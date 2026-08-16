@@ -35,7 +35,11 @@ The first call returns inline review comments (where the findings live); the sec
 
 The third call returns the review bodies. A finding CodeRabbit cannot anchor to a diff line — its collapsed "Outside diff range comments" section — is posted there and appears in neither of the first two calls. A re-review that produces only such findings has an empty inline list, so an empty first call is never on its own evidence that the bot found nothing.
 
+The review body's `Actionable comments posted: N` is the bot's own count of findings. Reconcile it against yours before reporting; when they differ, find the difference rather than trusting either — the inline list omits what the bot could not anchor, and one inline comment may carry several findings.
+
 Keep only comments whose `user.login` starts with `coderabbitai`. Record for each: `id`, `path`, `line` (or `original_line`), `body`, `in_reply_to_id`.
+
+One comment is not one finding: CodeRabbit packs several into one body when they share a line, each with its own severity line — so the unit you count, number and dispose of is the finding, never the comment.
 
 Drop replies (`in_reply_to_id` set) and any comment already marked resolved or outdated — but **count them in the total** and list them under skipped as `already resolved`.
 
@@ -48,7 +52,11 @@ _🎯 Functional Correctness_ | _🟠 Major_ | _⚡ Quick win_
 _📐 Maintainability & Code Quality_ | _🔵 Trivial_ | _⚡ Quick win_
 ```
 
-→ category | severity | effort. Severity ladder, low to high: `🔵 Trivial` < `🟡 Minor` < `🟠 Major` < `🔴 Critical`.
+→ category | severity | effort.
+
+Take every such line in a body, not the first. A body carrying two is two findings at two severities, and reading only the first silently downgrades the other — which is how a Major gets disposed of under a Minor's rules.
+
+Severity ladder, low to high: `🔵 Trivial` < `🟡 Minor` < `🟠 Major` < `🔴 Critical`.
 
 If a comment has no such line, infer from its heading (`⚠️ Potential issue` → Major, `🛠️ Refactor suggestion` / `🧹 Nitpick` → Minor) and mark the severity `(inferred)` in the report.
 
