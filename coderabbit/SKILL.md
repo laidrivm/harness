@@ -35,6 +35,8 @@ The first call returns inline review comments (where the findings live); the sec
 
 The third call returns the review bodies. A finding CodeRabbit cannot anchor to a diff line — its collapsed "Outside diff range comments" section — is posted there and appears in neither of the first two calls. A re-review that produces only such findings has an empty inline list, so an empty first call is never on its own evidence that the bot found nothing.
 
+`Actionable comments posted: N` counts only what the bot posted inline. A review's collapsed `Outside diff range comments (M)` section is additional — the finding total for that review is N + M, and a review body may carry M with no N at all.
+
 The review body's `Actionable comments posted: N` is the bot's own count of findings. Reconcile it against yours before reporting; when they differ, find the difference rather than trusting either — the inline list omits what the bot could not anchor, and one inline comment may carry several findings.
 
 The bot re-reviews on every push, and a merged PR still accepts comments — so a finding posted after your last pass exists in the API and in no report. Before treating a PR as done, re-fetch and reconcile against the bot's stated count again: a review submitted after your report is a review nobody has dispositioned.
