@@ -38,6 +38,8 @@ coderabbit review --base <base> --agent --config .coderabbit.yaml CLAUDE.md
 
 This reviews the branch's tracked changes (committed, staged and unstaged) against `<base>`. It commonly takes several minutes — give the call a generous timeout and don't rerun it because it seems slow. Add `--include-untracked` when new files aren't staged yet, and `--light` only if the user asks for a faster, shallower pass.
 
+Never pipe the review through a command that buffers — `tail`, `head`, `sort`, `wc`. `--agent` emits one JSON object per line as the review proceeds, and a buffer holds all of them until the process exits: a run that hangs and a run that is merely slow both look like an empty file, and a run refused for quota looks like a run that found nothing. Read the stream directly, or `tee` it to a file and read that file while it grows.
+
 The review quota is shared with the CodeRabbit web app, so a local run can be refused because of reviews started in the browser. The CLI's message mentions only billing, which reads as a plan problem when it is not.
 
 `--agent` gives structured findings instead of prose — the CLI itself recommends it under Claude. `--config` takes the files the CLI does *not* pick up on its own; drop from the list whichever doesn't exist in the repo, and add other convention files (`AGENTS.md`, `.cursorrules`) when they do.
@@ -101,6 +103,7 @@ Every output ends with a machine-readable last line, exactly one of:
 - `CODERABBIT gate: BLOCKED — N findings, M undispositioned.` (the arithmetic didn't close, or a real defect was declined — name them)
 - `CODERABBIT gate: BLOCKED — coderabbit doctor failed: <check>.` (step 1 stopped the run; no review happened)
 - `CODERABBIT gate: BLOCKED — review refused: <reason>.` (step 2 never produced findings — rate limit, auth revoked mid-run, service error; name the reason and the wait if the CLI gives one)
+- `CODERABBIT gate: BLOCKED — review did not return: <what the last event was>.` (the CLI was still running and had stopped emitting; name the last event seen and how long it ran)
 
 It exists so a driving agent, PR template or hook can check the step ran and closed without re-parsing the report.
 
