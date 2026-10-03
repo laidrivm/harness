@@ -20,8 +20,6 @@ Produce a **scannable map** of the changes between the base branch and `HEAD`, g
 
 The user is going to read this map, then jump into the code themselves. So every bullet needs a `file:line` so they can click straight in. Keep prose minimal — one short clause per bullet. Think index, not essay.
 
-**Do not perform the review. Do not make suggestions. Do not flag things to verify, confirm, double-check, or consider. Do not propose tests, fixes, or improvements. Do not ask "is this intended?" or "is this safe?".**
-
 Your job is purely descriptive: name the types, point at where data flows, state what the logic does, and *point at* where edge-case surfaces live. The user reads the map and decides for themselves what to check.
 
 ## The review order (why this structure)
@@ -110,7 +108,7 @@ Omit a section if there's nothing meaningful in it. A small feature might be jus
 ## Rules
 
 - **Every bullet has a `file:line`.** That's the whole point — the user clicks it to jump. No bullet without a citation. If you genuinely need to say something that has no specific line (a feature-level note), put it in the one-sentence intro under the feature heading, not in the bullets.
-- **One short clause per bullet.** Aim for under ~15 words after the em-dash. If you need more, you're writing a review, not a map. Split into two bullets at different lines, or cut.
+- **One short clause per bullet.** If you need more, you're writing a review, not a map. Split into two bullets at different lines, or cut.
 - **No suggestions, no advice, no questions.** Banned phrasings: "verify that…", "confirm…", "make sure…", "consider…", "check whether…", "is this intended?", "is this safe?", "should we…", "could…", "might want to…". State facts only.
 - **No emojis.** If something is security-sensitive, say so in words in the feature intro — don't decorate.
 - **Description over prescription.** "`detach` runs unconditionally on the bound pair" is fine. "Confirm it's safe that `detach` runs unconditionally" is not.
