@@ -192,5 +192,5 @@ The gate line is exactly one of:
 - **One concern per bullet.** Each WARM letter is one line; don't merge two findings.
 - **Be specific and quantified.** "last release 4 years ago", "pulls 40 sub-dependencies", "GHSA-xxxx fixed in 7.4.5" — not "looks old" or "might have issues".
 - **The verdict follows from the marks.** Don't soften a ❌ into a Keep, or hedge a clean dependency into a Reconsider. State the verdict plainly.
-- **No preamble.** Start with the first `## ` dependency heading (or the no-dependencies line). No "Here's the WARM check…".
+- **No preamble.** Start with the first `## ` dependency heading (or the no-dependencies line).
 - **Don't change any files.** This skill evaluates and reports — it doesn't remove dependencies, edit manifests, or run installs.
