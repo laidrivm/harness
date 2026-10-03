@@ -145,6 +145,6 @@ ZOMBIES gate: PASS — no gaps.
 - **Number the ideas sequentially across the whole report**, never restarting per letter or per feature — so "write 3 and 7" picks out exactly two tests. The numbers in the gate line count the same items.
 - **No implementation hints.** Don't suggest assertions, factories, or test setup — just what to verify.
 - **Group by feature first, then by letter.** Don't dump everything under one giant ZOMBIES list when the diff spans multiple features.
-- **No preamble.** No "Here are the tests I'd suggest…". Start with the first `## [Feature Area]` heading.
+- **No preamble.** Start with the first `## [Feature Area]` heading.
 - **No closing advice** beyond the summary line.
 - **Always end with the gate line** — including the nothing-to-test case. It's the machine-readable result a driving agent, PR template or hook reads without re-parsing the report.
