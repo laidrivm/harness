@@ -37,9 +37,9 @@ The third call returns the review bodies. A finding CodeRabbit cannot anchor to 
 
 `Actionable comments posted: N` counts only what the bot posted inline. A review's collapsed `Outside diff range comments (M)` section is additional — the finding total for that review is N + M, and a review body may carry M with no N at all.
 
-The review body's `Actionable comments posted: N` is the bot's own count of findings. Reconcile it against yours before reporting; when they differ, find the difference rather than trusting either — the inline list omits what the bot could not anchor, and one inline comment may carry several findings.
+Reconcile the bot's total for each review — N plus any M — against your own count before reporting. When they differ, find the difference rather than trusting either: one inline comment may carry several findings.
 
-The bot re-reviews on every push, and a merged PR still accepts comments — so a finding posted after your last pass exists in the API and in no report. Before treating a PR as done, re-fetch and reconcile against the bot's stated count again: a review submitted after your report is a review nobody has dispositioned.
+The bot re-reviews on every push, and a merged PR still accepts comments — so a finding posted after your last pass exists in the API and in no report. Before treating a PR as done, re-fetch and reconcile against the bot's N + M again: a review submitted after your report is a review nobody has dispositioned.
 
 Keep only comments whose `user.login` starts with `coderabbitai`. Record for each: `id`, `path`, `line` (or `original_line`), `body`, `in_reply_to_id`.
 
