@@ -17,7 +17,7 @@ Parse the arguments as the **base branch** to diff against. If empty, detect the
 
 Produce a **risk-ordered map** of the changes between the base branch and `HEAD`, grouped by feature area, so the user can decide where to spend their review time. The output is a triage report — not a review.
 
-**Do not perform the review. Do not make suggestions. Do not propose fixes. Do not flag specific lines to verify.** The user reads this map and decides for themselves what to dig into.
+It carries no suggestions, fixes or lines to verify: the user reads this map and decides for themselves what to dig into.
 
 ## Instructions
 
@@ -119,6 +119,6 @@ Triage produces no findings, so it can never reach PASS on a diff that has High 
 - **Order tiers from highest to lowest risk.** High first, then Medium, then Low, then Skip.
 - **Omit a tier section if it's empty.**
 - **If everything fits in one tier**, say so and suggest reviewing everything: "This diff is small — review all files".
-- **No suggestions, no advice.** This is a triage map, not a review. Don't say "verify…", "consider…", "make sure…".
+- **No suggestions, no advice.** This is a triage map, not a review.
 - **No emojis** other than the ⚠️ on the High Risk heading.
 - **End with a one-line summary**: `X groups, Y high-risk files to focus on`, followed by the gate line as the very last line.
