@@ -92,6 +92,6 @@ If everything is clean, output exactly:
 - **Number findings sequentially across the whole report**, never restarting per section — so the user can say "fix 3 and 7" and mean exactly two things.
 - **Verify Assumed Dependencies before flagging.** Use `find` or `ls`. A false-positive missing-file claim is the worst outcome of this skill.
 - **Skip auto-generated files** (lockfiles, compiled assets, generated route/type definitions).
-- **No preamble, no closing summary** beyond the `**X items across Y files.**` line. No "here's what I found", no advice on how to fix.
+- **No preamble, no closing summary** beyond the `**X items across Y files.**` line.
 - **Don't propose fixes.** This is a triage list — name the concern and stop.
 - **Don't restate the code.** "`if ($x) { … }` — this checks if x" is filler. Say what's wrong, not what's there.
