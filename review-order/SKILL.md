@@ -109,7 +109,7 @@ Omit a section if there's nothing meaningful in it. A small feature might be jus
 
 - **Every bullet has a `file:line`.** That's the whole point — the user clicks it to jump. No bullet without a citation. If you genuinely need to say something that has no specific line (a feature-level note), put it in the one-sentence intro under the feature heading, not in the bullets.
 - **One short clause per bullet.** If you need more, you're writing a review, not a map. Split into two bullets at different lines, or cut.
-- **No suggestions, no advice, no questions.** Banned phrasings: "verify that…", "confirm…", "make sure…", "consider…", "check whether…", "is this intended?", "is this safe?", "should we…", "could…", "might want to…". State facts only.
+- **No suggestions, no advice, no questions.** State facts only.
 - **No emojis.** If something is security-sensitive, say so in words in the feature intro — don't decorate.
 - **Description over prescription.** "`detach` runs unconditionally on the bound pair" is fine. "Confirm it's safe that `detach` runs unconditionally" is not.
 - **Edge Cases name the surface, not the fix.** Nullable input, unguarded branch, external state, queue-context assumption, concurrent path. Don't tell the reviewer what to do about it.
