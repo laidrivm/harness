@@ -19,7 +19,7 @@ If no feature description remains, run `git diff <base>...HEAD` and use the diff
 
 ## Goal
 
-Identify the **most valuable tests to write** for the feature, using ZOMBIES as a thinking tool. The output is a list of test ideas the user can stub out themselves — **do not write or stub the tests**.
+Identify the **most valuable tests to write** for the feature, using ZOMBIES as a thinking tool. The output is a list of test ideas for whoever acts on the report to write — **this skill does not write or stub the tests**.
 
 ZOMBIES stands for:
 
@@ -133,7 +133,7 @@ ZOMBIES gate: PASS — no gaps.
 
 ## Rules
 
-- **Don't stub the tests.** This skill outputs ideas only — the user writes the tests.
+- **Don't stub the tests.** This skill outputs ideas only; writing them is the step that acts on the report and closes the gate.
 - **Skip ZOMBIES letters that don't apply.** Do not write "(none)" placeholders. Quality over coverage.
 - **Gaps only.** Skip behaviours an existing test already fully covers. Keep partially-covered behaviours, prefixed with `[partial]` and naming the missing assertion. When unsure, keep the bullet prefixed with `[verify coverage]` — never silently drop a real gap.
 - **Name the target test file** in each feature heading — existing file or conventional path for a new one.
