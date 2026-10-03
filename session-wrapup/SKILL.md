@@ -28,7 +28,7 @@ Run the fix & capture loop over the session: look for mistakes that got correcte
 
 ## 3. Workflow state
 
-State which OpenSpec stage the work is in (proposal / spec / implementation / archive — or "not using OpenSpec this session"), and give the **exact command to run first next session**, copy-pasteable. If work stopped mid-task, one line on where.
+State which OpenSpec stage the work is in, named by its `/opsx:` command (explore / propose / apply / verify / sync / archive), or by the project's own stage name where it defines one — or "not using OpenSpec this session" — and give the **exact command to run first next session**, copy-pasteable. If work stopped mid-task, one line on where.
 
 ## 4. Save point
 
