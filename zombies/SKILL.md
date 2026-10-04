@@ -147,4 +147,5 @@ ZOMBIES gate: PASS — no gaps.
 - **Group by feature first, then by letter.** Don't dump everything under one giant ZOMBIES list when the diff spans multiple features.
 - **No preamble.** Start with the first `## [Feature Area]` heading.
 - **No closing advice** beyond the summary line.
-- **Always end with the gate line** — including the nothing-to-test case. It's the machine-readable result a driving agent, PR template or hook reads without re-parsing the report.
+- **Always end the report with the gate line** — including the nothing-to-test case. It's the machine-readable result a driving agent, PR template or hook reads without re-parsing the report.
+- **The gate line ends the report, not the turn.** When another task invoked this skill, act on the report and continue that task in the same turn; only a standalone `/zombies` run stops at the gate line.
