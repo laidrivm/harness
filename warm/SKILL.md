@@ -38,6 +38,7 @@ WARM is a **pre-merge gate**, not just a report. When an agent runs the pre-merg
 - **Placement is the sequence's call.** A **Hold** means the branch shouldn't be installed, let alone reviewed or merged — found late, it wastes every pass run before it, so a sequence should place this step ahead of its costly review steps.
 - **Exit condition** — the step **passes** when no dependency is left on **Hold** and no ❌ on **M** is unresolved. **Keep** and **Reconsider** verdicts do not block: they are the user's call, recorded and carried forward.
 - **Hold blocks the sequence.** Stop there, surface the finding, and wait for the user. Don't run the remaining steps against a branch with a suspected supply-chain problem, and never resolve it by installing or upgrading on your own.
+- **Pass continues the sequence** in the same turn. The gate line ends the report, not the turn; only a Hold stops it.
 - **Emit the gate line** (below) as the last line of output so the driving agent can read the outcome without re-parsing the report.
 
 ## Instructions
