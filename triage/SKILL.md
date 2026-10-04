@@ -121,4 +121,5 @@ Triage produces no findings, so it can never reach PASS on a diff that has High 
 - **If everything fits in one tier**, say so and suggest reviewing everything: "This diff is small — review all files".
 - **No suggestions, no advice.** This is a triage map, not a review.
 - **No emojis** other than the ⚠️ on the High Risk heading.
-- **End with a one-line summary**: `X groups, Y high-risk files to focus on`, followed by the gate line as the very last line.
+- **End with a one-line summary**: `X groups, Y high-risk files to focus on`, followed by the gate line as the very last line of the map.
+- **The gate line ends the map, not the turn.** When another task invoked this skill, read the High and Medium groups and continue that task in the same turn; only a standalone `/triage` run stops at the gate line.
