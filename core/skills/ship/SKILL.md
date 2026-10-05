@@ -51,9 +51,11 @@ gh pr view --json number,url,state,isDraft
 
 - **No PR** → create it from the `pr-brief` output:
   ```bash
-  gh pr create --base <base> --title "<title>" --body-file <(printf '%s' "<body>")
+  gh pr create --base <base> --title "<title>" --body-file - <<'PR_BODY_END'
+  <body>
+  PR_BODY_END
   ```
-  If the brief isn't in context, stop and ask for it. Never invent a title and body here.
+  The quoted delimiter keeps the shell from expanding the backticks and `$` a markdown body carries; a body in double quotes runs them. The closing `PR_BODY_END` must start its line, without the indent this list gives it. If the brief isn't in context, stop and ask for it. Never invent a title and body here.
 - **PR exists** → the push in step 2 already updated it. Report the URL and move on.
 
 ### 4. Wait for CodeRabbit on `<sha>`
