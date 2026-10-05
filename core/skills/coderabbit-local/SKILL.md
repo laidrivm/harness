@@ -84,7 +84,7 @@ Claims the regex is recompiled per call; it's module-level const. Bot is wrong.
    order is grouped by workflow on purpose
 
 5 findings, 2 to fix. Apply?
-CODERABBIT gate: OPEN — 5 findings, 2 fixes awaiting approval.
+CODERABBIT-LOCAL gate: OPEN — 5 findings, 2 fixes awaiting approval.
 ```
 
 Wait for approval. Then apply the approved fixes with `Edit`, and report what changed.
@@ -95,15 +95,15 @@ Wait for approval. Then apply the approved fixes with `Edit`, and report what ch
 
 Every output ends with a machine-readable last line, exactly one of:
 
-- `CODERABBIT gate: PASS — N findings, N dispositioned.` (every finding fixed, skipped or rejected)
-- `CODERABBIT gate: PASS — no findings.`
-- `CODERABBIT gate: PASS — no changes on this branch.` (step 1 found nothing to review)
-- `CODERABBIT gate: OPEN — N findings, M fixes awaiting approval.` (the plan in step 4, before the user answers)
-- `CODERABBIT gate: OPEN — N findings, M dismissals awaiting the user.` (fixes already applied under a project policy; what waits is a Major+ you propose to reject or skip)
-- `CODERABBIT gate: BLOCKED — N findings, M undispositioned.` (the arithmetic didn't close, or a real defect was declined — name them)
-- `CODERABBIT gate: BLOCKED — coderabbit doctor failed: <check>.` (step 1 stopped the run; no review happened)
-- `CODERABBIT gate: BLOCKED — review refused: <reason>.` (step 2 never produced findings — rate limit, auth revoked mid-run, service error; name the reason and the wait if the CLI gives one)
-- `CODERABBIT gate: BLOCKED — review did not return: <what the last event was>.` (the CLI was still running and had stopped emitting; name the last event seen and how long it ran)
+- `CODERABBIT-LOCAL gate: PASS — N findings, N dispositioned.` (every finding fixed, skipped or rejected)
+- `CODERABBIT-LOCAL gate: PASS — no findings.`
+- `CODERABBIT-LOCAL gate: PASS — no changes on this branch.` (step 1 found nothing to review)
+- `CODERABBIT-LOCAL gate: OPEN — N findings, M fixes awaiting approval.` (the plan in step 4, before the user answers)
+- `CODERABBIT-LOCAL gate: OPEN — N findings, M dismissals awaiting the user.` (fixes already applied under a project policy; what waits is a Major+ you propose to reject or skip)
+- `CODERABBIT-LOCAL gate: BLOCKED — N findings, M undispositioned.` (the arithmetic didn't close, or a real defect was declined — name them)
+- `CODERABBIT-LOCAL gate: BLOCKED — coderabbit doctor failed: <check>.` (step 1 stopped the run; no review happened)
+- `CODERABBIT-LOCAL gate: BLOCKED — review refused: <reason>.` (step 2 never produced findings — rate limit, auth revoked mid-run, service error; name the reason and the wait if the CLI gives one)
+- `CODERABBIT-LOCAL gate: BLOCKED — review did not return: <what the last event was>.` (the CLI was still running and had stopped emitting; name the last event seen and how long it ran)
 
 It exists so a driving agent, PR template or hook can check the step ran and closed without re-parsing the report.
 
