@@ -122,7 +122,7 @@ Then the gate line, exactly one of:
 - `ZOMBIES gate: PASS — no gaps.`
 - `ZOMBIES gate: OPEN — N gaps unaddressed.` (N = test ideas listed, including `[partial]` and `[verify coverage]` ones)
 
-This skill only ever finds gaps — it never closes them, so any gap leaves the gate `OPEN`. Whoever acts on the report closes it: after writing the tests, or deciding with a stated reason not to, they re-emit the line as `PASS — N gaps dispositioned.` — or `BLOCKED — <what needs the user>` if a gap can't be settled without them. A missing test harness, a CI job that doesn't run this suite, a fixture the repo never had — **a finding about the environment the tests land in is not a gap in the diff**: close the gate and report the environment fact separately, below the gate line. The last gate line of the turn is the one that counts.
+This skill only ever finds gaps — it never closes them, so any gap leaves the gate `OPEN`. Whoever acts on the report closes it: after writing the tests, or deciding with a stated reason not to, they re-emit the line as `ZOMBIES gate: PASS — N gaps dispositioned.` — or `ZOMBIES gate: BLOCKED — <what needs the user>.` if a gap can't be settled without them. A missing test harness, a CI job that doesn't run this suite, a fixture the repo never had — **a finding about the environment the tests land in is not a gap in the diff**: close the gate and report the environment fact separately, below the gate line. The last gate line of the turn is the one that counts.
 
 If there's nothing worth testing (e.g. trivial rename, pure config change), output exactly:
 
