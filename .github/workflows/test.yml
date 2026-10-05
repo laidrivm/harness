@@ -1,0 +1,31 @@
+name: Test
+
+# The harness's own suite. A consumer never runs it — `bun test` collects
+# nothing under `node_modules/` — so this is the only place it runs.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned by commit. Nothing updates these pins here — no dependabot runs
+      # in this repository — so they are bumped by hand, to the ones d2ass's
+      # dependabot has moved to.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      # No install: the package declares no dependencies.
+      - run: bun test
