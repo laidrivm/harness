@@ -68,8 +68,8 @@ To re-vendor (the skills CLI expects `.claude/skills/`, but this repo keeps skil
 
 ```bash
 npx -y skills add microsoft/playwright-cli --skill playwright-cli --agent claude-code
-rm -rf core/skills/playwright-cli && mv .claude/skills/playwright-cli core/skills/playwright-cli
-rm -rf .claude/skills
+[ -f .claude/skills/playwright-cli/SKILL.md ] && rm -rf core/skills/playwright-cli && mv .claude/skills/playwright-cli core/skills/playwright-cli
+rmdir .claude/skills
 git diff            # see what changed upstream
 git add -A && git commit -m "re-vendor playwright-cli skill"
 ```
