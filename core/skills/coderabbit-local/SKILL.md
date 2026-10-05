@@ -114,6 +114,7 @@ It exists so a driving agent, PR template or hook can check the step ran and clo
 - **Skipped is a list, not a count.** One line per skipped finding with its path and reason, even for Trivial.
 - **Number every finding sequentially across the whole report** — Applied, then Fixing, then Not fixing, then Skipped, never restarting per section. The last number equals the total in the heading, and "apply 3 and 7" means exactly two findings. Keep the same numbers when you report what changed after approval.
 - **Severity budgets attention, not belief.** A Minor is skipped because you read it and judged the change not worth making, never because of its label.
+- **A skip reason that cites a file, a convention or a decision quotes it from that file as read in this pass** — a reason recalled rather than read is no reason, and the finding is fixed or re-read instead.
 - **No fixes before approval**, unless the project's own policy overrides it (step 4). Where it does, the approval moves rather than disappears: it attaches to dismissing a Major or above. Steps 1–3 change nothing on disk either way.
 - **Rejections need a concrete reason** — what the bot missed, not "not applicable".
 - **The environment is not a finding.** A fact about where the diff lands — repo conventions, a missing CI job, how downstream consumes the change — is not a defect in the diff and never holds the gate `BLOCKED`. Close the gate on the findings and report the environment fact separately, below the gate line.
