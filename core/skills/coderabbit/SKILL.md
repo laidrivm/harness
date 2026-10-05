@@ -48,7 +48,7 @@ Keep only comments whose `user.login` starts with `coderabbitai`. Record for eac
 
 One comment is not one finding: CodeRabbit packs several into one body when they share a line, each with its own severity line — so the unit you count, number and dispose of is the finding, never the comment.
 
-Drop any comment whose thread the fourth call marks resolved or outdated — but **count it in the total** and list it under skipped as `already resolved`.
+Drop any comment whose thread the fourth call marks resolved or outdated — but **count each finding it carries in the total** and list each under skipped as `already resolved`.
 
 A reply (`in_reply_to_id` set) is discussion of a finding, not a finding, and says nothing about whether its parent is resolved — that is the thread's state alone. Leave it out of the total, unless it carries a severity line of its own, which makes it a finding.
 
