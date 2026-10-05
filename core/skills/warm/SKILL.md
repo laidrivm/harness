@@ -34,7 +34,7 @@ Plus a fifth, supply-chain check:
 
 WARM is a **pre-merge gate**, not just a report. When an agent runs the pre-merge sequence rather than the user invoking `/warm` by hand, this skill is one step in it — the driving sequence decides where it runs — and the step behaves like this:
 
-- **Precondition** — run only if a dependency manifest changed between the base and `HEAD` (step 1 answers this). No manifest changed → the step is a no-op that passes; don't ask the user, don't linger.
+- **Precondition** — run only if a dependency manifest or lockfile changed between the base and `HEAD` (step 1 answers this; a lockfile-only change gets the audit alone). Neither changed → the step is a no-op that passes; don't ask the user, don't linger.
 - **Placement is the sequence's call.** A **Hold** means the branch shouldn't be installed, let alone reviewed or merged — found late, it wastes every pass run before it, so a sequence should place this step ahead of its costly review steps.
 - **Exit condition** — the step **passes** when no dependency is left on **Hold** and no ❌ on **M** is unresolved. **Keep** and **Reconsider** verdicts do not block: they are the user's call, recorded and carried forward.
 - **Hold blocks the sequence.** Stop there, surface the finding, and wait for the user. Don't run the remaining steps against a branch with a suspected supply-chain problem, and never resolve it by installing or upgrading on your own.
@@ -71,9 +71,9 @@ For each changed manifest, run `git diff <base>...HEAD -- <manifest>` and extrac
 
 **S applies to every addition and upgrade** — a compromised maintainer account ships through a version bump just as easily as through a new install.
 
-If **only lockfiles changed** (transitive bumps, an audit autofix) with no manifest touched, skip the full WARM: run the ecosystem's audit tool on the branch state, report any advisories found, and note that only transitive dependencies moved. Then stop.
+If **only lockfiles changed** (transitive bumps, an audit autofix) with no manifest touched, compare each direct dependency's resolved version against the base lockfile first: one that moved is an upgrade within its range, and gets the upgrade checks above, **S** included. Skip the full WARM for the rest: run the ecosystem's audit tool on the branch state, report the advisories in versions this branch introduced or upgraded — the base lockfile's advisories are not this branch's — and name which direct dependencies moved, or that only transitive ones did. End with `WARM gate: PASS — only lockfiles changed, no advisories.`, or with the `BLOCKED — <package> has an unresolved advisory.` line naming each advisory's package, or `BLOCKED — <package> on Hold.` for a moved direct dependency. Then stop.
 
-If no manifests changed, output exactly:
+If no manifest and no lockfile changed, output exactly:
 
 ```
 ✅ No dependencies added or upgraded on this branch.
@@ -89,22 +89,22 @@ Look up what you need to answer each letter honestly. Sources, in order of prefe
 **JS/TS lookups use `bun`, not `npm`:**
 
 ```bash
-bun info <pkg>                  # version, license, deps, dist-tags, maintainers
+bun info <pkg>@<version>        # version, license, deps, dist-tags, maintainers
 bun info <pkg> time.created     # 2015-09-11T02:41:33.521Z
-bun info <pkg> time.modified    # last publish
+bun info <pkg> time.modified    # last publish of any version
 bun info <pkg> repository.url   # git+https://github.com/preactjs/preact.git
-bun info <pkg> scripts          # {"postinstall": "node install.js"}
+bun info <pkg>@<version> scripts  # {"postinstall": "node install.js"}
 bun info <pkg> --json           # everything at once
 curl -s https://api.npmjs.org/downloads/point/last-week/<pkg>
 ```
 
-Three constraints: `bun info` takes **one field per call** — `bun info preact name version` prints only `name`, so either one call per field or `--json` and parse it; it must run **inside a directory with a `package.json`** or it errors out; and bun has **no download counts**, so weekly downloads still come from the npmjs API via `curl` — exactly as written above. `curl` is allowlisted for `https://api.npmjs.org/` only; any other host goes through `WebFetch`.
+Three constraints: `bun info` takes **one field per call** — `bun info preact name version` prints only `name`, so either one call per field or `--json` and parse it; it must run **inside a directory with a `package.json`** or it errors out; and bun has **no download counts**, so weekly downloads still come from the npmjs API via `curl` — exactly as written above. `curl` is allowlisted for `https://api.npmjs.org/` only; any other host goes through `WebFetch`. `<version>` is the one the branch's lockfile resolves: without it `bun info` answers for the latest release, which is not what gets installed. `bun info` has no publish date per version, so the resolved version's date is `time["<version>"]` from `WebFetch https://registry.npmjs.org/<pkg>`.
 
 - **A (Alive)**: check the registry/repo for last release date and recent commit activity. Use `bun info <pkg> time.modified` / `WebFetch` the repo page. Note the latest release date and whether the repo is archived.
 - **R (Right-sized)**: compare the dependency's footprint (sub-dependencies, install size, breadth of API) against the slice the branch uses. Pulling a 40-dependency framework to call one helper is not right-sized.
 - **M (Maintained securely)**: check for known advisories. Prefer ecosystem tooling when available (`bun audit`, `composer audit`, `pip-audit`). If the tool isn't installed, don't install it — go straight to `WebSearch` the package name + "CVE"/"advisory" and check the advisory database, and say which method you used. Report the resolved version and whether a fixed version exists.
-- **S (Safety)** — three checks per dependency (JS/TS: `bun info <pkg> scripts`, `bun info <pkg> repository.url`, `bun info <pkg> time.modified`, plus the downloads `curl`; other ecosystems: `WebFetch` the registry page):
-  1. **Install scripts**: does the package declare `preinstall`/`postinstall` (or the ecosystem's equivalent lifecycle hooks)? A script that downloads and executes a binary or opaque bundle → ❌. A build-related script in a package that plausibly needs one (native addons) → ⚠️, name what it runs.
+- **S (Safety)** — three checks per dependency (JS/TS: `bun info <pkg>@<version> scripts`, `bun info <pkg> repository.url`, the resolved version's registry `time`, plus the downloads `curl`; other ecosystems: `WebFetch` the registry page):
+  1. **Install scripts**: does the package declare a script that runs at install — `preinstall`, `install`, `postinstall` or `prepare` (or the ecosystem's equivalent lifecycle hooks)? A script that downloads and executes a binary or opaque bundle → ❌. A build-related script in a package that plausibly needs one (native addons) → ⚠️, name what it runs.
   2. **Identity**: the name is not a typo/suffix neighbour of a popular package (`lodash` vs `Iodash`, `eslint-config-*` squats); the `repository` field points to a live repo that actually publishes this package; age and download counts are plausible for what the package claims to be. Any mismatch → ❌.
   3. **Release freshness**: the resolved version was published fewer than ~7 days ago on a long-established package → ⚠️ (compromised-maintainer pattern); combined with a newly appeared install script → ❌.
 
@@ -177,6 +177,7 @@ The gate line is exactly one of:
 
 - `WARM gate: PASS — no manifests changed.`
 - `WARM gate: PASS — N dependencies vetted.`
+- `WARM gate: PASS — only lockfiles changed, no advisories.`
 - `WARM gate: BLOCKED — <package> on Hold.` (name every held package)
 - `WARM gate: BLOCKED — <package> has an unresolved advisory.` (❌ on **M** with no fixed version taken)
 

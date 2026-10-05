@@ -30,6 +30,7 @@ git rev-parse --abbrev-ref HEAD
 Stop, with the reason, if:
 
 - **HEAD is `<base>`** — there is nothing to ship. Never push or merge from the base branch.
+- **HEAD is detached** — `rev-parse` prints `HEAD`, and there is no branch to push or open a PR from.
 - **The tree is dirty** — say which files. Ask whether to commit them or stash; don't decide.
 - **A gate is `BLOCKED` or `OPEN`** this session — same rule as `pr-brief` step 1. The last gate line per skill counts.
 
@@ -51,10 +52,14 @@ gh pr view --json number,url,state,isDraft
 
 - **No PR** → create it from the `pr-brief` output:
   ```bash
-  gh pr create --base <base> --title "<title>" --body-file <(printf '%s' "<body>")
+  gh pr create --base <base> --title "<title>" --body-file - <<'PR_BODY_END'
+  <body>
+  PR_BODY_END
   ```
-  If the brief isn't in context, stop and ask for it. Never invent a title and body here.
+  The quoted delimiter keeps the shell from expanding the backticks and `$` a markdown body carries; a body in double quotes runs them. The closing `PR_BODY_END` must start its line, without the indent this list gives it. Check the body first: a line of it that is exactly `PR_BODY_END` would end the heredoc there and run the rest as shell commands, so pick a delimiter no line of the body equals. If the brief isn't in context, stop and ask for it. Never invent a title and body here.
 - **PR exists** → the push in step 2 already updated it. Report the URL and move on.
+- **PR is closed or merged** (`state` other than `OPEN`) → stop with `SHIP gate: BLOCKED`. The push landed on a branch nothing will merge.
+- **PR is a draft** (`isDraft` true) → stop with `SHIP gate: BLOCKED`. CodeRabbit skips drafts, so step 4 would wait for a review that never comes; marking it ready is the user's call.
 
 ### 4. Wait for CodeRabbit on `<sha>`
 
@@ -67,9 +72,9 @@ for i in $(seq 1 18); do
 done
 ```
 
-Nine minutes, then give up — that is the ceiling on the wait, not a claim about how long CodeRabbit takes. If it expires, emit `SHIP gate: OPEN — no CodeRabbit review on <sha> after 9 min` and stop. Re-invoking the skill resumes here; that is cheaper than a longer blocking wait.
+Nine minutes, then give up — that is the ceiling on the wait, not a claim about how long CodeRabbit takes. If it expires, read the checks as below first, then emit `SHIP gate: OPEN — no CodeRabbit review on <sha> after 9 min` and stop. Re-invoking the skill resumes here; that is cheaper than a longer blocking wait.
 
-If the repo has CI, start `gh pr checks --watch --fail-fast` in the same waiting window rather than after it. Failing checks are handled like findings: fix, then back to step 2.
+If the repo has CI, read `gh pr checks` once the wait above ends, whichever way it ended — never `--watch`, which blocks with no ceiling. Checks still pending → emit `SHIP gate: OPEN — checks still running on <sha>` and stop; re-invoking resumes here. Failing checks are handled like findings: fix, then back to step 2.
 
 ### 5. Work the findings
 
@@ -79,6 +84,7 @@ When it comes back:
 
 - `CODERABBIT gate: PASS` with nothing changed on disk → go to step 6.
 - Fixes applied → commit them (`git commit`, message naming the findings by their numbers, e.g. `address coderabbit findings 1, 3, 5`), then **return to step 2**. The new push is a new `<sha>`, and it gets its own review.
+- `CODERABBIT gate: OPEN` → stop and report what it waits on — fixes awaiting approval or a dismissal awaiting the user — and emit `SHIP gate: OPEN`. Re-invoking the skill once the user has settled it resumes here.
 - `CODERABBIT gate: BLOCKED` → stop and report. A blocked gate is the user's call, never a reason to merge anyway.
 
 Cap the loop at **three** round trips. If CodeRabbit still has findings on the fourth push, stop and report — repeated churn on the same PR is a signal to talk, not to keep pushing.
@@ -90,8 +96,10 @@ Show, in three lines: the PR URL, the number of round trips, and the final gate 
 On approval:
 
 ```bash
-gh pr merge <N> --squash --delete-branch
+gh pr merge <N> --squash --delete-branch --match-head-commit <sha>
 ```
+
+`--match-head-commit` makes GitHub refuse the merge when the PR head is no longer the reviewed `<sha>` — a push from elsewhere after the review. On that refusal, stop and report it: the new head has not been reviewed.
 
 Match the repo's existing merge style if it has one (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`); `--squash` is the default only when the repo allows it.
 
@@ -109,8 +117,8 @@ Report the merge commit and the new `<base>` SHA.
 Every output ends with a machine-readable last line, exactly one of:
 
 - `SHIP gate: PASS — PR #N merged in M round trips, on <base> at <sha>.`
-- `SHIP gate: OPEN — <what it is waiting on>.` (review hasn't landed, checks still running, merge awaiting approval)
-- `SHIP gate: BLOCKED — <what needs the user>.` (dirty tree, blocked upstream gate, failing check that isn't ours, round-trip cap hit)
+- `SHIP gate: OPEN — <what it is waiting on>.` (review hasn't landed, checks still running, a CodeRabbit finding awaiting the user, merge awaiting approval)
+- `SHIP gate: BLOCKED — <what needs the user>.` (dirty tree, detached HEAD, closed or draft PR, blocked upstream gate, failing check that isn't ours, round-trip cap hit)
 
 ## Rules
 

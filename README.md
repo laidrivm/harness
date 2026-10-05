@@ -1,6 +1,10 @@
-# skills
+# harness
 
-Personal [Claude Code skills](https://code.claude.com/docs/en/skills): each top-level directory holds one skill as `<name>/SKILL.md`. They live here centrally and get symlinked into projects (or globally) with `link.sh`.
+The agent harness shared by several projects. It ships as a package (`package.json`, no lifecycle scripts).
+
+## Layout
+
+`core/` holds what any project can use. `core/skills/` holds personal [Claude Code skills](https://code.claude.com/docs/en/skills), one per directory as `core/skills/<name>/SKILL.md`, symlinked into projects (or globally) with `link.sh`.
 
 ## Skills
 
@@ -41,7 +45,7 @@ Whoever acts on a report re-emits its gate line after acting. **The last gate li
 
 ## Linking
 
-`link.sh` symlinks a skill into a project's `.claude/skills/` (relative links, so they survive in git) or into `~/.claude/skills` for global use.
+`link.sh` symlinks a skill from `core/skills/` into a project's `.claude/skills/` (relative links, so they survive in git) or into `~/.claude/skills` for global use.
 
 ```bash
 ./link.sh triage /Project/d2ass          # link one skill into a project
@@ -54,19 +58,18 @@ It refuses to overwrite existing files or links pointing elsewhere — use `--un
 
 ## Adding a skill
 
-Create `<name>/SKILL.md` with `name` and `description` frontmatter; `link.sh all` picks it up automatically. Add a row to the table above — name and one line, nothing the frontmatter already says.
+Create `core/skills/<name>/SKILL.md` with `name` and `description` frontmatter; `link.sh all` picks it up automatically. Add a row to the table above — name and one line, nothing the frontmatter already says.
 
 ## Skill provenance
 
 Skills listed in `skills-lock.json` are **vendored** — reference docs for someone else's tool, never edit them locally (edits get wiped on re-vendor, and an unedited copy is what keeps the doc in sync with the binary); re-vendor to update. Everything else is **owned** — forked or written here, edit freely via fix & capture. The lock's `computedHash` doubles as a drift detector: if it stops matching, someone edited a vendored skill.
 
-To re-vendor (the skills CLI expects `.claude/skills/`, but this repo keeps skills at the root, so the move is manual):
+To re-vendor (the skills CLI expects `.claude/skills/`, but this repo keeps skills in `core/skills/`, so the move is manual), from the repository root:
 
 ```bash
-cd /Users/laidrivm/Projects/skills
 npx -y skills add microsoft/playwright-cli --skill playwright-cli --agent claude-code
-rm -rf ./playwright-cli && mv .claude/skills/playwright-cli ./playwright-cli
-rm -rf .claude
+[ -f .claude/skills/playwright-cli/SKILL.md ] && rm -rf core/skills/playwright-cli && mv .claude/skills/playwright-cli core/skills/playwright-cli
+rmdir .claude/skills
 git diff            # see what changed upstream
 git add -A && git commit -m "re-vendor playwright-cli skill"
 ```

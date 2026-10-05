@@ -28,7 +28,7 @@ It checks the CLI version, storage, auth state, git repository and backend/WebSo
 
 On failure, report which check failed and what fixes it — `coderabbit auth login` for auth, a network/VPN issue for connectivity, [the install docs](https://docs.coderabbit.ai/cli/overview) if `coderabbit` is missing. **Do not install it yourself**, and never pipe an install script into a shell.
 
-Then confirm there is something to review: `git diff --stat <base>...HEAD`. If the branch is empty relative to `<base>`, say so and stop.
+Then confirm there is something to review: `git diff --stat <base>...HEAD` for what is committed, and `git status --short` for what is staged, unstaged or untracked — the review reads the first two kinds always and untracked files with `--include-untracked`. Stop only when the first prints nothing and the second lists nothing but untracked (`??`) files you are not including, and say so.
 
 ### 2. Review
 
@@ -84,7 +84,7 @@ Claims the regex is recompiled per call; it's module-level const. Bot is wrong.
    order is grouped by workflow on purpose
 
 5 findings, 2 to fix. Apply?
-CODERABBIT gate: OPEN — 5 findings, 2 fixes awaiting approval.
+CODERABBIT-LOCAL gate: OPEN — 5 findings, 2 fixes awaiting approval.
 ```
 
 Wait for approval. Then apply the approved fixes with `Edit`, and report what changed.
@@ -95,15 +95,15 @@ Wait for approval. Then apply the approved fixes with `Edit`, and report what ch
 
 Every output ends with a machine-readable last line, exactly one of:
 
-- `CODERABBIT gate: PASS — N findings, N dispositioned.` (every finding fixed, skipped or rejected)
-- `CODERABBIT gate: PASS — no findings.`
-- `CODERABBIT gate: PASS — no changes on this branch.` (step 1 found nothing to review)
-- `CODERABBIT gate: OPEN — N findings, M fixes awaiting approval.` (the plan in step 4, before the user answers)
-- `CODERABBIT gate: OPEN — N findings, M dismissals awaiting the user.` (fixes already applied under a project policy; what waits is a Major+ you propose to reject or skip)
-- `CODERABBIT gate: BLOCKED — N findings, M undispositioned.` (the arithmetic didn't close, or a real defect was declined — name them)
-- `CODERABBIT gate: BLOCKED — coderabbit doctor failed: <check>.` (step 1 stopped the run; no review happened)
-- `CODERABBIT gate: BLOCKED — review refused: <reason>.` (step 2 never produced findings — rate limit, auth revoked mid-run, service error; name the reason and the wait if the CLI gives one)
-- `CODERABBIT gate: BLOCKED — review did not return: <what the last event was>.` (the CLI was still running and had stopped emitting; name the last event seen and how long it ran)
+- `CODERABBIT-LOCAL gate: PASS — N findings, N dispositioned.` (every finding fixed, skipped or rejected)
+- `CODERABBIT-LOCAL gate: PASS — no findings.`
+- `CODERABBIT-LOCAL gate: PASS — no changes on this branch.` (step 1 found nothing to review)
+- `CODERABBIT-LOCAL gate: OPEN — N findings, M fixes awaiting approval.` (the plan in step 4, before the user answers)
+- `CODERABBIT-LOCAL gate: OPEN — N findings, M dismissals awaiting the user.` (fixes already applied under a project policy; what waits is a Major+ you propose to reject or skip)
+- `CODERABBIT-LOCAL gate: BLOCKED — N findings, M undispositioned.` (the arithmetic didn't close, or a real defect was declined — name them)
+- `CODERABBIT-LOCAL gate: BLOCKED — coderabbit doctor failed: <check>.` (step 1 stopped the run; no review happened)
+- `CODERABBIT-LOCAL gate: BLOCKED — review refused: <reason>.` (step 2 never produced findings — rate limit, auth revoked mid-run, service error; name the reason and the wait if the CLI gives one)
+- `CODERABBIT-LOCAL gate: BLOCKED — review did not return: <what the last event was>.` (the CLI was still running and had stopped emitting; name the last event seen and how long it ran)
 
 It exists so a driving agent, PR template or hook can check the step ran and closed without re-parsing the report.
 
@@ -114,6 +114,7 @@ It exists so a driving agent, PR template or hook can check the step ran and clo
 - **Skipped is a list, not a count.** One line per skipped finding with its path and reason, even for Trivial.
 - **Number every finding sequentially across the whole report** — Applied, then Fixing, then Not fixing, then Skipped, never restarting per section. The last number equals the total in the heading, and "apply 3 and 7" means exactly two findings. Keep the same numbers when you report what changed after approval.
 - **Severity budgets attention, not belief.** A Minor is skipped because you read it and judged the change not worth making, never because of its label.
+- **A skip reason that cites a file, a convention or a decision quotes it from that file as read in this pass** — a reason recalled rather than read is no reason, and the finding is fixed or re-read instead.
 - **No fixes before approval**, unless the project's own policy overrides it (step 4). Where it does, the approval moves rather than disappears: it attaches to dismissing a Major or above. Steps 1–3 change nothing on disk either way.
 - **Rejections need a concrete reason** — what the bot missed, not "not applicable".
 - **The environment is not a finding.** A fact about where the diff lands — repo conventions, a missing CI job, how downstream consumes the change — is not a defect in the diff and never holds the gate `BLOCKED`. Close the gate on the findings and report the environment fact separately, below the gate line.

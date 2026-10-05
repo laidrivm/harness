@@ -29,11 +29,14 @@ Every CodeRabbit finding on the PR gets an explicit disposition — **fixed**, *
 gh api "repos/OWNER/REPO/pulls/N/comments?per_page=100" --paginate
 gh api "repos/OWNER/REPO/issues/N/comments?per_page=100" --paginate
 gh api "repos/OWNER/REPO/pulls/N/reviews?per_page=100" --paginate
+gh api graphql --paginate -F o=OWNER -F r=REPO -F n=N -f query='query($o:String!,$r:String!,$n:Int!,$endCursor:String){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated comments(first:100){nodes{databaseId}}}}}}}'
 ```
 
 The first call returns inline review comments (where the findings live); the second returns the walkthrough / summary comments (where CodeRabbit sometimes parks extra findings in a collapsed "Outside diff range" or "Nitpick" section — read those bodies too, they contain findings that never became inline comments).
 
 The third call returns the review bodies. A finding CodeRabbit cannot anchor to a diff line — its collapsed "Outside diff range comments" section — is posted there and appears in neither of the first two calls. A re-review that produces only such findings has an empty inline list, so an empty first call is never on its own evidence that the bot found nothing.
+
+The fourth call returns each inline thread's `isResolved` and `isOutdated`, which no REST response carries; a comment's `databaseId` there is its `id` in the first call. `--paginate` follows the threads past 100; a thread's comments are not paged, since every one past its first hundred is a reply.
 
 `Actionable comments posted: N` counts only what the bot posted inline. A review's collapsed `Outside diff range comments (M)` section is additional — the finding total for that review is N + M, and a review body may carry M with no N at all.
 
@@ -45,7 +48,9 @@ Keep only comments whose `user.login` starts with `coderabbitai`. Record for eac
 
 One comment is not one finding: CodeRabbit packs several into one body when they share a line, each with its own severity line — so the unit you count, number and dispose of is the finding, never the comment.
 
-Drop replies (`in_reply_to_id` set) and any comment already marked resolved or outdated — but **count them in the total** and list them under skipped as `already resolved`.
+Drop any comment whose thread the fourth call marks resolved or outdated — but **count each finding it carries in the total** and list each under skipped as `already resolved`.
+
+A reply (`in_reply_to_id` set) is discussion of a finding, not a finding, and says nothing about whether its parent is resolved — that is the thread's state alone. Leave it out of the total, unless it carries a severity line of its own, which makes it a finding.
 
 ### 2. Parse severity
 
@@ -154,6 +159,7 @@ It exists so a driving agent, PR template or hook can check the step ran and clo
 - **Number every finding sequentially across the whole report** — Applied, then Fixing, then Not fixing, then Skipped, never restarting per section. The last number equals the total in the heading, and "apply 3 and 7" means exactly two findings. Keep the same numbers when you report what changed after approval.
 - **Severity budgets attention, not belief.** A Minor is skipped because you
   read it and judged the change not worth making, never because of its label.
+- **A skip reason that cites a file, a convention or a decision quotes it from that file as read in this pass** — a reason recalled rather than read is no reason, and the finding is fixed or re-read instead.
 - **An empty inline list is not a clean review.** A whole review can be out-of-grid: zero inline comments, both findings parked in the review body's collapsed `Outside diff range comments` section. Read every review body before concluding the bot found nothing.
 - **Verify before believing.** A Major finding still gets read against current code; the bot reviews a snapshot, the branch has moved.
 - **The environment is not a finding.** A fact about where the diff lands — repo conventions, a missing CI job, how downstream consumes the change — is not a defect in the diff and never holds the gate `BLOCKED`. Close the gate on the findings and report the environment fact separately, below the gate line.
