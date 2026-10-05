@@ -56,7 +56,7 @@ gh pr view --json number,url,state,isDraft
   <body>
   PR_BODY_END
   ```
-  The quoted delimiter keeps the shell from expanding the backticks and `$` a markdown body carries; a body in double quotes runs them. The closing `PR_BODY_END` must start its line, without the indent this list gives it. If the brief isn't in context, stop and ask for it. Never invent a title and body here.
+  The quoted delimiter keeps the shell from expanding the backticks and `$` a markdown body carries; a body in double quotes runs them. The closing `PR_BODY_END` must start its line, without the indent this list gives it. Check the body first: a line of it that is exactly `PR_BODY_END` would end the heredoc there and run the rest as shell commands, so pick a delimiter no line of the body equals. If the brief isn't in context, stop and ask for it. Never invent a title and body here.
 - **PR exists** → the push in step 2 already updated it. Report the URL and move on.
 - **PR is closed or merged** (`state` other than `OPEN`) → stop with `SHIP gate: BLOCKED`. The push landed on a branch nothing will merge.
 - **PR is a draft** (`isDraft` true) → stop with `SHIP gate: BLOCKED`. CodeRabbit skips drafts, so step 4 would wait for a review that never comes; marking it ready is the user's call.
