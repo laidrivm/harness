@@ -28,7 +28,7 @@ It checks the CLI version, storage, auth state, git repository and backend/WebSo
 
 On failure, report which check failed and what fixes it — `coderabbit auth login` for auth, a network/VPN issue for connectivity, [the install docs](https://docs.coderabbit.ai/cli/overview) if `coderabbit` is missing. **Do not install it yourself**, and never pipe an install script into a shell.
 
-Then confirm there is something to review: `git diff --stat <base>...HEAD`. If the branch is empty relative to `<base>`, say so and stop.
+Then confirm there is something to review: `git diff --stat <base>...HEAD` for what is committed, and `git status --short` for what is staged, unstaged or untracked — the review reads the first two kinds always and untracked files with `--include-untracked`. Stop only when the first prints nothing and the second lists nothing but untracked (`??`) files you are not including, and say so.
 
 ### 2. Review
 
