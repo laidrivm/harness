@@ -30,7 +30,9 @@ export function read<K extends keyof Config>(root: string, key: K): Config[K] {
 		harness?: Partial<Config>;
 	};
 	const value = manifest.harness?.[key];
-	if (value === undefined)
+	// `null` too: JSON can only spell an absent value that way, and the gate
+	// would otherwise read a field of it and throw something nobody can act on.
+	if (value === undefined || value === null)
 		throw new Error(
 			`${file} has no "harness.${key}" — the gate reads it there`,
 		);

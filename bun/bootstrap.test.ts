@@ -29,17 +29,19 @@ function project(guard?: string): string {
 	return dir;
 }
 
-/** The hook's verdict on `command` in `dir`. */
-function hook(dir: string, command: string) {
+/** The hook's verdict in `dir` on `input`, exactly as given on stdin. */
+function raw(dir: string, input: string) {
 	const run = Bun.spawnSync(["sh", "-c", BOOTSTRAP], {
 		cwd: dir,
 		env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
-		stdin: new TextEncoder().encode(
-			JSON.stringify({ tool_name: "Bash", tool_input: { command } }),
-		),
+		stdin: new TextEncoder().encode(input),
 	});
 	return { code: run.exitCode, stderr: run.stderr.toString() };
 }
+
+/** The hook's verdict on `command` in `dir`. */
+const hook = (dir: string, command: string) =>
+	raw(dir, JSON.stringify({ tool_name: "Bash", tool_input: { command } }));
 
 describe("before the install", () => {
 	test.each(["bun install", "bun i", "bun install --frozen-lockfile"])(
@@ -60,6 +62,11 @@ describe("before the install", () => {
 		const { code, stderr } = hook(project(), command);
 		expect(code).toBe(2);
 		expect(stderr).toContain("bun install");
+	});
+
+	test("input that is not JSON blocks rather than letting through", () => {
+		// The parse throws, bun exits 1, and the hook turns that into 2.
+		expect(raw(project(), "bun install").code).toBe(2);
 	});
 });
 

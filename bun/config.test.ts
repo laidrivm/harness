@@ -38,6 +38,11 @@ describe("reading a value", () => {
 		expect(() => read(consumer(), "rootFiles")).toThrow("harness.rootFiles");
 	});
 
+	test("a key set to null names that key", () => {
+		const dir = consumer({ rootFiles: null });
+		expect(() => read(dir, "rootFiles")).toThrow("harness.rootFiles");
+	});
+
 	test("a harness object without the key names that key", () => {
 		const dir = consumer({ rootFiles: {} });
 		expect(() => read(dir, "suppressions")).toThrow("harness.suppressions");

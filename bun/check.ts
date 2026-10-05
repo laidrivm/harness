@@ -68,9 +68,17 @@ type Step = { uses?: string; with?: { repository?: string } };
 type Workflow = { jobs?: Record<string, { uses?: string; steps?: Step[] }> };
 
 /**
- * Every workflow that checks out the harness repository or calls a reusable
- * workflow from it. Either would run a second commit of it beside the one
- * `bun.lock` pins, so CI and a session could disagree about what a gate is.
+ * Whether a `uses:` reference reaches into the harness repository. Lower-cased
+ * first: GitHub reads an owner and a repository in any letter case.
+ */
+const intoHarness = (uses?: string) =>
+	/^laidrivm\/harness[/@]/.test(uses?.toLowerCase() ?? "");
+
+/**
+ * Every workflow that checks out the harness repository, calls a reusable
+ * workflow from it or runs an action from it. Each would run a second commit of
+ * it beside the one `bun.lock` pins, so CI and a session could disagree about
+ * what a gate is.
  */
 export function workflows(root: string): string[] {
 	const problems: string[] = [];
@@ -79,22 +87,47 @@ export function workflows(root: string): string[] {
 		const text = readFileSync(join(root, path), "utf8");
 		const jobs = (Bun.YAML.parse(text) as Workflow | null)?.jobs ?? {};
 		for (const [name, job] of Object.entries(jobs)) {
-			if (job?.uses?.startsWith(`${HARNESS_REPO}/`))
-				problems.push(`${path}: job ${name} calls ${job.uses}`);
-			for (const step of job?.steps ?? [])
+			if (intoHarness(job?.uses))
+				problems.push(`${path}: job ${name} calls ${job?.uses}`);
+			for (const step of job?.steps ?? []) {
+				if (intoHarness(step?.uses))
+					problems.push(`${path}: job ${name} runs ${step?.uses}`);
 				if (
 					step?.uses?.startsWith("actions/checkout") &&
-					step.with?.repository === HARNESS_REPO
+					step.with?.repository?.toLowerCase() === HARNESS_REPO
 				)
 					problems.push(`${path}: job ${name} checks out ${HARNESS_REPO}`);
+			}
 		}
 	}
 	return problems;
 }
 
-/** The manifest's own version rules, the harness pin among them. */
+/**
+ * The manifest's own version rules, the harness pin among them, and the pin
+ * named exactly once. Counted as every string under a key named `harness`
+ * below the top level, where the consumer's values sit as an object — so a
+ * dependency map nobody listed here is counted too.
+ */
 export function pin(root: string): string[] {
-	return ranges(readFileSync(join(root, "package.json"), "utf8"));
+	const text = readFileSync(join(root, "package.json"), "utf8");
+	let named = 0;
+	const walk = (value: unknown, key: string, depth: number) => {
+		if (typeof value === "string") {
+			if (key === "harness" && depth > 0) named++;
+			return;
+		}
+		if (value === null || typeof value !== "object") return;
+		for (const [inner, next] of Object.entries(value))
+			walk(next, inner, depth + 1);
+	};
+	walk(JSON.parse(text), "", -1);
+	return [
+		...ranges(text),
+		...(named === 1
+			? []
+			: [`package.json: names the harness ${named} times, not once`]),
+	];
 }
 
 /** The gates whose values the consumer's `harness` key holds. */

@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { links, workflows } from "./check.ts";
+import { links, pin, workflows } from "./check.ts";
 
 const made: string[] = [];
 
@@ -137,5 +137,70 @@ describe("a workflow", () => {
 			},
 		});
 		expect(workflows(dir)).toEqual([]);
+	});
+
+	test("a step running an action from the harness is named", () => {
+		const dir = consumer({
+			files: {
+				".github/workflows/lint.yml": workflow(
+					"      - uses: laidrivm/harness/actions/gates@main\n",
+				),
+			},
+		});
+		expect(workflows(dir)).toEqual([
+			".github/workflows/lint.yml: job check runs laidrivm/harness/actions/gates@main",
+		]);
+	});
+
+	test("the harness named in another letter case is named all the same", () => {
+		const dir = consumer({
+			files: {
+				".github/workflows/lint.yml": workflow(
+					"      - uses: actions/checkout@0000000000000000000000000000000000000000\n        with:\n          repository: LaidrivM/Harness\n",
+				),
+			},
+		});
+		expect(workflows(dir)).toEqual([
+			".github/workflows/lint.yml: job check checks out laidrivm/harness",
+		]);
+	});
+});
+
+describe("the pin", () => {
+	const commit = "0123456789abcdef0123456789abcdef01234567";
+	const manifest = (fields: Record<string, unknown>) => ({
+		files: { "package.json": JSON.stringify({ name: "consumer", ...fields }) },
+	});
+
+	test("one pinned entry passes", () => {
+		const dir = consumer(
+			manifest({
+				dependencies: { harness: `github:laidrivm/harness#${commit}` },
+			}),
+		);
+		expect(pin(dir)).toEqual([]);
+	});
+
+	test("the harness in two dependency maps is named", () => {
+		const spec = `github:laidrivm/harness#${commit}`;
+		const dir = consumer(
+			manifest({
+				dependencies: { harness: spec },
+				devDependencies: { harness: spec },
+			}),
+		);
+		expect(pin(dir)).toEqual([
+			"package.json: names the harness 2 times, not once",
+		]);
+	});
+
+	test("the consumer's values under harness are not a second entry", () => {
+		const dir = consumer(
+			manifest({
+				dependencies: { harness: `github:laidrivm/harness#${commit}` },
+				harness: { diffBudgetExclude: ["bun.lock"] },
+			}),
+		);
+		expect(pin(dir)).toEqual([]);
 	});
 });

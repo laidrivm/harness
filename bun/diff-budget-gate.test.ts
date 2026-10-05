@@ -161,3 +161,20 @@ test("an unrelated base exits non-zero — no merge base to measure from", () =>
 	expect(g.code).toBe(2);
 	expect(g.stderr).toContain("no merge base");
 });
+
+test("a consumer naming no exclusions exits non-zero, naming the key", () => {
+	const dir = repo({ "package.json": "{}\n" }, { "b.ts": lines(10) });
+	const g = gate(dir);
+	expect(g.code).toBe(2);
+	expect(g.stderr).toContain("harness.diffBudgetExclude");
+});
+
+test("an empty exclusion list counts every file, the lockfile included", () => {
+	// The bash macOS ships calls an empty array unbound under `set -u`, so this
+	// is the case that fails there if the expansion is written plainly.
+	const empty = JSON.stringify({ harness: { diffBudgetExclude: [] } });
+	const dir = repo({ "package.json": empty }, { "bun.lock": lines(10) });
+	const g = gate(dir);
+	expect(g.code).toBe(0);
+	expect(g.total).toBe(10);
+});
