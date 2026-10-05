@@ -4,7 +4,9 @@ The agent harness shared by several projects. It ships as a package (`package.js
 
 ## Layout
 
-`core/` holds what any project can use. `core/skills/` holds personal [Claude Code skills](https://code.claude.com/docs/en/skills), one per directory as `core/skills/<name>/SKILL.md`, symlinked into projects (or globally) with `link.sh`.
+`core/` holds what any project can use. `core/skills/` holds personal [Claude Code skills](https://code.claude.com/docs/en/skills), one per directory as `core/skills/<name>/SKILL.md`.
+
+`bun/` holds what assumes Bun and TypeScript: the command guard and the hook text that boots it, the gates, and `check.ts`, which runs every check over a consumer's tree.
 
 ## Skills
 
@@ -43,22 +45,18 @@ One vocabulary everywhere: `🔴 Critical` > `🟠 Major` > `🟡 Minor` > `🔵
 
 Whoever acts on a report re-emits its gate line after acting. **The last gate line of the turn is the one that counts** — that's what makes "the report alone is never the deliverable" mechanically checkable instead of a rule in prose.
 
-## Linking
+## Consuming
 
-`link.sh` symlinks a skill from `core/skills/` into a project's `.claude/skills/` (relative links, so they survive in git) or into `~/.claude/skills` for global use.
+A project takes the harness as one dependency pinned to a full commit, `"harness": "github:laidrivm/harness#<40-hex commit>"`, so `bun.lock` records exactly what a session, a hook and CI run. Then:
 
-```bash
-./link.sh triage /Project/d2ass          # link one skill into a project
-./link.sh all /Project/d2ass             # link every skill
-./link.sh triage global                  # link into ~/.claude/skills
-./link.sh triage /Project/d2ass --unlink # remove the link (also works with `all`)
-```
-
-It refuses to overwrite existing files or links pointing elsewhere — use `--unlink` first.
+- Each skill the project uses is a tracked relative link, `.claude/skills/<name>` → `../../node_modules/harness/core/skills/<name>`. It resolves once `bun install` has run.
+- The Bash `PreToolUse` hook in `.claude/settings.json` is the text `bun/bootstrap.ts` exports, character for character. Before the install it lets only the install through; after it, it hands every command to the guard.
+- The values the gates run with live under a `"harness"` key in the project's `package.json`, typed in `bun/config.ts`. A gate whose key is absent fails, naming it.
+- `bun node_modules/harness/bun/check.ts`, from the project's root, runs every check over its tree.
 
 ## Adding a skill
 
-Create `core/skills/<name>/SKILL.md` with `name` and `description` frontmatter; `link.sh all` picks it up automatically. Add a row to the table above — name and one line, nothing the frontmatter already says.
+Create `core/skills/<name>/SKILL.md` with `name` and `description` frontmatter; a consumer links it by name. Add a row to the table above — name and one line, nothing the frontmatter already says.
 
 ## Skill provenance
 
