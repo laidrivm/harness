@@ -3,14 +3,16 @@
  * Fails when a tracked source file carries a linter or type-checker
  * suppression. The rule it replaces has an escape hatch — a suppression is
  * allowed once the user approves it — and a grep cannot see approval, so the
- * approval is a line of this file's allowlist and therefore a line of the diff.
+ * approval is an entry of the consumer's `harness.suppressions` and therefore a
+ * line of the diff.
  *
  * Every tracked file is read but prose. Prose names these markers while
  * explaining the rule — all four artefacts of the change introducing this check
  * do — and a check that fails on its own proposal is a check nobody keeps.
  */
 import { lstatSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
+import { read } from "./config.ts";
 
 const MARKERS = ["biome-ignore", "@ts-expect-error", "@ts-ignore"];
 
@@ -26,22 +28,33 @@ const PROSE = [".md"];
 /**
  * This script and its test, excluded by path rather than by allowlist entry:
  * both must spell the three markers out to do their job, and an entry would
- * pin a count that every added test case then has to re-approve.
+ * pin a count that every added test case then has to re-approve. Named from
+ * where they sit relative to `root`, which in a consumer is a path git does not
+ * track and so never matches.
  */
-const SELF = ["scripts/no-suppressions.ts", "scripts/no-suppressions.test.ts"];
+const self = (root: string) =>
+	["no-suppressions.ts", "no-suppressions.test.ts"].map((name) =>
+		relative(root, join(import.meta.dir, name)),
+	);
 
 /**
- * Approved suppressions, keyed by `<path> <marker>` and valued by how many
- * occurrences of that marker are approved there, with the reason as a comment
- * beside the entry. The count is what stops a second suppression riding in on
- * the first one's approval; the marker in the key is what stops a suppression
- * of one kind being swapped for another on the first one's approval.
+ * Approved suppressions, from the consumer's `harness.suppressions`: keyed by
+ * `<path> <marker>`, valued by how many occurrences of that marker are approved
+ * there and why. The count is what stops a second suppression riding in on the
+ * first one's approval; the marker in the key is what stops a suppression of
+ * one kind being swapped for another on the first one's approval.
  *
  * The markers are named here only as string literals, never in prose: Biome's
  * `suspicious/noTsIgnore` reads a comment as a directive wherever it sits, and
  * `biome check --write` rewrote this very sentence when it spelled one out.
  */
-const APPROVED: Record<string, number> = {};
+const approvedIn = (root: string): Record<string, number> =>
+	Object.fromEntries(
+		Object.entries(read(root, "suppressions")).map(([key, { count }]) => [
+			key,
+			count,
+		]),
+	);
 
 export type Finding = { path: string; line: number; marker: string };
 
@@ -52,15 +65,20 @@ export type Finding = { path: string; line: number; marker: string };
  *
  * The listing is taken at the repository root, never at `cwd`: `git ls-files`
  * run in a subdirectory reports only what is under it and names it relative to
- * it, so from `scripts/` the check's own two paths stop matching `SELF` and it
+ * it, so from a subdirectory the check's own two paths stop matching and it
  * fails on itself.
  */
-export function scan(cwd?: string, approved = APPROVED): Finding[] {
+export function scan(
+	cwd?: string,
+	approved?: Record<string, number>,
+): Finding[] {
 	const top = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], { cwd });
 	if (top.exitCode !== 0) throw new Error(top.stderr.toString());
 	// Only the terminator git adds, not `trim()`: a repository whose path ends
 	// in a space is unusual and not this check's to corrupt.
 	const root = top.stdout.toString().replace(/\n$/, "");
+	const allowed = approved ?? approvedIn(root);
+	const own = self(root);
 
 	const ls = Bun.spawnSync(["git", "ls-files", "-z"], { cwd: root });
 	if (ls.exitCode !== 0) throw new Error(ls.stderr.toString());
@@ -70,7 +88,7 @@ export function scan(cwd?: string, approved = APPROVED): Finding[] {
 	// would otherwise resolve to the root itself and be read as a directory.
 	for (const path of ls.stdout.toString().split("\0").filter(Boolean)) {
 		if (PROSE.some((ext) => path.endsWith(ext))) continue;
-		if (SELF.includes(path)) continue;
+		if (own.includes(path)) continue;
 		const full = join(root, path);
 		// Regular files only: the entry may be tracked but deleted from the work
 		// tree, a symlink whose target is nobody's business here, or a
@@ -92,7 +110,7 @@ export function scan(cwd?: string, approved = APPROVED): Finding[] {
 	}
 
 	return [...Map.groupBy(found, ({ path, marker }) => `${path} ${marker}`)]
-		.filter(([key, list]) => list.length > (approved[key] ?? 0))
+		.filter(([key, list]) => list.length > (allowed[key] ?? 0))
 		.flatMap(([, list]) => list);
 }
 

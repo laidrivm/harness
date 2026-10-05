@@ -1,14 +1,17 @@
 /**
  * Which disable comments Stryker honours, and therefore which lines the check
  * must see as exempted. This file leaves with the scanner it exercises when
- * `mutation-floor.ts` switches to `scripts/scan.ts` — `scan-lift` owns that
+ * `mutation-floor.ts` switches to `scan.ts` — `scan-lift` owns that
  * lift, and is a card on `Harness`.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup } from "./mutation-floor.fixture.ts";
-import { exemptions } from "./mutation-floor.ts";
+import { exemptions as scanned } from "./mutation-floor.ts";
 
 afterAll(cleanup);
+
+/** The scan over `source` as the module a consumer names `src/model.ts`. */
+const exemptions = (source: string) => scanned(source, "src/model.ts");
 
 /** `src/model.ts` as the scan sees it: `lines` with the code they annotate. */
 const marked = (...lines: string[]) =>

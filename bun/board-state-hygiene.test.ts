@@ -61,7 +61,8 @@ describe("the derivation reaches no network", () => {
 		// Allowing `./root.ts` above allows whatever `./root.ts` allows, and the
 		// case above would pass a version of it that had grown a fetch.
 		const from = readFileSync(join(import.meta.dir, "root.ts"), "utf8");
-		expect(imports(from)).toEqual(["node:path"]);
+		// Nothing at all: it asks git for the root, a local process.
+		expect(imports(from)).toEqual([]);
 	});
 
 	test("it calls nothing that opens a socket", () => {

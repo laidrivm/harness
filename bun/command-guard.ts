@@ -16,7 +16,7 @@
  * non-blocking, so an event this script cannot decide takes the blocking one
  * as well.
  *
- * Reading the command line is `scripts/command-parse.ts`'s; what this file
+ * Reading the command line is `command-parse.ts`'s; what this file
  * holds is what the prohibitions themselves are.
  */
 

@@ -1,5 +1,5 @@
 /**
- * The shell-line reader `scripts/command-guard.ts` decides on: it turns one
+ * The shell-line reader `command-guard.ts` decides on: it turns one
  * `tool_input.command` into the invocations a shell would actually run, so the
  * guard's prohibitions read command names rather than spellings.
  *

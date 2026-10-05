@@ -64,12 +64,23 @@ const put = (dir: string, tree: Tree) => {
 	}
 };
 
+/**
+ * The consumer manifest every fabricated repository starts from, committed in
+ * the base so it is no part of the diff. A case passing its own `package.json`
+ * in `base` replaces it.
+ */
+export const MANIFEST = JSON.stringify({
+	harness: {
+		diffBudgetExclude: ["bun.lock", "*.woff2", "src/fixtures/snapshot.json"],
+	},
+});
+
 export const repo = (base: Tree, head: Tree) => {
 	const dir = emptyDir();
 	git(dir, "init", "-q", "-b", "main");
 	git(dir, "config", "user.email", "test@example.com");
 	git(dir, "config", "user.name", "Test");
-	put(dir, base);
+	put(dir, { "package.json": MANIFEST, ...base });
 	git(dir, "add", "-A");
 	git(dir, "commit", "-qm", "base");
 	git(dir, "checkout", "-qb", "feature");

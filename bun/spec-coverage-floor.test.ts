@@ -13,7 +13,7 @@ afterAll(cleanup);
 // spec: spec-test-traceability/a-criterion-added-without-a-test
 // spec: spec-test-traceability/a-criterion-newly-covered
 describe("the count of uncited criteria against its floor", () => {
-	const reasoned = "const FLOOR = 380; // first measurement";
+	const reasoned = "first measurement";
 
 	test("a count equal to the floor passes", () => {
 		expect(gauge(380, 380, reasoned)).toEqual([]);
@@ -37,39 +37,18 @@ describe("the count of uncited criteria against its floor", () => {
 });
 
 // spec: spec-test-traceability/the-floor-changed-with-no-reason-given
-describe("the floor's line carries a reason", () => {
-	test("a line with no trailing comment fails", () => {
-		expect(gauge(380, 380, "const FLOOR = 380;").length).toBe(1);
+describe("the floor carries a reason", () => {
+	test("an empty reason fails", () => {
+		expect(gauge(380, 380, "").length).toBe(1);
 	});
 
-	test("a trailing marker with no text after it is not a reason", () => {
-		expect(gauge(380, 380, "const FLOOR = 380; //").length).toBe(1);
-	});
-
-	test("more markers are not a reason either", () => {
-		// `\S` alone accepted `///`: the third slash is not whitespace. A
-		// reason needs a character that is neither.
-		expect(gauge(380, 380, "const FLOOR = 380; ///").length).toBe(1);
-	});
-
-	test("a reason that begins with a slash is still a reason", () => {
-		expect(gauge(380, 380, "const FLOOR = 380; // /docs says why")).toEqual([]);
-	});
-
-	test("a trailing comment of whitespace alone is not a reason", () => {
-		expect(gauge(380, 380, "const FLOOR = 380; //   ").length).toBe(1);
-	});
-
-	test("a quoted marker on the line is not a reason", () => {
-		const quoted = 'const FLOOR = 380; const note = "// not a reason";';
-		expect(gauge(380, 380, quoted).length).toBe(1);
+	test("a reason of whitespace alone is not a reason", () => {
+		expect(gauge(380, 380, "   ").length).toBe(1);
 	});
 
 	test("the reason is demanded whichever direction the number moved", () => {
 		for (const count of [379, 380, 381]) {
-			expect(gauge(count, 380, "const FLOOR = 380;").join("\n")).toContain(
-				"reason",
-			);
+			expect(gauge(count, 380, "").join("\n")).toContain("reason");
 		}
 	});
 });
@@ -119,15 +98,14 @@ describe("a change archived without its tests", () => {
 		);
 
 		expect(uncited(dir)).toBe(before + 1);
-		expect(gauge(uncited(dir), before, "const FLOOR = 1; // x").length).toBe(1);
+		expect(gauge(uncited(dir), before, "measured").length).toBe(1);
 	});
 });
 
 // spec: spec-test-traceability/a-criterion-admitted-as-untestable
 describe("a criterion admitted as untestable", () => {
-	test("the raised floor passes once its line carries the reason", () => {
-		const raised =
-			"const FLOOR = 381; // one criterion is discharged at review";
+	test("the raised floor passes once it carries the reason", () => {
+		const raised = "one criterion is discharged at review";
 		expect(gauge(381, 381, raised)).toEqual([]);
 	});
 });

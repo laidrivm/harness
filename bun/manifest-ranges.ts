@@ -45,9 +45,9 @@ const RANGE =
  *
  * ponytail: two forms pass. The bare `owner/repo` shorthand, which bun and npm
  * both read as GitHub, has the shape of a path without a `#`, and this scan
- * reads every field — `src/model.ts` must pass. An HTTPS tarball URL has the
- * shape of `homepage` or `repository.url`. A complete check would read
- * `bun.lock`, where every dependency's source is written out whole.
+ * reads every field — a module path under `harness` must pass. An HTTPS
+ * tarball URL has the shape of `homepage` or `repository.url`. A complete check
+ * would read `bun.lock`, where every dependency's source is written out whole.
  */
 const GIT =
 	/^(github|gitlab|bitbucket|gist|git(\+[a-z]+)?):|^git@|\.git(#.*)?$|^[a-z0-9][\w.-]*\/[\w.-]+#/i;

@@ -58,7 +58,7 @@ function cite(path: string, text: string) {
 	// ponytail: superseded, and knowingly left. `CLAUDE.md` replaced the rule
 	// this implements — strip literals, then read delimiters per line — with a
 	// left-to-right scan carrying string and comment state, after the per-line
-	// form produced five holes in `scripts/mutation-floor.ts`. One is live here:
+	// form produced five holes in `mutation-floor.ts`. One is live here:
 	// an escaped quote ends the literal early, so `"he said \"/*\""` leaves a
 	// stray `/*`, `open` sticks true, and every citation below is dropped. The
 	// count then rises and the floor fails, naming a breach rather than this.
@@ -198,19 +198,6 @@ export function check(cwd?: string) {
 	};
 }
 
-export const FLOOR = 395; // +2 stryker.config.json criteria whose tests a ponytail-review pass cut, +1 commit-gates/the-list-has-one-home whose THEN is a review verdict, +1 mutation-floor/the-gate-is-not-picked-up-by-the-suite, confirmed by probe because a test would restate which file the gate lives in, +2 agent-rulebook scenarios on where a prohibition's prose may stand, which nothing in the suite can cite because nothing parses prose, +1 change-slicing/the-second-pull-request-s-base, which no test can close: the second pull request carries the same diff whichever branch it opened from, so nothing distinguishes the criterion met from the criterion broken; 386 since proposal-slicing synced, and 385 since e2e/static-build.spec.ts closed app-shell/build-output-is-self-contained, which had waited for a deployment to serve dist from; 386 while draft-board/hero-missing-from-the-snapshot stood uncited, and 385 again once e2e/board.spec.ts closed it — the requirement had let such a tile be neither named nor hidden, so there was no one state to assert until that was corrected; 402 since notion-task-board synced: the two capabilities bring 33 counted criteria and 16 are cited, the other 17 being about a board this repository cannot read — a card's status and pointer, which board a card sits on, what a saved view shows, whether a stage moved its card — and the derivation those tests do cover reports nothing for any of them by design, so nothing in the tree can assert them without the connector the change's non-goals refuse to put in the suite; two that the tree can see were cited into tests that already closed them, task-board/the-directory-s-row-in-the-ownership-map onto repo-layout's documented-directory block and task-board/the-brief-still-open onto checks/workflow-boards.test.ts; 406 since board-lifecycle synced, which brings four more of that same kind — what a card reads after the option list is replaced, what a card short of done carries in its title, summary and links, the order a drag sets in a column, and what reaching done moves between the two saved views — each verified by a view read in the step that closed it, the drag by the user performing it, because the connector stays out of the suite for the reason above; 407 since retire-plan-md step 2 deleted PLAN.md and with it the one case citing context-budget/a-source-that-is-itself-a-task, a requirement that change removes — and 397 once its archive synced: context-budget went from 16 criteria, none cited, to 8 with two cited, the removed requirements taking ten uncited with them; of the six left, three are fence scenarios that were uncited before and three are verdicts on where a fact is written, which nothing in the suite parses; 395 once extract-harness step 3 cited repo-onboarding/a-fresh-clone and repo-onboarding/the-skills-repository-is-referenced from checks/readme-map.test.ts
-
-/**
- * This file's own `FLOOR` line — the reason lives on it, so the check reads it
- * back. Anchored to the start of a line, `export` included, which is why the
- * malformed declarations the tests pass in, all of them indented arguments, are
- * not mistaken for it.
- */
-export const DECLARATION =
-	/^export const FLOOR = \d+;.*$/m.exec(
-		readFileSync(import.meta.path, "utf8"),
-	)?.[0] ?? "";
-
 /**
  * How many criteria in `openspec/specs/` no test cites. Counted per criterion
  * rather than per identifier: two criteria sharing a slug are two uncited
@@ -227,30 +214,19 @@ export function uncited(cwd?: string): number {
  *
  * The reason is demanded on every run rather than only on a rise, because
  * telling a rise from a drop needs the previously committed value, and reading
- * git history to decide whether to ask is more machinery than one comment.
+ * git history to decide whether to ask is more machinery than one field.
  */
-export function gauge(
-	count: number,
-	floor: number,
-	declaration: string,
-): string[] {
+export function gauge(count: number, floor: number, why: string): string[] {
 	const problems: string[] = [];
-	// Anchored to the semicolon: a reason is the comment trailing the
-	// declaration, never a `//` quoted elsewhere on the line. Position is what
-	// pins it — stripping string literals as well was measurably a no-op here,
-	// because nothing may sit between the semicolon and the marker.
-	//
-	// The reason must carry a character that is neither a slash nor whitespace,
-	// so `///` does not read as one; a reason may still begin with a slash.
-	if (!/;\s*\/\/.*[^/\s]/.test(declaration))
+	if (!why.trim())
 		problems.push(
-			`the floor states no reason: ${declaration.trim()} — write why on that line`,
+			"the floor states no reason — write why in harness.uncitedFloor.why",
 		);
 	if (count !== floor) {
 		const gap = `${count} uncited criteria against a floor of ${floor}`;
 		problems.push(
 			count > floor
-				? `${gap} — cite one, or raise the floor with the reason on its line`
+				? `${gap} — cite one, or raise the floor and say why`
 				: `${gap} — write ${count} as the floor, so the gain is recorded`,
 		);
 	}

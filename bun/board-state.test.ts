@@ -1,5 +1,5 @@
 /**
- * The three statuses `scripts/board-state.ts` derives, and the five it never
+ * The three statuses `board-state.ts` derives, and the five it never
  * reports. Every case but the last builds its own tree: this repository's
  * changes directory is the subject of one case and the fixture of none.
  */

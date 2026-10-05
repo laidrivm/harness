@@ -5,15 +5,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import {
-	cleanup,
-	emptyDir,
-	modules,
-	report,
-} from "./mutation-floor.fixture.ts";
-import { FLOOR } from "./mutation-floor.ts";
+import { cleanup, emptyDir, report } from "./mutation-floor.fixture.ts";
 
 afterAll(cleanup);
+
+/** The floor the fabricated consumer declares. */
+const FLOOR = 3;
 
 describe("the command line entry point", () => {
 	const cli = (
@@ -21,11 +18,21 @@ describe("the command line entry point", () => {
 		files: Record<string, string> = { "src/model.ts": "const x = 1;\n" },
 	) => {
 		const dir = emptyDir("mutation-floor-cli-");
-		// A copy of the check beside a tree of our own, so it resolves this
-		// report and this model rather than the repository's real ones.
-		mkdirSync(join(dir, "scripts"), { recursive: true });
-		for (const [name, text] of Object.entries(modules))
-			writeFileSync(join(dir, "scripts", name), text);
+		// A consumer of our own, run from inside, so the check resolves this
+		// report, this model and this floor rather than any real repository's.
+		Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
+		writeFileSync(
+			join(dir, "package.json"),
+			JSON.stringify({
+				harness: {
+					mutationFloor: {
+						module: "src/model.ts",
+						surviving: FLOOR,
+						why: "measured",
+					},
+				},
+			}),
+		);
 		for (const [path, text] of Object.entries(files)) {
 			mkdirSync(join(dir, dirname(path)), { recursive: true });
 			writeFileSync(join(dir, path), text);
@@ -34,7 +41,9 @@ describe("the command line entry point", () => {
 			mkdirSync(join(dir, "reports", "mutation"), { recursive: true });
 			writeFileSync(join(dir, "reports", "mutation", "mutation.json"), report);
 		}
-		return Bun.spawnSync(["bun", join(dir, "scripts", "mutation-floor.ts")]);
+		return Bun.spawnSync(["bun", join(import.meta.dir, "mutation-floor.ts")], {
+			cwd: dir,
+		});
 	};
 
 	const holding = () =>

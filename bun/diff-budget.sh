@@ -38,9 +38,22 @@ git rev-parse --verify --quiet "${base}^{commit}" >/dev/null ||
 git merge-base "$base" HEAD >/dev/null 2>&1 ||
 	die "no merge base between '${base}' and HEAD"
 
-# Artefacts nobody reads line by line. Everything else counts, `openspec/**`
-# included — a proposal too large to read is the case this gate exists for.
-EXCLUDE=(':(exclude)bun.lock' ':(exclude)*.woff2' ':(exclude)src/fixtures/snapshot.json')
+# Artefacts nobody reads line by line, from the consumer's
+# `harness.diffBudgetExclude`. Everything else counts, `openspec/**` included —
+# a proposal too large to read is the case this gate exists for. An absent key
+# is unmeasurable rather than empty: a default would make a forgotten list read
+# as a decision to exclude nothing.
+manifest="$(git rev-parse --show-toplevel)/package.json"
+patterns=$(bun -e '
+	const list = (await Bun.file(process.argv[1]).json()).harness?.diffBudgetExclude;
+	if (!Array.isArray(list)) process.exit(1);
+	for (const pattern of list) console.log(pattern);
+' "$manifest" 2>/dev/null) ||
+	die "${manifest} has no \"harness.diffBudgetExclude\""
+EXCLUDE=()
+while IFS= read -r pattern; do
+	[ -n "$pattern" ] && EXCLUDE+=(":(exclude)${pattern}")
+done <<<"$patterns"
 # Classification is by pathspec, so `src/app/latest.ts` stays source.
 TESTS=('*.test.ts' '*.test.tsx' 'e2e/**')
 
@@ -51,7 +64,9 @@ TESTS=('*.test.ts' '*.test.tsx' 'e2e/**')
 # gate exists to give one answer, so it asks rather than inheriting a
 # preference.
 count() {
-	git diff -M -l0 "${base}...HEAD" -- "$@" "${EXCLUDE[@]}" | awk '
+	# The `+` form because bash 3.2, which macOS ships, calls an empty array
+	# unbound under `set -u`.
+	git diff -M -l0 "${base}...HEAD" -- "$@" ${EXCLUDE[@]+"${EXCLUDE[@]}"} | awk '
 		/^diff --git / { inhunk = 0; next }
 		/^@@/          { inhunk = 1; next }
 		!inhunk && /^\+\+\+ / {

@@ -60,9 +60,9 @@ export type Oversize = { path: string; count: number; cap: number };
  * Every tracked file over its cap in the repository containing `cwd`.
  *
  * The listing is taken at the repository root, never at `cwd`, the shape
- * `scripts/no-suppressions.ts` uses: `git ls-files` run in a subdirectory
+ * `no-suppressions.ts` uses: `git ls-files` run in a subdirectory
  * reports only what is under it and names it relative to it, so a check run
- * from `scripts/` would miss the tree above and resolve the rest to nothing.
+ * from a subdirectory would miss the tree above and resolve the rest to nothing.
  *
  * Tracked only, so a file present for its author and absent from a clone
  * cannot fail one machine and no other.

@@ -3,8 +3,8 @@
  *
  * The manifests below are fabricated because the rule is: it answers for a
  * field this repository does not carry yet, and a case that could not have
- * come out the other way proves nothing about it. What the repository's own
- * manifest says is `checks/manifest-version-ranges.test.ts`'s.
+ * come out the other way proves nothing about it. What a consumer's own
+ * manifest says is a question for the consumer's check.
  */
 import { describe, expect, test } from "bun:test";
 import { ranges } from "./manifest-ranges.ts";

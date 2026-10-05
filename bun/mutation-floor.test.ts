@@ -7,19 +7,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	cleanup,
-	fabricate,
-	modules,
-	report,
-} from "./mutation-floor.fixture.ts";
-import {
-	FLOOR,
-	floorLine,
-	gauge,
-	loadReport,
-	survivors,
-} from "./mutation-floor.ts";
+import { cleanup, fabricate, report } from "./mutation-floor.fixture.ts";
+import { gauge, loadReport, survivors } from "./mutation-floor.ts";
 
 afterAll(cleanup);
 
@@ -125,36 +114,35 @@ describe("loading the report", () => {
 	});
 });
 
-/** A floor declaration carrying `reason` after the semicolon. */
-const declared = (n: number, reason = " // measured") =>
-	`export const FLOOR = ${n};${reason}`;
+/** A reason the floor carries, which every case not about reasons gives. */
+const why = "measured";
 
 describe("the count against the floor", () => {
 	test("a count equal to the floor passes", () => {
-		expect(gauge(12, 12, declared(12))).toEqual([]);
+		expect(gauge(12, 12, why)).toEqual([]);
 	});
 
 	// spec: mutation-floor/a-branch-added-without-a-test
 	test("a count above the floor fails", () => {
-		expect(gauge(13, 12, declared(12))).not.toEqual([]);
+		expect(gauge(13, 12, why)).not.toEqual([]);
 	});
 
 	test("a count below the floor fails", () => {
-		expect(gauge(11, 12, declared(12))).not.toEqual([]);
+		expect(gauge(11, 12, why)).not.toEqual([]);
 	});
 
 	test("a floor of zero with no survivors passes", () => {
-		expect(gauge(0, 0, declared(0))).toEqual([]);
+		expect(gauge(0, 0, why)).toEqual([]);
 	});
 
 	test("the failure above the floor names both numbers", () => {
-		const [problem] = gauge(13, 12, declared(12));
+		const [problem] = gauge(13, 12, why);
 		expect(problem).toContain("13");
 		expect(problem).toContain("12");
 	});
 
 	test("the failure below the floor names the value to write", () => {
-		const [problem] = gauge(11, 12, declared(12));
+		const [problem] = gauge(11, 12, why);
 		expect(problem).toContain("write 11");
 	});
 
@@ -165,57 +153,18 @@ describe("the count against the floor", () => {
 		// The new test kills one: the same report with one status flipped.
 		const after = report(...Array(4).fill("Survived"), "Killed", "Killed");
 		expect(survivors(after)).toBe(4);
-		expect(gauge(4, 5, declared(5))).not.toEqual([]);
-		expect(gauge(4, 4, declared(4))).toEqual([]);
+		expect(gauge(4, 5, why)).not.toEqual([]);
+		expect(gauge(4, 4, why)).toEqual([]);
 	});
 });
 
 // spec: mutation-floor/the-floor-changed-with-no-reason-given
 describe("the floor changed with no reason given", () => {
-	test("a declaration with no trailing comment fails", () => {
-		expect(gauge(12, 12, declared(12, ""))).not.toEqual([]);
+	test("an empty reason fails", () => {
+		expect(gauge(12, 12, "")).not.toEqual([]);
 	});
 
-	test("a comment marker with nothing after it fails", () => {
-		expect(gauge(12, 12, declared(12, " //"))).not.toEqual([]);
-	});
-
-	test("a comment of whitespace alone fails", () => {
-		expect(gauge(12, 12, declared(12, " //   "))).not.toEqual([]);
-	});
-
-	test("a floor absent from the source altogether fails", () => {
-		expect(floorLine("const OTHER = 1; // not the floor\n")).toBe("");
-		expect(gauge(12, 12, floorLine("const OTHER = 1;\n"))).not.toEqual([]);
-	});
-
-	test("the declaration is read from the start of a line", () => {
-		// The malformed declarations above are indented arguments, never the
-		// real line — an unanchored match would pick one of them up.
-		expect(floorLine(`\texport const FLOOR = 9; // indented\n`)).toBe("");
-		expect(floorLine(`export const FLOOR = 9; // real\n`)).toBe(
-			"export const FLOOR = 9; // real",
-		);
-	});
-
-	test("a reason on the next line is not a reason", () => {
-		expect(gauge(12, 12, "export const FLOOR = 12;\n// measured")).not.toEqual(
-			[],
-		);
-	});
-
-	test("a comment before the semicolon is not a reason", () => {
-		// Position is what pins a reason to the declaration, so a marker
-		// anywhere but after the semicolon leaves the floor unexplained.
-		expect(gauge(12, 12, "export const FLOOR = 12 // measured")).not.toEqual(
-			[],
-		);
-	});
-
-	// spec: mutation-floor/the-repository-as-it-stands
-	test("this script's own floor line states a reason", () => {
-		expect(
-			gauge(FLOOR, FLOOR, floorLine(modules["mutation-floor.ts"] as string)),
-		).toEqual([]);
+	test("a reason of whitespace alone fails", () => {
+		expect(gauge(12, 12, "   ")).not.toEqual([]);
 	});
 });

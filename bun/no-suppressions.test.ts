@@ -39,7 +39,11 @@ function fabricate(
 	git("init", "-b", "main");
 	write(dir, tracked);
 	git("add", "-A");
-	write(dir, untracked);
+	// Untracked, so the scan never reads it: the consumer's empty allowlist.
+	write(dir, {
+		"package.json": JSON.stringify({ harness: { suppressions: {} } }),
+		...untracked,
+	});
 	return dir;
 }
 
@@ -110,11 +114,11 @@ describe("what the check does not read", () => {
 	});
 
 	test("the check's own script and test pass", () => {
-		const dir = fabricate({
-			"scripts/no-suppressions.ts": `// @ts-ignore biome-ignore\n`,
-			"scripts/no-suppressions.test.ts": `// @ts-expect-error\n`,
-		});
-		expect(scan(dir)).toEqual([]);
+		// Read where they actually sit, which is the only place the exemption
+		// names: both spell every marker out, so a miss here reports both.
+		const paths = scan(import.meta.dir, {}).map(({ path }) => path);
+		expect(paths).not.toContain("bun/no-suppressions.ts");
+		expect(paths).not.toContain("bun/no-suppressions.test.ts");
 	});
 });
 
@@ -159,7 +163,7 @@ describe("a tree the check cannot read straight through", () => {
 	test("run from a subdirectory it still reads the whole repository", () => {
 		const dir = fabricate({
 			"src/model.ts": "// @ts-ignore\n",
-			"scripts/no-suppressions.ts": "// biome-ignore x\n",
+			"scripts/tool.ts": "const a = 1;\n",
 		});
 		expect(at(scan(join(dir, "scripts")))).toEqual([
 			"src/model.ts:1: @ts-ignore",
