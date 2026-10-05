@@ -21,8 +21,8 @@ SKILL="$1"
 DEST="$2"
 ACTION="${3:-link}"
 
-# Directory containing this script = the skills repo root
-SKILLS_REPO="$(cd "$(dirname "$0")" && pwd)"
+# Skills live under core/skills/ of the repo containing this script
+SKILLS_DIR="$(cd "$(dirname "$0")" && pwd)/core/skills"
 
 # Resolve the target skills directory
 if [ "$DEST" = "global" ]; then
@@ -45,10 +45,10 @@ relpath() {
 # link_one <skill-name> — create the symlink for a single skill
 link_one() {
   local name="$1"
-  local src="$SKILLS_REPO/$name"
+  local src="$SKILLS_DIR/$name"
   local link="$TARGET_DIR/$name"
 
-  [ -d "$src" ] || { echo "Error: skill '$name' not found in $SKILLS_REPO" >&2; return 1; }
+  [ -d "$src" ] || { echo "Error: skill '$name' not found in $SKILLS_DIR" >&2; return 1; }
   [ -f "$src/SKILL.md" ] || echo "Warning: $src has no SKILL.md — Claude Code won't pick it up." >&2
 
   local rel
@@ -88,13 +88,13 @@ unlink_one() {
   fi
 }
 
-# Build the list of skills to process: every top-level dir with a SKILL.md, or the named one
+# Build the list of skills to process: every core/skills/ dir with a SKILL.md, or the named one
 if [ "$SKILL" = "all" ]; then
   SKILLS=()
-  for dir in "$SKILLS_REPO"/*/; do
+  for dir in "$SKILLS_DIR"/*/; do
     [ -f "$dir/SKILL.md" ] && SKILLS+=("$(basename "$dir")")
   done
-  [ ${#SKILLS[@]} -gt 0 ] || { echo "Error: no skills (dirs with SKILL.md) found in $SKILLS_REPO" >&2; exit 1; }
+  [ ${#SKILLS[@]} -gt 0 ] || { echo "Error: no skills (dirs with SKILL.md) found in $SKILLS_DIR" >&2; exit 1; }
 else
   SKILLS=("$SKILL")
 fi
