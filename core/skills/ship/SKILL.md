@@ -58,6 +58,8 @@ gh pr view --json number,url,state,isDraft
   ```
   The quoted delimiter keeps the shell from expanding the backticks and `$` a markdown body carries; a body in double quotes runs them. The closing `PR_BODY_END` must start its line, without the indent this list gives it. If the brief isn't in context, stop and ask for it. Never invent a title and body here.
 - **PR exists** → the push in step 2 already updated it. Report the URL and move on.
+- **PR is closed or merged** (`state` other than `OPEN`) → stop with `SHIP gate: BLOCKED`. The push landed on a branch nothing will merge.
+- **PR is a draft** (`isDraft` true) → stop with `SHIP gate: BLOCKED`. CodeRabbit skips drafts, so step 4 would wait for a review that never comes; marking it ready is the user's call.
 
 ### 4. Wait for CodeRabbit on `<sha>`
 
@@ -116,7 +118,7 @@ Every output ends with a machine-readable last line, exactly one of:
 
 - `SHIP gate: PASS — PR #N merged in M round trips, on <base> at <sha>.`
 - `SHIP gate: OPEN — <what it is waiting on>.` (review hasn't landed, checks still running, a CodeRabbit finding awaiting the user, merge awaiting approval)
-- `SHIP gate: BLOCKED — <what needs the user>.` (dirty tree, detached HEAD, blocked upstream gate, failing check that isn't ours, round-trip cap hit)
+- `SHIP gate: BLOCKED — <what needs the user>.` (dirty tree, detached HEAD, closed or draft PR, blocked upstream gate, failing check that isn't ours, round-trip cap hit)
 
 ## Rules
 
