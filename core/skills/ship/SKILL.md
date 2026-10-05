@@ -30,6 +30,7 @@ git rev-parse --abbrev-ref HEAD
 Stop, with the reason, if:
 
 - **HEAD is `<base>`** — there is nothing to ship. Never push or merge from the base branch.
+- **HEAD is detached** — `rev-parse` prints `HEAD`, and there is no branch to push or open a PR from.
 - **The tree is dirty** — say which files. Ask whether to commit them or stash; don't decide.
 - **A gate is `BLOCKED` or `OPEN`** this session — same rule as `pr-brief` step 1. The last gate line per skill counts.
 
@@ -115,7 +116,7 @@ Every output ends with a machine-readable last line, exactly one of:
 
 - `SHIP gate: PASS — PR #N merged in M round trips, on <base> at <sha>.`
 - `SHIP gate: OPEN — <what it is waiting on>.` (review hasn't landed, checks still running, a CodeRabbit finding awaiting the user, merge awaiting approval)
-- `SHIP gate: BLOCKED — <what needs the user>.` (dirty tree, blocked upstream gate, failing check that isn't ours, round-trip cap hit)
+- `SHIP gate: BLOCKED — <what needs the user>.` (dirty tree, detached HEAD, blocked upstream gate, failing check that isn't ours, round-trip cap hit)
 
 ## Rules
 
