@@ -72,7 +72,7 @@ for i in $(seq 1 18); do
 done
 ```
 
-Nine minutes, then give up — that is the ceiling on the wait, not a claim about how long CodeRabbit takes. If it expires, emit `SHIP gate: OPEN — no CodeRabbit review on <sha> after 9 min` and stop. Re-invoking the skill resumes here; that is cheaper than a longer blocking wait.
+Nine minutes, then give up — that is the ceiling on the wait, not a claim about how long CodeRabbit takes. If it expires, read the checks as below first, then emit `SHIP gate: OPEN — no CodeRabbit review on <sha> after 9 min` and stop. Re-invoking the skill resumes here; that is cheaper than a longer blocking wait.
 
 If the repo has CI, read `gh pr checks` once the wait above ends, whichever way it ended — never `--watch`, which blocks with no ceiling. Checks still pending → emit `SHIP gate: OPEN — checks still running on <sha>` and stop; re-invoking resumes here. Failing checks are handled like findings: fix, then back to step 2.
 
