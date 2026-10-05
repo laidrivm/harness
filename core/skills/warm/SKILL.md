@@ -34,7 +34,7 @@ Plus a fifth, supply-chain check:
 
 WARM is a **pre-merge gate**, not just a report. When an agent runs the pre-merge sequence rather than the user invoking `/warm` by hand, this skill is one step in it — the driving sequence decides where it runs — and the step behaves like this:
 
-- **Precondition** — run only if a dependency manifest changed between the base and `HEAD` (step 1 answers this). No manifest changed → the step is a no-op that passes; don't ask the user, don't linger.
+- **Precondition** — run only if a dependency manifest or lockfile changed between the base and `HEAD` (step 1 answers this; a lockfile-only change gets the audit alone). Neither changed → the step is a no-op that passes; don't ask the user, don't linger.
 - **Placement is the sequence's call.** A **Hold** means the branch shouldn't be installed, let alone reviewed or merged — found late, it wastes every pass run before it, so a sequence should place this step ahead of its costly review steps.
 - **Exit condition** — the step **passes** when no dependency is left on **Hold** and no ❌ on **M** is unresolved. **Keep** and **Reconsider** verdicts do not block: they are the user's call, recorded and carried forward.
 - **Hold blocks the sequence.** Stop there, surface the finding, and wait for the user. Don't run the remaining steps against a branch with a suspected supply-chain problem, and never resolve it by installing or upgrading on your own.
@@ -73,7 +73,7 @@ For each changed manifest, run `git diff <base>...HEAD -- <manifest>` and extrac
 
 If **only lockfiles changed** (transitive bumps, an audit autofix) with no manifest touched, skip the full WARM: run the ecosystem's audit tool on the branch state, report any advisories found, and note that only transitive dependencies moved. End with `WARM gate: PASS — only lockfiles changed, no advisories.`, or with the `BLOCKED — <package> has an unresolved advisory.` line naming each advisory's package. Then stop.
 
-If no manifests changed, output exactly:
+If no manifest and no lockfile changed, output exactly:
 
 ```
 ✅ No dependencies added or upgraded on this branch.
