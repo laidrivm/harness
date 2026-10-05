@@ -93,8 +93,10 @@ Show, in three lines: the PR URL, the number of round trips, and the final gate 
 On approval:
 
 ```bash
-gh pr merge <N> --squash --delete-branch
+gh pr merge <N> --squash --delete-branch --match-head-commit <sha>
 ```
+
+`--match-head-commit` makes GitHub refuse the merge when the PR head is no longer the reviewed `<sha>` — a push from elsewhere after the review. On that refusal, stop and report it: the new head has not been reviewed.
 
 Match the repo's existing merge style if it has one (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`); `--squash` is the default only when the repo allows it.
 
