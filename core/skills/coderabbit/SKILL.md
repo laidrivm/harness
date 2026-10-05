@@ -29,11 +29,14 @@ Every CodeRabbit finding on the PR gets an explicit disposition — **fixed**, *
 gh api "repos/OWNER/REPO/pulls/N/comments?per_page=100" --paginate
 gh api "repos/OWNER/REPO/issues/N/comments?per_page=100" --paginate
 gh api "repos/OWNER/REPO/pulls/N/reviews?per_page=100" --paginate
+gh api graphql -F o=OWNER -F r=REPO -F n=N -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{isResolved isOutdated comments(first:100){nodes{databaseId}}}}}}}'
 ```
 
 The first call returns inline review comments (where the findings live); the second returns the walkthrough / summary comments (where CodeRabbit sometimes parks extra findings in a collapsed "Outside diff range" or "Nitpick" section — read those bodies too, they contain findings that never became inline comments).
 
 The third call returns the review bodies. A finding CodeRabbit cannot anchor to a diff line — its collapsed "Outside diff range comments" section — is posted there and appears in neither of the first two calls. A re-review that produces only such findings has an empty inline list, so an empty first call is never on its own evidence that the bot found nothing.
+
+The fourth call returns each inline thread's `isResolved` and `isOutdated`, which no REST response carries; a comment's `databaseId` there is its `id` in the first call.
 
 `Actionable comments posted: N` counts only what the bot posted inline. A review's collapsed `Outside diff range comments (M)` section is additional — the finding total for that review is N + M, and a review body may carry M with no N at all.
 
@@ -45,7 +48,7 @@ Keep only comments whose `user.login` starts with `coderabbitai`. Record for eac
 
 One comment is not one finding: CodeRabbit packs several into one body when they share a line, each with its own severity line — so the unit you count, number and dispose of is the finding, never the comment.
 
-Drop replies (`in_reply_to_id` set) and any comment already marked resolved or outdated — but **count them in the total** and list them under skipped as `already resolved`.
+Drop replies (`in_reply_to_id` set) and any comment whose thread the fourth call marks resolved or outdated — but **count them in the total** and list them under skipped as `already resolved`.
 
 ### 2. Parse severity
 
