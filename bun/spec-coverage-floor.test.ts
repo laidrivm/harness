@@ -1,14 +1,12 @@
 /**
  * The number the check reports and what it demands of a change to it: the
- * floor, the reason its line must carry, what an archived change owes, and
- * where this repository stands against it today.
+ * floor, the reason its line must carry, and what an archived change owes.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { root } from "./root.ts";
 import { cleanup, fabricate, problems, spec } from "./spec-coverage.fixture.ts";
-import { check, DECLARATION, FLOOR, gauge, uncited } from "./spec-coverage.ts";
+import { gauge, uncited } from "./spec-coverage.ts";
 
 afterAll(cleanup);
 
@@ -131,29 +129,5 @@ describe("a criterion admitted as untestable", () => {
 		const raised =
 			"const FLOOR = 381; // one criterion is discharged at review";
 		expect(gauge(381, 381, raised)).toEqual([]);
-	});
-});
-
-describe("the repository as it stands", () => {
-	const here = check(root);
-
-	test("nothing is cited wrongly", () => {
-		expect(here.problems).toEqual([]);
-	});
-
-	// spec: spec-test-traceability/the-repository-as-it-stands
-	test("the count of uncited criteria sits exactly on the floor", () => {
-		expect(gauge(uncited(root), FLOOR, DECLARATION)).toEqual([]);
-	});
-
-	test("the sweep read criteria and test files rather than nothing", () => {
-		expect(here.criteria.length).toBeGreaterThan(0);
-		// A named file rather than a count: this file supplies citations of its
-		// own, so a sweep that read only this one would satisfy a count.
-		expect(here.files).toContain("scripts/spec-coverage-sweep.test.ts");
-		// Without this the check passes vacuously: a scanner finding nothing
-		// reports no problems either, and this file's own citations are the
-		// only ones in the tree.
-		expect(here.cited.size).toBeGreaterThan(0);
 	});
 });

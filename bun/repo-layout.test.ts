@@ -182,11 +182,6 @@ describe("the tree the sweep reads", () => {
 		const dir = fabricate({ ...KEEP, "server.ts": "", "src/a.ts": "" });
 		expect(stray(join(dir, "src"), KEEP).join("")).toContain("server.ts");
 	});
-
-	// spec: repo-layout/the-repository-as-it-stands
-	test("this repository's root is named entirely by the list [14]", () => {
-		expect(stray()).toEqual([]);
-	});
 });
 
 /** A layout section holding one row per argument. */

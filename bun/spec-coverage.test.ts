@@ -5,7 +5,6 @@
  * `spec-coverage-floor.test.ts`.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { root } from "./root.ts";
 import {
 	cited,
 	cleanup,
@@ -34,9 +33,14 @@ describe("an identifier is derived from a heading", () => {
 	});
 
 	test("punctuation and a section mark collapse to single hyphens", () => {
-		expect(ids(counted(root))).toContain(
+		const dir = fabricate({
+			"openspec/specs/draft-model/spec.md": spec(
+				"Insufficient hero picked (model-spec §7.5)",
+			),
+		});
+		expect(ids(counted(dir))).toEqual([
 			"draft-model/insufficient-hero-picked-model-spec-7-5",
-		);
+		]);
 	});
 
 	test("a spec with no scenario heading yields no criteria", () => {

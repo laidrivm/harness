@@ -1,5 +1,5 @@
 /**
- * What `scripts/board-state.ts` must not do: reach a network, name a board, or
+ * What `board-state.ts` must not do: reach a network, name a board, or
  * let an identifier for private content into its output. This repository is
  * public and the boards are not.
  *
@@ -37,7 +37,7 @@ describe("the derivation reaches no network", () => {
 	// smaller number as a pass — so renaming the module would silence the
 	// cases that guard it instead of failing them.
 	const source = () =>
-		readFileSync(join(root, "scripts/board-state.ts"), "utf8");
+		readFileSync(join(import.meta.dir, "board-state.ts"), "utf8");
 
 	// Bun's own transpiler rather than a pattern over the source: it reports a
 	// bare `import "node:net";`, a wrapped import list and a dynamic
@@ -60,7 +60,7 @@ describe("the derivation reaches no network", () => {
 	test("the one module it does import reaches nothing either", () => {
 		// Allowing `./root.ts` above allows whatever `./root.ts` allows, and the
 		// case above would pass a version of it that had grown a fetch.
-		const from = readFileSync(join(root, "scripts/root.ts"), "utf8");
+		const from = readFileSync(join(import.meta.dir, "root.ts"), "utf8");
 		expect(imports(from)).toEqual(["node:path"]);
 	});
 

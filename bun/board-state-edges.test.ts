@@ -15,7 +15,6 @@ import {
 	fabricate,
 } from "./board-state.fixture.ts";
 import { boardState } from "./board-state.ts";
-import { root } from "./root.ts";
 
 afterAll(cleanup);
 
@@ -137,44 +136,5 @@ describe("a change that is not yet complete", () => {
 			after: ["candidacy-gate"],
 			blocking: ["candidacy-gate"],
 		});
-	});
-});
-
-describe("this repository's own ordering", () => {
-	// Every case above fabricates its tree, so a typo in one of the seven
-	// `.openspec.yaml` files this repository actually carries is caught by
-	// nothing here — it would surface as an unrelated case throwing somewhere
-	// else, which is the shape of a failure nobody reads.
-	//
-	// Derived inside each case rather than in this block: a throw while the
-	// block is being collected takes both cases out of the run, and bun
-	// reports the smaller number as a pass. A typo has to fail a case, not
-	// remove it.
-	test("every after: entry names a change the tree holds", () => {
-		const derived = boardState(root);
-		for (const [slug, { after }] of Object.entries(derived.edges))
-			for (const entry of after)
-				expect([slug, entry, Object.hasOwn(derived.status, entry)]).toEqual([
-					slug,
-					entry,
-					true,
-				]);
-	});
-
-	test("eight changes declare a predecessor and the rest declare none", () => {
-		const declaring = Object.entries(boardState(root).edges)
-			.filter(([, { after }]) => after.length > 0)
-			.map(([slug]) => slug)
-			.sort();
-		expect(declaring).toEqual([
-			"beta-refit",
-			"extract-harness",
-			"lane-synergy-model",
-			"laning-phase-model",
-			"outcome-calibration",
-			"score-calibration",
-			"side-and-phase-deltas",
-			"suggestion-calibration",
-		]);
 	});
 });

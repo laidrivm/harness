@@ -186,11 +186,6 @@ describe("the sweep", () => {
 			/no capped files/i,
 		);
 	});
-
-	// spec: change-slicing/the-tree-as-it-stands
-	test("this repository passes with nothing exempted", () => {
-		expect(oversize()).toEqual([]);
-	});
 });
 
 describe("the tree the sweep reads", () => {

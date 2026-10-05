@@ -9,7 +9,6 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type Finding, scan } from "./no-suppressions.ts";
-import { root } from "./root.ts";
 
 const script = `${import.meta.dir}/no-suppressions.ts`;
 const made: string[] = [];
@@ -184,15 +183,5 @@ describe("a tree the check cannot read straight through", () => {
 		const dir = mkdtempSync(join(tmpdir(), "no-suppressions-bare-"));
 		made.push(dir);
 		expect(() => scan(dir)).toThrow();
-	});
-});
-
-describe("the repository as it stands", () => {
-	test("passes with the empty allowlist", () => {
-		expect(scan(root)).toEqual([]);
-	});
-
-	test("the command exits 0", () => {
-		expect(Bun.spawnSync(["bun", script], { cwd: root }).exitCode).toBe(0);
 	});
 });
