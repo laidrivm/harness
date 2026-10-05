@@ -71,7 +71,7 @@ For each changed manifest, run `git diff <base>...HEAD -- <manifest>` and extrac
 
 **S applies to every addition and upgrade** — a compromised maintainer account ships through a version bump just as easily as through a new install.
 
-If **only lockfiles changed** (transitive bumps, an audit autofix) with no manifest touched, skip the full WARM: run the ecosystem's audit tool on the branch state, report any advisories found, and note that only transitive dependencies moved. End with `WARM gate: PASS — only lockfiles changed, no advisories.`, or with the `BLOCKED — <package> has an unresolved advisory.` line naming each advisory's package. Then stop.
+If **only lockfiles changed** (transitive bumps, an audit autofix) with no manifest touched, compare each direct dependency's resolved version against the base lockfile first: one that moved is an upgrade within its range, and gets the upgrade checks above, **S** included. Skip the full WARM for the rest: run the ecosystem's audit tool on the branch state, report the advisories in versions this branch introduced or upgraded — the base lockfile's advisories are not this branch's — and name which direct dependencies moved, or that only transitive ones did. End with `WARM gate: PASS — only lockfiles changed, no advisories.`, or with the `BLOCKED — <package> has an unresolved advisory.` line naming each advisory's package, or `BLOCKED — <package> on Hold.` for a moved direct dependency. Then stop.
 
 If no manifest and no lockfile changed, output exactly:
 
