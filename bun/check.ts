@@ -17,6 +17,7 @@ import { oversize } from "./file-size.ts";
 import { ranges } from "./manifest-ranges.ts";
 import { scan } from "./no-suppressions.ts";
 import { stray } from "./repo-layout.ts";
+import { settings } from "./settings.ts";
 import { check as citations, gauge, uncited } from "./spec-coverage.ts";
 
 /** What git tracks under `dir` in `root`, with the mode it records for each. */
@@ -113,7 +114,13 @@ export function gates(root: string): string[] {
 
 /** Every problem the checks find in `root`. */
 export function run(root: string): string[] {
-	return [...pin(root), ...links(root), ...workflows(root), ...gates(root)];
+	return [
+		...pin(root),
+		...links(root),
+		...workflows(root),
+		...settings(root),
+		...gates(root),
+	];
 }
 
 if (import.meta.main) {
