@@ -81,6 +81,7 @@ When it comes back:
 
 - `CODERABBIT gate: PASS` with nothing changed on disk → go to step 6.
 - Fixes applied → commit them (`git commit`, message naming the findings by their numbers, e.g. `address coderabbit findings 1, 3, 5`), then **return to step 2**. The new push is a new `<sha>`, and it gets its own review.
+- `CODERABBIT gate: OPEN` → stop and report what it waits on — fixes awaiting approval or a dismissal awaiting the user — and emit `SHIP gate: OPEN`. Re-invoking the skill once the user has settled it resumes here.
 - `CODERABBIT gate: BLOCKED` → stop and report. A blocked gate is the user's call, never a reason to merge anyway.
 
 Cap the loop at **three** round trips. If CodeRabbit still has findings on the fourth push, stop and report — repeated churn on the same PR is a signal to talk, not to keep pushing.
@@ -111,7 +112,7 @@ Report the merge commit and the new `<base>` SHA.
 Every output ends with a machine-readable last line, exactly one of:
 
 - `SHIP gate: PASS — PR #N merged in M round trips, on <base> at <sha>.`
-- `SHIP gate: OPEN — <what it is waiting on>.` (review hasn't landed, checks still running, merge awaiting approval)
+- `SHIP gate: OPEN — <what it is waiting on>.` (review hasn't landed, checks still running, a CodeRabbit finding awaiting the user, merge awaiting approval)
 - `SHIP gate: BLOCKED — <what needs the user>.` (dirty tree, blocked upstream gate, failing check that isn't ours, round-trip cap hit)
 
 ## Rules
