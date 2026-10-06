@@ -2,11 +2,12 @@
 
 Two groups, so this change ships one pull request per group in the order below:
 `feat/tracked-file-sweep-1`, then `-2`. Split because the capability carries
-four acceptance criteria and a step takes one to three. The seam is real rather
-than arithmetic: group 1 leaves a module with tests and no callers, which
-breaks nothing, and group 2 is where the tree stops holding six listings.
+four acceptance criteria and a step takes one to three. The seam is a caller,
+not a stub: group 1 switches `scripts/no-suppressions.ts` to the sweep, so the
+module ships with a shipped path calling it, as `change-slicing` requires, and
+group 2 is where the tree stops holding the other six listings.
 
-## 1. The sweep and its three behaviours
+## 1. The sweep, its three behaviours and its first caller
 
 Closes *A check run from a subdirectory*, *A tracked file absent from the work
 tree* and *A repository path ending in a space*.
@@ -34,30 +35,30 @@ tree* and *A repository path ending in a space*.
       absent from the work tree*); a repository whose path ends in a space
       keeps the space (*A repository path ending in a space*). Fabricate the
       repository — the last case cannot be observed in this one
-- [ ] 1.4 Measure `scripts/tracked.ts` and `scripts/tracked.test.ts` against
-      the 300-line cap and record the numbers (*change-slicing/No source file exceeds its per-file cap*)
-
-## 2. Seven call sites and no eighth
-
-Closes *A second listing is introduced*.
-
-- [ ] 2.1 Switch `scripts/no-suppressions.ts`. Run the gate before and after
+- [ ] 1.4 Switch `scripts/no-suppressions.ts`. Run the gate before and after
       and record that it reports the same findings on today's tree. Its comment
       says "an ignored or untracked file cannot fail a clone that does not have
       it", which conflates the two — an ignored file that is tracked is in
       every clone; correct it to name untracked files while the line is open
       (*A second listing is introduced*)
-- [ ] 2.2 Switch `scripts/spec-coverage.ts` — `check()`'s root and `tests()`'s
+- [ ] 1.5 Measure `scripts/tracked.ts`, `scripts/tracked.test.ts` and
+      `scripts/no-suppressions.ts` against the 300-line cap and record the numbers (*change-slicing/No source file exceeds its per-file cap*)
+
+## 2. Six more call sites and no eighth
+
+Closes *A second listing is introduced*.
+
+- [ ] 2.1 Switch `scripts/spec-coverage.ts` — `check()`'s root and `tests()`'s
       listing are the same sweep. Record the uncited count before and after; it
       does not move (*A second listing is introduced*)
-- [ ] 2.3 Switch `scripts/file-size.ts`. Record the file count it measures
+- [ ] 2.2 Switch `scripts/file-size.ts`. Record the file count it measures
       before and after (*A second listing is introduced*)
-- [ ] 2.4 Switch `src/app/module-classes.test.ts` and
+- [ ] 2.3 Switch `src/app/module-classes.test.ts` and
       `src/app/styles/styles.test.ts`, which is where `trim()` leaves. Record
       the assertion counts before and after: these two are tests, so "reports
       the same" means the same set of files reaches the assertions (*A second
       listing is introduced*)
-- [ ] 2.5 Switch the two path-only callers to `paths`: `readme-map.test.ts`,
+- [ ] 2.4 Switch the two path-only callers to `paths`: `readme-map.test.ts`,
       which takes no root today and so escaped both earlier counts, and
       `scripts/file-size.test.ts`'s inline copy at line ~179. Neither applies
       an `lstatSync` filter, on purpose — a tracked path deleted from the work
@@ -66,7 +67,7 @@ Closes *A second listing is introduced*.
       unchanged, which is what proves the list is the right one — the unfiltered view is the
       requirement's, not this caller's preference (*Every check reads the tree
       through one tracked-file sweep*, *A second listing is introduced*)
-- [ ] 2.6 Write the check the criterion names: a test failing when any tracked
+- [ ] 2.5 Write the check the criterion names: a test failing when any tracked
       source file other than `scripts/tracked.ts` and `scripts/tracked.test.ts`
       derives a tree listing of its own. What it matches is enumeration, not
       the command — `git rev-parse --show-toplevel`, and `git ls-files` with
@@ -76,9 +77,9 @@ Closes *A second listing is introduced*.
       `CLAUDE.md`, and break-check it both ways — reintroduce one listing and
       watch it fail, and confirm those two do not trip it (*A second listing is
       introduced*)
-- [ ] 2.7 Delete the three "the shape `scripts/no-suppressions.ts` uses"
+- [ ] 2.6 Delete the three "the shape `scripts/no-suppressions.ts` uses"
       comments left behind at the switched sites: the comment existed because
       the code could not be shared, and it now points at a file that no longer
       owns the sweep (*A second listing is introduced*)
-- [ ] 2.8 Measure every switched file against its cap and record the numbers
+- [ ] 2.7 Measure every switched file against its cap and record the numbers
       (*change-slicing/No source file exceeds its per-file cap*)
