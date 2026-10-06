@@ -715,6 +715,13 @@ qualification bolted onto them: the paragraph above names what falls outside
 it, and the three content scenarios further down — the ones that fail on a
 settled value rather than on a call — are what cover those routes instead.
 
+Because the prompt is partial, the two keys it stands in front of SHALL also be
+pinned by their settled value. A test that reads the content catches every
+route the rules miss — the permission mode and the subprocess alike — after
+the write rather than before it. This is not the rejected hook:
+it parses no edit and registers nothing, it reads two files the repository
+already ships.
+
 #### Scenario: A registry added to bunfig.toml
 
 - **WHEN** the agent edits `bunfig.toml` to add a `registry` key
@@ -744,13 +751,6 @@ settled value rather than on a call — are what cover those routes instead.
 - **WHEN** `.claude/settings.json` is read
 - **THEN** both rules are written as `Edit(...)` and neither as `Write(...)`,
   which Claude Code accepts but never matches
-
-Because the prompt is partial, the two keys it stands in front of SHALL also be
-pinned by their settled value. A test that reads the content catches every
-route the rules miss — the permission mode and the subprocess alike — after
-the write rather than before it. This is not the rejected hook:
-it parses no edit and registers nothing, it reads two files the repository
-already ships.
 
 #### Scenario: A registry reaches bunfig.toml by a route the prompt misses
 

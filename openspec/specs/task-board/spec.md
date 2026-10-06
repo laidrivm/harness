@@ -72,18 +72,6 @@ change directories — the card body is the record, and it SHALL hold what a
 proposal would need: what was observed, where, and what makes it work rather
 than an opinion.
 
-#### Scenario: A card for a change that exists in the tree
-
-- **WHEN** a card names a change with a directory under `openspec/changes/`
-- **THEN** it SHALL carry that path and its summary, and SHALL NOT otherwise
-  restate the change's why, its scope, its measurements or its ordering
-
-#### Scenario: A card for a finding with no change
-
-- **WHEN** a card names work that has no directory anywhere in the tree
-- **THEN** the card body SHALL be the record, and no file in the repository
-  SHALL be expected to hold it
-
 A card SHALL keep its identity across that boundary, WHERE the card's owning
 tree is this repository. WHEN a directory is created here for such a card that
 had none, the **same card** SHALL gain the pointer and lose the record its body held,
@@ -100,6 +88,18 @@ no directory, and each becomes a change or is dropped. A card on `Harness` or
 `mellon` SHALL NOT be required to cross it — their trees are not here, so the
 directory that would supply the pointer can never appear, and a rule waiting
 for it would hold every such card permanently in breach.
+
+#### Scenario: A card for a change that exists in the tree
+
+- **WHEN** a card names a change with a directory under `openspec/changes/`
+- **THEN** it SHALL carry that path and its summary, and SHALL NOT otherwise
+  restate the change's why, its scope, its measurements or its ordering
+
+#### Scenario: A card for a finding with no change
+
+- **WHEN** a card names work that has no directory anywhere in the tree
+- **THEN** the card body SHALL be the record, and no file in the repository
+  SHALL be expected to hold it
 
 #### Scenario: A finding that becomes a change
 
@@ -223,20 +223,6 @@ file in the repository, and never learned from the view — which is what makes
 the hidden column harmless: a status with no cards has no work in it, and a
 session reads the view to find work.
 
-#### Scenario: A card at a retired status
-
-- **WHEN** the option list is replaced while a card sits at `suggested`,
-  `ready`, `implementing` or `reviewing`
-- **THEN** that card SHALL read its successor afterwards, and no card on
-  either board SHALL read empty
-
-#### Scenario: A status holding no cards
-
-- **WHEN** a board's view shows fewer than nine columns because some
-  statuses hold no card
-- **THEN** the missing statuses SHALL still be writable by name, and the
-  view SHALL NOT be treated as the list of statuses that exist
-
 Derivation SHALL apply to `D2ASS` alone. It is the only board whose tree is
 this repository, so `scripts/board-state.ts` SHALL report nothing for a card
 on `Harness` or `mellon` and a reconciliation SHALL leave those cards
@@ -276,6 +262,20 @@ branch-name derivation gets fourteen wrong. Nine of those changes have no
 `file-size-cap`'s eight as twenty-two, which makes "pull requests at least
 steps" a coincidence rather than a test. No key in this repository joins a
 pull request to its change.
+
+#### Scenario: A card at a retired status
+
+- **WHEN** the option list is replaced while a card sits at `suggested`,
+  `ready`, `implementing` or `reviewing`
+- **THEN** that card SHALL read its successor afterwards, and no card on
+  either board SHALL read empty
+
+#### Scenario: A status holding no cards
+
+- **WHEN** a board's view shows fewer than nine columns because some
+  statuses hold no card
+- **THEN** the missing statuses SHALL still be writable by name, and the
+  view SHALL NOT be treated as the list of statuses that exist
 
 #### Scenario: A complete change directory, no step applied
 
@@ -502,6 +502,13 @@ that is finished.
 rather than a pointer to a file that is gone, and is found on `D2ASS` like any
 other card rather than through a list of sources.
 
+A brief's card SHALL be titled with the brief's filename — `tasks/task-1.md`
+and not *Task 1 — bun supply chain* — because that filename is the only key
+any surviving citation carries. A brief card's pointer is empty, its body
+being the record, so nothing else on the card could join a cited path to it,
+and a title chosen for readability would leave the four citations resolving
+to nothing.
+
 #### Scenario: A brief that is done
 
 - **WHEN** a brief carries a `Status: DONE` block naming the live
@@ -514,13 +521,6 @@ other card rather than through a list of sources.
 - **WHEN** the card for `tasks/task-5.md` is created
 - **THEN** the card SHALL hold the brief's scope, and the path SHALL NOT
   survive anywhere as a live citation
-
-A brief's card SHALL be titled with the brief's filename — `tasks/task-1.md`
-and not *Task 1 — bun supply chain* — because that filename is the only key
-any surviving citation carries. A brief card's pointer is empty, its body
-being the record, so nothing else on the card could join a cited path to it,
-and a title chosen for readability would leave the four citations resolving
-to nothing.
 
 #### Scenario: An archived change citing a brief by path
 
