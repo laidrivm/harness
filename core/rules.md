@@ -1,3 +1,5 @@
+# Harness rules
+
 ## Lessons learned (fix & capture)
 
 ### The loop — agent responsibilities
