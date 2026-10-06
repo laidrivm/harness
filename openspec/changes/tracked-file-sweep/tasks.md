@@ -70,8 +70,9 @@ Closes *A second listing is introduced*.
 - [ ] 2.5 Write the check the criterion names: a test failing when any tracked
       source file other than `scripts/tracked.ts` and `scripts/tracked.test.ts`
       derives a tree listing of its own. What it matches is enumeration, not
-      the command — `git rev-parse --show-toplevel`, and `git ls-files` with
-      neither a pathspec nor `--error-unmatch`. Two tracked tests ask git about
+      the command — `git rev-parse --show-toplevel`, and `git ls-files` with no
+      literal path operand, which `--error-unmatch` alone, a directory or a
+      glob does not supply. Two tracked tests ask git about
       named paths and must keep passing: `agent-permissions.test.ts` and
       `agent-permissions-allow.test.ts`. Scope it by what it exempts, per
       `CLAUDE.md`, and break-check it both ways — reintroduce one listing and

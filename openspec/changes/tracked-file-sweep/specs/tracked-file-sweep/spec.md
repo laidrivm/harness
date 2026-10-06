@@ -11,8 +11,10 @@ filter to that sweep's result. No tracked source file other than
 `git rev-parse --show-toplevel` or `git ls-files` to enumerate the tree — the
 sweep's own test is exempt because fabricating a repository is what it does.
 Asking git about a named path is not enumerating the tree and is not covered:
-`git ls-files --error-unmatch <path>` and a pathspec-scoped listing both answer
-a question about paths the caller already holds.
+`git ls-files --error-unmatch <path>` and a listing scoped to literal paths
+both answer a question about paths the caller already holds. A query naming no
+path, or naming a directory or a glob, still enumerates the tree, and
+`--error-unmatch` alone does not change that.
 
 The sweep SHALL take the listing at the repository root and SHALL return paths
 relative to it, because `git ls-files` run in a subdirectory reports only what
