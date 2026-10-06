@@ -11,6 +11,10 @@ untouched: `the-agent-tries-to-reply-to-a-review`,
 Step 1's task 1.5 asserts they still hold, which is a regression check rather
 than a closure.
 
+The guard stands at 299 lines against the 300-line cap, so the step whose
+change first carries a file over it splits that file in the same pull
+request; a step never ships over the cap and leaves the split to a later one.
+
 ## 1. The method tells a read from a write
 
 Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
@@ -93,8 +97,8 @@ and no criterion in any capability states what a doc sentence says.
       `scripts/command-guard.test.ts` against the 300-line cap and record both
       numbers, whether or not either is over; the test file stood at 214 and
       the guard at 246 when this was proposed, and the guard at 299 once the
-      harness took it. A file over the cap is split until both comply, in this
-      change, before it ships
+      harness took it. Both are under the cap here because each earlier step
+      split whatever its own change carried over it
       (*change-slicing/a-file-over-the-cap*)
 - [ ] 3.5 Search the four places that restate a decision — the change's sibling
       artefacts, `openspec/specs/**`, the cards on the boards and the README
