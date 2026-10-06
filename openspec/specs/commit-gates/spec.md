@@ -137,17 +137,6 @@ the network and would make an offline push fail on a gate about published
 vulnerabilities rather than about the branch. CI runs it on a pull request that
 touches `package.json`, and nightly.
 
-#### Scenario: A gate that CI would fail blocks the push instead
-
-- **WHEN** a branch is pushed whose surviving-mutant count exceeds the floor
-- **THEN** the hook reports the count and the floor and exits non-zero, and the
-  push does not happen
-
-#### Scenario: A tool the machine does not have
-
-- **WHEN** `actionlint` is not on `PATH` and a branch is pushed
-- **THEN** the hook completes without error and without linting the workflows
-
 The secret scan SHALL be bounded to the checked-out branch's range —
 `--log-opts` from the base branch to `HEAD`, resolved as
 `scripts/diff-budget.sh` resolves its own base — and SHALL NOT walk the whole
@@ -163,6 +152,17 @@ leaves its commits unscanned here. That is the same gap as a machine without
 `gitleaks`, and it closes the same way: CI keeps the history-wide scan, where a
 failure stops one pull request rather than everybody's pushes, and that is
 where the verdict is binding.
+
+#### Scenario: A gate that CI would fail blocks the push instead
+
+- **WHEN** a branch is pushed whose surviving-mutant count exceeds the floor
+- **THEN** the hook reports the count and the floor and exits non-zero, and the
+  push does not happen
+
+#### Scenario: A tool the machine does not have
+
+- **WHEN** `actionlint` is not on `PATH` and a branch is pushed
+- **THEN** the hook completes without error and without linting the workflows
 
 #### Scenario: A tool the machine has, reporting a finding
 
