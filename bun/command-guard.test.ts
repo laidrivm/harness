@@ -164,6 +164,42 @@ describe("committing while HEAD is on main", () => {
 	});
 });
 
+describe("the directory a commit lands in", () => {
+	test("the event's cwd decides, not the hook's own", () => {
+		const main = fabricate("main");
+		const feature = fabricate("feat/x");
+		expect(
+			run({ ...event("git commit -m fix"), cwd: main }, feature).code,
+		).toBe(2);
+		expect(
+			run({ ...event("git commit -m fix"), cwd: feature }, main).code,
+		).toBe(0);
+	});
+
+	test("a leading cd moves it", () => {
+		const main = fabricate("main");
+		const feature = fabricate("feat/x");
+		expect(run(event(`cd ${main} && git commit -m fix`), feature).code).toBe(2);
+		expect(run(event(`cd ${feature} && git commit -m fix`), main).code).toBe(0);
+	});
+
+	test("a relative -C resolves against the moved directory", () => {
+		const main = fabricate("main");
+		const feature = fabricate("feat/x");
+		const command = `cd ${feature}/.. && git -C ${feature.split("/").pop()} commit -m fix`;
+		expect(run(event(command), main).code).toBe(0);
+	});
+
+	test("a cd the guard cannot resolve blocks", () => {
+		const { code, reason } = run(
+			event('cd "$SOMEWHERE" && git commit -m fix'),
+			fabricate("feat/x"),
+		);
+		expect(code).toBe(2);
+		expect(reason).toContain("cannot resolve");
+	});
+});
+
 describe("gh commands that publish on the user's behalf", () => {
 	const anywhere = () => fabricate("feat/x");
 

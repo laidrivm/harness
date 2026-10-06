@@ -156,7 +156,8 @@ export function settings(root: string): string[] {
 		if (absoluteTokens(entry).length)
 			say(`${entry} carries a path a clone does not have`);
 		const path = entry.match(/^(?:Read|Edit)\((.+)\)$/)?.[1];
-		if (path !== undefined && !resolve(root, path).startsWith(`${root}/`))
+		const base = resolve(root); // a trailing `/` on root would double the prefix's
+		if (path !== undefined && !resolve(base, path).startsWith(`${base}/`))
 			say(`${entry} reaches outside the repository`);
 	}
 

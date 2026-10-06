@@ -106,7 +106,10 @@ export function commands(line: string): string[][] {
 	for (let at = 0; at < line.length; at++) {
 		const char = line.charAt(at);
 		if (char === "\\" && quote !== "'") {
-			word += line.charAt(++at);
+			const next = line.charAt(++at);
+			// Backslash-newline joins two lines and the shell drops both, so
+			// `git \⏎ commit` is one command whose second word is `commit`.
+			if (next !== "\n") word += next;
 		} else if (quote === "'") {
 			if (char === "'") quote = "";
 			else word += char;
@@ -162,7 +165,36 @@ export function commands(line: string): string[][] {
  * — see `invocations` for what stands in for that — so adding one here costs
  * nothing but the candidates it produces.
  */
-const WRAPPERS = new Set(["command", "builtin", "exec", "env"]);
+const WRAPPERS = new Set([
+	"command",
+	"builtin",
+	"exec",
+	"env",
+	"time",
+	"nohup",
+	"nice",
+	"timeout",
+	"sudo",
+	"doas",
+	"xargs",
+	"stdbuf",
+]);
+
+/**
+ * Reserved words that may stand before a command and are never one, so
+ * `if true; then git commit; fi` reaches `git` past `then`.
+ */
+const KEYWORDS = new Set([
+	"!",
+	"{",
+	"if",
+	"then",
+	"else",
+	"elif",
+	"do",
+	"while",
+	"until",
+]);
 
 /** Shells whose `-c` argument is another command to look inside. */
 export const SHELLS = new Set(["sh", "bash", "zsh", "dash"]);
@@ -205,6 +237,7 @@ export function invocations(words: string[]): [string, string[]][] {
 			continue;
 		}
 		const name = word.split("/").pop() ?? "";
+		if (KEYWORDS.has(name)) continue;
 		if (WRAPPERS.has(name)) {
 			wrapped = true;
 			continue;

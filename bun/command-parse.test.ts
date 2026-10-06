@@ -84,6 +84,28 @@ describe("a spelling that walks around a permission pattern", () => {
 	test("a command merely ending in git does not block", () => {
 		expect(run(event("mygit commit -m fix"), fabricate("main")).code).toBe(0);
 	});
+
+	test.each([
+		"{ git commit -m fix; }",
+		"if true; then git commit -m fix; fi",
+		"for b in x; do git commit -m fix; done",
+		"! git commit -m fix",
+		"time git commit -m fix",
+		"nohup git commit -m fix",
+		"timeout 30 git commit -m fix",
+		"sudo git commit -m fix",
+		"xargs git commit -m fix",
+		'eval "git commit -m fix"',
+	])("%s still reaches git", (line) => {
+		expect(run(event(line), fabricate("main")).code).toBe(2);
+	});
+
+	test("a line continuation does not split the subcommand off", () => {
+		expect(run(event("git \\\n  commit -m fix"), fabricate("main")).code).toBe(
+			2,
+		);
+		expect(run(event("git \\\ncommit -m fix"), fabricate("main")).code).toBe(2);
+	});
 });
 
 describe("quoting that hides the command from a naive tokeniser", () => {

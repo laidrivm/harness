@@ -182,6 +182,13 @@ describe("the permission lists", () => {
 			"reaches outside the repository",
 		);
 	});
+
+	test("a root passed with a trailing slash keeps its own paths inside", () => {
+		const config = changed((c) => c.permissions.allow.push("Edit(src/**)"));
+		expect(settings(`${consumer(config)}/`).join("\n")).not.toContain(
+			"reaches outside the repository",
+		);
+	});
 });
 
 describe("the supply-chain files", () => {

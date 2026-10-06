@@ -134,6 +134,14 @@ describe("a push whose destination is main", () => {
 		).toBe(2);
 	});
 
+	test("named by its ref under heads/", () => {
+		// git matches a `<dst>` outside `refs/` against the remote's refs.
+		expect(run(event("git push origin HEAD:heads/main"), branch()).code).toBe(
+			2,
+		);
+		expect(run(event("git push origin heads/main"), branch()).code).toBe(2);
+	});
+
 	test("named as a deletion", () => {
 		expect(run(event("git push origin :main"), branch()).code).toBe(2);
 	});

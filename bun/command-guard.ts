@@ -20,6 +20,8 @@
  * holds is what the prohibitions themselves are.
  */
 
+import { homedir } from "node:os";
+import { resolve } from "node:path";
 import { commands, invocations, SHELLS } from "./command-parse.ts";
 
 function block(reason: string): never {
@@ -98,12 +100,32 @@ if (typeof command !== "string") {
 }
 
 /**
+ * Where the command being checked runs: the event's `cwd`, since nothing
+ * promises the hook starts there, moved by every `cd` or `pushd` the line runs
+ * first — `cd ../other && git commit` commits in `other`. `null` once a move
+ * only running the shell could resolve, which blocks a commit or push rather
+ * than reading some other repository's branch.
+ *
+ * ponytail: sequential, not scoped — `(cd x); git commit` reads `x`, and a
+ * `cd` behind `||` counts as taken. Track subshell frames if one bites.
+ */
+let dir: string | null =
+	typeof payload?.cwd === "string" ? payload.cwd : process.cwd();
+
+/** `path` as the shell resolves it from `from`, or `null` where it cannot be read statically. */
+function place(from: string | null, path: string): string | null {
+	if (from === null || path === "-" || path.includes("$")) return null;
+	return resolve(from, path.replace(/^~(?=\/|$)/, homedir()));
+}
+
+/**
  * The branch `HEAD` points at in `cwd` — the `-C` target when the command
  * names one, since that is the repository the commit would land in — or a
  * block when git cannot say.
  */
-function currentBranch(cwd?: string): string {
+function currentBranch(cwd: string | null): string {
 	try {
+		if (cwd === null) throw new Error("unresolved directory");
 		const head = Bun.spawnSync(
 			["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
 			{ cwd },
@@ -114,7 +136,7 @@ function currentBranch(cwd?: string): string {
 		// non-zero and non-blocking. Fall through to the block instead.
 	}
 	block(
-		"command-guard: could not read the current branch — a detached HEAD, no work tree, or an unreadable -C target. A commit cannot be checked against main, so it is blocked.",
+		"command-guard: could not read the current branch — a detached HEAD, no work tree, an unreadable -C target, or a directory change the guard cannot resolve. A commit cannot be checked against main, so it is blocked.",
 	);
 }
 
@@ -138,6 +160,18 @@ function check(command: string): void {
 				check(rest.slice(dashC + 1).join(" "));
 				continue;
 			}
+			if (name === "eval") {
+				check(rest.join(" "));
+				continue;
+			}
+			if (name === "cd" || name === "pushd" || name === "popd") {
+				// `popd` returns to a stack this reader does not keep; bare `cd` goes home.
+				const operand = rest.find(
+					(word) => word === "-" || !word.startsWith("-"),
+				);
+				dir = name === "popd" ? null : place(dir, operand ?? "~");
+				continue;
+			}
 
 			if (name === "gh") {
 				// Adjacent anywhere, not the first two words: a global flag's value
@@ -157,9 +191,9 @@ function check(command: string): void {
 			if (name !== "git") continue;
 
 			let at = 0;
-			let target: string | undefined;
+			let target = dir;
 			for (let word = rest[at]; word?.startsWith("-"); word = rest[at]) {
-				if (word === "-C") target = rest[at + 1];
+				if (word === "-C") target = place(dir, rest[at + 1] ?? "");
 				at += VALUE_OPTIONS.has(word) ? 2 : 1;
 			}
 			const subcommand = rest[at];
@@ -175,7 +209,7 @@ function check(command: string): void {
 	}
 }
 
-function checkPush(args: string[], target?: string): void {
+function checkPush(args: string[], target: string | null): void {
 	if (args.some((arg) => FORCE.test(arg))) {
 		block(
 			"command-guard: force-pushing is the user's, not the agent's — the boundary is the rewrite, not how carefully it is leased. Ask the user to run it.",
@@ -233,7 +267,9 @@ function checkPush(args: string[], target?: string): void {
 		// the last colon per the spec; no ref name git accepts carries one, so
 		// no input tells that apart from a split on the first.
 		const destination = colon === -1 ? arg : arg.slice(colon + 1);
-		if (destination === "main" || destination === "refs/heads/main") {
+		// git matches a `<dst>` outside `refs/` against the remote's refs, so
+		// `heads/main` reaches `refs/heads/main` as surely as `main` does.
+		if (destination.replace(/^(refs\/)?heads\//, "") === "main") {
 			blockDestination(destination);
 		}
 		// Unbounded rather than aimed at main: the matching `:` form pushes every
