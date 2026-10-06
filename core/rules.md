@@ -44,9 +44,9 @@ Rule quality bar — a rule must be:
 This file is the only one read at the start of every session; a doc it indexes
 is read on demand and costs nothing until then. The trigger fires when this
 file passes ~350 lines, when one sublist below passes ~20 rules, or when rules
-from this file's middle are observably being ignored —
-`openspec/specs/context-budget/` and `openspec/specs/agent-rulebook/` fix those
-two figures. What a fired trigger asks for — promotion, deletion, the protocol
+from this file's middle are observably being ignored — the harness's
+`openspec/specs/context-budget/` and `openspec/specs/agent-rulebook/` fix
+those two figures. What a fired trigger asks for — promotion, deletion, the protocol
 for extracting a section or relocating one off the tree, and where a session
 save-point lives — is in [rulebook-growth.md](rulebook-growth.md),
 and never a second always-on file.

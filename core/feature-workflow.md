@@ -151,9 +151,9 @@ for them is already here.
   `proposed`, `done`, and only on `D2ASS`. The other six, and every card on
   `Harness` or `mellon`, are honoured rather than mechanised, and this bullet
   is the whole of what holds them — which is why it is stated as an obligation
-  rather than as a convention. Which nine, and so which six, is fixed in
-  `openspec/specs/task-board/` and named nowhere else; a second copy here is
-  the drift this change was written after.
+  rather than as a convention. Which nine, and so which six, is fixed in the
+  harness's `openspec/specs/task-board/` and named nowhere else; a second copy
+  here is the drift this change was written after.
 
   A reconciliation that finds a card disagreeing with the tree **reports what
   it corrected**; it does not repair silently. A silent repair leaves nobody
