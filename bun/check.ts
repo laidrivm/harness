@@ -19,6 +19,7 @@ import { scan } from "./no-suppressions.ts";
 import { stray } from "./repo-layout.ts";
 import { settings } from "./settings.ts";
 import { check as citations, gauge, uncited } from "./spec-coverage.ts";
+import { CORE, drift } from "./sync.ts";
 
 /** What git tracks under `dir` in `root`, with the mode it records for each. */
 function tracked(root: string, dir: string): { mode: string; path: string }[] {
@@ -150,6 +151,7 @@ export function run(root: string): string[] {
 	return [
 		...pin(root),
 		...links(root),
+		...drift(CORE, join(root, "harness")),
 		...workflows(root),
 		...settings(root),
 		...gates(root),
