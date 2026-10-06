@@ -97,9 +97,10 @@ already in the pre-push hook and in `test.yml`.
   than after it.
 - **A future workflow installs bun some other way.** → Then it is a site the
   walk does not recognise, and the check says nothing about it. The walk keys
-  on `oven-sh/setup-bun`, which is what every job uses today; a second method
-  arriving is a change to this capability, not a silent hole, because the job
-  that used it would still have to pass the step-level assertion.
+  on `oven-sh/setup-bun`, which is what every job uses today. A second method
+  arriving is a hole this check does not cover until the walk learns that
+  method, which is a change to this capability; nothing else in the tree
+  refuses such a job in the meantime.
 - **Widening the alias clause changes what the policy demands.** → It does
   not: `checks/agent-permissions-prompts.test.ts` already reads the alias of
   every gated command, and `Bash(bun up *)` is already listed. The clause is

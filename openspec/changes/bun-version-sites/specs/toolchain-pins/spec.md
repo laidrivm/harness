@@ -60,7 +60,7 @@ reaches every site rather than most of them.
 
 #### Scenario: Every site agreeing
 
-- **WHEN** all thirteen sites read the same version
+- **WHEN** every site the walk finds reads the same version
 - **THEN** the check passes, and says nothing about whether that version is
   current
 
