@@ -37,7 +37,7 @@ beyond the fix & capture loop. When it outgrows itself, split by this protocol:
   moves what a session **writes**: a status, which no file is the right
   instrument for, because a file records it only if somebody remembers to type
   it and nothing reads it back to check. Its new home is outside the tree
-  entirely — the boards `docs/feature-workflow.md` names — and the section
+  entirely — the boards `feature-workflow.md` names — and the section
   leaves rather than shrinking. Test it by asking what the section's lines are
   for: if the
   answer is *so that a later session knows where this stands*, no `docs/` file

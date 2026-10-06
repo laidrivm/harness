@@ -107,7 +107,7 @@ they route through `CLAUDE.md`'s fix & capture loop like every other rule.
 - Never chain a commit onto a check in one command — the check runs, prints,
   and does not stop it; read its result first.
 - Treat an edit to the `simple-git-hooks` *block* in `package.json` as a gate
-  change: it enters the OpenSpec cycle, which `docs/feature-workflow.md`
+  change: it enters the OpenSpec cycle, which `feature-workflow.md`
   already requires of one and this names the file it arrives as. Raising the
   package's own version is not one — verify the installed hook bodies still
   match the block instead.
