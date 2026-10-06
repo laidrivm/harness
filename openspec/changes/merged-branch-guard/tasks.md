@@ -27,7 +27,8 @@ costs on every call and shortens the prose the mechanism supersedes.
       all `+` is not merged [5]. (Req: agent-permissions — A commit on a
       merged branch is refused)
 - [ ] 1.3 Write the reachability tests: a branch with no ref under
-      `refs/remotes/origin/` is never examined [15]; a branch name carrying a
+      `refs/remotes/origin/` is never refused for freshness, while the merged
+      verdict still runs on it [15]; a branch name carrying a
       slash resolves its full remote ref [13]; a repository with no `origin`
       remote allows the commit [2]. (Req: agent-permissions — A commit on a
       merged branch is refused, §*The branch was never pushed*, §*The
@@ -77,8 +78,10 @@ costs on every call and shortens the prose the mechanism supersedes.
       A commit on a merged branch is refused)
 - [ ] 2.2 Shorten `docs/git-and-prs.md`'s pull-request-state rule to what the
       guard cannot see — a merge that has not been fetched yet is refused
-      rather than missed, so what remains for the prose is a branch closed by
-      a merge commit, a fast-forward or a squash of several commits, which no
-      `-` mark reveals, and the judgement the guard declines to make: where
+      rather than missed on a branch with an `origin` ref, so what remains for
+      the prose is a branch pruned, merged and not yet fetched, which the spec
+      records as its residual gap; a branch closed by a merge commit, a
+      fast-forward or a squash of several commits, which no `-` mark reveals;
+      and the judgement the guard declines to make: where
       the work goes once it is refused. (Req: agent-rulebook — A mechanised
       prohibition leaves its prose home)

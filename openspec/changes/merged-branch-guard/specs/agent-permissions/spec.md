@@ -4,9 +4,10 @@
 
 ### Requirement: A commit on a merged branch is refused
 
-The hook SHALL block a `git commit` on a branch whose work is already
-upstream, because a merged pull request strands every commit made to its
-branch afterwards, whatever merge style closed it. It SHALL decide this with
+The hook SHALL block a `git commit` on a branch at least one of whose commits
+`git cherry` marks as already upstream, because a merged pull request strands
+every commit made to its branch afterwards, whatever merge style closed it —
+though only the styles named below leave that mark. It SHALL decide this with
 local git only — no fetch, no `gh`, no network — since it runs on every Bash
 call and an offline session must not silently lose the check.
 
