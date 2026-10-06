@@ -67,13 +67,16 @@ decision module, group 3 wires it up and shortens the prose.
       did not commit [12]; `HEAD` moved by an amend is a turn that did [13];
       four commits read the same as one [7]; a turn that commits and then
       returns `HEAD` to the mark ends, since nothing it committed survives to
-      be reported; a second refusal with the same mark does not happen; a
+      be reported; one that pushed before resetting does not, since the
+      branch's remote-tracking ref holds a commit the mark does not; a second
+      refusal with the same mark does not happen; a
       second session is decided against its own mark rather than the newest;
       an absent mark ends the turn [21 mark half]; an unreadable mark ends the
       turn [18]. (Req: commit-gates — A turn that commits reports its gates
       before it ends, §*A turn that commits nothing*, §*The mark was never
-      written*, §*A turn whose commits are withdrawn before it ends*, §*A
-      refusal is not repeated*, §*Two sessions in one repository*)
+      written*, §*A turn whose commits are withdrawn before it ends*, §*A turn
+      that pushes, then resets to the mark*, §*A refusal is not repeated*,
+      §*Two sessions in one repository*)
 - [ ] 2.3 Write the test the removed push condition earned: a turn that
       commits the last task, pushes the branch, and ends with no gate line is
       still blocked. The condition it replaces would have passed exactly this
@@ -107,7 +110,9 @@ decision module, group 3 wires it up and shortens the prose.
 - [ ] 3.2 Register both hooks in `.claude/settings.json`, and confirm
       `agent-permissions.test.ts` still passes — it flattens
       `settings.hooks.PreToolUse` before asserting a length of one, so
-      registrations on other events are outside what it pins.
+      registrations on other events are outside what it pins. Pin the
+      `UserPromptSubmit` and `Stop` registrations in a settings check of
+      their own, so removing either fails it.
       (Req: commit-gates — A turn that commits reports its gates before it
       ends)
 - [ ] 3.3 Shorten `docs/review-toolkit.md`'s "never ask whether to run it" to

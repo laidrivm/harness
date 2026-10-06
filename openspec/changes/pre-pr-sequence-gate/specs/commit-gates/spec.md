@@ -34,9 +34,11 @@ discharges the obligation is the report, and nothing else.
 
 Whether the turn left commits SHALL be decided against a mark of `HEAD` taken
 when control arrived, written by a `UserPromptSubmit` hook. A turn that commits
-and then returns `HEAD` to the mark SHALL be treated as having left none: the
+and then returns `HEAD` to the mark SHALL be treated as having left none,
+unless the branch's remote-tracking ref holds a commit the mark does not: the
 gate exists so that work reaching a branch is reported, and work withdrawn
-before the turn ends reaches nothing. The mark SHALL be keyed by the session it
+before the turn ends reaches nothing — but a commit pushed and then reset
+locally has reached the remote branch, whatever `HEAD` says afterwards. The mark SHALL be keyed by the session it
 belongs to, since two sessions in one repository otherwise share one mark and
 answer each other's question. It SHALL live no longer than the turn that
 follows it: a record of what the sequence has already reported would be a
@@ -111,6 +113,13 @@ takes rather than a behaviour it asserts.
 
 - **WHEN** a turn commits and then returns `HEAD` to where the mark left it
 - **THEN** the turn ends, because nothing it committed survives to be reported
+
+#### Scenario: A turn that pushes, then resets to the mark
+
+- **WHEN** a turn commits the last task of a group, pushes the branch, and
+  returns `HEAD` to the mark
+- **THEN** the hook blocks, because the branch's remote-tracking ref holds a
+  commit the mark does not, so the work reached a branch
 
 #### Scenario: A refusal is not repeated
 
