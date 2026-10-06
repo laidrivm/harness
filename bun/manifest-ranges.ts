@@ -15,14 +15,15 @@
  */
 
 /**
- * The fields holding shell commands rather than version specs, which is the
- * whole of what this scan exempts. Everything else is walked, `overrides` and
- * any field added later alike — a scan scoped by a list of the collections it
- * covers is one a new collection is silently outside of, and a dependency
- * field nobody thought to add to that list is exactly where an unread range
- * would sit.
+ * The top-level fields holding something other than version specs, which is
+ * the whole of what this scan exempts: shell commands, and the consumer's
+ * `harness` values, whose reasons are prose a range pattern would misread.
+ * Everything else is walked, `overrides` and any field added later alike — a
+ * scan scoped by a list of the collections it covers is one a new collection
+ * is silently outside of, and a dependency field nobody thought to add to
+ * that list is exactly where an unread range would sit.
  */
-const EXEMPT = new Set(["scripts", "simple-git-hooks"]);
+const EXEMPT = new Set(["scripts", "simple-git-hooks", "harness"]);
 
 /**
  * Every way a spec names more than the one version it appears to: a widening

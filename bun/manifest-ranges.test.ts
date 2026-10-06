@@ -204,6 +204,19 @@ describe("a value this scan has nothing to say about", () => {
 		expect(ranges(manifest(fields))).toEqual([]);
 	});
 
+	test("a reason among the consumer's harness values passes, being exempt", () => {
+		// Prose, and prose opens with a tilde or a comparator as readily as a
+		// range does.
+		const fields = {
+			harness: {
+				mutationFloor: { surviving: 3, why: "~ half are equivalent" },
+				diffBudgetExclude: ["*.woff2"],
+			},
+		};
+
+		expect(ranges(manifest(fields))).toEqual([]);
+	});
+
 	test("a null passes rather than ending the scan", () => {
 		// `typeof null` is `"object"` and `Object.entries(null)` throws, so the
 		// guard against it is the difference between a clean manifest and a
