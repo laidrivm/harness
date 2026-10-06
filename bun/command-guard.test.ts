@@ -183,6 +183,15 @@ describe("the directory a commit lands in", () => {
 		).toBe(2);
 	});
 
+	test("a refusal from main names git -C as the way to commit elsewhere", () => {
+		const feature = fabricate("feat/x");
+		const { reason } = run(
+			event(`cd ${feature} && git commit -m fix`),
+			fabricate("main"),
+		);
+		expect(reason).toContain("git -C <path>");
+	});
+
 	test("a cd between feature checkouts does not block", () => {
 		const other = fabricate("feat/y");
 		expect(

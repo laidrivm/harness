@@ -4,7 +4,7 @@ The agent harness shared by several projects. It ships as a package (`package.js
 
 ## Layout
 
-`core/` holds what any project can use. `core/skills/` holds personal [Claude Code skills](https://code.claude.com/docs/en/skills), one per directory as `core/skills/<name>/SKILL.md`.
+`core/` holds what any project can use. `core/rules.md` is the rulebook, and the docs it links sit beside it as `core/<doc>.md`, laid out as a project's copy holds them. `core/skills/` holds personal [Claude Code skills](https://code.claude.com/docs/en/skills), one per directory as `core/skills/<name>/SKILL.md`.
 
 `bun/` holds what assumes Bun and TypeScript: the command guard and the hook text that boots it, the gates, and `check.ts`, which runs every check over a consumer's tree.
 
@@ -52,6 +52,7 @@ A project takes the harness as one dependency pinned to a full commit, `"harness
 - Each skill the project uses is a tracked relative link, `.claude/skills/<name>` → `../../node_modules/harness/core/skills/<name>`. It resolves once `bun install` has run.
 - The Bash `PreToolUse` hook in `.claude/settings.json` is the text `bun/bootstrap.ts` exports, character for character. Before the install it lets only the install through; after it, it hands every command to the guard.
 - The values the gates run with live under a `"harness"` key in the project's `package.json`, typed in `bun/config.ts`. A gate whose key is absent fails, naming it.
+- `bun node_modules/harness/bun/sync.ts`, from the project's root, writes `core/rules.md` and the docs beside it into a tracked `harness/`, which the project's `CLAUDE.md` imports and its review bot reads. A copy that differs from the pin fails the check below, naming each file; an edit to a rule belongs here, not in the copy.
 - `bun node_modules/harness/bun/check.ts`, from the project's root, runs every check over its tree.
 
 ## Adding a skill
