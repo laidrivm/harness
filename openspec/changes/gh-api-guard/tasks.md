@@ -43,22 +43,26 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
       passes. This task closes no criterion — it is the control that the new
       branch left the pair list alone (ZOMBIES 21)
 
-## 2. A parameter implies a write, and `graphql` is one regardless
+## 2. A parameter implies a write, and `graphql` is one unless it reads
 
 Closes `agent-permissions/a-write-with-no-method-flag`,
-`agent-permissions/a-graphql-call`.
+`agent-permissions/a-graphql-call`, `agent-permissions/a-graphql-read`.
 
 - [ ] 2.1 Write the failing cases first and record that each fails: `gh api
       /repos/o/r/issues/37/comments -f body=hi` blocks; `gh api graphql -f
-      query=mutation{…}` blocks; `gh api graphql -f query=query{…}` blocks
-      (ZOMBIES 14, 15)
+      query=mutation{…}` blocks; `gh api graphql -F query=@q.graphql` blocks;
+      `gh api graphql -f query='query{…}'` passes, and so does the
+      `coderabbit` skill's own review-thread query, taken verbatim from its
+      `SKILL.md` (ZOMBIES 14, 15)
 - [ ] 2.2 Add the second clause — no method flag and any of `-f`, `-F`,
       `--field`, `--raw-field`, `--input` present — quoting `gh api --help` at
       the line for why, since the default method is what makes this a write
       and nothing in the command says so (ZOMBIES 11, 16)
-- [ ] 2.3 Add the `graphql` operand refusal, with the reason at its line: the
-      operation sits inside an argument's value, and reading it is parsing to
-      decide whether to block (ZOMBIES 14, 15)
+- [ ] 2.3 Add the `graphql` clause — an inline `query` field opening with the
+      `query` keyword and holding no `mutation` token passes, every other
+      document blocks — with the reason at its line: the `coderabbit` skill's
+      thread read needs it, and a token search errs towards blocking
+      (ZOMBIES 14, 15)
 - [ ] 2.4 Add a case for a flag the list does not name, asserting it blocks
       when no method is present — the test is scoped by the reads it exempts,
       not by the writes it enumerates, per `CLAUDE.md` (ZOMBIES 17)
@@ -88,7 +92,9 @@ and no criterion in any capability states what a doc sentence says.
 - [ ] 3.4 Measure `scripts/command-guard.ts` and
       `scripts/command-guard.test.ts` against the 300-line cap and record both
       numbers, whether or not either is over; the test file stood at 214 and
-      the guard at 246 when this was proposed
+      the guard at 246 when this was proposed, and the guard at 299 once the
+      harness took it. A file over the cap is split until both comply, in this
+      change, before it ships
       (*change-slicing/a-file-over-the-cap*)
 - [ ] 3.5 Search the four places that restate a decision — the change's sibling
       artefacts, `openspec/specs/**`, the cards on the boards and the README

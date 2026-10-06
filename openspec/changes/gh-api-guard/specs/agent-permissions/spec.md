@@ -28,9 +28,16 @@ that can. A read is a call whose `--method` or `-X` names `GET` or `HEAD`,
 whatever parameters it carries, or one naming no method and carrying no
 parameter flag — `-f`, `-F`, `--field`, `--raw-field` or `--input` — since
 `gh api` sends `GET` by default and switches to `POST` as soon as a parameter
-is added. A `graphql` operand SHALL be blocked whichever operation it carries:
-telling a query from a mutation means parsing an argument's contents, and the
-guard resolves uncertainty towards blocking.
+is added. A `graphql` operand SHALL be allowed only when its document is given
+inline as the value of a `query` field, its operation keyword is `query`, and
+the token `mutation` appears nowhere in it; every other `graphql` call SHALL
+be blocked — a mutation, a document read from a file through `@` or
+`--input`, and anything else the guard cannot read. The `coderabbit` skill
+reads whether a review thread is resolved through exactly such a query, which
+no REST endpoint carries, so refusing `graphql` whole would break the read the
+review loop rests on. A token search blocks a query that merely names the
+word, and that over-refusal is the direction the guard resolves uncertainty
+towards.
 
 This SHALL NOT become a deny entry. A permission pattern matches a prefix, so
 it can name `gh api` whole or nothing narrower, and naming it whole would take
@@ -75,9 +82,16 @@ comments, issue comments and reviews through exactly this command.
 
 #### Scenario: A GraphQL call
 
-- **WHEN** the agent attempts `gh api graphql -f query=…`
-- **THEN** the guard blocks the call, whether the operation is a query or a
-  mutation
+- **WHEN** the agent attempts `gh api graphql` with a document carrying a
+  mutation, or read from a file
+- **THEN** the guard blocks the call
+
+#### Scenario: A GraphQL read
+
+- **WHEN** the agent attempts `gh api graphql -f query='query{…}'` with no
+  `mutation` token in the document, as the `coderabbit` skill does to read
+  review-thread state
+- **THEN** the guard allows the call
 
 #### Scenario: Reading through the endpoint still works
 

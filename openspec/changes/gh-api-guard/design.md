@@ -43,7 +43,8 @@ review is read at all. The `coderabbit` skill's first step is three
   write under `POST`; the method is the thing that differs, and a list of
   write paths is an enumeration of what the scan covers, which `CLAUDE.md`
   forbids in favour of naming what it exempts.
-- Parsing a GraphQL document to tell a query from a mutation.
+- Parsing a GraphQL document. The guard reads its leading operation keyword
+  and searches it for one token, and nothing more.
 
 ## Decisions
 
@@ -70,15 +71,23 @@ parameter flag would block a read the tool documents.
 for a smaller check. Rejected — it blocks a documented read, and a guard that
 refuses correct work is one people route around.
 
-### `graphql` is refused whole
+### `graphql` passes an inline query with no `mutation` in it
 
-An operand of `graphql` is blocked whichever operation the document carries.
-Telling a query from a mutation means reading inside a `-f query=…` value,
-which is parsing an argument to decide whether to block; the guard's existing
-rule for `git push` options resolves the same uncertainty towards blocking.
-Nothing in this project calls `gh api graphql` — grepped, with `gh api` as the
-control term that the same query finds — so the cost of refusing it is
-currently zero and the refusal says what to do instead.
+Refusing `graphql` whole was costed at zero on the grounds that nothing in the
+project called it. That was wrong: the `coderabbit` skill reads each review
+thread's `isResolved` and `isOutdated` through `gh api graphql`, and no REST
+response carries either field, so the refusal would break the read the review
+loop depends on.
+
+The guard therefore allows a `graphql` call only when the document is given
+inline as a `query` field's value, opens with the `query` keyword, and holds the
+token `mutation` nowhere. Everything else is blocked: a mutation, a document
+read from a file through `@` or `--input`, which the guard cannot see, and any
+document it cannot read. This is reading inside an argument, which the guard
+otherwise avoids, but the reading is one keyword and a token search, and every
+way it can be wrong — a query that merely names the word — blocks rather than
+allows, which is the direction the `git push` options rule resolves the same
+uncertainty towards.
 
 ### The check sits inside the existing `gh` branch
 

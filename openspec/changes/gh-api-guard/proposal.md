@@ -61,11 +61,10 @@ the user may approve while reading something else is not the rule as written.
   flag written after the path. The deny list stays the three subcommands and
   the guard stays the boundary, which is the division the modified requirement
   already describes.
-- **Distinguishing a GraphQL query from a mutation.** Reading the operation
-  out of a `-f query=…` string is parsing an argument to decide whether to
-  block, where the guard's rule elsewhere is to resolve uncertainty towards
-  blocking. Nothing in this project's documented workflow calls
-  `gh api graphql`, so refusing it whole costs nothing to name here.
+- **Parsing a GraphQL document.** The guard reads an inline document's
+  leading operation keyword and searches it for `mutation`, and no more: the
+  `coderabbit` skill's review-thread read passes, and anything that could
+  carry a write, or that the guard cannot see, is blocked.
 - **Every other route to the same act.** `curl` against the GitHub API, a
   personal token in a script, the web UI. This change closes the route the
   repository's own tooling makes easy, and the prose keeps the rest.
