@@ -193,7 +193,8 @@ function check(command: string): void {
 			let at = 0;
 			let target = dir;
 			for (let word = rest[at]; word?.startsWith("-"); word = rest[at]) {
-				if (word === "-C") target = place(dir, rest[at + 1] ?? "");
+				// Each `-C` resolves from the one before it, as git chains them.
+				if (word === "-C") target = place(target, rest[at + 1] ?? "");
 				at += VALUE_OPTIONS.has(word) ? 2 : 1;
 			}
 			const subcommand = rest[at];

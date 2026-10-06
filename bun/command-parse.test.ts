@@ -106,6 +106,18 @@ describe("a spelling that walks around a permission pattern", () => {
 		);
 		expect(run(event("git \\\ncommit -m fix"), fabricate("main")).code).toBe(2);
 	});
+
+	test("a quote inside a comment opens nothing", () => {
+		expect(
+			run(event("echo ok # it's\ngit commit -m fix"), fabricate("main")).code,
+		).toBe(2);
+	});
+
+	test("a # inside a word is not a comment", () => {
+		expect(
+			run(event("echo a#b; git commit -m fix"), fabricate("main")).code,
+		).toBe(2);
+	});
 });
 
 describe("quoting that hides the command from a naive tokeniser", () => {

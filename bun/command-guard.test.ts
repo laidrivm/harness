@@ -190,6 +190,12 @@ describe("the directory a commit lands in", () => {
 		expect(run(event(command), main).code).toBe(0);
 	});
 
+	test("a second -C resolves against the first", () => {
+		const main = fabricate("main");
+		const command = `git -C ${main} -C . commit -m fix`;
+		expect(run(event(command), fabricate("feat/x")).code).toBe(2);
+	});
+
 	test("a cd the guard cannot resolve blocks", () => {
 		const { code, reason } = run(
 			event('cd "$SOMEWHERE" && git commit -m fix'),

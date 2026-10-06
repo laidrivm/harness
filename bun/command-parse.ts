@@ -127,6 +127,15 @@ export function commands(line: string): string[][] {
 			else word += char;
 		} else if (char === '"' || char === "'") {
 			quote = char;
+		} else if (
+			char === "#" &&
+			word === "" &&
+			/^$|[\s;&|()]$/.test(line.slice(at - 1, at))
+		) {
+			// A `#` opening a word comments out the rest of the line, so a quote
+			// in it opens nothing — read as one, it swallowed the next line's
+			// command. Mid-word, as in `a#b`, it is literal.
+			while (at + 1 < line.length && line[at + 1] !== "\n") at++;
 		} else if (pattern && (char === "(" || char === "|")) {
 			// Pattern syntax: the optional `(` opening a pattern is not a subshell,
 			// and `|` between alternatives is not a pipe.
