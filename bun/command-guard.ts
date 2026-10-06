@@ -211,7 +211,7 @@ function check(command: string): void {
 
 			if (subcommand === "commit" && onMain(targets)) {
 				block(
-					"command-guard: HEAD is on main and this project never commits there. Branch first, then commit on the branch.",
+					`command-guard: HEAD is on main and this project never commits there. Branch first, then commit on the branch. ${ELSEWHERE}`,
 				);
 			}
 			if (subcommand === "push") checkPush(args, targets);
@@ -221,6 +221,10 @@ function check(command: string): void {
 
 const onMain = (targets: (string | null)[]) =>
 	targets.some((target) => currentBranch(target) === "main");
+
+/** How to reach another checkout from one on main, which `dirs` refuses by `cd`. */
+const ELSEWHERE =
+	"Every directory the line may run in is checked, so a cd into another checkout from one on main is refused too; name that checkout with git -C <path> instead.";
 
 function checkPush(args: string[], targets: (string | null)[]): void {
 	if (args.some((arg) => FORCE.test(arg))) {
@@ -254,7 +258,7 @@ function checkPush(args: string[], targets: (string | null)[]): void {
 	// nothing of its own to push from there.
 	if (onMain(targets)) {
 		block(
-			"command-guard: HEAD is on main and this project never pushes from there. Branch first, then push the branch.",
+			`command-guard: HEAD is on main and this project never pushes from there. Branch first, then push the branch. ${ELSEWHERE}`,
 		);
 	}
 
