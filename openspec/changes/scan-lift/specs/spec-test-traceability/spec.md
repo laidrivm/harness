@@ -53,8 +53,8 @@ the opposite of what this capability is for.
 
 #### Scenario: A citation floating in a file
 
-- **WHEN** a `// spec:` comment is followed by anything other than a `test`,
-  `it` or `describe` call
+- **WHEN** the first line after a `// spec:` comment that is neither blank
+  nor a comment is anything other than a `test`, `it` or `describe` call
 - **THEN** the check fails, so a block of citations cannot claim coverage no
   test performs
 

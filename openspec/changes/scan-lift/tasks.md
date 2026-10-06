@@ -67,6 +67,7 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       this change's own criterion is closed elsewhere, and
       citing it here would be false)
 - [ ] 1.8 Confirm `src/app/module-classes.test.ts` is untouched by this change
-      and passes — it is `blank`'s only production caller and therefore the
+      and passes — it is `blank`'s only caller outside the scanner's own
+      tests, a test itself rather than production code, and therefore the
       control that the module's other export was not disturbed
       (*A citation below an escaped quote*)
