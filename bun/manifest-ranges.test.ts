@@ -79,7 +79,6 @@ describe("a version naming a set rather than a version", () => {
 describe("a Git specifier", () => {
 	const commit = "0123456789abcdef0123456789abcdef01234567";
 
-	// spec: harness-consumption/pinned-to-a-commit
 	test("the harness pinned to a full commit passes", () => {
 		const fields = {
 			dependencies: { harness: `github:laidrivm/harness#${commit}` },
@@ -88,7 +87,6 @@ describe("a Git specifier", () => {
 		expect(ranges(manifest(fields))).toEqual([]);
 	});
 
-	// spec: harness-consumption/pinned-to-a-commit
 	test("a manifest with no harness entry passes", () => {
 		// The pin is admitted, not demanded: a manifest from before the harness
 		// was added names no entry for this rule to read.
@@ -97,7 +95,6 @@ describe("a Git specifier", () => {
 		expect(ranges(manifest(fields))).toEqual([]);
 	});
 
-	// spec: harness-consumption/pinned-to-something-that-moves
 	test.each([
 		["a 39-character hash", `#${commit.slice(1)}`],
 		["a 41-character hash", `#${commit}0`],
@@ -115,7 +112,6 @@ describe("a Git specifier", () => {
 		]);
 	});
 
-	// spec: harness-consumption/pinned-to-something-that-moves
 	test("the harness by bare shorthand is named", () => {
 		// The one entry the shorthand cannot hide in: it is read by its key, and
 		// every value but the pin fails there.
@@ -128,7 +124,6 @@ describe("a Git specifier", () => {
 		]);
 	});
 
-	// spec: harness-consumption/a-non-harness-git-specifier
 	test.each([
 		["pinned to a commit", `github:lodash/lodash#${commit}`],
 		["on a branch", "github:lodash/lodash#main"],
@@ -143,7 +138,6 @@ describe("a Git specifier", () => {
 		]);
 	});
 
-	// spec: harness-consumption/a-non-harness-git-specifier
 	test("a hosted prefix other than github is named", () => {
 		const found = ranges(
 			manifest({ dependencies: { lodash: "gitlab:lodash/lodash" } }),
@@ -154,7 +148,6 @@ describe("a Git specifier", () => {
 		]);
 	});
 
-	// spec: harness-consumption/a-non-harness-git-specifier
 	test("beside the pinned harness, only the other entry is named", () => {
 		const fields = {
 			dependencies: {

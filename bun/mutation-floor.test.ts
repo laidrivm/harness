@@ -12,7 +12,6 @@ import { gauge, loadReport, survivors } from "./mutation-floor.ts";
 
 afterAll(cleanup);
 
-// spec: mutation-floor/a-mutant-the-tests-assert-against
 describe("the survivor count", () => {
 	test("a report with no mutants fails rather than counting zero", () => {
 		expect(() => survivors(report())).toThrow(/no mutants/);
