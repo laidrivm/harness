@@ -13,8 +13,9 @@ on `main` runs on the same event and can decide this one too.
 ## What Changes
 
 - `scripts/command-guard.ts` refuses a `git commit` on a branch whose commits
-  are already upstream, which is what a merged pull request leaves behind
-  whatever style closed it.
+  are already upstream as equivalent patches, which is what a rebase merge or
+  a squash of one commit leaves behind. A merge commit, a fast-forward and a
+  squash of several commits leave no such mark, and the prose rule keeps them.
 - The freshness half of the check — not the merged verdict — engages only
   for a branch that exists on the remote. A branch with no counterpart has,
   so far as the repository can tell, never been pushed, so no pull request of

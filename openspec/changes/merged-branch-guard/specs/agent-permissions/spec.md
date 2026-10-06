@@ -18,6 +18,15 @@ SHALL NOT be stated as the absence of `+` marks: a branch with no commits
 prints neither mark, and the absence form refuses the first commit of every
 branch created.
 
+The verdict SHALL cover the merge styles that carry each of the branch's
+commits upstream as an equivalent patch — a rebase merge, and a squash of a
+single commit — and SHALL NOT claim the others. A merge commit or a
+fast-forward leaves the branch's commits as ancestors of the base, which
+`git cherry` does not list at all; a squash of several commits leaves one
+upstream patch that no single commit matches. Either prints no `-` and is
+allowed, so `git-and-prs.md`'s pull-request-state rule remains the check for
+them.
+
 This verdict SHALL be computed for every branch, whatever the branch's own
 state on the remote, and a positive verdict SHALL be honoured however old the
 base ref is. A stale base can only fail to carry a merge that has happened; it
@@ -77,6 +86,14 @@ unstated is a block the session works around.
   `git cherry` marks `-` against a recently fetched base ref
 - **THEN** the hook blocks the call, and the reason names the branch as
   already merged
+
+#### Scenario: A branch closed by a merge commit
+
+- **WHEN** the agent attempts `git commit` on a pushed branch whose pull
+  request was closed by a merge commit, so its commits are ancestors of the
+  base ref and `git cherry` lists none of them
+- **THEN** the commit is allowed, because no `-` mark exists, and the
+  pull-request-state rule in `git-and-prs.md` is what catches it
 
 #### Scenario: The branch was never pushed
 

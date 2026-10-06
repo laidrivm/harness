@@ -6,13 +6,11 @@ numbers are that run's idea numbers, so each of its 15 ideas is traceable to
 the group that closes it.
 
 Two groups, so two pull requests on `feat/merged-branch-guard-1` and `-2`, in
-order. Group 1 ships the module and its tests with nothing calling it; group 2
-wires it into the guard and shortens the prose the mechanism supersedes. The
-seam between them is a module no shipped path calls, which is a horizontal
-slice — so group 1 is not a released step on its own and group 2 follows it in
-the same session.
+order. Group 1 ships the module with the guard's `commit` arm calling it, so
+no step merges a module nothing calls; group 2 measures what the guard now
+costs on every call and shortens the prose the mechanism supersedes.
 
-## 1. The branch-state module
+## 1. The branch-state module and its caller
 
 - [ ] 1.1 Extend `scripts/command-guard.fixture.ts` to fabricate a repository
       with an `origin` remote, a `main` branch on it, a branch pushed to it,
@@ -55,30 +53,32 @@ the same session.
       `FETCH_MAX_AGE` bound with its reason where it is declared, and a
       result that distinguishes merged, stale and unknown so the guard can
       word each refusal differently. It runs the reads in the repository a
-      caller names, not in `cwd`, because `git commit -C <dir>` commits
+      caller names, not in `cwd`, because `git -C <dir> commit` commits
       elsewhere. (Req: agent-permissions — A commit on a merged branch is
       refused)
-
-## 2. Wiring, and the prose it supersedes
-
-- [ ] 2.1 Write the guard-level tests in `scripts/command-guard-branch.test.ts`:
+- [ ] 1.7 Write the guard-level tests in `scripts/command-guard-branch.test.ts`:
       a block exits exactly 2 [9]; the stale reason names the fetch and the
-      merged reason names moving the work, distinguishably [10]; `git commit
-      -C <other-repo>` is decided against the `-C` target [12]; a detached
+      merged reason names moving the work, distinguishably [10]; `git -C
+      <other-repo> commit` is decided against the `-C` target [12]; a detached
       HEAD still reaches the existing branch-read refusal first [14]. (Req:
       agent-permissions — A commit on a merged branch is refused)
-- [ ] 2.2 Call `branch-state.ts` from `command-guard.ts`'s `commit` arm, after
+- [ ] 1.8 Call `branch-state.ts` from `command-guard.ts`'s `commit` arm, after
       the `main` check, and confirm `command-guard.ts` and every file this
       change touches stay under the 300-line cap `change-slicing` sets. (Req:
       agent-permissions — A commit on a merged branch is refused)
-- [ ] 2.3 Measure the guard's per-call cost on a non-commit Bash call before
+
+## 2. The cost, and the prose it supersedes
+
+- [ ] 2.1 Measure the guard's per-call cost on a non-commit Bash call before
       and after, and record both numbers where the existing 16–22 ms figure is
       stated — the guard runs on every call, so a regression there is paid by
       every tool use, and the claim that only commits pay for this needs a
       measurement rather than a reading of the code. (Req: agent-permissions —
       A commit on a merged branch is refused)
-- [ ] 2.4 Shorten `docs/git-and-prs.md`'s pull-request-state rule to what the
+- [ ] 2.2 Shorten `docs/git-and-prs.md`'s pull-request-state rule to what the
       guard cannot see — a merge that has not been fetched yet is refused
-      rather than missed, so what remains for the prose is the judgement the
-      guard declines to make: where the work goes once it is refused. (Req:
-      agent-rulebook — A mechanised prohibition leaves its prose home)
+      rather than missed, so what remains for the prose is a branch closed by
+      a merge commit, a fast-forward or a squash of several commits, which no
+      `-` mark reveals, and the judgement the guard declines to make: where
+      the work goes once it is refused. (Req: agent-rulebook — A mechanised
+      prohibition leaves its prose home)

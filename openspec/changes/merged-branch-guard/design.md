@@ -65,6 +65,14 @@ and containment tests such as `git branch --merged` say nothing; equivalence
 is what survives the rewrite. Measurement A confirms it on a real
 squash-merged branch, and the negative control confirms the other direction.
 
+That measurement covers a squash of one commit, and the guarantee stops
+there. A merge commit or a fast-forward leaves the branch's commits as
+ancestors of the base, which `git cherry` omits rather than marks, and a squash
+of several commits leaves an upstream patch none of them matches — so neither
+prints a `-`. This repository itself merges by merge commit. The spec states
+the narrower guarantee, and the pull-request-state rule keeps those styles
+(task 2.2) rather than the guard claiming them.
+
 *Alternative considered*: `gh pr list --head <branch> --state merged`, which
 is what the prose rule tells a human to run. It is authoritative, and it
 needs the network, an authenticated `gh`, and a GitHub remote — three things
