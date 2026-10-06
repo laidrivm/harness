@@ -1,5 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { drift, sync } from "./sync.ts";
@@ -33,11 +39,10 @@ describe("the copy against the package", () => {
 
 	test("three differing files are each named", () => {
 		const three = { "a.md": "a\n", "b.md": "b\n", "c.md": "c\n" };
-		const { core, copy } = pair(three, {
-			"a.md": "A\n",
-			"b.md": "B\n",
-			"c.md": "C\n",
-		});
+		const { core, copy } = pair(
+			{ ...PACKAGE, ...three },
+			{ ...PACKAGE, "a.md": "A\n", "b.md": "B\n", "c.md": "C\n" },
+		);
 		const problems = drift(core, copy);
 		expect(problems).toHaveLength(3);
 		for (const name of Object.keys(three))
@@ -83,5 +88,18 @@ describe("syncing", () => {
 		});
 		sync(core, copy);
 		expect(drift(core, copy)).toEqual([]);
+	});
+
+	test("a package holding no rulebook is refused, the copy left whole", () => {
+		const { core, copy } = pair({}, PACKAGE);
+		expect(() => sync(core, copy)).toThrow(/holds no rules\.md/);
+		expect(readdirSync(copy).sort()).toEqual(Object.keys(PACKAGE).sort());
+	});
+
+	test("a package directory that is absent fails the check", () => {
+		const { copy } = pair({}, PACKAGE);
+		expect(() => drift(join(copy, "..", "absent"), copy)).toThrow(
+			/holds no rules\.md/,
+		);
 	});
 });

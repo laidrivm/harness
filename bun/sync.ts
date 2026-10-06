@@ -34,12 +34,26 @@ const files = (dir: string, only = /./) =>
 const MARKDOWN = /\.md$/;
 
 /**
+ * `core`'s Markdown files, or a throw when it holds no rulebook: an absent or
+ * empty source would read as "ship nothing", so `sync` would empty the copy
+ * and `drift` would then call the two identical.
+ */
+function source(core: string): string[] {
+	const want = files(core, MARKDOWN);
+	if (!want.includes("rules.md"))
+		throw new Error(
+			`${core} holds no rules.md — the package is not installed whole`,
+		);
+	return want;
+}
+
+/**
  * Every file of the copy at `copy` that differs from `core`, is missing from
  * it, or is not in `core` at all, each named. Compared byte for byte: a copy
  * edited by hand is an edit to a harness rule, which belongs in the harness.
  */
 export function drift(core: string, copy: string): string[] {
-	const want = files(core, MARKDOWN);
+	const want = source(core);
 	const have = files(copy);
 	const run = "run bun node_modules/harness/bun/sync.ts";
 	return [
@@ -61,8 +75,8 @@ export function drift(core: string, copy: string): string[] {
 
 /** Makes `copy` hold exactly `core`'s Markdown files, byte for byte. */
 export function sync(core: string, copy: string): void {
+	const want = source(core);
 	mkdirSync(copy, { recursive: true });
-	const want = files(core, MARKDOWN);
 	for (const name of files(copy))
 		if (!want.includes(name)) rmSync(join(copy, name));
 	for (const name of want) copyFileSync(join(core, name), join(copy, name));
