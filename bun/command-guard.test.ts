@@ -176,18 +176,47 @@ describe("the directory a commit lands in", () => {
 		).toBe(0);
 	});
 
-	test("a leading cd moves it", () => {
+	test("a cd into a checkout on main blocks", () => {
 		const main = fabricate("main");
-		const feature = fabricate("feat/x");
-		expect(run(event(`cd ${main} && git commit -m fix`), feature).code).toBe(2);
-		expect(run(event(`cd ${feature} && git commit -m fix`), main).code).toBe(0);
+		expect(
+			run(event(`cd ${main} && git commit -m fix`), fabricate("feat/x")).code,
+		).toBe(2);
 	});
 
-	test("a relative -C resolves against the moved directory", () => {
-		const main = fabricate("main");
+	test("a cd between feature checkouts does not block", () => {
+		const other = fabricate("feat/y");
+		expect(
+			run(event(`cd ${other} && git commit -m fix`), fabricate("feat/x")).code,
+		).toBe(0);
+	});
+
+	test.each([
+		"cd {feature} && git commit -m fix",
+		"(cd {feature}); git commit -m fix",
+		"false && cd {feature}; git commit -m fix",
+	])("%s from main still checks main", (line) => {
 		const feature = fabricate("feat/x");
-		const command = `cd ${feature}/.. && git -C ${feature.split("/").pop()} commit -m fix`;
-		expect(run(event(command), main).code).toBe(0);
+		const command = line.replace("{feature}", feature);
+		expect(run(event(command), fabricate("main")).code).toBe(2);
+	});
+
+	test("a cd into nothing moves nowhere", () => {
+		expect(
+			run(event("cd /nonexistent/xyz; git commit -m fix"), fabricate("feat/x"))
+				.code,
+		).toBe(0);
+	});
+
+	test("a relative -C resolves against the moved directory too", () => {
+		// `sub` is a feature checkout where the line starts and main where it
+		// moves, so only resolving from both finds main.
+		const start = fabricate();
+		const moved = fabricate();
+		Bun.spawnSync(["git", "init", "-q", "-b", "feat/x", "sub"], { cwd: start });
+		Bun.spawnSync(["git", "init", "-q", "-b", "main", "sub"], { cwd: moved });
+		expect(
+			run(event(`cd ${moved} && git -C sub commit -m fix`), start).code,
+		).toBe(2);
 	});
 
 	test("a second -C resolves against the first", () => {

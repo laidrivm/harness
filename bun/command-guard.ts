@@ -20,6 +20,7 @@
  * holds is what the prohibitions themselves are.
  */
 
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { commands, invocations, SHELLS } from "./command-parse.ts";
@@ -100,17 +101,19 @@ if (typeof command !== "string") {
 }
 
 /**
- * Where the command being checked runs: the event's `cwd`, since nothing
- * promises the hook starts there, moved by every `cd` or `pushd` the line runs
- * first — `cd ../other && git commit` commits in `other`. `null` once a move
- * only running the shell could resolve, which blocks a commit or push rather
- * than reading some other repository's branch.
- *
- * ponytail: sequential, not scoped — `(cd x); git commit` reads `x`, and a
- * `cd` behind `||` counts as taken. Track subshell frames if one bites.
+ * Every directory the command being checked may run in: the event's `cwd`,
+ * since nothing promises the hook starts there, and each place a `cd` or
+ * `pushd` before it reaches — `cd ../other && git commit` commits in `other`.
+ * All of them rather than the last, because a move inside `( … )` or behind a
+ * `false &&` is not taken, and telling those apart means running the shell. A
+ * commit or push is refused if any is on main, which costs refusing `cd
+ * <feature> && git commit` from a checkout on main; `git -C <feature>` is the
+ * spelling that commits there. `null` stands for a move only the shell could
+ * resolve, and blocks.
  */
-let dir: string | null =
-	typeof payload?.cwd === "string" ? payload.cwd : process.cwd();
+const dirs = new Set<string | null>([
+	typeof payload?.cwd === "string" ? payload.cwd : process.cwd(),
+]);
 
 /** `path` as the shell resolves it from `from`, or `null` where it cannot be read statically. */
 function place(from: string | null, path: string): string | null {
@@ -169,7 +172,12 @@ function check(command: string): void {
 				const operand = rest.find(
 					(word) => word === "-" || !word.startsWith("-"),
 				);
-				dir = name === "popd" ? null : place(dir, operand ?? "~");
+				for (const from of [...dirs]) {
+					const to = name === "popd" ? null : place(from, operand ?? "~");
+					// A `cd` into nothing fails and moves nowhere: `&&` stops there,
+					// and after `;` the shell stands where this set already has it.
+					if (to === null || existsSync(to)) dirs.add(to);
+				}
 				continue;
 			}
 
@@ -191,26 +199,30 @@ function check(command: string): void {
 			if (name !== "git") continue;
 
 			let at = 0;
-			let target = dir;
+			let targets = [...dirs];
 			for (let word = rest[at]; word?.startsWith("-"); word = rest[at]) {
 				// Each `-C` resolves from the one before it, as git chains them.
-				if (word === "-C") target = place(target, rest[at + 1] ?? "");
+				const path = rest[at + 1] ?? "";
+				if (word === "-C") targets = targets.map((from) => place(from, path));
 				at += VALUE_OPTIONS.has(word) ? 2 : 1;
 			}
 			const subcommand = rest[at];
 			const args = rest.slice(at + 1);
 
-			if (subcommand === "commit" && currentBranch(target) === "main") {
+			if (subcommand === "commit" && onMain(targets)) {
 				block(
 					"command-guard: HEAD is on main and this project never commits there. Branch first, then commit on the branch.",
 				);
 			}
-			if (subcommand === "push") checkPush(args, target);
+			if (subcommand === "push") checkPush(args, targets);
 		}
 	}
 }
 
-function checkPush(args: string[], target: string | null): void {
+const onMain = (targets: (string | null)[]) =>
+	targets.some((target) => currentBranch(target) === "main");
+
+function checkPush(args: string[], targets: (string | null)[]): void {
 	if (args.some((arg) => FORCE.test(arg))) {
 		block(
 			"command-guard: force-pushing is the user's, not the agent's — the boundary is the rewrite, not how carefully it is leased. Ask the user to run it.",
@@ -240,7 +252,7 @@ function checkPush(args: string[], target: string | null): void {
 	// word. Refusing the branch outright removes the decision instead of parsing
 	// around it, and costs nothing: the agent cannot commit on main, so it has
 	// nothing of its own to push from there.
-	if (currentBranch(target) === "main") {
+	if (onMain(targets)) {
 		block(
 			"command-guard: HEAD is on main and this project never pushes from there. Branch first, then push the branch.",
 		);
