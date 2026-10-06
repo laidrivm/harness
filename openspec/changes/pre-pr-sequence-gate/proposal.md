@@ -45,7 +45,7 @@ None.
 ### Modified Capabilities
 
 - `commit-gates`: gains a requirement that a turn which commits may not end
-  silently while a task group stands complete.
+  silently when it completed a task group.
 
 ### Unmodified, but adjacent
 

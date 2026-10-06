@@ -57,9 +57,12 @@ decision module, group 3 wires it up and shortens the prose.
       count [11]; a file with no group headings completes nothing [9]; a
       change under `archive/` is not read [2]; a repository with no
       `openspec/changes/` completes nothing [1]; two active changes trigger on
-      either [5]. (Req: commit-gates — A turn that commits reports its gates
-      before it ends, §*Every group still has work in it*, §*The completed
-      group belongs to an archived change*, §*A group that carries no boxes*)
+      either [5]; a group already complete in the task files the marked commit
+      holds does not qualify the turn, read through `git show <mark>:<path>`.
+      (Req: commit-gates — A turn that commits reports its gates before it
+      ends, §*Every group still has work in it*, §*A group completed in an
+      earlier turn*, §*The completed group belongs to an archived change*, §*A
+      group that carries no boxes*)
 - [ ] 2.2 Write the turn-state tests: `HEAD` equal to the mark is a turn that
       did not commit [12]; `HEAD` moved by an amend is a turn that did [13];
       four commits read the same as one [7]; a turn that commits and then

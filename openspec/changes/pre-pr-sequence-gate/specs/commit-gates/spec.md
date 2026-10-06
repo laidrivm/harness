@@ -8,14 +8,21 @@ A `Stop` hook registered in the tracked `.claude/settings.json` SHALL refuse
 to end a turn when all of the following hold: the turn left at least one commit
 on the branch that was not there when control arrived, a task group in a change
 outside `openspec/changes/archive/` has at least one box and no unticked one
-left, and the turn's final assistant message
+left and had an unticked one in the task lists as committed at the mark, and
+the turn's final assistant message
 carries neither a gate line nor `BLOCKED` naming what only the user can
 settle. It SHALL block by exiting **2** with the reason on stderr, which is
 the only code that prevents the turn ending, and the only channel the model
 reads — stderr from a hook exiting 0 reaches the debug log alone.
 
 A group with no boxes at all SHALL NOT count as complete, because the absence
-of an unticked box is not evidence that a box was ticked. A bare `BLOCKED`
+of an unticked box is not evidence that a box was ticked. A group already
+complete at the mark SHALL NOT qualify the turn either: it was completed, and
+reported or not, by an earlier turn, and counting it would refuse every turn
+that commits anything while any active change holds a finished group. The
+state at the mark SHALL be read from git — the task files as the marked commit
+holds them — rather than recorded beside the mark, which would be the second
+source of truth this requirement already refuses. A bare `BLOCKED`
 with nothing after it SHALL NOT satisfy the message condition, on the terms
 this project already applies to an `oversize:` marker in a pull request body:
 a marker with nothing after it clears nothing.
@@ -134,6 +141,13 @@ takes rather than a behaviour it asserts.
 - **WHEN** a turn commits while every task group in every active change still
   has an unticked box
 - **THEN** the turn ends, because no group has been completed
+
+#### Scenario: A group completed in an earlier turn
+
+- **WHEN** a turn commits work for a group that still has an unticked box,
+  while another group was already fully ticked in the task lists the marked
+  commit holds
+- **THEN** the turn ends, because no group was completed in this turn
 
 #### Scenario: The completed group belongs to an archived change
 

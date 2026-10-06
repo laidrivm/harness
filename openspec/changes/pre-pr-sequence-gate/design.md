@@ -108,6 +108,15 @@ apply flow already parses, and reading them costs a glob. Changes under
 `openspec/changes/archive/` are excluded by the glob, which is also what stops
 an archived change from holding the gate open forever.
 
+They are read twice: as the working tree holds them at `Stop`, and as the
+marked commit holds them, through `git show <mark>:<path>`. Only a group
+complete now and not complete at the mark qualifies the turn. Reading the
+completion state alone would count every group finished in an earlier turn,
+and any active change with one — a multi-step change mid-way through its
+steps is exactly that — would refuse every committing turn after it. The
+second read comes from git rather than from the mark, which records `HEAD`
+and nothing else.
+
 ### What the hook does not claim
 
 It reads `last_assistant_message` for a gate line. An agent that writes
