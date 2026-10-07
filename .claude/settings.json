@@ -1,0 +1,95 @@
+{
+	"permissions": {
+		"deny": [
+			"Bash(npx *)",
+			"Bash(npm *)",
+			"Bash(pnpm *)",
+			"Bash(yarn *)",
+			"Bash(gh pr comment *)",
+			"Bash(gh issue comment *)",
+			"Bash(gh pr review *)",
+			"Edit(.npmrc)"
+		],
+		"ask": [
+			"Bash(bun add *)",
+			"Bash(bun a *)",
+			"Bash(bun install *)",
+			"Bash(bun i *)",
+			"Bash(bun remove *)",
+			"Bash(bun rm *)",
+			"Bash(bun r *)",
+			"Bash(bun uninstall *)",
+			"Bash(bun update *)",
+			"Bash(bun up *)",
+			"Bash(bun patch *)",
+			"Bash(bun patch-commit *)",
+			"Bash(bun pm pkg *)",
+			"Bash(bun pm version *)",
+			"Bash(bun pm trust *)",
+			"Edit(bunfig.toml)"
+		],
+		"allow": [
+			"Bash(bun test *)",
+			"Bash(bun run *)",
+			"Bash(bun --version)",
+			"Bash(openspec --version)",
+			"Bash(openspec archive *)",
+			"Bash(openspec instructions *)",
+			"Bash(openspec list *)",
+			"Bash(openspec new *)",
+			"Bash(openspec status *)",
+			"Bash(openspec validate *)",
+			"Bash(coderabbit --version)",
+			"Bash(coderabbit doctor *)",
+			"Bash(coderabbit review *)",
+			"Bash(actionlint *)",
+			"Bash(git log *)",
+			"Bash(git grep *)",
+			"Bash(git ls-tree *)",
+			"Bash(git ls-remote *)",
+			"Bash(git rev-list *)",
+			"Bash(git cherry *)",
+			"Bash(git check-ignore *)",
+			"Bash(git help *)",
+			"Bash(git branch *)",
+			"Bash(git fetch *)",
+			"Bash(git switch *)",
+			"Bash(git add *)",
+			"Bash(git commit *)",
+			"Bash(gh run *)",
+			"Bash(grep *)",
+			"Bash(command -v *)",
+			"Skill(coderabbit-local)",
+			"Skill(opsx:apply)",
+			"Skill(opsx:archive)",
+			"Skill(opsx:explore)",
+			"Skill(opsx:propose)",
+			"Skill(opsx:sync)",
+			"Skill(opsx:update)",
+			"Skill(playwright-cli)",
+			"Skill(triage)",
+			"Skill(warm)",
+			"Skill(zombies)",
+			"WebFetch(domain:bun.com)",
+			"WebFetch(domain:docs.claude.com)",
+			"WebFetch(domain:docs.coderabbit.ai)",
+			"WebFetch(domain:docs.github.com)",
+			"WebFetch(domain:github.com)",
+			"WebFetch(domain:raw.githubusercontent.com)",
+			"WebSearch"
+		]
+	},
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bun \"$CLAUDE_PROJECT_DIR/bun/command-guard.ts\" || exit 2"
+					}
+				]
+			}
+		]
+	}
+}
