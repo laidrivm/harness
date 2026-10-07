@@ -1,16 +1,16 @@
 ## Context
 
-`scripts/mutation-floor.ts` does two jobs. It counts the mutants surviving in
-`src/model.ts` and compares that count against a floor declared in its own
-source; and it reads every comment in that file looking for a `// Stryker
-disable` directive, refusing one that names `all`, one written as a block
-comment, one missing `next-line`, and one carrying no reason.
+`bun/mutation-floor.ts` does two jobs. It counts the mutants surviving in
+`src/model.ts` (in d2ass) and compares that count against a floor declared in
+its own source; and it reads every comment in that file looking for a `//
+Stryker disable` directive, refusing one that names `all`, one written as a
+block comment, one missing `next-line`, and one carrying no reason.
 
-The second job has never had an input. `src/model.ts` carries no directive,
-and `git log` shows none has ever been written. The machinery around it is
-`exemptions()` and its two patterns in the check, the whole of
-`scripts/mutation-floor-exemptions.test.ts`, and one case in
-`scripts/mutation-floor-cli.test.ts`. `comments()` in `scripts/scan.ts` is not
+The second job has never had an input. `src/model.ts` (in d2ass) carries no
+directive, and `git log` shows none has ever been written. The machinery around
+it is `exemptions()` and its two patterns in the check, the whole of
+`bun/mutation-floor-exemptions.test.ts`, and one case in
+`bun/mutation-floor-cli.test.ts`. `comments()` in `bun/scan.ts` is not
 part of it: this is its first caller, not its only one.
 
 ## Goals / Non-Goals
@@ -20,7 +20,7 @@ part of it: this is its first caller, not its only one.
 - Delete the second job and everything reachable only from it.
 - Leave the first job — the count, the floor, the reason its line carries —
   reading exactly as it does now.
-- Leave `scripts/spec-coverage.ts`'s `FLOOR` where it stands by removing the
+- Leave `bun/spec-coverage.ts`'s `FLOOR` where it stands by removing the
   requirement rather than orphaning its scenarios. The figure is that file's
   to state and it moves without this change — 385 when this was written, 402
   once `notion-task-board` synced — so what this fixes is that it does not
@@ -33,9 +33,9 @@ part of it: this is its first caller, not its only one.
   and where line coverage does not: every branch is reachable by a test that
   asserts nothing about the number it produced.
 - Changing `FLOOR = 66`, the mutators Stryker runs, or the scope it runs over.
-- Touching `scripts/scan.ts` at all. `blank()` is read by
-  `src/app/module-classes.test.ts` and `comments()` by `scan-lift`'s switch of
-  `scripts/spec-coverage.ts`; this change only stops importing the second.
+- Touching `bun/scan.ts` at all. `blank()` is read by
+  `src/app/module-classes.test.ts` (in d2ass) and `comments()` by `scan-lift`'s
+  switch of `bun/spec-coverage.ts`; this change only stops importing the second.
 
 ## Decisions
 
@@ -56,21 +56,21 @@ with no input.
 **`comments()` stays; this change removes its import, not the export.** It was
 lifted out of this check two branches ago so that one scanner served both
 callers, and the second caller is named: `scan-lift` switches
-`scripts/spec-coverage.ts` onto it to close a defect in that file's own
+`bun/spec-coverage.ts` onto it to close a defect in that file's own
 per-line strip, which drops every `// spec:` citation below an escaped quote —
 reproduced against a fabricated repository, with the control that has no
 escaped quote citing normally.
 
 An earlier draft of this design removed it, on the ground that there was no
 next consumer named. There was; the draft did not grep the sibling changes
-`docs/feature-workflow.md` requires grepping, and `scan-lift` had carried that
+`core/feature-workflow.md` requires grepping, and `scan-lift` had carried that
 consumer since before this change was proposed. Removing and
 restoring the export is the only outcome that reasoning could have produced.
 
 What survives the correction is the shape of the worry: between this change and
 `scan-lift`, `comments()` has no caller, and a scanner nobody runs is a scanner
 nobody notices is wrong. `scan-lift` answers it by covering the export in
-`scripts/scan.test.ts` directly rather than through a caller, which is work it
+`bun/scan.test.ts` directly rather than through a caller, which is work it
 owns whichever of the two lands first.
 
 **The requirement is removed, not relaxed.** Leaving it while deleting its
@@ -91,7 +91,7 @@ would be a measurement recording that we stopped measuring.
   is this repository's preference for one spelling. No mutant is admitted that
   Stryker would not have admitted.
 - **`comments()` sits uncalled until `scan-lift` lands, and an uncalled
-  scanner rots.** → `scan-lift` covers it in `scripts/scan.test.ts` on its own
+  scanner rots.** → `scan-lift` covers it in `bun/scan.test.ts` on its own
   terms, so it is exercised by cases rather than by a caller. Landing that
   change first closes the window entirely; landing this one first leaves the
   export covered but unused, which is the weaker of the two and named as one.

@@ -7,7 +7,7 @@
 A check that reads the repository's files SHALL obtain them from a single
 shared sweep rather than deriving its own listing, and SHALL apply its own
 filter to that sweep's result. No tracked source file other than
-`scripts/tracked.ts` and `scripts/tracked.test.ts` SHALL invoke
+`bun/tracked.ts` and `bun/tracked.test.ts` SHALL invoke
 `git rev-parse --show-toplevel` or `git ls-files` to enumerate the tree — the
 sweep's own test is exempt because fabricating a repository is what it does.
 Asking git about a named path is not enumerating the tree and is not covered:
@@ -18,8 +18,8 @@ path, or naming a directory or a glob, still enumerates the tree, and
 
 The sweep SHALL take the listing at the repository root and SHALL return paths
 relative to it, because `git ls-files` run in a subdirectory reports only what
-is under it and names it relative to it — a check run from `scripts/` would
-otherwise scope itself to `scripts/` and say nothing about doing so.
+is under it and names it relative to it — a check run from `bun/` would
+otherwise scope itself to `bun/` and say nothing about doing so.
 
 The sweep SHALL read tracked files only. An untracked file — whether or not it
 matches an ignore rule — is one a clone does not have, so it cannot be allowed
@@ -61,8 +61,8 @@ space is unusual and not a check's to corrupt.
 
 #### Scenario: A second listing is introduced
 
-- **WHEN** a tracked source file other than `scripts/tracked.ts` and
-  `scripts/tracked.test.ts` invokes `git ls-files` or
+- **WHEN** a tracked source file other than `bun/tracked.ts` and
+  `bun/tracked.test.ts` invokes `git ls-files` or
   `git rev-parse --show-toplevel` to enumerate the tree
 - **THEN** a check in the suite fails, naming that file — the filter belongs at
   the call site and the listing does not

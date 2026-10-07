@@ -12,7 +12,7 @@ on `main` runs on the same event and can decide this one too.
 
 ## What Changes
 
-- `scripts/command-guard.ts` refuses a `git commit` on a branch whose commits
+- `bun/command-guard.ts` refuses a `git commit` on a branch whose commits
   are already upstream as equivalent patches, which is what a rebase merge or
   a squash of one commit leaves behind. A merge commit, a fast-forward and a
   squash of several commits leave no such mark, and the prose rule keeps them.
@@ -28,7 +28,7 @@ on `main` runs on the same event and can decide this one too.
   that one direction is a separate refusal: on a branch that is on the remote,
   a base ref not fetched recently is refused as undecidable rather than
   passed, because that is the case the incident consisted of.
-- `docs/git-and-prs.md`'s prose rule is shortened to what the guard cannot
+- `core/git-and-prs.md`'s prose rule is shortened to what the guard cannot
   see, per *A mechanised prohibition leaves its prose home*.
 
 ## Non-goals
@@ -59,12 +59,12 @@ None.
 
 ## Impact
 
-- `scripts/command-guard.ts`, a new `scripts/branch-state.ts` holding the ref
-  reads, and their tests in a new `scripts/command-guard-branch.test.ts`.
-  `scripts/command-guard.fixture.ts` gains a remote and a fetch time — it
+- `bun/command-guard.ts`, a new `bun/branch-state.ts` holding the ref
+  reads, and their tests in a new `bun/command-guard-branch.test.ts`.
+  `bun/command-guard.fixture.ts` gains a remote and a fetch time — it
   drives the guard through a real repository, which is what a branch-state
   check needs.
-- `docs/git-and-prs.md`: the pull-request-state rule is shortened to the part
+- `core/git-and-prs.md`: the pull-request-state rule is shortened to the part
   the guard cannot reach.
 - Every commit the agent makes on a pushed branch now depends on
   `origin/main` having been fetched recently, which is a workflow cost paid

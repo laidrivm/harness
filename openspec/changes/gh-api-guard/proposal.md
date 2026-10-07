@@ -4,7 +4,7 @@
 
 The prohibition on publishing text under the user's name is enforced by
 matching subcommand names — `gh pr comment`, `gh issue comment`, `gh pr
-review` — in `permissions.deny` and again in `scripts/command-guard.ts`'s
+review` — in `permissions.deny` and again in `bun/command-guard.ts`'s
 `GH_WRITES`. `gh api` reaches the same endpoints under a spelling neither
 matches, so the boundary is currently held by the agent obeying prose.
 
@@ -27,13 +27,13 @@ it reaches.
 
 `gh api` is in no tracked permission list, so today it prompts like any
 unlisted command and the user sees it. That is a prompt, not a boundary:
-`docs/git-and-prs.md` states the rule as absolute — *never* reply, comment or
+`core/git-and-prs.md` states the rule as absolute — *never* reply, comment or
 review under the user's name — and a rule whose only enforcement is a prompt
 the user may approve while reading something else is not the rule as written.
 
 ## What Changes
 
-- `scripts/command-guard.ts` blocks a `gh api` invocation that cannot be shown
+- `bun/command-guard.ts` blocks a `gh api` invocation that cannot be shown
   to be a read, beside the subcommand pairs it already blocks. `gh api --help`
   states the method: `GET` by default, and `POST` as soon as any parameter is
   added — so a read is a call whose `--method`/`-X` names `GET` or `HEAD`,
@@ -44,7 +44,7 @@ the user may approve while reading something else is not the rule as written.
   meant to read sees which flag to drop.
 - `openspec/specs/agent-permissions` §*GitHub write commands are denied* gains
   what the deny entries cannot express and the guard must therefore hold.
-- `docs/git-and-prs.md`'s prohibition narrows to what the mechanism still does
+- `core/git-and-prs.md`'s prohibition narrows to what the mechanism still does
   not cover — a tracker, a forum, any service that is not GitHub — per
   `openspec/specs/agent-rulebook` §*A mechanised prohibition leaves its prose
   home*.
@@ -86,12 +86,12 @@ own would put a second specification over one guard.
 
 ## Impact
 
-- `scripts/command-guard.ts` — one check beside `GH_WRITES`, reading the flags
+- `bun/command-guard.ts` — one check beside `GH_WRITES`, reading the flags
   `gh api` takes rather than the path it addresses.
-- `scripts/command-guard.test.ts` — the writes blocked, the reads passed, and
+- `bun/command-guard.test.ts` — the writes blocked, the reads passed, and
   the wrapped and compound forms the existing cases already cover.
 - `openspec/specs/agent-permissions/spec.md` — one requirement modified.
-- `docs/git-and-prs.md` — the prohibition loses the GitHub clause it no longer
+- `core/git-and-prs.md` — the prohibition loses the GitHub clause it no longer
   has to carry.
 - `.claude/settings.json` — unchanged; see Non-goals.
 - No dependency, workflow or runtime change, and nothing the application ships

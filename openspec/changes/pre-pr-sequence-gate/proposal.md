@@ -2,7 +2,7 @@
 
 ## Why
 
-`docs/review-toolkit.md` says completing a task group starts the pre-PR
+`core/review-toolkit.md` says completing a task group starts the pre-PR
 sequence in the same turn, and never to ask whether to run it. On 2026-08-19
 that turn ended with "Want me to run it?" — in a session that had read the
 file whole, hours earlier, while sweeping it for a different change. So the
@@ -21,7 +21,7 @@ past.
 - A `UserPromptSubmit` hook records `HEAD` when control arrives, so "this turn
   committed" is answerable at the end of it. Without that mark the hook would
   have to fire on every turn, including the ones that only answer a question.
-- `docs/review-toolkit.md`'s "never ask whether to run it" shortens to what
+- `core/review-toolkit.md`'s "never ask whether to run it" shortens to what
   the hook cannot see, per *A mechanised prohibition leaves its prose home*.
 
 ## Non-goals
@@ -50,8 +50,8 @@ None.
 ### Unmodified, but adjacent
 
 - `agent-permissions` states how the `PreToolUse` guard is registered and
-  pinned. Its test flattens `settings.hooks.PreToolUse` before asserting a
-  length of one (`agent-permissions.test.ts:50-64`), so two registrations on
+  pinned. Its check flattens `settings.hooks.PreToolUse` before asserting a
+  length of one (`bun/settings.ts`), so two registrations on
   other events do not break it, and no requirement of that capability changes.
 - `local-review-loop` owns what `/coderabbit-local` does inside the sequence.
   This change gates when the sequence must have run, not what it does.
@@ -61,7 +61,7 @@ None.
 - `.claude/settings.json`: two new hook registrations, on events the tracked
   settings do not use today.
 - A new script holding both halves, and its tests.
-- `docs/review-toolkit.md`: one sentence shortened.
+- `core/review-toolkit.md`: one sentence shortened.
 - Every turn now pays one hook launch at its end, on top of the per-Bash-call
   guard. The cost is a measurement this change owes, not an estimate.
 - No dependency, no CI change, no client code.

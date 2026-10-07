@@ -2,12 +2,12 @@
 
 ## Context
 
-`scripts/command-guard.ts` is a `PreToolUse` hook on every Bash call. It
+`bun/command-guard.ts` is a `PreToolUse` hook on every Bash call. It
 already reads the current branch on a `git commit` to refuse one on `main`,
 so the event, the parse and the branch read are all in place; what is missing
 is a second question asked at the same point.
 
-The prose rule it would relieve is `docs/git-and-prs.md`: re-check a pushed
+The prose rule it would relieve is `core/git-and-prs.md`: re-check a pushed
 branch's pull-request state before every commit to it, as a call whose output
 is read before the write. It is a rule about doing something first, which is
 the kind a session skips without noticing — on 2026-08-19 it was not run at
@@ -182,12 +182,12 @@ pushed, which is a second source of truth for a window this narrow.
 
 ### The git interrogation is its own module
 
-`scripts/command-guard.ts` stands at 246 lines against the 300-line cap in
+`bun/command-guard.ts` stands at 246 lines against the 300-line cap in
 `change-slicing`. Three ref reads with the comments this repository writes do
 not fit under it, and a file is split to the cap that will apply to it rather
 than the one that applies today. The branch questions — is this branch on the
 remote, is any of its work already upstream, how old is `origin/main` — go to
-`scripts/branch-state.ts`, leaving `command-guard.ts` holding what the
+`bun/branch-state.ts`, leaving `command-guard.ts` holding what the
 prohibitions are.
 
 That seam already exists: `command-parse.ts` holds how a command line is

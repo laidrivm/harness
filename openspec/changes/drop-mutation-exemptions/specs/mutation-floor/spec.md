@@ -4,9 +4,9 @@
 
 **Reason**: The requirement asked this repository to re-check the spelling of a
 Stryker directive — rejecting `all`, a block-comment spelling, a missing
-`next-line`, and a directive with no reason. `src/model.ts` has never carried
-a directive of any spelling, and the failure the checks exist to prevent is
-already caught by the requirement above them: the floor is an exact-match
+`next-line`, and a directive with no reason. `src/model.ts` (in d2ass) has never
+carried a directive of any spelling, and the failure the checks exist to prevent
+is already caught by the requirement above them: the floor is an exact-match
 comparison in both directions, so a malformed directive leaves the survivor
 count where it was and the attempt to record its gain by lowering the floor
 fails, naming both numbers. Measured against `gauge` directly — malformed and

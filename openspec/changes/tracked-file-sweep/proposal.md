@@ -12,18 +12,18 @@ a clone does not have.
 A check that then *opens* what it listed adds a fourth step, keeping only
 entries `lstatSync` reports as regular files, because a tracked path may be a
 deleted file, a symlink or a submodule gitlink that reads as a directory. Five
-of the seven sites do that — `scripts/spec-coverage.ts` among them, filtering
+of the seven sites do that — `bun/spec-coverage.ts` among them, filtering
 in `check()` rather than in the listing beside it. Two rule on paths without
 opening them, and for them a deleted-but-tracked path is still a path to rule
 on, so the filter would be wrong rather than merely unnecessary: the extension
-enumeration inside `scripts/file-size.test.ts`, and `readme-map.test.ts`,
-which matches the README's map rows against the listing.
+enumeration inside `bun/file-size.test.ts`, and
+`checks/readme-map.test.ts` (in d2ass), which matches the README's map rows
+against the listing.
 
-Enumerating the tree is what this covers, not every use of the command. Two
-tracked tests ask git about *named* paths — `git ls-files --error-unmatch` in
-`agent-permissions.test.ts` and a pathspec-scoped listing in
-`agent-permissions-allow.test.ts` — and neither derives a tree listing, so
-neither is a copy and neither may be caught by the check below.
+Enumerating the tree is what this covers, not every use of the command.
+`bun/settings.ts` asks git about *named* paths — a listing scoped to the
+`.npmrc` pathspecs — and derives no tree listing, so it is not a copy and may
+not be caught by the check below.
 
 `PLAN.md` has carried this as a rule-of-two candidate since `file-size-cap`
 step 3, recording three copies. The count is now **seven**, and two of them
@@ -31,20 +31,20 @@ have already drifted:
 
 | site | root trimmed with | subdirectory case tested | absent-file case tested |
 | --- | --- | --- | --- |
-| `scripts/no-suppressions.ts` | `replace(/\n$/, "")` | yes | yes |
-| `scripts/spec-coverage.ts` | `replace(/\n$/, "")` | yes | yes |
-| `scripts/file-size.ts` | `replace(/\n$/, "")` | yes | no |
-| `src/app/module-classes.test.ts` | `trim()` | no | no |
-| `src/app/styles/styles.test.ts` | `trim()` | no | no |
-| `scripts/file-size.test.ts` (inline) | `replace(/\n$/, "")` | no | n/a — path-only |
-| `readme-map.test.ts` | no root taken | no | n/a — path-only |
+| `bun/no-suppressions.ts` | `replace(/\n$/, "")` | yes | yes |
+| `bun/spec-coverage.ts` | `replace(/\n$/, "")` | yes | yes |
+| `bun/file-size.ts` | `replace(/\n$/, "")` | yes | no |
+| `src/app/module-classes.test.ts` (in d2ass) | `trim()` | no | no |
+| `src/app/styles/styles.test.ts` (in d2ass) | `trim()` | no | no |
+| `bun/file-size.test.ts` (inline) | `replace(/\n$/, "")` | no | n/a — path-only |
+| `checks/readme-map.test.ts` (in d2ass) | no root taken | no | n/a — path-only |
 
 The three script copies carry a comment explaining why `trim()` is wrong —
 "a repository whose path ends in a space is unusual and not this check's to
 corrupt" — and the two test copies use `trim()` anyway. That is the drift an
 eighth copy would repeat, and the reason the two missing tests are worth
-writing once rather than five times. `readme-map.test.ts` shows how the count
-grows unnoticed: it takes no root at all, so a search for
+writing once rather than five times. `readme-map.test.ts` (in d2ass) shows how
+the count grows unnoticed: it takes no root at all, so a search for
 `git rev-parse --show-toplevel` does not find it.
 
 ## What Changes
@@ -54,24 +54,27 @@ grows unnoticed: it takes no root at all, so a search for
   to it, and the subset of those that are regular files. A caller picks a list
   and applies its own filter rather than re-deriving either.
 - All seven call sites switch to it, the inline one in
-  `scripts/file-size.test.ts` and `readme-map.test.ts` included. Those two
+  `bun/file-size.test.ts` and `checks/readme-map.test.ts` (in d2ass)
+  included. Those two
   enumerate paths and must not drop a deleted-but-tracked one, so they take the
   unfiltered view rather than an exemption — needing the raw listing is what
   the second view is for.
 - A check fails the suite when any tracked source file other than
-  `scripts/tracked.ts` and `scripts/tracked.test.ts` enumerates the tree
+  `bun/tracked.ts` and `bun/tracked.test.ts` enumerates the tree
   itself, so the count cannot climb back. The sweep's own test is the one
   exemption, because fabricating a repository is what it does.
 - The two cases only `no-suppressions` and `spec-coverage` have today — run
   from a subdirectory, and a tracked file absent from the work tree — are
   written once against the lifted sweep.
-- `src/app/module-classes.test.ts` and `src/app/styles/styles.test.ts` stop
-  trimming a repository path's trailing space.
+- `src/app/module-classes.test.ts` (in d2ass) and
+  `src/app/styles/styles.test.ts` (in d2ass) stop trimming a repository
+  path's trailing space.
 
 ## Non-goals
 
-- **The rule of two itself.** `scan-lift` writes that rule into `CLAUDE.md`'s
-  Code list. This change is one of its candidates and does not restate it.
+- **The rule of two itself.** `scan-lift` writes that rule into
+  `core/rules.md`'s Code list. This change is one of its candidates and does not
+  restate it.
 - **Changing what any check scans.** Each caller keeps its own filter —
   extensions, prose exemptions, self-exclusion. Only the listing is shared.
 - **A filesystem walk.** `git ls-files` is the source precisely because a glob
@@ -102,10 +105,10 @@ mechanics this capability now owns.
 ## Impact
 
 - A new module for the sweep, and its tests.
-- `scripts/no-suppressions.ts`, `scripts/spec-coverage.ts`,
-  `scripts/file-size.ts` — the listing replaced by a call.
-- `src/app/module-classes.test.ts`, `src/app/styles/styles.test.ts` — the same,
-  plus the `trim()` fix that comes with it.
-- `scripts/file-size.test.ts` — the inline sixth copy.
+- `bun/no-suppressions.ts`, `bun/spec-coverage.ts`,
+  `bun/file-size.ts` — the listing replaced by a call.
+- `src/app/module-classes.test.ts` (in d2ass), `src/app/styles/styles.test.ts` —
+  the same, plus the `trim()` fix that comes with it.
+- `bun/file-size.test.ts` — the inline sixth copy.
 - Every one of these is a gate. A regression in the sweep is a gate that scans
   nothing and passes, which is why the two cases move with it.
