@@ -68,5 +68,5 @@ or carries *in d2ass* on its line.
       that the second passes
 - [x] 4.2 Run `bun test` and record that the uncited count from
       `bun/spec-coverage.ts` has not grown against the count before 1.1
-- [ ] 4.3 Move the `Re-point the moved changes' paths at the harness layout`
+- [x] 4.3 Move the `Re-point the moved changes' paths at the harness layout`
       card on `Harness` to `done`, and verify its status reads `done`
