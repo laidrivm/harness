@@ -66,8 +66,8 @@ grant exists.
 #### Scenario: trustedDependencies is never granted silently
 
 - **WHEN** the agent attempts `bun pm trust some-package`
-- **THEN** Claude Code prompts, because `CLAUDE.md` reserves that decision for
-  the user
+- **THEN** Claude Code prompts, because `core/code-style.md` reserves that
+  decision for the user
 
 #### Scenario: A read-only sibling is not captured
 

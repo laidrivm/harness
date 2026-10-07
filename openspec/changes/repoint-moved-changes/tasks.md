@@ -6,7 +6,7 @@ or carries *in d2ass* on its line.
 
 ## 1. Cut `bun-version-sites` to the harness's part
 
-- [ ] 1.1 File a card on `D2ASS` for the bun version reconciliation, written
+- [x] 1.1 File a card on `D2ASS` for the bun version reconciliation, written
       from `bun-version-sites` as it stands: the version-site check (tasks
       1.x, 2.x, 3.1–3.3), the `toolchain-pins` delta, and the design's
       decisions on reading `Dockerfile`, workflow inputs and
@@ -14,7 +14,7 @@ or carries *in d2ass* on its line.
       `src/app/module-classes.test.ts` and `src/app/styles/styles.test.ts` to
       the sweep, in the pull request that bumps the pin to the commit landing
       `bun/tracked.ts`). Verify the card exists on `D2ASS` and names both
-- [ ] 1.2 Delete `bun-version-sites/specs/toolchain-pins/` and every task,
+- [x] 1.2 Delete `bun-version-sites/specs/toolchain-pins/` and every task,
       design section and proposal passage the card took. Rewrite the
       proposal's Why to say the change was cut and that the rest went to
       `D2ASS`; keep the `agent-permissions` delta. Re-point task 3.4 at
