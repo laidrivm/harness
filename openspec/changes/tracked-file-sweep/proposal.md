@@ -107,8 +107,9 @@ mechanics this capability now owns.
 - A new module for the sweep, and its tests.
 - `bun/no-suppressions.ts`, `bun/spec-coverage.ts`,
   `bun/file-size.ts` — the listing replaced by a call.
-- `src/app/module-classes.test.ts` (in d2ass), `src/app/styles/styles.test.ts` —
-  the same, plus the `trim()` fix that comes with it.
+- `src/app/module-classes.test.ts` (in d2ass),
+  `src/app/styles/styles.test.ts` (in d2ass) — the same, plus the `trim()` fix
+  that comes with it.
 - `bun/file-size.test.ts` — the inline sixth copy.
 - Every one of these is a gate. A regression in the sweep is a gate that scans
   nothing and passes, which is why the two cases move with it.
