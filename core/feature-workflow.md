@@ -139,7 +139,9 @@ for them is already here.
   number and kind (`proposal`, `step 2`, `archive`); the turn a proposal
   merges adds its `proposal.md` on the default branch; the archive re-points
   that link to the archived path. An edit to a proposal's *Why* or *What
-  Changes* re-reads the card's summary in that turn.
+  Changes* re-reads the card's summary in that turn. A card citing a commit
+  names the pull request until it merges and the commit on the default branch
+  after, never a branch's commit — a rebase merge rewrites every hash on it.
 
   Write every repository path in a card's body inside backticks. Notion turns
   a bare `CLAUDE.md` into a link to a host of that name, so a card meant to
