@@ -141,9 +141,16 @@ Rules about how work is carried out here. They do not age with the code.
 - Re-measure a count gate in the commit that moves its count, whichever task
   the list files the re-measure under — a commit between the two is red on the
   default branch.
+- State the count a task expects from a measurement of the tree the step will
+  leave, never from what the step intends.
 - After re-pinning a Git dependency with `bun add`, run `bun install` and
   confirm the lockfile's workspace block names it once — bun writes the new
   specifier beside the old.
+- Fix a verified defect in what the branch ships, or file it as a card, in the
+  same turn — a non-goal defers rewording, never a reference that no longer
+  resolves.
+- List the files a plan routes, moves or deletes, and confirm each exists,
+  before the plan is written.
 
 #### Safety
 
