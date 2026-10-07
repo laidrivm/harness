@@ -14,18 +14,19 @@ What stays is the description a check outgrew. `agent-permissions`
 §*Every manifest-mutating invocation prompts* is normative in its first
 sentence — every invocation form that changes the dependency record — and the
 enumeration that follows promises `bun`'s documented aliases for the install
-family alone. `bun/settings.ts` demands an alias for every gated command,
-which is why `bun up` is listed: `bun update` carries that alias from 1.4.2
-and none in 1.3.14, and the drift that exposed it was a red merge in which two
-cases demanded opposite permission lists. The policy was never in breach; the
-sentence describing it was narrower than the check enforcing it, and a
-description a check has outgrown is the next thing somebody reasons from.
+family alone. `bun/settings.ts` demands an entry for each alias the installed
+bun documents for any gated command, which is why `bun up` is listed:
+`bun update` carries that alias from 1.4.2 and none in 1.3.14, and the drift
+that exposed it was a red merge in which two cases demanded opposite
+permission lists. The policy was never in breach; the sentence describing it
+was narrower than the check enforcing it, and a description a check has
+outgrown is the next thing somebody reasons from.
 
 ## What Changes
 
 - `agent-permissions` §*Every manifest-mutating invocation prompts* gains the
-  alias clause its check already enforces: an alias for every gated command,
-  not for the install family alone.
+  alias clause its check already enforces: each documented alias of any gated
+  command, not of the install family alone.
 
 ## Non-goals
 
@@ -43,8 +44,9 @@ None.
 ### Modified Capabilities
 
 - `agent-permissions`: the alias clause of *Every manifest-mutating invocation
-  prompts* covers every gated command where it covered the install family. The
-  description is widened to what is already enforced.
+  prompts* covers the documented alias of any gated command where it covered
+  the install family's alone. The description is widened to what is already
+  enforced.
 
 ## Impact
 
