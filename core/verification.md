@@ -94,3 +94,5 @@ What counts as evidence for a claim, and what a claim may rest on.
 - Confirm which commits a merge landed before building the next branch on the
   base — a merge can stop short of the branch's tip, and the next branch
   inherits the gap in silence.
+- Quote a commit hash from `git log` output in the same turn, never from
+  memory — a hash shaped like a real one reads as checked.

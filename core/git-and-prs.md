@@ -14,7 +14,9 @@ entry, a hook or a CI check leaves this file the way it would leave
   comment or a task bullet naming what later steps will add reads exactly like
   one naming what this step does, and a line saying which criteria the step
   closes names only those its own tasks satisfy.
-- A proposal ships on `spec/<proposal-slug>`; `feat/<proposal-slug>` is the
+- A proposal ships on `spec/<proposal-slug>`, committed there before the
+  implementation's branch is cut — `/opsx:propose` writes the artefacts into
+  whatever branch is checked out; `feat/<proposal-slug>` is the
   implementation's, and a squash-merged branch is never freed — check the name
   against closed pull requests before branching, never against the base's
   ancestry, which reports a squash-merged branch as unmerged.
