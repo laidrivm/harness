@@ -1,0 +1,37 @@
+name: Diff budget
+
+on:
+  # `edited` alongside the defaults, because the override this gate honours
+  # lives in the pull request body: without it a marker added after the last
+  # push is never read.
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  budget:
+    runs-on: ubuntu-latest
+    steps:
+      # `<base>...HEAD` needs the merge base, which a shallow clone does not
+      # carry; the script fails rather than passing when it cannot measure.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # The script reads its exclusions from package.json with bun. No install:
+      # the package declares no dependencies.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      # Neither value is interpolated into the script text: a pull request body
+      # is attacker-controlled, so both reach the shell through the environment.
+      - env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: bash bun/diff-budget.sh "$BASE_SHA"
