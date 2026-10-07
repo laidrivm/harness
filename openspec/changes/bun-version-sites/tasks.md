@@ -19,9 +19,10 @@ Closes `agent-permissions/an-alias-outside-the-install-family`.
 
 - [ ] 1.1 Widen the alias clause in the `agent-permissions` delta to every
       gated command, and confirm the policy already satisfies it —
-      `Bash(bun up *)` is listed in `bun/settings.ts` and `bun/settings.ts`
-      already reads the alias of every gated command from the installed bun,
-      so this step changes a description and not a boundary
+      `bun/settings.ts` already demands `Bash(bun up *)` among the gated
+      forms and reads the alias of every gated command from the installed bun,
+      and `.claude/settings.json` lists it, so this step changes a description
+      and not a boundary
       (*an-alias-outside-the-install-family*)
 - [ ] 1.2 Move the `bun-version-sites` card on `Harness` to `done`, and check
       it points at the `D2ASS` card *Reconcile the bun version sites* for the
