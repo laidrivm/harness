@@ -7,12 +7,12 @@
 A test SHALL cite a criterion in a `// spec:` comment placed directly above a
 `test`, `it` or `describe` call, separated from it by nothing but blank lines
 and further comment lines. A member form of those three SHALL be accepted as
-well — `test.each`, `test.skip`, `describe.each` — because `docs/testing.md`
+well — `test.each`, `test.skip`, `describe.each` — because `core/testing.md`
 counts a `test.each` row as a test, and a scanner that recognised only `test(`
 would call a citation above one unmatched. One comment SHALL carry any number of identifiers,
 whitespace-separated or one per continuation line, because a single act may
 satisfy several criteria; and several tests SHALL be free to cite one
-criterion, because `docs/testing.md` requires one arrange and one act per test
+criterion, because `core/testing.md` requires one arrange and one act per test
 and so expands a criterion into several of them. A criterion counts as cited
 once, however many tests cite it.
 

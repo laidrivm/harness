@@ -21,7 +21,7 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
 `agent-permissions/reading-through-the-endpoint-still-works`,
 `agent-permissions/a-read-that-carries-parameters`.
 
-- [ ] 1.1 Write the failing cases first, in `scripts/command-guard.test.ts`
+- [ ] 1.1 Write the failing cases first, in `bun/command-guard.test.ts`
       beside the existing `gh` block, and record that each fails against the
       guard as it stands: `gh api -X POST /repos/o/r/issues/37/comments -f
       body=hi` blocks; `gh api "repos/o/r/pulls/37/comments?per_page=100"
@@ -69,7 +69,7 @@ Closes `agent-permissions/a-write-with-no-method-flag`,
       (ZOMBIES 14, 15)
 - [ ] 2.4 Add a case for a flag the list does not name, asserting it blocks
       when no method is present — the test is scoped by the reads it exempts,
-      not by the writes it enumerates, per `CLAUDE.md` (ZOMBIES 17)
+      not by the writes it enumerates, per `core/rules.md` (ZOMBIES 17)
 - [ ] 2.5 Cover the reach the branch inherits rather than earns, each as its
       own case: an absolute path to `gh`, a `bash -c` wrapper, a compound
       command whose second half is the write, and a global flag in front of
@@ -83,7 +83,7 @@ Closes `agent-permissions/a-write-with-no-method-flag`,
 This step closes no acceptance criterion: it reconciles prose and measures,
 and no criterion in any capability states what a doc sentence says.
 
-- [ ] 3.1 Narrow `docs/git-and-prs.md`'s prohibition to what the guard still
+- [ ] 3.1 Narrow `core/git-and-prs.md`'s prohibition to what the guard still
       does not reach — a tracker, a forum, any service that is not GitHub —
       per `openspec/specs/agent-rulebook` §*A mechanised prohibition leaves its
       prose home*, which calls this the partly-covered case
@@ -93,8 +93,8 @@ and no criterion in any capability states what a doc sentence says.
 - [ ] 3.3 Confirm the `coderabbit` skill's three `gh api` reads pass the guard
       by running each through it, rather than reasoning from the clause — the
       skill is untracked here, so name the three commands in the record
-- [ ] 3.4 Measure `scripts/command-guard.ts` and
-      `scripts/command-guard.test.ts` against the 300-line cap and record both
+- [ ] 3.4 Measure `bun/command-guard.ts` and
+      `bun/command-guard.test.ts` against the 300-line cap and record both
       numbers, whether or not either is over; the test file stood at 214 and
       the guard at 246 when this was proposed, and the guard at 299 once the
       harness took it. Both are under the cap here because each earlier step

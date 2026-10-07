@@ -1,7 +1,7 @@
 # merged-branch-guard — tasks
 
 Test tasks come from the proposal-stage `/zombies` run and are written before
-the code they cover (docs/testing.md — TDD for edge cases). The bracketed
+the code they cover (core/testing.md — TDD for edge cases). The bracketed
 numbers are that run's idea numbers, so each of its 15 ideas is traceable to
 the group that closes it.
 
@@ -12,7 +12,7 @@ costs on every call and shortens the prose the mechanism supersedes.
 
 ## 1. The branch-state module and its caller
 
-- [ ] 1.1 Extend `scripts/command-guard.fixture.ts` to fabricate a repository
+- [ ] 1.1 Extend `bun/command-guard.fixture.ts` to fabricate a repository
       with an `origin` remote, a `main` branch on it, a branch pushed to it,
       and a `FETCH_HEAD` of a caller-chosen age and contents — age and
       contents both, since the bound reads the file for each. It fabricates no
@@ -22,7 +22,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       already gives. (Req: agent-permissions — A commit on a merged branch is
       refused)
 - [ ] 1.2 Write the mark-reading tests in
-      `scripts/command-guard-branch.test.ts`: no marks at all is allowed [1];
+      `bun/command-guard-branch.test.ts`: no marks at all is allowed [1];
       one `-` mark is merged [3]; `-` and `+` together is still merged [4];
       all `+` is not merged [5]. (Req: agent-permissions — A commit on a
       merged branch is refused)
@@ -49,7 +49,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       agent-permissions — A commit on a merged branch is refused, §*A fetch
       that brings nothing new*, §*A fetch of an unrelated ref*, §*The remote
       branch was deleted and pruned*)
-- [ ] 1.6 Write `scripts/branch-state.ts` against those tests: the remote-ref
+- [ ] 1.6 Write `bun/branch-state.ts` against those tests: the remote-ref
       test, the `git cherry` read, the `FETCH_HEAD` mtime, the
       `FETCH_MAX_AGE` bound with its reason where it is declared, and a
       result that distinguishes merged, stale and unknown so the guard can
@@ -57,7 +57,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       caller names, not in `cwd`, because `git -C <dir> commit` commits
       elsewhere. (Req: agent-permissions — A commit on a merged branch is
       refused)
-- [ ] 1.7 Write the guard-level tests in `scripts/command-guard-branch.test.ts`:
+- [ ] 1.7 Write the guard-level tests in `bun/command-guard-branch.test.ts`:
       a block exits exactly 2 [9]; the stale reason names the fetch and the
       merged reason names moving the work, distinguishably [10]; `git -C
       <other-repo> commit` is decided against the `-C` target [12]; a detached
@@ -76,7 +76,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       every tool use, and the claim that only commits pay for this needs a
       measurement rather than a reading of the code. (Req: agent-permissions —
       A commit on a merged branch is refused)
-- [ ] 2.2 Shorten `docs/git-and-prs.md`'s pull-request-state rule to what the
+- [ ] 2.2 Shorten `core/git-and-prs.md`'s pull-request-state rule to what the
       guard cannot see — a merge that has not been fetched yet is refused
       rather than missed on a branch with an `origin` ref, so what remains for
       the prose is a branch pruned, merged and not yet fetched, which the spec

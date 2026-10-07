@@ -2,7 +2,7 @@
 
 ## Context
 
-`scripts/command-guard.ts` blocks three acts: a commit while `HEAD` is on
+`bun/command-guard.ts` blocks three acts: a commit while `HEAD` is on
 `main`, a force-push wherever the flag sits, and the `gh` commands that publish
 text under the user's name. The third is a list of subcommand pairs:
 
@@ -41,7 +41,7 @@ review is read at all. The `coderabbit` skill's first step is three
 - A deny entry. It matches a prefix and would take the reads with it.
 - Deciding by endpoint path. `…/issues/N/comments` is a read under `GET` and a
   write under `POST`; the method is the thing that differs, and a list of
-  write paths is an enumeration of what the scan covers, which `CLAUDE.md`
+  write paths is an enumeration of what the scan covers, which `core/rules.md`
   forbids in favour of naming what it exempts.
 - Parsing a GraphQL document. The guard reads its leading operation keyword
   and searches it for one token, and nothing more.
@@ -107,7 +107,7 @@ test answer different questions about the same invocation.
   because it sends a body; a future flag that does the same would not be. The
   test is nonetheless scoped by what it exempts — a read is the narrow, named
   case and everything else blocks — so an unknown flag fails closed.
-- **The prose in `docs/git-and-prs.md` is narrowed while the mechanism covers
+- **The prose in `core/git-and-prs.md` is narrowed while the mechanism covers
   only GitHub.** → What it loses is the GitHub clause alone; a tracker, a
   forum and any other service stay in the sentence, which is the *partly
   covered* case `openspec/specs/agent-rulebook` describes.

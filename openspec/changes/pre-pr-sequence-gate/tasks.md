@@ -1,7 +1,7 @@
 # pre-pr-sequence-gate — tasks
 
 Test tasks come from the proposal-stage `/zombies` run and are written before
-the code they cover (docs/testing.md — TDD for edge cases). The bracketed
+the code they cover (core/testing.md — TDD for edge cases). The bracketed
 numbers are that run's idea numbers, so each of its 23 ideas is traceable to
 the group that closes it. Idea 17 is absent from the list below because it
 stopped being a case: it asked what a branch with no remote counterpart does,
@@ -50,7 +50,7 @@ decision module, group 3 wires it up and shortens the prose.
 
 ## 2. The decision module
 
-- [ ] 2.1 Write the task-file reading tests in `scripts/turn-gate.test.ts`: a
+- [ ] 2.1 Write the task-file reading tests in `bun/turn-gate.test.ts`: a
       group whose last box is ticked is complete [4]; a group with an unticked
       box is not [6, 22]; a group with no boxes at all is not [8]; `- [X]`
       counts as ticked [10]; a checkbox inside a fenced code block does not
@@ -91,7 +91,7 @@ decision module, group 3 wires it up and shortens the prose.
       A turn that commits reports its gates before it ends, §*The turn reports
       its gates*, §*The turn names what only the user can settle*, §*A bare
       marker with nothing after it*, §*The final message cannot be read*)
-- [ ] 2.5 Write `scripts/turn-gate.ts` against those tests, with both halves —
+- [ ] 2.5 Write `bun/turn-gate.ts` against those tests, with both halves —
       the mark writer and the turn-end decision — in one file, since they are
       two ends of one contract and splitting them puts the mark's format in
       two places. Confirm it stays under the 300-line cap `change-slicing`
@@ -108,14 +108,14 @@ decision module, group 3 wires it up and shortens the prose.
       gates before it ends, §*A task group is completed and the turn ends
       silently*, §*There is no repository, or no branch*)
 - [ ] 3.2 Register both hooks in `.claude/settings.json`, and confirm
-      `agent-permissions.test.ts` still passes — it flattens
+      `bun/settings.test.ts` still passes — `bun/settings.ts` flattens
       `settings.hooks.PreToolUse` before asserting a length of one, so
       registrations on other events are outside what it pins. Pin the
       `UserPromptSubmit` and `Stop` registrations in a settings check of
       their own, so removing either fails it.
       (Req: commit-gates — A turn that commits reports its gates before it
       ends)
-- [ ] 3.3 Shorten `docs/review-toolkit.md`'s "never ask whether to run it" to
+- [ ] 3.3 Shorten `core/review-toolkit.md`'s "never ask whether to run it" to
       what the hook cannot see: the hook reaches a turn that committed with a
       group complete, so what stays prose is the sequence's other trigger —
       any pull request that changes code — and the fact that a gate line is a

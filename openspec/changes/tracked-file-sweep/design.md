@@ -3,7 +3,7 @@
 ## Context
 
 Five sites derive the same listing, and a sixth sits inline in a test. Three
-carry the same explanatory comment pointing at `scripts/no-suppressions.ts` as
+carry the same explanatory comment pointing at `bun/no-suppressions.ts` as
 the shape they copy, which is the tell: the comment exists because the code
 could not be shared.
 
@@ -36,17 +36,18 @@ a bug report.
 
 ## Decisions
 
-### The module lives under `scripts/`, and `src/**` imports it
+### The module lives in `bun/`, and d2ass's tests reach it through the pin
 
-Two of the callers are tests under `src/app/`, and `CLAUDE.md` forbids
-`src/model.ts` and `src/types.ts` from importing `src/app/**` — it says nothing
-about a test under `src/app/` importing a script, and `src/app/module-classes.test.ts`
-already imports `../../scripts/scan.ts`. So the direction is established and
-the module goes beside its siblings in `scripts/`.
-
-*Alternative considered.* A `src/shared/` home was rejected: the sweep is not
-application code, it ships in no bundle, and putting it under `src/` would make
-it the only thing there that the app never runs.
+The module is `bun/tracked.ts`, beside `bun/scan.ts` and the gates that call
+it. Two of the callers are not the harness's but tests in d2ass:
+`src/app/module-classes.test.ts` (in d2ass) and
+`src/app/styles/styles.test.ts` (in d2ass). The first already imports
+`harness/bun/scan.ts` through the pinned package, so a d2ass test importing a
+harness module is an established direction, and both reach
+`harness/bun/tracked.ts` the same way, at the commit the pin names. Switching
+them is d2ass work, done in the pull request that bumps the pin to the commit
+landing the rest of this change — the `D2ASS` card *Reconcile the bun version
+sites* carries it.
 
 ### One export, three named results
 
@@ -81,7 +82,7 @@ than carrying it.
 
 ### Two views over one listing, so no caller needs an exemption
 
-`scripts/file-size.test.ts`'s inline copy is the one that looked like it needed
+`bun/file-size.test.ts`'s inline copy is the one that looked like it needed
 one. It enumerates the extensions tracked paths carry and applies no
 `lstatSync` filter, deliberately: a tracked path deleted from the work tree
 still carries an extension somebody has to rule on, and the filtered view would
@@ -109,7 +110,7 @@ rejected under *One export, three named results*.
 - **The `trim()` fix changes behaviour in a case nothing exercises.** → It is
   asserted directly, on a fabricated repository whose path ends in a space,
   rather than left to the tree nobody has one in.
-- **The lift lands while `scan-lift` also touches `scripts/spec-coverage.ts`
-  and `src/app/module-classes.test.ts`.** → Different regions of both files —
-  `scan-lift` touches the comment scanner, this one the listing — so the
+- **The lift lands while `scan-lift` also touches `bun/spec-coverage.ts`
+  and `src/app/module-classes.test.ts` (in d2ass).** → Different regions of both
+  files — `scan-lift` touches the comment scanner, this one the listing — so the
   conflict is textual at worst. Whichever lands second rebases.

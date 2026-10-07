@@ -2,7 +2,7 @@
 
 ## Context
 
-The rule this gate mechanises is one sentence in `docs/review-toolkit.md`:
+The rule this gate mechanises is one sentence in `core/review-toolkit.md`:
 completing a task group starts the pre-PR sequence in the same turn, and the
 agent never asks whether to run it. The session that broke it had read the
 file in full earlier the same day. That rules out the two remedies reached for
@@ -80,7 +80,7 @@ built the bypass into the gate. The report discharges it, and nothing else.
 
 A blocked turn must be endable by something the very next message can carry.
 Both escapes are text: the sequence's gate line, or `BLOCKED` naming what only
-the user can settle — the second of which `docs/review-toolkit.md` already
+the user can settle — the second of which `core/review-toolkit.md` already
 admits as a legitimate ending. So no repository state has to change for the
 turn to end, and there is no configuration in which the hook can refuse
 forever.

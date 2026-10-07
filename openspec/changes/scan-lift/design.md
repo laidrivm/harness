@@ -7,9 +7,9 @@ question about the same walk:
 
 | caller | wants | how it gets it today |
 | --- | --- | --- |
-| `src/app/module-classes.test.ts` | code with non-code erased | `blank(source, language)` in `scripts/scan.ts` |
-| `scripts/mutation-floor.ts` | every comment, its line, block or not | `comments(source, language)` in `scripts/scan.ts` |
-| `scripts/spec-coverage.ts` | which lines sit inside a block comment | per-line regex strip, 22 lines |
+| `src/app/module-classes.test.ts` (in d2ass) | code with non-code erased | `blank(source, language)` in `bun/scan.ts` |
+| `bun/mutation-floor.ts` | every comment, its line, block or not | `comments(source, language)` in `bun/scan.ts` |
+| `bun/spec-coverage.ts` | which lines sit inside a block comment | per-line regex strip, 22 lines |
 
 `scan.ts` is the one that carries the state a correct scan needs — an escaped
 quote, a `/*` inside a line comment, a quote inside a regex literal, a template
@@ -28,8 +28,8 @@ not hand it directly.
 
 - One walk in one module, with each caller taking the view it needs from it.
 - The live defect closed, with a case that fails before the switch.
-- `blank`'s contract unchanged, so `src/app/module-classes.test.ts` is
-  untouched and stands as the check that this change kept it.
+- `blank`'s contract unchanged, so `src/app/module-classes.test.ts` (in d2ass)
+  is untouched and stands as the check that this change kept it.
 - `comments` covered by its own cases rather than only through a caller.
 
 **Non-Goals:**
@@ -63,10 +63,10 @@ derivation is three lines.
 It shipped exercised only through `exemptions()`, which reads it for one
 purpose. Once `spec-coverage.ts` reads it for another, a defect in it reaches
 two gates, and a gate is the worst place to discover a scanner is wrong. The
-cases belong to `scripts/scan.test.ts` beside `blank`'s, because the walk is
+cases belong to `bun/scan.test.ts` beside `blank`'s, because the walk is
 one and the cases are about which view reports it.
 
-### The rule of two is a `CLAUDE.md` Code rule, not a spec
+### The rule of two is a `core/rules.md` Code rule, not a spec
 
 `reviewable-diff-gates` deferred it as "its own one-line rule, separately". A
 rule about when to extract a helper is a statement about how code is written
@@ -86,8 +86,8 @@ check it from a diff without reading intent.
   — so the derivation gets its own cases: a citation inside a commented-out
   block still does not count, and one below a block that closed still does.
 - **`blank`'s behaviour drifts while `spec-coverage.ts` is switched onto the
-  module.** → `src/app/module-classes.test.ts` is the control: it is `blank`'s
-  only production caller and this change does not edit it. `scripts/
+  module.** → `src/app/module-classes.test.ts` (in d2ass) is the control: it is
+  `blank`'s only production caller and this change does not edit it. `bun/
   scan.test.ts` is not a control — this change adds cases to it for `comments`
   — so its existing `blank` cases are regression coverage that must keep
   passing unedited, which is a weaker guarantee and named as one.
