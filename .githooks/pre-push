@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Enabled once per clone with `git config core.hooksPath .githooks` — the
+# package has no lifecycle scripts, so no install can register it. The diff
+# budget is soft here and hard in CI, as `change-slicing` requires.
+set -euo pipefail
+bun test
+bash bun/diff-budget.sh || true

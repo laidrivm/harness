@@ -8,6 +8,10 @@ The agent harness shared by several projects. It ships as a package (`package.js
 
 `bun/` holds what assumes Bun and TypeScript: the command guard and the hook text that boots it, the gates, and `check.ts`, which runs every check over a consumer's tree.
 
+## Working on the harness
+
+The repository runs itself: `.claude/` links its own skills and guard. Run `git config core.hooksPath .githooks` once per clone so a push runs `bun test` and reports the diff budget; CI runs both too, and fails the budget there. `.claude/commands/opsx/` is OpenSpec's output: regenerate it with `openspec update` and take a defect in it upstream, never edit it here.
+
 ## Skills
 
 | Skill | What it does |
