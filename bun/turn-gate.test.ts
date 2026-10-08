@@ -114,8 +114,37 @@ describe("which task lists a turn is decided on", () => {
 		expect(silentTurn({ [TASKS]: before }, { [TASKS]: after })).toBeUndefined();
 	});
 
-	test("a group that did not exist at the mark does not qualify the turn", () => {
-		expect(silentTurn({ "a.txt": "a" }, { [TASKS]: DONE })).toBeUndefined();
+	// spec: commit-gates/a-group-created-and-completed-in-the-same-turn
+	test("a group the mark does not hold, complete at the tip, qualifies [12]", () => {
+		expect(silentTurn({ "a.txt": "a" }, { [TASKS]: DONE })).toContain(
+			'"1. Group" in openspec/changes/c/',
+		);
+	});
+
+	test("a group committed unticked, then ticked, in one turn qualifies [13]", () => {
+		const dir = repo({ "a.txt": "a" });
+		const marks = store();
+		mark(prompt(dir), marks);
+		commit(dir, { [TASKS]: OPEN });
+		commit(dir, { [TASKS]: DONE });
+		expect(decide(end(dir, SILENT), marks)).toBeDefined();
+	});
+
+	test("a change added in the turn qualifies on its complete group only [14]", () => {
+		const added = "# c\n\n## 1. Done\n\n- [x] a\n\n## 2. Open\n\n- [ ] b\n";
+		const reason = silentTurn({ "a.txt": "a" }, { [TASKS]: added });
+		expect(reason).toContain('"1. Done"');
+		expect(reason).not.toContain('"2. Open"');
+	});
+
+	// spec: commit-gates/a-complete-group-the-turn-renamed
+	test("a complete group the turn renamed refuses once, then ends [15]", () => {
+		const dir = repo({ [TASKS]: DONE });
+		const marks = store();
+		mark(prompt(dir), marks);
+		commit(dir, { [TASKS]: DONE.replace("1. Group", "1. Renamed") });
+		expect(decide(end(dir, SILENT), marks)).toBeDefined();
+		expect(decide(end(dir, SILENT), marks)).toBeUndefined();
 	});
 });
 
