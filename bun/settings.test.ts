@@ -135,6 +135,11 @@ describe("the bootstrap hook", () => {
 		);
 	});
 
+	test("settings that turn every hook off are named", () => {
+		const config = { ...policy(), disableAllHooks: true };
+		expect(settings(consumer(config)).join("\n")).toContain("disableAllHooks");
+	});
+
 	test("a hook run in the background is named", () => {
 		const config = changed((c) => {
 			const [entry] = c.hooks.PreToolUse;
