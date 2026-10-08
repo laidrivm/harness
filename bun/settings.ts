@@ -45,7 +45,22 @@ const INSTALL = {
 	minimumReleaseAgeExcludes: [],
 };
 
-type Hook = { type?: string; if?: string; command?: string };
+type Hook = {
+	type?: string;
+	if?: string;
+	command?: string;
+	args?: unknown;
+	async?: unknown;
+	asyncRewake?: unknown;
+};
+
+/**
+ * Whether a hook runs its command in the foreground through a shell, the one
+ * form whose exit code can refuse: `async` and `asyncRewake` run it in the
+ * background, and `args` spawns `command` as an executable with no shell.
+ */
+const blocking = (hook: Hook) =>
+	hook.args === undefined && !hook.async && !hook.asyncRewake;
 type Settings = {
 	permissions?: { deny?: string[]; ask?: string[]; allow?: string[] };
 	hooks?: {
@@ -139,6 +154,7 @@ export function settings(root: string): string[] {
 		// A permission pattern matches the command word literally, so
 		// `command gh` would walk around a hook narrowed by one.
 		if (hook.if !== undefined) say("the Bash hook is narrowed by `if`");
+		if (!blocking(hook)) say("the Bash hook cannot block: `async` or `args`");
 		if (hook.command !== BOOTSTRAP)
 			say(
 				"the Bash hook is not the harness bootstrap — copy it from bootstrap.ts",
@@ -147,7 +163,7 @@ export function settings(root: string): string[] {
 
 	// Presence, not sole occupancy: a second prompt or stop hook cannot undo
 	// this one, since any `Stop` hook exiting 2 refuses. A match under another
-	// type, or behind `if`, never runs, so it does not count.
+	// type, behind `if`, or in a form that cannot block does not count.
 	for (const [event, text] of [
 		["UserPromptSubmit", TURN_MARK],
 		["Stop", TURN_STOP],
@@ -155,7 +171,11 @@ export function settings(root: string): string[] {
 		const runs = (parsed.hooks?.[event] ?? [])
 			.flatMap((entry) => entry.hooks ?? [])
 			.some(
-				(h) => h.type === "command" && h.if === undefined && h.command === text,
+				(h) =>
+					h.type === "command" &&
+					h.if === undefined &&
+					blocking(h) &&
+					h.command === text,
 			);
 		if (!runs)
 			say(
