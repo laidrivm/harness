@@ -92,7 +92,10 @@ The Bash hook must be the only one on its matcher, because a second
 `PreToolUse` command could allow what the guard refuses. A second
 `UserPromptSubmit` or `Stop` hook cannot undo this one: Claude Code runs them
 all, and any `Stop` hook exiting 2 refuses. So `settings.ts` fails only when
-an event carries no hook whose command equals the harness's text. A
+an event carries no hook of type `command`, unnarrowed by `if`, whose command
+equals the harness's text — the same two conditions the Bash check puts on
+its hook, since a matching string under another type or behind an `if` is a
+registration that never runs. A
 consumer's own prompt hooks, such as the ponytail plugin's, stay legal.
 
 ### A group absent at the mark qualifies

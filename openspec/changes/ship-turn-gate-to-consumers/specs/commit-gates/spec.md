@@ -214,7 +214,7 @@ its own working tree, because it is not installed as its own package.
 
 - **WHEN** a consumer's tracked `.claude/settings.json` lacks the `Stop` or
   the `UserPromptSubmit` registration, or carries one that differs from the
-  harness's text
+  harness's text, is not of type `command`, or is narrowed by `if`
 - **THEN** the consumer's check fails and names the registration
 
 #### Scenario: A consumer clone before install

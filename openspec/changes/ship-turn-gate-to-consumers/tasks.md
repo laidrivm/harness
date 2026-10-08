@@ -54,14 +54,16 @@ each consumer, after group 2 is merged and its commit can be pinned.
       `hooks.Stop` is named [6]; no `hooks.UserPromptSubmit` is named [7]; an
       extra consumer hook on `UserPromptSubmit` beside the harness's reports
       nothing [8]; a `Stop` command one character off is named [9]; the two
-      texts registered on each other's events are both named [10]; the
+      texts registered on each other's events are both named [10]; a
+      matching `Stop` command under a type other than `command` is named; a
+      matching `Stop` command narrowed by `if` is named; the
       policy-keeping fixture gains both registrations and still reports
       nothing [11]. (Req: commit-gates — A turn that commits reports its
       gates before it ends, §*A consumer without the registrations*)
 - [ ] 2.3 Export the two strings from `bun/bootstrap.ts` beside `BOOTSTRAP`,
       with the header naming why they carry no `|| exit 2`, and make
-      `bun/settings.ts` fail an event that holds no hook equal to its
-      string. `bun test` green.
+      `bun/settings.ts` fail an event that holds no `command` hook, without
+      `if`, equal to its string. `bun test` green.
 - [ ] 2.4 Shorten `core/review-toolkit.md`'s pre-PR paragraph: drop "where it
       is not, never ask whether to run it" and the clause scoping the hook to
       where it is registered, keep the trigger and what the hook cannot see.
