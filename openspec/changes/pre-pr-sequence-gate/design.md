@@ -128,6 +128,21 @@ uncommitted tick is not committed work either way. "Not complete at the mark"
 is built as the spec words it: the group had an unticked box there. A group
 the turn created already complete does not qualify.
 
+### The prose stays where the hook does not reach
+
+Group 3 registers the hook in the harness's own `.claude/settings.json`
+only. `core/review-toolkit.md` is synced to consumers, which register
+nothing, and the 2026-08-19 turn this change answers happened in one of
+them. Deleting "never ask whether to run it" would leave a consumer with
+neither the rule nor the mechanism. So 3.3 scopes the sentence instead: the
+hook holds it where `bun/turn-gate.ts` is registered, and prose holds it
+elsewhere. That is the agent-rulebook requirement applied per repository —
+prose leaves the home the mechanism covers, and only that one. Shipping the
+hook to consumers, and with it shortening the sentence to what the hook
+cannot see, is the Harness card "Ship the turn gate to consumers": a gate
+the harness ships is measured against every consumer before it is
+proposed.
+
 ### What the hook does not claim
 
 It reads `last_assistant_message` for a gate line. An agent that writes
