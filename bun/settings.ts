@@ -1,8 +1,8 @@
 /**
  * The agent permission policy, read from the consumer's tracked
  * `.claude/settings.json` and `bunfig.toml`: what is refused, what prompts,
- * what is pre-approved, and the hook that catches what a permission pattern
- * cannot express. The same for every consumer — strictness is not a value a
+ * what is pre-approved, the hook that catches what a permission pattern
+ * cannot express, and the turn gate's two registrations. The same for every consumer — strictness is not a value a
  * project chooses.
  *
  * The deny and ask lists are compared whole. An exact list pins every word
@@ -11,7 +11,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { BOOTSTRAP } from "./bootstrap.ts";
+import { BOOTSTRAP, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
 
 /** Every package manager a consumer does not use. */
 const MANAGERS = ["npx", "npm", "pnpm", "yarn"];
@@ -48,7 +48,11 @@ const INSTALL = {
 type Hook = { type?: string; if?: string; command?: string };
 type Settings = {
 	permissions?: { deny?: string[]; ask?: string[]; allow?: string[] };
-	hooks?: { PreToolUse?: { matcher?: string; hooks?: Hook[] }[] };
+	hooks?: {
+		PreToolUse?: { matcher?: string; hooks?: Hook[] }[];
+		UserPromptSubmit?: { hooks?: Hook[] }[];
+		Stop?: { hooks?: Hook[] }[];
+	};
 };
 
 // Built from a char code rather than written into a regex literal, where the
@@ -138,6 +142,24 @@ export function settings(root: string): string[] {
 		if (hook.command !== BOOTSTRAP)
 			say(
 				"the Bash hook is not the harness bootstrap — copy it from bootstrap.ts",
+			);
+	}
+
+	// Presence, not sole occupancy: a second prompt or stop hook cannot undo
+	// this one, since any `Stop` hook exiting 2 refuses. A match under another
+	// type, or behind `if`, never runs, so it does not count.
+	for (const [event, text] of [
+		["UserPromptSubmit", TURN_MARK],
+		["Stop", TURN_STOP],
+	] as const) {
+		const runs = (parsed.hooks?.[event] ?? [])
+			.flatMap((entry) => entry.hooks ?? [])
+			.some(
+				(h) => h.type === "command" && h.if === undefined && h.command === text,
+			);
+		if (!runs)
+			say(
+				`the ${event} hook is not the harness turn gate — copy it from bootstrap.ts`,
 			);
 	}
 

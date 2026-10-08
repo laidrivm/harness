@@ -22,3 +22,17 @@ export const BOOTSTRAP = [
 	'console.error("The harness is not installed: run bun install first.");',
 	"process.exit(2)' || exit 2",
 ].join(" ");
+
+/**
+ * The turn gate's `UserPromptSubmit` and `Stop` registrations, held as text
+ * for the same reason: `settings.ts` asserts each exactly.
+ *
+ * Without the package the `if` exits 0, which lets the prompt through and the
+ * turn end. With it, the gate's own exit code is the hook's. No `|| exit 2`,
+ * unlike the bootstrap: a gate that cannot launch must end the turn rather
+ * than hold it, as the gate's own fail-open header says.
+ */
+const turnGate = (half: "mark" | "stop") =>
+	`g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/turn-gate.ts"; if [ -f "$g" ]; then bun "$g" ${half}; fi`;
+export const TURN_MARK = turnGate("mark");
+export const TURN_STOP = turnGate("stop");
