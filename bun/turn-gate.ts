@@ -121,23 +121,53 @@ function tip(cwd: string, at: string): string | undefined {
 const ACTIVE = /^openspec\/changes\/(?!archive\/)[^/]+\/tasks\.md$/;
 
 /**
- * Groups complete at `tip` that had an unticked box at the mark, as
+ * Each `<rev>:<path>` as one `git cat-file --batch` answers it, in order; one
+ * the revision lacks reads as empty. A launch per file cost 208 ms on a tree
+ * of 13 changes, against 14 ms for the batch. Each answer is framed by the
+ * byte size in its header, so a file's own text is never read as a header.
+ */
+function blobs(cwd: string, specs: string[]): string[] {
+	const out = Bun.spawnSync(["git", "cat-file", "--batch"], {
+		cwd,
+		stdin: Buffer.from(specs.map((spec) => `${spec}\n`).join("")),
+	}).stdout;
+	const texts: string[] = [];
+	let at = 0;
+	for (const _ of specs) {
+		const eol = out.indexOf(10, at);
+		const size = /^\S+ blob (\d+)$/.exec(
+			eol < 0 ? "" : out.subarray(at, eol).toString(),
+		)?.[1];
+		at = eol + 1;
+		if (size === undefined) {
+			texts.push(""); // `missing`, or no answer at all
+			continue;
+		}
+		texts.push(out.subarray(at, at + Number(size)).toString());
+		at += Number(size) + 1;
+	}
+	return texts;
+}
+
+/**
+ * Groups complete at `tip` that were not complete at the mark, as
  * `<heading> in <change dir>`. Both sides are read from git, never from a
- * record beside the mark. A group absent at the mark had no unticked box
- * there, so it does not qualify.
+ * record beside the mark. A group absent at the mark was not complete there,
+ * so the turn that wrote and ticked it qualifies.
  */
 function completed(cwd: string, at: string, tip: string): string[] {
-	const paths = git(cwd, "ls-tree", "-r", "--name-only", tip, "--", "openspec/changes");
-	const found: string[] = [];
-	for (const path of (paths ?? "").split("\n").filter((p) => ACTIVE.test(p))) {
-		// ponytail: two `git show` per active change, ~60 ms for 7; one
-		// `git cat-file --batch` if the change count grows.
-		const before = groups(git(cwd, "show", `${at}:${path}`) ?? "");
-		for (const heading of complete(git(cwd, "show", `${tip}:${path}`) ?? ""))
-			if ((before.get(heading)?.open ?? 0) > 0)
-				found.push(`"${heading}" in ${path.replace(/tasks\.md$/, "")}`);
-	}
-	return found;
+	const paths = (
+		git(cwd, "ls-tree", "-r", "--name-only", tip, "--", "openspec/changes") ?? ""
+	)
+		.split("\n")
+		.filter((path) => ACTIVE.test(path));
+	const texts = blobs(cwd, paths.flatMap((p) => [`${at}:${p}`, `${tip}:${p}`]));
+	return paths.flatMap((path, i) => {
+		const before = new Set(complete(texts[2 * i]));
+		return complete(texts[2 * i + 1])
+			.filter((heading) => !before.has(heading))
+			.map((heading) => `"${heading}" in ${path.replace(/tasks\.md$/, "")}`);
+	});
 }
 
 /** The refusal for this turn, or nothing when it may end. */

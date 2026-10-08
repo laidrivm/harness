@@ -50,6 +50,16 @@ checked out there.
   `git cat-file --batch` read of the same 26 blobs costs 14 ms (harness: 88
   vs 11 ms, 6 changes).
 
+- **After the batch read (1.4)**, same method, both halves:
+
+  | Repository | `Stop` median | `Stop` p90 | mark median | mark p90 |
+  |---|---|---|---|---|
+  | dota2 | 53.7 ms | 59.6 ms | 26.4 ms | 29.3 ms |
+  | mellon | 44.3 ms | 46.8 ms | 27.2 ms | 28.2 ms |
+
+  Both halves are inside the 100 ms budget on both consumers, and dota2's
+  `Stop` lands where the prediction under *Risks* put it.
+
 ## Goals / Non-Goals
 
 **Goals:**
