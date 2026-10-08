@@ -50,7 +50,7 @@ decision module, group 3 wires it up and shortens the prose.
 
 ## 2. The decision module
 
-- [ ] 2.1 Write the task-file reading tests in `bun/turn-gate.test.ts`: a
+- [x] 2.1 Write the task-file reading tests in `bun/turn-gate.test.ts`: a
       group whose last box is ticked is complete [4]; a group with an unticked
       box is not [6, 22]; a group with no boxes at all is not [8]; `- [X]`
       counts as ticked [10]; a checkbox inside a fenced code block does not
@@ -63,7 +63,7 @@ decision module, group 3 wires it up and shortens the prose.
       ends, §*Every group still has work in it*, §*A group completed in an
       earlier turn*, §*The completed group belongs to an archived change*, §*A
       group that carries no boxes*)
-- [ ] 2.2 Write the turn-state tests: `HEAD` equal to the mark is a turn that
+- [x] 2.2 Write the turn-state tests: `HEAD` equal to the mark is a turn that
       did not commit [12]; `HEAD` moved by an amend is a turn that did [13];
       four commits read the same as one [7]; a turn that commits and then
       returns `HEAD` to the mark ends, since nothing it committed survives to
@@ -77,13 +77,13 @@ decision module, group 3 wires it up and shortens the prose.
       written*, §*A turn whose commits are withdrawn before it ends*, §*A turn
       that pushes, then resets to the mark*, §*A refusal is not repeated*,
       §*Two sessions in one repository*)
-- [ ] 2.3 Write the test the removed push condition earned: a turn that
+- [x] 2.3 Write the test the removed push condition earned: a turn that
       commits the last task, pushes the branch, and ends with no gate line is
       still blocked. The condition it replaces would have passed exactly this
       case, so the test is what stops it being re-added as an optimisation.
       (Req: commit-gates — A turn that commits reports its gates before it
       ends, §*The turn commits and pushes before ending*)
-- [ ] 2.4 Write the message-reading tests: a gate line ends the turn [16
+- [x] 2.4 Write the message-reading tests: a gate line ends the turn [16
       first half]; the words "gate line" in prose do not [16 second half];
       `BLOCKED` with what the user must settle ends the turn; a bare `BLOCKED`
       with nothing after it blocks; an empty message blocks [3]; a payload
@@ -91,7 +91,7 @@ decision module, group 3 wires it up and shortens the prose.
       A turn that commits reports its gates before it ends, §*The turn reports
       its gates*, §*The turn names what only the user can settle*, §*A bare
       marker with nothing after it*, §*The final message cannot be read*)
-- [ ] 2.5 Write `bun/turn-gate.ts` against those tests, with both halves —
+- [x] 2.5 Write `bun/turn-gate.ts` against those tests, with both halves —
       the mark writer and the turn-end decision — in one file, since they are
       two ends of one contract and splitting them puts the mark's format in
       two places. Confirm it stays under the 300-line cap `change-slicing`

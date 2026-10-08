@@ -119,6 +119,15 @@ steps is exactly that — would refuse every committing turn after it. The
 second read comes from git rather than from the mark, which records `HEAD`
 and nothing else.
 
+As built in group 2, the first read also comes from git, at the turn's tip
+commit, not from the working tree. The tip is `HEAD`, or the remote-tracking
+ref when `HEAD` was reset back to the mark after a push. That reset leaves the
+working tree as it was at the mark, so a working-tree read would let through
+the turn the spec's *A turn that pushes, then resets to the mark* refuses. An
+uncommitted tick is not committed work either way. "Not complete at the mark"
+is built as the spec words it: the group had an unticked box there. A group
+the turn created already complete does not qualify.
+
 ### What the hook does not claim
 
 It reads `last_assistant_message` for a gate line. An agent that writes
