@@ -14,7 +14,7 @@ decision module, group 3 wires it up and shortens the prose.
 
 ## 1. What the events actually do
 
-- [ ] 1.1 Measure whether a project-level `UserPromptSubmit` entry in
+- [x] 1.1 Measure whether a project-level `UserPromptSubmit` entry in
       `.claude/settings.json` composes with the ponytail plugin's or replaces
       it, by registering a marker entry and observing both in a session
       started afterwards — a permissions or hook change is only observable in
@@ -22,7 +22,7 @@ decision module, group 3 wires it up and shortens the prose.
       else in this change is worth building if they do not.
       (Req: commit-gates — A turn that commits reports its gates before it
       ends)
-- [ ] 1.2 Measure the cost the proposal records as owed: the wall time a
+- [x] 1.2 Measure the cost the proposal records as owed: the wall time a
       `Stop` hook adds to a turn end, and the wall time the `UserPromptSubmit`
       mark adds to a prompt, both against the guard's existing 16–22 ms figure
       so the numbers are comparable. Record them in this change's `design.md`,
@@ -35,7 +35,7 @@ decision module, group 3 wires it up and shortens the prose.
       the first's numbers rather than taking its own afresh.
       (Req: commit-gates — A turn that commits reports its gates before it
       ends)
-- [ ] 1.3 Confirm by probe that a `Stop` hook exiting 2 prevents the turn
+- [x] 1.3 Confirm by probe that a `Stop` hook exiting 2 prevents the turn
       ending and that its stderr reaches the model, and that exiting 1 does
       not — the documentation says so, and this capability's own rule is that
       a hook's behaviour is what the hook does. Record the whole payload the

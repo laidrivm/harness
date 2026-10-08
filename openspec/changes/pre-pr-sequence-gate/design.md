@@ -24,7 +24,9 @@ What the documentation confirms about that moment, read rather than recalled:
 What it does **not** confirm, and what this design therefore refuses to rest
 on: a `stop_hook_active` field. An earlier reading of the same page reported
 one; reading the page again for it found nothing. It is treated here as
-non-existent, and loop safety is obtained by construction instead.
+non-existent, and loop safety is obtained by construction instead. (Task 1.3
+later observed the field in a real payload — see *Measurements*; the design
+still does not rest on it.)
 
 ## Goals / Non-Goals
 
@@ -148,6 +150,61 @@ guarantee the check does not have.
   fire in this session, so the events are live but the composition of a
   project-level entry with a plugin's is a claim this design does not make.
   Task 1.1 measures it before anything depends on it.
+
+## Measurements
+
+Taken 2026-10-08 for group 1, on Claude Code 2.1.293 and bun 1.4.2, by
+`claude -p --output-format stream-json --verbose --include-hook-events` in a
+scratch repository whose project `.claude/settings.json` registered a logging
+hook on each event, with the ponytail plugin enabled.
+
+- **Composition (1.1).** A project-level `UserPromptSubmit` entry composes
+  with the plugin's: the stream reports two `UserPromptSubmit` hooks started
+  and answered per prompt, and the project hook's log holds one payload. The
+  design's premise holds.
+- **Exit codes (1.3).** A `Stop` hook exiting **2** continued the turn, and
+  its stderr reached the model as a user message headed `Stop hook feedback:`
+  — the model wrote the word the stderr asked for. Exiting **1** ended the
+  turn; the stderr was not acted on.
+- **The payload (1.3).** `UserPromptSubmit` carries `cwd`,
+  `hook_event_name`, `permission_mode`, `prompt`, `prompt_id`, `session_id`,
+  `transcript_path`. `Stop` carries `background_tasks`, `cwd`, `effort`,
+  `hook_event_name`, `last_assistant_message`, `permission_mode`,
+  `prompt_id`, `session_crons`, `session_id`, `stop_hook_active`,
+  `transcript_path`. **`stop_hook_active` exists**: `false` on the first
+  `Stop`, `true` on the one after a refusal. `prompt_id` is also unchanged
+  across that refusal, which confirms that a refused turn is continued and
+  writes no new mark. The design still uses neither: the once-per-mark rule
+  already bounds the loop, and the spec forbids depending on the field.
+- **Interruption (1.3).** SIGINT to a headless turn mid-tool-call fired no
+  `Stop` and no `StopFailure`; only `SessionEnd`, with reason `other`, fired.
+  Such a turn is ungated, as the spec's *Nor SHALL it claim to reach every
+  turn* already says. An interactive Esc was not probed: it ends no session,
+  so nothing registered here is expected to fire on it.
+- **Cost (1.2).** 30 spawns each, after 3 warm-ups, payload on stdin, in this
+  repository with 7 active changes. A proxy doing each half's I/O (stdin
+  parse, `git rev-parse`, mark write; for `Stop` also the `tasks.md` glob and
+  one `git show <mark>:<path>` per change) stood in for the script group 2
+  writes:
+
+  | Command | Median | p90 |
+  |---|---|---|
+  | bare `bun -e 0` | 6.1 ms | 6.4 ms |
+  | guard, `PreToolUse` | 9.2 ms | 10.2 ms |
+  | mark, `UserPromptSubmit` | 16.2 ms | 17.5 ms |
+  | turn end, `Stop`, `HEAD` moved | 60.3 ms | 62.3 ms |
+
+  Both halves are inside the **100 ms** budget, so the trigger stays as
+  designed. Most of the `Stop` cost is one `git show` per change, and 2.5
+  can halve it with a single `git cat-file --batch`. A turn that did not
+  commit stops after `git rev-parse` and costs about what the mark costs.
+  The guard now measures 9.2 ms against the 16–22 ms that
+  `agent-permissions`' *one bun start per Bash call* requirement records.
+  The figure overstates the cost on this machine, so the requirement's
+  "negligible" claim stands. The stale number is a one-line `MODIFIED` delta
+  for whichever change next touches that requirement; `merged-branch-guard`
+  task 2.3, which measures the same surface, should read these numbers
+  rather than take its own.
 
 ## Open Questions
 
