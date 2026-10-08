@@ -7,7 +7,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { BOOTSTRAP } from "./bootstrap.ts";
+import { BOOTSTRAP, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
 import { settings } from "./settings.ts";
 
 const made: string[] = [];
@@ -55,8 +55,16 @@ const policy = () => ({
 				hooks: [{ type: "command", command: BOOTSTRAP } as object],
 			},
 		],
+		UserPromptSubmit: [
+			{ hooks: [{ type: "command", command: TURN_MARK } as Hook] },
+		] as { hooks: Hook[] }[] | undefined,
+		Stop: [{ hooks: [{ type: "command", command: TURN_STOP } as Hook] }] as
+			| { hooks: Hook[] }[]
+			| undefined,
 	},
 });
+
+type Hook = { type: string; command: string; if?: string };
 
 const BUNFIG =
 	"[install]\nexact = true\nminimumReleaseAge = 259200\nminimumReleaseAgeExcludes = []\n";
@@ -125,6 +133,59 @@ describe("the bootstrap hook", () => {
 		expect(settings(consumer(config)).join("\n")).toContain(
 			"2 Bash hooks, not one",
 		);
+	});
+});
+
+describe("the turn gate's registrations", () => {
+	const report = (change: (c: ReturnType<typeof policy>) => void) =>
+		settings(consumer(changed(change))).join("\n");
+	const stop = (hook: Hook) => (c: ReturnType<typeof policy>) => {
+		c.hooks.Stop = [{ hooks: [hook] }];
+	};
+
+	// spec: commit-gates/a-consumer-without-the-registrations
+	test("no Stop registration is named [6]", () => {
+		expect(report((c) => delete c.hooks.Stop)).toContain("the Stop hook");
+	});
+
+	test("no UserPromptSubmit registration is named [7]", () => {
+		expect(report((c) => delete c.hooks.UserPromptSubmit)).toContain(
+			"the UserPromptSubmit hook",
+		);
+	});
+
+	test("a consumer's own prompt hook beside the harness's reports nothing [8]", () => {
+		const extra = { type: "command", command: "echo hi" };
+		expect(
+			report((c) => c.hooks.UserPromptSubmit?.push({ hooks: [extra] })),
+		).toBe("");
+	});
+
+	test("a Stop command one character off is named [9]", () => {
+		const off = { type: "command", command: `${TURN_STOP} ` };
+		expect(report(stop(off))).toContain("the Stop hook");
+	});
+
+	test("the two texts on each other's events are both named [10]", () => {
+		const text = report((c) => {
+			c.hooks.Stop = [{ hooks: [{ type: "command", command: TURN_MARK }] }];
+			c.hooks.UserPromptSubmit = [
+				{ hooks: [{ type: "command", command: TURN_STOP }] },
+			];
+		});
+		expect(text).toContain("the Stop hook");
+		expect(text).toContain("the UserPromptSubmit hook");
+	});
+
+	test("a matching Stop command under another hook type is named", () => {
+		expect(report(stop({ type: "prompt", command: TURN_STOP }))).toContain(
+			"the Stop hook",
+		);
+	});
+
+	test("a matching Stop command narrowed by if is named", () => {
+		const narrowed = { type: "command", command: TURN_STOP, if: "Bash(x)" };
+		expect(report(stop(narrowed))).toContain("the Stop hook");
 	});
 });
 
