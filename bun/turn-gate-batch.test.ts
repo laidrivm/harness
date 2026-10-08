@@ -59,6 +59,16 @@ describe("one batch read across every active task list", () => {
 		expect(named(reason)).toBe(1);
 	});
 
+	test("a multi-byte character does not shift the next file's framing", () => {
+		const dashes = OPEN.replace("a\n", `${"—".repeat(40)}\n`);
+		const reason = silentTurn(
+			{ [path("a")]: dashes, [path("b")]: OPEN },
+			{ [path("b")]: DONE },
+		);
+		expect(reason).toContain("openspec/changes/b/");
+		expect(named(reason)).toBe(1);
+	});
+
 	test("an empty task list at the mark reads as no groups [18]", () => {
 		const reason = silentTurn(
 			{ [path("a")]: "", [path("b")]: OPEN },
