@@ -10,7 +10,7 @@ each consumer, after group 2 is merged and its commit can be pinned.
 
 ## 1. What the gate decides, and how fast
 
-- [ ] 1.1 Turn the test at `bun/turn-gate.test.ts` "a group that did not
+- [x] 1.1 Turn the test at `bun/turn-gate.test.ts` "a group that did not
       exist at the mark does not qualify the turn" around: a group the mark
       does not hold, complete at the tip, qualifies [12]. Add: a group
       committed unticked and then ticked within one turn qualifies [13]; a
@@ -20,7 +20,7 @@ each consumer, after group 2 is merged and its commit can be pinned.
       1.3. (Req: commit-gates — A turn that commits reports its gates before
       it ends, §*A group created and completed in the same turn*, §*A complete
       group the turn renamed*)
-- [ ] 1.2 Write the batch-read tests: thirteen active changes with one group
+- [x] 1.2 Write the batch-read tests: thirteen active changes with one group
       completed in the turn name that group and its path only [16]; a task
       list holding a line shaped like a `cat-file` header (`<sha> blob 12`)
       parses as one file [17]; an empty `tasks.md` at the mark reads as no
@@ -29,12 +29,12 @@ each consumer, after group 2 is merged and its commit can be pinned.
       rewrite keeps the behaviour; 17 and 18 pin the framing it introduces.
       (Req: commit-gates — A turn that commits reports its gates before it
       ends)
-- [ ] 1.3 In `bun/turn-gate.ts`, qualify a group not complete at the mark,
+- [x] 1.3 In `bun/turn-gate.ts`, qualify a group not complete at the mark,
       absent included, and read both sides of every active task list
       through one `git cat-file --batch`, deleting the `ponytail:` ceiling
       comment on the loop it replaces. `bun test` green, file under the
       300-line cap.
-- [ ] 1.4 Re-measure both halves on dota2's tree, read-only and with the
+- [x] 1.4 Re-measure both halves on dota2's tree, read-only and with the
       method in design.md *Measurements*, and record the medians there.
       The `Stop` half must be under the 100 ms budget the archived
       `pre-pr-sequence-gate` design set; over it, stop and report before
