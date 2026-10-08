@@ -134,6 +134,14 @@ describe("the bootstrap hook", () => {
 			"2 Bash hooks, not one",
 		);
 	});
+
+	test("a hook run in the background is named", () => {
+		const config = changed((c) => {
+			const [entry] = c.hooks.PreToolUse;
+			if (entry) entry.hooks = [{ command: BOOTSTRAP, async: true }];
+		});
+		expect(settings(consumer(config)).join("\n")).toContain("cannot block");
+	});
 });
 
 describe("the turn gate's registrations", () => {
@@ -177,15 +185,15 @@ describe("the turn gate's registrations", () => {
 		expect(text).toContain("the UserPromptSubmit hook");
 	});
 
-	test("a matching Stop command under another hook type is named", () => {
-		expect(report(stop({ type: "prompt", command: TURN_STOP }))).toContain(
-			"the Stop hook",
-		);
-	});
-
-	test("a matching Stop command narrowed by if is named", () => {
-		const narrowed = { type: "command", command: TURN_STOP, if: "Bash(x)" };
-		expect(report(stop(narrowed))).toContain("the Stop hook");
+	test.each([
+		["under another hook type", { type: "prompt" }],
+		["narrowed by if", { if: "Bash(x)" }],
+		["run in the background", { async: true }],
+		["run in the background, waking on exit", { asyncRewake: true }],
+		["spawned without a shell", { args: [] }],
+	])("a matching Stop command %s is named", (_, departure) => {
+		const hook = { type: "command", command: TURN_STOP, ...departure };
+		expect(report(stop(hook as Hook))).toContain("the Stop hook");
 	});
 });
 
