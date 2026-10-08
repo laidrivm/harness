@@ -6,7 +6,8 @@
  * approval is an entry of the consumer's `harness.suppressions` and therefore a
  * line of the diff.
  *
- * Every tracked file is read but prose. Prose names these markers while
+ * Every tracked file is read but prose, the check's own script and test, and
+ * the root manifest the approvals live in. Prose names these markers while
  * explaining the rule — all four artefacts of the change introducing this check
  * do — and a check that fails on its own proposal is a check nobody keeps.
  */
@@ -36,6 +37,16 @@ const self = (root: string) =>
 	["no-suppressions.ts", "no-suppressions.test.ts"].map((name) =>
 		relative(root, join(import.meta.dir, name)),
 	);
+
+/**
+ * The root manifest, where `harness.suppressions` lives: every approval's key
+ * names its marker, so scanning the file counts each approval as a suppression
+ * of its own. Nothing in it can suppress anything — `read` parses it with
+ * `JSON.parse`, which rejects a comment, so a marker can only sit in a string.
+ * Root-relative, the way `git ls-files` names it from the root, so a workspace
+ * manifest below the root holds no allowlist and is still scanned.
+ */
+const MANIFEST = "package.json";
 
 /**
  * Approved suppressions, from the consumer's `harness.suppressions`: keyed by
@@ -88,7 +99,7 @@ export function scan(
 	// would otherwise resolve to the root itself and be read as a directory.
 	for (const path of ls.stdout.toString().split("\0").filter(Boolean)) {
 		if (PROSE.some((ext) => path.endsWith(ext))) continue;
-		if (own.includes(path)) continue;
+		if (own.includes(path) || path === MANIFEST) continue;
 		const full = join(root, path);
 		// Regular files only: the entry may be tracked but deleted from the work
 		// tree, a symlink whose target is nobody's business here, or a
