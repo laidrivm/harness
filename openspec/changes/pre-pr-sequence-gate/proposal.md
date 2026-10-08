@@ -21,8 +21,11 @@ past.
 - A `UserPromptSubmit` hook records `HEAD` when control arrives, so "this turn
   committed" is answerable at the end of it. Without that mark the hook would
   have to fire on every turn, including the ones that only answer a question.
-- `core/review-toolkit.md`'s "never ask whether to run it" shortens to what
-  the hook cannot see, per *A mechanised prohibition leaves its prose home*.
+- `core/review-toolkit.md`'s "never ask whether to run it" is scoped to
+  where the hook is not registered, and states what the hook cannot see, per
+  *A mechanised prohibition leaves its prose home*. It is not shortened
+  outright because consumers sync the doc without the hook (design.md, *The
+  prose stays where the hook does not reach*).
 
 ## Non-goals
 
@@ -61,7 +64,8 @@ None.
 - `.claude/settings.json`: two new hook registrations, on events the tracked
   settings do not use today.
 - A new script holding both halves, and its tests.
-- `core/review-toolkit.md`: one sentence shortened.
+- `core/review-toolkit.md`: one sentence scoped to where the hook is not
+  registered.
 - Every turn now pays one hook launch at its end, on top of the per-Bash-call
   guard. The cost is a measurement this change owes, not an estimate.
 - No dependency, no CI change, no client code.

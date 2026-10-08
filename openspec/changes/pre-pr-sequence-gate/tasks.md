@@ -115,9 +115,13 @@ decision module, group 3 wires it up and shortens the prose.
       their own, so removing either fails it.
       (Req: commit-gates — A turn that commits reports its gates before it
       ends)
-- [ ] 3.3 Shorten `core/review-toolkit.md`'s "never ask whether to run it" to
-      what the hook cannot see: the hook reaches a turn that committed with a
-      group complete, so what stays prose is the sequence's other trigger —
-      any pull request that changes code — and the fact that a gate line is a
-      report rather than proof. (Req: agent-rulebook — A mechanised
-      prohibition leaves its prose home)
+- [x] 3.3 Scope `core/review-toolkit.md`'s "never ask whether to run it" to
+      where the hook is not registered, and state what the hook cannot see:
+      the sequence's other trigger, any pull request that changes code, and
+      the fact that a gate line is a report rather than proof. This replaces
+      the original "shorten": the doc syncs to consumers, which do not
+      register the hook, so deleting the sentence would leave them with
+      neither the rule nor the mechanism. Shortening it moves to the Harness
+      card "Ship the turn gate to consumers". See design.md, *The prose
+      stays where the hook does not reach*. (Req: agent-rulebook — A
+      mechanised prohibition leaves its prose home)
