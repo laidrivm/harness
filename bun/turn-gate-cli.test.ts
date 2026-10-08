@@ -31,6 +31,7 @@ const script = `${import.meta.dir}/turn-gate.ts`;
  */
 function run(half: "mark" | "stop", event: unknown, cwd: string, tmp: string) {
 	const call = Bun.spawnSync(["bun", script, half], {
+		stdout: "pipe",
 		cwd,
 		env: { PATH: process.env.PATH, TMPDIR: tmp },
 		stdin: Buffer.from(
@@ -38,7 +39,11 @@ function run(half: "mark" | "stop", event: unknown, cwd: string, tmp: string) {
 		),
 		stderr: "pipe",
 	});
-	return { code: call.exitCode, reason: call.stderr.toString() };
+	return {
+		code: call.exitCode,
+		reason: call.stderr.toString(),
+		out: call.stdout.toString(),
+	};
 }
 
 /** A marked repository whose turn has committed the last task of its group. */
@@ -71,6 +76,16 @@ describe("how the refusal leaves the process", () => {
 		expect(run("stop", end(dir, message), dir, tmp)).toEqual({
 			code: 0,
 			reason: "",
+			out: "",
+		});
+	});
+
+	test("the mark half prints nothing — its stdout would join every prompt", () => {
+		const dir = repo({ [TASKS]: OPEN });
+		expect(run("mark", prompt(dir), dir, store())).toEqual({
+			code: 0,
+			reason: "",
+			out: "",
 		});
 	});
 });
