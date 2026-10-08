@@ -100,14 +100,14 @@ decision module, group 3 wires it up and shortens the prose.
 
 ## 3. Wiring, and the prose it supersedes
 
-- [ ] 3.1 Write the exit-code and refusal tests: a block exits exactly 2 [14];
+- [x] 3.1 Write the exit-code and refusal tests: a block exits exactly 2 [14];
       the reason names running the sequence and writing `BLOCKED` [15]; a
       non-repository ends the turn [19]; a detached `HEAD` ends the turn [20];
       the 2026-08-19 shape — last task committed, message ending in a question
       — blocks [23]. (Req: commit-gates — A turn that commits reports its
       gates before it ends, §*A task group is completed and the turn ends
       silently*, §*There is no repository, or no branch*)
-- [ ] 3.2 Register both hooks in `.claude/settings.json`, and confirm
+- [x] 3.2 Register both hooks in `.claude/settings.json`, and confirm
       `bun/settings.test.ts` still passes — `bun/settings.ts` flattens
       `settings.hooks.PreToolUse` before asserting a length of one, so
       registrations on other events are outside what it pins. Pin the
