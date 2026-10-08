@@ -44,7 +44,13 @@ documentation and OpenSpec artefacts discuss suppressions by name, this
 specification among them, and a check that fails on its own proposal is a check
 nobody keeps. The check's own script and test SHALL be
 outside the scanned set too, for the same reason and no other: they must carry
-the three markers literally to do their job. An approved suppression SHALL be
+the three markers literally to do their job. The repository's root
+`package.json` SHALL be outside the scanned set as well, because the allowlist
+lives in it and each approval's key names its marker, so scanning it counts
+every approval as a suppression of its own. A marker there cannot suppress
+anything: the gates read that file as strict JSON, which has no comments, so a
+marker can only sit inside a string. A `package.json` below the root holds no
+allowlist and SHALL stay scanned. An approved suppression SHALL be
 admitted only by naming its exact path, **which marker**, and how many
 occurrences of it are approved there, in the check's own allowlist — so the
 approval arrives as a reviewable line in the diff rather than as a silent
@@ -104,8 +110,23 @@ ignored or untracked file cannot fail a clone that does not have it.
 
 #### Scenario: A suppression inside a dependency
 
-- **WHEN** `node_modules` or `dist` contains a suppression
+- **WHEN** an untracked file under `node_modules` or `dist` contains a
+  suppression
 - **THEN** the check passes, because it reads tracked files only
+
+#### Scenario: The allowlist names the markers it approves
+
+- **WHEN** the tracked root `package.json` approves `src/model.ts`,
+  `biome-ignore`, count one, `src/model.ts` carries that one suppression, and
+  the allowlist has no entry for `package.json`
+- **THEN** the check passes, because the key naming `biome-ignore` is an
+  approval and not a suppression
+
+#### Scenario: A workspace manifest carries a marker
+
+- **WHEN** a tracked `packages/web/package.json` contains `@ts-ignore`
+- **THEN** the check fails and names that file, because only the root
+  manifest holds the allowlist
 
 ### Requirement: The pre-push hook runs the gates named here
 
