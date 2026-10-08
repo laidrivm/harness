@@ -153,6 +153,8 @@ Rules about how work is carried out here. They do not age with the code.
   resolves.
 - List the files a plan routes, moves or deletes, and confirm each exists,
   before the plan is written.
+- Check who holds a checkout before routing work around it — a non-default
+  branch is not evidence of another session.
 
 #### Safety
 
@@ -175,3 +177,5 @@ not age with the code.
 - After a generator runs, compare the directories it writes against a listing
   taken before it, ignored ones included — `git status` hides what
   `.gitignore` covers.
+- Push from a repository's own checkout, never a `git worktree` — a hook there
+  hands the tests it runs an absolute `GIT_DIR`.
