@@ -143,7 +143,9 @@ for them is already here.
   The same turn keeps the card's links and summary, which `task-board`'s
   *A card can be ranked without opening the repository* fixes. The turn a
   pull request opens adds its link under the card's `Ссылки` line, with its
-  number and kind (`proposal`, `step 2`, `archive`); the turn a proposal
+  number and kind (`proposal`, `step 2`, `archive`) — or, when the user
+  opened it, the first turn that learns it exists, at the latest the one told
+  it merged; the turn a proposal
   merges adds its `proposal.md` on the default branch; the archive re-points
   that link to the archived path. An edit to a proposal's *Why* or *What
   Changes* re-reads the card's summary in that turn. A card citing a commit
