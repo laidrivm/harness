@@ -214,6 +214,9 @@ describe("the root manifest", () => {
 		});
 		const run = Bun.spawnSync(["bun", script], { cwd: dir, stderr: "pipe" });
 		expect(run.exitCode).not.toBe(0);
+		// Refused as JSON, not reported as a finding — either would exit non-zero.
+		expect(run.stderr.toString()).toContain("JSON Parse error");
+		expect(run.stderr.toString()).not.toContain("package.json:");
 	});
 
 	// spec: commit-gates/a-workspace-manifest-carries-a-marker
