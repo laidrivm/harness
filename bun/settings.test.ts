@@ -196,6 +196,7 @@ describe("the turn gate's registrations", () => {
 		["run in the background", { async: true }],
 		["run in the background, waking on exit", { asyncRewake: true }],
 		["spawned without a shell", { args: [] }],
+		["run by PowerShell", { shell: "powershell" }],
 	])("a matching Stop command %s is named", (_, departure) => {
 		const hook = { type: "command", command: TURN_STOP, ...departure };
 		expect(report(stop(hook as Hook))).toContain("the Stop hook");

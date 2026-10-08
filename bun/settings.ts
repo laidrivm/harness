@@ -52,15 +52,20 @@ type Hook = {
 	args?: unknown;
 	async?: unknown;
 	asyncRewake?: unknown;
+	shell?: unknown;
 };
 
 /**
  * Whether a hook runs its command in the foreground through a shell, the one
  * form whose exit code can refuse: `async` and `asyncRewake` run it in the
- * background, and `args` spawns `command` as an executable with no shell.
+ * background, `args` spawns `command` as an executable with no shell, and a
+ * `shell` other than bash cannot read the POSIX text these hooks carry.
  */
 const blocking = (hook: Hook) =>
-	hook.args === undefined && !hook.async && !hook.asyncRewake;
+	hook.args === undefined &&
+	!hook.async &&
+	!hook.asyncRewake &&
+	(hook.shell === undefined || hook.shell === "bash");
 type Settings = {
 	permissions?: { deny?: string[]; ask?: string[]; allow?: string[] };
 	hooks?: {
