@@ -164,7 +164,10 @@ export function settings(root: string): string[] {
 		// A permission pattern matches the command word literally, so
 		// `command gh` would walk around a hook narrowed by one.
 		if (hook.if !== undefined) say("the Bash hook is narrowed by `if`");
-		if (!blocking(hook)) say("the Bash hook cannot block: `async` or `args`");
+		if (!blocking(hook))
+			say(
+				"the Bash hook cannot block: `async`, `asyncRewake`, `args` or a non-bash `shell`",
+			);
 		if (hook.command !== BOOTSTRAP)
 			say(
 				"the Bash hook is not the harness bootstrap — copy it from bootstrap.ts",
