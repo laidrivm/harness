@@ -19,8 +19,7 @@ pre-push hook and in CI.
 ## Measurements
 
 Taken 2026-10-08, bun 1.4.2, read-only against each repository's git
-objects. dota2's working tree is on another session's branch, so nothing was
-checked out there.
+objects, so nothing was checked out in either consumer.
 
 - **Replay.** Every first-parent commit of each `origin/main`, treated as a
   one-commit turn, through `complete()` from `bun/turn-gate.ts`:
@@ -141,9 +140,15 @@ because the ceiling has been reached.
 
 The bumped `settings.ts` fails a consumer without the registrations, and
 `sync.ts`'s drift check fails a rules copy that differs from the pin, so a
-commit holding one without the others is red in that consumer's CI. dota2's
-checkout belongs to another session, so its bump is made in a worktree off
-its `origin/main`.
+commit holding one without the others is red in that consumer's CI.
+
+Each bump is made and pushed from the consumer's own checkout, never from a
+`git worktree`. Git hands a hook an absolute `GIT_DIR` in a worktree, and
+dota2's pre-push tests inherit it: their fabricated repositories ran
+`git init --bare` and `git add` against dota2 itself, setting `core.bare` in
+its shared config and rewriting the worktree's index. In a plain checkout the
+same `GIT_DIR` is the relative `.git`, which resolves inside each test's
+temporary directory.
 
 ### The prose drops the clause the hook now holds everywhere
 

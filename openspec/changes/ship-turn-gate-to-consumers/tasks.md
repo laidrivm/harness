@@ -73,8 +73,9 @@ each consumer, after group 2 is merged and its commit can be pinned.
 
 ## 3. Each consumer
 
-- [ ] 3.1 dota2, in a worktree off its `origin/main`, since its checkout
-      belongs to another session: bump the pin to group 2's merge commit, run
+- [ ] 3.1 dota2, on a branch of its own checkout and never in a worktree
+      (design.md, *Each consumer lands the bump…*): bump the pin to group 2's
+      merge commit, run
       `bun install` and confirm the lockfile names `harness` once, run
       `harness:check` and report any failure this change did not cause, then
       add both registrations and refresh the rules copy with `sync.ts` in the
