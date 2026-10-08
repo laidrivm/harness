@@ -90,6 +90,26 @@
 					}
 				]
 			}
+		],
+		"UserPromptSubmit": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bun \"$CLAUDE_PROJECT_DIR/bun/turn-gate.ts\" mark"
+					}
+				]
+			}
+		],
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bun \"$CLAUDE_PROJECT_DIR/bun/turn-gate.ts\" stop"
+					}
+				]
+			}
 		]
 	}
 }
