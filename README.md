@@ -55,6 +55,7 @@ A project takes the harness as one dependency pinned to a full commit, `"harness
 
 - Each skill the project uses is a tracked relative link, `.claude/skills/<name>` → `../../node_modules/harness/core/skills/<name>`. It resolves once `bun install` has run.
 - The Bash `PreToolUse` hook in `.claude/settings.json` is the text `bun/bootstrap.ts` exports, character for character. Before the install it lets only the install through; after it, it hands every command to the guard.
+- The `UserPromptSubmit` and `Stop` hooks there are the texts `TURN_MARK` and `TURN_STOP` in `bun/bootstrap.ts`, character for character. They run the turn gate, which refuses a turn that completes a task group and ends without the pre-PR sequence's gate lines; before the install they let every prompt and turn through.
 - The values the gates run with live under a `"harness"` key in the project's `package.json`, typed in `bun/config.ts`. A gate whose key is absent fails, naming it.
 - `bun node_modules/harness/bun/sync.ts`, from the project's root, writes `core/rules.md` and the docs beside it into a tracked `harness/`, which the project's `CLAUDE.md` imports and its review bot reads. A copy that differs from the pin fails the check below, naming each file; an edit to a rule belongs here, not in the copy.
 - `bun node_modules/harness/bun/check.ts`, from the project's root, runs every check over its tree.

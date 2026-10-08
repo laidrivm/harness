@@ -42,7 +42,7 @@ each consumer, after group 2 is merged and its commit can be pinned.
 
 ## 2. The text a consumer carries, and the check that pins it
 
-- [ ] 2.1 Write the hook-text tests in `bun/bootstrap.test.ts`, running each
+- [x] 2.1 Write the hook-text tests in `bun/bootstrap.test.ts`, running each
       string through `sh -c` as the bootstrap tests do: without the package,
       `stop` exits 0 with both streams empty [1] and `mark` exits 0 with
       stdout empty [2]; with a stand-in script that refuses, `stop` exits
@@ -50,7 +50,7 @@ each consumer, after group 2 is merged and its commit can be pinned.
       `stop` exits other than 2 [4]; a `$CLAUDE_PROJECT_DIR` holding a space
       still runs the stand-in [5]. (Req: commit-gates — A turn that commits
       reports its gates before it ends, §*A consumer clone before install*)
-- [ ] 2.2 Write the registration tests in `bun/settings.test.ts`: no
+- [x] 2.2 Write the registration tests in `bun/settings.test.ts`: no
       `hooks.Stop` is named [6]; no `hooks.UserPromptSubmit` is named [7]; an
       extra consumer hook on `UserPromptSubmit` beside the harness's reports
       nothing [8]; a `Stop` command one character off is named [9]; the two
@@ -60,11 +60,11 @@ each consumer, after group 2 is merged and its commit can be pinned.
       policy-keeping fixture gains both registrations and still reports
       nothing [11]. (Req: commit-gates — A turn that commits reports its
       gates before it ends, §*A consumer without the registrations*)
-- [ ] 2.3 Export the two strings from `bun/bootstrap.ts` beside `BOOTSTRAP`,
+- [x] 2.3 Export the two strings from `bun/bootstrap.ts` beside `BOOTSTRAP`,
       with the header naming why they carry no `|| exit 2`, and make
       `bun/settings.ts` fail an event that holds no `command` hook, without
       `if`, equal to its string. `bun test` green.
-- [ ] 2.4 Shorten `core/review-toolkit.md`'s pre-PR paragraph: drop "where it
+- [x] 2.4 Shorten `core/review-toolkit.md`'s pre-PR paragraph: drop "where it
       is not, never ask whether to run it" and the clause scoping the hook to
       where it is registered, keep the trigger and what the hook cannot see.
       Grep `core/` and `README.md` for every other site that says the hook is
