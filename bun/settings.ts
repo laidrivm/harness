@@ -68,6 +68,7 @@ type Settings = {
 		UserPromptSubmit?: { hooks?: Hook[] }[];
 		Stop?: { hooks?: Hook[] }[];
 	};
+	disableAllHooks?: unknown;
 };
 
 // Built from a char code rather than written into a regex literal, where the
@@ -148,6 +149,10 @@ export function settings(root: string): string[] {
 	const hooks = (parsed.hooks?.PreToolUse ?? [])
 		.filter((entry) => entry.matcher === "Bash")
 		.flatMap((entry) => entry.hooks ?? []);
+	if (parsed.disableAllHooks)
+		say(
+			"disableAllHooks turns every hook off, the guard and turn gate included",
+		);
 	if (hooks.length !== 1) say(`${hooks.length} Bash hooks, not one`);
 	for (const hook of hooks) {
 		if (hook.type !== "command") say("the Bash hook is not a command");
