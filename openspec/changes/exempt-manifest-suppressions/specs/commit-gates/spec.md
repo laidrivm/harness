@@ -79,7 +79,8 @@ ignored or untracked file cannot fail a clone that does not have it.
 
 #### Scenario: A suppression inside a dependency
 
-- **WHEN** `node_modules` or `dist` contains a suppression
+- **WHEN** an untracked file under `node_modules` or `dist` contains a
+  suppression
 - **THEN** the check passes, because it reads tracked files only
 
 #### Scenario: The allowlist names the markers it approves
