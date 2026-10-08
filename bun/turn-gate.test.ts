@@ -61,6 +61,18 @@ describe("which groups a task list completes", () => {
 		expect(complete(text)).toEqual(["1. Group"]);
 	});
 
+	test("a `~~~` fence is not closed by a backtick fence inside it", () => {
+		const text =
+			"## 1. Group\n\n- [x] 1.1 a\n\n~~~md\n```\n- [ ] not a task\n~~~\n";
+		expect(complete(text)).toEqual(["1. Group"]);
+	});
+
+	test("an unticked box nested under a ticked one keeps the group open", () => {
+		expect(complete("## 1. Group\n\n- [x] 1.1 a\n  - [ ] 1.1.1 b\n")).toEqual(
+			[],
+		);
+	});
+
 	test("a file with no group headings completes nothing [9]", () => {
 		expect(complete("# c\n\n- [x] 1.1 a\n")).toEqual([]);
 	});
@@ -111,6 +123,14 @@ describe("whether the final message reports", () => {
 	// spec: commit-gates/the-turn-reports-its-gates
 	test("a gate line reports [16]", () => {
 		expect(reported("Done.\n\nTRIAGE gate: PASS — 1 groups.")).toBe(true);
+	});
+
+	test("a gate line set in bold reports", () => {
+		expect(reported("**TRIAGE gate: PASS — 1 groups.**")).toBe(true);
+	});
+
+	test("an `OPEN` gate line reports — the hook reads for a report, not a verdict", () => {
+		expect(reported("ZOMBIES gate: OPEN — 2 gaps unaddressed.")).toBe(true);
 	});
 
 	test("the words “gate line” in prose do not [16]", () => {
