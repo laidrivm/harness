@@ -39,12 +39,21 @@ function fabricate(
 	git("init", "-b", "main");
 	write(dir, tracked);
 	git("add", "-A");
-	// Untracked, so the scan never reads it: the consumer's empty allowlist.
+	// Untracked, so the scan never reads it: the consumer's empty allowlist —
+	// unless the case tracks a manifest of its own, which this must not replace.
 	write(dir, {
-		"package.json": JSON.stringify({ harness: { suppressions: {} } }),
+		...("package.json" in tracked ? {} : { "package.json": manifest({}) }),
 		...untracked,
 	});
 	return dir;
+}
+
+/** A consumer manifest approving `counts`, keyed by `<path> <marker>`. */
+function manifest(counts: Record<string, number>): string {
+	const suppressions = Object.fromEntries(
+		Object.entries(counts).map(([key, count]) => [key, { count, why: "x" }]),
+	);
+	return JSON.stringify({ harness: { suppressions } }, null, 2);
 }
 
 const at = (found: Finding[]) =>
@@ -152,6 +161,77 @@ describe("the allowlist", () => {
 			"src/types.ts": `// biome-ignore lint/style/x: y\n`,
 		});
 		expect(at(scan(dir, approved))).toEqual(["src/types.ts:1: biome-ignore"]);
+	});
+});
+
+describe("the root manifest", () => {
+	// spec: commit-gates/the-allowlist-names-the-markers-it-approves
+	test("its approval keys are not counted as suppressions", () => {
+		const dir = fabricate({
+			"package.json": manifest({ "src/model.ts biome-ignore": 1 }),
+			"src/model.ts": "// biome-ignore lint/style/x: approved\n",
+		});
+		expect(at(scan(dir))).toEqual([]);
+	});
+
+	test("nor are they in a consumer approving both markers at several paths", () => {
+		const files: Record<string, string> = {};
+		const counts: Record<string, number> = {};
+		for (const [name, marker] of [
+			["a", "biome-ignore"],
+			["b", "biome-ignore"],
+			["c", "biome-ignore"],
+			["d", "@ts-expect-error"],
+			["e", "@ts-expect-error"],
+		]) {
+			files[`src/${name}.ts`] = `// ${marker}\n`;
+			counts[`src/${name}.ts ${marker}`] = 1;
+		}
+		const dir = fabricate({ ...files, "package.json": manifest(counts) });
+		expect(at(scan(dir))).toEqual([]);
+	});
+
+	test("run from a subdirectory it is still the root manifest that is skipped", () => {
+		const dir = fabricate({
+			"package.json": manifest({ "src/model.ts biome-ignore": 1 }),
+			"src/model.ts": "// biome-ignore lint/style/x: approved\n",
+		});
+		expect(at(scan(join(dir, "src")))).toEqual([]);
+	});
+
+	test("an entry left approving the manifest itself fails nothing", () => {
+		// What a consumer carries between re-pinning and removing the entry.
+		const dir = fabricate({
+			"package.json": manifest({ "package.json biome-ignore": 1 }),
+		});
+		expect(at(scan(dir))).toEqual([]);
+	});
+
+	test("a comment in it fails the command rather than passing", () => {
+		// The skip holds only because the manifest cannot carry a comment.
+		const dir = fabricate({
+			"package.json": `${manifest({})}\n// biome-ignore x\n`,
+		});
+		const run = Bun.spawnSync(["bun", script], { cwd: dir, stderr: "pipe" });
+		expect(run.exitCode).not.toBe(0);
+	});
+
+	// spec: commit-gates/a-workspace-manifest-carries-a-marker
+	test("a workspace manifest below the root is still scanned", () => {
+		const dir = fabricate({
+			"packages/web/package.json": `{ "description": "@ts-ignore" }\n`,
+		});
+		expect(at(scan(dir))).toEqual(["packages/web/package.json:1: @ts-ignore"]);
+	});
+
+	test("a root file whose name only ends in package.json is still scanned", () => {
+		const dir = fabricate({ "my-package.json": `{ "a": "@ts-ignore" }\n` });
+		expect(at(scan(dir))).toEqual(["my-package.json:1: @ts-ignore"]);
+	});
+
+	test("a root package.jsonc, which can hold a comment, is still scanned", () => {
+		const dir = fabricate({ "package.jsonc": "{}\n// biome-ignore x\n" });
+		expect(at(scan(dir))).toEqual(["package.jsonc:2: biome-ignore"]);
 	});
 });
 
