@@ -73,7 +73,7 @@ each consumer, after group 2 is merged and its commit can be pinned.
 
 ## 3. Each consumer
 
-- [ ] 3.1 dota2, on a branch of its own checkout and never in a worktree
+- [x] 3.1 dota2, on a branch of its own checkout and never in a worktree
       (design.md, *Each consumer lands the bump…*): bump the pin to group 2's
       merge commit, run
       `bun install` and confirm the lockfile names `harness` once, run
@@ -82,5 +82,5 @@ each consumer, after group 2 is merged and its commit can be pinned.
       same commit. `harness:check` green. Confirm in a session started
       afterwards that a prompt writes a mark, since a hook change is only
       observable in a session started after it.
-- [ ] 3.2 mellon: the same steps on its `main`. `harness:check` green and a
+- [x] 3.2 mellon: the same steps on its `main`. `harness:check` green and a
       mark written in a fresh session.
