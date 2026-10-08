@@ -216,7 +216,7 @@ A `Stop` hook registered in the tracked `.claude/settings.json` SHALL refuse
 to end a turn when all of the following hold: the turn left at least one commit
 on the branch that was not there when control arrived, a task group in a change
 outside `openspec/changes/archive/` has at least one box and no unticked one
-left and had an unticked one in the task lists as committed at the mark, and
+left and was not complete in the task lists as committed at the mark, and
 the turn's final assistant message
 carries neither a gate line nor `BLOCKED` naming what only the user can
 settle. It SHALL block by exiting **2** with the reason on stderr, which is
@@ -227,8 +227,11 @@ A group with no boxes at all SHALL NOT count as complete, because the absence
 of an unticked box is not evidence that a box was ticked. A group already
 complete at the mark SHALL NOT qualify the turn either: it was completed, and
 reported or not, by an earlier turn, and counting it would refuse every turn
-that commits anything while any active change holds a finished group. The
-state at the mark SHALL be read from git — the task files as the marked commit
+that commits anything while any active change holds a finished group. A
+group absent at the mark SHALL qualify the turn like one with an unticked box
+there: the turn that wrote it and ticked it completed it, and excluding it
+lets a whole group of findings, added and closed in one turn, end silently.
+The state at the mark SHALL be read from git — the task files as the marked commit
 holds them — rather than recorded beside the mark, which would be the second
 source of truth this requirement already refuses. A bare `BLOCKED`
 with nothing after it SHALL NOT satisfy the message condition, on the terms
@@ -282,8 +285,18 @@ failure it was written for.
 Nor SHALL it claim to reach every turn. A turn that ends by a path which does
 not invoke this hook — an interruption, or a failure that ends the turn
 without it — is not gated, and the obligation falls back to the prose rule for
-those. Which lifecycle events fire on such a turn is a measurement this change
-takes rather than a behaviour it asserts.
+those. An interrupted headless turn was measured firing `SessionEnd` and no
+`Stop`; that is an observation, not a behaviour this requirement asserts.
+
+Every consumer SHALL register both halves in its tracked
+`.claude/settings.json` with the text the harness supplies, character for
+character, and the consumer's check SHALL fail when either registration is
+missing or differs, as it fails a Bash hook that is not the bootstrap. That
+text SHALL run the installed package's script, and SHALL end the turn — and
+let the prompt through — when the package is not installed: a clone before
+`bun install` is the partial installation the fail-open paragraph above
+already refuses to make unusable. The harness itself registers the script from
+its own working tree, because it is not installed as its own package.
 
 #### Scenario: A task group is completed and the turn ends silently
 
@@ -366,6 +379,20 @@ takes rather than a behaviour it asserts.
   commit holds
 - **THEN** the turn ends, because no group was completed in this turn
 
+#### Scenario: A group created and completed in the same turn
+
+- **WHEN** a turn adds a task group the marked commit does not hold, ticks
+  every box in it, commits, and ends with no gate line
+- **THEN** the hook blocks, because the group was not complete at the mark,
+  whether the turn committed it unticked first or not
+
+#### Scenario: A complete group the turn renamed
+
+- **WHEN** a turn renames the heading or the change directory of a group
+  already complete at the mark, and ends with no gate line
+- **THEN** the hook blocks once, because the group reads as absent at the
+  mark — a cost the refusal-once rule bounds to one turn
+
 #### Scenario: The completed group belongs to an archived change
 
 - **WHEN** the only fully ticked group is in a change under
@@ -390,3 +417,18 @@ takes rather than a behaviour it asserts.
   no branch
 - **THEN** the turn ends, because no commit of a task group can be in
   question
+
+#### Scenario: A consumer without the registrations
+
+- **WHEN** a consumer's tracked `.claude/settings.json` lacks the `Stop` or
+  the `UserPromptSubmit` registration, or carries one that differs from the
+  harness's text, is not of type `command`, is narrowed by `if`, or runs in
+  a form that cannot block (`async`, `asyncRewake`, `args`, a non-bash `shell`), or the
+  settings set `disableAllHooks`
+- **THEN** the consumer's check fails and names the registration
+
+#### Scenario: A consumer clone before install
+
+- **WHEN** a prompt arrives or a turn ends in a consumer whose
+  `node_modules/harness` is absent
+- **THEN** the prompt goes through and the turn ends, with nothing printed
