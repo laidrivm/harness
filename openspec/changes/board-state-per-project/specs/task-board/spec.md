@@ -312,6 +312,13 @@ behind it, and reports each correction.
 - **THEN** the reconciliation SHALL NOT compare it, and SHALL list it as
   naming no directory of this tree rather than correcting it
 
+#### Scenario: A well-formed pointer to a slug the tree lacks
+
+- **WHEN** a card's `Pointer` is wholly `openspec/changes/<slug>/`, and the
+  tree has no directory for that slug under `openspec/changes/` or its archive
+- **THEN** the reconciliation SHALL list the card as missing from the tree,
+  and SHALL NOT change its status
+
 ### Requirement: A card for another repository's change points across
 
 A card whose work lies in a change of another repository SHALL carry the
