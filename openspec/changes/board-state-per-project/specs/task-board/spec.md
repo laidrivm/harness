@@ -245,9 +245,7 @@ A repository SHALL name, under `harness.board` in its `package.json`, the one
 board whose cards its tree decides, by the name *There are three boards and a
 card goes to one of them* gives it. `bun/board-state.ts` SHALL print that name
 with what it derives, SHALL fail naming the key when it is absent, and SHALL
-refuse a value that is not a name. A session SHALL reconcile at the board read
-it already makes to choose work, comparing only the cards whose `Pointer` is
-wholly a directory of this tree.
+refuse a value that is not a name.
 
 #### Scenario: The key is absent
 
@@ -275,6 +273,15 @@ wholly a directory of this tree.
 - **THEN** it SHALL print `Harness` as its board beside the statuses its own
   `openspec/changes/` derives
 
+### Requirement: A board is reconciled when it is read and when a session ends
+
+A session SHALL reconcile its repository's board at two moments: at the
+`Board view` read it makes to choose work, and at `session-wrapup`, for the
+cards the session's own changes point at. Each moment runs
+`bun/board-state.ts`. It then compares every card whose `Pointer` is wholly a
+directory of this tree with the floor printed for that slug, corrects a card
+behind it, and reports each correction.
+
 #### Scenario: A card behind its floor at the board read
 
 - **WHEN** a session reads its board's `Board view` to choose work and a card
@@ -283,9 +290,53 @@ wholly a directory of this tree.
 - **THEN** in that turn it SHALL set the card to `done`, re-read it, and report
   the correction
 
+#### Scenario: A stage moved and its card forgotten
+
+- **WHEN** a session archives a change and reaches `session-wrapup` with that
+  change's card still at `archiving` or earlier
+- **THEN** the wrap-up SHALL set the card to `done`, re-read it, and report the
+  correction, before the next session's board read could find it
+
+#### Scenario: A session that touched no change
+
+- **WHEN** `session-wrapup` runs in a session whose work pointed at no change
+  directory
+- **THEN** it SHALL report that it reconciled nothing, and SHALL NOT read the
+  rest of the board
+
 #### Scenario: A card whose pointer names no directory of this tree
 
 - **WHEN** a card on the board this repository names carries a `Pointer` that
-  is empty, names another repository's path, or carries text around a path
+  is empty, or carries text around a path, in a form other than the
+  cross-repository one
 - **THEN** the reconciliation SHALL NOT compare it, and SHALL list it as
-  naming no directory of this tree rather than correcting or rewriting it
+  naming no directory of this tree rather than correcting it
+
+### Requirement: A card for another repository's change points across
+
+A card whose work lies in a change of another repository SHALL carry the
+pointer `<repo>: openspec/changes/<slug>/`, or the archived path in the same
+form: the repository's name, a colon and a space, then the path with nothing
+after it. A task number SHALL go in the card's body. This is the one exception
+to the repository-relative path *A board records a task's status and nothing
+the tree holds* fixes. A reconciliation SHALL skip such a card without
+comparing or listing it.
+
+#### Scenario: A consumer card for a harness change
+
+- **WHEN** a card on `D2ASS` carries `harness:
+  openspec/changes/archive/2026-10-08-ship-turn-gate-to-consumers/`
+- **THEN** dota2's reconciliation SHALL neither compare it against dota2's
+  tree nor list it, and SHALL leave its status as it is
+
+#### Scenario: A cross-repository pointer with text after the path
+
+- **WHEN** a card carries `harness: openspec/changes/<slug>/ — task 3.1`
+- **THEN** the reconciliation SHALL list it as naming no directory of this
+  tree, because the form allows nothing after the path
+
+#### Scenario: Which task the card carries
+
+- **WHEN** a consumer card carries one task of another repository's change
+- **THEN** the task's number SHALL be written in the card's body, and the
+  pointer SHALL hold the repository and the path alone

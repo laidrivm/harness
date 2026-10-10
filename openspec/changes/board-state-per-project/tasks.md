@@ -2,13 +2,15 @@
 
 Test tasks come from the proposal-stage `/zombies` run and are written before
 the code they cover (`core/testing.md` — TDD for edge cases). The bracketed
-numbers are that run's idea numbers, and all 24 are placed below.
+numbers are that run's idea numbers, and all 24 are placed below. Ideas 25 to
+27 cover the two answers the user settled (proposal, *Settled with the user*).
+The comparison they exercise is the agent's rather than code's, so each is a
+check run against a real board, not a test.
 
-The open questions in proposal.md are taken at their stated defaults:
-`harness:check` does not require the key, the hook lives in the policy-gate
-change, reconciliation runs at the board read only, and pointers in an old
-format are listed rather than rewritten. A different answer from the user
-changes 1.3, 1.5 and 2.1 before group 1 is applied.
+The two open questions still in proposal.md are taken at their stated
+defaults: `harness:check` does not require the key, and the hook lives in the
+policy-gate change. A different answer from the user changes 1.3 before
+group 1 is applied.
 
 There are two groups. Group 1 is one harness pull request on
 `feat/board-state-per-project-1`. Group 2 is one change in each consumer,
@@ -72,22 +74,43 @@ carried by the pull request that bumps its pin past group 1.
       derivation to `D2ASS`: "and only on `D2ASS`. The other six, and every
       card on `Harness` or `mellon`, are honoured", and the closing sentence
       of the board list. Say instead that each repository's
-      `harness.board` names its board, and that the session reconciles at
-      the `Board view` read it makes to choose work: it runs
-      `bun/board-state.ts`, corrects each card behind its floor whose
-      `Pointer` is wholly a directory of this tree, and lists the cards whose
-      pointer is empty, decorated, foreign, or names a slug the tree lacks.
-      Cite `task-board` for the statuses rather than restating them. Then
-      grep `core/`, `README.md` and `openspec/specs/` for `only on`,
-      `D2ASS alone` and `honoured rather than mechanised`, and fix each site
-      or name the change that will. (Req: task-board — A repository names
-      the board its tree decides, §*A card behind its floor at the board
-      read*, §*A card whose pointer names no directory of this tree*)
-- [ ] 1.6 After group 1 merges, in the first session that reads `Board view`
+      `harness.board` names its board. The session reconciles at the
+      `Board view` read it makes to choose work and again at
+      `session-wrapup`: it runs `bun/board-state.ts` and corrects each card
+      behind its floor whose `Pointer` is wholly a directory of this tree. It
+      skips a cross-repository pointer, and lists the cards whose pointer is
+      empty, decorated, or names a slug the tree lacks. State the
+      cross-repository form `<repo>: openspec/changes/<slug>/` where the
+      bullets say how a card's pointer is written, and say that a task number
+      goes in the body. Cite `task-board` for the statuses rather than
+      restating them. Then grep `core/`, `README.md` and `openspec/specs/`
+      for `only on`, `D2ASS alone` and `honoured rather than mechanised`, and
+      fix each site or name the change that will. (Req: task-board — A board
+      is reconciled when it is read and when a session ends, §*A card behind
+      its floor at the board read*, §*A card whose pointer names no
+      directory of this tree*; A card for another repository's change points
+      across)
+- [ ] 1.6 In `core/skills/session-wrapup/SKILL.md` step 3, *Workflow state*,
+      add the reconciliation: run `bun/board-state.ts`, compare the cards
+      whose pointers name the change directories this session touched,
+      correct each behind its floor with `update_properties` and a re-read,
+      and report each correction beside the stage, or say that nothing was
+      reconciled. Amend the *Rules* bullet that names the only files the
+      skill may touch, so that it permits these card corrections. If
+      `gate-decision-ledger` or `capture-as-mechanism` merged first and
+      edited the skill, keep their lines. (Req: task-board — A board is
+      reconciled when it is read and when a session ends, §*A stage moved and
+      its card forgotten*, §*A session that touched no change*)
+- [ ] 1.7 After group 1 merges, in the first session that reads `Board view`
       on `Harness`: run the reconciliation, and report what it corrected and
       what it listed [22] [24]. Expected to correct nothing, since every card
       was moved by hand that turn. A correction it does make is reported, not
       hidden.
+- [ ] 1.8 In the same session, run `/session-wrapup` and confirm that step 3
+      reports the reconciliation of the cards for the changes the session
+      touched. A card the session moved behind its floor on purpose, for the
+      check, is corrected and reported [27]. Restore it by hand afterwards if
+      it was ahead.
 
 ## 2. Each consumer
 
@@ -96,8 +119,16 @@ carried by the pull request that bumps its pin past group 1.
       "D2ASS"` to the `harness` object, run `bun
       node_modules/harness/bun/board-state.ts`, and confirm it prints `D2ASS`
       beside the 47 slugs design.md measured, or the count its tree then
-      holds. Reconcile `D2ASS` once and report the listed cards, the
-      `harness: openspec/…` pointers among them, without rewriting them
-      [23].
+      holds. Before reconciling, rewrite the `D2ASS` card for
+      `ship-turn-gate-to-consumers` task 3.1. Its pointer becomes `harness:
+      openspec/changes/archive/2026-10-08-ship-turn-gate-to-consumers/`,
+      and "task 3.1" moves into its body. Write it with `update_properties`
+      and re-read it. Then reconcile `D2ASS` once and report the listed
+      cards [23]. The rewritten card is skipped and not listed [25]. Check
+      the other side of that by putting text after the path of one
+      cross-repository pointer temporarily: that card is listed [26]. Restore
+      it and re-read it afterwards.
 - [ ] 2.2 mellon, the same on its `main` with `"board": "mellon"`. Confirm it
-      prints `mellon` and an empty `status`.
+      prints `mellon` and an empty `status`. Rewrite the `mellon` card for
+      task 3.2 the same way, with `update_properties` and a re-read, and
+      confirm that the reconciliation skips it [25].
