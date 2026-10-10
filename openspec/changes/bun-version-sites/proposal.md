@@ -27,6 +27,13 @@ outgrown is the next thing somebody reasons from.
 - `agent-permissions` §*Every manifest-mutating invocation prompts* gains the
   alias clause its check already enforces: each documented alias of any gated
   command, not of the install family alone.
+- The same requirement's claim that a broader `allow` from another source
+  suppresses an `ask` prompt is replaced with the precedence Claude Code
+  documents: `ask` prompts whatever `allow` also matches. Its scenario is
+  inverted to match. OpenSpec refuses to drop a scenario from a modified
+  requirement, so the delta removes the requirement and adds the corrected
+  one whole as *Every manifest-mutating invocation prompts, whatever else
+  allows it*. Every other scenario keeps its heading, so no citation moves.
 
 ## Non-goals
 
@@ -47,9 +54,18 @@ None.
   prompts* covers the documented alias of any gated command where it covered
   the install family's alone. The description is widened to what is already
   enforced.
+- `agent-permissions`: the same requirement stops saying that a broader
+  `allow` from another source suppresses an `ask` prompt. Claude Code's
+  permissions reference, read on 2026-10-11, says the opposite: "Rules are
+  evaluated in order: deny, then ask, then allow", and "a matching ask rule
+  prompts even when a more specific allow rule also matches the same call".
+  `core/verification.md` already reads the chain that way. Because this delta
+  copies the requirement whole, archiving it unchanged would re-assert the
+  false sentence.
 
 ## Impact
 
-- `openspec/specs/agent-permissions/spec.md` — one requirement modified, a
-  clause widened; no scenario's behaviour changes.
+- `openspec/specs/agent-permissions/spec.md` — one requirement modified: a
+  clause widened, and one false precedence claim and its scenario corrected.
+  No gated surface changes.
 - No code, settings or dependency change.
