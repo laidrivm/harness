@@ -54,13 +54,20 @@ path is `${XDG_STATE_HOME:-~/.local/state}/harness/gates.jsonl`.
 - *Alternative: one file per project.* Every record already names its project,
   so `jq` filters on that field. One file means one path to document.
 
-### The project is the basename of `$CLAUDE_PROJECT_DIR`
+### The project is `$CLAUDE_PROJECT_DIR`, resolved to an absolute path
 
 Every hook registration in this tree and in each consumer runs under that
-variable, so the writer reads it from the environment. The fallback is the
-basename of the event's `cwd`, then `unknown`. A worktree session started
-inside a project reports that project's name.
+variable, so the writer reads it from the environment and resolves it. That
+removes a trailing slash and keeps the whole path. The fallback is the event's
+`cwd`, resolved the same way, and then `unknown`. The wrap-up filters on the
+repository's `git rev-parse --show-toplevel`, which is the same path for a
+session started at the project's root.
 
+- *Alternative: the directory's basename.* It is shorter, but two checkouts
+  sharing a name, such as a clone and a fork of one project, would merge their
+  counts. The full path is local data: the ledger never leaves the machine,
+  and the counts the wrap-up copies into the yield ledger carry no project
+  field.
 - *Alternative: `git rev-parse --git-common-dir`.* That spawns git on every
   refusal, and the guard already spawns git to decide. The environment variable
   is free, and only the hooks' own registrations depend on it.
