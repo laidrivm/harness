@@ -34,11 +34,14 @@ string, so an alias is a separate entry and not a variant of one.
 An `ask` entry prompts even where an `allow` pattern from any settings source
 also matches the call, however broad. Claude Code evaluates deny, then ask,
 then allow, across every scope, so a grant in `.claude/settings.local.json` or
-a user-level settings file does not suppress the prompt.
+a user-level settings file does not suppress the prompt. In `dontAsk` mode,
+which refuses every call that would prompt, the same entry refuses the call
+instead.
 
 #### Scenario: A broader local allow entry does not suppress the prompt
 
-- **WHEN** `.claude/settings.local.json` carries `Bash(bun *)` under
+- **WHEN** the session is not in `dontAsk` mode, and
+  `.claude/settings.local.json` carries `Bash(bun *)` under
   `permissions.allow`
 - **AND** the agent attempts `bun add preact`
 - **THEN** Claude Code still prompts, because the `ask` entry is evaluated
