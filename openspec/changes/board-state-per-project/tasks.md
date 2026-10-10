@@ -121,13 +121,14 @@ carried by the pull request that bumps its pin past group 1.
       holds. Before reconciling, rewrite the `D2ASS` card for
       `ship-turn-gate-to-consumers` task 3.1. Its pointer becomes `harness:
       openspec/changes/archive/2026-10-08-ship-turn-gate-to-consumers/`,
-      and "task 3.1" moves into its body. Write it with `update_properties`
-      and re-read it. Then reconcile `D2ASS` once and report the listed
+      and "task 3.1" moves into its body. Write the pointer with
+      `update_properties` and the task number with `update_content`, in two
+      calls, and re-read the card after both. Then reconcile `D2ASS` once and report the listed
       cards [23]. The rewritten card is skipped and not listed [25]. Check
       the other side of that by putting text after the path of one
       cross-repository pointer temporarily: that card is listed [26]. Restore
       it and re-read it afterwards.
 - [ ] 2.2 mellon, the same on its `main` with `"board": "mellon"`. Confirm it
       prints `mellon` and an empty `status`. Rewrite the `mellon` card for
-      task 3.2 the same way, with `update_properties` and a re-read, and
+      task 3.2 the same way, in the same two calls and a re-read, and
       confirm that the reconciliation skips it [25].

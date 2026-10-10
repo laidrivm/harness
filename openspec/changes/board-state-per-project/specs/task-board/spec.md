@@ -314,8 +314,9 @@ behind it, and reports each correction.
 
 #### Scenario: A well-formed pointer to a slug the tree lacks
 
-- **WHEN** a card's `Pointer` is wholly `openspec/changes/<slug>/`, and the
-  tree has no directory for that slug under `openspec/changes/` or its archive
+- **WHEN** a card's `Pointer` is wholly `openspec/changes/<slug>/` or
+  `openspec/changes/archive/<date>-<slug>/`, and the tree has no directory at
+  that path
 - **THEN** the reconciliation SHALL list the card as missing from the tree,
   and SHALL NOT change its status
 
