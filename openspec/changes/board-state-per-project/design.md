@@ -119,8 +119,9 @@ tree holds* fixes, rather than as a copy of that requirement in the delta,
 which would put it past the diff budget for one sentence. The two consumer
 cards for `ship-turn-gate-to-consumers` carry `— task 3.1` and `— task 3.2`
 after the path. They are rewritten in group 2, with the task number moved
-into the body. The writes use `update_properties` and are followed by a
-re-read.
+into the body. The pointer is written with `update_properties` and the task
+number with `update_content`, in two calls, and the card is re-read after
+both.
 
 *Alternative: a `Repo` property beside `Pointer`.* Refused. Every board would
 need a schema change, for two cards today, and one instruction would then
