@@ -17,9 +17,11 @@ built from what the case needs, in a directory that holds no `.env`.
         so does an unset one [8];
       - a second record appends without rewriting the first [5];
       - two processes recording at once leave two whole JSON lines [7];
-      - the project is the basename of `CLAUDE_PROJECT_DIR`, including one
-        with a trailing slash [11]. Without it, the project is the basename of
-        the event `cwd` [9], and without either it is `unknown` [10];
+      - the project is `CLAUDE_PROJECT_DIR` as an absolute path, and one with
+        a trailing slash records the same path without it [11]. Without the
+        variable, the project is the event `cwd`, resolved the same way [9].
+        Without either, it is `unknown` [10]. Two directories that share a
+        basename record different projects;
       - an event with no string `session_id` still records [12];
       - each line parses as JSON with exactly the six keys [13], and `at` is
         ISO 8601 UTC [14];
@@ -77,7 +79,8 @@ built from what the case needs, in a directory that holds no `.env`.
       unchanged and the file under the 300-line cap.
 - [ ] 2.3 In `core/skills/session-wrapup/SKILL.md` step 5, add the `gates`
       line: this project's records since the previous yield entry's date,
-      counted per gate, decision and id with `jq`, or `gates: none fired`.
+      counted per gate, decision and id with `jq` and filtered on
+      `git rev-parse --show-toplevel`, or `gates: none fired`.
       Run it once by hand against a ledger holding records for two projects,
       and confirm that only this project's records are counted. (Req:
       gate-ledger — The wrap-up reports the gate decisions)

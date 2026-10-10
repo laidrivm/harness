@@ -110,6 +110,12 @@ inside a repository, so no consumer has an ignore entry to add.
 - **WHEN** the guard blocks a command in dota2 and another in mellon
 - **THEN** one file holds both records, each naming its own project
 
+#### Scenario: Two checkouts sharing a name
+
+- **WHEN** the guard blocks a command in a clone of a project and another in
+  a fork of it whose directory has the same name
+- **THEN** the two records name different projects
+
 ### Requirement: Recording never changes a decision
 
 A failure to write a record SHALL leave the gate's decision as it would have
