@@ -141,3 +141,5 @@ not age with the code.
   `.gitignore` covers.
 - Push from a repository's own checkout, never a `git worktree` — a hook there
   hands the tests it runs an absolute `GIT_DIR`.
+- Delete a branch, local or remote, only when the user asks for it — never
+  folded into a command run for another purpose.
