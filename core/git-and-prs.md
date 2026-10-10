@@ -127,7 +127,7 @@ they route through `CLAUDE.md`'s fix & capture loop like every other rule.
 - Commit the work before a probe whose undo touches the stash or the working
   tree — `git checkout <path>`, `git reset --hard`, `git stash`.
 - Restore a file a probe edited from a copy taken before it, never with `git
-  checkout` or `git stash` — the first discards every uncommitted change in
+  checkout` or `git stash` — the first discards every unstaged change in
   that file rather than the probe alone, and the second unstages what the
   index was holding.
 - A rules or docs edit that no artefact of the change under way asks for goes
