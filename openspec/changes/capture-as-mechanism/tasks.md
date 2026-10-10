@@ -11,9 +11,10 @@ One group, so the change ships whole on `feat/capture-as-mechanism`.
 ## 1. The question, and its count
 
 - [ ] 1.1 In `core/rules.md`, add the capture step's first bullet. It asks
-      whether a mechanism (a test, a `harness:check` check, a hook, a
-      permission entry) can hold the lesson. Under it go three sub-bullets:
-      add it in the same turn and write no rule; file a card on the board of
+      whether a mechanism (a test over the code the lesson is about, or a
+      gate: a `harness:check` check, a hook, a permission entry) can hold
+      the lesson. Under it go three sub-bullets: add the test in the same
+      turn and write no rule; file a card on the board of
       the repository that would ship it and write the rule as a stop-gap; or
       write the rule and tell the user why no mechanism fits. Name *A
       mechanised prohibition leaves its prose home* rather than restating
@@ -24,8 +25,9 @@ One group, so the change ships whole on `feat/capture-as-mechanism`.
       Replay three past captures through the text:
       - "re-fetch a card after setting its properties" routes to
         `card + rule` [3];
-      - "convert a `file:` URL with `fileURLToPath`" routes to
-        `mechanism` [4];
+      - "invalidate earlier OTP codes when generating a new one" (the
+        rule quality bar's own example) routes to `mechanism`, a test over
+        the generator [4];
       - "British English by default" routes to `rule` with a reason [5].
 
       Record the always-on line count before and after in the commit

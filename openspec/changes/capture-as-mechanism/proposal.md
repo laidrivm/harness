@@ -23,8 +23,9 @@ nothing in the loop asked whether one could.
 - The capture step of the loop in `core/rules.md` gains a first question,
   asked before any rule is proposed: **can a mechanism hold this?** The
   answer has three outcomes.
-  - **A test or check the branch can add.** The lesson becomes that test or
-    check in the same turn, and no rule is written.
+  - **A test the branch can add.** This applies when the lesson is about
+    one piece of code and a test over it holds the lesson. The lesson
+    becomes that test in the same turn, and no rule is written.
   - **A mechanism that would change a gate** (a hook, a `deny` entry, a
     `harness:check` check). It enters the OpenSpec cycle as
     `core/feature-workflow.md` requires of a gate change, so the capture
