@@ -62,9 +62,8 @@ the floor the tree derives for it is `done`.
   a board is read through the connector, and a hook has none. What a hook
   *can* catch is the call that loses the write, which was the 2026-10-10
   failure: `properties` handed to a Notion update whose command is not
-  `update_properties`. That check sits on a `PreToolUse` matcher that is not
-  `Bash`, and the harness registers none yet. Opening that surface is the
-  policy-gate change's work, so this change leaves the check to it. The
+  `update_properties`. That check is the change `notion-update-guard`'s,
+  whose hook sits on a `PreToolUse` matcher for the Notion update tool. The
   re-read stays the obligation `core/feature-workflow.md` states.
 - **Comparing in code.** The agent compares the cards it read with the floors
   the script printed. Feeding a card list into a script would put a board's
@@ -95,12 +94,12 @@ the floor the tree derives for it is `done`.
    without the key fails its check on the pin bump. If no, only
    `bun/board-state.ts` fails, and only when it runs. This proposal takes no:
    a project that keeps no board still passes its check.
-2. **Should the post-condition hook land here or in the policy-gate change?**
-   This proposal says the policy-gate change, which owns the first non-`Bash`
-   matcher.
 
 ## Settled with the user
 
+- **Where the guard on a lost card write lives:** in neither this change nor
+  `policy-gate-beyond-bash`, whose non-goals exclude board writes. It is the
+  change `notion-update-guard`.
 - **When reconciliation runs:** at the board read and at `session-wrapup`,
   rather than at the board read alone. The wrap-up is where a session that
   moved a stage but not its card is caught, before the next session finds it.

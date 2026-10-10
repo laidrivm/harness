@@ -131,16 +131,14 @@ corrections.* Refused for now (proposal, *Non-goals*). Board content would
 enter a process the test suite exercises, to compare positions in a list of
 nine.
 
-### The post-condition hook belongs to the policy-gate change
+### The post-condition hook belongs to `notion-update-guard`
 
 The 2026-10-10 failure was a Notion update whose command was
 `update_content`, carrying `properties` that the connector dropped without an
 error. A `PreToolUse` hook on that tool, refusing `properties` beside any
-command but `update_properties`, would have stopped it before the call. The
-harness registers no matcher but `Bash`, and `bun/settings.ts` pins each
-registration it does carry. The policy-gate change is the one that opens a
-non-`Bash` matcher and decides how such registrations are pinned, so this
-change leaves the check to it. The re-read after a write stays the prose
+command but `update_properties`, would have stopped it before the call.
+`policy-gate-beyond-bash` excludes board writes from its scope, so the hook is
+the change `notion-update-guard`'s. The re-read after a write stays the prose
 obligation, because no hook can read a board.
 
 ## Risks / Trade-offs
@@ -148,8 +146,8 @@ obligation, because no hook can read a board.
 - [The comparison is still the agent's, so a session can skip it] → it runs
   in the turn the session already reads the board, and its report has a
   fixed shape: corrected, listed, missing. A skipped run shows as a missing
-  report, not as a quiet board. The policy-gate and observability changes
-  are where skipping would become visible to a mechanism.
+  report, not as a quiet board. The observability change is where skipping
+  would become visible to a mechanism.
 - [A consumer leaves the key out] → the command fails naming it on the first
   run, and `harness:check` is deliberately not made to require it (proposal,
   open question 1).
