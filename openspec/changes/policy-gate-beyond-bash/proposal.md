@@ -42,7 +42,8 @@ four gaps: its *Policy Gate* box covers one tool of many.
   current `Edit(.npmrc)` and `Edit(bunfig.toml)` entries miss.
 - MCP writes that are not speech: board updates, drafts, labels, design-tool
   edits. The task-board workflow requires Notion page writes, and a draft
-  sends nothing.
+  sends nothing. The guard on a card write that loses its properties is the
+  change `notion-update-guard`'s.
 - A tool that sends under a name not listed. The list is an enumeration of
   verified tool names, and a connector added later with its own verb is not
   covered until the list names it — see design.md *Enumeration, not a
