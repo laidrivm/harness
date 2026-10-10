@@ -34,11 +34,22 @@ the floor the tree derives for it is `done`.
 - `bun/board-state.ts`, run as a command, prints that name beside the
   statuses and edges it derives, and fails naming the key when it is absent.
   `boardState(tree)` itself does not change.
-- A reconciliation has a moment. A session reading its board's `Board view`
-  to choose work runs `bun/board-state.ts` in the same turn. It corrects every
-  card whose `Pointer` names a change directory of this tree and sits behind
-  the derived floor, and reports each correction. A card whose `Pointer` names
-  no directory of this tree is not compared.
+- A reconciliation has two moments, and the session runs `bun/board-state.ts`
+  at each of them:
+  - at the `Board view` read, when the session chooses its work;
+  - at `session-wrapup`'s *Workflow state* step, for the cards that the
+    session's own changes point at. This catches, in the same session, a
+    stage that moved without its card.
+
+  Each moment corrects every card whose `Pointer` names a change directory of
+  this tree and sits behind the derived floor, and reports each correction.
+- A card for work whose change lives in another repository gets a pointer
+  form of its own, `<repo>: openspec/changes/<slug>/`. That is the repository's
+  name and the path, with nothing after it. A task number goes in the card's
+  body. The reconciliation recognises this form and skips it silently: it is
+  neither compared against the local tree nor listed as malformed. The cards
+  that carry the old `harness: openspec/… — task 3.1` form are rewritten into
+  it.
 - `core/feature-workflow.md` stops saying derivation holds "only on `D2ASS`"
   and that every card on `Harness` or `mellon` is honoured rather than
   mechanised. Each board is derived from its own repository.
@@ -59,17 +70,24 @@ the floor the tree derives for it is `done`.
   the script printed. Feeding a card list into a script would put a board's
   content into a process this repository's tests exercise, for a comparison
   of nine ordered names.
-- **Cards on another project's board.** A dota2 card whose subject is a
-  harness change is reconciled from nowhere. Its pointer names a directory
-  that dota2's tree lacks, and the harness's reconciliation does not read
-  `D2ASS`. Each project checks its own board first, and only its own.
+- **Reconciling a cross-repository card.** A dota2 card whose subject is a
+  harness change is still reconciled from nowhere. The cross-repository form
+  makes it recognisable, not derivable: dota2's tree lacks the directory, and
+  the harness's reconciliation does not read `D2ASS`. Each project checks its
+  own board first, and only its own.
+- **Folding the cross-repository form into *A board records…*.** That
+  requirement fixes the pointer as a repository-relative path. The added
+  requirement here states the cross-repository form as the one exception to
+  it, rather than copying the whole requirement into this delta. Rewording it
+  belongs to the card the next non-goal names.
 - **The rest of `task-board`'s d2ass-relative wording.** *A board records a
   task's status and nothing the tree holds* still exempts `Harness` and
   `mellon` cards from gaining a pointer "since their trees are not here".
   *A card names what blocks it* still speaks of "the repository `Harness` is
   leaving for". Both are now false read from the harness, and neither
-  decides what this change builds. They go to a card of their own rather
-  than doubling this delta.
+  decides what this change builds. They go to a card of their own on
+  `Harness`, *Task-board wording still reads from d2ass*, rather than
+  doubling this delta.
 
 ## Open questions for the user
 
@@ -80,15 +98,15 @@ the floor the tree derives for it is `done`.
 2. **Should the post-condition hook land here or in the policy-gate change?**
    This proposal says the policy-gate change, which owns the first non-`Bash`
    matcher.
-3. **When should reconciliation run?** This proposal runs it only at the
-   board read a session already makes, since that costs no extra query. The
-   alternative is also at `session-wrapup`, which would catch a stage moved
-   and forgotten within the same session.
-4. **What about pointers that break the format?** The dota2 and mellon cards
-   for `ship-turn-gate-to-consumers` carry `harness: openspec/changes/… —
-   task 3.1`, which is not the repository-relative path `task-board` fixes.
-   This proposal lists such cards as naming no directory of this tree, and
-   neither corrects nor rewrites them.
+
+## Settled with the user
+
+- **When reconciliation runs:** at the board read and at `session-wrapup`,
+  rather than at the board read alone. The wrap-up is where a session that
+  moved a stage but not its card is caught, before the next session finds it.
+- **Pointers that break the format:** rewrite them, rather than list them on
+  every run. Cross-repository work gets the defined form above, and the
+  existing cards are moved onto it.
 
 ## Capabilities
 
@@ -104,6 +122,7 @@ None.
   - *Three statuses are derived and six are moved by hand*: derivation
     applies to the board the running repository names, not to `D2ASS` alone.
   - Added: *A repository names the board its tree decides*.
+  - Added: *A card for another repository's change points across*.
 
 ## Impact
 
@@ -112,4 +131,7 @@ None.
   `node:fs`, `node:path` and `./root.ts`.
 - `package.json` here gains `"board": "Harness"`.
 - `core/feature-workflow.md`: two passages of the board bullets.
-- dota2 and mellon: one key each, in their next pin bump.
+- `core/skills/session-wrapup/SKILL.md`: step 3 runs the reconciliation. Its
+  rule that everything else is a report gains the card corrections.
+- dota2 and mellon: one key each, in their next pin bump. Their cards with
+  old-format pointers are rewritten in the same group.
