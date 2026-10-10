@@ -20,44 +20,48 @@ consumer, after group 1 is merged and its commit can be pinned.
       test file holds 285 lines against the 300-line cap, so the new cases
       go in `bun/settings-mcp.test.ts`. Verify the split by the full describe
       path of every test before and after, not by the count. Then write the
-      check tests there: the policy-keeping fixture gains the four entries and still
-      reports nothing [2]; settings with no `mcp__` deny entry are named, and
+      check tests there: settings with no `mcp__` deny entry are named, and
       the message lists the four expected [1]; the four in another order are
-      named [3]; a fifth `mcp__` deny entry is named [4]; an extra Bash deny
-      entry yields the Bash message and no `mcp__` one [5]; an entry naming
-      its server, `mcp__claude_ai_Gmail__send_message`, is named [6]; a tool
-      name one character off, `mcp__*__notion-create-comments`, is named [7];
-      one of the four moved from deny to ask is named as missing from deny
-      [11]. Each fails before 1.3. (Req: agent-permissions — Sending as the
-      user through an MCP tool is denied, §*An entry is dropped*)
-- [ ] 1.2 Write the parentheses tests in the same file: an `mcp__` rule with parentheses is
-      named as skipped at load when it stands under deny [8], under ask [9]
-      and under allow [10]. Each fails before 1.3. (Req: agent-permissions —
-      Sending as the user through an MCP tool is denied, §*An entry is
-      written with parentheses*)
+      named [3]; a fifth `mcp__` deny entry is named [4]; an entry naming its
+      server, `mcp__claude_ai_Gmail__send_message`, is named [6]; a tool name
+      one character off, `mcp__*__notion-create-comments`, is named [7]; one
+      of the four moved from deny to ask is named as missing from deny [11].
+      Each fails before 1.3. Two more pass before 1.3 and pin that it keeps
+      them passing: the policy-keeping fixture gains the four entries and
+      still reports nothing [2]; an extra Bash deny entry yields the Bash
+      message and no `mcp__` one [5]. (Req: agent-permissions — Sending as
+      the user through an MCP tool is denied, §*An entry is dropped*)
+- [ ] 1.2 Write the parentheses tests in the same file: an `mcp__` rule with
+      parentheses is named as skipped at load when it stands under deny [8],
+      under ask [9] and under allow [10]. Each fails before 1.3. (Req:
+      agent-permissions — Sending as the user through an MCP tool is denied,
+      §*An entry is written with parentheses*)
 - [ ] 1.3 In `bun/settings.ts`, export the four entries as a list beside
       `GH_WRITES`, compare the consumer's `mcp__` deny entries whole against
       it, and name any `mcp__` rule carrying `(` in deny, ask or allow, with
       the reason in the message. `bun test` green; `bun/settings.ts` under
       its file-size cap.
 - [ ] 1.4 Add the four entries to the harness's own `.claude/settings.json`,
-      and a test in `bun/settings-mcp.test.ts` reading that file whose `mcp__` deny entries equal the
-      exported list [12] — the harness's own file is not a consumer and no
-      other test reads its deny list. `bun test` green.
+      and a test in `bun/settings-mcp.test.ts` reading that file, whose
+      `mcp__` deny entries equal the exported list [12] — the harness's own
+      file is not a consumer and no other test reads its deny list.
+      `bun test` green.
 - [ ] 1.5 Shorten `core/git-and-prs.md`'s bullet *Never reply, comment or
       review under the user's name anywhere the `gh` deny entries do not
       reach* to what neither the `gh` nor the `mcp__` entries reach — a
       browser form, a direct HTTP call — keeping that opening a requested
-      pull request is not that. Grep `core/`, `README.md` and
-      `openspec/specs/` for every other site stating that only the `gh`
-      writes are denied, and fix each. (Req: agent-rulebook — A mechanised
-      prohibition leaves its prose home)
+      pull request is not that. `gh-api-guard` narrows the same bullet's
+      GitHub clause: whichever lands second narrows from the wording the
+      first left. Grep `core/`, `README.md` and `openspec/specs/` for every
+      other site stating that only the `gh` writes are denied, and fix each.
+      (Req: agent-rulebook — A mechanised prohibition leaves its prose home)
 - [ ] 1.6 In a session started after 1.4 is on the branch, confirm
-      `send_message` is absent from the session's tools and a `create_draft`
-      call is not refused, and record the result in the pull request [13]. A
-      settings change is observable only in a session started after it.
-      (Req: agent-permissions — Sending as the user through an MCP tool is
-      denied, §*The agent tries to send mail*, §*A draft still works*)
+      `send_message` is absent from the session's tools while `create_draft`
+      is still listed, without calling either, and record the result in the
+      pull request [13]. A settings change is observable only in a session
+      started after it. (Req: agent-permissions — Sending as the user through
+      an MCP tool is denied, §*The agent tries to send mail*, §*A draft still
+      works*)
 
 ## 2. Each consumer
 
