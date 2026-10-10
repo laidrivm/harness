@@ -157,6 +157,10 @@ for them is already here.
   cite a file in this tree ships a dead external link instead — and the card
   is read through the board, where no gate here can see it.
 
+  Set a card's status and pointer with `update_properties`, and re-fetch the
+  card before reporting it moved. `update_content` drops the `properties` it
+  is handed without an error, so a card reported `done` stayed `proposed`.
+
   Three of the nine statuses a reconciliation can repair, because the
   harness's `board-state.ts` derives them from the tree: `proposing`,
   `proposed`, `done`, and only on `D2ASS`. The other six, and every card on
