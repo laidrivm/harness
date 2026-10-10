@@ -57,11 +57,17 @@ path is `${XDG_STATE_HOME:-~/.local/state}/harness/gates.jsonl`.
 ### The project is `$CLAUDE_PROJECT_DIR`, resolved to an absolute path
 
 Every hook registration in this tree and in each consumer runs under that
-variable, so the writer reads it from the environment and resolves it. That
-removes a trailing slash and keeps the whole path. The fallback is the event's
-`cwd`, resolved the same way, and then `unknown`. The wrap-up filters on the
-repository's `git rev-parse --show-toplevel`, which is the same path for a
-session started at the project's root.
+variable, so the writer reads it from the environment. It records the path's
+`realpath`, which removes a trailing slash and resolves any symlink, or the
+resolved path when `realpath` fails. The fallback is the event's `cwd`, treated
+the same way, and then `unknown`.
+
+The wrap-up cannot read the same variable: the Bash tool's environment does not
+carry `CLAUDE_PROJECT_DIR`, as checked in this session on 2026-10-10. It
+filters on `git rev-parse --show-toplevel`, which git returns with symlinks
+resolved. It keeps a record whose project is that path or lies under it, so a
+session started in a subdirectory, which records the subdirectory, is still
+counted.
 
 - *Alternative: the directory's basename.* It is shorter, but two checkouts
   sharing a name, such as a clone and a fork of one project, would merge their
