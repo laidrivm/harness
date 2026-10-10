@@ -6,9 +6,10 @@
 
 The fix & capture loop SHALL ask whether a mechanism can hold a lesson before
 it proposes a rule for it. A mechanism is a test over the code the lesson is
-about, or a gate: a `harness:check` check, a hook or a permission entry. A rule SHALL be proposed without one only when no
-mechanism can express the lesson without blocking far more than the rule
-intends, and the proposal SHALL say why.
+about, or a gate: a `harness:check` check, a hook or a permission entry. A
+rule SHALL be proposed only as the stop-gap for a gate filed as a card, or
+when no mechanism can express the lesson without blocking far more than the
+rule intends — and then the proposal SHALL say why.
 
 #### Scenario: A test the branch can add
 
