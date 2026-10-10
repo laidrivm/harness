@@ -121,7 +121,9 @@ for them is already here.
   `openspec/specs/**`, the cards on the boards, and the README ownership map.
   Three are files and are grepped; the fourth is read through the saved
   `Board view`, a board being no part of this tree. Search the wording of the
-  claim being replaced, never the wording replacing it, and reconcile each
+  claim being replaced, never the wording replacing it nor only the files it
+  was noticed in — a renaming or renumbering repeats at every member of its
+  series — and reconcile each
   site in the step that makes it false or name the change that will — a later
   step of the same change leaves it false on the default branch until it
   merges.
@@ -196,6 +198,18 @@ for them is already here.
   user's drag, and a session reordering it overwrites the only instrument
   they have for ranking a column. `done` is no column of that view — its
   cards are read through the view named `Done`, newest archive first.
+- List the files a plan routes, moves or deletes, and confirm each exists,
+  before the plan is written.
+- Cite the requirement that fixes a value; never restate the value in another
+  requirement.
+- State the count a task expects from a measurement of the tree the step will
+  leave, never from what the step intends.
+- Re-measure a count gate in the commit that moves its count, whichever task
+  the list files the re-measure under — a commit between the two is red on the
+  default branch.
+- Fix a verified defect in what the branch ships, or file it as a card, in the
+  same turn — a non-goal defers rewording, never a reference that no longer
+  resolves.
 - Let an enumeration be its own count — never state a total in the prose
   introducing a list, which grows while the total does not. A number and the
   members it counts in one sentence cannot drift apart unseen; a number in the
