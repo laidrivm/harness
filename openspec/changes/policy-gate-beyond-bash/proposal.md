@@ -67,6 +67,10 @@ None.
 
 - `agent-rulebook`'s *A mechanised prohibition leaves its prose home* is the
   requirement the prose edit applies, not one it changes.
+- The active change `gh-api-guard` narrows the same `core/git-and-prs.md`
+  bullet for `gh api`. The two cover different channels and neither depends
+  on the other; whichever lands second narrows from the wording the first
+  left.
 
 ## Impact
 
