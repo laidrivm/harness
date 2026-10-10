@@ -7,10 +7,9 @@ numbers are that run's idea numbers, and all 24 are placed below. Ideas 25 to
 The comparison they exercise is the agent's rather than code's, so each is a
 check run against a real board, not a test.
 
-The two open questions still in proposal.md are taken at their stated
-defaults: `harness:check` does not require the key, and the hook lives in the
-policy-gate change. A different answer from the user changes 1.3 before
-group 1 is applied.
+The open question still in proposal.md is taken at its stated default:
+`harness:check` does not require the key. A different answer from the user
+changes 1.3 before group 1 is applied.
 
 There are two groups. Group 1 is one harness pull request on
 `feat/board-state-per-project-1`. Group 2 is one change in each consumer,
