@@ -150,7 +150,8 @@ nothing.
 broader `allow` in another settings source suppresses an `ask` prompt. The
 permissions reference read for this design says the opposite: an ask rule
 prompts even where an allow also matches. This change does not edit that
-requirement; the claim needs its own reconciliation.
+requirement. `bun-version-sites`, which already re-asserts it whole, carries
+the correction.
 
 ## Migration Plan
 
