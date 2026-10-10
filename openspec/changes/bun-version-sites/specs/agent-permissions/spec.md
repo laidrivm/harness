@@ -1,8 +1,20 @@
 # agent-permissions — delta spec
 
-## MODIFIED Requirements
+## REMOVED Requirements
 
 ### Requirement: Every manifest-mutating invocation prompts
+
+**Reason**: Its scenario *A broader local allow entry suppresses the prompt*
+states the opposite of Claude Code's documented precedence, where an `ask`
+rule prompts whatever `allow` also matches. OpenSpec refuses to drop a
+scenario from a modified requirement, so the corrected text is added whole
+under a new name instead.
+**Migration**: Read *Every manifest-mutating invocation prompts, whatever else
+allows it*, which carries every other scenario unchanged.
+
+## ADDED Requirements
+
+### Requirement: Every manifest-mutating invocation prompts, whatever else allows it
 
 `permissions.ask` in `.claude/settings.json` SHALL cover every invocation form
 that changes the project's dependency record — `package.json` or the lockfile.
@@ -19,19 +31,18 @@ can never be reached, and no entry broad enough to capture a read-only command
 design. Claude Code matches a permission pattern against the literal command
 string, so an alias is a separate entry and not a variant of one.
 
-Unlike `deny`, an `ask` entry does not override a grant from another source: a
-broader `allow` pattern in `.claude/settings.local.json` or a user-level
-settings file suppresses the prompt. This repository cannot test that, because
-the local file is gitignored, so the requirement holds only where no broader
-grant exists.
+An `ask` entry prompts even where an `allow` pattern from any settings source
+also matches the call, however broad. Claude Code evaluates deny, then ask,
+then allow, across every scope, so a grant in `.claude/settings.local.json` or
+a user-level settings file does not suppress the prompt.
 
-#### Scenario: A broader local allow entry suppresses the prompt
+#### Scenario: A broader local allow entry does not suppress the prompt
 
 - **WHEN** `.claude/settings.local.json` carries `Bash(bun *)` under
   `permissions.allow`
 - **AND** the agent attempts `bun add preact`
-- **THEN** Claude Code does not prompt, and no test in this repository detects
-  it
+- **THEN** Claude Code still prompts, because the `ask` entry is evaluated
+  before any `allow`
 
 #### Scenario: Adding a dependency
 
