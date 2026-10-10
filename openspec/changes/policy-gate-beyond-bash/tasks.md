@@ -59,7 +59,9 @@ consumer, after group 1 is merged and its commit can be pinned.
       `send_message` is absent from the session's tools while `create_draft`
       is still listed, without calling either, and record the result in the
       pull request [13]. A settings change is observable only in a session
-      started after it. (Req: agent-permissions — Sending as the user through
+      started after it. If the tool is still listed, the wildcard server
+      segment does not match: stop and settle the literal form (design.md,
+      *Risks*) before the pull request merges. (Req: agent-permissions — Sending as the user through
       an MCP tool is denied, §*The agent tries to send mail*, §*A draft still
       works*)
 

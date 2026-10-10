@@ -89,6 +89,14 @@ nothing.
 
 ## Risks / Trade-offs
 
+- [The reference shows a tool-name glob only as a trailing `*` (`mcp__*`) and
+  says `*` "stands in for whatever text is in its place"; no example puts it
+  in the server segment] → Task 1.6 confirms in a live session that
+  `mcp__*__send_message` removes the connector's tool before group 2 asks a
+  consumer to adopt it. If it does not, the entries become literal per server
+  name met — `mcp__claude_ai_Gmail__send_message` and so on — and the
+  *A wildcard server segment* decision is reversed in this design before
+  group 1 merges.
 - [A mod handling `tool.check` can approve a call a deny rule refuses, on a
   personal plan without managed settings] → Outside what project settings can
   hold; recorded so the deny entries are not read as absolute.
