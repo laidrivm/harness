@@ -46,7 +46,7 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       which citations moved and why; a count compared alone cannot tell the two
       apart (*A citation below an escaped quote*)
 - [ ] 1.5 Compare the full set of describe paths across `bun/scan.test.ts`
-      and `bun/spec-coverage.test.ts` before and after, per `core/rules.md`.
+      and `bun/spec-coverage.test.ts` before and after, per `core/testing.md`.
       The set changes by exactly 1.1's addition and 1.2's, and by nothing else
       — this change deletes no case (*A citation below an escaped quote*)
 - [ ] 1.6 Measure every capped file this change touched and record the numbers,
