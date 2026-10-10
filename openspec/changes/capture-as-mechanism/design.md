@@ -39,6 +39,16 @@ sub-bullets.
 A third numbered step was considered and rejected. It would read as
 something done after capturing, which is when the rule already exists.
 
+### A test is the branch's, a check is a gate
+
+A new `harness:check` check changes how a gate behaves, and
+`core/feature-workflow.md` sends every such change through the OpenSpec
+cycle, so it cannot land in the turn that captured the lesson. A test over
+the code the lesson is about can. The routing draws the line there: only a
+test holds a lesson in the same turn. A general lesson, one meant to stop a
+pattern anywhere, needs a gate, because a test over one call site does not
+reach the next one.
+
 ### The stop-gap rule is written with the card
 
 A gate change goes through proposal, apply and archive, and its card may sit

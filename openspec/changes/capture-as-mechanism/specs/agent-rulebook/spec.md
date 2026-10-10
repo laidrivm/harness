@@ -5,20 +5,22 @@
 ### Requirement: A captured lesson is weighed as a mechanism before it is written as prose
 
 The fix & capture loop SHALL ask whether a mechanism can hold a lesson before
-it proposes a rule for it. A mechanism is a test, a `harness:check` check, a
-hook or a permission entry. A rule SHALL be proposed without one only when no
+it proposes a rule for it. A mechanism is a test over the code the lesson is
+about, or a gate: a `harness:check` check, a hook or a permission entry. A rule SHALL be proposed without one only when no
 mechanism can express the lesson without blocking far more than the rule
 intends, and the proposal SHALL say why.
 
 #### Scenario: A test the branch can add
 
-- **WHEN** a lesson can be held by a test or check the branch in hand can add
-- **THEN** the capture adds it in the same turn and proposes no rule
+- **WHEN** a lesson is about one piece of code, and a test over that code,
+  which the branch in hand can add, holds it
+- **THEN** the capture adds the test in the same turn and proposes no rule
 
 #### Scenario: A mechanism that changes a gate
 
 - **WHEN** the mechanism that would hold a lesson is a hook, a permission
-  entry or a new check — a gate change, which enters the OpenSpec cycle
+  entry or a new `harness:check` check — a gate change, which enters the
+  OpenSpec cycle
 - **THEN** the capture files a card for that mechanism, on the board of the
   repository that would ship it, and proposes the rule as a stop-gap, which
   leaves under *A mechanised prohibition leaves its prose home* once the gate
