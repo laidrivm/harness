@@ -17,17 +17,21 @@ four gaps: its *Policy Gate* box covers one tool of many.
 
 ## What Changes
 
-- `.claude/settings.json` denies the MCP tools that send or post as the user,
-  by tool name under any server: `mcp__*__send_message`, `mcp__*__reply`,
-  `mcp__*__forward` and `mcp__*__notion-create-comment`. A deny rule is the
-  first rung that holds: an MCP tool has one name and no spelling to walk
-  around it, unlike a shell command, so no hook is needed.
-- `bun/settings.ts` compares a consumer's `mcp__` deny entries whole against
-  that list, as it compares the Bash deny list, and fails an `mcp__` entry
+- `.claude/settings.json` asks before the MCP tools that send or post as the
+  user, by tool name under any server: `mcp__*__send_message`,
+  `mcp__*__reply`, `mcp__*__forward` and `mcp__*__notion-create-comment`. A
+  call reaches the user as a prompt they approve or refuse, and an allow from
+  any source cannot skip it. A permission entry is the first rung that holds:
+  an MCP tool has one name and no spelling to walk around it, unlike a shell
+  command, so no hook is needed.
+- `bun/settings.ts` compares a consumer's `mcp__` ask entries whole against
+  that list, as it compares the Bash ask list, and fails an `mcp__` rule
   written with parentheses, which Claude Code skips when it loads settings.
-- `core/git-and-prs.md`'s prohibition shrinks to what neither the `gh`
-  entries nor the MCP entries reach — a browser form, a direct HTTP call —
-  per `agent-rulebook`'s *A mechanised prohibition leaves its prose home*.
+- `core/git-and-prs.md`'s prohibition becomes a rule of approval: the agent
+  sends under the user's name only through a call the user approved at the
+  prompt, and never through a channel no entry reaches — a browser form, a
+  direct HTTP call — per `agent-rulebook`'s *A mechanised prohibition leaves
+  its prose home*.
 - Each consumer bumps its pin and adds the entries in one commit, since the
   bumped check fails without them.
 
@@ -43,14 +47,20 @@ four gaps: its *Policy Gate* box covers one tool of many.
   verified tool names, and a connector added later with its own verb is not
   covered until the list names it — see design.md *Enumeration, not a
   catch-all*.
+- A project that wants these tools refused outright. Its own deny entry wins
+  over the harness's ask, since deny is evaluated first; this change neither
+  requires nor forbids one beyond what design.md *Deny still overrides ask*
+  sets out.
 
-## Open question for the user
+## Decisions the user settled
 
-Deny or ask, per tool. This proposal denies all four: the prose it replaces
-says *never*, and a denied tool is removed from the session's context, so the
-agent does not draft a call only to have it refused. `ask` would keep a
-per-call approval instead — useful if you want the agent to send a reply you
-have read. Which tools, if any, should prompt rather than be refused?
+- **Ask, not deny, for all four tools.** A send the user has read and
+  approved is legitimate; what the rule forbids is one they never saw.
+- **The server-segment glob stands.** A local CodeRabbit review claimed a
+  wildcard in the server segment does not cross-match; the reference says
+  deny and ask rules accept a glob matched against the full tool name, and
+  the user accepted that dismissal. Task 1.6 remains the stop that confirms
+  it in a fresh session.
 
 ## Capabilities
 
@@ -61,7 +71,7 @@ None.
 ### Modified Capabilities
 
 - `agent-permissions`: a new requirement, *Sending as the user through an MCP
-  tool is denied*, with its pinning in the consumer check.
+  tool prompts*, with its pinning in the consumer check.
 
 ### Unmodified, but adjacent
 
@@ -77,8 +87,8 @@ None.
 - `.claude/settings.json`, `bun/settings.ts`; `bun/settings.test.ts` gives
   its fixture to a new `bun/settings.fixture.ts`, and the new cases go in
   `bun/settings-mcp.test.ts`.
-- `core/git-and-prs.md`: one bullet shortened.
-- dota2 and mellon: a pin bump, four deny entries and a refreshed rules copy
+- `core/git-and-prs.md`: one bullet rewritten.
+- dota2 and mellon: a pin bump, four ask entries and a refreshed rules copy
   each, in their own pull requests.
-- No runtime cost: a deny rule is evaluated by Claude Code, with no process
-  launched.
+- No runtime cost: an ask rule is evaluated by Claude Code, with no process
+  launched. The cost is a prompt on each send, which is the point.
