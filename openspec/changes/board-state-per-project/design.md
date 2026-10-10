@@ -79,11 +79,52 @@ card behind its floor with `update_properties`, re-reads it, and reports the
 correction. That is the existing rule in `core/feature-workflow.md`, which
 this change does not restate.
 
-A card whose pointer is empty, names a path in another repository, or
-carries text around a path is listed rather than compared. A card whose
-pointer names a slug the tree has no directory for is listed as missing from
-the tree. That is *A card and the tree disagreeing* read from the other side,
-and the session reports it rather than guessing a status.
+Three kinds of card are treated differently:
+- A card whose pointer has the cross-repository form,
+  `<repo>: openspec/changes/<slug>/` with nothing after the path, is skipped
+  silently. Its tree is elsewhere, and the form says so.
+- A card whose pointer is empty, or carries text around a path, is listed
+  rather than compared.
+- A card whose pointer names a slug the tree has no directory for is listed
+  as missing from the tree. That is *A card and the tree disagreeing* read
+  from the other side, and the session reports it rather than guessing a
+  status.
+
+### The same comparison runs at the wrap-up
+
+`session-wrapup` step 3, *Workflow state*, already names the stage the
+session's work reached. It now also runs the command and compares the cards
+whose pointers name the change directories the session touched. It corrects
+each card behind its floor with `update_properties`, re-reads it, and reports
+the correction beside the stage. Step 3 is where the skill already reads
+OpenSpec state. The sibling changes `gate-decision-ledger` and
+`capture-as-mechanism` edit steps 2 and 5, so the three edits do not collide.
+Whichever of them merges last keeps all three.
+
+The skill's rule that everything other than the save point and the yield
+ledger is a report gains one exception: the card corrections step 3 makes.
+Without it, the skill's own rules would forbid the reconciliation.
+
+*Alternative: reconcile the whole board at the wrap-up.* Refused. The board
+read at the start of the next session already covers the whole board. What
+the wrap-up adds is the session's own cards, caught before anyone else reads
+them.
+
+### Cross-repository pointers have one form
+
+The form is the repository's name as its owner calls it (`harness`, not a
+URL), then `: `, then the path. It is stated as the one exception to the
+repository-relative path *A board records a task's status and nothing the
+tree holds* fixes, rather than as a copy of that requirement in the delta,
+which would put it past the diff budget for one sentence. The two consumer
+cards for `ship-turn-gate-to-consumers` carry `— task 3.1` and `— task 3.2`
+after the path. They are rewritten in group 2, with the task number moved
+into the body. The writes use `update_properties` and are followed by a
+re-read.
+
+*Alternative: a `Repo` property beside `Pointer`.* Refused. Every board would
+need a schema change, for two cards today, and one instruction would then
+read two properties to find one path.
 
 *Alternative: a script that takes the cards on stdin and prints the
 corrections.* Refused for now (proposal, *Non-goals*). Board content would
@@ -112,9 +153,10 @@ obligation, because no hook can read a board.
 - [A consumer leaves the key out] → the command fails naming it on the first
   run, and `harness:check` is deliberately not made to require it (proposal,
   open question 1).
-- [Old-format pointers stay as they are] → they are listed on every
-  reconciliation until someone rewrites them. That listing is the signal,
-  and rewriting is the user's call (proposal, open question 4).
+- [`session-wrapup` runs only when the user invokes it] → a session nobody
+  wraps up is not reconciled at its end. The next session's board read
+  catches the card, one session late, which is the floor this change keeps
+  from today.
 
 ## Migration Plan
 
