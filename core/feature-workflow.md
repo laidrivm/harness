@@ -154,10 +154,12 @@ for them is already here.
   names the pull request until it merges and the commit on the default branch
   after, never a branch's commit — a rebase merge rewrites every hash on it.
 
-  Write every repository path in a card's body inside backticks. Notion turns
-  a bare `CLAUDE.md` into a link to a host of that name, so a card meant to
-  cite a file in this tree ships a dead external link instead — and the card
-  is read through the board, where no gate here can see it.
+  Write every repository path and every domain name in a card's body inside
+  backticks. Notion turns a bare `CLAUDE.md` or `example.com` into a link to a
+  host of that name, so a card meant to cite a file in this tree ships a dead
+  external link instead — and the card is read through the board, where no
+  gate here can see it. A later `update_content` quoting the bare name then
+  matches nothing, since the page now holds the link.
 
   Set a card's status and pointer with `update_properties`, and re-fetch the
   card before reporting it moved. `update_content` drops the `properties` it
