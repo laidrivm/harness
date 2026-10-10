@@ -89,12 +89,18 @@ is at 294 lines.
 ### The turn gate records only when a group completed
 
 Its decisions are `refused`, `passed` and `released`, all with the rule
-`pre-pr-sequence`. A turn is `released` when the once-per-mark bound lets it end
-although it still reports nothing. That is the only record of an agent walking
-past a refusal, and the reason the ledger cannot count passes alone. A turn that completed nothing is not recorded. Neither is a
-turn the gate could not read: "could not read" covers every session in a
-repository that does not use OpenSpec, and would drown the ledger in turns
-that carry no information.
+`pre-pr-sequence`. A turn is `released` when the once-per-mark bound lets it
+end although it still reports nothing. That is the only record of an agent
+walking past a refusal. Counting passes alone would show the walk-past as a
+turn that was never refused.
+
+Two kinds of turn are not recorded:
+- a turn that completed nothing, which includes every turn in a repository
+  without OpenSpec;
+- a turn the gate could not read, such as one with no mark, a detached `HEAD`
+  or an event that is not JSON.
+
+Neither says anything about whether the sequence ran.
 
 `decide()` already computes the completed groups before it refuses. The pass
 is recorded on the path where `reported(message)` is true. To get there, the
