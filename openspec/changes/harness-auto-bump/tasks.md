@@ -59,7 +59,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
 - [x] 2.1 Add `bumpTest: string` to `bun/config.ts`'s `Config`. Verify: a
       test in `bun/config.test.ts` reads it, and an absent key throws naming
       `harness.bumpTest`.
-- [ ] 2.2 Write the pin-edit tests in a new `bun/bump-pin.test.ts` first: a
+- [x] 2.2 Write the pin-edit tests in a new `bun/bump-pin.test.ts` first: a
       manifest whose harness spec is `github:laidrivm/harness#<40-hex>`
       exactly once changes in that one line, under tabs and under spaces; a
       spec with a short hash, a second occurrence, or a different owner fails
