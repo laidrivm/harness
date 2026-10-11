@@ -58,8 +58,16 @@ function settingsText(text: string | undefined): string {
 		if (!Array.isArray(groups))
 			throw new Error(`.claude/settings.json: hooks.${event} is not a list`);
 		hooks[event] = groups.flatMap((group) => {
+			if (typeof group !== "object" || group === null)
+				throw new Error(
+					`.claude/settings.json: an entry of hooks.${event} is not an object`,
+				);
 			if (group.hooks === undefined) return [group];
-			const kept = group.hooks.filter((hook) => !ours(hook.command));
+			if (!Array.isArray(group.hooks))
+				throw new Error(
+					`.claude/settings.json: a hooks list under hooks.${event} is not a list`,
+				);
+			const kept = group.hooks.filter((hook) => !ours(hook?.command));
 			return kept.length ? [{ ...group, hooks: kept }] : [];
 		});
 	}
