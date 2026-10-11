@@ -6,6 +6,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import {
+	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
@@ -147,6 +148,48 @@ describe("the settings file", () => {
 			);
 	});
 
+	test("an event left with no hooks once a previous version's are gone is dropped", () => {
+		const config = stale();
+		Object.assign(config.hooks, {
+			SessionEnd: [{ hooks: [{ type: "command", command: old("bye.ts") }] }],
+		});
+		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
+		syncSettings(dir);
+		expect(Object.keys(parsed(dir).hooks)).not.toContain("SessionEnd");
+	});
+
+	test("a deny list with no Bash entries gets them after the project's own", () => {
+		const config = stale();
+		config.permissions.deny = ["Edit(secrets/**)"];
+		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
+		syncSettings(dir);
+		expect(parsed(dir).permissions.deny).toEqual([
+			"Edit(secrets/**)",
+			...DENY,
+			"Edit(.npmrc)",
+		]);
+	});
+
+	test("interleaved Bash entries collapse where the first stood", () => {
+		const config = stale();
+		config.permissions.deny = ["Edit(a)", "Bash(npx *)", "Edit(b)", "Bash(x *)"];
+		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
+		syncSettings(dir);
+		expect(parsed(dir).permissions.deny).toEqual([
+			"Edit(a)",
+			...DENY,
+			"Edit(b)",
+			"Edit(.npmrc)",
+		]);
+	});
+
+	test("settings that are not JSON fail naming the file and write nothing", () => {
+		const dir = consumer({ [SETTINGS]: "{", "bunfig.toml": STALE_BUNFIG });
+		expect(() => syncSettings(dir)).toThrow(".claude/settings.json");
+		expect(read(dir, SETTINGS)).toBe("{");
+		expect(read(dir, "bunfig.toml")).toBe(STALE_BUNFIG);
+	});
+
 	test("a second sync changes no byte of either file", () => {
 		const dir = consumer({
 			[SETTINGS]: JSON.stringify(stale(), null, "  "),
@@ -181,6 +224,17 @@ describe("bunfig.toml", () => {
 		expect(Bun.TOML.parse(out)).toMatchObject({ install: INSTALL });
 	});
 
+	test("a header spaced inside its brackets is the section replaced", () => {
+		expect(sync(STALE_BUNFIG.replace("[install]", "[ install ]"))).toBe(
+			CANONICAL,
+		);
+	});
+
+	test("a file that is not TOML fails naming bunfig.toml", () => {
+		const dir = consumer({ [SETTINGS]: "{}", "bunfig.toml": "[install\n" });
+		expect(() => syncSettings(dir)).toThrow("bunfig.toml");
+	});
+
 	test("a missing [install] is appended", () => {
 		expect(sync('[test]\nroot = "src"\n')).toBe(
 			`[test]\nroot = "src"\n\n${CANONICAL}`,
@@ -210,4 +264,15 @@ describe("bunfig.toml", () => {
 		expect(read(dir, "bunfig.toml")).toBe(bunfig);
 		expect(read(dir, SETTINGS)).toBe(json);
 	});
+});
+
+describe("sync.ts run from a consumer's root", () => {
+	test("writes the rules copy and the policy", () => {
+		const dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });
+		const script = join(import.meta.dir, "sync.ts");
+		const run = Bun.spawnSync(["bun", script], { cwd: dir, timeout: 20_000 });
+		expect(run.exitCode).toBe(0);
+		expect(existsSync(join(dir, "harness/rules.md"))).toBe(true);
+		expect(parsed(dir).permissions.deny).toContain("Bash(gh pr review *)");
+	}, 30_000);
 });
