@@ -174,8 +174,10 @@ tests load. A write token anywhere in that job is a token that code can take
    bun node_modules/harness/bun/bump.ts verify
      target = harness main head, its `test` check run succeeded?  no --> sha=""
      target == pin?                                              yes --> sha=""
-     move pin, bun install, sync.ts, check.ts, bumpTest          red --> exit 1
-     stage the edit --> outputs: sha=<target>, tree=<git write-tree>
+     move pin, bun install, sync.ts, check.ts                    red --> exit 1
+     stage the edit, tree=<git write-tree>
+     bumpTest                                                    red --> exit 1
+     outputs: sha=<target>, tree
         |
         v  needs: verify, if sha != ""
  land     permissions: contents: write    fresh checkout of the same main
@@ -195,9 +197,14 @@ running beside the token adds no exposure: a compromised harness already runs
 inside every agent session (Risks).
 
 `verify` reads the harness's `main` and its check runs through GitHub's REST
-API with its read token. The target commit passes from `verify` to `land`
-as a job output, so both act on the same commit even if the harness moves
-between them.
+API with its read token. Only a run named `test` and posted by the
+`github-actions` app counts, because any app can post a run under that name.
+The target commit passes from `verify` to `land` as a job output, so both
+act on the same commit even if the harness moves between them.
+
+The tree is taken after sync and check, before `bumpTest`. It is exactly
+what the bump wrote, so nothing the consumer's tests leave behind, under any
+path, can enter it, and `land` reproduces it without running them.
 
 The alternative the review raised — one job, the token passed only to the
 push step — is the one the Context's fourth point rules out.
