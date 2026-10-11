@@ -27,16 +27,17 @@ section. After a sync, the check SHALL find none of them wrong.
 ### Requirement: Sync leaves the consumer's own settings as it found them
 
 The sync command SHALL change nothing the policy check does not dictate by
-value: the allow list, hooks whose commands do not reach the harness package,
-permission entries that are not `Bash(`, other settings keys and other TOML
-tables. When it cannot show that its `bunfig.toml` edit preserved the rest
+value: the allow list, hooks the harness did not write (including ones that
+call its scripts), permission entries that are not `Bash(`, other settings
+keys and other TOML tables. When it cannot show that its `bunfig.toml` edit preserved the rest
 of the file, it SHALL write neither file and fail.
 
 #### Scenario: The project's own settings survive a sync
 
-- **WHEN** a consumer's settings carry a project hook, an allow list, an
-  `mcp__` ask entry, a project `Edit(...)` deny entry, an unknown top-level
-  key and a `bunfig.toml` with other tables
+- **WHEN** a consumer's settings carry a project hook, a project hook that
+  runs a harness script by its `node_modules/harness/` path, an allow list,
+  an `mcp__` ask entry, a project `Edit(...)` deny entry, an unknown
+  top-level key and a `bunfig.toml` with other tables
 - **THEN** after a sync each of them parses to the value it had before
 
 #### Scenario: An install section the rewrite would damage is left untouched
