@@ -116,7 +116,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       `gh workflow enable` as the cure.
       Verify: `actionlint` passes on the workflow text copied from README
       into a scratch `.github/workflows/` file.
-- [ ] 3.4 Run the migration's manual half in one consumer, on a branch of
+- [x] 3.4 Run the migration's manual half in one consumer, on a branch of
       its own: bump to the commit that merged 3.2, add `bumpTest` and the
       workflow, merge, and trigger it with `workflow_dispatch`. Verify: the
       run ends with no target to land — the first end-to-end run, since the
