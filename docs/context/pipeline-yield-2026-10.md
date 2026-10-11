@@ -45,3 +45,32 @@
 - coderabbit (#39): PASS — 2 findings, 2 acted on; re-run after merge: 2 already resolved
 - coderabbit (#41): PASS — 1 finding, 1 acted on
 - Not run: warm (no manifest changed), first-five, review-order, code-review, preflight, ponytail-review; triage on spec/board-state-per-project-2, spec/notion-update-guard and spec/bun-version-sites-ask-precedence, which the documentation-branch sequence requires; any review on the two subagent revisions after the user's answers; coderabbit on #34, #36, #37, #38 and #40
+
+## 2026-10-11 — harness-auto-bump (spec/, feat/-1 to -4, chore/archive-, and both consumers' chore/harness-auto-bump)
+
+- coderabbit (#44): PASS — 1 finding, 1 acted on
+- zombies (feat/harness-auto-bump-1): PASS — 7 findings, 7 acted on
+- triage (feat/harness-auto-bump-1): PASS — 0 findings (by design); 2 High groups read, 2 defects fixed
+- coderabbit-local (feat/harness-auto-bump-1): PASS — 2 findings, 2 acted on (one defect, reported twice)
+- coderabbit-local (feat/harness-auto-bump-1, after the mark replaced the path): PASS — 0 findings, 0 acted on
+- coderabbit (#45): PASS — 2 findings, 1 acted on (1 Minor skipped: a check-enforced prohibition stays the consumer's)
+- zombies (feat/harness-auto-bump-2): PASS — 5 findings, 5 acted on
+- triage (feat/harness-auto-bump-2): PASS — 0 findings (by design); the High group read, nothing found
+- coderabbit-local (feat/harness-auto-bump-2): PASS — 0 findings, 0 acted on; re-run after the check-name guard: 0 findings
+- coderabbit (#46): PASS — 3 findings, 3 acted on (all Major)
+- zombies (feat/harness-auto-bump-3): PASS — 2 findings, 2 acted on (1 closed with a reason: it would need the network)
+- triage (feat/harness-auto-bump-3): PASS — 0 findings (by design); High and Medium groups read, nothing found
+- coderabbit-local (feat/harness-auto-bump-3): PASS — 1 finding, 0 acted on (Major rejected, the user confirmed)
+- coderabbit (#47): PASS — 1 finding, 1 acted on
+- zombies (feat/harness-auto-bump-4): PASS — 3 findings, 3 acted on
+- triage (feat/harness-auto-bump-4): PASS — 0 findings (by design); the High group read, nothing found
+- coderabbit-local (feat/harness-auto-bump-4): PASS — 0 findings, 0 acted on
+- triage (dota2 chore/harness-auto-bump): PASS — 0 findings (by design); 2 High groups read, nothing found
+- coderabbit-local (dota2 chore/harness-auto-bump): PASS — 0 findings, 0 acted on
+- triage (mellon chore/harness-auto-bump): PASS — 0 findings (by design); 2 High groups read, nothing found
+- coderabbit-local (mellon chore/harness-auto-bump): PASS — 1 finding, 0 acted on (Minor skipped: the edits came from sync.ts)
+- opsx:verify (harness-auto-bump): 1 critical, 0 warnings, 1 suggestion — the critical acted on (an unticked task whose work was done)
+- triage (chore/archive-harness-auto-bump): PASS — 0 findings, nothing above Low
+- coderabbit-local (chore/archive-harness-auto-bump): PASS — 2 findings, 1 acted on (Major rejected, the user confirmed)
+- Side agents, not a skill: 5 notes, 5 acted on — the write token visible to the checking job, d2ass's stale install, the 60-day schedule shutdown, sync deleting a project hook by path, the unpinned check name
+- Not run: warm (no manifest changed), first-five, review-order, code-review, preflight, ponytail-review, security-review; coderabbit on #48, #49, dota2#319 and mellon#46, whose reviews were re-fetched after merge and held 0 findings
