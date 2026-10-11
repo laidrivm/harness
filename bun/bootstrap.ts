@@ -1,7 +1,7 @@
 /**
  * The Bash `PreToolUse` hook command every consumer's `.claude/settings.json`
- * carries, character for character. It is the one piece of the harness a
- * consumer holds as text, because it has to run before the harness is
+ * carries, character for character, as `sync.ts` writes it there. The
+ * consumer holds it as text because it has to run before the harness is
  * installed: `settings.ts` asserts it exactly, so a copy that drifts fails the
  * consumer's check instead of booting differently.
  *
@@ -42,19 +42,22 @@ export const TURN_STOP = turnGate("stop");
  * `settings.ts` asserts and `sync.ts` writes, so the two cannot disagree on
  * which hooks there are. A hook the harness adds is one entry here. Every
  * command names `node_modules/harness/`, which is how `sync.ts` tells the
- * harness's hooks from a project's own.
+ * harness's hooks from a project's own. `sole` makes `settings.ts` refuse any
+ * other hook under the same matcher; without it the hook need only be present.
  */
 export const HOOKS: {
 	event: string;
 	matcher?: string;
 	command: string;
 	name: string;
+	sole?: true;
 }[] = [
 	{
 		event: "PreToolUse",
 		matcher: "Bash",
 		command: BOOTSTRAP,
 		name: "harness bootstrap",
+		sole: true,
 	},
 	{ event: "UserPromptSubmit", command: TURN_MARK, name: "harness turn gate" },
 	{ event: "Stop", command: TURN_STOP, name: "harness turn gate" },
