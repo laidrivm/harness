@@ -8,6 +8,10 @@
  * new harness's sync and check and the consumer's own `bumpTest`, and reports
  * the target and the tree it checked. It pushes nothing. A head not yet green,
  * or already pinned, is a quiet day: exit 0 and no target.
+ *
+ * `land <sha> <tree>` runs in a second job, which may push: from a fresh
+ * checkout it redoes the edit, running bun and the harness's own sync but no
+ * consumer dependency, and pushes to `main` only the tree `verify` reported.
  */
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -30,6 +34,10 @@ const WRITES = [
 	".claude/settings.json",
 	"bunfig.toml",
 ];
+
+/** The two steps both jobs run; no lifecycle script, so no consumer code. */
+const INSTALL = ["bun", "install", "--ignore-scripts"];
+const SYNC = ["bun", "node_modules/harness/bun/sync.ts"];
 
 async function get(deps: Deps, path: string): Promise<unknown> {
 	const response = await fetch(`${deps.api}/repos/laidrivm/harness/${path}`, {
@@ -67,9 +75,26 @@ async function greenHead(deps: Deps): Promise<string | undefined> {
 
 function git(cwd: string, args: string[]): string {
 	const run = Bun.spawnSync(["git", ...args], { cwd });
+	// Named by its subcommand, past any `-c key=value` before it.
+	const name = args.find((arg) => !arg.startsWith("-") && !arg.includes("="));
 	if (run.exitCode !== 0)
-		throw new Error(`git ${args[0]}: ${run.stderr.toString().trim()}`);
+		throw new Error(`git ${name}: ${run.stderr.toString().trim()}`);
 	return run.stdout.toString().trim();
+}
+
+/** A step of the bump to `head`: its command must exit 0, or the bump stops. */
+const stepper =
+	(root: string, head: string, run: Run) => (name: string, argv: string[]) => {
+		const code = run(argv, root);
+		if (code !== 0)
+			throw new Error(`the bump to ${head} failed at ${name}, exit ${code}`);
+	};
+
+/** Stages what the bump wrote and returns that tree's id. */
+function stage(root: string): string {
+	const written = WRITES.filter((path) => existsSync(join(root, path)));
+	git(root, ["add", "-A", "--", ...written]);
+	return git(root, ["write-tree"]);
 }
 
 /**
@@ -95,19 +120,51 @@ export async function verify(
 	const head = await greenHead(deps);
 	if (head === undefined || head === pin) return { sha: "", tree: "" };
 	writeFileSync(manifest, movePin(text, head));
-	const step = (name: string, argv: string[]) => {
-		const code = deps.run(argv, root);
-		if (code !== 0)
-			throw new Error(`the bump to ${head} failed at ${name}, exit ${code}`);
-	};
-	step("install", ["bun", "install", "--ignore-scripts"]);
-	step("sync", ["bun", "node_modules/harness/bun/sync.ts"]);
+	const step = stepper(root, head, deps.run);
+	step("install", INSTALL);
+	step("sync", SYNC);
 	step("check", ["bun", "node_modules/harness/bun/check.ts"]);
-	const written = WRITES.filter((path) => existsSync(join(root, path)));
-	git(root, ["add", "-A", "--", ...written]);
-	const tree = git(root, ["write-tree"]);
+	const tree = stage(root);
 	step("bumpTest", ["sh", "-c", bumpTest]);
 	return { sha: head, tree };
+}
+
+/**
+ * Redoes `verify`'s edit to `sha` in the fresh checkout at `root` and pushes
+ * it to `main`, but only when the result is `tree`, the one `verify` checked.
+ * A `main` that moved since the checkout rejects the push, and the next day's
+ * run starts from it.
+ */
+export function land(
+	root: string,
+	sha: string,
+	tree: string,
+	deps: { run: Run },
+): void {
+	if (!/^[0-9a-f]{40}$/.test(tree))
+		throw new Error(`${tree} is not a full tree id`);
+	const manifest = join(root, "package.json");
+	const text = readFileSync(manifest, "utf8");
+	const old = pinOf(text);
+	writeFileSync(manifest, movePin(text, sha));
+	const step = stepper(root, sha, deps.run);
+	step("install", INSTALL);
+	step("sync", SYNC);
+	const reproduced = stage(root);
+	if (reproduced !== tree)
+		throw new Error(
+			`the bump to ${sha} reproduced tree ${reproduced}, not the checked ${tree}`,
+		);
+	git(root, [
+		"-c",
+		"user.name=github-actions[bot]",
+		"-c",
+		"user.email=41898282+github-actions[bot]@users.noreply.github.com",
+		"commit",
+		"-qm",
+		`Bump harness ${old.slice(0, 7)}..${sha.slice(0, 7)}`,
+	]);
+	git(root, ["push", "origin", "HEAD:main"]);
 }
 
 const spawn: Run = (argv, cwd) =>
@@ -115,21 +172,26 @@ const spawn: Run = (argv, cwd) =>
 		.exitCode;
 
 if (import.meta.main) {
-	const [command] = Bun.argv.slice(2);
-	if (command !== "verify") {
-		console.error("usage: bump.ts verify");
+	const [command, sha, tree] = Bun.argv.slice(2);
+	const landing = command === "land" && sha && tree;
+	if (command !== "verify" && !landing) {
+		console.error("usage: bump.ts verify | bump.ts land <sha> <tree>");
 		process.exit(2);
 	}
 	try {
-		const { sha, tree } = await verify(git(".", ["rev-parse", "--show-toplevel"]), {
-			api: process.env.GITHUB_API_URL ?? "https://api.github.com",
-			token: process.env.GITHUB_TOKEN,
-			run: spawn,
-		});
-		const lines = `sha=${sha}\ntree=${tree}\n`;
-		const output = process.env.GITHUB_OUTPUT;
-		if (output) appendFileSync(output, lines);
-		else process.stdout.write(lines);
+		const root = git(".", ["rev-parse", "--show-toplevel"]);
+		if (landing) land(root, sha, tree, { run: spawn });
+		else {
+			const result = await verify(root, {
+				api: process.env.GITHUB_API_URL ?? "https://api.github.com",
+				token: process.env.GITHUB_TOKEN,
+				run: spawn,
+			});
+			const lines = `sha=${result.sha}\ntree=${result.tree}\n`;
+			const output = process.env.GITHUB_OUTPUT;
+			if (output) appendFileSync(output, lines);
+			else process.stdout.write(lines);
+		}
 	} catch (error) {
 		console.error((error as Error).message);
 		process.exit(1);

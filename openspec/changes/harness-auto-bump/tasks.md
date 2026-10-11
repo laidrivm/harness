@@ -89,7 +89,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
 
 ## 3. The bump lands, and consumers can run it
 
-- [ ] 3.1 Write the landing tests in a new `bun/bump-land.test.ts`, against
+- [x] 3.1 Write the landing tests in a new `bun/bump-land.test.ts`, against
       a fixture repository whose `origin` is a local bare repository:
       reproducing the reported tree commits once with the subject
       `Bump harness <old7>..<new7>` as `github-actions[bot]` and moves the
@@ -99,7 +99,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       rejects the push and exits non-zero. (Req: Landing pushes exactly the
       tree that was checked — §*A checked bump lands on main*, §*A tree that
       differs from the checked one is not pushed*)
-- [ ] 3.2 Implement `bun/bump.ts land <sha> <tree>` against 3.1, sharing the
+- [x] 3.2 Implement `bun/bump.ts land <sha> <tree>` against 3.1, sharing the
       pin edit and install with `verify` and running `sync.ts` alone of the
       gate, then `git push origin HEAD:main`. Confirm `bump.ts`
       stays under 300 lines, splitting the landing half into its own module
