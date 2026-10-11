@@ -7,7 +7,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { BOOTSTRAP, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
+import { BOOTSTRAP, NOTICE, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
 import { settings } from "./settings.ts";
 
 const made: string[] = [];
@@ -59,6 +59,9 @@ const policy = () => ({
 			{ hooks: [{ type: "command", command: TURN_MARK } as Hook] },
 		] as { hooks: Hook[] }[] | undefined,
 		Stop: [{ hooks: [{ type: "command", command: TURN_STOP } as Hook] }] as
+			| { hooks: Hook[] }[]
+			| undefined,
+		SessionStart: [{ hooks: [{ type: "command", command: NOTICE } as Hook] }] as
 			| { hooks: Hook[] }[]
 			| undefined,
 	},
@@ -159,6 +162,12 @@ describe("the turn gate's registrations", () => {
 	// spec: commit-gates/a-consumer-without-the-registrations
 	test("no Stop registration is named [6]", () => {
 		expect(report((c) => delete c.hooks.Stop)).toContain("the Stop hook");
+	});
+
+	test("no SessionStart notice is named", () => {
+		expect(report((c) => delete c.hooks.SessionStart)).toContain(
+			"the SessionStart hook is not the harness stale-install notice",
+		);
 	});
 
 	test("no UserPromptSubmit registration is named [7]", () => {
