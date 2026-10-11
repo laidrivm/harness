@@ -49,7 +49,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       after the rules copy, verifying the TOML result by parsing before
       writing either file. Verify: 1.3 and 1.4 pass, and `bun test` passes
       whole.
-- [ ] 1.6 Rewrite README's *Consuming* bullets on the hooks: `sync.ts`
+- [x] 1.6 Rewrite README's *Consuming* bullets on the hooks: `sync.ts`
       writes them, the permission lists and `[install]`, rather than a person
       copying them out of `bootstrap.ts`. Verify: no sentence in README still
       tells a consumer to copy a hook text, and `bun test` passes.
