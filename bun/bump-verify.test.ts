@@ -20,7 +20,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { verify } from "./bump.ts";
+import { CHECK, verify } from "./bump.ts";
 
 const OLD = "eddf1fdd56642c48a3b222034ec6268c9b55971f";
 const NEW = "9d321b61a74c70d4d3324d11e64fef488f2202a0";
@@ -232,4 +232,19 @@ describe("bump.ts run as a script", () => {
 		expect(code).toBe(1);
 		expect(stderr).toContain("commits/main: 500");
 	}, 20_000);
+});
+
+describe("the check a bump waits for", () => {
+	// A check run is named by its job's `name`, or by the job's key without one.
+	test("the harness's own CI has a job of that name, run on a push to main", () => {
+		const workflow = Bun.YAML.parse(
+			readFileSync(join(import.meta.dir, "../.github/workflows/test.yml"), "utf8"),
+		) as {
+			on: { push?: { branches?: string[] } };
+			jobs: Record<string, { name?: string }>;
+		};
+		const names = Object.entries(workflow.jobs).map(([key, job]) => job.name ?? key);
+		expect(names).toContain(CHECK);
+		expect(workflow.on.push?.branches).toContain("main");
+	});
 });

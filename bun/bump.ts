@@ -43,12 +43,20 @@ async function get(deps: Deps, path: string): Promise<unknown> {
 	return response.json();
 }
 
-/** The harness's `main` head, when its latest `test` run succeeded. */
+/**
+ * The check run a harness commit must pass before a consumer adopts it: the
+ * job in the harness's `.github/workflows/test.yml`. A run that is missing
+ * reads as a quiet day, not a failure, so renaming that job would stop every
+ * consumer's bumps without a sound. `bump-verify.test.ts` fails instead.
+ */
+export const CHECK = "test";
+
+/** The harness's `main` head, when its latest `CHECK` run succeeded. */
 async function greenHead(deps: Deps): Promise<string | undefined> {
 	const { sha } = (await get(deps, "commits/main")) as { sha: string };
 	const { check_runs } = (await get(
 		deps,
-		`commits/${sha}/check-runs?check_name=test&filter=latest`,
+		`commits/${sha}/check-runs?check_name=${CHECK}&filter=latest`,
 	)) as { check_runs: { conclusion: string | null }[] };
 	return check_runs.some((run) => run.conclusion === "success") ? sha : undefined;
 }
