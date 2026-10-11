@@ -99,6 +99,8 @@ describes is rewritten, the rule is a candidate for deletion.
   block, never on its command string alone.
 - Recognise the entries a tool owns in a shared file by a mark only that tool
   writes, never by a substring a user's own entry can also contain.
+- Pin a name one system looks up in another with a test that reads it where it
+  is defined, whenever a missing match reads as nothing to do.
 
 #### Process
 
