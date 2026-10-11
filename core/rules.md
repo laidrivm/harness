@@ -97,6 +97,8 @@ describes is rewritten, the rule is a candidate for deletion.
   a raw substring.
 - Pin a hook's registration on every field that decides whether it runs and can
   block, never on its command string alone.
+- Recognise the entries a tool owns in a shared file by a mark only that tool
+  writes, never by a substring a user's own entry can also contain.
 
 #### Process
 
