@@ -32,13 +32,16 @@ function project(files?: Record<string, string>): string {
 	return dir;
 }
 
-function notice(dir: string) {
-	const run = Bun.spawnSync(["bash", "-c", NOTICE], {
+function notice(dir: string, env: Record<string, string | undefined> = {}) {
+	// By absolute path, so a case can empty PATH and still start the shell.
+	const run = Bun.spawnSync(["/bin/bash", "-c", NOTICE], {
 		cwd: dir,
-		env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+		env: { ...process.env, CLAUDE_PROJECT_DIR: dir, ...env },
 	});
 	return { code: run.exitCode, out: run.stdout.toString() };
 }
+
+const STALE = { ".bun-tag": "laidrivm-harness-9d321b6", "package.json": "{}" };
 
 describe("the stale-install notice", () => {
 	// spec: harness-updates/a-stale-install-is-named-at-session-start
@@ -75,6 +78,21 @@ describe("the stale-install notice", () => {
 		["with a tag of another form", { ".bun-tag": "something else" }],
 	])("an install %s prints nothing", (_, files) => {
 		expect(notice(project(files))).toEqual({ code: 0, out: "" });
+	});
+
+	test("without CLAUDE_PROJECT_DIR it reads the project in the working directory", () => {
+		const { out } = notice(project(STALE), { CLAUDE_PROJECT_DIR: undefined });
+		expect(out).toContain("9d321b6");
+	});
+
+	test("an unreadable package.json prints nothing", () => {
+		const dir = project(STALE);
+		writeFileSync(join(dir, "package.json"), "{");
+		expect(notice(dir)).toEqual({ code: 0, out: "" });
+	});
+
+	test("a bun that cannot start still exits 0", () => {
+		expect(notice(project(STALE), { PATH: "/nonexistent" }).code).toBe(0);
 	});
 
 	test("no installed harness at all prints the not-installed line", () => {
