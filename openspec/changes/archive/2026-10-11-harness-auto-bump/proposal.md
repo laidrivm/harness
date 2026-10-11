@@ -32,7 +32,8 @@ Three steps, in this order, each leaning on the one before:
    consumer's own unit tests. Green, the result is pushed straight to the
    consumer's `main`; red, nothing is pushed and the run fails. The checks
    run in a job that holds no write token, and the push happens in a second
-   job that runs none of the consumer's dependencies. The consumer's
+   job that runs the harness's own code and none of the consumer's other
+   dependencies. The consumer's
    unit-test command is a new `"harness"` key, `bumpTest`.
 3. **A session says when its install is stale.** A `SessionStart` hook,
    exported by `bun/bootstrap.ts` and so written by step 1, prints one line
