@@ -85,11 +85,11 @@ repository. When any of them fails, nothing SHALL be pushed. A missing
 
 ### Requirement: Landing pushes exactly the tree that was checked
 
-Landing SHALL redo the bump's edit from a fresh checkout of the same `main`
-without running any of the consumer's dependencies' code, and SHALL commit
-and push to `main` only when the result is the tree the checks reported. It
-Its install SHALL run no lifecycle script, so no consumer git hook is installed
-to run at the push.
+Landing SHALL redo the bump's edit from a fresh checkout of the same `main`,
+running the harness's own code but none of the consumer's other dependencies,
+and SHALL commit and push to `main` only when the result is the tree the
+checks reported. Its install SHALL run no lifecycle script, so no consumer git
+hook is installed to run at the push.
 
 #### Scenario: A checked bump lands on main
 
