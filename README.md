@@ -59,7 +59,7 @@ A project takes the harness as one dependency pinned to a full commit, `"harness
 - The values the gates run with live under a `"harness"` key in the project's `package.json`, typed in `bun/config.ts`. A gate whose key is absent fails, naming it.
 - `bun node_modules/harness/bun/sync.ts`, from the project's root, writes `core/rules.md` and the docs beside it into a tracked `harness/`, which the project's `CLAUDE.md` imports and its review bot reads. A copy that differs from the pin fails the check below, naming each file; an edit to a rule belongs here, not in the copy. It also writes the harness's hooks and the `Bash(` entries of the `deny` and `ask` lists into `.claude/settings.json`, and `[install]` into `bunfig.toml`, leaving every other entry and key as it found them; nobody copies those by hand. A hook it writes ends with `# harness-managed`, which is how it tells its own from a project's, so a project hook that calls a harness script survives.
 - `bun node_modules/harness/bun/check.ts`, from the project's root, runs every check over its tree.
-- The project bumps itself daily with the workflow below, saved as `.github/workflows/harness-bump.yml`. `verify` moves the pin to the harness's newest `main` commit once its `test` run passed, then runs the new harness's sync and check and the command under `"harness": { "bumpTest": … }`. That command is the project's unit tests, the ones needing no database, Docker or browser. It has no default because each project spells it differently. `verify` holds a read-only token while it runs the project's tests. `land` holds the write token: it redoes the edit without running any dependency's code and pushes to `main` only the tree `verify` checked. Bumps arrive unattended only while the schedule is enabled. In a public repository GitHub disables it after 60 days without activity, no later harness commit restarts it, and `gh workflow enable harness-bump.yml` does.
+- The project bumps itself daily with the workflow below, saved as `.github/workflows/harness-bump.yml`. `verify` moves the pin to the harness's newest `main` commit once its `test` run passed, then runs the new harness's sync and check and the command under `"harness": { "bumpTest": … }`. That command is the project's unit tests, the ones needing no database, Docker or browser. It has no default because each project spells it differently. `verify` holds a read-only token while it runs the project's tests. `land` holds the write token: it redoes the edit running only bun and the harness's own code (the pinned `bump.ts` and the new harness's `sync.ts`), never the project's other dependencies, and pushes to `main` only the tree `verify` checked. Bumps arrive unattended only while the schedule is enabled. In a public repository GitHub disables it after 60 days without activity, no later harness commit restarts it, and `gh workflow enable harness-bump.yml` does.
 
   ```yaml
   name: Harness bump
@@ -97,7 +97,7 @@ A project takes the harness as one dependency pinned to a full commit, `"harness
       permissions:
         contents: write
       steps:
-        # Credentials kept: this job pushes, and runs no dependency's code.
+        # Credentials kept: this job pushes, running only the harness's own code.
         - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
           with:

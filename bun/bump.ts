@@ -35,7 +35,10 @@ const WRITES = [
 	"bunfig.toml",
 ];
 
-/** The two steps both jobs run; no lifecycle script, so no consumer code. */
+/**
+ * The two steps both jobs run. No lifecycle script runs, so the only package
+ * code that executes is the harness's own sync.
+ */
 const INSTALL = ["bun", "install", "--ignore-scripts"];
 const SYNC = ["bun", "node_modules/harness/bun/sync.ts"];
 
