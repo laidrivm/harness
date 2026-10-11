@@ -108,8 +108,10 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       `land` job with `contents: write` that `needs` it and runs only when it
       reported a target, each installing and calling `bump.ts` as design.md
       shows — the `bumpTest` key with the reason it has no default, and
-      that GitHub disables the schedule after 60 days without repository
-      activity in a public repository, with `gh workflow enable` as the cure.
+      that bumps arrive unattended only while the schedule is enabled, since
+      GitHub disables it after 60 days without repository activity in a
+      public repository and no later harness commit restarts it, with
+      `gh workflow enable` as the cure.
       Verify: `actionlint` passes on the workflow text copied from README
       into a scratch `.github/workflows/` file.
 - [ ] 3.4 Run the migration's manual half in one consumer, on a branch of
