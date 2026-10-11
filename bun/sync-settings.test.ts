@@ -78,7 +78,8 @@ describe("the settings file", () => {
 		const unmarked = (command: string) => command.slice(0, -` ${MARK}`.length);
 		const config = stale();
 		for (const { event, command } of HOOKS) {
-			const groups = config.hooks[event as keyof typeof config.hooks];
+			// An event the previous version never registered is only added.
+			const groups = config.hooks[event as keyof typeof config.hooks] ?? [];
 			const [group] = groups;
 			if (group) group.hooks = [{ type: "command", command: unmarked(command) }];
 		}

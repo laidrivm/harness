@@ -124,7 +124,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
 
 ## 4. A session names a stale install
 
-- [ ] 4.1 Write the notice tests in a new `bun/bootstrap-notice.test.ts`,
+- [x] 4.1 Write the notice tests in a new `bun/bootstrap-notice.test.ts`,
       running the hook text through `bash` with `CLAUDE_PROJECT_DIR` set to a
       fixture: a `.bun-tag` whose hash differs from the pin prints one line
       naming both and `bun install` and exits 0; a fixture whose
@@ -134,11 +134,11 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       line and exits 0. (Req: A session names an install that lags the pin —
       §*A stale install is named at session start*, §*An install older than
       the notice is still named*, §*A current install says nothing*)
-- [ ] 4.2 Add the `SessionStart` registration to `bootstrap.ts`'s list as
+- [x] 4.2 Add the `SessionStart` registration to `bootstrap.ts`'s list as
       inline `bun -e` text, with a `shortcut:` comment where it reads
       `.bun-tag`, saying that bun documents no such file and that the notice
       falls silent if it changes. Verify: 4.1 passes, 1.3's sync test now
       writes it, and `settings.ts`'s check requires it.
-- [ ] 4.3 Add one line to README's *Consuming* section: a session prints
+- [x] 4.3 Add one line to README's *Consuming* section: a session prints
       the stale-install line, and `bun install` clears it. Verify: `bun test`
       passes whole.

@@ -46,6 +46,36 @@ export const TURN_MARK = turnGate("mark");
 export const TURN_STOP = turnGate("stop");
 
 /**
+ * The `SessionStart` notice: one line when the installed harness is not the
+ * pinned one, as after a `git pull` that brought a bump, until `bun install`.
+ * Claude Code adds a `SessionStart` hook's output to the session, so the
+ * agent reads it too.
+ *
+ * Inline rather than a script in the package: a stale install is an older
+ * package, which may predate any script, and a notice living there would be
+ * missing in exactly the state it exists to name. Every path exits 0, and
+ * `|| true` covers a bun that cannot start: a notice never stops a session.
+ *
+ * shortcut: the installed commit is read from `node_modules/harness/.bun-tag`,
+ * which bun 1.4.2 writes as `<owner>-<repo>-<7 hex>` and documents nowhere; a
+ * bun that changes it makes the notice fall silent rather than wrong. Upgrade
+ * when bun documents where an installed git dependency's commit is recorded.
+ */
+export const NOTICE = [
+	"bun -e 'const fs = require(\"node:fs\");",
+	'const d = process.env.CLAUDE_PROJECT_DIR ?? ".";',
+	'if (!fs.existsSync(d + "/node_modules/harness")) {',
+	'console.log("The harness is not installed: run bun install."); process.exit(0); }',
+	"try {",
+	'const pin = (JSON.parse(fs.readFileSync(d + "/package.json", "utf8")).dependencies?.harness ?? "").match(/#([0-9a-f]{40})$/)?.[1];',
+	'const tag = fs.readFileSync(d + "/node_modules/harness/.bun-tag", "utf8").trim().match(/-([0-9a-f]{7,40})$/)?.[1];',
+	"if (pin && tag && !pin.startsWith(tag))",
+	'console.log("The installed harness is " + tag + ", the pin " + pin.slice(0, 7) + ": run bun install.");',
+	"} catch {}' || true",
+	MARK,
+].join(" ");
+
+/**
  * Every hook the harness registers in a consumer's settings: what
  * `settings.ts` asserts and `sync.ts` writes, so the two cannot disagree on
  * which hooks there are. A hook the harness adds is one entry here, and its
@@ -68,4 +98,5 @@ export const HOOKS: {
 	},
 	{ event: "UserPromptSubmit", command: TURN_MARK, name: "harness turn gate" },
 	{ event: "Stop", command: TURN_STOP, name: "harness turn gate" },
+	{ event: "SessionStart", command: NOTICE, name: "harness stale-install notice" },
 ];
