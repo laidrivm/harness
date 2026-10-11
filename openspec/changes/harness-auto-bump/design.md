@@ -101,13 +101,20 @@ the check dictates by value, and leaves alone what the check only refuses
 
 In `.claude/settings.json`:
 
-- **Hooks.** An entry is the harness's when its command names
-  `node_modules/harness/`, which every registration in the list does and no
-  project hook has reason to. `sync.ts` removes each such hook from every
-  event, drops a matcher group the removal left empty, then appends each
-  registration in its own group. Identifying by text was the alternative,
-  and it would fail to recognise the previous version's hook, which is
-  exactly the one a bump must replace.
+- **Hooks.** Every registration's command ends with `MARK`, the shell
+  comment `# harness-managed`, and an entry is the harness's when its command
+  ends with it. One exception covers the consumers' current hooks, which were
+  copied by hand before the mark existed: an entry also counts when it equals
+  a current registration's command with the mark removed. `sync.ts` removes
+  each such hook from every event, drops a matcher group the removal left
+  empty, then appends each registration in its own group.
+
+  There were two alternatives. Matching the exact text would miss the
+  previous version's hook, which is exactly the one a bump must replace.
+  Matching the path `node_modules/harness/` would also take a project's own
+  hook that calls a harness script, such as a `Stop` hook running
+  `bun node_modules/harness/bun/check.ts`, and delete it silently in a bump
+  that nobody reviews. The mark is something only the harness writes.
 - **`deny` and `ask`.** Their `Bash(` entries are replaced, in place of the
   first one, by the exported lists, in order. Every other entry keeps its
   position: an `mcp__` ask from `policy-gate-beyond-bash`, a project's own
@@ -336,10 +343,11 @@ guard's per-call cost.
   one bump a day. The conflicts are resolved by taking `main`'s side and
   running `bun install`.
 - [`sync.ts` now writes two files a person also edits] → it touches only
-  hooks naming `node_modules/harness/`, the `Bash(` subsets of `deny` and
-  `ask`, and the `[install]` section. Its tests pin that a project hook, a
-  non-Bash permission entry, the allow list, unknown keys and every other
-  TOML table come through with equal values.
+  hooks carrying the harness's mark, the `Bash(` subsets of `deny` and
+  `ask`, and the `[install]` section. Its tests pin that a project hook,
+  including one that calls a harness script, a non-Bash permission entry,
+  the allow list, unknown keys and every other TOML table all come through
+  with equal values.
 
 ## Migration Plan
 
@@ -348,10 +356,10 @@ guard's per-call cost.
    On 2026-10-11 d2ass's was not (Context). Its sessions have run with every
    Bash command blocked and the turn gate off, and that state persists until
    step 3 is there to name it.
-1. Merge step 1. In each consumer, bump by hand once and run `sync.ts`. It
-   replaces hand-copied values with identical ones, so no diff is expected.
-   Any change in `.claude/settings.json` or `bunfig.toml` means the
-   replacement rule misread a real file.
+1. Merge step 1. In each consumer, bump by hand once and run `sync.ts`. The
+   only expected diff is ` # harness-managed` appended to each of the
+   harness's three hook commands. Any other change in `.claude/settings.json`
+   or `bunfig.toml` means the replacement rule misread a real file.
 2. Merge step 2. In each consumer, by hand: bump to a commit that contains
    `bun/bump.ts` — the pin it holds then has none, so this bump cannot be
    automatic — add `bumpTest`, add the workflow, then run it once through

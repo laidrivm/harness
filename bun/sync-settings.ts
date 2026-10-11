@@ -8,7 +8,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { HOOKS } from "./bootstrap.ts";
+import { HOOKS, MARK } from "./bootstrap.ts";
 import { ASK, DENY, EDIT_ASK, EDIT_DENY, INSTALL } from "./settings.ts";
 
 type Group = { matcher?: string; hooks?: { command?: unknown }[] };
@@ -17,8 +17,16 @@ type Settings = {
 	hooks?: Record<string, Group[]>;
 };
 
-/** Every hook command in `HOOKS` names it, and no project hook has reason to. */
-const OURS = "node_modules/harness/";
+/**
+ * Whether the harness wrote `command`: it ends with `MARK`, or it is a
+ * current hook's text without it, as consumers copied it by hand before the
+ * mark existed. A project hook calling a harness script by its path is
+ * neither, so it survives.
+ */
+const ours = (command: unknown) =>
+	typeof command === "string" &&
+	(command.endsWith(MARK) ||
+		HOOKS.some((hook) => hook.command === `${command} ${MARK}`));
 
 const read = (file: string) =>
 	existsSync(file) ? readFileSync(file, "utf8") : undefined;
@@ -51,9 +59,7 @@ function settingsText(text: string | undefined): string {
 			throw new Error(`.claude/settings.json: hooks.${event} is not a list`);
 		hooks[event] = groups.flatMap((group) => {
 			if (group.hooks === undefined) return [group];
-			const kept = group.hooks.filter(
-				(hook) => !String(hook.command ?? "").includes(OURS),
-			);
+			const kept = group.hooks.filter((hook) => !ours(hook.command));
 			return kept.length ? [{ ...group, hooks: kept }] : [];
 		});
 	}
