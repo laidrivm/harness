@@ -190,6 +190,13 @@ describe("the settings file", () => {
 		expect(read(dir, "bunfig.toml")).toBe(STALE_BUNFIG);
 	});
 
+	test("an event whose hooks are not a list fails naming it", () => {
+		const json = JSON.stringify({ hooks: { Stop: "x" } });
+		const dir = consumer({ [SETTINGS]: json });
+		expect(() => syncSettings(dir)).toThrow("hooks.Stop is not a list");
+		expect(read(dir, SETTINGS)).toBe(json);
+	});
+
 	test("a second sync changes no byte of either file", () => {
 		const dir = consumer({
 			[SETTINGS]: JSON.stringify(stale(), null, "  "),

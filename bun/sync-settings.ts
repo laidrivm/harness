@@ -47,6 +47,8 @@ function settingsText(text: string | undefined): string {
 	}
 	const hooks = config.hooks ?? {};
 	for (const [event, groups] of Object.entries(hooks)) {
+		if (!Array.isArray(groups))
+			throw new Error(`.claude/settings.json: hooks.${event} is not a list`);
 		hooks[event] = groups.flatMap((group) => {
 			if (group.hooks === undefined) return [group];
 			const kept = group.hooks.filter(
