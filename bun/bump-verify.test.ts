@@ -3,7 +3,14 @@
  * GitHub's API and a real git repository. The install and the gate's
  * commands are injected, so no case reaches the network or runs a suite.
  */
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+} from "bun:test";
 import {
 	mkdirSync,
 	mkdtempSync,
@@ -21,6 +28,8 @@ const NEW = "9d321b61a74c70d4d3324d11e64fef488f2202a0";
 /** What the stand-in serves: `main`'s head, and that commit's `test` runs. */
 let head = NEW;
 let runs: { conclusion: string | null }[] = [];
+let broken = false;
+const seen: (string | null)[] = [];
 let server: ReturnType<typeof Bun.serve>;
 const made: string[] = [];
 
@@ -29,6 +38,8 @@ beforeAll(() => {
 		port: 0,
 		fetch(request) {
 			const path = new URL(request.url).pathname;
+			seen.push(request.headers.get("authorization"));
+			if (broken) return new Response("down", { status: 500 });
 			if (path === "/repos/laidrivm/harness/commits/main")
 				return Response.json({ sha: head });
 			if (path === `/repos/laidrivm/harness/commits/${head}/check-runs`)
@@ -36,6 +47,11 @@ beforeAll(() => {
 			return new Response("not found", { status: 404 });
 		},
 	});
+});
+
+beforeEach(() => {
+	broken = false;
+	seen.length = 0;
 });
 
 afterAll(() => {
@@ -155,4 +171,65 @@ describe("the gate", () => {
 		await expect(verify(dir, deps(run))).rejects.toThrow("harness.bumpTest");
 		expect(calls).toEqual([]);
 	});
+});
+
+describe("what verify stages and asks", () => {
+	test("a file the test run leaves behind stays out of the tree", async () => {
+		head = NEW;
+		runs = [{ conclusion: "success" }];
+		const dir = consumer();
+		const { run: base } = runner();
+		const run = (argv: string[], cwd: string) => {
+			if (argv[0] === "sh") writeFileSync(join(cwd, "coverage.txt"), "x\n");
+			return base(argv, cwd);
+		};
+		const { tree } = await verify(dir, deps(run));
+		expect(git(dir, "ls-tree", "-r", "--name-only", tree)).not.toContain(
+			"coverage.txt",
+		);
+	});
+
+	test("a token given is sent as a Bearer header on every request", async () => {
+		head = OLD;
+		runs = [{ conclusion: "success" }];
+		await verify(consumer(), { ...deps(runner().run), token: "t0k" });
+		expect(seen).toEqual(["Bearer t0k", "Bearer t0k"]);
+	});
+
+	test("an API answer that is not OK rejects naming the path", async () => {
+		broken = true;
+		const { run, calls } = runner();
+		await expect(verify(consumer(), deps(run))).rejects.toThrow(
+			"commits/main: 500",
+		);
+		expect(calls).toEqual([]);
+	});
+});
+
+describe("bump.ts run as a script", () => {
+	/** The script in `dir`, asynchronously so the stand-in can answer it. */
+	async function script(dir: string, env: Record<string, string> = {}) {
+		const child = Bun.spawn(["bun", join(import.meta.dir, "bump.ts"), "verify"], {
+			cwd: dir,
+			env: { ...process.env, GITHUB_API_URL: server.url.origin, ...env },
+			stderr: "pipe",
+		});
+		return { code: await child.exited, stderr: await new Response(child.stderr).text() };
+	}
+
+	test("appends its outputs to GITHUB_OUTPUT when set", async () => {
+		head = OLD;
+		runs = [{ conclusion: "success" }];
+		const dir = consumer();
+		const output = join(dir, "output");
+		expect((await script(dir, { GITHUB_OUTPUT: output })).code).toBe(0);
+		expect(readFileSync(output, "utf8")).toBe("sha=\ntree=\n");
+	}, 20_000);
+
+	test("exits 1 and prints why when verify fails", async () => {
+		broken = true;
+		const { code, stderr } = await script(consumer());
+		expect(code).toBe(1);
+		expect(stderr).toContain("commits/main: 500");
+	}, 20_000);
 });
