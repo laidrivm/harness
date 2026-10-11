@@ -26,7 +26,7 @@ ZOMBIES stands for:
 - **Z**ero — no inputs / empty state
 - **O**ne — a single input / the happy path
 - **M**any — multiple inputs, ordering, pagination, concurrency
-- **B**oundaries — limits, off-by-one, min/max lengths, timing edges, type edges
+- **B**oundaries — limits, off-by-one, min/max lengths, timing edges, type edges, and the empty and whitespace-only case of any value read from configuration and then executed or trusted
 - **I**nterface — the contract/shape of the public API (return types, status codes, redirects)
 - **E**xceptions — invalid input, failures, expired/used/missing state, auth failures
 - **S**imple scenarios — the common everyday usage paths a real user takes
