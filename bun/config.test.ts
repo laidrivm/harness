@@ -34,6 +34,13 @@ describe("reading a value", () => {
 		expect(read(dir, "diffBudgetExclude")).toEqual(["bun.lock"]);
 	});
 
+	test("the bump's test command is read, and its absence names it", () => {
+		expect(read(consumer({ bumpTest: "bun test" }), "bumpTest")).toBe(
+			"bun test",
+		);
+		expect(() => read(consumer({}), "bumpTest")).toThrow("harness.bumpTest");
+	});
+
 	test("a manifest with no harness object names the key it lacks", () => {
 		expect(() => read(consumer(), "rootFiles")).toThrow("harness.rootFiles");
 	});

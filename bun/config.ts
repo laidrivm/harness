@@ -21,6 +21,8 @@ export type Config = {
 	suppressions: Record<string, { count: number; why: string }>;
 	/** Pathspecs the diff budget does not count. */
 	diffBudgetExclude: string[];
+	/** The shell command a bump runs as the consumer's unit tests. */
+	bumpTest: string;
 };
 
 /** `key` from the `"harness"` object of `root`'s `package.json`. */
