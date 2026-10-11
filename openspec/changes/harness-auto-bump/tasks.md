@@ -56,7 +56,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
 
 ## 2. The bump checks a candidate
 
-- [ ] 2.1 Add `bumpTest: string` to `bun/config.ts`'s `Config`. Verify: a
+- [x] 2.1 Add `bumpTest: string` to `bun/config.ts`'s `Config`. Verify: a
       test in `bun/config.test.ts` reads it, and an absent key throws naming
       `harness.bumpTest`.
 - [ ] 2.2 Write the pin-edit tests in a new `bun/bump-pin.test.ts` first: a
