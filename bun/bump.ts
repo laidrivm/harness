@@ -57,8 +57,12 @@ async function greenHead(deps: Deps): Promise<string | undefined> {
 	const { check_runs } = (await get(
 		deps,
 		`commits/${sha}/check-runs?check_name=${CHECK}&filter=latest`,
-	)) as { check_runs: { conclusion: string | null }[] };
-	return check_runs.some((run) => run.conclusion === "success") ? sha : undefined;
+	)) as { check_runs: { conclusion: string | null; app?: { slug?: string } }[] };
+	// The name alone could be any app's; the harness's run is GitHub Actions'.
+	const green = check_runs.some(
+		(run) => run.conclusion === "success" && run.app?.slug === "github-actions",
+	);
+	return green ? sha : undefined;
 }
 
 function git(cwd: string, args: string[]): string {
@@ -71,33 +75,39 @@ function git(cwd: string, args: string[]): string {
 /**
  * Checks the harness's newest green commit against the consumer at `root`,
  * returning it and the tree checked, or empty strings on a quiet day. Throws
- * naming the step that failed; the edit is then left unstaged in `root`.
+ * naming the step that failed.
+ *
+ * The tree is taken after sync and check and before `bumpTest`, so it holds
+ * exactly what the bump wrote: whatever the consumer's tests leave behind,
+ * under any path, cannot enter it, and `land` reproduces it without them.
  */
 export async function verify(
 	root: string,
 	deps: Deps,
 ): Promise<{ sha: string; tree: string }> {
 	const bumpTest = read(root, "bumpTest");
+	// `sh -c ""` exits 0, which would pass every bump with no test run at all.
+	if (typeof bumpTest !== "string" || bumpTest.trim() === "")
+		throw new Error("package.json: harness.bumpTest is blank");
 	const manifest = join(root, "package.json");
 	const text = readFileSync(manifest, "utf8");
 	const pin = pinOf(text);
 	const head = await greenHead(deps);
 	if (head === undefined || head === pin) return { sha: "", tree: "" };
 	writeFileSync(manifest, movePin(text, head));
-	const steps: [string, string[]][] = [
-		["install", ["bun", "install", "--ignore-scripts"]],
-		["sync", ["bun", "node_modules/harness/bun/sync.ts"]],
-		["check", ["bun", "node_modules/harness/bun/check.ts"]],
-		["bumpTest", ["sh", "-c", bumpTest]],
-	];
-	for (const [name, argv] of steps) {
+	const step = (name: string, argv: string[]) => {
 		const code = deps.run(argv, root);
 		if (code !== 0)
 			throw new Error(`the bump to ${head} failed at ${name}, exit ${code}`);
-	}
+	};
+	step("install", ["bun", "install", "--ignore-scripts"]);
+	step("sync", ["bun", "node_modules/harness/bun/sync.ts"]);
+	step("check", ["bun", "node_modules/harness/bun/check.ts"]);
 	const written = WRITES.filter((path) => existsSync(join(root, path)));
 	git(root, ["add", "-A", "--", ...written]);
-	return { sha: head, tree: git(root, ["write-tree"]) };
+	const tree = git(root, ["write-tree"]);
+	step("bumpTest", ["sh", "-c", bumpTest]);
+	return { sha: head, tree };
 }
 
 const spawn: Run = (argv, cwd) =>

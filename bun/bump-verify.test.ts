@@ -27,7 +27,10 @@ const NEW = "9d321b61a74c70d4d3324d11e64fef488f2202a0";
 
 /** What the stand-in serves: `main`'s head, and that commit's `test` runs. */
 let head = NEW;
-let runs: { conclusion: string | null }[] = [];
+type CheckRun = { conclusion: string | null; app?: { slug: string } };
+let runs: CheckRun[] = [];
+/** A passed run as the harness's own CI posts it. */
+const GREEN: CheckRun = { conclusion: "success", app: { slug: "github-actions" } };
 let broken = false;
 const seen: (string | null)[] = [];
 let server: ReturnType<typeof Bun.serve>;
@@ -117,7 +120,12 @@ describe("choosing a target", () => {
 		["still running", NEW, [{ conclusion: null }]],
 		["failed", NEW, [{ conclusion: "failure" }]],
 		["absent", NEW, []],
-		["green but already pinned", OLD, [{ conclusion: "success" }]],
+		["green but already pinned", OLD, [GREEN]],
+		[
+			"green only from another app",
+			NEW,
+			[{ conclusion: "success", app: { slug: "other" } }],
+		],
 	])("a head whose test run is %s reports no target and changes nothing", async (_, sha, served) => {
 		head = sha;
 		runs = served;
@@ -133,7 +141,7 @@ describe("choosing a target", () => {
 describe("the gate", () => {
 	const green = () => {
 		head = NEW;
-		runs = [{ conclusion: "success" }];
+		runs = [GREEN];
 	};
 
 	// spec: harness-updates/a-bump-that-passes-reports-what-it-checked
@@ -164,9 +172,13 @@ describe("the gate", () => {
 		},
 	);
 
-	test("a consumer with no bumpTest fails naming the key before any call", async () => {
+	test.each([
+		["no", {}],
+		["an empty", { bumpTest: "" }],
+		["a whitespace", { bumpTest: "  " }],
+	])("a consumer with %s bumpTest fails naming the key before any call", async (_, harness) => {
 		green();
-		const dir = consumer({});
+		const dir = consumer(harness);
 		const { run, calls } = runner();
 		await expect(verify(dir, deps(run))).rejects.toThrow("harness.bumpTest");
 		expect(calls).toEqual([]);
@@ -174,24 +186,27 @@ describe("the gate", () => {
 });
 
 describe("what verify stages and asks", () => {
-	test("a file the test run leaves behind stays out of the tree", async () => {
-		head = NEW;
-		runs = [{ conclusion: "success" }];
-		const dir = consumer();
-		const { run: base } = runner();
-		const run = (argv: string[], cwd: string) => {
-			if (argv[0] === "sh") writeFileSync(join(cwd, "coverage.txt"), "x\n");
-			return base(argv, cwd);
-		};
-		const { tree } = await verify(dir, deps(run));
-		expect(git(dir, "ls-tree", "-r", "--name-only", tree)).not.toContain(
-			"coverage.txt",
-		);
-	});
+	test.each(["coverage.txt", "harness/leftover.md"])(
+		"%s, left behind by the test run, stays out of the tree",
+		async (leftover) => {
+			head = NEW;
+			runs = [GREEN];
+			const dir = consumer();
+			const { run: base } = runner();
+			const run = (argv: string[], cwd: string) => {
+				if (argv[0] === "sh") writeFileSync(join(cwd, leftover), "x\n");
+				return base(argv, cwd);
+			};
+			const { tree } = await verify(dir, deps(run));
+			expect(git(dir, "ls-tree", "-r", "--name-only", tree)).not.toContain(
+				leftover,
+			);
+		},
+	);
 
 	test("a token given is sent as a Bearer header on every request", async () => {
 		head = OLD;
-		runs = [{ conclusion: "success" }];
+		runs = [GREEN];
 		await verify(consumer(), { ...deps(runner().run), token: "t0k" });
 		expect(seen).toEqual(["Bearer t0k", "Bearer t0k"]);
 	});
@@ -219,7 +234,7 @@ describe("bump.ts run as a script", () => {
 
 	test("appends its outputs to GITHUB_OUTPUT when set", async () => {
 		head = OLD;
-		runs = [{ conclusion: "success" }];
+		runs = [GREEN];
 		const dir = consumer();
 		const output = join(dir, "output");
 		expect((await script(dir, { GITHUB_OUTPUT: output })).code).toBe(0);
