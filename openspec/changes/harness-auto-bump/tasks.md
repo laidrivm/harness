@@ -65,14 +65,14 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       spec with a short hash, a second occurrence, or a different owner fails
       before any install, naming it; after the edit, the parsed
       `dependencies.harness` equals the new spec.
-- [ ] 2.3 Write the target tests in a new `bun/bump-verify.test.ts`, against
+- [x] 2.3 Write the target tests in a new `bun/bump-verify.test.ts`, against
       a local `Bun.serve` stub of GitHub's commits and check-runs endpoints,
       so no test reaches the network: a head whose `test` run is in
       progress, failed, or absent, and a head equal to the pin, each exit 0
       with the tree unchanged and no target reported. (Req: A bump attempts
       only the harness's newest green commit — §*A quiet day changes
       nothing*)
-- [ ] 2.4 Write the gate tests in the same file, with the install step and
+- [x] 2.4 Write the gate tests in the same file, with the install step and
       the three gate commands injected so the test controls their exit codes
       and records their order: sync, check, then `bumpTest`, each from the
       consumer's root; the first failure exits non-zero, runs nothing after
@@ -81,7 +81,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       bump lands only what passed the consumer's checks — §*A bump that fails
       the consumer's checks does not land*, §*A bump that passes reports what
       it checked*)
-- [ ] 2.5 Implement `bun/bump.ts verify` against 2.2–2.4: the API reads
+- [x] 2.5 Implement `bun/bump.ts verify` against 2.2–2.4: the API reads
       with `GITHUB_TOKEN`, the guarded pin edit, `bun install
       --ignore-scripts`, the gate, and the target and tree written as
       `$GITHUB_OUTPUT` lines when that variable is set and to stdout
