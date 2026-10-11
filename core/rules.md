@@ -117,6 +117,9 @@ Rules about how work is carried out here. They do not age with the code.
 - Split a file to the cap that will apply to it, not the one that applies
   today, and re-measure the diff budget afterwards — a split counts its moved
   lines in it twice.
+- Ask the user to run a command that prompts for a password in a terminal of
+  their own, never through the `!` prefix — the prompt there reads no input,
+  and the command fails as if the password were wrong.
 
 #### Safety
 
