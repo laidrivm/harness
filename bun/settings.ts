@@ -160,11 +160,11 @@ export function settings(root: string): string[] {
 			"disableAllHooks turns every hook off, the guard and turn gate included",
 		);
 	const fix = "run bun node_modules/harness/bun/sync.ts";
-	for (const { event, matcher, command, name } of HOOKS) {
+	for (const { event, matcher, command, name, sole } of HOOKS) {
 		const hooks = (parsed.hooks?.[event] ?? [])
 			.filter((entry) => matcher === undefined || entry.matcher === matcher)
 			.flatMap((entry) => entry.hooks ?? []);
-		if (matcher === undefined) {
+		if (!sole) {
 			// Presence, not sole occupancy: a second prompt or stop hook cannot
 			// undo this one, since any `Stop` hook exiting 2 refuses. A match
 			// under another type, behind `if`, or in a form that cannot block
@@ -179,8 +179,6 @@ export function settings(root: string): string[] {
 			if (!runs) say(`the ${event} hook is not the ${name} — ${fix}`);
 			continue;
 		}
-		// Sole occupancy for a matcher's hook: the guard decides every command
-		// alone, and a second hook beside it is a second policy.
 		if (hooks.length !== 1) say(`${hooks.length} ${matcher} hooks, not one`);
 		for (const hook of hooks) {
 			if (hook.type !== "command") say(`the ${matcher} hook is not a command`);
