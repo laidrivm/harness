@@ -123,11 +123,13 @@ gets one holding the hooks and the two lists. `check.ts` still refuses it
 for the empty allow list, which is the consumer's to write.
 
 In `bunfig.toml`, Bun parses TOML but cannot write it, and a TOML library
-would be a dependency in a package that has none. `sync.ts` replaces the
-`[install]` section's text, from its header to the next header or the end,
-with the canonical lines, and appends the section when it is missing. A
-comment inside that section is lost, such as mellon's `# seconds = 3 days`.
-That follows from the section being the harness's. The replacement is a line
+would be a dependency in a package that has none. When `[install]` already parses to
+`INSTALL`, `sync.ts` leaves the file alone. Otherwise it replaces the
+section's text, from its header to the next header or the end, with the
+canonical lines, and appends the section when it is missing. A rewrite loses
+the comments inside the section, which in d2ass are several lines of
+rationale, so a rewrite happens only when the harness changed `INSTALL` or
+the consumer departed from it. The replacement is a line
 scan of a file a tool parses, so it is verified by parsing: the result's
 `[install]` must parse to `INSTALL`, and every other table must parse
 unchanged. If either fails, `sync.ts` writes nothing and throws.
@@ -347,10 +349,9 @@ guard's per-call cost.
    Bash command blocked and the turn gate off, and that state persists until
    step 3 is there to name it.
 1. Merge step 1. In each consumer, bump by hand once and run `sync.ts`. It
-   replaces hand-copied values with identical ones, so the only expected
-   diff is mellon losing the comment inside `[install]`. Any other change in
-   `.claude/settings.json` or `bunfig.toml` means the replacement rule
-   misread a real file.
+   replaces hand-copied values with identical ones, so no diff is expected.
+   Any change in `.claude/settings.json` or `bunfig.toml` means the
+   replacement rule misread a real file.
 2. Merge step 2. In each consumer, by hand: bump to a commit that contains
    `bun/bump.ts` — the pin it holds then has none, so this bump cannot be
    automatic — add `bumpTest`, add the workflow, then run it once through

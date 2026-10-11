@@ -11,7 +11,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { BOOTSTRAP, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
+import { HOOKS } from "./bootstrap.ts";
 
 /** Every package manager a consumer does not use. */
 const MANAGERS = ["npx", "npm", "pnpm", "yarn"];
@@ -38,8 +38,18 @@ const MANIFEST_WRITES = [
 	"bun pm trust",
 ];
 
+/**
+ * The `Bash(` entries `deny` and `ask` hold, whole and in order, and the file
+ * rule beside each. Exported with `INSTALL` so `sync-settings.ts` writes the
+ * values this check compares, not a second copy of them.
+ */
+export const DENY = [...MANAGERS, ...GH_WRITES].map((c) => `Bash(${c} *)`);
+export const ASK = MANIFEST_WRITES.map((c) => `Bash(${c} *)`);
+export const EDIT_DENY = "Edit(.npmrc)";
+export const EDIT_ASK = "Edit(bunfig.toml)";
+
 /** The `[install]` section the release-age and exact-version gates rest on. */
-const INSTALL = {
+export const INSTALL = {
 	exact: true,
 	minimumReleaseAge: 259200,
 	minimumReleaseAgeExcludes: [],
@@ -68,11 +78,7 @@ const blocking = (hook: Hook) =>
 	(hook.shell === undefined || hook.shell === "bash");
 type Settings = {
 	permissions?: { deny?: string[]; ask?: string[]; allow?: string[] };
-	hooks?: {
-		PreToolUse?: { matcher?: string; hooks?: Hook[] }[];
-		UserPromptSubmit?: { hooks?: Hook[] }[];
-		Stop?: { hooks?: Hook[] }[];
-	};
+	hooks?: Record<string, { matcher?: string; hooks?: Hook[] }[]>;
 	disableAllHooks?: unknown;
 };
 
@@ -143,63 +149,58 @@ export function settings(root: string): string[] {
 	const say = (problem: string) => problems.push(`${file}: ${problem}`);
 
 	const bash = (list: string[]) => list.filter((e) => e.startsWith("Bash("));
-	const expectDeny = [...MANAGERS, ...GH_WRITES].map((c) => `Bash(${c} *)`);
-	const expectAsk = MANIFEST_WRITES.map((c) => `Bash(${c} *)`);
-	if (JSON.stringify(bash(deny)) !== JSON.stringify(expectDeny))
-		say(`the Bash deny list is not ${expectDeny.join(", ")}`);
-	if (JSON.stringify(bash(ask)) !== JSON.stringify(expectAsk))
-		say(`the Bash ask list is not ${expectAsk.join(", ")}`);
+	if (JSON.stringify(bash(deny)) !== JSON.stringify(DENY))
+		say(`the Bash deny list is not ${DENY.join(", ")}`);
+	if (JSON.stringify(bash(ask)) !== JSON.stringify(ASK))
+		say(`the Bash ask list is not ${ASK.join(", ")}`);
 	problems.push(...bunForms(bash(ask)));
 
-	const hooks = (parsed.hooks?.PreToolUse ?? [])
-		.filter((entry) => entry.matcher === "Bash")
-		.flatMap((entry) => entry.hooks ?? []);
 	if (parsed.disableAllHooks)
 		say(
 			"disableAllHooks turns every hook off, the guard and turn gate included",
 		);
-	if (hooks.length !== 1) say(`${hooks.length} Bash hooks, not one`);
-	for (const hook of hooks) {
-		if (hook.type !== "command") say("the Bash hook is not a command");
-		// A permission pattern matches the command word literally, so
-		// `command gh` would walk around a hook narrowed by one.
-		if (hook.if !== undefined) say("the Bash hook is narrowed by `if`");
-		if (!blocking(hook))
-			say(
-				"the Bash hook cannot block: `async`, `asyncRewake`, `args` or a non-bash `shell`",
-			);
-		if (hook.command !== BOOTSTRAP)
-			say(
-				"the Bash hook is not the harness bootstrap — copy it from bootstrap.ts",
-			);
-	}
-
-	// Presence, not sole occupancy: a second prompt or stop hook cannot undo
-	// this one, since any `Stop` hook exiting 2 refuses. A match under another
-	// type, behind `if`, or in a form that cannot block does not count.
-	for (const [event, text] of [
-		["UserPromptSubmit", TURN_MARK],
-		["Stop", TURN_STOP],
-	] as const) {
-		const runs = (parsed.hooks?.[event] ?? [])
-			.flatMap((entry) => entry.hooks ?? [])
-			.some(
+	const fix = "run bun node_modules/harness/bun/sync.ts";
+	for (const { event, matcher, command, name } of HOOKS) {
+		const hooks = (parsed.hooks?.[event] ?? [])
+			.filter((entry) => matcher === undefined || entry.matcher === matcher)
+			.flatMap((entry) => entry.hooks ?? []);
+		if (matcher === undefined) {
+			// Presence, not sole occupancy: a second prompt or stop hook cannot
+			// undo this one, since any `Stop` hook exiting 2 refuses. A match
+			// under another type, behind `if`, or in a form that cannot block
+			// does not count.
+			const runs = hooks.some(
 				(h) =>
 					h.type === "command" &&
 					h.if === undefined &&
 					blocking(h) &&
-					h.command === text,
+					h.command === command,
 			);
-		if (!runs)
-			say(
-				`the ${event} hook is not the harness turn gate — copy it from bootstrap.ts`,
-			);
+			if (!runs) say(`the ${event} hook is not the ${name} — ${fix}`);
+			continue;
+		}
+		// Sole occupancy for a matcher's hook: the guard decides every command
+		// alone, and a second hook beside it is a second policy.
+		if (hooks.length !== 1) say(`${hooks.length} ${matcher} hooks, not one`);
+		for (const hook of hooks) {
+			if (hook.type !== "command") say(`the ${matcher} hook is not a command`);
+			// A permission pattern matches the command word literally, so
+			// `command gh` would walk around a hook narrowed by one.
+			if (hook.if !== undefined)
+				say(`the ${matcher} hook is narrowed by \`if\``);
+			if (!blocking(hook))
+				say(
+					`the ${matcher} hook cannot block: \`async\`, \`asyncRewake\`, \`args\` or a non-bash \`shell\``,
+				);
+			if (hook.command !== command)
+				say(`the ${matcher} hook is not the ${name} — ${fix}`);
+		}
 	}
 
-	if (!deny.includes("Edit(.npmrc)")) say("Edit(.npmrc) is not denied");
-	if (!ask.includes("Edit(bunfig.toml)")) say("Edit(bunfig.toml) is not asked");
-	if (deny.includes("Edit(bunfig.toml)"))
-		say("Edit(bunfig.toml) is denied, so its ask entry is unreachable");
+	if (!deny.includes(EDIT_DENY)) say(`${EDIT_DENY} is not denied`);
+	if (!ask.includes(EDIT_ASK)) say(`${EDIT_ASK} is not asked`);
+	if (deny.includes(EDIT_ASK))
+		say(`${EDIT_ASK} is denied, so its ask entry is unreachable`);
 	for (const entry of [...deny, ...ask, ...allow])
 		if (/^(Write|NotebookEdit|Glob)\(/.test(entry))
 			say(`${entry} never matches — a file rule is written Edit(...)`);

@@ -36,3 +36,26 @@ const turnGate = (half: "mark" | "stop") =>
 	`g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/turn-gate.ts"; if [ -f "$g" ]; then bun "$g" ${half}; fi`;
 export const TURN_MARK = turnGate("mark");
 export const TURN_STOP = turnGate("stop");
+
+/**
+ * Every hook the harness registers in a consumer's settings: what
+ * `settings.ts` asserts and `sync.ts` writes, so the two cannot disagree on
+ * which hooks there are. A hook the harness adds is one entry here. Every
+ * command names `node_modules/harness/`, which is how `sync.ts` tells the
+ * harness's hooks from a project's own.
+ */
+export const HOOKS: {
+	event: string;
+	matcher?: string;
+	command: string;
+	name: string;
+}[] = [
+	{
+		event: "PreToolUse",
+		matcher: "Bash",
+		command: BOOTSTRAP,
+		name: "harness bootstrap",
+	},
+	{ event: "UserPromptSubmit", command: TURN_MARK, name: "harness turn gate" },
+	{ event: "Stop", command: TURN_STOP, name: "harness turn gate" },
+];

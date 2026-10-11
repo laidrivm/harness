@@ -11,7 +11,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
 
 ## 1. Sync writes the policy
 
-- [ ] 1.1 Turn `bun/bootstrap.ts`'s three hook constants into one exported
+- [x] 1.1 Turn `bun/bootstrap.ts`'s three hook constants into one exported
       list of `{ event, matcher?, command }`, and make `bun/settings.ts`
       assert each entry with its present shape rules: the Bash hook alone and
       blocking, the others present in blocking form. Verify: the existing
@@ -19,7 +19,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       what they assert. If `notion-update-guard` has merged first, its hook
       becomes an entry of the list here; if this merges first, that change
       adds an entry rather than a constant.
-- [ ] 1.2 Export from `bun/settings.ts` the exact values it compares — the
+- [x] 1.2 Export from `bun/settings.ts` the exact values it compares — the
       `Bash(` deny and ask lists, the two `Edit` entries, `INSTALL` — and make
       its own comparisons read those exports. Verify: `bun test
       bun/settings.test.ts` passes with no assertion changed.
@@ -34,7 +34,9 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       policy check dictates — §*A harness change to its policy needs no
       manual edit*; Sync leaves the consumer's own settings as it found them
       — §*The project's own settings survive a sync*)
-- [ ] 1.4 Write the `bunfig.toml` tests in the same file: `[install]` is
+- [ ] 1.4 Write the `bunfig.toml` tests in the same file: an `[install]`
+      that already parses to `INSTALL` leaves the file byte-identical, its
+      comments included; one that differs is
       replaced from its header to the next header or the end; a missing
       section is appended; other tables parse equal afterwards; a layout
       whose rewrite would change another table, or leave `[install]` unequal
