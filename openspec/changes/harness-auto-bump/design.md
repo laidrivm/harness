@@ -59,7 +59,9 @@ two consumers and GitHub do today, each read on 2026-10-11:
 **Goals:**
 
 - A harness commit that passed its own tests reaches each consumer's `main`
-  within a day, with nobody acting, whenever the consumer's checks pass on it.
+  within a day, with nobody acting, whenever the consumer's checks pass on it,
+  for as long as the consumer's scheduled workflow is enabled. Restoring a
+  schedule GitHub has disabled is a manual step (Risks).
 - A bump that would fail the consumer's checks never lands, and nothing run
   to decide that can push.
 - A harness change to a hook text, a permission list or `[install]` lands
@@ -323,8 +325,10 @@ guard's per-call cost.
   been quiet for 60 days, and it then stays off when the harness resumes.
   If they do not, it stops 60 days after the consumer's last human activity.
   Either way it stops silently and stays off until someone runs
-  `gh workflow enable` or edits the cron line. README's workflow section
-  says so.
+  `gh workflow enable` or edits the cron line. No later harness commit can
+  restart it, so unattended adoption is promised only while the schedule is
+  enabled (Goals). README's workflow section states both that condition and
+  the command.
 - [A feature branch cut before a bump conflicts on `package.json`,
   `bun.lock`, `harness/` and `.claude/settings.json` when rebased] → at most
   one bump a day. The conflicts are resolved by taking `main`'s side and
