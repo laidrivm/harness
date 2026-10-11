@@ -104,6 +104,22 @@ describe("landing", () => {
 		expect(git(origin, "rev-parse", "main")).toBe(moved);
 	});
 
+	test.each(["install", "sync"])(
+		"a failing %s throws naming it, with no commit and no push",
+		(fail) => {
+			const { origin, dir } = consumer();
+			const before = git(origin, "rev-parse", "main");
+			const tree = reported(dir);
+			const run = (argv: string[]) =>
+				(fail === "install" ? argv[1] === "install" : argv[1]?.endsWith("sync.ts"))
+					? 1
+					: 0;
+			expect(() => land(dir, NEW, tree, { run })).toThrow(`at ${fail}`);
+			expect(git(dir, "rev-parse", "HEAD")).toBe(before);
+			expect(git(origin, "rev-parse", "main")).toBe(before);
+		},
+	);
+
 	test("a tree that is not a full object id is refused before any call", () => {
 		const { dir } = consumer();
 		const { run, calls } = runner();
