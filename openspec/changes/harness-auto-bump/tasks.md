@@ -104,7 +104,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       gate, then `git push origin HEAD:main`. Confirm `bump.ts`
       stays under 300 lines, splitting the landing half into its own module
       if not. Verify: 3.1 passes and `bun test` passes whole.
-- [ ] 3.3 Add to README's *Consuming* section the consumer's workflow —
+- [x] 3.3 Add to README's *Consuming* section the consumer's workflow —
       daily `schedule` plus `workflow_dispatch`, a concurrency group, a
       `verify` job with `contents: read` and `persist-credentials: false`, a
       `land` job with `contents: write` that `needs` it and runs only when it
