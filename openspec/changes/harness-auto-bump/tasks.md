@@ -23,7 +23,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       `Bash(` deny and ask lists, the two `Edit` entries, `INSTALL` — and make
       its own comparisons read those exports. Verify: `bun test
       bun/settings.test.ts` passes with no assertion changed.
-- [ ] 1.3 Write the settings tests in a new `bun/sync-settings.test.ts`
+- [x] 1.3 Write the settings tests in a new `bun/sync-settings.test.ts`
       first: a settings file carrying the previous version's hooks and lists
       comes out passing `settings.ts`'s check, with old hooks removed rather
       than duplicated; a project hook, the allow list, an `mcp__` ask, a
@@ -34,7 +34,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       policy check dictates — §*A harness change to its policy needs no
       manual edit*; Sync leaves the consumer's own settings as it found them
       — §*The project's own settings survive a sync*)
-- [ ] 1.4 Write the `bunfig.toml` tests in the same file: an `[install]`
+- [x] 1.4 Write the `bunfig.toml` tests in the same file: an `[install]`
       that already parses to `INSTALL` leaves the file byte-identical, its
       comments included; one that differs is
       replaced from its header to the next header or the end; a missing
@@ -44,7 +44,7 @@ stays under the 300-line cap, so new tests go in new files beside full ones.
       byte-identical. (Req: Sync leaves the consumer's own settings as it
       found them — §*The project's own settings survive a sync*, §*An install
       section the rewrite would damage is left untouched*)
-- [ ] 1.5 Implement the settings and `bunfig.toml` writes in a new
+- [x] 1.5 Implement the settings and `bunfig.toml` writes in a new
       `bun/sync-settings.ts`, called from `sync.ts`'s `import.meta.main`
       after the rules copy, verifying the TOML result by parsing before
       writing either file. Verify: 1.3 and 1.4 pass, and `bun test` passes
