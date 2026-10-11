@@ -15,6 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Consumers' bumps adopt a commit only once a check run of this name passed
+  # on it (CHECK in bun/bump.ts); bump-verify.test.ts fails on a rename.
   test:
     runs-on: ubuntu-latest
     steps:
