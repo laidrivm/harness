@@ -15,7 +15,10 @@ the facts the sweep relies on:
   rule's only wildcard also matches the bare command, and the space before it
   is a word boundary. `:*` is the same as a trailing ` *`, but only at the end
   of a pattern.
-- A bare tool name, and `Tool(*)`, match every use of that tool.
+- A bare tool name matches every use of that tool, and `Bash(*)` is the same
+  as `Bash`. That equivalence is documented for Bash and not for every tool:
+  `WebFetch(domain:*)`, for one, is not a bare `WebFetch`. So the sweep treats
+  only `Bash(*)` as universal.
 - Approving a compound command saves up to five rules, one per subcommand.
   That is where entries like `set -e` or a lone `echo` come from.
 
@@ -51,7 +54,9 @@ tracked allow list, inline in `settings()`.
   safe direction: it shows an entry that could have been hidden, and never
   hides one that should be shown.
 - Reading the tracked file's `additionalDirectories`, sandbox settings or
-  hooks. Only `permissions` decides whether an entry prompts.
+  hooks. A gap means that no tracked permission rule matches. A
+  `PreToolUse` hook can still allow or block the call, and the sweep does not
+  model that. The harness's own hooks only ever block.
 
 ## Decisions
 
