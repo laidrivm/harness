@@ -61,6 +61,9 @@ export function branchState(
 	// the one exception to blocking what cannot be decided, since refusing here
 	// would refuse every commit in every scratch repository.
 	if (base === 1) return "ok";
+	// An unborn branch has no commit a merge could have carried, and `git cherry`
+	// cannot name its `HEAD`, so it would otherwise read as unknown.
+	if (verify(dir, "HEAD") === 1) return "ok";
 	const cherry = git(dir, "cherry", BASE, "HEAD");
 	if (base !== 0 || cherry.code !== 0) return "unknown";
 	// At least one `-`, never "no `+`": a branch with no commits prints no mark

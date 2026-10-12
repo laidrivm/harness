@@ -33,6 +33,12 @@ describe("the marks git cherry prints", () => {
 		expect(state(upstream())).toBe("ok");
 	});
 
+	test("an unborn branch, which git cherry cannot read, is allowed", () => {
+		const dir = upstream();
+		git(dir, "switch", "--orphan", "fresh");
+		expect(state(dir, "fresh")).toBe("ok");
+	});
+
 	// spec: agent-permissions/a-commit-on-a-branch-whose-pull-request-merged
 	test("one commit already upstream is merged", () => {
 		expect(state(upstream({ merged: true }))).toBe("merged");
@@ -122,6 +128,13 @@ describe("how recently origin/main was fetched", () => {
 		);
 	});
 
+	test("a merged branch is merged however old the fetch", () => {
+		// A stale base can hide a merge, never invent one, so the verdict it
+		// does show stands.
+		const dir = upstream({ merged: true, fetchedAgo: 60 * MINUTE });
+		expect(state(dir)).toBe("merged");
+	});
+
 	// spec: agent-permissions/the-fetch-time-cannot-be-read
 	test("a repository with no FETCH_HEAD is unknown", () => {
 		expect(state(upstream({ fetchHead: null }))).toBe("unknown");
@@ -178,6 +191,19 @@ describe("the guard's refusal", () => {
 		expect(code).toBe(2);
 		expect(reason).toContain("git fetch origin");
 		expect(reason).not.toContain("Move the work");
+	});
+
+	// spec: agent-permissions/the-fetch-time-cannot-be-read
+	test("the unknown reason names fetching", () => {
+		const { code, reason } = run(commit, upstream({ fetchHead: null }));
+		expect(code).toBe(2);
+		expect(reason).toContain("git fetch origin");
+	});
+
+	test("a cd into a merged checkout from a clean one blocks", () => {
+		const merged = upstream({ merged: true });
+		const command = event(`cd ${merged} && git commit -m fix`);
+		expect(run(command, upstream({ own: true })).code).toBe(2);
 	});
 
 	test("a commit on a pushed branch with work of its own is allowed", () => {
