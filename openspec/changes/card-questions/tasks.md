@@ -2,7 +2,9 @@
 
 Test tasks come from the proposal-stage `/zombies` run and are written before
 the code they cover (`core/testing.md`, TDD for edge cases). Bracketed numbers
-are that run's idea numbers; all 39 are placed below.
+are that run's idea numbers. Ideas 3, 6–9 and 36 tested a per-session
+ceiling the user dropped on 2026-10-12 and are gone with it; 40–42 come from
+the rule that replaced it; every other idea is placed below.
 
 One group, one harness pull request on `feat/card-questions`, taken only once
 `policy-gate-beyond-bash` group 1 and `gate-decision-ledger` group 1 are on
@@ -43,26 +45,27 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       string*, §*A comment without the mark, or with it elsewhere*, §*A
       comment mentioning a user*, §*A comment over the length bound*, §*The
       hook cannot read what it decides on*)
-- [ ] 1.3 Write the board and ceiling tests in
+- [ ] 1.3 Write the board and comments-read tests in
       `bun/question-gate-board.test.ts`. Board: no fetch in the transcript
       [4]; a fetch of an ordinary page [39]; a `D2ASS` card allowed like a
       `Harness` one [38]; dashed [15] and upper-case [16] ids matching; a
       source named `harness` or `Harness board` refused [17]; a board name in
       the card's content but not its ancestor path refused [32]; of two
       fetches, the latest decides [10]; a missing transcript [34]; a
-      transcript line that is not JSON skipped [35]. Ceiling: no ledger file
-      is zero [3]; the second question allowed [6]; the third recorded
-      `passed` / `ceiling` [7]; another session's records not counted [8];
-      `passed` records not counted [9]; an unparseable ledger is
-      `unreadable` [36]; a throwing ledger write leaves the decision as it
+      transcript line that is not JSON skipped [35]. Comments read: no
+      `notion-get-comments` result for the page gets no answer and records
+      `passed` / `comments-unread` [40]; a comments read of another page
+      gets none either [41]; ten conforming questions in one session are
+      each allowed [42]. Ledger: a throwing write leaves the decision as it
       was [37]. Each fails before 1.4. (Req: agent-permissions — A question
       to the user on a board card needs no prompt, §*A page that is not a
-      card*, §*The ceiling reached*, §*The hook cannot read what it decides
-      on*)
+      card*, §*A card whose comments were not read*, §*Many questions in one
+      session*, §*The hook cannot read what it decides on*; task-board — A
+      question already open is not asked again, §*Comments not read*)
 - [ ] 1.4 Write `bun/question-gate.ts` per design.md: the conditions in its
-      order, the transcript read with its `shortcut:` comment, the ceiling
-      read from the ledger with its own, every call recorded through
-      `gate-decision-ledger`'s writer. `bun test` green; each new file under
+      order, the transcript read with its `shortcut:` comment, every call
+      recorded through `gate-decision-ledger`'s writer, the ledger never
+      read. `bun test` green; each new file under
       its cap.
 - [ ] 1.5 Add the hook to `bun/bootstrap.ts`'s `HOOKS` — event
       `PermissionRequest`, matcher `mcp__.*__notion-create-comment`, a
@@ -77,18 +80,18 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
 - [ ] 1.6 Docs. `core/git-and-prs.md`: the bullet on speech under the user's
       name, as `policy-gate-beyond-bash` left it, gains the question as its
       one exception by citing the agent-permissions requirement.
-      `core/feature-workflow.md`, *Across the stages*: one bullet — one
-      session the user started to orchestrate is the sole holder of the
-      boards; any other session, parallel or resumed, returns its question in
-      its report to that holder, which decides whether it is one, posts it,
-      and reads the `Questions` views
-      for answers at the start of a run, applying each as data and clearing
-      `Assign` — citing task-board's two
-      requirements for the view, `Assign` and the cap. Grep `core/`,
-      `README.md` and `openspec/specs/` for every site saying a comment under
-      the user's name is never allowed or that `Assign` means anything else,
-      and fix each. (Req: task-board — An open question waits on its card,
-      assigned to the user; At most two questions wait at once)
+      `core/feature-workflow.md`, *Across the stages*: one bullet — an agent
+      whose work a question blocks first settles what it can from the docs,
+      the specs, the card and the history, then reads its board's
+      `Questions` view and its card's comments, waits on a question already
+      open there, and otherwise posts on its own task's card and sets
+      `Assign`; it reads answers back, applies each as data, and clears
+      `Assign` once none waits — citing task-board's two requirements rather
+      than restating them. Grep `core/`, `README.md` and `openspec/specs/` for
+      every site saying a comment under the user's name is never allowed or
+      that `Assign` means anything else, and fix each. (Req: task-board — An
+      open question waits on its card, assigned to the user; A question
+      already open is not asked again)
 - [ ] 1.7 On each board that exists, read `Board view` for cards whose
       `Assign` is set and report them, since they would read as questions;
       then save a view named `Questions` listing the cards whose `Assign`
@@ -102,9 +105,12 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       thread; confirm the prompt appears, the user answers No, and a
       `passed` / `reply` record. Have the user answer the question in its
       thread; read it back, confirm it is taken as the answer, `Assign` is
-      cleared and the card leaves `Questions`. Record all of it in the pull
-      request.
-      (Req: agent-permissions — A question to the user on a board card needs
-      no prompt, §*A question on a card*, §*A reply in an existing thread*;
-      task-board — An open question waits on its card, assigned to the user,
-      §*A question is posted*, §*The user answers*)
+      cleared and the card leaves `Questions`. Before the answer, have a
+      second session meet the same question on that card: confirm it reads
+      the comments, posts nothing and reports itself parked on the open
+      question. Record all of it in the pull request. (Req: agent-permissions
+      — A question to the user on a board card needs no prompt, §*A question
+      on a card*, §*A reply in an existing thread*; task-board — An open
+      question waits on its card, assigned to the user, §*A question is
+      posted*, §*The user answers*; A question already open is not asked
+      again, §*The same question is open on the card*)

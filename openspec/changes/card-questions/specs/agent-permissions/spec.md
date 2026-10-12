@@ -19,8 +19,7 @@ user through an MCP tool prompts*.
   parent data source is one of the boards *There are three boards and a card
   goes to one of them* names, the text opening with the inline-code mark
   `harness-question`, mentioning no user, at most 1500 characters long, and
-  the hook has allowed, over this session's whole life, fewer calls than
-  task-board's *At most two questions wait at once* lets wait
+  the session's record shows it read that page's comments
 - **THEN** the hook answers `allow`, the comment is posted without a prompt,
   and the ledger records the call as allowed
 
@@ -70,18 +69,21 @@ user through an MCP tool prompts*.
   record shows no read of that page
 - **THEN** the hook gives no answer
 
-#### Scenario: The ceiling reached
+#### Scenario: A card whose comments were not read
 
-- **WHEN** the hook has already allowed, over this session's whole life and
-  answered questions included, as many calls as task-board's *At most two
-  questions wait at once* lets wait
-- **THEN** it gives no answer to the next, and the ledger records that call
-  as passed to the prompt
+- **WHEN** the session's record holds no read of that page's comments
+- **THEN** the hook gives no answer, and the ledger records the call as
+  passed to the prompt
+
+#### Scenario: Many questions in one session
+
+- **WHEN** a session posts its tenth conforming question
+- **THEN** the hook answers `allow` as it did for the first, because no count
+  of questions bounds it
 
 #### Scenario: The hook cannot read what it decides on
 
-- **WHEN** the event is not JSON, or the session's record or the ledger
-  cannot be read
+- **WHEN** the event is not JSON, or the session's record cannot be read
 - **THEN** the hook gives no answer, so a fault leaves the prompt standing
   rather than allowing the call
 

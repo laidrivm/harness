@@ -42,8 +42,8 @@ comment, as designed.
 ## Goals / Non-Goals
 
 **Goals:** one hook that widens the ask entry for exactly the act the
-proposal describes, failing closed; one place the cap, the view and the
-`Assign` meaning are fixed; prose that cites both.
+proposal describes, failing closed; one place the view, the `Assign`
+meaning and the rule against asking twice are fixed; prose that cites both.
 
 **Non-Goals:** a reader script for answers, a notifier, and any change to
 what `policy-gate-beyond-bash` asks for.
@@ -105,6 +105,12 @@ register records which cards a session holds.
   `Harness` would pass. Accepted: the workspace is the user's, and the other
   conditions still hold there.
 
+The same record answers whether the session read the card's comments before
+asking: it must hold a `notion-get-comments` result for that page. That is
+the mechanised half of *A question already open is not asked again* — the
+hook cannot judge whether two questions are the same, but it can refuse to
+let a session ask on a card whose open questions it never looked at.
+
 ### The envelope: mark, one question, no mention, a length bound
 
 The mark is the inline-code token `harness-question` as the comment's first
@@ -120,43 +126,36 @@ report. Everything else about the question's form — a recommended answer,
 rounds of independent questions — is the idea card *Ask proposal-stage
 questions with a recommended answer, in rounds of independent ones*.
 
-### Recorded and counted through the gate ledger
+### Recorded through the gate ledger
 
 Each call the hook sees is one `gate-decision-ledger` record: gate
 `question-gate`, decision `allowed` or `passed`, and as the rule the first
 condition that failed — `reply`, `anchored`, `rich-text`, `unmarked`,
-`mention`, `length`, `not-a-card`, `ceiling`, `unreadable` — or `question`.
-Those names are the stable ids the ledger's rule field holds, one per
-condition, and the session is the `session_id` of the `PermissionRequest`
-event, as the ledger records it for every gate. The per-session ceiling counts
-this session's `allowed` records over its whole life: an answered question
-still counts. An absent
-ledger file is zero records; one that exists and cannot be parsed is
-`unreadable`.
+`mention`, `length`, `not-a-card`, `comments-unread`, `unreadable` — or
+`question`. Those names are the stable ids the ledger's rule field holds, one
+per condition, and the session is the `session_id` of the `PermissionRequest`
+event, as the ledger records it for every gate. The hook writes the ledger and
+never reads it.
 
-Shortcut: `claude -r` keeps a session's id, so a resumed session that has
-asked its two falls back to the prompt for a third even after both were
-answered. Upgrade when the orchestrator's register can say which questions
-are answered.
+### No cap, and no question asked twice — the user's choice
 
-- *Alternative: a counter of the hook's own in the temp directory.* A second
-  store of gate decisions, which the orchestrator card's *one store, not two*
-  rules out.
+The card first asked for at most two open questions, from the observation
+that more than two parallel interviews are more than a person holds, and the
+first draft of this design added a per-session ceiling on the hook as a
+backstop. The user dropped both on 2026-10-12: a ceiling that is hit still
+leaves a pile of questions to clean up or lift, and an agent stops on its own
+— its context runs out, it has nothing left to ask, or the loop guard ends
+it. In their place the user asked for one rule: before asking, an agent reads
+the `Questions` view of its board and the comments of its card, and a
+question already open there is waited on, not asked again — so the pile holds
+each question once.
 
-### The cap is two, counted on the boards
-
-Two, from the card's own source: more than two parallel interviews are more
-than a person holds. The session holding the board counts the `Questions`
-views before posting — view mode, which spends no SQL quota. The hook's
-ceiling cites the same requirement, so a runaway session stops at the number
-the boards allow even when its count of the views is wrong.
-
-The count is not a reservation: two sessions counting at once could each see
-one place free. It holds because one session holds the boards at a time — the
-one the user started to orchestrate — so posting is serialised by
-construction. Coordinating several holders is the card *Run several changes
-in parallel*'s; until then a second holder is outside this design, and the
-per-session ceiling bounds what it can add.
+- *Alternative: the cap of two, counted through the `Questions` views.* It
+  parked work behind a count, and needed one session holding the boards so
+  that two sessions counting at once could not both post.
+- *Alternative: a per-session ceiling counted from the ledger.* It never
+  retired an answered question, so a resumed session stopped asking after its
+  second for good.
 
 ### `Assign` means a question waits, and nothing else
 
@@ -164,13 +163,14 @@ The card *Run several changes in parallel* proposed `Assign` as a worker's
 lock. One property with two meanings makes the `Questions` view list locked
 cards as questions, so the lock goes to that card's own design.
 
-### Only the board's holder asks
+### The agent whose work is blocked asks
 
-A worker returns its question in its report; the session holding the board
-decides whether it is a question at all — settled by the docs, the specs, the
-card or the history, or reversible enough to decide and flag in the pull
-request — and posts it. The hook cannot tell the two sessions apart, so this
-stands as procedure in `core/feature-workflow.md`, citing task-board.
+With no count to serialise, no session needs to hold the boards: the agent
+the question blocks first settles what it can from the docs, the specs, the
+card and the history, then reads the open questions, and posts what is left
+on its own task's card. This stands as procedure in
+`core/feature-workflow.md`, citing task-board, except for the comments read,
+which the hook checks.
 
 ## Risks / Trade-offs
 
@@ -182,12 +182,19 @@ stands as procedure in `core/feature-workflow.md`, citing task-board.
   task 1.1 covers, and a session in `dontAsk` that cannot ask reports the
   refusal as any other.
 - [Text the agent read persuades it to post a marked comment] → Bounded to a
-  card on the user's board, 1500 characters, no mention, the per-session
-  ceiling, and a reader who is the user.
+  card on the user's board, 1500 characters, no mention, and a reader who is
+  the user.
+- [Nothing bounds how many questions wait, and a runaway session can post
+  many] → The user's choice: an agent stops on its own, and the loop guard
+  ends one that does not. The ledger counts what was posted.
+- [The same question, worded differently, is asked twice] → The hook only
+  proves the card's comments were read; judging sameness is the agent's, and
+  a duplicate costs the user one extra answer.
+- [The comments were read before another agent posted the same question] →
+  Accepted: the window runs from the read to the post, and the duplicate
+  costs as above.
 - [Until the bot-integration card named in *Decisions* lands, every question
   stands on the boards as written by the user] → The mark is the only sign it is the agent's.
-- [A failed ledger write undercounts the ceiling] → The boards' cap is the
-  bound that holds; the ceiling is its backstop.
 - [A `PermissionRequest` hook or a mod outside the project can also answer
   the prompt] → Recorded by `policy-gate-beyond-bash`; unchanged here.
 - [Cost] → One `bun` launch per `notion-create-comment` prompt; none for any
