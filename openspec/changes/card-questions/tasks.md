@@ -94,7 +94,8 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       already open is not asked again)
 - [ ] 1.7 On each board that exists, read `Board view` for cards whose
       `Assign` is set and report them, since they would read as questions;
-      then save a view named `Questions` listing the cards whose `Assign`
+      the user clears each one that holds no open question before the view
+      is relied on. Then save a view named `Questions` listing the cards whose `Assign`
       holds the user. Re-fetch each board's views to confirm. (Req:
       task-board — An open question waits on its card, assigned to the user,
       §*The `Questions` view is missing*)

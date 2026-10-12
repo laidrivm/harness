@@ -190,6 +190,11 @@ which the hook checks.
 - [The same question, worded differently, is asked twice] → The hook only
   proves the card's comments were read; judging sameness is the agent's, and
   a duplicate costs the user one extra answer.
+- [The hook checks the card's comments were read, not the `Questions` view]
+  → Accepted: the view read stays the rule's prose. The hook knows the page it
+  posts on, not each board's view id, and a question open on another card
+  belongs to another task, so a skipped view read costs at most one duplicate
+  answer, as above.
 - [The comments were read before another agent posted the same question] →
   Accepted: the window runs from the read to the post, and the duplicate
   costs as above.
