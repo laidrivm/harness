@@ -43,8 +43,10 @@ What Claude Code exposes was read from its hooks reference
   agentic loop before the next model call". Its input lists the calls with
   their responses, but has no failure flag. The page does not say how it is
   ordered against `PostToolUseFailure`.
-- A `Stop` hook can only keep a turn going (exit 2, or `decision: "block"`).
-  It has no way to end one.
+- A `Stop` hook runs only once the turn is already ending. `stage-goal`'s
+  probe showed `continue: false` from one ending a goal-driven `-p` run
+  (`openspec/changes/stage-goal/design.md`). It cannot cut short a turn that
+  is still calling tools, and a loop is exactly such a turn.
 - A command hook's default timeout is 600 s on tool events. A timed-out hook
   is cancelled and decides nothing, so a stalled `PreToolUse` hook does not
   block. Exit codes other than 0 and 2 are non-blocking errors.
@@ -165,7 +167,8 @@ The guard stops the repeat, not the agent. An agent that keeps calling the
 barred command is refused each time, at the cost of a model turn and no tool
 run. Ending such a run is the launcher's job. A launcher can see the
 `loop-guard:` refusals in the session's output, or count the guard's records
-in the ledger.
+in the ledger. It can also cap the run with `--max-turns`, which `stage-goal`'s
+probe saw end a `-p` run with `error_max_turns`.
 
 Turning that into a question for the user is the questions card's work. This
 change fixes only the `loop-guard:` prefix that card can match on.
