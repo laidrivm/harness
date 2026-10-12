@@ -24,9 +24,10 @@ capture it exactly like a bug, so future runs don't repeat the old style:
      rule only when the reason is a settled project convention the bot
      cannot know; a one-off keeps its reason in the report and becomes no
      rule. A rule here *or in the docs this file indexes* is read back by the
-     next review, since `.coderabbit.yaml` points `code_guidelines` at both
-     `**/CLAUDE.md` and `docs/*.md` — so being read back never decides which
-     of the two a rule goes in, and the always-on budget is free to.
+     next review wherever the repository's `.coderabbit.yaml` names, under
+     `code_guidelines`, the paths this file and those docs sit at — so being
+     read back never decides which of the two a rule goes in, and the
+     always-on budget is free to.
    - If it's a one-off (typo, misread requirement, wrong file) → say
      "not capturing this" and why. Not every bug becomes a rule.
 

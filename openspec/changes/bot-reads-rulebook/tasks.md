@@ -52,7 +52,7 @@ Closes `local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach`,
       `**/CLAUDE.md` is CodeRabbit's default rather than an omission. Verify
       that the suite passes over the repository as it stands (13) and that
       `bun bun/check-yaml.ts` parses the file
-- [ ] 1.6 Reword the `core/rules.md` §*The loop* sentence that names
+- [x] 1.6 Reword the `core/rules.md` §*The loop* sentence that names
       `**/CLAUDE.md` and `docs/*.md`. The new wording says a rule is read
       back wherever the repository's `.coderabbit.yaml` names the paths the
       rulebook and its docs sit at, and it names no glob (design.md §*The
