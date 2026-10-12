@@ -17,7 +17,7 @@ carried by the pull request that bumps its pin past group 1.
 
 ## 1. The key, the command and the prose
 
-- [ ] 1.1 Write the command tests in a new `bun/board-state-cli.test.ts`. Each
+- [x] 1.1 Write the command tests in a new `bun/board-state-cli.test.ts`. Each
       case runs `bun/board-state.ts` as a process against a fabricated
       repository holding a `package.json`, with an environment built from
       what the case needs and started in a directory with no `.env`. Every
