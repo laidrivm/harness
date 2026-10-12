@@ -25,9 +25,9 @@ What Claude Code exposes was read from its hooks reference
   stderr to Claude, since the tool has already failed.
 - `continue: false` with `stopReason` "stops processing entirely" and takes
   precedence over every event-specific decision. The reason stays in the
-  conversation, so Claude sees it if the session is resumed. The page lists
-  the events that ignore `continue`, and `PostToolUseFailure` is not among
-  them.
+  conversation, so Claude sees it if the session is resumed. The page names,
+  event by event, those that ignore `continue`, and `PostToolUseFailure` is
+  not one of them. It gives no consolidated list.
 - A command hook's default timeout is 600 s on tool events. A timed-out hook
   is cancelled and decides nothing. Exit codes other than 0 and 2 are
   non-blocking errors.
