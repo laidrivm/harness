@@ -31,10 +31,13 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
 - [ ] 1.4 Pin the harness: add `devDependencies.harness` at the newest `main`
       commit whose `test` run passed, run `bun install` (it asks), confirm
       `bun.lock`'s workspace block names `harness` once, and replace the
-      `hooks` block of `.claude/settings.json` with the `HOOKS` texts. If
-      `notion-update-guard` has merged, its registration takes its `HOOKS`
-      form too. Verify: 1.2's tests pass; `bun test` green; `bun.lock` and
-      `package.json` staged together.
+      `hooks` block of `.claude/settings.json` with the `HOOKS` texts. That
+      includes the Notion update guard: pull request 52 registered it as
+      `bun "$CLAUDE_PROJECT_DIR/bun/notion-guard.ts"`, and this task replaces
+      that with its `HOOKS` entry, `NOTION_GUARD` under `NOTION_MATCHER`. The
+      pinned commit must hold `bun/notion-guard.ts`, or that hook's `[ -f ]`
+      lets every call through until the next bump. Verify: 1.2's tests pass;
+      `bun test` green; `bun.lock` and `package.json` staged together.
 - [ ] 1.5 In `bun/bootstrap.ts`, make `NOTICE` read
       `dependencies?.harness ?? devDependencies?.harness`, and write the new
       text into the `SessionStart` entry of `.claude/settings.json` in the
@@ -57,6 +60,7 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
       `main` — still refused, exit 2 [4]; run the registered `SessionStart`
       text with the install at another commit than the pin — it prints the
       line naming both; install the branch's harness into a
-      scratch consumer through a git URL — one package, no nested
+      scratch consumer as `github:laidrivm/harness#<the pushed branch
+      commit>`, the form both consumers use — one package, no nested
       `node_modules/harness` (§*A gate edited in the working tree does not
       hold the session*, §*A consumer installs one copy of the harness*).
