@@ -1,5 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	readFileSync,
+	realpathSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
 	cleanup,
@@ -38,7 +43,9 @@ function run(half: "mark" | "stop", event: unknown, turn: Turn) {
 			HOME: turn.tmp,
 			XDG_STATE_HOME: turn.state,
 		},
-		stdin: Buffer.from(JSON.stringify(event)),
+		stdin: Buffer.from(
+			typeof event === "string" ? event : JSON.stringify(event),
+		),
 		stderr: "pipe",
 	});
 	return { code: call.exitCode, reason: call.stderr.toString() };
@@ -75,8 +82,17 @@ describe("a turn that completed a group", () => {
 				gate: "turn-gate",
 				decision: "refused",
 				rule: "pre-pr-sequence",
+				project: realpathSync(t.dir),
+				session: "s1",
 			}),
 		]);
+	});
+
+	test("a refused turn ended with a named BLOCKED records a pass", () => {
+		const t = turn(DONE);
+		stop(t, SILENT);
+		stop(t, "BLOCKED — the user must choose the id list.");
+		expect(decisions(t.state)).toEqual(["refused", "passed"]);
 	});
 
 	test("a turn ending with gate lines records a pass", () => {
@@ -114,6 +130,12 @@ describe("a turn the ledger says nothing about", () => {
 		const t = { dir: repo({ [TASKS]: OPEN }), tmp: store(), state: store() };
 		commit(t.dir, { [TASKS]: DONE });
 		stop(t, SILENT);
+		expect(existsSync(ledger(t.state))).toBe(false);
+	});
+
+	test("an event that is not JSON leaves the file absent", () => {
+		const t = turn(DONE);
+		run("stop", "not json", t);
 		expect(existsSync(ledger(t.state))).toBe(false);
 	});
 
