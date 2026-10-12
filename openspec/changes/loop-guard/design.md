@@ -14,7 +14,11 @@ What Claude Code exposes was read from its hooks reference
 (`code.claude.com/docs/en/hooks`, which `docs.claude.com` redirects to) on
 2026-10-12, with Claude Code 2.1.296 installed. It says:
 
-- `PostToolUseFailure` fires once for each failed tool call. Its input carries
+- `PostToolUseFailure` fires once for each tool call that "started executing"
+  and then failed. It does not fire for a call rejected before execution: an
+  unknown tool, input failing schema or tool-specific validation (returned as
+  a `tool_use_error`), or a permission denial. A call a `PreToolUse` hook
+  blocks never starts executing either. Its input carries
   the common fields (`session_id`, `cwd`, and `agent_id` inside a sub-agent)
   and also `tool_name`, `tool_input`, `tool_use_id`, `error` and an optional
   `is_interrupt`. The docs advise keying on `tool_name`, `is_interrupt` and
@@ -72,11 +76,12 @@ by `#` and each run of whitespace by one space. The count file maps these
 hashes to counts, so nothing in it reads back as a command or an error.
 
 - *Alternative: tool and error only.* This is what the card's example asked
-  for: `update_content` returning "No matches found" several times. In
-  *Measurements* it would have tripped on three calls, and at least two of
-  them were not loops: an agent editing four different files it had not
-  read yet, and three edits to files a linter had changed. A different input
-  is a change of approach, even when it fails the same way.
+  for: `update_content` returning "No matches found" several times. A
+  different input is a change of approach, even when it fails the same way.
+  The transcripts back this only weakly. The three keys it would have tripped
+  on in *Measurements* include two that were not loops: an agent editing four
+  different files it had not read yet, and three edits to files a linter had
+  changed. But all three are rejections the hook never receives.
 - *Alternative: the error's first line only,* as the docs suggest for
   matching. For Bash that line is `Exit code 1`, which merges every failing
   command into one.
@@ -142,7 +147,9 @@ functions here move into a mod unchanged, if the mod-plugin card is taken up.
 The retained transcripts were scanned on 2026-10-12, in all of
 `~/.claude/projects/`: the harness, d2ass, mellon and two others. That is 53
 files, the oldest from 2026-09-11, holding 130 failed calls once permission
-refusals and user interruptions are excluded.
+refusals and user interruptions are excluded. The scan read every error
+result, validation rejections included, so it counts a superset of what the
+hook receives.
 
 - Keyed by tool, input and normalised error, as decided: no transcript holds
   any call that failed the same way twice. The guard would never have warned.
@@ -150,8 +157,9 @@ refusals and user interruptions are excluded.
   on three keys. The first is four Edits to files not yet read, each on a
   different file. The second is three Edits to files modified since they were
   read. The third is three commits the command guard refused on `main`.
-  Whether a `PreToolUse` refusal reaches `PostToolUseFailure` at all is not
-  documented.
+  None of the three would reach the hook. The Edits are `tool_use_error`
+  validation rejections, and the commits were blocked by a `PreToolUse` hook,
+  so none of them started executing (*Context*).
 
 So the measurement shows no false positive for the chosen key in a month of
 ordinary work. It also shows no loop caught. The evidence that one is needed
