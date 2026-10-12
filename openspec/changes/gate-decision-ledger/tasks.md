@@ -57,7 +57,7 @@ built from what the case needs, in a directory that holds no `.env`.
 
 ## 2. The turn gate's decisions, and the wrap-up line
 
-- [ ] 2.1 Write the turn gate's cases in `bun/gate-ledger.test.ts`, using
+- [x] 2.1 Write the turn gate's cases in `bun/gate-ledger.test.ts`, using
       `bun/turn-gate.fixture.ts`:
       - a refusal records `turn-gate`, `refused`, `pre-pr-sequence` [4];
       - a refused turn continued to an end with gate lines records a refusal,
