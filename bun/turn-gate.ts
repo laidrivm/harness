@@ -34,7 +34,7 @@
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { ledgerFile } from "./gate-ledger.ts";
+import { ran } from "./gate-ledger.ts";
 
 type Event = {
 	session_id?: unknown;
@@ -178,36 +178,6 @@ function completed(cwd: string, at: string, tip: string): string[] {
 	});
 }
 
-/**
- * Whether the ledger holds the pre-PR runner's record of `commit` made in this
- * checkout: its project is the top level or a path under it, so a run from a
- * subdirectory counts and one in another clone, measured against that clone's
- * base refs, does not. A ledger it cannot read, or a torn line, holds none.
- */
-function ran(cwd: string, commit: string): boolean {
-	const top = git(cwd, "rev-parse", "--show-toplevel");
-	if (!top) return false;
-	let text = "";
-	try {
-		text = readFileSync(ledgerFile(), "utf8");
-	} catch {
-		return false;
-	}
-	return text.split("\n").some((line) => {
-		try {
-			const { gate, project, commit: read } = JSON.parse(line) ?? {};
-			return (
-				gate === "pre-pr" &&
-				read === commit &&
-				typeof project === "string" &&
-				(project === top || project.startsWith(`${top}/`))
-			);
-		} catch {
-			return false;
-		}
-	});
-}
-
 /** The runner's path as a command run from `cwd` reaches it. */
 function runner(cwd: string): string {
 	const path = join(import.meta.dir, "pre-pr.ts");
@@ -239,7 +209,7 @@ export function decide(event: Event, store: string): string | undefined {
 	const end = tip(cwd, at);
 	const done = end ? completed(cwd, at, end) : [];
 	if (done.length === 0 || !end) return;
-	if (gated && ran(cwd, end)) return;
+	if (gated && ran(end, git(cwd, "rev-parse", "--show-toplevel"))) return;
 	writeFileSync(file, `${at} refused`);
 	if (gated)
 		return (

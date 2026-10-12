@@ -1,7 +1,8 @@
 /**
  * The gate ledger: one JSON line per decision a harness gate records, so that
  * whether a gate earns its place is decided on counts. The wrap-up reads it
- * with `jq`, and the turn gate reads back only the pre-PR runner's records.
+ * with `jq`; `ran` below reads back only the pre-PR runner's records, for the
+ * turn gate.
  *
  * It lives in the user's state directory, outside every working tree, so no
  * consumer has an ignore entry to add and nothing in it can be staged. A
@@ -11,7 +12,7 @@
  * ponytail: the file is never rotated. A record is about 130 bytes and a
  * refusal is rare; rotate it once it passes a few megabytes.
  */
-import { appendFileSync, mkdirSync, realpathSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
@@ -36,6 +37,36 @@ export function ledgerFile(): string {
 	const xdg = process.env.XDG_STATE_HOME ?? "";
 	const state = isAbsolute(xdg) ? xdg : join(homedir(), ".local", "state");
 	return join(state, "harness", "gates.jsonl");
+}
+
+/**
+ * Whether the ledger holds the pre-PR runner's record of `commit` made in the
+ * checkout whose top level is `top`: its project is `top` or a path under it,
+ * so a run from a subdirectory counts and one in another clone, measured
+ * against that clone's base refs, does not. A ledger that cannot be read, or a
+ * torn line, holds none.
+ */
+export function ran(commit: string, top: string | undefined): boolean {
+	if (!top) return false;
+	let text = "";
+	try {
+		text = readFileSync(ledgerFile(), "utf8");
+	} catch {
+		return false;
+	}
+	return text.split("\n").some((line) => {
+		try {
+			const { gate, project, commit: read } = JSON.parse(line) ?? {};
+			return (
+				gate === "pre-pr" &&
+				read === commit &&
+				typeof project === "string" &&
+				(project === top || project.startsWith(`${top}/`))
+			);
+		} catch {
+			return false;
+		}
+	});
 }
 
 /**
