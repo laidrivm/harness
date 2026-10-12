@@ -33,13 +33,16 @@ export const OTHER = "1234567890abcdef1234567890abcdef";
 export const MARK = "`harness-question`";
 export const QUESTION = `${MARK} Ship the hook as one group? 1 — yes (recommended), 2 — no.`;
 
-/** A connector fetch of `page` whose ancestor path names `board`. */
-export const fetched = (page: string, board: string, content = "") => ({
+/**
+ * A connector fetch of `page` whose ancestor path names `board` as its data
+ * source, or, with none, a page with no ancestor path, as a top-level one.
+ */
+export const fetched = (page: string, board?: string, content = "") => ({
 	name: "mcp__claude_ai_Notion__notion-fetch",
 	input: { id: `https://app.notion.com/p/${page}` },
 	result: JSON.stringify({
 		metadata: { type: "page" },
-		text: `<page url="https://app.notion.com/p/${page}">\n<ancestor-path>\n<parent-data-source url="collection://x" name="${board}"/>\n</ancestor-path>\n<properties>{}</properties>\n<content>\n${content}\n</content>\n</page>`,
+		text: `<page url="https://app.notion.com/p/${page}">\n${board === undefined ? "" : `<ancestor-path>\n<parent-data-source url="collection://x" name="${board}"/>\n</ancestor-path>`}\n<properties>{}</properties>\n<content>\n${content}\n</content>\n</page>`,
 	}),
 });
 

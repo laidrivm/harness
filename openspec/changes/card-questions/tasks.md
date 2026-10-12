@@ -62,7 +62,7 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       card*, §*A card whose comments were not read*, §*Many questions in one
       session*, §*The hook cannot read what it decides on*; task-board — A
       question already open is not asked again, §*Comments not read*)
-- [ ] 1.4 Write `bun/question-gate.ts` per design.md: the conditions in its
+- [x] 1.4 Write `bun/question-gate.ts` per design.md: the conditions in its
       order, the transcript read with its `shortcut:` comment, every call
       recorded through `gate-decision-ledger`'s writer, the ledger never
       read. `bun test` green; each new file under

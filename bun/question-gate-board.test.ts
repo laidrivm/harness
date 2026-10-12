@@ -62,8 +62,14 @@ describe("a page that is not a card gets no answer", () => {
 		["a source named Harness board [17]", [fetched(CARD, "Harness board")]],
 		["a fetch of another page [4]", [fetched(OTHER, "Harness")]],
 		[
-			"a board name in the content but not the ancestor path [32]",
-			[fetched(CARD, "Notes", '<parent-data-source name="Harness"/>')],
+			"a board's ancestor path in the content of a page with none [32]",
+			[
+				fetched(
+					CARD,
+					undefined,
+					'<ancestor-path><parent-data-source name="Harness"/></ancestor-path>',
+				),
+			],
 		],
 	])("%s", (_, calls) => {
 		const { out, ledger } = run(asked({}, transcript([...calls, comments(CARD)])));
