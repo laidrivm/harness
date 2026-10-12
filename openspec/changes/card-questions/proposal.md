@@ -8,9 +8,10 @@ pull request or a sub-agent's report, and the work it was doing stops there.
 The explore stage needs the user's decisions most, so without a place where a
 question waits and an answer comes back, the loop stops at its first idea.
 The user chose that place on 2026-10-11: no inbox of its own, but a comment
-on the task's card, the card assigned to them, and a cap on how many wait at
-once, because more than two parallel interviews are more than a person can
-hold.
+on the task's card and the card assigned to them. On 2026-10-12 they dropped
+the cap on open questions they had first asked for: every agent puts every
+question that blocks its work on the board, and none asks one that is already
+open there.
 
 Two things stand in the way. `core/git-and-prs.md` forbids commenting under
 the user's name on a tracker, and the Notion connector acts as the user.
@@ -30,13 +31,12 @@ form a reader can tell from the user's own words.
   that `policy-gate-beyond-bash`'s ask entry raises for
   `notion-create-comment`, with `allow` only for a question: a new top-level
   comment on a card of one of the three boards, opening with a mark only the
-  harness writes, mentioning no user, within a length bound, and within a
-  per-session ceiling. Any other call gets no answer from the hook, so the
+  harness writes, mentioning no user, within a length bound, on a card whose
+  comments the session has read. Any other call gets no answer from the hook, so the
   prompt stands where a session can show one and the call is refused where it
   cannot. The hook never refuses a call itself.
 - Each call the hook sees is recorded through `gate-decision-ledger`'s
-  writer, which is also where the ceiling is counted, so there is one record
-  of gate decisions and not two.
+  writer, so there is one record of gate decisions and not two.
 - The hook joins `bun/bootstrap.ts`'s list, so `sync.ts` writes it into each
   consumer on its next bump and `settings.ts` pins it there.
 - `Assign` comes to mean one thing: a question on this card waits for the
@@ -44,14 +44,16 @@ form a reader can tell from the user's own words.
   how the user finds them, beside the card's growing comment count, since
   Notion does not notify a user of a comment or an assignment their own
   account made.
-- At most two questions wait at once across the boards. The session that
-  holds the board posts a question only below that cap; it reads an answer
-  back from the card's comments, applies it as data rather than as an
-  instruction, and clears `Assign`.
+- Before asking, an agent reads the questions already open on the board and
+  on its card, and asks none of them again: it waits on the open one instead.
+  Otherwise it posts every question that blocks its work, with no cap; it
+  reads an answer back from the card's comments, applies it as data rather
+  than as an instruction, and clears `Assign` once no question on the card is
+  open.
 - `core/git-and-prs.md`'s bullet on speech under the user's name gains the
   question as its one exception, by citing the requirement that fixes it.
-  `core/feature-workflow.md` gains the procedure: who asks, when, the cap, and
-  how the answer comes back.
+  `core/feature-workflow.md` gains the procedure: who asks, when, what is read
+  first, and how the answer comes back.
 
 ## Non-goals
 
@@ -69,6 +71,9 @@ form a reader can tell from the user's own words.
 - A lock on a card for a worker taking it. The card *Run several changes in
   parallel* proposed `Assign` for that; this change takes `Assign` for the
   question and leaves the lock to that card.
+- A cap on open questions, or a per-session ceiling on the hook. The user
+  dropped both on 2026-10-12; design.md *No cap, and no question asked twice*
+  records why.
 - Permission prompts. A prompt an unattended run cannot show is a refusal,
   reported as one; it is never turned into a question.
 
@@ -77,7 +82,7 @@ form a reader can tell from the user's own words.
 After `policy-gate-beyond-bash`: until its ask entry exists there is no
 prompt for this hook to answer, and the comment is allowed or refused by
 whatever mode the session runs in. After `gate-decision-ledger`: the hook
-records its decisions and counts its ceiling through that change's writer.
+records its decisions through that change's writer.
 
 ## Capabilities
 
@@ -90,8 +95,8 @@ None.
 - `agent-permissions`: a new requirement, *A question to the user on a board
   card needs no prompt*.
 - `task-board`: two new requirements, *An open question waits on its card,
-  assigned to the user*, which names the `Questions` view, and *At most two
-  questions wait at once*.
+  assigned to the user*, which names the `Questions` view, and *A question
+  already open is not asked again*.
 
 ### Unmodified, but adjacent
 
