@@ -43,13 +43,30 @@ function methods(words: string[]): { flag: string; method: string }[] {
 const operands = (rest: string[]) =>
 	rest.filter((word) => !word.startsWith("-"));
 
+/**
+ * A flag that owns the word after it while gh looks for a subcommand: a long
+ * one without `=`, or a lone short letter. `-Ro/r` carries its value, and gh
+ * 2.97 resolves `gh pr -Ro/r comment` and `gh pr -R o/r comment` alike to
+ * `pr comment`; a flag `pr` does not know fails before anything runs.
+ */
+const OWNS_NEXT = /^(--[^=]+|-[^-])$/;
+
+/** The word gh resolves as the subcommand of `words[at]`. */
+function subcommandOf(words: string[], at: number): string | undefined {
+	for (let next = at + 1; next < words.length; next++) {
+		const word = words[next] ?? "";
+		if (!word.startsWith("-")) return word;
+		if (OWNS_NEXT.test(word)) next++;
+	}
+	return undefined;
+}
+
 /** Why `gh` with these words after it publishes text, or `undefined`. */
 export function ghPublish(rest: string[]): string | undefined {
-	// Adjacent anywhere, not the first two words: a global flag's value sits in
-	// front of them in `gh --repo a/b pr comment`.
-	const plain = operands(rest);
+	// Anywhere, not the first two words: a global flag's value sits in front of
+	// them in `gh --repo a/b pr comment`.
 	const write = GH_WRITES.find(([a, b]) =>
-		plain.some((word, at) => word === a && plain[at + 1] === b),
+		rest.some((word, at) => word === a && subcommandOf(rest, at) === b),
 	);
 	if (!write) return undefined;
 	return `command-guard: \`gh ${write.join(" ")}\` publishes text under the user's name. Report what you would have written and let them send it.`;

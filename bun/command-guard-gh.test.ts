@@ -55,6 +55,14 @@ describe("gh commands that publish on the user's behalf", () => {
 		).toBe(2);
 	});
 
+	test.each([
+		"gh pr --repo o/r comment 37 --body hi",
+		"gh pr -R o/r review 37 --approve",
+		"gh pr -Ro/r comment 37 --body hi",
+	])("a repo flag between the subcommand's words blocks: %s", (line) => {
+		expect(run(event(line), anywhere()).code).toBe(2);
+	});
+
 	test("opening a pull request does not block", () => {
 		expect(run(event("gh pr create --title x --body y"), anywhere()).code).toBe(
 			0,
