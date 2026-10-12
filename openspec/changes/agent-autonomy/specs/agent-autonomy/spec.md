@@ -116,9 +116,12 @@ generated OpenSpec commands. It covers a step that waits on the user, asks the
 user, or hands an act to the user, and that an unattended session reaches on
 its way through explore, propose, apply, the pre-PR sequence, opening the pull
 request or archive. Each such step SHALL carry its class inline, at the step,
-in the form `(unattended: <class>`. Each marker SHALL name a class that
-`core/autonomy.md` defines, and a check SHALL fail on any marker that names a
-class it does not define.
+in the form `(unattended: <class> — <what instead>)`. The text after the dash
+SHALL say what an unattended session does at that particular step, and SHALL
+NOT be empty. Each marker SHALL name a class that `core/autonomy.md` defines,
+and a check SHALL fail on any marker that names a class it does not define.
+The check reads the class and nothing more. Whether the text after the dash
+fits its step is for review to judge.
 
 A step with no marker SHALL read as `card`, whether it sits in the harness's
 own prose, in a vendored skill, or in an OpenSpec command. A step in a
