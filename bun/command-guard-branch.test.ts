@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { branchState } from "./branch-state.ts";
-import { cleanup, git, upstream } from "./command-guard.fixture.ts";
+import { cleanup, fabricate, git, upstream } from "./command-guard.fixture.ts";
 
 /**
  * What the guard refuses by the state of the branch a commit lands on: one
@@ -47,5 +47,40 @@ describe("the marks git cherry prints", () => {
 		git(dir, "push", "origin", "main");
 		git(dir, "switch", "feat/x");
 		expect(state(dir)).toBe("ok");
+	});
+});
+
+describe("which branches the check reaches", () => {
+	// spec: agent-permissions/the-branch-was-never-pushed
+	test("an unpushed branch is never refused for freshness", () => {
+		const dir = upstream({ own: true, pushed: false, fetchedAgo: 60 * MINUTE });
+		expect(state(dir)).toBe("ok");
+	});
+
+	test("an unpushed branch still meets the merged verdict", () => {
+		expect(state(upstream({ merged: true, pushed: false }))).toBe("merged");
+	});
+
+	test("a branch name carrying slashes resolves its full remote ref", () => {
+		// Stale on purpose: only a branch read as pushed is refused for it, so a
+		// name cut at a slash would be read as never pushed and allowed.
+		const branch = "feat/deep/x";
+		const dir = upstream({ branch, fetchedAgo: 60 * MINUTE });
+		expect(state(dir, branch)).toBe("stale");
+	});
+
+	// spec: agent-permissions/the-repository-has-no-base-ref
+	test.each([
+		["no origin remote", () => fabricate("feat/x")],
+		[
+			"an origin with no main on it",
+			() => {
+				const dir = fabricate("feat/x");
+				git(dir, "remote", "add", "origin", fabricate());
+				return dir;
+			},
+		],
+	])("a repository with %s is allowed", (_, arrange) => {
+		expect(state(arrange())).toBe("ok");
 	});
 });

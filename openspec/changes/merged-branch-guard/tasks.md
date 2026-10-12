@@ -26,7 +26,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       one `-` mark is merged [3]; `-` and `+` together is still merged [4];
       all `+` is not merged [5]. (Req: agent-permissions — A commit on a
       merged branch is refused)
-- [ ] 1.3 Write the reachability tests: a branch with no ref under
+- [x] 1.3 Write the reachability tests: a branch with no ref under
       `refs/remotes/origin/` is never refused for freshness, while the merged
       verdict still runs on it [15]; a branch name carrying a
       slash resolves its full remote ref [13]; a repository with no `origin`
