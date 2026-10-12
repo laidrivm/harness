@@ -58,9 +58,9 @@ session to do in place of the step.
 | `feature-workflow.md` — "Then remind the user to `/clear`" | `agent` | none needed: a session started on `/opsx:apply` is already fresh, and any other session names the apply command in its report | the runner starts each stage in a new session (card *Run the board loop*) |
 | `feature-workflow.md` — "or an explicit user decision to skip it" | `card` | hand the skip on; write the test meanwhile if it can be written | skipping a finding is the user's to decide |
 | `feature-workflow.md` — "present an architecture delta before the user reviews code" | `agent` | put it in the pull request's body | the user reads it there, and nothing waits on it |
-| `feature-workflow.md` — "Wait for the user's go-ahead before opening it" | `agent` | open it, ready, once every gate line reads `PASS`, or reads `OPEN` only over a question handed on; list that question in the body | the unattended run of 2026-10-12 worked this way, on the user's choice to "decide, and flag in the PR"; the merge stays theirs, so nothing lands unseen |
+| `feature-workflow.md` — "Wait for the user's go-ahead before opening it" | `agent` | open it, ready, once every gate line reads `PASS`, or reads `OPEN` only over a question handed on. For each Major or Critical proposed for dismissal, the body gives its severity, its file and line, what it says, and why dismissal is proposed | the user settled this on harness#63: the pull request may open over a proposed dismissal, as long as the body lists each one. The merge stays theirs, so nothing lands unseen |
 | `feature-workflow.md` — "prompt the user to run `/opsx:archive`" | `agent` | run it once `/opsx:verify` leaves nothing unsettled | archive opens a pull request of its own, which the user merges |
-| `review-toolkit.md` — "Dismissing a 🟠 Major or 🔴 Critical … is put to the user" | `card` | hand it on with what the bot missed; the gate line stays `OPEN` | *Dismissing a Major or above is the user's call* (`local-review-loop`) |
+| `review-toolkit.md` — "Dismissing a 🟠 Major or 🔴 Critical … is put to the user" | `card` | hand it on with what the bot missed, list it in the pull request's body as the go-ahead row says, and leave the gate line at `OPEN` | *Dismissing a Major or above is the user's call* (`local-review-loop`) |
 | `review-toolkit.md` — "if Major or above survives the third, report it and stop" | `card` | hand on the decision to push; do not push | that scenario leaves the push to the user |
 | `rules.md` — "propose a one-line rule … add it after the user confirms" (and its skills-repo branch) | `card` | hand the wording on | rules are the user's to accept |
 | `rules.md` — "ask the user to approve a suppression" | `card` | hand it on | a suppression is a decision, and the answer can be acted on |
@@ -131,10 +131,13 @@ takes it in a session of their own.
 
 ### The pull request opens over a dismissal handed on
 
-Unattended, a pending Major dismissal does not hold back the pull request.
-The body lists the dismissal for the user, and the gate line keeps reading
-`OPEN`. The unattended run of 2026-10-12 worked this way, under the user's
-choice to "decide, and flag in the PR". It also follows card-questions' rule that the board holder may
+Unattended, a pending Major or Critical dismissal does not hold back the pull
+request. The body lists each such finding with its severity, its file and
+line, what the finding says, and the reason dismissal is proposed. The gate
+line keeps reading `OPEN`. The user settled this on harness#63: opening is
+allowed only on the condition that every proposed dismissal is listed in the
+body that way. A bare count, or a finding listed without its reason, does not
+meet it. It also follows card-questions' rule that the board holder may
 decide a reversible question and flag it in the pull request: the merge is
 the user's, so a dismissal that is wrong is still read before it lands.
 

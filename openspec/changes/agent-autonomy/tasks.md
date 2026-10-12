@@ -3,7 +3,8 @@
 The test tasks come from the proposal-stage `/zombies` run and are written
 before the doc and the markers they cover, following `core/testing.md` (TDD
 for edge cases). The numbers in brackets are that run's idea numbers, and all
-14 of them are placed below.
+14 of them are placed below. Item [15] was added after the user settled the
+rule on harness#63.
 
 The change is one group and one harness pull request, on
 `feat/agent-autonomy`. The pull request is taken only once the card-questions
@@ -31,21 +32,28 @@ change (harness#56) is on `main`.
       - `core/rules.md` links `autonomy.md`, and the link resolves [12].
       - `agnet` fails, naming the file [13].
       - The real tree passes [14].
+      - `core/autonomy.md`'s `` ### `agent` `` section requires the four
+        fields of a proposed dismissal in the pull request's body. The fields
+        are the severity, the file and line, what the finding says, and why
+        dismissal is proposed. Compare with whitespace normalised [15].
 
       The cases build their fixture trees in a temporary directory, apart
-      from [12] and [14], which read the repository. Each case fails before
-      1.2.
+      from [12], [14] and [15], which read the repository. Each case fails
+      before 1.2.
       (Req: agent-autonomy — A step on the loop's critical path names its
       class where it stands, §*A marker names an unknown class*, §*A marker
       that wraps across a line*; Three classes say what an unattended session
-      does at a step that names the user)
+      does at a step that names the user, §*The pull request opens over a
+      proposed dismissal*)
 - [ ] 1.2 Write `core/autonomy.md`. It opens with a level-1 heading, and says:
       - When a session is unattended, and that an attended one follows each
         step as written.
       - The three classes as `` ### `agent` ``, `` ### `card` `` and
         `` ### `user` ``, each saying what an unattended session does.
         `card` cites the card-questions change's *A worker meets a question*
-        and restates none of it.
+        and restates none of it. `agent` says that a pull request opened over
+        a proposed Major or Critical dismissal lists each such finding in its
+        body, with the four fields of [15].
       - That a step with no marker is `card`.
       - That a prompt naming a stage is the request the stage's command waits
         for.
