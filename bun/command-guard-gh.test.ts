@@ -135,6 +135,16 @@ describe("gh api, by the method it sends", () => {
 		expect(JSON.parse(ledger).rule).toBe("gh-api-write");
 	});
 
+	test("api as a flag's value is not the api subcommand", () => {
+		expect(
+			run(event("gh --repo api issue list -X POST"), anywhere()).code,
+		).toBe(0);
+	});
+
+	test("api behind a flag and its value still blocks", () => {
+		expect(run(event("gh -R o/r api /x -X POST"), anywhere()).code).toBe(2);
+	});
+
 	test("a method flag with no method after it blocks", () => {
 		expect(run(event("gh api /repos/o/r -X"), anywhere()).code).toBe(2);
 	});

@@ -39,10 +39,6 @@ function methods(words: string[]): { flag: string; method: string }[] {
 	return found;
 }
 
-/** The words of a `gh` invocation that are not flags. */
-const operands = (rest: string[]) =>
-	rest.filter((word) => !word.startsWith("-"));
-
 /**
  * A flag that owns the word after it while gh looks for a subcommand: a long
  * one without `=`, or a lone short letter. `-Ro/r` carries its value, and gh
@@ -74,7 +70,9 @@ export function ghPublish(rest: string[]): string | undefined {
 
 /** Why these words make a `gh api` call that writes, or `undefined`. */
 export function ghApiWrite(rest: string[]): string | undefined {
-	if (!operands(rest).includes("api")) return undefined;
+	// The top-level command, resolved as gh does: `api` as a flag's value in
+	// `gh --repo api issue list` is no `api` call.
+	if (subcommandOf(rest, -1) !== "api") return undefined;
 	// Any flag naming a write, not the last: gh honours the last, and blocking
 	// on any one errs the way the guard resolves every uncertainty.
 	const sent = methods(rest).find(
