@@ -2,7 +2,7 @@
 name: coderabbit-local
 description: Run CodeRabbit locally with the `coderabbit` CLI against the changes this branch made since it diverged from its base — no PR needed — then triage the findings the same way the `coderabbit` skill triages PR comments. Use when the user wants a CodeRabbit review before pushing or opening a PR, asks to "run coderabbit", "coderabbit review", or wants the bot's take on the current branch.
 argument-hint: "[base branch] [--all]"
-allowed-tools: "Bash(coderabbit doctor:*), Bash(coderabbit review:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git status:*), Read, Edit, Grep, Glob"
+allowed-tools: "Bash(coderabbit doctor:*), Bash(coderabbit review:*), Bash(git diff:*), Bash(git log:*), Bash(git ls-files:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git status:*), Read, Edit, Grep, Glob"
 ---
 
 # CodeRabbit (local CLI)
@@ -32,9 +32,19 @@ Then confirm there is something to review: `git diff --stat <base>...HEAD` for w
 
 ### 2. Review
 
+First collect the guideline files the PR bot reads. When the repository has a `.coderabbit.yaml`, read its `knowledge_base.code_guidelines.filePatterns` from the parsed YAML, not from a line that merely resembles the key. Expand each pattern with
+
 ```bash
-coderabbit review --base <base> --agent --config .coderabbit.yaml CLAUDE.md
+git ls-files ':(glob)<pattern>'
 ```
+
+The `:(glob)` magic matters. A plain pathspec's `*` crosses `/`, as the bot's does not: in the harness, `core/*.md` listed 34 files plainly, against the 9 the bot reads. Then review:
+
+```bash
+coderabbit review --base <base> --agent --config .coderabbit.yaml CLAUDE.md <each file matched>
+```
+
+Pass each file once. A pattern that also matches `CLAUDE.md` adds nothing, because it is already named. When there is no `.coderabbit.yaml`, there are no patterns to expand, and the call is `--config CLAUDE.md` alone.
 
 This reviews the branch's tracked changes (committed, staged and unstaged) against `<base>`. It commonly takes several minutes — give the call a generous timeout and don't rerun it because it seems slow. Add `--include-untracked` when new files aren't staged yet, and `--light` only if the user asks for a faster, shallower pass.
 
