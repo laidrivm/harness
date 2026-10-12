@@ -56,6 +56,20 @@ describe("a repository that names no board", () => {
 		expect(out).toBe("");
 	});
 
+	test("a repository with no package.json fails naming the file", () => {
+		const dir = fabricate(complete("candidacy-gate"));
+		Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
+		const call = Bun.spawnSync(["bun", script], {
+			cwd: dir,
+			env: { PATH: process.env.PATH },
+		});
+		expect(call.exitCode).not.toBe(0);
+		expect(call.stderr.toString()).toContain(
+			join(realpathSync(dir), "package.json"),
+		);
+		expect(call.stdout.toString()).toBe("");
+	});
+
 	test("a package.json that is not JSON fails naming the file [20]", () => {
 		const { code, out, err, file } = run("{ harness: ");
 		expect(code).not.toBe(0);
