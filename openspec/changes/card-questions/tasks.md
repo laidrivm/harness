@@ -77,7 +77,7 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       `PermissionRequest` key [24]. `bun test` green. (Req: agent-permissions
       — A question to the user on a board card needs no prompt, §*The hook in
       a consumer*)
-- [ ] 1.6 Docs. `core/git-and-prs.md`: the bullet on speech under the user's
+- [x] 1.6 Docs. `core/git-and-prs.md`: the bullet on speech under the user's
       name, as `policy-gate-beyond-bash` left it, gains the question as its
       one exception by citing the agent-permissions requirement.
       `core/feature-workflow.md`, *Across the stages*: one bullet — an agent
