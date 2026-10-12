@@ -33,7 +33,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       remote allows the commit [2]. (Req: agent-permissions — A commit on a
       merged branch is refused, §*The branch was never pushed*, §*The
       repository has no base ref*)
-- [ ] 1.4 Write the freshness tests: exactly 30 minutes old is accepted and
+- [x] 1.4 Write the freshness tests: exactly 30 minutes old is accepted and
       older is refused [6, 7]; a future timestamp must not compute a negative
       age [8]; an unreadable fetch time blocks [11]. (Req: agent-permissions —
       A commit on a merged branch is refused, §*The base ref is stale*,

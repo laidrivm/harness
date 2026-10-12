@@ -1,5 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { branchState } from "./branch-state.ts";
+import { statSync } from "node:fs";
+import { join } from "node:path";
+import { branchState, FETCH_MAX_AGE } from "./branch-state.ts";
 import { cleanup, fabricate, git, upstream } from "./command-guard.fixture.ts";
 
 /**
@@ -82,5 +84,39 @@ describe("which branches the check reaches", () => {
 		],
 	])("a repository with %s is allowed", (_, arrange) => {
 		expect(state(arrange())).toBe("ok");
+	});
+});
+
+describe("how recently origin/main was fetched", () => {
+	/** When the fixture's fetch wrote `FETCH_HEAD`, read back from the file. */
+	const fetchedAt = (dir: string) =>
+		statSync(join(dir, ".git", "FETCH_HEAD")).mtimeMs;
+
+	// spec: agent-permissions/the-base-ref-is-stale
+	test("a fetch exactly FETCH_MAX_AGE old is accepted", () => {
+		const dir = upstream();
+		expect(state(dir, "feat/x", fetchedAt(dir) + FETCH_MAX_AGE)).toBe("ok");
+	});
+
+	// spec: agent-permissions/the-base-ref-is-stale
+	test("a fetch older than FETCH_MAX_AGE is refused", () => {
+		const dir = upstream();
+		expect(state(dir, "feat/x", fetchedAt(dir) + FETCH_MAX_AGE + 1)).toBe(
+			"stale",
+		);
+	});
+
+	test("a fetch time far in the future is refused, not read as a recent one", () => {
+		// A negative age would sit under any bound for as long as the clock
+		// stayed behind the file.
+		const dir = upstream();
+		expect(state(dir, "feat/x", fetchedAt(dir) - FETCH_MAX_AGE - 1)).toBe(
+			"stale",
+		);
+	});
+
+	// spec: agent-permissions/the-fetch-time-cannot-be-read
+	test("a repository with no FETCH_HEAD is unknown", () => {
+		expect(state(upstream({ fetchHead: null }))).toBe("unknown");
 	});
 });
