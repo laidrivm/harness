@@ -12,10 +12,10 @@ instead of spending the plan's limit.
 
 The guard SHALL count a tool call that failed after it started executing, and
 only against earlier failures in the same session and the same sub-agent. Two
-failures SHALL count as one call repeated only when the tool, its input and
-its error text are equal once runs of digits and of whitespace are normalised. A call's free-text description
-SHALL NOT be part of its input. A call the user or the runtime interrupted
-SHALL NOT be counted.
+failures SHALL count as one call repeated only when the tool and its input are
+equal, and their error text is equal once runs of digits and of whitespace are
+normalised. A call's free-text description SHALL NOT be part of its input. A
+call the user or the runtime interrupted SHALL NOT be counted.
 
 #### Scenario: The same command fails the same way three times
 

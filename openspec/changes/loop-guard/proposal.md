@@ -25,10 +25,10 @@ this change records into.
 ## What Changes
 
 - A new hook on `PostToolUseFailure` counts failed calls per session and per
-  sub-agent. Two failures are one repeat only when the tool, its input and the
-  error text are all the same once digits and whitespace are normalised. A
-  different input or a different error is a change of approach, and starts its
-  own count.
+  sub-agent. Two failures are one repeat only when the tool and its input are
+  the same, and the error text is the same once digits and whitespace are
+  normalised. A different input or a different error is a change of approach,
+  and starts its own count.
 - On the third identical failure the hook returns a warning to the agent beside
   the error: change approach, or end the turn with `BLOCKED` naming what only
   the user can settle. On the fourth it ends the session with a reason that
