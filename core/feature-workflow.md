@@ -162,9 +162,9 @@ for them is already here.
   `update_content` quoting the bare name then matches nothing, since the page
   now holds the link.
 
-  Set a card's status and pointer with `update_properties`, and re-fetch the
-  card before reporting it moved. `update_content` drops the `properties` it
-  is handed without an error, so a card reported `done` stayed `proposed`.
+  Re-fetch a card after writing its status or pointer, before reporting it
+  moved — no hook can read the board, and a card once reported `done` stayed
+  `proposed`.
 
   Anchor an `update_content` edit on plain text. An `old_str` holding a
   `<mention-page>` tag matches nothing. A bullet added to the end of a section
