@@ -17,8 +17,9 @@ stage. None of them launches one:
 - `board-state-per-project` names the board a tree decides, as `harness.board`.
 - `stage-goal` gives each stage its done-check, `bun/goal-check.ts`, and its
   launch form. It leaves "choosing and launching the next stage" to this card.
-- `loop-guard` and `stage-goal`'s ceiling end a session that goes round in
-  circles. Both leave wall-clock time to "whatever launches the session".
+- `loop-guard` refuses a call that keeps failing the same way, and
+  `stage-goal`'s ceiling ends a session that goes round in circles. Both leave
+  wall-clock time to "whatever launches the session".
 - `agent-autonomy` says a session is unattended only when its starting prompt
   says so.
 
@@ -73,8 +74,8 @@ These are the next slices, each a card or a follow-up step of this one:
 - **Repeating the pass.** The loop runs one pass and stops. Running pass after
   pass is the next slice. That slice also covers the reasons a loop waits or
   stops: no work left, every card blocked or waiting on a question, the plan's
-  rate limit close (`rateLimits`), and a session that `loop-guard` or the
-  ceiling ended.
+  rate limit close (`rateLimits`), a session the ceiling ended, and one whose
+  calls `loop-guard` keeps refusing.
 - **Pull requests and CI on each pass.** A change whose pull request is open
   is skipped here, not worked. Ranking it first once a review arrives or CI
   finishes, and launching `/coderabbit` or a fix, is a later slice.
@@ -107,8 +108,8 @@ directory:
   prompt;
 - `card-questions` (harness#56) gives a blocked session somewhere to leave its
   question;
-- `loop-guard` (harness#66) ends a session that repeats a failing call, and
-  leaves wall-clock time to this runner.
+- `loop-guard` (harness#66) refuses a call that keeps failing the same way,
+  and leaves ending such a session, and wall-clock time, to this runner.
 
 Task 1.0 adds each of these to `after:` once its directory lands on `main`.
 
