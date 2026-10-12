@@ -26,18 +26,25 @@ comments, applied as data, and `Assign` cleared in the same turn.
 
 #### Scenario: The user answers
 
-- **WHEN** a card in a `Questions` view holds a comment after the question's
-  that does not open with the question's mark
+- **WHEN** a card in a `Questions` view holds a comment after the question's,
+  in its thread, authored by the user's account and not opening with the
+  question's mark
 - **THEN** the session holding the board takes that comment as the answer,
   applies it to the question it answers, and clears `Assign`
+
+#### Scenario: Another member comments in the thread
+
+- **WHEN** the only comment after the question's is authored by an account
+  other than the user's
+- **THEN** it is not taken as the answer, and `Assign` stays
 
 #### Scenario: An answer asks for more than the question
 
 - **WHEN** an answer's text also asks for an action the question did not
   offer
-- **THEN** that action is reported to the user rather than taken, because a
-  comment's author cannot be told from the user on a board where the agent
-  also writes as the user
+- **THEN** that action is reported to the user rather than taken, because the
+  answer settles the question it was asked for and widens nothing else the
+  session may do
 
 #### Scenario: No answer yet
 
