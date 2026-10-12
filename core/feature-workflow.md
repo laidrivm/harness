@@ -22,9 +22,10 @@ completes, name the next step and the exact command.
   review each artefact before the next is written, use `/opsx:new` and then
   `/opsx:continue` once per artefact (`/opsx:ff` writes the rest in one go).
 - During proposal, ask the questions a spec review would ask: unclear
-  requirements, consequences of design choices, what happens on failure.
-  For any endpoint, fix the exact response shape in design.md per the
-  API design rules. Cheap to fix here, expensive after apply.
+  requirements, consequences of design choices, what happens on failure
+  (unattended: card — hand each question on, and settle none of them
+  yourself). For any endpoint, fix the exact response shape in design.md per
+  the API design rules. Cheap to fix here, expensive after apply.
 - Before the proposal is finalised: run `/zombies "<feature description>"`
   against the proposal text. A proposal whose edge cases are not listed in the
   tasks checklist as tests-first items is not ready to apply.
@@ -49,7 +50,8 @@ completes, name the next step and the exact command.
 - When the project adopts a new long-lived domain (a UI framework, a
   database, a deployment platform) and no vendored skill covers it,
   suggest vendoring one: name the candidate skill and its source, and let
-  the user vendor it in the skills repo — never install a skill yourself.
+  the user vendor it in the skills repo — never install a skill yourself
+  (unattended: card — hand the suggestion on, and install nothing).
   Vet the source like a dependency (official org or recognised maintainer,
   active repo, read the SKILL.md): a skill is executable instructions, so
   an untrusted skill is a prompt-injection vector. Suggest once per
@@ -67,7 +69,10 @@ completes, name the next step and the exact command.
   so an apply that skipped this stalls at its first commit. Then remind the
   user to `/clear` —
   implementation should start from a clean context, reading only the spec
-  artefacts. Stages 2 and 3 repeat per group, in order, until the last one
+  artefacts (unattended: agent — a session started on `/opsx:apply` is
+  already clean; any other session names the apply command in its report
+  for the runner). Stages 2 and 3 repeat per group, in order, until the last
+  one
   merges.
 - Never edit spec files by hand and don't rewrite the proposal mid-build.
   Small course corrections go into the rules in `CLAUDE.md` (fix &
@@ -82,24 +87,31 @@ completes, name the next step and the exact command.
 - Run the pre-PR sequence the Review toolkit sets out, in its order, showing
   each report and acting on it in the same turn.
 - Every new or `[partial]` finding from that run becomes a test before
-  archive — or an explicit user decision to skip it. Deferred items from
+  archive — or an explicit user decision to skip it (unattended: card — hand
+  the skip on, and write the test meanwhile where it can be written).
+  Deferred items from
   the proposal-stage list are settled here too. Scaffolding tests from the
   apply run are deleted here as well (see the Testing rules).
 - If the change introduced or removed a primitive — a new module boundary,
   abstraction, DB table, or external integration — present an
   **architecture delta** before the user reviews code: a short diagram or
   list of what exists now vs. before, highlighting the additions. The user
-  reviews the system first, the code second.
+  reviews the system first, the code second (unattended: agent — put the
+  delta in the pull request's body).
 
 - When all Stage 3 gates pass: push the branch and offer to open the PR
   (`gh pr create`, ready for review — see Git & PRs) with the description per
-  Git & PRs. Wait for the user's go-ahead before opening it.
+  Git & PRs. Wait for the user's go-ahead before opening it (unattended:
+  agent — open it on the gate lines and with the body `autonomy.md`'s
+  `agent` sets out).
 
 ## Stage 4 — Archive
 
 - After the change's last step is merged and verified, run `/opsx:verify`
   against the change's artefacts and settle what it reports, then prompt the
-  user to run `/opsx:archive` so the change lands in the project history.
+  user to run `/opsx:archive` so the change lands in the project history
+  (unattended: agent — run it yourself once `/opsx:verify` leaves nothing
+  unsettled).
   Work is not finished until it's archived.
 - Single-source rule: agent rules and contract rules live in `CLAUDE.md`
   and the docs it indexes; architecture defaults live in the `context:`

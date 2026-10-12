@@ -16,7 +16,8 @@ capture it exactly like a bug, so future runs don't repeat the old style:
 2. Capture the lesson, in the same turn, before treating the task as done:
    - If it's about how code should be written here → propose a one-line rule
      for the matching sublist of "Rules" below — Code, Process or Safety —
-     and add it after the user confirms.
+     and add it after the user confirms (unattended: card — hand the wording
+     on, as for the skills-repo wording below).
    - If it's about how reviews should be run → say the fix belongs in the
      corresponding skill in the shared skills repo, and propose the exact
      wording (do not edit the skill from this project).
@@ -113,7 +114,8 @@ Rules about how work is carried out here. They do not age with the code.
   gitignored file is present for the author and absent in a clone, and a glob
   matches a path string whether or not the file exists.
 - Never silence a linter or type-checker finding by disabling its rule in
-  configuration; fix the code or ask the user to approve a suppression.
+  configuration; fix the code or ask the user to approve a suppression
+  (unattended: card — hand the suppression on).
 - All repo artefacts — docs, plans, specs, code comments, commit messages —
   are written in British English by default (`behaviour`, `afterwards`);
   identifiers and third-party API names keep whatever spelling they ship with.
@@ -127,7 +129,8 @@ Rules about how work is carried out here. They do not age with the code.
   lines in it twice.
 - Ask the user to run a command that prompts for a password in a terminal of
   their own, never through the `!` prefix — the prompt there reads no input,
-  and the command fails as if the password were wrong.
+  and the command fails as if the password were wrong (unattended: user —
+  report `BLOCKED`, naming the command).
 - Before the first `/opsx:` command of a task, find or create its card on the
   board `feature-workflow.md` names and move it to that stage's status — no
   `/opsx:` skill points there, so the card is otherwise missed.
@@ -169,7 +172,8 @@ not age with the code.
 - Push from a repository's own checkout, never a `git worktree` — a hook there
   hands the tests it runs an absolute `GIT_DIR`.
 - Delete a branch, local or remote, only when the user asks for it — never
-  folded into a command run for another purpose.
+  folded into a command run for another purpose (unattended: user — delete
+  nothing, and name the branch in the report).
 - Never run an act the command guard or a permission entry refuses or asks
   about — a commit, a push, a `gh` write, a package command, an edit to a gated
   file — through an interpreter (`python3 -c`, `bun -e`, `node -e`) or a
