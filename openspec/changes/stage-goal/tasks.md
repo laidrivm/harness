@@ -12,9 +12,6 @@ merge (proposal.md, *Impact*, *Ordering*).
 
 ## 1. The stage check, its record, and the launch form
 
-- [ ] 1.0 Add `pre-pr-run-record` to `after:` in this change's
-      `.openspec.yaml`, now that its directory is on `main`. Verify:
-      `bun test bun/board-state-hygiene.test.ts` is green.
 - [ ] 1.1 Write the check's tests in `bun/goal-check.test.ts`. Each one spawns
       `bun/goal-check.ts` in a scratch repository with a change, a ledger and
       a stub `gh`:
