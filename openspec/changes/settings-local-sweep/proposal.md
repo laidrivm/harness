@@ -10,9 +10,9 @@ a prompt nobody answers, which is a silent refusal; the tracked
 file is the only record of what it lacked.
 
 Measured on 2026-10-12, by entry and without quoting the files: the harness's
-own checkout holds 21 allow entries, d2ass's 44 and mellon's 16. Across the
+own checkout holds 24 allow entries, d2ass's 44 and mellon's 16. Across the
 three, 12 restate a grant the same repository's tracked file already makes, one
-re-grants a command the tracked file gates behind a prompt, 7 name a path only
+re-grants a command the tracked file gates behind a prompt, 10 name a path only
 one machine has, and 61 are neither — each a command the tracked policy
 should take or a one-off that belongs nowhere. The curation that
 `agent-permissions` §*The tracked allow list holds only what a clone can use*
@@ -37,9 +37,12 @@ the harness's own clean-up.
   check there would pass on an absent input; and §*The permission policy is
   pinned by a test* already forbids that check reading the file.
 - The README's *Consuming* list gains the command, beside `check.ts`.
-- The harness's own clean-up: the entries its documented workflow needs move
-  into its tracked `.claude/settings.json`, and the pull request names each
-  promotion and the largest dropped group, as the curation criterion requires.
+- The harness's own clean-up: what an unattended session following the
+  documented workflow needs moves into its tracked `.claude/settings.json`,
+  including the general form of a command whose local grants name one
+  machine's path. The pull request names each promotion and the largest
+  dropped group, as the curation criterion requires, and gives a reason for
+  each arbitrary-code runner, whether promoted or refused.
   Pruning the local file is the user's, on their machine.
 
 ## Non-goals

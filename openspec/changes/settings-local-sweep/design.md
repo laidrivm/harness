@@ -19,6 +19,12 @@ the facts the sweep relies on:
 - Approving a compound command saves up to five rules, one per subcommand.
   That is where entries like `set -e` or a lone `echo` come from.
 
+The live `agent-permissions` §*Every manifest-mutating invocation prompts*
+still says the opposite of the first point: that a broader local allow
+suppresses an ask. `bun-version-sites` replaces that requirement with the
+documented precedence. The first scenario here depends on the corrected
+reading, so this change follows that one.
+
 `bun/settings.ts` already decides what a machine-local allow entry is. It
 looks for an absolute path token in any entry, and checks whether a `Read` or
 `Edit` path resolves outside the repository. It applies that test to the
@@ -117,22 +123,54 @@ local file, it prints one line saying there is nothing to sweep and exits 0.
 
 ### The harness's own clean-up
 
-On 2026-10-12 the harness's checkout held 21 local allow entries: 5 decided by
-the tracked file, 4 machine-local and 12 gaps. Three of the gaps are commands
-the documented workflow runs, and they are promoted:
+The criterion for promotion is what an unattended session needs to follow the
+documented workflow, because there a prompt is a refusal. The evidence is the
+local file and the session transcripts of the unattended run on the night of
+2026-10-12.
+
+Measured again after that run, the harness's checkout held 24 local allow
+entries: 5 decided by the tracked file, 7 machine-local and 12 gaps. Three of
+the seven are new `mkdir -p` grants, each naming a scratch directory. A
+machine-local entry like that is one instance of a general command the
+workflow needs.
+
+Promoted to the tracked file:
 
 - `Bash(bun info *)` and `Bash(bun audit *)`: the `/warm` skill's own
   procedure reads registry metadata and advisories with them.
-- `Bash(git rm *)`: removing a tracked file is part of a change just as
-  `git add` and `git commit` are, and both of those are already granted.
+- `Bash(git rm *)`: it deletes tracked files, and they are recoverable from
+  git until and after the commit.
+- `Bash(mkdir *)`: it creates directories and nothing else, and the four
+  `mkdir -p` grants show it is where an unattended run stalled. Once it is
+  promoted, those four read as decided.
+- `Bash(bash bun/diff-budget.sh *)`: this is step 1 of the pre-PR sequence and
+  the pre-push hook's own command. The harness has no `diff-budget` package
+  script, so `bun run *` does not reach it.
+- `Bash(bun bun/*)`: it runs a tracked harness script, including the sweep
+  this change adds. That is code from the tree, which `bun test *` and
+  `bun run *` already run, so it adds no reach the policy did not already
+  grant.
 
-The other nine are dropped. They are three in-place `sed` edits of single
-files, two runs of a README generator that is not in the tree, a help
-call under the CodeRabbit CLI's retired short name and one under its current
-name, a lone `echo` left over from a compound command, and a blanket grant of
-the Python interpreter. The last is never tracked policy: it is an
-arbitrary-code grant that this project, which runs on bun, has no workflow
-for.
+Considered and refused, each an arbitrary-code runner:
+
+- `Bash(python3 *)`, and with it `python3 -I` and `python3 -c`: an inline
+  interpreter runs code the command guard cannot read and no diff records. A
+  `subprocess` call inside it reaches `git push --force` or `gh pr comment`
+  without the hook or a deny entry seeing a word of it. The project runs on
+  bun, so no documented workflow needs it. A scripted edit goes through the
+  editing tool, or through a script file whose text a reviewer can read.
+- `Bash(bun -e *)`: refused for the same reason. The night's uses read JSON,
+  which a script file in the tree can do.
+- `Bash(bun *)`: it would grant `bun x`, which fetches and runs a package the
+  way the denied `npx` does.
+
+The other gaps are dropped: three in-place `sed` edits of single files, two
+runs of a README generator that is not in the tree, a help call under the
+CodeRabbit CLI's retired short name and one under its current name, and a
+lone `echo` left over from a compound command. With the refused interpreter
+grant, that makes nine of the twelve gaps dropped and three promoted. The
+other three promotions are general forms of a command, not entries the file
+holds.
 
 ## Risks / Trade-offs
 
@@ -143,6 +181,10 @@ for.
   have decided, or the reverse. Tests pin each documented behaviour by name,
   so a change in the docs points to the case to update. Nothing here can
   observe the binary's matcher directly.
+- [An unattended session still stalls on `python3` or `bun -e`] → this is the
+  cost of refusing them. In `dontAsk` mode the call is refused, and the
+  session falls back to the editing tool or a script in the tree. If the
+  user would rather take the interpreter risk, that is one entry to add.
 - [The sweep is never run] → that is the hygiene-audits card's to prevent. The
   file keeps growing exactly as it does today, and no gate is weakened.
 
