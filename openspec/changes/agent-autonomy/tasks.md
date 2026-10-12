@@ -83,7 +83,7 @@ change (harness#56) is on `main`.
       no longer there, since the step has moved and its class needs reading
       again. `bun test` is green. (Req: agent-autonomy — A step on the loop's
       critical path names its class where it stands)
-- [ ] 1.4 Mark the four gate-skill steps in the same table, in
+- [x] 1.4 Mark the four gate-skill steps in the same table, in
       `core/skills/{zombies,warm,triage,coderabbit-local}/SKILL.md`. Leave
       `.claude/commands/opsx/` alone, as design.md *OpenSpec's commands are
       covered by a rule, not by edits* explains. `bun test` is green. (Req:

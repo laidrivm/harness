@@ -89,7 +89,7 @@ CODERABBIT-LOCAL gate: OPEN — 5 findings, 2 fixes awaiting approval.
 
 Wait for approval. Then apply the approved fixes with `Edit`, and report what changed.
 
-**The project overrides this.** If the repo's own review policy (`CLAUDE.md`, `docs/`, a gate the project defines) prescribes applying verified findings without asking, follow the project, not this skill: apply them before showing the plan, list them under `### Applied (N)`, and keep no approval gate on fixes at any severity. Where the project puts the approval on the dismissal instead, a 🟠 Major or 🔴 Critical you propose to reject or skip goes to the user with what the bot missed, and the gate stays OPEN until they settle it. Name the rule you followed in one line under the heading.
+**The project overrides this.** If the repo's own review policy (`CLAUDE.md`, `docs/`, a gate the project defines) prescribes applying verified findings without asking, follow the project, not this skill: apply them before showing the plan, list them under `### Applied (N)`, and keep no approval gate on fixes at any severity. Where the project puts the approval on the dismissal instead, a 🟠 Major or 🔴 Critical you propose to reject or skip goes to the user with what the bot missed, and the gate stays OPEN until they settle it (unattended: card — hand it on, as the project's own policy on dismissals says). Name the rule you followed in one line under the heading.
 
 ### 5. Gate line
 
