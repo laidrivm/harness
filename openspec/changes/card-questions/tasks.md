@@ -26,7 +26,7 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       agent-permissions — A question to the user on a board card needs no
       prompt, §*A question on a card*, §*The same question where no prompt
       can be shown*)
-- [ ] 1.2 Write the envelope tests in `bun/question-gate.test.ts`, with the
+- [x] 1.2 Write the envelope tests in `bun/question-gate.test.ts`, with the
       event, transcript and ledger builders in `bun/question-gate.fixture.ts`
       — the cases below pass 300 lines in one file, the `.ts` cap. A
       conforming question is allowed [5] and recorded `allowed` /
