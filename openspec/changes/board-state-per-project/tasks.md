@@ -89,7 +89,7 @@ carried by the pull request that bumps its pin past group 1.
       its floor at the board read*, §*A card whose pointer names no
       directory of this tree*; A card for another repository's change points
       across)
-- [ ] 1.6 In `core/skills/session-wrapup/SKILL.md` step 3, *Workflow state*,
+- [x] 1.6 In `core/skills/session-wrapup/SKILL.md` step 3, *Workflow state*,
       add the reconciliation: run `bun/board-state.ts`, compare the cards
       whose pointers name the change directories this session touched,
       correct each behind its floor with `update_properties` and a re-read,
