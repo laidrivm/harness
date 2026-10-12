@@ -44,8 +44,30 @@ unattended session do:
 - `user`: the session neither takes the step nor asks for it on a card. It
   stops the work that needs the step and reports `BLOCKED`, naming the step.
 
+A dismissal handed on SHALL NOT hold back the pull request. Suppose an
+unattended session opens a pull request while the local review left a 🟠 Major
+or 🔴 Critical that the session proposes to dismiss. The pull request body
+SHALL then list each such finding with four things:
+
+- its severity
+- its file and line
+- what the finding says
+- the reason the session proposes to dismiss it
+
+The gate line SHALL keep reading `OPEN`. The merge stays with the user, so a
+wrong dismissal is still read before it lands.
+
 `core/rules.md` SHALL link the doc, so that a consumer's copy of the rulebook
 reaches it.
+
+#### Scenario: The pull request opens over a proposed dismissal
+
+- **WHEN** an unattended session has passed the pre-PR sequence, and
+  `/coderabbit-local` left a 🟠 Major that it proposes to dismiss
+- **THEN** it opens the pull request
+- **AND** the body names that finding's severity, its file and line, what it
+  says, and why dismissal is proposed
+- **AND** the gate line reads `OPEN`
 
 #### Scenario: A step the agent may take
 
@@ -60,6 +82,8 @@ reaches it.
   raised, and the step is marked `card`
 - **THEN** it hands the dismissal on through the card-questions procedure, with
   what the bot missed, and does not settle the dismissal itself
+- **AND** if it opens the pull request, the body lists the finding as
+  *The pull request opens over a proposed dismissal* sets out
 
 #### Scenario: A step that stays with the user
 
