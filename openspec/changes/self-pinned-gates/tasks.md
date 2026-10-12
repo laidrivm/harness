@@ -36,8 +36,12 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
       form too. Verify: 1.2's tests pass; `bun test` green; `bun.lock` and
       `package.json` staged together.
 - [ ] 1.5 In `bun/bootstrap.ts`, make `NOTICE` read
-      `dependencies?.harness ?? devDependencies?.harness`. Verify: 1.3's tests
-      pass and `bun/sync-settings.test.ts` passes unchanged.
+      `dependencies?.harness ?? devDependencies?.harness`, and write the new
+      text into the `SessionStart` entry of `.claude/settings.json` in the
+      same commit. The notice is inline text the settings run, not a script
+      in the package, so it takes effect without moving the pin. Verify: 1.3's
+      tests pass, 1.2's still do, and `bun/sync-settings.test.ts` passes
+      unchanged.
 - [ ] 1.6 Docs: `README.md`'s *Working on the harness* says a clone runs
       `bun install` before any other command, that the sessions run the gates
       from the pin, and how the pin moves (design.md *The pin moves by hand*);
@@ -50,7 +54,9 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
 - [ ] 1.7 By hand, in a scratch copy with the pin installed and recorded in
       the pull request: replace the working tree's `bun/command-guard.ts` with
       `process.exit(0)` and feed the registered bootstrap a `git commit` on
-      `main` — still refused, exit 2 [4]; install the branch's harness into a
+      `main` — still refused, exit 2 [4]; run the registered `SessionStart`
+      text with the install at another commit than the pin — it prints the
+      line naming both; install the branch's harness into a
       scratch consumer through a git URL — one package, no nested
       `node_modules/harness` (§*A gate edited in the working tree does not
       hold the session*, §*A consumer installs one copy of the harness*).
