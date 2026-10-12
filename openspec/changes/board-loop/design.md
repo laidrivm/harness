@@ -110,9 +110,10 @@ a branch that is under review.
 The user's drag is the only ranking instrument (`task-board`), and only a
 session can read it. In step 2 a short `claude -p` session, with no goal and
 nothing to write, reads `Board view` for the board `harness.board` names. It
-is handed the takeable list and returns one `PICK: <slug>` line. The runner
-treats that line as untrusted input: one exact line, and a slug from its own
-list. In step 1 the user names the change instead. That is the seam's working
+is handed the takeable list and returns one line, `PICK: <slug>` or
+`PICK: none`. The runner treats that line as untrusted input. It must be one
+exact line. `PICK: none` makes the pass idle, and any other slug has to come
+from the runner's own list. In step 1 the user names the change instead. That is the seam's working
 stub (`change-slicing`, *A seam between steps carries a working stub*): it
 honours the user's order because the user is the one choosing. Step 2 removes
 the argument.
