@@ -100,8 +100,9 @@ make the change untakeable.
 A pass SHALL launch the step as one fresh `claude -p` session. The session
 runs in auto mode with nobody to answer prompts, and in the launch form
 `stage-goal` fixes, under a prompt that declares it unattended. The pass
-SHALL end the session after three hours. It SHALL then run the step's goal
-check itself, and SHALL write one ledger record and one printed line per pass.
+SHALL end the session one hour after launch. It SHALL then run the step's
+goal check itself, and SHALL write one ledger record and one printed line per
+pass.
 
 #### Scenario: The step met its goal
 
@@ -117,7 +118,7 @@ check itself, and SHALL write one ledger record and one printed line per pass.
 
 #### Scenario: The session runs past the limit
 
-- **WHEN** the session is still running three hours after launch
+- **WHEN** the session is still running one hour after launch
 - **THEN** the pass ends it, records `timeout`, and exits 1
 
 #### Scenario: Every pass leaves a record

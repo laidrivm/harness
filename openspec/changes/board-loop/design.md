@@ -123,7 +123,7 @@ the argument.
   has to name the change when the session starts, and the pick is what
   decides the change.
 
-### The stage session: launch form, auto mode, no prompts, three hours
+### The stage session: launch form, auto mode, no prompts, one hour
 
 The runner composes no condition of its own. It uses `stage-goal`'s launch
 form (`core/feature-workflow.md`, *Unattended stages*, once `stage-goal`
@@ -135,9 +135,11 @@ reports it as `BLOCKED`. Neither `bypassPermissions` nor
 `--dangerously-skip-permissions` is ever passed.
 
 The launcher owns time, as `stage-goal` and `loop-guard` both leave it. The
-limit is three hours, and the spec fixes it. The 2026-10-12 overnight run's
-propose and apply sub-agents finished well within that. A session past it is
-not converging, and the ceiling cannot see a single turn that never stops.
+limit is a hard one hour per stage session, and the spec fixes it. A session
+past it is not converging, and the ceiling cannot see a single turn that
+never stops. The user chose one hour on 2026-10-12. A step that needs longer
+is split into smaller task groups (`change-slicing`), and the limit is not
+raised.
 
 - *Alternative: `--max-turns`.* It counts model calls, which are not a
   measure of time, and `stage-goal` leaves it optional for a launcher.
@@ -171,8 +173,10 @@ named follow-up.
   read `Board view`. If it cannot, it returns no single `PICK:` line, and the
   pass records `refused` and launches no stage session. Without the board
   there is no order to honour.
-- [Three hours is a judgement] → The limit has one site. The `timeout` count
-  in the ledger is what would move it.
+- [A step that would finish in a little over an hour is cut off] → The pass
+  records `timeout`, and the step is split rather than the limit raised. The
+  limit has one site, and the ledger's `timeout` count shows how often it
+  bites.
 - [A pick session that reads the board also reads text that a card's author
   wrote] → Only its `PICK:` line is used, and only when it names a slug the
   runner had already computed as takeable.
