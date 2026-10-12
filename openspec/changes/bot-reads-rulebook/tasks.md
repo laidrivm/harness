@@ -22,8 +22,12 @@ Closes `local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach`,
 `local-review-loop/a-config-the-test-cannot-read`.
 
 - [ ] 1.1 Write `bun/review-config.test.ts` first, with cases built on
-      temporary fixture repositories and each citing its criterion. Record
-      that each fails while no `.coderabbit.yaml` exists. The cases: a
+      temporary fixture repositories and each citing its criterion. Each
+      fixture below carries a parseable `.coderabbit.yaml` whose patterns
+      produce exactly the mismatch named, and each case asserts the failure
+      names that doc or pattern, so none can pass for the config being absent.
+      Record that the case over the repository itself (13) fails while the
+      root has no `.coderabbit.yaml`. The cases: a
       `CLAUDE.md` linking a doc outside every pattern fails, naming that
       doc (ZOMBIES 5); `core/rules.md` itself unmatched fails, naming it
       (4); one live pattern beside one that matches no tracked file fails,
@@ -77,6 +81,8 @@ run, and this step's pull request body quotes the command each run issued.
       `.coderabbit.yaml`, not from a line that resembles it, and expand each
       pattern with `git ls-files ':(glob)<pattern>'`. Then pass `--config
       .coderabbit.yaml CLAUDE.md` followed by every file matched, each once.
+      Where no `.coderabbit.yaml` exists, there is nothing to expand, and the
+      skill passes `--config CLAUDE.md` alone (16).
       Add `Bash(git ls-files:*)` to `allowed-tools`. State at the expansion
       why the `:(glob)` magic is there: a plain pathspec matched 34 files where
       the bot matches 9 (ZOMBIES 14)
