@@ -102,16 +102,17 @@ export function record(
 }
 
 /**
- * The command guard's refusal, bound to the event it read: writes the reason to
- * stderr, records the prohibition's id, then exits 2. The id is passed at each
- * call site and never derived from the reason, so rewording a message keeps
- * its count. Bind it to a const typed explicitly: TypeScript reads a call as
- * ending the path only through a name whose type is written out.
+ * A guard's refusal, bound to the gate's name and the event it read: writes
+ * the reason to stderr, records the prohibition's id, then exits 2. The id is
+ * passed at each call site and never derived from the reason, so rewording a
+ * message keeps its count. Bind it to a const typed explicitly: TypeScript
+ * reads a call as ending the path only through a name whose type is written
+ * out.
  */
 export const blocker =
-	(event: unknown) =>
+	(gate: string, event: unknown) =>
 	(id: string, reason: string): never => {
 		process.stderr.write(`${reason}\n`);
-		record("command-guard", "block", id, event);
+		record(gate, "block", id, event);
 		process.exit(2);
 	};

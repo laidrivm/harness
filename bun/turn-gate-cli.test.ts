@@ -28,8 +28,8 @@ const script = `${import.meta.dir}/turn-gate.ts`;
 
 /**
  * Runs one half. The environment carries only what the case needs: `TMPDIR`
- * points the mark store, and `XDG_STATE_HOME` the gate ledger, at a directory
- * of the case's own.
+ * points the mark store at a directory of the case's own, and
+ * `XDG_STATE_HOME` the gate ledger, so a refusal never reaches the user's.
  */
 function run(half: "mark" | "stop", event: unknown, cwd: string, tmp: string) {
 	const call = Bun.spawnSync(["bun", script, half], {

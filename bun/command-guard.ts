@@ -2,8 +2,9 @@
 /**
  * `PreToolUse` guard for every Bash call, registered in
  * `.claude/settings.json`. It blocks the prohibitions no permission entry can
- * express: a commit while `HEAD` is on `main`, a force-push wherever the flag
- * sits, and the `gh` commands that publish text on the user's behalf.
+ * express: a commit while `HEAD` is on `main` or on a branch whose pull request
+ * has merged, a force-push wherever the flag sits, and the `gh` commands that
+ * publish text on the user's behalf.
  *
  * It runs without an `if` field on purpose. A permission pattern — which is
  * what `if` takes — matches the command word literally, so `/usr/bin/git` and
@@ -21,57 +22,15 @@
  */
 
 import { existsSync } from "node:fs";
+import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
 import { commands, invocations, place, SHELLS } from "./command-parse.ts";
 import { blocker } from "./gate-ledger.ts";
-
-/**
- * Global options that swallow the token after them, so the subcommand of
- * `git -C some/dir commit` resolves to `commit` and not to the path.
- * `--exec-path` is absent on purpose: bare, it prints the path and runs
- * nothing, so treating the next token as its value would be wrong.
- */
-const VALUE_OPTIONS = new Set([
-	"-C",
-	"-c",
-	"--git-dir",
-	"--work-tree",
-	"--namespace",
-	"--config-env",
-]);
-
-/**
- * Short flags bundle — git reads `push -uf` as `-u -f` — so the single-dash
- * form matches an `f` anywhere in the group, and `-f` is the only short option
- * of `git push` that carries one. The long form matches by prefix because git
- * accepts any unambiguous abbreviation: `--force-w` and `--force-i` are taken,
- * while `--forc` and `--fo` are rejected as ambiguous, so every spelling git
- * honours begins with `--force`. `--follow-tags` and `--fixup` do not.
- */
-const FORCE = /^(-[a-z0-9]*f[a-z0-9]*$|--force)/;
-
-/**
- * Options of `git push` that act on refs the command never names, so no
- * destination check can clear them: the first three push every ref under
- * `refs/heads/` or `refs/`, `main` among them, and `--prune` deletes a remote
- * branch that has no local counterpart — `main` itself in any tree that does
- * not carry it.
- */
-const REF_WIDE = ["--all", "--branches", "--mirror", "--prune"];
-
-/**
- * Options whose value is the next word. Matched by their exact spelling, unlike
- * `REF_WIDE`: a prefix here could swallow the word after it and hide an
- * operand, while an abbreviation left unskipped is read as an operand and can
- * only refuse a push. Both lists resolve their uncertainty towards blocking.
- * The `=` forms need no entry — they are one word, and start with `-`.
- */
-const PUSH_VALUE_OPTIONS = new Set([
-	"-o",
-	"--push-option",
-	"--receive-pack",
-	"--exec",
-	"--repo",
-]);
+import {
+	FORCE,
+	PUSH_VALUE_OPTIONS,
+	REF_WIDE,
+	VALUE_OPTIONS,
+} from "./git-options.ts";
 
 /**
  * Blocks a push whose destination cannot be shown to exclude `main`. Two
@@ -91,7 +50,7 @@ function blockDestination(destination?: string): never {
 }
 
 const payload = await Bun.stdin.json().catch(() => null);
-const block: (id: string, reason: string) => never = blocker(payload);
+const block: (id: string, reason: string) => never = blocker("command-guard", payload);
 const command = payload?.tool_input?.command;
 if (typeof command !== "string") {
 	block(
@@ -120,22 +79,37 @@ const dirs = new Set<string | null>([
  * names one, since that is the repository the commit would land in — or a
  * block when git cannot say.
  */
-function currentBranch(cwd: string | null): string {
-	try {
-		if (cwd === null) throw new Error("unresolved directory");
-		const head = Bun.spawnSync(
-			["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
-			{ cwd },
-		);
-		if (head.exitCode === 0) return head.stdout.toString().trim();
-	} catch {
-		// An unreadable `-C` target makes spawnSync throw, which would exit
-		// non-zero and non-blocking. Fall through to the block instead.
-	}
+const currentBranch = (cwd: string | null) =>
+	(cwd === null ? null : headBranch(cwd)) ??
 	block(
 		"unreadable-branch",
 		"command-guard: could not read the current branch — a detached HEAD, no work tree, an unreadable -C target, or a directory change the guard cannot resolve. A commit cannot be checked against main, so it is blocked.",
 	);
+
+/**
+ * Refuses a commit on `target`'s branch where `branchState` finds its pull
+ * request merged, or cannot tell. `onMain` has already read every target and
+ * blocked on any it could not, so `target` is a directory here.
+ */
+function refuseStranded(target: string): void {
+	const branch = currentBranch(target);
+	const state = branchState(target, branch);
+	const where = `command-guard: \`${branch}\``;
+	if (state === "merged")
+		block(
+			"merged-branch",
+			`${where} is already merged: origin/main carries a commit of it as an equivalent patch, so anything committed to it now is stranded. Move the work to a new branch cut from origin/main.`,
+		);
+	if (state === "stale")
+		block(
+			"stale-fetch",
+			`${where} is on the remote, and origin/main was not fetched within ${FETCH_MAX_AGE / 60_000} minutes, so whether its pull request has merged cannot be decided. Run git fetch origin, then commit.`,
+		);
+	if (state === "unknown")
+		block(
+			"unreadable-fetch",
+			`${where} cannot be checked for a merged pull request: its commits could not be compared with origin/main, or the last fetch's FETCH_HEAD could not be read. Run git fetch origin, then commit.`,
+		);
 }
 
 /** The `gh` subcommand pairs that publish text on the user's behalf. */
@@ -211,6 +185,8 @@ function check(command: string): void {
 					`command-guard: HEAD is on main and this project never commits there. Branch first, then commit on the branch. ${ELSEWHERE}`,
 				);
 			}
+			if (subcommand === "commit")
+				for (const target of targets) refuseStranded(target as string);
 			if (subcommand === "push") checkPush(args, targets);
 		}
 	}

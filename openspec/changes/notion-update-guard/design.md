@@ -71,10 +71,12 @@ nothing else in this change waits on it.
 - [The connector starts applying `properties` beside other commands] → the
   guard refuses a call that would have worked. The reason names the split,
   which still works, so the cost is one extra call.
-- [`bun/settings.test.ts` stands at 285 of its 300-line cap] →
-  `policy-gate-beyond-bash` plans to split it. Whichever change lands second
-  puts its cases in the split file, and neither grows the original past the
-  cap.
+- [`bun/settings.test.ts` stands at 299 of its 300-line cap on `main` once
+  group 1 merged, its policy fixture carrying this guard's registration] →
+  `policy-gate-beyond-bash` step 1 moves that fixture into
+  `bun/settings.fixture.ts`, which leaves the file at 211 lines. This
+  change's check cases sit in `bun/settings-notion.test.ts`, so neither
+  change grows the original past the cap.
 
 ## Migration Plan
 

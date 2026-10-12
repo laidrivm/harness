@@ -127,6 +127,13 @@ Rules about how work is carried out here. They do not age with the code.
 - Before the first `/opsx:` command of a task, find or create its card on the
   board `feature-workflow.md` names and move it to that stage's status — no
   `/opsx:` skill points there, so the card is otherwise missed.
+- Commit or push in another checkout with `git -C <literal path>` — never `cd`
+  into it, since the command guard also checks the directory the call starts
+  in, nor through a shell variable, which the guard cannot resolve and refuses.
+- Name in `after:` only a change whose directory the branch already holds,
+  under `openspec/changes/` or its archive — `bun/board-state.ts` refuses any
+  other slug and `bun/board-state-hygiene.test.ts` runs it over the repository;
+  keep the order in the proposal's prose until that change merges.
 
 #### Safety
 
@@ -153,3 +160,7 @@ not age with the code.
   hands the tests it runs an absolute `GIT_DIR`.
 - Delete a branch, local or remote, only when the user asks for it — never
   folded into a command run for another purpose.
+- Never run an act the command guard or a permission entry refuses or asks
+  about — a commit, a push, a `gh` write, a package command, an edit to a gated
+  file — through an interpreter (`python3 -c`, `bun -e`, `node -e`) or a
+  throwaway script; both read only the call's own words, so the act walks past.

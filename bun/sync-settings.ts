@@ -3,13 +3,20 @@
  * written into the consumer's `.claude/settings.json` and `bunfig.toml`, so a
  * harness change to a hook or a list lands with the pin rather than as a hand
  * edit in each consumer. What the check only refuses — an empty allow list,
- * `disableAllHooks` — stays the consumer's to fix, since no harness change
- * can introduce it.
+ * `disableAllHooks`, an `mcp__` deny or allow rule with parentheses — stays
+ * the consumer's to fix, since no harness change can introduce it.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { HOOKS, MARK } from "./bootstrap.ts";
-import { ASK, DENY, EDIT_ASK, EDIT_DENY, INSTALL } from "./settings.ts";
+import {
+	ASK,
+	DENY,
+	EDIT_ASK,
+	EDIT_DENY,
+	INSTALL,
+	MCP_ASK,
+} from "./settings.ts";
 
 type Group = { matcher?: string; hooks?: { command?: unknown }[] };
 type Settings = {
@@ -32,18 +39,21 @@ const read = (file: string) =>
 	existsSync(file) ? readFileSync(file, "utf8") : undefined;
 
 /**
- * `list` with its `Bash(` entries replaced by `bash`, where the first of them
- * stood, and `file` appended when absent. The check compares the `Bash(`
- * subset whole, so the harness owns all of it; every other entry keeps its
- * place.
+ * `list` with its entries starting with `prefix` replaced by `entries`, where
+ * the first of them stood, or after the rest when there is none. The check
+ * compares each such subset whole — `Bash(` in both lists, `mcp__` in `ask` —
+ * so the harness owns all of it; every other entry keeps its place.
  */
-function policyList(list: string[] = [], bash: string[], file: string) {
-	const first = list.findIndex((entry) => entry.startsWith("Bash("));
-	const rest = list.filter((entry) => !entry.startsWith("Bash("));
+function owned(list: string[], prefix: string, entries: string[]) {
+	const first = list.findIndex((entry) => entry.startsWith(prefix));
+	const rest = list.filter((entry) => !entry.startsWith(prefix));
 	const at = first === -1 ? rest.length : first;
-	const out = [...rest.slice(0, at), ...bash, ...rest.slice(at)];
-	return out.includes(file) ? out : [...out, file];
+	return [...rest.slice(0, at), ...entries, ...rest.slice(at)];
 }
+
+/** `list` with `file` appended when absent. */
+const withFile = (list: string[], file: string) =>
+	list.includes(file) ? list : [...list, file];
 
 /** The settings file's new text: the harness's hooks and lists, the rest kept. */
 function settingsText(text: string | undefined): string {
@@ -82,8 +92,15 @@ function settingsText(text: string | undefined): string {
 		if (groups.length === 0) delete hooks[event];
 	config.hooks = hooks;
 	const permissions = config.permissions ?? {};
-	permissions.deny = policyList(permissions.deny, DENY, EDIT_DENY);
-	permissions.ask = policyList(permissions.ask, ASK, EDIT_ASK);
+	permissions.deny = withFile(
+		owned(permissions.deny ?? [], "Bash(", DENY),
+		EDIT_DENY,
+	);
+	permissions.ask = owned(
+		withFile(owned(permissions.ask ?? [], "Bash(", ASK), EDIT_ASK),
+		"mcp__",
+		MCP_ASK,
+	);
 	config.permissions = permissions;
 	const indent = text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";
 	return `${JSON.stringify(config, null, indent)}\n`;
