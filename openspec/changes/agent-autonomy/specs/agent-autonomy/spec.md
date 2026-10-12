@@ -33,7 +33,7 @@ step, and it never relaxes an attended one.
 ### Requirement: Three classes say what an unattended session does at a step that names the user
 
 `core/autonomy.md` SHALL define exactly three classes, `agent`, `card` and
-`user`, and SHALL be the only place that defines what each one lets an
+`user`, and SHALL be the only file under `core/` that defines what each lets an
 unattended session do:
 
 - `agent`: the session takes the step itself and records what it did in the

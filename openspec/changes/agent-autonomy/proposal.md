@@ -75,7 +75,9 @@ gives each step its class.
 ## Ordering
 
 This change comes after card-questions. Until that change exists, `card` has
-no procedure to hand a question to.
+no procedure to hand a question to. `.openspec.yaml` cannot record the order
+yet, because an `after:` naming a change that is not on `main` fails
+`bun test`. Task 1.0 adds it once harness#56 merges.
 
 ## Capabilities
 
