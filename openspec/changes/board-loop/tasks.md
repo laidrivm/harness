@@ -27,8 +27,7 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       - an unpushed tip refuses and leaves the branch checked out [4]. A
         pushed step branch is switched off to the default branch [5]. A
         default branch that cannot fast-forward refuses, with no merge and
-        no reset [6];
-      - no `harness.board` refuses, naming the key, and launches nothing [7].
+        no reset [6].
       All of these fail before 1.4. (Req: board-loop — The runner is the
       user's script and starts from a clean clone)
 - [ ] 1.2 Write the takeable tests:
@@ -84,7 +83,9 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       - a slug that is not takeable is refused and starts nothing [19]. Output
         with no `PICK:` line, or with two, is refused [20];
       - the pick prompt names the board by its `harness.board` value and
-        lists the takeable slugs [21].
+        lists the takeable slugs [21];
+      - no `harness.board` refuses, naming the key, and launches no session
+        [7].
       Replace 1.2's ideas [15] and [16] with one case: any argument is
       refused, naming the usage. These fail before 2.2. (Req: board-loop — A
       pass takes the first takeable card in the board's order)

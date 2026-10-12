@@ -139,3 +139,8 @@ list. It SHALL take no change on the user's word or by its own order.
   or returns no single `PICK:` line
 - **THEN** the pass launches no stage session, and records `idle` for
   `PICK: none` and `refused` otherwise
+
+#### Scenario: No board named
+
+- **WHEN** the project's `package.json` holds no `harness.board`
+- **THEN** the pass refuses, naming the key, and launches no session
