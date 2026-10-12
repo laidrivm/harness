@@ -80,9 +80,9 @@ export function branchState(
 	const path = git(dir, "rev-parse", "--git-path", "FETCH_HEAD");
 	if (pushed !== 0 || path.code !== 0) return "unknown";
 	try {
-		// Every fetch rewrites FETCH_HEAD, including one that updates no ref and
-		// so leaves no reflog entry; but any fetch does, so only a line naming
-		// `main` shows the base was among what it fetched.
+		// Every fetch rewrites FETCH_HEAD, one that updates no ref and so leaves
+		// no reflog entry included; but so does a fetch of some other ref, so only
+		// a line naming `main` shows the base was among what it fetched.
 		const file = resolve(dir, path.out.trim());
 		const covers = /^[0-9a-f]+\t[^\t]*\tbranch 'main' of /m.test(
 			readFileSync(file, "utf8"),
