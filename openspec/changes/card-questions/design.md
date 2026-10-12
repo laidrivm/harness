@@ -115,9 +115,9 @@ let a session ask on a card whose open questions it never looked at.
 
 The mark is the inline-code token `harness-question` as the comment's first
 characters — a token a person does not type in a reply, so the read-back can
-take the first comment after it that lacks it, by the user's account, as the
-answer (rules.md: recognise what a tool owns by a mark only that tool
-writes). The account rules out another member; the mark rules out the agent,
+take the first later comment in that question's own thread, by the user's
+account and without the mark, as the answer, and ignore every other comment
+(rules.md: recognise what a tool owns by a mark only that tool writes). The account rules out another member; the mark rules out the agent,
 which writes as the same account. One question
 per comment keeps one thread per decision. A user mention is refused because
 it notifies its subject of text that reads as the user's. The bound of 1500
@@ -192,9 +192,9 @@ which the hook checks.
   a duplicate costs the user one extra answer.
 - [The hook checks the card's comments were read, not the `Questions` view]
   → Accepted: the view read stays the rule's prose. The hook knows the page it
-  posts on, not each board's view id, and a question open on another card
-  belongs to another task, so a skipped view read costs at most one duplicate
-  answer, as above.
+  posts on, not each board's view id. Work parked on another card's question
+  finds its answer through the card its report names, so a skipped view read
+  costs at most one duplicate answer, as above.
 - [The comments were read before another agent posted the same question] →
   Accepted: the window runs from the read to the post, and the duplicate
   costs as above.

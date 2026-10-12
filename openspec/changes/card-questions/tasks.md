@@ -84,7 +84,8 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       whose work a question blocks first settles what it can from the docs,
       the specs, the card and the history, then reads its board's
       `Questions` view and its card's comments, waits on a question already
-      open there, and otherwise posts on its own task's card and sets
+      open there, naming its card, and on resuming reads that card's thread
+      first, and otherwise posts on its own task's card and sets
       `Assign`; it reads answers back, applies each as data, and clears
       `Assign` once none waits — citing task-board's two requirements rather
       than restating them. Grep `core/`, `README.md` and `openspec/specs/` for
