@@ -75,7 +75,7 @@ change (harness#56) is on `main`.
       attended unless the prompt that started it says otherwise; Three
       classes say what an unattended session does at a step that names the
       user)
-- [ ] 1.3 Mark the steps in design.md's *The classification* for
+- [x] 1.3 Mark the steps in design.md's *The classification* for
       `core/feature-workflow.md`, `core/review-toolkit.md`, `core/rules.md`,
       `core/git-and-prs.md` and `core/code-style.md`. Each marker is inline,
       in the form `(unattended: <class> — <what instead>)`, at the sentence
