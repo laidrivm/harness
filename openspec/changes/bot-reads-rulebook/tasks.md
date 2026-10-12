@@ -21,7 +21,7 @@ Closes `local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach`,
 `local-review-loop/a-pattern-that-matches-nothing`,
 `local-review-loop/a-config-the-test-cannot-read`.
 
-- [ ] 1.1 Write `bun/review-config.test.ts` first, with cases built on
+- [x] 1.1 Write `bun/review-config.test.ts` first, with cases built on
       temporary fixture repositories and each citing its criterion. Each
       fixture below carries a parseable `.coderabbit.yaml` whose patterns
       produce exactly the mismatch named, and each case asserts the failure
@@ -33,17 +33,17 @@ Closes `local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach`,
       (4); one live pattern beside one that matches no tracked file fails,
       naming only the second (6); a pattern matching only an untracked file
       counts as matching nothing (9)
-- [ ] 1.2 Add the cases where the config is unreadable, each failing and
+- [x] 1.2 Add the cases where the config is unreadable, each failing and
       saying which way: the file is absent (3); the YAML does not parse, with
       the parser's message and the path (11); the `filePatterns` key is
       missing (1); the list is empty (2); an entry is empty or blank (8); an
       entry is not a string, named by its position (10)
-- [ ] 1.3 Add the boundary cases: `core/*.md` does not match
+- [x] 1.3 Add the boundary cases: `core/*.md` does not match
       `core/skills/<name>/SKILL.md` (7); an `https://` link in `CLAUDE.md` is
       not taken as a doc (12); a `README.md` link is exempt and needs no
       pattern; a doc that only `core/rules.md` links, outside every pattern,
       fails
-- [ ] 1.4 Write the exemption into the test with its reason. Verify that the
+- [x] 1.4 Write the exemption into the test with its reason. Verify that the
       fixture which links `README.md` from `CLAUDE.md` passes, and that the
       same fixture fails without the exemption
 - [ ] 1.5 Add the root `.coderabbit.yaml`. It sets
