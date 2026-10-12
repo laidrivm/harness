@@ -8,7 +8,7 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
 
 - [x] 1.1 Before any install, add `node_modules` to `.gitignore`, with no
       trailing slash. Verify: `git check-ignore node_modules` prints it.
-- [ ] 1.2 Write the tests first, in a new `bun/self-pin.test.ts` reading the
+- [x] 1.2 Write the tests first, in a new `bun/self-pin.test.ts` reading the
       tracked files: each `HOOKS` entry's command is registered in
       `.claude/settings.json` under its event and, where it has one, its
       matcher, and a missing one is named [1]; no hook command anywhere in
