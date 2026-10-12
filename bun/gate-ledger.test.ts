@@ -8,7 +8,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { cleanup, fabricate } from "./command-guard.fixture.ts";
+import { cleanup, event, fabricate, run } from "./command-guard.fixture.ts";
 
 /**
  * `gate-ledger.ts`: what one record holds and where it lands. Every case runs
@@ -172,5 +172,89 @@ describe("a ledger that cannot be written", () => {
 			stderr: "",
 		});
 		expect(existsSync(ledger(state))).toBe(false);
+	});
+});
+
+/** A guard run whose ledger lands in `state`. */
+const guard = (payload: unknown, cwd: string, state: string) =>
+	run(payload, cwd, envOf({ XDG_STATE_HOME: state }));
+
+/** The rule the one record of a guard run names. */
+function rule(payload: unknown, cwd: string): string {
+	const state = dir();
+	guard(payload, cwd, state);
+	expect(records(state)).toEqual([
+		expect.objectContaining({ gate: "command-guard", decision: "block" }),
+	]);
+	return records(state)[0].rule;
+}
+
+describe("the guard's refusals", () => {
+	// spec: gate-ledger/a-commit-on-main
+	test("a commit on main records main-commit", () => {
+		expect(rule(event("git commit -m x"), fabricate("main"))).toBe(
+			"main-commit",
+		);
+	});
+
+	// spec: gate-ledger/an-unreadable-event
+	test("an event that is not JSON records unreadable-event", () => {
+		expect(rule("not json", fabricate("main"))).toBe("unreadable-event");
+	});
+
+	// spec: gate-ledger/two-refusals-of-one-push
+	test.each([
+		["names main records push-to-main", "feat/x:main", "push-to-main"],
+		["names no bounded destination records unbounded-push", ":", "unbounded-push"],
+	])("a push that %s", (_, refspec, id) => {
+		expect(rule(event(`git push origin ${refspec}`), fabricate("feat/x"))).toBe(
+			id,
+		);
+	});
+
+	// spec: gate-ledger/a-blocked-push-naming-a-token
+	test("a blocked push leaves no part of its command in the ledger", () => {
+		const state = dir();
+		guard(
+			event("git push https://bot:s3cr3t@example.com/o/r.git +feat/x"),
+			fabricate("feat/x"),
+			state,
+		);
+		const text = readFileSync(ledger(state), "utf8");
+		for (const part of ["s3cr3t", "example.com", "https", "feat/x", "git push"])
+			expect(text).not.toContain(part);
+	});
+
+	// spec: gate-ledger/an-ordinary-command
+	test("an allowed command leaves the ledger absent", () => {
+		const state = dir();
+		guard(event("git status"), fabricate("main"), state);
+		expect(existsSync(ledger(state))).toBe(false);
+	});
+
+	// spec: gate-ledger/an-unwritable-state-directory
+	test("an unwritable state directory still blocks a force-push", () => {
+		const state = join(dir(), "file");
+		writeFileSync(state, "");
+		const { code, reason } = guard(
+			event("git push --force origin feat/x"),
+			fabricate("feat/x"),
+			state,
+		);
+		expect({ code, reason }).toEqual({
+			code: 2,
+			reason: expect.stringContaining("force-pushing is the user's"),
+		});
+	});
+
+	// spec: gate-ledger/a-reason-reworded
+	test("every block call site passes an id of its own, as a literal", () => {
+		const source = readFileSync(`${import.meta.dir}/command-guard.ts`, "utf8");
+		const sites = source.match(/\bblock\(/g) ?? [];
+		const ids = [
+			...source.matchAll(/\bblock\(\s*"([a-z]+(?:-[a-z]+)*)",/g),
+		].map((match) => match[1]);
+		expect(ids).toHaveLength(sites.length);
+		expect(new Set(ids).size).toBe(ids.length);
 	});
 });

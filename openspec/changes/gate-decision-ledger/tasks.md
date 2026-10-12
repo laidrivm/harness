@@ -30,7 +30,7 @@ built from what the case needs, in a directory that holds no `.env`.
       All of these fail before 1.3. (Req: gate-ledger — The ledger lives
       outside every working tree; A record holds no command text; Recording
       never changes a decision)
-- [ ] 1.2 Write the guard's cases in the same file, spawning
+- [x] 1.2 Write the guard's cases in the same file, spawning
       `bun/command-guard.ts`:
       - a commit on `main` records `command-guard`, `block`, `main-commit` [3];
       - a non-JSON event records `unreadable-event` [18];
