@@ -91,7 +91,7 @@ These are the next slices, each a card or a follow-up step of this one:
 ## Ordering
 
 `after:` names `gate-decision-ledger` and `board-state-per-project`, the two
-changes this builds on whose directories are on `main`. Four of the others are
+changes this builds on whose directories are on `main`. The others are still
 open pull requests, and `board-state` refuses an `after:` entry with no
 directory:
 
@@ -100,10 +100,11 @@ directory:
 - `agent-autonomy` (harness#63) defines what "unattended" means in the stage
   prompt;
 - `card-questions` (harness#56) gives a blocked session somewhere to leave its
-  question.
+  question;
+- `loop-guard` (harness#66) ends a session that repeats a failing call, and
+  leaves wall-clock time to this runner.
 
-`loop-guard` is still being proposed. Task 1.0 adds each of these to `after:`
-once its directory lands on `main`.
+Task 1.0 adds each of these to `after:` once its directory lands on `main`.
 
 ## Capabilities
 
