@@ -34,8 +34,9 @@ change (harness#56) is on `main`.
       - The real tree passes [14].
       - `core/autonomy.md`'s `` ### `agent` `` section requires these fields
         in the pull request's body for a Major or Critical left open: the
-        severity, the file and line, what the finding says, and either why
-        dismissal is proposed or that it is still open. Compare with
+        severity, the file and line, what the finding says, and then, for a
+        proposed dismissal, the reason it is proposed, and for a finding
+        unresolved after the third pass, that it is still open. Compare with
         whitespace normalised [15].
       - `core/autonomy.md` holds `This session runs unattended.` as a line of
         its own, the line the spec fixes [16].

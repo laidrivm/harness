@@ -110,8 +110,10 @@ None.
   `core/review-toolkit.md`, `core/rules.md`, `core/git-and-prs.md`,
   `core/code-style.md`, and `core/skills/{zombies,warm,triage,coderabbit-local}/SKILL.md`;
   one link line each in `core/rules.md` and `CLAUDE.md`.
-- Consumers: the doc and the markers reach them through `sync.ts` on their
-  next bump, and nothing is done by hand. No gate changes, so neither consumer
+- Consumers: the docs and their markers reach them through `sync.ts` on
+  their next bump. The skills' markers reach them through the skill links
+  into `node_modules/harness/core/skills/`, which the bump updates. Nothing
+  is done by hand. No gate changes, so neither consumer
   tree is measured.
 - Interactive sessions: no change. A marker only says what an unattended
   session does.
