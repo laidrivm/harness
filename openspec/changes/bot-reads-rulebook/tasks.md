@@ -58,7 +58,7 @@ Closes `local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach`,
       rulebook and its docs sit at, and it names no glob (design.md §*The
       prose names no glob*). Verify by reading the sentence as it stands in
       the harness, in d2ass's `harness/rules.md` and in mellon's
-- [ ] 1.7 Reword `README.md`'s consumer line saying the copy in `harness/` is
+- [x] 1.7 Reword `README.md`'s consumer line saying the copy in `harness/` is
       what "its review bot reads". The bot reads the copy once the project's
       `.coderabbit.yaml` names `harness/*.md` under `code_guidelines`. Say
       that, and nothing about any one consumer's visibility or settings
