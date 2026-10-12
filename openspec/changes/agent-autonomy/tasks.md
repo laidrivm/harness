@@ -51,7 +51,7 @@ change (harness#56) is on `main`.
       proposed dismissal*, §*The pull request opens over a Major left
       unresolved*; A session is attended unless the prompt that started it
       says otherwise)
-- [ ] 1.2 Write `core/autonomy.md`. It opens with a level-1 heading, and says:
+- [x] 1.2 Write `core/autonomy.md`. It opens with a level-1 heading, and says:
       - When a session is unattended: the line `This session runs
         unattended.`, verbatim and on a line of its own, with one declared
         and one undeclared example, as in design.md. An attended session
