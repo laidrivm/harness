@@ -88,6 +88,6 @@ built from what the case needs, in a directory that holds no `.env`.
       project's records are counted, the subdirectory's record among them,
       and that no other project's are. (Req:
       gate-ledger — The wrap-up reports the gate decisions)
-- [ ] 2.4 In the README, name the ledger's path in the *Consuming* section
+- [x] 2.4 In the README, name the ledger's path in the *Consuming* section
       beside the hooks that write it. Grep for every other place that lists
       what the hooks do, and reconcile each one.
