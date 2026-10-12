@@ -10,7 +10,7 @@ built from what the case needs, in a directory that holds no `.env`.
 
 ## 1. The writer, and the guard's refusals
 
-- [ ] 1.1 Write the writer's tests in `bun/gate-ledger.test.ts`:
+- [x] 1.1 Write the writer's tests in `bun/gate-ledger.test.ts`:
       - a first record creates the state directory and the file, and holds
         one line [1];
       - an empty `XDG_STATE_HOME` falls back to `$HOME/.local/state` [2], and
