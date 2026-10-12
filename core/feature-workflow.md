@@ -166,6 +166,13 @@ for them is already here.
   moved — no hook can read the board, and a card once reported `done` stayed
   `proposed`.
 
+  A card's `Pointer` is a directory of this tree. A card whose change lives in
+  another repository points across instead, as
+  `<repo>: openspec/changes/<slug>/`: the repository's name, a colon and a
+  space, then the path with nothing after it. A task number goes in the
+  card's body, never after the path — `task-board`'s *A card for another
+  repository's change points across* fixes the form.
+
   Anchor an `update_content` edit on plain text. An `old_str` holding a
   `<mention-page>` tag matches nothing. A bullet added to the end of a section
   anchors on that section's last line, never on the first item under the next
@@ -173,12 +180,20 @@ for them is already here.
 
   Three of the nine statuses a reconciliation can repair, because the
   harness's `board-state.ts` derives them from the tree: `proposing`,
-  `proposed`, `done`, and only on `D2ASS`. The other six, and every card on
-  `Harness` or `mellon`, are honoured rather than mechanised, and this bullet
-  is the whole of what holds them — which is why it is stated as an obligation
-  rather than as a convention. Which nine, and so which six, is fixed in the
-  harness's `openspec/specs/task-board/` and named nowhere else; a second copy
-  here is the drift this change was written after.
+  `proposed`, `done`, on the board the repository names under `harness.board`
+  in its `package.json`. Each board is derived from its own repository. The
+  other six are moved by hand, and this bullet is the whole of what holds
+  them — which is why it is stated as an obligation rather than as a
+  convention. Which nine, and so which six, is fixed in the harness's
+  `openspec/specs/task-board/` and named nowhere else; a second copy here is
+  the drift this change was written after.
+
+  The session reconciles its board at the `Board view` read it makes to choose
+  work, and again at `session-wrapup` for the cards its own changes point at.
+  Each time it runs the harness's `bun/board-state.ts` and corrects each card
+  behind its floor whose `Pointer` is wholly a directory of this tree. It
+  skips a cross-repository pointer, and lists the cards whose pointer is
+  empty, decorated, or names a slug the tree lacks.
 
   A reconciliation that finds a card disagreeing with the tree **reports what
   it corrected**; it does not repair silently. A silent repair leaves nobody
@@ -198,8 +213,9 @@ for them is already here.
   A board is read through the saved view named `Board view`, never through a
   SQL query. The boards are named here rather than linked: this repository is
   public and they are not, so a board or view URL is an identifier for private
-  content and does not belong in a tracked file. Which statuses the
-  harness's `board-state.ts` derives, and on which board, is the bullet above.
+  content and does not belong in a tracked file. Each repository names its own
+  board under `harness.board`, and the bullet above is what that board's tree
+  decides.
 - Take the first card of its column that is not blocked, in the order
   `Board view` returns, name every card stepped over and why, and never move a
   card within that order: it is the

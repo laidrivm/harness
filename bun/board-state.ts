@@ -4,6 +4,10 @@
  * so the whole of its behaviour is exercisable from a fabricated directory and
  * an agent is what carries its output to the board.
  *
+ * It answers for the repository it runs in, whichever that is, and run as a
+ * command it prints the board that repository names under `harness.board`
+ * beside what it derives — the one board whose cards this tree decides.
+ *
  * It never reports the six statuses nobody can read from here — `idea`,
  * `exploring`, `explored`, `applying`, `applied`, `archiving` — nor anything
  * about a card on a board whose tree is not this repository. A derivation that
@@ -12,6 +16,7 @@
  */
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { read } from "./config.ts";
 import { root } from "./root.ts";
 
 export type Status = "done" | "proposed" | "proposing";
@@ -216,4 +221,32 @@ export function boardState(tree: string): State {
 	return { status, edges };
 }
 
-if (import.meta.main) console.log(JSON.stringify(boardState(root), null, "\t"));
+/**
+ * A board's address rather than its name: anything carrying a scheme, or a
+ * UUID in either case with or without its hyphens, anywhere in the value. The
+ * boards are private and this repository is public, so an address is refused
+ * whatever the name around it.
+ */
+const ADDRESS =
+	/:\/\/|[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}/i;
+
+/**
+ * The board `tree`'s `package.json` names. A refusal names the key and never
+ * the value: a refused value is exactly the one that must travel no further,
+ * into a CI log for instance.
+ */
+function board(tree: string): string {
+	const named: unknown = read(tree, "board");
+	if (typeof named !== "string" || named.trim() === "")
+		throw new Error(`"harness.board" holds no board name`);
+	if (ADDRESS.test(named))
+		throw new Error(
+			`"harness.board" holds a board's address rather than its name — the value is not repeated here`,
+		);
+	return named;
+}
+
+if (import.meta.main)
+	console.log(
+		JSON.stringify({ board: board(root), ...boardState(root) }, null, "\t"),
+	);
