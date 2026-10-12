@@ -34,7 +34,7 @@ form a reader can tell from the user's own words.
   per-session ceiling. Any other call gets no answer from the hook, so the
   prompt stands where a session can show one and the call is refused where it
   cannot. The hook never refuses a call itself.
-- Each call the hook answers is recorded through `gate-decision-ledger`'s
+- Each call the hook sees is recorded through `gate-decision-ledger`'s
   writer, which is also where the ceiling is counted, so there is one record
   of gate decisions and not two.
 - The hook joins `bun/bootstrap.ts`'s list, so `sync.ts` writes it into each
@@ -91,6 +91,13 @@ None.
 - `task-board`: two new requirements, *An open question waits on its card,
   assigned to the user*, which names the `Questions` view, and *At most two
   questions wait at once*.
+
+### Unmodified, but adjacent
+
+- `policy-gate-beyond-bash`'s *Sending as the user through an MCP tool
+  prompts* keeps its entry for `notion-create-comment`; the new
+  agent-permissions requirement names itself as that requirement's one
+  exception, and archives after it.
 
 ## Impact
 
