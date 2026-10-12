@@ -26,7 +26,11 @@
 			"Bash(bun pm pkg *)",
 			"Bash(bun pm version *)",
 			"Bash(bun pm trust *)",
-			"Edit(bunfig.toml)"
+			"Edit(bunfig.toml)",
+			"mcp__*__send_message",
+			"mcp__*__reply",
+			"mcp__*__forward",
+			"mcp__*__notion-create-comment"
 		],
 		"allow": [
 			"Bash(bun test *)",
