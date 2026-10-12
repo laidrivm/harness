@@ -89,6 +89,15 @@
 						"command": "bun \"$CLAUDE_PROJECT_DIR/bun/command-guard.ts\" || exit 2"
 					}
 				]
+			},
+			{
+				"matcher": "^mcp__.+__notion-update-page$",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bun \"$CLAUDE_PROJECT_DIR/bun/notion-guard.ts\""
+					}
+				]
 			}
 		],
 		"UserPromptSubmit": [

@@ -38,7 +38,7 @@ the pull request that bumps its pin past group 1.
       These pin the string; 2.3 confirms that Claude Code applies it. All of
       these fail before 1.3. (Req: task-board — A card write that would lose
       its properties is refused, §*A consumer without the registration*)
-- [ ] 1.3 Write `bun/notion-guard.ts`, fail-open as design.md *Fail-open*
+- [x] 1.3 Write `bun/notion-guard.ts`, fail-open as design.md *Fail-open*
       says. Add the registration text and the matcher to `bun/bootstrap.ts`,
       with no `|| exit 2`. Pin both in `bun/settings.ts`, and register the
       guard in this repository's `.claude/settings.json`. `bun test` must be
