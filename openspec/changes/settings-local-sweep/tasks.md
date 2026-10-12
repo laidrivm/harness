@@ -45,8 +45,9 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
 - [ ] 1.7 Run the sweep against the harness's main checkout and compare its
       classes with design §*The harness's own clean-up*. Where the file has
       changed since 2026-10-12, decide each new gap by the same criterion.
-      Promote the chosen entries into `.claude/settings.json` and verify that
-      `bun test` passes. In the pull request body, name each promotion and
+      Promote the chosen entries into `.claude/settings.json`. Verify that
+      `bun test` passes and that a rerun reports the `mkdir -p` grants as
+      decided. In the pull request body, name each promotion and
       the largest dropped group, per §*The tracked allow list holds only what
       a clone can use*, and give classes and counts only. The local file is
       machine-local and none of its entries are quoted beyond those promoted
