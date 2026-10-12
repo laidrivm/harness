@@ -2,7 +2,14 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { statSync } from "node:fs";
 import { join } from "node:path";
 import { branchState, FETCH_MAX_AGE } from "./branch-state.ts";
-import { cleanup, fabricate, git, upstream } from "./command-guard.fixture.ts";
+import {
+	cleanup,
+	event,
+	fabricate,
+	git,
+	run,
+	upstream,
+} from "./command-guard.fixture.ts";
 
 /**
  * What the guard refuses by the state of the branch a commit lands on: one
@@ -144,5 +151,55 @@ describe("what the review rounds' probes measured", () => {
 		git(dir, "push", "origin", "--delete", "feat/x");
 		git(dir, "fetch", "--prune", "origin");
 		expect(state(dir)).toBe("merged");
+	});
+});
+
+describe("the guard's refusal", () => {
+	const commit = event("git commit -m fix");
+
+	// spec: agent-permissions/a-commit-on-a-branch-whose-pull-request-merged
+	test("a commit on a merged branch exits exactly 2", () => {
+		expect(run(commit, upstream({ merged: true })).code).toBe(2);
+	});
+
+	test("the merged reason names moving the work, not fetching", () => {
+		const { reason } = run(commit, upstream({ merged: true }));
+		expect(reason).toContain("already merged");
+		expect(reason).toContain("Move the work");
+		expect(reason).not.toContain("git fetch");
+	});
+
+	// spec: agent-permissions/the-base-ref-is-stale
+	test("the stale reason names fetching, not moving the work", () => {
+		const { code, reason } = run(
+			commit,
+			upstream({ fetchedAgo: 60 * MINUTE }),
+		);
+		expect(code).toBe(2);
+		expect(reason).toContain("git fetch origin");
+		expect(reason).not.toContain("Move the work");
+	});
+
+	test("a commit on a pushed branch with work of its own is allowed", () => {
+		expect(run(commit, upstream({ own: true })).code).toBe(0);
+	});
+
+	// Both directions, so neither the target nor the start alone passes both.
+	test.each([
+		["a merged target from a clean start blocks", true, 2],
+		["a clean target from a merged start is allowed", false, 0],
+	])("git -C: %s", (_, targetMerged, expected) => {
+		const target = upstream({ merged: targetMerged, own: !targetMerged });
+		const start = upstream({ merged: !targetMerged, own: targetMerged });
+		const command = event(`git -C ${target} commit -m fix`);
+		expect(run(command, start).code).toBe(expected);
+	});
+
+	test("a detached HEAD meets the branch-read refusal first", () => {
+		const dir = upstream({ merged: true });
+		git(dir, "checkout", "--detach");
+		const { code, reason } = run(commit, dir);
+		expect(code).toBe(2);
+		expect(reason).toContain("current branch");
 	});
 });

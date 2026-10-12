@@ -57,7 +57,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       caller names, not in `cwd`, because `git -C <dir> commit` commits
       elsewhere. (Req: agent-permissions — A commit on a merged branch is
       refused)
-- [ ] 1.7 Write the guard-level tests in `bun/command-guard-branch.test.ts`:
+- [x] 1.7 Write the guard-level tests in `bun/command-guard-branch.test.ts`:
       a block exits exactly 2 [9]; the stale reason names the fetch and the
       merged reason names moving the work, distinguishably [10]; `git -C
       <other-repo> commit` is decided against the `-C` target [12]; a detached

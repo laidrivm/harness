@@ -62,7 +62,7 @@ export function detached(): string {
 export type Upstream = {
 	/** The branch `HEAD` is left on; `feat/x` when not given. */
 	branch?: string;
-	/** A commit of the branch's that `origin/main` carries as an equivalent patch. */
+	/** A branch commit `origin/main` carries as an equivalent patch. */
 	merged?: boolean;
 	/** A commit only the branch carries, made after the merged one. */
 	own?: boolean;
