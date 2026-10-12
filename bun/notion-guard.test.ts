@@ -49,6 +49,7 @@ describe("calls that go through", () => {
 		["no properties [1]", {}],
 		["an empty properties [2]", { properties: {} }],
 		["a null properties [3]", { properties: null }],
+		["an empty array as properties", { properties: [] }],
 	])("a content edit with %s", (_, extra) => {
 		const input = { command: "update_content", content_updates: EDIT };
 		expect(run(update({ ...input, ...extra })).code).toBe(0);
@@ -99,8 +100,11 @@ describe("calls that would lose their properties", () => {
 
 describe("events the guard cannot read", () => {
 	// spec: task-board/an-event-the-hook-cannot-read
-	test("stdin that is not JSON lets the call through [19]", () => {
-		expect(run("{ not json").code).toBe(0);
+	test.each([
+		["stdin that is not JSON [19]", "{ not json"],
+		["stdin holding JSON null", "null"],
+	])("%s lets the call through", (_, stdin) => {
+		expect(run(stdin).code).toBe(0);
 	});
 
 	test("an event with no tool_input lets the call through [20]", () => {
