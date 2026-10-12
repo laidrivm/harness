@@ -140,6 +140,20 @@ describe("a doc out of reach", () => {
 		expect(problems[0]).toContain(named);
 	});
 
+	// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach
+	test.each([
+		["a titled link", 'See [x](docs/x.md "X").\n'],
+		["a reference definition", "See [x][x].\n\n[x]: docs/x.md\n"],
+	])("a doc behind %s outside every pattern is named", (_name, link) => {
+		const dir = fabricate({
+			"CLAUDE.md": `@core/rules.md\n${link}`,
+			"docs/x.md": "# X\n",
+		});
+		const problems = unreached(dir);
+		expect(problems).toHaveLength(1);
+		expect(problems[0]).toContain("docs/x.md");
+	});
+
 	test("a link carrying an anchor reaches the doc it names", () => {
 		const dir = fabricate({
 			"CLAUDE.md": "@core/rules.md\nSee [t](core/t.md#a-section).\n",

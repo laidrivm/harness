@@ -60,7 +60,12 @@ function indexed(root: string, from: string): string[] {
 	const path = join(root, from);
 	if (!existsSync(path)) return [];
 	const text = readFileSync(path, "utf8");
-	const targets = [...text.matchAll(/\]\(([^)\s#]+\.md)(?:#[^)]*)?\)/g)]
+	// An inline link's destination runs to the first space, `#` or `)`, so an
+	// optional title after it is ignored; a reference definition is a line of
+	// its own, `[label]: destination`.
+	const inline = /\]\(\s*([^)\s#]+\.md)(?:#[^)\s]*)?(?:\s+[^)]*)?\)/g;
+	const reference = /^\s{0,3}\[[^\]]+\]:\s*([^\s#]+\.md)(?:#\S*)?(?:\s|$)/gm;
+	const targets = [...text.matchAll(inline), ...text.matchAll(reference)]
 		.map((m) => m[1] as string)
 		.filter((t) => !/^[a-z][a-z0-9+.-]*:/i.test(t))
 		.map((t) => normalize(join(dirname(from), t)));
