@@ -46,6 +46,16 @@ export const TURN_MARK = turnGate("mark");
 export const TURN_STOP = turnGate("stop");
 
 /**
+ * The Notion update guard's `PreToolUse` registration. The matcher is a
+ * regular expression, as Claude Code reads a hook's, so it reaches the tool
+ * under any server name and no longer tool. Before the install every call goes
+ * through; after it, the guard's exit code is the hook's. No `|| exit 2`, like
+ * the turn gate: the guard is fail-open, as its header says.
+ */
+export const NOTION_MATCHER = "^mcp__.+__notion-update-page$";
+export const NOTION_GUARD = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/notion-guard.ts"; if [ -f "$g" ]; then bun "$g"; fi ${MARK}`;
+
+/**
  * The `SessionStart` notice: one line when the installed harness is not the
  * pinned one, as after a `git pull` that brought a bump, until `bun install`.
  * Claude Code adds a `SessionStart` hook's output to the session, so the
@@ -95,6 +105,12 @@ export const HOOKS: {
 		command: BOOTSTRAP,
 		name: "harness bootstrap",
 		sole: true,
+	},
+	{
+		event: "PreToolUse",
+		matcher: NOTION_MATCHER,
+		command: NOTION_GUARD,
+		name: "harness Notion update guard",
 	},
 	{ event: "UserPromptSubmit", command: TURN_MARK, name: "harness turn gate" },
 	{ event: "Stop", command: TURN_STOP, name: "harness turn gate" },

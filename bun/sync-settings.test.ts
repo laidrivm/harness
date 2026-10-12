@@ -86,16 +86,20 @@ describe("the settings file", () => {
 	test("a hook copied by hand before the mark existed is replaced, not doubled", () => {
 		const unmarked = (command: string) => command.slice(0, -` ${MARK}`.length);
 		const config = stale();
-		for (const { event, command } of HOOKS) {
-			// An event the previous version never registered is only added.
-			const groups = config.hooks[event as keyof typeof config.hooks] ?? [];
-			const [group] = groups;
+		type Group = { matcher?: string; hooks: object[] };
+		for (const { event, matcher, command } of HOOKS) {
+			// A hook the previous version never registered is only added.
+			const groups: Group[] =
+				config.hooks[event as keyof typeof config.hooks] ?? [];
+			const group = groups.find((g) => g.matcher === matcher);
 			if (group) group.hooks = [{ type: "command", command: unmarked(command) }];
 		}
 		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
 		syncSettings(dir);
-		for (const { event, command } of HOOKS)
-			expect(parsed(dir).hooks[event]).toEqual([
+		for (const { event, matcher, command } of HOOKS)
+			expect(
+				parsed(dir).hooks[event].filter((g: Group) => g.matcher === matcher),
+			).toEqual([
 				expect.objectContaining({ hooks: [{ type: "command", command }] }),
 			]);
 	});
