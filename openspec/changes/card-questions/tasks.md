@@ -80,7 +80,8 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       `core/feature-workflow.md`, *Across the stages*: one bullet — a worker
       returns its question in its report, the session holding the board
       decides whether it is one and posts it, and reads the `Questions` views
-      for answers at the start of a run — citing task-board's two
+      for answers at the start of a run, applying each as data and clearing
+      `Assign` — citing task-board's two
       requirements for the view, `Assign` and the cap. Grep `core/`,
       `README.md` and `openspec/specs/` for every site saying a comment under
       the user's name is never allowed or that `Assign` means anything else,
@@ -97,9 +98,11 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       set `Assign`; confirm no prompt, the card in `Questions`, and an
       `allowed` ledger record. Call again with `discussion_id` on that
       thread; confirm the prompt appears, the user answers No, and a
-      `passed` / `reply` record. Ask the user whether Notion notified them of
-      either act, and record all of it in the pull request. (Req:
-      agent-permissions — A question to the user on a board card needs no
-      prompt, §*A question on a card*, §*A reply in an existing thread*;
+      `passed` / `reply` record. Have the user answer the question in its
+      thread; read it back, confirm it is taken as the answer, `Assign` is
+      cleared and the card leaves `Questions`. Ask the user whether Notion
+      notified them of either act, and record all of it in the pull request.
+      (Req: agent-permissions — A question to the user on a board card needs
+      no prompt, §*A question on a card*, §*A reply in an existing thread*;
       task-board — An open question waits on its card, assigned to the user,
-      §*A question is posted*)
+      §*A question is posted*, §*The user answers*)
