@@ -16,7 +16,7 @@ change (harness#56) is on `main`.
       change's `.openspec.yaml`. Before that, the `after:` fails
       `board-state-hygiene.test.ts`, so the proposal does not carry it.
       `bun test` is green.
-- [ ] 1.1 Write `bun/autonomy.test.ts` with these cases:
+- [x] 1.1 Write `bun/autonomy.test.ts` with these cases:
       - A file with no marker adds nothing [1].
       - A doc that defines no class fails, naming the doc [2].
       - One `agent` marker passes [3].
