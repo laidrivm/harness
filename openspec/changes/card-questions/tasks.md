@@ -67,7 +67,7 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       recorded through `gate-decision-ledger`'s writer, the ledger never
       read. `bun test` green; each new file under
       its cap.
-- [ ] 1.5 Add the hook to `bun/bootstrap.ts`'s `HOOKS` — event
+- [x] 1.5 Add the hook to `bun/bootstrap.ts`'s `HOOKS` — event
       `PermissionRequest`, matcher `mcp__.*__notion-create-comment`, a
       command that runs the gate from `node_modules/harness/bun/` when it is
       installed and exits 0 otherwise, ending with `MARK` [22] — and register
