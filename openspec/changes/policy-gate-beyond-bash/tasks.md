@@ -14,7 +14,7 @@ Its boxes are ticked in the archive pull request.
 
 ## 1. The entries, the check that pins them, and the prose they replace
 
-- [ ] 1.1 Move `policy`, `consumer` and `changed` from `bun/settings.test.ts`
+- [x] 1.1 Move `policy`, `consumer` and `changed` from `bun/settings.test.ts`
       into `bun/settings.fixture.ts`, as the other gates share theirs: the
       test file holds 294 lines against the 300-line cap, so the new cases
       go in `bun/settings-mcp.test.ts`. Verify the split by the full describe

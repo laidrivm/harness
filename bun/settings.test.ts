@@ -4,101 +4,18 @@
  * say is that consumer's check to report.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { BOOTSTRAP, NOTICE, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
+import { BOOTSTRAP, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
 import { settings } from "./settings.ts";
+import {
+	BUNFIG,
+	changed,
+	cleanup,
+	consumer,
+	type Hook,
+	policy,
+} from "./settings.fixture.ts";
 
-const made: string[] = [];
-
-afterAll(() => {
-	for (const dir of made) rmSync(dir, { recursive: true, force: true });
-});
-
-const policy = () => ({
-	permissions: {
-		deny: [
-			"Bash(npx *)",
-			"Bash(npm *)",
-			"Bash(pnpm *)",
-			"Bash(yarn *)",
-			"Bash(gh pr comment *)",
-			"Bash(gh issue comment *)",
-			"Bash(gh pr review *)",
-			"Edit(.npmrc)",
-		],
-		ask: [
-			"Bash(bun add *)",
-			"Bash(bun a *)",
-			"Bash(bun install *)",
-			"Bash(bun i *)",
-			"Bash(bun remove *)",
-			"Bash(bun rm *)",
-			"Bash(bun r *)",
-			"Bash(bun uninstall *)",
-			"Bash(bun update *)",
-			"Bash(bun up *)",
-			"Bash(bun patch *)",
-			"Bash(bun patch-commit *)",
-			"Bash(bun pm pkg *)",
-			"Bash(bun pm version *)",
-			"Bash(bun pm trust *)",
-			"Edit(bunfig.toml)",
-		],
-		allow: ["Bash(bun test *)", "Read(docs/**)"],
-	},
-	hooks: {
-		PreToolUse: [
-			{
-				matcher: "Bash",
-				hooks: [{ type: "command", command: BOOTSTRAP } as object],
-			},
-		],
-		UserPromptSubmit: [
-			{ hooks: [{ type: "command", command: TURN_MARK } as Hook] },
-		] as { hooks: Hook[] }[] | undefined,
-		Stop: [{ hooks: [{ type: "command", command: TURN_STOP } as Hook] }] as
-			| { hooks: Hook[] }[]
-			| undefined,
-		SessionStart: [{ hooks: [{ type: "command", command: NOTICE } as Hook] }] as
-			| { hooks: Hook[] }[]
-			| undefined,
-	},
-});
-
-type Hook = { type: string; command: string; if?: string };
-
-const BUNFIG =
-	"[install]\nexact = true\nminimumReleaseAge = 259200\nminimumReleaseAgeExcludes = []\n";
-
-/** A consumer tracking `config` as its settings, plus `files`. */
-function consumer(
-	config: ReturnType<typeof policy>,
-	files: Record<string, string> = {},
-): string {
-	const dir = mkdtempSync(join(tmpdir(), "harness-settings-"));
-	made.push(dir);
-	const all = {
-		".claude/settings.json": JSON.stringify(config),
-		"bunfig.toml": BUNFIG,
-		...files,
-	};
-	for (const [path, text] of Object.entries(all)) {
-		mkdirSync(dirname(join(dir, path)), { recursive: true });
-		writeFileSync(join(dir, path), text);
-	}
-	Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
-	Bun.spawnSync(["git", "add", "-A"], { cwd: dir });
-	return dir;
-}
-
-/** The policy with `change` applied to a fresh copy. */
-const changed = (change: (config: ReturnType<typeof policy>) => void) => {
-	const config = policy();
-	change(config);
-	return config;
-};
+afterAll(cleanup);
 
 describe("a consumer keeping the policy", () => {
 	test("reports nothing", () => {
