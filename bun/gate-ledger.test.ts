@@ -110,6 +110,25 @@ describe("the project a record names", () => {
 		expect(project({}, { cwd: `${root}/` })).toBe(realpathSync(root));
 	});
 
+	test("is CLAUDE_PROJECT_DIR over the event's cwd", () => {
+		const root = dir();
+		expect(project({ CLAUDE_PROJECT_DIR: root }, { cwd: dir() })).toBe(
+			realpathSync(root),
+		);
+	});
+
+	test("an empty CLAUDE_PROJECT_DIR falls back to the event's cwd", () => {
+		const root = dir();
+		expect(project({ CLAUDE_PROJECT_DIR: "" }, { cwd: root })).toBe(
+			realpathSync(root),
+		);
+	});
+
+	test("is a missing directory's resolved path", () => {
+		const gone = join(realpathSync(dir()), "gone");
+		expect(project({ CLAUDE_PROJECT_DIR: `${gone}/` })).toBe(gone);
+	});
+
 	test("is unknown with neither", () => {
 		expect(project({})).toBe("unknown");
 	});
@@ -207,10 +226,18 @@ describe("the guard's refusals", () => {
 	test.each([
 		["names main records push-to-main", "feat/x:main", "push-to-main"],
 		["names no bounded destination records unbounded-push", ":", "unbounded-push"],
+		["reaches every ref records unbounded-push", "--all", "unbounded-push"],
 	])("a push that %s", (_, refspec, id) => {
 		expect(rule(event(`git push origin ${refspec}`), fabricate("feat/x"))).toBe(
 			id,
 		);
+	});
+
+	test("a refusal records the session of the event the guard read", () => {
+		const state = dir();
+		const payload = { ...event("git commit -m x"), session_id: "s9" };
+		guard(payload, fabricate("main"), state);
+		expect(records(state)[0].session).toBe("s9");
 	});
 
 	// spec: gate-ledger/a-blocked-push-naming-a-token
