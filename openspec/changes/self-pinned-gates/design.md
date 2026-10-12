@@ -27,8 +27,9 @@ scratch copies of the harness (never in its checkout):
   The same project depending on it as a `file:` folder installed two, because
   bun treats a folder dependency like a workspace and installs its
   development dependencies — no consumer depends on the harness that way.
-  The `github:` form both consumers use was not itself measured; it fetches a
-  tarball, which bun installs like the git form.
+  The `github:` form both consumers use could not be measured yet, since no
+  pushed commit carries the self-pin; tasks.md 1.7 measures it on the apply
+  branch before the one-copy scenario counts as verified.
 - **Both consumers pin under `dependencies`** (`d2ass` and `mellon`'s
   `package.json`, read-only).
 
@@ -121,9 +122,10 @@ that made it, which is how a skill is developed here.
 - **The pinned copy is a directory a session can edit.** The pin separates
   the code under development from the code that gates; it does not stop a
   deliberate edit under `node_modules/harness/`. Proposal *Non-goals*.
-- **Sibling changes registering a working-tree hook.** `notion-update-guard`
-  (pull request 52) adds one to the harness's settings. Whichever of the two
-  merges second registers the notion guard in its `HOOKS` form.
+- **A sibling registered a working-tree hook.** `notion-update-guard`'s step 1
+  (pull request 52) merged first, registering the Notion update guard in the
+  harness's settings in working-tree form. This change's apply registers it
+  in its `HOOKS` form instead (tasks.md 1.4).
 
 ## Migration Plan
 

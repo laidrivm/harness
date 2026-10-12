@@ -81,10 +81,12 @@ None.
 - `README.md`, and the comments in `.github/workflows/test.yml` and
   `diff-budget.yml` that skip the install because "the package declares no
   dependencies": still no install, for another reason.
-- In-flight changes that register a hook in the harness's own settings in
-  working-tree form — `notion-update-guard` (pull request 52) — meet the new
-  test whichever merges second; that one registers the hook in its `HOOKS`
-  form instead.
+- `notion-update-guard`'s step 1 (pull request 52) has merged, and it
+  registers the Notion update guard in the harness's settings in
+  working-tree form, `bun "$CLAUDE_PROJECT_DIR/bun/notion-guard.ts"`. This
+  change's apply replaces that registration with the guard's `HOOKS` entry
+  (`NOTION_GUARD` under `NOTION_MATCHER`), like the other hooks, and pins a
+  commit that holds `bun/notion-guard.ts`.
 - Closest existing artefacts: the archived `ship-turn-gate-to-consumers`,
   which gave consumers the pinned hook texts this change adopts, and
   `harness-auto-bump`, whose notice this change extends.
