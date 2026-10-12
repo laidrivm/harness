@@ -4,6 +4,7 @@ import {
 	mkdirSync,
 	readFileSync,
 	realpathSync,
+	statSync,
 	symlinkSync,
 	writeFileSync,
 } from "node:fs";
@@ -89,6 +90,15 @@ describe("where the ledger lives", () => {
 		);
 		await Promise.all(both);
 		expect(records(state).map((r) => r.session).sort()).toEqual(["s1", "s2"]);
+	});
+
+	test("the directory and the file are readable by their owner alone", () => {
+		const state = dir();
+		write(envOf({ XDG_STATE_HOME: state }));
+		const mode = (path: string) => statSync(path).mode & 0o777;
+		expect([mode(join(state, "harness")), mode(ledger(state))]).toEqual([
+			0o700, 0o600,
+		]);
 	});
 });
 
