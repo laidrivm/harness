@@ -7,10 +7,14 @@ for edge cases). The numbers in brackets are that run's idea numbers, and all
 
 The change is one group and one harness pull request, on
 `feat/agent-autonomy`. The pull request is taken only once the card-questions
-change (harness#56) is on `main`, as `.openspec.yaml`'s `after:` records.
+change (harness#56) is on `main`.
 
 ## 1. The classes, the markers, and the vocabulary check
 
+- [ ] 1.0 With harness#56 on `main`, add `after: [card-questions]` to this
+      change's `.openspec.yaml`. Before that, the `after:` fails
+      `board-state-hygiene.test.ts`, so the proposal does not carry it.
+      `bun test` is green.
 - [ ] 1.1 Write `bun/autonomy.test.ts` with these cases:
       - A file with no marker adds nothing [1].
       - A doc that defines no class fails, naming the doc [2].

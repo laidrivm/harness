@@ -24,8 +24,10 @@ read on 2026-10-12:
   the board decides whether to post it or to decide it and flag it in the
   pull request. `card` hands questions to that procedure and does not
   restate it.
-- `bun/board-state.ts` reports an `after:` naming a directory that is on
-  neither `main` nor its archive, but no test runs it over the tree.
+- `bun/board-state.ts` refuses an `after:` that names a directory on
+  neither `main` nor its archive, and `board-state-hygiene.test.ts` runs it
+  over the tree. An `after: [card-questions]` therefore fails `bun test` on
+  this branch until harness#56 merges.
 
 ## Goals / Non-Goals
 
@@ -168,9 +170,10 @@ and that is a guess. The default class covers what such a check would miss.
   in `context-budget`; measure the file in the apply.
 - [An orchestrator forgets the declaration] → Its workers run attended, and
   they stall at the first step that waits. This is visible and safe.
-- [`after: [card-questions]` names a change that is not yet on `main`] →
-  `board-state.ts` reports that as unresolved until harness#56 merges. Merge
-  #56 first.
+- [The ordering is prose until harness#56 merges] → `.openspec.yaml` carries
+  no `after:` on this branch, because one naming card-questions fails
+  `bun test` (see *Context*). Task 1.0 adds it as the apply's first commit,
+  and the apply itself waits for #56.
 - [A consumer gets the doc before the card-questions hook] → `card` still
   ends in the worker's report, which needs no hook.
 
