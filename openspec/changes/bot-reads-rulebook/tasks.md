@@ -78,7 +78,7 @@ Closes `local-review-loop/the-config-names-guideline-files`,
 The skill is prose and no test runs it. Each criterion is closed by a recorded
 run, and this step's pull request body quotes the command each run issued.
 
-- [ ] 2.1 Change `core/skills/coderabbit-local/SKILL.md` step 2. Read
+- [x] 2.1 Change `core/skills/coderabbit-local/SKILL.md` step 2. Read
       `knowledge_base.code_guidelines.filePatterns` from the parsed
       `.coderabbit.yaml`, not from a line that resembles it, and expand each
       pattern with `git ls-files ':(glob)<pattern>'`. Then pass `--config
