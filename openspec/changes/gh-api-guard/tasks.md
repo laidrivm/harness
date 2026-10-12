@@ -29,7 +29,7 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
       The first is the probed hole and fails today at exit 0; the two reads
       pass today and are the control that the new test did not simply block
       the command (ZOMBIES 2, 3, 6)
-- [ ] 1.2 Add the method test inside the `name === "gh"` branch, after the
+- [x] 1.2 Add the method test inside the `name === "gh"` branch, after the
       `GH_WRITES` pair search and before its `continue`. Read `--method` and
       `-X` in both the separated and the `=` spellings, compare the value
       case-insensitively, and treat `GET` and `HEAD` as a read whatever else

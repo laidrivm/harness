@@ -17,12 +17,14 @@
  * as well.
  *
  * Reading the command line is `command-parse.ts`'s; what this file
- * holds is what the prohibitions themselves are.
+ * holds is what the prohibitions themselves are, those on `gh` excepted, which
+ * are `command-guard-gh.ts`'s.
  */
 
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { ghRefusal } from "./command-guard-gh.ts";
 import { commands, invocations, SHELLS } from "./command-parse.ts";
 
 function block(reason: string): never {
@@ -143,13 +145,6 @@ function currentBranch(cwd: string | null): string {
 	);
 }
 
-/** The `gh` subcommand pairs that publish text on the user's behalf. */
-const GH_WRITES = [
-	["pr", "comment"],
-	["issue", "comment"],
-	["pr", "review"],
-];
-
 function check(command: string): void {
 	for (const part of commands(command)) {
 		// Every candidate, not the first: past a wrapper the parser cannot tell
@@ -182,17 +177,8 @@ function check(command: string): void {
 			}
 
 			if (name === "gh") {
-				// Adjacent anywhere, not the first two words: a global flag's value
-				// sits in front of them in `gh --repo a/b pr comment`.
-				const plain = rest.filter((word) => !word.startsWith("-"));
-				const write = GH_WRITES.find(([a, b]) =>
-					plain.some((word, at) => word === a && plain[at + 1] === b),
-				);
-				if (write) {
-					block(
-						`command-guard: \`gh ${write.join(" ")}\` publishes text under the user's name. Report what you would have written and let them send it.`,
-					);
-				}
+				const refusal = ghRefusal(rest);
+				if (refusal) block(refusal);
 				continue;
 			}
 
