@@ -47,6 +47,11 @@ describe("the page is a card on a board", () => {
 		expect(rule(transcript([...moved, comments(CARD)]))).toBe("not-a-card");
 	});
 
+	test("a fetch result written as a plain string still names the board", () => {
+		const plain = { ...fetched(CARD, "Harness"), plain: true as const };
+		expect(rule(transcript([plain, comments(CARD)]))).toBe("question");
+	});
+
 	test("a transcript line that is not JSON is skipped [35]", () => {
 		const path = transcript([fetched(CARD, "Harness"), comments(CARD)], ["{"]);
 		expect(rule(path)).toBe("question");
@@ -76,6 +81,18 @@ describe("a page that is not a card gets no answer", () => {
 		expect({ out, rule: ledger[0]?.rule }).toEqual({ out: "", rule: "not-a-card" });
 	});
 
+	test("a fetch of the card that failed is no read of a card", () => {
+		const failed = { ...fetched(CARD, "Harness"), failed: true as const };
+		expect(rule(transcript([failed, comments(CARD)]))).toBe("not-a-card");
+	});
+
+	// spec: agent-permissions/the-hook-cannot-read-what-it-decides-on
+	test("a page id holding no 32-hex id is unreadable", () => {
+		const path = transcript([fetched(CARD, "Harness"), comments(CARD)]);
+		const odd = event({ page_id: "not-an-id", markdown: QUESTION }, path);
+		expect(run(odd).ledger[0]?.rule).toBe("unreadable");
+	});
+
 	// spec: agent-permissions/the-hook-cannot-read-what-it-decides-on
 	test("a transcript that does not exist is unreadable [34]", () => {
 		expect(rule(join(scratch(), "missing.jsonl"))).toBe("unreadable");
@@ -88,6 +105,10 @@ describe("the card's comments were read", () => {
 	test.each([
 		["no comments read [40]", [fetched(CARD, "Harness")]],
 		["another page's comments read [41]", [fetched(CARD, "Harness"), comments(OTHER)]],
+		[
+			"a comments read that failed",
+			[fetched(CARD, "Harness"), { ...comments(CARD), failed: true as const }],
+		],
 	])("%s: no answer, recorded comments-unread", (_, calls) => {
 		const { out, ledger } = run(asked({}, transcript(calls)));
 		expect({ out, rule: ledger[0]?.rule }).toEqual({

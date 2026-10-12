@@ -57,11 +57,14 @@ function uses(path: string): Use[] {
 				found.set(block.id, { name: block.name, input: block.input ?? {} });
 			const use = block?.type === "tool_result" && found.get(block.tool_use_id);
 			if (use && !block.is_error)
-				use.result = (Array.isArray(block.content) ? block.content : [block])
-					.map((part: { text?: unknown }) =>
-						typeof part?.text === "string" ? part.text : "",
-					)
-					.join("");
+				use.result =
+					typeof block.content === "string"
+						? block.content
+						: (Array.isArray(block.content) ? block.content : [])
+								.map((part: { text?: unknown }) =>
+									typeof part?.text === "string" ? part.text : "",
+								)
+								.join("");
 		}
 	}
 	return [...found.values()];

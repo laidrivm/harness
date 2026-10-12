@@ -53,7 +53,17 @@ export const comments = (page: string) => ({
 	result: "<discussions></discussions>",
 });
 
-type Call = { name: string; input: object; result: string };
+/**
+ * A tool call and its result. `failed` marks the result `is_error`, and
+ * `plain` writes its content as a bare string rather than a list of parts.
+ */
+type Call = {
+	name: string;
+	input: object;
+	result: string;
+	failed?: true;
+	plain?: true;
+};
 
 /**
  * A transcript holding `calls` in order, each as the assistant line carrying
@@ -79,7 +89,10 @@ export function transcript(calls: Call[], extra: string[] = []): string {
 					{
 						type: "tool_result",
 						tool_use_id: `t${n}`,
-						content: [{ type: "text", text: call.result }],
+						content: call.plain
+							? call.result
+							: [{ type: "text", text: call.result }],
+						...(call.failed ? { is_error: true } : {}),
 					},
 				],
 			},
