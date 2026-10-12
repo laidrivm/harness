@@ -38,7 +38,7 @@ There is one group, shipped as `feat/pre-pr-run-record`. It is cut after
         `diff-budget.sh` and never `pre-pr.ts`, read from those files [18].
       All of these fail before 1.3. (Req: pre-pr-runner — all four;
       gate-ledger — A record holds no command text)
-- [ ] 1.2 Write the turn gate's record cases in `bun/turn-gate-record.test.ts`,
+- [x] 1.2 Write the turn gate's record cases in `bun/turn-gate-record.test.ts`,
       using `bun/turn-gate.fixture.ts`:
       - no ledger file means one refusal, then a release [19]. An empty one
         reads as no record [20];
