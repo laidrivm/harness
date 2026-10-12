@@ -43,7 +43,7 @@ the pull request that bumps its pin past group 1.
       with no `|| exit 2`. Pin both in `bun/settings.ts`, and register the
       guard in this repository's `.claude/settings.json`. `bun test` must be
       green, with every file under its cap.
-- [ ] 1.4 If `bun/gate-ledger.ts` is on `main`, record each refusal under
+- [x] 1.4 If `bun/gate-ledger.ts` is on `main`, record each refusal under
       `notion-properties-dropped` and add the case that a refusal appends that
       record [25]. Also add the case that an unwritable ledger still refuses
       with its reason [24]. If the module is not on `main` yet, leave this
