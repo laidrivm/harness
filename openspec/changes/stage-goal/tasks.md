@@ -103,7 +103,11 @@ merge (proposal.md, *Impact*, *Ordering*).
       exported functions) and call it from `turn-gate.ts`. Call it in `mark`
       to reset, and in `stop` before `decide()`. At the ceiling, record,
       print the JSON and exit 0. Update `turn-gate.ts`'s header comment to
-      name the ceiling. Verify: `bun test` is green.
+      name the ceiling. Its "without reading `stop_hook_active`" becomes a
+      line saying that the refusal bound still reads no event field and the
+      ceiling does, which `commit-gates`' "SHALL NOT depend on a
+      loop-protection field" allows, since that sentence is about the
+      refusal. Verify: `bun test` is green.
 - [ ] 2.3 Measure `bun/turn-gate.ts` and `bun/goal-check.ts` against the
       300-line cap. Verify: `bun/file-size.ts` passes on the branch.
 - [ ] 2.4 In `README.md` *Consuming*, the turn-gate line names the ceiling. In
