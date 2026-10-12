@@ -72,7 +72,11 @@ The guard counts failures and never resets on a success.
 
 The key is the SHA-256 of `tool_name`, `tool_input` with `description` removed
 and serialised with sorted keys, and `error` with each run of digits replaced
-by `#` and each run of whitespace by one space. The count file maps these
+by `#` and each run of whitespace by one space. Digits go because an error
+carries timestamps, ids and durations that differ on every call and would hide
+a repeat. The cost is that errors differing only by a number, such as HTTP 404
+and 500, count as one; with the tool and input unchanged the agent has not
+changed approach, so that is accepted. The count file maps these
 hashes to counts, so nothing in it reads back as a command or an error.
 
 - *Alternative: tool and error only.* This is what the card's example asked
