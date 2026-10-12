@@ -131,9 +131,9 @@ Rules about how work is carried out here. They do not age with the code.
   into it, since the command guard also checks the directory the call starts
   in, nor through a shell variable, which the guard cannot resolve and refuses.
 - Name in `after:` only a change whose directory the branch already holds,
-  under `openspec/changes/` or its archive — `bun/board-state-hygiene.test.ts`
-  derives the board from the tree and fails on any other slug; keep the order
-  in the proposal's prose until that change merges.
+  under `openspec/changes/` or its archive — `bun/board-state.ts` refuses any
+  other slug and `bun/board-state-hygiene.test.ts` runs it over the repository;
+  keep the order in the proposal's prose until that change merges.
 
 #### Safety
 
