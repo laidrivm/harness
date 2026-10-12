@@ -39,6 +39,19 @@ const MANIFEST_WRITES = [
 ];
 
 /**
+ * The MCP tools that send or post as the user, asked under any server: the
+ * server name is chosen per machine, so the same tool reaches sessions under
+ * more than one. An enumeration of verified names, not a verb glob. Exported
+ * so `sync-settings.ts` writes the list this check compares.
+ */
+export const MCP_ASK = [
+	"send_message",
+	"reply",
+	"forward",
+	"notion-create-comment",
+].map((tool) => `mcp__*__${tool}`);
+
+/**
  * The `Bash(` entries `deny` and `ask` hold, whole and in order, and the file
  * rule beside each. Exported with `INSTALL` so `sync-settings.ts` writes the
  * values this check compares, not a second copy of them.
@@ -154,6 +167,14 @@ export function settings(root: string): string[] {
 	if (JSON.stringify(bash(ask)) !== JSON.stringify(ASK))
 		say(`the Bash ask list is not ${ASK.join(", ")}`);
 	problems.push(...bunForms(bash(ask)));
+	const mcp = ask.filter((e) => e.startsWith("mcp__"));
+	if (JSON.stringify(mcp) !== JSON.stringify(MCP_ASK))
+		say(`the mcp__ ask list is not ${MCP_ASK.join(", ")}`);
+	for (const entry of [...deny, ...ask, ...allow])
+		if (entry.startsWith("mcp__") && entry.includes("("))
+			say(
+				`${entry} is skipped at load — Claude Code ignores an mcp__ rule written with parentheses`,
+			);
 
 	if (parsed.disableAllHooks)
 		say(

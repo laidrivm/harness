@@ -106,6 +106,10 @@ It was rejected: the reference states that deny and ask rules accept a glob
 in the tool-name position matched against the full tool name, and reserves
 the glob-free server segment for allow rules. The user confirmed the
 rejection, with task 1.6 kept as the stop that checks it in a fresh session.
+On 2026-10-12 a fresh session in a checkout of the step-1 branch, launched
+with `--allowedTools "mcp__claude_ai_Gmail__send_message"` (an allow the ask
+must outrank), prompted for `mcp__claude_ai_Gmail__send_message`, and the
+user answered No, so the server-segment wildcard matches.
 
 ### Enumeration, not a catch-all
 

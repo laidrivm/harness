@@ -20,8 +20,17 @@ import {
 
 afterAll(cleanup);
 
+/** The MCP ask entries the harness owns, as the check names them. */
+const FOUR = [
+	"mcp__*__send_message",
+	"mcp__*__reply",
+	"mcp__*__forward",
+	"mcp__*__notion-create-comment",
+];
+
 describe("the settings file", () => {
 	// spec: harness-updates/a-harness-change-to-its-policy-needs-no-manual-edit
+	//   harness-updates/a-consumer-adopts-the-mcp-ask-entries-through-the-sync
 	test("a previous version's hooks, lists and [install] come out passing the check", () => {
 		const dir = consumer({
 			[SETTINGS]: JSON.stringify(stale(), null, "\t"),
@@ -47,7 +56,8 @@ describe("the settings file", () => {
 		};
 		const config = stale({ model: "opus" });
 		config.permissions.deny.push("Edit(secrets/**)");
-		config.permissions.ask.unshift("mcp__notion__update");
+		config.permissions.deny.push("mcp__notion__update");
+		config.permissions.allow.push("mcp__design__read_file");
 		config.hooks.PreToolUse.push({ matcher: "Edit", hooks: [own] });
 		config.hooks.UserPromptSubmit[0]?.hooks.push(own);
 		config.hooks.Stop.push({ hooks: [check] });
@@ -55,16 +65,15 @@ describe("the settings file", () => {
 		syncSettings(dir);
 		const after = parsed(dir);
 		expect(after.model).toBe("opus");
-		expect(after.permissions.allow).toEqual(["Bash(bun test *)"]);
+		expect(after.permissions.allow).toEqual([
+			"Bash(bun test *)",
+			"mcp__design__read_file",
+		]);
 		expect(after.permissions.deny).toEqual([
 			...DENY,
 			"Edit(.npmrc)",
 			"Edit(secrets/**)",
-		]);
-		expect(after.permissions.ask).toEqual([
 			"mcp__notion__update",
-			...ASK,
-			"Edit(bunfig.toml)",
 		]);
 		expect(after.hooks.PreToolUse).toContainEqual({
 			matcher: "Edit",
@@ -119,7 +128,11 @@ describe("the settings file", () => {
 		syncSettings(dir);
 		const after = parsed(dir);
 		expect(after.permissions.deny).toEqual([...DENY, "Edit(.npmrc)"]);
-		expect(after.permissions.ask).toEqual([...ASK, "Edit(bunfig.toml)"]);
+		expect(after.permissions.ask).toEqual([
+			...ASK,
+			"Edit(bunfig.toml)",
+			...FOUR,
+		]);
 		for (const { event, command } of HOOKS)
 			expect(JSON.stringify(after.hooks[event])).toContain(
 				JSON.stringify(command),
@@ -158,6 +171,39 @@ describe("the settings file", () => {
 			...DENY,
 			"Edit(b)",
 			"Edit(.npmrc)",
+		]);
+	});
+
+	// spec: harness-updates/a-consumer-adopts-the-mcp-ask-entries-through-the-sync
+	test("an ask list with no mcp__ entry gets the four after its others [14]", () => {
+		const dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });
+		syncSettings(dir);
+		expect(parsed(dir).permissions.ask).toEqual([
+			...ASK,
+			"Edit(bunfig.toml)",
+			...FOUR,
+		]);
+	});
+
+	// spec: harness-updates/a-consumer-adopts-the-mcp-ask-entries-through-the-sync
+	test("interleaved mcp__ ask entries collapse into the four where the first stood [17] [18] [19] [22]", () => {
+		const config = stale();
+		config.permissions.ask = [
+			"Edit(a)",
+			"mcp__notion__update",
+			"Bash(bun add *)",
+			"mcp__*__reply(*)",
+			"Edit(b)",
+			"mcp__*__send_mail",
+		];
+		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
+		syncSettings(dir);
+		expect(parsed(dir).permissions.ask).toEqual([
+			"Edit(a)",
+			...FOUR,
+			...ASK,
+			"Edit(b)",
+			"Edit(bunfig.toml)",
 		]);
 	});
 

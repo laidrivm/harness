@@ -14,7 +14,7 @@ Its boxes are ticked in the archive pull request.
 
 ## 1. The entries, the check that pins them, and the prose they replace
 
-- [ ] 1.1 Move `policy`, `consumer` and `changed` from `bun/settings.test.ts`
+- [x] 1.1 Move `policy`, `consumer` and `changed` from `bun/settings.test.ts`
       into `bun/settings.fixture.ts`, as the other gates share theirs: the
       test file holds 294 lines against the 300-line cap, so the new cases
       go in `bun/settings-mcp.test.ts`. Verify the split by the full describe
@@ -34,7 +34,7 @@ Its boxes are ticked in the archive pull request.
       carry, reports nothing (design.md, *Measurements*). (Req:
       agent-permissions — Sending as the user through an MCP tool prompts,
       §*An entry is dropped*, §*A project denies one of the tools outright*)
-- [ ] 1.2 Write the parentheses tests in the same file: an `mcp__` rule with
+- [x] 1.2 Write the parentheses tests in the same file: an `mcp__` rule with
       parentheses is named as skipped at load when it stands under ask [9],
       under deny [8] and under allow [10]. Each fails before 1.3. (Req:
       agent-permissions — Sending as the user through an MCP tool prompts,
@@ -66,7 +66,7 @@ Its boxes are ticked in the archive pull request.
       dictates, §*A consumer adopts the MCP ask entries through the sync*;
       Sync leaves the consumer's own settings as it found them, §*The
       project's own settings survive a sync*)
-- [ ] 1.3 In `bun/settings.ts`, export the four entries as a list beside
+- [x] 1.3 In `bun/settings.ts`, export the four entries as a list beside
       `MANIFEST_WRITES`, compare the consumer's `mcp__` ask entries whole
       against it, and name any `mcp__` rule carrying `(` in deny, ask or
       allow, with the reason in the message. In the same commit, have
@@ -79,12 +79,12 @@ Its boxes are ticked in the archive pull request.
       `sync.ts` writes into `.claude/settings.json` name the `mcp__` ask
       entries beside the `Bash(` ones. `bun test` green; both files under
       their file-size cap.
-- [ ] 1.4 Add the four entries to the harness's own `.claude/settings.json`
+- [x] 1.4 Add the four entries to the harness's own `.claude/settings.json`
       under `permissions.ask`, and a test in `bun/settings-mcp.test.ts`
       reading that file, whose `mcp__` ask entries equal the exported list
       [12] — the harness's own file is not a consumer and no other test reads
       its permission lists. `bun test` green.
-- [ ] 1.5 Rewrite `core/git-and-prs.md`'s bullet *Never reply, comment or
+- [x] 1.5 Rewrite `core/git-and-prs.md`'s bullet *Never reply, comment or
       review under the user's name anywhere the `gh` deny entries do not
       reach* as a rule of approval: send under the user's name only through a
       call the user approved at the prompt, and never through a channel no
@@ -96,7 +96,7 @@ Its boxes are ticked in the archive pull request.
       that sending under the user's name is never allowed or that only the
       `gh` writes are gated, and fix each. (Req: agent-rulebook — A
       mechanised prohibition leaves its prose home)
-- [ ] 1.6 This task needs the user and no agent closes it alone. The user
+- [x] 1.6 This task needs the user and no agent closes it alone. The user
       starts a fresh session in a checkout of the branch after 1.4 is on it,
       since a settings change is observable only in a session started after
       it. In that session, call the mail connector's `send_message` addressed
@@ -111,6 +111,14 @@ Its boxes are ticked in the archive pull request.
       *Risks*) before the pull request merges. (Req: agent-permissions —
       Sending as the user through an MCP tool prompts, §*The agent tries to
       send mail*, §*A draft still works*)
+
+      Done 2026-10-12: a fresh session in a checkout of this branch, launched
+      with `--allowedTools "mcp__claude_ai_Gmail__send_message"` (an allow
+      the ask must outrank), prompted for
+      `mcp__claude_ai_Gmail__send_message`; the user answered No, and the
+      mail was not sent. In the user's earlier 2026-10-12 session on the same
+      check, the connector's tool list still named `create_draft` — an ask
+      entry prompts at call time and never removes a tool from the list.
 
 ## 2. Each consumer, through its automatic bump
 
