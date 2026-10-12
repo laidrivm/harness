@@ -11,9 +11,13 @@ outside `openspec/changes/archive/` has at least one box and no unticked one
 left and was not complete in the task lists as committed at the mark, the
 turn's final assistant message carries no `BLOCKED` naming what only the user
 can settle, and either that message carries no gate line or the gate ledger
-holds no record of the pre-PR runner for the turn's tip (`pre-pr-runner`, *The
-runner records each run for the commit it read*). The tip is the commit the
-turn's work is read from, as the paragraph on the mark below decides it. It
+holds no record of the pre-PR runner for the turn's tip in this checkout
+(`pre-pr-runner`, *The runner records each run for the commit it read*). The
+tip is the commit the turn's work is read from, as the paragraph on the mark
+below decides it. A record is this checkout's when the project it names is the
+repository's top level, as git resolves it from the turn's working directory,
+or lies under it. A run in another clone at the same commit does not count,
+because that clone measured against its own base refs. It
 SHALL block by exiting **2** with the reason on stderr, which is
 the only code that prevents the turn ending, and the only channel the model
 reads — stderr from a hook exiting 0 reaches the debug log alone.
@@ -129,6 +133,19 @@ its own working tree, because it is not installed as its own package.
 - **WHEN** the runner recorded commit `A`, the turn then committed `B`, and it
   ends with gate lines
 - **THEN** the hook blocks, because the run never read `B`
+
+#### Scenario: A run record from another checkout
+
+- **WHEN** a second clone of the repository recorded a run at the tip, and
+  this checkout did not
+- **THEN** the hook blocks, because that run measured against the other
+  clone's base refs
+
+#### Scenario: A run from a subdirectory
+
+- **WHEN** the runner recorded the tip from a subdirectory of this checkout
+- **THEN** the record discharges the turn, because its project lies under the
+  checkout's top level
 
 #### Scenario: A run record and no gate line
 
