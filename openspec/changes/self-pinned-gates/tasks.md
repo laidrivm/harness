@@ -28,7 +28,7 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
       harness-updates — The harness's own sessions run its gates from its
       pin, §*The notice reads a development-dependency pin*, §*A runtime pin
       is preferred*)
-- [ ] 1.4 Pin the harness: add `devDependencies.harness` at the newest `main`
+- [x] 1.4 Pin the harness: add `devDependencies.harness` at the newest `main`
       commit whose `test` run passed, run `bun install` (it asks), confirm
       `bun.lock`'s workspace block names `harness` once, and replace the
       `hooks` block of `.claude/settings.json` with the `HOOKS` texts. That

@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "harness",
+      "devDependencies": {
+        "harness": "github:laidrivm/harness#c7887b80b8f78ae0ae62b1b5498aa538499a62db",
+      },
+    },
+  },
+  "packages": {
+    "harness": ["harness@github:laidrivm/harness#c7887b8", {}, "laidrivm-harness-c7887b8", "sha512-/MgcPxzaLFjvkVyW/GwExw7vGvJcrFEua7+SZHRsJmfjSmL1GBV6nBRkGdcvk9cIaUYnfcwEobXuwEu9xD4foQ=="],
+  }
+}
