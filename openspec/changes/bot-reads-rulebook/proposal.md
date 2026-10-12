@@ -37,8 +37,8 @@ card's delta, and the card has nothing left of its own. d2ass's
   patterns on top of its defaults, so `**/CLAUDE.md` stays read without being
   named again.
 - A test reads that config where the bot reads it and fails when the rulebook,
-  or a doc `CLAUDE.md` links, falls outside every configured pattern, or when a
-  pattern matches no tracked file.
+  or a doc it or `CLAUDE.md` links, falls outside every configured pattern, or
+  when a pattern matches no tracked file.
 - The `core/rules.md` sentence, and the README line saying a consumer's review
   bot reads `harness/`, stop naming globs. They say instead what holds in
   every tree: a rule is read back wherever the repository's

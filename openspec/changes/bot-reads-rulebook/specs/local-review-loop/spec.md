@@ -6,15 +6,18 @@
 
 The harness's `.coderabbit.yaml` SHALL name patterns under
 `knowledge_base.code_guidelines.filePatterns` that match `core/rules.md` and
-every doc `CLAUDE.md` links. Each pattern SHALL match at least one tracked
-file. A test SHALL pin both, reading the patterns from the config the bot
-parses. If it cannot read that list, the test SHALL fail, never pass.
+every markdown file that it or `CLAUDE.md` links. `README.md` is excepted,
+because it describes the package and holds no rule. Each pattern SHALL match
+at least one tracked file. A test SHALL pin both, reading the patterns from
+the config the bot parses. If it cannot read that list, the test SHALL fail,
+never pass.
 
 #### Scenario: A doc the rulebook indexes falls out of reach
 
-- **WHEN** a doc that `CLAUDE.md` links, or `core/rules.md` itself, sits at a
-  path no configured pattern matches
-- **THEN** the test fails, naming that doc
+- **WHEN** a markdown file that `CLAUDE.md` or `core/rules.md` links, other
+  than `README.md`, or `core/rules.md` itself, sits at a path no configured
+  pattern matches
+- **THEN** the test fails, naming that file
 
 #### Scenario: A pattern that matches nothing
 

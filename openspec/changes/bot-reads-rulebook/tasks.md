@@ -35,25 +35,30 @@ Closes `local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach`,
       missing (1); the list is empty (2); an entry is empty or blank (8); an
       entry is not a string, named by its position (10)
 - [ ] 1.3 Add the boundary cases: `core/*.md` does not match
-      `core/skills/<name>/SKILL.md` (7), and an `https://` link in `CLAUDE.md`
-      is not taken as a doc (12)
-- [ ] 1.4 Add the root `.coderabbit.yaml`. It sets
+      `core/skills/<name>/SKILL.md` (7); an `https://` link in `CLAUDE.md` is
+      not taken as a doc (12); a `README.md` link is exempt and needs no
+      pattern; a doc that only `core/rules.md` links, outside every pattern,
+      fails
+- [ ] 1.4 Write the exemption into the test with its reason. Verify that the
+      fixture which links `README.md` from `CLAUDE.md` passes, and that the
+      same fixture fails without the exemption
+- [ ] 1.5 Add the root `.coderabbit.yaml`. It sets
       `knowledge_base.code_guidelines.filePatterns: ["core/*.md"]` and
       nothing else. A comment in it says why the glob is flat, and that
       `**/CLAUDE.md` is CodeRabbit's default rather than an omission. Verify
       that the suite passes over the repository as it stands (13) and that
       `bun bun/check-yaml.ts` parses the file
-- [ ] 1.5 Reword the `core/rules.md` §*The loop* sentence that names
+- [ ] 1.6 Reword the `core/rules.md` §*The loop* sentence that names
       `**/CLAUDE.md` and `docs/*.md`. The new wording says a rule is read
       back wherever the repository's `.coderabbit.yaml` names the paths the
       rulebook and its docs sit at, and it names no glob (design.md §*The
       prose names no glob*). Verify by reading the sentence as it stands in
       the harness, in d2ass's `harness/rules.md` and in mellon's
-- [ ] 1.6 Reword `README.md`'s consumer line saying the copy in `harness/` is
+- [ ] 1.7 Reword `README.md`'s consumer line saying the copy in `harness/` is
       what "its review bot reads". The bot reads the copy once the project's
       `.coderabbit.yaml` names `harness/*.md` under `code_guidelines`. Say
       that, and nothing about any one consumer's visibility or settings
-- [ ] 1.7 Search the four places that restate a decision for the old claim.
+- [ ] 1.8 Search the four places that restate a decision for the old claim.
       Grep `docs/\*\.md`, `code_guidelines` and `review bot` across the
       sibling artefacts, `openspec/specs/**`, the cards on the boards and the
       README map. Reconcile each site, or name the change that will
