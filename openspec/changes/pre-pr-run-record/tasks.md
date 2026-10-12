@@ -11,7 +11,7 @@ There is one group, shipped as `feat/pre-pr-run-record`. It is cut after
 
 ## 1. The runner, its record, and the turn gate that reads it
 
-- [ ] 1.1 Write the runner's tests in `bun/pre-pr.test.ts`, spawning
+- [x] 1.1 Write the runner's tests in `bun/pre-pr.test.ts`, spawning
       `bun/pre-pr.ts` in a scratch repository with a base branch:
       - a branch with nothing past its base records `pass` [1];
       - the first run creates the ledger with one line [2];
