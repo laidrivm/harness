@@ -239,8 +239,9 @@ export function decide(
 			`gates, but the gate ledger holds no pre-PR runner record of ${end} ` +
 			"in this checkout. Run `bun " +
 			runner(cwd) +
-			"` after the last commit and end with its line and the other gate " +
-			"lines — or end with `BLOCKED — <what the user must decide>`."
+			"` with `HEAD` at that commit — it records only the commit it reads " +
+			"— and end with its line and the other gate lines, or end with " +
+			"`BLOCKED — <what the user must decide>`."
 		);
 	return (
 		`This turn committed and completed ${done.join(", ")}, and its final ` +
