@@ -100,8 +100,10 @@ register records which cards a session holds.
 
 The mark is the inline-code token `harness-question` as the comment's first
 characters — a token a person does not type in a reply, so the read-back can
-take the first comment after it that lacks it as the answer (rules.md:
-recognise what a tool owns by a mark only that tool writes). One question
+take the first comment after it that lacks it, by the user's account, as the
+answer (rules.md: recognise what a tool owns by a mark only that tool
+writes). The account rules out another member; the mark rules out the agent,
+which writes as the same account. One question
 per comment keeps one thread per decision. A user mention is refused because
 it notifies its subject of text that reads as the user's. The bound of 1500
 characters holds a question, its options and a link to its branch, and not a
@@ -135,6 +137,13 @@ than a person holds. The session holding the board counts the `Questions`
 views before posting — view mode, which spends no SQL quota. The hook's
 ceiling cites the same requirement, so a runaway session stops at the number
 the boards allow even when its count of the views is wrong.
+
+The count is not a reservation: two sessions counting at once could each see
+one place free. It holds because one session holds the boards at a time — the
+one the user started to orchestrate — so posting is serialised by
+construction. Coordinating several holders is the card *Run several changes
+in parallel*'s; until then a second holder is outside this design, and the
+per-session ceiling bounds what it can add.
 
 ### `Assign` means a question waits, and nothing else
 
