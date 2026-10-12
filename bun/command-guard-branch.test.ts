@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { branchState, FETCH_MAX_AGE } from "./branch-state.ts";
 import {
@@ -212,6 +212,18 @@ describe("the guard's refusal", () => {
 		const merged = upstream({ merged: true });
 		const command = event(`cd ${merged} && git commit -m fix`);
 		expect(run(command, upstream({ own: true })).code).toBe(2);
+	});
+
+	test.each([
+		["merged-branch", { merged: true }],
+		["stale-fetch", { fetchedAgo: 60 * MINUTE }],
+		["unreadable-fetch", { fetchHead: null }],
+	] as const)("the gate ledger records %s", (id, arrange) => {
+		const state = fabricate(undefined, "command-guard-state-");
+		const env = { ...process.env, XDG_STATE_HOME: state };
+		run(commit, upstream(arrange), env);
+		const ledger = join(state, "harness", "gates.jsonl");
+		expect(JSON.parse(readFileSync(ledger, "utf8")).rule).toBe(id);
 	});
 
 	test("a commit on a pushed branch with work of its own is allowed", () => {

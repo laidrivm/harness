@@ -24,13 +24,13 @@
 import { existsSync } from "node:fs";
 import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
 import { commands, invocations, place, SHELLS } from "./command-parse.ts";
+import { blocker } from "./gate-ledger.ts";
 import {
 	FORCE,
 	PUSH_VALUE_OPTIONS,
 	REF_WIDE,
 	VALUE_OPTIONS,
 } from "./git-options.ts";
-import { blocker } from "./gate-ledger.ts";
 
 /**
  * Blocks a push whose destination cannot be shown to exclude `main`. Two
