@@ -54,10 +54,10 @@ Which review skills ran this session, and what each one actually produced. One l
 
 Then one line naming the review skills that **didn't** run, so the gap is visible rather than assumed.
 
-Then one `gates` line: what the harness's own gates decided in this project since the previous yield entry, counted per gate, decision and id. Take `<top>` from `git rev-parse --show-toplevel` and `<since>` from the date in the previous entry's heading. On the first entry ever, `<since>` is empty. Then run:
+Then one `gates` line: what the harness's own gates decided in this project since the previous yield entry, counted per gate, decision and id. Take `<top>` from `git rev-parse --show-toplevel` and `<since>` from the date in the previous entry's heading. On the first entry ever, `<since>` is empty. Take `<state>` as `$XDG_STATE_HOME` when it is an absolute path, and `$HOME/.local/state` otherwise — the choice `bun/gate-ledger.ts` makes when it writes. Then run:
 
 ```bash
-jq -rs --arg top "<top>" --arg since "<since>" '[.[] | select(.at >= $since and (.project == $top or (.project | startswith($top + "/"))))] | group_by([.gate, .decision, .rule]) | map("\(.[0].gate) \(.[0].decision) \(.[0].rule) ×\(length)") | if length == 0 then "none fired" else join(", ") end' "${XDG_STATE_HOME:-$HOME/.local/state}/harness/gates.jsonl"
+jq -rs --arg top "<top>" --arg since "<since>" '[.[] | select(.at >= $since and (.project == $top or (.project | startswith($top + "/"))))] | group_by([.gate, .decision, .rule]) | map("\(.[0].gate) \(.[0].decision) \(.[0].rule) ×\(length)") | if length == 0 then "none fired" else join(", ") end' "<state>/harness/gates.jsonl"
 ```
 
 Write its output as `- gates: <output>`. A record under a subdirectory of `<top>` counts, because a session started there records the subdirectory. If the file does not exist yet, write `- gates: none fired`.
