@@ -89,23 +89,27 @@ delta admits that field for a gate that reads a commit.
   is stored to the second, and is copied by an amend or a rebase. The rule on
   reading a value from the structure that holds it points to the commit id.
 
-### The turn gate matches the commit, never the session or the project
+### The turn gate matches the commit and the checkout, never the session
 
-A record discharges a turn when its gate is `pre-pr` and its `commit` equals
-the tip. The record also holds `session` and `project`. The runner has no
-hook event, so it passes `CLAUDE_CODE_SESSION_ID` from the Bash environment as
-the session when that variable is set. The gate matches neither field:
+A record discharges a turn when its gate is `pre-pr`, its `commit` equals the
+tip, and its `project` is the checkout's top level or lies under it. The top
+level is `git rev-parse --show-toplevel`, run from the event's `cwd`, which
+git returns with symlinks resolved. That is the same filter
+`gate-decision-ledger`'s wrap-up uses. The runner has no hook event, so it
+passes `CLAUDE_CODE_SESSION_ID` from the Bash environment as the session when
+that variable is set. The gate does not match the session:
 
 - The runner can be run by a subagent. A subagent's session id is not the
   one the main session's `Stop` event carries. That variable is present in
   this session's Bash environment, `CLAUDE_CODE_CHILD_SESSION` beside it.
-- The writer's project comes from `CLAUDE_PROJECT_DIR`, which the Bash tool's
-  environment lacks (measured by `gate-decision-ledger`). The runner would
-  record its working directory, and a session started in a subdirectory names
-  another path at `Stop`.
-- Accepted cost: two clones at one commit share a record, so a run in one
-  discharges a turn in the other. It is the same commit, which is the thing
-  the diff budget measures.
+- The project cannot be matched for equality. The writer takes it from
+  `CLAUDE_PROJECT_DIR`, which the Bash tool's environment lacks (measured by
+  `gate-decision-ledger`), so the runner records its working directory, and a
+  session started in a subdirectory names another path at `Stop`. Matching on
+  the top level or a path under it holds both cases.
+- The project has to be matched at all. Two clones or worktrees at one commit
+  measure the diff budget against their own base refs, which each fetched
+  separately. A run in one therefore proves nothing about the other.
 
 ### No record over a tree that differs from `HEAD`
 

@@ -27,8 +27,10 @@ the follow-ups listed under *Non-goals* move them.
   then name a tree the run did not see.
 - The turn gate's condition gains a clause. A turn that completed a task group
   and ends with a gate line must also have a runner record for the commit its
-  work is read from. Otherwise the gate refuses, and the refusal names the
-  runner's path. A named `BLOCKED` ends the turn as it does today.
+  work is read from, written in this checkout. Another clone at that commit
+  measured against its own base refs. Otherwise the gate refuses, and the
+  refusal names the runner's path. A named `BLOCKED` ends the turn as it does
+  today.
 - The pre-push hook and CI keep calling `bun/diff-budget.sh` directly, never
   the runner. A push therefore writes no record and cannot discharge the
   sequence, which `commit-gates` already refuses to let a push do.

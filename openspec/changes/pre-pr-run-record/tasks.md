@@ -47,6 +47,8 @@ There is one group, shipped as `feat/pre-pr-run-record`. It is cut after
       - the tip's record is found among other projects' and other gates'
         records [23]. Records for earlier commits only do not discharge [24].
         A prefix of the tip does not match [25];
+      - a record for the tip from another clone does not discharge. One
+        whose project is a subdirectory of this checkout does;
       - a tip read from the remote-tracking ref needs that ref's record [26];
       - the reason names `bun/pre-pr.ts` from the harness tree [27] and
         `node_modules/harness/bun/pre-pr.ts` from an installed copy [28];
@@ -69,7 +71,10 @@ There is one group, shipped as `feat/pre-pr-run-record`. It is cut after
       take an optional `commit`. Verify: 1.1 is green.
 - [ ] 1.4 In `bun/turn-gate.ts` `decide()`, on the path where a group completed
       and the message carries a gate line but no named `BLOCKED`, read the
-      ledger for a `pre-pr` record whose `commit` is the tip. Refuse without
+      ledger for a `pre-pr` record whose `commit` is the tip and whose
+      `project` is the checkout's `git rev-parse --show-toplevel` or a path
+      under it (design.md, *The turn gate matches the commit and the
+      checkout*). Refuse without
       one, naming the tip and the runner's path relative to the event's
       `cwd`. Correct the header comment's "a gate line written without
       running the gate passes it". Verify: `bun test` is green and the file
