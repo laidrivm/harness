@@ -54,7 +54,7 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
       `README.md`, `core/` and `openspec/specs/` for "runs itself", "own
       working tree" and "no dependencies", and fix each site this change makes
       false.
-- [ ] 1.7 By hand, in a scratch copy with the pin installed and recorded in
+- [x] 1.7 By hand, in a scratch copy with the pin installed and recorded in
       the pull request: replace the working tree's `bun/command-guard.ts` with
       `process.exit(0)` and feed the registered bootstrap a `git commit` on
       `main` — still refused, exit 2 [4]; run the registered `SessionStart`
