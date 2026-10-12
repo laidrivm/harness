@@ -9,6 +9,7 @@ import {
 	lines,
 	repo,
 } from "./diff-budget.fixture.ts";
+import { reported } from "./turn-gate.ts";
 
 /**
  * `pre-pr.ts`, spawned as an agent runs it: the step it runs, the record it
@@ -144,6 +145,12 @@ describe("the record of a run", () => {
 		expect(records(state).map((r) => r.commit)).toEqual([a, head(dir)]);
 	});
 
+	test("a set CLAUDE_CODE_SESSION_ID is the record's session", () => {
+		const dir = repo({}, { "a.ts": lines(3) });
+		const result = run(dir, { CLAUDE_CODE_SESSION_ID: "abc-123" });
+		expect(records(result.state)[0]?.session).toBe("abc-123");
+	});
+
 	test("an empty CLAUDE_CODE_SESSION_ID records no session [12]", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
 		const result = run(dir, { CLAUDE_CODE_SESSION_ID: "" });
@@ -190,6 +197,23 @@ describe("when no record is written", () => {
 			expect.stringContaining("no run record"),
 		]);
 		expect(result.out).toContain("DIFF gate:");
+	});
+
+	test("a repository with no commit records nothing, and says so", () => {
+		const dir = emptyDir("pre-pr-bare-");
+		git(dir, "init", "-q");
+		const result = run(dir);
+		expect([records(result.state).length, result.out]).toEqual([
+			0,
+			expect.stringContaining("no run record"),
+		]);
+	});
+
+	test("the line saying no record was written is not read as a gate line", () => {
+		const dir = repo({}, { "a.ts": lines(3) });
+		writeFileSync(join(dir, "a.ts"), lines(4));
+		const said = run(dir).out.split("\n").filter((l) => l.includes("no run record"));
+		expect([said.length, reported(said.join("\n"))]).toEqual([1, false]);
 	});
 
 	// spec: pre-pr-runner/an-untracked-scratch-file
