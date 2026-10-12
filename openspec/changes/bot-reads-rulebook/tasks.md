@@ -93,7 +93,7 @@ run, and this step's pull request body quotes the command each run issued.
       and the markdown files directly under `core/`, with none under
       `core/skills/` (17). Record whether the CLI accepted the longer list. If
       it refused, stop and report, per design.md §Risks
-- [ ] 2.3 Build the invocation by hand from d2ass's tree, read-only, and
+- [x] 2.3 Build the invocation by hand from d2ass's tree, read-only, and
       record that `CLAUDE.md`, which `**/CLAUDE.md` also matches, appears once
       (15). Record the 2 `docs/*.md` and 9 `harness/*.md` files it lists (17)
 - [ ] 2.4 Build the invocation from mellon's tree, read-only, and record that
