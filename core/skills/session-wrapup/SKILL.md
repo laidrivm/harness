@@ -2,7 +2,7 @@
 name: session-wrapup
 description: End-of-session ritual — confidence check on what was built, fix & capture pass for uncaptured lessons, OpenSpec workflow state with the next command and the session's board cards reconciled, an optional save-point doc for long exploratory sessions, and a pipeline-yield line recording what each review skill actually found.
 disable-model-invocation: true
-allowed-tools: "Read, Write, Glob, Grep, Bash(git log:*), Bash(git status:*), Bash(git diff:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*)"
+allowed-tools: "Read, Write, Glob, Grep, Bash(git log:*), Bash(git status:*), Bash(git diff:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(bun bun/board-state.ts), Bash(bun node_modules/harness/bun/board-state.ts), mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page"
 ---
 
 # Session Wrap-up
