@@ -63,7 +63,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       <other-repo> commit` is decided against the `-C` target [12]; a detached
       HEAD still reaches the existing branch-read refusal first [14]. (Req:
       agent-permissions — A commit on a merged branch is refused)
-- [ ] 1.8 Call `branch-state.ts` from `command-guard.ts`'s `commit` arm, after
+- [x] 1.8 Call `branch-state.ts` from `command-guard.ts`'s `commit` arm, after
       the `main` check, and confirm `command-guard.ts` and every file this
       change touches stay under the 300-line cap `change-slicing` sets. (Req:
       agent-permissions — A commit on a merged branch is refused)

@@ -2,8 +2,9 @@
 /**
  * `PreToolUse` guard for every Bash call, registered in
  * `.claude/settings.json`. It blocks the prohibitions no permission entry can
- * express: a commit while `HEAD` is on `main`, a force-push wherever the flag
- * sits, and the `gh` commands that publish text on the user's behalf.
+ * express: a commit while `HEAD` is on `main` or on a branch whose pull request
+ * has merged, a force-push wherever the flag sits, and the `gh` commands that
+ * publish text on the user's behalf.
  *
  * It runs without an `if` field on purpose. A permission pattern — which is
  * what `if` takes — matches the command word literally, so `/usr/bin/git` and
@@ -23,6 +24,7 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
 import { commands, invocations, SHELLS } from "./command-parse.ts";
 
 function block(reason: string): never {
@@ -126,22 +128,15 @@ function place(from: string | null, path: string): string | null {
  * names one, since that is the repository the commit would land in — or a
  * block when git cannot say.
  */
-function currentBranch(cwd: string | null): string {
-	try {
-		if (cwd === null) throw new Error("unresolved directory");
-		const head = Bun.spawnSync(
-			["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
-			{ cwd },
-		);
-		if (head.exitCode === 0) return head.stdout.toString().trim();
-	} catch {
-		// An unreadable `-C` target makes spawnSync throw, which would exit
-		// non-zero and non-blocking. Fall through to the block instead.
-	}
-	block(
-		"command-guard: could not read the current branch — a detached HEAD, no work tree, an unreadable -C target, or a directory change the guard cannot resolve. A commit cannot be checked against main, so it is blocked.",
-	);
-}
+const currentBranch = (cwd: string | null) =>
+	(cwd === null ? null : headBranch(cwd)) ?? block("command-guard: could not read the current branch — a detached HEAD, no work tree, an unreadable -C target, or a directory change the guard cannot resolve. A commit cannot be checked against main, so it is blocked.");
+
+/** Why a commit is refused on a branch `branchState` did not find `ok`. */
+const STRANDED = {
+	merged: "is already merged: origin/main carries a commit of it as an equivalent patch, so anything committed to it now is stranded. Move the work to a new branch cut from origin/main.",
+	stale: `is on the remote, and origin/main was not fetched within ${FETCH_MAX_AGE / 60_000} minutes, so whether its pull request has merged cannot be decided. Run git fetch origin, then commit.`,
+	unknown: "cannot be checked for a merged pull request: its commits could not be compared with origin/main, or the last fetch's FETCH_HEAD could not be read. Run git fetch origin, then commit.",
+};
 
 /** The `gh` subcommand pairs that publish text on the user's behalf. */
 const GH_WRITES = [
@@ -213,6 +208,12 @@ function check(command: string): void {
 				block(
 					`command-guard: HEAD is on main and this project never commits there. Branch first, then commit on the branch. ${ELSEWHERE}`,
 				);
+			}
+			// `onMain` read every target and blocked on any unreadable, so none is null.
+			for (const target of subcommand === "commit" ? targets : []) {
+				const branch = currentBranch(target);
+				const state = branchState(target as string, branch);
+				if (state !== "ok") block(`command-guard: \`${branch}\` ${STRANDED[state]}`);
 			}
 			if (subcommand === "push") checkPush(args, targets);
 		}
