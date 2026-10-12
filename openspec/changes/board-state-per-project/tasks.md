@@ -44,7 +44,7 @@ carried by the pull request that bumps its pin past group 1.
       (Req: task-board — A repository names the board its tree decides,
       §*The key is absent*, §*The key holds an identifier rather than a
       name*, §*The key holds no name at all*)
-- [ ] 1.2 Update `bun/board-state-hygiene.test.ts`. Keep *the output names no
+- [x] 1.2 Update `bun/board-state-hygiene.test.ts`. Keep *the output names no
       board* for `boardState(tree)`, and add a case that the command, given
       `"board": "Harness"`, names that board and no other [15]. Widen the
       import allow-list to `./config.ts`, and have the module walk assert
