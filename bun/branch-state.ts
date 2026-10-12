@@ -77,13 +77,34 @@ export function branchState(
 	// above does not ask.
 	const pushed = verify(dir, `refs/remotes/origin/${branch}`);
 	if (pushed === 1) return "ok";
-	const path = git(dir, "rev-parse", "--git-path", "FETCH_HEAD");
-	if (pushed !== 0 || path.code !== 0) return "unknown";
+	const paths = git(
+		dir,
+		"rev-parse",
+		"--git-path",
+		"FETCH_HEAD",
+		"--git-common-dir",
+	);
+	if (pushed !== 0 || paths.code !== 0) return "unknown";
+	// A linked worktree keeps a FETCH_HEAD of its own, while a fetch in the main
+	// checkout writes the common one and moves the `origin/main` every worktree
+	// shares — so a fresh fetch recorded in either counts. Outside a worktree
+	// the two paths are one file.
+	const [own = "", common = ""] = paths.out.trim().split("\n");
+	const files = new Set([
+		resolve(dir, own),
+		resolve(dir, common, "FETCH_HEAD"),
+	]);
+	const found = [...files].map((file) => fetched(file, now));
+	if (found.includes("ok")) return "ok";
+	return found.includes("stale") ? "stale" : "unknown";
+}
+
+/** Whether one FETCH_HEAD records a fetch of `main` within the bound. */
+function fetched(file: string, now: number): BranchState {
 	try {
 		// Every fetch rewrites FETCH_HEAD, one that updates no ref and so leaves
 		// no reflog entry included; but so does a fetch of some other ref, so only
 		// a line naming `main` shows the base was among what it fetched.
-		const file = resolve(dir, path.out.trim());
 		const covers = /^[0-9a-f]+\t[^\t]*\tbranch 'main' of /m.test(
 			readFileSync(file, "utf8"),
 		);

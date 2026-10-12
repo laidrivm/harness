@@ -135,6 +135,14 @@ describe("how recently origin/main was fetched", () => {
 		expect(state(dir)).toBe("merged");
 	});
 
+	test("a linked worktree counts a fetch made in the main checkout", () => {
+		// The worktree's own FETCH_HEAD does not exist; only the common one does.
+		const worktree = fabricate();
+		git(upstream(), "worktree", "add", "-b", "feat/w", worktree);
+		git(worktree, "push", "origin", "feat/w");
+		expect(state(worktree, "feat/w")).toBe("ok");
+	});
+
 	// spec: agent-permissions/the-fetch-time-cannot-be-read
 	test("a repository with no FETCH_HEAD is unknown", () => {
 		expect(state(upstream({ fetchHead: null }))).toBe("unknown");
