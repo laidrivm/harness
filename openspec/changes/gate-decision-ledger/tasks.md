@@ -78,7 +78,7 @@ built from what the case needs, in a directory that holds no `.env`.
       design.md *The turn gate records only when a group completed* sets
       out. `bun test` must be green, with every existing turn-gate test
       unchanged and the file under the 300-line cap.
-- [ ] 2.3 In `core/skills/session-wrapup/SKILL.md` step 5, add the `gates`
+- [x] 2.3 In `core/skills/session-wrapup/SKILL.md` step 5, add the `gates`
       line: this project's records since the previous yield entry's date,
       counted per gate, decision and id with `jq`. The line keeps the records
       whose project is `git rev-parse --show-toplevel` or a path under it, and
