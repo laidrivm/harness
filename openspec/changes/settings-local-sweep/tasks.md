@@ -38,9 +38,10 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
       problems for a fabricated consumer with and without a local file full
       of gaps (21)
 - [ ] 1.6 Add one bullet to the README's *Consuming* list, beside `check.ts`.
-      It names the command, says it runs only where the local file exists,
-      and cites the hygiene-audits card for when it reruns. Verify by running
-      the bullet's own command from the harness root
+      It names the command and says it runs only where the local file
+      exists, which is never a clone or CI. It does not name the
+      hygiene-audits card, because a board is private and the README is
+      not. Verify by running the bullet's own command from the harness root
 - [ ] 1.7 Run the sweep against the harness's main checkout and compare its
       classes with design §*The harness's own clean-up*. Where the file has
       changed since 2026-10-12, decide each new gap by the same criterion.
