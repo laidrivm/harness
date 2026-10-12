@@ -21,7 +21,7 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
 `agent-permissions/reading-through-the-endpoint-still-works`,
 `agent-permissions/a-read-that-carries-parameters`.
 
-- [ ] 1.1 Write the failing cases first, in `bun/command-guard.test.ts`
+- [x] 1.1 Write the failing cases first, in `bun/command-guard.test.ts`
       beside the existing `gh` block, and record that each fails against the
       guard as it stands: `gh api -X POST /repos/o/r/issues/37/comments -f
       body=hi` blocks; `gh api "repos/o/r/pulls/37/comments?per_page=100"

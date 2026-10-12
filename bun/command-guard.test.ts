@@ -8,10 +8,11 @@ import {
 } from "./command-guard.fixture.ts";
 
 /**
- * What `command-guard.ts` refuses by the name a command carries: a commit on
- * main, and the `gh` writes that publish under the user's. What the reading of
- * the command line gets wrong is `command-parse.test.ts`'s; what a push
- * reaches is `command-guard-push.test.ts`'s.
+ * What `command-guard.ts` refuses of a commit: one on main, wherever the line
+ * moves it. What the reading of the command line gets wrong is
+ * `command-parse.test.ts`'s; what a push reaches is
+ * `command-guard-push.test.ts`'s; what `gh` publishes is
+ * `command-guard-gh.test.ts`'s.
  */
 
 afterAll(cleanup);
@@ -241,54 +242,5 @@ describe("the directory a commit lands in", () => {
 		);
 		expect(code).toBe(2);
 		expect(reason).toContain("cannot resolve");
-	});
-});
-
-describe("gh commands that publish on the user's behalf", () => {
-	const anywhere = () => fabricate("feat/x");
-
-	test("a pull request comment blocks", () => {
-		const { code, reason } = run(
-			event('gh pr comment 37 --body "fixed"'),
-			anywhere(),
-		);
-		expect(code).toBe(2);
-		expect(reason).toContain("publishes text");
-	});
-
-	test("an issue comment blocks", () => {
-		expect(run(event("gh issue comment 12 --body x"), anywhere()).code).toBe(2);
-	});
-
-	test("a review blocks", () => {
-		expect(run(event("gh pr review 37 --approve"), anywhere()).code).toBe(2);
-	});
-
-	test("an absolute path to gh blocks", () => {
-		// This is what the deny entry cannot see and the guard can.
-		expect(
-			run(event("/opt/homebrew/bin/gh pr comment 37 --body x"), anywhere())
-				.code,
-		).toBe(2);
-	});
-
-	test("a write behind a global flag blocks", () => {
-		expect(
-			run(event("gh --repo a/b pr comment 37 --body x"), anywhere()).code,
-		).toBe(2);
-	});
-
-	test("opening a pull request does not block", () => {
-		expect(run(event("gh pr create --title x --body y"), anywhere()).code).toBe(
-			0,
-		);
-	});
-
-	test("reading a pull request does not block", () => {
-		expect(run(event("gh pr view 37 --json state"), anywhere()).code).toBe(0);
-	});
-
-	test("listing issues does not block", () => {
-		expect(run(event("gh issue list"), anywhere()).code).toBe(0);
 	});
 });
