@@ -57,8 +57,8 @@ presence is the signal, whatever its value.
 ### A dedicated clone, returned to the default branch by fast-forward only
 
 The clone is where every pass works, so each pass starts by making it the
-default branch's tip. It never discards anything to get there. A dirty tree
-or an unpushed tip means the previous session left work, and that is the
+default branch's tip. It never discards anything to get there. A tracked
+edit or an unpushed tip means the previous session left work, and that is the
 user's to look at (`git-and-prs.md`: never move off unpushed work). A
 fast-forward that fails means someone committed in the clone, which is
 equally theirs.
@@ -164,10 +164,13 @@ named follow-up.
 ## Risks / Trade-offs
 
 - [The Notion connector may not load in `claude -p`, or auto mode may refuse
-  its reads] → Task 1.6's live pass records whether the card moved, and
-  task 2.4 records whether the pick session can read `Board view`. If either
-  fails, the pass still opens the pull request. Only the card lags, and the
-  next interactive reconciliation reports it (`board-state-per-project`).
+  its reads] → Task 1.6's live pass records whether the card moved. If the
+  stage session cannot move it, the pull request still opens. Only the card
+  lags, and the next interactive reconciliation reports it
+  (`board-state-per-project`). Task 2.4 records whether the pick session can
+  read `Board view`. If it cannot, it returns no single `PICK:` line, and the
+  pass records `refused` and launches no stage session. Without the board
+  there is no order to honour.
 - [Three hours is a judgement] → The limit has one site. The `timeout` count
   in the ledger is what would move it.
 - [A pick session that reads the board also reads text that a card's author
