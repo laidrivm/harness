@@ -26,7 +26,8 @@ The live `agent-permissions` §*Every manifest-mutating invocation prompts*
 still says the opposite of the first point: that a broader local allow
 suppresses an ask. `bun-version-sites` replaces that requirement with the
 documented precedence. The first scenario here depends on the corrected
-reading, so this change follows that one.
+reading, so this change follows that one, and `.openspec.yaml` declares it
+`after: [bun-version-sites]`.
 
 `bun/settings.ts` already decides what a machine-local allow entry is. It
 looks for an absolute path token in any entry, and checks whether a `Read` or
