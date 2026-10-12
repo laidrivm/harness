@@ -17,8 +17,8 @@ proposal.md, *Why*, and the requirements are in the three delta specs.
 
 ## Goals / Non-Goals
 
-**Goals:** a record that only running the step can produce, keyed to a commit,
-and a turn gate that requires it for the tip.
+**Goals:** a record that only running the step can produce, keyed to a commit
+and a checkout, and a turn gate that requires it for the tip.
 
 **Non-Goals:** everything listed in proposal.md, *Non-goals*. In addition, no
 reader of the ledger is added beyond the turn gate, and no `package.json`
@@ -167,9 +167,6 @@ Consumers, read-only, on 2026-10-12:
 - [An agent runs the runner, then makes the last commit] → The record names the
   earlier commit, and the gate refuses once with the tip and the path. The doc
   says to run the runner again after the sequence's final commit.
-- [A consumer bumps before it reads the new doc line] → The refusal itself
-  names the command, and the once-per-mark bound limits the cost to one
-  refusal.
 - [The ledger is unwritable, so every run goes unrecorded] → Each qualifying
   turn is refused once, then released. `gate-decision-ledger` records that
   release, which makes the failure visible in the wrap-up's counts rather
