@@ -12,7 +12,7 @@ the pull request that bumps its pin past group 1.
 
 ## 1. The guard, its registration and the check
 
-- [ ] 1.1 Write `bun/notion-guard.test.ts`, spawning `bun/notion-guard.ts` with
+- [x] 1.1 Write `bun/notion-guard.test.ts`, spawning `bun/notion-guard.ts` with
       an event on stdin:
       - let through: no `properties` [1], `{}` [2], `null` [3],
         `update_properties` with properties [5], and `icon` and `cover` beside
@@ -27,7 +27,7 @@ the pull request that bumps its pin past group 1.
         `tool_input` [20].
       Every refusal case fails before 1.3. (Req: task-board — A card write
       that would lose its properties is refused)
-- [ ] 1.2 Write the check's cases where `policy-gate-beyond-bash`'s split put
+- [x] 1.2 Write the check's cases where `policy-gate-beyond-bash`'s split put
       them, or in a new `bun/settings-notion.test.ts` if that split has not
       landed. Never grow `bun/settings.test.ts` past its cap. Cases:
       - a consumer without the registration fails, naming it [22];
@@ -38,7 +38,7 @@ the pull request that bumps its pin past group 1.
       These pin the string; 2.3 confirms that Claude Code applies it. All of
       these fail before 1.3. (Req: task-board — A card write that would lose
       its properties is refused, §*A consumer without the registration*)
-- [ ] 1.3 Write `bun/notion-guard.ts`, fail-open as design.md *Fail-open*
+- [x] 1.3 Write `bun/notion-guard.ts`, fail-open as design.md *Fail-open*
       says. Add the registration text and the matcher to `bun/bootstrap.ts`,
       with no `|| exit 2`. Pin both in `bun/settings.ts`, and register the
       guard in this repository's `.claude/settings.json`. `bun test` must be
@@ -49,7 +49,7 @@ the pull request that bumps its pin past group 1.
       with its reason [24]. If the module is not on `main` yet, leave this
       box open and say so in the pull request. Nothing else in the group
       waits on it.
-- [ ] 1.5 In `core/feature-workflow.md`, shorten "Set a card's status and
+- [x] 1.5 In `core/feature-workflow.md`, shorten "Set a card's status and
       pointer with `update_properties`, and re-fetch the card before reporting
       it moved" to the re-read the hook cannot do, per agent-rulebook's
       *A mechanised prohibition leaves its prose home*. Grep for every other

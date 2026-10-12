@@ -2,7 +2,7 @@
  * The agent permission policy, read from the consumer's tracked
  * `.claude/settings.json` and `bunfig.toml`: what is refused, what prompts,
  * what is pre-approved, the hook that catches what a permission pattern
- * cannot express, and the turn gate's two registrations. The same for every consumer — strictness is not a value a
+ * cannot express, and every other hook `bootstrap.ts` lists. The same for every consumer — strictness is not a value a
  * project chooses.
  *
  * The deny and ask lists are compared whole. An exact list pins every word

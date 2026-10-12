@@ -1,8 +1,9 @@
 /**
  * What `command-guard.ts` refuses of a `gh` invocation: the subcommands that
  * publish text under the user's name, and `gh api` reaching the same endpoints
- * with a method that writes. It returns the reason rather than blocking,
- * because the exit code is the guard's.
+ * with a method that writes. Each check returns the reason rather than
+ * blocking, because the exit code and the ledger id are the guard's, written
+ * at its call site.
  */
 
 /** The `gh` subcommand pairs that publish text on the user's behalf. */
@@ -38,26 +39,30 @@ function methods(words: string[]): { flag: string; method: string }[] {
 	return found;
 }
 
-/** Why `gh` with these words after it must not run, or `undefined` when it may. */
-export function ghRefusal(rest: string[]): string | undefined {
+/** The words of a `gh` invocation that are not flags. */
+const operands = (rest: string[]) =>
+	rest.filter((word) => !word.startsWith("-"));
+
+/** Why `gh` with these words after it publishes text, or `undefined`. */
+export function ghPublish(rest: string[]): string | undefined {
 	// Adjacent anywhere, not the first two words: a global flag's value sits in
 	// front of them in `gh --repo a/b pr comment`.
-	const plain = rest.filter((word) => !word.startsWith("-"));
+	const plain = operands(rest);
 	const write = GH_WRITES.find(([a, b]) =>
 		plain.some((word, at) => word === a && plain[at + 1] === b),
 	);
-	if (write) {
-		return `command-guard: \`gh ${write.join(" ")}\` publishes text under the user's name. Report what you would have written and let them send it.`;
-	}
-	if (!plain.includes("api")) return undefined;
+	if (!write) return undefined;
+	return `command-guard: \`gh ${write.join(" ")}\` publishes text under the user's name. Report what you would have written and let them send it.`;
+}
 
+/** Why these words make a `gh api` call that writes, or `undefined`. */
+export function ghApiWrite(rest: string[]): string | undefined {
+	if (!operands(rest).includes("api")) return undefined;
 	// Any flag naming a write, not the last: gh honours the last, and blocking
 	// on any one errs the way the guard resolves every uncertainty.
 	const sent = methods(rest).find(
 		({ method }) => !READS.has(method.toUpperCase()),
 	);
-	if (sent) {
-		return `command-guard: \`gh api\` with \`${sent.flag}\` sends a write under the user's name — only GET and HEAD read. To read, name \`-X GET\`; to write, report what you would have sent and let them send it.`;
-	}
-	return undefined;
+	if (!sent) return undefined;
+	return `command-guard: \`gh api\` with \`${sent.flag}\` sends a write under the user's name — only GET and HEAD read. To read, name \`-X GET\`; to write, report what you would have sent and let them send it.`;
 }

@@ -9,6 +9,9 @@
  * the reader misses is a fragment the guard never checks.
  */
 
+import { homedir } from "node:os";
+import { resolve } from "node:path";
+
 /** Characters that end one command and start the next, outside quotes. */
 const SEPARATORS = new Set([";", "\n", "|", "&", "(", ")"]);
 
@@ -255,4 +258,10 @@ export function invocations(words: string[]): [string, string[]][] {
 		if (!wrapped) break;
 	}
 	return found;
+}
+
+/** `path` as the shell resolves it from `from`, or `null` where it cannot be read statically. */
+export function place(from: string | null, path: string): string | null {
+	if (from === null || path === "-" || path.includes("$")) return null;
+	return resolve(from, path.replace(/^~(?=\/|$)/, homedir()));
 }

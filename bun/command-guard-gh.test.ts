@@ -1,4 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, event, fabricate, run } from "./command-guard.fixture.ts";
 
 /**
@@ -113,6 +115,16 @@ describe("gh api, by the method it sends", () => {
 		const { code, reason } = run(event(line), anywhere());
 		expect(code).toBe(2);
 		expect(reason).toContain(`\`${flag}\``);
+	});
+
+	test("a refusal records gh-api-write in the gate ledger", () => {
+		const state = fabricate(undefined, "command-guard-state-");
+		run(event("gh api -X POST /repos/o/r/issues/37/comments"), anywhere(), {
+			...process.env,
+			XDG_STATE_HOME: state,
+		});
+		const ledger = readFileSync(join(state, "harness", "gates.jsonl"), "utf8");
+		expect(JSON.parse(ledger).rule).toBe("gh-api-write");
 	});
 
 	test("a method flag with no method after it blocks", () => {

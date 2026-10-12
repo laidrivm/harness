@@ -10,7 +10,7 @@ built from what the case needs, in a directory that holds no `.env`.
 
 ## 1. The writer, and the guard's refusals
 
-- [ ] 1.1 Write the writer's tests in `bun/gate-ledger.test.ts`:
+- [x] 1.1 Write the writer's tests in `bun/gate-ledger.test.ts`:
       - a first record creates the state directory and the file, and holds
         one line [1];
       - an empty `XDG_STATE_HOME` falls back to `$HOME/.local/state` [2], and
@@ -30,7 +30,7 @@ built from what the case needs, in a directory that holds no `.env`.
       All of these fail before 1.3. (Req: gate-ledger — The ledger lives
       outside every working tree; A record holds no command text; Recording
       never changes a decision)
-- [ ] 1.2 Write the guard's cases in the same file, spawning
+- [x] 1.2 Write the guard's cases in the same file, spawning
       `bun/command-guard.ts`:
       - a commit on `main` records `command-guard`, `block`, `main-commit` [3];
       - a non-JSON event records `unreadable-event` [18];
@@ -45,13 +45,13 @@ built from what the case needs, in a directory that holds no `.env`.
       `block(` call sites pass the same id [6]. All of these fail before 1.3.
       (Req: gate-ledger — Every gate refusal is recorded; Each prohibition has
       a stable id; Recording never changes a decision)
-- [ ] 1.3 Write `bun/gate-ledger.ts`: the append, best-effort and silent,
+- [x] 1.3 Write `bun/gate-ledger.ts`: the append, best-effort and silent,
       carrying a `ponytail:` comment that names rotation as the upgrade; and
       `block(id, reason)`, which records and exits 2. Move the guard onto
       it, with one id per prohibition. `bun test` must be green, and
       `bun/command-guard.ts` must end at or below its starting 299 lines
       (`bun/file-size.ts` caps `.ts` at 300).
-- [ ] 1.4 Run the existing `bun/command-guard.test.ts` unchanged and confirm
+- [x] 1.4 Run the existing `bun/command-guard.test.ts` unchanged and confirm
       that every decision and every reason's text is the same as before. A
       changed exit code or message is a regression this change does not buy.
 

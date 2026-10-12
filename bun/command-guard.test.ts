@@ -10,8 +10,8 @@ import {
 /**
  * What `command-guard.ts` refuses of a commit: one on main, wherever the line
  * moves it. What the reading of the command line gets wrong is
- * `command-parse.test.ts`'s; what a push reaches is
- * `command-guard-push.test.ts`'s; what `gh` publishes is
+ * `command-parse.test.ts`'s and `command-parse-nesting.test.ts`'s; what a push
+ * reaches is `command-guard-push.test.ts`'s; what `gh` publishes is
  * `command-guard-gh.test.ts`'s.
  */
 
