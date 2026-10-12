@@ -34,7 +34,7 @@ Its boxes are ticked in the archive pull request.
       carry, reports nothing (design.md, *Measurements*). (Req:
       agent-permissions — Sending as the user through an MCP tool prompts,
       §*An entry is dropped*, §*A project denies one of the tools outright*)
-- [ ] 1.2 Write the parentheses tests in the same file: an `mcp__` rule with
+- [x] 1.2 Write the parentheses tests in the same file: an `mcp__` rule with
       parentheses is named as skipped at load when it stands under ask [9],
       under deny [8] and under allow [10]. Each fails before 1.3. (Req:
       agent-permissions — Sending as the user through an MCP tool prompts,

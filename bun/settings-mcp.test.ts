@@ -89,3 +89,15 @@ describe("the MCP ask entries", () => {
 		).toBe("");
 	});
 });
+
+describe("an mcp__ rule written with parentheses", () => {
+	// spec: agent-permissions/an-entry-is-written-with-parentheses
+	test.each([
+		["ask [9]", "ask"],
+		["deny [8]", "deny"],
+		["allow [10]", "allow"],
+	] as const)("is named as skipped at load under %s", (_, list) => {
+		const text = report((c) => c.permissions[list].push("mcp__*__reply(*)"));
+		expect(text).toContain("mcp__*__reply(*) is skipped at load");
+	});
+});
