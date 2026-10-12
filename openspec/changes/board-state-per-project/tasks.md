@@ -55,7 +55,7 @@ carried by the pull request that bumps its pin past group 1.
       are moved by hand, §*A card on a board whose tree is elsewhere*,
       §*The derivation reaches no network*; A repository names the board its
       tree decides, §*The harness reads its own board*)
-- [ ] 1.3 Implement. Add `board: string` to `Config` in `bun/config.ts` with
+- [x] 1.3 Implement. Add `board: string` to `Config` in `bun/config.ts` with
       its one-line comment. In `bun/board-state.ts`'s `import.meta.main`,
       read the key through `read`, refuse a non-string, a blank string, a
       value carrying `://`, or a UUID with or without hyphens in either case,
