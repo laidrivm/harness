@@ -60,7 +60,7 @@ describe("gh commands that publish on the user's behalf", () => {
 
 describe("gh api, by the method it sends", () => {
 	// spec: agent-permissions/a-comment-posted-through-the-endpoint
-	test("a comment posted with -X POST blocks", () => {
+	test("a comment posted with -X POST blocks, naming the flag", () => {
 		const { code } = run(
 			event("gh api -X POST /repos/o/r/issues/37/comments -f body=hi"),
 			anywhere(),
@@ -83,5 +83,30 @@ describe("gh api, by the method it sends", () => {
 		expect(
 			run(event("gh api -X GET /search/issues -f q=repo:o/r"), anywhere()).code,
 		).toBe(0);
+	});
+
+	// spec: agent-permissions/a-comment-posted-through-the-endpoint
+	test.each([
+		["--method POST", "gh api --method POST /repos/o/r/pulls/37/reviews"],
+		["--method=post", "gh api --method=post /repos/o/r/pulls/37/reviews"],
+		["-X=POST", "gh api -X=POST /repos/o/r/issues/37/comments"],
+		["-XPOST", "gh api -XPOST /repos/o/r/issues/37/comments"],
+		["-iX POST", "gh api -iX POST /repos/o/r/issues/37/comments"],
+		["-X POST", "gh api /repos/o/r/issues/37/comments -X POST -f body=hi"],
+		["-X PATCH", "gh api -X PATCH /repos/o/r/issues/comments/1 -f body=x"],
+		["-X PUT", "gh api -X PUT /repos/o/r/pulls/37/merge"],
+		["-X DELETE", "gh api -X DELETE /repos/o/r/issues/comments/1"],
+		["-X DELETE", "gh api -X GET -X DELETE /repos/o/r/issues/comments/1"],
+	])("%s blocks: %s", (_flag, line) => {
+		expect(run(event(line), anywhere()).code).toBe(2);
+	});
+
+	// spec: agent-permissions/a-read-that-carries-parameters
+	test.each([
+		"gh api -X get /search/issues -f q=repo:o/r",
+		"gh api --method=HEAD /repos/o/r",
+		"gh api /search/issues -f q=repo:o/r --method GET",
+	])("%s passes", (line) => {
+		expect(run(event(line), anywhere()).code).toBe(0);
 	});
 });

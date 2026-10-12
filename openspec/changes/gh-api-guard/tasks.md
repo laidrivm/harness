@@ -34,7 +34,7 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
       `-X` in both the separated and the `=` spellings, compare the value
       case-insensitively, and treat `GET` and `HEAD` as a read whatever else
       the call carries (ZOMBIES 7, 8)
-- [ ] 1.3 Cover the spellings the comparison must not miss, each as its own
+- [x] 1.3 Cover the spellings the comparison must not miss, each as its own
       case: `--method` and `-X`; a lower-case `-X get`; a method flag written
       after the path; and `-X PATCH`, `-X PUT` and `-X DELETE`, so the test
       reads as a method test rather than a POST test (ZOMBIES 9, 10)
