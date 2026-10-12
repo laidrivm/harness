@@ -40,8 +40,8 @@ be read back from the card's comments and applied as data.
 
 #### Scenario: Another member comments in the thread
 
-- **WHEN** the only comment after the question's is authored by an account
-  other than the user's
+- **WHEN** the only comment after the question's, in its thread, is authored
+  by an account other than the user's
 - **THEN** it is not taken as the answer, and `Assign` stays
 
 #### Scenario: An answer asks for more than the question
@@ -73,8 +73,9 @@ be read back from the card's comments and applied as data.
 
 Before posting a question, an agent SHALL read its board's `Questions` view
 and the comments of the card it would post on, and SHALL NOT post a question
-that is already open there; it SHALL wait on the open one instead, citing it
-where it reports the work as parked.
+that is already open there; it SHALL wait on the open one instead, naming the
+card that holds it where it reports the work as parked. The run that resumes
+parked work SHALL read that card's question thread before anything else.
 
 #### Scenario: The same question is open on the card
 
@@ -90,9 +91,16 @@ where it reports the work as parked.
 - **THEN** the agent posts nothing on its own card and reports its work as
   parked on that question, naming the card that holds it
 
+#### Scenario: Parked work resumes
+
+- **WHEN** a run resumes work its report parked on a question on another card
+- **THEN** it reads that card's question thread first, and applies an answer
+  found there, even though that card has left the `Questions` view
+
 #### Scenario: The question was asked and answered before
 
-- **WHEN** the card holds the same question already answered
+- **WHEN** the card, or the card the work was parked on, holds the same
+  question already answered
 - **THEN** the agent applies that answer rather than asking again
 
 #### Scenario: Comments not read
