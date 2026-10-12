@@ -89,7 +89,7 @@ change (harness#56) is on `main`.
       covered by a rule, not by edits* explains. `bun test` is green. (Req:
       agent-autonomy — A step on the loop's critical path names its class
       where it stands, §*An ask in an OpenSpec command with no marker*)
-- [ ] 1.5 Grep `core/`, `README.md` and `openspec/specs/` for every site that
+- [x] 1.5 Grep `core/`, `README.md` and `openspec/specs/` for every site that
       says an unattended session or a sub-agent must wait for the user, or
       that defines the classes again, and reconcile each site with the doc.
       List any site in a follow-up's scope in the pull request rather than
