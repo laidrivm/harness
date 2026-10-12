@@ -1,10 +1,17 @@
 /**
  * `notion-guard.ts` as the hook runs it: a spawned process reading the event
  * on stdin, answering by exit code, in a directory holding no `.env` and with
- * only `PATH` in its environment.
+ * only `PATH` and a home and ledger of the case's own in its environment, so
+ * nothing reaches the user's own ledger.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import {
+	existsSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -17,11 +24,11 @@ beforeAll(() => {
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-/** The guard's verdict on `stdin`, exactly as given. */
-function run(stdin: string) {
+/** The guard's verdict on `stdin`, exactly as given, its ledger in `state`. */
+function run(stdin: string, state = join(dir, "state")) {
 	const call = Bun.spawnSync(["bun", script], {
 		cwd: dir,
-		env: { PATH: process.env.PATH },
+		env: { PATH: process.env.PATH, HOME: dir, XDG_STATE_HOME: state },
 		stdin: Buffer.from(stdin),
 		stdout: "pipe",
 		stderr: "pipe",
@@ -110,5 +117,44 @@ describe("events the guard cannot read", () => {
 	test("an event with no tool_input lets the call through [20]", () => {
 		const event = { tool_name: "mcp__notion__notion-update-page" };
 		expect(run(JSON.stringify(event)).code).toBe(0);
+	});
+});
+
+describe("the gate ledger", () => {
+	const refused = update({ command: "update_content", properties: STATUS });
+	const ledger = (state: string) => join(state, "harness", "gates.jsonl");
+
+	test("a refusal appends one notion-properties-dropped record [25]", () => {
+		const state = mkdtempSync(join(dir, "state-"));
+		run(refused, state);
+		const records = readFileSync(ledger(state), "utf8")
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line));
+		expect(records).toEqual([
+			expect.objectContaining({
+				gate: "notion-guard",
+				decision: "block",
+				rule: "notion-properties-dropped",
+			}),
+		]);
+	});
+
+	test("a call let through leaves the ledger absent", () => {
+		const state = mkdtempSync(join(dir, "state-"));
+		run(update({ command: "update_properties", properties: STATUS }), state);
+		expect(existsSync(ledger(state))).toBe(false);
+	});
+
+	test("an unwritable ledger still refuses, with its reason [24]", () => {
+		// A file where the state directory should be: no permission bit to
+		// flip, so the case holds when the suite runs as root.
+		const state = join(mkdtempSync(join(dir, "state-")), "file");
+		writeFileSync(state, "");
+		const { code, reason } = run(refused, state);
+		expect({ code, reason }).toEqual({
+			code: 2,
+			reason: expect.stringContaining("`update_properties`"),
+		});
 	});
 });
