@@ -49,7 +49,7 @@ the pull request that bumps its pin past group 1.
       with its reason [24]. If the module is not on `main` yet, leave this
       box open and say so in the pull request. Nothing else in the group
       waits on it.
-- [ ] 1.5 In `core/feature-workflow.md`, shorten "Set a card's status and
+- [x] 1.5 In `core/feature-workflow.md`, shorten "Set a card's status and
       pointer with `update_properties`, and re-fetch the card before reporting
       it moved" to the re-read the hook cannot do, per agent-rulebook's
       *A mechanised prohibition leaves its prose home*. Grep for every other
