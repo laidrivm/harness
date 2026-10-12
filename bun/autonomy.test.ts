@@ -98,6 +98,25 @@ describe("the marker vocabulary", () => {
 		]);
 	});
 
+	test("a core/ without the doc defines no class", () => {
+		const dir = tree();
+		rmSync(join(dir, "core", "autonomy.md"));
+		expect(check(dir)).toEqual([
+			"core/autonomy.md: defines agent, card and user, found none",
+		]);
+	});
+
+	test("a core/ without rules.md links no doc", () => {
+		const dir = tree();
+		rmSync(join(dir, "core", "rules.md"));
+		expect(check(dir)).toEqual(["core/rules.md: links no autonomy.md"]);
+	});
+
+	test("a link to a section of the doc counts as linking it", () => {
+		const rules = "# Rules\n\nSee [the classes](autonomy.md#the-classes).\n";
+		expect(check(tree({ "rules.md": rules }))).toEqual([]);
+	});
+
 	test("rules.md without the link fails", () => {
 		expect(check(tree({ "rules.md": "# Rules\n" }))).toEqual([
 			"core/rules.md: links no autonomy.md",
