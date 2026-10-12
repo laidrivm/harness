@@ -49,7 +49,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       agent-permissions — A commit on a merged branch is refused, §*A fetch
       that brings nothing new*, §*A fetch of an unrelated ref*, §*The remote
       branch was deleted and pruned*)
-- [ ] 1.6 Write `bun/branch-state.ts` against those tests: the remote-ref
+- [x] 1.6 Write `bun/branch-state.ts` against those tests: the remote-ref
       test, the `git cherry` read, the `FETCH_HEAD` mtime, the
       `FETCH_MAX_AGE` bound with its reason where it is declared, and a
       result that distinguishes merged, stale and unknown so the guard can
