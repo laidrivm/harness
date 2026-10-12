@@ -101,3 +101,41 @@ describe("the stale-install notice", () => {
 		expect(out).toContain("not installed");
 	});
 });
+
+/** The installed commit of `STALE`, as a full pin. */
+const INSTALLED = "9d321b6a0c4e8f1b2d3c4b5a6e7f8091a2b3c4d5";
+
+/** A stale install whose project's `package.json` is `manifest`. */
+function pinned(manifest: object): string {
+	const dir = project(STALE);
+	writeFileSync(join(dir, "package.json"), JSON.stringify(manifest));
+	return dir;
+}
+
+describe("the stale-install notice on a development-dependency pin", () => {
+	// spec: harness-updates/the-notice-reads-a-development-dependency-pin
+	test("a pin held only as a development dependency is named", () => {
+		const { code, out } = notice(
+			pinned({ devDependencies: { harness: `github:laidrivm/harness#${PIN}` } }),
+		);
+		expect(code).toBe(0);
+		expect(out).toContain("9d321b6");
+		expect(out).toContain(PIN.slice(0, 7));
+	});
+
+	// spec: harness-updates/a-runtime-pin-is-preferred
+	test("a runtime pin is compared even where the development pin matches the install", () => {
+		const { out } = notice(
+			pinned({
+				dependencies: { harness: `github:laidrivm/harness#${PIN}` },
+				devDependencies: { harness: `github:laidrivm/harness#${INSTALLED}` },
+			}),
+		);
+		expect(out).toContain(PIN.slice(0, 7));
+	});
+
+	test("a development pin at no full commit prints nothing", () => {
+		const dir = pinned({ devDependencies: { harness: "github:laidrivm/harness#main" } });
+		expect(notice(dir)).toEqual({ code: 0, out: "" });
+	});
+});

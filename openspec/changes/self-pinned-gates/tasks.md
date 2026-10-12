@@ -20,7 +20,7 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
       harness-updates — The harness's own sessions run its gates from its
       pin, §*A registration is missing from the harness's settings*, §*A hook
       runs a working-tree script*)
-- [ ] 1.3 Write the notice tests in `bun/bootstrap-notice.test.ts`: a pin
+- [x] 1.3 Write the notice tests in `bun/bootstrap-notice.test.ts`: a pin
       only under `devDependencies`, with an install from another commit,
       prints the line [5]; a pin under both, at different commits, is
       compared from `dependencies` [6]; a `devDependencies.harness` that is
