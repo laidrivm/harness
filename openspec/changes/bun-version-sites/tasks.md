@@ -27,9 +27,12 @@ Closes `agent-permissions/an-alias-outside-the-install-family` and
 - [ ] 1.2 Move the `bun-version-sites` card on `Harness` to `done`, and check
       it points at the `D2ASS` card *Reconcile the bun version sites* for the
       part this change no longer carries
-- [ ] 1.3 Measure every capped file this change touched and record the
+- [x] 1.3 Measure every capped file this change touched and record the
       numbers, whether or not any is over
-      (*change-slicing/a-file-over-the-cap*)
+      (*change-slicing/a-file-over-the-cap*). Measured: none touched. The
+      cap covers `.ts`, `.tsx` and `.css`, and this change writes none — only
+      its own artefacts here and, at archive,
+      `openspec/specs/agent-permissions/spec.md`
 - [ ] 1.4 Confirm the corrected precedence where it is observed, not from
       inside the session. In a session started after `Bash(bun *)` is added to
       `.claude/settings.local.json` under `permissions.allow`, the user asks
