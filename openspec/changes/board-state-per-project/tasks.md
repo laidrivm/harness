@@ -66,7 +66,7 @@ carried by the pull request that bumps its pin past group 1.
       new source may not name the service the socket case forbids. `bun
       test` green, and both files under the cap that `bun/file-size.ts`
       applies.
-- [ ] 1.4 Run `bun bun/board-state.ts` here and record in this task's commit
+- [x] 1.4 Run `bun bun/board-state.ts` here and record in this task's commit
       message that it prints `Harness` and the statuses design.md measured,
       plus this change's own slug.
 - [ ] 1.5 Rewrite the two passages in `core/feature-workflow.md` that tie
