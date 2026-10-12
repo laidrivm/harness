@@ -9,6 +9,7 @@ layout, and how a project consumes it, are in [README.md](README.md).
   [review toolkit](core/review-toolkit.md),
   [feature workflow](core/feature-workflow.md),
   [rulebook growth](core/rulebook-growth.md), [code style](core/code-style.md),
-  [API design](core/api-design.md), [testing](core/testing.md).
+  [API design](core/api-design.md), [testing](core/testing.md),
+  [autonomy](core/autonomy.md).
 
 @core/rules.md

@@ -56,6 +56,8 @@ never a second always-on file.
 
 What counts as evidence for a claim — environments, external contracts,
 observability, causal claims — see [verification.md](verification.md).
+What a session does at a step that names the user when it runs unattended —
+see [autonomy.md](autonomy.md).
 
 #### Code
 

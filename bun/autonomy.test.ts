@@ -120,8 +120,9 @@ describe("the repository", () => {
 
 	test("the agent class lists each Major or Critical left open by its fields", () => {
 		const doc = read("core/autonomy.md");
-		const start = doc.indexOf("### `agent`");
-		const rest = doc.slice(start + 1);
+		const heading = "### `agent`";
+		const start = doc.indexOf(heading);
+		const rest = doc.slice(start + heading.length);
 		const end = rest.search(/^#{2,3} /m);
 		const section = (end < 0 ? rest : rest.slice(0, end)).replace(/\s+/g, " ");
 		expect(start).toBeGreaterThan(-1);
