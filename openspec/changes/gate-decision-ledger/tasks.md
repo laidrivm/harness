@@ -45,7 +45,7 @@ built from what the case needs, in a directory that holds no `.env`.
       `block(` call sites pass the same id [6]. All of these fail before 1.3.
       (Req: gate-ledger — Every gate refusal is recorded; Each prohibition has
       a stable id; Recording never changes a decision)
-- [ ] 1.3 Write `bun/gate-ledger.ts`: the append, best-effort and silent,
+- [x] 1.3 Write `bun/gate-ledger.ts`: the append, best-effort and silent,
       carrying a `ponytail:` comment that names rotation as the upgrade; and
       `block(id, reason)`, which records and exits 2. Move the guard onto
       it, with one id per prohibition. `bun test` must be green, and

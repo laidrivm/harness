@@ -21,14 +21,8 @@
  */
 
 import { existsSync } from "node:fs";
-import { homedir } from "node:os";
-import { resolve } from "node:path";
-import { commands, invocations, SHELLS } from "./command-parse.ts";
-
-function block(reason: string): never {
-	process.stderr.write(`${reason}\n`);
-	process.exit(2);
-}
+import { commands, invocations, place, SHELLS } from "./command-parse.ts";
+import { blocker } from "./gate-ledger.ts";
 
 /**
  * Global options that swallow the token after them, so the subcommand of
@@ -85,17 +79,23 @@ const PUSH_VALUE_OPTIONS = new Set([
  * with one it never carried.
  */
 function blockDestination(destination?: string): never {
+	if (destination)
+		block(
+			"push-to-main",
+			`command-guard: this push names \`${destination}\` as a destination. Pushing to main is the user's — ask them to run it.`,
+		);
 	block(
-		destination
-			? `command-guard: this push names \`${destination}\` as a destination. Pushing to main is the user's — ask them to run it.`
-			: "command-guard: this push names no bounded destination, so it cannot be shown not to reach main. Name the branch you mean.",
+		"unbounded-push",
+		"command-guard: this push names no bounded destination, so it cannot be shown not to reach main. Name the branch you mean.",
 	);
 }
 
 const payload = await Bun.stdin.json().catch(() => null);
+const block: (id: string, reason: string) => never = blocker(payload);
 const command = payload?.tool_input?.command;
 if (typeof command !== "string") {
 	block(
+		"unreadable-event",
 		"command-guard: the hook event carried no readable tool_input.command, so this command could not be checked. Blocked rather than allowed, because an unread command is the case the guard exists for.",
 	);
 }
@@ -115,12 +115,6 @@ const dirs = new Set<string | null>([
 	typeof payload?.cwd === "string" ? payload.cwd : process.cwd(),
 ]);
 
-/** `path` as the shell resolves it from `from`, or `null` where it cannot be read statically. */
-function place(from: string | null, path: string): string | null {
-	if (from === null || path === "-" || path.includes("$")) return null;
-	return resolve(from, path.replace(/^~(?=\/|$)/, homedir()));
-}
-
 /**
  * The branch `HEAD` points at in `cwd` — the `-C` target when the command
  * names one, since that is the repository the commit would land in — or a
@@ -139,6 +133,7 @@ function currentBranch(cwd: string | null): string {
 		// non-zero and non-blocking. Fall through to the block instead.
 	}
 	block(
+		"unreadable-branch",
 		"command-guard: could not read the current branch — a detached HEAD, no work tree, an unreadable -C target, or a directory change the guard cannot resolve. A commit cannot be checked against main, so it is blocked.",
 	);
 }
@@ -190,6 +185,7 @@ function check(command: string): void {
 				);
 				if (write) {
 					block(
+						"gh-publish",
 						`command-guard: \`gh ${write.join(" ")}\` publishes text under the user's name. Report what you would have written and let them send it.`,
 					);
 				}
@@ -211,6 +207,7 @@ function check(command: string): void {
 
 			if (subcommand === "commit" && onMain(targets)) {
 				block(
+					"main-commit",
 					`command-guard: HEAD is on main and this project never commits there. Branch first, then commit on the branch. ${ELSEWHERE}`,
 				);
 			}
@@ -229,6 +226,7 @@ const ELSEWHERE =
 function checkPush(args: string[], targets: (string | null)[]): void {
 	if (args.some((arg) => FORCE.test(arg))) {
 		block(
+			"force-push",
 			"command-guard: force-pushing is the user's, not the agent's — the boundary is the rewrite, not how carefully it is leased. Ask the user to run it.",
 		);
 	}
@@ -258,6 +256,7 @@ function checkPush(args: string[], targets: (string | null)[]): void {
 	// nothing of its own to push from there.
 	if (onMain(targets)) {
 		block(
+			"main-push",
 			`command-guard: HEAD is on main and this project never pushes from there. Branch first, then push the branch. ${ELSEWHERE}`,
 		);
 	}
@@ -275,6 +274,7 @@ function checkPush(args: string[], targets: (string | null)[]): void {
 		// be wrong.
 		if (arg.startsWith("+")) {
 			block(
+				"plus-refspec",
 				"command-guard: a leading `+` on a refspec forces the update exactly as --force does. Force-pushing is the user's, not the agent's.",
 			);
 		}

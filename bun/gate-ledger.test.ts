@@ -63,9 +63,10 @@ describe("where the ledger lives", () => {
 	});
 
 	test.each([
-		["empty", ""],
-		["unset", undefined],
-	])("an %s XDG_STATE_HOME falls back to $HOME/.local/state", (_, value) => {
+		["left empty", ""],
+		["left unset", undefined],
+		["given as a relative path", "state"],
+	])("an XDG_STATE_HOME %s falls back to $HOME/.local/state", (_, value) => {
 		const home = dir();
 		write(envOf({ HOME: home, XDG_STATE_HOME: value }));
 		expect(lines(join(home, ".local", "state"))).toHaveLength(1);
