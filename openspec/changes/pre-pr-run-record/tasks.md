@@ -79,7 +79,7 @@ There is one group, shipped as `feat/pre-pr-run-record`. It is cut after
       `cwd`. Correct the header comment's "a gate line written without
       running the gate passes it". Verify: `bun test` is green and the file
       stays under the 300-line cap (`bun/file-size.ts`).
-- [ ] 1.5 In `core/review-toolkit.md`, make step 1 the runner. Say to run it
+- [x] 1.5 In `core/review-toolkit.md`, make step 1 the runner. Say to run it
       again after the sequence's last commit, and replace "it does not prove
       it ran" with what the record proves and what it does not. In `README.md`
       *Consuming*, the turn-gate line names the run record. Grep for the
