@@ -45,7 +45,7 @@ commit, unmerged and unpushed, printed 1 line, prefix `+`, and zero `-`.
 
 **Non-Goals:**
 
-- Any network call. The guard's measured cost is 16–22 ms per Bash call, and
+- Any network call. The guard's measured cost is about 11 ms per Bash call, and
   it runs on every one of them; a fetch or a `gh` call per commit is a
   different order, and offline it would degrade into measurement B — the
   behaviour that missed the merge.
