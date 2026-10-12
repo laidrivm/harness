@@ -23,14 +23,21 @@ export type Config = {
 	diffBudgetExclude: string[];
 	/** The shell command a bump runs as the consumer's unit tests. */
 	bumpTest: string;
+	/** The name of the board whose cards this tree decides — never its address. */
+	board: string;
 };
 
 /** `key` from the `"harness"` object of `root`'s `package.json`. */
 export function read<K extends keyof Config>(root: string, key: K): Config[K] {
 	const file = join(root, "package.json");
-	const manifest = JSON.parse(readFileSync(file, "utf8")) as {
-		harness?: Partial<Config>;
-	};
+	const text = readFileSync(file, "utf8");
+	let manifest: { harness?: Partial<Config> };
+	try {
+		manifest = JSON.parse(text);
+	} catch (error) {
+		// The parser's own message names a position and no file.
+		throw new Error(`${file} is not JSON — ${String(error)}`);
+	}
 	const value = manifest.harness?.[key];
 	// `null` too: JSON can only spell an absent value that way, and the gate
 	// would otherwise read a field of it and throw something nobody can act on.

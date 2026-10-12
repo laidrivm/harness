@@ -17,7 +17,7 @@ carried by the pull request that bumps its pin past group 1.
 
 ## 1. The key, the command and the prose
 
-- [ ] 1.1 Write the command tests in a new `bun/board-state-cli.test.ts`. Each
+- [x] 1.1 Write the command tests in a new `bun/board-state-cli.test.ts`. Each
       case runs `bun/board-state.ts` as a process against a fabricated
       repository holding a `package.json`, with an environment built from
       what the case needs and started in a directory with no `.env`. Every
@@ -44,7 +44,7 @@ carried by the pull request that bumps its pin past group 1.
       (Req: task-board — A repository names the board its tree decides,
       §*The key is absent*, §*The key holds an identifier rather than a
       name*, §*The key holds no name at all*)
-- [ ] 1.2 Update `bun/board-state-hygiene.test.ts`. Keep *the output names no
+- [x] 1.2 Update `bun/board-state-hygiene.test.ts`. Keep *the output names no
       board* for `boardState(tree)`, and add a case that the command, given
       `"board": "Harness"`, names that board and no other [15]. Widen the
       import allow-list to `./config.ts`, and have the module walk assert
@@ -55,7 +55,7 @@ carried by the pull request that bumps its pin past group 1.
       are moved by hand, §*A card on a board whose tree is elsewhere*,
       §*The derivation reaches no network*; A repository names the board its
       tree decides, §*The harness reads its own board*)
-- [ ] 1.3 Implement. Add `board: string` to `Config` in `bun/config.ts` with
+- [x] 1.3 Implement. Add `board: string` to `Config` in `bun/config.ts` with
       its one-line comment. In `bun/board-state.ts`'s `import.meta.main`,
       read the key through `read`, refuse a non-string, a blank string, a
       value carrying `://`, or a UUID with or without hyphens in either case,
@@ -66,10 +66,10 @@ carried by the pull request that bumps its pin past group 1.
       new source may not name the service the socket case forbids. `bun
       test` green, and both files under the cap that `bun/file-size.ts`
       applies.
-- [ ] 1.4 Run `bun bun/board-state.ts` here and record in this task's commit
+- [x] 1.4 Run `bun bun/board-state.ts` here and record in this task's commit
       message that it prints `Harness` and the statuses design.md measured,
       plus this change's own slug.
-- [ ] 1.5 Rewrite the two passages in `core/feature-workflow.md` that tie
+- [x] 1.5 Rewrite the two passages in `core/feature-workflow.md` that tie
       derivation to `D2ASS`: "and only on `D2ASS`. The other six, and every
       card on `Harness` or `mellon`, are honoured", and the closing sentence
       of the board list. Say instead that each repository's
@@ -89,7 +89,7 @@ carried by the pull request that bumps its pin past group 1.
       its floor at the board read*, §*A card whose pointer names no
       directory of this tree*; A card for another repository's change points
       across)
-- [ ] 1.6 In `core/skills/session-wrapup/SKILL.md` step 3, *Workflow state*,
+- [x] 1.6 In `core/skills/session-wrapup/SKILL.md` step 3, *Workflow state*,
       add the reconciliation: run `bun/board-state.ts`, compare the cards
       whose pointers name the change directories this session touched,
       correct each behind its floor with `update_properties` and a re-read,
