@@ -9,8 +9,10 @@
  * It runs without an `if` field on purpose. A permission pattern — which is
  * what `if` takes — matches the command word literally, so `/usr/bin/git` and
  * `command gh` never reach a hook narrowed that way. Deciding here instead
- * costs one bun start per Bash call, measured at 16-22 ms, and buys a boundary
- * that a spelling does not walk around.
+ * costs one bun start per Bash call, and buys a boundary that a spelling does
+ * not walk around. On a call it allows, the guard measured 10.7-11.0 ms per call
+ * before the merged-branch check and 11.0-11.1 ms after (50 runs per round,
+ * three rounds, 2026-10-13). Only a commit pays for the branch's git reads.
  *
  * Exit 0 allows and exit 2 blocks, with the reason on stderr — those are the
  * only two codes Claude Code reads as a decision. Every other non-zero code is
