@@ -107,7 +107,8 @@ describes is rewritten, the rule is a candidate for deletion.
 Rules about how work is carried out here. They do not age with the code.
 
 - Confirm a path is tracked before a check or a claim depends on it — a
-  gitignored file is present for the author and absent in a clone.
+  gitignored file is present for the author and absent in a clone, and a glob
+  matches a path string whether or not the file exists.
 - Never silence a linter or type-checker finding by disabling its rule in
   configuration; fix the code or ask the user to approve a suppression.
 - All repo artefacts — docs, plans, specs, code comments, commit messages —
