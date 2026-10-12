@@ -42,7 +42,9 @@ wrap-up counts lines with `jq` over the file. It does not get a reader script.
 ### JSON lines, one file, in the state directory
 
 Each record is a line `{"at","gate","decision","rule","project","session"}`. The
-path is `${XDG_STATE_HOME:-~/.local/state}/harness/gates.jsonl`.
+path is `$XDG_STATE_HOME/harness/gates.jsonl` when that variable is an
+absolute path, as the XDG spec requires, and
+`~/.local/state/harness/gates.jsonl` otherwise.
 
 - *Alternative: a file inside the project, gitignored.* Every consumer would
   have to add the ignore entry, and the rulebook's Safety rule on `.gitignore`
