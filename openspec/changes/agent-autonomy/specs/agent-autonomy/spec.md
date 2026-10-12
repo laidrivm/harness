@@ -57,8 +57,9 @@ The pull request's body SHALL list each such finding with:
 - its severity;
 - its file and line;
 - what it says;
-- either the reason dismissal is proposed, or a statement that the finding is
-  still open.
+- for a proposed dismissal, the reason it is proposed;
+- for a finding unresolved after the third pass, a statement that it is still
+  open.
 
 The gate line SHALL read as `local-review-loop` sets it: `OPEN` over a
 proposed dismissal and `BLOCKED` over an unresolved finding. The merge stays
