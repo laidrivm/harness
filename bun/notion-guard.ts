@@ -16,7 +16,11 @@
  * refusing every update when the event's shape changed would stop the board
  * workflow outright. No hook can read the page afterwards, so re-reading a
  * card before reporting it moved stays the session's to do.
+ *
+ * A refusal is recorded in the gate ledger as `notion-properties-dropped`. The
+ * ledger swallows its own errors, so one it cannot write changes no decision.
  */
+import { blocker } from "./gate-ledger.ts";
 
 type Input = { command?: unknown; properties?: unknown };
 
@@ -38,16 +42,15 @@ function refusal({ command, properties }: Input): string | undefined {
 }
 
 if (import.meta.main) {
+	let event: { tool_input?: Input } | null = null;
 	let reason: string | undefined;
 	try {
-		const event = JSON.parse(await Bun.stdin.text());
-		reason = refusal(event.tool_input ?? {});
+		event = JSON.parse(await Bun.stdin.text());
+		reason = refusal(event?.tool_input ?? {});
 	} catch {
 		// Fail-open, as the header says: an event this script cannot read
 		// lets the call through.
 	}
-	if (reason) {
-		process.stderr.write(`${reason}\n`);
-		process.exit(2);
-	}
+	if (reason)
+		blocker("notion-guard", event)("notion-properties-dropped", reason);
 }
