@@ -17,7 +17,7 @@ which no task here touches.
 Closes `agent-permissions/an-alias-outside-the-install-family` and
 `agent-permissions/a-broader-local-allow-entry-does-not-suppress-the-prompt`.
 
-- [ ] 1.1 Widen the alias clause in the `agent-permissions` delta to each
+- [x] 1.1 Widen the alias clause in the `agent-permissions` delta to each
       alias bun documents for any gated command, and confirm the policy
       already satisfies it — `bun/settings.ts` already demands
       `Bash(bun up *)` among the gated forms and reads each gated command's
