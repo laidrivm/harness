@@ -69,7 +69,7 @@ carried by the pull request that bumps its pin past group 1.
 - [x] 1.4 Run `bun bun/board-state.ts` here and record in this task's commit
       message that it prints `Harness` and the statuses design.md measured,
       plus this change's own slug.
-- [ ] 1.5 Rewrite the two passages in `core/feature-workflow.md` that tie
+- [x] 1.5 Rewrite the two passages in `core/feature-workflow.md` that tie
       derivation to `D2ASS`: "and only on `D2ASS`. The other six, and every
       card on `Harness` or `mellon`, are honoured", and the closing sentence
       of the board list. Say instead that each repository's
