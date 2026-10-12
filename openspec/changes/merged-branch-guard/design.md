@@ -196,6 +196,11 @@ prohibitions themselves are". Asking git about a branch is the same kind of
 thing as parsing a command line — a fact the guard consumes, not a rule it
 states.
 
+Step 1 also moved git's option grammar — `VALUE_OPTIONS`, `FORCE`,
+`REF_WIDE` and `PUSH_VALUE_OPTIONS` — verbatim into `bun/git-options.ts`,
+because merging the gate ledger's ids into the guard brought
+`command-guard.ts` to 318 lines against the 300-line cap.
+
 ## Risks / Trade-offs
 
 - **Offline work on a pushed branch is blocked** → the branch that cannot be
