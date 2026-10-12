@@ -53,7 +53,9 @@ user's name, with an opening mark that tells it from the user's own words.
   But its token would sit in the session, which the card *Keep credentials
   out of agent sessions* exists to stop, and its calls would go by direct
   HTTP — the channel `policy-gate-beyond-bash`'s rewritten bullet forbids
-  because no entry reaches it. Revisit once that card lands.
+  because no entry reaches it. Its planned successor is the card *Post
+  agents' Notion comments and card writes from a bot integration, not under
+  my name*, which takes this up once the credentials card lands.
 - *Alternative: the question in the card's body.* A page write needs no
   permission. It was rejected because a body has no thread per question and
   no way to tell an answered question from an open one, and the user chose
@@ -171,11 +173,13 @@ stands as procedure in `core/feature-workflow.md`, citing task-board.
 - [Text the agent read persuades it to post a marked comment] → Bounded to a
   card on the user's board, 1500 characters, no mention, the per-session
   ceiling, and a reader who is the user.
+- [Until the bot-integration card named in *Decisions* lands, every question
+  stands on the boards as written by the user] → The mark is the only sign it is the agent's.
 - [A board shared with other members shows them a comment under the user's
   name] → The mark says whose it is. Whether any board is shared is the
   user's to check (PR, *Check by hand*).
 - [Notion may notify the user of their own comment or assignment after all]
-  → The `Questions` view costs nothing either way; task 1.7 records which.
+  → The `Questions` view costs nothing either way; task 1.8 records which.
 - [A failed ledger write undercounts the ceiling] → The boards' cap is the
   bound that holds; the ceiling is its backstop.
 - [A `PermissionRequest` hook or a mod outside the project can also answer
