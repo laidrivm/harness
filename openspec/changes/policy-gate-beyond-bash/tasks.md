@@ -79,7 +79,7 @@ Its boxes are ticked in the archive pull request.
       `sync.ts` writes into `.claude/settings.json` name the `mcp__` ask
       entries beside the `Bash(` ones. `bun test` green; both files under
       their file-size cap.
-- [ ] 1.4 Add the four entries to the harness's own `.claude/settings.json`
+- [x] 1.4 Add the four entries to the harness's own `.claude/settings.json`
       under `permissions.ask`, and a test in `bun/settings-mcp.test.ts`
       reading that file, whose `mcp__` ask entries equal the exported list
       [12] — the harness's own file is not a consumer and no other test reads

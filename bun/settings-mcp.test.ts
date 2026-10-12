@@ -4,7 +4,8 @@
  * parenthesised form Claude Code skips when it loads settings.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { settings } from "./settings.ts";
+import { readFileSync } from "node:fs";
+import { MCP_ASK, settings } from "./settings.ts";
 import {
 	changed,
 	cleanup,
@@ -87,6 +88,17 @@ describe("the MCP ask entries", () => {
 		expect(
 			report((c) => c.permissions.allow.push("mcp__design__read_file")),
 		).toBe("");
+	});
+});
+
+describe("the harness's own settings", () => {
+	// No consumer check reads this file, so nothing else pins its entries.
+	test("ask before the four tools [12]", () => {
+		const own = JSON.parse(
+			readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"),
+		);
+		const ask: string[] = own.permissions.ask;
+		expect(ask.filter((e) => e.startsWith("mcp__"))).toEqual(MCP_ASK);
 	});
 });
 
