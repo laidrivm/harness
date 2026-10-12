@@ -62,4 +62,6 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
 - [ ] 1.10 By hand, after the merge: the user prunes the harness's local file
       to its machine-local entries, and the sweep run from the main checkout
       exits 0 (25). File one card each on the `D2ASS` and `mellon` boards for
-      that repository's clean-up, to follow its next pin bump
+      that repository's clean-up, to follow its next pin bump. File one card
+      on the `Harness` board for the follow-up that design §*Interpreters
+      stay behind a prompt* names
