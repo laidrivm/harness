@@ -39,11 +39,15 @@ if (dirty || !commit) {
 } else {
 	const decision = code === 0 ? "pass" : code === 1 ? "fail" : "error";
 	const session = process.env.CLAUDE_CODE_SESSION_ID || undefined;
+	// The writer prefers CLAUDE_PROJECT_DIR, which can name another checkout;
+	// the turn gate matches the top level of the one the run read.
+	delete process.env.CLAUDE_PROJECT_DIR;
+	const top = git("rev-parse", "--show-toplevel");
 	record(
 		"pre-pr",
 		decision,
 		"diff-budget",
-		{ session_id: session, cwd: process.cwd() },
+		{ session_id: session, cwd: top },
 		commit,
 	);
 }

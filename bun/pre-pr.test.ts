@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	cleanup,
@@ -149,6 +149,13 @@ describe("the record of a run", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
 		const result = run(dir, { CLAUDE_CODE_SESSION_ID: "abc-123" });
 		expect(records(result.state)[0]?.session).toBe("abc-123");
+	});
+
+	test("the project is the checkout's top level, whatever CLAUDE_PROJECT_DIR names", () => {
+		const dir = repo({}, { "a.ts": lines(3) });
+		const elsewhere = emptyDir("pre-pr-other-");
+		const result = run(dir, { CLAUDE_PROJECT_DIR: elsewhere });
+		expect(records(result.state)[0]?.project).toBe(realpathSync(dir));
 	});
 
 	test("an empty CLAUDE_CODE_SESSION_ID records no session [12]", () => {
