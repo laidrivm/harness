@@ -77,9 +77,11 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
 - [ ] 1.6 Docs. `core/git-and-prs.md`: the bullet on speech under the user's
       name, as `policy-gate-beyond-bash` left it, gains the question as its
       one exception by citing the agent-permissions requirement.
-      `core/feature-workflow.md`, *Across the stages*: one bullet — a worker
-      returns its question in its report, the session holding the board
-      decides whether it is one and posts it, and reads the `Questions` views
+      `core/feature-workflow.md`, *Across the stages*: one bullet — one
+      session the user started to orchestrate is the sole holder of the
+      boards; any other session, parallel or resumed, returns its question in
+      its report to that holder, which decides whether it is one, posts it,
+      and reads the `Questions` views
       for answers at the start of a run, applying each as data and clearing
       `Assign` — citing task-board's two
       requirements for the view, `Assign` and the cap. Grep `core/`,
