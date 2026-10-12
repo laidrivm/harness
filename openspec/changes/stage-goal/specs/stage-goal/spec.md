@@ -118,9 +118,10 @@ changes a decision*.
 A session that carries an OpenSpec stage with nobody present SHALL set one
 `/goal` for that stage. Its condition SHALL be met only by the check's
 `goal met` for that stage and change, or by a final message that opens with
-`BLOCKED` and names what only the user can settle. The launch form and the
-condition's text are in `core/feature-workflow.md`. Explore and conversational
-sessions SHALL set no goal.
+`BLOCKED` and names what only the user can settle. The launcher SHALL judge
+the outcome by running the check for its own stage, change and step after the
+session ends, since a ledger record names no change or step. Explore and
+conversational sessions SHALL set no goal.
 
 #### Scenario: An apply step launched headless
 
@@ -131,8 +132,16 @@ sessions SHALL set no goal.
 #### Scenario: A stage that needs the user
 
 - **WHEN** the stage cannot go on without the user's decision
-- **THEN** the session ends on a named `BLOCKED`, and the ledger holds no
-  `met` record for the stage's commit
+- **THEN** the session ends on a named `BLOCKED`, and the check for that
+  stage still reports `goal open`
+
+#### Scenario: Two targets at one commit
+
+- **WHEN** the ledger holds an `apply` record of `met` at commit `C` for one
+  change, and a launcher's own target is a step of another change that is
+  not complete at `C`
+- **THEN** the launcher reruns the check for its own target, which reports
+  `goal open`, and the other change's record decides nothing
 
 #### Scenario: An exploration
 
