@@ -16,7 +16,9 @@ references (`code.claude.com/docs/en/hooks`, `/permission-modes`):
 - "In sessions that can't show a prompt, such as background subagents in
   non-interactive mode, Claude Code still runs these hooks, and if no hook
   returns a decision, it denies the tool call."
-- `dontAsk` denies every call that would prompt, before any prompt exists.
+- `dontAsk` "auto-denies every tool call that would otherwise prompt you";
+  the reference does not say whether a `PermissionRequest` hook is consulted
+  first.
 - A matcher holding characters other than letters, digits, `_`, `-`, spaces,
   `,` and `|` is an unanchored JavaScript regular expression.
 
@@ -153,6 +155,10 @@ stands as procedure in `core/feature-workflow.md`, citing task-board.
 - [A `PermissionRequest` `allow` might not answer an ask-rule prompt in
   practice, or not in `-p`] → Task 1.1 confirms both in fresh sessions before
   any code is written, and stops the change if either fails.
+- [`dontAsk` may refuse a question before the hook is consulted] → Left
+  unspecified: the orchestrator card runs unattended sessions with `-p`, which
+  task 1.1 covers, and a session in `dontAsk` that cannot ask reports the
+  refusal as any other.
 - [Text the agent read persuades it to post a marked comment] → Bounded to a
   card on the user's board, 1500 characters, no mention, the per-session
   ceiling, and a reader who is the user.

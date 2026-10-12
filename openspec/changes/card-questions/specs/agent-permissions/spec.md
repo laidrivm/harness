@@ -8,8 +8,9 @@ A `PermissionRequest` hook the harness registers SHALL answer `allow` to the
 prompt for `notion-create-comment` only when the call is a question as the
 scenarios below fix it, and SHALL give no answer to any other call, so the
 prompt stands where a session can show one and the call is refused where it
-cannot. The hook SHALL NOT itself refuse a call, and each answer it gives
-SHALL be recorded in the gate ledger.
+cannot. The hook SHALL NOT itself refuse a call, and each call it sees SHALL
+be recorded in the gate ledger. This is the one exception to *Sending as the
+user through an MCP tool prompts*.
 
 #### Scenario: A question on a card
 
@@ -82,12 +83,6 @@ SHALL be recorded in the gate ledger.
   cannot be read
 - **THEN** the hook gives no answer, so a fault leaves the prompt standing
   rather than allowing the call
-
-#### Scenario: A mode that never prompts
-
-- **WHEN** the session runs in `dontAsk` mode
-- **THEN** the call is refused even when it is a question, because that mode
-  refuses a call before any prompt is raised for the hook to answer
 
 #### Scenario: A project denies the tool
 
