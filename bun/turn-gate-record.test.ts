@@ -195,23 +195,31 @@ describe("a ledger the gate cannot use", () => {
 });
 
 describe("the runner's path in the refusal", () => {
-	/** Runs a copy of the gate installed at `at` inside the repository. */
-	function refusal(at: string) {
+	/**
+	 * Runs a copy of the gate installed at `at` inside the repository, for a
+	 * session whose working directory is `from` within it.
+	 */
+	function refusal(at: string, from = "") {
 		const dir = repo({ [TASKS]: OPEN });
+		const cwd = join(dir, from);
 		const tmp = store();
-		mark(prompt(dir), join(tmp, "turn-gate"));
+		mark(prompt(cwd), join(tmp, "turn-gate"));
 		commit(dir, { [TASKS]: DONE });
 		const bin = join(dir, at);
 		mkdirSync(bin, { recursive: true });
 		for (const file of ["turn-gate.ts", "gate-ledger.ts"])
 			copyFileSync(join(import.meta.dir, file), join(bin, file));
 		const call = Bun.spawnSync(["bun", join(bin, "turn-gate.ts"), "stop"], {
-			cwd: dir,
+			cwd,
 			env: { PATH: process.env.PATH, TMPDIR: tmp, XDG_STATE_HOME: state },
-			stdin: Buffer.from(JSON.stringify(end(dir, REPORTED))),
+			stdin: Buffer.from(JSON.stringify(end(cwd, REPORTED))),
 		});
 		return call.stderr.toString();
 	}
+
+	test("from a subdirectory, it is the path that reaches the runner from there", () => {
+		expect(refusal("bun", "openspec")).toContain(" ../bun/pre-pr.ts");
+	});
 
 	test("from the harness tree, it is `bun/pre-pr.ts` [27]", () => {
 		expect(refusal("bun")).toContain(" bun/pre-pr.ts");

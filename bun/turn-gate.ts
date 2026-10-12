@@ -163,7 +163,9 @@ function blobs(cwd: string, specs: string[]): string[] {
  */
 function completed(cwd: string, at: string, tip: string): string[] {
 	const paths = (
-		git(cwd, "ls-tree", "-r", "--name-only", tip, "--", "openspec/changes") ?? ""
+		// `--full-tree`: without it a session in a subdirectory lists nothing.
+		git(cwd, "ls-tree", "--full-tree", "-r", "--name-only", tip, "--",
+			"openspec/changes") ?? ""
 	)
 		.split("\n")
 		.filter((path) => ACTIVE.test(path));
