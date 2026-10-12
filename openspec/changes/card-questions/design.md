@@ -32,6 +32,13 @@ Consumers, measured read-only on 2026-10-12: neither dota2 nor mellon, nor
 the user-level settings on this machine, registers a `PermissionRequest`
 hook, and neither consumer has an `mcp__` ask entry yet.
 
+Settled by the user on 2026-10-12: the boards are seen by the user and the
+bot only, nobody else; and Notion does not notify the user of a comment or an
+assignment their own account made, which they do not need — the comment
+count on the card's page-level comments block growing is signal enough, with
+the `Questions` view listing the cards. So a question is a top-level page
+comment, as designed.
+
 ## Goals / Non-Goals
 
 **Goals:** one hook that widens the ask entry for exactly the act the
@@ -179,11 +186,6 @@ stands as procedure in `core/feature-workflow.md`, citing task-board.
   ceiling, and a reader who is the user.
 - [Until the bot-integration card named in *Decisions* lands, every question
   stands on the boards as written by the user] → The mark is the only sign it is the agent's.
-- [A board shared with other members shows them a comment under the user's
-  name] → The mark says whose it is. Whether any board is shared is the
-  user's to check (PR, *Check by hand*).
-- [Notion may notify the user of their own comment or assignment after all]
-  → The `Questions` view costs nothing either way; task 1.8 records which.
 - [A failed ledger write undercounts the ceiling] → The boards' cap is the
   bound that holds; the ceiling is its backstop.
 - [A `PermissionRequest` hook or a mod outside the project can also answer

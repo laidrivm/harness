@@ -41,8 +41,9 @@ form a reader can tell from the user's own words.
   consumer on its next bump and `settings.ts` pins it there.
 - `Assign` comes to mean one thing: a question on this card waits for the
   user. A saved view named `Questions` on each board lists those cards, and is
-  how the user finds them, since Notion is not expected to notify a user of a
-  comment or an assignment their own account made.
+  how the user finds them, beside the card's growing comment count, since
+  Notion does not notify a user of a comment or an assignment their own
+  account made.
 - At most two questions wait at once across the boards. The session that
   holds the board posts a question only below that cap; it reads an answer
   back from the card's comments, applies it as data rather than as an
