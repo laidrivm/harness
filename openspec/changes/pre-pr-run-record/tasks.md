@@ -80,8 +80,11 @@ There is one group, shipped as `feat/pre-pr-run-record`. It is cut after
       *Consuming*, the turn-gate line names the run record. Grep for the
       superseded wording ("does not prove", "gate line written without
       running", "ends without the pre-PR sequence's gate lines") across the
-      tree outside `archive/` and reconcile each hit. Verify: the grep
-      returns only lines this task rewrote.
+      tree, excluding `openspec/changes/archive/` and this change's own
+      directory, which quotes them on purpose, and reconcile each hit.
+      `openspec/specs/commit-gates/spec.md` is expected to match, because
+      this change's delta rewrites it at archive. Verify: no other hit
+      remains outside the lines this task rewrote.
 - [ ] 1.6 Run the branch's `bun/pre-pr.ts` once in the harness and once with
       d2ass and then mellon as the working directory. It writes only to the
       ledger, so their trees stay untouched. Verify: `jq` over the ledger
