@@ -91,7 +91,7 @@ function blockDestination(destination?: string): never {
 }
 
 const payload = await Bun.stdin.json().catch(() => null);
-const block: (id: string, reason: string) => never = blocker(payload);
+const block: (id: string, reason: string) => never = blocker("command-guard", payload);
 const command = payload?.tool_input?.command;
 if (typeof command !== "string") {
 	block(
