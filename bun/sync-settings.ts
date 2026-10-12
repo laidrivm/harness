@@ -3,8 +3,8 @@
  * written into the consumer's `.claude/settings.json` and `bunfig.toml`, so a
  * harness change to a hook or a list lands with the pin rather than as a hand
  * edit in each consumer. What the check only refuses — an empty allow list,
- * `disableAllHooks` — stays the consumer's to fix, since no harness change
- * can introduce it.
+ * `disableAllHooks`, an `mcp__` deny or allow rule with parentheses — stays
+ * the consumer's to fix, since no harness change can introduce it.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
