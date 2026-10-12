@@ -5,10 +5,11 @@
 ### Requirement: A session is attended unless the prompt that started it says otherwise
 
 A session SHALL be unattended only when the prompt or brief that started it
-says it runs unattended. Every other session SHALL be attended, and an
-attended session SHALL follow every step as its prose is written, markers
-included. A marker only says what an unattended session does in place of the
-step, and it never relaxes an attended one.
+holds the line `This session runs unattended.`, verbatim and on a line of its
+own. No other wording SHALL make a session unattended. Every other session
+SHALL be attended, and an attended session SHALL follow every step as its
+prose is written, markers included. A marker only says what an unattended
+session does in place of the step, and it never relaxes an attended one.
 
 #### Scenario: An attended session reaches the pull request
 
@@ -20,14 +21,14 @@ step, and it never relaxes an attended one.
 
 #### Scenario: A worker whose brief declares it unattended
 
-- **WHEN** an orchestrating session starts a worker with a brief saying the
-  worker runs unattended
+- **WHEN** an orchestrating session starts a worker with a brief that holds
+  the line `This session runs unattended.`
 - **THEN** the worker reads each step it reaches through that step's class
 
-#### Scenario: A brief that says nothing
+#### Scenario: A prompt that implies but does not declare
 
-- **WHEN** a session is started by a prompt that does not say it runs
-  unattended
+- **WHEN** a session is started by the prompt "Apply agent-autonomy
+  overnight, I'm asleep", which lacks the line
 - **THEN** it is attended, and a step that waits on the user waits
 
 ### Requirement: Three classes say what an unattended session does at a step that names the user
@@ -38,24 +39,30 @@ unattended session do:
 
 - `agent`: the session takes the step itself and records what it did in the
   user's stead, in its report or in the pull request's body.
-- `card`: the session hands the question on as a worker does in the
-  card-questions change, and the work that waits on the answer stops while
-  other work goes on.
+- `card`: the session hands the question on through the card-questions
+  change's procedure. The work that waits on the answer stops, and other
+  work goes on.
 - `user`: the session neither takes the step nor asks for it on a card. It
   stops the work that needs the step and reports `BLOCKED`, naming the step.
 
-A dismissal handed on SHALL NOT hold back the pull request. Suppose an
-unattended session opens a pull request while the local review left a 🟠 Major
-or 🔴 Critical that the session proposes to dismiss. The pull request body
-SHALL then list each such finding with four things:
+A 🟠 Major or 🔴 Critical that the local review left open SHALL NOT hold back
+an unattended session's pull request. The finding is left open in either of
+two cases:
 
-- its severity
-- its file and line
-- what the finding says
-- the reason the session proposes to dismiss it
+- the session proposes to dismiss it;
+- it is still unresolved after the third pass.
 
-The gate line SHALL keep reading `OPEN`. The merge stays with the user, so a
-wrong dismissal is still read before it lands.
+The pull request's body SHALL list each such finding with:
+
+- its severity;
+- its file and line;
+- what it says;
+- either the reason dismissal is proposed, or a statement that the finding is
+  still open.
+
+The gate line SHALL read as `local-review-loop` sets it: `OPEN` over a
+proposed dismissal and `BLOCKED` over an unresolved finding. The merge stays
+with the user.
 
 `core/rules.md` SHALL link the doc, so that a consumer's copy of the rulebook
 reaches it.
@@ -68,6 +75,15 @@ reaches it.
 - **AND** the body names that finding's severity, its file and line, what it
   says, and why dismissal is proposed
 - **AND** the gate line reads `OPEN`
+
+#### Scenario: The pull request opens over a Major left unresolved
+
+- **WHEN** an unattended session's third `/coderabbit-local` pass still
+  reports a 🟠 Major that no fix resolved and no dismissal was proposed for
+- **THEN** it pushes and opens the pull request
+- **AND** the body names that finding's severity, its file and line, what it
+  says, and that it is still open
+- **AND** the gate line reads `BLOCKED`
 
 #### Scenario: A step the agent may take
 

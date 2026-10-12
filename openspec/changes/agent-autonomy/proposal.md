@@ -21,10 +21,10 @@ gives each step its class.
 ## What Changes
 
 - A new doc, `core/autonomy.md`, read on demand. It states when a session is
-  unattended: when the prompt or brief that started it says so, and never
-  otherwise. Attended sessions follow every step as written. The doc defines
-  three classes, `agent`, `card` and `user`, and what an unattended session
-  does under each:
+  unattended: when the prompt or brief that started it holds the line
+  `This session runs unattended.`, and never otherwise. Attended sessions
+  follow every step as written. The doc defines three classes, `agent`,
+  `card` and `user`, and what an unattended session does under each:
   - `agent`: it takes the step and records what it did in the user's stead.
   - `card`: it hands the question on through the card-questions procedure, and
     the work that waits on it stops.
@@ -60,7 +60,7 @@ gives each step its class.
   `feature-generator`, `spec-generator`, and the consumers' own `CLAUDE.md`
   and `openspec/config.yaml`. Each one reads as `card` by default until a
   follow-up marks it.
-- The question's envelope, the cap, `Assign` and the `Questions` view. These
+- The question's envelope, `Assign` and the `Questions` view. These
   belong to the card-questions change (harness#56). The question's form
   (a recommended answer, rounds of independent questions) belongs to the idea
   card *Ask proposal-stage questions with a recommended answer, in rounds of
@@ -94,8 +94,12 @@ None.
 ### Unmodified, but adjacent
 
 - `local-review-loop`'s *Dismissing a Major or above is the user's call*
-  keeps its `OPEN` gate line. The marker on `core/review-toolkit.md` says what
-  an unattended session does while that line reads `OPEN`.
+  keeps its gate lines: `OPEN` over a proposed dismissal, and `BLOCKED` over
+  a Major the third pass left unresolved. The markers on
+  `core/review-toolkit.md` say what an unattended session does under either
+  line: it opens the pull request, and the body lists each finding. On
+  harness#63 the user made, in advance, the decision that scenario leaves to
+  them: an unattended session pushes.
 - `agent-permissions`'s *Who may invoke a skill is enforced, not narrated*
   is unchanged until *agent-autonomy-flags*.
 
