@@ -115,6 +115,19 @@ describe("gh api, by the method it sends", () => {
 		expect(reason).toContain(`\`${flag}\``);
 	});
 
+	test("a method flag with no method after it blocks", () => {
+		expect(run(event("gh api /repos/o/r -X"), anywhere()).code).toBe(2);
+	});
+
+	test("a write flag blocks even where a later GET is what gh sends", () => {
+		const { code, reason } = run(
+			event("gh api -X POST -X GET /repos/o/r/issues/37/comments"),
+			anywhere(),
+		);
+		expect(code).toBe(2);
+		expect(reason).toContain("`-X POST`");
+	});
+
 	// spec: agent-permissions/a-read-that-carries-parameters
 	test.each([
 		"gh api -X get /search/issues -f q=repo:o/r",
