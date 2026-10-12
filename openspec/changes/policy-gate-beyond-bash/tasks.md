@@ -116,7 +116,9 @@ Its boxes are ticked in the archive pull request.
       with `--allowedTools "mcp__claude_ai_Gmail__send_message"` (an allow
       the ask must outrank), prompted for
       `mcp__claude_ai_Gmail__send_message`; the user answered No, and the
-      mail was not sent.
+      mail was not sent. In the user's earlier 2026-10-12 session on the same
+      check, the connector's tool list still named `create_draft` — an ask
+      entry prompts at call time and never removes a tool from the list.
 
 ## 2. Each consumer, through its automatic bump
 
