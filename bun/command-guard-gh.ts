@@ -57,7 +57,7 @@ export function ghRefusal(rest: string[]): string | undefined {
 		({ method }) => !READS.has(method.toUpperCase()),
 	);
 	if (sent) {
-		return `command-guard: \`gh api\` with \`${sent.flag}\` sends a write under the user's name — only GET and HEAD read. Drop the flag to read, or report what you would have sent and let them send it.`;
+		return `command-guard: \`gh api\` with \`${sent.flag}\` sends a write under the user's name — only GET and HEAD read. To read, name \`-X GET\`; to write, report what you would have sent and let them send it.`;
 	}
 	return undefined;
 }

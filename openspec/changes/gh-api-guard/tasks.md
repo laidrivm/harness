@@ -38,7 +38,7 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
       case: `--method` and `-X`; a lower-case `-X get`; a method flag written
       after the path; and `-X PATCH`, `-X PUT` and `-X DELETE`, so the test
       reads as a method test rather than a POST test (ZOMBIES 9, 10)
-- [ ] 1.4 Make the refusal name `gh api` and the flag that decided it, and
+- [x] 1.4 Make the refusal name `gh api` and the flag that decided it, and
       assert that text rather than only the exit code — an author who meant to
       read has to see which flag to drop. Assert the exit code is 2, the only
       code Claude Code reads as a block (ZOMBIES 12, 13)

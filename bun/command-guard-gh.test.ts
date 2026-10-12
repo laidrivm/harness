@@ -61,11 +61,13 @@ describe("gh commands that publish on the user's behalf", () => {
 describe("gh api, by the method it sends", () => {
 	// spec: agent-permissions/a-comment-posted-through-the-endpoint
 	test("a comment posted with -X POST blocks, naming the flag", () => {
-		const { code } = run(
+		const { code, reason } = run(
 			event("gh api -X POST /repos/o/r/issues/37/comments -f body=hi"),
 			anywhere(),
 		);
 		expect(code).toBe(2);
+		expect(reason).toContain("`gh api`");
+		expect(reason).toContain("`-X POST`");
 	});
 
 	// spec: agent-permissions/reading-through-the-endpoint-still-works
@@ -97,8 +99,10 @@ describe("gh api, by the method it sends", () => {
 		["-X PUT", "gh api -X PUT /repos/o/r/pulls/37/merge"],
 		["-X DELETE", "gh api -X DELETE /repos/o/r/issues/comments/1"],
 		["-X DELETE", "gh api -X GET -X DELETE /repos/o/r/issues/comments/1"],
-	])("%s blocks: %s", (_flag, line) => {
-		expect(run(event(line), anywhere()).code).toBe(2);
+	])("%s blocks: %s", (flag, line) => {
+		const { code, reason } = run(event(line), anywhere());
+		expect(code).toBe(2);
+		expect(reason).toContain(`\`${flag}\``);
 	});
 
 	// spec: agent-permissions/a-read-that-carries-parameters
