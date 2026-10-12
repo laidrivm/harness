@@ -32,8 +32,11 @@ four gaps: its *Policy Gate* box covers one tool of many.
   prompt, and never through a channel no entry reaches — a browser form, a
   direct HTTP call — per `agent-rulebook`'s *A mechanised prohibition leaves
   its prose home*.
-- Each consumer bumps its pin and adds the entries in one commit, since the
-  bumped check fails without them.
+- `bun/sync-settings.ts` writes that list into a consumer's `ask` as it
+  writes the Bash lists, since the harness now owns the `mcp__` ask entries
+  whole. `harness-updates`' *Sync writes every value the policy check
+  dictates* stays true, and each consumer's automatic bump lands the entries
+  with no hand edit.
 
 ## Non-goals
 
@@ -73,6 +76,9 @@ None.
 
 - `agent-permissions`: a new requirement, *Sending as the user through an MCP
   tool prompts*, with its pinning in the consumer check.
+- `harness-updates`: *Sync writes every value the policy check dictates*
+  names the `mcp__` ask entries, and *Sync leaves the consumer's own settings
+  as it found them* stops counting them among the consumer's own.
 
 ### Unmodified, but adjacent
 
@@ -88,8 +94,9 @@ None.
 - `.claude/settings.json`, `bun/settings.ts`; `bun/settings.test.ts` gives
   its fixture to a new `bun/settings.fixture.ts`, and the new cases go in
   `bun/settings-mcp.test.ts`.
+- `bun/sync-settings.ts` and `bun/sync-settings.test.ts`.
 - `core/git-and-prs.md`: one bullet rewritten.
-- dota2 and mellon: a pin bump, four ask entries and a refreshed rules copy
-  each, in their own pull requests.
+- dota2 and mellon: a pin bump each, landed by its automatic bump, whose sync
+  writes the four ask entries and refreshes the rules copy.
 - No runtime cost: an ask rule is evaluated by Claude Code, with no process
   launched. The cost is a prompt on each send, which is the point.
