@@ -46,7 +46,8 @@ export function record(
 		const xdg = process.env.XDG_STATE_HOME ?? "";
 		const state = isAbsolute(xdg) ? xdg : join(homedir(), ".local", "state");
 		const dir = join(state, "harness");
-		mkdirSync(dir, { recursive: true });
+		// Private: a record names a project path and a session id.
+		mkdirSync(dir, { recursive: true, mode: 0o700 });
 		const line = JSON.stringify({
 			at: new Date().toISOString(),
 			gate,
@@ -55,7 +56,7 @@ export function record(
 			project: project(seen),
 			session: typeof seen?.session_id === "string" ? seen.session_id : null,
 		});
-		appendFileSync(join(dir, "gates.jsonl"), `${line}\n`);
+		appendFileSync(join(dir, "gates.jsonl"), `${line}\n`, { mode: 0o600 });
 	} catch {
 		// Recording never changes a decision.
 	}
