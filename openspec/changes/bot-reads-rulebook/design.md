@@ -66,10 +66,14 @@ The pin lives in a harness test, `bun/review-config.test.ts`, and not in
 config. That is a new gate with its own rollout, so it gets its own card
 (proposal.md §Non-goals). The test reads the config with `Bun.YAML.parse`,
 which `bun/check-yaml.ts` already uses, and matches patterns with `Bun.Glob`,
-whose `*` stops at `/` just as the bot's does. It takes the docs from
-`CLAUDE.md`'s own structure: its relative markdown links and its `@` import
-lines. It never keeps a list of them, because a list would be a second copy
-that drifts.
+whose `*` stops at `/` just as the bot's does. It takes the docs from the
+structure of `CLAUDE.md` and `core/rules.md` themselves: their relative
+markdown links and `CLAUDE.md`'s `@` import lines. It never keeps a list of
+them, because a list would be a second copy that drifts. The scan names its
+one exemption, `README.md`, and gives the reason beside it. `CLAUDE.md` links
+the README for the package layout, which holds no rule. A scan scoped to
+`core/` would instead pass in silence once a doc moved out of it, and that
+move is the very thing the test exists to catch.
 
 ### The local invocation passes what the patterns match
 
