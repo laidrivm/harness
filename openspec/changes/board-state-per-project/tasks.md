@@ -100,7 +100,7 @@ carried by the pull request that bumps its pin past group 1.
       edited the skill, keep their lines. (Req: task-board — A board is
       reconciled when it is read and when a session ends, §*A stage moved and
       its card forgotten*, §*A session that touched no change*)
-- [ ] 1.7 After group 1 merges, in the first session that reads `Board view`
+- [x] 1.7 After group 1 merges, in the first session that reads `Board view`
       on `Harness`: run the reconciliation, and report what it corrected and
       what it listed [22] [24]. Expected to correct nothing, since every card
       was moved by hand that turn. A correction it does make is reported, not
