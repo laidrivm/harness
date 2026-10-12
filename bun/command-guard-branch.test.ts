@@ -120,3 +120,29 @@ describe("how recently origin/main was fetched", () => {
 		expect(state(upstream({ fetchHead: null }))).toBe("unknown");
 	});
 });
+
+describe("what the review rounds' probes measured", () => {
+	// spec: agent-permissions/a-fetch-that-brings-nothing-new
+	test("a fetch bringing no new commit refreshes the bound", () => {
+		// It updates no ref, so a reading taken from the reflog stays stale.
+		const dir = upstream({ fetchedAgo: 60 * MINUTE });
+		git(dir, "fetch", "origin");
+		expect(state(dir)).toBe("ok");
+	});
+
+	// spec: agent-permissions/a-fetch-of-an-unrelated-ref
+	test("a fetch naming only another ref does not refresh it", () => {
+		// It moves FETCH_HEAD's mtime all the same; only its contents tell.
+		const dir = upstream({ fetchedAgo: 60 * MINUTE });
+		git(dir, "fetch", "origin", "feat/x");
+		expect(state(dir)).toBe("stale");
+	});
+
+	// spec: agent-permissions/the-remote-branch-was-deleted-and-pruned
+	test("a merged branch deleted on the remote and pruned is still merged", () => {
+		const dir = upstream({ merged: true });
+		git(dir, "push", "origin", "--delete", "feat/x");
+		git(dir, "fetch", "--prune", "origin");
+		expect(state(dir)).toBe("merged");
+	});
+});

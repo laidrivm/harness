@@ -38,7 +38,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       age [8]; an unreadable fetch time blocks [11]. (Req: agent-permissions —
       A commit on a merged branch is refused, §*The base ref is stale*,
       §*The fetch time cannot be read*)
-- [ ] 1.5 Write the three regression tests the review rounds' probes earned: a
+- [x] 1.5 Write the three regression tests the review rounds' probes earned: a
       successful fetch bringing no new commit refreshes the bound, which a
       reflog-based reading would not — measured, the reflog stayed at 139
       entries while `FETCH_HEAD` advanced; a fetch naming only an unrelated
