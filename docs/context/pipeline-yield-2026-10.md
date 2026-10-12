@@ -74,3 +74,10 @@
 - coderabbit-local (chore/archive-harness-auto-bump): PASS — 2 findings, 1 acted on (Major rejected, the user confirmed)
 - Side agents, not a skill: 5 notes, 5 acted on — the write token visible to the checking job, d2ass's stale install, the 60-day schedule shutdown, sync deleting a project hook by path, the unpinned check name
 - Not run: warm (no manifest changed), first-five, review-order, code-review, preflight, ponytail-review, security-review; coderabbit on #48, #49, dota2#319 and mellon#46, whose reviews were re-fetched after merge and held 0 findings
+
+## 2026-10-12 — chore/wrapup-2026-10-11
+
+- Side agents, not a skill: 3 notes, 3 acted on — the no-push-from-worktree rule against worktree-per-session, the harness dependency in consumers, transcripts deleted after 30 days (cleanupPeriodDays raised to 365)
+- triage (chore/wrapup-2026-10-12): PASS — 1 group, nothing above Low risk
+- coderabbit-local (chore/wrapup-2026-10-12): PASS — 1 finding, 1 acted on (this entry's "nothing changed" claim, corrected)
+- Not run: zombies, warm, coderabbit, first-five, review-order, code-review, preflight — until the wrap-up the session changed nothing in this repository: it filed and edited board cards and wrote the untracked local/harness-roadmap.html; the wrap-up branch carries three card-writing rules in core/feature-workflow.md and this entry
