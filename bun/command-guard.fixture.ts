@@ -3,7 +3,7 @@
  * spawned `command-guard.ts` reading a fabricated hook event.
  *
  * Its own module rather than a copy in each file, because the guard's cases
- * split across two of them and this is a fabricated repository rather than a
+ * split across files and this is a fabricated repository rather than a
  * stub — a second copy would drift in what it fabricates, and the tests would
  * still pass while exercising something else. `afterAll` is not registered
  * here: a lifecycle hook belongs to the file it runs for, so each test file
