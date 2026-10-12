@@ -120,6 +120,34 @@ describe("a doc out of reach", () => {
 		expect(problems[0]).toContain("core/skills/x/SKILL.md");
 	});
 
+	// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach
+	test.each([
+		// Another doc keeps `core/*.md` live, so the rulebook is the one problem.
+		[
+			"the rulebook",
+			{ "core/rules.md": null, "core/x.md": "# X\n" },
+			"core/rules.md",
+		],
+		[
+			"a doc CLAUDE.md links",
+			{ "CLAUDE.md": "@core/rules.md\nSee [g](core/gone.md).\n" },
+			"core/gone.md",
+		],
+		["CLAUDE.md", { "CLAUDE.md": null }, "CLAUDE.md"],
+	])("%s absent from the tree is named", (_name, files, named) => {
+		const problems = unreached(fabricate(files));
+		expect(problems).toHaveLength(1);
+		expect(problems[0]).toContain(named);
+	});
+
+	test("a link carrying an anchor reaches the doc it names", () => {
+		const dir = fabricate({
+			"CLAUDE.md": "@core/rules.md\nSee [t](core/t.md#a-section).\n",
+			"core/t.md": "# T\n",
+		});
+		expect(unreached(dir)).toEqual([]);
+	});
+
 	test("an external link is not taken as a doc", () => {
 		const dir = fabricate({
 			"CLAUDE.md": "@core/rules.md\nSee [w](https://example.com/w.md).\n",
@@ -163,6 +191,8 @@ describe("a config the check cannot read", () => {
 	// spec: local-review-loop/a-config-the-test-cannot-read
 	test.each([
 		["is absent", null, "absent"],
+		["is empty", "", "missing"],
+		["names a single string", config("core/*.md"), "not a list"],
 		["does not parse", "knowledge_base: [", "does not parse"],
 		["has no filePatterns", "language: en-GB\n", "missing"],
 		["has an empty list", config([]), "empty"],

@@ -83,12 +83,19 @@ export function unreached(root: string): string[] {
 		...indexed(root, "CLAUDE.md"),
 		...indexed(root, RULEBOOK),
 	]);
+	// A glob matches a path string whether or not the file exists, so a doc
+	// the tree lacks would otherwise read as reached.
+	const absent = ["CLAUDE.md", ...docs].filter(
+		(d) => !EXEMPT.has(d) && !tracked.includes(d),
+	);
 	return [
 		...named
 			.filter((_, i) => !tracked.some((f) => globs[i]?.match(f)))
 			.map((p) => `${CONFIG}: pattern "${p}" matches no tracked file`),
+		...absent.map((d) => `${d}: indexed by the rulebook but not tracked`),
 		...[...docs]
-			.filter((d) => !EXEMPT.has(d) && !globs.some((g) => g.match(d)))
+			.filter((d) => !EXEMPT.has(d) && !absent.includes(d))
+			.filter((d) => !globs.some((g) => g.match(d)))
 			.map((d) => `${d}: no pattern under ${KEY} in ${CONFIG} matches it`),
 	];
 }
