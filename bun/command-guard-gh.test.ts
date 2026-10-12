@@ -167,3 +167,42 @@ describe("gh api, by the method it sends", () => {
 		expect(run(event(line), anywhere()).code).toBe(0);
 	});
 });
+
+describe("gh api, the words its other flags own", () => {
+	test.each([
+		"gh api repos/o/r/issues --template '-XPOST'",
+		"gh api repos/o/r/issues -q -XPOST",
+		"gh api repos/o/r/issues -iq -XPOST",
+		"gh api repos/o/r/issues --hostname -XPOST",
+		"gh api -- -XPOST",
+	])("a value that reads like a method is not one: %s", (line) => {
+		expect(run(event(line), anywhere()).code).toBe(0);
+	});
+
+	test.each([
+		"-f -XPOST -X PUT",
+		"-f body=-XPOST -X PUT",
+	])("a field's value is not read as a method: %s", (flags) => {
+		// A field with no method is a write, but step 2's; this pins only the
+		// flag the refusal names.
+		const { reason } = run(
+			event(`gh api repos/o/r/issues ${flags}`),
+			anywhere(),
+		);
+		expect(reason).toContain("`-X PUT`");
+	});
+
+	test.each([
+		["-H 'Accept: x' -X POST", "-X POST"],
+		["-tX -X DELETE", "-X DELETE"],
+		["--jq=. -X PATCH", "-X PATCH"],
+		["-iXPOST", "-iXPOST"],
+	])("a write after another flag still blocks: %s", (flags, named) => {
+		const { code, reason } = run(
+			event(`gh api repos/o/r/issues ${flags}`),
+			anywhere(),
+		);
+		expect(code).toBe(2);
+		expect(reason).toContain(`\`${named}\``);
+	});
+});

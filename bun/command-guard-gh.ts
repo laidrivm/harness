@@ -23,11 +23,26 @@ const READS = new Set(["GET", "HEAD"]);
  */
 const METHOD = /^(--method(?==|$)|-i*X)=?(.*)$/;
 
+/**
+ * The other flags that take a value, as `gh api --help` lists them on gh
+ * 2.97, where each owns the next word: written bare, without `=`, or as the
+ * last letter of a bundle behind the booleans `-i` and `-h`. A value attached
+ * in the same word, as in `-tX` or `--jq=.`, takes no word after it.
+ */
+const OWNS_NEXT_VALUE =
+	/^(--(cache|field|header|hostname|input|jq|preview|raw-field|template)|-[ih]*[FHfpqt])$/;
+
 /** Each method flag in `words`, as written, with the method it names. */
 function methods(words: string[]): { flag: string; method: string }[] {
 	const found = [];
 	for (let at = 0; at < words.length; at++) {
 		const word = words[at] ?? "";
+		// Every word after `--` is an operand, so `-XPOST` there is a path.
+		if (word === "--") break;
+		if (OWNS_NEXT_VALUE.test(word)) {
+			at++;
+			continue;
+		}
 		const attached = METHOD.exec(word)?.[2];
 		if (attached === undefined) continue;
 		// `-X=` names an empty method, which blocks; only a bare flag takes the
