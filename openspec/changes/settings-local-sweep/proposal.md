@@ -41,8 +41,8 @@ the harness's own clean-up.
   documented workflow needs moves into its tracked `.claude/settings.json`,
   including the general form of a command whose local grants name one
   machine's path. The pull request names each promotion and the largest
-  dropped group, as the curation criterion requires, and gives a reason for
-  each arbitrary-code runner, whether promoted or refused.
+  dropped group, as the curation criterion requires. No interpreter is
+  promoted, because the command guard cannot read the code one runs.
   Pruning the local file is the user's, on their machine.
 
 ## Non-goals
