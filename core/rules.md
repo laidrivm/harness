@@ -134,6 +134,9 @@ Rules about how work is carried out here. They do not age with the code.
   under `openspec/changes/` or its archive — `bun/board-state.ts` refuses any
   other slug and `bun/board-state-hygiene.test.ts` runs it over the repository;
   keep the order in the proposal's prose until that change merges.
+- Pass a CI gate the base it measures from as the checked-out merge commit's
+  first parent, never `pull_request.base.sha`, which does not follow the base
+  branch.
 
 #### Safety
 
