@@ -57,7 +57,7 @@ built from what the case needs, in a directory that holds no `.env`.
 
 ## 2. The turn gate's decisions, and the wrap-up line
 
-- [ ] 2.1 Write the turn gate's cases in `bun/gate-ledger.test.ts`, using
+- [x] 2.1 Write the turn gate's cases in `bun/gate-ledger.test.ts`, using
       `bun/turn-gate.fixture.ts`:
       - a refusal records `turn-gate`, `refused`, `pre-pr-sequence` [4];
       - a refused turn continued to an end with gate lines records a refusal,
@@ -73,12 +73,12 @@ built from what the case needs, in a directory that holds no `.env`.
       All of these fail before 2.2. (Req: gate-ledger — Every gate refusal is
       recorded; A refusal walked past is recorded; Recording never changes a
       decision)
-- [ ] 2.2 In `bun/turn-gate.ts`, compute the completed groups before
+- [x] 2.2 In `bun/turn-gate.ts`, compute the completed groups before
       checking `reported`, then record `refused`, `passed` and `released` as
       design.md *The turn gate records only when a group completed* sets
       out. `bun test` must be green, with every existing turn-gate test
       unchanged and the file under the 300-line cap.
-- [ ] 2.3 In `core/skills/session-wrapup/SKILL.md` step 5, add the `gates`
+- [x] 2.3 In `core/skills/session-wrapup/SKILL.md` step 5, add the `gates`
       line: this project's records since the previous yield entry's date,
       counted per gate, decision and id with `jq`. The line keeps the records
       whose project is `git rev-parse --show-toplevel` or a path under it, and
@@ -88,6 +88,6 @@ built from what the case needs, in a directory that holds no `.env`.
       project's records are counted, the subdirectory's record among them,
       and that no other project's are. (Req:
       gate-ledger — The wrap-up reports the gate decisions)
-- [ ] 2.4 In the README, name the ledger's path in the *Consuming* section
+- [x] 2.4 In the README, name the ledger's path in the *Consuming* section
       beside the hooks that write it. Grep for every other place that lists
       what the hooks do, and reconcile each one.
