@@ -96,7 +96,7 @@ Its boxes are ticked in the archive pull request.
       that sending under the user's name is never allowed or that only the
       `gh` writes are gated, and fix each. (Req: agent-rulebook — A
       mechanised prohibition leaves its prose home)
-- [ ] 1.6 This task needs the user and no agent closes it alone. The user
+- [x] 1.6 This task needs the user and no agent closes it alone. The user
       starts a fresh session in a checkout of the branch after 1.4 is on it,
       since a settings change is observable only in a session started after
       it. In that session, call the mail connector's `send_message` addressed
@@ -111,6 +111,12 @@ Its boxes are ticked in the archive pull request.
       *Risks*) before the pull request merges. (Req: agent-permissions —
       Sending as the user through an MCP tool prompts, §*The agent tries to
       send mail*, §*A draft still works*)
+
+      Done 2026-10-12: a fresh session in a checkout of this branch, launched
+      with `--allowedTools "mcp__claude_ai_Gmail__send_message"` (an allow
+      the ask must outrank), prompted for
+      `mcp__claude_ai_Gmail__send_message`; the user answered No, and the
+      mail was not sent.
 
 ## 2. Each consumer, through its automatic bump
 
