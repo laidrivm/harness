@@ -12,7 +12,7 @@ change (harness#56) is on `main`.
 
 ## 1. The classes, the markers, and the vocabulary check
 
-- [ ] 1.0 With harness#56 on `main`, add `after: [card-questions]` to this
+- [x] 1.0 With harness#56 on `main`, add `after: [card-questions]` to this
       change's `.openspec.yaml`. Before that, the `after:` fails
       `board-state-hygiene.test.ts`, so the proposal does not carry it.
       `bun test` is green.
