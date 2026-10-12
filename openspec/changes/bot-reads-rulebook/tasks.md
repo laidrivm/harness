@@ -62,7 +62,7 @@ Closes `local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach`,
       what "its review bot reads". The bot reads the copy once the project's
       `.coderabbit.yaml` names `harness/*.md` under `code_guidelines`. Say
       that, and nothing about any one consumer's visibility or settings
-- [ ] 1.8 Search the four places that restate a decision for the old claim.
+- [x] 1.8 Search the four places that restate a decision for the old claim.
       Grep `docs/\*\.md`, `code_guidelines` and `review bot` across the
       sibling artefacts, `openspec/specs/**`, the cards on the boards and the
       README map. Reconcile each site in this step. Where a site lies outside
