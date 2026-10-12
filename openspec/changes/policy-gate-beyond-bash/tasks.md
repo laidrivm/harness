@@ -84,7 +84,7 @@ Its boxes are ticked in the archive pull request.
       reading that file, whose `mcp__` ask entries equal the exported list
       [12] — the harness's own file is not a consumer and no other test reads
       its permission lists. `bun test` green.
-- [ ] 1.5 Rewrite `core/git-and-prs.md`'s bullet *Never reply, comment or
+- [x] 1.5 Rewrite `core/git-and-prs.md`'s bullet *Never reply, comment or
       review under the user's name anywhere the `gh` deny entries do not
       reach* as a rule of approval: send under the user's name only through a
       call the user approved at the prompt, and never through a channel no
