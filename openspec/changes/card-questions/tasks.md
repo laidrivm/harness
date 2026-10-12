@@ -45,7 +45,7 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       string*, §*A comment without the mark, or with it elsewhere*, §*A
       comment mentioning a user*, §*A comment over the length bound*, §*The
       hook cannot read what it decides on*)
-- [ ] 1.3 Write the board and comments-read tests in
+- [x] 1.3 Write the board and comments-read tests in
       `bun/question-gate-board.test.ts`. Board: no fetch in the transcript
       [4]; a fetch of an ordinary page [39]; a `D2ASS` card allowed like a
       `Harness` one [38]; dashed [15] and upper-case [16] ids matching; a
