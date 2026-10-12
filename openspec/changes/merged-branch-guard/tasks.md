@@ -76,7 +76,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       every tool use, and the claim that only commits pay for this needs a
       measurement rather than a reading of the code. (Req: agent-permissions —
       A commit on a merged branch is refused)
-- [ ] 2.2 Shorten `core/git-and-prs.md`'s pull-request-state rule to what the
+- [x] 2.2 Shorten `core/git-and-prs.md`'s pull-request-state rule to what the
       guard cannot see — a merge that has not been fetched yet is refused
       rather than missed on a branch with an `origin` ref, so what remains for
       the prose is a branch pruned, merged and not yet fetched, which the spec
