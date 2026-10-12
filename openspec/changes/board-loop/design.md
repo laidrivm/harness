@@ -12,6 +12,7 @@ user's terminal, dedicated clone (CLAUDECODE unset)
   bun bun/board-loop.ts
    |
    |-- refuse | fetch, switch to default, merge --ff-only        (git)
+   |-- bun install --frozen-lockfile                            (self-pinned-gates, #64)
    |-- takeable list                       bun/board-state.ts  (main; `board` key: #53)
    |      + first unticked group                turn-gate.ts groups()
    |      + no open PR on its branch, none closed  gh pr list
@@ -64,6 +65,31 @@ equally theirs.
 
 - *Alternative: a worktree per pass.* That is phase B, and a worktree's
   absolute `GIT_DIR` already broke a push hook here once (`rules.md`, Safety).
+
+### The runner installs, so no session has to
+
+A consumer's hooks run from `node_modules/harness/`. Once
+`self-pinned-gates` (harness#64) lands, the harness's own hooks do too, so
+every clone needs `bun install` before a session's gates work. `bun install`
+is a deliberate `ask` in the tracked policy, for supply-chain reasons, and
+under `--permission-prompts none` an ask is a refusal. A session that had to
+install would stall at its first command. The user agreed (2026-10-12) that
+the runner, being their own script, runs the install in its clone. It does
+so after every fast-forward and before any session, because a fast-forward
+can bring a moved pin. It uses `bun install --frozen-lockfile`, so the install
+takes exactly what `bun.lock` records and fails rather than resolving anew.
+That is the form the bootstrap already lets through and that CI runs. A
+failed install refuses the pass. On a tree with no dependencies and no
+lockfile, which is the harness before #64, the frozen install exits 0
+(measured with bun 1.4.2), so the runner runs it unconditionally.
+
+- *Alternative: allow `bun install` for the runner's sessions with
+  `--allowedTools`.* That hands the supply-chain decision to the session the
+  `ask` exists to stop, and it would install from whatever the session had
+  edited.
+- *Alternative: install only when `bun.lock` changed in the fast-forward.*
+  That saves a few seconds, but leaves a clone whose `node_modules` was
+  removed or never made without its gates.
 
 ### Takeable is computed in code, from the tree and `gh`
 

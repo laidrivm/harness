@@ -39,7 +39,11 @@ user's interactive checkout without needing worktrees.
   consumer). Each run is one **pass**:
   1. It refuses to start inside a Claude Code session, on a tracked tree
      that differs from `HEAD`, or on a branch whose tip no remote holds.
-     Otherwise it returns the clone to the default branch's fetched tip.
+     Otherwise it returns the clone to the default branch's fetched tip and
+     runs `bun install --frozen-lockfile`. `bun install` is an `ask` in the
+     tracked policy, which a session with nobody to answer cannot get past.
+     Once `self-pinned-gates` (harness#64) lands, the harness's own hooks
+     need the install too.
   2. It collects the **takeable** changes from `bun/board-state.ts`. A change
      is takeable when it is `proposed`, nothing it names in `after:` is still
      open, `tasks.md` still has an unticked group, and no open pull request

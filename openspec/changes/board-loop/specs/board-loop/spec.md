@@ -10,12 +10,12 @@ moves across the board without a person driving each stage.
 
 ### Requirement: The runner is the user's script and starts from a clean clone
 
-The runner SHALL refuse to start when `CLAUDECODE` is present in its
-environment, because an agent may not launch sessions. It SHALL refuse a
-checkout whose tracked files differ from `HEAD`, or whose branch tip no
-remote-tracking branch contains. Otherwise it SHALL fetch, switch to the
-default branch and fast-forward that branch to its remote. Where it cannot
-fast-forward, it SHALL refuse and never merge or reset.
+The runner SHALL refuse to start when `CLAUDECODE` is in its environment. It
+SHALL refuse a tracked edit, or a branch tip no remote-tracking branch
+contains. Otherwise it SHALL fetch and fast-forward the default branch,
+refusing where it cannot and never merging or resetting. It SHALL then run
+`bun install --frozen-lockfile` and refuse when that fails, so that no session
+it launches has to install.
 
 #### Scenario: Started from an agent's shell
 
@@ -41,6 +41,20 @@ fast-forward, it SHALL refuse and never merge or reset.
 
 - **WHEN** a tracked file differs from `HEAD`
 - **THEN** the runner refuses. An untracked file alone does not stop it
+
+#### Scenario: The install fails
+
+- **WHEN** `bun install --frozen-lockfile` exits non-zero after the
+  fast-forward, for example because `bun.lock` no longer matches
+  `package.json`
+- **THEN** the runner refuses, records `refused`, prints the install's
+  failure, and launches no session
+
+#### Scenario: The pin moved on the default branch
+
+- **WHEN** the fast-forward brings a commit that moves a pinned dependency
+- **THEN** the install runs against the new lockfile before any session
+  starts
 
 ### Requirement: A pass takes only a takeable change
 

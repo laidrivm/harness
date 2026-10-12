@@ -2,12 +2,15 @@
 
 Test tasks come from the proposal-stage `/zombies` run and are written before
 the code they cover (`core/testing.md`). The numbers in brackets are that
-run's idea numbers, and all 29 are placed below. Every case spawns
-`bun/board-loop.ts` in a scratch repository. Its environment has no
-`CLAUDECODE`, because `bun test` itself runs inside a session. `XDG_STATE_HOME`
-points at a temporary directory, so no case touches the real ledger. Stub
-`gh`, `claude` and `goal-check` sit first on `PATH`, so no case reaches GitHub
-or starts a session, and each stub records the arguments it was given.
+run's idea numbers, and all 29 are placed below. Ideas 30 and 31 cover the
+install the user settled afterwards (design.md, *The runner installs*).
+
+Every case spawns `bun/board-loop.ts` in a scratch repository. Its
+environment has no `CLAUDECODE`, because `bun test` itself runs inside a
+session. `XDG_STATE_HOME` points at a temporary directory, so no case touches
+the real ledger. Stub `gh`, `claude`, `goal-check` and the install sit first
+on `PATH`, so no case reaches GitHub or a registry or starts a session. Each
+stub records the arguments it was given.
 
 There are two groups, each a harness pull request: `feat/board-loop-1`, then
 `feat/board-loop-2`. Both are cut after the changes in proposal.md's
@@ -27,7 +30,13 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       - an unpushed tip refuses and leaves the branch checked out [4]. A
         pushed step branch is switched off to the default branch [5]. A
         default branch that cannot fast-forward refuses, with no merge and
-        no reset [6].
+        no reset [6];
+      - a stub `bun` whose `install --frozen-lockfile` exits non-zero refuses
+        the pass. It records `refused`, prints the install's output, and
+        starts no `claude` [30];
+      - the install runs after the fast-forward and before the first `claude`
+        call, and runs on every pass, including one whose fast-forward
+        brought nothing [31].
       All of these fail before 1.4. (Req: board-loop — The runner is the
       user's script and starts from a clean clone)
 - [ ] 1.2 Write the takeable tests:
@@ -60,11 +69,11 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       (Req: board-loop — A pass carries one step unattended and records the
       check's verdict)
 - [ ] 1.4 Export `groups()` from `bun/turn-gate.ts`. Write `bun/board-loop.ts`:
-      it refuses, then brings the clone up to date, then builds the takeable
-      list, takes the named slug, launches the session with `stage-goal`'s
-      launch form, runs the check, records and exits. Verify: 1.1–1.3 are
-      green, `bun test` is green, and the file is under the per-file cap in
-      `bun/file-size.ts`.
+      it refuses, then brings the clone up to date and installs, then builds
+      the takeable list, takes the named slug, launches the session with
+      `stage-goal`'s launch form, runs the check, records and exits.
+      Verify: 1.1–1.3 are green, `bun test` is green, and the file is under
+      the per-file cap in `bun/file-size.ts`.
 - [ ] 1.5 Add the runner to `README.md`'s *Consuming* section: started by
       the user from a terminal of their own, in a clone used for nothing
       else, and what one pass does. Verify: `grep -n board-loop README.md`
