@@ -24,9 +24,10 @@ capture it exactly like a bug, so future runs don't repeat the old style:
      rule only when the reason is a settled project convention the bot
      cannot know; a one-off keeps its reason in the report and becomes no
      rule. A rule here *or in the docs this file indexes* is read back by the
-     next review, since `.coderabbit.yaml` points `code_guidelines` at both
-     `**/CLAUDE.md` and `docs/*.md` — so being read back never decides which
-     of the two a rule goes in, and the always-on budget is free to.
+     next review wherever the repository's `.coderabbit.yaml` names, under
+     `code_guidelines`, the paths this file and those docs sit at — so being
+     read back never decides which of the two a rule goes in, and the
+     always-on budget is free to.
    - If it's a one-off (typo, misread requirement, wrong file) → say
      "not capturing this" and why. Not every bug becomes a rule.
 
@@ -107,7 +108,8 @@ describes is rewritten, the rule is a candidate for deletion.
 Rules about how work is carried out here. They do not age with the code.
 
 - Confirm a path is tracked before a check or a claim depends on it — a
-  gitignored file is present for the author and absent in a clone.
+  gitignored file is present for the author and absent in a clone, and a glob
+  matches a path string whether or not the file exists.
 - Never silence a linter or type-checker finding by disabling its rule in
   configuration; fix the code or ask the user to approve a suppression.
 - All repo artefacts — docs, plans, specs, code comments, commit messages —
@@ -134,6 +136,12 @@ Rules about how work is carried out here. They do not age with the code.
   under `openspec/changes/` or its archive — `bun/board-state.ts` refuses any
   other slug and `bun/board-state-hygiene.test.ts` runs it over the repository;
   keep the order in the proposal's prose until that change merges.
+- Pass a CI gate the base it measures from as the checked-out merge commit's
+  first parent, never `pull_request.base.sha`, which does not follow the base
+  branch.
+- Pass `--full-tree` to a `git ls-tree` whose pathspec names a path from the
+  repository root — a working directory below the root resolves it against
+  itself and lists nothing.
 
 #### Safety
 

@@ -24,11 +24,16 @@
  *
  * It reads the final message, not the gates: a gate line written without
  * running the gate passes it.
+ *
+ * Run as the hook, it records each refusal, pass and release of a turn that
+ * completed a group in the gate ledger (`gate-ledger.ts`); `decide` called
+ * from a test records nothing.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { record } from "./gate-ledger.ts";
 
 type Event = {
 	session_id?: unknown;
@@ -170,12 +175,20 @@ function completed(cwd: string, at: string, tip: string): string[] {
 	});
 }
 
-/** The refusal for this turn, or nothing when it may end. */
-export function decide(event: Event, store: string): string | undefined {
+/**
+ * The refusal for this turn, or nothing when it may end. A turn that completed
+ * a group is handed to `log` as `passed` when it reports, `released` when the
+ * once-per-mark bound alone lets it end, or `refused`; the groups are computed
+ * before `reported` is checked for that, so a gate line alone is no pass.
+ */
+export function decide(
+	event: Event,
+	store: string,
+	log: (decision: string) => void = () => {},
+): string | undefined {
 	const file = markFile(store, event);
 	const { cwd, last_assistant_message: message } = event;
 	if (!file || typeof cwd !== "string" || typeof message !== "string") return;
-	if (reported(message)) return;
 	let recorded: string;
 	try {
 		recorded = readFileSync(file, "utf8");
@@ -183,12 +196,17 @@ export function decide(event: Event, store: string): string | undefined {
 		return;
 	}
 	const [at, refused] = recorded.split(" ");
-	if (refused || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(at)) return;
+	if (!/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(at)) return;
 	if (!git(cwd, "symbolic-ref", "-q", "HEAD")) return;
 	const end = tip(cwd, at);
 	const done = end ? completed(cwd, at, end) : [];
 	if (done.length === 0) return;
+	if (reported(message) || refused) {
+		log(reported(message) ? "passed" : "released");
+		return;
+	}
 	writeFileSync(file, `${at} refused`);
+	log("refused");
 	return (
 		`This turn committed and completed ${done.join(", ")}, and its final ` +
 		"message reports no gates. Run the pre-PR sequence now " +
@@ -206,7 +224,10 @@ if (import.meta.main) {
 	try {
 		const event = JSON.parse(await Bun.stdin.text());
 		if (process.argv[2] === "mark") mark(event, store);
-		else reason = decide(event, store);
+		else
+			reason = decide(event, store, (decision) =>
+				record("turn-gate", decision, "pre-pr-sequence", event),
+			);
 	} catch {
 		// Fail-open, as the header says: an event this script cannot read
 		// ends the turn rather than holding it.
