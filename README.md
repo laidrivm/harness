@@ -10,7 +10,7 @@ The agent harness shared by several projects. It ships as a package (`package.js
 
 ## Working on the harness
 
-The repository runs itself: `.claude/` links its own skills and guard. Run `git config core.hooksPath .githooks` once per clone so a push runs `bun test` and reports the diff budget; CI runs both too, and fails the budget there. `.claude/commands/opsx/` is OpenSpec's output: regenerate it with `openspec update` and take a defect in it upstream, never edit it here.
+The repository runs itself as its own consumer. `package.json` pins the harness under `devDependencies` and `.claude/settings.json` registers the hooks `bun/bootstrap.ts` lists, so a session runs its gates from `node_modules/harness/`, a merged commit, and an edit to `bun/` holds no session until it merges and the pin moves past it. A clone therefore runs `bun install` before any other command, which the bootstrap lets through alone. The pin moves by hand: edit its line in `package.json` to a `main` commit whose `test` run passed, run `bun install`, and open a pull request carrying both files. The skills stay linked to the working tree, `.claude/skills/<name>` → `../../core/skills/<name>`. Run `git config core.hooksPath .githooks` once per clone so a push runs `bun test` and reports the diff budget; CI runs both too, and fails the budget there. `.claude/commands/opsx/` is OpenSpec's output: regenerate it with `openspec update` and take a defect in it upstream, never edit it here.
 
 ## Skills
 

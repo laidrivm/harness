@@ -45,7 +45,7 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
       in the package, so it takes effect without moving the pin. Verify: 1.3's
       tests pass, 1.2's still do, and `bun/sync-settings.test.ts` passes
       unchanged.
-- [ ] 1.6 Docs: `README.md`'s *Working on the harness* says a clone runs
+- [x] 1.6 Docs: `README.md`'s *Working on the harness* says a clone runs
       `bun install` before any other command, that the sessions run the gates
       from the pin, and how the pin moves (design.md *The pin moves by hand*);
       the comments in `.github/workflows/test.yml` and `diff-budget.yml` that
