@@ -15,16 +15,18 @@ step adds to `bun/gate-ledger.ts`.
 - [ ] 1.1 Probe before any code, in a scratch directory outside every
       repository, with a `.claude/settings.json` whose `PostToolUseFailure`
       hook prints `{"continue": false, "stopReason": "loop-guard: probe"}`.
-      Confirm three things:
+      Confirm four things:
       - a `claude -p` run whose prompt runs `false` ends, and its result
         carries the reason;
       - the same hook firing inside a sub-agent the run launches either stops
         only that sub-agent or stops the run;
-      - with a `Stop` hook that exits 2, the stop still ends the run.
+      - with a `Stop` hook that exits 2, the stop still ends the run;
+      - with a `PreToolUse` hook on Bash that exits 2, the blocked call does
+        not fire the hook.
       Record each answer in the pull request's *Check by hand* list. If the
       first does not hold, stop the step and report `BLOCKED`: design.md's
       approach depends on it. (Req: loop-guard — A repeat past the warning
-      stops the session)
+      stops the session; A repeat is the same call failing the same way)
 - [ ] 1.2 Write the guard's tests in `bun/loop-guard.test.ts`, spawning the
       script with an event on stdin and a temp store:
       - a first failure exits 0 with no output [1], and creates the session's

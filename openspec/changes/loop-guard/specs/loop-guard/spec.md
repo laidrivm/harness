@@ -10,10 +10,10 @@ instead of spending the plan's limit.
 
 ### Requirement: A repeat is the same call failing the same way
 
-The guard SHALL count a failed tool call only against earlier failures in the
-same session and the same sub-agent. Two failures SHALL count as one call
-repeated only when the tool, its input and its error text are equal once runs
-of digits and of whitespace are normalised. A call's free-text description
+The guard SHALL count a tool call that failed after it started executing, and
+only against earlier failures in the same session and the same sub-agent. Two
+failures SHALL count as one call repeated only when the tool, its input and
+its error text are equal once runs of digits and of whitespace are normalised. A call's free-text description
 SHALL NOT be part of its input. A call the user or the runtime interrupted
 SHALL NOT be counted.
 
@@ -46,6 +46,12 @@ SHALL NOT be counted.
 - **WHEN** a sub-agent and the session that launched it each fail once on the
   same call with the same error
 - **THEN** neither count passes one
+
+#### Scenario: A call rejected before it runs
+
+- **WHEN** a call fails input validation, is denied permission, or is blocked
+  by a `PreToolUse` hook, three times the same way
+- **THEN** none of the three is counted, since none started executing
 
 #### Scenario: An interrupted call
 

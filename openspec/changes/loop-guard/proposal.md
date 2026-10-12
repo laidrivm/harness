@@ -10,10 +10,12 @@ session. Nothing in the harness counts repeats today: its hooks are the command
 guard (`PreToolUse`) and the turn gate (`UserPromptSubmit` and `Stop`), and
 neither sees a tool's result.
 
-Claude Code now reports every failed tool call to a `PostToolUseFailure` hook,
-with the call's input and the error text, and lets a hook end the session with
-a reason (`continue: false` with `stopReason`). That is enough to notice a loop
-and stop it, without a process watching from outside.
+Claude Code now reports each tool call that fails after it started executing
+to a `PostToolUseFailure` hook, with the call's input and the error text. A
+call rejected before it runs is not reported (see *Non-goals*). Claude Code
+also lets a hook end the session with a reason (`continue: false` with
+`stopReason`). That is enough to notice a loop and stop it, without a process
+watching from outside.
 
 The closest existing artefacts are the turn gate (`commit-gates`' *A turn that
 commits reports its gates before it ends*), which is the harness's other
@@ -56,6 +58,10 @@ this change records into.
   different anchor, or a test suite failing differently after each fix. Those
   are the agent trying something new, and counting them would stop ordinary
   test-driven work (design.md, *Measurements*).
+- **Calls rejected before they run.** These are an unknown tool, input that
+  fails validation, a permission denial, or a `PreToolUse` hook's refusal,
+  including the command guard's. Claude Code reports none of them to
+  `PostToolUseFailure`, so the guard never sees them.
 - **A mod.** The card *Ship the harness's in-session behaviour as a mod plugin*
   may later move this count into a mod. The harness ships no plugin today, and
   whether mods load in `claude -p` is unverified.
