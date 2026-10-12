@@ -19,8 +19,8 @@ user through an MCP tool prompts*.
   parent data source is one of the boards *There are three boards and a card
   goes to one of them* names, the text opening with the inline-code mark
   `harness-question`, mentioning no user, at most 1500 characters long, and
-  the hook has allowed fewer calls in this session than task-board's *At most
-  two questions wait at once* lets wait
+  the hook has allowed, over this session's whole life, fewer calls than
+  task-board's *At most two questions wait at once* lets wait
 - **THEN** the hook answers `allow`, the comment is posted without a prompt,
   and the ledger records the call as allowed
 
@@ -72,8 +72,9 @@ user through an MCP tool prompts*.
 
 #### Scenario: The ceiling reached
 
-- **WHEN** the hook has already allowed as many calls in this session as
-  task-board's *At most two questions wait at once* lets wait
+- **WHEN** the hook has already allowed, over this session's whole life and
+  answered questions included, as many calls as task-board's *At most two
+  questions wait at once* lets wait
 - **THEN** it gives no answer to the next, and the ledger records that call
   as passed to the prompt
 

@@ -119,7 +119,11 @@ Each call the hook sees is one `gate-decision-ledger` record: gate
 `question-gate`, decision `allowed` or `passed`, and as the rule the first
 condition that failed — `reply`, `anchored`, `rich-text`, `unmarked`,
 `mention`, `length`, `not-a-card`, `ceiling`, `unreadable` — or `question`.
-The per-session ceiling counts this session's `allowed` records. An absent
+Those names are the stable ids the ledger's rule field holds, one per
+condition, and the session is the `session_id` of the `PermissionRequest`
+event, as the ledger records it for every gate. The per-session ceiling counts
+this session's `allowed` records over its whole life: an answered question
+still counts. An absent
 ledger file is zero records; one that exists and cannot be parsed is
 `unreadable`.
 
