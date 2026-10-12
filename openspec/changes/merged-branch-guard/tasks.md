@@ -21,7 +21,7 @@ costs on every call and shortens the prose the mechanism supersedes.
       fixture is shared rather than copied, for the reason its own header
       already gives. (Req: agent-permissions — A commit on a merged branch is
       refused)
-- [ ] 1.2 Write the mark-reading tests in
+- [x] 1.2 Write the mark-reading tests in
       `bun/command-guard-branch.test.ts`: no marks at all is allowed [1];
       one `-` mark is merged [3]; `-` and `+` together is still merged [4];
       all `+` is not merged [5]. (Req: agent-permissions — A commit on a
