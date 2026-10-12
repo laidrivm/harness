@@ -97,8 +97,12 @@ Everything except the board's order can be read without a session:
 `boardState()` gives `proposed` and `blocking`, the ticks give the step, and
 `gh pr list --state all --head <branch>` gives the pull requests. The step is
 counted as `stage-goal` counts it: the n-th `## ` group, with the first group
-holding an unticked box as the next step. `turn-gate.ts` exports its group
-parser, so the box test has one definition. A `gh` failure makes the change
+holding an unticked box as the next step. Today `turn-gate.ts` exports only
+`complete()`, which lists the finished groups and cannot name the next one.
+Task 1.4 therefore exports its parser, `groups()`, which keeps every `## `
+group in order with its ticked and open counts. The runner takes the first
+group whose open count is above zero, so the box test still has one
+definition. A `gh` failure makes the change
 untakeable, never "no PR": a missed open PR would launch a second session on
 a branch that is under review.
 

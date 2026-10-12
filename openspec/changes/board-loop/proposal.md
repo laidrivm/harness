@@ -46,10 +46,11 @@ user's interactive checkout without needing worktrees.
      need the install too.
   2. It collects the **takeable** changes from `bun/board-state.ts`. A change
      is takeable when it is `proposed`, nothing it names in `after:` is still
-     open, `tasks.md` still has an unticked group, and no open pull request
-     sits on that group's branch. While a step's pull request waits for the
-     user's merge, that change is not takeable, so the pass carries a
-     different one. A pass carries at most one change.
+     open, `tasks.md` still has an unticked group, no open pull request sits
+     on that group's branch, and no closed one has used that branch before.
+     While a step's pull request waits for the user's merge, that change is
+     not takeable, so the pass carries a different one. A pass carries at
+     most one change.
   3. It picks one of them. In step 1 the user names the change. In step 2 a
      short pick session reads `Board view` and names the first takeable card
      in the board's own order. The runner accepts only a name from its own
