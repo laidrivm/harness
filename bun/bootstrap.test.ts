@@ -1,13 +1,18 @@
 /**
- * The bootstrap hook and the turn gate's registrations run as Claude Code runs
- * them: the command through a shell, the event as JSON on stdin, in a project
- * with no harness installed and then with one.
+ * The bootstrap hook, the turn gate's registrations and the Notion guard's run
+ * as Claude Code runs them: the command through a shell, the event as JSON on
+ * stdin, in a project with no harness installed and then with one.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { BOOTSTRAP, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
+import {
+	BOOTSTRAP,
+	NOTION_GUARD,
+	TURN_MARK,
+	TURN_STOP,
+} from "./bootstrap.ts";
 
 const made: string[] = [];
 
@@ -90,18 +95,25 @@ describe("after the install", () => {
 	});
 });
 
-/** A project with a stand-in turn gate installed when `script` is set. */
-function gated(script?: string, prefix = "harness-turn-gate-"): string {
+/** A project with `script` installed as `file`, the turn gate by default. */
+function gated(
+	script?: string,
+	prefix = "harness-turn-gate-",
+	file = "turn-gate.ts",
+): string {
 	const dir = mkdtempSync(join(tmpdir(), prefix));
 	made.push(dir);
 	if (script !== undefined) {
 		mkdirSync(join(dir, "node_modules/harness/bun"), { recursive: true });
-		writeFileSync(join(dir, "node_modules/harness/bun/turn-gate.ts"), script);
+		writeFileSync(join(dir, "node_modules/harness/bun", file), script);
 	}
 	return dir;
 }
 
-/** A turn-gate registration's verdict in `dir`, as Claude Code runs it. */
+/**
+ * A registration's verdict in `dir`, as Claude Code runs it: the turn gate's
+ * on an empty event, the Notion guard's on any.
+ */
 function turn(command: string, dir: string) {
 	const run = Bun.spawnSync(["sh", "-c", command], {
 		cwd: dir,
@@ -149,5 +161,31 @@ describe("the turn gate after the install", () => {
 	test("a project path holding a space still reaches the gate [5]", () => {
 		const dir = gated(REFUSES, "harness turn gate ");
 		expect(turn(TURN_STOP, dir).code).toBe(2);
+	});
+});
+
+/** A project with `script` installed as the Notion guard. */
+const guarded = (script: string) =>
+	gated(script, "harness-notion-guard-", "notion-guard.ts");
+
+describe("the Notion guard's registration", () => {
+	test("before the install, the call goes through with nothing printed", () => {
+		expect(turn(NOTION_GUARD, gated())).toEqual({
+			code: 0,
+			stdout: "",
+			stderr: "",
+		});
+	});
+
+	test("after the install, a refusal leaves exactly 2, with its reason", () => {
+		const refuses = "console.error('refused'); process.exit(2);\n";
+		expect(turn(NOTION_GUARD, guarded(refuses))).toMatchObject({
+			code: 2,
+			stderr: "refused\n",
+		});
+	});
+
+	test("a guard that fails to run lets the call through", () => {
+		expect(turn(NOTION_GUARD, guarded("throw (\n")).code).not.toBe(2);
 	});
 });

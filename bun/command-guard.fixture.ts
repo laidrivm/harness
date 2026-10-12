@@ -127,10 +127,22 @@ export function upstream({
 	return dir;
 }
 
-/** Runs the guard against a fabricated event and repository. */
-export function run(payload: unknown, cwd: string) {
+/**
+ * Runs the guard against a fabricated event and repository. The default
+ * environment points the gate ledger at a directory of the run's own, so a
+ * case that blocks never writes to the user's.
+ */
+export function run(
+	payload: unknown,
+	cwd: string,
+	env: Record<string, string | undefined> = {
+		...process.env,
+		XDG_STATE_HOME: fabricate(undefined, "command-guard-state-"),
+	},
+) {
 	const call = Bun.spawnSync(["bun", guard], {
 		cwd,
+		env,
 		stdin: Buffer.from(
 			typeof payload === "string" ? payload : JSON.stringify(payload),
 		),

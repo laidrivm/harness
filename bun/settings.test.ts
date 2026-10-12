@@ -8,6 +8,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { BOOTSTRAP, NOTICE, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
+import { NOTION_GUARD, NOTION_MATCHER } from "./bootstrap.ts";
 import { settings } from "./settings.ts";
 
 const made: string[] = [];
@@ -53,6 +54,10 @@ const policy = () => ({
 			{
 				matcher: "Bash",
 				hooks: [{ type: "command", command: BOOTSTRAP } as object],
+			},
+			{
+				matcher: NOTION_MATCHER,
+				hooks: [{ type: "command", command: NOTION_GUARD } as object],
 			},
 		],
 		UserPromptSubmit: [

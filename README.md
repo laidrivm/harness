@@ -26,7 +26,7 @@ The repository runs itself: `.claude/` links its own skills and guard. Run `git 
 | `pr-brief` | Compose the PR title and description once the gates pass — reads the gate lines, the diff and the plan, writes nothing |
 | `preflight` | Production pre-flight checklist for a branch: env vars, config, migrations — everything needed once it merges |
 | `review-order` | Scannable review checklist grouped by feature, four-pass order (types, data flow, business logic, edge cases) |
-| `session-wrapup` | End-of-session debrief: confidence check, fix & capture pass, OpenSpec state + next command, optional save-point doc, pipeline yield per review skill |
+| `session-wrapup` | End-of-session debrief: confidence check, fix & capture pass, OpenSpec state + next command + the session's board cards reconciled, optional save-point doc, pipeline yield per review skill |
 | `ship` | Push, open or update the PR, wait for CodeRabbit on that SHA, work the findings, repeat, then merge on approval and return to an up-to-date base |
 | `spec-generator` | Turn a vague product idea (plus sketches/notes) into a structured product spec |
 | `triage` | Group a diff into feature areas with risk tiers to decide where review time goes |
@@ -56,6 +56,7 @@ A project takes the harness as one dependency pinned to a full commit, `"harness
 - Each skill the project uses is a tracked relative link, `.claude/skills/<name>` → `../../node_modules/harness/core/skills/<name>`. It resolves once `bun install` has run.
 - The Bash `PreToolUse` hook in `.claude/settings.json` is the bootstrap, one of the hooks `bun/bootstrap.ts` lists. Before the install it lets only the install through; after it, it hands every command to the guard.
 - The `UserPromptSubmit` and `Stop` hooks there run the turn gate, which refuses a turn that completes a task group and ends without the pre-PR sequence's gate lines; before the install they let every prompt and turn through.
+- The `PreToolUse` hook there matching the Notion connector's `notion-update-page` under any server name runs the Notion update guard, which refuses a call carrying `properties` beside any command but `update_properties`, since the connector drops them without an error; before the install it lets every call through.
 - The values the gates run with live under a `"harness"` key in the project's `package.json`, typed in `bun/config.ts`. A gate whose key is absent fails, naming it.
 - `bun node_modules/harness/bun/sync.ts`, from the project's root, writes `core/rules.md` and the docs beside it into a tracked `harness/`, which the project's `CLAUDE.md` imports and its review bot reads. A copy that differs from the pin fails the check below, naming each file; an edit to a rule belongs here, not in the copy. It also writes the harness's hooks and the `Bash(` entries of the `deny` and `ask` lists into `.claude/settings.json`, and `[install]` into `bunfig.toml`, leaving every other entry and key as it found them; nobody copies those by hand. A hook it writes ends with `# harness-managed`, which is how it tells its own from a project's, so a project hook that calls a harness script survives.
 - `bun node_modules/harness/bun/check.ts`, from the project's root, runs every check over its tree.

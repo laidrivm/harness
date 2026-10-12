@@ -5,7 +5,11 @@
 See proposal.md for why. The permission policy is `agent-permissions`; its
 consumer half is `bun/settings.ts`, which compares the Bash deny and ask lists
 whole and asserts the hook texts `bun/bootstrap.ts` exports. A consumer's
-`harness:check` runs it in the pre-push hook and in CI.
+`harness:check` runs it in the pre-push hook and in CI. Since
+`harness-auto-bump` (archived 2026-10-11, after this change was proposed),
+`bun/sync-settings.ts` writes every value that check compares exactly, and
+each consumer's automatic bump runs the sync, the check and its `bumpTest`
+before it lands a new pin on the consumer's `main`.
 
 MCP tools reach a session from three places: a claude.ai connector, whose
 tools Claude Code names `mcp__claude_ai_<server>__<tool>`; a server the user
@@ -47,8 +51,8 @@ re-measured after its `main` was pulled the same day.
   under the server name `notion`, while this session's connector exposes the
   same tools as `claude_ai_Notion`. One tool reaches sessions under two server
   names on one machine, which is what decides the wildcard below.
-- The new check fails both consumers until group 2 lands its entries, by
-  design: the bumped pin and the entries arrive in one commit.
+- Neither consumer carries an `mcp__` ask entry (re-read 2026-10-12), so a
+  sync that writes the four replaces none of theirs.
 
 ## Decisions
 
@@ -121,14 +125,45 @@ deny reads as missing from ask. Parentheses get their own message, in deny,
 ask or allow, because they are the form that reads as a boundary and does
 nothing.
 
+### The sync writes the `mcp__` ask entries — revised 2026-10-12
+
+`bun/sync-settings.ts` writes the four into a consumer's `ask` the way it
+writes the `Bash(` subset: every `mcp__` ask entry is replaced, where the
+first one stood, by the exported list, which is appended when the consumer
+has none. `mcp__` entries in `deny` and `allow` are left where they are.
+
+The `harness-auto-bump` design assumed the opposite. It listed "an `mcp__`
+ask from `policy-gate-beyond-bash`" among the entries a sync keeps in place,
+as the consumer's own, and `harness-updates` pinned that with a scenario.
+That held only while the check did not read those entries. Once it compares
+them whole, as this change has it do, the harness owns them for the same
+reason the auto-bump design gave for the `Bash(` subset: the check compares
+the subset whole, so a project can add no entry of its own without failing
+it. Kept as the consumer's, they would break *Sync writes every value the
+policy check dictates*, and each consumer's automatic bump would fail its
+check from group 1's merge until a hand edit landed.
+
+Alternative: exempt the `mcp__` ask entries from that requirement and add
+them by hand in each consumer, as this change first planned. Rejected: every
+later change to the list costs a hand edit in every consumer, and the
+automatic bump stalls until each one lands.
+
+The cost: a project's own `mcp__` ask entry, one the harness does not list,
+is replaced by the next sync rather than kept. The check already refuses such
+an entry. Neither consumer carries one (*Measurements*), and a project that
+wants another tool gated denies it, which neither the check nor the sync
+touches.
+
 ## Risks / Trade-offs
 
 - [The reference shows a tool-name glob only as a trailing `*` (`mcp__*`);
   no example puts it in the server segment] → Task 1.6 confirms in a fresh
-  session that `mcp__*__send_message` prompts for the connector's tool before
-  group 2 asks a consumer to adopt it. If it does not, the entries become
-  literal per server name met, and group 1 does not merge until that is
-  settled.
+  session that `mcp__*__send_message` prompts for the connector's tool. It
+  needs the user, who starts that session and answers the prompt, and it
+  must pass before group 1 merges: once group 1 is on `main` and green, each
+  consumer's automatic bump adopts the entries unattended. If it does not
+  pass, the entries become literal per server name met, and group 1 does not
+  merge until that is settled.
 - [A `PermissionRequest` hook can answer the prompt, and a mod handling
   `tool.check` can approve a call on a personal plan without managed
   settings] → Outside what project settings can hold; recorded so the ask
@@ -141,8 +176,12 @@ nothing.
   fresh session as a task, and a rename met later goes through fix & capture.
 - [The prose changes before every repository carries the entries] → It ships
   with group 1, and the rules copy reaches a consumer only with the pin bump
-  that also requires the entries, so no repository reads the new prose
+  whose sync also writes the entries, so no repository reads the new prose
   without the mechanism.
+- [The automatic bump lands the entries with nobody reviewing the consumer's
+  commit] → The bump lands only after the check and `bumpTest` pass. The
+  live prompt is confirmed by task 1.6 before group 1 merges, and group 2
+  reads what each bump landed.
 
 ## Adjacent finding
 
@@ -155,6 +194,9 @@ the correction.
 
 ## Migration Plan
 
-Group 1 lands the harness side. Each consumer then bumps its pin, adds the
-four ask entries and refreshes `harness/` in one commit. Rollback is reverting
-that commit; the entries remove no capability a workflow uses.
+Group 1 lands the harness side. Each consumer's automatic bump then moves its
+pin, and the sync it runs writes the four ask entries and refreshes the rules
+copy in the commit it lands. Rollback is reverting group 1 in the harness. The
+next bump leaves the entries in place, since the reverted sync no longer owns
+them, and they remove no capability a workflow uses, so a consumer deletes
+them when it chooses.
