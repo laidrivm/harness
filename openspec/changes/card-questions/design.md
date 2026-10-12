@@ -144,11 +144,11 @@ that more than two parallel interviews are more than a person holds, and the
 first draft of this design added a per-session ceiling on the hook as a
 backstop. The user dropped both on 2026-10-12: a ceiling that is hit still
 leaves a pile of questions to clean up or lift, and an agent stops on its own
-— its context runs out, it has nothing left to ask, or the loop guard ends
-it. In their place the user asked for one rule: before asking, an agent reads
-the `Questions` view of its board and the comments of its card, and a
-question already open there is waited on, not asked again — so the pile holds
-each question once.
+— its context runs out, it has nothing left to ask, or the loop guard refuses
+the call it keeps repeating. In their place the user asked for one rule:
+before asking, an agent reads the `Questions` view of its board and the
+comments of its card, and a question already open there is waited on, not
+asked again — so the pile holds each question once.
 
 - *Alternative: the cap of two, counted through the `Questions` views.* It
   parked work behind a count, and needed one session holding the boards so
@@ -186,7 +186,8 @@ which the hook checks.
   the user.
 - [Nothing bounds how many questions wait, and a runaway session can post
   many] → The user's choice: an agent stops on its own, and the loop guard
-  ends one that does not. The ledger counts what was posted.
+  refuses a post one keeps repeating after it failed. The ledger counts what
+  was posted.
 - [The same question, worded differently, is asked twice] → The hook only
   proves the card's comments were read; judging sameness is the agent's, and
   a duplicate costs the user one extra answer.
