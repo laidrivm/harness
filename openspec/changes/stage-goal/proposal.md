@@ -98,9 +98,8 @@ adds, so the `goal` gate needs no change to it.
   (measured, design.md).
 - Ordering: this applies after `gate-decision-ledger`, whose writer it
   records through, and after `pre-pr-run-record`, whose record the check
-  reads. Only `gate-decision-ledger` is in `after:`. `pre-pr-run-record` is
-  not on `main` yet, and `board-state` refuses an `after:` entry with no
-  directory, so task 1.0 adds it once it lands.
+  reads, and whose MODIFIED `gate-ledger` delta adds the `commit` field the
+  `goal` record carries. Both are in `after:`.
 - Closest existing artefacts: the turn gate (the archived
   `2026-10-08-pre-pr-sequence-gate`), which is the harness's other `Stop`
   hook, and `pre-pr-run-record`, whose record is what most of the check
