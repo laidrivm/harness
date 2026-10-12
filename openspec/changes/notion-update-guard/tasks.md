@@ -27,7 +27,7 @@ the pull request that bumps its pin past group 1.
         `tool_input` [20].
       Every refusal case fails before 1.3. (Req: task-board — A card write
       that would lose its properties is refused)
-- [ ] 1.2 Write the check's cases where `policy-gate-beyond-bash`'s split put
+- [x] 1.2 Write the check's cases where `policy-gate-beyond-bash`'s split put
       them, or in a new `bun/settings-notion.test.ts` if that split has not
       landed. Never grow `bun/settings.test.ts` past its cap. Cases:
       - a consumer without the registration fails, naming it [22];
