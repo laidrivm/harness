@@ -69,7 +69,7 @@ There is one group, shipped as `feat/pre-pr-run-record`. It is cut after
       with `commit`, unless `git status --porcelain --untracked-files=no`
       prints anything, and exits with the step's status. Extend the writer to
       take an optional `commit`. Verify: 1.1 is green.
-- [ ] 1.4 In `bun/turn-gate.ts` `decide()`, on the path where a group completed
+- [x] 1.4 In `bun/turn-gate.ts` `decide()`, on the path where a group completed
       and the message carries a gate line but no named `BLOCKED`, read the
       ledger for a `pre-pr` record whose `commit` is the tip and whose
       `project` is the checkout's `git rev-parse --show-toplevel` or a path
