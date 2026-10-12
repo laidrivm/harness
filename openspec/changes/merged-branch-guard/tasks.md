@@ -12,7 +12,7 @@ costs on every call and shortens the prose the mechanism supersedes.
 
 ## 1. The branch-state module and its caller
 
-- [ ] 1.1 Extend `bun/command-guard.fixture.ts` to fabricate a repository
+- [x] 1.1 Extend `bun/command-guard.fixture.ts` to fabricate a repository
       with an `origin` remote, a `main` branch on it, a branch pushed to it,
       and a `FETCH_HEAD` of a caller-chosen age and contents — age and
       contents both, since the bound reads the file for each. It fabricates no
