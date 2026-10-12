@@ -10,8 +10,9 @@ import {
 /**
  * What `command-guard.ts` refuses by the name a command carries: a commit on
  * main, and the `gh` writes that publish under the user's. What the reading of
- * the command line gets wrong is `command-parse.test.ts`'s; what a push
- * reaches is `command-guard-push.test.ts`'s.
+ * the command line gets wrong is `command-parse.test.ts`'s and
+ * `command-parse-nesting.test.ts`'s; what a push reaches is
+ * `command-guard-push.test.ts`'s.
  */
 
 afterAll(cleanup);
