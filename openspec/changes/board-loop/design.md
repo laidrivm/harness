@@ -114,9 +114,9 @@ is handed the takeable list and returns one line, `PICK: <slug>` or
 `PICK: none`. The runner treats that line as untrusted input. It must be one
 exact line. `PICK: none` makes the pass idle, and any other slug has to come
 from the runner's own list. In step 1 the user names the change instead.
-That is the seam's working stub (`change-slicing`, *A seam between steps carries a working stub*): it
-honours the user's order because the user is the one choosing. Step 2 removes
-the argument.
+That is the seam's working stub (`change-slicing`, *A seam between steps
+carries a working stub*). It honours the user's order because the user is the
+one choosing. Step 2 removes the argument.
 
 - *Alternative: take changes in alphabetical or `board-state` order.* That
   overrides the user's order, which `task-board` forbids.
