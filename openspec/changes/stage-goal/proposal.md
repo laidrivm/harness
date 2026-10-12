@@ -39,9 +39,9 @@ Used as shipped, `/goal` leaves three gaps, each measured on Claude Code
   takes the form of a gate line.
 - Each run of the check writes one record to the gate ledger:
   gate `goal`, the stage as the rule, `met` or `open`, and the commit it
-  read. A stage that ended without a `met` record for its commit did not
-  finish. Nothing new reads the ledger: the wrap-up's gates line already
-  counts every gate.
+  read. The record names no change or step, so it feeds the wrap-up's gates
+  line, which already counts every gate, and never decides a launch. A
+  launcher learns the outcome by rerunning the check for its own target.
 - `core/feature-workflow.md` gains the launch form for an unattended stage.
   It is one `/goal` per stage, whose condition is that the check's last line
   reads `goal met`, or that the final message opens with a named `BLOCKED`.

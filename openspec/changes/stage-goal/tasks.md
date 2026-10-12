@@ -47,7 +47,10 @@ merge (proposal.md, *Impact*, *Ordering*).
         untracked file alone is not [31];
       - an unknown stage [32], a missing change [33] and a run outside a
         repository [34] exit 2 and record nothing. An unwritable state
-        directory changes neither the line nor the exit [35].
+        directory changes neither the line nor the exit [35];
+      - a `goal` `met` record at `HEAD` for another change's step leaves
+        `apply` for an incomplete step `open`, because the check reads no
+        `goal` record (PR review).
       All of these fail before 1.2. (Req: stage-goal — A stage is done when
       the check says so; Each verdict is recorded)
 - [ ] 1.2 Write `bun/goal-check.ts`. It parses `<stage> <change> [<step>]`.
@@ -71,7 +74,8 @@ merge (proposal.md, *Impact*, *Ordering*).
       stage, never explore or a conversation) and the launch form with the
       condition's exact text, for the harness (`bun/goal-check.ts`) and for a
       consumer (`node_modules/harness/bun/goal-check.ts`). It says the
-      ledger's `goal` record, not the exit status, is the outcome, and cites
+      launcher's own rerun of the check is the outcome, not `claude -p`'s exit
+      status and not a ledger record. It cites
       `stage-goal` for the criteria rather than restating them. Verify: the
       check command inside the documented condition runs as written from the
       harness and from d2ass, as 1.3 ran it. (Req: stage-goal — An

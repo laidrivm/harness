@@ -162,27 +162,33 @@ this one both reset by the resume's prompt.
 - *Alternative: stop blocking at the ceiling, and let the goal decide.* The
   goal's own hook blocks regardless, so nothing ends.
 
-### The outcome is a ledger record, never a transcript read
+### The outcome is the check rerun for the target, never a transcript read
 
-`goal`/`<stage>`/`met`, or `open`, comes from the check, with `commit`.
-`goal`/`rounds`/`ceiling` comes from the turn gate, without a commit, because
-the ceiling reads none. A stage finished when the ledger holds `met` for its
-stage at the commit the launcher expected. Anything else (`open` last, a
-`ceiling`, or no record) means it did not finish, and the launcher reruns the
-check itself to find out which. The wrap-up's gates line
-(`gate-decision-ledger`) counts these with no new reader.
+After the session ends, the launcher runs the check for its own stage, change
+and step, and its exit status is the outcome: 0 finished, 1 not. The ledger
+records each verdict for counting. `goal`/`<stage>`/`met` or `open` comes from
+the check, with `commit`. `goal`/`rounds`/`ceiling` comes from the turn gate,
+without a commit, because the ceiling reads none. The wrap-up's gates line
+(`gate-decision-ledger`) counts these with no new reader. A record names no
+change or step, so two targets at one commit, such as steps of two changes,
+leave records that cannot be told apart. That is why no launcher decides from
+one.
 
 - *Alternative: read `goal_status` from the transcript.* Its format is
   undocumented, and the transcript is pruned.
 - *Alternative: a goal journal of its own.* `gate-decision-ledger` is the
   only journal.
+- *Alternative: add the change and step to the record.* `gate-ledger`'s *A
+  record holds no command text* admits six fields and the commit, and nothing
+  else. Putting the target into the rule would split the wrap-up's counts per
+  change. The rerun costs one call, and a launcher can make it at any time.
 
 ## Risks / Trade-offs
 
 - [The evaluator judges `goal met` from a line that the agent could type
-  without running the check] → The ledger is the outcome of record, not the
-  evaluator's verdict. A typed line leaves no `met` record, and the launcher
-  reads the record.
+  without running the check] → The evaluator's verdict ends the session and
+  decides nothing else. The launcher reruns the check, which a typed line
+  cannot answer for.
 - [An interactive idle check-in may fire `UserPromptSubmit` and reset the
   count] → Not measured. Interactive goals have a person present, and the
   ceiling exists for unattended ones. Task 2.5's live check records what it
