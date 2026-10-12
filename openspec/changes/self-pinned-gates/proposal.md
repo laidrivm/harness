@@ -78,8 +78,9 @@ None.
   consumer's check compares that text exactly, so each picks it up through
   `sync.ts` on its next bump, as every hook-text change does.
 - `bun/turn-gate-cli.test.ts`'s settings block, `bun/bootstrap-notice.test.ts`.
-- `README.md`, and the "No install" comment in `.github/workflows/test.yml`,
-  which stays true of the suite but no longer of the package.
+- `README.md`, and the comments in `.github/workflows/test.yml` and
+  `diff-budget.yml` that skip the install because "the package declares no
+  dependencies": still no install, for another reason.
 - In-flight changes that register a hook in the harness's own settings in
   working-tree form — `notion-update-guard` (pull request 52) — meet the new
   test whichever merges second; that one registers the hook in its `HOOKS`

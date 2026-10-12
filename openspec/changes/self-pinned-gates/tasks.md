@@ -41,8 +41,9 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
 - [ ] 1.6 Docs: `README.md`'s *Working on the harness* says a clone runs
       `bun install` before any other command, that the sessions run the gates
       from the pin, and how the pin moves (design.md *The pin moves by hand*);
-      `.github/workflows/test.yml`'s "No install" comment says the suite needs
-      no install, not that the package declares no dependencies. Grep
+      the comments in `.github/workflows/test.yml` and `diff-budget.yml` that
+      give "the package declares no dependencies" as the reason for not
+      installing say the job needs no install instead. Grep
       `README.md`, `core/` and `openspec/specs/` for "runs itself", "own
       working tree" and "no dependencies", and fix each site this change makes
       false.
