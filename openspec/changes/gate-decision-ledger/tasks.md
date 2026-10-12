@@ -51,7 +51,7 @@ built from what the case needs, in a directory that holds no `.env`.
       it, with one id per prohibition. `bun test` must be green, and
       `bun/command-guard.ts` must end at or below its starting 299 lines
       (`bun/file-size.ts` caps `.ts` at 300).
-- [ ] 1.4 Run the existing `bun/command-guard.test.ts` unchanged and confirm
+- [x] 1.4 Run the existing `bun/command-guard.test.ts` unchanged and confirm
       that every decision and every reason's text is the same as before. A
       changed exit code or message is a regression this change does not buy.
 
