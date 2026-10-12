@@ -98,7 +98,7 @@ run, and this step's pull request body quotes the command each run issued.
       (15). Record the 2 `docs/*.md` and 9 `harness/*.md` files it lists (17)
 - [ ] 2.4 Build the invocation from mellon's tree, read-only, and record that
       it is `--config CLAUDE.md` alone (16)
-- [ ] 2.5 Reword `core/review-toolkit.md`'s sentence saying the CLI does not
+- [x] 2.5 Reword `core/review-toolkit.md`'s sentence saying the CLI does not
       read `.coderabbit.yaml` on its own. The CLI's docs say it does, but only
       while no `--config` is given, and the skill always gives one. The
       reworded sentence says the skill therefore passes the config and the

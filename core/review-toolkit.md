@@ -45,9 +45,12 @@ design, because settling it is the user's.
   early the moment a review returns nothing above 🟡 Minor, and if Major or
   above survives the third, report it and stop rather than starting a fourth.
   Collect Minor findings across all passes and report them once at the end,
-  each fixed or skipped with its reason. The CLI does not read
-  `.coderabbit.yaml` on its own, so the skill passes it explicitly — a local
-  review that skips that is a differently aligned reviewer, not a cheaper one.
+  each fixed or skipped with its reason. The CLI looks for
+  `.coderabbit.yaml` on its own only while no `--config` is given, and the
+  skill always gives one. So the skill passes the config explicitly, together
+  with the guideline files that the config's `code_guidelines` patterns match.
+  A local review that skips them is a differently aligned reviewer, not a
+  cheaper one.
 - `/coderabbit [pr]` — chews the bot's PR comments. Its
   `disable-model-invocation` flag reserves it for the user, because the bot's
   review arrives on its own schedule and waiting for it burns a session doing
