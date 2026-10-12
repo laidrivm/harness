@@ -65,7 +65,9 @@ Closes `local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach`,
 - [ ] 1.8 Search the four places that restate a decision for the old claim.
       Grep `docs/\*\.md`, `code_guidelines` and `review bot` across the
       sibling artefacts, `openspec/specs/**`, the cards on the boards and the
-      README map. Reconcile each site, or name the change that will
+      README map. Reconcile each site in this step. Where a site lies outside
+      this change, list it in the step's pull request body with the change
+      or card that will reconcile it. Where none exists, file a card.
 
 ## 2. The local review reads what the PR bot reads
 
