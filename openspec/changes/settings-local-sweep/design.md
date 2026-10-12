@@ -60,7 +60,8 @@ command, `bun/settings-local.ts`, and stays out of `bun/check.ts`'s `run`.
   requirement and gain nothing for it.
 - `check.ts` runs in CI and in clones, and neither has a local file. A sweep
   there would pass on an absent input every time it ran where it is enforced.
-  That is the stale-slice pass the fixture's comment was written against.
+  That is the pass on a missing or local slice that the requirement's "never"
+  was written against.
 - The file exists only on the user's machine. So the sweep is something a
   person or a scheduler on that machine runs, and the hygiene-audits card
   decides which.
