@@ -60,7 +60,7 @@ nothing else in this change waits on it.
   both adopt the registration. Their `mcp__` allow entries name read tools of
   the design server, which this matcher does not reach.
 - **Cost:** one `bun` start per page update, which the command guard's
-  header measures at 16–22 ms. A session that moves a card makes one or two
+  header measures at about 11 ms. A session that moves a card makes one or two
   such calls.
 
 ## Risks / Trade-offs
