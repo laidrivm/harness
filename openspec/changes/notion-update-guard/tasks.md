@@ -12,7 +12,7 @@ the pull request that bumps its pin past group 1.
 
 ## 1. The guard, its registration and the check
 
-- [ ] 1.1 Write `bun/notion-guard.test.ts`, spawning `bun/notion-guard.ts` with
+- [x] 1.1 Write `bun/notion-guard.test.ts`, spawning `bun/notion-guard.ts` with
       an event on stdin:
       - let through: no `properties` [1], `{}` [2], `null` [3],
         `update_properties` with properties [5], and `icon` and `cover` beside
