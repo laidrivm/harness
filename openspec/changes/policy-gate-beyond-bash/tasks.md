@@ -66,7 +66,7 @@ Its boxes are ticked in the archive pull request.
       dictates, §*A consumer adopts the MCP ask entries through the sync*;
       Sync leaves the consumer's own settings as it found them, §*The
       project's own settings survive a sync*)
-- [ ] 1.3 In `bun/settings.ts`, export the four entries as a list beside
+- [x] 1.3 In `bun/settings.ts`, export the four entries as a list beside
       `MANIFEST_WRITES`, compare the consumer's `mcp__` ask entries whole
       against it, and name any `mcp__` rule carrying `(` in deny, ask or
       allow, with the reason in the message. In the same commit, have
