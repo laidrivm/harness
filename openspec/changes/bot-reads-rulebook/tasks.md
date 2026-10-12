@@ -46,7 +46,7 @@ Closes `local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach`,
 - [x] 1.4 Write the exemption into the test with its reason. Verify that the
       fixture which links `README.md` from `CLAUDE.md` passes, and that the
       same fixture fails without the exemption
-- [ ] 1.5 Add the root `.coderabbit.yaml`. It sets
+- [x] 1.5 Add the root `.coderabbit.yaml`. It sets
       `knowledge_base.code_guidelines.filePatterns: ["core/*.md"]` and
       nothing else. A comment in it says why the glob is flat, and that
       `**/CLAUDE.md` is CodeRabbit's default rather than an omission. Verify

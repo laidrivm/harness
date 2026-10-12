@@ -9,6 +9,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { unreached } from "./review-config.ts";
+import { root } from "./root.ts";
 
 const made: string[] = [];
 
@@ -55,6 +56,12 @@ function fabricate(
 	for (const [path, text] of Object.entries(untracked)) write(path, text);
 	return dir;
 }
+
+describe("the repository as it stands", () => {
+	test("its config reaches the rulebook and every doc it indexes", () => {
+		expect(unreached(root)).toEqual([]);
+	});
+});
 
 describe("a doc out of reach", () => {
 	// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach
