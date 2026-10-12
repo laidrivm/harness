@@ -102,8 +102,8 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       thread; confirm the prompt appears, the user answers No, and a
       `passed` / `reply` record. Have the user answer the question in its
       thread; read it back, confirm it is taken as the answer, `Assign` is
-      cleared and the card leaves `Questions`. Ask the user whether Notion
-      notified them of either act, and record all of it in the pull request.
+      cleared and the card leaves `Questions`. Record all of it in the pull
+      request.
       (Req: agent-permissions — A question to the user on a board card needs
       no prompt, §*A question on a card*, §*A reply in an existing thread*;
       task-board — An open question waits on its card, assigned to the user,
