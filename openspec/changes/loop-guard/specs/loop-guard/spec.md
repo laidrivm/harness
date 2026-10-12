@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Stop an agent that keeps repeating the same failing call, with a reason the
-session's launcher can read, so that a loop in an unattended session ends
-instead of spending the plan's limit.
+Refuse a call an agent keeps repeating after it failed the same way, with a
+reason the agent and the session's launcher can both read. A loop in an
+unattended session then stops spending the plan's limit on that call.
 
 ## ADDED Requirements
 
@@ -61,9 +61,10 @@ call the user or the runtime interrupted SHALL NOT be counted.
 
 ### Requirement: The third repeat warns the agent
 
-On the third failure of one call, the guard SHALL return a warning to the agent
-beside the error and let the turn continue. The warning SHALL name the tool and
-the count, and SHALL tell the agent to change approach or to end the turn with
+On the third and every later failure of one call, the guard SHALL add a warning
+to the agent's context beside the error and let the turn continue. The warning
+SHALL name the tool and the count, SHALL say that the next identical call will
+be refused, and SHALL tell the agent to change approach or to end the turn with
 `BLOCKED` naming what only the user can settle.
 
 #### Scenario: Third failure
@@ -76,43 +77,65 @@ the count, and SHALL tell the agent to change approach or to end the turn with
 - **WHEN** a call fails for the second time the same way
 - **THEN** the guard says nothing
 
-### Requirement: A repeat past the warning stops the session
+### Requirement: A thrice-failed call is refused before it runs
 
-On the fourth and every later failure of one call, the guard SHALL end the
-session through the hook output that stops processing, with a reason that
-starts `loop-guard:` and names the tool and the count. The reason SHALL be the
-same text whether a person or a launcher reads it, so a launcher can tell a
-loop from every other way a session ends by that prefix alone.
+Once a call has failed the same way three times, the guard SHALL refuse the
+same tool with the same input before it runs, for as long as the prompt that
+was being processed at the third failure is still being processed. The refusal SHALL give a reason that starts
+`loop-guard:` and names the tool and the count, so an agent, a person or a
+launcher can tell it from any other refusal by that prefix alone. The guard
+SHALL NOT end the session.
 
-#### Scenario: Fourth failure
+#### Scenario: The fourth identical call
 
-- **WHEN** a call fails for the fourth time the same way
-- **THEN** the session stops, and its reason starts `loop-guard:`
+- **WHEN** a call has failed three times the same way and the agent makes it
+  a fourth time
+- **THEN** the call does not run, and the agent reads a reason that starts
+  `loop-guard:`
 
-#### Scenario: Resumed after a stop
+#### Scenario: A different input after the warning
 
-- **WHEN** a stopped session is resumed and the same call fails the same way
-  again
-- **THEN** the session stops again
+- **WHEN** one call has failed the same way three times, and the agent makes a
+  call with a different input
+- **THEN** that call runs
 
-#### Scenario: The cause is fixed
+#### Scenario: A new prompt
 
-- **WHEN** a stopped session is resumed after the cause was fixed outside it,
-  and the call now succeeds
-- **THEN** the guard does nothing
+- **WHEN** a person or a launcher sends a new prompt after the refusal, and
+  the agent makes the identical call again
+- **THEN** the call runs
 
-### Requirement: Each warning and stop is recorded in the gate ledger
+#### Scenario: Fails again after a new prompt
 
-The guard SHALL record each warning and each stop as one record in the gate
+- **WHEN** that call, run again under the new prompt, fails the same way once
+  more
+- **THEN** it is warned and refused again, under the new prompt
+
+#### Scenario: A sub-agent's refused call
+
+- **WHEN** a call has failed the same way three times in a sub-agent, and the
+  session that launched it makes the identical call
+- **THEN** that call runs
+
+#### Scenario: The agent keeps calling
+
+- **WHEN** the agent makes the refused call again and again
+- **THEN** each one is refused, and the session goes on until the agent or
+  its launcher ends it
+
+### Requirement: Each warning and refusal is recorded in the gate ledger
+
+The guard SHALL record each warning and each refusal as one record in the gate
 ledger that `openspec/changes/gate-decision-ledger/` defines, through that
 ledger's writer and under its requirements *A record holds no command text* and
 *Recording never changes a decision*. It SHALL keep no log of its own. A
 failure below the warning SHALL NOT be recorded.
 
-#### Scenario: A warning, then a stop
+#### Scenario: A warning, then a refusal
 
-- **WHEN** one call fails four times the same way
-- **THEN** the ledger gains a warning and then a stop for the loop guard,
+- **WHEN** one call fails three times the same way and is then made a fourth
+  time
+- **THEN** the ledger gains a warning and then a refusal for the loop guard,
   both under one rule id, and no part of the call's input or error
 
 #### Scenario: A first failure
@@ -129,28 +152,35 @@ from which a call's input or error can be read back.
 
 #### Scenario: An unreadable event
 
-- **WHEN** the hook receives an event that is not JSON
+- **WHEN** either hook receives an event that is not JSON
 - **THEN** it exits 0 with no output
 
 #### Scenario: An unwritable count
 
-- **WHEN** the guard's count cannot be written and a call fails for the fourth
-  time
-- **THEN** the session is not stopped
+- **WHEN** the guard's count cannot be written and a call fails for the third
+  time the same way
+- **THEN** the fourth identical call runs
+
+#### Scenario: An unreadable count before a call
+
+- **WHEN** the count file holds something that is not the guard's JSON and a
+  call is about to run
+- **THEN** the call runs
 
 ### Requirement: Every consumer session runs the guard
 
-The guard SHALL be one of the hooks the harness registers in a consumer's
+The guard's hooks SHALL be among those the harness registers in a consumer's
 `.claude/settings.json`, and the consumer check SHALL fail a settings file that
-lacks it, as it does for the turn gate. Before the harness is installed, the
-registration SHALL exit 0 and decide nothing.
+lacks either, as it does for the turn gate. Before the harness is installed,
+each registration SHALL exit 0 and decide nothing.
 
-#### Scenario: A consumer without the hook
+#### Scenario: A consumer without the hooks
 
-- **WHEN** a consumer's settings carry every harness hook but this one
-- **THEN** the check names the missing hook and the command that writes it
+- **WHEN** a consumer's settings carry every harness hook but this guard's
+- **THEN** the check names each missing hook and the command that writes it
 
 #### Scenario: Before the install
 
-- **WHEN** a call fails in a clone where the harness is not installed yet
-- **THEN** the hook exits 0 with no output
+- **WHEN** a call is made or fails in a clone where the harness is not
+  installed yet
+- **THEN** each hook exits 0 with no output
