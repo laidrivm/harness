@@ -90,7 +90,7 @@ There is one group, shipped as `feat/pre-pr-run-record`. It is cut after
       `openspec/specs/commit-gates/spec.md` is expected to match, because
       this change's delta rewrites it at archive. Verify: no other hit
       remains outside the lines this task rewrote.
-- [ ] 1.6 Run the branch's `bun/pre-pr.ts` once in the harness and once with
+- [x] 1.6 Run the branch's `bun/pre-pr.ts` once in the harness and once with
       d2ass and then mellon as the working directory. It writes only to the
       ledger, so their trees stay untouched. Verify: `jq` over the ledger
       shows one `pre-pr` record per tree, each naming that tree's `HEAD`, and
