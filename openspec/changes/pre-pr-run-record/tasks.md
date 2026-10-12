@@ -63,7 +63,7 @@ There is one group, shipped as `feat/pre-pr-run-record`. It is cut after
       `bun/turn-gate-cli.test.ts`'s "a reported turn exits 0" that is refused
       [35]. All of the new cases fail before 1.4. (Req: commit-gates — A turn
       that commits reports its gates before it ends)
-- [ ] 1.3 Write `bun/pre-pr.ts`. It runs `diff-budget.sh` from its own
+- [x] 1.3 Write `bun/pre-pr.ts`. It runs `diff-budget.sh` from its own
       directory with output inherited, and maps the exit status to `pass`,
       `fail` or `error`. It records through `gate-decision-ledger`'s writer
       with `commit`, unless `git status --porcelain --untracked-files=no`
