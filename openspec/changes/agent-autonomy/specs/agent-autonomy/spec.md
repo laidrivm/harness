@@ -70,15 +70,19 @@ reaches it.
 
 ### Requirement: A step on the loop's critical path names its class where it stands
 
-Each step in the harness's prose and gate skills that waits on the user, asks
-the user, or hands an act to the user, and that an unattended session reaches
-on its way through explore, propose, apply, the pre-PR sequence, opening the
-pull request or archive, SHALL carry its class inline at that step, in the
-form `(unattended: <class>`. Each marker SHALL name a class that
-`core/autonomy.md` defines, and a check SHALL fail on any marker that names
-a class it does not define. A step with no marker SHALL read as `card`.
-This holds for a step in this harness's prose, in a vendored skill and in an
-OpenSpec command alike.
+This requirement covers each step in the docs under `core/` and in the gate
+skills that a harness checkout owns, as opposed to vendored skills or
+generated OpenSpec commands. It covers a step that waits on the user, asks the
+user, or hands an act to the user, and that an unattended session reaches on
+its way through explore, propose, apply, the pre-PR sequence, opening the pull
+request or archive. Each such step SHALL carry its class inline, at the step,
+in the form `(unattended: <class>`. Each marker SHALL name a class that
+`core/autonomy.md` defines, and a check SHALL fail on any marker that names a
+class it does not define.
+
+A step with no marker SHALL read as `card`, whether it sits in the harness's
+own prose, in a vendored skill, or in an OpenSpec command. A step in a
+vendored skill or an OpenSpec command is never required to carry a marker.
 
 A prompt or brief that names a stage SHALL be the request that the stage's own
 command waits for, such as `/opsx:explore`'s confirmation before it captures a
