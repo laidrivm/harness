@@ -96,7 +96,7 @@ run, and this step's pull request body quotes the command each run issued.
 - [x] 2.3 Build the invocation by hand from d2ass's tree, read-only, and
       record that `CLAUDE.md`, which `**/CLAUDE.md` also matches, appears once
       (15). Record the 2 `docs/*.md` and 9 `harness/*.md` files it lists (17)
-- [ ] 2.4 Build the invocation from mellon's tree, read-only, and record that
+- [x] 2.4 Build the invocation from mellon's tree, read-only, and record that
       it is `--config CLAUDE.md` alone (16)
 - [x] 2.5 Reword `core/review-toolkit.md`'s sentence saying the CLI does not
       read `.coderabbit.yaml` on its own. The CLI's docs say it does, but only
