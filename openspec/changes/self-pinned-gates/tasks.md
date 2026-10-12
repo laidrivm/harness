@@ -38,7 +38,7 @@ cites the scenario it closes in a `// spec: harness-updates/<slug>` comment.
       pinned commit must hold `bun/notion-guard.ts`, or that hook's `[ -f ]`
       lets every call through until the next bump. Verify: 1.2's tests pass;
       `bun test` green; `bun.lock` and `package.json` staged together.
-- [ ] 1.5 In `bun/bootstrap.ts`, make `NOTICE` read
+- [x] 1.5 In `bun/bootstrap.ts`, make `NOTICE` read
       `dependencies?.harness ?? devDependencies?.harness`, and write the new
       text into the `SessionStart` entry of `.claude/settings.json` in the
       same commit. The notice is inline text the settings run, not a script
