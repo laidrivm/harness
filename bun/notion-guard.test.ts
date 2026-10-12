@@ -124,9 +124,10 @@ describe("the gate ledger", () => {
 	const refused = update({ command: "update_content", properties: STATUS });
 	const ledger = (state: string) => join(state, "harness", "gates.jsonl");
 
-	test("a refusal appends one notion-properties-dropped record [25]", () => {
+	test("a refusal appends one record of its id and session [25]", () => {
 		const state = mkdtempSync(join(dir, "state-"));
-		run(refused, state);
+		const event = { ...JSON.parse(refused), session_id: "s9" };
+		run(JSON.stringify(event), state);
 		const records = readFileSync(ledger(state), "utf8")
 			.split("\n")
 			.filter(Boolean)
@@ -136,6 +137,7 @@ describe("the gate ledger", () => {
 				gate: "notion-guard",
 				decision: "block",
 				rule: "notion-properties-dropped",
+				session: "s9",
 			}),
 		]);
 	});
