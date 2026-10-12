@@ -33,7 +33,8 @@ entry, a hook or a CI check leaves this file the way it would leave
   by amending. An amend rewrites what the remote holds, so the next push is
   refused as a non-fast-forward and only a force gets past it — and a force
   is a destructive act put to the user for a defect that cost one commit to
-  fix (unattended: user — never force; report `BLOCKED`). The extra commits vanish at squash-merge, which is what this
+  fix (unattended: user — never force; report `BLOCKED`). The extra commits
+  vanish at squash-merge, which is what this
   repository does.
 - Ask `git ls-remote` before rewriting a branch at all — amend, rebase or
   reset alike — never memory. The rule above names the amend because that is
