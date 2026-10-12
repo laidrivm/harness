@@ -29,6 +29,16 @@ describe("gh commands that publish on the user's behalf", () => {
 		expect(run(event("gh pr review 37 --approve"), anywhere()).code).toBe(2);
 	});
 
+	test("a review behind a push in a compound command blocks", () => {
+		const { code, reason } = run(
+			event("git push && gh pr review 37 --approve"),
+			anywhere(),
+		);
+		expect(code).toBe(2);
+		// The push is allowed from a feature branch, so the review is what blocks.
+		expect(reason).toContain("`gh pr review`");
+	});
+
 	test("an absolute path to gh blocks", () => {
 		// This is what the deny entry cannot see and the guard can.
 		expect(

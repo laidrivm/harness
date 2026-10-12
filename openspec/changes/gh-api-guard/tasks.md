@@ -42,7 +42,7 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
       assert that text rather than only the exit code — an author who meant to
       read has to see which flag to drop. Assert the exit code is 2, the only
       code Claude Code reads as a block (ZOMBIES 12, 13)
-- [ ] 1.5 Assert the four carried criteria still hold, unedited: the three
+- [x] 1.5 Assert the four carried criteria still hold, unedited: the three
       subcommand writes still block and `gh pr view 37 --json state` still
       passes. This task closes no criterion — it is the control that the new
       branch left the pair list alone (ZOMBIES 21)
