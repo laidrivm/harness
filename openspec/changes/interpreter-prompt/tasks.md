@@ -13,8 +13,8 @@ Numbers in brackets refer to the proposal-stage `/zombies` list in the PR.
 ## 1. An interpreter given unread program text prompts
 
 Closes every scenario of `agent-permissions` §*An interpreter given program
-text the guard cannot read prompts*, except
-`a-local-allow-entry-does-not-grant-it`, which task 1.7 measures, and both scenarios of
+text the guard cannot read prompts* but
+`a-local-allow-entry-does-not-grant-it`, which task 1.7 measures, and both of
 `gate-ledger` §*A prompt a guard asks for is recorded*.
 
 - [ ] 1.1 Write the failing cases first in a new

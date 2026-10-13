@@ -21,29 +21,18 @@ consumer and still miss `bun --eval` and `python3 -Ic`.
 
 ## What Changes
 
-- The command guard answers **ask** when an interpreter is given program text it cannot
-  read: inline code, a script file its repository does not track, or code
-  arriving on standard input. It answers with Claude Code's `PreToolUse`
-  `permissionDecision: "ask"` and exit 0, instead of blocking with exit 2. The
-  hook's `ask` prompts even in auto mode, so a local `allow` cannot grant the
-  call silently. Whether it outranks a matching `allow` rule is measured during
-  apply.
-- The interpreters are the shells the guard already knows, plus `source` and
-  `.`, `python` in every versioned spelling, `node`, `bun`, `deno`, `perl`,
-  `ruby` and `php`. A shell's `-c` text is still read and checked, never
-  asked about.
-- Left to the permission rules, as today: a script file tracked by the
-  repository that holds it, or under that repository's `node_modules/`; a
-  bare version or help query; and `bun`'s subcommands, except the ones that
-  run code given to them (`exec`, `repl`, and `run` given an untracked file).
-  `bun x` is left to the change that guards `bunx`.
-- A block anywhere in the same command still wins. The prompt is decided only
-  once the whole command has been read.
-- The gate ledger records each prompt under its own id, so the counts show
-  whether the check earns its place.
-- `agent-permissions` §*The git prohibitions are enforced by a hook* stops
-  naming `python -c` as accepted and names the third outcome, and the
-  new requirement says what is asked about.
+- The command guard answers `ask` (exit 0, a `PreToolUse`
+  `permissionDecision` on stdout) when an interpreter is given program text it
+  cannot read: inline code, a script file its repository neither tracks nor
+  installed under `node_modules/`, or code on standard input. A hook's `ask`
+  prompts even in auto mode. Whether a matching `allow` rule silences it is
+  measured during apply. The new requirement lists the interpreters and the
+  exemptions. A shell's `-c` text is still read and checked, never asked
+  about, and `bun x` is left to the `bunx` change.
+- A block anywhere in the same command still wins.
+- The gate ledger records each prompt under its own id.
+- `agent-permissions` §*The git prohibitions are enforced by a hook* names
+  the third outcome and stops accepting `python -c` as its ceiling.
 
 ## Non-goals
 
@@ -90,12 +79,11 @@ None.
 - `bun/command-guard-interpreters.test.ts`, new.
 - `openspec/specs/agent-permissions/spec.md` and
   `openspec/specs/gate-ledger/spec.md`, through this change's deltas.
-- `.claude/settings.json` is unchanged. Measured on 2026-10-13 against
-  this repository, `d2ass` and `mellon`: no documented agent command uses
-  inline interpreter code. Every script they run is a tracked file,
-  `node_modules/harness/…` or a package script. Of the three local settings
-  files, only one grant would now prompt: `d2ass`'s
-  `sh .git/hooks/pre-commit`.
+- `.claude/settings.json` is unchanged. Measured 2026-10-13 across this
+  repository, `d2ass` and `mellon`: no documented agent command uses inline
+  interpreter code, and every script they name is tracked, under
+  `node_modules/harness/` or a package script. Of the local grants, only
+  `d2ass`'s `sh .git/hooks/pre-commit` would now prompt.
 - Open pull requests nearby: #86 modifies the same hook requirement, so
   whichever of the two archives second re-copies it. #96 syncs
   `settings-local-sweep` into the same spec file, under other requirements.
