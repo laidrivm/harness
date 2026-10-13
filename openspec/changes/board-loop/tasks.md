@@ -59,7 +59,7 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       Evidence: `bun/board-loop-takeable.test.ts`, beside the precondition
       file for the 300-line cap; it also refuses a call naming anything but
       one change, with the usage. All failed before the runner existed.
-- [ ] 1.3 Write the stage and verdict tests:
+- [x] 1.3 Write the stage and verdict tests:
       - a stub `goal-check` printing `goal met` gives `met`, exit 0, and one
         `loop`/`met`/`apply` record [22];
       - `claude` is called with `-p`, `--permission-mode auto` and
@@ -76,6 +76,10 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
         record [29].
       (Req: board-loop — A pass carries one step unattended and records the
       check's verdict)
+      Evidence: `bun/board-loop-stage.test.ts`. The constant is `pass()`'s
+      default limit, which the timeout case lowers through a two-line entry
+      module (`lowered()` in the fixture). All failed before the runner
+      existed.
 - [ ] 1.4 Export `groups()` from `bun/turn-gate.ts`. Write `bun/board-loop.ts`:
       it refuses, then brings the clone up to date and installs, then builds
       the takeable list, takes the named slug, launches the session with
