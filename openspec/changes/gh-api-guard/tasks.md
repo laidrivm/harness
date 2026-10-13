@@ -52,29 +52,29 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
 Closes `agent-permissions/a-write-with-no-method-flag`,
 `agent-permissions/a-graphql-call`, `agent-permissions/a-graphql-read`.
 
-- [ ] 2.1 Write the failing cases first and record that each fails: `gh api
+- [x] 2.1 Write the failing cases first and record that each fails: `gh api
       /repos/o/r/issues/37/comments -f body=hi` blocks; `gh api graphql -f
       query=mutation{…}` blocks; `gh api graphql -F query=@q.graphql` blocks;
       `gh api graphql -f query='query{…}'` passes, and so does the
       `coderabbit` skill's own review-thread query, taken verbatim from its
       `SKILL.md` (ZOMBIES 14, 15)
-- [ ] 2.2 Add the second clause — no method flag and any of `-f`, `-F`,
+- [x] 2.2 Add the second clause — no method flag and any of `-f`, `-F`,
       `--field`, `--raw-field`, `--input` present — quoting `gh api --help` at
       the line for why, since the default method is what makes this a write
       and nothing in the command says so (ZOMBIES 11, 16)
-- [ ] 2.3 Add the `graphql` clause — an inline `query` field opening with the
+- [x] 2.3 Add the `graphql` clause — an inline `query` field opening with the
       `query` keyword and holding no `mutation` token passes, every other
       document blocks — with the reason at its line: the `coderabbit` skill's
       thread read needs it, and a token search errs towards blocking
       (ZOMBIES 14, 15)
-- [ ] 2.4 Add a case for a flag the list does not name, asserting it blocks
+- [x] 2.4 Add a case for a flag the list does not name, asserting it blocks
       when no method is present — the test is scoped by the reads it exempts,
       not by the writes it enumerates, per `core/rules.md` (ZOMBIES 17)
-- [ ] 2.5 Cover the reach the branch inherits rather than earns, each as its
+- [x] 2.5 Cover the reach the branch inherits rather than earns, each as its
       own case: an absolute path to `gh`, a `bash -c` wrapper, a compound
       command whose second half is the write, and a global flag in front of
       the operand (ZOMBIES 4, 5, 18, 19, 20)
-- [ ] 2.6 Add the bare-path read as a case of its own — `gh api /repos/o/r`
+- [x] 2.6 Add the bare-path read as a case of its own — `gh api /repos/o/r`
       with no flags at all — so the default-`GET` path is asserted and not
       merely implied by the `--paginate` case (ZOMBIES 1)
 
@@ -83,24 +83,24 @@ Closes `agent-permissions/a-write-with-no-method-flag`,
 This step closes no acceptance criterion: it reconciles prose and measures,
 and no criterion in any capability states what a doc sentence says.
 
-- [ ] 3.1 Narrow `core/git-and-prs.md`'s prohibition to what the guard still
+- [x] 3.1 Narrow `core/git-and-prs.md`'s prohibition to what the guard still
       does not reach — a tracker, a forum, any service that is not GitHub —
       per `openspec/specs/agent-rulebook` §*A mechanised prohibition leaves its
       prose home*, which calls this the partly-covered case
-- [ ] 3.2 Re-run the probe table in `proposal.md` §Why against the built
+- [x] 3.2 Re-run the probe table in `proposal.md` §Why against the built
       guard and record the new column, so the change's own evidence is
       measured after rather than quoted from before
-- [ ] 3.3 Confirm the `coderabbit` skill's three `gh api` reads pass the guard
+- [x] 3.3 Confirm the `coderabbit` skill's three `gh api` reads pass the guard
       by running each through it, rather than reasoning from the clause — the
       skill is untracked here, so name the three commands in the record
-- [ ] 3.4 Measure `bun/command-guard.ts` and
+- [x] 3.4 Measure `bun/command-guard.ts` and
       `bun/command-guard.test.ts` against the 300-line cap and record both
       numbers, whether or not either is over; the test file stood at 214 and
       the guard at 246 when this was proposed, and the guard at 299 once the
       harness took it. Both are under the cap here because each earlier step
       split whatever its own change carried over it
       (*change-slicing/a-file-over-the-cap*)
-- [ ] 3.5 Search the four places that restate a decision — the change's sibling
+- [x] 3.5 Search the four places that restate a decision — the change's sibling
       artefacts, `openspec/specs/**`, the cards on the boards and the README
       ownership map —
       for a sentence saying the guard blocks three `gh` writes, and reconcile

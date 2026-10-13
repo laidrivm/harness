@@ -81,8 +81,8 @@ Whether the CLI resolves `code_guidelines` from a config passed with
 `--config` is undocumented, and the one check the spec names cannot observe
 it. Passing the matched files explicitly is right either way: if the CLI
 already resolves them, the cost is a duplicate. The skill expands each
-pattern with `git ls-files ':(glob)<pattern>'`, because a plain pathspec
-matched 34 files where the bot matches 9, and `git ls-files` goes into the
+pattern with `git ls-files ':(top,glob)<pattern>'`, because a plain pathspec
+matched 34 files where the bot matches 9 and `top` reads it from the root, and `git ls-files` goes into the
 skill's `allowed-tools`. *Alternative:* name `core/rules.md` alone. That would
 miss the indexed docs, which `core/rules.md` §*The loop* treats as a home for
 a rule equal to the rulebook itself.

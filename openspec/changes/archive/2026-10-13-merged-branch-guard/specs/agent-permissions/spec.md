@@ -1,0 +1,551 @@
+# agent-permissions — delta spec
+
+## ADDED Requirements
+
+### Requirement: A commit on a merged branch is refused
+
+The hook SHALL block a `git commit` on a branch at least one of whose commits
+`git cherry` marks as already upstream, because a merged pull request strands
+every commit made to its branch afterwards, whatever merge style closed it —
+though only the styles named below leave that mark. It SHALL decide this with
+local git only — no fetch, no `gh`, no network — since it runs on every Bash
+call and an offline session must not silently lose the check.
+
+The verdict SHALL be taken from `git cherry`, which marks a commit `-` when an
+equivalent patch is already upstream and `+` when it is not, and equivalence
+is what survives a squash merge rewriting the branch's commits. A branch SHALL
+be treated as merged when at least one of its commits is marked `-`. The rule
+SHALL NOT be stated as the absence of `+` marks: a branch with no commits
+prints neither mark, and the absence form refuses the first commit of every
+branch created.
+
+The verdict SHALL cover the merge styles that carry each of the branch's
+commits upstream as an equivalent patch — a rebase merge, and a squash of a
+single commit — and SHALL NOT claim the others. A merge commit or a
+fast-forward leaves the branch's commits as ancestors of the base, which
+`git cherry` does not list at all; a squash of several commits leaves one
+upstream patch that a single commit matches only by chance. Whatever the
+style, a branch with a commit marked `-` is merged and refused; for one with
+none, `git-and-prs.md`'s pull-request-state rule remains the check.
+
+This verdict SHALL be computed for every branch, whatever the branch's own
+state on the remote, and a positive verdict SHALL be honoured however old the
+base ref is. A stale base can only fail to carry a merge that has happened; it
+cannot invent one. So staleness threatens this requirement in one direction
+only, and the freshness rule below exists to close that one.
+
+The hook SHALL refuse a commit when the base ref's last fetch is older than
+`FETCH_MAX_AGE`, which SHALL be 30 minutes, measured inclusively: a fetch
+exactly 30 minutes old is accepted and one older is refused. The bound SHALL
+carry the reason it holds that value where it is declared.
+
+The fetch time SHALL be read from the modification time of `FETCH_HEAD`, which
+every successful fetch rewrites. In a linked worktree two files apply — the
+worktree's own, written by a fetch run there, and the common checkout's,
+written by a fetch in the main checkout, which moves the `origin/main` every
+worktree shares — and either SHALL count; elsewhere they are the same file.
+It SHALL NOT be read from
+the reflog of the base ref: a fetch that brings no new commit updates no ref
+and so writes no reflog entry, which would refuse the commit while naming a
+remedy that cannot change the answer — measured on this repository, where a
+fetch bringing nothing left the reflog at 139 entries and its newest timestamp
+57 minutes old while `FETCH_HEAD` advanced to the current second.
+
+That timestamp alone SHALL NOT satisfy the bound. `FETCH_HEAD` is written by
+every fetch whatever it fetched, so fetching one unrelated ref refreshes it
+while leaving the base ref untouched — measured, `git fetch origin <other>`
+advanced the mtime by a second and wrote a `FETCH_HEAD` naming only that
+branch. The bound SHALL therefore be satisfied only when one applicable
+`FETCH_HEAD` is within `FETCH_MAX_AGE` **and** its contents name the base
+branch, which is the evidence that the fetch it timestamps covered the base.
+Where no applicable `FETCH_HEAD` is readable, the fetch time SHALL be treated
+as unknown and therefore as a refusal, on the terms this capability already
+applies to an undecidable event.
+
+Where the base ref does not exist at all — no `origin` remote, or no `main`
+under it — no merged verdict can be computed, and the commit SHALL be allowed
+rather than refused. This is an exception to the undecidable-blocks rule and
+is stated as one: a repository with no upstream has nothing a pull request
+could have merged into, and refusing there would refuse every commit in every
+scratch repository the agent creates, this capability's own test fixture
+among them.
+
+The freshness refusal SHALL apply only to a branch that exists under
+`refs/remotes/origin/`. A branch with no counterpart there has, so far as the
+repository can tell, never been pushed, so no pull request of it can have
+merged and the window freshness closes is not open for it. That inference is
+weaker than it reads and the weakness SHALL be recorded rather than implied:
+deleting the branch on the remote and pruning removes the counterpart, and a
+push made without `-u` leaves no upstream configuration behind either, so a
+branch that was pushed and then pruned is indistinguishable from one that was
+never pushed. Such a branch is still refused by the merged verdict above,
+which does not consult that ref; what it loses is only the freshness refusal,
+so the residual gap is a branch pruned, merged, and not yet fetched.
+
+Each refusal SHALL name what the agent is to do next — move the work to a
+branch cut from the merged base, or fetch — because a block whose remedy is
+unstated is a block the session works around.
+
+#### Scenario: A commit on a branch whose pull request merged
+
+- **WHEN** the agent attempts `git commit` on a pushed branch whose commits
+  `git cherry` marks `-` against a recently fetched base ref
+- **THEN** the hook blocks the call, and the reason names the branch as
+  already merged
+
+#### Scenario: A branch closed by a merge commit
+
+- **WHEN** the agent attempts `git commit` on a pushed branch whose pull
+  request was closed by a merge commit, so its commits are ancestors of the
+  base ref and `git cherry` lists none of them
+- **THEN** the commit is allowed, because no `-` mark exists, and the
+  pull-request-state rule in `git-and-prs.md` is what catches it
+
+#### Scenario: The branch was never pushed
+
+- **WHEN** the agent attempts `git commit` on a branch with no ref under
+  `refs/remotes/origin/`, and the base ref was last fetched longer ago than
+  `FETCH_MAX_AGE`
+- **THEN** the commit is allowed, because the freshness refusal does not
+  reach a branch no pull request can have merged
+
+#### Scenario: The first commit of a new branch
+
+- **WHEN** the agent attempts `git commit` on a branch freshly cut from the
+  base ref, which carries no commits and so no `git cherry` marks at all
+- **THEN** the commit is allowed, because no mark is the absence of evidence
+  and not evidence of a merge
+
+#### Scenario: A pushed branch with work of its own
+
+- **WHEN** the agent attempts `git commit` on a pushed branch whose commits
+  `git cherry` marks `+` against a recently fetched base ref
+- **THEN** the commit is allowed
+
+#### Scenario: The base ref is stale
+
+- **WHEN** the agent attempts `git commit` on a pushed branch and the base
+  ref was last fetched longer ago than `FETCH_MAX_AGE`
+- **THEN** the hook blocks the call, and the reason names fetching the base
+  ref as what makes the branch decidable
+
+#### Scenario: A fetch that brings nothing new
+
+- **WHEN** a refused commit is followed by a successful fetch that brings no
+  new commit, so no ref is updated
+- **THEN** the next commit is allowed, because the fetch time comes from
+  `FETCH_HEAD` rather than from a ref's reflog
+
+#### Scenario: A fetch of an unrelated ref
+
+- **WHEN** the last fetch named one branch other than the base, so
+  `FETCH_HEAD` is recent but does not name the base branch
+- **THEN** the hook blocks the call on a pushed branch, because the recency
+  belongs to a fetch that did not cover the base
+
+#### Scenario: The repository has no base ref
+
+- **WHEN** the repository has no `origin` remote, or none with a `main`
+  branch, so no merged verdict can be computed at all
+- **THEN** the commit is allowed, because there is no upstream a pull request
+  could have merged into
+
+#### Scenario: The fetch time cannot be read
+
+- **WHEN** the repository has no readable `FETCH_HEAD`
+- **THEN** the hook blocks the call on a pushed branch, because an unknown
+  answer takes the blocking path
+
+#### Scenario: The remote branch was deleted and pruned
+
+- **WHEN** a branch's counterpart under `refs/remotes/origin/` has been
+  removed by a remote deletion followed by a prune, and its commits are
+  marked `-` against the base ref
+- **THEN** the hook still blocks, because the merged verdict does not consult
+  that ref
+
+#### Scenario: A stranded commit already exists
+
+- **WHEN** a commit has already been made on the merged branch, so
+  `git cherry` marks that one `+` while the merged commits stay `-`
+- **THEN** the hook still blocks, because the merged commits' marks remain
+  for as long as the branch does
+
+## MODIFIED Requirements
+
+### Requirement: The git prohibitions are enforced by a hook
+
+Three git prohibitions cannot be expressed as prefix-matched permission entries,
+because their trigger is repository state or an argument in any position. They
+SHALL be enforced by a single `PreToolUse` hook registered in the tracked
+`.claude/settings.json`. The hook SHALL read the invoked command
+from the event JSON on stdin rather than pattern-matching the raw payload, so
+a `--force` appearing in a command's description cannot trigger it. It SHALL
+block by exiting **2** with the reason on stderr — the only code Claude Code
+treats as blocking — and SHALL exit 2 for an event it cannot decide as well: a
+malformed payload, an absent command field or a git call that fails. Every
+other non-zero code lets the command run, so the undecidable case fails closed
+or it does not fail at all. It SHALL depend on nothing beyond git and bun, both
+of which the repository already requires.
+
+A guard that never starts is the undecidable case too, and the script cannot
+answer for it: an unresolved path or an absent `bun` exits **1**, which lets the
+command run. The registered command SHALL therefore carry an `|| exit 2`
+fallback, so every failure to launch blocks as well.
+
+The hook SHALL carry no `if` field, and SHALL therefore run on every Bash call.
+The `if` field takes a permission pattern, and a permission pattern matches the
+command word literally: `/usr/bin/git commit` and `command gh pr comment` reach
+no hook narrowed that way, which was demonstrated against the registered guard
+before this requirement was written. Narrowing by `if` would mean the boundary
+is whatever spelling the pattern anticipates. Deciding in the script instead
+costs one bun start per Bash call, measured on a call it allows at 10.7-11.0 ms
+before the merged-branch check and 11.0-11.1 ms after — negligible beside the
+call it precedes — and the script SHALL resolve each command to its base name,
+past a leading assignment, past a wrapper word such as `command`, `builtin`,
+`exec` or `env`, and into a shell's `-c` argument.
+
+The residual ceiling is a command whose text does not contain the guarded name
+at all — `python -c` spawning a subprocess, or anything encoded. That is
+accepted: the guard exists for an agent that writes `git` and `gh` because the
+documentation and this repository's prose do, not for an adversary.
+
+The hook SHALL block a commit while `HEAD` is on `main`, and SHALL block any
+force-push, whether written as `--force`, `--force-with-lease`, `-f`, bundled
+into a short-flag group such as `-uf`, which git reads as `-u -f`, or as the
+`+` prefix of a refspec, and wherever it sits in the command. This is stricter than the prose it replaces, which
+forbade force-pushing only after a pull request was open: the agent loses
+force-push entirely, and the user keeps it.
+
+The hook SHALL also block a push unless every destination the command names is
+a concrete ref other than `main`. The rule is stated as what it exempts rather
+than as a list of the spellings that mean `main`, because git's grammar has
+more of those than a list remembers: `git push origin :` pushes every branch
+that already exists on the remote, a wildcard refspec pushes whatever it
+matches, and `git push origin HEAD` names its destination only through the
+current branch.
+
+While `HEAD` is on `main`, the hook SHALL block every push, whatever the
+command names. A push with no refspec sends the current branch to its upstream
+of the same name, and telling that case apart from a push that names a refspec
+means deciding which operand is the repository — which a value-taking option
+such as `-o <string>` moves by one word. Refusing every push from `main`
+removes that decision instead of parsing around it, and costs an agent nothing:
+it cannot commit there, so it has nothing of its own to push from there.
+
+From any other branch, every operand SHALL be read as a refspec, including the
+repository operand, which is one word that cannot be told from a refspec
+without the same decision above — and a remote whose name is `main` blocks a
+push that would have been allowed, which is the safe direction. The words that
+are values of `-o` and `--push-option`, and of `--receive-pack`, `--exec` and
+`--repo` in their separate-word form, SHALL be skipped, so a push option whose
+value reads like a branch name does not refuse the push carrying it.
+
+Each refspec SHALL be read as `[+]<src>:<dst>`, where a refspec without
+`:<dst>` updates the ref its `<src>` names. The hook SHALL block when the
+destination equals `main` or `refs/heads/main`; and when the destination is not a single concrete ref at all — the bare `:` and
+`+:` matching form, a destination containing `*`, and an empty destination —
+because an unbounded destination cannot be shown not to include `main`.
+
+A leading `+` on a refspec SHALL be blocked as a force-push wherever it
+appears, whatever its destination: it forces the update exactly as `--force`
+does, and the flag pattern does not see it because it is not a flag.
+
+`--all`, its alias `--branches`, `--mirror` and `--prune` SHALL be blocked
+outright: each acts on refs the command does not name. The first three push
+every ref under `refs/heads/` or `refs/`, `main` among them; `--prune` removes
+a remote branch that has no local counterpart, so it deletes `main` from the
+remote in any tree that does not carry it locally.
+
+Those four SHALL be matched by prefix and not by exact spelling: git accepts
+any unambiguous abbreviation, and `--mir`, `--pru`, `--al` and `--bra` all
+reach the option they abbreviate. Any argument that is a prefix of one of the
+four SHALL block, including one git would itself reject as ambiguous — over-
+refusing a command git does not accept costs nothing.
+
+Bare `--` SHALL be exempt from that prefix match, being a prefix of all four
+and none of them: it ends option parsing, and git accepts it. It is the one
+argument the justification above does not reach, since refusing it would refuse
+a valid push. The operands after it are read as refspecs like any other, so
+`git push -- origin main` still blocks on its destination.
+
+The words skipped as option values SHALL be the exact spellings instead — `-o`,
+`--push-option`, `--receive-pack`, `--exec` and `--repo`, and the `=` forms.
+Prefix-matching there would let a short abbreviation swallow the word after it,
+hiding an operand; leaving an abbreviated form unskipped reads that value as an
+operand and can only refuse a push. Both lists therefore resolve their
+uncertainty towards blocking.
+
+The destination SHALL be read from the command's own words. A destination that
+comes from configuration is outside the guard — `remote.<name>.push`,
+`push.default` set to `matching`, `upstream` or `tracking`, and
+`remote.<name>.mirror` set to true, which makes `--mirror` the default. Reading
+them would make the hook decide on repository state the command does not carry,
+and the fallback that fails closed on an unreadable state would then block
+every push made where that configuration cannot be read. That half stays prose.
+
+The script SHALL find the git command inside a compound one by splitting only
+on separators outside quotes. A split that ignores quoting cuts both ways: it
+severs a force flag from its command, and it turns a quoted `;` inside a
+`--grep` argument into a fragment that reads as a commit. Quoting SHALL be
+removed from the words it yields as well, so a value containing a space —
+`GIT_AUTHOR_NAME="Jane Doe" git commit`, `git -C "some path" commit` — does not
+break the command's resolution. A command substitution SHALL start a command
+even inside double quotes, in **both** POSIX spellings, `$(…)` and backticks:
+the shell expands them there alike, so honouring one and not the other leaves
+the guard walked around by the other.
+
+The branch SHALL be read from the repository the command names with `-C`, and
+not from the guard's own working directory, which is a different repository in
+exactly that case. `-C` is the only selector honoured: `--git-dir`,
+`--work-tree` and the `GIT_DIR` and `GIT_WORK_TREE` environment assignments are
+a declared limitation rather than coverage, so a command using one of them is
+decided against the guard's own working tree — which can refuse a commit or a
+push that would have landed elsewhere, and can miss one that lands on `main` in
+another repository.
+
+The long force flags SHALL be matched by the `--force` prefix rather than by
+their full spellings. Git accepts any unambiguous abbreviation, so `--force-w`
+and `--force-i` reach the force-push path while `--forc` and `--fo` are
+rejected as ambiguous — every spelling git honours therefore begins with
+`--force`.
+
+#### Scenario: A commit attempted on main
+
+- **WHEN** `HEAD` is on `main` and the agent attempts `git commit -m "fix"`
+- **THEN** the hook blocks the call and the reason names branching first
+
+#### Scenario: A commit on a feature branch
+
+- **WHEN** `HEAD` is on `feat/something` and the agent attempts `git commit`
+- **THEN** the hook allows the call
+
+#### Scenario: A commit reached through a compound command
+
+- **WHEN** `HEAD` is on `main` and the agent attempts `git add -A && git
+  commit -m "fix"`
+- **THEN** the hook blocks the call
+
+#### Scenario: A commit reached through a command that does not start with git
+
+- **WHEN** `HEAD` is on `main` and the agent attempts `bun test && git commit
+  -m "fix"`
+- **THEN** the hook blocks the call, because the script scans every subcommand
+  and not the command string's prefix
+
+#### Scenario: A guarded command reached by another spelling
+
+- **WHEN** the agent attempts `/usr/bin/git commit` on `main`, `command gh pr
+  comment 37 --body x`, or `bash -c "git commit"` on `main`
+- **THEN** the hook blocks each one, because the script resolves the command to
+  its base name rather than matching the word as written
+
+#### Scenario: A guarded command behind a quoted value containing a space
+
+- **WHEN** `HEAD` is on `main` and the agent attempts
+  `GIT_AUTHOR_NAME="Jane Doe" git commit -m "fix"`
+- **THEN** the hook blocks the call — splitting on whitespace alone would
+  resolve the invocation to the tail of the quoted value instead of to `git`
+
+#### Scenario: A guarded command inside a backtick substitution
+
+- **WHEN** `HEAD` is on `main` and the agent attempts
+  ``echo "`git commit -m fix`"``
+- **THEN** the hook blocks the call, as it does for the `$(…)` spelling
+
+#### Scenario: A forbidden command appearing only as text
+
+- **WHEN** the agent attempts `printf 'git push --force'`
+- **THEN** the hook allows the call — the guard reads invocations, and a quoted
+  argument is data
+
+#### Scenario: A command that merely ends in a guarded name
+
+- **WHEN** the agent attempts `mygit commit -m "fix"` on `main`
+- **THEN** the hook allows the call — the base name is `mygit`, not `git`
+
+#### Scenario: A gh write reached by an absolute path
+
+- **WHEN** the agent attempts `/opt/homebrew/bin/gh pr comment 37 --body x`
+- **THEN** the hook blocks the call, which is the case the deny entry cannot see
+
+#### Scenario: A gh write behind a global flag
+
+- **WHEN** the agent attempts `gh --repo owner/name pr comment 37 --body x`
+- **THEN** the hook blocks the call, because the pair is matched wherever it
+  sits and not as the first two words
+
+#### Scenario: A force-push with the flag last
+
+- **WHEN** the agent attempts `git push origin feat/x --force`
+- **THEN** the hook blocks the call, although no command-prefix pattern would
+  have matched it
+
+#### Scenario: A force flag bundled with another short flag
+
+- **WHEN** the agent attempts `git push -uf origin feat/x`
+- **THEN** the hook blocks the call, because git reads the group as `-u -f`
+
+#### Scenario: A separator inside a quoted argument
+
+- **WHEN** the agent attempts `git push origin "a;b" --force`
+- **THEN** the hook blocks the call, because the `;` is inside quotes and does
+  not start a second command that the flag would fall outside of
+
+#### Scenario: An abbreviated force flag
+
+- **WHEN** the agent attempts `git push --force-w origin feat/x`
+- **THEN** the hook blocks the call, because git resolves the abbreviation to
+  `--force-with-lease`
+
+#### Scenario: A git command hidden in a command substitution
+
+- **WHEN** the agent attempts `echo "$(git push --force origin feat/x)"`
+- **THEN** the hook blocks the call
+
+#### Scenario: A commit aimed at another repository
+
+- **WHEN** `HEAD` here is on `feat/x` and the agent attempts `git -C ../other
+  commit -m "fix"` where `../other` is on `main`
+- **THEN** the hook blocks the call, because `-C` names where the commit lands
+
+#### Scenario: A lease-guarded force-push
+
+- **WHEN** the agent attempts `git push --force-with-lease`
+- **THEN** the hook blocks the call — the boundary is the rewrite, not how
+  carefully it is guarded
+
+#### Scenario: An ordinary push
+
+- **WHEN** the agent attempts `git push -u origin feat/x`
+- **THEN** the hook allows the call
+
+#### Scenario: The word force appears only in the description
+
+- **WHEN** the agent attempts `git push origin feat/x` with the description
+  "force the branch up to date"
+- **THEN** the hook allows the call, because it reads the command field and
+  not the whole payload
+
+#### Scenario: A push aimed at main by refspec
+
+- **WHEN** the agent attempts `git push origin HEAD:main` from a feature branch
+- **THEN** the hook blocks the call
+
+#### Scenario: A push naming main as its only refspec
+
+- **WHEN** the agent attempts `git push origin main` from a feature branch
+- **THEN** the hook blocks the call, because a refspec without `:<dst>` updates
+  the ref its `<src>` names
+
+#### Scenario: A push aimed at main by its full ref name
+
+- **WHEN** the agent attempts `git push origin +HEAD:refs/heads/main`
+- **THEN** the hook blocks the call
+
+#### Scenario: A push with no refspec while HEAD is on main
+
+- **WHEN** the agent attempts `git push` with `HEAD` on `main`
+- **THEN** the hook blocks the call, because git pushes the current branch to
+  the upstream branch of the same name
+
+#### Scenario: A push of every branch
+
+- **WHEN** the agent attempts `git push --all origin`
+- **THEN** the hook blocks the call, because `--all` pushes every ref under
+  `refs/heads/`, `main` among them
+
+#### Scenario: A push that deletes main
+
+- **WHEN** the agent attempts `git push origin :main`
+- **THEN** the hook blocks the call — the refspec has no `<src>`, and `<dst>`
+  is what the check reads
+
+#### Scenario: A second refspec aimed at main
+
+- **WHEN** the agent attempts `git push origin feat/x main`
+- **THEN** the hook blocks the call, because every refspec is read and not
+  only the first
+
+#### Scenario: A blocked flag written as an abbreviation
+
+- **WHEN** the agent attempts `git push --mir origin`
+- **THEN** the hook blocks the call, because git resolves the abbreviation and
+  the guard matches the four by prefix
+
+#### Scenario: The end-of-options marker
+
+- **WHEN** the agent attempts `git push -- origin feat/x` from a feature branch
+- **THEN** the hook allows the call — `--` is a prefix of all four blocked
+  options and none of them, and refusing it would refuse a valid push
+
+#### Scenario: A push that prunes
+
+- **WHEN** the agent attempts `git push --prune origin`
+- **THEN** the hook blocks the call, because `--prune` removes a remote branch
+  whose local counterpart is gone and names none of them
+
+#### Scenario: A push of every branch with no branch to read
+
+- **WHEN** the agent attempts `git push --all origin` with a detached `HEAD`
+- **THEN** the hook blocks the call on the flag alone, without reading a
+  branch it cannot read
+
+#### Scenario: A push to a branch whose name contains main
+
+- **WHEN** the agent attempts `git push origin HEAD:mainline`
+- **THEN** the hook allows the call — the destination is compared whole
+
+#### Scenario: A push whose source is main but whose destination is not
+
+- **WHEN** the agent attempts `git push origin main:feat/x`
+- **THEN** the hook allows the call, because `<dst>` is what the push updates
+
+#### Scenario: A push with no refspec from a feature branch
+
+- **WHEN** the agent attempts `git push` with `HEAD` on `feat/x`
+- **THEN** the hook allows the call
+
+#### Scenario: A push of matching branches
+
+- **WHEN** the agent attempts `git push origin :`
+- **THEN** the hook blocks the call — the refspec names every branch already on
+  the remote, which cannot be shown to exclude `main`
+
+#### Scenario: A push through a wildcard refspec
+
+- **WHEN** the agent attempts `git push origin 'refs/heads/*:refs/heads/*'`
+- **THEN** the hook blocks the call, because the destination is not a single
+  concrete ref
+
+#### Scenario: A push carrying a push option
+
+- **WHEN** the agent attempts `git push -o ci.skip origin` with `HEAD` on
+  `main`
+- **THEN** the hook blocks the call, because every push from `main` is blocked
+  and no operand has to be identified
+
+#### Scenario: A push naming HEAD from a feature branch
+
+- **WHEN** the agent attempts `git push origin HEAD` with `HEAD` on `feat/x`
+- **THEN** the hook allows the call
+
+#### Scenario: A force-push written as a refspec prefix
+
+- **WHEN** the agent attempts `git push origin +feat/x:feat/x`
+- **THEN** the hook blocks the call, because `+` forces the update exactly as
+  `--force` does
+
+#### Scenario: A push of another branch from main
+
+- **WHEN** the agent attempts `git push origin feat/x` with `HEAD` on `main`
+- **THEN** the hook blocks the call — every push from `main` is refused,
+  because which operand is the repository is not decidable cheaply enough to
+  rest a boundary on
+
+#### Scenario: A push option whose value reads like a branch
+
+- **WHEN** the agent attempts `git push -o main origin feat/x` with `HEAD` on
+  `feat/x`
+- **THEN** the hook allows the call, because the word after `-o` is that
+  option's value and not an operand

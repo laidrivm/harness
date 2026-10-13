@@ -45,7 +45,7 @@ commit, unmerged and unpushed, printed 1 line, prefix `+`, and zero `-`.
 
 **Non-Goals:**
 
-- Any network call. The guard's measured cost is 16–22 ms per Bash call, and
+- Any network call. The guard's measured cost is about 11 ms per Bash call, and
   it runs on every one of them; a fetch or a `gh` call per commit is a
   different order, and offline it would degrade into measurement B — the
   behaviour that missed the merge.
@@ -132,6 +132,13 @@ covered: a plain `git fetch origin` in this repository wrote 130 lines with
 the bound is the mtime *and* the base branch appearing in the contents — one
 file read, answering both halves.
 
+A linked worktree keeps a `FETCH_HEAD` of its own, while a fetch in the main
+checkout writes the common one and moves the `origin/main` every worktree
+shares — measured in step 1's review, where a fetch in the main checkout left
+the worktree's own file absent. So the bound reads both files, and a fresh
+fetch of `main` recorded in either satisfies it; outside a worktree they are
+the same file.
+
 *Alternative considered*: running the freshness check as a fetch of the base
 alone. That is decision one again — a network call on a hook that runs on
 every Bash call — and it answers by doing the thing rather than by observing
@@ -196,6 +203,11 @@ prohibitions themselves are". Asking git about a branch is the same kind of
 thing as parsing a command line — a fact the guard consumes, not a rule it
 states.
 
+Step 1 also moved git's option grammar — `VALUE_OPTIONS`, `FORCE`,
+`REF_WIDE` and `PUSH_VALUE_OPTIONS` — verbatim into `bun/git-options.ts`,
+because merging the gate ledger's ids into the guard brought
+`command-guard.ts` to 318 lines against the 300-line cap.
+
 ## Risks / Trade-offs
 
 - **Offline work on a pushed branch is blocked** → the branch that cannot be
@@ -214,10 +226,15 @@ states.
   `main`, but it means a stacked branch whose parent has merged is refused
   for the parent's commits rather than its own. Naming the merged commits in
   the refusal message is what tells the two apart.
-- **The guard grows a second reason to spawn git** → a pushed branch costs
-  three local git calls on a commit instead of one. All three are local ref
-  reads; the branch read the guard already does is the expensive one, and it
-  is already paid.
+- **The guard grows a second reason to spawn git** → a commit on a pushed
+  branch costs seven local git calls instead of one: the branch read again,
+  the base and `HEAD` checked, `git cherry`, the remote ref checked, and one
+  `rev-parse` for both `FETCH_HEAD` paths. All are local reads, and only a
+  commit pays them — a call that is not a commit measured 11.0–11.1 ms
+  against 10.7–11.0 ms before (task 2.1).
+- **An unborn branch is allowed** → `git cherry` cannot name a `HEAD` with no
+  commit, which would read as unknown and refuse the first commit of every
+  orphan branch; such a branch has no commit a merge could have carried.
 
 ## Open Questions
 

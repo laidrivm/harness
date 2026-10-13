@@ -12,11 +12,11 @@ change (harness#56) is on `main`.
 
 ## 1. The classes, the markers, and the vocabulary check
 
-- [ ] 1.0 With harness#56 on `main`, add `after: [card-questions]` to this
+- [x] 1.0 With harness#56 on `main`, add `after: [card-questions]` to this
       change's `.openspec.yaml`. Before that, the `after:` fails
       `board-state-hygiene.test.ts`, so the proposal does not carry it.
       `bun test` is green.
-- [ ] 1.1 Write `bun/autonomy.test.ts` with these cases:
+- [x] 1.1 Write `bun/autonomy.test.ts` with these cases:
       - A file with no marker adds nothing [1].
       - A doc that defines no class fails, naming the doc [2].
       - One `agent` marker passes [3].
@@ -51,7 +51,7 @@ change (harness#56) is on `main`.
       proposed dismissal*, §*The pull request opens over a Major left
       unresolved*; A session is attended unless the prompt that started it
       says otherwise)
-- [ ] 1.2 Write `core/autonomy.md`. It opens with a level-1 heading, and says:
+- [x] 1.2 Write `core/autonomy.md`. It opens with a level-1 heading, and says:
       - When a session is unattended: the line `This session runs
         unattended.`, verbatim and on a line of its own, with one declared
         and one undeclared example, as in design.md. An attended session
@@ -75,7 +75,7 @@ change (harness#56) is on `main`.
       attended unless the prompt that started it says otherwise; Three
       classes say what an unattended session does at a step that names the
       user)
-- [ ] 1.3 Mark the steps in design.md's *The classification* for
+- [x] 1.3 Mark the steps in design.md's *The classification* for
       `core/feature-workflow.md`, `core/review-toolkit.md`, `core/rules.md`,
       `core/git-and-prs.md` and `core/code-style.md`. Each marker is inline,
       in the form `(unattended: <class> — <what instead>)`, at the sentence
@@ -83,13 +83,13 @@ change (harness#56) is on `main`.
       no longer there, since the step has moved and its class needs reading
       again. `bun test` is green. (Req: agent-autonomy — A step on the loop's
       critical path names its class where it stands)
-- [ ] 1.4 Mark the four gate-skill steps in the same table, in
+- [x] 1.4 Mark the four gate-skill steps in the same table, in
       `core/skills/{zombies,warm,triage,coderabbit-local}/SKILL.md`. Leave
       `.claude/commands/opsx/` alone, as design.md *OpenSpec's commands are
       covered by a rule, not by edits* explains. `bun test` is green. (Req:
       agent-autonomy — A step on the loop's critical path names its class
       where it stands, §*An ask in an OpenSpec command with no marker*)
-- [ ] 1.5 Grep `core/`, `README.md` and `openspec/specs/` for every site that
+- [x] 1.5 Grep `core/`, `README.md` and `openspec/specs/` for every site that
       says an unattended session or a sub-agent must wait for the user, or
       that defines the classes again, and reconcile each site with the doc.
       List any site in a follow-up's scope in the pull request rather than
