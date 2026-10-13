@@ -62,7 +62,7 @@ Closes `agent-permissions/a-write-with-no-method-flag`,
       `--field`, `--raw-field`, `--input` present — quoting `gh api --help` at
       the line for why, since the default method is what makes this a write
       and nothing in the command says so (ZOMBIES 11, 16)
-- [ ] 2.3 Add the `graphql` clause — an inline `query` field opening with the
+- [x] 2.3 Add the `graphql` clause — an inline `query` field opening with the
       `query` keyword and holding no `mutation` token passes, every other
       document blocks — with the reason at its line: the `coderabbit` skill's
       thread read needs it, and a token search errs towards blocking

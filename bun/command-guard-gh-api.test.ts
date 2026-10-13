@@ -38,6 +38,10 @@ describe("gh api graphql", () => {
 	test.each([
 		"gh api graphql -f query='mutation{addComment(input:{}){clientMutationId}}'",
 		"gh api graphql -F query=@q.graphql",
+		"gh api graphql -f query='query{viewer{login}} mutation{x}'",
+		"gh api graphql -f query='query{viewer{login}}' --input doc.json",
+		"gh api graphql -X GET -f query='mutation{x}'",
+		"gh api graphql --paginate",
 	])("%s blocks", (line) => {
 		expect(run(event(line), anywhere()).code).toBe(2);
 	});

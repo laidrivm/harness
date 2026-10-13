@@ -152,18 +152,47 @@ export function ghApiWrite(rest: string[]): string | undefined {
 	const api = subcommandAt(rest, -1);
 	if (rest[api] !== "api") return undefined;
 	// Every word but `api` itself: a flag written before it reaches it too.
-	const { flags } = parse(rest.filter((_, at) => at !== api));
+	const { flags, operands } = parse(rest.filter((_, at) => at !== api));
 	const methods = flags.filter(({ name }) => name === "method");
 	// Any flag naming a write, not the last: gh honours the last, and blocking
 	// on any one errs the way the guard resolves every uncertainty.
 	const sent = methods.find(({ value }) => !READS.has(value.toUpperCase()));
 	if (sent) return refusal(`with \`${sent.written}\` sends a write`);
-	if (methods.length > 0) return undefined;
+	if (operands[0] === "graphql" && !graphqlRead(flags)) {
+		return "command-guard: `gh api graphql` can carry a mutation, and only an inline `-f query='query…'` holding no `mutation` reads as a read. Report what you would have sent and let them send it.";
+	}
+	if (methods.length > 0 || operands[0] === "graphql") return undefined;
 	// `gh api --help`: "The default HTTP request method is `GET` normally and
 	// `POST` if any parameters were added." Nothing in the command says POST.
 	const body = flags.find(({ name }) => !READ_FLAGS.has(name));
 	if (body) return refusal(`with \`${body.written}\` and no method sends POST`);
 	return undefined;
+}
+
+const isField = (name: string) => name === "field" || name === "raw-field";
+
+/**
+ * Whether a `graphql` call reads: its document is inline as a `query` field,
+ * opens with the `query` keyword and holds no `mutation` token, and every
+ * other flag is a read flag, a read method, or a variable. The `coderabbit`
+ * skill reads review-thread state this way, which no REST endpoint carries.
+ * A token search refuses a query that merely names the word, the direction
+ * the guard errs in; a document from a file (`@`, `--input`) blocks unread.
+ */
+function graphqlRead(flags: Flag[]): boolean {
+	const query = ({ name, value }: Flag) =>
+		isField(name) && value.startsWith("query");
+	const documents = flags.filter(query);
+	return (
+		documents.length > 0 &&
+		documents.every(
+			({ value }) =>
+				/^query=\s*query\b/.test(value) && !/mutation/i.test(value),
+		) &&
+		flags.every(
+			({ name }) => READ_FLAGS.has(name) || name === "method" || isField(name),
+		)
+	);
 }
 
 const refusal = (what: string) =>
