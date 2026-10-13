@@ -39,8 +39,12 @@ The hook SHALL refuse a commit when the base ref's last fetch is older than
 exactly 30 minutes old is accepted and one older is refused. The bound SHALL
 carry the reason it holds that value where it is declared.
 
-The fetch time SHALL be read from the modification time of the repository's
-`FETCH_HEAD`, which every successful fetch rewrites. It SHALL NOT be read from
+The fetch time SHALL be read from the modification time of `FETCH_HEAD`, which
+every successful fetch rewrites. In a linked worktree two files apply — the
+worktree's own, written by a fetch run there, and the common checkout's,
+written by a fetch in the main checkout, which moves the `origin/main` every
+worktree shares — and either SHALL count; elsewhere they are the same file.
+It SHALL NOT be read from
 the reflog of the base ref: a fetch that brings no new commit updates no ref
 and so writes no reflog entry, which would refuse the commit while naming a
 remedy that cannot change the answer — measured on this repository, where a
@@ -51,11 +55,12 @@ That timestamp alone SHALL NOT satisfy the bound. `FETCH_HEAD` is written by
 every fetch whatever it fetched, so fetching one unrelated ref refreshes it
 while leaving the base ref untouched — measured, `git fetch origin <other>`
 advanced the mtime by a second and wrote a `FETCH_HEAD` naming only that
-branch. The bound SHALL therefore be satisfied only when `FETCH_HEAD` is
-within `FETCH_MAX_AGE` **and** its contents name the base branch, which is the
-evidence that the fetch it timestamps covered the base. An unreadable
-`FETCH_HEAD` SHALL be treated as unknown and therefore as a refusal, on the
-terms this capability already applies to an undecidable event.
+branch. The bound SHALL therefore be satisfied only when one applicable
+`FETCH_HEAD` is within `FETCH_MAX_AGE` **and** its contents name the base
+branch, which is the evidence that the fetch it timestamps covered the base.
+Where no applicable `FETCH_HEAD` is readable, the fetch time SHALL be treated
+as unknown and therefore as a refusal, on the terms this capability already
+applies to an undecidable event.
 
 Where the base ref does not exist at all — no `origin` remote, or no `main`
 under it — no merged verdict can be computed, and the commit SHALL be allowed
