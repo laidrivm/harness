@@ -90,10 +90,13 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       check, so `bun/turn-gate.ts` is untouched and needed no split. The
       three runner files are 36 pass, 0 fail; `bun test` is 1417 pass,
       0 fail; `bun/board-loop.ts` is 192 lines against the cap of 300.
-- [ ] 1.5 Add the runner to `README.md`'s *Consuming* section: started by
+- [x] 1.5 Add the runner to `README.md`'s *Consuming* section: started by
       the user from a terminal of their own, in a clone used for nothing
       else, and what one pass does. Verify: `grep -n board-loop README.md`
       finds it, and it restates neither the limit nor the takeable rule.
+      Evidence: `grep -n board-loop README.md` finds line 67, which names
+      neither. The ledger bullet above it now names the board loop among
+      the writers, since a pass records there.
 - [ ] 1.6 The pull request's *Check by hand* gives the user the command for
       one live pass in a dedicated clone of the harness, on a change at
       `proposed`. It lists what to look at: the step's pull request, the
