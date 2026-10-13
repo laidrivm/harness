@@ -88,6 +88,13 @@ describe("the count", () => {
 		)).toEqual([]);
 	});
 
+	test("a counter that holds no whole number ends nothing", () => {
+		const mark = join(store(), "s1");
+		writeFileSync(`${mark}.rounds`, "garbage");
+		rounds(mark, CEILING - 1);
+		expect(countRound(again(), mark)).toBeUndefined();
+	});
+
 	test("an unwritable counter decides as without a ceiling [52]", () => {
 		const mark = marked();
 		rounds(mark, CEILING - 1);
