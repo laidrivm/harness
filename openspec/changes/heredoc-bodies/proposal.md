@@ -61,8 +61,10 @@ of it. So the fix cannot be "skip every heredoc body".
 
 - **Here-strings (`<<<`).** `bash <<< 'git push --force'` passes today,
   exactly as `echo '…' | bash` does: a quoted string fed to a shell's stdin.
-  That is the pipe-to-shell question, and a sibling change proposing to
-  block curl-to-shell pipes owns it.
+  That is the question of a shell reading its program from stdin, which
+  `guard-remote-code` (harness#99) answers by refusing every such shell.
+  The same change refuses `bash <<'EOF'` whatever its body says. This
+  change is about bodies read by programs that are not shells.
 - **Interpreters reading a body**, such as `python3 - <<'EOF'`. The residual
   ceiling already names an interpreter spawning a subprocess. Keeping inline
   interpreters behind a prompt is a sibling change's work.

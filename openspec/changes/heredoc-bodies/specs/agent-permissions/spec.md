@@ -114,6 +114,12 @@ runs by path is outside the guard, as a file written any other way is.
   then `EOF`, then `)"`
 - **THEN** the hook blocks the call
 
+#### Scenario: A body written to a script the same call runs
+
+- **WHEN** the agent attempts `cat > s.sh <<'EOF'`, with the same body, then
+  `EOF`, then `bash s.sh`
+- **THEN** the hook blocks the call, because `bash` stands in the call
+
 ### Requirement: A heredoc the guard cannot place is read as commands
 
 Where the guard cannot place a body, it SHALL read the text after the

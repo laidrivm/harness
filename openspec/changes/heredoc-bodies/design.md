@@ -134,7 +134,19 @@ apply step.
 - [The whole-call rule in D4 refuses a commit message carrying a guarded
   command when the same call also invokes `bash`] → that is today's
   behaviour for every call, so nothing gets worse.
-- [Overlap with sibling changes] → the curl-to-shell proposal reads a pipe
-  into a shell, and the inline-interpreter proposal reads `python3 -` and
-  the like. Neither reads a heredoc body. If either adds readers to a shared
-  set, D4 should take them from that set rather than keep a list of its own.
+- [Overlap with `guard-remote-code` (harness#99)] → that change refuses a
+  shell, `source`, `.` or `eval` whose program is not written on the line.
+  That refuses `bash <<'EOF'`, `cat <<'EOF' | sh` and
+  `eval "$(cat <<'EOF' …)"` whatever their bodies say, under its own reason.
+  The two compose without a hole. Under #99 those three calls block before
+  D4 is consulted, and D4 still covers a case #99 allows on purpose: a call
+  that writes a body to a file and then runs it with `bash s.sh`. The rest of
+  this change concerns bodies read by programs that are not shells, such as
+  `cat <<'EOF' > file` and `git commit -F - <<'EOF'`, which #99 does not
+  touch. Both changes edit `commands()` in `bun/command-parse.ts`: #99 marks
+  a command that a substitution interrupts, and this one adds the heredoc
+  state. Whichever lands second rebases onto the other.
+- [Overlap with the inline-interpreter proposal] → that one is about a
+  prompt for `python3 -c` and the like, and it reads no heredoc body. A body
+  fed to `python3 -` stays outside both changes, inside the residual
+  ceiling.

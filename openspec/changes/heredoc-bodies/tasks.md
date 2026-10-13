@@ -17,6 +17,7 @@ Closes `agent-permissions/a-pull-request-body-naming-a-push`,
 `agent-permissions/a-body-given-to-a-shell-as-its-script`,
 `agent-permissions/a-body-piped-into-a-shell`,
 `agent-permissions/a-body-evaluated-through-a-substitution`,
+`agent-permissions/a-body-written-to-a-script-the-same-call-runs`,
 `agent-permissions/a-delimiter-that-never-comes`,
 `agent-permissions/an-arithmetic-shift`, `agent-permissions/a-here-string`.
 
