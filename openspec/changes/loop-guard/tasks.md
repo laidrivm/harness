@@ -22,7 +22,7 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
       bar does not hold in the sub-agent, or refuses the parent's call, name
       it there and in the step's design note before 1.3.
       (Req: loop-guard — A thrice-failed call is refused before it runs)
-- [ ] 1.2 Write the guard's tests in `bun/loop-guard.test.ts`, spawning the
+- [x] 1.2 Write the guard's tests in `bun/loop-guard.test.ts`, spawning the
       script with an event on stdin and a temp store:
       - for counting:
         - a first failure exits 0 with no output [1];
