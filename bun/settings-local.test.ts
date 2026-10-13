@@ -183,3 +183,41 @@ describe("the documented matching", () => {
 		]);
 	});
 });
+
+describe("a literal matcher, and the order honest", () => {
+	test.each([
+		"Bash(sort -t: -k2 -rn)",
+		'Bash(echo "exit=$?")',
+		"Bash(grep -E 'a.+b$' x)",
+	])("%s is decided by itself [16]", (entry) => {
+		expect(report({ allow: [entry] }, entry)).toEqual([
+			`decided: ${entry} — allow holds ${entry}`,
+		]);
+	});
+
+	test.each([
+		["Bash(ls a?c)", "Bash(ls abc)"],
+		["Bash(grep a.c x)", "Bash(grep abc x)"],
+		['Bash(echo "exit=$?")', 'Bash(echo "exit=0")'],
+	])("%s does not decide %s [16]", (rule, entry) => {
+		expect(report({ allow: [rule] }, entry)).toEqual([
+			`gap: ${entry} — promote it to .claude/settings.json or drop it`,
+		]);
+	});
+
+	test("a path specifier that leaves by traversal is kept [17]", () => {
+		const swept = sweep(repo({}, ["Read(../outside/**)"]));
+		expect(swept).toEqual({
+			reported: [],
+			kept: [
+				"kept: Read(../outside/**) — reaches outside the repository",
+			],
+		});
+	});
+
+	test("an entry with an absolute path that a tracked rule decides is decided, not kept [18]", () => {
+		expect(
+			report({ allow: ["Bash(mkdir *)"] }, "Bash(mkdir -p /tmp/x)"),
+		).toEqual(["decided: Bash(mkdir -p /tmp/x) — allow holds Bash(mkdir *)"]);
+	});
+});

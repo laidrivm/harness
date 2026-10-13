@@ -19,7 +19,7 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
       ask before allow, and every class in one file (7, 8, 9); the
       documented matching (10–14); and an entry of another tool with the
       same argument text (15)
-- [ ] 1.2 Add the cases that keep the matcher literal and the order honest.
+- [x] 1.2 Add the cases that keep the matcher literal and the order honest.
       An entry carrying `:`, `$`, `?`, `"` or `-` matches only itself and
       throws nothing (16). A `Read(../…)` entry with no absolute token is kept
       (17). An entry with an absolute path that a tracked rule decides is
