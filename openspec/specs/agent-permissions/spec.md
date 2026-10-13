@@ -209,7 +209,9 @@ documentation and this repository's prose do, not for an adversary.
 The hook SHALL block a commit while `HEAD` is on `main`, and SHALL block any
 force-push, whether written as `--force`, `--force-with-lease`, `-f`, bundled
 into a short-flag group such as `-uf`, which git reads as `-u -f`, or as the
-`+` prefix of a refspec, and wherever it sits in the command. This is stricter than the prose it replaces, which
+`+` prefix of a refspec, and wherever it sits in the command as a switch or a
+refspec — the value of a value-taking option, such as `--force` in
+`-o --force`, is a string git sends on and forces nothing. This is stricter than the prose it replaces, which
 forbade force-pushing only after a pull request was open: the agent loses
 force-push entirely, and the user keeps it.
 
@@ -233,9 +235,13 @@ From any other branch, every operand SHALL be read as a refspec, including the
 repository operand, which is one word that cannot be told from a refspec
 without the same decision above — and a remote whose name is `main` blocks a
 push that would have been allowed, which is the safe direction. The words that
-are values of `-o` and `--push-option`, and of `--receive-pack`, `--exec` and
-`--repo` in their separate-word form, SHALL be skipped, so a push option whose
-value reads like a branch name does not refuse the push carrying it.
+are values of `-o` and `--push-option`, and of `--receive-pack`, `--exec`,
+`--repo` and `--recurse-submodules` in their separate-word form, SHALL be
+skipped before any word is classified, and read as neither a switch nor an
+operand — git consumes each as its option's value whatever it looks like — so
+a push option whose value reads like a branch name or a force flag does not
+refuse the push carrying it. A short option's value SHALL be the rest of its
+word or, with none left, the next word: `-fo x` still forces, `-of` does not.
 
 Each refspec SHALL be read as `[+]<src>:<dst>`, where a refspec without
 `:<dst>` updates the ref its `<src>` names. The hook SHALL block when the
@@ -255,7 +261,7 @@ remote in any tree that does not carry it locally.
 
 Those four SHALL be matched by prefix and not by exact spelling: git accepts
 any unambiguous abbreviation, and `--mir`, `--pru`, `--al` and `--bra` all
-reach the option they abbreviate. Any argument that is a prefix of one of the
+reach the option they abbreviate. Any switch that is a prefix of one of the
 four SHALL block, including one git would itself reject as ambiguous — over-
 refusing a command git does not accept costs nothing.
 
@@ -265,11 +271,13 @@ argument the justification above does not reach, since refusing it would refuse
 a valid push. The operands after it are read as refspecs like any other, so
 `git push -- origin main` still blocks on its destination.
 
-The words skipped as option values SHALL be the exact spellings instead — `-o`,
-`--push-option`, `--receive-pack`, `--exec` and `--repo`, and the `=` forms.
+The options whose values are skipped SHALL be matched by their exact spellings
+instead — `-o`, `--push-option`, `--receive-pack`, `--exec`, `--repo` and
+`--recurse-submodules`, the options git 2.47.0's `git push -h` lists with a
+required value; their `=` forms carry the value in the same word.
 Prefix-matching there would let a short abbreviation swallow the word after it,
-hiding an operand; leaving an abbreviated form unskipped reads that value as an
-operand and can only refuse a push. Both lists therefore resolve their
+hiding a switch or an operand; leaving an abbreviated or negated form unskipped
+reads that value as one and can only refuse a push. Both lists therefore resolve their
 uncertainty towards blocking.
 
 The destination SHALL be read from the command's own words. A destination that
@@ -545,6 +553,19 @@ rejected as ambiguous — every spelling git honours therefore begins with
   `feat/x`
 - **THEN** the hook allows the call, because the word after `-o` is that
   option's value and not an operand
+
+#### Scenario: A push option whose value reads like a force flag
+
+- **WHEN** the agent attempts `git push -o --force origin feat/x` or
+  `git push -o --all origin feat/x` with `HEAD` on `feat/x`
+- **THEN** the hook allows the call, because git sends the word after `-o` to
+  the server as that option's value and neither forces nor widens the push
+
+#### Scenario: A force flag beside a push option
+
+- **WHEN** the agent attempts `git push -o ci.skip --force origin feat/x`
+- **THEN** the hook blocks the call, because `--force` is a switch there and
+  only the word after `-o` is its value
 
 ### Requirement: Every manifest-mutating invocation prompts, whatever else allows it
 
