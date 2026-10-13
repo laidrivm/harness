@@ -41,6 +41,20 @@ describe("a literal matcher, and the order honest", () => {
 		expect(report({ allow: [rule] }, entry)).toEqual([gap(entry)]);
 	});
 
+	test.each([
+		["mcp__*", "mcp__github__get_issue"],
+		["mcp__*__get_issue", "mcp__github__get_issue"],
+	])("an unanchored allow glob %s decides nothing, as Claude Code skips it", (rule, entry) => {
+		expect(report({ allow: [rule] }, entry)).toEqual([gap(entry)]);
+	});
+
+	test("an allow glob after a named server decides that server's tools", () => {
+		const entry = "mcp__github__get_issue";
+		expect(report({ allow: ["mcp__github__*"] }, entry)).toEqual([
+			`decided: ${entry} — allow holds mcp__github__*`,
+		]);
+	});
+
 	test("a path specifier that leaves by traversal is kept [17]", () => {
 		const swept = sweep(repo({}, ["Read(../outside/**)"]));
 		expect(swept).toEqual({
