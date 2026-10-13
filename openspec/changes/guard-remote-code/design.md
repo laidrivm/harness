@@ -105,8 +105,8 @@ exemption in the check: `command -v git commit` was never a commit either.
 ### 5. `bunx` needs `--no-install` among its own options
 
 `bunx` and `bun x` (a `bun` whose first non-option word is `x`) are refused
-unless `--no-install` appears before the first non-option word, skipping the
-value of `-p`/`--package`. A word after the package is the package's own
+unless `--no-install` appears before the first non-option word after `bunx`
+or after that `x`, skipping the value of `-p`/`--package`. A word after the package is the package's own
 argument (`bun.com/docs/pm/bunx`: `--bun` "must occur before the executable
 name", and the same holds for every bunx flag).
 
