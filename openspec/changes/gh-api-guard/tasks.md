@@ -70,7 +70,7 @@ Closes `agent-permissions/a-write-with-no-method-flag`,
 - [x] 2.4 Add a case for a flag the list does not name, asserting it blocks
       when no method is present — the test is scoped by the reads it exempts,
       not by the writes it enumerates, per `core/rules.md` (ZOMBIES 17)
-- [ ] 2.5 Cover the reach the branch inherits rather than earns, each as its
+- [x] 2.5 Cover the reach the branch inherits rather than earns, each as its
       own case: an absolute path to `gh`, a `bash -c` wrapper, a compound
       command whose second half is the write, and a global flag in front of
       the operand (ZOMBIES 4, 5, 18, 19, 20)

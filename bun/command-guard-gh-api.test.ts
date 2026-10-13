@@ -44,6 +44,23 @@ describe("gh api with a parameter and no method", () => {
 	});
 });
 
+describe("the reach the gh branch inherits", () => {
+	const write = "gh api /repos/o/r/issues/37/comments -f body=hi";
+
+	// spec: agent-permissions/a-write-with-no-method-flag
+	test.each([
+		["an absolute path to gh", `/opt/homebrew/bin/${write}`],
+		["a bash -c wrapper", `bash -c "${write}"`],
+		["the second half of a compound command", `gh pr view 37 && ${write}`],
+		[
+			"a flag in front of the operand",
+			"gh api --hostname github.com /repos/o/r/issues/37/comments -f body=hi",
+		],
+	])("%s blocks", (_, line) => {
+		expect(run(event(line), anywhere()).code).toBe(2);
+	});
+});
+
 describe("gh api graphql", () => {
 	// spec: agent-permissions/a-graphql-call
 	test.each([
