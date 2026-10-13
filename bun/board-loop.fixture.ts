@@ -81,7 +81,8 @@ export type Stubs = {
 	install?: number;
 	/** The goal check's last line. Its exit status follows it, as the check's does. */
 	verdict?: string;
-	claudeCode?: number;
+	/** The session's exit status, or `null` for no `claude` on `PATH`. */
+	claudeCode?: number | null;
 	/** Seconds the `claude` stub runs for before exiting. */
 	sleep?: number;
 };
@@ -107,7 +108,7 @@ function bin(log: string, s: Stubs): string {
 			`exit ${verdict.startsWith("goal met") ? 0 : 1}`,
 		].join("\n"),
 	);
-	stub("claude", s.sleep ? `exec /bin/sleep ${s.sleep}` : `exit ${s.claudeCode ?? 0}`);
+	if (s.claudeCode !== null) stub("claude", s.sleep ? `exec /bin/sleep ${s.sleep}` : `exit ${s.claudeCode ?? 0}`);
 	return dir;
 }
 
