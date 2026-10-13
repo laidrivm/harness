@@ -110,7 +110,7 @@ merge (proposal.md, *Impact*, *Ordering*).
       ceiling does, which `commit-gates`' "SHALL NOT depend on a
       loop-protection field" allows, since that sentence is about the
       refusal. Verify: `bun test` is green.
-- [ ] 2.3 Measure `bun/turn-gate.ts` and `bun/goal-rounds.ts` against the
+- [x] 2.3 Measure `bun/turn-gate.ts` and `bun/goal-rounds.ts` against the
       300-line cap. Verify: `bun/file-size.ts` passes on the branch.
 - [ ] 2.4 In `README.md` *Consuming*, the turn-gate line names the ceiling. In
       `core/feature-workflow.md`'s *Unattended stages*, add what happens at
