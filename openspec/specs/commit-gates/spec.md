@@ -217,8 +217,9 @@ A `Stop` hook registered in the tracked `.claude/settings.json` SHALL refuse
 to end a turn when all of the following hold: the turn left at least one commit
 on the branch that was not there when control arrived, a task group in a change
 outside `openspec/changes/archive/` has at least one box and no unticked one
-left and was not complete in the task lists as committed at the mark, the
-turn's final assistant message carries no `BLOCKED` naming what only the user
+left and was complete neither in the task lists as committed at the mark nor
+in those `origin/main` holds when the turn ends, the turn's final assistant
+message carries no `BLOCKED` naming what only the user
 can settle, and either that message carries no gate line or the gate ledger
 holds no record of the pre-PR runner for the turn's tip in this checkout
 (`pre-pr-runner`, *The runner records each run for the commit it read*). The
@@ -239,9 +240,26 @@ that commits anything while any active change holds a finished group. A
 group absent at the mark SHALL qualify the turn like one with an unticked box
 there: the turn that wrote it and ticked it completed it, and excluding it
 lets a whole group of findings, added and closed in one turn, end silently.
-The state at the mark SHALL be read from git — the task files as the marked commit
-holds them — rather than recorded beside the mark, which would be the second
-source of truth this requirement already refuses. A bare `BLOCKED`
+
+Nor SHALL a group qualify the turn that is already complete in the task lists
+as `origin/main` holds them when the turn ends, the base ref the merged-branch
+guard reads (`agent-permissions`). That group reached the default branch
+through a pull request of its own, and a turn that pulled it, fetched it or
+merged `main` into its branch brought it in rather than completed it. Counting
+it refused 8 of the last 14 pulls on `main` in the harness's orchestrator
+session on 2026-10-13, each of which committed nothing. The ref SHALL be read
+when the turn ends, not at the mark, because the fetch that brings a group in
+is the same one that moves the ref. A repository without that ref SHALL read it
+as holding no task list, which excludes nothing. The cost is accepted: a turn
+that completes a group, merges its own pull request and fetches the merge
+before ending ends without reporting. Merging is not among the commands the
+harness's settings allow without a prompt, and the pre-push hook has run on
+what merged.
+
+The state at the mark and on `origin/main` SHALL be read from git — the task
+files as the marked commit and the ref hold them — rather than recorded beside
+the mark, which would be the second source of truth this requirement already
+refuses. A bare `BLOCKED`
 with nothing after it SHALL NOT satisfy the message condition, on the terms
 this project already applies to an `oversize:` marker in a pull request body:
 a marker with nothing after it clears nothing.
@@ -260,7 +278,9 @@ and then returns `HEAD` to the mark SHALL be treated as having left none,
 unless the branch's remote-tracking ref holds a commit the mark does not: the
 gate exists so that work reaching a branch is reported, and work withdrawn
 before the turn ends reaches nothing — but a commit pushed and then reset
-locally has reached the remote branch, whatever `HEAD` says afterwards. The mark SHALL be keyed by the session it
+locally has reached the remote branch, whatever `HEAD` says afterwards. A tip
+read from that ref is decided like any other, so a fetch on `main`, whose
+remote-tracking ref is `origin/main`, completes no group. The mark SHALL be keyed by the session it
 belongs to, since two sessions in one repository otherwise share one mark and
 answer each other's question. It SHALL live no longer than the turn that
 follows it: a record of what the sequence has already reported would be a
@@ -478,6 +498,46 @@ its own working tree, because it is not installed as its own package.
 - **WHEN** the only fully ticked group is in a change under
   `openspec/changes/archive/`
 - **THEN** the turn ends, because archiving is what retires the obligation
+
+#### Scenario: A pull brings in another pull request's completed group
+
+- **WHEN** a turn on `main` fast-forwards it to `origin/main`, which completes
+  a group that was open at the mark, and ends with no gate line
+- **THEN** the turn ends, because the group was already complete on
+  `origin/main`
+
+#### Scenario: A fetch on main moves the tip to its remote-tracking ref
+
+- **WHEN** a turn on `main` fetches, leaves `HEAD` at the mark, and
+  `origin/main` now completes a group
+- **THEN** the turn ends, because a tip read from the remote-tracking ref is
+  decided like any other
+
+#### Scenario: Main merged into a feature branch
+
+- **WHEN** a turn merges `origin/main` into its branch, the merge brings in a
+  group complete there, and the turn completes nothing of its own
+- **THEN** the turn ends
+
+#### Scenario: The turn's own group beside a pulled one
+
+- **WHEN** a turn completes a group `origin/main` does not hold complete, and
+  also pulls in another group `origin/main` does, and ends with no gate line
+- **THEN** the hook blocks, and the reason names the turn's own group and not
+  the pulled one
+
+#### Scenario: A repository without origin/main
+
+- **WHEN** no `origin/main` ref exists and a turn completes a group
+- **THEN** the hook blocks as it would without this exclusion, because a ref
+  that is absent excludes nothing
+
+#### Scenario: A turn that merges its own pull request
+
+- **WHEN** a turn completes a group, pushes, merges its pull request, fetches
+  `origin/main`, and ends with no gate line
+- **THEN** the turn ends — the accepted cost, because `origin/main` now holds
+  the group complete
 
 #### Scenario: The mark was never written
 
