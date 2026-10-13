@@ -79,7 +79,7 @@ None.
 
 - `.coderabbit.yaml` — new, at the root. The harness sets no
   `harness.rootFiles`, so no root-layout exemption is involved.
-- `bun/review-config.test.ts` — new.
+- `bun/review-config.ts` and `bun/review-config.test.ts` — new.
 - `core/rules.md`, `README.md`, `core/review-toolkit.md` — one sentence each.
   `core/rules.md` reaches consumers through `sync.ts` on their next bump.
 - `core/skills/coderabbit-local/SKILL.md` — step 2's invocation, and
