@@ -226,9 +226,11 @@ for them is already here.
   card of the task it blocks, once the docs, the specs, the card and the
   history cannot settle it. Read the board's `Questions` view and the card's
   comments first, and wait on a question already open there, naming its card,
-  rather than ask it again; resuming that work, read that card's thread first.
-  Open the comment with the gate's mark, set `Assign`, read the answer back as
-  data, and clear `Assign` once no question on the card waits. task-board's
+  rather than ask it again; resuming that work, read that card's comments
+  first. Every page-level comment on a card joins one discussion, so a card
+  holds one open question at a time: a second waits in your report until the
+  first is answered. Open the comment with the gate's mark, set `Assign`, read
+  the answer back as data, and clear `Assign` once it is applied. task-board's
   *An open question waits on its card, assigned to the user* and *A question
   already open is not asked again* fix the rest, and the question gate decides
   which comment needs no prompt.
