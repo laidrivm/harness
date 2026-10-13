@@ -21,7 +21,7 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
 `agent-permissions/reading-through-the-endpoint-still-works`,
 `agent-permissions/a-read-that-carries-parameters`.
 
-- [ ] 1.1 Write the failing cases first, in `bun/command-guard.test.ts`
+- [x] 1.1 Write the failing cases first, in `bun/command-guard.test.ts`
       beside the existing `gh` block, and record that each fails against the
       guard as it stands: `gh api -X POST /repos/o/r/issues/37/comments -f
       body=hi` blocks; `gh api "repos/o/r/pulls/37/comments?per_page=100"
@@ -29,20 +29,20 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
       The first is the probed hole and fails today at exit 0; the two reads
       pass today and are the control that the new test did not simply block
       the command (ZOMBIES 2, 3, 6)
-- [ ] 1.2 Add the method test inside the `name === "gh"` branch, after the
+- [x] 1.2 Add the method test inside the `name === "gh"` branch, after the
       `GH_WRITES` pair search and before its `continue`. Read `--method` and
       `-X` in both the separated and the `=` spellings, compare the value
       case-insensitively, and treat `GET` and `HEAD` as a read whatever else
       the call carries (ZOMBIES 7, 8)
-- [ ] 1.3 Cover the spellings the comparison must not miss, each as its own
+- [x] 1.3 Cover the spellings the comparison must not miss, each as its own
       case: `--method` and `-X`; a lower-case `-X get`; a method flag written
       after the path; and `-X PATCH`, `-X PUT` and `-X DELETE`, so the test
       reads as a method test rather than a POST test (ZOMBIES 9, 10)
-- [ ] 1.4 Make the refusal name `gh api` and the flag that decided it, and
+- [x] 1.4 Make the refusal name `gh api` and the flag that decided it, and
       assert that text rather than only the exit code — an author who meant to
       read has to see which flag to drop. Assert the exit code is 2, the only
       code Claude Code reads as a block (ZOMBIES 12, 13)
-- [ ] 1.5 Assert the four carried criteria still hold, unedited: the three
+- [x] 1.5 Assert the four carried criteria still hold, unedited: the three
       subcommand writes still block and `gh pr view 37 --json state` still
       passes. This task closes no criterion — it is the control that the new
       branch left the pair list alone (ZOMBIES 21)
@@ -52,29 +52,29 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
 Closes `agent-permissions/a-write-with-no-method-flag`,
 `agent-permissions/a-graphql-call`, `agent-permissions/a-graphql-read`.
 
-- [ ] 2.1 Write the failing cases first and record that each fails: `gh api
+- [x] 2.1 Write the failing cases first and record that each fails: `gh api
       /repos/o/r/issues/37/comments -f body=hi` blocks; `gh api graphql -f
       query=mutation{…}` blocks; `gh api graphql -F query=@q.graphql` blocks;
       `gh api graphql -f query='query{…}'` passes, and so does the
       `coderabbit` skill's own review-thread query, taken verbatim from its
       `SKILL.md` (ZOMBIES 14, 15)
-- [ ] 2.2 Add the second clause — no method flag and any of `-f`, `-F`,
+- [x] 2.2 Add the second clause — no method flag and any of `-f`, `-F`,
       `--field`, `--raw-field`, `--input` present — quoting `gh api --help` at
       the line for why, since the default method is what makes this a write
       and nothing in the command says so (ZOMBIES 11, 16)
-- [ ] 2.3 Add the `graphql` clause — an inline `query` field opening with the
+- [x] 2.3 Add the `graphql` clause — an inline `query` field opening with the
       `query` keyword and holding no `mutation` token passes, every other
       document blocks — with the reason at its line: the `coderabbit` skill's
       thread read needs it, and a token search errs towards blocking
       (ZOMBIES 14, 15)
-- [ ] 2.4 Add a case for a flag the list does not name, asserting it blocks
+- [x] 2.4 Add a case for a flag the list does not name, asserting it blocks
       when no method is present — the test is scoped by the reads it exempts,
       not by the writes it enumerates, per `core/rules.md` (ZOMBIES 17)
-- [ ] 2.5 Cover the reach the branch inherits rather than earns, each as its
+- [x] 2.5 Cover the reach the branch inherits rather than earns, each as its
       own case: an absolute path to `gh`, a `bash -c` wrapper, a compound
       command whose second half is the write, and a global flag in front of
       the operand (ZOMBIES 4, 5, 18, 19, 20)
-- [ ] 2.6 Add the bare-path read as a case of its own — `gh api /repos/o/r`
+- [x] 2.6 Add the bare-path read as a case of its own — `gh api /repos/o/r`
       with no flags at all — so the default-`GET` path is asserted and not
       merely implied by the `--paginate` case (ZOMBIES 1)
 

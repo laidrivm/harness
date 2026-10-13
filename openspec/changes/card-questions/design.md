@@ -64,9 +64,9 @@ user's name, with an opening mark that tells it from the user's own words.
   agents' Notion comments and card writes from a bot integration, not under
   my name*, which takes this up once the credentials card lands.
 - *Alternative: the question in the card's body.* A page write needs no
-  permission. It was rejected because a body has no thread per question and
-  no way to tell an answered question from an open one, and the user chose
-  the comment.
+  permission. It was rejected because a body edit raises no comment count,
+  which is the signal the user reads, has no place for the user's answer
+  beside the question, and the user chose the comment.
 
 ### A `PermissionRequest` hook answers the ask; nothing else changes
 
@@ -114,15 +114,35 @@ let a session ask on a card whose open questions it never looked at.
 ### The envelope: mark, one question, no mention, a length bound
 
 The mark is the inline-code token `harness-question` as the comment's first
-characters — a token a person does not type in a reply, so the read-back can
-take the first later comment in that question's own thread, by the user's
-account and without the mark, as the answer, and ignore every other comment
-(rules.md: recognise what a tool owns by a mark only that tool writes). The account rules out another member; the mark rules out the agent,
-which writes as the same account. One question
-per comment keeps one thread per decision. A user mention is refused because
-it notifies its subject of text that reads as the user's. The bound of 1500
-characters holds a question, its options and a link to its branch, and not a
-report. Everything else about the question's form — a recommended answer,
+characters — a token a person does not type in a reply (rules.md: recognise
+what a tool owns by a mark only that tool writes).
+
+A page-level comment does not open a thread of its own. Measured on
+2026-10-13 in task 1.1: a call with only `page_id` and `markdown` came back
+carrying the `discussion_id` of the card's existing page-level discussion,
+and the comment was appended there as its third. Every page-level comment on
+a card joins that one discussion, so a question has no thread to hold its
+answer. The read-back therefore takes as the answer the first comment after
+the question in the card's page-level discussion, by the user's account and
+without the mark, and ignores every other comment. The account rules out
+another member; the mark rules out the agent, which writes as the same
+account. For that answer to belong to one question, a card holds one open
+question at a time: a second question for the same card waits in the agent's
+report until the first is answered, then is posted. This orders questions per
+card; it caps nothing across the boards.
+
+- *Alternative: anchor each question on a block of the card*
+  (`selection_with_ellipsis`), which opens a discussion per question. Rejected:
+  the user reads the page-level comment count as the signal, and an anchored
+  comment sits beside a passage of the body rather than at the top.
+- *Alternative: number each question and ask for the number in the answer.*
+  Rejected: the answer is meant to be as short as "1", and a missing number
+  leaves the same ambiguity.
+
+One question per comment keeps one answer per decision. A user mention is
+refused because it notifies its subject of text that reads as the user's.
+The bound of 1500 characters holds a question, its options and a link to its
+branch, and not a report. Everything else about the question's form — a recommended answer,
 rounds of independent questions — is the idea card *Ask proposal-stage
 questions with a recommended answer, in rounds of independent ones*.
 
@@ -174,6 +194,15 @@ which the hook checks.
 
 ## Risks / Trade-offs
 
+- [An unattended run cannot read the card: `claude -p` refused `notion-fetch`
+  and `notion-get-comments` in task 1.1, as it refuses every tool no allow
+  rule names] → The runner passes them with `--allowedTools`, under the
+  server name its machine uses. They do not go in the tracked allow list: an
+  allow rule needs a literal server segment, and the server name is chosen
+  per machine (`claude_ai_Notion` for the connector, `notion` for a local
+  registration), so a tracked entry would name one machine's server. The
+  runner is the orchestrator card's.
+
 - [A `PermissionRequest` `allow` might not answer an ask-rule prompt in
   practice, or not in `-p`] → Task 1.1 confirms both in fresh sessions before
   any code is written, and stops the change if either fails.
@@ -196,9 +225,13 @@ which the hook checks.
   posts on, not each board's view id. Work parked on another card's question
   finds its answer through the card its report names, so a skipped view read
   costs at most one duplicate answer, as above.
-- [The comments were read before another agent posted the same question] →
-  Accepted: the window runs from the read to the post, and the duplicate
-  costs as above.
+- [Two sessions read a card and both post before either sees the other] →
+  The card then holds two open questions, and one plain comment from the user
+  reads as the answer to both. Accepted rather than serialised with a claim:
+  a card is one task, worked by one agent at a time (the orchestrator gives
+  each card one worker, and the board loop carries one change per pass), so
+  two posters on one card is itself the defect. The window runs from the read
+  to the post.
 - [Until the bot-integration card named in *Decisions* lands, every question
   stands on the boards as written by the user] → The mark is the only sign it is the agent's.
 - [A `PermissionRequest` hook or a mod outside the project can also answer

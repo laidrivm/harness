@@ -1,6 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import {
+	appendFileSync,
 	existsSync,
+	mkdirSync,
 	readFileSync,
 	realpathSync,
 	writeFileSync,
@@ -73,6 +75,26 @@ const records = (state: string) =>
 		: [];
 const decisions = (state: string) => records(state).map((r) => r.decision);
 
+/** Writes the pre-PR runner's record of the turn's tip, as `pre-pr.ts` does. */
+function runner(t: Turn) {
+	const head = Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: t.dir });
+	mkdirSync(join(t.state, "harness"), { recursive: true });
+	appendFileSync(
+		ledger(t.state),
+		`${JSON.stringify({
+			gate: "pre-pr",
+			decision: "pass",
+			rule: "diff-budget",
+			project: realpathSync(t.dir),
+			commit: head.stdout.toString().trim(),
+		})}\n`,
+	);
+}
+const turnGate = (state: string) =>
+	records(state)
+		.filter((r) => r.gate === "turn-gate")
+		.map((r) => r.decision);
+
 describe("a turn that completed a group", () => {
 	test("a refusal records turn-gate, refused, pre-pr-sequence", () => {
 		const t = turn(DONE);
@@ -95,18 +117,26 @@ describe("a turn that completed a group", () => {
 		expect(decisions(t.state)).toEqual(["refused", "passed"]);
 	});
 
-	test("a turn ending with gate lines records a pass", () => {
+	test("a turn ending with gate lines and the runner's record records a pass", () => {
+		const t = turn(DONE);
+		runner(t);
+		stop(t, GATES);
+		expect(turnGate(t.state)).toEqual(["passed"]);
+	});
+
+	test("a turn ending with gate lines and no runner record records a refusal", () => {
 		const t = turn(DONE);
 		stop(t, GATES);
-		expect(decisions(t.state)).toEqual(["passed"]);
+		expect(decisions(t.state)).toEqual(["refused"]);
 	});
 
 	// spec: gate-ledger/a-turn-refused-then-let-through
 	test("a refused turn continued to gate lines records a refusal, then a pass", () => {
 		const t = turn(DONE);
 		stop(t, SILENT);
+		runner(t);
 		stop(t, GATES);
-		expect(decisions(t.state)).toEqual(["refused", "passed"]);
+		expect(turnGate(t.state)).toEqual(["refused", "passed"]);
 	});
 
 	// spec: gate-ledger/refused-then-ended-without-gates

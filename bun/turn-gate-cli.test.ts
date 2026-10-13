@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
 	cleanup,
 	commit,
@@ -71,14 +72,30 @@ describe("how the refusal leaves the process", () => {
 	});
 
 	// spec: commit-gates/the-turn-reports-its-gates
-	test("a reported turn exits 0 with nothing on stderr", () => {
+	test("a reported turn with the runner's record exits 0 with nothing on stderr", () => {
 		const { dir, tmp } = finished();
+		mkdirSync(join(tmp, "harness"));
+		writeFileSync(
+			join(tmp, "harness", "gates.jsonl"),
+			`${JSON.stringify({
+				gate: "pre-pr",
+				project: realpathSync(dir),
+				commit: git(dir, "rev-parse", "HEAD"),
+			})}\n`,
+		);
 		const message = `${SILENT}\n\nTRIAGE gate: PASS — 1 groups.`;
 		expect(run("stop", end(dir, message), dir, tmp)).toEqual({
 			code: 0,
 			reason: "",
 			out: "",
 		});
+	});
+
+	// spec: commit-gates/gate-lines-with-no-run-behind-them
+	test("a reported turn without the runner's record exits 2 [35]", () => {
+		const { dir, tmp } = finished();
+		const message = `${SILENT}\n\nTRIAGE gate: PASS — 1 groups.`;
+		expect(run("stop", end(dir, message), dir, tmp).code).toBe(2);
 	});
 
 	test("the mark half prints nothing — its stdout would join every prompt", () => {

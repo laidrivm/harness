@@ -9,8 +9,10 @@
  * It runs without an `if` field on purpose. A permission pattern — which is
  * what `if` takes — matches the command word literally, so `/usr/bin/git` and
  * `command gh` never reach a hook narrowed that way. Deciding here instead
- * costs one bun start per Bash call, measured at 16-22 ms, and buys a boundary
- * that a spelling does not walk around.
+ * costs one bun start per Bash call, and buys a boundary that a spelling does
+ * not walk around. On a call it allows, the guard measured 10.7-11.0 ms per call
+ * before the merged-branch check and 11.0-11.1 ms after (50 runs per round,
+ * three rounds, 2026-10-13). Only a commit pays for the branch's git reads.
  *
  * Exit 0 allows and exit 2 blocks, with the reason on stderr — those are the
  * only two codes Claude Code reads as a decision. Every other non-zero code is
@@ -18,11 +20,13 @@
  * as well.
  *
  * Reading the command line is `command-parse.ts`'s; what this file
- * holds is what the prohibitions themselves are.
+ * holds is what the prohibitions themselves are, the reading of a `gh`
+ * invocation excepted, which is `command-guard-gh.ts`'s.
  */
 
 import { existsSync } from "node:fs";
 import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
+import { ghApiWrite, ghPublish } from "./command-guard-gh.ts";
 import { commands, invocations, place, SHELLS } from "./command-parse.ts";
 import { blocker } from "./gate-ledger.ts";
 import {
@@ -112,13 +116,6 @@ function refuseStranded(target: string): void {
 		);
 }
 
-/** The `gh` subcommand pairs that publish text on the user's behalf. */
-const GH_WRITES = [
-	["pr", "comment"],
-	["issue", "comment"],
-	["pr", "review"],
-];
-
 function check(command: string): void {
 	for (const part of commands(command)) {
 		// Every candidate, not the first: past a wrapper the parser cannot tell
@@ -151,18 +148,10 @@ function check(command: string): void {
 			}
 
 			if (name === "gh") {
-				// Adjacent anywhere, not the first two words: a global flag's value
-				// sits in front of them in `gh --repo a/b pr comment`.
-				const plain = rest.filter((word) => !word.startsWith("-"));
-				const write = GH_WRITES.find(([a, b]) =>
-					plain.some((word, at) => word === a && plain[at + 1] === b),
-				);
-				if (write) {
-					block(
-						"gh-publish",
-						`command-guard: \`gh ${write.join(" ")}\` publishes text under the user's name. Report what you would have written and let them send it.`,
-					);
-				}
+				const publish = ghPublish(rest);
+				if (publish) block("gh-publish", publish);
+				const write = ghApiWrite(rest);
+				if (write) block("gh-api-write", write);
 				continue;
 			}
 
