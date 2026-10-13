@@ -33,10 +33,12 @@ machine (2026-10-13), with scripts whose output shows which lines ran:
 
 **Goals:**
 
-- Where the guard places a body, it places it where every probed shell does,
-  or earlier. Ending a body early reads more lines as commands, and that
-  only over-refuses.
-- Where it cannot place one, the call is read as it is today.
+- Where the guard places a body, it places it where bash, zsh and sh do.
+  Ending a body early is not safe: the lines read as commands can open a
+  quote that hides the command after the real end.
+- Where the delimiter line never comes, the rest is read as commands, and
+  the shell runs none of it. A delimiter word the guard cannot read refuses
+  the call.
 
 **Non-Goals:**
 
@@ -62,9 +64,11 @@ differ.** A delimiter line must match exactly, and only tabs are stripped
 under `<<-`. A line also ends the body when it equals the delimiter once
 joined to earlier lines ending in a backslash. bash, zsh and sh join there
 and dash does not, so the guard takes whichever end comes first. A quoted
-delimiter is joined too, though no probed shell joins it. That ends the body
-earlier than the shell does, and only in a case that does not come up in
-practice.
+delimiter is matched literally, as every probed shell matches it. Ending a
+body earlier than the shell is not the safe side D1 makes it look: the lines
+read as commands can open a quote that hides the command after the real end,
+as `cat <<'EOF'⏎E\⏎OF⏎'⏎EOF⏎git push --force` would under a join (PR #101
+review).
 
 **D3. Pending heredocs belong to the substitution level.** The list of
 operators waiting for a body is saved and cleared when `$(` or a backtick
@@ -91,16 +95,22 @@ limit so it reads as a decision and not an oversight.
 
 **D5. An unquoted body yields only what its substitutions hold.** The body
 is scanned in a body mode where the only special characters are `$(`, the
-backtick and the backslash. The literal text is dropped, not gathered into
+backtick and the backslash. A backslash quotes the character after it, so
+`\\$(…)` is a literal backslash and a substitution that runs, while `\$(` is
+literal: the parity of a run of backslashes decides. The literal text is
+dropped, not gathered into
 words. A body is stdin, not argv, and gathering it would only produce
 nonsense commands such as one whose name is `git push --force`.
 
 **D6. `<<` is no operator inside arithmetic, and some delimiters are left
 alone.** A frame opened by `$((` or `((` is marked as arithmetic, and a frame
 nested inside it inherits the mark. `$(` and backticks clear it, because
-they are command contexts again. A delimiter word holding `$`, a backtick or
-`(` is not honoured, which sends `<<$(…)`, `$[1<<2]` and the like to today's
-reading. `<<<` is consumed as a here-string before `<<` is tested.
+they are command contexts again. A delimiter word holding `$` is matched by
+its literal text, since the shell does not expand it: `cat <<$X` ends at a
+`$X` line. A word holding a backtick or `(`, as in `<<$(…)`, refuses the
+call. Today's reading would let a quote in the body hide the command after
+it (PR #101 review), and no call anyone needs spells a delimiter that way.
+`<<<` is consumed as a here-string before `<<` is tested.
 
 **D7. The operator and its delimiter leave the word list.** Today `<<-`
 followed by a space-separated delimiter leaves the delimiter word as a

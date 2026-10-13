@@ -48,10 +48,11 @@ of it. So the fix cannot be "skip every heredoc body".
   line as a script, whatever the quoting. That covers `bash <<'EOF'`,
   `cat <<'EOF' | sh` and `eval "$(cat <<'EOF' …)"`, all of which run the
   body.
-- A heredoc the scanner cannot place is read as it is today, as commands.
-  That means an operator whose delimiter line never comes, or whose
-  delimiter word holds a `$`, a backtick or a `(`. Reading such a body as
-  commands can only over-refuse.
+- A heredoc the scanner cannot place fails closed. An operator whose
+  delimiter line never comes is read as it is today, as commands, and the
+  shell runs nothing after it. A delimiter word holding a backtick or a `(`
+  refuses the call. One holding a `$` is matched by its literal text, as
+  the shell matches it.
 - `openspec/specs/agent-permissions` gains requirements fixing that
   reading. The script-reader one also states its ceiling: a file a heredoc
   writes and the same call then runs by path, as in `./s.sh`, is outside the
@@ -85,7 +86,7 @@ put a second specification over one guard.
   *A quoted heredoc's body is data*, *An unquoted heredoc's body runs only
   its substitutions*, *A heredoc body ends where the shell ends it*, *A
   heredoc fed to a script reader is read as a script* and *A heredoc the
-  guard cannot place is read as commands*. They are added beside *The git
+  guard cannot place fails closed*. They are added beside *The git
   prohibitions are enforced by a hook* rather than written into it. That
   requirement already runs to 140 lines of prose and scenarios, and copying
   it whole for a MODIFIED delta would put most of this change's diff in text

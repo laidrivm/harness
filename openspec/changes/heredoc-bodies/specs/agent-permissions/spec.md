@@ -27,8 +27,9 @@ quotes.
 The guard SHALL read the body of a heredoc whose delimiter is wholly unquoted
 for `$(…)` and backtick substitutions, and SHALL check each command they
 hold. The rest of the body is input text, so it SHALL NOT be read as
-commands. A backslash before `$` or a backtick SHALL keep it literal, as the
-shell keeps it.
+commands. A `$` or a backtick after an odd number of backslashes SHALL stay
+literal, as the shell keeps it. After an even number the backslashes quote
+each other, so the substitution SHALL be checked.
 
 #### Scenario: A substitution in an unquoted body
 
@@ -41,6 +42,12 @@ shell keeps it.
 - **WHEN** the body line is `` `git push --force origin feat/x` `` instead
 - **THEN** the hook blocks the call
 
+#### Scenario: Two backslashes before a substitution
+
+- **WHEN** the body line is `\\$(git push --force origin feat/x)` instead
+- **THEN** the hook blocks the call, because the first backslash quotes the
+  second and the shell runs the substitution
+
 #### Scenario: A plain line in an unquoted body
 
 - **WHEN** the agent attempts `cat <<EOF`, with a body line
@@ -52,9 +59,11 @@ shell keeps it.
 The guard SHALL start a body after the next unquoted newline at the
 operator's own substitution level. A newline inside `( … )` starts it, and
 one inside `$(…)` or backticks does not. The body SHALL end at the first
-line equal to the delimiter, with leading tabs stripped for `<<-`, or equal
-to it once joined to lines before it ending in a backslash. The guard SHALL
-read every command after that line.
+line equal to the delimiter, with leading tabs stripped for `<<-`. For a
+wholly unquoted delimiter it SHALL also end at a line equal to the delimiter
+once joined to lines before it ending in a backslash. A quoted delimiter
+SHALL be matched literally, as the shell matches it. The guard SHALL read
+every command after that line.
 
 #### Scenario: A quote character in a body
 
@@ -82,6 +91,13 @@ read every command after that line.
   `git push --force origin feat/x`, then `EOF`
 - **THEN** the hook blocks the call, because bash, zsh and sh join `EO\` and
   `F` into the delimiter
+
+#### Scenario: A split delimiter under a quoted one
+
+- **WHEN** the agent attempts `cat <<'EOF'`, then `E\`, `OF`, `'`, then
+  `EOF`, then `git push --force origin feat/x`
+- **THEN** the hook blocks the call, because the shell does not join lines
+  for a quoted delimiter, so `'` is body and the push runs after `EOF`
 
 #### Scenario: A space-indented delimiter under the dash form
 
@@ -120,18 +136,32 @@ runs by path is outside the guard, as a file written any other way is.
   `EOF`, then `bash s.sh`
 - **THEN** the hook blocks the call, because `bash` stands in the call
 
-### Requirement: A heredoc the guard cannot place is read as commands
+### Requirement: A heredoc the guard cannot place fails closed
 
-Where the guard cannot place a body, it SHALL read the text after the
-operator as commands. That covers a delimiter line that never comes, and a
-delimiter word holding `$`, a backtick or `(`. `<<` inside `$((…))` or
-`((…))` is a shift, and `<<<` is a here-string, so neither SHALL start a
-body.
+Where the delimiter line never comes, the guard SHALL read the text after
+the operator as commands. A delimiter word holding `$` SHALL be matched by
+its literal text, since the shell does not expand it. A delimiter word
+holding a backtick or `(` SHALL make the guard refuse the call, since the
+guard cannot tell where that word ends, and reading the body as commands
+lets a quote in it hide what follows. `<<` inside `$((…))` or `((…))` is a
+shift, and `<<<` is a here-string, so neither SHALL start a body.
 
 #### Scenario: A delimiter that never comes
 
 - **WHEN** the agent attempts `cat <<'EOF'`, then
   `git push --force origin feat/x`, with no `EOF` line
+- **THEN** the hook blocks the call
+
+#### Scenario: A delimiter holding a dollar
+
+- **WHEN** the agent attempts `cat <<$X`, with a body line `don't`, then
+  `$X`, then `git push --force origin feat/x`
+- **THEN** the hook blocks the call, because the body ends at the literal
+  `$X` line
+
+#### Scenario: A delimiter holding a substitution
+
+- **WHEN** the agent attempts `cat <<$(echo E)`, then a body line `x`
 - **THEN** the hook blocks the call
 
 #### Scenario: An arithmetic shift
