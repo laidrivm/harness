@@ -105,11 +105,23 @@ carried by the pull request that bumps its pin past group 1.
       what it listed [22] [24]. Expected to correct nothing, since every card
       was moved by hand that turn. A correction it does make is reported, not
       hidden.
-- [ ] 1.8 In the same session, run `/session-wrapup` and confirm that step 3
+- [x] 1.8 In the same session, run `/session-wrapup` and confirm that step 3
       reports the reconciliation of the cards for the changes the session
       touched. A card the session moved behind its floor on purpose, for the
       check, is corrected and reported [27]. Restore it by hand afterwards if
       it was ahead.
+      — evidence: run on 2026-10-14 in the orchestrator session, where the
+      user invoked `/session-wrapup`. Step 3 ran `bun bun/board-state.ts` and
+      compared the 21 `Harness` cards whose `Pointer` names a change
+      directory the session touched. For the check, the card for this change
+      was moved from applying to explored, below its floor `proposed`; the
+      reconciliation set it to `proposed`, re-read it and reported it [27].
+      It was then restored to applying by hand, as it had been ahead. Listed
+      without a status change: the interpreter-prompt card, whose directory
+      exists only on an unmerged proposal branch, and three done cards whose
+      `Pointer` still names a pre-archive path (settings-local-sweep,
+      push-option-values, bot-reads-rulebook). 1.7 ran on 2026-10-12, so
+      this was a later session than the task names, not the same one.
 
 ## 2. Each consumer
 
