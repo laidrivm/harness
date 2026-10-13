@@ -108,6 +108,9 @@ describes is rewritten, the rule is a candidate for deletion.
 - Never treat reading extra text as commands as a command scan's safe side —
   a quote that text leaves open hides what follows; probe a claim about how a
   shell parses before a design rests on it.
+- Pin a scan's frame-level state with a case whose newline falls inside the
+  frame — a state the frame's close discards passes every case that closes it
+  first.
 
 #### Process
 
@@ -150,6 +153,9 @@ Rules about how work is carried out here. They do not age with the code.
 - Pass `--full-tree` to a `git ls-tree` whose pathspec names a path from the
   repository root — a working directory below the root resolves it against
   itself and lists nothing.
+- Mark a pull request draft (`gh pr ready --undo`) while an agent still pushes
+  to it, and mark it ready only once its report is in — a merge button that
+  works merges the half-done branch.
 - Before a commit, run the build's own scan over every file the commit writes
   that the scan covers, since a fixture in a test can be valid input to the
   scan it tests.

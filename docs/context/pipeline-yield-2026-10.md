@@ -81,3 +81,12 @@
 - triage (chore/wrapup-2026-10-12): PASS — 1 group, nothing above Low risk
 - coderabbit-local (chore/wrapup-2026-10-12): PASS — 1 finding, 1 acted on (this entry's "nothing changed" claim, corrected)
 - Not run: zombies, warm, coderabbit, first-five, review-order, code-review, preflight — until the wrap-up the session changed nothing in this repository: it filed and edited board cards and wrote the untracked local/harness-roadmap.html; the wrap-up branch carries three card-writing rules in core/feature-workflow.md and this entry
+
+## 2026-10-14 — main (orchestrator session for roadmap section A, 2026-10-12 to 2026-10-14; sub-agents in scratch clones, PRs #82–#113 and dota2#322, mellon#47)
+
+- coderabbit (#99, run by the orchestrator): PASS — 2 findings, 1 acted on (a `-c` program is the first operand after the shell's options; 1 already resolved)
+- coderabbit (#101, run by the orchestrator over four reviews): PASS — 10 findings, 7 acted on (quoted delimiter matched literally, backslash parity, a `$` delimiter matched literally, a dash-split delimiter refused, a path-named command read as a script reader, the refusal naming its open state, MD038); 1 Minor skipped by reading (path rule kept as fail-closed), 1 Trivial skipped, the rest already resolved
+- Side agent, not a skill: 1 note, 1 acted on — every #101 hole shares one shape, so a scan ending inside a quote now refuses the call (D10)
+- Sub-agents' own pre-PR runs (zombies, warm, triage, coderabbit-local) are recorded in each PR body; the sharpest yield there: coderabbit-local found 2 Critical guard holes on #109 (a `-c` program shaped like a redirection; an unnormalised path to standard input), and 1 Major each was dismissed by the user on #104 and #111
+- Not run by the orchestrator: zombies, warm, triage, coderabbit-local, first-five, review-order, code-review, preflight — every code and spec change went through a sub-agent's pre-PR sequence
+- gates: command-guard block force-push ×1, command-guard block gh-publish ×1, command-guard block main-commit ×4, command-guard block main-push ×3, command-guard block stale-fetch ×2, command-guard block unreadable-branch ×2, loop-guard warned repeated-failure ×1, pre-pr pass diff-budget ×11, question-gate allowed question ×2, question-gate passed reply ×1, turn-gate passed pre-pr-sequence ×11, turn-gate refused pre-pr-sequence ×11
