@@ -10,17 +10,13 @@
  *   bun bun/board-loop.ts <change>                        (the harness)
  *   bun node_modules/harness/bun/board-loop.ts <change>   (a consumer)
  *
- * It refuses inside a Claude Code session, because the classifier refuses a
- * session that launches `claude -p` and an agent's `bun` call names none. It
- * never discards work to reach the default branch's tip: a tracked edit, an
- * unpushed tip or a branch that cannot fast-forward is the user's to look at.
- * It installs from the lockfile before any session, since `bun install` is an
- * `ask` that a session with nobody to answer cannot get past.
- *
- * Each pass ends on one line, `board-loop: <outcome> — …`, and one `loop`
- * record in the gate ledger. The outcome is `met`, `open`, `timeout`, `idle`
- * or `refused`, and the exit status is 0 for `met` and `idle` alone, so a
- * shell loop around it stops at the first pass that needs a person.
+ * It refuses inside a Claude Code session: an agent's `bun` call names no
+ * `claude -p` for the classifier to refuse. It never discards work to
+ * reach the default branch's tip, and it installs before any session, since
+ * `bun install` is an `ask` nobody would answer. Each pass ends on one line
+ * and one `loop` record: `met`, `open`, `timeout`, `idle` or `refused`, with
+ * exit 0 for `met` and `idle` alone, so a shell loop stops where a person is
+ * needed.
  */
 import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -158,18 +154,12 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 	console.log(`carrying ${target} on ${chosen.branch}`);
 	let late = false;
 	try {
-		const session = Bun.spawn(
-			[
-				"claude",
-				"-p",
-				prompt(slug, chosen.step, relative(top.out, check)),
-				"--permission-mode",
-				"auto",
-				"--permission-prompts",
-				"none",
-			],
-			{ stdio: ["ignore", "inherit", "inherit"] },
-		);
+		const launch = prompt(slug, chosen.step, relative(top.out, check));
+		// Auto mode with nothing to answer prompts; never a bypass of permissions.
+		const flags = ["--permission-mode", "auto", "--permission-prompts", "none"];
+		const session = Bun.spawn(["claude", "-p", launch, ...flags], {
+			stdio: ["ignore", "inherit", "inherit"],
+		});
 		const timer = setTimeout(() => {
 			late = true;
 			// shortcut: SIGTERM to `claude` alone; send SIGKILL to its group if one is seen to outlive it.

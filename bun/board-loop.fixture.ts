@@ -13,12 +13,12 @@
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { emptyDir, git } from "./diff-budget.fixture.ts";
+import { records as ledger } from "./goal-check.fixture.ts";
+
+export { out } from "./goal-check.fixture.ts";
 
 const runner = join(import.meta.dir, "board-loop.ts");
 const REAL_GIT = Bun.which("git") ?? "git";
-
-export const out = (dir: string, ...args: string[]) =>
-	Bun.spawnSync(["git", ...args], { cwd: dir }).stdout.toString().trim();
 
 export const ONE = "## 1. Only\n\n- [ ] 1.1 a\n";
 export const THREE =
@@ -159,14 +159,4 @@ export function run(
 }
 
 /** The `loop` records in a state directory's ledger. */
-export function records(state: string): Record<string, unknown>[] {
-	try {
-		return readFileSync(join(state, "harness", "gates.jsonl"), "utf8")
-			.split("\n")
-			.filter(Boolean)
-			.map((line) => JSON.parse(line))
-			.filter((r) => r.gate === "loop");
-	} catch {
-		return [];
-	}
-}
+export const records = (state: string) => ledger(state, "loop");

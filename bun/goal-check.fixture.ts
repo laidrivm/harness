@@ -104,14 +104,14 @@ export function run(
 	return { code: call.exitCode, last: text.split("\n").at(-1) ?? "", state };
 }
 
-/** The `goal` records in a state directory's ledger. */
-export function records(state: string): Record<string, unknown>[] {
+/** One gate's records in a state directory's ledger, the goal check's by default. */
+export function records(state: string, gate = "goal"): Record<string, unknown>[] {
 	try {
 		return readFileSync(join(state, "harness", "gates.jsonl"), "utf8")
 			.split("\n")
 			.filter(Boolean)
 			.map((line) => JSON.parse(line))
-			.filter((r) => r.gate === "goal");
+			.filter((r) => r.gate === gate);
 	} catch {
 		return [];
 	}
