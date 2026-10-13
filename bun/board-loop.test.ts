@@ -70,16 +70,19 @@ describe("the clone", () => {
 	});
 
 	// spec: board-loop/the-previous-pass-s-step-branch
-	test("a default branch that cannot fast-forward refuses, merging and resetting nothing [6]", () => {
+	test.each([
+		["diverged from", true, "cannot fast-forward"],
+		["only ahead of", false, "holds commits origin/main lacks"],
+	])("a local main %s origin refuses, merging and resetting nothing [6]", (_, moved, why) => {
 		const { dir, origin } = clone();
 		commit(dir);
 		const local = out(dir, "rev-parse", "main");
 		git(dir, "switch", "-qc", "feat/demo", "origin/main");
 		git(dir, "push", "-q", "origin", "feat/demo");
-		advance(origin);
+		if (moved) advance(origin);
 		const r = run(dir);
 		expect(r.last).toStartWith("board-loop: refused");
-		expect(r.last).toContain("fast-forward");
+		expect(r.last).toContain(why);
 		expect(out(dir, "rev-parse", "main")).toBe(local);
 		expect(r.calls).not.toContain("claude");
 	});
