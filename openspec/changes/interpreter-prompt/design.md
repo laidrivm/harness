@@ -45,11 +45,11 @@ only a prompt.
 
 ### Tracked, or installed under `node_modules/`
 
-A tracked file's text is in the tree a reviewer reads, and an uncommitted
-edit to it shows in `git diff`. Consumers run
-`bun node_modules/harness/bun/<script>.ts`, which they do not track, so the
-repository's own top-level `node_modules/` is exempt. A `node_modules`
-directory anywhere else is not.
+A committed file's text is in the tree a reviewer reads. An uncommitted or
+staged edit is not, and a shell write makes one past the guard, so it asks.
+Consumers run `bun node_modules/harness/bun/<script>.ts`, which they do not
+track, so the repository's own top-level `node_modules/` is exempt. A
+`node_modules` directory anywhere else is not.
 
 The operand resolves from every directory in the guard's `dirs` set, as `-C`
 does, and then to its real path: a tracked symlink puts only its target's

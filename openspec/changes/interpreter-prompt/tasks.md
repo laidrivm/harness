@@ -22,27 +22,28 @@ text the guard cannot read prompts* but
       `command-guard.fixture.ts`, and record that each fails against the guard
       as it stands. Cover inline code in every listed spelling, wrapped forms,
       a non-shell interpreter reading standard input (`python3`, `node -`,
-      `bun -`), throwaway files, a tracked or `node_modules/` symlink to one,
-      `source`, and the bun subcommands that run code. Each exits 0, and its
-      whole stdout parses as one object with `hookEventName` `PreToolUse`,
+      `bun -`), throwaway files, a tracked script with a staged or uncommitted
+      edit, a tracked or `node_modules/` symlink to a throwaway file, `source`,
+      and the bun subcommands that run code. Each exits 0, and its whole
+      stdout parses as one object with `hookEventName` `PreToolUse`,
       `permissionDecision` `ask` and a reason naming the interpreter [1, 3, 7,
       9, 10, 14, 15, 16, 21]
 - [ ] 1.2 Write the controls in the same file, which must pass both before and
-      after: a tracked script, a tracked script with uncommitted edits, a file
-      under the repository's top-level `node_modules/`, the long version and
-      help queries, `bash -c "echo hi"`, `bun test` and `bun run <package
-      script>`. Each has empty stdout and exit 0. Assert at the module level
-      that `bun x tool` and a bare `sh` reading a pipe get no reason from
-      this check. Those two belong to the `bunx` check and the shell-stdin
-      check [2, 4, 11, 12, 13, 14, 15, 22]
+      after: a clean tracked script, a file under the repository's top-level
+      `node_modules/`, the long version and help queries, `bash -c "echo hi"`,
+      `bun test` and `bun run <package script>`. Each has empty stdout and exit
+      0. Assert at the module level that `bun x tool` and a bare `sh` reading a
+      pipe get no reason from this check. Those two belong to the `bunx` check
+      and the shell-stdin check [2, 4, 11, 12, 13, 14, 15, 22]
 - [ ] 1.3 Add `bun/command-guard-interpreters.ts`. It is given an invocation
       and the guard's `dirs`, and returns an `{ id, reason }` or nothing. It
       holds the interpreter names, the `bun` subcommand constant read from
-      bun 1.4.2's `--help`, and the tracked-or-installed test on the file's
-      `realpath`, through `git ls-files --error-unmatch` and `git rev-parse
-      --show-toplevel`. Uncertainty answers `ask`: a `null` place, a `$` in the
-      path, a link that does not resolve, a git call that fails, a directory
-      outside any work tree [8, 18, 19, 20]. Verify with 1.1 and 1.2
+      bun 1.4.2's `--help`, and the committed-or-installed test on the file's
+      `realpath`, through `git ls-files --error-unmatch`, `git diff --quiet
+      HEAD --` and `git rev-parse --show-toplevel`. Uncertainty answers `ask`:
+      a `null` place, a `$` in the path, a link that does not resolve, a git
+      call that fails, a directory outside any work tree [8, 18, 19, 20].
+      Verify with 1.1 and 1.2
 - [ ] 1.4 In `bun/command-guard.ts`, call the module for each invocation that
       the shell `-c` and `eval` branches did not consume, and collect the
       results. After `check(command)`, if any were collected, write one JSON
