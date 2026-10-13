@@ -116,11 +116,11 @@ describe("which record discharges a reported turn", () => {
 		expect(decide(end(dir, REPORTED), marks)).toBeString();
 	});
 
-	// spec: commit-gates/a-run-from-a-subdirectory
-	test("a record from a subdirectory of this checkout discharges", () => {
+	// spec: commit-gates/a-worktree-nested-inside-the-checkout
+	test("a record naming a path under this checkout does not discharge", () => {
 		const { dir, marks, tip } = finished();
-		ledger(run(tip, join(real(dir), "openspec")));
-		expect(decide(end(dir, REPORTED), marks)).toBeUndefined();
+		ledger(run(tip, join(real(dir), ".worktrees", "other")));
+		expect(decide(end(dir, REPORTED), marks)).toBeString();
 	});
 
 	test("a tip read from the remote-tracking ref needs that ref's record [26]", () => {

@@ -224,9 +224,9 @@ holds no record of the pre-PR runner for the turn's tip in this checkout
 (`pre-pr-runner`, *The runner records each run for the commit it read*). The
 tip is the commit the turn's work is read from, as the paragraph on the mark
 below decides it. A record is this checkout's when the project it names is the
-repository's top level, as git resolves it from the turn's working directory,
-or lies under it. A run in another clone at the same commit does not count,
-because that clone measured against its own base refs. It
+repository's top level, as git resolves it from the turn's working directory.
+A run in another clone or worktree at the same commit does not count, nested
+inside this one or not, because it measured against its own base refs. It
 SHALL block by exiting **2** with the reason on stderr, which is
 the only code that prevents the turn ending, and the only channel the model
 reads — stderr from a hook exiting 0 reaches the debug log alone.
@@ -353,8 +353,15 @@ its own working tree, because it is not installed as its own package.
 #### Scenario: A run from a subdirectory
 
 - **WHEN** the runner recorded the tip from a subdirectory of this checkout
-- **THEN** the record discharges the turn, because its project lies under the
-  checkout's top level
+- **THEN** the record discharges the turn, because the runner records the
+  checkout's top level wherever in it it runs
+
+#### Scenario: A worktree nested inside the checkout
+
+- **WHEN** a worktree kept under this checkout's directory recorded a run at
+  the tip, and this checkout did not
+- **THEN** the hook blocks, because the record names that worktree's top
+  level, not this one's
 
 #### Scenario: A run record and no gate line
 

@@ -41,10 +41,10 @@ export function ledgerFile(): string {
 
 /**
  * Whether the ledger holds the pre-PR runner's record of `commit` made in the
- * checkout whose top level is `top`: its project is `top` or a path under it,
- * so a run from a subdirectory counts and one in another clone, measured
- * against that clone's base refs, does not. A ledger that cannot be read, or a
- * torn line, holds none.
+ * checkout whose top level is `top`. The runner records its checkout's top
+ * level wherever it runs, so the match is exact: a path under `top` can be a
+ * worktree nested there, measured against its own base refs. A ledger that
+ * cannot be read, or a torn line, holds none.
  */
 export function ran(commit: string, top: string | undefined): boolean {
 	if (!top) return false;
@@ -57,12 +57,7 @@ export function ran(commit: string, top: string | undefined): boolean {
 	return text.split("\n").some((line) => {
 		try {
 			const { gate, project, commit: read } = JSON.parse(line) ?? {};
-			return (
-				gate === "pre-pr" &&
-				read === commit &&
-				typeof project === "string" &&
-				(project === top || project.startsWith(`${top}/`))
-			);
+			return gate === "pre-pr" && read === commit && project === top;
 		} catch {
 			return false;
 		}
