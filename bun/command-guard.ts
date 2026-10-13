@@ -20,10 +20,11 @@
  * non-blocking, so an event this script cannot decide takes the blocking one
  * as well.
  *
- * Reading the command line is `command-parse.ts`'s; what this file
- * holds is what the prohibitions themselves are, the reading of a `gh`
- * invocation excepted, which is `command-guard-gh.ts`'s, and of a shell's
- * program and a `bunx`'s options, which is `command-guard-exec.ts`'s.
+ * Reading the command line is `command-parse.ts`'s, and what one command
+ * invokes is `command-words.ts`'s; what this file holds is what the
+ * prohibitions themselves are, the reading of a `gh` invocation excepted,
+ * which is `command-guard-gh.ts`'s, and of a shell's program and a `bunx`'s
+ * options, which is `command-guard-exec.ts`'s.
  */
 
 import { existsSync } from "node:fs";
@@ -34,7 +35,8 @@ import {
 	unreadProgram,
 } from "./command-guard-exec.ts";
 import { ghApiWrite, ghPublish } from "./command-guard-gh.ts";
-import { commands, invocations, place, SHELLS } from "./command-parse.ts";
+import { commands } from "./command-parse.ts";
+import { invocations, place, SHELLS } from "./command-words.ts";
 import { blocker } from "./gate-ledger.ts";
 import { FORCE, pushWords, REF_WIDE, VALUE_OPTIONS } from "./git-options.ts";
 
@@ -119,7 +121,7 @@ function refuseStranded(target: string): void {
 }
 
 function check(command: string): void {
-	for (const part of commands(command)) {
+	for (const part of commands(command, block)) {
 		// Every candidate, not the first: past a wrapper the parser cannot tell
 		// an option's operand from the command it wraps, and a candidate naming
 		// nothing this file guards costs a comparison.
