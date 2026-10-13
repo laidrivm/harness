@@ -31,6 +31,17 @@ describe("gh api with a parameter and no method", () => {
 		expect(code).toBe(2);
 		expect(reason).toContain("`-f body=hi`");
 	});
+
+	test("a flag the read list does not name blocks", () => {
+		// Scoped by the reads it exempts: a flag gh adds later is a write until
+		// someone shows it reads.
+		const { code, reason } = run(
+			event("gh api /repos/o/r/issues --some-future-flag"),
+			anywhere(),
+		);
+		expect(code).toBe(2);
+		expect(reason).toContain("`--some-future-flag`");
+	});
 });
 
 describe("gh api graphql", () => {
