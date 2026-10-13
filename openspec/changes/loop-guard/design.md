@@ -219,6 +219,31 @@ What happened:
 So `continue: false` from this event neither stopped the run nor surfaced its
 reason. The second, third and fourth questions of that probe were not run.
 
+**The probe that confirmed the revision (2026-10-13).** The user ran R1 of the
+revised kit. The setup:
+- a scratch repository whose hook counted failures per Bash command;
+- on a command's second failure, the hook barred it and answered with an
+  `additionalContext` warning;
+- `PreToolUse` refused the barred command with exit 2 and a `loop-guard:`
+  reason;
+- `claude -p` was told to run `false` four times and quote any hook note.
+
+The hook bars at the second failure, not the third, only to keep the run
+short.
+
+The four counts:
+- `FAILED false` in the log: 2;
+- `DECISION refused` in the log: 1;
+- `loop-guard: probe refused` in the stream-json output: 3;
+- `loop-guard: probe warning` in that output: 2.
+
+So the barred call never ran again (R1). The refusal's reason reached the
+model and the `-p` output (R2), and so did the warning (R3). The model tried the
+refused call once and did not try it again.
+
+R4 (the bar inside a sub-agent) and R5 (`PostToolBatch`) were not run. R4
+stays in task 1.1.
+
 **Transcripts.** The retained transcripts were scanned on 2026-10-12, in all of
 `~/.claude/projects/`: the harness, d2ass, mellon and two others. That is 53
 files, the oldest from 2026-09-11, holding 130 failed calls once permission
@@ -244,14 +269,10 @@ a new prompt lets through again.
 
 ## Risks / Trade-offs
 
-- [`additionalContext` from `PostToolUseFailure` may not reach the model under
-  `-p`, as `continue: false` did not] → The new task 1.1 probes it. If it does
-  not arrive, the refusal still carries the same instruction, so the warning
-  is lost but the guard still holds.
 - [A `PreToolUse` refusal may behave differently outside Bash, or inside a
-  sub-agent] → Task 1.1 probes a sub-agent. The command guard's refusals are
-  the evidence for Bash. Other tools are covered only by the docs, which
-  promise the same block for every tool.
+  sub-agent] → Task 1.1 probes a sub-agent. The R1 probe and the command
+  guard's refusals are the evidence for Bash. Other tools are covered only by
+  the docs, which promise the same block for every tool.
 - [An agent may keep calling the barred command, spending model turns] → Each
   refusal is recorded. Ending the run is the launcher's job (*The guard
   refuses the call, it does not end the session*).
