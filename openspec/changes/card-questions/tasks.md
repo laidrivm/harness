@@ -108,15 +108,17 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       `allowed` ledger record. Call again with the `discussion_id` the post
       returned; confirm the prompt appears, the user answers No, and a
       `passed` / `reply` record. Before the answer, have a second session
-      meet the same question on that card, and then a different one: confirm
-      it reads the comments, posts neither, and reports itself parked on the
-      open question. Have the user answer with a page-level comment; read it
-      back, confirm it is taken as the answer, `Assign` is cleared and the
-      card leaves `Questions`. An unattended session needs
+      meet the same question on that card: confirm it reads the comments,
+      posts nothing, and reports itself parked on the open question. Then
+      have it meet a different question for that card: confirm it holds the
+      question in its report and posts nothing. Have the user answer with a
+      page-level comment; read it back, confirm it is taken as the answer,
+      `Assign` is cleared and the card leaves `Questions`, and confirm the
+      held question is posted after that. An unattended session needs
       `--allowedTools` for `notion-fetch` and `notion-get-comments` under its
-      machine's server name (design.md *Risks*). Record all of it in the pull request. (Req: agent-permissions
-      — A question to the user on a board card needs no prompt, §*A question
-      on a card*, §*A reply in an existing thread*; task-board — An open
+      machine's server name (design.md *Risks*). Record all of it in the
+      pull request. (Req: agent-permissions — A question to the user on a
+      board card needs no prompt, §*A question on a card*, §*A reply in an existing thread*; task-board — An open
       question waits on its card, assigned to the user, §*A question is
       posted*, §*The user answers*, §*A second question for a card*; A
       question already open is not asked again, §*The same question is open

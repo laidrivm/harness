@@ -26,9 +26,9 @@ be read back from the card's comments and applied as data.
 
 #### Scenario: The user answers
 
-- **WHEN** a card in a `Questions` view holds a comment after the question's
-  in the card's page-level discussion, authored by the user's account and not
-  opening with the question's mark
+- **WHEN** a card in a `Questions` view holds, in its page-level discussion,
+  a comment after the question's that is the first one authored by the user's
+  account and not opening with the question's mark
 - **THEN** the session working on the card's task takes that comment as the
   answer and applies it to the question it answers
 
