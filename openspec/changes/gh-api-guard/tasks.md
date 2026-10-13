@@ -87,7 +87,7 @@ and no criterion in any capability states what a doc sentence says.
       does not reach — a tracker, a forum, any service that is not GitHub —
       per `openspec/specs/agent-rulebook` §*A mechanised prohibition leaves its
       prose home*, which calls this the partly-covered case
-- [ ] 3.2 Re-run the probe table in `proposal.md` §Why against the built
+- [x] 3.2 Re-run the probe table in `proposal.md` §Why against the built
       guard and record the new column, so the change's own evidence is
       measured after rather than quoted from before
 - [ ] 3.3 Confirm the `coderabbit` skill's three `gh api` reads pass the guard
