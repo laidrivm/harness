@@ -125,7 +125,7 @@ carried by the pull request that bumps its pin past group 1.
 
 ## 2. Each consumer
 
-- [ ] 2.1 dota2, on a branch of its own checkout and never in a worktree, in
+- [x] 2.1 dota2, on a branch of its own checkout and never in a worktree, in
       the pull request that bumps its pin past group 1: add `"board":
       "D2ASS"` to the `harness` object, run `bun
       node_modules/harness/bun/board-state.ts`, and confirm it prints `D2ASS`
@@ -140,6 +140,20 @@ carried by the pull request that bumps its pin past group 1.
       the other side of that by putting text after the path of one
       cross-repository pointer temporarily: that card is listed [26]. Restore
       it and re-read it afterwards.
+      — evidence: laidrivm/dota2#322, merged 2026-10-13, added `"board":
+      "D2ASS"`; `bun node_modules/harness/bun/board-state.ts` printed
+      `D2ASS` beside 47 slugs, 13 `proposed` and 34 `done`, the count
+      design.md measured. The card's `Pointer` was rewritten to `harness:
+      openspec/changes/archive/2026-10-08-ship-turn-gate-to-consumers/` with
+      `update_properties` and the card re-read. Its body already named task
+      3.1, so the `update_content` call the task plans was not needed: one
+      call sufficed where the wording assumed two. Reconciling `D2ASS` once
+      found 23 well-formed pointers (13 `proposed`, 10 archive directories
+      present), all at their floor, so it corrected nothing [23]; it skipped
+      the rewritten cross-repository card [25] and listed the 25 cards with
+      an empty `Pointer`. With " — task 3.1" put after that card's path
+      temporarily, it was listed as naming no directory [26]; the pointer
+      was then restored and the card re-read.
 - [ ] 2.2 mellon, the same on its `main` with `"board": "mellon"`. Confirm it
       prints `mellon` and an empty `status`. Rewrite the `mellon` card for
       task 3.2 the same way, in the same two calls and a re-read, and
