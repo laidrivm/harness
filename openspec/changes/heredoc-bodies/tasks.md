@@ -97,14 +97,15 @@ Closes `agent-permissions/a-pull-request-body-naming-a-push`,
       pass over the finished command list (D4). Rewrite the doc comment on
       `commands()` to name every state it carries, the heredoc included.
       Verify that 1.1 to 1.3 pass and that `bun test` passes whole.
-      — evidence: 48 heredoc cases pass; `bun test` 1356 pass, 0 fail
+      — evidence: 53 heredoc cases pass, five of them from the pre-PR
+      `/zombies`; `bun test` passes whole
 - [x] 1.6 Measure `bun/command-parse.ts`, `bun/command-heredoc.ts` and the
       new test file against the 300-line cap: run `wc -l` on the three, and
       `bun test bun/file-size.test.ts` to confirm the gate's own reading. If
       one is over, split it in this step. Record the three counts in the pull
       request.
       — evidence: `command-parse.ts` 329 before the split, 298 after;
-      `command-heredoc.ts` 130; `command-words.ts` 124; the test file 195;
+      `command-heredoc.ts` 130; `command-words.ts` 124; the test file 213;
       `bun test bun/file-size.test.ts` 30 pass
 - [x] 1.7 Re-run the probe table in `proposal.md`, Why, against the built
       guard, and record the column it now gives in the pull request. The
