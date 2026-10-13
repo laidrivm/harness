@@ -23,9 +23,10 @@ the facts the sweep relies on:
   That is where entries like `set -e` or a lone `echo` come from.
 
 The live `agent-permissions` §*Every manifest-mutating invocation prompts*
-still says the opposite of the first point: that a broader local allow
-suppresses an ask. `bun-version-sites` replaces that requirement with the
-documented precedence. The first scenario here depends on the corrected
+said the opposite of the first point: that a broader local allow suppresses
+an ask. `bun-version-sites` replaced that requirement with the documented
+precedence, as §*Every manifest-mutating invocation prompts, whatever else
+allows it*. The first scenario here depends on the corrected
 reading, so this change follows that one, and `.openspec.yaml` declares it
 `after: [bun-version-sites]`.
 

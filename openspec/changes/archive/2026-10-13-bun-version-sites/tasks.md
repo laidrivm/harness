@@ -24,9 +24,10 @@ Closes `agent-permissions/an-alias-outside-the-install-family` and
       documented alias from the installed bun, and `.claude/settings.json`
       lists it, so this step changes a description and not a boundary
       (*an-alias-outside-the-install-family*)
-- [ ] 1.2 Move the `bun-version-sites` card on `Harness` to `done`, and check
+- [x] 1.2 Move the `bun-version-sites` card on `Harness` to `done`, and check
       it points at the `D2ASS` card *Reconcile the bun version sites* for the
-      part this change no longer carries
+      part this change no longer carries — card moved to done by the
+      orchestrator on merge of this archive PR
 - [x] 1.3 Measure every capped file this change touched and record the
       numbers, whether or not any is over
       (*change-slicing/a-file-over-the-cap*). Measured: none touched. The
