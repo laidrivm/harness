@@ -132,9 +132,10 @@ function load(file: string): Count {
  */
 function countFile(store: string, event: Event): string | undefined {
 	const { session_id: session, agent_id: agent } = event;
-	const safe = (id: unknown) => typeof id === "string" && /^[\w-]+$/.test(id);
-	if (!safe(session) || (agent !== undefined && !safe(agent))) return;
-	return join(store, agent === undefined ? session : `${session}.${agent}`);
+	const safe = (id: unknown): id is string =>
+		typeof id === "string" && /^[\w-]+$/.test(id);
+	if (!safe(session) || (agent != null && !safe(agent))) return;
+	return join(store, agent == null ? session : `${session}.${agent}`);
 }
 
 /**
