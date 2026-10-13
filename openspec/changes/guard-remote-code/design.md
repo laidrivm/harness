@@ -45,14 +45,22 @@ to the script, so `bash script.sh -s` is a script and `curl … | bash -s --
   `O`, and `--rcfile`/`--init-file`, take the next word as their value. A
   redirection and its target are skipped, as `invocations` already does.
 - A group carrying `s` → reads stdin → **refused**.
-- A group carrying `c` → the program is the next word: none there, or the
-  command marked as substitution-fed (Decision 3) → **refused**; otherwise the
-  existing recursion reads the string, unchanged.
-- Otherwise the first remaining word is the script. None, `-`, `/dev/stdin` or
-  a path under `/dev/fd/` → **refused**; any other path → allowed.
+- A group carrying `c` → the program is the next word: none there, one holding
+  a `$`, or the command marked as substitution-fed (Decision 3) →
+  **refused**; otherwise the existing recursion reads the string, unchanged.
+- Otherwise the first remaining word is the script. None, `-`, or a path under
+  `/dev/` or `/proc/` → **refused**; any other path → allowed. Scoped by
+  directory rather than by the stdin spellings (`/dev/stdin`, `/dev/fd/0`,
+  `/proc/self/fd/0`), since no script of a repository lives in either.
 
-`source` and `.`: no operand, `-`, `/dev/stdin` or `/dev/fd/*` → refused.
-`eval`: no words, or substitution-fed → refused. A heredoc, a here-string and
+`source` and `.`: the same operand test. `eval`: no words, any word holding a
+`$`, or substitution-fed → refused.
+
+A `$` is refused because the guard reads the text and the shell runs the
+value: `cmd='git push --force'; sh -c "$cmd"` hands the recursion the literal
+`$cmd`, which names nothing. Telling a harmless `$HOME` from a `$cmd` would
+need the value, so every expansion in a program string is refused — a `-c`
+string or an `eval`, never a script's arguments. A heredoc, a here-string and
 `< file` all leave the shell with no script operand, so they need no case of
 their own; `<(…)` reaches the shell as a lone `<` with nothing after it and
 falls into the same branch.
@@ -64,9 +72,10 @@ stable and short; the list sits beside its reason in the code.
 ### 3. A substitution-fed mark from the parser, not a text search
 
 `bash -c "echo $(curl …)"` reaches the guard as `["bash", "-c", "echo "]` —
-the substitution has already been split off. Searching the raw line for `$(`
-would also fire inside single quotes, and `core/rules.md` says to read a value
-from the structure the tool parses. So `commands()` marks the command it
+the substitution has already been split off, so the `$` test of Decision 2
+never sees it. Searching the raw line for `$(` would also fire on a script's
+arguments elsewhere on the line, and `core/rules.md` says to read a value from
+the structure the tool parses. So `commands()` marks the command it
 interrupts when it opens `$(`, a backtick, or a `(` straight after a `<`/`>`;
 the mark rides beside the array (a `WeakSet` export, or whatever the apply
 finds smaller) so its one caller's type does not change. Only `-c` and `eval`
@@ -128,6 +137,9 @@ well under the diff budget's warning threshold.
 - [Over-refusal of a local program fed by stdin — `sh < local.sh`, `bash
   <<'EOF'`] → the reason names the remedy, `bash <path>`; nothing in either
   consumer's tracked files does this (measured, `proposal.md` §Impact).
+- [Over-refusal of a `-c` string or `eval` holding any `$`, `bash -c 'echo
+  $HOME'` included] → run the commands directly, or put them in a script and
+  run it by path; neither consumer's tracked files does this.
 - [An unlisted value-taking shell option hides a stdin read] → the list is
   short and stable; a test pins each listed option.
 - [`xargs sh -c '{}'` runs input with a literal-looking script] → named here
