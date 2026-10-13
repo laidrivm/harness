@@ -146,6 +146,20 @@ describe("a group the turn completed itself", () => {
 		},
 	);
 
+	test("a change the turn creates and completes beside a pulled one is the only one named", () => {
+		// `a/` sorts first, so its two `missing` answers precede the pulled
+		// change's three in the batch.
+		const created = "openspec/changes/a/tasks.md";
+		const dir = based("feat", { [TASKS]: OPEN });
+		land(dir, { [TASKS]: DONE });
+		const marks = marked(dir);
+		git(dir, ...mergeMain);
+		commit(dir, { [created]: `${DONE}- [x] 1.3 c\n` });
+		const reason = decide(end(dir, SILENT), marks);
+		expect(reason).toContain("openspec/changes/a/");
+		expect(reason).not.toContain("openspec/changes/c/");
+	});
+
 	test("a change archived on `origin/main` and complete at the tip is refused [8]", () => {
 		const dir = based("feat", { [TASKS]: OPEN });
 		rmSync(join(dir, TASKS));
