@@ -232,7 +232,8 @@ guidelines the PR bot reads. A pattern SHALL match as the bot matches it: a
 #### Scenario: A repository with no config
 
 - **WHEN** the repository has no `.coderabbit.yaml`
-- **THEN** the invocation passes `--config CLAUDE.md` alone
+- **THEN** the invocation passes `CLAUDE.md` and no guideline file, adding
+  `AGENTS.md` or `.cursorrules` once each where the repository has them
 
 #### Scenario: A file two sources name
 
