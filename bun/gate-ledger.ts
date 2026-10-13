@@ -2,7 +2,7 @@
  * The gate ledger: one JSON line per decision a harness gate records, so that
  * whether a gate earns its place is decided on counts. The wrap-up reads it
  * with `jq`; `ran` below reads back only the pre-PR runner's records, for the
- * turn gate.
+ * turn gate and the goal check.
  *
  * It lives in the user's state directory, outside every working tree, so no
  * consumer has an ignore entry to add and nothing in it can be staged. A
@@ -44,9 +44,14 @@ export function ledgerFile(): string {
  * checkout whose top level is `top`. The runner records its checkout's top
  * level wherever it runs, so the match is exact: a path under `top` can be a
  * worktree nested there, measured against its own base refs. A ledger that
- * cannot be read, or a torn line, holds none.
+ * cannot be read, or a torn line, holds none. Given `decision`, only a run
+ * that ended so counts: the goal check asks for a pass, the turn gate for any.
  */
-export function ran(commit: string, top: string | undefined): boolean {
+export function ran(
+	commit: string,
+	top: string | undefined,
+	decision?: string,
+): boolean {
 	if (!top) return false;
 	let text = "";
 	try {
@@ -56,8 +61,10 @@ export function ran(commit: string, top: string | undefined): boolean {
 	}
 	return text.split("\n").some((line) => {
 		try {
-			const { gate, project, commit: read } = JSON.parse(line) ?? {};
-			return gate === "pre-pr" && read === commit && project === top;
+			const parsed = JSON.parse(line) ?? {};
+			const { gate, project, commit: read } = parsed;
+			const ended = !decision || parsed.decision === decision;
+			return gate === "pre-pr" && read === commit && project === top && ended;
 		} catch {
 			return false;
 		}

@@ -50,7 +50,7 @@ merge (proposal.md, *Impact*, *Ordering*).
         `goal` record (PR review).
       All of these fail before 1.2. (Req: stage-goal — A stage is done when
       the check says so; Each verdict is recorded)
-- [ ] 1.2 Write `bun/goal-check.ts`. It parses `<stage> <change> [<step>]`.
+- [x] 1.2 Write `bun/goal-check.ts`. It parses `<stage> <change> [<step>]`.
       It reads the tree at `HEAD` through git, and the group test through
       `turn-gate.ts`'s `complete()`. It reads the `pre-pr` record through the
       ledger read that `pre-pr-run-record` added, and the pull request

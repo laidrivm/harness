@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import {
 	archived,
@@ -61,6 +62,12 @@ describe("each stage's conditions", () => {
 	// spec: stage-goal/an-archive
 	test("a change moved under archive/ is met [7]", () => {
 		expect(run(archived(), ["archive", "demo"]).code).toBe(0);
+	});
+
+	// spec: stage-goal/an-archive
+	test("an archive checked from a subdirectory is met", () => {
+		const below = join(archived(), "openspec");
+		expect(run(below, ["archive", "demo"]).code).toBe(0);
 	});
 
 	// spec: stage-goal/an-archive
