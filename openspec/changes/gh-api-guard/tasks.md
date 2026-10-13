@@ -93,7 +93,7 @@ and no criterion in any capability states what a doc sentence says.
 - [x] 3.3 Confirm the `coderabbit` skill's three `gh api` reads pass the guard
       by running each through it, rather than reasoning from the clause — the
       skill is untracked here, so name the three commands in the record
-- [ ] 3.4 Measure `bun/command-guard.ts` and
+- [x] 3.4 Measure `bun/command-guard.ts` and
       `bun/command-guard.test.ts` against the 300-line cap and record both
       numbers, whether or not either is over; the test file stood at 214 and
       the guard at 246 when this was proposed, and the guard at 299 once the
