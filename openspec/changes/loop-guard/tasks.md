@@ -12,20 +12,15 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
 
 ## 1. Count and refuse, in the harness's own sessions
 
-- [ ] 1.1 Before any code, the user runs the probe in the scratch kit's
-      `refuse/` variant. It is a throwaway repository whose hook bars `false`
-      after its second failure and refuses it in `PreToolUse`. A session does
-      not run `claude` itself. The kit's README gives the commands. Confirm
-      four things:
-      - under `claude -p`, the barred `false` does not run again, so the log
-        shows no `PostToolUseFailure` after the bar;
-      - the refusal's `loop-guard:` reason reaches the model and the output;
-      - the `additionalContext` warning reaches the model;
-      - inside a sub-agent, the refusal holds the same way.
-      Record each answer in the pull request's *Check by hand* list. If the
-      first does not hold, stop the step and report `BLOCKED`: design.md's
-      approach depends on it. If the third does not hold, note it for group 2,
-      whose warning would then reach the agent only through the refusal.
+- [ ] 1.1 Before any code, the user runs R4 from the scratch kit's `refuse/`
+      variant: inside a sub-agent, the barred call is refused, and the
+      parent's own call still runs. A session does not run `claude` itself.
+      The kit's README gives the command. R1 to R3 already passed on
+      2026-10-13 (design.md, *Measurements*): the barred call did not run
+      again, and both the refusal and the warning reached the `-p` output.
+      Record the R4 answer in the pull request's *Check by hand* list. If the
+      bar does not hold in the sub-agent, or refuses the parent's call, name
+      it there and in the step's design note before 1.3.
       (Req: loop-guard — A thrice-failed call is refused before it runs)
 - [ ] 1.2 Write the guard's tests in `bun/loop-guard.test.ts`, spawning the
       script with an event on stdin and a temp store:
