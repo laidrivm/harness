@@ -20,7 +20,7 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       — evidence: on `0dec082` all 22 cases fail with `code: 0` and no
       ledger rule. A heredoc whose body is `git push --force` exited 2 on
       `force-push`, so the heredoc and here-string bodies are `echo hi`
-- [ ] 1.2 Write the cases that must keep passing, and confirm they pass before
+- [x] 1.2 Write the cases that must keep passing, and confirm they pass before
       and after: `bash bun/diff-budget.sh`, with and without a trailing
       `$(git merge-base HEAD origin/main)`; `sh -c "git status"`;
       `bash -o pipefail script.sh`; `bash --version`;
@@ -28,6 +28,7 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       validate`; `bunx --bun --no-install playwright test`; `bunx --no-install
       -p renovate renovate-config-validator`; `bun x --no-install openspec`;
       `bun test x.test.ts` (4, 9, 11, 15–18, 35, 37, 39, 41, 42)
+      — evidence: before, 12 of 12 pass on `0dec082`; after, see 1.5
 - [ ] 1.3 Add the boundary cases as their own tests: bare `sh`; bare `eval`;
       `bash -es`; `xargs sh -c`; `+o` and `-O` and `--rcfile x` each taking a
       value; script operands `-`, `/dev/stdin`, `/dev/fd/3` and
