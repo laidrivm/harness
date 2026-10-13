@@ -1,5 +1,15 @@
 # agent-autonomy — delta spec
 
+## Purpose
+
+What a session does when nobody is at the terminal and it reaches a step that
+waits on the user, asks the user, or hands an act to the user. It covers how a
+session knows it is unattended, the three classes that say what it does at
+such a step, and how a step names its class. It exists because the harness's
+prose was written for a session with the user present, and an unattended
+session would otherwise stall at each such step, or guess which ones it may
+take.
+
 ## ADDED Requirements
 
 ### Requirement: A session is attended unless the prompt that started it says otherwise
