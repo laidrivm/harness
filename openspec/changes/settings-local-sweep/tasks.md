@@ -51,7 +51,7 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
       the largest dropped group, per §*The tracked allow list holds only what
       a clone can use*, and give classes and counts only. The local file is
       machine-local and none of its entries are quoted beyond those promoted
-- [ ] 1.8 Measure `bun/settings.ts`, `bun/settings-local.ts` and
+- [x] 1.8 Measure `bun/settings.ts`, `bun/settings-local.ts` and
       `bun/settings-local.test.ts` against the 300-line cap and record the
       three numbers in the pull request body
 - [ ] 1.9 Search the four places that restate a decision for any sentence
