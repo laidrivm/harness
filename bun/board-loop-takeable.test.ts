@@ -87,6 +87,13 @@ describe("the change the user names", () => {
 		expect(r.last).toBe("board-loop: refused — demo: every group is ticked");
 	});
 
+	test("the one named is carried, not the first of several takeable", () => {
+		const { dir } = clone({ ...change("demo"), ...change("other") });
+		const r = run(dir, ["other"]);
+		expect(r.calls).toContain("goal-check.ts apply other 1");
+		expect(r.calls).not.toContain("apply demo");
+	});
+
 	test("one with no directory is refused [16]", () => {
 		const { dir } = clone();
 		const r = run(dir, ["ghost"]);

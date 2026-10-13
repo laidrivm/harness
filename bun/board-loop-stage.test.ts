@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { change, clone, lowered, records, run, TICKED } from "./board-loop.fixture.ts";
@@ -82,6 +82,25 @@ describe("one record and one line per pass", () => {
 		writeFileSync(state, "");
 		const r = run(dir, ["demo"], {}, { state });
 		expect([r.code, r.last]).toEqual([0, "board-loop: met — apply demo step 1"]);
+	});
+
+	test("a record names the clone and no commit", () => {
+		const { dir } = clone();
+		const [loop] = records(run(dir).state);
+		expect([loop.project, "commit" in loop]).toEqual([realpathSync(dir), false]);
+	});
+
+	const gone = (origin: string) => rmSync(origin, { recursive: true });
+	test.each([
+		["a fetch that fails", [], gone, {}, "git fetch failed"],
+		["a tree board-state rejects", ["ghost"], () => {}, {}, "does not derive a board state"],
+		["no claude on PATH", [], () => {}, { claudeCode: null }, "claude could not be started"],
+	] as const)("%s refuses the pass", (_, after, arrange, stubs, reason) => {
+		const { dir, origin } = clone(change("demo", undefined, [...after]));
+		arrange(origin);
+		const r = run(dir, ["demo"], stubs);
+		expect(r.last).toStartWith("board-loop: refused");
+		expect(r.last).toContain(reason);
 	});
 
 	// spec: board-loop/every-pass-leaves-a-record
