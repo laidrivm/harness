@@ -843,9 +843,9 @@ absolute path token by the rule above and 46 are a `perl -0pi -e` one-liner
 carrying its own regex for one file. 59 entries earned the tracked file.
 
 An entry SHALL NOT restate one the `deny` or `ask` list already carries.
-Whether `allow` outranks `ask` is not settled here; the entry is refused
-either way, because it either re-opens a gate or reads as a grant while doing
-nothing.
+Claude Code evaluates deny, then ask, then allow, so such an entry can neither
+lift a deny nor silence an ask: it is refused because it reads as a grant
+while doing nothing.
 
 #### Scenario: An allow entry restates a gated one
 
