@@ -135,7 +135,9 @@ for them is already here.
   against the live spec and re-copy it if the live text moved, keeping only
   this change's edits; after an archive syncs it, grep the active changes for a
   delta of the same requirement and re-copy that delta the same way — the
-  later archive otherwise reverts this one.
+  later archive otherwise reverts this one. Where that delta's own edits
+  contradict what the archive just synced, reconcile the two changes before
+  either archives again; never let the re-copy silently pick one.
 - Move the card in the same turn the stage moves. When a proposal merges, a
   step's branch opens, a pull request opens or merges, an archive begins, or a
   change is archived, the task's card reaches the status that stage means

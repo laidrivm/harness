@@ -142,8 +142,9 @@ Rules about how work is carried out here. They do not age with the code.
 - Pass `--full-tree` to a `git ls-tree` whose pathspec names a path from the
   repository root — a working directory below the root resolves it against
   itself and lists nothing.
-- Before a commit, run the build's own scan over every file the commit writes,
-  since a fixture in a test can be valid input to the scan it tests.
+- Before a commit, run the build's own scan over every file the commit writes
+  that the scan covers, since a fixture in a test can be valid input to the
+  scan it tests.
 
 #### Safety
 
