@@ -74,7 +74,7 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
 
 ## 2. The warning, the ledger, and the consumers
 
-- [ ] 2.1 Write the cases for this group, failing before 2.2:
+- [x] 2.1 Write the cases for this group, failing before 2.2:
       - in `bun/loop-guard.test.ts`:
         - a third identical failure prints `additionalContext` naming the tool
           and 3, and exits 0 [4];
@@ -100,13 +100,13 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
       (Req: loop-guard — The third repeat warns the agent; Each warning and
       refusal is recorded in the gate ledger; Every consumer session runs the
       guard)
-- [ ] 2.2 Add the warning, and the ledger calls, through `record` in
+- [x] 2.2 Add the warning, and the ledger calls, through `record` in
       `bun/gate-ledger.ts`. Add the two registration texts and their `HOOKS`
       entries to `bun/bootstrap.ts` (no matcher, not `sole`), and add them to
       `settings.test.ts`'s policy-keeping fixture. Confirm that the
       command guard's `sole` check on the `Bash` matcher still counts only
       its own hook. `bun test` must be green.
-- [ ] 2.3 In the README's *Consuming* section, name the two hooks beside the
+- [x] 2.3 In the README's *Consuming* section, name the two hooks beside the
       turn gate's, with the `loop-guard:` refusal. Grep for every other place
       that lists the hooks a consumer runs (`bun/bootstrap.ts` comments,
       `openspec/specs/**`, `core/`) and reconcile each one.

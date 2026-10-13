@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
 	BOOTSTRAP,
+	LOOP_GUARD,
 	NOTICE,
 	NOTION_GUARD,
 	NOTION_MATCHER,
@@ -76,6 +77,13 @@ export const policy = () => ({
 				matcher: NOTION_MATCHER,
 				hooks: [{ type: "command", command: NOTION_GUARD } as object],
 			},
+			{ hooks: [{ type: "command", command: LOOP_GUARD } as object] } as {
+				matcher?: string;
+				hooks: object[];
+			},
+		],
+		PostToolUseFailure: [
+			{ hooks: [{ type: "command", command: LOOP_GUARD } as object] },
 		],
 		PermissionRequest: [
 			{

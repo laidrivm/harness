@@ -4,11 +4,14 @@
  * sub-agent. Registered without a matcher on both, so it sees every tool.
  *
  * On `PostToolUseFailure` it counts the failure under its fingerprint, and on
- * the third failure with one fingerprint it bars the call under the prompt
- * being processed. On `PreToolUse` it refuses a barred call made under that
- * same prompt, by exiting 2 with the reason on stderr; a new prompt lets the
- * call run once more. It never ends the session. The thresholds are fixed by
- * `openspec/changes/loop-guard/specs/loop-guard/spec.md`, not by configuration.
+ * the third and every later failure with one fingerprint it bars the call
+ * under the prompt being processed and warns the agent, through
+ * `additionalContext` beside the error. On `PreToolUse` it refuses a barred
+ * call made under that same prompt, by exiting 2 with the reason on stderr; a
+ * new prompt lets the call run once more. Each warning and refusal is one
+ * record in the gate ledger. It never ends the session. The thresholds are
+ * fixed by `openspec/changes/loop-guard/specs/loop-guard/spec.md`, not by
+ * configuration.
  *
  * It fails open, unlike the command guard: whatever it cannot read or write —
  * an event that is not JSON, an id unsafe as a file name, a count that is not
@@ -25,6 +28,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { record } from "./gate-ledger.ts";
 
 type Event = {
 	hook_event_name?: unknown;
@@ -94,6 +98,19 @@ export function fail(
 	return { failures, barred: { ...count.barred, [key]: { prompt, count: n } } };
 }
 
+/** What both the warning and the refusal tell the agent to do instead. */
+const ADVICE =
+	"Do not retry it: change approach, or end the turn with `BLOCKED` " +
+	"naming what only the user can settle.";
+
+/** The warning beside the error of a failure that bars its call. */
+export function warning(tool: string, n: number): string {
+	return (
+		`loop-guard: this ${tool} call has failed the same way ${n} times, ` +
+		`so the next identical call will be refused until the next prompt. ${ADVICE}`
+	);
+}
+
 /** The refusal of a call about to run, or nothing when it may run. */
 export function refusal(
 	count: Count,
@@ -105,11 +122,12 @@ export function refusal(
 	if (bar?.prompt !== prompt) return;
 	return (
 		`loop-guard: this ${tool} call has failed the same way ${bar.count} ` +
-		"times, so it is refused until the next prompt. Do not retry it: " +
-		"change approach, or end the turn with `BLOCKED` naming what only the " +
-		"user can settle."
+		`times, so it is refused until the next prompt. ${ADVICE}`
 	);
 }
+
+/** What the guard answers, and the ledger records: a warning or a refusal. */
+export type Answer = { decision: "warned" | "refused"; reason: string };
 
 const isRecord = (value: unknown): value is Record<string, never> =>
 	!!value && typeof value === "object" && !Array.isArray(value);
@@ -140,19 +158,23 @@ function countFile(store: string, event: Event): string | undefined {
 
 /**
  * Plays the event's role, choosing it from `hook_event_name`: the refusal on
- * `PreToolUse`, nothing on a counted failure or any other event.
+ * `PreToolUse`, the warning on a failure that bars its call, and nothing on
+ * any other failure or event.
  */
-export function guard(event: Event, store: string): string | undefined {
+export function guard(event: Event, store: string): Answer | undefined {
 	const file = countFile(store, event);
 	const { tool_name: tool, error } = event;
 	if (!file || typeof tool !== "string") return;
 	const key = callKey(tool, event.tool_input);
 	const prompt = typeof event.prompt_id === "string" ? event.prompt_id : null;
-	if (event.hook_event_name === "PreToolUse")
-		return refusal(load(file), tool, key, prompt);
+	if (event.hook_event_name === "PreToolUse") {
+		const reason = refusal(load(file), tool, key, prompt);
+		return reason ? { decision: "refused", reason } : undefined;
+	}
 	if (event.hook_event_name !== "PostToolUseFailure") return;
 	if (event.is_interrupt === true || typeof error !== "string") return;
-	const next = fail(load(file), key, fingerprint(key, error), prompt);
+	const print = fingerprint(key, error);
+	const next = fail(load(file), key, print, prompt);
 	mkdirSync(store, { recursive: true });
 	// Written beside and renamed into place, so a reader never sees half a
 	// count. Two failures recorded at once can still lose one increment,
@@ -160,6 +182,10 @@ export function guard(event: Event, store: string): string | undefined {
 	const partial = `${file}.${process.pid}`;
 	writeFileSync(partial, JSON.stringify(next));
 	renameSync(partial, file);
+	const n = next.failures[print] ?? 0;
+	// Only once the bar is written: a warning of a refusal that will not come
+	// would be wrong.
+	if (n >= BAR_AT) return { decision: "warned", reason: warning(tool, n) };
 }
 
 if (import.meta.main) {
@@ -167,14 +193,25 @@ if (import.meta.main) {
 	// OS temp dir, which the OS clears; prune here if that ever stops being
 	// true.
 	const store = join(tmpdir(), "loop-guard");
-	let reason: string | undefined;
+	let event: unknown;
+	let answer: Answer | undefined;
 	try {
-		reason = guard(JSON.parse(await Bun.stdin.text()) ?? {}, store);
+		event = JSON.parse(await Bun.stdin.text()) ?? {};
+		answer = guard(event as Event, store);
 	} catch {
 		// Fail-open, as the header says.
 	}
-	if (reason) {
-		process.stderr.write(`${reason}\n`);
-		process.exit(2);
+	if (answer) {
+		// Silent on failure, so the answer never depends on it.
+		record("loop-guard", answer.decision, "repeated-failure", event);
+		if (answer.decision === "refused") {
+			process.stderr.write(`${answer.reason}\n`);
+			process.exit(2);
+		}
+		const context = {
+			hookEventName: "PostToolUseFailure",
+			additionalContext: answer.reason,
+		};
+		process.stdout.write(`${JSON.stringify({ hookSpecificOutput: context })}\n`);
 	}
 }
