@@ -132,6 +132,19 @@ command's words, never a tree, so there is nothing in either consumer to run
 it against. The probe table in proposal.md is the measurement, re-run in the
 apply step.
 
+**D10. A scan that ends inside a quote refuses the call.** Each hole the PR
+#101 review found has one shape: the guard places a boundary the shell
+places elsewhere, a stray `'` in the text between opens a quote, and the
+quote runs to the end of the call and hides every command after it. The
+probe on main confirms that the guard allows `echo don't⏎git push --force
+origin feat/x` today. A call whose text the shell sees as ending inside a
+quote or an open substitution is a syntax error, and the shell runs none of
+it, so refusing costs nothing there. Where the guard alone sees the open
+quote, the refusal is the only sign that it misread a boundary. D1–D6 fix
+the boundaries known today; D10 closes the ones found later. It ships in
+this change rather than alone: on today's scan it would refuse every
+heredoc commit message holding an apostrophe, which D1–D5 read as data.
+
 ## Risks / Trade-offs
 
 - [The guard places a body the shell does not see, e.g. `<<` inside
