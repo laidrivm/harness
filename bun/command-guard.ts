@@ -27,12 +27,7 @@ import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
 import { ghApiWrite, ghPublish } from "./command-guard-gh.ts";
 import { commands, invocations, place, SHELLS } from "./command-parse.ts";
 import { blocker } from "./gate-ledger.ts";
-import {
-	FORCE,
-	PUSH_VALUE_OPTIONS,
-	REF_WIDE,
-	VALUE_OPTIONS,
-} from "./git-options.ts";
+import { FORCE, pushWords, REF_WIDE, VALUE_OPTIONS } from "./git-options.ts";
 
 /**
  * Blocks a push whose destination cannot be shown to exclude `main`. Two
@@ -187,7 +182,10 @@ const ELSEWHERE =
 	"Every directory the line may run in is checked, so a cd into another checkout from one on main is refused too; name that checkout with git -C <path> instead.";
 
 function checkPush(args: string[], targets: (string | null)[]): void {
-	if (args.some((arg) => FORCE.test(arg))) {
+	// Classified as git's parser reads them, so a push option's value — `-o
+	// --force` — is neither a switch nor an operand.
+	const { switches, operands } = pushWords(args);
+	if (switches.some((arg) => FORCE.test(arg))) {
 		block(
 			"force-push",
 			"command-guard: force-pushing is the user's, not the agent's — the boundary is the rewrite, not how carefully it is leased. Ask the user to run it.",
@@ -204,7 +202,7 @@ function checkPush(args: string[], targets: (string | null)[]): void {
 	// accept costs nothing. The length guard keeps bare `--`, which ends the
 	// options and names nothing, from matching all four.
 	if (
-		args.some(
+		switches.some(
 			(arg) => arg.length > 2 && REF_WIDE.some((opt) => opt.startsWith(arg)),
 		)
 	) {
@@ -224,13 +222,7 @@ function checkPush(args: string[], targets: (string | null)[]): void {
 		);
 	}
 
-	for (let at = 0; at < args.length; at++) {
-		const arg = args[at] ?? "";
-		if (arg.startsWith("-")) {
-			if (PUSH_VALUE_OPTIONS.has(arg)) at++;
-			continue;
-		}
-
+	for (const arg of operands) {
 		// Every operand, the repository among them: one word cannot be told from
 		// a refspec without the decision refused above, and a remote called
 		// `main` refuses a push that would have been allowed — the safe way to
