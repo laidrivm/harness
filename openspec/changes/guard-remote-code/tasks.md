@@ -29,7 +29,7 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       -p renovate renovate-config-validator`; `bun x --no-install openspec`;
       `bun test x.test.ts` (4, 9, 11, 15–18, 35, 37, 39, 41, 42)
       — evidence: before, 12 of 12 pass on `0dec082`; after, see 1.5
-- [ ] 1.3 Add the boundary cases as their own tests: bare `sh`; bare `eval`;
+- [x] 1.3 Add the boundary cases as their own tests: bare `sh`; bare `eval`;
       `bash -es`; `xargs sh -c`; `+o` and `-O` and `--rcfile x` each taking a
       value; script operands `-`, `/dev/stdin`, `/dev/fd/3` and
       `/proc/self/fd/0`; `cmd='git push --force'; sh -c "$cmd"` and `eval
@@ -41,6 +41,12 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       bash`; `zsh` and `dash` fed by a pipe; `bash -s -- --help` fed by a
       pipe blocks while `bash script.sh -s` passes, since options end at `--`
       or the script (1, 2, 5–8, 12–14, 19, 20, 33)
+      — evidence: on `0dec082` the 24 blocking cases fail and the 4 that
+      run pass. Two added beside them: `bash -Oc extglob 'git push --force'`
+      is refused as `force-push`, since the recursion now reads the program
+      past the option's value; and `time cp a.txt .` and `xargs grep -n
+      eval` run, since `.`, `source` and `eval` are builtins only the
+      command's own name can be
 - [ ] 1.4 In `bun/command-parse.ts`, mark a command that a `$(`, a backtick or
       a `<(`/`>(` interrupts, without changing `commands()`'s return type, and
       stop `invocations` at `command -v`/`-V`; keep its existing tests green
