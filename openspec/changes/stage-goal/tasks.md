@@ -66,7 +66,7 @@ merge (proposal.md, *Impact*, *Ordering*).
       verdict line naming what that tree lacks. `jq` over the ledger shows one
       `goal` record per run, each naming that tree's `HEAD`, and `git status`
       is unchanged in both.
-- [ ] 1.4 In `core/feature-workflow.md`, add a section *Unattended stages*.
+- [x] 1.4 In `core/feature-workflow.md`, add a section *Unattended stages*.
       It covers when a session sets a goal (an unattended stage, one goal per
       stage, never explore or a conversation) and the launch form with the
       condition's exact text, for the harness (`bun/goal-check.ts`) and for a
