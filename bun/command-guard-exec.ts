@@ -64,10 +64,11 @@ const noScript = (operand: string | undefined) =>
 /**
  * Why `name` with `rest` is handed a program the guard cannot read, or
  * nothing. `part` is the whole command, for the substitution mark and an
- * `xargs` before the shell; `first` says `name` is the command itself rather
- * than a word past a wrapper. `.`, `source` and `eval` are builtins, which a
- * wrapper running a binary cannot reach, so past one they are operands — the
- * trailing `.` of `sudo cp a .` — and only a shell is checked there.
+ * `xargs` before the shell; `first` says `name` is the first candidate. `.`,
+ * `source` and `eval` are builtins: `command` or `builtin` can run one only as
+ * the word right after it, and a wrapper running a binary cannot reach one at
+ * all, so a later candidate is an operand — the trailing `.` of `sudo cp a .`
+ * — and only a shell is checked there.
  */
 export function unreadProgram(
 	part: string[],
