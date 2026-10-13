@@ -16,7 +16,7 @@ One group, which ships whole as one harness pull request on
       existing case still runs without that ref. That keeps them covering
       *A repository without origin/main* [1]. Verify: `bun test` stays green
       with the helper unused.
-- [ ] 1.2 Write `bun/turn-gate-pulled.test.ts`, driving `decide` with a
+- [x] 1.2 Write `bun/turn-gate-pulled.test.ts`, driving `decide` with a
       `log` spy. Each case below fails before 1.3, except where the case says
       it passes today:
       - a fast-forward pull on `main` that completes a group, then a silent
