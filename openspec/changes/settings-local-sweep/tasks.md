@@ -28,7 +28,7 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
       `bun/settings.ts` into one exported predicate, which `settings()` calls.
       Verify that `bun/settings.test.ts` passes unedited, and add the case
       showing the sweep keeps exactly what that predicate rejects (20)
-- [ ] 1.4 Write `bun/settings-local.ts` per design §*Three classes* and
+- [x] 1.4 Write `bun/settings-local.ts` per design §*Three classes* and
       §*Output*: tests run deny, ask, allow and then machine-local; a decided
       line names the tracked entry and its list (19); a file that does not
       parse throws and names the file (22, 23); and an absent local file
