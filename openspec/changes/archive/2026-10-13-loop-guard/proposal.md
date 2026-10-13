@@ -24,8 +24,8 @@ reason never reached the output.
 
 The closest existing artefacts are the command guard (`agent-permissions`' *The
 git prohibitions are enforced by a hook*), whose `PreToolUse` refusal this
-change reuses, and `openspec/changes/gate-decision-ledger/`, whose ledger this
-change records into.
+change reuses, and the `gate-ledger` capability, whose ledger this change
+records into.
 
 ## What Changes
 
@@ -92,17 +92,16 @@ change records into.
 
 ### Modified Capabilities
 
-None. The gate ledger's requirements are not yet archived into
-`openspec/specs/`, so this change cites them rather than modifying them. The
-turn gate and the command guard decide as before.
+- `gate-ledger`: *Every gate refusal is recorded* names the loop guard
+  beside the gates whose refusals the ledger records. The turn gate and the
+  command guard decide as before.
 
 ## Impact
 
 - New `bun/loop-guard.ts` with tests. It is registered on `PostToolUseFailure`
   and on `PreToolUse` (every tool) in the harness's own
   `.claude/settings.json`, and in `bun/bootstrap.ts`'s `HOOKS`.
-- Records through `bun/gate-ledger.ts`, which `gate-decision-ledger` has
-  already put on `main`.
+- Records through `bun/gate-ledger.ts`, the `gate-ledger` capability's writer.
 - Consumers: on their next pin bump, `sync.ts` adds two hooks. Every tool call
   costs one more bun start, at the cost the command guard's header records. A
   failed call costs a second one.

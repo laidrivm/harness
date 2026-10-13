@@ -11,7 +11,8 @@ than by feel.
 ### Requirement: Every gate refusal is recorded
 
 Each refusal a harness gate makes — the command guard, the Notion update
-guard or the turn gate — SHALL append one record to the ledger. Every reason a
+guard, the turn gate or the loop guard — SHALL append one record to the
+ledger. Every reason a
 guard blocks for counts, including an event it could not read. The turn gate
 SHALL also record a turn that completed a task group and was let through
 because its final message reported, so that a count of refusals has a
