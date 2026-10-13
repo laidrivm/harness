@@ -44,6 +44,12 @@ describe("gh api with a parameter and no method", () => {
 	});
 });
 
+describe("gh api with no flags at all", () => {
+	test("a bare path reads, by the default GET", () => {
+		expect(run(event("gh api /repos/o/r"), anywhere()).code).toBe(0);
+	});
+});
+
 describe("the reach the gh branch inherits", () => {
 	const write = "gh api /repos/o/r/issues/37/comments -f body=hi";
 
