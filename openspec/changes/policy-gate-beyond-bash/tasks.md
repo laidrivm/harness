@@ -122,7 +122,7 @@ Its boxes are ticked in the archive pull request.
 
 ## 2. Each consumer, through its automatic bump
 
-- [ ] 2.1 dota2: once group 1 is merged and green, confirm on the
+- [x] 2.1 dota2: once group 1 is merged and green, confirm on the
       consumer's `main` that the automatic bump landed a pin at or past
       group 1's merge commit, and that the landed `.claude/settings.json`
       holds the four `mcp__` ask entries the sync wrote, with its `mcp__`
@@ -131,5 +131,14 @@ Its boxes are ticked in the archive pull request.
       workflow's runs, or note that its schedule is disabled, and report any
       failure this change did not cause. Then bump by hand on a branch of the
       consumer's own checkout, never in a worktree, with the same sync.
+
+      Done 2026-10-13: the `harness-bump` workflow, dispatched with the
+      user's word (run 38406397102, green), landed 72f8fae on `main`,
+      pinning harness 9cc096a, which has group 1's merge 837fe1d (#69) as an
+      ancestor. The landed `.claude/settings.json` holds the four ask
+      entries the sync wrote, `mcp__*__send_message`, `mcp__*__reply`,
+      `mcp__*__forward` and `mcp__*__notion-create-comment`. The bump's diff
+      touches no allow line, so the three `mcp__claude-design__*` allow
+      entries are unchanged. `bun run harness:check` exits 0 on 72f8fae.
 - [ ] 2.2 mellon: the same confirmation on its `main`. `harness:check`
       green.
