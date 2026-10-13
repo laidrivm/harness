@@ -43,6 +43,27 @@ Three facts follow, and the design rests on them:
 - **`continue: false` from a command `Stop` hook ends a goal run**, even while
   the goal's own hook is blocking.
 
+**Measured at apply.** Task 2.5's live check ran on 2026-10-13 with haiku in
+a scratch clone of `main` at `84bb1a3`. With `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`
+at 100 and a goal waiting on a file that another process would create, the run
+ended at 20 continued stops with one `ceiling` record and the `goal-ceiling:`
+reason in the transcript. A resume restored the goal and counted to 20 again.
+Two earlier attempts ended before the ceiling, each by Claude Code itself:
+
+- A goal that forbade creating the file it waited on ended after one round.
+  The evaluator judged the condition impossible (`goal_status` with
+  `failed: true`).
+- Without the raised cap, haiku stopped calling tools after three Reads,
+  although the goal asked for one each round. The block cap ended the turn
+  ("blocked the turn from ending 9 consecutive times"), with the harness's
+  count at 8. A goal that asks for a tool call each round does not keep that
+  cap away.
+
+So Claude Code already ends a goal run whose model stops calling tools and a
+goal its evaluator judges impossible. The ceiling is what ends a run that
+keeps calling tools without meeting the criterion, the case the decision below
+sizes it for. A live check of the ceiling has to raise the block cap.
+
 **Consumers, read-only, 2026-10-12.** d2ass and mellon each register exactly
 one `Stop` hook, the bootstrap's `turn-gate.ts stop` text, and exactly one
 `UserPromptSubmit` hook, its `mark` text. Neither has a `Stop` hook of its own
@@ -197,12 +218,12 @@ one.
   decides nothing else. The launcher reruns the check, which a typed line
   cannot answer for.
 - [An interactive idle check-in may fire `UserPromptSubmit` and reset the
-  count] → Not measured. Interactive goals have a person present, and the
-  ceiling exists for unattended ones. Task 2.5's live check records what it
-  sees.
+  count] → Not measured: task 2.5's live check ran headless. Interactive
+  goals have a person present, and the ceiling exists for unattended ones.
 - [A future Claude Code continues a goal on a path that `Stop` never sees] →
-  The ceiling would not see those rounds. The live check in task 2.5 is the
-  regression test to re-run when the pin on Claude Code moves.
+  The ceiling would not see those rounds. The live check in task 2.5, with
+  its goal and the raised block cap, is the regression test to re-run when
+  the pin on Claude Code moves.
 - [`gh` is slow or offline] → The verdict is `open`, never `met`, and the
   line names why.
 - [Twenty is a judgement, not a measurement of goal runs] → No harness
