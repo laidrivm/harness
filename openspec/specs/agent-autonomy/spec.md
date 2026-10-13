@@ -23,8 +23,8 @@ session does in place of the step, and it never relaxes an attended one.
 
 #### Scenario: An attended session reaches the pull request
 
-- **WHEN** a session the user started at the terminal has passed the pre-PR
-  sequence
+- **WHEN** a session whose starting prompt does not hold the line
+  `This session runs unattended.` has passed the pre-PR sequence
 - **THEN** it offers to open the pull request and waits for the user's
   go-ahead, as `core/feature-workflow.md` says, whatever the step's marker
   reads
