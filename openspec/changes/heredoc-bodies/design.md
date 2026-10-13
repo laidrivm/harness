@@ -33,7 +33,8 @@ machine (2026-10-13), with scripts whose output shows which lines ran:
 
 **Goals:**
 
-- Where the guard places a body, it places it where bash, zsh and sh do.
+- Where the guard places a body, every probed shell places it there too;
+  where they disagree, the call is refused.
   Ending a body early is not safe: the lines read as commands can open a
   quote that hides the command after the real end.
 - Where the delimiter line never comes, the rest is read as commands, and
@@ -63,7 +64,10 @@ misread `<<`.
 differ.** A delimiter line must match exactly, and only tabs are stripped
 under `<<-`. A line also ends the body when it equals the delimiter once
 joined to earlier lines ending in a backslash. bash, zsh and sh join there
-and dash does not, so the guard takes whichever end comes first. A quoted
+and dash does not. The guard cannot tell which shell runs the call, and
+either end hides lines from one of them, so where a joined line equals the
+delimiter the guard refuses the call. No call anyone needs splits its
+delimiter that way (PR #101 re-review). A quoted
 delimiter is matched literally, as every probed shell matches it. Ending a
 body earlier than the shell is not the safe side D1 makes it look: the lines
 read as commands can open a quote that hides the command after the real end,

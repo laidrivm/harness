@@ -37,9 +37,9 @@ of it. So the fix cannot be "skip every heredoc body".
   notes whether any part of it is quoted, and takes the body from where the
   shell takes it: after the next newline at the operator's own substitution
   level, up to the first line that equals the delimiter. `<<-` strips
-  leading tabs. Where the line before ends in a backslash, the joined
-  logical line is checked as well, because bash, zsh and sh join there and
-  dash does not.
+  leading tabs. A line that equals an unquoted delimiter only once joined
+  to a line ending in a backslash refuses the call, because bash, zsh and
+  sh join there and dash does not, and the guard cannot tell which runs.
 - A quoted delimiter's body is inert. An unquoted delimiter's body is read
   for `$(…)` and backtick substitutions only, which the shell runs before
   the body becomes input, and its other text is dropped.
