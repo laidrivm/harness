@@ -11,7 +11,8 @@ when it cannot measure. Three places call it: the pre-push hook, CI, and an
 agent by hand.
 
 `gate-decision-ledger` adds `bun/gate-ledger.ts`, which appends JSON lines to
-`${XDG_STATE_HOME:-~/.local/state}/harness/gates.jsonl` and never throws. Its
+`harness/gates.jsonl` under `XDG_STATE_HOME` when that is an absolute path,
+and under `~/.local/state` otherwise, and never throws. Its
 step 2 also edits `decide()` in the turn gate. The motivation is in
 proposal.md, *Why*, and the requirements are in the three delta specs.
 
@@ -102,11 +103,11 @@ that variable is set. The gate does not match the session:
 - The runner can be run by a subagent. A subagent's session id is not the
   one the main session's `Stop` event carries. That variable is present in
   this session's Bash environment, `CLAUDE_CODE_CHILD_SESSION` beside it.
-- The project cannot be matched for equality. The writer takes it from
-  `CLAUDE_PROJECT_DIR`, which the Bash tool's environment lacks (measured by
-  `gate-decision-ledger`), so the runner records its working directory, and a
-  session started in a subdirectory names another path at `Stop`. Matching on
-  the top level or a path under it holds both cases.
+- The writer prefers `CLAUDE_PROJECT_DIR`, which can name another checkout,
+  so the runner drops it and records the checkout's top level as git resolves
+  it. The gate resolves the top level the same way from the event's `cwd`, so
+  a session in a subdirectory still matches. A project under the top level
+  matches as well, which *A run from a subdirectory* fixes.
 - The project has to be matched at all. Two clones or worktrees at one commit
   measure the diff budget against their own base refs, which each fetched
   separately. A run in one therefore proves nothing about the other.
@@ -133,8 +134,8 @@ CI stay unchanged, and they still never produce it.
 `decide()` reads `gates.jsonl` only after it has found a completed group and a
 gate line. That is the one path where the answer can change the decision, and
 it is rare (`gate-decision-ledger`'s design puts the batch read it already
-pays there at 14 ms). The read takes the path from the writer's module, so
-one place names the file. A line that does not parse as JSON is skipped, not
+pays there at 14 ms). The read is `ran()` in the writer's module, so one
+place names the file and its format. A line that does not parse as JSON is skipped, not
 fatal: the writer appends from several processes, and one torn line must not
 hide the records around it.
 
@@ -144,9 +145,8 @@ The turn gate builds the runner's path from its own directory, relative to the
 event's `cwd`. That gives `bun/pre-pr.ts` in the harness and
 `node_modules/harness/bun/pre-pr.ts` in a consumer, with no table to keep in
 step. The harness has no `scripts` block, so `bun run …` names nothing here.
-The `bun run diff-budget` that `core/review-toolkit.md` names today fails in
-the harness and in mellon. That defect is reported separately and not fixed
-here.
+`core/review-toolkit.md`'s step 1 named `bun run diff-budget`, which failed in
+the harness and in mellon, and now names the runner by the same two paths.
 
 ## Measurements
 
