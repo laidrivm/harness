@@ -80,7 +80,7 @@ merge (proposal.md, *Impact*, *Ordering*).
 
 ## 2. The round ceiling
 
-- [ ] 2.1 Write the ceiling's tests in `bun/turn-gate-ceiling.test.ts`, using
+- [x] 2.1 Write the ceiling's tests in `bun/turn-gate-ceiling.test.ts`, using
       `bun/turn-gate.fixture.ts`:
       - a stop with `stop_hook_active` false counts nothing [37]. With no
         mark, nothing is counted and the stop is decided as today [38];
