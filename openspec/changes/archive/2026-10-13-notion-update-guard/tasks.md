@@ -59,13 +59,37 @@ the pull request that bumps its pin past group 1.
 
 ## 2. Each consumer
 
-- [ ] 2.1 dota2: bump the pin to group 1's merge commit, run `bun install`, and
+- [x] 2.1 dota2: bump the pin to group 1's merge commit, run `bun install`, and
       confirm that the lockfile names `harness` once. Add the registration
       from `bun/bootstrap.ts` and refresh `harness/` with `sync.ts`, all in
       one commit. `harness:check` must be green.
-- [ ] 2.2 mellon: the same steps.
-- [ ] 2.3 In a session started after 2.1 merges, move a dota2 card using
+      The "add the registration … in one commit" step was a no-op: since an
+      earlier change `sync.ts` writes the hook registrations itself, and
+      this step's wording predates that. Done by the auto-bump commit
+      `72f8fae`, which pinned `9cc096a` (group 1's `a8c337f` from #52 and
+      the ledger's `eb2a98f` from #70 among its ancestors), wrote the
+      `PreToolUse` registration, whose matcher
+      `^mcp__.+__notion-update-page$` and command are identical to
+      `NOTION_MATCHER` and `NOTION_GUARD` in `bun/bootstrap.ts`, and
+      refreshed `harness/`. A re-run of `sync.ts` changed nothing,
+      `bun.lock` names `harness` once, and `harness:check` exits 0. No further commit was needed; the
+      evidence is in the body of laidrivm/dota2#322 (merged).
+- [x] 2.2 mellon: the same steps.
+      The same no-op, done by the auto-bump commit `da1cce8`; evidence in
+      laidrivm/mellon#47 (merged).
+- [x] 2.3 In a session started after 2.1 merges, move a dota2 card using
       `update_content` with `properties`, and confirm the call is refused
       with the hook's reason. Confirm that `update_properties` goes through.
       If the refusal does not happen, the matcher is not applied as the
       hooks reference says: stop and report before 2.2 merges.
+      Run by the user on 2026-10-13 in a new dota2 session after
+      laidrivm/dota2#322 merged. `notion-update-page` with
+      `command: "update_content"` and `properties` on the card `tasks/task-5.md` was refused before it
+      reached Notion by `node_modules/harness/bun/notion-guard.ts`, with
+      the reason that under `update_content` the connector silently drops
+      properties and `update_properties` is the command to use. The ledger
+      recorded `"gate":"notion-guard"`, `"decision":"block"`,
+      `"rule":"notion-properties-dropped"` at `2026-10-13T14:58:35.766Z`,
+      with the dota2 checkout as its project. The same change sent with
+      `update_properties` went through, and a re-fetch showed Status
+      `explored`, where it had read `exploring`.
