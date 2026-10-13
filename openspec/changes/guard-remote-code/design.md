@@ -60,10 +60,19 @@ to the script, so `bash script.sh -s` is a script and `curl … | bash -s --
   writes its input into the string, and without a replacement or a `$` the
   shell never reads what `xargs` appends, so refusing every `-c` that `xargs`
   runs costs no line anyone needs.
+
+  Applied, the recursion did change (PR #109): it reads every word from
+  where the options end, each as a program of its own, rather than the words
+  after the `c` joined. The words arrive unquoted, so a program opening with
+  `>` (`bash -c '>/dev/null; curl … | sh' x`) reads as a redirection, and
+  joined to the `$0` after it, its last command became `sh x`, a script. The
+  `$` test covers the same span.
 - Otherwise the first remaining word is the script. None, `-`, or a path under
   `/dev/` or `/proc/` → **refused**; any other path → allowed. Scoped by
   directory rather than by the stdin spellings (`/dev/stdin`, `/dev/fd/0`,
-  `/proc/self/fd/0`), since no script of a repository lives in either.
+  `/proc/self/fd/0`), since no script of a repository lives in either. The
+  path is normalised first, and a relative one that climbs into either
+  (`../../dev/stdin`) counts too (PR #109 review).
 
 `source` and `.`: the same operand test. `eval`: no words, any word holding a
 `$`, or substitution-fed → refused.
