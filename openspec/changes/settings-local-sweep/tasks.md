@@ -33,7 +33,7 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
       line names the tracked entry and its list (19); a file that does not
       parse throws and names the file (22, 23); and an absent local file
       exits 0. Verify that 1.1 and 1.2 pass
-- [ ] 1.5 Assert that neither file's bytes change across a run that reports
+- [x] 1.5 Assert that neither file's bytes change across a run that reports
       entries (24). Assert that `bun/check.ts`'s `run` returns the same
       problems for a fabricated consumer with and without a local file full
       of gaps (21)

@@ -4,8 +4,9 @@
  * brackets are the edge cases `/zombies` listed against the proposal.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { rmSync, writeFileSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { run as run_ } from "./check.ts";
 import { cleanup, consumer, policy } from "./settings.fixture.ts";
 import { machineLocal } from "./settings.ts";
 import { sweep } from "./settings-local.ts";
@@ -183,6 +184,40 @@ describe("the documented matching", () => {
 		expect(report({ allow: ["Bash(git log *)"] }, "PowerShell(git log)")).toEqual([
 			"gap: PowerShell(git log) — promote it to .claude/settings.json or drop it",
 		]);
+	});
+});
+
+describe("what the sweep leaves alone", () => {
+	// spec: agent-permissions/nothing-left-to-promote-or-drop
+	test("neither file changes across a run that reports entries [24]", () => {
+		const dir = repo({ allow: ["Bash(git log *)"] }, [
+			"Bash(git log)",
+			"Bash(git push *)",
+		]);
+		const read = () =>
+			[".claude/settings.json", LOCAL].map((f) => readFileSync(join(dir, f)));
+		const before = read();
+		expect(run(dir).code).toBe(1);
+		expect(read()).toEqual(before);
+	});
+
+	test("check.ts's run reports the same with and without a local file [21]", () => {
+		const manifest = {
+			harness: {
+				rootFiles: {},
+				suppressions: {},
+				uncitedFloor: { count: 0, why: "none" },
+			},
+		};
+		const dir = consumer(policy(), {
+			"package.json": JSON.stringify(manifest),
+			// The size gate refuses a tree with no file it caps.
+			"src/index.ts": "export {};\n",
+		});
+		const before = run_(dir);
+		// Unparseable, so a check that read it would throw or report it.
+		writeFileSync(join(dir, LOCAL), "{ not json");
+		expect(run_(dir)).toEqual(before);
 	});
 });
 
