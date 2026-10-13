@@ -16,43 +16,102 @@ const GH_WRITES = [
 /** The methods `gh api` reads with; any other one it is given writes. */
 const READS = new Set(["GET", "HEAD"]);
 
-/**
- * A method flag in every spelling `gh api` honours, probed against gh 2.97:
- * `--method V`, `--method=V`, `-X V`, `-X=V`, `-XV`, and `-iX V`, since `-i`
- * is its one boolean shorthand and so the one that can bundle in front.
- */
-const METHOD = /^(--method(?==|$)|-i*X)=?(.*)$/;
+/** `gh api`'s one-letter flags by their long names, from gh 2.97's `--help`. */
+const SHORT: Record<string, string> = {
+	F: "field",
+	H: "header",
+	X: "method",
+	f: "raw-field",
+	h: "help",
+	i: "include",
+	p: "preview",
+	q: "jq",
+	t: "template",
+};
+
+/** The `gh api` flags that take a value, from gh 2.97's `--help`. */
+const TAKES_VALUE = new Set([
+	"cache",
+	"field",
+	"header",
+	"hostname",
+	"input",
+	"jq",
+	"method",
+	"preview",
+	"raw-field",
+	"template",
+]);
+
+/** A flag as written, by its long name, with the value it was given. */
+type Flag = { name: string; written: string; value: string };
 
 /**
- * The other flags that take a value, as `gh api --help` lists them on gh
- * 2.97, where each owns the next word: written bare, without `=`, or as the
- * last letter of a bundle behind the booleans `-i` and `-h`. A value attached
- * in the same word, as in `-tX` or `--jq=.`, takes no word after it.
+ * `words` as pflag reads them, probed against gh 2.97. A value is attached
+ * (`-XPOST`, `-X=POST`, `--jq=.`) or, for a flag that takes one written bare,
+ * is the next word whatever it reads like, so `-XPOST` after `--template` is
+ * a template. A short bundle runs the booleans `-i` and `-h` up to a letter
+ * that takes a value, which takes the rest of the word. Every word after `--`
+ * is an operand.
  */
-const OWNS_NEXT_VALUE =
-	/^(--(cache|field|header|hostname|input|jq|preview|raw-field|template)|-[ih]*[FHfpqt])$/;
-
-/** Each method flag in `words`, as written, with the method it names. */
-function methods(words: string[]): { flag: string; method: string }[] {
-	const found = [];
+function parse(words: string[]): { flags: Flag[]; operands: string[] } {
+	const flags: Flag[] = [];
+	const operands: string[] = [];
 	for (let at = 0; at < words.length; at++) {
 		const word = words[at] ?? "";
-		// Every word after `--` is an operand, so `-XPOST` there is a path.
-		if (word === "--") break;
-		if (OWNS_NEXT_VALUE.test(word)) {
-			at++;
+		if (word === "--") {
+			operands.push(...words.slice(at + 1));
+			break;
+		}
+		if (!word.startsWith("-") || word === "-") {
+			operands.push(word);
 			continue;
 		}
-		const attached = METHOD.exec(word)?.[2];
-		if (attached === undefined) continue;
-		// `-X=` names an empty method, which blocks; only a bare flag takes the
-		// next word.
-		const separate = !attached && !word.includes("=");
-		const method = separate ? (words[++at] ?? "") : attached;
-		found.push({ flag: separate ? `${word} ${method}` : word, method });
+		let name: string;
+		let attached: string | undefined;
+		if (word.startsWith("--")) {
+			const eq = word.indexOf("=");
+			name = word.slice(2, eq === -1 ? undefined : eq);
+			attached = eq === -1 ? undefined : word.slice(eq + 1);
+		} else {
+			const letters = word.slice(1);
+			const first = letters.search(/[^ih]/);
+			for (const letter of letters.slice(0, first === -1 ? undefined : first))
+				flags.push({ name: SHORT[letter] ?? letter, written: word, value: "" });
+			if (first === -1) continue;
+			const letter = letters[first] ?? "";
+			name = SHORT[letter] ?? letter;
+			const rest = letters.slice(first + 1);
+			attached = rest ? rest.replace(/^=/, "") : undefined;
+		}
+		const bare = TAKES_VALUE.has(name) && attached === undefined;
+		const value = bare ? (words[++at] ?? "") : (attached ?? "");
+		flags.push({ name, written: bare ? `${word} ${value}` : word, value });
 	}
-	return found;
+	return { flags, operands };
 }
+
+/**
+ * The flags that neither name a method nor carry a parameter: all a call with
+ * no method may hold and still read. Any other — a field, `--input`, a flag
+ * gh 2.97 does not list — makes it a write, so the test is scoped by the reads
+ * it exempts.
+ */
+const READ_FLAGS = new Set([
+	"allow-escape-sequences",
+	"cache",
+	"header",
+	"help",
+	"hostname",
+	"include",
+	"jq",
+	"paginate",
+	"preview",
+	"silent",
+	"slurp",
+	"template",
+	"verbose",
+]);
 
 /**
  * A flag that owns the word after it while gh looks for a subcommand: a long
@@ -62,15 +121,18 @@ function methods(words: string[]): { flag: string; method: string }[] {
  */
 const OWNS_NEXT = /^(--[^=]+|-[^-])$/;
 
-/** The word gh resolves as the subcommand of `words[at]`. */
-function subcommandOf(words: string[], at: number): string | undefined {
+/** Where the word gh resolves as the subcommand of `words[at]` stands, or -1. */
+function subcommandAt(words: string[], at: number): number {
 	for (let next = at + 1; next < words.length; next++) {
 		const word = words[next] ?? "";
-		if (!word.startsWith("-")) return word;
+		if (!word.startsWith("-")) return next;
 		if (OWNS_NEXT.test(word)) next++;
 	}
-	return undefined;
+	return -1;
 }
+
+const subcommandOf = (words: string[], at: number) =>
+	words[subcommandAt(words, at)];
 
 /** Why `gh` with these words after it publishes text, or `undefined`. */
 export function ghPublish(rest: string[]): string | undefined {
@@ -87,12 +149,22 @@ export function ghPublish(rest: string[]): string | undefined {
 export function ghApiWrite(rest: string[]): string | undefined {
 	// The top-level command, resolved as gh does: `api` as a flag's value in
 	// `gh --repo api issue list` is no `api` call.
-	if (subcommandOf(rest, -1) !== "api") return undefined;
+	const api = subcommandAt(rest, -1);
+	if (rest[api] !== "api") return undefined;
+	// Every word but `api` itself: a flag written before it reaches it too.
+	const { flags } = parse(rest.filter((_, at) => at !== api));
+	const methods = flags.filter(({ name }) => name === "method");
 	// Any flag naming a write, not the last: gh honours the last, and blocking
 	// on any one errs the way the guard resolves every uncertainty.
-	const sent = methods(rest).find(
-		({ method }) => !READS.has(method.toUpperCase()),
-	);
-	if (!sent) return undefined;
-	return `command-guard: \`gh api\` with \`${sent.flag}\` sends a write under the user's name — only GET and HEAD read. To read, name \`-X GET\`; to write, report what you would have sent and let them send it.`;
+	const sent = methods.find(({ value }) => !READS.has(value.toUpperCase()));
+	if (sent) return refusal(`with \`${sent.written}\` sends a write`);
+	if (methods.length > 0) return undefined;
+	// `gh api --help`: "The default HTTP request method is `GET` normally and
+	// `POST` if any parameters were added." Nothing in the command says POST.
+	const body = flags.find(({ name }) => !READ_FLAGS.has(name));
+	if (body) return refusal(`with \`${body.written}\` and no method sends POST`);
+	return undefined;
 }
+
+const refusal = (what: string) =>
+	`command-guard: \`gh api\` ${what} under the user's name — only GET and HEAD read. To read, name \`-X GET\`; to write, report what you would have sent and let them send it.`;
