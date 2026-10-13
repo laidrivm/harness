@@ -25,7 +25,7 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       Evidence: all five sit under `openspec/changes/archive/2026-10-13-*`;
       `bun bun/board-state.ts` lists the seven and blocks on
       `board-state-per-project` alone; the hygiene test is 9 pass, 0 fail.
-- [ ] 1.1 Write the precondition tests in `bun/board-loop.test.ts`:
+- [x] 1.1 Write the precondition tests in `bun/board-loop.test.ts`:
       - `CLAUDECODE` set refuses before any stub is called, and the message
         says to start the runner from your own terminal [1]. An empty value
         refuses too [2];
@@ -42,6 +42,8 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
         brought nothing [31].
       All of these fail before 1.4. (Req: board-loop — The runner is the
       user's script and starts from a clean clone)
+      Evidence: 11 cases, with the stubs in `bun/board-loop.fixture.ts`; all
+      failed before the runner existed.
 - [ ] 1.2 Write the takeable tests:
       - no `proposed` change is idle, launches nothing and exits 0 [8]. Every
         group ticked is not takeable [9];
