@@ -80,7 +80,7 @@ merge (proposal.md, *Impact*, *Ordering*).
 
 ## 2. The round ceiling
 
-- [ ] 2.1 Write the ceiling's tests in `bun/turn-gate-ceiling.test.ts`, using
+- [x] 2.1 Write the ceiling's tests in `bun/turn-gate-ceiling.test.ts`, using
       `bun/turn-gate.fixture.ts`:
       - a stop with `stop_hook_active` false counts nothing [37]. With no
         mark, nothing is counted and the stop is decided as today [38];
@@ -100,8 +100,9 @@ merge (proposal.md, *Impact*, *Ordering*).
         without a ceiling [52].
       All of these fail before 2.2. (Req: stage-goal — A goal run ends at a
       round ceiling; The ceiling's end is told apart from any other)
-- [ ] 2.2 Add the round counter to `bun/goal-check.ts` (the constant and two
-      exported functions) and call it from `turn-gate.ts`. Call it in `mark`
+- [x] 2.2 Add the round counter to `bun/goal-rounds.ts` (the constant and two
+      exported functions; design.md, *two modules*) and call it from
+      `turn-gate.ts`. Call it in `mark`
       to reset, and in `stop` before `decide()`. At the ceiling, record,
       print the JSON and exit 0. Update `turn-gate.ts`'s header comment to
       name the ceiling. Its "without reading `stop_hook_active`" becomes a
@@ -109,9 +110,9 @@ merge (proposal.md, *Impact*, *Ordering*).
       ceiling does, which `commit-gates`' "SHALL NOT depend on a
       loop-protection field" allows, since that sentence is about the
       refusal. Verify: `bun test` is green.
-- [ ] 2.3 Measure `bun/turn-gate.ts` and `bun/goal-check.ts` against the
+- [x] 2.3 Measure `bun/turn-gate.ts` and `bun/goal-rounds.ts` against the
       300-line cap. Verify: `bun/file-size.ts` passes on the branch.
-- [ ] 2.4 In `README.md` *Consuming*, the turn-gate line names the ceiling. In
+- [x] 2.4 In `README.md` *Consuming*, the turn-gate line names the ceiling. In
       `core/feature-workflow.md`'s *Unattended stages*, add what happens at
       the ceiling and how to resume. Grep for "refuses a turn that completes
       a task group" and "Unattended stages" for sites that restate either,
