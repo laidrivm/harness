@@ -52,20 +52,20 @@ repository's own top-level `node_modules/` is exempt. A `node_modules`
 directory anywhere else is not.
 
 The operand resolves from every directory in the guard's `dirs` set, as `-C`
-does. Only an interpreter given a file pays for the git reads.
+does, and then to its real path: a tracked symlink puts only its target's
+name in the tree. Only an interpreter given a file pays for the git reads.
 
 ### `bun`: subcommands from `bun --help`, minus three
 
 Of the subcommands bun 1.4.2's `--help` lists, three run code handed to them,
 so they ask: `exec` (a shell script as text), `repl`, and `create`/`c` (a
 template fetched and run). `x` is exempt here, because the `bunx` card
-decides it. `run` hands its operand to the file
-rule when that operand is an existing file, and otherwise it is a
-`package.json` script, tracked text. The flags `-e`, `--eval`, `-p` and
-`--print` need no special case: a flag as the first argument is no
-subcommand and no file, so it asks. The constant carries the version it was
-read from, and a test compares it with the installed `bun --help`. This is
-how `bun/settings.ts` pins the manifest-writing forms.
+decides it. `run` hands its operand to the file rule when that operand is an
+existing file, and otherwise it is a `package.json` script, tracked text. The
+flags `-e`, `--eval`, `-p` and `--print` need no special case: a flag as the
+first argument is no subcommand and no file, so it asks. The constant carries
+the version it was read from, and a test compares it with the installed `bun
+--help`. This is how `bun/settings.ts` pins the manifest-writing forms.
 
 ### One decision per command, after the walk
 
