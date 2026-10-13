@@ -92,6 +92,43 @@ describe("a shell handed a program the line does not spell out", () => {
 	});
 });
 
+describe("a program the line spells out still runs", () => {
+	const runs = (line: string) => expect(guard(line).code).toBe(0);
+
+	// spec: agent-permissions/a-script-of-the-repository-still-runs
+	test.each([
+		"bash bun/diff-budget.sh",
+		"bash bun/diff-budget.sh $(git merge-base HEAD origin/main)",
+	])("%s runs", runs);
+
+	// spec: agent-permissions/a-literal-c-string-still-runs
+	test("a literal -c string runs", () => runs('sh -c "git status"'));
+
+	test("a value-taking option before a script runs", () => {
+		runs("bash -o pipefail script.sh");
+	});
+
+	// spec: agent-permissions/asking-about-a-shell-runs-none
+	test.each(["bash --version", "command -v bash", "command -V sh"])(
+		"%s runs",
+		runs,
+	);
+
+	// spec: agent-permissions/an-installed-tool
+	test.each([
+		"bunx --no-install openspec validate",
+		"bunx --bun --no-install playwright test",
+		"bun x --no-install openspec",
+	])("%s runs", runs);
+
+	// spec: agent-permissions/a-package-named-by-p
+	test("a package named by -p with the flag runs", () => {
+		runs("bunx --no-install -p renovate renovate-config-validator");
+	});
+
+	test("bun test is not bun x", () => runs("bun test x.test.ts"));
+});
+
 describe("a bunx that installs what it runs", () => {
 	// spec: agent-permissions/a-package-fetched-to-run
 	test("bunx cowsay hi blocks", () => installs("bunx cowsay hi"));
