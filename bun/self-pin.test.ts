@@ -21,12 +21,14 @@ describe("the harness's own hook registrations", () => {
 	// spec: harness-updates/a-registration-is-missing-from-the-harness-s-settings
 	test.each(HOOKS.map((hook) => [`${hook.name} (${hook.event})`, hook]))(
 		"%s is registered in its consumer text",
-		(_, { event, matcher, command }) => {
-			const commands = (hooks()[event] ?? [])
+		(_, { event, matcher, command, sole }) => {
+			// The whole hook object, so an `if`, `async` or other type that would
+			// stop it running or blocking fails here — no check reads these settings.
+			const registered = (hooks()[event] ?? [])
 				.filter((entry) => entry.matcher === matcher)
-				.flatMap((entry) => entry.hooks ?? [])
-				.map((hook) => hook.command);
-			expect(commands).toContain(command);
+				.flatMap((entry) => entry.hooks ?? []);
+			expect(registered).toContainEqual({ type: "command", command });
+			if (sole) expect(registered).toHaveLength(1);
 		},
 	);
 
