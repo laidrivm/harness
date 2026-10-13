@@ -13,7 +13,7 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
 
 ## 1. The question gate, its registration, and the procedure
 
-- [ ] 1.1 Stop before any code, with the user present. Put a throwaway
+- [x] 1.1 Stop before any code, with the user present. Put a throwaway
       `PermissionRequest` hook answering `allow` for
       `mcp__.*__notion-create-comment` in the gitignored
       `.claude/settings.local.json`; in a session started afterwards, post a
@@ -25,7 +25,9 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       stop: design.md *Risks* sends the change back to explore. (Req:
       agent-permissions — A question to the user on a board card needs no
       prompt, §*A question on a card*, §*The same question where no prompt
-      can be shown*)
+      can be shown*) Done 2026-10-13 with the gate itself: interactively and
+      under `claude -p` the comment posted with no prompt, recorded `allowed`
+      / `question`; an unmarked one prompted, recorded `passed` / `unmarked`.
 - [x] 1.2 Write the envelope tests in `bun/question-gate.test.ts`, with the
       event, transcript and ledger builders in `bun/question-gate.fixture.ts`
       — the cases below pass 300 lines in one file, the `.ts` cap. A
