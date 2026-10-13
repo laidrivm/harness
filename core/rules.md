@@ -165,9 +165,9 @@ not age with the code.
 - Reconcile a vendored skill's `allowed-tools` and `disable-model-invocation`
   against this project's policy before the skill is used.
 - Run every npm-family command the `playwright-cli` skill or its references
-  name through bun instead — `npx` as `bunx`, `npm run` as `bun run`,
-  `npm install -g` as `bun add -g`, `npm init` as `bun create` — since its own
-  are denied here.
+  name through bun instead — `npx` as `bunx --no-install`, `npm run` as
+  `bun run`, `npm install -g` as `bun add -g`, `npm init` as `bun create` —
+  since its own are denied here.
 - Beside a pinned image, binary or digest that no dependency manifest tracks,
   write which tool updates the pin, or that nothing does.
 - Gate a suite that runs destructive SQL on a variable saying the database is

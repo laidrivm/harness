@@ -72,13 +72,20 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       — evidence: two reason cases (a pipe into `zsh`, so a reason naming
       `sh` alone fails) and every blocking case asserts `unread-program` or
       `bunx-install` from the ledger; the file runs 64 pass
-- [ ] 1.7 Delete `core/code-style.md`'s `bunx` bullet and narrow its pipe
+- [x] 1.7 Delete `core/code-style.md`'s `bunx` bullet and narrow its pipe
       bullet to a script downloaded to a file and run by path, keeping the
       unattended clause; map `npx` to `bunx --no-install` in `core/rules.md`'s
       `playwright-cli` bullet; grep the four places that restate either rule
       and reconcile each — `agent-autonomy`'s `design.md` quotes the pipe
       bullet in its unattended table, if that change is not yet archived
       (design Decision 7)
+      — evidence: a grep of every tracked `.md` outside the archive for
+      `bunx`, `curl`, `remote content` and `into a shell` finds, beside the
+      two edited files, `agent-autonomy` archived (its record stays as it
+      was), `core/skills/coderabbit-local/SKILL.md`'s "never pipe an install
+      script into a shell", which the guard now enforces and which stays,
+      and `agent-permissions`' `bunx openspec validate *` example, left per
+      design §Risks
 - [ ] 1.8 Re-run the probe table in `proposal.md` §Why against the built guard
       and record the new column; measure `bun/command-guard.ts`,
       `bun/command-parse.ts` and the new files against the 300-line cap and
