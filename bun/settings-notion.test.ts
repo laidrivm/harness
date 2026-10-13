@@ -2,16 +2,10 @@
  * The Notion update guard's registration as the check pins it, over a
  * consumer whose settings hold nothing but `PreToolUse` groups: the rest of
  * the policy is `settings.test.ts`'s, and only this registration's message is
- * read here. Then the harness's own registration, which no check reads.
+ * read here. The harness's own registration is `self-pin.test.ts`'s.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	mkdirSync,
-	mkdtempSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NOTION_GUARD, NOTION_MATCHER } from "./bootstrap.ts";
@@ -63,20 +57,6 @@ describe("the registration", () => {
 	test("under another matcher is named [23]", () => {
 		const matcher = "mcp__claude_ai_Notion__notion-update-page";
 		expect(named([group(matcher, NOTION_GUARD)])).toBe(true);
-	});
-
-	// The harness is no consumer, so the check never reads its own settings,
-	// and a matcher drifting there would stop the guard without a word.
-	test("in the harness's own settings runs its guard under the matcher", () => {
-		const own = JSON.parse(
-			readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"),
-		) as { hooks: { PreToolUse: { matcher: string }[] } };
-		const notion = own.hooks.PreToolUse.filter(
-			(entry) => entry.matcher === NOTION_MATCHER,
-		);
-		expect(notion).toEqual([
-			group(NOTION_MATCHER, 'bun "$CLAUDE_PROJECT_DIR/bun/notion-guard.ts"'),
-		]);
 	});
 });
 

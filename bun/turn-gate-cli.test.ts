@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	cleanup,
@@ -19,8 +19,8 @@ import {
 /**
  * `turn-gate.ts` as the hooks run it: a spawned process reading the event on
  * stdin, answering by exit code. What it decides is the other two test
- * files'; here is how the decision leaves the process, and that both halves
- * are registered.
+ * files'; here is how the decision leaves the process. That both halves are
+ * registered is `self-pin.test.ts`'s.
  */
 
 afterAll(cleanup);
@@ -148,25 +148,5 @@ describe("what ends the turn because it cannot be read", () => {
 	test("an event that is not JSON lets the prompt through", () => {
 		const { dir, tmp } = finished();
 		expect(run("mark", "not json", dir, tmp).code).toBe(0);
-	});
-});
-
-describe("the registrations in this repository's settings", () => {
-	const hooks = () =>
-		JSON.parse(
-			readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"),
-		).hooks;
-
-	test.each([
-		["UserPromptSubmit", "mark"],
-		["Stop", "stop"],
-	])("%s runs the %s half", (event, half) => {
-		const commands = (hooks()[event] ?? []).flatMap(
-			(entry: { hooks?: { command?: string }[] }) =>
-				(entry.hooks ?? []).map((hook) => hook.command),
-		);
-		expect(commands).toContain(
-			`bun "$CLAUDE_PROJECT_DIR/bun/turn-gate.ts" ${half}`,
-		);
 	});
 });

@@ -18,8 +18,9 @@ import {
 
 /**
  * What the loop guard counts as one call failing the same way, the warning,
- * what it records in the gate ledger, and its registrations. Refusing the
- * call is `loop-guard-refuse.test.ts`'s.
+ * and what it records in the gate ledger. Refusing the call is
+ * `loop-guard-refuse.test.ts`'s; that the harness registers it is
+ * `self-pin.test.ts`'s.
  */
 
 afterAll(cleanup);
@@ -240,23 +241,4 @@ describe("the gate ledger", () => {
 		expect(written[3]?.code).toBe(2);
 		expect(answers(unwritable)).toEqual(written);
 	});
-});
-
-describe("the registrations in this repository's settings", () => {
-	test.each(["PostToolUseFailure", "PreToolUse"])(
-		"%s runs the guard for every tool, failing open",
-		(event) => {
-			const { hooks } = JSON.parse(
-				readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"),
-			);
-			expect(hooks[event]).toContainEqual({
-				hooks: [
-					{
-						type: "command",
-						command: 'bun "$CLAUDE_PROJECT_DIR/bun/loop-guard.ts"',
-					},
-				],
-			});
-		},
-	);
 });
