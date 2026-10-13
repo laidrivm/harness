@@ -45,7 +45,7 @@ commit, unmerged and unpushed, printed 1 line, prefix `+`, and zero `-`.
 
 **Non-Goals:**
 
-- Any network call. The guard's measured cost is 16–22 ms per Bash call, and
+- Any network call. The guard's measured cost is about 11 ms per Bash call, and
   it runs on every one of them; a fetch or a `gh` call per commit is a
   different order, and offline it would degrade into measurement B — the
   behaviour that missed the merge.
@@ -195,6 +195,11 @@ read, and the guard's own header says what it keeps is "what the
 prohibitions themselves are". Asking git about a branch is the same kind of
 thing as parsing a command line — a fact the guard consumes, not a rule it
 states.
+
+Step 1 also moved git's option grammar — `VALUE_OPTIONS`, `FORCE`,
+`REF_WIDE` and `PUSH_VALUE_OPTIONS` — verbatim into `bun/git-options.ts`,
+because merging the gate ledger's ids into the guard brought
+`command-guard.ts` to 318 lines against the 300-line cap.
 
 ## Risks / Trade-offs
 
