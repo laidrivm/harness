@@ -74,7 +74,7 @@ Closes `agent-permissions/a-write-with-no-method-flag`,
       own case: an absolute path to `gh`, a `bash -c` wrapper, a compound
       command whose second half is the write, and a global flag in front of
       the operand (ZOMBIES 4, 5, 18, 19, 20)
-- [ ] 2.6 Add the bare-path read as a case of its own — `gh api /repos/o/r`
+- [x] 2.6 Add the bare-path read as a case of its own — `gh api /repos/o/r`
       with no flags at all — so the default-`GET` path is asserted and not
       merely implied by the `--paginate` case (ZOMBIES 1)
 
