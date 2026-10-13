@@ -83,7 +83,7 @@ Closes `agent-permissions/a-write-with-no-method-flag`,
 This step closes no acceptance criterion: it reconciles prose and measures,
 and no criterion in any capability states what a doc sentence says.
 
-- [ ] 3.1 Narrow `core/git-and-prs.md`'s prohibition to what the guard still
+- [x] 3.1 Narrow `core/git-and-prs.md`'s prohibition to what the guard still
       does not reach — a tracker, a forum, any service that is not GitHub —
       per `openspec/specs/agent-rulebook` §*A mechanised prohibition leaves its
       prose home*, which calls this the partly-covered case
