@@ -19,18 +19,21 @@ the guard cannot read* and §*bunx runs only what is already installed*.
 - [ ] 1.2 Write the cases that must keep passing, and confirm they pass before
       and after: `bash bun/diff-budget.sh`, with and without a trailing
       `$(git merge-base HEAD origin/main)`; `sh -c "git status"`;
-      `sh -c 'echo $(date)'`; `bash -o pipefail script.sh`; `bash --version`;
+      `bash -o pipefail script.sh`; `bash --version`;
       `command -v bash`; `command -V sh`; `bunx --no-install openspec
       validate`; `bunx --bun --no-install playwright test`; `bunx --no-install
       -p renovate renovate-config-validator`; `bun x --no-install openspec`;
-      `bun test x.test.ts` (4, 9, 11, 15–18, 20, 35, 37, 39, 41, 42)
+      `bun test x.test.ts` (4, 9, 11, 15–18, 35, 37, 39, 41, 42)
 - [ ] 1.3 Add the boundary cases as their own tests: bare `sh`; bare `eval`;
       `bash -es`; `xargs sh -c`; `+o` and `-O` and `--rcfile x` each taking a
-      value; script operands `-`, `/dev/stdin` and `/dev/fd/3`; `bash -c "git
+      value; script operands `-`, `/dev/stdin`, `/dev/fd/3` and
+      `/proc/self/fd/0`; `cmd='git push --force'; sh -c "$cmd"` and `eval
+      "$cmd"`, and `sh -c 'echo $(date)'` with them — the `$` test reaches a
+      single-quoted string too — while `bash script.sh "$HOME"` passes; `bash -c "git
       status" $(echo x)`; a blocked shell after `git status &&`; `cat a.sh |
       bash`; `zsh` and `dash` fed by a pipe; `bash -s -- --help` fed by a
       pipe blocks while `bash script.sh -s` passes, since options end at `--`
-      or the script (1, 2, 5–8, 12–14, 19, 33)
+      or the script (1, 2, 5–8, 12–14, 19, 20, 33)
 - [ ] 1.4 In `bun/command-parse.ts`, mark a command that a `$(`, a backtick or
       a `<(`/`>(` interrupts, without changing `commands()`'s return type, and
       stop `invocations` at `command -v`/`-V`; keep its existing tests green
