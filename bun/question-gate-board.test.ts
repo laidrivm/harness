@@ -120,7 +120,12 @@ describe("the card's comments were read", () => {
 	// spec: agent-permissions/many-questions-in-one-session
 	test("ten questions in one session are each allowed [42]", () => {
 		const path = transcript([fetched(CARD, "Harness"), comments(CARD)]);
-		const answers = Array.from({ length: 10 }, () => run(asked({}, path)).out);
+		// One ledger for all ten, so a count kept there would show.
+		const state = join(scratch(), "state");
+		const answers = Array.from(
+			{ length: 10 },
+			() => run(asked({}, path), state).out,
+		);
 		expect(answers.every((out) => out !== "")).toBe(true);
 	});
 });
