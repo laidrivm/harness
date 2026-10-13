@@ -118,10 +118,41 @@ merge (proposal.md, *Impact*, *Ordering*).
       a task group" and "Unattended stages" for sites that restate either,
       and reconcile each. Verify: no stale site remains outside
       `openspec/changes/`.
-- [ ] 2.5 Live check, in a scratch clone of the harness with this branch [53].
-      Run a `claude -p` goal that cannot be met but calls a tool each round,
-      and confirm that it ends at round 20 and that the ledger holds one
-      `ceiling` record. Then run `claude -p --resume <id> "go on"` and
-      confirm the goal is restored and the count starts again. Record what
-      an interactive idle check-in does to the count if one is seen. Verify:
-      the observations are written into the pull request body.
+- [x] 2.5 Live check, in a scratch clone of the harness with this branch [53],
+      with `XDG_STATE_HOME` pointing at a ledger of its own and
+      `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=100`, so that Claude Code's own block
+      cap cannot end the run first. Run, with `claude -p --model haiku`, a
+      goal that waits on something outside the session, so the evaluator
+      cannot judge it impossible:
+      `/goal Another process will create the file READY.md in this directory. Each round, check once whether it exists with the Read tool, then stop. Do not create or edit any file yourself. The goal is met when READY.md exists.`
+      Confirm that it ends at round 20 and that the ledger holds one
+      `ceiling` record. Then run `claude -p --resume <id> "go on"` with the
+      same cap and confirm the goal is restored and the count starts again.
+      Record what an interactive idle check-in does to the count if one is
+      seen. Verify: the observations are written below and in the pull
+      request body.
+      Run by the user on 2026-10-13, in a scratch clone of `main` at
+      `84bb1a3`, with model haiku:
+      - The run above: the ledger held one `"decision":"ceiling"` record,
+        `$TMPDIR/turn-gate/<sid>.rounds` read 20, and the transcript carried
+        ``goal-ceiling: 20 continued stops since the last prompt, and a goal run gets 20. The goal stays set: `claude --resume <sid>` with a prompt goes on and counts afresh, and `/goal clear` drops it.``
+      - The resume, `claude -p --resume <sid> … "go on"` with the same cap:
+        the goal was restored, the ledger held two `ceiling` records, and
+        the counter reached 20 again.
+      - Both runs were headless, and no interactive idle check-in was
+        reported.
+      Two earlier attempts did not reach the ceiling, and each showed a way
+      Claude Code ends a goal run before the harness does (design.md,
+      *Measured at apply*):
+      - This task's first goal ("read README.md once each round … met when
+        NEVER-CREATED.md exists", with creating files forbidden) contradicts
+        itself. Claude Code's evaluator returned a `goal_status` with
+        `failed: true` and ended the goal after one round; the counter read
+        0.
+      - Without the raised cap, haiku stopped calling tools after three
+        Reads, and Claude Code's block cap ended the turn ("A hook blocked
+        the turn from ending 9 consecutive times — overriding and ending
+        turn … Set CLAUDE_CODE_STOP_HOOK_BLOCK_CAP to raise this limit")
+        with the counter at 8. A Read asked for in each round does not keep
+        that cap from firing, as the pull request of group 2 claimed: the
+        model can stop reading.
