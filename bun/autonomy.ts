@@ -14,7 +14,9 @@ const THREE = ["agent", "card", "user"];
 // The class runs to the first space, newline, dash or parenthesis. `\s*` lets a
 // marker wrap after the colon, and an empty class is still reported.
 const MARKER = /\(unattended:\s*([^\s)—]*)/g;
-const HEADING = /^### `([a-z]+)`\s*$/gm;
+// Any backticked name, so a fourth heading such as `agent-run` is counted and
+// refused, never silently left out of the set.
+const HEADING = /^### `([^`]+)`\s*$/gm;
 const LINK = /\]\(autonomy\.md(#[^)]*)?\)/;
 
 /** Every Markdown file under `dir`, at any depth. Nothing is exempt. */

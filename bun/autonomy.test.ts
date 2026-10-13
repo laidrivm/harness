@@ -86,8 +86,15 @@ describe("the marker vocabulary", () => {
 			"flow.md": "(unattended: agent — x)\n",
 		});
 		expect(check(dir)).toEqual([
-			"core/autonomy.md: defines agent, card and user, found card, user",
+			"core/autonomy.md: defines agent, card and user, found agent-run, card, user",
 			"core/flow.md: (unattended: agent) names no defined class",
+		]);
+	});
+
+	test("a hyphenated fourth heading beside the three fails", () => {
+		const dir = tree({ "autonomy.md": `${DOC}\n### \`agent-run\`\n` });
+		expect(check(dir)).toEqual([
+			"core/autonomy.md: defines agent, card and user, found agent, agent-run, card, user",
 		]);
 	});
 
