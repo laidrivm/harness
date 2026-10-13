@@ -115,6 +115,14 @@ or after that `x`, skipping the value of `-p`/`--package`. A word after the pack
 argument (`bun.com/docs/pm/bunx`: `--bun` "must occur before the executable
 name", and the same holds for every bunx flag).
 
+Finding that `x` passes over any word straight after one of bun's own
+options, as that option's possible value, rather than enumerating which bun
+options take one: an option added later would otherwise hide the `x` after
+it (`bun --cwd /tmp x cowsay`, PR #109 review). `bun run --cwd x script` still
+stops at `run`. The price is `bun --hot app.ts x`, whose `x` is the script's
+argument, refused as an installing `bun x` — accepted, since a refusal is the
+safe way to be wrong.
+
 The card asked whether `--no-install` of a package absent from `package.json`
 needs a narrower rule. **Decided: no.** With the flag, bunx runs what is
 already installed — the project's `node_modules` or Bun's global cache. After
