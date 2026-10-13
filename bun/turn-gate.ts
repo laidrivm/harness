@@ -50,9 +50,10 @@ type Boxes = { ticked: number; open: number };
 
 /**
  * Every `## ` group of a task list with its boxes counted. A box inside a
- * fenced code block is an example, not a task.
+ * fenced code block is an example, not a task. Exported for the goal check,
+ * which reads a step's group by its place in this order.
  */
-function groups(text: string): Map<string, Boxes> {
+export function groups(text: string): Map<string, Boxes> {
 	const found = new Map<string, Boxes>();
 	let group: Boxes | undefined;
 	let fence: string | undefined;
