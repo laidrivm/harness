@@ -10,7 +10,7 @@ One group, which ships whole as one harness pull request on
 
 ## 1. Groups that `origin/main` already holds complete do not count
 
-- [ ] 1.1 In `bun/turn-gate.fixture.ts`, add a helper that publishes the
+- [x] 1.1 In `bun/turn-gate.fixture.ts`, add a helper that publishes the
       current tree as `origin`'s `main` and fetches it, so
       `refs/remotes/origin/main` exists. Leave `repo()` as it is, so every
       existing case still runs without that ref. That keeps them covering
