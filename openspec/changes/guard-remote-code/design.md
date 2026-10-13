@@ -46,8 +46,12 @@ to the script, so `bash script.sh -s` is a script and `curl … | bash -s --
   redirection and its target are skipped, as `invocations` already does.
 - A group carrying `s` → reads stdin → **refused**.
 - A group carrying `c` → the program is the next word: none there, one holding
-  a `$`, or the command marked as substitution-fed (Decision 3) →
-  **refused**; otherwise the existing recursion reads the string, unchanged.
+  a `$`, the command marked as substitution-fed (Decision 3), or an `xargs`
+  among the command's words before the shell → **refused**; otherwise the
+  existing recursion reads the string, unchanged. `xargs -I{} sh -c '{}'`
+  writes its input into the string, and without a replacement or a `$` the
+  shell never reads what `xargs` appends, so refusing every `-c` that `xargs`
+  runs costs no line anyone needs.
 - Otherwise the first remaining word is the script. None, `-`, or a path under
   `/dev/` or `/proc/` → **refused**; any other path → allowed. Scoped by
   directory rather than by the stdin spellings (`/dev/stdin`, `/dev/fd/0`,
@@ -142,8 +146,6 @@ well under the diff budget's warning threshold.
   run it by path; neither consumer's tracked files does this.
 - [An unlisted value-taking shell option hides a stdin read] → the list is
   short and stable; a test pins each listed option.
-- [`xargs sh -c '{}'` runs input with a literal-looking script] → named here
-  as a gap; the input is what the guard's residual ceiling already accepts.
 - [A package already in Bun's global cache from before this change] → runs
   under `--no-install`; *Check by hand* in the PR.
 - [The heredoc card stops reading a quoted heredoc's body as commands] → a

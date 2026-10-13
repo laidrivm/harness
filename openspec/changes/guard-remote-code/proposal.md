@@ -37,16 +37,17 @@ every `bun add`, so a package reaches the project only through a prompt — and
 - The guard blocks `sh`, `bash`, `zsh`, `dash`, `source`, `.` and `eval` when
   the program they run is not written out in the command's own words: read
   from standard input (a pipe, a redirection, a heredoc, a here-string),
-  from a process or command substitution, or from a parameter expansion in a
-  `-c` string or an `eval` (`sh -c "$cmd"`). It decides by
+  from a process or command substitution, from a parameter expansion in a
+  `-c` string or an `eval` (`sh -c "$cmd"`), or from `xargs` filling in a
+  `-c` string (`xargs -I{} sh -c '{}'`). It decides by
   where the program comes from, not by what produced it, so `curl`, `wget`,
   `gh api` and `base64 -d` need no list. A script operand (`bash
   bun/diff-budget.sh`) and a literal `-c` string, which the guard already
   reads, still run.
 - The guard blocks `bunx`, and `bun x`, unless `--no-install` stands among its
   own options. With the flag it runs only what is already installed.
-- Each refusal names what to do instead: show the user the script's URL, or
-  run the tool with `--no-install`.
+- Each refusal names what to do instead: show the user the script's URL or
+  run a local script by its path, or run the tool with `--no-install`.
 - `core/code-style.md` loses the two bullets the guard now holds, keeping only
   what it does not reach — a script downloaded to a file and run by path — per
   `agent-rulebook`'s *A mechanised prohibition leaves its prose home*.
