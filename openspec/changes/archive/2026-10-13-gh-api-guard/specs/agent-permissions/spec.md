@@ -39,10 +39,14 @@ review loop rests on. A token search blocks a query that merely names the
 word, and that over-refusal is the direction the guard resolves uncertainty
 towards.
 
-This SHALL NOT become a deny entry. A permission pattern matches a prefix, so
-it can name `gh api` whole or nothing narrower, and naming it whole would take
-the reads with it — the `coderabbit` skill reads a pull request's inline
-comments, issue comments and reviews through exactly this command.
+This SHALL NOT become a deny entry. A permission pattern matches the whole
+command text, with `*` standing in for any run of it, so it can name a flag
+but never the absence of one: a call writes because of the method and
+parameter flags it carries together, in any order, so a pattern narrow enough
+to spare the reads misses a write spelled another way, and naming `gh api`
+whole would take the reads with it — the `coderabbit` skill reads a pull
+request's inline comments, issue comments and reviews through exactly this
+command.
 
 #### Scenario: The agent tries to reply to a review
 
