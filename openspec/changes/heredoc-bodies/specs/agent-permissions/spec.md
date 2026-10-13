@@ -117,9 +117,9 @@ every command after that line.
 ### Requirement: A heredoc fed to a script reader is read as a script
 
 Where any command in the call is `sh`, `bash`, `zsh`, `dash`, `eval`,
-`source` or `.`, the guard SHALL read every heredoc body in that call as
-commands, whatever its quoting. A file a heredoc writes and the call then
-runs by path is outside the guard, as a file written any other way is.
+`source` or `.`, or is named by a path holding a `/`, the guard SHALL read
+every heredoc body in that call as commands, whatever its quoting. A file
+written any other way, as by `printf`, stays outside the guard.
 
 #### Scenario: A body given to a shell as its script
 
@@ -143,6 +143,12 @@ runs by path is outside the guard, as a file written any other way is.
 - **WHEN** the agent attempts `cat > s.sh <<'EOF'`, with the same body, then
   `EOF`, then `bash s.sh`
 - **THEN** the hook blocks the call, because `bash` stands in the call
+
+#### Scenario: A body written to a script the call runs by path
+
+- **WHEN** the agent attempts `cat > s.sh <<'EOF'`, with the same body, then
+  `EOF`, then `./s.sh`
+- **THEN** the hook blocks the call, because `./s.sh` is named by a path
 
 ### Requirement: A heredoc the guard cannot place fails closed
 
