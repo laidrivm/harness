@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
+import { cleanup, emptyDir, repo } from "./diff-budget.fixture.ts";
 import {
 	archived,
 	CHANGE,
@@ -74,6 +74,19 @@ describe("each stage's conditions", () => {
 	test("an archive whose change directory is still present is open [20]", () => {
 		const r = run(archived(true), ["archive", "demo"]);
 		expect(r.last).toContain(`${CHANGE}/ is still in HEAD`);
+	});
+
+	// spec: stage-goal/an-archive
+	test("an archive of a longer name that starts with this one is no move", () => {
+		const dir = repo(
+			{ [`${CHANGE}/proposal.md`]: "# demo\n" },
+			{
+				[`${CHANGE}/proposal.md`]: null,
+				"openspec/changes/archive/2026-10-13-demo-two/proposal.md": "# two\n",
+			},
+		);
+		const r = run(dir, ["archive", "demo"]);
+		expect(r.last).toContain("no openspec/changes/archive/<date>-demo/");
 	});
 
 	// spec: stage-goal/a-step-the-task-list-does-not-have

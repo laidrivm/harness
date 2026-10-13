@@ -31,6 +31,7 @@ describe("the pull request and the tree", () => {
 	test.each([
 		["absent [25]", null],
 		["failing [26]", { answer: "", code: 1 }],
+		["answering with no JSON", { answer: "not json", code: 0 }],
 	])("gh %s is open, naming the unreadable state", (_, gh) => {
 		const r = run(proposal(), ["propose", "demo"], { gh });
 		expect(r.last).toContain("pull request's state could not be read");
@@ -49,6 +50,13 @@ describe("the pull request and the tree", () => {
 		const gh = { answer: "[]", code: 0 };
 		const r = run(proposal(), ["propose", "demo"], { gh });
 		expect(r.last).toContain("no open pull request for feature");
+	});
+
+	// spec: stage-goal/the-pull-request-is-behind
+	test("a detached HEAD is open and names no branch", () => {
+		const dir = proposal();
+		git(dir, "checkout", "-q", "--detach");
+		expect(run(dir, ["propose", "demo"]).last).toContain("HEAD names no branch");
 	});
 
 	// spec: stage-goal/uncommitted-work
@@ -131,6 +139,15 @@ describe("the line, the exits and the record", () => {
 				commit: head(dir),
 			},
 		]);
+	});
+
+	// spec: stage-goal/a-met-stage
+	test("the record names the checkout read, not CLAUDE_PROJECT_DIR", () => {
+		const dir = tasks(TWO);
+		const env = { CLAUDE_PROJECT_DIR: emptyDir("goal-check-other-") };
+		const r = run(dir, ["apply", "demo", "2"], { env });
+		const top = out(dir, "rev-parse", "--show-toplevel");
+		expect(records(r.state).map((x) => x.project)).toEqual([top]);
 	});
 
 	// spec: stage-goal/two-runs

@@ -87,7 +87,7 @@ export function stateWith(...lines: (object | string)[]): string {
 export function run(
 	dir: string,
 	args: string[],
-	opts: { gh?: Gh; state?: string } = {},
+	opts: { gh?: Gh; state?: string; env?: Record<string, string> } = {},
 ) {
 	const state = opts.state ?? stateWith(runRecord(dir));
 	const call = Bun.spawnSync([process.execPath, check, ...args], {
@@ -97,6 +97,7 @@ export function run(
 			HOME: emptyDir("goal-check-home-"),
 			XDG_STATE_HOME: state,
 			CLAUDE_CODE_SESSION_ID: "s-1",
+			...opts.env,
 		},
 	});
 	const text = call.stdout.toString().trim();
