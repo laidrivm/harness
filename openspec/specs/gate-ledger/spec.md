@@ -81,8 +81,9 @@ counts taken a month apart remain comparable.
 
 ### Requirement: A record holds no command text
 
-A record SHALL hold the time, the gate, the decision, the prohibition's id, the
-project and the session, and nothing else. Its counts are copied into a
+A record SHALL hold the time, the gate, the decision, the rule it applied — a
+guard's prohibition id, or the turn gate's `pre-pr-sequence` — the project and
+the session, and nothing else. Its counts are copied into a
 tracked file of a public repository, and a command line can carry a token or a
 machine-local path.
 
