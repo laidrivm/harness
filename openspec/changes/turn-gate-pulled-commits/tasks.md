@@ -64,7 +64,7 @@ One group, which ships whole as one harness pull request on
       on `completed()` and the module header so they name the third side.
       Verify: `bun test` is green, 1.2 and 1.3 included, and every file is
       under its cap.
-- [ ] 1.5 Grep `README.md`, `core/` and `openspec/specs/` for every passage
+- [x] 1.5 Grep `README.md`, `core/` and `openspec/specs/` for every passage
       that says which groups qualify a turn ("not complete at the mark",
       "completed a task group", "completes a task group"). Reconcile each one
       that this change makes false. On 2026-10-13 none was found, because each
