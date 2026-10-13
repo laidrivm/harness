@@ -59,7 +59,7 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
       change's sibling artefacts, `openspec/specs/**`, the board cards and
       the README ownership map. The settingslocal card and the hygiene-audits
       card are two of them
-- [ ] 1.10 By hand, after the merge: the user prunes the harness's local file
+- [x] 1.10 By hand, after the merge: the user prunes the harness's local file
       to its machine-local entries, and the sweep run from the main checkout
       exits 0 (25). File one card each on the `D2ASS` and `mellon` boards for
       that repository's clean-up, to follow its next pin bump. File one card
