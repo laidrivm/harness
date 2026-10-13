@@ -178,7 +178,7 @@ call under the CodeRabbit CLI's retired short name and one under its current
 name, and a lone `echo` left over from a compound command. The blanket
 `python3` grant is dropped too, per *Interpreters stay behind a prompt* below.
 That makes nine of the twelve gaps dropped and three promoted, `git rm` in its
-narrowed form, so its broader local grant is dropped as well. The other three
+narrowed form, so its broader local grant is dropped as well. The other four
 promotions are commands the workflow runs, not entries the file holds.
 
 ### Interpreters stay behind a prompt
