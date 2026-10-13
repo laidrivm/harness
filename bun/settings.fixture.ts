@@ -15,6 +15,8 @@ import {
 	NOTICE,
 	NOTION_GUARD,
 	NOTION_MATCHER,
+	QUESTION_GATE,
+	QUESTION_MATCHER,
 	TURN_MARK,
 	TURN_STOP,
 } from "./bootstrap.ts";
@@ -73,6 +75,12 @@ export const policy = () => ({
 			{
 				matcher: NOTION_MATCHER,
 				hooks: [{ type: "command", command: NOTION_GUARD } as object],
+			},
+		],
+		PermissionRequest: [
+			{
+				matcher: QUESTION_MATCHER,
+				hooks: [{ type: "command", command: QUESTION_GATE } as object],
 			},
 		],
 		UserPromptSubmit: [

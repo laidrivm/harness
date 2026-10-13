@@ -111,6 +111,17 @@
 				]
 			}
 		],
+		"PermissionRequest": [
+			{
+				"matcher": "^mcp__.+__notion-create-comment$",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bun \"$CLAUDE_PROJECT_DIR/bun/question-gate.ts\""
+					}
+				]
+			}
+		],
 		"UserPromptSubmit": [
 			{
 				"hooks": [

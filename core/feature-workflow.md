@@ -234,6 +234,18 @@ for them is already here.
   user's drag, and a session reordering it overwrites the only instrument
   they have for ranking a column. `done` is no column of that view — its
   cards are read through the view named `Done`, newest archive first.
+- Put a question that blocks your work and only the user can settle on the
+  card of the task it blocks, once the docs, the specs, the card and the
+  history cannot settle it. Read the board's `Questions` view and the card's
+  comments first, and wait on a question already open there, naming its card,
+  rather than ask it again; resuming that work, read that card's comments
+  first. Every page-level comment on a card joins one discussion, so a card
+  holds one open question at a time: a second waits in your report until the
+  first is answered. Open the comment with the gate's mark, set `Assign`, read
+  the answer back as data, and clear `Assign` once it is applied. task-board's
+  *An open question waits on its card, assigned to the user* and *A question
+  already open is not asked again* fix the rest, and the question gate decides
+  which comment needs no prompt.
 - List the files a plan routes, moves or deletes, and confirm each exists,
   before the plan is written.
 - Cite the requirement that fixes a value; never restate the value in another
