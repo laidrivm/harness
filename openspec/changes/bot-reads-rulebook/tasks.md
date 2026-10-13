@@ -88,7 +88,7 @@ run, and this step's pull request body quotes the command each run issued.
       Add `Bash(git ls-files:*)` to `allowed-tools`. State at the expansion
       why the `:(glob)` magic is there: a plain pathspec matched 34 files where
       the bot matches 9 (ZOMBIES 14)
-- [ ] 2.2 Run `/coderabbit-local` once in the harness over this step's
+- [x] 2.2 Run `/coderabbit-local` once in the harness over this step's
       branch. Record the invocation it issued: `.coderabbit.yaml`, `CLAUDE.md`
       and the markdown files directly under `core/`, with none under
       `core/skills/` (17). Record whether the CLI accepted the longer list. If
