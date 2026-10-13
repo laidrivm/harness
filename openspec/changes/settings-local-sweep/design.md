@@ -156,13 +156,15 @@ Promoted to the tracked file:
 - `Bash(mkdir *)`: it creates directories and nothing else, and the four
   `mkdir -p` grants show it is where an unattended run stalled. Once it is
   promoted, those four read as decided.
-- `Bash(bash bun/diff-budget.sh *)`: this is step 1 of the pre-PR sequence and
-  the pre-push hook's own command. The harness has no `diff-budget` package
-  script, so `bun run *` does not reach it.
-- `Bash(bun bun/settings-local.ts)`: the sweep itself, named exactly. The
-  harness's workflow runs no other `bun bun/<name>.ts` by hand. The scripts
-  under `bun/` either run as hooks or are run from a consumer's tree. A
-  pattern over the directory is refused, because it would run whatever file
+- `Bash(bash bun/diff-budget.sh *)`: this is the diff budget the pre-PR
+  runner wraps, and the pre-push hook's own command. The harness has no
+  `diff-budget` package script, so `bun run *` does not reach it.
+- `Bash(bun bun/settings-local.ts)`: the sweep itself, named exactly. Since
+  this was proposed, the pre-PR sequence's step 1 has become
+  `bun bun/pre-pr.ts`, so `Bash(bun bun/pre-pr.ts *)` is promoted beside it.
+  The harness's workflow runs no other `bun bun/<name>.ts` by hand: the other
+  scripts under `bun/` either run as hooks or are run from a consumer's tree.
+  A pattern over the directory is refused, because it would run whatever file
   sits there.
 
 The remaining gaps are dropped. The one-offs: three in-place `sed` edits of

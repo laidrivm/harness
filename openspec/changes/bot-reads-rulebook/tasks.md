@@ -78,27 +78,27 @@ Closes `local-review-loop/the-config-names-guideline-files`,
 The skill is prose and no test runs it. Each criterion is closed by a recorded
 run, and this step's pull request body quotes the command each run issued.
 
-- [ ] 2.1 Change `core/skills/coderabbit-local/SKILL.md` step 2. Read
+- [x] 2.1 Change `core/skills/coderabbit-local/SKILL.md` step 2. Read
       `knowledge_base.code_guidelines.filePatterns` from the parsed
       `.coderabbit.yaml`, not from a line that resembles it, and expand each
-      pattern with `git ls-files ':(glob)<pattern>'`. Then pass `--config
+      pattern with `git ls-files ':(top,glob)<pattern>'`. Then pass `--config
       .coderabbit.yaml CLAUDE.md` followed by every file matched, each once.
       Where no `.coderabbit.yaml` exists, there is nothing to expand, and the
       skill passes `--config CLAUDE.md` alone (16).
       Add `Bash(git ls-files:*)` to `allowed-tools`. State at the expansion
       why the `:(glob)` magic is there: a plain pathspec matched 34 files where
       the bot matches 9 (ZOMBIES 14)
-- [ ] 2.2 Run `/coderabbit-local` once in the harness over this step's
+- [x] 2.2 Run `/coderabbit-local` once in the harness over this step's
       branch. Record the invocation it issued: `.coderabbit.yaml`, `CLAUDE.md`
       and the markdown files directly under `core/`, with none under
       `core/skills/` (17). Record whether the CLI accepted the longer list. If
       it refused, stop and report, per design.md §Risks
-- [ ] 2.3 Build the invocation by hand from d2ass's tree, read-only, and
+- [x] 2.3 Build the invocation by hand from d2ass's tree, read-only, and
       record that `CLAUDE.md`, which `**/CLAUDE.md` also matches, appears once
       (15). Record the 2 `docs/*.md` and 9 `harness/*.md` files it lists (17)
-- [ ] 2.4 Build the invocation from mellon's tree, read-only, and record that
+- [x] 2.4 Build the invocation from mellon's tree, read-only, and record that
       it is `--config CLAUDE.md` alone (16)
-- [ ] 2.5 Reword `core/review-toolkit.md`'s sentence saying the CLI does not
+- [x] 2.5 Reword `core/review-toolkit.md`'s sentence saying the CLI does not
       read `.coderabbit.yaml` on its own. The CLI's docs say it does, but only
       while no `--config` is given, and the skill always gives one. The
       reworded sentence says the skill therefore passes the config and the

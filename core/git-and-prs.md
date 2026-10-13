@@ -33,7 +33,8 @@ entry, a hook or a CI check leaves this file the way it would leave
   by amending. An amend rewrites what the remote holds, so the next push is
   refused as a non-fast-forward and only a force gets past it — and a force
   is a destructive act put to the user for a defect that cost one commit to
-  fix. The extra commits vanish at squash-merge, which is what this
+  fix (unattended: user — never force; report `BLOCKED`). The extra commits
+  vanish at squash-merge, which is what this
   repository does.
 - Ask `git ls-remote` before rewriting a branch at all — amend, rebase or
   reset alike — never memory. The rule above names the amend because that is
@@ -111,7 +112,8 @@ Rules about how work is carried out here. They do not age with the code, and
 they route through `CLAUDE.md`'s fix & capture loop like every other rule.
 
 - Never bypass a git hook with `--no-verify`, `SKIP_SIMPLE_GIT_HOOKS` or a
-  `core.hooksPath` override; run it or ask.
+  `core.hooksPath` override; run it or ask (unattended: user — report the
+  hook's failure as `BLOCKED`, and never ask to bypass it).
 - Never chain a commit onto a check in one command — the check runs, prints,
   and does not stop it; read its result first.
 - Treat an edit to the `simple-git-hooks` *block* in `package.json` as a gate

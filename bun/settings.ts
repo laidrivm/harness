@@ -151,6 +151,21 @@ function absoluteTokens(entry: string): string[] {
 		.filter((token) => /(?:^|[=<>])["']?(\/|~\/)/.test(token));
 }
 
+/**
+ * Why `entry` names a path only one machine has, or `undefined` when it names
+ * none. The tracked allow list refuses such an entry, and the local sweep
+ * keeps it, from this one definition.
+ */
+export function machineLocal(entry: string, root: string): string | undefined {
+	if (absoluteTokens(entry).length)
+		return "carries a path a clone does not have";
+	const path = entry.match(/^(?:Read|Edit)\((.+)\)$/)?.[1];
+	const base = resolve(root); // a trailing `/` on root would double the prefix's
+	if (path !== undefined && !resolve(base, path).startsWith(`${base}/`))
+		return "reaches outside the repository";
+	return undefined;
+}
+
 /** Every way `root`'s settings depart from the policy. */
 export function settings(root: string): string[] {
 	const file = ".claude/settings.json";
@@ -228,12 +243,8 @@ export function settings(root: string): string[] {
 
 	if (allow.length === 0) say("the allow list is empty");
 	for (const entry of allow) {
-		if (absoluteTokens(entry).length)
-			say(`${entry} carries a path a clone does not have`);
-		const path = entry.match(/^(?:Read|Edit)\((.+)\)$/)?.[1];
-		const base = resolve(root); // a trailing `/` on root would double the prefix's
-		if (path !== undefined && !resolve(base, path).startsWith(`${base}/`))
-			say(`${entry} reaches outside the repository`);
+		const why = machineLocal(entry, root);
+		if (why) say(`${entry} ${why}`);
 	}
 
 	const bunfig = Bun.TOML.parse(
