@@ -53,6 +53,10 @@ of it. So the fix cannot be "skip every heredoc body".
   shell runs nothing after it. A delimiter word holding a backtick or a `(`
   refuses the call. One holding a `$` is matched by its literal text, as
   the shell matches it.
+- A call whose scan ends inside a quote or an open substitution is
+  refused. The shell would run none of it, and where only the guard sees
+  the open quote, it has misread a boundary that the quote would hide
+  commands behind. This backstop closes boundary misreadings found later.
 - `openspec/specs/agent-permissions` gains requirements fixing that
   reading. The script-reader one also states its ceiling: a file a heredoc
   writes and the same call then runs by path, as in `./s.sh`, is outside the
@@ -82,11 +86,12 @@ put a second specification over one guard.
 
 ### Modified Capabilities
 
-- `agent-permissions`: gains five requirements, one behaviour each:
+- `agent-permissions`: gains six requirements, one behaviour each:
   *A quoted heredoc's body is data*, *An unquoted heredoc's body runs only
   its substitutions*, *A heredoc body ends where the shell ends it*, *A
-  heredoc fed to a script reader is read as a script* and *A heredoc the
-  guard cannot place fails closed*. They are added beside *The git
+  heredoc fed to a script reader is read as a script*, *A heredoc the
+  guard cannot place fails closed* and *A call the scan ends inside a quote
+  is refused*. They are added beside *The git
   prohibitions are enforced by a hook* rather than written into it. That
   requirement already runs to 140 lines of prose and scenarios, and copying
   it whole for a MODIFIED delta would put most of this change's diff in text
@@ -99,7 +104,7 @@ put a second specification over one guard.
   collector move to a new `bun/command-heredoc.ts`.
 - `bun/command-parse-heredoc.test.ts` — new: the cases, driven through the
   guard as `bun/command-parse.test.ts`'s are.
-- `openspec/specs/agent-permissions/spec.md` — five requirements added.
+- `openspec/specs/agent-permissions/spec.md` — six requirements added.
 - `bun/command-guard.ts`, `.claude/settings.json` — unchanged.
 - Open PR #86 edits `bun/command-guard.ts` and `bun/git-options.ts`, and
   neither file is touched here. Open PR #78 moves the hooks under

@@ -175,3 +175,22 @@ shift, and `<<<` is a here-string, so neither SHALL start a body.
 - **WHEN** the agent attempts `cat <<<x`, then
   `git push --force origin feat/x`, then `x`
 - **THEN** the hook blocks the call
+
+### Requirement: A call the scan ends inside a quote is refused
+
+The guard SHALL refuse a call whose scan reaches the end of the text inside a
+single- or double-quoted string, or inside an unclosed `$(…)` or backtick
+substitution. The shell runs no part of such a call, so nothing it runs is
+refused. Where only the guard sees the open quote, the guard has misread a
+boundary, and the quote would hide every command after it from the guard.
+
+#### Scenario: A stray apostrophe before a guarded command
+
+- **WHEN** the agent attempts `echo don't`, then
+  `git push --force origin feat/x`
+- **THEN** the hook blocks the call
+
+#### Scenario: An unclosed substitution
+
+- **WHEN** the agent attempts `echo $(git status`
+- **THEN** the hook blocks the call

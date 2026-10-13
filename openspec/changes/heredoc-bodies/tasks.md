@@ -23,7 +23,9 @@ Closes `agent-permissions/a-pull-request-body-naming-a-push`,
 `agent-permissions/two-backslashes-before-a-substitution`,
 `agent-permissions/a-split-delimiter-under-a-quoted-one`,
 `agent-permissions/a-delimiter-holding-a-dollar`,
-`agent-permissions/a-delimiter-holding-a-substitution`.
+`agent-permissions/a-delimiter-holding-a-substitution`,
+`agent-permissions/a-stray-apostrophe-before-a-guarded-command`,
+`agent-permissions/an-unclosed-substitution`.
 
 - [ ] 1.1 Write the failing cases first in a new
       `bun/command-parse-heredoc.test.ts`, driven through the guard with
@@ -58,8 +60,9 @@ Closes `agent-permissions/a-pull-request-body-naming-a-push`,
       - `git commit -F - <<'EOF'` on `main`, which still blocks as
         `main-commit`
 
-      Assert the exit code is 0 or 2 in the two unclosed cases. Any other
-      code is a crash, and Claude Code reads a crash as allowing the call.
+      Assert the exit code is 2 in the two unclosed cases, as design D10
+      refuses them. Any other code is a crash or a pass, and Claude Code
+      reads a crash as allowing the call.
 - [ ] 1.4 Add `bun/command-heredoc.ts` with the delimiter reader and the body
       collector as pure functions over the source text, per design D2, D6
       and D8. Each reads the text from the source at the offset the scan
@@ -67,7 +70,10 @@ Closes `agent-permissions/a-pull-request-body-naming-a-push`,
       1.5 wires them in.
 - [ ] 1.5 Carry the heredoc state in `commands()` in `bun/command-parse.ts`.
       Recognise `<<` and `<<-` outside quotes, comments and arithmetic, and
-      consume `<<<` whole first. Drop the operator, its delimiter and a
+      consume `<<<` whole first. Refuse the call when the scan ends inside a
+      quote or an open substitution (D10), with its own ledger id, and say
+      in the reason that the text leaves a quote open. Drop the operator,
+      its delimiter and a
       digits-only fd from the words (D7). Keep the pending list on the frames
       `$(` and backticks suspend and off the ones `(` suspends (D3). Mark
       arithmetic frames (D6). Place each body at the separating newline,
