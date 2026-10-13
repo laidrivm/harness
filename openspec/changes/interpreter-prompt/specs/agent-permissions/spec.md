@@ -18,7 +18,9 @@ every name `python` followed by digits and dots, `node`, `bun`, `deno`,
 assignments and redirections, as the git prohibitions are. An invocation of one of them
 SHALL be asked about unless one of the following holds:
 
-- its only argument is `--version`, `-v`, `-V`, `--help` or `-h`;
+- its only argument is `--version` or `--help`. The short forms differ
+  between interpreters: `python3 -v` and `bash -v` turn on verbose mode, and
+  then read a program from standard input;
 - it is a shell carrying `-c`, whose text the guard reads and checks as
   *The git prohibitions are enforced by a hook* sets out;
 - its first argument names a file that the git repository holding it tracks, or a
@@ -105,8 +107,8 @@ for `bunx`.
 
 #### Scenario: A version query
 
-- **WHEN** the agent attempts `python3 --version` or `node -v`
-- **THEN** the guard emits no decision
+- **WHEN** the agent attempts `python3 --version` or `node --help`
+- **THEN** the guard emits no decision, while `python3 -v` is asked about
 
 #### Scenario: A block in the same command wins
 
