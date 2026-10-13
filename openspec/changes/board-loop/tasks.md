@@ -18,10 +18,13 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
 
 ## 1. One pass for a change the user names
 
-- [ ] 1.0 Add `stage-goal`, `pre-pr-run-record`, `agent-autonomy`,
+- [x] 1.0 Add `stage-goal`, `pre-pr-run-record`, `agent-autonomy`,
       `card-questions` and `loop-guard` to `after:` in this change's
       `.openspec.yaml`, once each directory is on `main`. Verify:
       `bun test bun/board-state-hygiene.test.ts` is green.
+      Evidence: all five sit under `openspec/changes/archive/2026-10-13-*`;
+      `bun bun/board-state.ts` lists the seven and blocks on
+      `board-state-per-project` alone; the hygiene test is 9 pass, 0 fail.
 - [ ] 1.1 Write the precondition tests in `bun/board-loop.test.ts`:
       - `CLAUDECODE` set refuses before any stub is called, and the message
         says to start the runner from your own terminal [1]. An empty value

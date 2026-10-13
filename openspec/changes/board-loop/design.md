@@ -68,9 +68,9 @@ equally theirs.
 
 ### The runner installs, so no session has to
 
-A consumer's hooks run from `node_modules/harness/`. Once
-`self-pinned-gates` (harness#64) lands, the harness's own hooks do too, so
-every clone needs `bun install` before a session's gates work. `bun install`
+A consumer's hooks run from `node_modules/harness/`. Since
+`self-pinned-gates` landed, the harness's own hooks do too, so every clone
+needs `bun install` before a session's gates work. `bun install`
 is a deliberate `ask` in the tracked policy, for supply-chain reasons, and
 under `--permission-prompts none` an ask is a refusal. A session that had to
 install would stall at its first command. The user agreed (2026-10-12) that
@@ -80,7 +80,7 @@ can bring a moved pin. It uses `bun install --frozen-lockfile`, so the install
 takes exactly what `bun.lock` records and fails rather than resolving anew.
 That is the form the bootstrap already lets through and that CI runs. A
 failed install refuses the pass. On a tree with no dependencies and no
-lockfile, which is the harness before #64, the frozen install exits 0
+lockfile, which the harness was before `self-pinned-gates`, the frozen install exits 0
 (measured with bun 1.4.2), so the runner runs it unconditionally.
 
 - *Alternative: allow `bun install` for the runner's sessions with
@@ -97,10 +97,11 @@ Everything except the board's order can be read without a session:
 `boardState()` gives `proposed` and `blocking`, the ticks give the step, and
 `gh pr list --state all --head <branch>` gives the pull requests. The step is
 counted as `stage-goal` counts it: the n-th `## ` group, with the first group
-holding an unticked box as the next step. Today `turn-gate.ts` exports only
-`complete()`, which lists the finished groups and cannot name the next one.
-Task 1.4 therefore exports its parser, `groups()`, which keeps every `## `
-group in order with its ticked and open counts. The runner takes the first
+holding an unticked box as the next step. `complete()` lists only the
+finished groups and cannot name the next one, so the runner reads
+`turn-gate.ts`'s parser, `groups()`, which keeps every `## ` group in order
+with its ticked and open counts. `stage-goal` already exported it for the
+goal check, so task 1.4 had nothing to export. The runner takes the first
 group whose open count is above zero, so the box test still has one
 definition. A `gh` failure makes the change
 untakeable, never "no PR": a missed open PR would launch a second session on
@@ -131,9 +132,9 @@ one choosing. Step 2 removes the argument.
 ### The stage session: launch form, auto mode, no prompts, one hour
 
 The runner composes no condition of its own. It uses `stage-goal`'s launch
-form (`core/feature-workflow.md`, *Unattended stages*, once `stage-goal`
-step 1 lands) with stage `apply`, the change and the step, prefixed by the
-declaration `agent-autonomy` requires. The flags are `--permission-mode auto`
+form (`core/feature-workflow.md`, *Unattended stages*) with stage `apply`,
+the change and the step, and the declaration `agent-autonomy` requires on a
+line of its own, as that form places it. The flags are `--permission-mode auto`
 and `--permission-prompts none`, which is the mode the unattended run of
 2026-10-12 worked in. A call that would prompt is refused, and the session
 reports it as `BLOCKED`. Neither `bypassPermissions` nor
@@ -152,7 +153,11 @@ raised.
 ### The verdict is the check's, run by the runner
 
 `claude -p` exits 0 whether or not a goal was met (`stage-goal`, measured).
-So the runner runs `goal-check.ts apply <slug> <n>` itself after the session
+A session can also end early without meeting it: at the round ceiling, at
+Claude Code's own block cap once the model stops calling tools, or when the
+goal evaluator judges the condition impossible (`stage-goal`, *Measured at
+apply*). None of these ends is told apart here, because each leaves the check
+reading `goal open`. So the runner runs `goal-check.ts apply <slug> <n>` itself after the session
 ends, and takes the outcome from its last line. That run also writes the
 check's own `goal` record with the commit, so the runner's `loop` record
 carries no commit and holds only the outcome of the pass: `met`, `open`,
@@ -164,8 +169,10 @@ needs a person.
 ### The card is the stage session's to move
 
 The script cannot write the board. The session already has to move the card
-in the same turn as the stage (`core/feature-workflow.md`, *Move the card*),
-and its prompt says so. Checking that move from outside the session is the
+in the same turn as the stage (`core/feature-workflow.md`, *Move the card*).
+The prompt does not repeat that, because the prompt is the launch form alone:
+a line added to it would join the goal's condition, which the evaluator
+cannot check against the board. Checking that move from outside the session is the
 named follow-up.
 
 ## Risks / Trade-offs
@@ -185,8 +192,6 @@ named follow-up.
 - [A pick session that reads the board also reads text that a card's author
   wrote] → Only its `PICK:` line is used, and only when it names a slug the
   runner had already computed as takeable.
-- [`goal-check.ts` is absent because `stage-goal` has not landed] → Group 1
-  applies after it (task 1.0). Until then, the runner has no verdict to read.
 
 ## Migration Plan
 
