@@ -97,6 +97,12 @@ there inherits the wrapper and compound reach the existing cases prove, rather
 than earning its own. `GH_WRITES` keeps its shape: the pair list and the `api`
 test answer different questions about the same invocation.
 
+The guard stood at the file cap, so step 1 moved both into
+`bun/command-guard-gh.ts` as two functions returning a reason. The `gh`
+branch still calls them where the pair search stood, and passes each refusal
+its own ledger id at its own `block(` call, which is where the gate ledger's
+test reads the ids.
+
 ## Risks / Trade-offs
 
 - **A read the workflow needs is blocked, and the block looks like a bug.** →

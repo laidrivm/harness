@@ -9,21 +9,22 @@ review` — in `permissions.deny` and again in `bun/command-guard.ts`'s
 matches, so the boundary is currently held by the agent obeying prose.
 
 Probed against the guard on `82948be`, with the three named writes as the
-control:
+control, and again once steps 1 and 2 had merged (`600dddc`), with
+`gh api /repos/o/r` exiting 0 as the control that the built guard still reads:
 
-| command | guard |
-| --- | --- |
-| `gh pr comment 1 --body hi` | exit 2, blocked |
-| `gh issue comment 1 --body hi` | exit 2, blocked |
-| `gh pr review 1 --approve` | exit 2, blocked |
-| `gh api -X POST /repos/o/r/issues/1/comments -f body=hi` | exit 0, allowed |
-| `gh api --method POST /repos/o/r/pulls/1/reviews -f event=APPROVE` | exit 0, allowed |
-| `gh api graphql -f query=mutation{addComment…}` | exit 0, allowed |
-| `gh api -X PATCH /repos/o/r/issues/comments/1 -f body=edited` | exit 0, allowed |
+| command | guard on `82948be` | guard on `600dddc` |
+| --- | --- | --- |
+| `gh pr comment 1 --body hi` | exit 2, blocked | exit 2, blocked |
+| `gh issue comment 1 --body hi` | exit 2, blocked | exit 2, blocked |
+| `gh pr review 1 --approve` | exit 2, blocked | exit 2, blocked |
+| `gh api -X POST /repos/o/r/issues/1/comments -f body=hi` | exit 0, allowed | exit 2, blocked |
+| `gh api --method POST /repos/o/r/pulls/1/reviews -f event=APPROVE` | exit 0, allowed | exit 2, blocked |
+| `gh api graphql -f query=mutation{addComment…}` | exit 0, allowed | exit 2, blocked |
+| `gh api -X PATCH /repos/o/r/issues/comments/1 -f body=edited` | exit 0, allowed | exit 2, blocked |
 
-`bash -c "gh api -X POST …"` passes too, where the wrapped form of the named
-write is blocked — so the gap is in what the guard looks for, not in how far
-it reaches.
+`bash -c "gh api -X POST …"` passed too on `82948be`, where the wrapped form
+of the named write is blocked — so the gap was in what the guard looks for,
+not in how far it reaches. On `600dddc` it exits 2.
 
 `gh api` is in no tracked permission list, so today it prompts like any
 unlisted command and the user sees it. That is a prompt, not a boundary:
@@ -33,9 +34,10 @@ the user may approve while reading something else is not the rule as written.
 
 ## What Changes
 
-- `bun/command-guard.ts` blocks a `gh api` invocation that cannot be shown
-  to be a read, beside the subcommand pairs it already blocks. `gh api --help`
-  states the method: `GET` by default, and `POST` as soon as any parameter is
+- The guard blocks a `gh api` invocation that cannot be shown to be a read,
+  beside the subcommand pairs it already blocks. Both checks live in
+  `bun/command-guard-gh.ts`, which the guard calls from its `gh` branch.
+  `gh api --help` states the method: `GET` by default, and `POST` as soon as any parameter is
   added — so a read is a call whose `--method`/`-X` names `GET` or `HEAD`,
   whatever fields it carries, or one naming no method and carrying no
   parameter flag: `-f`, `-F`, `--field`, `--raw-field` or `--input`. Anything
@@ -47,7 +49,9 @@ the user may approve while reading something else is not the rule as written.
 - `core/git-and-prs.md`'s prohibition narrows to what the mechanism still does
   not cover — a tracker, a forum, any service that is not GitHub — per
   `openspec/specs/agent-rulebook` §*A mechanised prohibition leaves its prose
-  home*.
+  home*. A rewrite on the default branch took it there before this change's
+  last step: the sentence now names the `gh` writes as refused and keeps only
+  the channels no permission entry reaches.
 
 ## Non-goals
 
@@ -86,10 +90,14 @@ own would put a second specification over one guard.
 
 ## Impact
 
-- `bun/command-guard.ts` — one check beside `GH_WRITES`, reading the flags
-  `gh api` takes rather than the path it addresses.
-- `bun/command-guard.test.ts` — the writes blocked, the reads passed, and
-  the wrapped and compound forms the existing cases already cover.
+- `bun/command-guard-gh.ts` — new, split out of `bun/command-guard.ts`,
+  which stood at the file cap: the `GH_WRITES` pair search beside the
+  `gh api` check, which reads the flags `gh api` takes rather than the path it
+  addresses. The guard's `gh` branch calls both and passes each refusal its
+  ledger id.
+- `bun/command-guard-gh.test.ts` and `bun/command-guard-gh-api.test.ts` —
+  new: the writes blocked, the reads passed, and the wrapped and compound
+  forms; the `gh` cases move there from `bun/command-guard.test.ts`.
 - `openspec/specs/agent-permissions/spec.md` — one requirement modified.
 - `core/git-and-prs.md` — the prohibition loses the GitHub clause it no longer
   has to carry.
