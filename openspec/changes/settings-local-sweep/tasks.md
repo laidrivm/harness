@@ -37,7 +37,7 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
       entries (24). Assert that `bun/check.ts`'s `run` returns the same
       problems for a fabricated consumer with and without a local file full
       of gaps (21)
-- [ ] 1.6 Add one bullet to the README's *Consuming* list, beside `check.ts`.
+- [x] 1.6 Add one bullet to the README's *Consuming* list, beside `check.ts`.
       It names the command and says it runs only where the local file
       exists, which is never a clone or CI. It does not name the
       hygiene-audits card, because a board is private and the README is
