@@ -130,10 +130,12 @@ function check(command: string): void {
 			if (bunx) block("bunx-install", bunx);
 			// `bash -c "git push --force"`, `bash -lc …` and `bash -oc pipefail
 			// …` too: the program is the first operand after the options and
-			// their values, wherever the `c` stood.
+			// their values, wherever the `c` stood. Every word from there is read
+			// as a program on its own, since one that looks like a redirection
+			// may be it, and joined to the next it could hide its last command.
 			const shell = SHELLS.has(name) ? shellWords(rest) : null;
 			if (shell?.command) {
-				check(rest.slice(shell.operand).join(" "));
+				for (const word of rest.slice(shell.start)) check(word);
 				continue;
 			}
 			if (name === "eval") {
