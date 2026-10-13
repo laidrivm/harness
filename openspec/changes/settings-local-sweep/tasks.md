@@ -24,7 +24,7 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
       throws nothing (16). A `Read(../…)` entry with no absolute token is kept
       (17). An entry with an absolute path that a tracked rule decides is
       reported as decided (18)
-- [ ] 1.3 Move the machine-local test out of `settings()` in
+- [x] 1.3 Move the machine-local test out of `settings()` in
       `bun/settings.ts` into one exported predicate, which `settings()` calls.
       Verify that `bun/settings.test.ts` passes unedited, and add the case
       showing the sweep keeps exactly what that predicate rejects (20)
