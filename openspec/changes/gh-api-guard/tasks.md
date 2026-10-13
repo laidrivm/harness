@@ -52,7 +52,7 @@ Closes `agent-permissions/a-comment-posted-through-the-endpoint`,
 Closes `agent-permissions/a-write-with-no-method-flag`,
 `agent-permissions/a-graphql-call`, `agent-permissions/a-graphql-read`.
 
-- [ ] 2.1 Write the failing cases first and record that each fails: `gh api
+- [x] 2.1 Write the failing cases first and record that each fails: `gh api
       /repos/o/r/issues/37/comments -f body=hi` blocks; `gh api graphql -f
       query=mutation{…}` blocks; `gh api graphql -F query=@q.graphql` blocks;
       `gh api graphql -f query='query{…}'` passes, and so does the
