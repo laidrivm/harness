@@ -50,7 +50,7 @@ One group, which ships whole as one harness pull request on
         ceiling.
       Keep the file under its 300-line cap. (Req: commit-gates — A turn that
       commits reports its gates before it ends)
-- [ ] 1.3 Add one case to `bun/turn-gate-cli.test.ts`: the 2026-10-13
+- [x] 1.3 Add one case to `bun/turn-gate-cli.test.ts`: the 2026-10-13
       orchestrator turn. A pull on `main` brings in a completed group, and the
       message has no gate line. The script exits 0 with an empty stderr
       [11]. It fails before 1.4. Add a case to

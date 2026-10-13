@@ -9,6 +9,7 @@ import {
 	git,
 	OPEN,
 	prompt,
+	publish,
 	repo,
 	SILENT,
 	store,
@@ -96,6 +97,22 @@ describe("how the refusal leaves the process", () => {
 		const { dir, tmp } = finished();
 		const message = `${SILENT}\n\nTRIAGE gate: PASS — 1 groups.`;
 		expect(run("stop", end(dir, message), dir, tmp).code).toBe(2);
+	});
+
+	// spec: commit-gates/a-pull-brings-in-another-pull-request-s-completed-group
+	test("the 2026-10-13 turn — a pull on `main` brought in a completed group, no gate line — exits 0 with nothing on stderr [11]", () => {
+		const dir = repo({ [TASKS]: OPEN });
+		commit(dir, { [TASKS]: DONE });
+		publish(dir);
+		git(dir, "checkout", "-q", "-b", "main", "HEAD~1");
+		const tmp = store();
+		run("mark", prompt(dir), dir, tmp);
+		git(dir, "merge", "-q", "--ff-only", "origin/main");
+		expect(run("stop", end(dir, SILENT), dir, tmp)).toEqual({
+			code: 0,
+			reason: "",
+			out: "",
+		});
 	});
 
 	test("the mark half prints nothing — its stdout would join every prompt", () => {

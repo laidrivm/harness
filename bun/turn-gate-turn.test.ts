@@ -41,6 +41,14 @@ describe("a turn that committed", () => {
 		expect(decide(end(dir, SILENT), marks)).toContain("1. Group");
 	});
 
+	// spec: commit-gates/a-repository-without-origin-main
+	test("with no `origin/main` to exclude by, completing a group is refused [1]", () => {
+		const { dir, marks } = started();
+		commit(dir, { [TASKS]: DONE });
+		expect(git(dir, "for-each-ref", "refs/remotes/origin/main")).toBe("");
+		expect(decide(end(dir, SILENT), marks)).toContain("1. Group");
+	});
+
 	test("`HEAD` moved by an amend is a turn that committed [13]", () => {
 		const { dir, marks } = started();
 		writeFileSync(join(dir, TASKS), DONE);
