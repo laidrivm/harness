@@ -107,11 +107,21 @@ export function unreadProgram(
  * nothing. `--no-install` counts only among bunx's own options, before the
  * package — a word after it is the package's argument — and for `bun x` only
  * after the `x`. `-p`/`--package` take the next word as their value.
+ *
+ * Which of bun's own options take a value is not enumerated, since a new one
+ * would silently hide the `x` after it: any word straight after an option is
+ * passed over as its possible value, and an `x` there counts too. That reads
+ * `bun --cwd /tmp x cowsay` as `bun x`, and `bun run --cwd x script` as `run`.
+ * The price is `bun --hot app.ts x`, refused although `x` is the script's.
  */
 export function bunxInstall(name: string, rest: string[]): string | undefined {
 	let words = rest;
 	if (name === "bun") {
-		const sub = rest.findIndex((word) => !word.startsWith("-"));
+		const sub = rest.findIndex(
+			(word, at) =>
+				word === "x" ||
+				!(word.startsWith("-") || rest[at - 1]?.startsWith("-")),
+		);
 		if (rest[sub] !== "x") return undefined;
 		words = rest.slice(sub + 1);
 	} else if (name !== "bunx") return undefined;

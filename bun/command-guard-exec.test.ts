@@ -257,6 +257,20 @@ describe("a bunx that installs what it runs", () => {
 		installs("bun --no-install x cowsay");
 	});
 
+	// A word after one of bun's options may be its value, so it is passed over
+	// on the way to the `x` — `bun --hot app.ts x` included, a refusal accepted.
+	test.each([
+		"bun --cwd /tmp x cowsay",
+		"bun --cwd=/tmp x cowsay",
+		"bun -c cfg x cowsay",
+		"bun --hot app.ts x",
+	])("%s blocks", (line) => installs(line));
+
+	test.each(["bun run --cwd x script", "bun --cwd /tmp x --no-install tsc"])(
+		"%s runs",
+		(line) => expect(guard(line).code).toBe(0),
+	);
+
 	// spec: agent-permissions/the-flag-after-the-package
 	test("the flag after the package blocks", () => {
 		installs("bunx cowsay --no-install");
