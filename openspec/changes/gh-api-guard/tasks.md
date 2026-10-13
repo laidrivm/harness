@@ -90,7 +90,7 @@ and no criterion in any capability states what a doc sentence says.
 - [x] 3.2 Re-run the probe table in `proposal.md` §Why against the built
       guard and record the new column, so the change's own evidence is
       measured after rather than quoted from before
-- [ ] 3.3 Confirm the `coderabbit` skill's three `gh api` reads pass the guard
+- [x] 3.3 Confirm the `coderabbit` skill's three `gh api` reads pass the guard
       by running each through it, rather than reasoning from the clause — the
       skill is untracked here, so name the three commands in the record
 - [ ] 3.4 Measure `bun/command-guard.ts` and
