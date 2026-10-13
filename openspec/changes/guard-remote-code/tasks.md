@@ -12,7 +12,8 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       each tagged with its scenario's `// spec:` line, and record that each
       blocking case exits 0 against the guard as it stands: the pipe, the
       `-s`, the process substitution, the command substitution, the heredoc
-      and redirection, the option-value and the wrapped-shell scenarios; and
+      and redirection, the option-value, the wrapped-shell and the `xargs`
+      scenarios; and
       `bunx cowsay hi`, `bun x cowsay hi`, the flag after the package, `-p`
       without the flag, and the three wrapped `bunx` spellings
       (3, 7, 8, 10, 22–34, 36, 38, 40, 44–46)
@@ -44,7 +45,8 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       every candidate ahead of the `SHELLS` branch, with ledger ids
       `unread-program` and `bunx-install`; 1.1–1.3 pass
 - [ ] 1.6 Assert the reasons, not only the exit code: the unread-program
-      reason names the shell and showing the user the URL; the bunx reason
+      reason names the shell, showing the user the URL and running a local
+      script by its path; the bunx reason
       names `--no-install`; each writes its ledger id (3, 21, 34, 43)
 - [ ] 1.7 Delete `core/code-style.md`'s `bunx` bullet and narrow its pipe
       bullet to a script downloaded to a file and run by path, keeping the
