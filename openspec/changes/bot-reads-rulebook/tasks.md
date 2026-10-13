@@ -81,7 +81,7 @@ run, and this step's pull request body quotes the command each run issued.
 - [x] 2.1 Change `core/skills/coderabbit-local/SKILL.md` step 2. Read
       `knowledge_base.code_guidelines.filePatterns` from the parsed
       `.coderabbit.yaml`, not from a line that resembles it, and expand each
-      pattern with `git ls-files ':(glob)<pattern>'`. Then pass `--config
+      pattern with `git ls-files ':(top,glob)<pattern>'`. Then pass `--config
       .coderabbit.yaml CLAUDE.md` followed by every file matched, each once.
       Where no `.coderabbit.yaml` exists, there is nothing to expand, and the
       skill passes `--config CLAUDE.md` alone (16).

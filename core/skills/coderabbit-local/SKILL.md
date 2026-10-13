@@ -35,10 +35,10 @@ Then confirm there is something to review: `git diff --stat <base>...HEAD` for w
 First collect the guideline files the PR bot reads. When the repository has a `.coderabbit.yaml`, read its `knowledge_base.code_guidelines.filePatterns` from the parsed YAML, not from a line that merely resembles the key. An entry is either a glob string or an object `{ files, applyTo }`. For an object, take each glob under `files`. Its `applyTo` scope cannot be expressed locally, so say in the report that it was dropped. Expand each glob with
 
 ```bash
-git ls-files ':(glob)<pattern>'
+git ls-files ':(top,glob)<pattern>'
 ```
 
-The `:(glob)` magic matters. A plain pathspec's `*` crosses `/`, as the bot's does not: in the harness, `core/*.md` listed 34 files plainly, against the 9 the bot reads. Then review:
+The `glob` magic matters. A plain pathspec's `*` crosses `/`, as the bot's does not: in the harness, `core/*.md` listed 34 files plainly, against the 9 the bot reads. `top` reads the pattern from the repository root, as the bot does, even when the session sits in a subdirectory. Then review:
 
 ```bash
 coderabbit review --base <base> --agent --config .coderabbit.yaml CLAUDE.md <each file matched>
