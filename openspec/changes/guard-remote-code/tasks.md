@@ -46,7 +46,12 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       is refused as `force-push`, since the recursion now reads the program
       past the option's value; and `time cp a.txt .` and `xargs grep -n
       eval` run, since `.`, `source` and `eval` are builtins only the
-      command's own name can be
+      command's own name can be. The pre-PR `/zombies` added nine more,
+      each written: `bash -s --version` and `bash 2>/dev/null` fed by a pipe,
+      `bash -c -- 'echo $HOME'` and `command eval "$cmd"` block; `. ./env.sh`,
+      `source ./env.sh`, `eval "git status"` and `bunx -p renovate
+      --no-install renovate-config-validator` run; `bun --no-install x
+      cowsay` blocks
 - [x] 1.4 In `bun/command-parse.ts`, mark a command that a `$(`, a backtick or
       a `<(`/`>(` interrupts, without changing `commands()`'s return type, and
       stop `invocations` at `command -v`/`-V`; keep its existing tests green
