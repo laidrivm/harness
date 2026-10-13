@@ -8,7 +8,7 @@ numbers in brackets are the proposal-stage `/zombies` ideas each task covers.
 Closes every scenario of `agent-permissions` §*A shell is not handed a program
 the guard cannot read* and §*bunx runs only what is already installed*.
 
-- [ ] 1.1 Write the failing cases first in `bun/command-guard-exec.test.ts`,
+- [x] 1.1 Write the failing cases first in `bun/command-guard-exec.test.ts`,
       each tagged with its scenario's `// spec:` line, and record that each
       blocking case exits 0 against the guard as it stands: the pipe, the
       `-s`, the process substitution, the command substitution, the heredoc
@@ -17,6 +17,9 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       `bunx cowsay hi`, `bun x cowsay hi`, the flag after the package, `-p`
       without the flag, and the three wrapped `bunx` spellings
       (3, 7, 8, 10, 22–34, 36, 38, 40, 44–46)
+      — evidence: on `0dec082` all 22 cases fail with `code: 0` and no
+      ledger rule. A heredoc whose body is `git push --force` exited 2 on
+      `force-push`, so the heredoc and here-string bodies are `echo hi`
 - [ ] 1.2 Write the cases that must keep passing, and confirm they pass before
       and after: `bash bun/diff-budget.sh`, with and without a trailing
       `$(git merge-base HEAD origin/main)`; `sh -c "git status"`;
