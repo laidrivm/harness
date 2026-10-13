@@ -42,7 +42,7 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
       exists, which is never a clone or CI. It does not name the
       hygiene-audits card, because a board is private and the README is
       not. Verify by running the bullet's own command from the harness root
-- [ ] 1.7 Run the sweep against the harness's main checkout and compare its
+- [x] 1.7 Run the sweep against the harness's main checkout and compare its
       classes with design §*The harness's own clean-up*. Where the file has
       changed since 2026-10-12, decide each new gap by the same criterion.
       Promote the chosen entries into `.claude/settings.json`. Verify that
