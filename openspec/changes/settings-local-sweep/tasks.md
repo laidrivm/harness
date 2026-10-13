@@ -12,7 +12,7 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
 `agent-permissions/a-gap-in-the-tracked-policy`,
 `agent-permissions/nothing-left-to-promote-or-drop`.
 
-- [ ] 1.1 Write the failing cases first, then confirm each one fails because
+- [x] 1.1 Write the failing cases first, then confirm each one fails because
       the module does not exist yet. Cite each criterion in a `// spec:` line
       above the case that closes it. Cover the empty inputs (1, 2, 3); one
       entry of each class (4, 5, 6); the order of the lists: deny before allow,
