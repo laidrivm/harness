@@ -59,7 +59,7 @@ merge (proposal.md, *Impact*, *Ordering*).
       records through `gate-decision-ledger`'s writer with `commit`.
       Verify: 1.1 is green, and the file is under the 300-line cap
       (`bun/file-size.ts`).
-- [ ] 1.3 Run the branch's check from d2ass's and from mellon's directory, as
+- [x] 1.3 Run the branch's check from d2ass's and from mellon's directory, as
       `bun <harness clone>/bun/goal-check.ts propose <an active change>`
       against d2ass and `archive <an archived change>` against mellon [36].
       Both are read-only: the trees stay untouched. Verify: each prints a
