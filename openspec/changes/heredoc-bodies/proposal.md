@@ -58,9 +58,10 @@ of it. So the fix cannot be "skip every heredoc body".
   the open quote, it has misread a boundary that the quote would hide
   commands behind. This backstop closes boundary misreadings found later.
 - `openspec/specs/agent-permissions` gains requirements fixing that
-  reading. The script-reader one also states its ceiling: a file a heredoc
-  writes and the same call then runs by path, as in `./s.sh`, is outside the
-  guard, just as `printf '…' > s.sh; ./s.sh` already is.
+  reading. The script-reader one counts a command named by a path, as in
+  `./s.sh`, as a reader too, so a heredoc written to a file and run by the
+  same call stays blocked. A file written another way, as in
+  `printf '…' > s.sh; ./s.sh`, stays outside the guard, as it is today.
 
 ## Non-goals
 

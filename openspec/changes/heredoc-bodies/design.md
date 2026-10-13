@@ -84,7 +84,8 @@ every frame alike would hide a command in exactly the subshell case:
 
 **D4. A script reader anywhere in the call reads every body as a script.**
 The check is one pass over the commands the scan found. Any invocation of
-`sh`, `bash`, `zsh` or `dash` (from `SHELLS`), or of `eval`, `source` or `.`,
+`sh`, `bash`, `zsh` or `dash` (from `SHELLS`), of `eval`, `source` or `.`,
+or of a command named by a path (below),
 means each body is scanned again as a whole command line, as today's
 reading does. The alternative was to tie each body to the command whose
 stdin it feeds. That would need the redirection and pipe model the parser
@@ -92,10 +93,14 @@ says it does not have, and it would still miss
 `eval "$(cat <<'EOF' …)"`, where the body reaches the reader through a
 substitution. Reading the whole call is cruder and fails closed.
 
-A file the heredoc writes and the call runs by path (`./s.sh`) is not
-covered. It is the same act as `printf '…' > s.sh; ./s.sh`, which the guard
-already allows, because a single-quoted string is data. The spec states that
-limit so it reads as a decision and not an oversight.
+A command named by a path — any name holding a `/`, as in `./s.sh` —
+counts as a script reader too, since it runs a file the guard never read.
+Today's reading blocks `cat > s.sh <<'EOF'⏎git push --force⏎EOF⏎./s.sh`
+only by reading the body as commands, and quoted bodies as data would
+otherwise let it through (PR #101 review). It costs a call that both writes
+a heredoc and runs a program by path, which none of the commit and pull
+request calls this change is for does. `printf '…' > s.sh; ./s.sh` stays
+outside the guard, as it is today: a single-quoted string is data.
 
 **D5. An unquoted body yields only what its substitutions hold.** The body
 is scanned in a body mode where the only special characters are `$(`, the
