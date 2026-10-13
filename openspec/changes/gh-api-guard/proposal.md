@@ -9,21 +9,22 @@ review` — in `permissions.deny` and again in `bun/command-guard.ts`'s
 matches, so the boundary is currently held by the agent obeying prose.
 
 Probed against the guard on `82948be`, with the three named writes as the
-control:
+control, and again once steps 1 and 2 had merged (`600dddc`), with
+`gh api /repos/o/r` exiting 0 as the control that the built guard still reads:
 
-| command | guard |
-| --- | --- |
-| `gh pr comment 1 --body hi` | exit 2, blocked |
-| `gh issue comment 1 --body hi` | exit 2, blocked |
-| `gh pr review 1 --approve` | exit 2, blocked |
-| `gh api -X POST /repos/o/r/issues/1/comments -f body=hi` | exit 0, allowed |
-| `gh api --method POST /repos/o/r/pulls/1/reviews -f event=APPROVE` | exit 0, allowed |
-| `gh api graphql -f query=mutation{addComment…}` | exit 0, allowed |
-| `gh api -X PATCH /repos/o/r/issues/comments/1 -f body=edited` | exit 0, allowed |
+| command | guard on `82948be` | guard on `600dddc` |
+| --- | --- | --- |
+| `gh pr comment 1 --body hi` | exit 2, blocked | exit 2, blocked |
+| `gh issue comment 1 --body hi` | exit 2, blocked | exit 2, blocked |
+| `gh pr review 1 --approve` | exit 2, blocked | exit 2, blocked |
+| `gh api -X POST /repos/o/r/issues/1/comments -f body=hi` | exit 0, allowed | exit 2, blocked |
+| `gh api --method POST /repos/o/r/pulls/1/reviews -f event=APPROVE` | exit 0, allowed | exit 2, blocked |
+| `gh api graphql -f query=mutation{addComment…}` | exit 0, allowed | exit 2, blocked |
+| `gh api -X PATCH /repos/o/r/issues/comments/1 -f body=edited` | exit 0, allowed | exit 2, blocked |
 
-`bash -c "gh api -X POST …"` passes too, where the wrapped form of the named
-write is blocked — so the gap is in what the guard looks for, not in how far
-it reaches.
+`bash -c "gh api -X POST …"` passed too on `82948be`, where the wrapped form
+of the named write is blocked — so the gap was in what the guard looks for,
+not in how far it reaches. On `600dddc` it exits 2.
 
 `gh api` is in no tracked permission list, so today it prompts like any
 unlisted command and the user sees it. That is a prompt, not a boundary:
