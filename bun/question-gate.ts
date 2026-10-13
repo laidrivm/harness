@@ -117,17 +117,19 @@ function verdict(event: {
 	} catch {
 		return "unreadable";
 	}
-	const of = (tool: string) =>
-		calls.filter(
+	// The latest call of `tool` on the page, failed or not: a read that failed
+	// last leaves the session with no current view of the card.
+	const latest = (tool: string) =>
+		calls.findLast(
 			(c) =>
 				c.name.endsWith(`__${tool}`) &&
-				c.result !== undefined &&
 				id(tool === "notion-fetch" ? c.input.id : c.input.page_id) === page,
 		);
-	const fetch = of("notion-fetch").at(-1);
+	const fetch = latest("notion-fetch");
 	if (!fetch?.result || !BOARDS.includes(board(fetch.result) ?? ""))
 		return "not-a-card";
-	if (of("notion-get-comments").length === 0) return "comments-unread";
+	if (latest("notion-get-comments")?.result === undefined)
+		return "comments-unread";
 	return "question";
 }
 

@@ -86,6 +86,18 @@ describe("a page that is not a card gets no answer", () => {
 		expect(rule(transcript([failed, comments(CARD)]))).toBe("not-a-card");
 	});
 
+	test("a fetch that worked, then one that failed, is no read of a card", () => {
+		const failed = { ...fetched(CARD, "Harness"), failed: true as const };
+		const calls = [fetched(CARD, "Harness"), failed, comments(CARD)];
+		expect(rule(transcript(calls))).toBe("not-a-card");
+	});
+
+	test("a fetch that failed, then one that worked, reads the card", () => {
+		const failed = { ...fetched(CARD, "Harness"), failed: true as const };
+		const calls = [failed, fetched(CARD, "Harness"), comments(CARD)];
+		expect(rule(transcript(calls))).toBe("question");
+	});
+
 	// spec: agent-permissions/the-hook-cannot-read-what-it-decides-on
 	test("a page id holding no 32-hex id is unreadable", () => {
 		const path = transcript([fetched(CARD, "Harness"), comments(CARD)]);
@@ -109,12 +121,26 @@ describe("the card's comments were read", () => {
 			"a comments read that failed",
 			[fetched(CARD, "Harness"), { ...comments(CARD), failed: true as const }],
 		],
+		[
+			"a read that worked, then one that failed",
+			[
+				fetched(CARD, "Harness"),
+				comments(CARD),
+				{ ...comments(CARD), failed: true as const },
+			],
+		],
 	])("%s: no answer, recorded comments-unread", (_, calls) => {
 		const { out, ledger } = run(asked({}, transcript(calls)));
 		expect({ out, rule: ledger[0]?.rule }).toEqual({
 			out: "",
 			rule: "comments-unread",
 		});
+	});
+
+	test("a read that failed, then one that worked, counts as read", () => {
+		const failed = { ...comments(CARD), failed: true as const };
+		const calls = [fetched(CARD, "Harness"), failed, comments(CARD)];
+		expect(rule(transcript(calls))).toBe("question");
 	});
 
 	// spec: agent-permissions/many-questions-in-one-session
