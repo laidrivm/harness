@@ -44,7 +44,7 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       user's script and starts from a clean clone)
       Evidence: 11 cases, with the stubs in `bun/board-loop.fixture.ts`; all
       failed before the runner existed.
-- [ ] 1.2 Write the takeable tests:
+- [x] 1.2 Write the takeable tests:
       - no `proposed` change is idle, launches nothing and exits 0 [8]. Every
         group ticked is not takeable [9];
       - a single-group change is step 1 on `feat/<slug>` [10]. Group 1
@@ -56,6 +56,9 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
         A slug with no directory is refused [16];
       - a failing or missing `gh` leaves nothing takeable [17].
       (Req: board-loop — A pass takes only a takeable change)
+      Evidence: `bun/board-loop-takeable.test.ts`, beside the precondition
+      file for the 300-line cap; it also refuses a call naming anything but
+      one change, with the usage. All failed before the runner existed.
 - [ ] 1.3 Write the stage and verdict tests:
       - a stub `goal-check` printing `goal met` gives `met`, exit 0, and one
         `loop`/`met`/`apply` record [22];
