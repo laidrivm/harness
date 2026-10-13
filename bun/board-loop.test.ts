@@ -52,10 +52,8 @@ describe("the clone", () => {
 		const r = run(dir);
 		expect(r.last).toStartWith("board-loop: refused");
 		expect(r.last).toContain("unpushed");
-		expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")]).toEqual([
-			"feat/demo",
-			tip,
-		]);
+		const after = [out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")];
+		expect(after).toEqual(["feat/demo", tip]);
 	});
 
 	// spec: board-loop/the-previous-pass-s-step-branch
