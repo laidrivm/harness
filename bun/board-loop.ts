@@ -115,6 +115,9 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 		const why = step[0] === "merge" ? `${DEFAULT} cannot fast-forward to origin/${DEFAULT}` : `git ${step[0]} failed`;
 		return end("refused", `${why}; nothing was merged or reset`);
 	}
+	// A local main ahead of origin fast-forwards as "up to date", unpushed work and all.
+	if (sh("git", "rev-parse", "HEAD").out !== sh("git", "rev-parse", `origin/${DEFAULT}`).out)
+		return end("refused", `${DEFAULT} holds commits origin/${DEFAULT} lacks; nothing was merged or reset`);
 	const install = sh("bun", "install", "--frozen-lockfile");
 	if (!install.ok) {
 		console.error([install.out, install.err].filter(Boolean).join("\n"));
