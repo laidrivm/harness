@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
 	after,
 	base,
@@ -16,8 +17,9 @@ import {
 } from "./loop-guard.fixture.ts";
 
 /**
- * What the loop guard counts as one call failing the same way, and its
- * registrations. Refusing the call is `loop-guard-refuse.test.ts`'s.
+ * What the loop guard counts as one call failing the same way, the warning,
+ * what it records in the gate ledger, and its registrations. Refusing the
+ * call is `loop-guard-refuse.test.ts`'s.
  */
 
 afterAll(cleanup);
@@ -33,6 +35,7 @@ describe("what counts as one call failing the same way", () => {
 		expect(run(temp(), before())).toEqual(SILENT);
 	});
 
+	// spec: loop-guard/second-failure
 	test("a second identical failure gives no output [3]", () => {
 		const tmp = temp();
 		run(tmp, failure());
@@ -152,6 +155,74 @@ describe("what counts as one call failing the same way", () => {
 	test("failures with no `session_id` decide nothing [20]", () => {
 		const none = { session_id: undefined };
 		expect(after(thrice(none), before(none))).toEqual(SILENT);
+	});
+});
+
+/** The `hookSpecificOutput` a run printed on stdout. */
+const said = (out: string) => JSON.parse(out).hookSpecificOutput;
+
+describe("the warning", () => {
+	// spec: loop-guard/third-failure
+	test("a third identical failure adds context naming the tool and 3 [4, 16]", () => {
+		const { code, out, err } = after(thrice().slice(0, 2), failure());
+		expect({ code, err }).toEqual({ code: 0, err: "" });
+		const { hookEventName, additionalContext } = said(out);
+		expect(hookEventName).toBe("PostToolUseFailure");
+		expect(additionalContext).toStartWith("loop-guard:");
+		expect(additionalContext).toContain("Bash");
+		expect(additionalContext).toContain("3 times");
+		expect(additionalContext).toContain("will be refused");
+		expect(additionalContext).toContain("change approach");
+		expect(additionalContext).toContain("`BLOCKED`");
+	});
+
+	// spec: loop-guard/fails-again-after-a-new-prompt
+	test("a fourth identical failure, under a new prompt, warns with 4 [5]", () => {
+		const { code, out } = after(thrice(), failure({ prompt_id: "p2" }));
+		expect(code).toBe(0);
+		expect(said(out).additionalContext).toContain("4 times");
+	});
+});
+
+/** Where the ledger lies in `tmp`, which the fixture makes `XDG_STATE_HOME`. */
+const ledger = (tmp: string) => join(tmp, "harness", "gates.jsonl");
+
+describe("the gate ledger", () => {
+	// spec: loop-guard/a-warning-then-a-refusal
+	test("records the warning [31], then the refusal [32], under one rule", () => {
+		const tmp = temp();
+		const secret = { tool_input: { command: "echo hunter2" } };
+		after(thrice({ ...secret, error: "hunter2!" }), before(secret), tmp);
+		const text = readFileSync(ledger(tmp), "utf8");
+		const records = text
+			.trim()
+			.split("\n")
+			.map((line) => JSON.parse(line));
+		expect(records).toMatchObject([
+			{ gate: "loop-guard", decision: "warned", rule: "repeated-failure" },
+			{ gate: "loop-guard", decision: "refused", rule: "repeated-failure" },
+		]);
+		expect(records).toHaveLength(2);
+		expect(text).not.toContain("hunter2");
+	});
+
+	// spec: loop-guard/a-first-failure
+	test("a first and a second failure leave it absent [33]", () => {
+		const tmp = temp();
+		for (const event of thrice().slice(0, 2)) run(tmp, event);
+		expect(existsSync(ledger(tmp))).toBe(false);
+	});
+
+	test("unwritable, the warning and the refusal are unchanged [34]", () => {
+		const events = [...thrice(), before()];
+		const answers = (tmp: string) => events.map((event) => run(tmp, event));
+		const unwritable = temp();
+		// A file where the ledger's directory goes.
+		writeFileSync(join(unwritable, "harness"), "");
+		const written = answers(temp());
+		expect(written[2]?.out).toContain("additionalContext");
+		expect(written[3]?.code).toBe(2);
+		expect(answers(unwritable)).toEqual(written);
 	});
 });
 

@@ -74,7 +74,7 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
 
 ## 2. The warning, the ledger, and the consumers
 
-- [ ] 2.1 Write the cases for this group, failing before 2.2:
+- [x] 2.1 Write the cases for this group, failing before 2.2:
       - in `bun/loop-guard.test.ts`:
         - a third identical failure prints `additionalContext` naming the tool
           and 3, and exits 0 [4];
