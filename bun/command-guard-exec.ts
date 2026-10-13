@@ -8,6 +8,7 @@
  * guard's, written at its call site.
  */
 
+import { posix } from "node:path";
 import { FED, OPEN_REDIRECTION, SHELLS } from "./command-parse.ts";
 
 /**
@@ -36,30 +37,43 @@ function firstWord(words: string[], at: number): number {
  * standard input. `operand` is that first operand's index, or past the end
  * where there is none. For `-c` it is the program, whichever word the `c`
  * stood in: bash runs `echo $HOME` for `bash -co pipefail 'echo $HOME'`.
+ *
+ * `start` is where the options end, before any redirection is skipped. The
+ * words arrive with their quoting removed, so a quoted `-c` program opening
+ * with `>` reads as a redirection, and the word after it as the program: the
+ * `-c` checks read every word from `start` on, not from `operand`.
  */
 export function shellWords(rest: string[]) {
-	const found = { info: false, stdin: false, command: false, operand: 0 };
+	const found = { info: false, stdin: false, command: false, start: 0 };
 	for (let at = firstWord(rest, 0); at < rest.length; ) {
 		const word = rest[at] ?? "";
-		if (word === "--") return { ...found, operand: firstWord(rest, at + 1) };
+		let next = at + 1;
+		if (word === "--")
+			return { ...found, start: next, operand: firstWord(rest, next) };
 		if (word === "--version" || word === "--help") found.info = true;
 		else if (/^[-+][^-]/.test(word)) {
 			found.stdin ||= word.includes("s");
 			found.command ||= word.includes("c");
-			at += word.match(/[oO]/g)?.length ?? 0;
-		} else if (!word.startsWith("--")) return { ...found, operand: at };
-		at = firstWord(rest, at + (TAKES_VALUE.has(word) ? 2 : 1));
+			next += word.match(/[oO]/g)?.length ?? 0;
+		} else if (TAKES_VALUE.has(word)) next++;
+		else if (!word.startsWith("--")) return { ...found, operand: at };
+		found.start = next;
+		at = firstWord(rest, next);
 	}
 	return { ...found, operand: rest.length };
 }
 
 /**
- * A script operand that names no script: none, `-`, or a path under `/dev/`
- * or `/proc/` — scoped by directory rather than by the spellings of standard
- * input, since no repository keeps a script in either.
+ * A script operand that names no script: none, `-`, or a path that, once
+ * normalised, lies under `/dev/` or `/proc/` — or would after climbing out of
+ * the working directory, which `../../dev/stdin` reaches from two levels
+ * down. Scoped by directory rather than by the spellings of standard input,
+ * since no repository keeps a script in either.
  */
 const noScript = (operand: string | undefined) =>
-	operand === undefined || operand === "-" || /^\/(dev|proc)\//.test(operand);
+	operand === undefined ||
+	operand === "-" ||
+	/^(\/|(\.\.\/)+)(dev|proc)\//.test(posix.normalize(operand));
 
 /**
  * Why `name` with `rest` is handed a program the guard cannot read, or
@@ -90,7 +104,13 @@ export function unreadProgram(
 		if (shell.stdin) unread = true;
 		else if (shell.info) unread = false;
 		else if (shell.command)
-			unread = !program || program.includes("$") || fed || xargs;
+			unread =
+				!program ||
+				rest
+					.slice(shell.start, shell.operand + 1)
+					.some((word) => word.includes("$")) ||
+				fed ||
+				xargs;
 		else unread = noScript(program);
 	} else if (first && (name === "source" || name === ".")) {
 		unread = noScript(rest[firstWord(rest, 0)]);
