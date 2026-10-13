@@ -57,7 +57,7 @@ One group, which ships whole as one harness pull request on
       `bun/turn-gate-turn.test.ts`, citing *A repository without
       origin/main*: with no `origin/main`, a turn completing its group is
       refused [1]. It passes today and pins the fallback.
-- [ ] 1.4 Export `BASE` from `bun/branch-state.ts` and import it in
+- [x] 1.4 Export `BASE` from `bun/branch-state.ts` and import it in
       `bun/turn-gate.ts`. In `completed()`, read `<BASE>:<path>` in the same
       `git cat-file --batch` call as the mark and the tip, and add its
       complete groups to the set excluded at the mark. Update the doc comment

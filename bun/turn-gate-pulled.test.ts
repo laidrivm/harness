@@ -27,7 +27,7 @@ import { decide, mark } from "./turn-gate.ts";
 
 afterAll(cleanup);
 
-/** A second change, so a turn can complete a group of its own beside one pulled. */
+/** A second change, so a turn can complete its own group beside a pulled one. */
 const OWN = "openspec/changes/own/tasks.md";
 
 type Files = Record<string, string>;
