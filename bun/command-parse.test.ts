@@ -67,6 +67,15 @@ describe("a spelling that walks around a permission pattern", () => {
 		).toBe(2);
 	});
 
+	test.each(["command -v", "command -V", "command -pv"])(
+		"%s names what follows and runs none of it",
+		(asks) => {
+			expect(
+				run(event(`${asks} git commit -m fix`), fabricate("main")).code,
+			).toBe(0);
+		},
+	);
+
 	test("a redirection in front of the command is not the command", () => {
 		expect(
 			run(event(">/tmp/nope git commit -m fix"), fabricate("main")).code,

@@ -47,10 +47,14 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       past the option's value; and `time cp a.txt .` and `xargs grep -n
       eval` run, since `.`, `source` and `eval` are builtins only the
       command's own name can be
-- [ ] 1.4 In `bun/command-parse.ts`, mark a command that a `$(`, a backtick or
+- [x] 1.4 In `bun/command-parse.ts`, mark a command that a `$(`, a backtick or
       a `<(`/`>(` interrupts, without changing `commands()`'s return type, and
       stop `invocations` at `command -v`/`-V`; keep its existing tests green
       (design Decisions 3, 4)
+      — evidence: the mark is the exported `WeakSet` `FED`; `OPEN_REDIRECTION`
+      is exported and now takes `<<<`, so a here-string's word is not read as
+      a script. `bun test bun/command-parse` 46 pass, three of them new
+      `command -v`/`-V`/`-pv` cases that fail with the parse edit stashed
 - [ ] 1.5 Add `bun/command-guard-exec.ts` with the unread-program and bunx
       checks per design Decisions 2 and 5, each value-taking shell option
       listed beside its reason, and call both from `bun/command-guard.ts` for

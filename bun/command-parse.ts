@@ -16,6 +16,12 @@ import { resolve } from "node:path";
 const SEPARATORS = new Set([";", "\n", "|", "&", "(", ")"]);
 
 /**
+ * The commands `commands()` returned that a substitution interrupted. Beside
+ * the arrays rather than in them, so the one caller's type stays as it was.
+ */
+export const FED = new WeakSet<string[]>();
+
+/**
  * Splits a command line into commands, each a list of words with its quoting
  * removed. Quote-aware in both directions, and that matters twice over:
  *
@@ -33,6 +39,11 @@ const SEPARATORS = new Set([";", "\n", "|", "&", "(", ")"]);
  * it, so the quote the shell sees closing is the one this reader sees closing
  * too: read as an opening quote instead, `echo "$(true)"; git push` swallowed
  * the separator and the push after it into a single quoted word.
+ *
+ * A command that a `$(`, a backtick, or a `<(`/`>(` interrupts is added to
+ * `FED`, because what the substitution produces becomes words of it that this
+ * list never holds: `bash -c "echo $(curl …)"` comes back as `["bash", "-c",
+ * "echo "]`.
  */
 export function commands(line: string): string[][] {
 	const all: string[][] = [];
@@ -100,9 +111,10 @@ export function commands(line: string): string[][] {
 		}
 		word = "";
 	};
-	const endCommand = () => {
+	const endCommand = (fed = false) => {
 		endWord();
 		if (words.length) all.push(words);
+		if (words.length && fed) FED.add(words);
 		words = [];
 	};
 
@@ -117,11 +129,11 @@ export function commands(line: string): string[][] {
 			if (char === "'") quote = "";
 			else word += char;
 		} else if (char === "$" && line[at + 1] === "(") {
-			endCommand();
+			endCommand(true);
 			suspend(); // inside the substitution neither is in force
 			at++;
 		} else if (char === "`") {
-			endCommand();
+			endCommand(!backtick);
 			if (backtick) resume();
 			else suspend();
 			backtick = !backtick;
@@ -147,7 +159,8 @@ export function commands(line: string): string[][] {
 			// `;;` ends the command list and puts the scan back in a pattern, so
 			// the `(` and `|` of every pattern after the first are read as such.
 			if (char === ";" && line[at + 1] === ";" && cases > 0) pattern = true;
-			endCommand();
+			// `<(` and `>(` open a process substitution rather than a subshell.
+			endCommand(char === "(" && /[<>]/.test(line.charAt(at - 1)));
 			// A subshell suspends as a substitution does. That is what keeps the
 			// `)` closing a group inside `$( … )` from restoring the quote the
 			// substitution suspended and putting the rest of it back in quotes.
@@ -220,8 +233,11 @@ export const SHELLS = new Set(["sh", "bash", "zsh", "dash"]);
  */
 const NOT_A_NAME = /^([A-Za-z_][A-Za-z0-9_]*=|-|[0-9]*[<>])/;
 
-/** A redirection whose target is the next word rather than part of this one. */
-const OPEN_REDIRECTION = /^[0-9]*[<>]{1,2}&?$/;
+/**
+ * A redirection whose target is the next word rather than part of this one —
+ * the here-string `<<<` among them, whose word is a shell's standard input.
+ */
+export const OPEN_REDIRECTION = /^[0-9]*(<<<|[<>]{1,2}&?)$/;
 
 /**
  * The commands a fragment may invoke, each by its base name and with its
@@ -251,6 +267,9 @@ export function invocations(words: string[]): [string, string[]][] {
 		const name = word.split("/").pop() ?? "";
 		if (KEYWORDS.has(name)) continue;
 		if (WRAPPERS.has(name)) {
+			// `command -v bash` names a command and runs nothing.
+			if (name === "command" && /^-[pvV]*[vV][pvV]*$/.test(words[at + 1] ?? ""))
+				break;
 			wrapped = true;
 			continue;
 		}
