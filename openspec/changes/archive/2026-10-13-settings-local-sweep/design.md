@@ -19,6 +19,11 @@ the facts the sweep relies on:
   as `Bash`. That equivalence is documented for Bash and not for every tool:
   `WebFetch(domain:*)`, for one, is not a bare `WebFetch`. So the sweep treats
   only `Bash(*)` as universal.
+- A glob in the tool name is honoured in deny and ask, but an allow rule's
+  glob counts only after a glob-free `mcp__<server>__`. Claude Code skips an
+  unanchored allow glob such as `mcp__*`, so the sweep lets it decide nothing.
+  This was added during apply, after triage found the sweep had treated such a
+  rule as a grant.
 - Approving a compound command saves up to five rules, one per subcommand.
   That is where entries like `set -e` or a lone `echo` come from.
 
@@ -173,7 +178,7 @@ call under the CodeRabbit CLI's retired short name and one under its current
 name, and a lone `echo` left over from a compound command. The blanket
 `python3` grant is dropped too, per *Interpreters stay behind a prompt* below.
 That makes nine of the twelve gaps dropped and three promoted, `git rm` in its
-narrowed form, so its broader local grant is dropped as well. The other three
+narrowed form, so its broader local grant is dropped as well. The other four
 promotions are commands the workflow runs, not entries the file holds.
 
 ### Interpreters stay behind a prompt
