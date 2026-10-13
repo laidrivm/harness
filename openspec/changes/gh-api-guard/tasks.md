@@ -58,7 +58,7 @@ Closes `agent-permissions/a-write-with-no-method-flag`,
       `gh api graphql -f query='query{…}'` passes, and so does the
       `coderabbit` skill's own review-thread query, taken verbatim from its
       `SKILL.md` (ZOMBIES 14, 15)
-- [ ] 2.2 Add the second clause — no method flag and any of `-f`, `-F`,
+- [x] 2.2 Add the second clause — no method flag and any of `-f`, `-F`,
       `--field`, `--raw-field`, `--input` present — quoting `gh api --help` at
       the line for why, since the default method is what makes this a write
       and nothing in the command says so (ZOMBIES 11, 16)
