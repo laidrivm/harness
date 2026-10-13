@@ -137,6 +137,16 @@ describe("the card's comments were read", () => {
 		});
 	});
 
+	test("an id-less use and an id-less result are not paired as a read", () => {
+		const read = comments(CARD);
+		const lines = [
+			{ type: "tool_use", name: read.name, input: read.input },
+			{ type: "tool_result", content: read.result },
+		].map((block) => JSON.stringify({ message: { content: [block] } }));
+		const path = transcript([fetched(CARD, "Harness")], lines);
+		expect(rule(path)).toBe("comments-unread");
+	});
+
 	test("a read that failed, then one that worked, counts as read", () => {
 		const failed = { ...comments(CARD), failed: true as const };
 		const calls = [fetched(CARD, "Harness"), failed, comments(CARD)];

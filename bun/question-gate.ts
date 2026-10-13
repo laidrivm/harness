@@ -53,9 +53,18 @@ function uses(path: string): Use[] {
 		}
 		if (!Array.isArray(content)) continue;
 		for (const block of content) {
-			if (block?.type === "tool_use" && typeof block.name === "string")
+			// Ids are checked as strings: a use and a result that both lack one
+			// would otherwise pair under the key `undefined`.
+			if (
+				block?.type === "tool_use" &&
+				typeof block.id === "string" &&
+				typeof block.name === "string"
+			)
 				found.set(block.id, { name: block.name, input: block.input ?? {} });
-			const use = block?.type === "tool_result" && found.get(block.tool_use_id);
+			const use =
+				block?.type === "tool_result" &&
+				typeof block.tool_use_id === "string" &&
+				found.get(block.tool_use_id);
 			if (use && !block.is_error)
 				use.result =
 					typeof block.content === "string"
