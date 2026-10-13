@@ -5,8 +5,8 @@
 `bun/command-guard.ts` reads a shell's `-c` text and an `eval`'s, so `bash -c
 "git push --force"` is refused. It reads nothing an interpreter runs:
 `python3 -c "import subprocess; subprocess.run(['git', 'push', '--force'])"`,
-`bun -e`, `node -e`, a throwaway script run as `bun /tmp/x.ts`, and `printf
-'git commit' | sh` all carry a refused act past it as text it never parses.
+`bun -e`, `node -e`, a throwaway script run as `bun /tmp/x.ts`, and `curl …
+| python3` all carry a refused act past it as text it never parses.
 The last Safety rule of `core/rules.md` forbids that route in prose, and
 agents broke the session brief's matching prose four times in one night
 (2026-10-12/13). The spec's hook requirement names `python -c` as the accepted
@@ -24,7 +24,8 @@ consumer and still miss `bun --eval` and `python3 -Ic`.
 - The command guard answers `ask` (exit 0, a `PreToolUse`
   `permissionDecision` on stdout) when an interpreter is given program text it
   cannot read: inline code, a script file its repository neither tracks nor
-  installed under `node_modules/`, or code on standard input. A hook's `ask`
+  installed under `node_modules/`, or a non-shell interpreter's code on
+  standard input. A hook's `ask`
   prompts even in auto mode. Whether a matching `allow` rule silences it is
   measured during apply. The new requirement lists the interpreters and the
   exemptions. A shell's `-c` text is still read and checked, never asked
@@ -47,9 +48,12 @@ consumer and still miss `bun --eval` and `python3 -Ic`.
   (redirection, `tee`, `cp`, `dd`, `awk -i inplace`). The gated files carry
   `Edit` rules, which a redirection already meets. `perl -pi -e` and a Python
   edit fall under this change, because they are interpreters.
-- **`bunx` and `bun x`**, which belong to the change that blocks curl-to-shell
-  pipes and unchecked `bunx`. A `curl … | sh` matches both checks. Its block
-  outranks this check's prompt.
+- **`bunx`, `bun x`, and a shell reading its program from standard input, a
+  substitution or `$`.** These belong to `guard-remote-code` (#99), which
+  refuses them. This change covers a non-shell interpreter on standard input
+  (`curl … | python3`, `node -`, `bun -`) and a shell given an untracked
+  script file. Both checks may share one module, and the apply step of
+  whichever lands second merges into the other's.
 - **How the guard reads a heredoc body**, which belongs to the change that
   stops it reading a quoted heredoc as commands.
 - **Other runners**: `make`, `find -exec`, `awk`'s `system()`, a git alias,

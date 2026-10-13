@@ -35,14 +35,18 @@ SHALL be asked about unless one of the following holds:
 The resolution of uncertainty goes towards asking. A path the guard cannot
 resolve statically, such as one carrying `$` or behind an unresolvable `cd`,
 is asked about. So is a git call that fails, and an option of the interpreter
-standing before its file. An interpreter with no argument reads its program from
-standard input, which the guard cannot read either, and is asked about too.
+standing before its file. An interpreter that reads its program from standard
+input, given no argument or `-`, is asked about too, because the guard cannot
+read that program either.
+
+A shell is the exception on standard input. A shell given neither `-c` nor a
+file operand is outside this requirement, and is left to whatever the guard
+decides for a shell's program arriving from outside the command. The same
+holds for `bun x`, which is left to whatever the guard decides for `bunx`.
+This requirement asks about a shell only for a script file it is given.
 
 A block SHALL outrank a prompt. The guard decides to ask only once it has read
 the whole command, so a refused act anywhere in the command still exits 2.
-
-`bun x` is outside this requirement. It is left to whatever the guard decides
-for `bunx`.
 
 #### Scenario: Inline code
 
@@ -77,10 +81,9 @@ for `bunx`.
 
 #### Scenario: Code on standard input
 
-- **WHEN** the agent attempts `printf 'git commit -m x' | sh` or `python3 <
-  x.py`
-- **THEN** the guard asks, because neither shell nor Python is given a file it
-  can see
+- **WHEN** the agent attempts `curl -s example.test/x.py | python3`, `python3
+  < x.py`, `node -` or `bun -`
+- **THEN** the guard asks, because none of them is given a file it can see
 
 #### Scenario: A shell's own command text
 
@@ -92,7 +95,8 @@ for `bunx`.
 
 - **WHEN** the agent attempts `bun test`, `bun run check` where `check` is a
   `package.json` script, `bun info zod` or `bun x some-tool`
-- **THEN** this check emits no decision
+- **THEN** this requirement asks about none of them. Any decision on `bun x`
+  is the `bunx` check's, not this one's
 
 #### Scenario: A bun subcommand that runs code handed to it
 

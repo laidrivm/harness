@@ -5,8 +5,8 @@ One task group, so the change ships whole on `feat/interpreter-prompt`.
 The `agent-permissions` delta modifies *The git prohibitions are enforced by a
 hook* whole. Its scenarios describe the git and `gh` checks, which this change
 leaves alone, so it closes none of them. Task 1.6 asserts they still hold.
-#86 modifies the same requirement. Before archiving, diff this copy against
-the live spec on fresh `main`. If #86 merged first, re-copy the requirement
+Pull request #86 modifies the same requirement. Before archiving, diff this
+copy against the live spec on fresh `main`. If #86 merged first, re-copy the requirement
 and keep only this change's two paragraph edits.
 Numbers in brackets refer to the proposal-stage `/zombies` list in the PR.
 
@@ -20,17 +20,20 @@ text the guard cannot read prompts* but
 - [ ] 1.1 Write the failing cases first in a new
       `bun/command-guard-interpreters.test.ts`, driven through
       `command-guard.fixture.ts`, and record that each fails against the guard
-      as it stands. Inline code in every listed spelling, wrapped forms,
-      stdin, throwaway files, `source`, and the bun subcommands that run code:
-      each exits 0, and its whole stdout parses as one object with
+      as it stands. Cover inline code in every listed spelling, wrapped forms,
+      a non-shell interpreter reading standard input (`python3`, `node -`,
+      `bun -`), throwaway files, `source`, and the bun subcommands that run
+      code. Each exits 0, and its whole stdout parses as one object with
       `hookEventName` `PreToolUse`, `permissionDecision` `ask` and a reason
-      naming the interpreter [1, 2, 3, 7, 9, 10, 14, 15, 16, 21]
+      naming the interpreter [1, 3, 7, 9, 10, 14, 15, 16, 21]
 - [ ] 1.2 Write the controls in the same file, which must pass both before and
       after: a tracked script, a tracked script with uncommitted edits, a file
-      under the repository's top-level `node_modules/`, the version and help
-      queries, `bash -c "echo hi"`, `bun test`, `bun run <package script>`
-      and `bun x tool`. Each has empty stdout and exit 0
-      [4, 11, 12, 13, 14, 15, 22]
+      under the repository's top-level `node_modules/`, the long version and
+      help queries, `bash -c "echo hi"`, `bun test` and `bun run <package
+      script>`. Each has empty stdout and exit 0. Assert at the module level
+      that `bun x tool` and a bare `sh` reading a pipe get no reason from
+      this check. Those two belong to the `bunx` check and the shell-stdin
+      check [2, 4, 11, 12, 13, 14, 15, 22]
 - [ ] 1.3 Add `bun/command-guard-interpreters.ts`. It is given an invocation
       and the guard's `dirs`, and returns an `{ id, reason }` or nothing. It
       holds the interpreter names, the `bun` subcommand constant read from
