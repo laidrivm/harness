@@ -6,6 +6,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { cleanup, consumer, policy } from "./settings.fixture.ts";
+import { machineLocal } from "./settings.ts";
 import { sweep } from "./settings-local.ts";
 
 afterAll(cleanup);
@@ -213,6 +214,19 @@ describe("a literal matcher, and the order honest", () => {
 				"kept: Read(../outside/**) — reaches outside the repository",
 			],
 		});
+	});
+
+	test.each([
+		"Read(//Users/someone/**)",
+		"Bash(cp a /tmp/b)",
+		"Bash(cat ~/notes)",
+		"Edit(../secrets/**)",
+		"Read(docs/**)",
+		"Bash(bun test)",
+	])("%s is kept exactly when the tracked-file check refuses it [20]", (entry) => {
+		const dir = repo({}, [entry]);
+		const kept = (sweep(dir)?.kept ?? []).length === 1;
+		expect(kept).toBe(machineLocal(entry, dir) !== undefined);
 	});
 
 	test("an entry with an absolute path that a tracked rule decides is decided, not kept [18]", () => {
