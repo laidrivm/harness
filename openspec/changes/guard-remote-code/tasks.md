@@ -65,10 +65,13 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       recursion reads from the operand `shellWords` finds rather than the
       word after the `c`; `.`, `source` and `eval` are checked only as the
       command's own name, never past a wrapper
-- [ ] 1.6 Assert the reasons, not only the exit code: the unread-program
+- [x] 1.6 Assert the reasons, not only the exit code: the unread-program
       reason names the shell, showing the user the URL and running a local
       script by its path; the bunx reason
       names `--no-install`; each writes its ledger id (3, 21, 34, 43)
+      — evidence: two reason cases (a pipe into `zsh`, so a reason naming
+      `sh` alone fails) and every blocking case asserts `unread-program` or
+      `bunx-install` from the ledger; the file runs 64 pass
 - [ ] 1.7 Delete `core/code-style.md`'s `bunx` bullet and narrow its pipe
       bullet to a script downloaded to a file and run by path, keeping the
       unattended clause; map `npx` to `bunx --no-install` in `core/rules.md`'s
