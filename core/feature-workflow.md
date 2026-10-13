@@ -141,7 +141,13 @@ for them is already here.
   merges.
 - Copy a `MODIFIED` requirement whole from the live spec before editing it,
   and read each scenario it carries against the code that scenario describes
-  before rewording it — the delta re-asserts every line it copies.
+  before rewording it — the delta re-asserts every line it copies. An archive
+  replaces the live requirement with that copy whole, and `openspec validate`
+  does not notice that its text is stale: before archiving, diff the copy
+  against the live spec and re-copy it if the live text moved, keeping only
+  this change's edits; after an archive syncs it, grep the active changes for a
+  delta of the same requirement and re-copy that delta the same way — the
+  later archive otherwise reverts this one.
 - Move the card in the same turn the stage moves. When a proposal merges, a
   step's branch opens, a pull request opens or merges, an archive begins, or a
   change is archived, the task's card reaches the status that stage means
