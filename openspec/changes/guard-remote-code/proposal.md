@@ -60,9 +60,9 @@ every `bun add`, so a package reaches the project only through a prompt — and
   reading a program from stdin or from `-c`/`-e`. Their option grammars
   differ per interpreter, and the board's card on inline interpreter code
   owns that class. `curl … | python3` stays outside this change.
-- **Download, then run by path** (`curl -o i.sh … && sh i.sh`). The script
-  operand is a word of the line; whether the file came from the network is
-  not. The narrowed `core/code-style.md` bullet keeps it.
+- **Download, then run by path** (`curl -o i.sh … && sh i.sh`), or name the
+  file as a startup file (`bash --rcfile i.sh`). The path is a word of the
+  line; the file's contents and whether it came from the network are not. The narrowed `core/code-style.md` bullet keeps it.
 - **A package in Bun's global cache that never passed the check.**
   `--no-install` runs what is already installed, and the global cache is
   installed. After this change only a prompted `bun add -g` or a `bunx` run
