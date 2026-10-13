@@ -10,7 +10,7 @@
  * call made under that same prompt, by exiting 2 with the reason on stderr; a
  * new prompt lets the call run once more. Each warning and refusal is one
  * record in the gate ledger. It never ends the session. The thresholds are
- * fixed by `openspec/changes/loop-guard/specs/loop-guard/spec.md`, not by
+ * fixed by `openspec/specs/loop-guard/spec.md`, not by
  * configuration.
  *
  * It fails open, unlike the command guard: whatever it cannot read or write —
