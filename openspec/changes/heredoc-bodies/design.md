@@ -154,6 +154,15 @@ the boundaries known today; D10 closes the ones found later. It ships in
 this change rather than alone: on today's scan it would refuse every
 heredoc commit message holding an apostrophe, which D1–D5 read as data.
 
+**Applied.** `commands()` takes the guard's `block` and refuses through it:
+`unclosed-quote` for D10, `unplaced-heredoc` for a split delimiter and for a
+backtick or `(` in a delimiter word. D2's join is checked both ways: the
+body's end under the joined reading is compared with its end under the
+plain one, so `x\⏎EOF`, which bash reads as `xEOF` and dash as the end, is
+refused too. With D8's two functions out, `bun/command-parse.ts` still
+measured 329 lines, so `invocations` and the sets it reads moved unchanged
+to `bun/command-words.ts`, beside D4's `readsScript`.
+
 ## Risks / Trade-offs
 
 - [The guard places a body the shell does not see, e.g. `<<` inside

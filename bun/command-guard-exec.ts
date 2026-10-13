@@ -9,7 +9,8 @@
  */
 
 import { posix } from "node:path";
-import { FED, OPEN_REDIRECTION, SHELLS } from "./command-parse.ts";
+import { FED } from "./command-parse.ts";
+import { OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
 
 /**
  * The long shell options that take the next word as their value. A short

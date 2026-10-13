@@ -10,13 +10,13 @@ One group, which ships whole as one harness pull request on
 
 ## 1. Groups that `origin/main` already holds complete do not count
 
-- [ ] 1.1 In `bun/turn-gate.fixture.ts`, add a helper that publishes the
+- [x] 1.1 In `bun/turn-gate.fixture.ts`, add a helper that publishes the
       current tree as `origin`'s `main` and fetches it, so
       `refs/remotes/origin/main` exists. Leave `repo()` as it is, so every
       existing case still runs without that ref. That keeps them covering
       *A repository without origin/main* [1]. Verify: `bun test` stays green
       with the helper unused.
-- [ ] 1.2 Write `bun/turn-gate-pulled.test.ts`, driving `decide` with a
+- [x] 1.2 Write `bun/turn-gate-pulled.test.ts`, driving `decide` with a
       `log` spy. Each case below fails before 1.3, except where the case says
       it passes today:
       - a fast-forward pull on `main` that completes a group, then a silent
@@ -50,21 +50,21 @@ One group, which ships whole as one harness pull request on
         ceiling.
       Keep the file under its 300-line cap. (Req: commit-gates — A turn that
       commits reports its gates before it ends)
-- [ ] 1.3 Add one case to `bun/turn-gate-cli.test.ts`: the 2026-10-13
+- [x] 1.3 Add one case to `bun/turn-gate-cli.test.ts`: the 2026-10-13
       orchestrator turn. A pull on `main` brings in a completed group, and the
       message has no gate line. The script exits 0 with an empty stderr
       [11]. It fails before 1.4. Add a case to
       `bun/turn-gate-turn.test.ts`, citing *A repository without
       origin/main*: with no `origin/main`, a turn completing its group is
       refused [1]. It passes today and pins the fallback.
-- [ ] 1.4 Export `BASE` from `bun/branch-state.ts` and import it in
+- [x] 1.4 Export `BASE` from `bun/branch-state.ts` and import it in
       `bun/turn-gate.ts`. In `completed()`, read `<BASE>:<path>` in the same
       `git cat-file --batch` call as the mark and the tip, and add its
       complete groups to the set excluded at the mark. Update the doc comment
       on `completed()` and the module header so they name the third side.
       Verify: `bun test` is green, 1.2 and 1.3 included, and every file is
       under its cap.
-- [ ] 1.5 Grep `README.md`, `core/` and `openspec/specs/` for every passage
+- [x] 1.5 Grep `README.md`, `core/` and `openspec/specs/` for every passage
       that says which groups qualify a turn ("not complete at the mark",
       "completed a task group", "completes a task group"). Reconcile each one
       that this change makes false. On 2026-10-13 none was found, because each

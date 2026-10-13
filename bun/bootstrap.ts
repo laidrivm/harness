@@ -86,6 +86,10 @@ export const LOOP_GUARD = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/loop-
  * missing in exactly the state it exists to name. Every path exits 0, and
  * `|| true` covers a bun that cannot start: a notice never stops a session.
  *
+ * The pin is read from `devDependencies` when `dependencies` names none: the
+ * harness pins itself there, since a consumer would install a runtime
+ * self-pin and, through it, every earlier one.
+ *
  * shortcut: the installed commit is read from `node_modules/harness/.bun-tag`,
  * which bun 1.4.2 writes as `<owner>-<repo>-<7 hex>` and documents nowhere; a
  * bun that changes it makes the notice fall silent rather than wrong. Upgrade
@@ -97,7 +101,8 @@ export const NOTICE = [
 	'if (!fs.existsSync(d + "/node_modules/harness")) {',
 	'console.log("The harness is not installed: run bun install."); process.exit(0); }',
 	"try {",
-	'const pin = (JSON.parse(fs.readFileSync(d + "/package.json", "utf8")).dependencies?.harness ?? "").match(/#([0-9a-f]{40})$/)?.[1];',
+	'const m = JSON.parse(fs.readFileSync(d + "/package.json", "utf8"));',
+	'const pin = (m.dependencies?.harness ?? m.devDependencies?.harness ?? "").match(/#([0-9a-f]{40})$/)?.[1];',
 	'const tag = fs.readFileSync(d + "/node_modules/harness/.bun-tag", "utf8").trim().match(/-([0-9a-f]{7,40})$/)?.[1];',
 	"if (pin && tag && !pin.startsWith(tag))",
 	'console.log("The installed harness is " + tag + ", the pin " + pin.slice(0, 7) + ": run bun install.");',

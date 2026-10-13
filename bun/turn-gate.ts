@@ -8,7 +8,8 @@
  *
  * `bun turn-gate.ts stop` is the `Stop` half. It refuses, by exiting 2 with
  * the reason on stderr, to end a turn that left commits on the branch and
- * completed a task group of an active change, unless the final message
+ * completed a task group of an active change — one complete neither at the
+ * mark nor on `origin/main` as the turn ends — unless the final message
  * carries `BLOCKED` naming what only the user can settle, or carries a gate
  * line while the gate ledger holds the pre-PR runner's record of the tip in
  * this checkout.
@@ -45,6 +46,7 @@
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import { BASE } from "./branch-state.ts";
 import { ran, record } from "./gate-ledger.ts";
 import { countRound, resetRounds } from "./goal-rounds.ts";
 
@@ -170,10 +172,12 @@ function blobs(cwd: string, specs: string[]): string[] {
 }
 
 /**
- * Groups complete at `tip` that were not complete at the mark, as
- * `<heading> in <change dir>`. Both sides are read from git, never from a
- * record beside the mark. A group absent at the mark was not complete there,
- * so the turn that wrote and ticked it qualifies.
+ * Groups complete at `tip` that were complete neither at the mark nor on
+ * `BASE` as the turn ends, as `<heading> in <change dir>`. Every side is read
+ * from git, never from a record beside the mark. A group `BASE` holds complete
+ * came in by a pull, a fetch or a merge of `main`, and a missing `BASE` reads
+ * as empty, excluding nothing. A group absent at the mark was not complete
+ * there, so the turn that wrote and ticked it qualifies.
  */
 function completed(cwd: string, at: string, tip: string): string[] {
 	const paths = (
@@ -183,10 +187,12 @@ function completed(cwd: string, at: string, tip: string): string[] {
 	)
 		.split("\n")
 		.filter((path) => ACTIVE.test(path));
-	const texts = blobs(cwd, paths.flatMap((p) => [`${at}:${p}`, `${tip}:${p}`]));
+	const sides = [at, BASE, tip];
+	const texts = blobs(cwd, paths.flatMap((p) => sides.map((s) => `${s}:${p}`)));
 	return paths.flatMap((path, i) => {
-		const before = new Set(complete(texts[2 * i]));
-		return complete(texts[2 * i + 1])
+		const [atMark, onBase, atTip] = texts.slice(3 * i, 3 * i + 3);
+		const before = new Set([...complete(atMark), ...complete(onBase)]);
+		return complete(atTip)
 			.filter((heading) => !before.has(heading))
 			.map((heading) => `"${heading}" in ${path.replace(/tasks\.md$/, "")}`);
 	});

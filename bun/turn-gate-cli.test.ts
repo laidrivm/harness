@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	cleanup,
@@ -9,6 +9,7 @@ import {
 	git,
 	OPEN,
 	prompt,
+	publish,
 	repo,
 	SILENT,
 	store,
@@ -18,8 +19,8 @@ import {
 /**
  * `turn-gate.ts` as the hooks run it: a spawned process reading the event on
  * stdin, answering by exit code. What it decides is the other two test
- * files'; here is how the decision leaves the process, and that both halves
- * are registered.
+ * files'; here is how the decision leaves the process. That both halves are
+ * registered is `self-pin.test.ts`'s.
  */
 
 afterAll(cleanup);
@@ -98,6 +99,22 @@ describe("how the refusal leaves the process", () => {
 		expect(run("stop", end(dir, message), dir, tmp).code).toBe(2);
 	});
 
+	// spec: commit-gates/a-pull-brings-in-another-pull-request-s-completed-group
+	test("the 2026-10-13 turn — a pull on `main` brought in a completed group, no gate line — exits 0 with nothing on stderr [11]", () => {
+		const dir = repo({ [TASKS]: OPEN });
+		commit(dir, { [TASKS]: DONE });
+		publish(dir);
+		git(dir, "checkout", "-q", "-b", "main", "HEAD~1");
+		const tmp = store();
+		run("mark", prompt(dir), dir, tmp);
+		git(dir, "merge", "-q", "--ff-only", "origin/main");
+		expect(run("stop", end(dir, SILENT), dir, tmp)).toEqual({
+			code: 0,
+			reason: "",
+			out: "",
+		});
+	});
+
 	test("the mark half prints nothing — its stdout would join every prompt", () => {
 		const dir = repo({ [TASKS]: OPEN });
 		expect(run("mark", prompt(dir), dir, store())).toEqual({
@@ -131,25 +148,5 @@ describe("what ends the turn because it cannot be read", () => {
 	test("an event that is not JSON lets the prompt through", () => {
 		const { dir, tmp } = finished();
 		expect(run("mark", "not json", dir, tmp).code).toBe(0);
-	});
-});
-
-describe("the registrations in this repository's settings", () => {
-	const hooks = () =>
-		JSON.parse(
-			readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"),
-		).hooks;
-
-	test.each([
-		["UserPromptSubmit", "mark"],
-		["Stop", "stop"],
-	])("%s runs the %s half", (event, half) => {
-		const commands = (hooks()[event] ?? []).flatMap(
-			(entry: { hooks?: { command?: string }[] }) =>
-				(entry.hooks ?? []).map((hook) => hook.command),
-		);
-		expect(commands).toContain(
-			`bun "$CLAUDE_PROJECT_DIR/bun/turn-gate.ts" ${half}`,
-		);
 	});
 });

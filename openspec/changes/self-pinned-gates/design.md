@@ -125,7 +125,10 @@ that made it, which is how a skill is developed here.
 - **A sibling registered a working-tree hook.** `notion-update-guard`'s step 1
   (pull request 52) merged first, registering the Notion update guard in the
   harness's settings in working-tree form. This change's apply registers it
-  in its `HOOKS` form instead (tasks.md 1.4).
+  in its `HOOKS` form instead (tasks.md 1.4). `card-questions` and
+  `loop-guard` then merged with the question gate and the loop guard in the
+  same form, and the merge of `main` into the apply branch converts them
+  too, with the pin moved to a commit that holds both scripts.
 
 ## Migration Plan
 
