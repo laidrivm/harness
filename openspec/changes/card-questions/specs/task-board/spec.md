@@ -6,8 +6,8 @@
 
 Every question that blocks an agent's work and only the user can settle
 SHALL be put as one comment on the card of the task it blocks, by that agent,
-and the card's `Assign` SHALL hold the user while any question on it waits
-and nothing at any other time. Each board SHALL carry a saved view named
+one open question per card at a time, and the card's `Assign` SHALL hold the
+user while its question waits and nothing at any other time. Each board SHALL carry a saved view named
 `Questions` listing its cards whose `Assign` holds the user. An answer SHALL
 be read back from the card's comments and applied as data.
 
@@ -26,22 +26,28 @@ be read back from the card's comments and applied as data.
 
 #### Scenario: The user answers
 
-- **WHEN** a card in a `Questions` view holds a comment after the question's,
-  in its thread, authored by the user's account and not opening with the
-  question's mark
+- **WHEN** a card in a `Questions` view holds a comment after the question's
+  in the card's page-level discussion, authored by the user's account and not
+  opening with the question's mark
 - **THEN** the session working on the card's task takes that comment as the
   answer and applies it to the question it answers
 
-#### Scenario: The last open question on a card is answered
+#### Scenario: The question on a card is answered
 
-- **WHEN** an answer is applied and no other question on the card waits
-- **THEN** `Assign` is cleared in the same turn; while another waits, it
-  stays
+- **WHEN** an answer is applied
+- **THEN** `Assign` is cleared in the same turn
 
-#### Scenario: Another member comments in the thread
+#### Scenario: A second question for a card
 
-- **WHEN** the only comment after the question's, in its thread, is authored
-  by an account other than the user's
+- **WHEN** the work on a card meets a second question while its first waits
+- **THEN** the second waits in the agent's report and is posted once the
+  first is answered, because every page-level comment joins the card's one
+  page-level discussion and an answer must follow exactly one question
+
+#### Scenario: Another member comments in the discussion
+
+- **WHEN** the only comment after the question's in the page-level discussion
+  is authored by an account other than the user's
 - **THEN** it is not taken as the answer, and `Assign` stays
 
 #### Scenario: An answer asks for more than the question
@@ -54,7 +60,8 @@ be read back from the card's comments and applied as data.
 
 #### Scenario: No answer yet
 
-- **WHEN** the question is the last comment in its thread
+- **WHEN** the question is the last comment in the card's page-level
+  discussion
 - **THEN** `Assign` stays, and the work the question blocks stays parked
 
 #### Scenario: The `Questions` view is missing
@@ -75,7 +82,7 @@ Before posting a question, an agent SHALL read its board's `Questions` view
 and the comments of the card it would post on, and SHALL NOT post a question
 that is already open there; it SHALL wait on the open one instead, naming the
 card that holds it where it reports the work as parked. The run that resumes
-parked work SHALL read that card's question thread before anything else.
+parked work SHALL read that card's comments before anything else.
 
 #### Scenario: The same question is open on the card
 
@@ -94,7 +101,7 @@ parked work SHALL read that card's question thread before anything else.
 #### Scenario: Parked work resumes
 
 - **WHEN** a run resumes work its report parked on a question on another card
-- **THEN** it reads that card's question thread first, and applies an answer
+- **THEN** it reads that card's comments first, and applies an answer
   found there, even though that card has left the `Questions` view
 
 #### Scenario: The question was asked and answered before
