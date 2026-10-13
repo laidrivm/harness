@@ -106,7 +106,7 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
       `settings.test.ts`'s policy-keeping fixture. Confirm that the
       command guard's `sole` check on the `Bash` matcher still counts only
       its own hook. `bun test` must be green.
-- [ ] 2.3 In the README's *Consuming* section, name the two hooks beside the
+- [x] 2.3 In the README's *Consuming* section, name the two hooks beside the
       turn gate's, with the `loop-guard:` refusal. Grep for every other place
       that lists the hooks a consumer runs (`bun/bootstrap.ts` comments,
       `openspec/specs/**`, `core/`) and reconcile each one.
