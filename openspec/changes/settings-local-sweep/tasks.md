@@ -54,7 +54,7 @@ Closes `agent-permissions/an-entry-the-tracked-file-already-decides`,
 - [x] 1.8 Measure `bun/settings.ts`, `bun/settings-local.ts` and
       `bun/settings-local.test.ts` against the 300-line cap and record the
       three numbers in the pull request body
-- [ ] 1.9 Search the four places that restate a decision for any sentence
+- [x] 1.9 Search the four places that restate a decision for any sentence
       saying the local file is unread or unmeasured, and reconcile each: the
       change's sibling artefacts, `openspec/specs/**`, the board cards and
       the README ownership map. The settingslocal card and the hygiene-audits
