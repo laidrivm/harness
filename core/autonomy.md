@@ -50,9 +50,14 @@ The session takes the step itself, and records in its report or in the pull
 request's body what it did in the user's stead. It opens a pull request when
 every gate line reads `PASS`, with two exceptions:
 
-- a gate line reading `OPEN` only over a question it handed on;
+- `CODERABBIT-LOCAL` reading `OPEN` only over a 🟠 Major or 🔴 Critical
+  dismissal it proposes;
 - `CODERABBIT-LOCAL` reading `BLOCKED` only over a 🟠 Major or 🔴 Critical
   that the third pass left unresolved.
+
+Any other gate line short of `PASS` holds the pull request back. In
+particular, a `TRIAGE` or `ZOMBIES` line reading `BLOCKED` over a question
+handed on stops the pull request until the answer comes, as `card` says.
 
 The body lists each Major or Critical the local review left open, whether
 dismissal is proposed or it is unresolved after the third pass. Each entry
