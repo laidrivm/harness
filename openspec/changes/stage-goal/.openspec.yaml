@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-10-12
+after:
+  - gate-decision-ledger
+  - pre-pr-run-record

@@ -39,6 +39,19 @@ const MANIFEST_WRITES = [
 ];
 
 /**
+ * The MCP tools that send or post as the user, asked under any server: the
+ * server name is chosen per machine, so the same tool reaches sessions under
+ * more than one. An enumeration of verified names, not a verb glob. Exported
+ * so `sync-settings.ts` writes the list this check compares.
+ */
+export const MCP_ASK = [
+	"send_message",
+	"reply",
+	"forward",
+	"notion-create-comment",
+].map((tool) => `mcp__*__${tool}`);
+
+/**
  * The `Bash(` entries `deny` and `ask` hold, whole and in order, and the file
  * rule beside each. Exported with `INSTALL` so `sync-settings.ts` writes the
  * values this check compares, not a second copy of them.
@@ -138,6 +151,21 @@ function absoluteTokens(entry: string): string[] {
 		.filter((token) => /(?:^|[=<>])["']?(\/|~\/)/.test(token));
 }
 
+/**
+ * Why `entry` names a path only one machine has, or `undefined` when it names
+ * none. The tracked allow list refuses such an entry, and the local sweep
+ * keeps it, from this one definition.
+ */
+export function machineLocal(entry: string, root: string): string | undefined {
+	if (absoluteTokens(entry).length)
+		return "carries a path a clone does not have";
+	const path = entry.match(/^(?:Read|Edit)\((.+)\)$/)?.[1];
+	const base = resolve(root); // a trailing `/` on root would double the prefix's
+	if (path !== undefined && !resolve(base, path).startsWith(`${base}/`))
+		return "reaches outside the repository";
+	return undefined;
+}
+
 /** Every way `root`'s settings depart from the policy. */
 export function settings(root: string): string[] {
 	const file = ".claude/settings.json";
@@ -154,6 +182,14 @@ export function settings(root: string): string[] {
 	if (JSON.stringify(bash(ask)) !== JSON.stringify(ASK))
 		say(`the Bash ask list is not ${ASK.join(", ")}`);
 	problems.push(...bunForms(bash(ask)));
+	const mcp = ask.filter((e) => e.startsWith("mcp__"));
+	if (JSON.stringify(mcp) !== JSON.stringify(MCP_ASK))
+		say(`the mcp__ ask list is not ${MCP_ASK.join(", ")}`);
+	for (const entry of [...deny, ...ask, ...allow])
+		if (entry.startsWith("mcp__") && entry.includes("("))
+			say(
+				`${entry} is skipped at load — Claude Code ignores an mcp__ rule written with parentheses`,
+			);
 
 	if (parsed.disableAllHooks)
 		say(
@@ -161,8 +197,10 @@ export function settings(root: string): string[] {
 		);
 	const fix = "run bun node_modules/harness/bun/sync.ts";
 	for (const { event, matcher, command, name, sole } of HOOKS) {
+		// A hook registered with no matcher counts only in a group with none:
+		// one behind a matcher does not run for every tool.
 		const hooks = (parsed.hooks?.[event] ?? [])
-			.filter((entry) => matcher === undefined || entry.matcher === matcher)
+			.filter((entry) => entry.matcher === matcher)
 			.flatMap((entry) => entry.hooks ?? []);
 		if (!sole) {
 			// Presence, not sole occupancy: a second prompt or stop hook cannot
@@ -207,12 +245,8 @@ export function settings(root: string): string[] {
 
 	if (allow.length === 0) say("the allow list is empty");
 	for (const entry of allow) {
-		if (absoluteTokens(entry).length)
-			say(`${entry} carries a path a clone does not have`);
-		const path = entry.match(/^(?:Read|Edit)\((.+)\)$/)?.[1];
-		const base = resolve(root); // a trailing `/` on root would double the prefix's
-		if (path !== undefined && !resolve(base, path).startsWith(`${base}/`))
-			say(`${entry} reaches outside the repository`);
+		const why = machineLocal(entry, root);
+		if (why) say(`${entry} ${why}`);
 	}
 
 	const bunfig = Bun.TOML.parse(

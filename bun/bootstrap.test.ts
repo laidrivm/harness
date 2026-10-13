@@ -1,7 +1,8 @@
 /**
- * The bootstrap hook, the turn gate's registrations and the Notion guard's run
- * as Claude Code runs them: the command through a shell, the event as JSON on
- * stdin, in a project with no harness installed and then with one.
+ * The bootstrap hook and the turn gate's, Notion guard's, question gate's and
+ * loop guard's registrations run as Claude Code runs them: the command
+ * through a shell, the event as JSON on stdin, in a project with no harness
+ * installed and then with one.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -9,7 +10,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	BOOTSTRAP,
+	HOOKS,
 	NOTION_GUARD,
+	QUESTION_GATE,
 	TURN_MARK,
 	TURN_STOP,
 } from "./bootstrap.ts";
@@ -187,5 +190,55 @@ describe("the Notion guard's registration", () => {
 
 	test("a guard that fails to run lets the call through", () => {
 		expect(turn(NOTION_GUARD, guarded("throw (\n")).code).not.toBe(2);
+	});
+});
+
+describe("the question gate's registration", () => {
+	const gate = (script: string) =>
+		gated(script, "harness-question-gate-", "question-gate.ts");
+
+	test("before the install, nothing is printed, so the prompt stands", () => {
+		expect(turn(QUESTION_GATE, gated())).toEqual({
+			code: 0,
+			stdout: "",
+			stderr: "",
+		});
+	});
+
+	test("after the install, the gate's answer reaches Claude Code", () => {
+		expect(turn(QUESTION_GATE, gate("console.log('allow');\n")).stdout).toBe(
+			"allow\n",
+		);
+	});
+
+	test("a gate that fails to run prints no answer", () => {
+		expect(turn(QUESTION_GATE, gate("throw (\n")).stdout).toBe("");
+	});
+});
+
+describe("the loop guard's registrations", () => {
+	/** The text `HOOKS` registers the guard with on `event`. */
+	const on = (event: string) => {
+		const hook = HOOKS.find(
+			(h) => h.event === event && h.name === "harness loop guard",
+		);
+		expect(hook).toBeDefined();
+		return hook?.command ?? "";
+	};
+	const events = ["PreToolUse", "PostToolUseFailure"];
+
+	// spec: loop-guard/before-the-install
+	test.each(events)("on %s, before the install, exit 0 with nothing printed [35]", (event) => {
+		expect(turn(on(event), gated())).toEqual({ code: 0, stdout: "", stderr: "" });
+	});
+
+	test.each(events)("on %s, after the install, pass on the guard's answer", (event) => {
+		const answers = "console.log('warned'); console.error('refused'); process.exit(2);\n";
+		const dir = gated(answers, "harness-loop-guard-", "loop-guard.ts");
+		expect(turn(on(event), dir)).toEqual({
+			code: 2,
+			stdout: "warned\n",
+			stderr: "refused\n",
+		});
 	});
 });

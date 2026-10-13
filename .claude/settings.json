@@ -26,12 +26,21 @@
 			"Bash(bun pm pkg *)",
 			"Bash(bun pm version *)",
 			"Bash(bun pm trust *)",
-			"Edit(bunfig.toml)"
+			"Edit(bunfig.toml)",
+			"mcp__*__send_message",
+			"mcp__*__reply",
+			"mcp__*__forward",
+			"mcp__*__notion-create-comment"
 		],
 		"allow": [
 			"Bash(bun test *)",
 			"Bash(bun run *)",
 			"Bash(bun --version)",
+			"Bash(bun info *)",
+			"Bash(bun audit *)",
+			"Bash(bun bun/pre-pr.ts *)",
+			"Bash(bun bun/settings-local.ts)",
+			"Bash(bash bun/diff-budget.sh *)",
 			"Bash(openspec --version)",
 			"Bash(openspec archive *)",
 			"Bash(openspec instructions *)",
@@ -56,8 +65,10 @@
 			"Bash(git switch *)",
 			"Bash(git add *)",
 			"Bash(git commit *)",
+			"Bash(git rm -- *)",
 			"Bash(gh run *)",
 			"Bash(grep *)",
+			"Bash(mkdir *)",
 			"Bash(command -v *)",
 			"Skill(coderabbit-local)",
 			"Skill(opsx:apply)",
@@ -96,6 +107,35 @@
 					{
 						"type": "command",
 						"command": "g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/notion-guard.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi # harness-managed"
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bun \"$CLAUDE_PROJECT_DIR/bun/loop-guard.ts\""
+					}
+				]
+			}
+		],
+		"PostToolUseFailure": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bun \"$CLAUDE_PROJECT_DIR/bun/loop-guard.ts\""
+					}
+				]
+			}
+		],
+		"PermissionRequest": [
+			{
+				"matcher": "^mcp__.+__notion-create-comment$",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bun \"$CLAUDE_PROJECT_DIR/bun/question-gate.ts\""
 					}
 				]
 			}

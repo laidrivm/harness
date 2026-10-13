@@ -56,6 +56,26 @@ export const NOTION_MATCHER = "^mcp__.+__notion-update-page$";
 export const NOTION_GUARD = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/notion-guard.ts"; if [ -f "$g" ]; then bun "$g"; fi ${MARK}`;
 
 /**
+ * The question gate's `PermissionRequest` registration, under the same kind
+ * of matcher for `notion-create-comment`. Before the install, and whenever the
+ * gate cannot run, the hook prints nothing and gives no answer, so the prompt
+ * stands: this one fails closed with no `|| exit 2`, since only an `allow`
+ * the gate prints widens anything.
+ */
+export const QUESTION_MATCHER = "^mcp__.+__notion-create-comment$";
+export const QUESTION_GATE = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/question-gate.ts"; if [ -f "$g" ]; then bun "$g"; fi ${MARK}`;
+
+/**
+ * The loop guard's registration, one text on both `PreToolUse` and
+ * `PostToolUseFailure` with no matcher: the script chooses its role from the
+ * event, and sees every tool. Before the install every call goes through and
+ * every failure passes uncounted; after it, the guard's exit code and its
+ * warning on stdout are the hook's. No `|| exit 2`: the guard is fail-open,
+ * as its header says.
+ */
+export const LOOP_GUARD = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/loop-guard.ts"; if [ -f "$g" ]; then bun "$g"; fi ${MARK}`;
+
+/**
  * The `SessionStart` notice: one line when the installed harness is not the
  * pinned one, as after a `git pull` that brought a bump, until `bun install`.
  * Claude Code adds a `SessionStart` hook's output to the session, so the
@@ -96,6 +116,7 @@ export const NOTICE = [
  * which hooks there are. A hook the harness adds is one entry here, and its
  * command ends with `MARK`. `sole` makes `settings.ts` refuse any
  * other hook under the same matcher; without it the hook need only be present.
+ * An entry with no matcher is registered, and checked, in a group with none.
  */
 export const HOOKS: {
 	event: string;
@@ -116,6 +137,18 @@ export const HOOKS: {
 		matcher: NOTION_MATCHER,
 		command: NOTION_GUARD,
 		name: "harness Notion update guard",
+	},
+	{
+		event: "PermissionRequest",
+		matcher: QUESTION_MATCHER,
+		command: QUESTION_GATE,
+		name: "harness question gate",
+	},
+	{ event: "PreToolUse", command: LOOP_GUARD, name: "harness loop guard" },
+	{
+		event: "PostToolUseFailure",
+		command: LOOP_GUARD,
+		name: "harness loop guard",
 	},
 	{ event: "UserPromptSubmit", command: TURN_MARK, name: "harness turn gate" },
 	{ event: "Stop", command: TURN_STOP, name: "harness turn gate" },

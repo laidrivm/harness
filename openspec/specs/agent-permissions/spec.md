@@ -10,6 +10,7 @@ Claude Code and prose is not: a supply-chain rule written only in
 `CLAUDE.md` shapes what the agent attempts and stops nothing.
 
 ## Requirements
+
 ### Requirement: Foreign package managers are denied
 
 The repository's tracked Claude Code settings SHALL deny the package managers
@@ -79,6 +80,33 @@ guard below, which resolves the command to its base name and so sees the
 wrapped spellings. The two are not a rule stated twice — the guard is a
 superset, and a deny entry can only ever be redundant, never wrong.
 
+Those three are subcommand names, and `gh api` addresses the same endpoints
+while naming no subcommand at all. The guard SHALL therefore also block a
+`gh api` invocation that cannot be shown to be a read, and SHALL NOT block one
+that can. A read is a call whose `--method` or `-X` names `GET` or `HEAD`,
+whatever parameters it carries, or one naming no method and carrying no
+parameter flag — `-f`, `-F`, `--field`, `--raw-field` or `--input` — since
+`gh api` sends `GET` by default and switches to `POST` as soon as a parameter
+is added. A `graphql` operand SHALL be allowed only when its document is given
+inline as the value of a `query` field, its operation keyword is `query`, and
+the token `mutation` appears nowhere in it; every other `graphql` call SHALL
+be blocked — a mutation, a document read from a file through `@` or
+`--input`, and anything else the guard cannot read. The `coderabbit` skill
+reads whether a review thread is resolved through exactly such a query, which
+no REST endpoint carries, so refusing `graphql` whole would break the read the
+review loop rests on. A token search blocks a query that merely names the
+word, and that over-refusal is the direction the guard resolves uncertainty
+towards.
+
+This SHALL NOT become a deny entry. A permission pattern matches the whole
+command text, with `*` standing in for any run of it, so it can name a flag
+but never the absence of one: a call writes because of the method and
+parameter flags it carries together, in any order, so a pattern narrow enough
+to spare the reads misses a write spelled another way, and naming `gh api`
+whole would take the reads with it — the `coderabbit` skill reads a pull
+request's inline comments, issue comments and reviews through exactly this
+command.
+
 #### Scenario: The agent tries to reply to a review
 
 - **WHEN** the agent attempts `gh pr comment 37 --body "fixed"`
@@ -100,6 +128,46 @@ superset, and a deny entry can only ever be redundant, never wrong.
 - **WHEN** the agent attempts `gh pr view 37 --json state`
 - **THEN** the call is not blocked, because the deny list names write commands
   only
+
+#### Scenario: A comment posted through the endpoint
+
+- **WHEN** the agent attempts
+  `gh api -X POST /repos/o/r/issues/37/comments -f body=hi`
+- **THEN** the guard blocks the call, naming `gh api` and the method that made
+  it a write
+
+#### Scenario: A write with no method flag
+
+- **WHEN** the agent attempts
+  `gh api /repos/o/r/issues/37/comments -f body=hi`
+- **THEN** the guard blocks the call, because a parameter flag with no method
+  sends `POST`
+
+#### Scenario: A GraphQL call
+
+- **WHEN** the agent attempts `gh api graphql` with a document carrying a
+  mutation, or read from a file
+- **THEN** the guard blocks the call
+
+#### Scenario: A GraphQL read
+
+- **WHEN** the agent attempts `gh api graphql -f query='query{…}'` with no
+  `mutation` token in the document, as the `coderabbit` skill does to read
+  review-thread state
+- **THEN** the guard allows the call
+
+#### Scenario: Reading through the endpoint still works
+
+- **WHEN** the agent attempts
+  `gh api "repos/o/r/pulls/37/comments?per_page=100" --paginate`
+- **THEN** the call is not blocked, because it names no method and carries no
+  parameter flag
+
+#### Scenario: A read that carries parameters
+
+- **WHEN** the agent attempts `gh api -X GET /search/issues -f q=repo:o/r`
+- **THEN** the call is not blocked, because an explicit `GET` sends the
+  parameters as a query string
 
 ### Requirement: The git prohibitions are enforced by a hook
 
@@ -127,7 +195,8 @@ command word literally: `/usr/bin/git commit` and `command gh pr comment` reach
 no hook narrowed that way, which was demonstrated against the registered guard
 before this requirement was written. Narrowing by `if` would mean the boundary
 is whatever spelling the pattern anticipates. Deciding in the script instead
-costs one bun start per Bash call, measured at 16-22 ms — negligible beside the
+costs one bun start per Bash call, measured on a call it allows at 10.7-11.0 ms
+before the merged-branch check and 11.0-11.1 ms after — negligible beside the
 call it precedes — and the script SHALL resolve each command to its base name,
 past a leading assignment, past a wrapper word such as `command`, `builtin`,
 `exec` or `env`, and into a shell's `-c` argument.
@@ -140,7 +209,9 @@ documentation and this repository's prose do, not for an adversary.
 The hook SHALL block a commit while `HEAD` is on `main`, and SHALL block any
 force-push, whether written as `--force`, `--force-with-lease`, `-f`, bundled
 into a short-flag group such as `-uf`, which git reads as `-u -f`, or as the
-`+` prefix of a refspec, and wherever it sits in the command. This is stricter than the prose it replaces, which
+`+` prefix of a refspec, and wherever it sits in the command as a switch or a
+refspec — the value of a value-taking option, such as `--force` in
+`-o --force`, is a string git sends on and forces nothing. This is stricter than the prose it replaces, which
 forbade force-pushing only after a pull request was open: the agent loses
 force-push entirely, and the user keeps it.
 
@@ -164,9 +235,13 @@ From any other branch, every operand SHALL be read as a refspec, including the
 repository operand, which is one word that cannot be told from a refspec
 without the same decision above — and a remote whose name is `main` blocks a
 push that would have been allowed, which is the safe direction. The words that
-are values of `-o` and `--push-option`, and of `--receive-pack`, `--exec` and
-`--repo` in their separate-word form, SHALL be skipped, so a push option whose
-value reads like a branch name does not refuse the push carrying it.
+are values of `-o` and `--push-option`, and of `--receive-pack`, `--exec`,
+`--repo` and `--recurse-submodules` in their separate-word form, SHALL be
+skipped before any word is classified, and read as neither a switch nor an
+operand — git consumes each as its option's value whatever it looks like — so
+a push option whose value reads like a branch name or a force flag does not
+refuse the push carrying it. A short option's value SHALL be the rest of its
+word or, with none left, the next word: `-fo x` still forces, `-of` does not.
 
 Each refspec SHALL be read as `[+]<src>:<dst>`, where a refspec without
 `:<dst>` updates the ref its `<src>` names. The hook SHALL block when the
@@ -186,7 +261,7 @@ remote in any tree that does not carry it locally.
 
 Those four SHALL be matched by prefix and not by exact spelling: git accepts
 any unambiguous abbreviation, and `--mir`, `--pru`, `--al` and `--bra` all
-reach the option they abbreviate. Any argument that is a prefix of one of the
+reach the option they abbreviate. Any switch that is a prefix of one of the
 four SHALL block, including one git would itself reject as ambiguous — over-
 refusing a command git does not accept costs nothing.
 
@@ -196,11 +271,13 @@ argument the justification above does not reach, since refusing it would refuse
 a valid push. The operands after it are read as refspecs like any other, so
 `git push -- origin main` still blocks on its destination.
 
-The words skipped as option values SHALL be the exact spellings instead — `-o`,
-`--push-option`, `--receive-pack`, `--exec` and `--repo`, and the `=` forms.
+The options whose values are skipped SHALL be matched by their exact spellings
+instead — `-o`, `--push-option`, `--receive-pack`, `--exec`, `--repo` and
+`--recurse-submodules`, the options git 2.47.0's `git push -h` lists with a
+required value; their `=` forms carry the value in the same word.
 Prefix-matching there would let a short abbreviation swallow the word after it,
-hiding an operand; leaving an abbreviated form unskipped reads that value as an
-operand and can only refuse a push. Both lists therefore resolve their
+hiding a switch or an operand; leaving an abbreviated or negated form unskipped
+reads that value as one and can only refuse a push. Both lists therefore resolve their
 uncertainty towards blocking.
 
 The destination SHALL be read from the command's own words. A destination that
@@ -476,33 +553,52 @@ rejected as ambiguous — every spelling git honours therefore begins with
   `feat/x`
 - **THEN** the hook allows the call, because the word after `-o` is that
   option's value and not an operand
-### Requirement: Every manifest-mutating invocation prompts
+
+#### Scenario: A push option whose value reads like a force flag
+
+- **WHEN** the agent attempts `git push -o --force origin feat/x` or
+  `git push -o --all origin feat/x` with `HEAD` on `feat/x`
+- **THEN** the hook allows the call, because git sends the word after `-o` to
+  the server as that option's value and neither forces nor widens the push
+
+#### Scenario: A force flag beside a push option
+
+- **WHEN** the agent attempts `git push -o ci.skip --force origin feat/x`
+- **THEN** the hook blocks the call, because `--force` is a switch there and
+  only the word after `-o` is its value
+
+### Requirement: Every manifest-mutating invocation prompts, whatever else allows it
 
 `permissions.ask` in `.claude/settings.json` SHALL cover every invocation form
 that changes the project's dependency record — `package.json` or the lockfile.
-That is bun's install family, `bun add`, `bun install` and `bun remove`, with
-each alias `bun` documents for them; `bun update`, `bun patch` and its
-undocumented equivalent `bun patch-commit`; and the `bun pm` subcommands that
-edit `package.json` directly — `pkg`, `version` and `trust`. It SHALL carry no
-entry naming a denied package manager, because an `ask` rule for a denied
-command can never be reached, and no entry broad enough to capture a read-only
-command — save `bun pm pkg get`, which the single `bun pm pkg` entry prompts for
-by design. Claude Code matches a permission pattern against the literal command
+That is bun's install family, `bun add`, `bun install` and `bun remove`;
+`bun update`, `bun patch` and its undocumented equivalent `bun patch-commit`;
+and the `bun pm` subcommands that edit `package.json` directly — `pkg`,
+`version` and `trust`. It SHALL also cover each alias `bun` documents for any
+of them, not for the install family alone: `bun update` gained `bun up` in
+1.4.2 and the surface a check reads is the installed binary's, so an alias
+arrives with a release rather than with a decision. It SHALL carry no entry
+naming a denied package manager, because an `ask` rule for a denied command
+can never be reached, and no entry broad enough to capture a read-only command
+— save `bun pm pkg get`, which the single `bun pm pkg` entry prompts for by
+design. Claude Code matches a permission pattern against the literal command
 string, so an alias is a separate entry and not a variant of one.
 
-Unlike `deny`, an `ask` entry does not override a grant from another source: a
-broader `allow` pattern in `.claude/settings.local.json` or a user-level
-settings file suppresses the prompt. This repository cannot test that, because
-the local file is gitignored, so the requirement holds only where no broader
-grant exists.
+An `ask` entry prompts even where an `allow` pattern from any settings source
+also matches the call, however broad. Claude Code evaluates deny, then ask,
+then allow, across every scope, so a grant in `.claude/settings.local.json` or
+a user-level settings file does not suppress the prompt. In `dontAsk` mode,
+which refuses every call that would prompt, the same entry refuses the call
+instead.
 
-#### Scenario: A broader local allow entry suppresses the prompt
+#### Scenario: A broader local allow entry does not suppress the prompt
 
-- **WHEN** `.claude/settings.local.json` carries `Bash(bun *)` under
+- **WHEN** the session is not in `dontAsk` mode, and
+  `.claude/settings.local.json` carries `Bash(bun *)` under
   `permissions.allow`
 - **AND** the agent attempts `bun add preact`
-- **THEN** Claude Code does not prompt, and no test in this repository detects
-  it
+- **THEN** Claude Code still prompts, because the `ask` entry is evaluated
+  before any `allow`
 
 #### Scenario: Adding a dependency
 
@@ -514,6 +610,12 @@ grant exists.
 - **WHEN** the agent attempts `bun a preact`, `bun i`, or any of `bun rm`,
   `bun r` and `bun uninstall`
 - **THEN** Claude Code prompts, because each alias carries its own `ask` entry
+
+#### Scenario: An alias outside the install family
+
+- **WHEN** the installed `bun update --help` documents the alias `bun up`
+- **THEN** `permissions.ask` carries `Bash(bun up *)`, because the clause
+  reaches every gated command rather than the install family alone
 
 #### Scenario: Removing a dependency
 
@@ -531,8 +633,8 @@ grant exists.
 #### Scenario: trustedDependencies is never granted silently
 
 - **WHEN** the agent attempts `bun pm trust some-package`
-- **THEN** Claude Code prompts, because `CLAUDE.md` reserves that decision for
-  the user
+- **THEN** Claude Code prompts, because `core/code-style.md` reserves that
+  decision for the user
 
 #### Scenario: A read-only sibling is not captured
 
@@ -831,9 +933,9 @@ absolute path token by the rule above and 46 are a `perl -0pi -e` one-liner
 carrying its own regex for one file. 59 entries earned the tracked file.
 
 An entry SHALL NOT restate one the `deny` or `ask` list already carries.
-Whether `allow` outranks `ask` is not settled here; the entry is refused
-either way, because it either re-opens a gate or reads as a grant while doing
-nothing.
+Claude Code evaluates deny, then ask, then allow, so such an entry can neither
+lift a deny nor silence an ask: it is refused because it reads as a grant
+while doing nothing.
 
 #### Scenario: An allow entry restates a gated one
 
@@ -890,3 +992,274 @@ nothing.
 - **WHEN** the curation is done
 - **THEN** `.claude/settings.local.json` still exists and is still untracked;
   only what belonged in the tracked file has left it
+
+### Requirement: The untracked settings file is swept against the tracked policy
+
+A command run from a repository's root SHALL sort each `permissions.allow`
+entry of `.claude/settings.local.json` against that repository's tracked
+`.claude/settings.json`, in Claude Code's order: deny, then ask, then allow. It
+SHALL fail while an entry remains that the tracked file already decides or
+that is not machine-local by *The tracked allow list holds only what a clone
+can use*, naming each, and SHALL write neither file.
+
+#### Scenario: An entry the tracked file already decides
+
+- **WHEN** the local file allows `Bash(bun install:*)` and the tracked file
+  asks for `Bash(bun install *)`
+- **THEN** the sweep names the entry as decided by that ask entry and exits
+  non-zero — ask is evaluated before allow, so the grant does nothing
+
+#### Scenario: A gap in the tracked policy
+
+- **WHEN** the local file allows `Bash(git push *)` and no tracked entry
+  matches it
+- **THEN** the sweep names it as a gap, to be promoted to the tracked file or
+  dropped, and exits non-zero
+
+#### Scenario: Nothing left to promote or drop
+
+- **WHEN** the local file is absent, or holds only an entry naming
+  `//Users/<someone>/…`
+- **THEN** the sweep exits 0, listing the machine-local entry as kept
+- **AND** neither file has changed
+
+### Requirement: A commit on a merged branch is refused
+
+The hook SHALL block a `git commit` on a branch at least one of whose commits
+`git cherry` marks as already upstream, because a merged pull request strands
+every commit made to its branch afterwards, whatever merge style closed it —
+though only the styles named below leave that mark. It SHALL decide this with
+local git only — no fetch, no `gh`, no network — since it runs on every Bash
+call and an offline session must not silently lose the check.
+
+The verdict SHALL be taken from `git cherry`, which marks a commit `-` when an
+equivalent patch is already upstream and `+` when it is not, and equivalence
+is what survives a squash merge rewriting the branch's commits. A branch SHALL
+be treated as merged when at least one of its commits is marked `-`. The rule
+SHALL NOT be stated as the absence of `+` marks: a branch with no commits
+prints neither mark, and the absence form refuses the first commit of every
+branch created.
+
+The verdict SHALL cover the merge styles that carry each of the branch's
+commits upstream as an equivalent patch — a rebase merge, and a squash of a
+single commit — and SHALL NOT claim the others. A merge commit or a
+fast-forward leaves the branch's commits as ancestors of the base, which
+`git cherry` does not list at all; a squash of several commits leaves one
+upstream patch that a single commit matches only by chance. Whatever the
+style, a branch with a commit marked `-` is merged and refused; for one with
+none, `git-and-prs.md`'s pull-request-state rule remains the check.
+
+This verdict SHALL be computed for every branch, whatever the branch's own
+state on the remote, and a positive verdict SHALL be honoured however old the
+base ref is. A stale base can only fail to carry a merge that has happened; it
+cannot invent one. So staleness threatens this requirement in one direction
+only, and the freshness rule below exists to close that one.
+
+The hook SHALL refuse a commit when the base ref's last fetch is older than
+`FETCH_MAX_AGE`, which SHALL be 30 minutes, measured inclusively: a fetch
+exactly 30 minutes old is accepted and one older is refused. The bound SHALL
+carry the reason it holds that value where it is declared.
+
+The fetch time SHALL be read from the modification time of `FETCH_HEAD`, which
+every successful fetch rewrites. In a linked worktree two files apply — the
+worktree's own, written by a fetch run there, and the common checkout's,
+written by a fetch in the main checkout, which moves the `origin/main` every
+worktree shares — and either SHALL count; elsewhere they are the same file.
+It SHALL NOT be read from
+the reflog of the base ref: a fetch that brings no new commit updates no ref
+and so writes no reflog entry, which would refuse the commit while naming a
+remedy that cannot change the answer — measured on this repository, where a
+fetch bringing nothing left the reflog at 139 entries and its newest timestamp
+57 minutes old while `FETCH_HEAD` advanced to the current second.
+
+That timestamp alone SHALL NOT satisfy the bound. `FETCH_HEAD` is written by
+every fetch whatever it fetched, so fetching one unrelated ref refreshes it
+while leaving the base ref untouched — measured, `git fetch origin <other>`
+advanced the mtime by a second and wrote a `FETCH_HEAD` naming only that
+branch. The bound SHALL therefore be satisfied only when one applicable
+`FETCH_HEAD` is within `FETCH_MAX_AGE` **and** its contents name the base
+branch, which is the evidence that the fetch it timestamps covered the base.
+Where no applicable `FETCH_HEAD` is readable, the fetch time SHALL be treated
+as unknown and therefore as a refusal, on the terms this capability already
+applies to an undecidable event.
+
+Where the base ref does not exist at all — no `origin` remote, or no `main`
+under it — no merged verdict can be computed, and the commit SHALL be allowed
+rather than refused. This is an exception to the undecidable-blocks rule and
+is stated as one: a repository with no upstream has nothing a pull request
+could have merged into, and refusing there would refuse every commit in every
+scratch repository the agent creates, this capability's own test fixture
+among them.
+
+The freshness refusal SHALL apply only to a branch that exists under
+`refs/remotes/origin/`. A branch with no counterpart there has, so far as the
+repository can tell, never been pushed, so no pull request of it can have
+merged and the window freshness closes is not open for it. That inference is
+weaker than it reads and the weakness SHALL be recorded rather than implied:
+deleting the branch on the remote and pruning removes the counterpart, and a
+push made without `-u` leaves no upstream configuration behind either, so a
+branch that was pushed and then pruned is indistinguishable from one that was
+never pushed. Such a branch is still refused by the merged verdict above,
+which does not consult that ref; what it loses is only the freshness refusal,
+so the residual gap is a branch pruned, merged, and not yet fetched.
+
+Each refusal SHALL name what the agent is to do next — move the work to a
+branch cut from the merged base, or fetch — because a block whose remedy is
+unstated is a block the session works around.
+
+#### Scenario: A commit on a branch whose pull request merged
+
+- **WHEN** the agent attempts `git commit` on a pushed branch whose commits
+  `git cherry` marks `-` against a recently fetched base ref
+- **THEN** the hook blocks the call, and the reason names the branch as
+  already merged
+
+#### Scenario: A branch closed by a merge commit
+
+- **WHEN** the agent attempts `git commit` on a pushed branch whose pull
+  request was closed by a merge commit, so its commits are ancestors of the
+  base ref and `git cherry` lists none of them
+- **THEN** the commit is allowed, because no `-` mark exists, and the
+  pull-request-state rule in `git-and-prs.md` is what catches it
+
+#### Scenario: The branch was never pushed
+
+- **WHEN** the agent attempts `git commit` on a branch with no ref under
+  `refs/remotes/origin/`, and the base ref was last fetched longer ago than
+  `FETCH_MAX_AGE`
+- **THEN** the commit is allowed, because the freshness refusal does not
+  reach a branch no pull request can have merged
+
+#### Scenario: The first commit of a new branch
+
+- **WHEN** the agent attempts `git commit` on a branch freshly cut from the
+  base ref, which carries no commits and so no `git cherry` marks at all
+- **THEN** the commit is allowed, because no mark is the absence of evidence
+  and not evidence of a merge
+
+#### Scenario: A pushed branch with work of its own
+
+- **WHEN** the agent attempts `git commit` on a pushed branch whose commits
+  `git cherry` marks `+` against a recently fetched base ref
+- **THEN** the commit is allowed
+
+#### Scenario: The base ref is stale
+
+- **WHEN** the agent attempts `git commit` on a pushed branch and the base
+  ref was last fetched longer ago than `FETCH_MAX_AGE`
+- **THEN** the hook blocks the call, and the reason names fetching the base
+  ref as what makes the branch decidable
+
+#### Scenario: A fetch that brings nothing new
+
+- **WHEN** a refused commit is followed by a successful fetch that brings no
+  new commit, so no ref is updated
+- **THEN** the next commit is allowed, because the fetch time comes from
+  `FETCH_HEAD` rather than from a ref's reflog
+
+#### Scenario: A fetch of an unrelated ref
+
+- **WHEN** the last fetch named one branch other than the base, so
+  `FETCH_HEAD` is recent but does not name the base branch
+- **THEN** the hook blocks the call on a pushed branch, because the recency
+  belongs to a fetch that did not cover the base
+
+#### Scenario: The repository has no base ref
+
+- **WHEN** the repository has no `origin` remote, or none with a `main`
+  branch, so no merged verdict can be computed at all
+- **THEN** the commit is allowed, because there is no upstream a pull request
+  could have merged into
+
+#### Scenario: The fetch time cannot be read
+
+- **WHEN** the repository has no readable `FETCH_HEAD`
+- **THEN** the hook blocks the call on a pushed branch, because an unknown
+  answer takes the blocking path
+
+#### Scenario: The remote branch was deleted and pruned
+
+- **WHEN** a branch's counterpart under `refs/remotes/origin/` has been
+  removed by a remote deletion followed by a prune, and its commits are
+  marked `-` against the base ref
+- **THEN** the hook still blocks, because the merged verdict does not consult
+  that ref
+
+#### Scenario: A stranded commit already exists
+
+- **WHEN** a commit has already been made on the merged branch, so
+  `git cherry` marks that one `+` while the merged commits stay `-`
+- **THEN** the hook still blocks, because the merged commits' marks remain
+  for as long as the branch does
+
+### Requirement: Sending as the user through an MCP tool prompts
+
+`permissions.ask` in the tracked `.claude/settings.json` SHALL carry, with
+the server segment a wildcard, an entry for each MCP tool that sends or posts
+text under the user's name: `send_message`, `reply`, `forward` and
+`notion-create-comment`. That enumeration is the policy; a tool absent from
+it does not prompt by this rule. A consumer's check SHALL fail when its
+`mcp__` ask entries are not exactly that list, or when any `mcp__` rule
+carries parentheses.
+
+#### Scenario: The agent tries to send mail
+
+- **WHEN** the agent calls `mcp__claude_ai_Gmail__send_message`
+- **THEN** Claude Code prompts the user, and the mail is sent only if they
+  approve that call
+
+#### Scenario: The same tool under another server name
+
+- **WHEN** a machine registers the mail server as `gmail` rather than
+  through a claude.ai connector, so the tool is `mcp__gmail__send_message`
+- **THEN** the same ask entry prompts for it, because the server segment is a
+  wildcard matched against the full tool name
+
+#### Scenario: A user-level allow names an asked tool
+
+- **WHEN** the user's own settings allow `mcp__claude_ai_Gmail__reply`
+- **THEN** the call still prompts, because an ask rule is evaluated before
+  every allow rule, from any settings source
+
+#### Scenario: A project denies one of the tools outright
+
+- **WHEN** a project's settings also deny `mcp__claude_ai_Gmail__forward`
+- **THEN** the call is refused without a prompt and the tool is removed from
+  the session's context, because deny is evaluated before ask; the consumer
+  check does not object, since it compares the ask entries only
+
+#### Scenario: A mode that never prompts
+
+- **WHEN** the session runs in `dontAsk` mode
+- **THEN** a call to one of the four is refused, because that mode denies
+  every call that would otherwise prompt
+
+#### Scenario: A mode that skips other prompts
+
+- **WHEN** the session runs in `auto` or `bypassPermissions` mode
+- **THEN** a call to one of the four still prompts, because a tool matched by
+  an explicit ask rule is among the actions no mode auto-approves
+
+#### Scenario: A board write still works
+
+- **WHEN** the agent updates a card through `notion-update-page`
+- **THEN** no entry of this requirement prompts for it, because a page write
+  is not speech under the user's name and the task-board workflow requires it
+
+#### Scenario: A draft still works
+
+- **WHEN** the agent calls a mail connector's `create_draft`
+- **THEN** no entry of this requirement prompts for it, because a draft sends
+  nothing until the user sends it
+
+#### Scenario: An entry is dropped
+
+- **WHEN** `mcp__*__forward` is deleted from a consumer's ask list
+- **THEN** the consumer's check fails, naming the list it expected
+
+#### Scenario: An entry is written with parentheses
+
+- **WHEN** an ask entry reads `mcp__*__reply(*)`
+- **THEN** the consumer's check fails, because Claude Code skips an `mcp__`
+  rule with parentheses when it loads settings, so the entry would prompt for
+  nothing while reading as a boundary

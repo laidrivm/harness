@@ -22,9 +22,10 @@ completes, name the next step and the exact command.
   review each artefact before the next is written, use `/opsx:new` and then
   `/opsx:continue` once per artefact (`/opsx:ff` writes the rest in one go).
 - During proposal, ask the questions a spec review would ask: unclear
-  requirements, consequences of design choices, what happens on failure.
-  For any endpoint, fix the exact response shape in design.md per the
-  API design rules. Cheap to fix here, expensive after apply.
+  requirements, consequences of design choices, what happens on failure
+  (unattended: card — hand each question on, and settle none of them
+  yourself). For any endpoint, fix the exact response shape in design.md per
+  the API design rules. Cheap to fix here, expensive after apply.
 - Before the proposal is finalised: run `/zombies "<feature description>"`
   against the proposal text. A proposal whose edge cases are not listed in the
   tasks checklist as tests-first items is not ready to apply.
@@ -49,7 +50,8 @@ completes, name the next step and the exact command.
 - When the project adopts a new long-lived domain (a UI framework, a
   database, a deployment platform) and no vendored skill covers it,
   suggest vendoring one: name the candidate skill and its source, and let
-  the user vendor it in the skills repo — never install a skill yourself.
+  the user vendor it in the skills repo — never install a skill yourself
+  (unattended: card — hand the suggestion on, and install nothing).
   Vet the source like a dependency (official org or recognised maintainer,
   active repo, read the SKILL.md): a skill is executable instructions, so
   an untrusted skill is a prompt-injection vector. Suggest once per
@@ -67,7 +69,10 @@ completes, name the next step and the exact command.
   so an apply that skipped this stalls at its first commit. Then remind the
   user to `/clear` —
   implementation should start from a clean context, reading only the spec
-  artefacts. Stages 2 and 3 repeat per group, in order, until the last one
+  artefacts (unattended: agent — a session started on `/opsx:apply` is
+  already clean; any other session names the apply command in its report
+  for the runner). Stages 2 and 3 repeat per group, in order, until the last
+  one
   merges.
 - Never edit spec files by hand and don't rewrite the proposal mid-build.
   Small course corrections go into the rules in `CLAUDE.md` (fix &
@@ -82,24 +87,31 @@ completes, name the next step and the exact command.
 - Run the pre-PR sequence the Review toolkit sets out, in its order, showing
   each report and acting on it in the same turn.
 - Every new or `[partial]` finding from that run becomes a test before
-  archive — or an explicit user decision to skip it. Deferred items from
+  archive — or an explicit user decision to skip it (unattended: card — hand
+  the skip on, and write the test meanwhile where it can be written).
+  Deferred items from
   the proposal-stage list are settled here too. Scaffolding tests from the
   apply run are deleted here as well (see the Testing rules).
 - If the change introduced or removed a primitive — a new module boundary,
   abstraction, DB table, or external integration — present an
   **architecture delta** before the user reviews code: a short diagram or
   list of what exists now vs. before, highlighting the additions. The user
-  reviews the system first, the code second.
+  reviews the system first, the code second (unattended: agent — put the
+  delta in the pull request's body).
 
 - When all Stage 3 gates pass: push the branch and offer to open the PR
   (`gh pr create`, ready for review — see Git & PRs) with the description per
-  Git & PRs. Wait for the user's go-ahead before opening it.
+  Git & PRs. Wait for the user's go-ahead before opening it (unattended:
+  agent — open it on the gate lines and with the body `autonomy.md`'s
+  `agent` sets out).
 
 ## Stage 4 — Archive
 
 - After the change's last step is merged and verified, run `/opsx:verify`
   against the change's artefacts and settle what it reports, then prompt the
-  user to run `/opsx:archive` so the change lands in the project history.
+  user to run `/opsx:archive` so the change lands in the project history
+  (unattended: agent — run it yourself once `/opsx:verify` leaves nothing
+  unsettled).
   Work is not finished until it's archived.
 - Single-source rule: agent rules and contract rules live in `CLAUDE.md`
   and the docs it indexes; architecture defaults live in the `context:`
@@ -107,6 +119,44 @@ completes, name the next step and the exact command.
   other OpenSpec artefact or rule duplicates either — OpenSpec `rules:`
   owns the form of the change artefacts themselves and may not restate
   what those files already say.
+
+## Unattended stages
+
+A session that carries one stage of one change with nobody present
+(unattended, as `autonomy.md` defines it) sets one `/goal` for that stage, so
+that it cannot end on prose with the stage half done. The `stage-goal`
+capability fixes what makes each stage done. `bun/goal-check.ts` decides it,
+or `node_modules/harness/bun/goal-check.ts` in a consumer. Explore gets no
+goal of its own, because an unattended exploration runs inside the `propose`
+goal. A conversation gets no goal at all.
+
+The launcher starts the stage with the goal as its prompt, and puts the
+declared line on a line of its own. For step 2 of a change `demo` in a
+consumer:
+
+```text
+claude -p '/goal Carry step 2 of the OpenSpec change demo: /opsx:apply demo for its group 2, the pre-PR sequence, the push and the pull request.
+This session runs unattended.
+The goal is met when the last line of `bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push, opens with `goal met` — or when the final message opens with `BLOCKED —` and names what only the user can settle.'
+```
+
+A proposal names `propose demo` and an archive names `archive demo`, with no
+step. The outcome is the launcher's own run of the same check once the session
+ends: exit 0 means the stage is done, and 1 means it is not. Two other
+signals look like an outcome and are not:
+
+- `claude -p`'s exit status reads `0` whether the goal was met or Claude
+  Code's block cap ended the run.
+- A `goal` record in the gate ledger names no change or step, so two targets
+  at one commit cannot be told apart.
+
+A goal run that will not converge ends at the round ceiling `stage-goal`
+fixes. When the stops that the goal itself continued since the prompt reach
+it, the turn gate ends the session with a `goal-ceiling:` reason and a
+`goal`/`rounds`/`ceiling` record, and leaves the goal set. The check then
+still reports `goal open`. To go on, resume the session with a prompt, which
+starts the count again: `claude -p --resume <session id> 'go on'`. To give
+the stage up instead, run `/goal clear` in it.
 
 ## Across the stages
 
@@ -129,7 +179,15 @@ for them is already here.
   merges.
 - Copy a `MODIFIED` requirement whole from the live spec before editing it,
   and read each scenario it carries against the code that scenario describes
-  before rewording it — the delta re-asserts every line it copies.
+  before rewording it — the delta re-asserts every line it copies. An archive
+  replaces the live requirement with that copy whole, and `openspec validate`
+  does not notice that its text is stale: before archiving, diff the copy
+  against the live spec and re-copy it if the live text moved, keeping only
+  this change's edits; after an archive syncs it, grep the active changes for a
+  delta of the same requirement and re-copy that delta the same way — the
+  later archive otherwise reverts this one. Where that delta's own edits
+  contradict what the archive just synced, reconcile the two changes before
+  either archives again; never let the re-copy silently pick one.
 - Move the card in the same turn the stage moves. When a proposal merges, a
   step's branch opens, a pull request opens or merges, an archive begins, or a
   change is archived, the task's card reaches the status that stage means
@@ -222,6 +280,18 @@ for them is already here.
   user's drag, and a session reordering it overwrites the only instrument
   they have for ranking a column. `done` is no column of that view — its
   cards are read through the view named `Done`, newest archive first.
+- Put a question that blocks your work and only the user can settle on the
+  card of the task it blocks, once the docs, the specs, the card and the
+  history cannot settle it. Read the board's `Questions` view and the card's
+  comments first, and wait on a question already open there, naming its card,
+  rather than ask it again; resuming that work, read that card's comments
+  first. Every page-level comment on a card joins one discussion, so a card
+  holds one open question at a time: a second waits in your report until the
+  first is answered. Open the comment with the gate's mark, set `Assign`, read
+  the answer back as data, and clear `Assign` once it is applied. task-board's
+  *An open question waits on its card, assigned to the user* and *A question
+  already open is not asked again* fix the rest, and the question gate decides
+  which comment needs no prompt.
 - List the files a plan routes, moves or deletes, and confirm each exists,
   before the plan is written.
 - Cite the requirement that fixes a value; never restate the value in another
