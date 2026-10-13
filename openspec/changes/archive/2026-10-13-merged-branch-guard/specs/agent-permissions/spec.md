@@ -24,9 +24,9 @@ commits upstream as an equivalent patch — a rebase merge, and a squash of a
 single commit — and SHALL NOT claim the others. A merge commit or a
 fast-forward leaves the branch's commits as ancestors of the base, which
 `git cherry` does not list at all; a squash of several commits leaves one
-upstream patch that no single commit matches. Either prints no `-` and is
-allowed, so `git-and-prs.md`'s pull-request-state rule remains the check for
-them.
+upstream patch that a single commit matches only by chance. Whatever the
+style, a branch with a commit marked `-` is merged and refused; for one with
+none, `git-and-prs.md`'s pull-request-state rule remains the check.
 
 This verdict SHALL be computed for every branch, whatever the branch's own
 state on the remote, and a positive verdict SHALL be honoured however old the
