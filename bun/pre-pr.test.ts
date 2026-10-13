@@ -151,6 +151,13 @@ describe("the record of a run", () => {
 		expect(records(result.state)[0]?.session).toBe("abc-123");
 	});
 
+	// spec: commit-gates/a-run-from-a-subdirectory
+	test("run from a subdirectory, the project is still the top level", () => {
+		const dir = repo({}, { "src/a.ts": lines(3) });
+		const { state } = run(join(dir, "src"));
+		expect(records(state)[0]?.project).toBe(realpathSync(dir));
+	});
+
 	test("the project is the checkout's top level, whatever CLAUDE_PROJECT_DIR names", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
 		const elsewhere = emptyDir("pre-pr-other-");

@@ -83,24 +83,24 @@ Closes `agent-permissions/a-write-with-no-method-flag`,
 This step closes no acceptance criterion: it reconciles prose and measures,
 and no criterion in any capability states what a doc sentence says.
 
-- [ ] 3.1 Narrow `core/git-and-prs.md`'s prohibition to what the guard still
+- [x] 3.1 Narrow `core/git-and-prs.md`'s prohibition to what the guard still
       does not reach — a tracker, a forum, any service that is not GitHub —
       per `openspec/specs/agent-rulebook` §*A mechanised prohibition leaves its
       prose home*, which calls this the partly-covered case
-- [ ] 3.2 Re-run the probe table in `proposal.md` §Why against the built
+- [x] 3.2 Re-run the probe table in `proposal.md` §Why against the built
       guard and record the new column, so the change's own evidence is
       measured after rather than quoted from before
-- [ ] 3.3 Confirm the `coderabbit` skill's three `gh api` reads pass the guard
+- [x] 3.3 Confirm the `coderabbit` skill's three `gh api` reads pass the guard
       by running each through it, rather than reasoning from the clause — the
       skill is untracked here, so name the three commands in the record
-- [ ] 3.4 Measure `bun/command-guard.ts` and
+- [x] 3.4 Measure `bun/command-guard.ts` and
       `bun/command-guard.test.ts` against the 300-line cap and record both
       numbers, whether or not either is over; the test file stood at 214 and
       the guard at 246 when this was proposed, and the guard at 299 once the
       harness took it. Both are under the cap here because each earlier step
       split whatever its own change carried over it
       (*change-slicing/a-file-over-the-cap*)
-- [ ] 3.5 Search the four places that restate a decision — the change's sibling
+- [x] 3.5 Search the four places that restate a decision — the change's sibling
       artefacts, `openspec/specs/**`, the cards on the boards and the README
       ownership map —
       for a sentence saying the guard blocks three `gh` writes, and reconcile

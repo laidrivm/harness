@@ -41,9 +41,13 @@ design, because settling it is the user's.
   wrong costs a `git checkout`. Dismissing a 🟠 Major or 🔴 Critical goes the
   other way: it is put to the user with what the bot missed, and the gate line
   reads `OPEN` until they settle it, because a wrong dismissal reaches the
-  merge where a wrong fix does not. At most three reviews with fixes between them; stop
+  merge where a wrong fix does not (unattended: card — hand it on with what
+  the bot missed, and list it in the pull request's body as `autonomy.md`'s
+  `agent` sets out). At most three reviews with fixes between them; stop
   early the moment a review returns nothing above 🟡 Minor, and if Major or
-  above survives the third, report it and stop rather than starting a fourth.
+  above survives the third, report it and stop rather than starting a fourth
+  (unattended: agent — push and open the pull request, listing the finding
+  as still open).
   Collect Minor findings across all passes and report them once at the end,
   each fixed or skipped with its reason. The CLI looks for
   `.coderabbit.yaml` on its own only while no `--config` is given, and the

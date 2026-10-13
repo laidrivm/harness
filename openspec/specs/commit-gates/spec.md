@@ -9,6 +9,7 @@ past: a secret reaches a public repository once, and a suppression that nobody
 approved is a silenced finding nobody reads.
 
 ## Requirements
+
 ### Requirement: A secret scan runs in CI and, when available, before a commit
 
 CI SHALL run `gitleaks` over the branch on every pull request, from a
@@ -216,10 +217,17 @@ A `Stop` hook registered in the tracked `.claude/settings.json` SHALL refuse
 to end a turn when all of the following hold: the turn left at least one commit
 on the branch that was not there when control arrived, a task group in a change
 outside `openspec/changes/archive/` has at least one box and no unticked one
-left and was not complete in the task lists as committed at the mark, and
-the turn's final assistant message
-carries neither a gate line nor `BLOCKED` naming what only the user can
-settle. It SHALL block by exiting **2** with the reason on stderr, which is
+left and was not complete in the task lists as committed at the mark, the
+turn's final assistant message carries no `BLOCKED` naming what only the user
+can settle, and either that message carries no gate line or the gate ledger
+holds no record of the pre-PR runner for the turn's tip in this checkout
+(`pre-pr-runner`, *The runner records each run for the commit it read*). The
+tip is the commit the turn's work is read from, as the paragraph on the mark
+below decides it. A record is this checkout's when the project it names is the
+repository's top level, as git resolves it from the turn's working directory.
+A run in another clone or worktree at the same commit does not count, nested
+inside this one or not, because it measured against its own base refs. It
+SHALL block by exiting **2** with the reason on stderr, which is
 the only code that prevents the turn ending, and the only channel the model
 reads — stderr from a hook exiting 0 reaches the debug log alone.
 
@@ -241,7 +249,10 @@ a marker with nothing after it clears nothing.
 The branch's push state SHALL NOT be a condition. A turn that commits and
 pushes before it ends is precisely the case the sequence exists to prevent, so
 treating a push as discharge would build the bypass into the gate. What
-discharges the obligation is the report, and nothing else.
+discharges the obligation is the report backed by the runner's record for the
+tip, or a named `BLOCKED`, and nothing else. A run record for any commit but
+the tip SHALL NOT discharge it: a commit made after the run is one the run
+never read.
 
 Whether the turn left commits SHALL be decided against a mark of `HEAD` taken
 when control arrived, written by a `UserPromptSubmit` hook. A turn that commits
@@ -271,16 +282,25 @@ cannot end a turn; and refusing when the final message is unreadable would
 refuse with an instruction that cannot be followed, since the escape from the
 refusal is text in that same message.
 
+The gate ledger is not among those inputs. A ledger that is absent or cannot be
+read SHALL be treated as holding no run record, because a missing record is the
+case the record clause exists to catch. The once-per-mark bound below limits
+what that costs to one refusal.
+
 The refusal SHALL name both endings the rule already admits — running the
 sequence, or writing `BLOCKED` with what only the user can settle — because
-each is text the next message can carry. No repository state need change for a
+each is text the next message can carry. Where the message carried a gate line
+and only the record is missing, the refusal SHALL name the tip and the
+runner's path as the project reaches it. No repository state need change for a
 blocked turn to end, so the hook SHALL NOT be able to refuse indefinitely, and
 SHALL NOT depend on a loop-protection field to guarantee it.
 
-This requirement SHALL NOT claim that the sequence ran. The hook reads the
-final message for a gate line; a gate line written without running the gate
-passes it. What it catches is the turn that ends silently, which is the
-failure it was written for.
+This requirement SHALL claim that the sequence's deterministic step ran at the
+tip, and nothing beyond that. The run record proves that step. The steps that
+need judgement are still only reported, and the hook reads the final message
+for their gate lines, so a judgement step's gate line written without running
+that step passes it. What it catches is the turn that ends silently, and the
+turn whose deterministic step never ran at the commit it reports on.
 
 Nor SHALL it claim to reach every turn. A turn that ends by a path which does
 not invoke this hook — an interruption, or a failure that ends the turn
@@ -307,7 +327,67 @@ its own working tree, because it is not installed as its own package.
 
 #### Scenario: The turn reports its gates
 
-- **WHEN** the same turn's final message carries the sequence's gate line
+- **WHEN** the same turn's final message carries the sequence's gate line, and
+  the ledger holds a runner record for the tip
+- **THEN** the turn ends
+
+#### Scenario: Gate lines with no run behind them
+
+- **WHEN** a turn commits the last task of a group and ends with gate lines,
+  and the ledger holds no runner record for the tip
+- **THEN** the hook blocks, and the reason names the tip and the runner's path
+
+#### Scenario: A run record for an earlier commit
+
+- **WHEN** the runner recorded commit `A`, the turn then committed `B`, and it
+  ends with gate lines
+- **THEN** the hook blocks, because the run never read `B`
+
+#### Scenario: A run record from another checkout
+
+- **WHEN** a second clone of the repository recorded a run at the tip, and
+  this checkout did not
+- **THEN** the hook blocks, because that run measured against the other
+  clone's base refs
+
+#### Scenario: A run from a subdirectory
+
+- **WHEN** the runner recorded the tip from a subdirectory of this checkout
+- **THEN** the record discharges the turn, because the runner records the
+  checkout's top level wherever in it it runs
+
+#### Scenario: A worktree nested inside the checkout
+
+- **WHEN** a worktree kept under this checkout's directory recorded a run at
+  the tip, and this checkout did not
+- **THEN** the hook blocks, because the record names that worktree's top
+  level, not this one's
+
+#### Scenario: A run record and no gate line
+
+- **WHEN** the ledger holds a runner record for the tip and the final message
+  carries no gate line
+- **THEN** the hook blocks, because the steps that need judgement are still
+  reported only in the message
+
+#### Scenario: A run that failed
+
+- **WHEN** the runner's record for the tip has the outcome `fail`, and the
+  message carries gate lines
+- **THEN** the turn ends: the record proves that the step ran, and the gate
+  line reports what it found
+
+#### Scenario: No ledger at all
+
+- **WHEN** a turn completes a group and ends with gate lines, and the ledger
+  file does not exist
+- **THEN** the hook blocks once, and the next end of that turn is let through
+  by the once-per-mark bound
+
+#### Scenario: Blocked without a run
+
+- **WHEN** the final message carries `BLOCKED` naming what the user must
+  decide, and the ledger holds no run record for the tip
 - **THEN** the turn ends
 
 #### Scenario: The turn names what only the user can settle
