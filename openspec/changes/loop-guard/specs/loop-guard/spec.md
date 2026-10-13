@@ -109,7 +109,12 @@ SHALL NOT end the session.
 
 - **WHEN** that call, run again under the new prompt, fails the same way once
   more
-- **THEN** it is warned and refused again, under the new prompt
+- **THEN** the agent reads the warning with the error, under the new prompt
+
+#### Scenario: Repeats after that warning
+
+- **WHEN** the agent then makes the identical call again under the new prompt
+- **THEN** the call is refused before it runs
 
 #### Scenario: A sub-agent's refused call
 

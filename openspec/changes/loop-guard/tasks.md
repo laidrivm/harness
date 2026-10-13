@@ -47,6 +47,8 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
         - a sub-agent's bar does not refuse its parent's identical call [24];
         - the call under a different `prompt_id` runs [25], and one with no
           `prompt_id` on either side is refused [26];
+        - once that call fails a fourth time under the new `prompt_id`, the
+          identical call under it is refused (PR review);
         - a different input [27] and the same input under another tool [28]
           run;
         - a garbage count file lets the call through [29], and a non-JSON
