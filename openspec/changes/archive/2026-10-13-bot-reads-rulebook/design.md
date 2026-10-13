@@ -60,16 +60,20 @@ would take in 25 skill files and the vendored `playwright-cli` references.
 
 ### A harness test, not a check shipped to consumers
 
-The pin lives in a harness test, `bun/review-config.test.ts`, and not in
-`bun/check.ts`. A consumer check would apply the same contract to
+The pin is a harness test, `bun/review-config.test.ts`, over a check in
+`bun/review-config.ts`, and it is not in `bun/check.ts`. The check sits outside
+the test because `core/testing.md` allows fabricated inputs only for a decision
+rule that ships outside the test exercising it. A consumer check would apply the same contract to
 `harness/*.md`, and mellon would fail it on its first run, since it has no
 config. That is a new gate with its own rollout, so it gets its own card
 (proposal.md §Non-goals). The test reads the config with `Bun.YAML.parse`,
 which `bun/check-yaml.ts` already uses, and matches patterns with `Bun.Glob`,
 whose `*` stops at `/` just as the bot's does. It takes the docs from the
 structure of `CLAUDE.md` and `core/rules.md` themselves: their relative
-markdown links and `CLAUDE.md`'s `@` import lines. It never keeps a list of
-them, because a list would be a second copy that drifts. The scan names its
+markdown links, inline or reference-style, and `CLAUDE.md`'s `@` import lines.
+It never keeps a list of them, because a list would be a second copy that
+drifts. A doc counts as reached only if the tree tracks it, because a glob
+matches a path string whether or not the file exists. The scan names its
 one exemption, `README.md`, and gives the reason beside it. `CLAUDE.md` links
 the README for the package layout, which holds no rule. A scan scoped to
 `core/` would instead pass in silence once a doc moved out of it, and that

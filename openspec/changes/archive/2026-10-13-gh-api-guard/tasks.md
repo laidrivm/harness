@@ -67,9 +67,10 @@ Closes `agent-permissions/a-write-with-no-method-flag`,
       document blocks — with the reason at its line: the `coderabbit` skill's
       thread read needs it, and a token search errs towards blocking
       (ZOMBIES 14, 15)
-- [x] 2.4 Add a case for a flag the list does not name, asserting it blocks
-      when no method is present — the test is scoped by the reads it exempts,
-      not by the writes it enumerates, per `core/rules.md` (ZOMBIES 17)
+- [x] 2.4 Add a case for a flag the read list does not name, asserting it
+      blocks when no method is present — the test is scoped by the reads it
+      exempts, not by the writes it enumerates, per `core/rules.md`
+      (ZOMBIES 17)
 - [x] 2.5 Cover the reach the branch inherits rather than earns, each as its
       own case: an absolute path to `gh`, a `bash -c` wrapper, a compound
       command whose second half is the write, and a global flag in front of

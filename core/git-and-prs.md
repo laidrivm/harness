@@ -80,8 +80,9 @@ entry, a hook or a CI check leaves this file the way it would leave
   the same command as the commit or the push runs but cannot stop it. The
   command guard refuses a commit once at least one of the branch's commits is
   already upstream as an equivalent patch; the PR state is what catches a
-  merge commit, a fast-forward, a squash of several commits, and a branch
-  pruned and merged but not yet fetched. Where a refused commit's work goes is
+  merge that leaves no such commit — a merge commit or a fast-forward always,
+  a squash of several commits usually — and a branch pruned and merged but
+  not yet fetched. Where a refused commit's work goes is
   yours to decide; a branch that moved under the pass makes the pass's fixes
   duplicates of what is already there; and a tree that has held more than one
   branch this session may not be on the one the last command left it on.
@@ -91,7 +92,9 @@ entry, a hook or a CI check leaves this file the way it would leave
   user approved at its prompt; the `gh` writes stay refused. Never through a
   channel no permission entry reaches — a browser form, a direct HTTP call:
   report what you would have written and let them send it. Opening the pull
-  request they asked for is not that.
+  request they asked for is not that, and nor is a question the question gate
+  lets through without a prompt (`agent-permissions`, *A question to the user
+  on a board card needs no prompt*).
 - Never re-run a check whose own output already proved it passed and whose
   inputs have not changed since — a later command's success is not that proof.
 - Never wait on a result someone else produces — CI, a review bot, a queue:

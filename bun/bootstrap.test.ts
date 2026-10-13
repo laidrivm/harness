@@ -1,7 +1,8 @@
 /**
- * The bootstrap hook, the turn gate's registrations and the Notion guard's run
- * as Claude Code runs them: the command through a shell, the event as JSON on
- * stdin, in a project with no harness installed and then with one.
+ * The bootstrap hook and the turn gate's, Notion guard's and question gate's
+ * registrations run as Claude Code runs them: the command through a shell,
+ * the event as JSON on stdin, in a project with no harness installed and then
+ * with one.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -10,6 +11,7 @@ import { join } from "node:path";
 import {
 	BOOTSTRAP,
 	NOTION_GUARD,
+	QUESTION_GATE,
 	TURN_MARK,
 	TURN_STOP,
 } from "./bootstrap.ts";
@@ -187,5 +189,28 @@ describe("the Notion guard's registration", () => {
 
 	test("a guard that fails to run lets the call through", () => {
 		expect(turn(NOTION_GUARD, guarded("throw (\n")).code).not.toBe(2);
+	});
+});
+
+describe("the question gate's registration", () => {
+	const gate = (script: string) =>
+		gated(script, "harness-question-gate-", "question-gate.ts");
+
+	test("before the install, nothing is printed, so the prompt stands", () => {
+		expect(turn(QUESTION_GATE, gated())).toEqual({
+			code: 0,
+			stdout: "",
+			stderr: "",
+		});
+	});
+
+	test("after the install, the gate's answer reaches Claude Code", () => {
+		expect(turn(QUESTION_GATE, gate("console.log('allow');\n")).stdout).toBe(
+			"allow\n",
+		);
+	});
+
+	test("a gate that fails to run prints no answer", () => {
+		expect(turn(QUESTION_GATE, gate("throw (\n")).stdout).toBe("");
 	});
 });

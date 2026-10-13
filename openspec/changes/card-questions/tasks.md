@@ -13,7 +13,7 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
 
 ## 1. The question gate, its registration, and the procedure
 
-- [ ] 1.1 Stop before any code, with the user present. Put a throwaway
+- [x] 1.1 Stop before any code, with the user present. Put a throwaway
       `PermissionRequest` hook answering `allow` for
       `mcp__.*__notion-create-comment` in the gitignored
       `.claude/settings.local.json`; in a session started afterwards, post a
@@ -26,8 +26,10 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       stop: design.md *Risks* sends the change back to explore. (Req:
       agent-permissions — A question to the user on a board card needs no
       prompt, §*A question on a card*, §*The same question where no prompt
-      can be shown*)
-- [ ] 1.2 Write the envelope tests in `bun/question-gate.test.ts`, with the
+      can be shown*) Done 2026-10-13 with the gate itself: interactively and
+      under `claude -p` the comment posted with no prompt, recorded `allowed`
+      / `question`; an unmarked one prompted, recorded `passed` / `unmarked`.
+- [x] 1.2 Write the envelope tests in `bun/question-gate.test.ts`, with the
       event, transcript and ledger builders in `bun/question-gate.fixture.ts`
       — the cases below pass 300 lines in one file, the `.ts` cap. A
       conforming question is allowed [5] and recorded `allowed` /
@@ -46,7 +48,7 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       string*, §*A comment without the mark, or with it elsewhere*, §*A
       comment mentioning a user*, §*A comment over the length bound*, §*The
       hook cannot read what it decides on*)
-- [ ] 1.3 Write the board and comments-read tests in
+- [x] 1.3 Write the board and comments-read tests in
       `bun/question-gate-board.test.ts`. Board: no fetch in the transcript
       [4]; a fetch of an ordinary page [39]; a `D2ASS` card allowed like a
       `Harness` one [38]; dashed [15] and upper-case [16] ids matching; a
@@ -63,12 +65,12 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       card*, §*A card whose comments were not read*, §*Many questions in one
       session*, §*The hook cannot read what it decides on*; task-board — A
       question already open is not asked again, §*Comments not read*)
-- [ ] 1.4 Write `bun/question-gate.ts` per design.md: the conditions in its
+- [x] 1.4 Write `bun/question-gate.ts` per design.md: the conditions in its
       order, the transcript read with its `shortcut:` comment, every call
       recorded through `gate-decision-ledger`'s writer, the ledger never
       read. `bun test` green; each new file under
       its cap.
-- [ ] 1.5 Add the hook to `bun/bootstrap.ts`'s `HOOKS` — event
+- [x] 1.5 Add the hook to `bun/bootstrap.ts`'s `HOOKS` — event
       `PermissionRequest`, matcher `mcp__.*__notion-create-comment`, a
       command that runs the gate from `node_modules/harness/bun/` when it is
       installed and exits 0 otherwise, ending with `MARK` [22] — and register
@@ -78,7 +80,7 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       `PermissionRequest` key [24]. `bun test` green. (Req: agent-permissions
       — A question to the user on a board card needs no prompt, §*The hook in
       a consumer*)
-- [ ] 1.6 Docs. `core/git-and-prs.md`: the bullet on speech under the user's
+- [x] 1.6 Docs. `core/git-and-prs.md`: the bullet on speech under the user's
       name, as `policy-gate-beyond-bash` left it, gains the question as its
       one exception by citing the agent-permissions requirement.
       `core/feature-workflow.md`, *Across the stages*: one bullet — an agent

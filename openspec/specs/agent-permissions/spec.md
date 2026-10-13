@@ -10,6 +10,7 @@ Claude Code and prose is not: a supply-chain rule written only in
 `CLAUDE.md` shapes what the agent attempts and stops nothing.
 
 ## Requirements
+
 ### Requirement: Foreign package managers are denied
 
 The repository's tracked Claude Code settings SHALL deny the package managers
@@ -79,6 +80,33 @@ guard below, which resolves the command to its base name and so sees the
 wrapped spellings. The two are not a rule stated twice — the guard is a
 superset, and a deny entry can only ever be redundant, never wrong.
 
+Those three are subcommand names, and `gh api` addresses the same endpoints
+while naming no subcommand at all. The guard SHALL therefore also block a
+`gh api` invocation that cannot be shown to be a read, and SHALL NOT block one
+that can. A read is a call whose `--method` or `-X` names `GET` or `HEAD`,
+whatever parameters it carries, or one naming no method and carrying no
+parameter flag — `-f`, `-F`, `--field`, `--raw-field` or `--input` — since
+`gh api` sends `GET` by default and switches to `POST` as soon as a parameter
+is added. A `graphql` operand SHALL be allowed only when its document is given
+inline as the value of a `query` field, its operation keyword is `query`, and
+the token `mutation` appears nowhere in it; every other `graphql` call SHALL
+be blocked — a mutation, a document read from a file through `@` or
+`--input`, and anything else the guard cannot read. The `coderabbit` skill
+reads whether a review thread is resolved through exactly such a query, which
+no REST endpoint carries, so refusing `graphql` whole would break the read the
+review loop rests on. A token search blocks a query that merely names the
+word, and that over-refusal is the direction the guard resolves uncertainty
+towards.
+
+This SHALL NOT become a deny entry. A permission pattern matches the whole
+command text, with `*` standing in for any run of it, so it can name a flag
+but never the absence of one: a call writes because of the method and
+parameter flags it carries together, in any order, so a pattern narrow enough
+to spare the reads misses a write spelled another way, and naming `gh api`
+whole would take the reads with it — the `coderabbit` skill reads a pull
+request's inline comments, issue comments and reviews through exactly this
+command.
+
 #### Scenario: The agent tries to reply to a review
 
 - **WHEN** the agent attempts `gh pr comment 37 --body "fixed"`
@@ -100,6 +128,46 @@ superset, and a deny entry can only ever be redundant, never wrong.
 - **WHEN** the agent attempts `gh pr view 37 --json state`
 - **THEN** the call is not blocked, because the deny list names write commands
   only
+
+#### Scenario: A comment posted through the endpoint
+
+- **WHEN** the agent attempts
+  `gh api -X POST /repos/o/r/issues/37/comments -f body=hi`
+- **THEN** the guard blocks the call, naming `gh api` and the method that made
+  it a write
+
+#### Scenario: A write with no method flag
+
+- **WHEN** the agent attempts
+  `gh api /repos/o/r/issues/37/comments -f body=hi`
+- **THEN** the guard blocks the call, because a parameter flag with no method
+  sends `POST`
+
+#### Scenario: A GraphQL call
+
+- **WHEN** the agent attempts `gh api graphql` with a document carrying a
+  mutation, or read from a file
+- **THEN** the guard blocks the call
+
+#### Scenario: A GraphQL read
+
+- **WHEN** the agent attempts `gh api graphql -f query='query{…}'` with no
+  `mutation` token in the document, as the `coderabbit` skill does to read
+  review-thread state
+- **THEN** the guard allows the call
+
+#### Scenario: Reading through the endpoint still works
+
+- **WHEN** the agent attempts
+  `gh api "repos/o/r/pulls/37/comments?per_page=100" --paginate`
+- **THEN** the call is not blocked, because it names no method and carries no
+  parameter flag
+
+#### Scenario: A read that carries parameters
+
+- **WHEN** the agent attempts `gh api -X GET /search/issues -f q=repo:o/r`
+- **THEN** the call is not blocked, because an explicit `GET` sends the
+  parameters as a query string
 
 ### Requirement: The git prohibitions are enforced by a hook
 
@@ -127,7 +195,8 @@ command word literally: `/usr/bin/git commit` and `command gh pr comment` reach
 no hook narrowed that way, which was demonstrated against the registered guard
 before this requirement was written. Narrowing by `if` would mean the boundary
 is whatever spelling the pattern anticipates. Deciding in the script instead
-costs one bun start per Bash call, measured at 16-22 ms — negligible beside the
+costs one bun start per Bash call, measured on a call it allows at 10.7-11.0 ms
+before the merged-branch check and 11.0-11.1 ms after — negligible beside the
 call it precedes — and the script SHALL resolve each command to its base name,
 past a leading assignment, past a wrapper word such as `command`, `builtin`,
 `exec` or `env`, and into a shell's `-c` argument.
@@ -932,3 +1001,172 @@ can use*, naming each, and SHALL write neither file.
   `//Users/<someone>/…`
 - **THEN** the sweep exits 0, listing the machine-local entry as kept
 - **AND** neither file has changed
+
+### Requirement: A commit on a merged branch is refused
+
+The hook SHALL block a `git commit` on a branch at least one of whose commits
+`git cherry` marks as already upstream, because a merged pull request strands
+every commit made to its branch afterwards, whatever merge style closed it —
+though only the styles named below leave that mark. It SHALL decide this with
+local git only — no fetch, no `gh`, no network — since it runs on every Bash
+call and an offline session must not silently lose the check.
+
+The verdict SHALL be taken from `git cherry`, which marks a commit `-` when an
+equivalent patch is already upstream and `+` when it is not, and equivalence
+is what survives a squash merge rewriting the branch's commits. A branch SHALL
+be treated as merged when at least one of its commits is marked `-`. The rule
+SHALL NOT be stated as the absence of `+` marks: a branch with no commits
+prints neither mark, and the absence form refuses the first commit of every
+branch created.
+
+The verdict SHALL cover the merge styles that carry each of the branch's
+commits upstream as an equivalent patch — a rebase merge, and a squash of a
+single commit — and SHALL NOT claim the others. A merge commit or a
+fast-forward leaves the branch's commits as ancestors of the base, which
+`git cherry` does not list at all; a squash of several commits leaves one
+upstream patch that a single commit matches only by chance. Whatever the
+style, a branch with a commit marked `-` is merged and refused; for one with
+none, `git-and-prs.md`'s pull-request-state rule remains the check.
+
+This verdict SHALL be computed for every branch, whatever the branch's own
+state on the remote, and a positive verdict SHALL be honoured however old the
+base ref is. A stale base can only fail to carry a merge that has happened; it
+cannot invent one. So staleness threatens this requirement in one direction
+only, and the freshness rule below exists to close that one.
+
+The hook SHALL refuse a commit when the base ref's last fetch is older than
+`FETCH_MAX_AGE`, which SHALL be 30 minutes, measured inclusively: a fetch
+exactly 30 minutes old is accepted and one older is refused. The bound SHALL
+carry the reason it holds that value where it is declared.
+
+The fetch time SHALL be read from the modification time of `FETCH_HEAD`, which
+every successful fetch rewrites. In a linked worktree two files apply — the
+worktree's own, written by a fetch run there, and the common checkout's,
+written by a fetch in the main checkout, which moves the `origin/main` every
+worktree shares — and either SHALL count; elsewhere they are the same file.
+It SHALL NOT be read from
+the reflog of the base ref: a fetch that brings no new commit updates no ref
+and so writes no reflog entry, which would refuse the commit while naming a
+remedy that cannot change the answer — measured on this repository, where a
+fetch bringing nothing left the reflog at 139 entries and its newest timestamp
+57 minutes old while `FETCH_HEAD` advanced to the current second.
+
+That timestamp alone SHALL NOT satisfy the bound. `FETCH_HEAD` is written by
+every fetch whatever it fetched, so fetching one unrelated ref refreshes it
+while leaving the base ref untouched — measured, `git fetch origin <other>`
+advanced the mtime by a second and wrote a `FETCH_HEAD` naming only that
+branch. The bound SHALL therefore be satisfied only when one applicable
+`FETCH_HEAD` is within `FETCH_MAX_AGE` **and** its contents name the base
+branch, which is the evidence that the fetch it timestamps covered the base.
+Where no applicable `FETCH_HEAD` is readable, the fetch time SHALL be treated
+as unknown and therefore as a refusal, on the terms this capability already
+applies to an undecidable event.
+
+Where the base ref does not exist at all — no `origin` remote, or no `main`
+under it — no merged verdict can be computed, and the commit SHALL be allowed
+rather than refused. This is an exception to the undecidable-blocks rule and
+is stated as one: a repository with no upstream has nothing a pull request
+could have merged into, and refusing there would refuse every commit in every
+scratch repository the agent creates, this capability's own test fixture
+among them.
+
+The freshness refusal SHALL apply only to a branch that exists under
+`refs/remotes/origin/`. A branch with no counterpart there has, so far as the
+repository can tell, never been pushed, so no pull request of it can have
+merged and the window freshness closes is not open for it. That inference is
+weaker than it reads and the weakness SHALL be recorded rather than implied:
+deleting the branch on the remote and pruning removes the counterpart, and a
+push made without `-u` leaves no upstream configuration behind either, so a
+branch that was pushed and then pruned is indistinguishable from one that was
+never pushed. Such a branch is still refused by the merged verdict above,
+which does not consult that ref; what it loses is only the freshness refusal,
+so the residual gap is a branch pruned, merged, and not yet fetched.
+
+Each refusal SHALL name what the agent is to do next — move the work to a
+branch cut from the merged base, or fetch — because a block whose remedy is
+unstated is a block the session works around.
+
+#### Scenario: A commit on a branch whose pull request merged
+
+- **WHEN** the agent attempts `git commit` on a pushed branch whose commits
+  `git cherry` marks `-` against a recently fetched base ref
+- **THEN** the hook blocks the call, and the reason names the branch as
+  already merged
+
+#### Scenario: A branch closed by a merge commit
+
+- **WHEN** the agent attempts `git commit` on a pushed branch whose pull
+  request was closed by a merge commit, so its commits are ancestors of the
+  base ref and `git cherry` lists none of them
+- **THEN** the commit is allowed, because no `-` mark exists, and the
+  pull-request-state rule in `git-and-prs.md` is what catches it
+
+#### Scenario: The branch was never pushed
+
+- **WHEN** the agent attempts `git commit` on a branch with no ref under
+  `refs/remotes/origin/`, and the base ref was last fetched longer ago than
+  `FETCH_MAX_AGE`
+- **THEN** the commit is allowed, because the freshness refusal does not
+  reach a branch no pull request can have merged
+
+#### Scenario: The first commit of a new branch
+
+- **WHEN** the agent attempts `git commit` on a branch freshly cut from the
+  base ref, which carries no commits and so no `git cherry` marks at all
+- **THEN** the commit is allowed, because no mark is the absence of evidence
+  and not evidence of a merge
+
+#### Scenario: A pushed branch with work of its own
+
+- **WHEN** the agent attempts `git commit` on a pushed branch whose commits
+  `git cherry` marks `+` against a recently fetched base ref
+- **THEN** the commit is allowed
+
+#### Scenario: The base ref is stale
+
+- **WHEN** the agent attempts `git commit` on a pushed branch and the base
+  ref was last fetched longer ago than `FETCH_MAX_AGE`
+- **THEN** the hook blocks the call, and the reason names fetching the base
+  ref as what makes the branch decidable
+
+#### Scenario: A fetch that brings nothing new
+
+- **WHEN** a refused commit is followed by a successful fetch that brings no
+  new commit, so no ref is updated
+- **THEN** the next commit is allowed, because the fetch time comes from
+  `FETCH_HEAD` rather than from a ref's reflog
+
+#### Scenario: A fetch of an unrelated ref
+
+- **WHEN** the last fetch named one branch other than the base, so
+  `FETCH_HEAD` is recent but does not name the base branch
+- **THEN** the hook blocks the call on a pushed branch, because the recency
+  belongs to a fetch that did not cover the base
+
+#### Scenario: The repository has no base ref
+
+- **WHEN** the repository has no `origin` remote, or none with a `main`
+  branch, so no merged verdict can be computed at all
+- **THEN** the commit is allowed, because there is no upstream a pull request
+  could have merged into
+
+#### Scenario: The fetch time cannot be read
+
+- **WHEN** the repository has no readable `FETCH_HEAD`
+- **THEN** the hook blocks the call on a pushed branch, because an unknown
+  answer takes the blocking path
+
+#### Scenario: The remote branch was deleted and pruned
+
+- **WHEN** a branch's counterpart under `refs/remotes/origin/` has been
+  removed by a remote deletion followed by a prune, and its commits are
+  marked `-` against the base ref
+- **THEN** the hook still blocks, because the merged verdict does not consult
+  that ref
+
+#### Scenario: A stranded commit already exists
+
+- **WHEN** a commit has already been made on the merged branch, so
+  `git cherry` marks that one `+` while the merged commits stay `-`
+- **THEN** the hook still blocks, because the merged commits' marks remain
+  for as long as the branch does

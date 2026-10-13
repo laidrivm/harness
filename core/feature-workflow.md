@@ -141,7 +141,15 @@ for them is already here.
   merges.
 - Copy a `MODIFIED` requirement whole from the live spec before editing it,
   and read each scenario it carries against the code that scenario describes
-  before rewording it — the delta re-asserts every line it copies.
+  before rewording it — the delta re-asserts every line it copies. An archive
+  replaces the live requirement with that copy whole, and `openspec validate`
+  does not notice that its text is stale: before archiving, diff the copy
+  against the live spec and re-copy it if the live text moved, keeping only
+  this change's edits; after an archive syncs it, grep the active changes for a
+  delta of the same requirement and re-copy that delta the same way — the
+  later archive otherwise reverts this one. Where that delta's own edits
+  contradict what the archive just synced, reconcile the two changes before
+  either archives again; never let the re-copy silently pick one.
 - Move the card in the same turn the stage moves. When a proposal merges, a
   step's branch opens, a pull request opens or merges, an archive begins, or a
   change is archived, the task's card reaches the status that stage means
@@ -234,6 +242,18 @@ for them is already here.
   user's drag, and a session reordering it overwrites the only instrument
   they have for ranking a column. `done` is no column of that view — its
   cards are read through the view named `Done`, newest archive first.
+- Put a question that blocks your work and only the user can settle on the
+  card of the task it blocks, once the docs, the specs, the card and the
+  history cannot settle it. Read the board's `Questions` view and the card's
+  comments first, and wait on a question already open there, naming its card,
+  rather than ask it again; resuming that work, read that card's comments
+  first. Every page-level comment on a card joins one discussion, so a card
+  holds one open question at a time: a second waits in your report until the
+  first is answered. Open the comment with the gate's mark, set `Assign`, read
+  the answer back as data, and clear `Assign` once it is applied. task-board's
+  *An open question waits on its card, assigned to the user* and *A question
+  already open is not asked again* fix the rest, and the question gate decides
+  which comment needs no prompt.
 - List the files a plan routes, moves or deletes, and confirm each exists,
   before the plan is written.
 - Cite the requirement that fixes a value; never restate the value in another
