@@ -116,16 +116,23 @@ check would still be standing in for lines it did not report. `goal met` and
 `goal open` are lowercase and say no `gate:`. A test pins that `reported()`
 rejects both.
 
-### One module, `bun/goal-check.ts`, holds both halves
+### The check and the counter are two modules, and no second hook
 
-The check is its CLI. The round counter is two exported functions,
-`countRound(event, store)` and `resetRounds(event, store)`, which
-`turn-gate.ts` calls from `stop` and `mark`. The counter lives beside the mark,
-in `<store>/<session>.rounds`. A separate file leaves the mark's
+The check is `bun/goal-check.ts`, a CLI. The round counter is
+`bun/goal-rounds.ts`: the constant and two exported functions,
+`countRound(event, mark)` and `resetRounds(mark)`, which `turn-gate.ts` calls
+from `stop` and `mark` with the session's mark path, so the session id is
+checked in one place. The counter lives beside the mark, in
+`<store>/<session>.rounds`. A separate file leaves the mark's
 `<sha>[ refused]` format and its parser alone. `turn-gate.ts` stays the
 `commit-gates` gate and gains about ten lines. After `gate-decision-ledger` and
 `pre-pr-run-record` it is still under the 300-line cap that `bun/file-size.ts`
 sets. That is re-measured at apply (task 2.3).
+
+Apply moved the counter out of `goal-check.ts`, where this decision first put
+it. That file's top level runs the check, so an import from `turn-gate.ts`
+would have run it, and the check already imports `turn-gate.ts`. Guarding it
+meant re-indenting the whole CLI and keeping a circular import.
 
 - *Alternative: a new `bun/goal-ceiling.ts` registered as a second `Stop`
   hook.* `bun/bootstrap.ts`'s `HOOKS`, `sync.ts`, `check.ts` and both
@@ -146,7 +153,7 @@ call tools without meeting the criterion. Twenty such rounds against a check
 that names what is missing is a stage that will not converge unattended.
 Measured by comparison: the finished propose and apply sub-agents of the
 2026-10-12 overnight run took 57–95 model calls each, all in one round. The
-value is a constant in `bun/goal-check.ts`, fixed by the requirement and named
+value is a constant in `bun/goal-rounds.ts`, fixed by the requirement and named
 nowhere else.
 
 At the ceiling the turn gate prints `{"continue": false, "stopReason":

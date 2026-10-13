@@ -90,7 +90,7 @@ adds, so the `goal` gate needs no change to it.
 ## Impact
 
 - New `bun/goal-check.ts` with tests. `bun/turn-gate.ts`'s `stop` half reads
-  a round count kept beside its mark.
+  a round count kept beside its mark, through a new `bun/goal-rounds.ts`.
 - `core/feature-workflow.md` gains the launch form. `README.md`'s *Consuming*
   turn-gate line names the ceiling.
 - Consumers gain the check and the ceiling on their next pin bump. Nothing is

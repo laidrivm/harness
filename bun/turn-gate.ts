@@ -15,7 +15,14 @@
  *
  * It refuses at most once per mark. A refused turn is continued, not
  * restarted, so no new mark is written. That bounds a condition the model
- * cannot satisfy to one turn, without reading `stop_hook_active`.
+ * cannot satisfy to one turn, and the bound reads no event field.
+ *
+ * The round ceiling does read one. Before it decides, the `stop` half counts
+ * the stops a goal continued (`stop_hook_active` true) since the mark. At the
+ * ceiling `goal-rounds.ts` fixes, it ends the session instead, printing
+ * `continue: false` and exiting 0, and records `goal`/`rounds`/`ceiling`. A
+ * refusal would only hand the goal another round. `commit-gates`' "SHALL NOT
+ * depend on a loop-protection field" is about the refusal, so the ceiling may.
  *
  * Whatever it cannot read — no mark, no message, no repository, a detached
  * `HEAD`, an event that is not JSON — ends the turn. This is fail-open on
@@ -39,6 +46,7 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { ran, record } from "./gate-ledger.ts";
+import { countRound, resetRounds } from "./goal-rounds.ts";
 
 type Event = {
 	session_id?: unknown;
@@ -114,6 +122,7 @@ export function mark(event: Event, store: string): void {
 	if (!file || typeof event.cwd !== "string") return;
 	mkdirSync(store, { recursive: true });
 	writeFileSync(file, git(event.cwd, "rev-parse", "-q", "--verify", "HEAD") ?? "");
+	resetRounds(file);
 }
 
 /**
@@ -260,8 +269,15 @@ if (import.meta.main) {
 	let reason: string | undefined;
 	try {
 		const event = JSON.parse(await Bun.stdin.text());
+		const file = markFile(store, event);
+		// Before `decide`: a session that is ending gains nothing from a refusal.
+		const ceiling =
+			process.argv[2] !== "mark" && file ? countRound(event, file) : undefined;
 		if (process.argv[2] === "mark") mark(event, store);
-		else
+		else if (ceiling) {
+			record("goal", "ceiling", "rounds", event);
+			console.log(JSON.stringify({ continue: false, stopReason: ceiling }));
+		} else
 			reason = decide(event, store, (decision) =>
 				record("turn-gate", decision, "pre-pr-sequence", event),
 			);
