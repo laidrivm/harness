@@ -106,8 +106,9 @@ that variable is set. The gate does not match the session:
 - The writer prefers `CLAUDE_PROJECT_DIR`, which can name another checkout,
   so the runner drops it and records the checkout's top level as git resolves
   it. The gate resolves the top level the same way from the event's `cwd`, so
-  a session in a subdirectory still matches. A project under the top level
-  matches as well, which *A run from a subdirectory* fixes.
+  a session in a subdirectory still matches. A record naming a path under the
+  top level does not match: the archive PR made the match exact, since a nested
+  worktree measures against its own base refs.
 - The project has to be matched at all. Two clones or worktrees at one commit
   measure the diff budget against their own base refs, which each fetched
   separately. A run in one therefore proves nothing about the other.
