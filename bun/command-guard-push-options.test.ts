@@ -25,6 +25,7 @@ function guard(command: string): { code: number; rule?: string } {
 	return { code, rule: JSON.parse(readFileSync(ledger, "utf8")).rule };
 }
 
+// spec: agent-permissions/a-push-option-whose-value-reads-like-a-force-flag
 describe("a push option's value", () => {
 	test.each([
 		"git push -o --force origin feat/x",
@@ -40,6 +41,7 @@ describe("a push option's value", () => {
 	});
 });
 
+// spec: agent-permissions/a-force-flag-beside-a-push-option
 describe("the switches beside it", () => {
 	test.each([
 		["git push -o x --force origin feat/x", "force-push"],
