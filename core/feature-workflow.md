@@ -120,6 +120,36 @@ completes, name the next step and the exact command.
   owns the form of the change artefacts themselves and may not restate
   what those files already say.
 
+## Unattended stages
+
+A session that carries one stage of one change with nobody present
+(unattended, as `autonomy.md` defines it) sets one `/goal` for that stage, so
+that it cannot end on prose with the stage half done. The `stage-goal`
+capability fixes what makes each stage done. `bun/goal-check.ts` decides it,
+or `node_modules/harness/bun/goal-check.ts` in a consumer. Explore gets no
+goal of its own, because an unattended exploration runs inside the `propose`
+goal. A conversation gets no goal at all.
+
+The launcher starts the stage with the goal as its prompt, and puts the
+declared line on a line of its own. For step 2 of a change `demo` in a
+consumer:
+
+```text
+claude -p '/goal Carry step 2 of the OpenSpec change demo: /opsx:apply demo for its group 2, the pre-PR sequence, the push and the pull request.
+This session runs unattended.
+The goal is met when the last line of `bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push, opens with `goal met` — or when the final message opens with `BLOCKED —` and names what only the user can settle.'
+```
+
+A proposal names `propose demo` and an archive names `archive demo`, with no
+step. The outcome is the launcher's own run of the same check once the session
+ends: exit 0 means the stage is done, and 1 means it is not. Two other
+signals look like an outcome and are not:
+
+- `claude -p`'s exit status reads `0` whether the goal was met or Claude
+  Code's block cap ended the run.
+- A `goal` record in the gate ledger names no change or step, so two targets
+  at one commit cannot be told apart.
+
 ## Across the stages
 
 Discipline every artefact of a change is written under, whichever stage
