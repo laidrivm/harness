@@ -48,7 +48,12 @@ to the script, so `bash script.sh -s` is a script and `curl … | bash -s --
   `O`, and `--rcfile`/`--init-file`, take the next word as their value. A
   redirection and its target are skipped, as `invocations` already does.
 - A group carrying `s` → reads stdin → **refused**.
-- A group carrying `c` → the program is the next word: none there, one holding
+- A group carrying `c` → the program is the first operand once the options
+  and their values are consumed, not the word after the `c`: bash runs
+  `echo $HOME` for both `bash -co pipefail 'echo $HOME'` and `bash -oc
+  pipefail 'echo $HOME'`, and `$cmd` for `sh -c -x "$cmd"`. zsh and dash
+  reject some of these spellings, which costs nothing, since the guard only
+  refuses. That operand: none there, one holding
   a `$`, the command marked as substitution-fed (Decision 3), or an `xargs`
   among the command's words before the shell → **refused**; otherwise the
   existing recursion reads the string, unchanged. `xargs -I{} sh -c '{}'`

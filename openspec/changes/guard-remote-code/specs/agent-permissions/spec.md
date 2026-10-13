@@ -101,6 +101,13 @@ running a local script by its path.
 - **THEN** the hook blocks the call, because the guard cannot tell a
   substitution after the string from one inside it
 
+#### Scenario: An option between `-c` and its program
+
+- **WHEN** the agent attempts `bash -co pipefail 'echo $HOME'` or
+  `sh -c -x "$cmd"`
+- **THEN** the hook blocks the call, because the program is the first operand
+  after the shell's options, and it holds a `$`
+
 #### Scenario: Asking about a shell runs none
 
 - **WHEN** the agent attempts `command -v bash` or `bash --version`
