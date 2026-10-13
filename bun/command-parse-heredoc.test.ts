@@ -141,6 +141,19 @@ describe("a call the scan ends inside a quote is refused", () => {
 	// spec: agent-permissions/an-unclosed-substitution
 	test("an unclosed substitution refuses", () =>
 		blocks("echo $(git status", "unclosed-quote"));
+
+	test.each([
+		[`echo don't\n${push}`, "a single-quoted string"],
+		["echo $(git status", "a `$(` substitution"],
+		["echo `git status", "a backtick substitution"],
+	])("%p refuses, naming %s", (command, open) => {
+		const { code, rule, reason } = verdict(command);
+		expect({ code, rule, named: reason.includes(open) }).toEqual({
+			code: 2,
+			rule: "unclosed-quote",
+			named: true,
+		});
+	});
 });
 
 describe("the heredoc cases no scenario pins", () => {
@@ -157,6 +170,10 @@ describe("the heredoc cases no scenario pins", () => {
 		],
 		["a delimiter line with a trailing blank", `cat <<'EOF'\nEOF \n${push}\nEOF`],
 		["a body line that starts with the delimiter", `cat <<'EOF'\nEOFX\n${push}\nEOF`],
+		[
+			"a quoted heredoc inside an unquoted body's substitution",
+			`cat <<EOF\n$(cat <<'X'\n${push}\nX\n)\nEOF`,
+		],
 	])("%s runs", (_, command) => allows(command));
 
 	test.each([
@@ -169,6 +186,7 @@ describe("the heredoc cases no scenario pins", () => {
 		["a body begun inside a subshell", `cat <<'EOF' && (true\nbody\nEOF\n)\n${push}\nEOF`],
 		["an empty quoted body", `cat <<'EOF'\nEOF\n${push}`],
 		["the unquoted second of two heredocs", `cat <<'A' <<B\nx\nA\n$(${push})\nB`],
+		["an unquoted body bash then runs", `cat > s.sh <<EOF\n${push}\nEOF\nbash s.sh`],
 	])("%s blocks the push after it", (_, command) => blocks(command));
 
 	// Joined, the delimiter line reads `xEOF` and the body goes on, while dash
