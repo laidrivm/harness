@@ -18,7 +18,8 @@ stage. None of them launches one:
 - `stage-goal` gives each stage its done-check, `bun/goal-check.ts`, and its
   launch form. It leaves "choosing and launching the next stage" to this card.
 - `loop-guard` refuses a call that keeps failing the same way, and
-  `stage-goal`'s ceiling ends a session that goes round in circles. Both leave
+  `stage-goal`'s ceiling ends a goal run at its twentieth continued stop,
+  never a turn that is still calling tools. Both leave
   wall-clock time to "whatever launches the session".
 - `agent-autonomy` says a session is unattended only when its starting prompt
   says so.

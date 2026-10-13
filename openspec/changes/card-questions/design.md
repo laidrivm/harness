@@ -164,8 +164,9 @@ that more than two parallel interviews are more than a person holds, and the
 first draft of this design added a per-session ceiling on the hook as a
 backstop. The user dropped both on 2026-10-12: a ceiling that is hit still
 leaves a pile of questions to clean up or lift, and an agent stops on its own
-— its context runs out, it has nothing left to ask, or the loop guard refuses
-the call it keeps repeating. In their place the user asked for one rule:
+— its context runs out, or it has nothing left to ask — and the loop guard
+refuses a call it keeps repeating, leaving a run that goes on calling to its
+launcher to end. In their place the user asked for one rule:
 before asking, an agent reads the `Questions` view of its board and the
 comments of its card, and a question already open there is waited on, not
 asked again — so the pile holds each question once.
