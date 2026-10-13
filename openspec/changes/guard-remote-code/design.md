@@ -11,12 +11,15 @@ off the word it sits in. See `proposal.md` §Why for the probe.
 
 ## Goals / Non-Goals
 
-**Goals:** close the route by which any guarded act reaches a shell unread,
+**Goals:** close the route by which any guarded act reaches a shell unread
+from the line itself — standard input, a substitution, an expansion —
 `curl … | sh` among them; refuse `bunx` that installs; keep a repository
 script and a literal `-c` string running.
 
 **Non-Goals:** reading pipe topology in general; any interpreter that is not a
-shell (`proposal.md` §Non-goals).
+shell; a program the shell reads from a file — a script operand,
+`--rcfile`/`--init-file` — whose contents the guard does not open
+(`proposal.md` §Non-goals).
 
 ## Decisions
 
@@ -146,6 +149,10 @@ well under the diff budget's warning threshold.
   run it by path; neither consumer's tracked files does this.
 - [An unlisted value-taking shell option hides a stdin read] → the list is
   short and stable; a test pins each listed option.
+- [A file the shell reads runs unread — a script operand, `--rcfile` or
+  `--init-file`] → accepted: the guard reads a line, not the files it names,
+  and opening one would judge a file that may change before the shell reads
+  it; `core/code-style.md`'s narrowed bullet keeps a downloaded script.
 - [A package already in Bun's global cache from before this change] → runs
   under `--no-install`; *Check by hand* in the PR.
 - [The heredoc card stops reading a quoted heredoc's body as commands] → a
