@@ -80,8 +80,9 @@ These are named follow-ups, each a card of its own:
 
 ## Impact
 
-- New `bun/pre-pr.ts` with tests. `bun/turn-gate.ts` reads the ledger on the
-  one path where a group completed and the message carries a gate line.
+- New `bun/pre-pr.ts` with tests. `bun/turn-gate.ts` reads the ledger, through
+  `ran()` in `bun/gate-ledger.ts`, on the one path where a group completed and
+  the message carries a gate line.
 - `core/review-toolkit.md`, `README.md` (the *Consuming* line on the turn
   gate), and the header comment of `bun/turn-gate.ts`.
 - Consumers: on their next pin bump, the turn gate asks for the runner at
