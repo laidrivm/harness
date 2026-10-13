@@ -1,14 +1,9 @@
 /**
- * What the runner's test files need: a dedicated clone of a bare `origin`, and
- * the runner spawned in it as the user would start it. The environment is
- * built from what the case needs. It has no `CLAUDECODE`, because `bun test`
- * itself runs inside a session; `XDG_STATE_HOME` is a directory of its own;
- * and `PATH` holds only stubs, so no case reaches GitHub or a registry or
- * starts a session. Every stub appends its name and arguments to one log, so a
- * case reads which commands ran and in what order.
- *
- * Its own module because the cases split across three files, under the
- * 300-line cap. Each test file registers `diff-budget.fixture.ts`'s `cleanup`.
+ * The runner spawned in a clone of a bare `origin`, for the three
+ * `board-loop*.test.ts` files. Its environment has no `CLAUDECODE` (`bun test`
+ * runs inside a session), a state directory of its own, and a `PATH` of stubs
+ * that each append their name and arguments to one log, so no case reaches
+ * GitHub or a registry or starts a session.
  */
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

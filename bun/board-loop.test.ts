@@ -4,13 +4,7 @@ import { join } from "node:path";
 import { cleanup, git } from "./diff-budget.fixture.ts";
 import { advance, clone, commit, out, records, run } from "./board-loop.fixture.ts";
 
-/**
- * The runner's preconditions: who may start it, the clone it starts from, and
- * the install before any session. What a pass takes is in
- * `board-loop-takeable.test.ts`, and the stage and its verdict in
- * `board-loop-stage.test.ts`. Bracketed numbers are the proposal-stage
- * `/zombies` ideas.
- */
+/** Who may start the runner, the clone it starts from, and the install. [n]: `/zombies` ideas. */
 
 afterAll(cleanup);
 
