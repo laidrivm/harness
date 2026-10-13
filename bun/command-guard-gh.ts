@@ -1,7 +1,7 @@
 /**
  * What `command-guard.ts` refuses of a `gh` invocation: the subcommands that
- * publish text under the user's name, and `gh api` reaching the same endpoints
- * with a method that writes. Each check returns the reason rather than
+ * publish text under the user's name, and a `gh api` call reaching the same
+ * endpoints that cannot be shown to read. Each check returns the reason rather than
  * blocking, because the exit code and the ledger id are the guard's, written
  * at its call site.
  */
