@@ -72,11 +72,17 @@ describe("what counts as one call failing the same way", () => {
 		expect(after(fails, before(input({ timeout: 1000 }))).code).toBe(0);
 	});
 
-	test("inputs differing only in key order are one call [14]", () => {
-		const one = { tool_input: { command: "x", timeout: 1 } };
-		const other = { tool_input: { timeout: 1, command: "x" } };
-		const fails = [one, other, one].map((over) => failure(over));
-		expect(after(fails, before(other)).code).toBe(2);
+	test.each([
+		["[14]", { command: "x", timeout: 1 }, { timeout: 1, command: "x" }],
+		["at depth", { o: { a: 1, b: 2 } }, { o: { b: 2, a: 1 } }],
+	])("inputs differing only in key order are one call %s", (_, one, other) => {
+		const fails = [one, other, one].map((i) => failure({ tool_input: i }));
+		expect(after(fails, before({ tool_input: other })).code).toBe(2);
+	});
+
+	test("a failure reported under another event is not counted", () => {
+		const fails = thrice({ hook_event_name: "PostToolUse" });
+		expect(after(fails).code).toBe(0);
 	});
 
 	test.each([
