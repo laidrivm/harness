@@ -182,6 +182,16 @@ describe("the warning", () => {
 		expect(code).toBe(0);
 		expect(said(out).additionalContext).toContain("4 times");
 	});
+
+	test("a barred call failing with another error says nothing", () => {
+		expect(after(thrice(), failure({ error: "2 skip" }))).toEqual(SILENT);
+	});
+
+	test("with the store unwritable, the third failure says nothing", () => {
+		const tmp = temp();
+		writeFileSync(join(tmp, "loop-guard"), ""); // a file where the store goes
+		expect(after(thrice().slice(0, 2), failure(), tmp)).toEqual(SILENT);
+	});
 });
 
 /** Where the ledger lies in `tmp`, which the fixture makes `XDG_STATE_HOME`. */
@@ -210,6 +220,12 @@ describe("the gate ledger", () => {
 	test("a first and a second failure leave it absent [33]", () => {
 		const tmp = temp();
 		for (const event of thrice().slice(0, 2)) run(tmp, event);
+		expect(existsSync(ledger(tmp))).toBe(false);
+	});
+
+	test("a call the guard lets run leaves it absent", () => {
+		const tmp = temp();
+		run(tmp, before());
 		expect(existsSync(ledger(tmp))).toBe(false);
 	});
 
