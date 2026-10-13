@@ -88,6 +88,12 @@ user the script's URL.
 - **WHEN** the agent attempts `sh -c "git status"`
 - **THEN** the call is not blocked by this requirement
 
+#### Scenario: A substitution after a literal `-c` string
+
+- **WHEN** the agent attempts `bash -c "git status" $(echo x)`
+- **THEN** the hook blocks the call, because the guard cannot tell a
+  substitution after the string from one inside it
+
 #### Scenario: Asking about a shell runs none
 
 - **WHEN** the agent attempts `command -v bash` or `bash --version`
