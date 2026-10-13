@@ -43,13 +43,8 @@ export function commit(dir: string, tree: Tree = { "note.txt": `${Math.random()}
 		writeFileSync(join(dir, path), text);
 	}
 	git(dir, "add", "-A");
-	git(dir, "commit", "-qm", "c");
+	git(dir, "-c", "user.email=test@example.com", "-c", "user.name=Test", "commit", "-qm", "c");
 }
-
-const identify = (dir: string) => {
-	git(dir, "config", "user.email", "test@example.com");
-	git(dir, "config", "user.name", "Test");
-};
 
 /** A bare `origin` whose `main` holds `tree`, and a clone of it on `main`. */
 export function clone(tree: Tree = change("demo")) {
@@ -57,7 +52,6 @@ export function clone(tree: Tree = change("demo")) {
 	git(origin, "init", "-q", "--bare", "-b", "main");
 	const dir = emptyDir("board-loop-clone-");
 	git(dir, "init", "-q", "-b", "main");
-	identify(dir);
 	git(dir, "remote", "add", "origin", origin);
 	commit(dir, { "package.json": "{}\n", ...tree });
 	git(dir, "push", "-q", "origin", "main");
@@ -68,7 +62,6 @@ export function clone(tree: Tree = change("demo")) {
 export function advance(origin: string, tree?: Tree) {
 	const other = emptyDir("board-loop-other-");
 	git(other, "clone", "-q", origin, ".");
-	identify(other);
 	commit(other, tree);
 	git(other, "push", "-q", "origin", "main");
 }
