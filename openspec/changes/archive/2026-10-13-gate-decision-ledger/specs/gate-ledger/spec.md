@@ -10,11 +10,12 @@ than by feel.
 
 ### Requirement: Every gate refusal is recorded
 
-Each refusal the command guard or the turn gate makes SHALL append one record
-to the ledger. Every reason the guard blocks for counts, including an event it
-could not read. The turn gate SHALL also record a turn that completed a task
-group and was let through because its final message reported, so that a count
-of refusals has a denominator. An allowed Bash call SHALL NOT be recorded.
+Each refusal a harness gate makes — the command guard, the Notion update
+guard or the turn gate — SHALL append one record to the ledger. Every reason a
+guard blocks for counts, including an event it could not read. The turn gate
+SHALL also record a turn that completed a task group and was let through
+because its final message reported, so that a count of refusals has a
+denominator. A call a guard allows SHALL NOT be recorded.
 
 #### Scenario: A commit on main
 
@@ -63,7 +64,7 @@ refused, without doing what the refusal asked.
 
 ### Requirement: Each prohibition has a stable id
 
-Each prohibition the command guard enforces SHALL have an id of its own, and a
+Each prohibition a guard enforces SHALL have an id of its own, and a
 record SHALL carry that id rather than the reason's prose. Two prohibitions
 SHALL NOT share an id, and rewording a reason SHALL NOT change its id, so that
 counts taken a month apart remain comparable.
@@ -95,9 +96,10 @@ machine-local path.
 ### Requirement: The ledger lives outside every working tree
 
 The ledger SHALL be one file in the user's state directory — under
-`$XDG_STATE_HOME` when it is set, and under `~/.local/state` otherwise — shared
-by every project, with each record naming its project. Nothing SHALL be written
-inside a repository, so no consumer has an ignore entry to add.
+`$XDG_STATE_HOME` when it is an absolute path, and under `~/.local/state`
+otherwise — shared by every project, with each record naming its project.
+Nothing SHALL be written inside a repository, so no consumer has an ignore
+entry to add.
 
 #### Scenario: A consumer's first refusal
 
