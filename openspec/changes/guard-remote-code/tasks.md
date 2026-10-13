@@ -55,11 +55,16 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       is exported and now takes `<<<`, so a here-string's word is not read as
       a script. `bun test bun/command-parse` 46 pass, three of them new
       `command -v`/`-V`/`-pv` cases that fail with the parse edit stashed
-- [ ] 1.5 Add `bun/command-guard-exec.ts` with the unread-program and bunx
+- [x] 1.5 Add `bun/command-guard-exec.ts` with the unread-program and bunx
       checks per design Decisions 2 and 5, each value-taking shell option
       listed beside its reason, and call both from `bun/command-guard.ts` for
       every candidate ahead of the `SHELLS` branch, with ledger ids
       `unread-program` and `bunx-install`; 1.1–1.3 pass
+      — evidence: `bun test bun/command-parse bun/command-guard` 303 pass,
+      0 fail, the 1.2 cases among them; the whole suite 1270 pass. The `-c`
+      recursion reads from the operand `shellWords` finds rather than the
+      word after the `c`; `.`, `source` and `eval` are checked only as the
+      command's own name, never past a wrapper
 - [ ] 1.6 Assert the reasons, not only the exit code: the unread-program
       reason names the shell, showing the user the URL and running a local
       script by its path; the bunx reason

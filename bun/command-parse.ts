@@ -268,8 +268,8 @@ export function invocations(words: string[]): [string, string[]][] {
 		if (KEYWORDS.has(name)) continue;
 		if (WRAPPERS.has(name)) {
 			// `command -v bash` names a command and runs nothing.
-			if (name === "command" && /^-[pvV]*[vV][pvV]*$/.test(words[at + 1] ?? ""))
-				break;
+			const option = words[at + 1] ?? "";
+			if (name === "command" && /^-[pvV]*[vV][pvV]*$/.test(option)) break;
 			wrapped = true;
 			continue;
 		}

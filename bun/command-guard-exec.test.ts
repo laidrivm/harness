@@ -223,8 +223,9 @@ describe("a bunx that installs what it runs", () => {
 	});
 
 	// spec: agent-permissions/a-wrapped-bunx
-	test.each(["env FOO=1 bunx cowsay", "~/.bun/bin/bunx cowsay", 'bash -c "bunx cowsay"'])(
-		"%s blocks",
-		(line) => installs(line),
-	);
+	test.each([
+		"env FOO=1 bunx cowsay",
+		"~/.bun/bin/bunx cowsay",
+		'bash -c "bunx cowsay"',
+	])("%s blocks", (line) => installs(line));
 });

@@ -3,8 +3,9 @@
  * `PreToolUse` guard for every Bash call, registered in
  * `.claude/settings.json`. It blocks the prohibitions no permission entry can
  * express: a commit while `HEAD` is on `main` or on a branch whose pull request
- * has merged, a force-push wherever the flag sits, and the `gh` commands that
- * publish text on the user's behalf.
+ * has merged, a force-push wherever the flag sits, the `gh` commands that
+ * publish text on the user's behalf, a shell handed a program the line does not
+ * spell out, and a `bunx` that would install what it runs.
  *
  * It runs without an `if` field on purpose. A permission pattern — which is
  * what `if` takes — matches the command word literally, so `/usr/bin/git` and
@@ -21,11 +22,17 @@
  *
  * Reading the command line is `command-parse.ts`'s; what this file
  * holds is what the prohibitions themselves are, the reading of a `gh`
- * invocation excepted, which is `command-guard-gh.ts`'s.
+ * invocation excepted, which is `command-guard-gh.ts`'s, and of a shell's
+ * program and a `bunx`'s options, which is `command-guard-exec.ts`'s.
  */
 
 import { existsSync } from "node:fs";
 import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
+import {
+	bunxInstall,
+	shellWords,
+	unreadProgram,
+} from "./command-guard-exec.ts";
 import { ghApiWrite, ghPublish } from "./command-guard-gh.ts";
 import { commands, invocations, place, SHELLS } from "./command-parse.ts";
 import { blocker } from "./gate-ledger.ts";
@@ -116,12 +123,17 @@ function check(command: string): void {
 		// Every candidate, not the first: past a wrapper the parser cannot tell
 		// an option's operand from the command it wraps, and a candidate naming
 		// nothing this file guards costs a comparison.
-		for (const [name, rest] of invocations(part)) {
-			// `bash -c "git push --force"`, and `bash -lc …` too: short flags
-			// bundle, so `-c` neither stands alone nor has to come first.
-			const dashC = rest.findIndex((word) => /^-[a-z]*c[a-z]*$/.test(word));
-			if (SHELLS.has(name) && dashC >= 0) {
-				check(rest.slice(dashC + 1).join(" "));
+		for (const [index, [name, rest]] of invocations(part).entries()) {
+			const unread = unreadProgram(part, name, rest, index === 0);
+			if (unread) block("unread-program", unread);
+			const bunx = bunxInstall(name, rest);
+			if (bunx) block("bunx-install", bunx);
+			// `bash -c "git push --force"`, `bash -lc …` and `bash -oc pipefail
+			// …` too: the program is the first operand after the options and
+			// their values, wherever the `c` stood.
+			const shell = SHELLS.has(name) ? shellWords(rest) : null;
+			if (shell?.command) {
+				check(rest.slice(shell.operand).join(" "));
 				continue;
 			}
 			if (name === "eval") {
