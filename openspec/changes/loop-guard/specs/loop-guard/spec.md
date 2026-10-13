@@ -134,7 +134,7 @@ SHALL NOT end the session.
 ### Requirement: Each warning and refusal is recorded in the gate ledger
 
 The guard SHALL record each warning and each refusal as one record in the gate
-ledger that `openspec/changes/gate-decision-ledger/` defines, through that
+ledger that the `gate-ledger` capability defines, through that
 ledger's writer and under its requirements *A record holds no command text* and
 *Recording never changes a decision*. It SHALL keep no log of its own. A
 failure below the warning SHALL NOT be recorded.
