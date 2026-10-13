@@ -31,7 +31,9 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       `/proc/self/fd/0`; `cmd='git push --force'; sh -c "$cmd"` and `eval
       "$cmd"`, and `sh -c 'echo $(date)'` with them — the `$` test reaches a
       single-quoted string too — while `bash script.sh "$HOME"` passes; `bash -c "git
-      status" $(echo x)` blocks; a blocked shell after `git status &&`; `cat a.sh |
+      status" $(echo x)` blocks; `bash -co pipefail 'echo $HOME'`, `bash -oc
+      pipefail 'echo $HOME'` and `sh -c -x "$cmd"` block, since the program is
+      the first operand after the options (PR #99 review); a blocked shell after `git status &&`; `cat a.sh |
       bash`; `zsh` and `dash` fed by a pipe; `bash -s -- --help` fed by a
       pipe blocks while `bash script.sh -s` passes, since options end at `--`
       or the script (1, 2, 5–8, 12–14, 19, 20, 33)
