@@ -154,7 +154,13 @@ carried by the pull request that bumps its pin past group 1.
       an empty `Pointer`. With " — task 3.1" put after that card's path
       temporarily, it was listed as naming no directory [26]; the pointer
       was then restored and the card re-read.
-- [ ] 2.2 mellon, the same on its `main` with `"board": "mellon"`. Confirm it
+- [x] 2.2 mellon, the same on its `main` with `"board": "mellon"`. Confirm it
       prints `mellon` and an empty `status`. Rewrite the `mellon` card for
       task 3.2 the same way, in the same two calls and a re-read, and
       confirm that the reconciliation skips it [25].
+      — evidence: laidrivm/mellon#47, merged, added `"board": "mellon"`;
+      `board-state.ts` printed `mellon` and an empty `status`. The card's
+      `Pointer` was rewritten to its archive path with `update_properties`
+      and the card re-read; its body already named task 3.2, so here too one
+      call sufficed where the wording assumed two. The reconciliation skipped
+      the card [25] and listed the 31 cards with an empty `Pointer`.
