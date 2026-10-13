@@ -75,6 +75,8 @@ export function sweep(
 ): { reported: string[]; kept: string[] } | undefined {
 	if (!existsSync(join(dir, LOCAL))) return undefined;
 	const local = permissions(dir, LOCAL).allow ?? [];
+	// A string would otherwise be swept one character at a time.
+	if (!Array.isArray(local)) throw new Error(`${LOCAL}: allow is not a list`);
 	const tracked = permissions(dir, TRACKED);
 	const decided: string[] = [];
 	const gaps: string[] = [];

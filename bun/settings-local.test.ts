@@ -1,57 +1,22 @@
 /**
- * The sweep over a fabricated repository: its tracked `.claude/settings.json`
- * and an untracked `.claude/settings.local.json` beside it. The numbers in
- * brackets are the edge cases `/zombies` listed against the proposal.
+ * The sweep's classes, the order of the tracked lists and the documented
+ * matching, over fabricated repositories. The numbers in brackets are the edge
+ * cases `/zombies` listed against the proposal; the cases that keep the matcher
+ * literal and the inputs it leaves alone are `settings-local-edges.test.ts`'s.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { run as run_ } from "./check.ts";
-import { cleanup, consumer, policy } from "./settings.fixture.ts";
-import { machineLocal } from "./settings.ts";
+import { consumer, policy } from "./settings.fixture.ts";
 import { sweep } from "./settings-local.ts";
+import {
+	cleanup,
+	gap,
+	LOCAL,
+	report,
+	repo,
+	run,
+} from "./settings-local.fixture.ts";
 
 afterAll(cleanup);
-
-const script = join(import.meta.dir, "settings-local.ts");
-const LOCAL = ".claude/settings.local.json";
-
-type Lists = { deny?: string[]; ask?: string[]; allow?: string[] };
-
-/**
- * A repository whose tracked file holds `tracked` as its permission lists and
- * whose local file holds `local` — an allow list, raw text, or nothing.
- */
-function repo(tracked: Lists, local?: string[] | string): string {
-	const config = policy();
-	config.permissions = { deny: [], ask: [], allow: [], ...tracked };
-	const files: Record<string, string> = {};
-	if (local !== undefined)
-		files[LOCAL] =
-			typeof local === "string"
-				? local
-				: JSON.stringify({ permissions: { allow: local } });
-	return consumer(config, files);
-}
-
-/** The sweep run as the command, from inside `dir`, with only `PATH` set. */
-function run(dir: string) {
-	const call = Bun.spawnSync(["bun", script], {
-		cwd: dir,
-		env: { PATH: process.env.PATH },
-		stdout: "pipe",
-		stderr: "pipe",
-	});
-	return {
-		code: call.exitCode,
-		out: call.stdout.toString(),
-		err: call.stderr.toString(),
-	};
-}
-
-/** What the sweep reports for one local entry against `tracked`. */
-const report = (tracked: Lists, entry: string) =>
-	sweep(repo(tracked, [entry]))?.reported ?? [];
 
 describe("nothing to sweep", () => {
 	// spec: agent-permissions/nothing-left-to-promote-or-drop
@@ -74,9 +39,7 @@ describe("nothing to sweep", () => {
 		const dir = consumer(config, {
 			[LOCAL]: JSON.stringify({ permissions: { allow: ["Bash(git rm -- *)"] } }),
 		});
-		expect(sweep(dir)?.reported).toEqual([
-			"gap: Bash(git rm -- *) — promote it to .claude/settings.json or drop it",
-		]);
+		expect(sweep(dir)?.reported).toEqual([gap("Bash(git rm -- *)")]);
 	});
 });
 
@@ -131,7 +94,7 @@ describe("the order of the lists", () => {
 		expect(sweep(dir)).toEqual({
 			reported: [
 				"decided: Bash(git log --oneline) — allow holds Bash(git log *)",
-				"gap: Bash(sed -i x y) — promote it to .claude/settings.json or drop it",
+				gap("Bash(sed -i x y)"),
 			],
 			kept: [
 				"kept: Read(//Users/someone/**) — carries a path a clone does not have",
@@ -150,7 +113,7 @@ describe("the documented matching", () => {
 
 	test("the space before a trailing `*` is a word boundary [11]", () => {
 		expect(report({ allow: ["Bash(ls *)"] }, "Bash(lsof)")).toEqual([
-			"gap: Bash(lsof) — promote it to .claude/settings.json or drop it",
+			gap("Bash(lsof)"),
 		]);
 	});
 
@@ -167,7 +130,7 @@ describe("the documented matching", () => {
 
 	test("a `:*` inside a rule is literal [13]", () => {
 		expect(report({ allow: ["Bash(git:* push)"] }, "Bash(git push)")).toEqual([
-			"gap: Bash(git push) — promote it to .claude/settings.json or drop it",
+			gap("Bash(git push)"),
 		]);
 	});
 
@@ -180,112 +143,16 @@ describe("the documented matching", () => {
 		},
 	);
 
+	test("a tool-name glob in the tracked ask list decides a tool it names", () => {
+		const entry = "mcp__claude_ai_Gmail__send_message";
+		expect(report({ ask: ["mcp__*__send_message"] }, entry)).toEqual([
+			`decided: ${entry} — ask holds mcp__*__send_message`,
+		]);
+	});
+
 	test("a Bash rule never decides another tool's entry with the same text [15]", () => {
 		expect(report({ allow: ["Bash(git log *)"] }, "PowerShell(git log)")).toEqual([
-			"gap: PowerShell(git log) — promote it to .claude/settings.json or drop it",
+			gap("PowerShell(git log)"),
 		]);
-	});
-});
-
-describe("what the sweep leaves alone", () => {
-	// spec: agent-permissions/nothing-left-to-promote-or-drop
-	test("neither file changes across a run that reports entries [24]", () => {
-		const dir = repo({ allow: ["Bash(git log *)"] }, [
-			"Bash(git log)",
-			"Bash(git push *)",
-		]);
-		const read = () =>
-			[".claude/settings.json", LOCAL].map((f) => readFileSync(join(dir, f)));
-		const before = read();
-		expect(run(dir).code).toBe(1);
-		expect(read()).toEqual(before);
-	});
-
-	test("check.ts's run reports the same with and without a local file [21]", () => {
-		const manifest = {
-			harness: {
-				rootFiles: {},
-				suppressions: {},
-				uncitedFloor: { count: 0, why: "none" },
-			},
-		};
-		const dir = consumer(policy(), {
-			"package.json": JSON.stringify(manifest),
-			// The size gate refuses a tree with no file it caps.
-			"src/index.ts": "export {};\n",
-		});
-		const before = run_(dir);
-		// Unparseable, so a check that read it would throw or report it.
-		writeFileSync(join(dir, LOCAL), "{ not json");
-		expect(run_(dir)).toEqual(before);
-	});
-});
-
-describe("an input that cannot be read", () => {
-	test("a local file that does not parse throws, naming it [22]", () => {
-		const dir = repo({}, '{ "permissions": ');
-		expect(() => sweep(dir)).toThrow(LOCAL);
-	});
-
-	test.each([
-		["missing", undefined],
-		["not JSON", "{ permissions: "],
-	])("a tracked file %s throws, naming it [23]", (_, text) => {
-		const dir = repo({}, ["Bash(git push *)"]);
-		const tracked = join(dir, ".claude/settings.json");
-		if (text === undefined) rmSync(tracked);
-		else writeFileSync(tracked, text);
-		expect(() => sweep(dir)).toThrow(".claude/settings.json");
-	});
-});
-
-describe("a literal matcher, and the order honest", () => {
-	test.each([
-		"Bash(sort -t: -k2 -rn)",
-		'Bash(echo "exit=$?")',
-		"Bash(grep -E 'a.+b$' x)",
-	])("%s is decided by itself [16]", (entry) => {
-		expect(report({ allow: [entry] }, entry)).toEqual([
-			`decided: ${entry} — allow holds ${entry}`,
-		]);
-	});
-
-	test.each([
-		["Bash(ls a?c)", "Bash(ls abc)"],
-		["Bash(grep a.c x)", "Bash(grep abc x)"],
-		['Bash(echo "exit=$?")', 'Bash(echo "exit=0")'],
-	])("%s does not decide %s [16]", (rule, entry) => {
-		expect(report({ allow: [rule] }, entry)).toEqual([
-			`gap: ${entry} — promote it to .claude/settings.json or drop it`,
-		]);
-	});
-
-	test("a path specifier that leaves by traversal is kept [17]", () => {
-		const swept = sweep(repo({}, ["Read(../outside/**)"]));
-		expect(swept).toEqual({
-			reported: [],
-			kept: [
-				"kept: Read(../outside/**) — reaches outside the repository",
-			],
-		});
-	});
-
-	test.each([
-		"Read(//Users/someone/**)",
-		"Bash(cp a /tmp/b)",
-		"Bash(cat ~/notes)",
-		"Edit(../secrets/**)",
-		"Read(docs/**)",
-		"Bash(bun test)",
-	])("%s is kept exactly when the tracked-file check refuses it [20]", (entry) => {
-		const dir = repo({}, [entry]);
-		const kept = (sweep(dir)?.kept ?? []).length === 1;
-		expect(kept).toBe(machineLocal(entry, dir) !== undefined);
-	});
-
-	test("an entry with an absolute path that a tracked rule decides is decided, not kept [18]", () => {
-		expect(
-			report({ allow: ["Bash(mkdir *)"] }, "Bash(mkdir -p /tmp/x)"),
-		).toEqual(["decided: Bash(mkdir -p /tmp/x) — allow holds Bash(mkdir *)"]);
 	});
 });
