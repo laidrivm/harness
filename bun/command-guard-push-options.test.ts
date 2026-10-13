@@ -32,6 +32,7 @@ describe("a push option's value", () => {
 		"git push --push-option --force-with-lease origin feat/x",
 		"git push --push-option=--all origin feat/x",
 		"git push -o--force origin feat/x",
+		"git push -of origin feat/x",
 		"git push -uo --mirror origin feat/x",
 		"git push --recurse-submodules --force origin feat/x",
 	])("%s is allowed", (command) => {
@@ -44,6 +45,10 @@ describe("the switches beside it", () => {
 		["git push -o x --force origin feat/x", "force-push"],
 		["git push -o x --force-with-lease origin feat/x", "force-push"],
 		["git push -fo x origin feat/x", "force-push"],
+		// Negated, it takes no value; abbreviated, it is not recognised — so the
+		// word after either is read as a switch.
+		["git push --no-push-option --force origin feat/x", "force-push"],
+		["git push --push-opt --force origin feat/x", "force-push"],
 		["git push -o x --all origin", "unbounded-push"],
 		["git push -o--force main", "push-to-main"],
 		["git push --push-option=x origin main", "push-to-main"],
