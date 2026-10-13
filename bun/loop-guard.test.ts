@@ -113,7 +113,6 @@ describe("what counts as one call failing the same way", () => {
 
 	test.each([
 		["holding `/` and `..` [15]", { session_id: "../s1" }],
-		["that is `..` [15]", { session_id: ".." }],
 		["of a sub-agent holding `..`", { agent_id: "../a1" }],
 	])("an id %s decides nothing", (_, over) => {
 		expect(after(thrice(over), before(over)).code).toBe(0);

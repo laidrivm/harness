@@ -60,7 +60,7 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
       All of these fail before 1.3. (Req: loop-guard — A repeat is the same
       call failing the same way; A thrice-failed call is refused before it
       runs; The guard fails open)
-- [ ] 1.3 Write `bun/loop-guard.ts` as design.md sets out:
+- [x] 1.3 Write `bun/loop-guard.ts` as design.md sets out:
       - the call key, the fingerprint and both decisions as pure exported
         functions;
       - the role chosen from `hook_event_name`;
