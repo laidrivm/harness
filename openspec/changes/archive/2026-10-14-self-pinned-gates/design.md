@@ -33,6 +33,17 @@ scratch copies of the harness (never in its checkout):
 - **Both consumers pin under `dependencies`** (`d2ass` and `mellon`'s
   `package.json`, read-only).
 
+**Measured after merge.** Pull request 78 merged with the pin at `84bb1a3`,
+before its re-pin landed; pull request 115 completed it, moving the pin to
+`57a0173`, past the guard and turn-gate fixes, and re-copying the
+`commit-gates` delta. On 2026-10-14, after #78 merged and `bun install` ran in
+the harness checkout on `main`, the user asked a fresh session to make an
+empty commit. The agent's `git commit --allow-empty` was refused by the hook
+`g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/command-guard.ts"; …` — the
+pinned copy, not the working tree — with "command-guard: HEAD is on main and
+this project never commits there…". That check ran at the old pin `84bb1a3`;
+#115 moved the pin to `57a0173` and left the registered hook text unchanged.
+
 ## Goals / Non-Goals
 
 **Goals:** the harness's sessions run its hooks from a merged commit; its

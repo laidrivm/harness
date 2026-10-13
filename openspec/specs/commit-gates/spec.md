@@ -335,8 +335,9 @@ missing or differs, as it fails a Bash hook that is not the bootstrap. That
 text SHALL run the installed package's script, and SHALL end the turn — and
 let the prompt through — when the package is not installed: a clone before
 `bun install` is the partial installation the fail-open paragraph above
-already refuses to make unusable. The harness itself registers the script from
-its own working tree, because it is not installed as its own package.
+already refuses to make unusable. The harness registers the same text in its
+own settings, as `harness-updates`' *The harness's own sessions run its gates
+from its pin* requires.
 
 #### Scenario: A task group is completed and the turn ends silently
 
