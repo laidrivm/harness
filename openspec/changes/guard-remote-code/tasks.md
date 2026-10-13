@@ -28,7 +28,9 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       `bash -es`; `xargs sh -c`; `+o` and `-O` and `--rcfile x` each taking a
       value; script operands `-`, `/dev/stdin` and `/dev/fd/3`; `bash -c "git
       status" $(echo x)`; a blocked shell after `git status &&`; `cat a.sh |
-      bash`; `zsh` and `dash` fed by a pipe (1, 2, 5–8, 12–14, 19, 33)
+      bash`; `zsh` and `dash` fed by a pipe; `bash -s -- --help` fed by a
+      pipe blocks while `bash script.sh -s` passes, since options end at `--`
+      or the script (1, 2, 5–8, 12–14, 19, 33)
 - [ ] 1.4 In `bun/command-parse.ts`, mark a command that a `$(`, a backtick or
       a `<(`/`>(` interrupts, without changing `commands()`'s return type, and
       stop `invocations` at `command -v`/`-V`; keep its existing tests green
@@ -45,7 +47,9 @@ the guard cannot read* and §*bunx runs only what is already installed*.
       bullet to a script downloaded to a file and run by path, keeping the
       unattended clause; map `npx` to `bunx --no-install` in `core/rules.md`'s
       `playwright-cli` bullet; grep the four places that restate either rule
-      and reconcile each (design Decision 7)
+      and reconcile each — `agent-autonomy`'s `design.md` quotes the pipe
+      bullet in its unattended table, if that change is not yet archived
+      (design Decision 7)
 - [ ] 1.8 Re-run the probe table in `proposal.md` §Why against the built guard
       and record the new column; measure `bun/command-guard.ts`,
       `bun/command-parse.ts` and the new files against the 300-line cap and

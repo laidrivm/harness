@@ -35,9 +35,12 @@ it keeps the bypass in the second probe row and needs the list.
 
 ### 2. What counts as an unread program
 
-For `sh`, `bash`, `zsh` and `dash`, walk the words after the name:
+For `sh`, `bash`, `zsh` and `dash`, walk the shell's own options — the words
+after the name up to `--` or the first operand; every word after that belongs
+to the script, so `bash script.sh -s` is a script and `curl … | bash -s --
+--help` is not a version query:
 
-- `--version` or `--help` anywhere → not a run; allowed.
+- `--version` or `--help` among those options → not a run; allowed.
 - A short-flag group (`-x`, `-eu`, `+o`) is an option; a group carrying `o` or
   `O`, and `--rcfile`/`--init-file`, take the next word as their value. A
   redirection and its target are skipped, as `invocations` already does.
@@ -68,6 +71,13 @@ interrupts when it opens `$(`, a backtick, or a `(` straight after a `<`/`>`;
 the mark rides beside the array (a `WeakSet` export, or whatever the apply
 finds smaller) so its one caller's type does not change. Only `-c` and `eval`
 read it: `bash script.sh $(…)` is a script with arguments and stays allowed.
+
+The mark cannot tell a substitution inside the `-c` string from one after it,
+so `bash -c "git status" $(echo x)` is refused too. Telling them apart means
+recording whether the substitution opened mid-word, and `eval x $(…)` would
+still need the coarse rule, since `eval` joins every argument into its
+program. The over-refusal is a line nobody needs; the precision is not worth
+a second state in the scanner.
 
 ### 4. `command -v` names a command and runs nothing
 
