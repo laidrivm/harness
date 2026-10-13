@@ -224,9 +224,13 @@ which the hook checks.
   posts on, not each board's view id. Work parked on another card's question
   finds its answer through the card its report names, so a skipped view read
   costs at most one duplicate answer, as above.
-- [The comments were read before another agent posted the same question] →
-  Accepted: the window runs from the read to the post, and the duplicate
-  costs as above.
+- [Two sessions read a card and both post before either sees the other] →
+  The card then holds two open questions, and one plain comment from the user
+  reads as the answer to both. Accepted rather than serialised with a claim:
+  a card is one task, worked by one agent at a time (the orchestrator gives
+  each card one worker, and the board loop carries one change per pass), so
+  two posters on one card is itself the defect. The window runs from the read
+  to the post.
 - [Until the bot-integration card named in *Decisions* lands, every question
   stands on the boards as written by the user] → The mark is the only sign it is the agent's.
 - [A `PermissionRequest` hook or a mod outside the project can also answer
