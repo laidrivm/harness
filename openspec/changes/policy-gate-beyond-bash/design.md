@@ -189,12 +189,13 @@ touches.
 
 ## Adjacent finding
 
-`agent-permissions` *Every manifest-mutating invocation prompts* says a
+`agent-permissions` *Every manifest-mutating invocation prompts* said a
 broader `allow` in another settings source suppresses an `ask` prompt. The
 permissions reference read for this design says the opposite: an ask rule
 prompts even where an allow also matches. This change does not edit that
-requirement. `bun-version-sites`, which already re-asserts it whole, carries
-the correction.
+requirement. `bun-version-sites` carried the correction, and its archive
+replaced the requirement with *Every manifest-mutating invocation prompts,
+whatever else allows it*.
 
 ## Migration Plan
 

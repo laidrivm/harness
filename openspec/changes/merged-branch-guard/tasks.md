@@ -70,13 +70,13 @@ costs on every call and shortens the prose the mechanism supersedes.
 
 ## 2. The cost, and the prose it supersedes
 
-- [ ] 2.1 Measure the guard's per-call cost on a non-commit Bash call before
+- [x] 2.1 Measure the guard's per-call cost on a non-commit Bash call before
       and after, and record both numbers where the existing 16–22 ms figure is
       stated — the guard runs on every call, so a regression there is paid by
       every tool use, and the claim that only commits pay for this needs a
       measurement rather than a reading of the code. (Req: agent-permissions —
       A commit on a merged branch is refused)
-- [ ] 2.2 Shorten `core/git-and-prs.md`'s pull-request-state rule to what the
+- [x] 2.2 Shorten `core/git-and-prs.md`'s pull-request-state rule to what the
       guard cannot see — a merge that has not been fetched yet is refused
       rather than missed on a branch with an `origin` ref, so what remains for
       the prose is a branch pruned, merged and not yet fetched, which the spec

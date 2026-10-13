@@ -33,7 +33,7 @@ on `main` runs on the same event and can decide this one too.
 
 ## Non-goals
 
-- Reaching the network. The guard costs 16–22 ms per Bash call today; a fetch
+- Reaching the network. The guard costs about 11 ms per Bash call; a fetch
   or a `gh` call on every commit is a different order of cost, and an offline
   session would degrade to exactly the behaviour that missed the merge.
 - Guarding anything but `git commit`. A push from a merged branch is already
@@ -52,7 +52,8 @@ None.
 
 - `agent-permissions`: the guard's commit rule gains a second refusal — a
   branch whose commits are already upstream, and a pushed branch whose
-  merge state cannot be decided from a stale `origin/main`.
+  merge state cannot be decided from a stale `origin/main`. *The git
+  prohibitions are enforced by a hook* has its measured cost corrected.
 - `agent-rulebook`: none. The prose shortening this change performs is what
   that capability's existing requirement already demands; no requirement of
   it changes.

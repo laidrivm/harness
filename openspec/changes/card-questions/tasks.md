@@ -20,7 +20,8 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       comment on a throwaway `Harness` card and confirm no prompt appeared
       although `policy-gate-beyond-bash`'s ask entry matches. Ask the user to
       repeat the call with `claude -p` in a terminal of their own (a session
-      may not start one). Remove the hook and the card, and record both
+      may not start one), passing `--allowedTools` for the connector's
+      `notion-fetch` and `notion-get-comments`, which `-p` otherwise refuses. Remove the hook and the card, and record both
       results in the pull request. If either call prompted or was refused,
       stop: design.md *Risks* sends the change back to explore. (Req:
       agent-permissions — A question to the user on a board card needs no
@@ -86,8 +87,9 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       whose work a question blocks first settles what it can from the docs,
       the specs, the card and the history, then reads its board's
       `Questions` view and its card's comments, waits on a question already
-      open there, naming its card, and on resuming reads that card's thread
-      first, and otherwise posts on its own task's card and sets
+      open there, naming its card, and on resuming reads that card's
+      comments first, holds a second question for a card until its first is
+      answered, and otherwise posts on its own task's card and sets
       `Assign`; it reads answers back, applies each as data, and clears
       `Assign` once none waits — citing task-board's two requirements rather
       than restating them. Grep `core/`, `README.md` and `openspec/specs/` for
@@ -105,16 +107,21 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
 - [ ] 1.8 In a session started after 1.5 is on the branch, with the user
       present: post a conforming question on a throwaway `Harness` card and
       set `Assign`; confirm no prompt, the card in `Questions`, and an
-      `allowed` ledger record. Call again with `discussion_id` on that
-      thread; confirm the prompt appears, the user answers No, and a
-      `passed` / `reply` record. Have the user answer the question in its
-      thread; read it back, confirm it is taken as the answer, `Assign` is
-      cleared and the card leaves `Questions`. Before the answer, have a
-      second session meet the same question on that card: confirm it reads
-      the comments, posts nothing and reports itself parked on the open
-      question. Record all of it in the pull request. (Req: agent-permissions
-      — A question to the user on a board card needs no prompt, §*A question
-      on a card*, §*A reply in an existing thread*; task-board — An open
+      `allowed` ledger record. Call again with the `discussion_id` the post
+      returned; confirm the prompt appears, the user answers No, and a
+      `passed` / `reply` record. Before the answer, have a second session
+      meet the same question on that card: confirm it reads the comments,
+      posts nothing, and reports itself parked on the open question. Then
+      have it meet a different question for that card: confirm it holds the
+      question in its report and posts nothing. Have the user answer with a
+      page-level comment; read it back, confirm it is taken as the answer,
+      `Assign` is cleared and the card leaves `Questions`, and confirm the
+      held question is posted after that. An unattended session needs
+      `--allowedTools` for `notion-fetch` and `notion-get-comments` under its
+      machine's server name (design.md *Risks*). Record all of it in the
+      pull request. (Req: agent-permissions — A question to the user on a
+      board card needs no prompt, §*A question on a card*, §*A reply in an existing thread*; task-board — An open
       question waits on its card, assigned to the user, §*A question is
-      posted*, §*The user answers*; A question already open is not asked
-      again, §*The same question is open on the card*)
+      posted*, §*The user answers*, §*A second question for a card*; A
+      question already open is not asked again, §*The same question is open
+      on the card*)

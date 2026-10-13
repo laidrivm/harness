@@ -39,10 +39,17 @@ wrap-up counts lines with `jq` over the file. It does not get a reader script.
   No allow list here grants `jq`, so the wrap-up's one call prompts, which is
   acceptable for a command run once per session.
 
+This holds for this change only. `pre-pr-run-record` adds a reader to this
+module, `ran()`, which the turn gate calls to find a run record for a commit.
+That is a reader inside a gate, not a summary script, and the decision above
+does not forbid it.
+
 ### JSON lines, one file, in the state directory
 
 Each record is a line `{"at","gate","decision","rule","project","session"}`. The
-path is `${XDG_STATE_HOME:-~/.local/state}/harness/gates.jsonl`.
+path is `$XDG_STATE_HOME/harness/gates.jsonl` when that variable is an
+absolute path, as the XDG spec requires, and
+`~/.local/state/harness/gates.jsonl` otherwise.
 
 - *Alternative: a file inside the project, gitignored.* Every consumer would
   have to add the ignore entry, and the rulebook's Safety rule on `.gitignore`
@@ -98,6 +105,13 @@ is at 294 lines.
 - *Alternative: derive the id from the reason's prose,* such as its first
   words. Rewording a message would then split one prohibition's counts in two,
   which is what the spec's *A reason reworded* scenario forbids.
+
+As applied, the module exports `blocker(gate, event)`, which returns the
+`block(id, reason)` described above, bound to the gate's name and to the event
+the guard read. The Notion update guard, which `notion-update-guard` adds, uses
+the same function to record its one refusal, `notion-properties-dropped`, under
+the gate `notion-guard`. The spec's requirements on ids cover every guard that
+does this.
 
 ### The turn gate records only when a group completed
 
