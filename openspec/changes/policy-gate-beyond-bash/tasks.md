@@ -140,5 +140,11 @@ Its boxes are ticked in the archive pull request.
       `mcp__*__forward` and `mcp__*__notion-create-comment`. The bump's diff
       touches no allow line, so the three `mcp__claude-design__*` allow
       entries are unchanged. `bun run harness:check` exits 0 on 72f8fae.
-- [ ] 2.2 mellon: the same confirmation on its `main`. `harness:check`
+- [x] 2.2 mellon: the same confirmation on its `main`. `harness:check`
       green.
+
+      Done 2026-10-13: the same workflow (run 38406403222, green) bumped the
+      pin from da1cce8 to 9cc096a on `main`. The landed
+      `.claude/settings.json` holds the same four ask entries, the bump's
+      diff touches no allow line, and `bun run harness:check` exits 0 on
+      that commit.
