@@ -100,7 +100,7 @@ and no criterion in any capability states what a doc sentence says.
       harness took it. Both are under the cap here because each earlier step
       split whatever its own change carried over it
       (*change-slicing/a-file-over-the-cap*)
-- [ ] 3.5 Search the four places that restate a decision — the change's sibling
+- [x] 3.5 Search the four places that restate a decision — the change's sibling
       artefacts, `openspec/specs/**`, the cards on the boards and the README
       ownership map —
       for a sentence saying the guard blocks three `gh` writes, and reconcile
