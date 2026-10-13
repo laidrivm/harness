@@ -78,6 +78,11 @@ export function sweep(
 	// A string would otherwise be swept one character at a time.
 	if (!Array.isArray(local)) throw new Error(`${LOCAL}: allow is not a list`);
 	const tracked = permissions(dir, TRACKED);
+	// Claude Code skips an allow glob in the tool name unless a glob-free
+	// `mcp__<server>__` comes first, so such a rule grants nothing.
+	tracked.allow = (tracked.allow ?? []).filter(
+		(r) => r.includes("(") || !r.includes("*") || /^mcp__[^*]+__/.test(r),
+	);
 	const decided: string[] = [];
 	const gaps: string[] = [];
 	const kept: string[] = [];
