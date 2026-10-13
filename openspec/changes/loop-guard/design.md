@@ -91,8 +91,8 @@ choosing its role from the event's `hook_event_name`.
   bar's lifetime handles that case instead (*The bar lasts until the next
   prompt*).
 
-The price is a bun start before every tool call, measured at 16 to 22 ms for
-the command guard. That is the cost the first draft avoided, and it is now the
+The price is a bun start before every tool call, at the cost the command
+guard's header records. That is the cost the first draft avoided, and it is now the
 only documented mechanism that has been seen to work.
 
 ### The call key and the fingerprint
@@ -255,8 +255,9 @@ a new prompt lets through again.
 - [An agent may keep calling the barred command, spending model turns] → Each
   refusal is recorded. Ending the run is the launcher's job (*The guard
   refuses the call, it does not end the session*).
-- [Every tool call pays a bun start] → 16 to 22 ms beside calls that take far
-  longer. It is the price of the only mechanism seen to work.
+- [Every tool call pays a bun start] → At the cost the command guard's header
+  records, beside calls that take far longer. It is the price of the only
+  mechanism seen to work.
 - [Parallel failures in one session can race on the count file and lose an
   increment] → The guard undercounts, so it fails open. Accepted.
 - [Count files accumulate in the temp directory] → One small file per session,

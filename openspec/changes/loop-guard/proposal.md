@@ -104,6 +104,6 @@ turn gate and the command guard decide as before.
 - Records through `bun/gate-ledger.ts`, which `gate-decision-ledger` has
   already put on `main`.
 - Consumers: on their next pin bump, `sync.ts` adds two hooks. Every tool call
-  costs one more bun start, measured at 16 to 22 ms for the command guard. A
+  costs one more bun start, at the cost the command guard's header records. A
   failed call costs a second one.
 - README *Consuming* names the hooks beside the others.
