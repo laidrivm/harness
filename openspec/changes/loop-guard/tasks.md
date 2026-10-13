@@ -100,7 +100,7 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
       (Req: loop-guard — The third repeat warns the agent; Each warning and
       refusal is recorded in the gate ledger; Every consumer session runs the
       guard)
-- [ ] 2.2 Add the warning, and the ledger calls, through `record` in
+- [x] 2.2 Add the warning, and the ledger calls, through `record` in
       `bun/gate-ledger.ts`. Add the two registration texts and their `HOOKS`
       entries to `bun/bootstrap.ts` (no matcher, not `sole`), and add them to
       `settings.test.ts`'s policy-keeping fixture. Confirm that the

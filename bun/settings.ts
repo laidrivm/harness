@@ -197,8 +197,10 @@ export function settings(root: string): string[] {
 		);
 	const fix = "run bun node_modules/harness/bun/sync.ts";
 	for (const { event, matcher, command, name, sole } of HOOKS) {
+		// A hook registered with no matcher counts only in a group with none:
+		// one behind a matcher does not run for every tool.
 		const hooks = (parsed.hooks?.[event] ?? [])
-			.filter((entry) => matcher === undefined || entry.matcher === matcher)
+			.filter((entry) => entry.matcher === matcher)
 			.flatMap((entry) => entry.hooks ?? []);
 		if (!sole) {
 			// Presence, not sole occupancy: a second prompt or stop hook cannot
