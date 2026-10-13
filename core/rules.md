@@ -105,6 +105,9 @@ describes is rewritten, the rule is a candidate for deletion.
   writes, never by a substring a user's own entry can also contain.
 - Pin a name one system looks up in another with a test that reads it where it
   is defined, whenever a missing match reads as nothing to do.
+- Never treat reading extra text as commands as a command scan's safe side —
+  a quote that text leaves open hides what follows; probe a claim about how a
+  shell parses before a design rests on it.
 
 #### Process
 
