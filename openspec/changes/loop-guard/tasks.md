@@ -12,7 +12,7 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
 
 ## 1. Count and refuse, in the harness's own sessions
 
-- [ ] 1.1 Before any code, the user runs R4 from the scratch kit's `refuse/`
+- [x] 1.1 Before any code, the user runs R4 from the scratch kit's `refuse/`
       variant: inside a sub-agent, the barred call is refused, and the
       parent's own call still runs. A session does not run `claude` itself.
       The kit's README gives the command. R1 to R3 already passed on

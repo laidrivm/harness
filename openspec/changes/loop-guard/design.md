@@ -245,8 +245,23 @@ So the barred call never ran again (R1). The refusal's reason reached the
 model and the `-p` output (R2), and so did the warning (R3). The model tried the
 refused call once and did not try it again.
 
-R4 (the bar inside a sub-agent) and R5 (`PostToolBatch`) were not run. R4
-stays in task 1.1.
+**The probe of the bar inside a sub-agent (2026-10-13).** The user ran R4 of
+the same kit, task 1.1: the parent launched one sub-agent that ran `false`
+four times, then ran `echo parent-continued` itself. What happened:
+- every `PreToolUse` and `PostToolUseFailure` event of the sub-agent's calls
+  carried its `agent_id`, and none of the parent's did;
+- `FAILED false` in the log: 2, then the bar, with the warning at the second
+  failure (the probe's threshold);
+- `DECISION refused` in the log: 2, each on a `PreToolUse` carrying that
+  `agent_id`;
+- the refusal reached the sub-agent and the parent's final answer;
+- the parent's own call ran with no refusal, and `claude -p` exited 0.
+
+So the bar holds inside a sub-agent (R4). The parent never ran `false`
+itself, so that a sub-agent's bar spares its parent's identical call is shown
+by `agent_id` alone: present on the sub-agent's events and absent on the
+parent's, which is what keying the count on it relies on. R5
+(`PostToolBatch`) was not run.
 
 **Transcripts.** The retained transcripts were scanned on 2026-10-12, in all of
 `~/.claude/projects/`: the harness, d2ass, mellon and two others. That is 53
@@ -274,9 +289,9 @@ a new prompt lets through again.
 ## Risks / Trade-offs
 
 - [A `PreToolUse` refusal may behave differently outside Bash, or inside a
-  sub-agent] → Task 1.1 probes a sub-agent. The R1 probe and the command
-  guard's refusals are the evidence for Bash. Other tools are covered only by
-  the docs, which promise the same block for every tool.
+  sub-agent] → The R4 probe saw it hold in a sub-agent. The R1 probe and the
+  command guard's refusals are the evidence for Bash. Other tools are covered
+  only by the docs, which promise the same block for every tool.
 - [An agent may keep calling the barred command, spending model turns] → Each
   refusal is recorded. Ending the run is the launcher's job (*The guard
   refuses the call, it does not end the session*).
