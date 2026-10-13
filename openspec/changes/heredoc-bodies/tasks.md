@@ -19,7 +19,11 @@ Closes `agent-permissions/a-pull-request-body-naming-a-push`,
 `agent-permissions/a-body-evaluated-through-a-substitution`,
 `agent-permissions/a-body-written-to-a-script-the-same-call-runs`,
 `agent-permissions/a-delimiter-that-never-comes`,
-`agent-permissions/an-arithmetic-shift`, `agent-permissions/a-here-string`.
+`agent-permissions/an-arithmetic-shift`, `agent-permissions/a-here-string`,
+`agent-permissions/two-backslashes-before-a-substitution`,
+`agent-permissions/a-split-delimiter-under-a-quoted-one`,
+`agent-permissions/a-delimiter-holding-a-dollar`,
+`agent-permissions/a-delimiter-holding-a-substitution`.
 
 - [ ] 1.1 Write the failing cases first in a new
       `bun/command-parse-heredoc.test.ts`, driven through the guard with
@@ -35,8 +39,7 @@ Closes `agent-permissions/a-pull-request-body-naming-a-push`,
       so the fd does not become the command name; `<<- EOF` with a space
       before the delimiter; a `\$(` in an unquoted body, which stays literal;
       a `#` comment holding `<<EOF`, which opens nothing; `<<EOF` inside
-      double quotes, which opens nothing; `cat <<$x` with the `$x` line
-      present, read as today; `(( x = 1 << 2 ))`; a heredoc inside `$(…)`
+      double quotes, which opens nothing; `(( x = 1 << 2 ))`; a heredoc inside `$(…)`
       whose body closes before the `)`; and the subshell case from design D3,
       `cat <<'EOF' && (true⏎body⏎EOF⏎)⏎git push --force origin feat/x⏎EOF`,
       which must block. Confirm each passes or fails for the reason its name
@@ -47,7 +50,7 @@ Closes `agent-permissions/a-pull-request-body-naming-a-push`,
       - `cat <<` with no delimiter word before the newline, read as today
       - a quoted and an unquoted heredoc on one line, where the second body's
         `$(…)` blocks
-      - a delimiter line `EOF ` with a trailing blank, which does not end the
+      - a delimiter line `EOF` followed by one blank, which does not end the
         body
       - a body line `EOFX`, which does not end the body
       - an unclosed quote in the delimiter word (`cat <<'EOF`)
