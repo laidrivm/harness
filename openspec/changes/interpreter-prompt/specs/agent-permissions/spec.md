@@ -23,21 +23,21 @@ SHALL be asked about unless one of the following holds:
   then read a program from standard input;
 - it is a shell carrying `-c`, whose text the guard reads and checks as
   *The git prohibitions are enforced by a hook* sets out;
-- its first argument names a file that the git repository holding it tracks, or a
-  file under that repository's top-level `node_modules/`. A tracked file with
-  uncommitted edits counts as tracked, because the editing tool made those
-  edits and the diff shows them;
+- its first argument, with its symlinks resolved, names a file that the git
+  repository holding it tracks, or a file under that repository's top-level
+  `node_modules/`. A tracked file with uncommitted edits counts as tracked,
+  because the editing tool made those edits and the diff shows them;
 - it is `bun` and its first argument is a subcommand that the installed
   `bun --help` lists, or an alias that help names, other than `exec`, `repl`
   and `create` with its alias `c`, which run code handed to them. `run` given
   an operand that is an existing file applies the rule above to that file.
 
 The resolution of uncertainty goes towards asking. A path the guard cannot
-resolve statically, such as one carrying `$` or behind an unresolvable `cd`,
-is asked about. So is a git call that fails, and an option of the interpreter
-standing before its file. An interpreter that reads its program from standard
-input, given no argument or `-`, is asked about too, because the guard cannot
-read that program either.
+resolve statically, such as one carrying `$`, behind an unresolvable `cd` or
+through a symlink it cannot follow, is asked about. So is a git call that
+fails, and an option of the interpreter standing before its file. An
+interpreter that reads its program from standard input, given no argument or
+`-`, is asked about too, because the guard cannot read that program either.
 
 A shell is the exception on standard input. A shell given neither `-c` nor a
 file operand is outside this requirement, and is left to whatever the guard
@@ -64,7 +64,8 @@ the whole command, so a refused act anywhere in the command still exits 2.
 #### Scenario: A throwaway script
 
 - **WHEN** the agent attempts `bun /tmp/x.ts`, `python3 scratch.py` where
-  `scratch.py` is untracked, `bash /tmp/x.sh` or `source /tmp/env.sh`
+  `scratch.py` is untracked, `bash /tmp/x.sh`, `source /tmp/env.sh`, or a
+  tracked symlink or one under `node_modules/` that points at such a file
 - **THEN** the guard asks
 
 #### Scenario: A script the repository tracks
