@@ -51,20 +51,15 @@ edit to it shows in `git diff`. Consumers run
 repository's own top-level `node_modules/` is exempt. A `node_modules`
 directory anywhere else is not.
 
-Mechanics: resolve the operand from every directory in the guard's `dirs` set,
-as `-C` and `cd` already are. A `null` place asks. Then run `git -C
-<file's directory> ls-files --error-unmatch -- <file>`. On a miss, run `git
-rev-parse --show-toplevel` from the same directory and compare against
-`<top>/node_modules/`. A failing git call asks. Only an interpreter given a
-file pays for these git reads, so the header comment's "only a commit pays"
-grows by that clause.
+The operand resolves from every directory in the guard's `dirs` set, as `-C`
+does. Only an interpreter given a file pays for the git reads.
 
 ### `bun`: subcommands from `bun --help`, minus three
 
 Of the subcommands bun 1.4.2's `--help` lists, three run code handed to them,
 so they ask: `exec` (a shell script as text), `repl`, and `create`/`c` (a
-template fetched and run). `x` is exempt
-here, because the `bunx` card decides it. `run` hands its operand to the file
+template fetched and run). `x` is exempt here, because the `bunx` card
+decides it. `run` hands its operand to the file
 rule when that operand is an existing file, and otherwise it is a
 `package.json` script, tracked text. The flags `-e`, `--eval`, `-p` and
 `--print` need no special case: a flag as the first argument is no
@@ -98,6 +93,3 @@ can be approved, as the `bunfig.toml` precedent records. Its reason clause
 - [The JSON is malformed or mixed with other stdout] → Claude Code would
   ignore it and fall back to the permission rules, which is the gap itself.
   A test parses the guard's whole stdout as one object.
-- [MODIFIED requirement shared with #86] → whichever change archives second
-  re-copies the requirement from the live spec and keeps only its own edits.
-  The note at the top of `tasks.md` holds that step.
