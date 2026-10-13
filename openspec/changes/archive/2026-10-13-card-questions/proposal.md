@@ -97,6 +97,9 @@ None.
 - `task-board`: two new requirements, *An open question waits on its card,
   assigned to the user*, which names the `Questions` view, and *A question
   already open is not asked again*.
+- `gate-ledger`: *Every gate refusal is recorded* names the question gate as
+  the one gate that records the calls it allows. Added at archive, once
+  `loop-guard`'s edit to that requirement had landed.
 
 ### Unmodified, but adjacent
 
