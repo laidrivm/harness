@@ -142,7 +142,8 @@ The thresholds were settled by the user on 2026-10-12 and are fixed by
   call has failed the same way three times, and the next identical call will
   be refused.
 - `PreToolUse` refuses a barred call by exiting 2 with a reason on stderr that
-  starts `loop-guard:`, the form the command guard already uses. An identical
+  starts `loop-guard:`, the form the command guard already uses, and repeats
+  the warning's advice: change approach or end the turn `BLOCKED`. An identical
   call made after the third failure is recorded therefore never runs.
   Identical calls made in parallel, and checked before that record is
   written, can still run. Nothing orders the hooks of separate calls in one

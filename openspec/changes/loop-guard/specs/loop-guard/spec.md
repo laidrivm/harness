@@ -83,7 +83,10 @@ Once a call has failed the same way three times, the guard SHALL refuse the
 same tool with the same input before it runs, for as long as the prompt that
 was being processed at the third failure is still being processed. The refusal SHALL give a reason that starts
 `loop-guard:` and names the tool and the count, so an agent, a person or a
-launcher can tell it from any other refusal by that prefix alone. The guard
+launcher can tell it from any other refusal by that prefix alone. It SHALL
+also tell the agent to change approach or to end the turn with `BLOCKED`, as
+the warning does, since the refusal reaches the agent where a warning may
+not. The guard
 SHALL NOT end the session.
 
 #### Scenario: The fourth identical call

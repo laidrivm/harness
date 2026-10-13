@@ -42,8 +42,10 @@ nothing outside `main`: `bun/gate-ledger.ts` is already there.
           exit 0 with no output;
       - for refusing:
         - after three identical failures, the same call under the same
-          `prompt_id` exits 2, with stderr starting `loop-guard:` and naming
-          the tool and 3 [22], and a second attempt is refused again [23];
+          `prompt_id` exits 2, with stderr starting `loop-guard:`, naming
+          the tool and 3, and telling the agent to change approach or end
+          the turn with `BLOCKED` [22], and a second attempt is refused
+          again [23];
         - a sub-agent's bar does not refuse its parent's identical call [24];
         - the call under a different `prompt_id` runs [25], and one with no
           `prompt_id` on either side is refused [26];
