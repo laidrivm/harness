@@ -23,10 +23,7 @@ import { join, relative } from "node:path";
 import { record } from "./gate-ledger.ts";
 import { groups } from "./turn-gate.ts";
 
-/**
- * How long a stage session may run, fixed by the spec. A step that needs
- * longer is split into smaller task groups, and this is not raised.
- */
+/** A stage session's limit, fixed by the spec: a longer step is split, never given more. */
 export const LIMIT = 60 * 60 * 1000;
 
 /** The default branch, as `branch-state.ts`'s `BASE` names it. */

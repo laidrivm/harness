@@ -2,11 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup } from "./diff-budget.fixture.ts";
 import { change, clone, ONE, run, THREE, TICKED } from "./board-loop.fixture.ts";
 
-/**
- * Which changes a pass may take, and which step of one it carries. The
- * preconditions are in `board-loop.test.ts`. Bracketed numbers are the
- * proposal-stage `/zombies` ideas.
- */
+/** Which changes a pass may take, and which step of one. [n]: `/zombies` ideas. */
 
 afterAll(cleanup);
 

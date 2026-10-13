@@ -4,11 +4,7 @@ import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { change, clone, lowered, records, run, TICKED } from "./board-loop.fixture.ts";
 
-/**
- * The stage session a pass launches, the verdict it takes from the goal check,
- * and the one record and line each pass leaves. Bracketed numbers are the
- * proposal-stage `/zombies` ideas.
- */
+/** The stage session, its verdict, and each pass's record. [n]: `/zombies` ideas. */
 
 afterAll(cleanup);
 
