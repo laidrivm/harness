@@ -112,7 +112,7 @@ merge (proposal.md, *Impact*, *Ordering*).
       refusal. Verify: `bun test` is green.
 - [x] 2.3 Measure `bun/turn-gate.ts` and `bun/goal-rounds.ts` against the
       300-line cap. Verify: `bun/file-size.ts` passes on the branch.
-- [ ] 2.4 In `README.md` *Consuming*, the turn-gate line names the ceiling. In
+- [x] 2.4 In `README.md` *Consuming*, the turn-gate line names the ceiling. In
       `core/feature-workflow.md`'s *Unattended stages*, add what happens at
       the ceiling and how to resume. Grep for "refuses a turn that completes
       a task group" and "Unattended stages" for sites that restate either,
