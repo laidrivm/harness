@@ -9,7 +9,9 @@
  * `bun turn-gate.ts stop` is the `Stop` half. It refuses, by exiting 2 with
  * the reason on stderr, to end a turn that left commits on the branch and
  * completed a task group of an active change, unless the final message
- * carries a gate line or `BLOCKED` naming what only the user can settle.
+ * carries `BLOCKED` naming what only the user can settle, or carries a gate
+ * line while the gate ledger holds the pre-PR runner's record of the tip in
+ * this checkout.
  *
  * It refuses at most once per mark. A refused turn is continued, not
  * restarted, so no new mark is written. That bounds a condition the model
@@ -20,20 +22,23 @@
  * purpose, unlike the command guard. A hook that refuses when its partner did
  * not run turns a partial installation into a session that cannot end a turn.
  * And the escape from a refusal is text in the message, so refusing over an
- * unreadable one leaves nothing to act on.
+ * unreadable one leaves nothing to act on. The ledger is the exception: one it
+ * cannot read holds no record, and the once-per-mark bound limits that to one
+ * refusal.
  *
- * It reads the final message, not the gates: a gate line written without
- * running the gate passes it.
+ * The runner's record proves that the deterministic step ran at the tip, and
+ * nothing more. The judgement steps are read from the final message alone, so
+ * a gate line for one of them, written without running it, still passes.
  *
  * Run as the hook, it records each refusal, pass and release of a turn that
  * completed a group in the gate ledger (`gate-ledger.ts`); `decide` called
  * from a test records nothing.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { record } from "./gate-ledger.ts";
+import { join, relative } from "node:path";
+import { ran, record } from "./gate-ledger.ts";
 
 type Event = {
 	session_id?: unknown;
@@ -162,7 +167,9 @@ function blobs(cwd: string, specs: string[]): string[] {
  */
 function completed(cwd: string, at: string, tip: string): string[] {
 	const paths = (
-		git(cwd, "ls-tree", "-r", "--name-only", tip, "--", "openspec/changes") ?? ""
+		// `--full-tree`: without it a session in a subdirectory lists nothing.
+		git(cwd, "ls-tree", "--full-tree", "-r", "--name-only", tip, "--",
+			"openspec/changes") ?? ""
 	)
 		.split("\n")
 		.filter((path) => ACTIVE.test(path));
@@ -175,11 +182,24 @@ function completed(cwd: string, at: string, tip: string): string[] {
 	});
 }
 
+/** The runner's path as a command run from `cwd` reaches it. */
+function runner(cwd: string): string {
+	const path = join(import.meta.dir, "pre-pr.ts");
+	try {
+		// Real paths on both sides: a temp directory reached through a symlink
+		// would otherwise climb out to the root and back.
+		return relative(realpathSync(cwd), path);
+	} catch {
+		return path;
+	}
+}
+
 /**
  * The refusal for this turn, or nothing when it may end. A turn that completed
- * a group is handed to `log` as `passed` when it reports, `released` when the
- * once-per-mark bound alone lets it end, or `refused`; the groups are computed
- * before `reported` is checked for that, so a gate line alone is no pass.
+ * a group is handed to `log` as `passed` when it names a `BLOCKED`, or carries
+ * a gate line and the runner's record of the tip; `released` when the
+ * once-per-mark bound alone lets it end; or `refused`. The groups are computed
+ * before the message is read for that, so a gate line alone is no pass.
  */
 export function decide(
 	event: Event,
@@ -200,13 +220,29 @@ export function decide(
 	if (!git(cwd, "symbolic-ref", "-q", "HEAD")) return;
 	const end = tip(cwd, at);
 	const done = end ? completed(cwd, at, end) : [];
-	if (done.length === 0) return;
-	if (reported(message) || refused) {
-		log(reported(message) ? "passed" : "released");
+	if (done.length === 0 || !end) return;
+	const gated = GATE_LINE.test(message);
+	const top = gated ? git(cwd, "rev-parse", "--show-toplevel") : undefined;
+	if (NAMED_BLOCK.test(message) || (gated && ran(end, top))) {
+		log("passed");
+		return;
+	}
+	if (refused) {
+		log("released");
 		return;
 	}
 	writeFileSync(file, `${at} refused`);
 	log("refused");
+	if (gated)
+		return (
+			`This turn committed and completed ${done.join(", ")}, and reports ` +
+			`gates, but the gate ledger holds no pre-PR runner record of ${end} ` +
+			"in this checkout. Run `bun " +
+			runner(cwd) +
+			"` with `HEAD` at that commit — it records only the commit it reads " +
+			"— and end with its line and the other gate lines, or end with " +
+			"`BLOCKED — <what the user must decide>`."
+		);
 	return (
 		`This turn committed and completed ${done.join(", ")}, and its final ` +
 		"message reports no gates. Run the pre-PR sequence now " +
