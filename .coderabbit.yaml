@@ -1,0 +1,11 @@
+# CodeRabbit config for the harness. It points the review bot at the rulebook
+# and the docs beside it, and does nothing else. bun/review-config.test.ts pins
+# the patterns, and openspec/specs/local-review-loop holds the contract.
+knowledge_base:
+  code_guidelines:
+    # Added on top of CodeRabbit's defaults, which already read **/CLAUDE.md,
+    # so that file is deliberately not named again.
+    # Flat on purpose: "core/*.md" leaves out core/skills/**, which are
+    # prompts for an agent rather than rules a reviewer should quote.
+    filePatterns:
+      - "core/*.md"
