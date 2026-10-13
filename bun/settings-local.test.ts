@@ -4,6 +4,7 @@
  * brackets are the edge cases `/zombies` listed against the proposal.
  */
 import { afterAll, describe, expect, test } from "bun:test";
+import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, consumer, policy } from "./settings.fixture.ts";
 import { machineLocal } from "./settings.ts";
@@ -182,6 +183,24 @@ describe("the documented matching", () => {
 		expect(report({ allow: ["Bash(git log *)"] }, "PowerShell(git log)")).toEqual([
 			"gap: PowerShell(git log) — promote it to .claude/settings.json or drop it",
 		]);
+	});
+});
+
+describe("an input that cannot be read", () => {
+	test("a local file that does not parse throws, naming it [22]", () => {
+		const dir = repo({}, '{ "permissions": ');
+		expect(() => sweep(dir)).toThrow(LOCAL);
+	});
+
+	test.each([
+		["missing", undefined],
+		["not JSON", "{ permissions: "],
+	])("a tracked file %s throws, naming it [23]", (_, text) => {
+		const dir = repo({}, ["Bash(git push *)"]);
+		const tracked = join(dir, ".claude/settings.json");
+		if (text === undefined) rmSync(tracked);
+		else writeFileSync(tracked, text);
+		expect(() => sweep(dir)).toThrow(".claude/settings.json");
 	});
 });
 
