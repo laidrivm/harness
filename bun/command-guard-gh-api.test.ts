@@ -32,6 +32,22 @@ describe("gh api with a parameter and no method", () => {
 		expect(reason).toContain("`-f body=hi`");
 	});
 
+	// spec: agent-permissions/a-write-with-no-method-flag
+	test.each([
+		"--field body=hi",
+		"--raw-field=body=hi",
+		"-F body=hi",
+		"-iF body=hi",
+		"--input body.json",
+	])("%s blocks", (flags) => {
+		const { code, reason } = run(
+			event(`gh api /repos/o/r/issues/37/comments ${flags}`),
+			anywhere(),
+		);
+		expect(code).toBe(2);
+		expect(reason).toContain(`\`${flags}\``);
+	});
+
 	test("a flag the read list does not name blocks", () => {
 		// Scoped by the reads it exempts: a flag gh adds later is a write until
 		// someone shows it reads.
@@ -76,8 +92,11 @@ describe("gh api graphql", () => {
 		"gh api graphql -f query='query{viewer{login}}' --input doc.json",
 		"gh api graphql -X GET -f query='mutation{x}'",
 		"gh api graphql --paginate",
+		"gh api graphql -f query='query{viewer{login}}' -f query='mutation{x}'",
 	])("%s blocks", (line) => {
-		expect(run(event(line), anywhere()).code).toBe(2);
+		const { code, reason } = run(event(line), anywhere());
+		expect(code).toBe(2);
+		expect(reason).toContain("`gh api graphql`");
 	});
 
 	// spec: agent-permissions/a-graphql-read
