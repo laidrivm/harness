@@ -102,6 +102,11 @@ describe("what counts as one call failing the same way", () => {
 		expect(after([failure(), failure(over), failure()]).code).toBe(0);
 	});
 
+	test("a null `agent_id` is counted as the session's own", () => {
+		const fails = [failure(), failure({ agent_id: null }), failure()];
+		expect(after(fails).code).toBe(2);
+	});
+
 	test("two processes recording at once leave a count that parses [8]", async () => {
 		const tmp = temp();
 		const calls = [1, 2, 3, 4, 5, 6, 7, 8].map((n) =>
