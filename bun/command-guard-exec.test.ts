@@ -266,10 +266,11 @@ describe("a bunx that installs what it runs", () => {
 		"bun --hot app.ts x",
 	])("%s blocks", (line) => installs(line));
 
-	test.each(["bun run --cwd x script", "bun --cwd /tmp x --no-install tsc"])(
-		"%s runs",
-		(line) => expect(guard(line).code).toBe(0),
-	);
+	test.each([
+		"bun run --cwd x script",
+		"bun --cwd /tmp test x.test.ts",
+		"bun --cwd /tmp x --no-install tsc",
+	])("%s runs", (line) => expect(guard(line).code).toBe(0));
 
 	// spec: agent-permissions/the-flag-after-the-package
 	test("the flag after the package blocks", () => {
