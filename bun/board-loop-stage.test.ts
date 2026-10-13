@@ -57,8 +57,10 @@ describe("the session", () => {
 	// spec: board-loop/permissions-are-never-bypassed
 	test("claude runs headless in auto mode with no prompts and no bypass [23]", () => {
 		const { dir } = clone();
-		const call = run(dir).calls.split("\n").find((line) => line.startsWith("claude")) ?? "";
-		expect(call).toStartWith("claude -p ");
+		const { calls } = run(dir);
+		// The prompt spans lines, and nothing is logged after the session but the check.
+		const call = calls.slice(calls.indexOf("\nclaude ") + 1, calls.indexOf("\nbun /"));
+		expect(call).toStartWith("claude -p /goal ");
 		expect(call).toContain("--permission-mode auto --permission-prompts none");
 		expect(call).not.toContain("bypassPermissions");
 		expect(call).not.toContain("dangerously-skip-permissions");

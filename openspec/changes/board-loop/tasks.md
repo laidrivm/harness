@@ -80,12 +80,16 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       default limit, which the timeout case lowers through a two-line entry
       module (`lowered()` in the fixture). All failed before the runner
       existed.
-- [ ] 1.4 Export `groups()` from `bun/turn-gate.ts`. Write `bun/board-loop.ts`:
+- [x] 1.4 Export `groups()` from `bun/turn-gate.ts`. Write `bun/board-loop.ts`:
       it refuses, then brings the clone up to date and installs, then builds
       the takeable list, takes the named slug, launches the session with
       `stage-goal`'s launch form, runs the check, records and exits.
       Verify: 1.1–1.3 are green, `bun test` is green, and the file is under
       the per-file cap in `bun/file-size.ts`.
+      Evidence: `stage-goal` had already exported `groups()` for the goal
+      check, so `bun/turn-gate.ts` is untouched and needed no split. The
+      three runner files are 36 pass, 0 fail; `bun test` is 1417 pass,
+      0 fail; `bun/board-loop.ts` is 192 lines against the cap of 300.
 - [ ] 1.5 Add the runner to `README.md`'s *Consuming* section: started by
       the user from a terminal of their own, in a clone used for nothing
       else, and what one pass does. Verify: `grep -n board-loop README.md`
