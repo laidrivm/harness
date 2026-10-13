@@ -97,14 +97,19 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       that `Assign` means anything else, and fix each. (Req: task-board — An
       open question waits on its card, assigned to the user; A question
       already open is not asked again)
-- [ ] 1.7 On each board that exists, read `Board view` for cards whose
+- [x] 1.7 On each board that exists, read `Board view` for cards whose
       `Assign` is set and report them, since they would read as questions;
       the user clears each one that holds no open question before the view
       is relied on. Then save a view named `Questions` listing the cards whose `Assign`
       holds the user. Re-fetch each board's views to confirm. (Req:
       task-board — An open question waits on its card, assigned to the user,
-      §*The `Questions` view is missing*)
-- [ ] 1.8 In a session started after 1.5 is on the branch, with the user
+      §*The `Questions` view is missing*) Done 2026-10-13: re-fetched, each of
+      the three boards has a saved view `Questions`, a board grouped by
+      `Status` and filtered to cards whose `Assign` holds the user. A query
+      of all three for a set `Assign` found one card, 1.8's throwaway card
+      holding that check's own open question, so no stale assignment was
+      left to clear.
+- [x] 1.8 In a session started after 1.5 is on the branch, with the user
       present: post a conforming question on a throwaway `Harness` card and
       set `Assign`; confirm no prompt, the card in `Questions`, and an
       `allowed` ledger record. Call again with the `discussion_id` the post
@@ -124,4 +129,20 @@ and ledger in a temporary directory, with `XDG_STATE_HOME` pointing there.
       question waits on its card, assigned to the user, §*A question is
       posted*, §*The user answers*, §*A second question for a card*; A
       question already open is not asked again, §*The same question is open
-      on the card*)
+      on the card*) Done 2026-10-13 by the user, in two fresh sessions in the
+      harness checkout on a throwaway `Harness` card. Session A read the card
+      and its comments (none), posted a marked question with `page_id` and
+      `markdown` only — allowed by the hook with no prompt, recorded
+      `allowed` / `question` — and set `Assign`; the card showed in
+      `Questions`. Its reply with the returned `discussion_id` prompted, the
+      user answered No, recorded `passed` / `reply`. Session B, asked the
+      same question, read the card, its comments and the board's
+      `Questions` view, posted nothing and reported itself parked on it;
+      asked a different question for that card, it posted nothing and held
+      it in its report. The user answered with a page-level comment; told
+      to go on, session B took the first unmarked comment after the question
+      as the answer, cleared `Assign` (the view emptied), then posted the
+      held question with no prompt, recorded `allowed` / `question`, and set
+      `Assign` again. Every page-level comment on a card joins its one
+      page-level discussion, so an answer and the next question share a
+      thread; the first-unmarked-comment reading held there.
