@@ -22,6 +22,7 @@ Closes `agent-permissions/a-pull-request-body-naming-a-push`,
 `agent-permissions/an-arithmetic-shift`, `agent-permissions/a-here-string`,
 `agent-permissions/two-backslashes-before-a-substitution`,
 `agent-permissions/a-split-delimiter-under-a-quoted-one`,
+`agent-permissions/a-split-delimiter-that-dash-reads-past`,
 `agent-permissions/a-delimiter-holding-a-dollar`,
 `agent-permissions/a-delimiter-holding-a-substitution`,
 `agent-permissions/a-stray-apostrophe-before-a-guarded-command`,
@@ -72,7 +73,7 @@ Closes `agent-permissions/a-pull-request-body-naming-a-push`,
       Recognise `<<` and `<<-` outside quotes, comments and arithmetic, and
       consume `<<<` whole first. Refuse the call when the scan ends inside a
       quote or an open substitution (D10), with its own ledger id, and say
-      in the reason that the text leaves a quote open. Drop the operator,
+      in the reason which state remains open. Drop the operator,
       its delimiter and a
       digits-only fd from the words (D7). Keep the pending list on the frames
       `$(` and backticks suspend and off the ones `(` suspends (D3). Mark

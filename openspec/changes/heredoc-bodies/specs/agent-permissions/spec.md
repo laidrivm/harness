@@ -60,9 +60,10 @@ The guard SHALL start a body after the next unquoted newline at the
 operator's own substitution level. A newline inside `( … )` starts it, and
 one inside `$(…)` or backticks does not. The body SHALL end at the first
 line equal to the delimiter, with leading tabs stripped for `<<-`. For a
-wholly unquoted delimiter it SHALL also end at a line equal to the delimiter
-once joined to lines before it ending in a backslash. A quoted delimiter
-SHALL be matched literally, as the shell matches it. The guard SHALL read
+wholly unquoted delimiter, a line that equals the delimiter only once joined
+to lines before it ending in a backslash ends the body in bash, zsh and sh
+but not in dash, so the guard SHALL refuse the call. A quoted delimiter
+SHALL be matched literally, as every shell matches it. The guard SHALL read
 every command after that line.
 
 #### Scenario: A quote character in a body
@@ -90,7 +91,14 @@ every command after that line.
 - **WHEN** the agent attempts `cat <<EOF`, then `EO\`, then `F`, then
   `git push --force origin feat/x`, then `EOF`
 - **THEN** the hook blocks the call, because bash, zsh and sh join `EO\` and
-  `F` into the delimiter
+  `F` into the delimiter and dash does not
+
+#### Scenario: A split delimiter that dash reads past
+
+- **WHEN** the agent attempts `cat <<EOF`, then `EO\`, `F`, `'`, `EOF`,
+  `git push --force origin feat/x`, then `echo "x'" # "`
+- **THEN** the hook blocks the call, because dash ends the body only at
+  `EOF` and runs the push, while the quotes balance under the joined reading
 
 #### Scenario: A split delimiter under a quoted one
 
