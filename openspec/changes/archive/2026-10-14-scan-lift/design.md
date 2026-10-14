@@ -46,10 +46,11 @@ not hand it directly.
 ### `spec-coverage.ts` derives its view at the call site
 
 `comments(source, language)` returns `{ text, line, block }[]`. What
-`spec-coverage.ts` wants is different: for each line index, is it inside a
-block comment. That is derivable from the comment list — a block comment
-opening on line *n* whose text spans *k* newlines encloses lines *n* through
-*n + k* — so it derives it at its own call site rather than earning a second
+`spec-coverage.ts` wants is different: for each line index, does it begin
+inside a block comment. That is derivable from the comment list — a block
+comment opening on line *n* whose text spans *k* newlines encloses lines
+*n + 1* through *n + k*, and not line *n*, where code may stand before the
+opener — so it derives it at its own call site rather than earning a second
 export.
 
 *Alternatives considered.* A `regions()` primitive returning every non-code
