@@ -76,8 +76,10 @@ export type Stubs = {
 	ghCode?: number;
 	/** The exit status of `bun install --frozen-lockfile`. */
 	install?: number;
-	/** The goal check's last line. Its exit status follows it, as the check's does. */
+	/** The pinned goal check's last line, which the install writes. */
 	verdict?: string;
+	/** `false` for an install that leaves no pinned goal check. */
+	pinned?: boolean;
 	/** The session's exit status, or `null` for no `claude` on `PATH`. */
 	claudeCode?: number | null;
 	/** Seconds the stage session runs for before exiting. */
@@ -90,7 +92,11 @@ export type Stubs = {
 	pickChild?: boolean;
 };
 
-/** The stub directory. `bun` answers both the install and the goal check. */
+/**
+ * The stub directory. `bun install` writes the pinned goal check as two lines
+ * of text, and any other `bun` call prints the file it is handed, so a verdict
+ * names the copy it came from.
+ */
 function bin(log: string, s: Stubs): string {
 	const dir = emptyDir("board-loop-bin-");
 	const stub = (name: string, body: string) => {
@@ -102,13 +108,13 @@ function bin(log: string, s: Stubs): string {
 	if (s.gh !== null)
 		stub("gh", `printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
 	const verdict = s.verdict ?? "goal met: apply demo step 1 at abc1234";
+	const pin = "node_modules/harness/bun";
+	const write = `mkdir -p ${pin} && printf 'checking\\n%s\\n' '${verdict}' > ${pin}/goal-check.ts; `;
 	stub(
 		"bun",
 		[
-			`if [ "$1" = install ]; then echo 'the install says this'; exit ${s.install ?? 0}; fi`,
-			`echo 'checking'`,
-			`echo '${verdict}'`,
-			`exit ${verdict.startsWith("goal met") ? 0 : 1}`,
+			`if [ "$1" = install ]; then ${s.pinned === false ? "" : write}echo 'the install says this'; exit ${s.install ?? 0}; fi`,
+			`cat "$1"`,
 		].join("\n"),
 	);
 	// The stage session's prompt opens with `/goal`; the pick session's does not.

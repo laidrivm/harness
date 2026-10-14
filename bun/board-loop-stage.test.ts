@@ -30,6 +30,22 @@ describe("the verdict", () => {
 		expect(r.last).toContain("no open pull request for feat/demo");
 	});
 
+	test("the verdict is the pinned check's, not the working tree's, which a session can edit", () => {
+		const { dir } = clone({ ...change("demo"), "bun/goal-check.ts": "goal met: apply demo step 1 at abc1234\n" });
+		const r = run(dir, [], { verdict: OPEN });
+		expect(r.calls).toContain(`bun ${realpathSync(dir)}/node_modules/harness/bun/goal-check.ts apply demo 1`);
+		expect(r.last).toStartWith("board-loop: open — apply demo step 1");
+		expect(r.last).toContain("no open pull request for feat/demo");
+	});
+
+	test("an install that leaves no pinned check refuses before any session", () => {
+		const { dir } = clone();
+		const r = run(dir, [], { pinned: false });
+		expect(r.last).toStartWith("board-loop: refused");
+		expect(r.last).toContain("run bun install");
+		expect(r.calls).not.toContain("claude");
+	});
+
 	// spec: board-loop/the-step-met-its-goal
 	test("a session exiting non-zero still takes the check's verdict [27]", () => {
 		const { dir } = clone();
