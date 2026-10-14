@@ -97,12 +97,28 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       Evidence: `grep -n board-loop README.md` finds line 67, which names
       neither. The ledger bullet above it now names the board loop among
       the writers, since a pass records there.
-- [ ] 1.6 The pull request's *Check by hand* gives the user the command for
+- [x] 1.6 The pull request's *Check by hand* gives the user the command for
       one live pass in a dedicated clone of the harness, on a change at
       `proposed`. It lists what to look at: the step's pull request, the
       `loop` and `goal` records in the ledger, and whether the card moved
       to `applying`. The runner refuses inside a session, so the live pass is
       the user's. Verify: the pull request body holds that list.
+      Evidence: #121's body held it. The user ran the pass on 2026-10-14
+      with step 1's runner, on `main` at 3901a31, in a fresh clone (the loop
+      clone) whose trust dialog they had accepted first.
+      `bun bun/board-loop.ts scan-lift` printed
+      `passed over board-loop: pull request #121 already used feat/board-loop-1`,
+      then `carrying apply scan-lift step 1 on feat/scan-lift`. The session
+      committed on `feat/scan-lift` and opened #124, and the `scan-lift` card
+      moved to `applying`. The ledger gained `goal`/`met`/`apply` at
+      10:27:36Z, at the session's commit 8465f75. At 10:28:00Z it gained
+      `goal`/`met`/`apply` again, then `loop`/`met`/`apply`, both with a null
+      session. The doubled `goal` record is by design. The first is the
+      session's own run of the check, which the launch form makes its goal
+      condition. The second is the runner's verdict run (design.md, *The
+      verdict is the check's, run by the runner*). A null session marks the
+      runner's, and nothing here counts `goal` records, so this needs no
+      follow-up.
 
 ## 2. The pass picks in the board's order
 
