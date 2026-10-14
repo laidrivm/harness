@@ -185,7 +185,7 @@ describe("the pick", () => {
 		expect(pick).toContain("demo, other");
 		expect(pick).not.toContain("spent");
 		expect(pick).not.toContain("change nothing anywhere");
-		expect(pick).toContain("set the `Status` of the card your `PICK:` line names to `applying`");
+		expect(pick).toContain("set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`");
 		expect(pick).toContain("write no other card or property");
 	});
 
