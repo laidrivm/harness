@@ -119,21 +119,22 @@ async function session(text: string, limit: number, capture = false) {
 	const flags = ["--permission-mode", "auto", "--permission-prompts", "none"];
 	// A file, not a pipe: a child the session leaves running could hold a pipe open and stall the pass.
 	const dir = capture ? mkdtempSync(join(tmpdir(), "board-loop-")) : "";
-	const run = Bun.spawn(["claude", "-p", text, ...flags], {
-		stdio: ["ignore", capture ? Bun.file(join(dir, "out")) : "inherit", "inherit"],
-	});
-	let late = false;
-	const timer = setTimeout(() => {
-		late = true;
-		// shortcut: SIGTERM to `claude` alone; send SIGKILL to its group if one is seen to outlive it.
-		run.kill();
-	}, limit);
-	await run.exited;
-	clearTimeout(timer);
-	if (!capture) return { late, out: "" };
-	const out = readFileSync(join(dir, "out"), "utf8");
-	rmSync(dir, { recursive: true });
-	return { late, out };
+	try {
+		const run = Bun.spawn(["claude", "-p", text, ...flags], {
+			stdio: ["ignore", capture ? Bun.file(join(dir, "out")) : "inherit", "inherit"],
+		});
+		let late = false;
+		const timer = setTimeout(() => {
+			late = true;
+			// shortcut: SIGTERM to `claude` alone; send SIGKILL to its group if one is seen to outlive it.
+			run.kill();
+		}, limit);
+		await run.exited;
+		clearTimeout(timer);
+		return { late, out: capture ? readFileSync(join(dir, "out"), "utf8") : "" };
+	} finally {
+		if (capture) rmSync(dir, { recursive: true, force: true });
+	}
 }
 
 /** One pass. `limit` is lowered only by a test, through an entry module. */
