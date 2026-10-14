@@ -12,7 +12,7 @@ One group, one harness pull request on `feat/goal-check-verdict`.
 
 ## 1. One verdict per commit
 
-- [ ] 1.1 Change the stub in `bun/goal-check.fixture.ts` first, so the cases
+- [x] 1.1 Change the stub in `bun/goal-check.fixture.ts` first, so the cases
       below can be written against it:
       - the query string at `bin()` becomes
         `pr list --head feature --state all --json headRefOid,state`, the one
