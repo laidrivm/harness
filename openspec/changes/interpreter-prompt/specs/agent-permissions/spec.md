@@ -13,7 +13,8 @@ well. The `allow` rule that a "don't ask again" writes to
 `.claude/settings.local.json` therefore cannot grant the call silently.
 
 The interpreters are `sh`, `bash`, `zsh`, `dash`, `source`, `.`, `python` and
-every name `python` followed by digits and dots, `node`, `bun`, `deno`,
+every name `python` followed by digits and dots and an optional `t`, as in
+the free-threaded `python3.13t`, `node`, `bun`, `deno`,
 `perl`, `ruby` and `php`. Each is resolved by base name, past wrappers,
 assignments and redirections, as the git prohibitions are. An invocation of one of them
 SHALL be asked about unless one of the following holds:
@@ -67,7 +68,8 @@ interpreter runs, such as anything encoded and handed to `make`, `find -exec`,
 #### Scenario: Inline code
 
 - **WHEN** the agent attempts `python3 -c "print(1)"`, `python3 -Ic
-  "print(1)"`, `/usr/bin/python3.12 -c "print(1)"`, `node -e "1"`, `bun
+  "print(1)"`, `/usr/bin/python3.12 -c "print(1)"`, `python3.13t -c
+  "print(1)"`, `node -e "1"`, `bun
   --eval "1"`, `bun -p "1"` or `perl -pi -e 's/a/b/' x`
 - **THEN** the guard exits 0 with a `permissionDecision` of `ask`
 
