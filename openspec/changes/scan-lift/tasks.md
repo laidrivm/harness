@@ -146,4 +146,13 @@ Closes `spec-test-traceability/a-spec-marker-inside-a-template-literal`.
 - [x] 2.5 Measure every capped file this step touched and record the numbers,
       whether or not any is over (*change-slicing/No source file exceeds its
       per-file cap*). Against the `.ts` cap of 300: `bun/spec-coverage.ts`
-      223, `bun/spec-coverage.test.ts` 276, none over
+      223, `bun/spec-coverage.test.ts` 276, none over; after 2.6, 224 and
+      285, none over
+- [x] 2.6 Close the edge `/zombies` found in 2.3: a template line opening with
+      `// spec:` that closes the template and then carries a real `//`
+      comment, where `comments` does report a line comment opening on that
+      line. The case first: against 2.3's code it failed, reporting three
+      malformed identifiers from the template's text. Then accept a line
+      only when the reported comment is the whole line after its indentation;
+      the case passes, and the sweep's floor is unchanged
+      (*A spec marker inside a template literal*)

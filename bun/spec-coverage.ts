@@ -26,8 +26,8 @@ const CALL = /^\s*(?:test|it|describe)(?:\.\w+)*\s*[(`]/;
 /**
  * A line-leading `// spec:` comment. Anything with code before it on the line
  * is not one, which is what keeps a single-line string literal out; `cite()`
- * tries it only on a line the scan reports a line comment opening on, which
- * keeps a line of a multi-line template literal out.
+ * tries it only on a line the scan reports a line comment opening on first,
+ * which keeps a line of a multi-line template literal out.
  */
 const CITATION = /^\s*\/\/\s*spec:(.*)$/;
 
@@ -52,12 +52,13 @@ function cite(path: string, text: string) {
 	// citation to its call steps over. The line a block opens on is not one of
 	// them: code may stand before the opener, a test call included.
 	const enclosed = lines.map(() => false);
-	// The lines a `//` comment opens on: anywhere else — a line inside a
-	// template literal or a block comment — `// spec:` is text, not a citation.
+	// The lines a `//` comment opens on with nothing before it: anywhere else —
+	// a line inside a template literal or a block comment, even one that closes
+	// before a comment on the same line — `// spec:` is text, not a citation.
 	const opens = new Set<number>();
 	for (const { text: body, line, block } of comments(text, "ts")) {
 		if (!block) {
-			opens.add(line - 1);
+			if (lines[line - 1]?.trimStart() === `//${body}`) opens.add(line - 1);
 			continue;
 		}
 		const spans = body.split("\n").length - 1;
