@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { change, clone, lowered, records, run, TICKED } from "./board-loop.fixture.ts";
@@ -37,6 +37,17 @@ describe("the verdict", () => {
 		const r = run(dir, [], { sleep: 60, stubborn: true }, { entry: lowered(1000) });
 		expect(Date.now() - started).toBeLessThan(30_000);
 		expect(r.last).toStartWith("board-loop: timeout — apply demo step 1");
+	}, 40_000);
+
+	test("a child the session started is ended with it at the limit, before the pass returns", async () => {
+		const { dir } = clone();
+		const marker = join(emptyDir("board-loop-orphan-"), "late");
+		const started = Date.now();
+		const r = run(dir, [], { sleep: 60, orphan: marker }, { entry: lowered(1000) });
+		expect(r.last).toStartWith("board-loop: timeout — apply demo step 1");
+		// Past the 8 s after the stage's start at which the child, had it outlived the pass, would write.
+		await Bun.sleep(Math.max(0, 12_000 - (Date.now() - started)));
+		expect(existsSync(marker)).toBe(false);
 	}, 40_000);
 
 	test("the verdict is the pinned check's, not the working tree's, which a session can edit", () => {
