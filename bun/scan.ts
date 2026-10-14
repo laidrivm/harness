@@ -6,8 +6,7 @@
  *
  * Its own module rather than a helper inside a caller, so a caller erasing
  * comments and a caller reading them decide a regex literal or a template
- * expression once instead of being kept in step by hand. The `scan-lift`
- * card on `Harness` records the copy still outstanding.
+ * expression once instead of being kept in step by hand.
  */
 
 /**
