@@ -68,6 +68,9 @@ describes is rewritten, the rule is a candidate for deletion.
 - Inline a single-caller helper only after grepping for the logic it duplicates
   elsewhere, and keep one whose comment documents a decision its call site would
   bury.
+- Write logic a second time only by lifting it into one module both callers
+  import, switching the first caller in the same change — two copies kept in
+  step by hand drift, and the stale one fails silently.
 - A guard against malformed input must cover the whole value, not a prefix —
   anchor both ends or parse it.
 - Read a value a tool consumes from the structure that tool parses, and where it
