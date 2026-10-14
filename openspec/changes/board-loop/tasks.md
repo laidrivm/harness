@@ -131,9 +131,12 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       missing or address-shaped `harness.board` refuses with that module's
       own message. The three runner files are 49 pass, 0 fail, and
       `bun/board-loop.ts` is 221 lines against the cap of 300.
-- [ ] 2.3 Update the *Consuming* line: the runner takes no argument and
+- [x] 2.3 Update the *Consuming* line: the runner takes no argument and
       follows `Board view`. Verify: `grep -n board-loop README.md` reads
       that way.
+      Evidence: `grep -n board-loop README.md` finds line 67, which names
+      the command with no `<change>`, says it takes no argument, and says a
+      short session reads `Board view` on the board `harness.board` names.
 - [ ] 2.4 The pull request's *Check by hand* gives the user a live pass with
       two takeable changes, the second dragged above the first, and says
       which one the pass must carry. Verify: the pull request body holds it.
