@@ -95,4 +95,6 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       this change and passes — it is `blank`'s only caller outside the scanner's
       own tests, a test itself rather than production code, and therefore the
       control that the module's other export was not disturbed
-      (*A citation below an escaped quote*)
+      (*A citation below an escaped quote*). Untouched, 39 pass, run against
+      d2ass's pinned `bun/scan.ts`, which differs from this branch's by the
+      module comment's last sentence alone
