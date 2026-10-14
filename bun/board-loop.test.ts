@@ -2,9 +2,9 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, git } from "./diff-budget.fixture.ts";
-import { advance, clone, commit, out, records, run } from "./board-loop.fixture.ts";
+import { advance, change, clone, commit, lowered, out, records, run, TICKED } from "./board-loop.fixture.ts";
 
-/** Who may start the runner, the clone it starts from, and the install. [n]: `/zombies` ideas. */
+/** Who may start the runner, the clone it starts from, the install and the pick. [n]: `/zombies` ideas. */
 
 afterAll(cleanup);
 
@@ -19,7 +19,7 @@ describe("started from a session", () => {
 		["empty [2]", ""],
 	])("CLAUDECODE %s refuses before any command runs", (_, value) => {
 		const { dir } = clone();
-		const r = run(dir, ["demo"], {}, { env: { CLAUDECODE: value } });
+		const r = run(dir, [], {}, { env: { CLAUDECODE: value } });
 		expect(r.code).toBe(1);
 		expect(r.last).toContain("from a terminal of your own");
 		expect(r.calls).toBe("");
@@ -92,7 +92,7 @@ describe("the install", () => {
 	// spec: board-loop/the-install-fails
 	test("a failing install refuses, prints its output and starts no session [30]", () => {
 		const { dir } = clone();
-		const r = run(dir, ["demo"], { install: 1 });
+		const r = run(dir, [], { install: 1 });
 		expect(r.code).toBe(1);
 		expect(r.text).toContain("the install says this");
 		expect(r.last).toStartWith("board-loop: refused");
@@ -118,5 +118,79 @@ describe("the install", () => {
 	test("the install runs on a pass whose fast-forward brought nothing [31]", () => {
 		const { dir } = clone();
 		expect(run(dir).calls).toContain("bun install --frozen-lockfile");
+	});
+});
+
+describe("the pick", () => {
+	/** Whether a stage session started: only its prompt opens with `/goal`. */
+	const staged = (calls: string) => calls.includes("claude -p /goal");
+
+	test.each([[["demo"]], [["demo", "other"]], [["../demo"]]])(
+		"any argument is refused with the usage, before any command runs [15][16]: %j",
+		(args) => {
+			const { dir } = clone();
+			const r = run(dir, args);
+			expect(r.last).toContain("usage: board-loop.ts");
+			expect(r.calls).toBe("");
+		},
+	);
+
+	// spec: board-loop/the-user-dragged-a-card-up
+	test("the pass carries the change the pick names, not the first in the tree's order", () => {
+		const { dir } = clone({ ...change("demo"), ...change("other") });
+		const r = run(dir, [], { pick: "PICK: other" });
+		expect(r.calls).toContain("goal-check.ts apply other 1");
+		expect(r.calls).not.toContain("apply demo");
+	});
+
+	test("the pick prompt names the board by its harness.board value and lists the takeable slugs [21]", () => {
+		const { dir } = clone({ ...change("demo"), ...change("other"), ...change("spent", TICKED) });
+		const pick = run(dir).calls.split("\nclaude -p /goal")[0];
+		expect(pick).toContain("board Demo");
+		expect(pick).toContain("demo, other");
+		expect(pick).not.toContain("spent");
+	});
+
+	// spec: board-loop/a-pick-outside-the-list
+	test("PICK: none is idle and starts no stage session [18]", () => {
+		const { dir } = clone();
+		const r = run(dir, [], { pick: "PICK: none" });
+		expect([r.code, r.last]).toEqual([0, "board-loop: idle — the pick session found no takeable card on the board"]);
+		expect(staged(r.calls)).toBe(false);
+		expect(records(r.state).map((x) => x.decision)).toEqual(["idle"]);
+	});
+
+	// spec: board-loop/a-pick-outside-the-list
+	test.each([
+		["a change that is not takeable [19]", { ...change("demo"), ...change("spent", TICKED) }, "PICK: spent", "spent: every group is ticked"],
+		["a change with no directory [19]", change("demo"), "PICK: ghost", "ghost: no change of that name is takeable"],
+		["no PICK: line [20]", change("demo"), "demo, I think", "not one exact PICK: line"],
+		["two PICK: lines [20]", change("demo"), "PICK: demo\nPICK: demo", "not one exact PICK: line"],
+		["a PICK: line with more on it [20]", change("demo"), "PICK: demo, then other", "not one exact PICK: line"],
+	])("a pick naming %s is refused and starts nothing", (_, tree, pick, why) => {
+		const { dir } = clone(tree);
+		const r = run(dir, [], { pick });
+		expect(r.code).toBe(1);
+		expect(r.last).toStartWith("board-loop: refused");
+		expect(r.last).toContain(why);
+		expect(staged(r.calls)).toBe(false);
+		expect(records(r.state).map((x) => x.decision)).toEqual(["refused"]);
+	});
+
+	test("a pick session still running at the limit gives timeout and starts no stage", () => {
+		const { dir } = clone();
+		const r = run(dir, [], { pickSleep: 30 }, { entry: lowered(1000) });
+		expect(r.last).toStartWith("board-loop: timeout — the pick session");
+		expect(staged(r.calls)).toBe(false);
+	});
+
+	// spec: board-loop/no-board-named
+	test("no harness.board refuses, naming the key, and launches no session [7]", () => {
+		const { dir } = clone({ ...change("demo"), "package.json": "{}\n" });
+		const r = run(dir);
+		expect(r.last).toStartWith("board-loop: refused");
+		expect(r.last).toContain("harness.board");
+		expect(r.calls).not.toContain("claude");
+		expect(records(r.state).map((x) => x.decision)).toEqual(["refused"]);
 	});
 });

@@ -106,7 +106,7 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
 
 ## 2. The pass picks in the board's order
 
-- [ ] 2.1 Write the pick tests in `bun/board-loop.test.ts`:
+- [x] 2.1 Write the pick tests in `bun/board-loop.test.ts`:
       - `PICK: none` is idle and starts no stage session [18];
       - a slug that is not takeable is refused and starts nothing [19]. Output
         with no `PICK:` line, or with two, is refused [20];
@@ -117,6 +117,10 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       Replace 1.2's ideas [15] and [16] with one case: any argument is
       refused, naming the usage. These fail before 2.2. (Req: board-loop — A
       pass takes the first takeable card in the board's order)
+      Evidence: 13 cases under *the pick*, a pick session past the limit
+      among them. The fixture's `claude` stub answers the pick with a `PICK:`
+      line and every earlier case runs with no argument, so before 2.2 the
+      three runner files were 7 pass, 42 fail, every pick case among them.
 - [ ] 2.2 Launch the pick session before the stage session: no goal, the
       same flags, and the same time limit. Accept one exact `PICK:` line that
       names a slug from the takeable list. Delete the argument, which was

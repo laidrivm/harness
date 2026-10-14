@@ -52,7 +52,7 @@ describe("passed over, with the reason printed", () => {
 	// spec: board-loop/a-step-waiting-for-the-user-s-merge
 	test("an open pull request on the step's branch [13]", () => {
 		const { dir } = clone();
-		const r = run(dir, ["demo"], { gh: '[{"number":7,"state":"OPEN"}]' });
+		const r = run(dir, [], { gh: '[{"number":7,"state":"OPEN"}]' });
 		expect(r.text).toContain("passed over demo: pull request #7 is open on feat/demo");
 		expect(r.calls).not.toContain("claude");
 	});
@@ -62,7 +62,7 @@ describe("passed over, with the reason printed", () => {
 		["merged", "MERGED"],
 	])("a %s pull request that used the branch name [14]", (_, state) => {
 		const { dir } = clone();
-		const r = run(dir, ["demo"], { gh: `[{"number":5,"state":"${state}"}]` });
+		const r = run(dir, [], { gh: `[{"number":5,"state":"${state}"}]` });
 		expect(r.text).toContain("passed over demo: pull request #5 already used feat/demo");
 	});
 
@@ -73,40 +73,8 @@ describe("passed over, with the reason printed", () => {
 		["answering with no JSON", { gh: "not json" }],
 	])("gh %s leaves nothing takeable [17]", (_, stubs) => {
 		const { dir } = clone();
-		const r = run(dir, ["demo"], stubs);
+		const r = run(dir, [], stubs);
 		expect(r.text).toContain("passed over demo: the pull request query failed");
 		expect(r.last).toStartWith("board-loop: idle");
 	});
-});
-
-describe("the change the user names", () => {
-	test("one that is not takeable is refused with its reason [15]", () => {
-		const { dir } = clone({ ...change("demo", TICKED), ...change("other") });
-		const r = run(dir, ["demo"]);
-		expect(r.code).toBe(1);
-		expect(r.last).toBe("board-loop: refused — demo: every group is ticked");
-	});
-
-	test("the one named is carried, not the first of several takeable", () => {
-		const { dir } = clone({ ...change("demo"), ...change("other") });
-		const r = run(dir, ["other"]);
-		expect(r.calls).toContain("goal-check.ts apply other 1");
-		expect(r.calls).not.toContain("apply demo");
-	});
-
-	test("one with no directory is refused [16]", () => {
-		const { dir } = clone();
-		const r = run(dir, ["ghost"]);
-		expect(r.last).toBe("board-loop: refused — ghost: no change of that name is proposed");
-	});
-
-	test.each([[[]], [["demo", "other"]], [["../demo"]]])(
-		"a call naming anything but one change is refused with the usage: %j",
-		(args) => {
-			const { dir } = clone();
-			const r = run(dir, args);
-			expect(r.last).toContain("usage: board-loop.ts <change>");
-			expect(r.calls).toBe("");
-		},
-	);
 });
