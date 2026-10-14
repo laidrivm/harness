@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { blank } from "./scan.ts";
+import { blank, comments } from "./scan.ts";
 
 /** `MARK` stands in for whatever a caller is looking for: it survives the scan
  * when it sits in code, and goes when it sits in something the language quotes
@@ -13,6 +13,7 @@ describe("scanning TypeScript", () => {
 		["a line comment", "// MARK"],
 		["a block comment", "/* MARK */"],
 		["template text", "const a = `text MARK`;"],
+		["template text after an escaped backtick", "const a = `a \\` MARK`;"],
 		["a regex literal", "const a = /MARK/;"],
 		["a regex after return", "function f() { return /MARK/; }"],
 		["a regex after an arrow", "const f = () => /MARK/;"],
@@ -39,6 +40,14 @@ describe("scanning TypeScript", () => {
 			"code after a block comment that follows a division by `of`",
 			"const a = of / 2; /* hidden */ const MARK = 1;",
 		],
+		[
+			"code after a regex literal holding a comment opener",
+			"const r = /[/*]/; MARK;",
+		],
+		[
+			"code after a template holding an escaped backtick",
+			"const a = `\\``; MARK;",
+		],
 	])("keeps %s", (_, source) => expect(kept(source, "ts")).toBe(true));
 
 	test("preserves offsets, so a match reads back out of the source", () => {
@@ -64,4 +73,61 @@ describe("scanning CSS", () => {
 	])("keeps what TypeScript would take for %s", (_, source) =>
 		expect(kept(source, "css")).toBe(true),
 	);
+});
+
+const read = (source: string) => comments(source, "ts");
+
+describe("reading comments", () => {
+	test("a block comment spanning lines reports the line it opens on", () => {
+		expect(read("a;\n/* one\ntwo */\nb;")).toEqual([
+			{ text: " one\ntwo ", line: 2, block: true },
+		]);
+	});
+
+	test("a line marker inside a block comment is the block's text", () => {
+		expect(read("/* a // b */ c;")).toEqual([
+			{ text: " a // b ", line: 1, block: true },
+		]);
+	});
+
+	test("a block opener inside a line comment opens nothing", () => {
+		expect(read("// a /* b\nconst x = 1; // after")).toEqual([
+			{ text: " a /* b", line: 1, block: false },
+			{ text: " after", line: 2, block: false },
+		]);
+	});
+
+	test("a comment inside a template interpolation is one", () => {
+		expect(read("const a = `${ /* c */ 1 }`;")).toEqual([
+			{ text: " c ", line: 1, block: true },
+		]);
+	});
+
+	test.each([
+		["template text", "const a = `// no ${1} /* no */`;"],
+		["template text after an escaped backtick", "const a = `a \\` // no`;"],
+		// A syntax error, so everything after the opener stays template text.
+		["an unterminated template", "const a = `x\n// no"],
+	])("reports nothing from %s", (_, source) => {
+		expect(read(source)).toEqual([]);
+	});
+
+	test("a comment opener inside a regex literal opens nothing", () => {
+		expect(read("const r = /[/*]/;\n// c")).toEqual([
+			{ text: " c", line: 2, block: false },
+		]);
+	});
+
+	test("CRLF line ends count one line each", () => {
+		expect(read("/* a\r\nb */\r\n// c\r\n").map((c) => c.line)).toEqual([
+			1, 3,
+		]);
+	});
+
+	// CSS has no line comment, so `//` in a URL is part of the rule.
+	test("CSS reports its block comments and no line comment", () => {
+		expect(
+			comments(".a { background: url(//cdn/x.png); } /* c */", "css"),
+		).toEqual([{ text: " c ", line: 1, block: true }]);
+	});
 });

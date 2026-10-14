@@ -18,7 +18,7 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       found. A case that passes before the switch pins nothing — the control is
       the same source without the escaped quote, which the implementation
       already handles (*A citation below an escaped quote*)
-- [ ] 1.2 Cover `comments` in `bun/scan.test.ts` on the shapes the walk
+- [x] 1.2 Cover `comments` in `bun/scan.test.ts` on the shapes the walk
       exists for and `blank`'s cases cannot reach, because they are about what
       is returned rather than what survives: a block comment's opening line
       when its text spans lines, a `//` inside a block comment and a `/*`
@@ -27,7 +27,12 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       matter more once a second gate routes through this module — a regex
       literal containing `/*`, an escaped backtick, an unterminated template,
       CRLF — so close the ones `comments` makes reachable and name the rest
-      here (*A citation below an escaped quote*)
+      here (*A citation below an escaped quote*). All four are reachable and
+      closed. One remains open in `blank` alone: an unterminated template's
+      text is never erased, because the walk erases template text only when
+      the backtick closing it arrives — `comments` reports nothing past the
+      opener, which is correct, so it is named here and `blank` is left as
+      the design fixes it
 - [ ] 1.3 Switch `bun/spec-coverage.ts` to the export: derive which lines
       sit inside a block comment from the comment list — a block opening on
       line *n* whose text spans *k* newlines encloses *n* through *n + k* — and
