@@ -46,14 +46,17 @@ export function commit(dir: string, tree: Tree = { "note.txt": `${Math.random()}
 	git(dir, "-c", "user.email=test@example.com", "-c", "user.name=Test", "commit", "-qm", "c");
 }
 
-/** A bare `origin` whose `main` holds `tree`, and a clone of it on `main`. */
+/**
+ * A bare `origin` whose `main` holds `tree`, and a clone of it on `main`. Its
+ * `package.json` names the board `Demo` unless `tree` holds one of its own.
+ */
 export function clone(tree: Tree = change("demo")) {
 	const origin = emptyDir("board-loop-origin-");
 	git(origin, "init", "-q", "--bare", "-b", "main");
 	const dir = emptyDir("board-loop-clone-");
 	git(dir, "init", "-q", "-b", "main");
 	git(dir, "remote", "add", "origin", origin);
-	commit(dir, { "package.json": "{}\n", ...tree });
+	commit(dir, { "package.json": '{"harness":{"board":"Demo"}}\n', ...tree });
 	git(dir, "push", "-q", "origin", "main");
 	return { dir, origin };
 }
@@ -76,8 +79,12 @@ export type Stubs = {
 	verdict?: string;
 	/** The session's exit status, or `null` for no `claude` on `PATH`. */
 	claudeCode?: number | null;
-	/** Seconds the `claude` stub runs for before exiting. */
+	/** Seconds the stage session runs for before exiting. */
 	sleep?: number;
+	/** What the pick session prints: `PICK: demo` unless given. */
+	pick?: string;
+	/** Seconds the pick session runs for before printing. */
+	pickSleep?: number;
 };
 
 /** The stub directory. `bun` answers both the install and the goal check. */
@@ -101,7 +108,14 @@ function bin(log: string, s: Stubs): string {
 			`exit ${verdict.startsWith("goal met") ? 0 : 1}`,
 		].join("\n"),
 	);
-	if (s.claudeCode !== null) stub("claude", s.sleep ? `exec /bin/sleep ${s.sleep}` : `exit ${s.claudeCode ?? 0}`);
+	// The stage session's prompt opens with `/goal`; the pick session's does not.
+	const stage = s.sleep ? `exec /bin/sleep ${s.sleep}` : `exit ${s.claudeCode ?? 0}`;
+	const pick = [
+		s.pickSleep ? `/bin/sleep ${s.pickSleep}` : ":",
+		`printf '%s\\n' '${s.pick ?? "PICK: demo"}'`,
+		`exit ${s.claudeCode ?? 0}`,
+	].join("; ");
+	if (s.claudeCode !== null) stub("claude", `case "$2" in\n/goal*) ${stage} ;;\n*) ${pick} ;;\nesac`);
 	return dir;
 }
 
@@ -118,10 +132,10 @@ export function lowered(ms: number): string {
 	return entry;
 }
 
-/** One pass in `dir`, naming `args`, under the stubs `s`. */
+/** One pass in `dir`, under the stubs `s`. `args` is only for the usage refusal. */
 export function run(
 	dir: string,
-	args: string[] = ["demo"],
+	args: string[] = [],
 	s: Stubs = {},
 	opts: { env?: Record<string, string>; state?: string; entry?: string } = {},
 ) {
