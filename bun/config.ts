@@ -11,8 +11,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export type Config = {
-	/** The module Stryker mutates, and how many of its mutants survive. */
-	mutationFloor: { module: string; surviving: number; why: string };
+	/** How many of the mutants Stryker reports survive. */
+	mutationFloor: { surviving: number; why: string };
 	/** How many acceptance criteria no test cites. */
 	uncitedFloor: { count: number; why: string };
 	/** Every file allowed at the root, and why it is there. */
