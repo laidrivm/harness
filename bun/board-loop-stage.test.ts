@@ -93,7 +93,7 @@ describe("the session", () => {
 			"/goal Carry step 1 of the OpenSpec change demo: /opsx:apply demo for its group 1,",
 		);
 		expect(calls).toContain("\nThis session runs unattended.\n");
-		expect(calls).toMatch(/`bun \S*goal-check\.ts apply demo 1`, run after the last push/);
+		expect(calls).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 1`, run after the last push");
 	});
 });
 
