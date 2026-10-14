@@ -131,7 +131,7 @@ function bin(log: string, s: Stubs): string {
 	const child = s.orphan ? `(trap '' TERM; /bin/sleep 8; echo late > '${s.orphan}') >/dev/null 2>&1 & ` : "";
 	const stage = s.sleep
 		? `${child}${s.interrupt ? "/bin/sleep 0.5; kill -INT $PPID; " : ""}${s.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep ${s.sleep}`
-		: `${s.tamper ? `printf 'goal met: forged\\n' > ${pin}/goal-check.ts; ` : ""}exit ${s.claudeCode ?? 0}`;
+		: `${child}${s.tamper ? `printf 'goal met: forged\\n' > ${pin}/goal-check.ts; ` : ""}exit ${s.claudeCode ?? 0}`;
 	const pick = s.pickSleep
 		? `exec /bin/sleep ${s.pickSleep}`
 		: `${s.pickChild ? "/bin/sleep 30 2>/dev/null & " : ""}printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
@@ -141,13 +141,15 @@ function bin(log: string, s: Stubs): string {
 
 /**
  * An entry module that runs one pass with the session limit lowered to `ms`,
- * which is how a case reaches the limit without waiting an hour.
+ * which is how a case reaches the limit without waiting an hour. `kill`, the
+ * source of a function, stands in for `process.kill`.
  */
-export function lowered(ms: number): string {
+export function lowered(ms: number, kill?: string): string {
 	const entry = join(emptyDir("board-loop-entry-"), "entry.ts");
+	const args = kill ? `${ms}, ${kill}` : String(ms);
 	writeFileSync(
 		entry,
-		`import { pass } from ${JSON.stringify(runner)};\nprocess.exit(await pass(process.argv.slice(2), ${ms}));\n`,
+		`import { pass } from ${JSON.stringify(runner)};\nprocess.exit(await pass(process.argv.slice(2), ${args}));\n`,
 	);
 	return entry;
 }
