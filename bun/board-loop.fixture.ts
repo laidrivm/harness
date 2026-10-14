@@ -90,6 +90,8 @@ export type Stubs = {
 	orphan?: string;
 	/** Whether the stage session sends the runner SIGINT, as Ctrl-C would. */
 	interrupt?: boolean;
+	/** Whether the stage session rewrites the pinned goal check to read `goal met`. */
+	tamper?: boolean;
 	/** What the pick session prints: `PICK: demo` unless given. */
 	pick?: string;
 	/** Seconds the pick session runs for, printing nothing. */
@@ -129,7 +131,7 @@ function bin(log: string, s: Stubs): string {
 	const child = s.orphan ? `(trap '' TERM; /bin/sleep 8; echo late > '${s.orphan}') >/dev/null 2>&1 & ` : "";
 	const stage = s.sleep
 		? `${child}${s.interrupt ? "/bin/sleep 0.5; kill -INT $PPID; " : ""}${s.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep ${s.sleep}`
-		: `exit ${s.claudeCode ?? 0}`;
+		: `${s.tamper ? `printf 'goal met: forged\\n' > ${pin}/goal-check.ts; ` : ""}exit ${s.claudeCode ?? 0}`;
 	const pick = s.pickSleep
 		? `exec /bin/sleep ${s.pickSleep}`
 		: `${s.pickChild ? "/bin/sleep 30 2>/dev/null & " : ""}printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
