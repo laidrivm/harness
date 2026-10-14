@@ -88,8 +88,8 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       the per-file cap in `bun/file-size.ts`.
       Evidence: `stage-goal` had already exported `groups()` for the goal
       check, so `bun/turn-gate.ts` is untouched and needed no split. The
-      three runner files are 36 pass, 0 fail; `bun test` is 1417 pass,
-      0 fail; `bun/board-loop.ts` is 192 lines against the cap of 300.
+      three runner files are 42 pass, 0 fail; `bun test` is 1423 pass,
+      0 fail; `bun/board-loop.ts` is 182 lines against the cap of 300.
 - [x] 1.5 Add the runner to `README.md`'s *Consuming* section: started by
       the user from a terminal of their own, in a clone used for nothing
       else, and what one pass does. Verify: `grep -n board-loop README.md`
