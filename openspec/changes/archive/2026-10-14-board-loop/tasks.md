@@ -170,5 +170,8 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       `PICK: drop-mutation-exemptions`, and the next line read
       `carrying apply drop-mutation-exemptions step 1 on feat/drop-mutation-exemptions-1`.
       So the pick followed the drag, not alphabetical or creation order.
-      The stage session was still running when this was written, so no exit
-      status is recorded here.
+      The stage session went on to open #126. The runner then recorded
+      `goal open` and `loop open` at the session's commit 8f3fe22, although
+      the session's own last check there read `goal met`. That disagreement
+      is outside this task, which tests the pick order, and is left to a card
+      of its own. The runner's exit status was not captured.
