@@ -210,6 +210,13 @@ this. A tracked allow rule would name one machine's server.
 
 ## Risks / Trade-offs
 
+- [The pick session now writes, and it reads text that card authors wrote,
+  comments included] → Its prompt confines the write to one property of one
+  card, the one its `PICK:` line names, out of the lists the runner gave it.
+  The runner still accepts nothing outside those lists. Text that steers the
+  pick can at worst move one listed card to `applying`, the move a correct
+  pick makes anyway. An answer is read as data by the stage session
+  (`task-board`, *An answer asks for more than the question*).
 - [The pick session moves a card and then the runner refuses its line] → The
   card waits in `applying`. The next pass takes it first and carries it.
 - [Every applied change that is not yet archived is a candidate, so the pick
