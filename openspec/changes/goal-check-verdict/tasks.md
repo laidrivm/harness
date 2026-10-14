@@ -77,7 +77,7 @@ One group, one harness pull request on `feat/goal-check-verdict`.
       Verify: `bun test bun/goal-check-io.test.ts bun/goal-check.test.ts`
       is green. `bun test` is green, `bun/board-loop*.test.ts` included,
       since they stub the check and need no edit.
-- [ ] 1.5 Reread the four places `core/feature-workflow.md` names for the
+- [x] 1.5 Reread the four places `core/feature-workflow.md` names for the
       claim this change replaces, that only an *open* pull request at `HEAD`
       satisfies a stage. Grep `open pull request` and
       `state could not be read` across `core/`, `openspec/specs/`, the
