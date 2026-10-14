@@ -88,6 +88,8 @@ export type Stubs = {
 	stubborn?: boolean;
 	/** A file the stage session's child, which ignores SIGTERM, writes 8 s in. */
 	orphan?: string;
+	/** Whether the stage session sends the runner SIGINT, as Ctrl-C would. */
+	interrupt?: boolean;
 	/** What the pick session prints: `PICK: demo` unless given. */
 	pick?: string;
 	/** Seconds the pick session runs for, printing nothing. */
@@ -126,7 +128,7 @@ function bin(log: string, s: Stubs): string {
 	// An ignored signal stays ignored across `exec`.
 	const child = s.orphan ? `(trap '' TERM; /bin/sleep 8; echo late > '${s.orphan}') >/dev/null 2>&1 & ` : "";
 	const stage = s.sleep
-		? `${child}${s.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep ${s.sleep}`
+		? `${child}${s.interrupt ? "/bin/sleep 0.5; kill -INT $PPID; " : ""}${s.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep ${s.sleep}`
 		: `exit ${s.claudeCode ?? 0}`;
 	const pick = s.pickSleep
 		? `exec /bin/sleep ${s.pickSleep}`
