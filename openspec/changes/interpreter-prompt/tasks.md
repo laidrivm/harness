@@ -21,14 +21,15 @@ text the guard cannot read prompts* but
       as it stands. Cover inline code in every listed spelling, wrapped forms,
       a non-shell interpreter reading standard input (`python3`, `node -`,
       `bun -`), throwaway files, a tracked script with a staged or uncommitted
-      edit, a tracked or `node_modules/` symlink to a throwaway file, `source`,
+      edit, a file under `node_modules/` outside `harness/`, a tracked or
+      `node_modules/harness/` symlink to a throwaway file, `source`,
       and the bun subcommands that run code. Each exits 0, and its whole
       stdout parses as one object with `hookEventName` `PreToolUse`,
       `permissionDecision` `ask` and a reason naming the interpreter [1, 3, 7,
       9, 10, 14, 15, 16, 21]
 - [ ] 1.2 Write the controls in the same file, which must pass both before and
       after: a clean tracked script, a file under the repository's top-level
-      `node_modules/`, the long version and help queries, `bash -c "echo hi"`,
+      `node_modules/harness/`, the long version and help queries, `bash -c "echo hi"`,
       `bun test` and `bun run <script of a tracked, unedited package.json>`;
       beside them, as cases that must ask, `bun run check` with an edited or
       untracked `package.json`, and with a script whose command line runs an
