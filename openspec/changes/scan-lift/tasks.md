@@ -1,8 +1,9 @@
 # scan-lift — tasks
 
-One group, so this change ships whole on `feat/scan-lift`. It closes one
-acceptance criterion: `spec-test-traceability`'s *A citation below an escaped
-quote*.
+Two groups. Group 1 shipped whole on `feat/scan-lift`, written when it was the
+only one, and closes `spec-test-traceability`'s *A citation below an escaped
+quote*. Group 2 was added after it merged, on the user's decision of
+2026-10-14 (`design.md`), and ships on `feat/scan-lift-2`.
 
 `scan.ts`'s `comments` export and `bun/mutation-floor.ts`'s switch onto it
 shipped in `14fc537`, outside this change; they are preconditions here, not
@@ -106,3 +107,31 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       (*A citation below an escaped quote*). Untouched, 39 pass, run against
       d2ass's pinned `bun/scan.ts`, which differs from this branch's by the
       module comment's last sentence alone
+
+## 2. A citation stands only on a line comment
+
+Closes `spec-test-traceability/a-spec-marker-inside-a-template-literal`.
+
+- [x] 2.1 Narrow the design's fixed point and pin the rule: `design.md` records
+      the user's decision of 2026-10-14 and keeps `CITATION`'s grammar and the
+      continuation walk fixed while letting the lines it is tried on move; the
+      delta's `A test cites the criteria it closes` gains the scenario, and
+      `openspec validate scan-lift` passes
+      (*A spec marker inside a template literal*)
+- [ ] 2.2 Add the failing case first, against `bun/spec-coverage.ts` as it
+      stands, and record that it fails: a test file whose multi-line template
+      literal holds a line opening with `// spec:` above a `test(` call, and a
+      real `// spec:` line comment below it, asserting only the real one is
+      cited and nothing is reported (*A spec marker inside a template
+      literal*)
+- [ ] 2.3 Try `CITATION` in `cite()` only on a line `comments` reports a line
+      comment opening on, from the comment list it already reads, and rewrite
+      the `ponytail:` comment over `CITATION`, which names this hole as open.
+      2.2's case now passes (*A spec marker inside a template literal*)
+- [ ] 2.4 Record the set of cited identifiers before and after 2.3 over this
+      repository, d2ass and mellon, measured with `check()` over each tree,
+      and say which citations moved and why (*A spec marker inside a template
+      literal*)
+- [ ] 2.5 Measure every capped file this step touched and record the numbers,
+      whether or not any is over (*change-slicing/No source file exceeds its
+      per-file cap*)

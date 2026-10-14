@@ -71,3 +71,10 @@ the opposite of what this capability is for.
   citation on a later line
 - **THEN** the citation counts, because the scan carries the string's state
   through the escape rather than ending the literal at it
+
+#### Scenario: A spec marker inside a template literal
+
+- **WHEN** a line of a multi-line template literal begins with
+  `// spec: <identifier>`, above a `test` call
+- **THEN** it is not a citation, because the scan reports no comment there —
+  and a real `// spec:` line comment in the same file still counts

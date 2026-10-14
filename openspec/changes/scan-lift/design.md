@@ -36,9 +36,10 @@ not hand it directly.
 
 - A parser. The only question asked of a character stays *what encloses it*.
 - Any new language in the `SYNTAX` table.
-- Changing how a citation is *interpreted* once found. `CITATION` and the
-  following-comment-lines walk in `spec-coverage.ts` are this change's fixed
-  points.
+- Changing how a citation is *interpreted* once found, beyond where one may
+  stand. `CITATION`'s grammar and the following-comment-lines walk in
+  `spec-coverage.ts` are this change's fixed points; which lines `CITATION` is
+  tried on is not, since step 2 (below).
 
 ## Decisions
 
@@ -65,6 +66,30 @@ purpose. Once `spec-coverage.ts` reads it for another, a defect in it reaches
 two gates, and a gate is the worst place to discover a scanner is wrong. The
 cases belong to `bun/scan.test.ts` beside `blank`'s, because the walk is
 one and the cases are about which view reports it.
+
+### A citation counts only on a line comment the scan reports (step 2)
+
+Step 1 held `CITATION` fixed, so a line reading `// spec: <id>` inside a
+multi-line template literal still counted: the regex sees the line, and the
+template is text the scan knows about and the citation check never asked. The
+local review of step 1 raised it as a Major. Fixing it reads how a citation is
+found, not what one says, so it was put to the user: dismiss it here and fix it
+in a change of its own, or extend this design. On 2026-10-14 the user chose to
+extend this design and fix it here, if the size limit allows — it does, and it
+ships as step 2, because step 1 had merged by then.
+
+So `cite()` tries `CITATION` only on a line where `comments` reports a line
+comment opening. `CITATION` still decides what the comment says, and it still
+requires nothing before the `//` on its line. The continuation walk is
+unchanged: the line after a line comment begins in code, so a continuation line
+that `//` leads is a line comment already. The comment list is the one
+`cite()` already takes for the enclosed lines, so no second walk is added.
+
+*Alternatives considered.* Dismissing the finding and writing fixtures with
+`\n` instead, which the `ponytail:` comment over `CITATION` asked for, was the
+status quo: it makes every author of a fixture carry a rule the scanner could
+carry. A separate change was the other option the user was given, and the
+smaller diff of a step here decided it.
 
 ### The rule of two is a `core/rules.md` Code rule, not a spec
 
