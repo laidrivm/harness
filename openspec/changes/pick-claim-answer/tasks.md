@@ -30,7 +30,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
       [1]–[3] fail before 1.2, and [4] and [5] pass before and after. (Req:
       board-loop — A pass takes the first takeable card in the board's order,
       §*A picked card is claimed*, §*A card already applying*)
-- [ ] 1.2 In `bun/board-loop.ts`, rewrite `pickPrompt`: change nothing but the
+- [x] 1.2 In `bun/board-loop.ts`, rewrite `pickPrompt`: change nothing but the
       `Status` of the one card named in `PICK:`, set it to `applying` when it
       reads `proposed`, leave an `applying` card as it is, and fetch it again.
       Update the function's comment, which says it has nothing to write.
