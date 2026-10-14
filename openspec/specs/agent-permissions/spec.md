@@ -1478,8 +1478,10 @@ every command after that line.
 
 Where any command in the call is `sh`, `bash`, `zsh`, `dash`, `eval`,
 `source` or `.`, or is named by a path holding a `/`, the guard SHALL read
-every heredoc body in that call as commands, whatever its quoting. A file
-written any other way, as by `printf`, stays outside the guard.
+every heredoc body in that call as commands, whatever its quoting; for that
+call this rule takes precedence over *A quoted heredoc's body is data* and
+*An unquoted heredoc's body runs only its substitutions*. A file written any
+other way, as by `printf`, stays outside the guard.
 
 #### Scenario: A body given to a shell as its script
 
@@ -1515,7 +1517,8 @@ written any other way, as by `printf`, stays outside the guard.
 Where the delimiter line never comes, the guard SHALL read the text after
 the operator as commands. A delimiter word holding `$` SHALL be matched by
 its literal text, since the shell does not expand it. A delimiter word
-holding a backtick or `(` SHALL make the guard refuse the call, since the
+holding a backtick or `(` outside quotes SHALL make the guard refuse the
+call, since the
 guard cannot tell where that word ends, and reading the body as commands
 lets a quote in it hide what follows. `<<` inside `$((…))` or `((…))` is a
 shift, and `<<<` is a here-string, so neither SHALL start a body.
