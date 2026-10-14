@@ -31,8 +31,9 @@ consumer and still miss `bun --eval` and `python3 -Ic`.
   checked, never asked about, and `bun x` is left to the `bunx` change.
 - A block anywhere in the same command still wins.
 - The gate ledger records each prompt under its own id.
-- `agent-permissions` §*The git prohibitions are enforced by a hook* names
-  the third outcome and stops accepting `python -c` as its ceiling.
+- The new requirement also names the hook's third outcome, and takes
+  `python -c` out of the ceiling that §*The git prohibitions are enforced by
+  a hook* accepts.
 
 ## Non-goals
 
@@ -51,8 +52,8 @@ consumer and still miss `bun --eval` and `python3 -Ic`.
   substitution or `$`.** These belong to `guard-remote-code` (#99), which
   refuses them. This change covers a non-shell interpreter on standard input
   (`curl … | python3`, `node -`, `bun -`) and a shell given an untracked
-  script file. Both checks may share one module, and the apply step of
-  whichever lands second merges into the other's.
+  script file. `guard-remote-code` is on `main`, so this change's apply step
+  merges into its module where the two can share one.
 - **How the guard reads a heredoc body**, which belongs to the change that
   stops it reading a quoted heredoc as commands.
 - **Other runners**: `make`, `find -exec`, `awk`'s `system()`, a git alias,
@@ -67,10 +68,13 @@ None.
 
 ### Modified Capabilities
 
-- `agent-permissions`: a new requirement holds an interpreter given unread
-  program text behind a prompt. §*The git prohibitions are enforced by a
-  hook* gains the `ask` outcome and drops `python -c` from its accepted
-  ceiling.
+- `agent-permissions`: gains one requirement, *An interpreter given program
+  text the guard cannot read prompts*. It also qualifies §*The git
+  prohibitions are enforced by a hook*: the `ask` outcome, a failing git call
+  of this check, and `python -c` leaving the accepted ceiling. It is added
+  beside that requirement rather than written into it, as `heredoc-bodies`
+  was, because copying it whole for a MODIFIED delta would put most of this
+  change's diff in text it does not change.
 - `gate-ledger`: a prompt a guard asks for is recorded, beside its refusals.
 
 ## Impact
@@ -87,6 +91,5 @@ None.
   interpreter code, and every script they name is tracked, under
   `node_modules/harness/` or a package script. Of the local grants, only
   `d2ass`'s `sh .git/hooks/pre-commit` would now prompt.
-- Open pull requests nearby: #86 modifies the same hook requirement, so
-  whichever of the two archives second re-copies it. #96 syncs
-  `settings-local-sweep` into the same spec file, under other requirements.
+- The delta adds a requirement and modifies none, so archiving it re-copies
+  nothing from the live spec.

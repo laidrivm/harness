@@ -2,12 +2,10 @@
 
 One task group, so the change ships whole on `feat/interpreter-prompt`.
 
-The `agent-permissions` delta modifies *The git prohibitions are enforced by a
-hook* whole. Its scenarios describe the git and `gh` checks, which this change
-leaves alone, so it closes none of them. Task 1.6 asserts they still hold.
-Pull request #86 modifies the same requirement. Before archiving, diff this
-copy against the live spec on fresh `main`. If #86 merged first, re-copy the requirement
-and keep only this change's two paragraph edits.
+The `agent-permissions` delta adds one requirement and modifies none. It
+qualifies *The git prohibitions are enforced by a hook* from beside it, whose
+scenarios describe the git and `gh` checks this change leaves alone. Task 1.6
+asserts they still hold.
 Numbers in brackets refer to the proposal-stage `/zombies` list in the PR.
 
 ## 1. An interpreter given unread program text prompts
@@ -59,8 +57,8 @@ text the guard cannot read prompts* but
       in both directions, as `bun/settings.ts` pins the manifest-writing forms.
       Verify by deleting one entry and seeing the test fail [17]
 - [ ] 1.6 Run `bun test`. Every existing guard case still passes unedited,
-      which is the control for the carried scenarios of the modified hook
-      requirement
+      which is the control for the scenarios of the hook requirement this
+      change qualifies
 - [ ] 1.7 Measure whether a local `allow` grant silences the hook's `ask`:
       with `Bash(python3 *)` in `.claude/settings.local.json`, run `python3
       -c "print(1)"` in an attended session and refuse the prompt. This needs
