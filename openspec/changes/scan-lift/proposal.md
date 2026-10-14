@@ -25,6 +25,10 @@ is work here. `spec-coverage.ts` is the caller that has not switched.
 - `bun/spec-coverage.ts` drops its per-line strip and derives which lines
   sit inside a block comment from `scan.ts`'s `comments` export. A citation
   below an escaped quote becomes visible.
+- `bun/spec-coverage.ts` accepts a citation only on a line comment that
+  export reports, so a `// spec:` line inside a multi-line template literal
+  stops counting. Added as step 2 on the user's decision of 2026-10-14, after
+  step 1's local review raised it (`design.md`).
 - `bun/scan.test.ts` gains cases for that export on the shapes `blank`'s
   own cases cannot reach, because they are about what is returned rather than
   about what survives.
@@ -62,12 +66,14 @@ technique.
 
 - `spec-test-traceability`: the requirement that a test cites a criterion in a
   `// spec:` comment gains a scenario pinning the case it fails today — a
-  citation below a string holding an escaped quote and a `/*`.
+  citation below a string holding an escaped quote and a `/*` — and, in step
+  2, one pinning that a spec marker inside a template literal is no citation.
 
 ## Impact
 
 - `bun/spec-coverage.ts` — the per-line strip and its `ponytail:` comment
-  deleted, ~25 lines, replaced by a derivation over the comment list.
+  deleted, ~25 lines, replaced by a derivation over the comment list; in
+  step 2, the `ponytail:` comment over `CITATION` goes with the hole it named.
 - `bun/scan.test.ts` — cases for `comments`, which shipped without its own.
 - `src/app/module-classes.test.ts` (in d2ass) — `blank`'s only production
   caller; unaffected, and the check that this change leaves `blank` alone.
