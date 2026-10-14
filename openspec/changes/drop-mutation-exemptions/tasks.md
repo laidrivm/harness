@@ -1,17 +1,17 @@
 ## 1. Remove the exemption half
 
-- [ ] 1.1 Delete `exemptions()`, the `DISABLE` and `ADMITTED` patterns and the
+- [x] 1.1 Delete `exemptions()`, the `DISABLE` and `ADMITTED` patterns and the
       `Comment` handling from `bun/mutation-floor.ts`, with its call from
       the `import.meta.main` block and the now-unread `MODEL` and `MODEL_NAME`
-- [ ] 1.2 Delete `bun/mutation-floor-exemptions.test.ts`
-- [ ] 1.3 Delete the three cases in `bun/mutation-floor-cli.test.ts` that
+- [x] 1.2 Delete `bun/mutation-floor-exemptions.test.ts`
+- [x] 1.3 Delete the three cases in `bun/mutation-floor-cli.test.ts` that
       rest on that half — the malformed directive, the same comment in another
       file, and the absent model — and the `files` argument of its `cli`
       helper if nothing else passes one
-- [ ] 1.4 Drop `./scan.ts` from `bun/mutation-floor.fixture.ts`'s
+- [x] 1.4 Drop `./scan.ts` from `bun/mutation-floor.fixture.ts`'s
       `modules` map, leaving the check and `./root.ts` — what the check still
       imports — and confirm the command-line cases still stand a runnable copy
-- [ ] 1.5 Leave `bun/scan.ts` untouched, and confirm it: `comments()` and
+- [x] 1.5 Leave `bun/scan.ts` untouched, and confirm it: `comments()` and
       its span bookkeeping stay for `scan-lift`'s consumer, so `git diff` names
       neither that file nor `bun/scan.test.ts`
 
