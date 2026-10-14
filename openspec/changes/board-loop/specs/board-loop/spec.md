@@ -11,8 +11,10 @@ moves across the board without a person driving each stage.
 ### Requirement: The runner is the user's script and starts from a clean clone
 
 The runner SHALL refuse to start when `CLAUDECODE` is in its environment. It
-SHALL refuse a tracked edit, or a branch tip no remote-tracking branch
-contains. Otherwise it SHALL fetch and fast-forward the default branch,
+SHALL refuse a clone that `~/.claude.json` does not record as a trusted
+workspace under its real path, because a session there ignores the tracked
+`permissions.allow`. It SHALL refuse a tracked edit, or a branch tip no
+remote-tracking branch contains. Otherwise it SHALL fetch and fast-forward the default branch,
 refusing where it cannot and never merging or resetting. It SHALL then run
 `bun install --frozen-lockfile` and refuse when that fails, so that no session
 it launches has to install.
@@ -23,6 +25,13 @@ it launches has to install.
   the empty string
 - **THEN** it exits non-zero, saying the user starts it from a terminal of
   their own, and it has run no git, `gh` or `claude` command
+
+#### Scenario: An untrusted clone
+
+- **WHEN** the clone's real path is not a trusted workspace in
+  `~/.claude.json`
+- **THEN** the pass is refused, naming how to trust it, before any fetch or
+  session
 
 #### Scenario: The previous pass's step branch
 
