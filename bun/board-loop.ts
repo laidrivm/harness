@@ -22,6 +22,7 @@
 import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
+import { type Kill, session } from "./board-loop-session.ts";
 import { record } from "./gate-ledger.ts";
 import { groups } from "./turn-gate.ts";
 
@@ -115,56 +116,8 @@ function pickPrompt(board: string, slugs: string[]): string {
 	].join("\n");
 }
 
-/** One `claude -p` session, ended at `limit`; `capture` keeps its output rather than showing it. */
-async function session(text: string, limit: number, capture = false) {
-	// Auto mode with nothing to answer prompts; never a bypass of permissions.
-	const flags = ["--permission-mode", "auto", "--permission-prompts", "none"];
-	// A file, not a pipe: a child the session leaves running could hold a pipe open and stall the pass.
-	const dir = capture ? mkdtempSync(join(tmpdir(), "board-loop-")) : "";
-	let interrupt: (() => void) | undefined;
-	try {
-		// Leader of its own process group, so a child it starts (a test run, a push) is signalled with it.
-		const run = Bun.spawn(["claude", "-p", text, ...flags], {
-			stdio: ["ignore", capture ? Bun.file(join(dir, "out")) : "inherit", "inherit"],
-			detached: true,
-		});
-		/** Signals the whole group; false once no member is left. */
-		const group = (signal: NodeJS.Signals | 0) => {
-			try {
-				process.kill(-run.pid, signal);
-				return true;
-			} catch {
-				return false;
-			}
-		};
-		// Ctrl-C reaches the terminal's foreground group, which a detached one is not.
-		interrupt = () => {
-			group("SIGKILL");
-			// `process.exit` skips the `finally` below.
-			if (capture) rmSync(dir, { recursive: true, force: true });
-			process.exit(130);
-		};
-		process.on("SIGINT", interrupt);
-		let late = false;
-		const timer = setTimeout(() => {
-			late = true;
-			group("SIGTERM");
-			// A member that ignores SIGTERM is killed outright.
-			setTimeout(() => group("SIGKILL"), 5_000).unref();
-		}, limit);
-		await run.exited;
-		clearTimeout(timer);
-		// Nothing the session started may go on working once the pass records `timeout`.
-		for (let wait = 0; late && wait < 100 && group(0); wait++) await Bun.sleep(100);
-		return { late, out: capture ? readFileSync(join(dir, "out"), "utf8") : "" };
-	} finally {
-		if (interrupt) process.off("SIGINT", interrupt);
-		if (capture) rmSync(dir, { recursive: true, force: true });
-	}
-}
-
-/** One pass. `limit` is lowered only by a test, through an entry module. */
-export async function pass(args: string[], limit = LIMIT): Promise<number> {
+/** One pass. `limit` and `kill` are replaced only by a test, through an entry module. */
+export async function pass(args: string[], limit = LIMIT, kill: Kill = process.kill): Promise<number> {
 	// Its presence, whatever its value, before any command runs.
 	if ("CLAUDECODE" in process.env)
 		return end("refused", "a Claude Code session started it — start the runner from a terminal of your own");
@@ -241,13 +194,20 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 	if (takeable.size === 0) return end("idle", "no change is takeable");
 
 	const minutes = `${limit / 60_000} minutes`;
+	/** A session ends clean, or the pass names what outlived it and records no planned outcome. */
+	const unclean = (what: string, { late, left }: { late: boolean; left?: number }) => {
+		const outlived = left ? `process group ${left} outlived ${what} — see pgrep -g ${left}` : "";
+		if (late) return end("timeout", [`${what} ran past ${minutes}`, outlived].filter(Boolean).join("; "));
+		if (left) return end("refused", outlived);
+	};
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
-		picked = await session(pickPrompt(named, [...takeable.keys()]), limit, true);
+		picked = await session(pickPrompt(named, [...takeable.keys()]), limit, kill, true);
 	} catch {
 		return end("refused", "claude could not be started");
 	}
-	if (picked.late) return end("timeout", `the pick session ran past ${minutes}`);
+	const pickEnd = unclean("the pick session", picked);
+	if (pickEnd !== undefined) return pickEnd;
 	if (picked.out.trim()) console.log(picked.out.trim());
 	// Untrusted text: one exact line, naming a change this pass computed as takeable.
 	const lines = picked.out.split("\n").filter((line) => line.startsWith("PICK:"));
@@ -260,13 +220,14 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 
 	const target = `apply ${slug} step ${chosen.step}`;
 	console.log(`carrying ${target} on ${chosen.branch}`);
-	let late: boolean;
+	let staged: Awaited<ReturnType<typeof session>>;
 	try {
-		({ late } = await session(prompt(slug, chosen.step, relative(real, check)), limit));
+		staged = await session(prompt(slug, chosen.step, relative(real, check)), limit, kill);
 	} catch {
 		return end("refused", "claude could not be started");
 	}
-	if (late) return end("timeout", `${target} ran past ${minutes}`);
+	const stageEnd = unclean(target, staged);
+	if (stageEnd !== undefined) return stageEnd;
 
 	// The check's own verdict at the commit the session left, never the exit status.
 	const verdict = sh("bun", join(judge, "goal-check.ts"), "apply", slug, String(chosen.step));
