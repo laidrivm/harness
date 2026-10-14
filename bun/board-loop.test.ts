@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { cleanup, git } from "./diff-budget.fixture.ts";
+import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { advance, change, clone, commit, lowered, out, records, run, TICKED, trusting } from "./board-loop.fixture.ts";
 
 /** Who may start the runner, the clone it starts from, the install and the pick. [n]: `/zombies` ideas. */
@@ -43,6 +43,14 @@ describe("the clone", () => {
 		expect(r.calls).not.toContain("git fetch");
 		expect(r.calls).not.toContain("claude");
 		expect(records(r.state).map((x) => x.decision)).toEqual(["refused"]);
+	});
+
+	test("trust is read from CLAUDE_CONFIG_DIR when it is set, not the home", () => {
+		const { dir } = clone();
+		const config = emptyDir("board-loop-config-");
+		writeFileSync(join(config, ".claude.json"), trusting(dir));
+		const r = run(dir, [], {}, { claudeJson: null, env: { CLAUDE_CONFIG_DIR: config } });
+		expect(r.last).toStartWith("board-loop: met");
 	});
 
 	// spec: board-loop/an-edited-tracked-file
