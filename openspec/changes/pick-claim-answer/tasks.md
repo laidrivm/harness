@@ -39,8 +39,9 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
 - [ ] 1.3 Search the four places `core/feature-workflow.md` names for the
       claim this replaces, "the card is the stage session's to move" and the
       pick session that writes nothing. Reconcile each live site, or name
-      `board-loop`'s archived design as history. Verify: the grep in the pull
-      request body.
+      `board-loop`'s archived design as history. `README.md`'s *Consuming*
+      line says the pick moves its card to `applying`. Verify: the grep in
+      the pull request body.
 - [ ] 1.4 The pull request's *Check by hand* gives the user one live pass on a
       change at `proposed`. The card must read `applying` before the runner
       prints `carrying …` [6], and it reports whether the stage session
@@ -102,8 +103,10 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
 - [ ] 2.6 In `core/feature-workflow.md`, add to the question bullet that an
       answer the loop carries counts as applied when its step's pull request
       opens, citing `task-board`. Add to *Unattended stages* that an answer
-      step's first line names the answer it writes as group N+1. Verify:
-      `bun test` is green.
+      step's first line names the answer it writes as group N+1. In
+      `README.md`'s *Consuming* line, the pass lists the takeable changes and
+      the answer candidates. Verify:
+      `bun test` is green, and `grep -n board-loop README.md` reads that way.
 - [ ] 2.7 The pull request's *Check by hand* gives the user a live pass on a
       card with an answered question in `applied`. The pass must carry step
       N+1, the card must move to `applying`, and `Assign` must be cleared in
