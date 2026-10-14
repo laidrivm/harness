@@ -49,11 +49,14 @@ function bin(gh: Gh): string {
 	return dir;
 }
 
+/** A pull request as `gh` lists it; an undefined state is left out. */
+export const pr = (headRefOid: string, state?: string) => ({ headRefOid, state });
+
+/** A `gh` that answers at once with these pull requests. */
+export const prs = (...list: object[]) => ({ answer: JSON.stringify(list), code: 0 });
+
 /** An open pull request whose head is the repository's `HEAD`. */
-const prAt = (dir: string) => ({
-	answer: JSON.stringify([{ headRefOid: head(dir), state: "OPEN" }]),
-	code: 0,
-});
+const prAt = (dir: string) => prs(pr(head(dir), "OPEN"));
 
 /** Appends ledger lines; a string is written as it stands, a torn line say. */
 export function ledger(state: string, ...lines: (object | string)[]): void {

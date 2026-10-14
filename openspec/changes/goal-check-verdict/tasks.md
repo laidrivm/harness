@@ -26,7 +26,7 @@ One group, one harness pull request on `feat/goal-check-verdict`.
         before `opts.env`, so a case can still override it.
       Verify: the existing met cases now fail, because the check still sends
       the old query and reads the state as unreadable.
-- [ ] 1.2 Write the state cases in `bun/goal-check-io.test.ts`, citing the
+- [x] 1.2 Write the state cases in `bun/goal-check-io.test.ts`, citing the
       scenario each pins:
       - split the case titled *no open pull request, a closed or merged one at
         HEAD, is open* [28]. An empty answer reads
