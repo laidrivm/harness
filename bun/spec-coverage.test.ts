@@ -261,3 +261,16 @@ describe("a citation below an escaped quote", () => {
 		expect(problems(dir)).toEqual([]);
 	});
 });
+
+// spec: spec-test-traceability/a-spec-marker-inside-a-template-literal
+describe("a spec marker inside a template literal", () => {
+	test("only the real line comment below the template is cited", () => {
+		const dir = world(
+			'const fixture = `\n// spec: capability/a-first-thing\ntest("acts", () => {});\n`;\n// spec: capability/a-second-thing\ntest("acts", () => {});\n',
+			"A first thing",
+			"A second thing",
+		);
+		expect(cited(dir)).toEqual(["capability/a-second-thing"]);
+		expect(problems(dir)).toEqual([]);
+	});
+});

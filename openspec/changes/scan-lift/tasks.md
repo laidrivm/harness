@@ -118,12 +118,14 @@ Closes `spec-test-traceability/a-spec-marker-inside-a-template-literal`.
       delta's `A test cites the criteria it closes` gains the scenario, and
       `openspec validate scan-lift` passes
       (*A spec marker inside a template literal*)
-- [ ] 2.2 Add the failing case first, against `bun/spec-coverage.ts` as it
+- [x] 2.2 Add the failing case first, against `bun/spec-coverage.ts` as it
       stands, and record that it fails: a test file whose multi-line template
       literal holds a line opening with `// spec:` above a `test(` call, and a
       real `// spec:` line comment below it, asserting only the real one is
       cited and nothing is reported (*A spec marker inside a template
-      literal*)
+      literal*). Measured against the code as it stood: the case failed,
+      alone of the file's 26, citing `capability/a-first-thing` from inside
+      the template and reporting nothing — the false citation is silent
 - [ ] 2.3 Try `CITATION` in `cite()` only on a line `comments` reports a line
       comment opening on, from the comment list it already reads, and rewrite
       the `ponytail:` comment over `CITATION`, which names this hole as open.
