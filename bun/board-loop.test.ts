@@ -136,9 +136,13 @@ describe("the pick", () => {
 	);
 
 	// spec: board-loop/the-user-dragged-a-card-up
-	test("the pass carries the change the pick names, not the first in the tree's order", () => {
+	test.each([
+		["alone", "PICK: other"],
+		["under lines of prose", "Read the board.\nThe first card is other.\nPICK: other"],
+		["ending in a carriage return", "PICK: other\r"],
+	])("the pass carries the change the pick names, not the first in the tree's order: %s", (_, pick) => {
 		const { dir } = clone({ ...change("demo"), ...change("other") });
-		const r = run(dir, [], { pick: "PICK: other" });
+		const r = run(dir, [], { pick });
 		expect(r.calls).toContain("goal-check.ts apply other 1");
 		expect(r.calls).not.toContain("apply demo");
 	});
@@ -146,7 +150,8 @@ describe("the pick", () => {
 	test("the pick prompt names the board by its harness.board value and lists the takeable slugs [21]", () => {
 		const { dir } = clone({ ...change("demo"), ...change("other"), ...change("spent", TICKED) });
 		const pick = run(dir).calls.split("\nclaude -p /goal")[0];
-		expect(pick).toContain("board Demo");
+		expect(pick).toContain("`Board view` of the Notion board Demo");
+		expect(pick).toContain("\nThis session runs unattended.\n");
 		expect(pick).toContain("demo, other");
 		expect(pick).not.toContain("spent");
 	});
@@ -164,6 +169,7 @@ describe("the pick", () => {
 	test.each([
 		["a change that is not takeable [19]", { ...change("demo"), ...change("spent", TICKED) }, "PICK: spent", "spent: every group is ticked"],
 		["a change with no directory [19]", change("demo"), "PICK: ghost", "ghost: no change of that name is takeable"],
+		["nothing at all [20]", change("demo"), "", "not one exact PICK: line"],
 		["no PICK: line [20]", change("demo"), "demo, I think", "not one exact PICK: line"],
 		["two PICK: lines [20]", change("demo"), "PICK: demo\nPICK: demo", "not one exact PICK: line"],
 		["a PICK: line with more on it [20]", change("demo"), "PICK: demo, then other", "not one exact PICK: line"],
@@ -173,6 +179,8 @@ describe("the pick", () => {
 		expect(r.code).toBe(1);
 		expect(r.last).toStartWith("board-loop: refused");
 		expect(r.last).toContain(why);
+		// What the session said is shown to the user above the line.
+		expect(r.text).toContain(pick);
 		expect(staged(r.calls)).toBe(false);
 		expect(records(r.state).map((x) => x.decision)).toEqual(["refused"]);
 	});
