@@ -69,10 +69,11 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       and `bun/spec-coverage.test.ts` before and after, per `core/testing.md`.
       The set changes by exactly 1.1's addition and 1.2's, and by nothing else
       — this change deletes no case (*A citation below an escaped quote*).
-      Measured from each revision's JUnit report: 43 paths on `main`, 60 here,
-      no path removed. The 17 added are 1.1's two, 1.2's thirteen, and the two
+      Measured from each revision's JUnit report: 43 paths on `main`, 61 here,
+      no path removed. The 18 added are 1.1's two, 1.2's thirteen, the two
       derivation cases 1.3 asks to keep — a citation below a closed block, and
-      a call on the line a block opens on
+      a call on the line a block opens on — and the pre-PR `/zombies` pass's
+      one, a citation below a block left open
 - [x] 1.6 Measure every capped file this change touched and record the numbers,
       whether or not any is over. The cap covers `.ts`, `.tsx` and `.css`, so
       `core/rules.md` is not in this list — the always-on budget in its own
@@ -80,7 +81,7 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       checked. Capped: `bun/scan.ts`, `bun/scan.test.ts`,
       `bun/spec-coverage.ts`, `bun/spec-coverage.test.ts`
       (*change-slicing/No source file exceeds its per-file cap*). Against the
-      `.ts` cap of 300: 264, 133, 224 and 255 lines, none over
+      `.ts` cap of 300: 264, 133, 224 and 263 lines, none over
 - [x] 1.7 Add the rule of two to `core/rules.md`'s Code list, in its own
       commit per the rule about a rules edit no artefact asks for. Tighten the
       neighbouring rule rather than appending a variant if it already covers
