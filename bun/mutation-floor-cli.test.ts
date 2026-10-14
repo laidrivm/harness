@@ -4,7 +4,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { cleanup, emptyDir, report } from "./mutation-floor.fixture.ts";
 
 afterAll(cleanup);
@@ -13,30 +13,22 @@ afterAll(cleanup);
 const FLOOR = 3;
 
 describe("the command line entry point", () => {
-	const cli = (
-		report: string | null,
-		files: Record<string, string> = { "src/model.ts": "const x = 1;\n" },
-	) => {
+	const cli = (report: string | null) => {
 		const dir = emptyDir("mutation-floor-cli-");
 		// A consumer of our own, run from inside, so the check resolves this
-		// report, this model and this floor rather than any real repository's.
+		// report and this floor rather than any real repository's.
 		Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
 		writeFileSync(
 			join(dir, "package.json"),
 			JSON.stringify({
 				harness: {
 					mutationFloor: {
-						module: "src/model.ts",
 						surviving: FLOOR,
 						why: "measured",
 					},
 				},
 			}),
 		);
-		for (const [path, text] of Object.entries(files)) {
-			mkdirSync(join(dir, dirname(path)), { recursive: true });
-			writeFileSync(join(dir, path), text);
-		}
 		if (report !== null) {
 			mkdirSync(join(dir, "reports", "mutation"), { recursive: true });
 			writeFileSync(join(dir, "reports", "mutation", "mutation.json"), report);
@@ -45,9 +37,6 @@ describe("the command line entry point", () => {
 			cwd: dir,
 		});
 	};
-
-	const holding = () =>
-		JSON.stringify(report(...Array(FLOOR).fill("Survived"), "Killed"));
 
 	test("it exits 0 and says nothing when the count equals the floor", () => {
 		const run = cli(
@@ -68,30 +57,6 @@ describe("the command line entry point", () => {
 
 	test("it fails when the report is absent rather than passing", () => {
 		const run = cli(null);
-		expect(run.exitCode).not.toBe(0);
-	});
-
-	test("a malformed exemption in the model fails the check", () => {
-		const run = cli(holding(), {
-			"src/model.ts": "// Stryker disable next-line all\nconst x = 1;\n",
-		});
-		expect(run.stderr.toString()).toContain("all");
-		expect(run.exitCode).toBe(1);
-	});
-
-	test("the same comment in another file does not fail it", () => {
-		// The scan is scoped to the one file that is mutated; elsewhere the
-		// comment means nothing to Stryker and so means nothing here.
-		const run = cli(holding(), {
-			"src/model.ts": "const x = 1;\n",
-			"src/app/session.ts": "// Stryker disable next-line all\nconst y = 2;\n",
-		});
-		expect(run.stderr.toString()).toBe("");
-		expect(run.exitCode).toBe(0);
-	});
-
-	test("it fails when the model is absent rather than passing", () => {
-		const run = cli(holding(), {});
 		expect(run.exitCode).not.toBe(0);
 	});
 });

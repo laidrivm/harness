@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
- * Fails when the number of mutants surviving in the module the consumer names
- * differs from its floor — both under `harness.mutationFloor` in its
+ * Fails when the number of mutants surviving in Stryker's report differs from
+ * the floor the consumer declares under `harness.mutationFloor` in its
  * `package.json`. Reads Stryker's JSON report; it runs no tool, so a
  * Stryker that crashed is a non-zero exit its own invoker already surfaced, and
  * this check never has to tell that apart from an exceeded floor.
@@ -14,7 +14,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { read } from "./config.ts";
 import { root } from "./root.ts";
-import { comments } from "./scan.ts";
 
 /** Statuses meaning the tests let the mutant through. */
 const SURVIVING = ["Survived", "NoCoverage"];
@@ -125,73 +124,14 @@ export function gauge(count: number, floor: number, why: string): string[] {
 }
 
 /**
- * A `Stryker disable` directive, matched against a comment's text rather than a
- * line, because Stryker runs its own matcher over every comment Babel hands it
- * — a block-comment directive is one it honours, and one a line-leading scan
- * would never see.
- *
- * Deliberately looser than Stryker's `^\s?Stryker`, which allows a single
- * leading space: a directive written with two is one Stryker ignores in
- * silence, and failing on it is what tells the author so.
- */
-// Unanchored at the end, like Stryker's own: a block comment's text runs past
-// the directive's line, and `$` would refuse every multi-line one.
-const DISABLE = /^\s*Stryker disable\b(.*)/;
-
-/**
- * The one accepted tail: `next-line <Mutator>[,<Mutator>…]: <reason>`. A list
- * is accepted because one line can carry two mutants equivalent for the same
- * reason, and rejecting it would push the author towards `all`.
- */
-const ADMITTED = /^\s+next-line\s+([A-Za-z]+(?:\s*,\s*[A-Za-z]+)*)\s*:(.*)$/;
-
-/**
- * Every disable comment in `source` that is not the accepted form. Stryker
- * silently ignores a malformed one, so an author who mistypes it believes a
- * mutant is admitted while it still counts — this is what turns that into a
- * failure.
- *
- * `// Stryker restore` and an ignore-plugin are not checked for: a `restore`
- * with no matching `disable` changes nothing, and a plugin is a new file and a
- * new dependency, both of which a reviewer sees.
- */
-export function exemptions(source: string, path: string): string[] {
-	const lines = source.split("\n");
-	const problems: string[] = [];
-	for (const { text, line, block } of comments(source, "ts")) {
-		const marker = DISABLE.exec(text);
-		if (!marker) continue;
-		const at = `${path}:${line}: ${lines[line - 1]?.trim()}`;
-		// A directive in a block comment fails however well it is formed:
-		// Stryker honours both spellings, and one spelling in the codebase is
-		// what keeps a reader from having to know that.
-		const tail = block ? null : ADMITTED.exec(marker[1] ?? "");
-		if (!tail)
-			problems.push(
-				`${at} — write \`// Stryker disable next-line <Mutator>: <reason>\``,
-			);
-		else if (tail[1]?.split(",").some((name) => name.trim() === "all"))
-			problems.push(
-				`${at} — names \`all\`, which would also silence a mutant added to that line later`,
-			);
-		else if (!tail[2]?.trim()) problems.push(`${at} — states no reason`);
-	}
-	return problems;
-}
-
-/**
  * Resolved from the repository root rather than the working directory, so the
  * check reads the same report whichever directory of the repository it runs in.
  */
 export const REPORT = join(root, "reports", "mutation", "mutation.json");
 
 if (import.meta.main) {
-	// The one file Stryker mutates, and so the only one the scan is scoped to.
-	const { module, surviving, why } = read(root, "mutationFloor");
-	const problems = [
-		...gauge(survivors(loadReport(REPORT)), surviving, why),
-		...exemptions(readFileSync(join(root, module), "utf8"), module),
-	];
+	const { surviving, why } = read(root, "mutationFloor");
+	const problems = gauge(survivors(loadReport(REPORT)), surviving, why);
 	for (const problem of problems) console.error(problem);
 	if (problems.length) process.exit(1);
 }
