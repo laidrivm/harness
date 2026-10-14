@@ -84,6 +84,6 @@ One group, one harness pull request on `feat/goal-check-verdict`.
       README and this change's own artefacts. Correct what the step makes
       false. Verify: the grep names no site still saying a merged pull request
       leaves the stage `open`.
-- [ ] 1.6 `bun bun/pre-pr.ts` reports the step's diff within the budget, and
+- [x] 1.6 `bun bun/pre-pr.ts` reports the step's diff within the budget, and
       the pull request body names *A stage is done when the check says so* as
       the requirement it closes.
