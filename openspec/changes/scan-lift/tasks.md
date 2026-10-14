@@ -81,7 +81,7 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       `bun/spec-coverage.ts`, `bun/spec-coverage.test.ts`
       (*change-slicing/No source file exceeds its per-file cap*). Against the
       `.ts` cap of 300: 264, 133, 224 and 255 lines, none over
-- [ ] 1.7 Add the rule of two to `core/rules.md`'s Code list, in its own
+- [x] 1.7 Add the rule of two to `core/rules.md`'s Code list, in its own
       commit per the rule about a rules edit no artefact asks for. Tighten the
       neighbouring rule rather than appending a variant if it already covers
       the direction: the existing one is *Inline a single-caller helper only
@@ -90,7 +90,12 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       it: `core/rules.md` against the line trigger `context-budget` fixes, and
       the Code sublist against the per-sublist trigger `agent-rulebook` fixes
       (*context-budget/The trigger fires on the one file* — this change's own
-      criterion is closed elsewhere, and citing it here would be false)
+      criterion is closed elsewhere, and citing it here would be false).
+      Measured after: `core/rules.md` 195 lines against ~350; the Code sublist
+      20 rules, which reaches its ~20 trigger. What the trigger asks for — a
+      merge, promotion or deletion out of Code — is the Harness card *Move
+      rules that die with their code into comments at that code*, which now
+      records the count
 - [x] 1.8 Confirm `src/app/module-classes.test.ts` (in d2ass) is untouched by
       this change and passes — it is `blank`'s only caller outside the scanner's
       own tests, a test itself rather than production code, and therefore the
