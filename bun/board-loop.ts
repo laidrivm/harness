@@ -1,14 +1,15 @@
 #!/usr/bin/env bun
 /**
  * One pass of the board loop: the user's own script, started from a terminal
- * of their own at the root of a clone used for nothing else. It carries the
- * next apply step of the change the user names in a fresh, unattended
+ * of their own at the root of a clone used for nothing else. A short pick
+ * session reads `Board view` and names the first takeable card in the board's
+ * order. The pass carries that change's next apply step in a fresh, unattended
  * `claude -p` session under `stage-goal`'s launch form, then takes the
  * outcome from the goal check it runs itself, never from the session's exit
  * status.
  *
- *   bun bun/board-loop.ts <change>                        (the harness)
- *   bun node_modules/harness/bun/board-loop.ts <change>   (a consumer)
+ *   bun bun/board-loop.ts                        (the harness)
+ *   bun node_modules/harness/bun/board-loop.ts   (a consumer)
  *
  * It refuses inside a Claude Code session: an agent's `bun` call names no
  * `claude -p` for the classifier to refuse. It never discards work to
@@ -87,15 +88,43 @@ function prompt(slug: string, step: number, check: string): string {
 	].join("\n");
 }
 
+/** The pick session's prompt: no goal, and nothing for it to write. */
+function pickPrompt(board: string, slugs: string[]): string {
+	return [
+		`Read the saved view named \`Board view\` of the Notion board ${board}, and change nothing anywhere.`,
+		"This session runs unattended.",
+		`These changes are takeable: ${slugs.join(", ")}. A card's \`Pointer\` names its change as \`openspec/changes/<slug>/\`.`,
+		"Take the `applying` column before `proposed`, and each column in the order the view returns it. Find the first card whose pointer names one of those changes.",
+		"End with one line, `PICK: <slug>` for its change or `PICK: none` when no card names one, and write no other line starting `PICK:`.",
+	].join("\n");
+}
+
+/** One `claude -p` session, ended at `limit`; `capture` keeps its output rather than showing it. */
+async function session(text: string, limit: number, capture = false) {
+	// Auto mode with nothing to answer prompts; never a bypass of permissions.
+	const flags = ["--permission-mode", "auto", "--permission-prompts", "none"];
+	const run = Bun.spawn(["claude", "-p", text, ...flags], {
+		stdio: ["ignore", capture ? "pipe" : "inherit", "inherit"],
+	});
+	let late = false;
+	const timer = setTimeout(() => {
+		late = true;
+		// shortcut: SIGTERM to `claude` alone; send SIGKILL to its group if one is seen to outlive it.
+		run.kill();
+	}, limit);
+	const out = capture ? new Response(run.stdout as ReadableStream).text() : "";
+	await run.exited;
+	clearTimeout(timer);
+	// A killed session's output is not waited for: a child it left may hold the pipe open.
+	return { late, out: late ? "" : await out };
+}
+
 /** One pass. `limit` is lowered only by a test, through an entry module. */
 export async function pass(args: string[], limit = LIMIT): Promise<number> {
 	// Its presence, whatever its value, before any command runs.
 	if ("CLAUDECODE" in process.env)
 		return end("refused", "a Claude Code session started it — start the runner from a terminal of your own");
-	const [slug, ...rest] = args;
-	// A path segment, so it can neither climb out of `openspec/changes/` nor name another tree.
-	if (!/^\w[\w.-]*$/.test(slug ?? "") || rest.length)
-		return end("refused", "usage: board-loop.ts <change>");
+	if (args.length) return end("refused", "usage: board-loop.ts — it takes no argument and follows Board view");
 
 	const top = sh("git", "rev-parse", "--show-toplevel");
 	if (!top.ok) return end("refused", "not inside a git repository");
@@ -126,7 +155,14 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 
 	// Imported here: `root.ts`, under it, runs git as it loads, and a pass
 	// started from a session must have run nothing.
-	const { boardState } = await import("./board-state.ts");
+	const { board, boardState } = await import("./board-state.ts");
+	let named: string;
+	try {
+		named = board(top.out);
+	} catch (error) {
+		// Names the key, never the value.
+		return end("refused", (error as Error).message);
+	}
 	let state: ReturnType<typeof boardState>;
 	try {
 		state = boardState(top.out);
@@ -145,32 +181,35 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 		} else takeable.set(name, seen);
 	}
 	if (takeable.size === 0) return end("idle", "no change is takeable");
+
+	const minutes = `${limit / 60_000} minutes`;
+	let picked: Awaited<ReturnType<typeof session>>;
+	try {
+		picked = await session(pickPrompt(named, [...takeable.keys()]), limit, true);
+	} catch {
+		return end("refused", "claude could not be started");
+	}
+	if (picked.late) return end("timeout", `the pick session ran past ${minutes}`);
+	if (picked.out.trim()) console.log(picked.out.trim());
+	// Untrusted text: one exact line, naming a change this pass computed as takeable.
+	const lines = picked.out.split("\n").filter((line) => line.startsWith("PICK:"));
+	const slug = lines.length === 1 ? /^PICK: (\w[\w.-]*)$/.exec(lines[0].trimEnd())?.[1] : undefined;
+	if (!slug) return end("refused", "the pick session returned not one exact PICK: line");
+	if (slug === "none") return end("idle", "the pick session found no takeable card on the board");
 	const chosen = takeable.get(slug);
 	if (!chosen)
-		return end("refused", `${slug}: ${reasons.get(slug) ?? "no change of that name is proposed"}`);
+		return end("refused", `the pick session named ${slug}: ${reasons.get(slug) ?? "no change of that name is takeable"}`);
 
 	const target = `apply ${slug} step ${chosen.step}`;
 	const check = join(import.meta.dir, "goal-check.ts");
 	console.log(`carrying ${target} on ${chosen.branch}`);
-	let late = false;
+	let late: boolean;
 	try {
-		const launch = prompt(slug, chosen.step, relative(top.out, check));
-		// Auto mode with nothing to answer prompts; never a bypass of permissions.
-		const flags = ["--permission-mode", "auto", "--permission-prompts", "none"];
-		const session = Bun.spawn(["claude", "-p", launch, ...flags], {
-			stdio: ["ignore", "inherit", "inherit"],
-		});
-		const timer = setTimeout(() => {
-			late = true;
-			// shortcut: SIGTERM to `claude` alone; send SIGKILL to its group if one is seen to outlive it.
-			session.kill();
-		}, limit);
-		await session.exited;
-		clearTimeout(timer);
+		({ late } = await session(prompt(slug, chosen.step, relative(top.out, check)), limit));
 	} catch {
 		return end("refused", "claude could not be started");
 	}
-	if (late) return end("timeout", `${target} ran past ${limit / 60_000} minutes`);
+	if (late) return end("timeout", `${target} ran past ${minutes}`);
 
 	// The check's own verdict at the commit the session left, never the exit status.
 	const verdict = sh("bun", check, "apply", slug, String(chosen.step));

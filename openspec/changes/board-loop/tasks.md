@@ -121,11 +121,16 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       among them. The fixture's `claude` stub answers the pick with a `PICK:`
       line and every earlier case runs with no argument, so before 2.2 the
       three runner files were 7 pass, 42 fail, every pick case among them.
-- [ ] 2.2 Launch the pick session before the stage session: no goal, the
+- [x] 2.2 Launch the pick session before the stage session: no goal, the
       same flags, and the same time limit. Accept one exact `PICK:` line that
       names a slug from the takeable list. Delete the argument, which was
       step 1's stub. Verify: 2.1 is green, 1.1–1.3 are still green, and the
       file is under its cap.
+      Evidence: both sessions share one launcher, `session()`. The board's
+      name comes from `board-state.ts`'s `board()`, now exported, so a
+      missing or address-shaped `harness.board` refuses with that module's
+      own message. The three runner files are 49 pass, 0 fail, and
+      `bun/board-loop.ts` is 221 lines against the cap of 300.
 - [ ] 2.3 Update the *Consuming* line: the runner takes no argument and
       follows `Board view`. Verify: `grep -n board-loop README.md` reads
       that way.
