@@ -73,7 +73,9 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       no path removed. The 18 added are 1.1's two, 1.2's thirteen, the two
       derivation cases 1.3 asks to keep — a citation below a closed block, and
       a call on the line a block opens on — and the pre-PR `/zombies` pass's
-      one, a citation below a block left open
+      one, a citation below a block left open. So the set moved by three
+      cases more than this task's prediction names, all of them additions;
+      the claim it exists for, that no case is deleted, holds
 - [x] 1.6 Measure every capped file this change touched and record the numbers,
       whether or not any is over. The cap covers `.ts`, `.tsx` and `.css`, so
       `core/rules.md` is not in this list — the always-on budget in its own
