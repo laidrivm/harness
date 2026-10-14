@@ -153,7 +153,22 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
       Evidence: `grep -n board-loop README.md` finds line 67, which names
       the command with no `<change>`, says it takes no argument, and says a
       short session reads `Board view` on the board `harness.board` names.
-- [ ] 2.4 The pull request's *Check by hand* gives the user a live pass with
+- [x] 2.4 The pull request's *Check by hand* gives the user a live pass with
       two takeable changes, the second dragged above the first, and says
       which one the pass must carry. Verify: the pull request body holds it.
-      evidence: pending the user's live pass
+      Evidence: #123's body held it. The user ran the pass on 2026-10-14 in a
+      clone of the harness, on `main` after a pull and `bun install`, with
+      the harness pin at 57a0173. They first dragged
+      `drop-mutation-exemptions` to the top of `proposed`, above
+      `capture-as-mechanism`, `tracked-file-sweep` and `interpreter-prompt`.
+      `bun bun/board-loop.ts` printed
+      `passed over board-loop: pull request #123 already used feat/board-loop-2`
+      and `passed over scan-lift: every group is ticked`. The pick session
+      read `Board view` across two pages and changed nothing. It found
+      `applying` holding only `scan-lift` and `board-loop`, neither of them
+      takeable, and `proposed` in the dragged order. It ended with
+      `PICK: drop-mutation-exemptions`, and the next line read
+      `carrying apply drop-mutation-exemptions step 1 on feat/drop-mutation-exemptions-1`.
+      So the pick followed the drag, not alphabetical or creation order.
+      The stage session was still running when this was written, so no exit
+      status is recorded here.
