@@ -27,6 +27,7 @@ describe("started from a session", () => {
 });
 
 describe("the clone", () => {
+	// spec: board-loop/an-untrusted-clone
 	// Claude Code ignores the tracked `permissions.allow` in a folder nobody trusted.
 	test.each([
 		["no ~/.claude.json", () => null],
