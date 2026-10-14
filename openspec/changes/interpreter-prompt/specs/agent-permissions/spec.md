@@ -33,6 +33,9 @@ SHALL be asked about unless one of the following holds:
   `bun --help` lists, or an alias that help names, other than `exec`, `repl`
   and `create` with its alias `c`, which run code handed to them. `run` given
   an operand that is an existing file applies the rule above to that file.
+  `run` given a script name applies it to the `package.json` the script is
+  read from, and reads the script's command line as a command line, so a
+  script that runs an untracked file or inline code asks as typing it would.
 
 The resolution of uncertainty goes towards asking. A path the guard cannot
 resolve statically, such as one carrying `$`, behind an unresolvable `cd` or
