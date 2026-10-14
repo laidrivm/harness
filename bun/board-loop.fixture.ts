@@ -1,11 +1,12 @@
 /**
  * The runner spawned in a clone of a bare `origin`, for the three
  * `board-loop*.test.ts` files. Its environment has no `CLAUDECODE` (`bun test`
- * runs inside a session), a state directory of its own, and a `PATH` of stubs
+ * runs inside a session), a state directory and a home of its own, the
+ * home's `.claude.json` trusting the clone, and a `PATH` of stubs
  * that each append their name and arguments to one log, so no case reaches
  * GitHub or a registry or starts a session.
  */
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { emptyDir, git } from "./diff-budget.fixture.ts";
 import { records as ledger } from "./goal-check.fixture.ts";
@@ -130,21 +131,34 @@ export function lowered(ms: number): string {
 	return entry;
 }
 
-/** One pass in `dir`, under the stubs `s`. `args` is only for the usage refusal. */
+/** A `~/.claude.json` whose `projects` trusts each of `dirs`, by real path. */
+export const trusting = (...dirs: string[]) =>
+	JSON.stringify({
+		projects: Object.fromEntries(dirs.map((d) => [realpathSync(d), { hasTrustDialogAccepted: true }])),
+	});
+
+/**
+ * One pass in `dir`, under the stubs `s`. `args` is only for the usage
+ * refusal. The fixture home's `.claude.json` is `claudeJson`, `null` for none,
+ * and trusts `dir` unless given.
+ */
 export function run(
 	dir: string,
 	args: string[] = [],
 	s: Stubs = {},
-	opts: { env?: Record<string, string>; state?: string; entry?: string } = {},
+	opts: { env?: Record<string, string>; state?: string; entry?: string; claudeJson?: string | null } = {},
 ) {
 	const log = join(emptyDir("board-loop-log-"), "calls");
 	writeFileSync(log, "");
 	const state = opts.state ?? emptyDir("board-loop-state-");
+	const home = emptyDir("board-loop-home-");
+	const claudeJson = opts.claudeJson === undefined ? trusting(dir) : opts.claudeJson;
+	if (claudeJson !== null) writeFileSync(join(home, ".claude.json"), claudeJson);
 	const call = Bun.spawnSync([process.execPath, opts.entry ?? runner, ...args], {
 		cwd: dir,
 		env: {
 			PATH: bin(log, s),
-			HOME: emptyDir("board-loop-home-"),
+			HOME: home,
 			XDG_STATE_HOME: state,
 			...opts.env,
 		},
