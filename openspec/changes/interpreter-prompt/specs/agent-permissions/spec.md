@@ -95,7 +95,8 @@ the whole command, so a refused act anywhere in the command still exits 2.
 #### Scenario: A bun subcommand
 
 - **WHEN** the agent attempts `bun test`, `bun run check` where `check` is a
-  `package.json` script, `bun info zod` or `bun x some-tool`
+  script of a tracked, unedited `package.json` whose command line asks
+  nothing, `bun info zod` or `bun x some-tool`
 - **THEN** this requirement asks about none of them. Any decision on `bun x`
   is the `bunx` check's, not this one's
 
@@ -104,6 +105,14 @@ the whole command, so a refused act anywhere in the command still exits 2.
 - **WHEN** the agent attempts `bun exec "git push --force"`, `bun repl`, or
   `bun run /tmp/x.ts`
 - **THEN** the guard asks
+
+#### Scenario: A package script the tree does not vouch for
+
+- **WHEN** the agent attempts `bun run check` where `package.json` is
+  untracked or carries an uncommitted or staged edit, or where the `check`
+  script's command line is `bun x.ts` and `x.ts` is untracked
+- **THEN** the guard asks, because the script's text or what it runs is not in
+  the tree a reviewer reads
 
 #### Scenario: A path the guard cannot resolve
 

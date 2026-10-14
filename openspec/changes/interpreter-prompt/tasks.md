@@ -31,7 +31,10 @@ text the guard cannot read prompts* but
 - [ ] 1.2 Write the controls in the same file, which must pass both before and
       after: a clean tracked script, a file under the repository's top-level
       `node_modules/`, the long version and help queries, `bash -c "echo hi"`,
-      `bun test` and `bun run <package script>`. Each has empty stdout and exit
+      `bun test` and `bun run <script of a tracked, unedited package.json>`;
+      beside them, as cases that must ask, `bun run check` with an edited or
+      untracked `package.json`, and with a script whose command line runs an
+      untracked file (PR #100 review). Each control has empty stdout and exit
       0. Assert at the module level that `bun x tool` and a bare `sh` reading a
       pipe get no reason from this check. Those two belong to the `bunx` check
       and the shell-stdin check [2, 4, 11, 12, 13, 14, 15, 22]
