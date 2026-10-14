@@ -187,6 +187,7 @@ describe("the pick", () => {
 		expect(pick).not.toContain("change nothing anywhere");
 		expect(pick).toContain("set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`");
 		expect(pick).toContain("write no other card or property");
+		expect(pick).toContain("Write nothing when that line names no change listed above.");
 	});
 
 	// spec: board-loop/a-card-already-applying
