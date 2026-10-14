@@ -116,7 +116,7 @@ function pickPrompt(board: string, slugs: string[]): string {
 		"This session runs unattended.",
 		`These changes are takeable: ${slugs.join(", ")}. A card's \`Pointer\` names its change as \`openspec/changes/<slug>/\`.`,
 		"Take the `applying` column before `proposed`, and each column in the order the view returns it. Find the first card whose pointer names one of those changes.",
-		"Before you answer, set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`, then fetch that card again, and write no other card or property. Leave a card already at `applying` unwritten. A write that fails changes nothing about your answer.",
+		"Before you answer, set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`, then fetch that card again, and write no other card or property. Write nothing when that line names no change listed above. Leave a card already at `applying` unwritten. A write that fails changes nothing about your answer.",
 		"End with one line, `PICK: <slug>` for its change or `PICK: none` when no card names one, and write no other line starting `PICK:`.",
 	].join("\n");
 }
