@@ -73,12 +73,12 @@ and cited in one move, leaving the count where it was.
 A test SHALL cite a criterion in a `// spec:` comment placed directly above a
 `test`, `it` or `describe` call, separated from it by nothing but blank lines
 and further comment lines. A member form of those three SHALL be accepted as
-well — `test.each`, `test.skip`, `describe.each` — because `docs/testing.md`
+well — `test.each`, `test.skip`, `describe.each` — because `core/testing.md`
 counts a `test.each` row as a test, and a scanner that recognised only `test(`
 would call a citation above one unmatched. One comment SHALL carry any number of identifiers,
 whitespace-separated or one per continuation line, because a single act may
 satisfy several criteria; and several tests SHALL be free to cite one
-criterion, because `docs/testing.md` requires one arrange and one act per test
+criterion, because `core/testing.md` requires one arrange and one act per test
 and so expands a criterion into several of them. A criterion counts as cited
 once, however many tests cite it.
 
@@ -119,8 +119,8 @@ the opposite of what this capability is for.
 
 #### Scenario: A citation floating in a file
 
-- **WHEN** a `// spec:` comment is followed by anything other than a `test`,
-  `it` or `describe` call
+- **WHEN** the first line after a `// spec:` comment that is neither blank
+  nor a comment is anything other than a `test`, `it` or `describe` call
 - **THEN** the check fails, so a block of citations cannot claim coverage no
   test performs
 
@@ -129,6 +129,21 @@ the opposite of what this capability is for.
 - **WHEN** a scenario heading is reworded and the test citing its old slug is
   left alone
 - **THEN** the check fails, naming the citation and its file
+
+#### Scenario: A citation below an escaped quote
+
+- **WHEN** a test file holds a line whose string literal contains an escaped
+  quote followed by `/*` — `const s = "he said \"/*\"";` — and a `// spec:`
+  citation on a later line
+- **THEN** the citation counts, because the scan carries the string's state
+  through the escape rather than ending the literal at it
+
+#### Scenario: A spec marker inside a template literal
+
+- **WHEN** a line of a multi-line template literal begins with
+  `// spec: <identifier>`, above a `test` call
+- **THEN** it is not a citation, because the scan reports no comment there —
+  and a real `// spec:` line comment in the same file still counts
 
 ### Requirement: The count of uncited criteria may not rise silently
 
