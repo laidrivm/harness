@@ -156,3 +156,4 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
 - [ ] 2.4 The pull request's *Check by hand* gives the user a live pass with
       two takeable changes, the second dragged above the first, and says
       which one the pass must carry. Verify: the pull request body holds it.
+      evidence: pending the user's live pass

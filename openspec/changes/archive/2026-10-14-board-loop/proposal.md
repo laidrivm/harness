@@ -112,8 +112,8 @@ and the five that task 1.0 added once their directories landed:
 - `loop-guard` refuses a call that keeps failing the same way, and leaves
   ending such a session, and wall-clock time, to this runner.
 
-All five were archived on 2026-10-13. `board-state-per-project` is the one
-still open, so `board-state` reports this change blocked until it archives.
+All five were archived on 2026-10-13, and `board-state-per-project` on
+2026-10-14, so nothing in `after:` blocks this change any more.
 
 ## Capabilities
 
