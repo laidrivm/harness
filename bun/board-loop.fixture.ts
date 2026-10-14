@@ -86,6 +86,8 @@ export type Stubs = {
 	pick?: string;
 	/** Seconds the pick session runs for, printing nothing. */
 	pickSleep?: number;
+	/** Whether the pick session leaves a child running that holds its output open. */
+	pickChild?: boolean;
 };
 
 /** The stub directory. `bun` answers both the install and the goal check. */
@@ -113,7 +115,7 @@ function bin(log: string, s: Stubs): string {
 	const stage = s.sleep ? `exec /bin/sleep ${s.sleep}` : `exit ${s.claudeCode ?? 0}`;
 	const pick = s.pickSleep
 		? `exec /bin/sleep ${s.pickSleep}`
-		: `printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
+		: `${s.pickChild ? "/bin/sleep 30 2>/dev/null & " : ""}printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
 	if (s.claudeCode !== null) stub("claude", `case "$2" in\n/goal*) ${stage} ;;\n*) ${pick} ;;\nesac`);
 	return dir;
 }

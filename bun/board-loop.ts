@@ -19,8 +19,8 @@
  * exit 0 for `met` and `idle` alone, so a shell loop stops where a person is
  * needed.
  */
-import { readFileSync, realpathSync } from "node:fs";
-import { homedir } from "node:os";
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { record } from "./gate-ledger.ts";
 import { groups } from "./turn-gate.ts";
@@ -117,8 +117,10 @@ function pickPrompt(board: string, slugs: string[]): string {
 async function session(text: string, limit: number, capture = false) {
 	// Auto mode with nothing to answer prompts; never a bypass of permissions.
 	const flags = ["--permission-mode", "auto", "--permission-prompts", "none"];
+	// A file, not a pipe: a child the session leaves running could hold a pipe open and stall the pass.
+	const dir = capture ? mkdtempSync(join(tmpdir(), "board-loop-")) : "";
 	const run = Bun.spawn(["claude", "-p", text, ...flags], {
-		stdio: ["ignore", capture ? "pipe" : "inherit", "inherit"],
+		stdio: ["ignore", capture ? Bun.file(join(dir, "out")) : "inherit", "inherit"],
 	});
 	let late = false;
 	const timer = setTimeout(() => {
@@ -126,11 +128,12 @@ async function session(text: string, limit: number, capture = false) {
 		// shortcut: SIGTERM to `claude` alone; send SIGKILL to its group if one is seen to outlive it.
 		run.kill();
 	}, limit);
-	const out = capture ? new Response(run.stdout as ReadableStream).text() : "";
 	await run.exited;
 	clearTimeout(timer);
-	// A killed session's output is not waited for: a child it left may hold the pipe open.
-	return { late, out: late ? "" : await out };
+	if (!capture) return { late, out: "" };
+	const out = readFileSync(join(dir, "out"), "utf8");
+	rmSync(dir, { recursive: true });
+	return { late, out };
 }
 
 /** One pass. `limit` is lowered only by a test, through an entry module. */

@@ -202,6 +202,14 @@ describe("the pick", () => {
 		expect(records(r.state).map((x) => x.decision)).toEqual(["refused"]);
 	});
 
+	test("a child the pick session leaves running does not stall the pass", () => {
+		const { dir } = clone();
+		const started = Date.now();
+		const r = run(dir, [], { pickChild: true });
+		expect(Date.now() - started).toBeLessThan(20_000);
+		expect(r.last).toBe("board-loop: met — apply demo step 1");
+	});
+
 	test("a pick session still running at the limit gives timeout and starts no stage", () => {
 		const { dir } = clone();
 		const r = run(dir, [], { pickSleep: 30 }, { entry: lowered(1000) });
