@@ -25,14 +25,9 @@ const CALL = /^\s*(?:test|it|describe)(?:\.\w+)*\s*[(`]/;
 
 /**
  * A line-leading `// spec:` comment. Anything with code before it on the line
- * is not one, which is what keeps a single-line string literal out.
- *
- * ponytail: line-based, so a `// spec:` line inside a multi-line template
- * literal reads as a citation. The fix is to accept only a line comment the
- * scan's `comments` reports, left because `scan-lift` held how a citation is
- * read fixed while it switched how one is found; the failure is loud — a false citation either names a real criterion, wrongly
- * crediting one this file's fixtures never assert, or names none and fails the
- * check. Write fixtures with `\n` rather than as multi-line templates.
+ * is not one, which is what keeps a single-line string literal out; `cite()`
+ * tries it only on a line the scan reports a line comment opening on, which
+ * keeps a line of a multi-line template literal out.
  */
 const CITATION = /^\s*\/\/\s*spec:(.*)$/;
 
@@ -53,20 +48,24 @@ function cite(path: string, text: string) {
 	const lines = text.split("\n");
 	const found: Citation[] = [];
 	const wrong: string[] = [];
-	// Whether each line begins inside a `/* … */` block. Without it a `// spec:`
-	// line inside a commented-out block reads as a citation, and the `*/` under
-	// it reads as a separator, so the block silently credits a criterion. The
-	// line a block opens on is not one of them: code may stand before the
-	// opener, a test call included.
+	// Whether each line begins inside a `/* … */` block, which the walk from a
+	// citation to its call steps over. The line a block opens on is not one of
+	// them: code may stand before the opener, a test call included.
 	const enclosed = lines.map(() => false);
+	// The lines a `//` comment opens on: anywhere else — a line inside a
+	// template literal or a block comment — `// spec:` is text, not a citation.
+	const opens = new Set<number>();
 	for (const { text: body, line, block } of comments(text, "ts")) {
-		if (!block) continue;
+		if (!block) {
+			opens.add(line - 1);
+			continue;
+		}
 		const spans = body.split("\n").length - 1;
 		for (let k = 1; k <= spans; k++) enclosed[line - 1 + k] = true;
 	}
 
 	lines.forEach((line, index) => {
-		if (enclosed[index]) return;
+		if (!opens.has(index)) return;
 		const marker = CITATION.exec(line);
 		if (!marker) return;
 		const at = `${path}:${index + 1}`;

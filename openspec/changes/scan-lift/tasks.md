@@ -126,10 +126,13 @@ Closes `spec-test-traceability/a-spec-marker-inside-a-template-literal`.
       literal*). Measured against the code as it stood: the case failed,
       alone of the file's 26, citing `capability/a-first-thing` from inside
       the template and reporting nothing — the false citation is silent
-- [ ] 2.3 Try `CITATION` in `cite()` only on a line `comments` reports a line
+- [x] 2.3 Try `CITATION` in `cite()` only on a line `comments` reports a line
       comment opening on, from the comment list it already reads, and rewrite
       the `ponytail:` comment over `CITATION`, which names this hole as open.
-      2.2's case now passes (*A spec marker inside a template literal*)
+      2.2's case now passes (*A spec marker inside a template literal*). The
+      check that skipped a line beginning inside a block comment goes with it:
+      no line comment opens on such a line with nothing before it, and the
+      block-comment cases still pass
 - [ ] 2.4 Record the set of cited identifiers before and after 2.3 over this
       repository, d2ass and mellon, measured with `check()` over each tree,
       and say which citations moved and why (*A spec marker inside a template
