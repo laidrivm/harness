@@ -14,10 +14,10 @@ The runner SHALL refuse to start when `CLAUDECODE` is in its environment. It
 SHALL refuse a clone that `~/.claude.json` does not record as a trusted
 workspace under its real path, because a session there ignores the tracked
 `permissions.allow`. It SHALL refuse a tracked edit, or a branch tip no
-remote-tracking branch contains. Otherwise it SHALL fetch and fast-forward the default branch,
-refusing where it cannot and never merging or resetting. It SHALL then run
-`bun install --frozen-lockfile` and refuse when that fails, so that no session
-it launches has to install.
+remote-tracking branch contains. Otherwise it SHALL fetch and fast-forward
+the default branch, refusing where it cannot and never merging or resetting.
+It SHALL then run `bun install --frozen-lockfile` and refuse when that fails,
+so that no session it launches has to install.
 
 #### Scenario: Started from an agent's shell
 

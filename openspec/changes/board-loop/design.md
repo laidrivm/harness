@@ -19,7 +19,7 @@ user's terminal, dedicated clone (CLAUDECODE unset)
    |-- pick: argument (step 1) | pick session (step 2)        claude -p, Board view
    |-- stage session: launch form, unattended  claude -p       (stage-goal, agent-autonomy)
    |      branch, /opsx:apply, pre-PR, push, PR, card moved    (the session, as written)
-   |-- verdict: bun/goal-check.ts apply <slug> <n>             (stage-goal, #65)
+   |-- verdict: node_modules/harness/bun/goal-check.ts apply <slug> <n>  (stage-goal, #65)
    '-- one record: loop/<outcome>/apply                        (gate-decision-ledger)
 ```
 
@@ -166,6 +166,29 @@ carries no commit and holds only the outcome of the pass: `met`, `open`,
 otherwise, so a shell loop around the runner can stop on the first pass that
 needs a person.
 
+The check it runs is the pinned copy, `node_modules/harness/bun/goal-check.ts`
+under the clone's top, in the harness as in a consumer, and the stage prompt
+names the same file. The working tree's `bun/goal-check.ts` is the session's
+to edit, so a verdict read from it would let a session judge itself, which
+is what `self-pinned-gates` stopped for the gates. The install puts the copy
+there. A pass that finds it missing after the install refuses before any
+session, telling the user to run `bun install`. The user settled this on
+2026-10-14, closing the question step 1 left in its pull request.
+
+- *Alternative: the runner's own directory (`import.meta.dir`).* In the
+  harness that is the working tree the session edits.
+
+### The clone must be a trusted workspace
+
+In a folder whose trust dialog nobody accepted, Claude Code ignores the
+tracked `permissions.allow`, so under `--permission-prompts none` every call
+it lists is refused, and the pass would fail looking like the loop's fault
+(seen live on 2026-10-13 in a fresh clone). Before it fetches, the runner reads
+`projects[<real path of the clone>].hasTrustDialogAccepted` from
+`~/.claude.json` and refuses unless it is `true`, telling the user to run
+`claude` once in the clone, accept the dialog and `/exit`. Only the exact path
+counts: crediting a trusted parent could pass where Claude Code does not.
+
 ### The card is the stage session's to move
 
 The script cannot write the board. The session already has to move the card
@@ -192,6 +215,13 @@ named follow-up.
 - [A pick session that reads the board also reads text that a card's author
   wrote] → Only its `PICK:` line is used, and only when it names a slug the
   runner had already computed as takeable.
+- [A stage session in the harness edits `bun/goal-check.ts` so that its own
+  step reads as met] → Closed: the verdict runs the pinned copy under
+  `node_modules/harness/`, which no session's edit reaches before a pin bump
+  merges.
+- [The pinned check lags the harness's `main`] → It judges by the rules of
+  the pin, as every other gate here does since `self-pinned-gates`. A change
+  to the check takes effect for the loop once a pin bump carries it.
 
 ## Migration Plan
 
