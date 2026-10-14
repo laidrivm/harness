@@ -43,13 +43,17 @@ outside it as the ceiling. The "first argument" rule is deliberately crude:
 interpreter's options is an enumeration that goes stale, and asking costs
 only a prompt.
 
-### Tracked, or installed under `node_modules/`
+### Tracked, or installed under `node_modules/harness/`
 
 A committed file's text is in the tree a reviewer reads. An uncommitted or
 staged edit is not, and a shell write makes one past the guard, so it asks.
 Consumers run `bun node_modules/harness/bun/<script>.ts`, which they do not
-track, so the repository's own top-level `node_modules/` is exempt. A
-`node_modules` directory anywhere else is not.
+track, so the repository's own top-level `node_modules/harness/` is exempt.
+The rest of `node_modules/` is not: no measured command runs a file there,
+and exempting it would let a script written into `node_modules/.cache/` pass
+(local CodeRabbit review). A file written into `node_modules/harness/` itself
+still passes, which the stated ceiling accepts, since the guard is not built
+for an adversary.
 
 The operand resolves from every directory in the guard's `dirs` set, as `-C`
 does, and then to its real path: a tracked symlink puts only its target's

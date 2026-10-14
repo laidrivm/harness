@@ -24,7 +24,7 @@ consumer and still miss `bun --eval` and `python3 -Ic`.
 - The command guard answers `ask` (exit 0, a `PreToolUse` `permissionDecision`
   on stdout) when an interpreter is given program text it cannot read: inline
   code, a script file its repository neither holds committed nor installed
-  under `node_modules/`, or a non-shell interpreter's code on standard input.
+  under `node_modules/harness/`, or a non-shell interpreter's code on standard input.
   A hook's `ask` prompts even in auto mode. Whether a matching `allow` rule
   silences it is measured during apply. The new requirement lists the
   interpreters and the exemptions. A shell's `-c` text is still read and

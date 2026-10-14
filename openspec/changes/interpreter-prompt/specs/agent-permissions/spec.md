@@ -25,8 +25,10 @@ SHALL be asked about unless one of the following holds:
   *The git prohibitions are enforced by a hook* sets out;
 - its first argument, with its symlinks resolved, names a file that the git
   repository holding it tracks unchanged from `HEAD`, or a file under that
-  repository's top-level `node_modules/`. A staged or uncommitted edit asks,
-  because a shell write makes one as easily as the editing tool does;
+  repository's top-level `node_modules/harness/`, where the harness package
+  installs its scripts. A staged or uncommitted edit asks, because a shell
+  write makes one as easily as the editing tool does, and so does a file
+  elsewhere under `node_modules/`;
 - it is `bun` and its first argument is a subcommand that the installed
   `bun --help` lists, or an alias that help names, other than `exec`, `repl`
   and `create` with its alias `c`, which run code handed to them. `run` given
@@ -76,7 +78,8 @@ interpreter runs, such as anything encoded and handed to `make`, `find -exec`,
 
 - **WHEN** the agent attempts `bun /tmp/x.ts`, `python3 scratch.py` where
   `scratch.py` is untracked or edited, `bash /tmp/x.sh`, `source /tmp/env.sh`,
-  or a tracked symlink or one under `node_modules/` that points at such a file
+  `bun node_modules/.cache/x.ts`, or a tracked symlink or one under
+  `node_modules/harness/` that points at such a file
 - **THEN** the guard asks
 
 #### Scenario: A script the repository tracks
