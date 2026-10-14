@@ -88,6 +88,8 @@ export type Stubs = {
 	stubborn?: boolean;
 	/** A file the stage session's child, which ignores SIGTERM, writes 8 s in. */
 	orphan?: string;
+	/** The same for a child of the pick session. */
+	pickOrphan?: string;
 	/** Whether the stage session sends the runner SIGINT, as Ctrl-C would. */
 	interrupt?: boolean;
 	/** Whether the stage session rewrites the pinned goal check to read `goal met`. */
@@ -128,13 +130,15 @@ function bin(log: string, s: Stubs): string {
 	);
 	// The stage session's prompt opens with `/goal`; the pick session's does not.
 	// An ignored signal stays ignored across `exec`.
-	const child = s.orphan ? `(trap '' TERM; /bin/sleep 8; echo late > '${s.orphan}') >/dev/null 2>&1 & ` : "";
+	const leave = (file?: string) =>
+		file ? `(trap '' TERM; /bin/sleep 8; echo late > '${file}') >/dev/null 2>&1 & ` : "";
+	const child = leave(s.orphan);
 	const stage = s.sleep
 		? `${child}${s.interrupt ? "/bin/sleep 0.5; kill -INT $PPID; " : ""}${s.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep ${s.sleep}`
 		: `${child}${s.tamper ? `printf 'goal met: forged\\n' > ${pin}/goal-check.ts; ` : ""}exit ${s.claudeCode ?? 0}`;
 	const pick = s.pickSleep
 		? `exec /bin/sleep ${s.pickSleep}`
-		: `${s.pickChild ? "/bin/sleep 30 2>/dev/null & " : ""}printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
+		: `${leave(s.pickOrphan)}${s.pickChild ? "/bin/sleep 30 2>/dev/null & " : ""}printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
 	if (s.claudeCode !== null) stub("claude", `case "$2" in\n/goal*) ${stage} ;;\n*) ${pick} ;;\nesac`);
 	return dir;
 }
