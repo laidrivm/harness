@@ -19,7 +19,8 @@
  * exit 0 for `met` and `idle` alone, so a shell loop stops where a person is
  * needed.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, relative } from "node:path";
 import { record } from "./gate-ledger.ts";
 import { groups } from "./turn-gate.ts";
@@ -41,6 +42,19 @@ function sh(...args: string[]) {
 		return { ok: run.exitCode === 0, out: text(run.stdout), err: text(run.stderr) };
 	} catch {
 		return { ok: false, out: "", err: `${args[0]}: not found` };
+	}
+}
+
+/**
+ * Whether Claude Code's config trusts `dir`, keyed by its real path. The path
+ * itself only: crediting a trusted parent could pass where Claude Code does not.
+ */
+function trusted(dir: string): boolean {
+	try {
+		const config = JSON.parse(readFileSync(join(homedir(), ".claude.json"), "utf8"));
+		return config?.projects?.[dir]?.hasTrustDialogAccepted === true;
+	} catch {
+		return false;
 	}
 }
 
@@ -129,6 +143,11 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 	const top = sh("git", "rev-parse", "--show-toplevel");
 	if (!top.ok) return end("refused", "not inside a git repository");
 	process.chdir(top.out);
+	// In a folder nobody trusted Claude Code ignores the tracked `permissions.allow`,
+	// so under `--permission-prompts none` the session's every unlisted call is refused.
+	const real = realpathSync(top.out);
+	if (!trusted(real))
+		return end("refused", `not a trusted workspace — run claude once in ${real}, accept the trust dialog and /exit`);
 	if (sh("git", "status", "--porcelain", "--untracked-files=no").out)
 		return end("refused", "tracked files differ from HEAD — work the last session left");
 	if (!sh("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out)
