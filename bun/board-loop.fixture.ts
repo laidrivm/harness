@@ -83,7 +83,7 @@ export type Stubs = {
 	sleep?: number;
 	/** What the pick session prints: `PICK: demo` unless given. */
 	pick?: string;
-	/** Seconds the pick session runs for before printing. */
+	/** Seconds the pick session runs for, printing nothing. */
 	pickSleep?: number;
 };
 
@@ -110,11 +110,9 @@ function bin(log: string, s: Stubs): string {
 	);
 	// The stage session's prompt opens with `/goal`; the pick session's does not.
 	const stage = s.sleep ? `exec /bin/sleep ${s.sleep}` : `exit ${s.claudeCode ?? 0}`;
-	const pick = [
-		s.pickSleep ? `/bin/sleep ${s.pickSleep}` : ":",
-		`printf '%s\\n' '${s.pick ?? "PICK: demo"}'`,
-		`exit ${s.claudeCode ?? 0}`,
-	].join("; ");
+	const pick = s.pickSleep
+		? `exec /bin/sleep ${s.pickSleep}`
+		: `printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
 	if (s.claudeCode !== null) stub("claude", `case "$2" in\n/goal*) ${stage} ;;\n*) ${pick} ;;\nesac`);
 	return dir;
 }

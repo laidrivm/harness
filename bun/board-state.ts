@@ -235,7 +235,7 @@ const ADDRESS =
  * the value: a refused value is exactly the one that must travel no further,
  * into a CI log for instance.
  */
-function board(tree: string): string {
+export function board(tree: string): string {
 	const named: unknown = read(tree, "board");
 	if (typeof named !== "string" || named.trim() === "")
 		throw new Error(`"harness.board" holds no board name`);
