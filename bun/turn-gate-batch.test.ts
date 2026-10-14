@@ -13,10 +13,11 @@ import {
 import { decide, mark } from "./turn-gate.ts";
 
 /**
- * How `turn-gate.ts` reads every active task list, at the mark and at the
- * tip, in one `git cat-file --batch`: each answer must land on its own path,
- * whatever the files hold. Bracketed numbers are the proposal-stage `/zombies`
- * ideas, as `tasks.md` numbers them.
+ * How `turn-gate.ts` reads every active task list, at the mark, on
+ * `origin/main` and at the tip, in one `git cat-file --batch`: each answer
+ * must land on its own path, whatever the files hold. These repositories have
+ * no `origin/main`, so each path's middle answer is `missing`. Bracketed
+ * numbers are the proposal-stage `/zombies` ideas, as `tasks.md` numbers them.
  */
 
 afterAll(cleanup);

@@ -3,3 +3,8 @@ created: 2026-10-12
 after:
   - gate-decision-ledger
   - board-state-per-project
+  - stage-goal
+  - pre-pr-run-record
+  - agent-autonomy
+  - card-questions
+  - loop-guard

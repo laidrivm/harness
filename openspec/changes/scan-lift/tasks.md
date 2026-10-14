@@ -12,13 +12,14 @@ steps.
 
 Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
 
-- [ ] 1.1 Add the failing case first, against `bun/spec-coverage.ts` as it
+- [x] 1.1 Add the failing case first, against `bun/spec-coverage.ts` as it
       stands, and record that it fails. A test file holding `const s = "he said
       \"/*\"";` and a `// spec:` citation below it, asserting the citation is
       found. A case that passes before the switch pins nothing — the control is
       the same source without the escaped quote, which the implementation
-      already handles (*A citation below an escaped quote*)
-- [ ] 1.2 Cover `comments` in `bun/scan.test.ts` on the shapes the walk
+      already handles (*A citation below an escaped quote*). Measured against
+      the strip: the case failed, alone of the file's 22, and the control passed
+- [x] 1.2 Cover `comments` in `bun/scan.test.ts` on the shapes the walk
       exists for and `blank`'s cases cannot reach, because they are about what
       is returned rather than what survives: a block comment's opening line
       when its text spans lines, a `//` inside a block comment and a `/*`
@@ -27,15 +28,24 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       matter more once a second gate routes through this module — a regex
       literal containing `/*`, an escaped backtick, an unterminated template,
       CRLF — so close the ones `comments` makes reachable and name the rest
-      here (*A citation below an escaped quote*)
-- [ ] 1.3 Switch `bun/spec-coverage.ts` to the export: derive which lines
+      here (*A citation below an escaped quote*). All four are reachable and
+      closed. One remains open in `blank` alone: an unterminated template's
+      text is never erased, because the walk erases template text only when
+      the backtick closing it arrives — `comments` reports nothing past the
+      opener, which is correct, so it is named here and `blank` is left as
+      the design fixes it
+- [x] 1.3 Switch `bun/spec-coverage.ts` to the export: derive which lines
       sit inside a block comment from the comment list — a block opening on
       line *n* whose text spans *k* newlines encloses *n* through *n + k* — and
       delete the per-line strip with the `ponytail:` comment standing over it.
       1.1's case now passes. Keep two cases the derivation must not lose: a
       citation inside a commented-out block still does not count, and one below
-      a block that has closed still does (*A citation below an escaped quote*)
-- [ ] 1.4 Record the *set* of cited identifiers before and after 1.3, not only
+      a block that has closed still does (*A citation below an escaped quote*).
+      The lines marked are *n + 1* through *n + k*, the ones that begin inside
+      the block, which is what the strip computed: marking *n* as well would
+      skip a test call that a block opens after, measured by a probe that fails
+      the case pinning it
+- [x] 1.4 Record the *set* of cited identifiers before and after 1.3, not only
       the count, and set `FLOOR` to whatever the new count reads with the
       reason on its line. The count moves in either direction and neither is a
       defect on its own: a citation the old scanner dropped becomes visible and
@@ -44,19 +54,37 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       literal today, measured, because the per-line strip only removes quoted
       spans that open and close on one line. Read the set difference and say
       which citations moved and why; a count compared alone cannot tell the two
-      apart (*A citation below an escaped quote*)
-- [ ] 1.5 Compare the full set of describe paths across `bun/scan.test.ts`
+      apart (*A citation below an escaped quote*). Measured with this branch's
+      `check()` over each tree. This repository: 302 cited before and after,
+      the same set, 253 uncited. mellon: none either side. d2ass: 214 cited
+      before and 216 after, nothing lost, two gained —
+      `review-bot-config/a-harness-rule-arrives-with-a-pin-bump` and
+      `review-bot-config/a-harness-rule-violated` in
+      `checks/coderabbit-config.test.ts`, dropped because the line comment on
+      its line 103 reads `src/** until`, whose `/*` the strip took for a block
+      opener that nothing closed. No `FLOOR` stands in this repository: the
+      floor is each consumer's `harness.uncitedFloor`, so d2ass's moves from
+      197 to 195, with that reason, in the bump that takes this change
+- [x] 1.5 Compare the full set of describe paths across `bun/scan.test.ts`
       and `bun/spec-coverage.test.ts` before and after, per `core/testing.md`.
       The set changes by exactly 1.1's addition and 1.2's, and by nothing else
-      — this change deletes no case (*A citation below an escaped quote*)
-- [ ] 1.6 Measure every capped file this change touched and record the numbers,
+      — this change deletes no case (*A citation below an escaped quote*).
+      Measured from each revision's JUnit report: 43 paths on `main`, 61 here,
+      no path removed. The 18 added are 1.1's two, 1.2's thirteen, the two
+      derivation cases 1.3 asks to keep — a citation below a closed block, and
+      a call on the line a block opens on — and the pre-PR `/zombies` pass's
+      one, a citation below a block left open. So the set moved by three
+      cases more than this task's prediction names, all of them additions;
+      the claim it exists for, that no case is deleted, holds
+- [x] 1.6 Measure every capped file this change touched and record the numbers,
       whether or not any is over. The cap covers `.ts`, `.tsx` and `.css`, so
       `core/rules.md` is not in this list — the always-on budget in its own
       §*Maintenance & growth* is what governs it, and 1.7 is where that is
       checked. Capped: `bun/scan.ts`, `bun/scan.test.ts`,
       `bun/spec-coverage.ts`, `bun/spec-coverage.test.ts`
-      (*change-slicing/No source file exceeds its per-file cap*)
-- [ ] 1.7 Add the rule of two to `core/rules.md`'s Code list, in its own
+      (*change-slicing/No source file exceeds its per-file cap*). Against the
+      `.ts` cap of 300: 264, 133, 224 and 263 lines, none over
+- [x] 1.7 Add the rule of two to `core/rules.md`'s Code list, in its own
       commit per the rule about a rules edit no artefact asks for. Tighten the
       neighbouring rule rather than appending a variant if it already covers
       the direction: the existing one is *Inline a single-caller helper only
@@ -65,9 +93,16 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       it: `core/rules.md` against the line trigger `context-budget` fixes, and
       the Code sublist against the per-sublist trigger `agent-rulebook` fixes
       (*context-budget/The trigger fires on the one file* — this change's own
-      criterion is closed elsewhere, and citing it here would be false)
-- [ ] 1.8 Confirm `src/app/module-classes.test.ts` (in d2ass) is untouched by
+      criterion is closed elsewhere, and citing it here would be false).
+      Measured after: `core/rules.md` 195 lines against ~350; the Code sublist
+      20 rules, which reaches its ~20 trigger. What the trigger asks for — a
+      merge, promotion or deletion out of Code — is the Harness card *Move
+      rules that die with their code into comments at that code*, which now
+      records the count
+- [x] 1.8 Confirm `src/app/module-classes.test.ts` (in d2ass) is untouched by
       this change and passes — it is `blank`'s only caller outside the scanner's
       own tests, a test itself rather than production code, and therefore the
       control that the module's other export was not disturbed
-      (*A citation below an escaped quote*)
+      (*A citation below an escaped quote*). Untouched, 39 pass, run against
+      d2ass's pinned `bun/scan.ts`, which differs from this branch's by the
+      module comment's last sentence alone

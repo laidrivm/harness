@@ -129,6 +129,41 @@ describe("the turn gate's registrations", () => {
 	});
 });
 
+describe("the loop guard's registrations", () => {
+	const report = (change: (c: ReturnType<typeof policy>) => void) =>
+		settings(consumer(changed(change))).join("\n");
+	/** The policy's matcher-less groups on `event`: there, the guard's alone. */
+	const unmatched = (c: ReturnType<typeof policy>, event: string) =>
+		(c.hooks[event as keyof typeof c.hooks] ?? []).filter(
+			(g) => !("matcher" in g),
+		) as { matcher?: string }[];
+
+	// spec: loop-guard/a-consumer-without-the-hooks
+	test.each(["PreToolUse", "PostToolUseFailure"])(
+		"missing on %s is named, with the command that writes it [36]",
+		(event) => {
+			const text = report((c) => {
+				const hooks = c.hooks as Record<string, object[]>;
+				const gone = unmatched(c, event);
+				expect(gone).toHaveLength(1);
+				hooks[event] = hooks[event]?.filter((g) => !gone.includes(g)) ?? [];
+			});
+			expect(text).toContain(
+				`the ${event} hook is not the harness loop guard — run bun node_modules/harness/bun/sync.ts`,
+			);
+		},
+	);
+
+	test("registered under a matcher, so not for every tool, is named", () => {
+		const text = report((c) => {
+			const groups = unmatched(c, "PreToolUse");
+			expect(groups).toHaveLength(1);
+			for (const group of groups) group.matcher = "Edit";
+		});
+		expect(text).toContain("the PreToolUse hook is not the harness loop guard");
+	});
+});
+
 describe("the permission lists", () => {
 	test("a denied manager dropped is named", () => {
 		const config = changed((c) => {

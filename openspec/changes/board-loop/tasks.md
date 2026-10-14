@@ -18,11 +18,14 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
 
 ## 1. One pass for a change the user names
 
-- [ ] 1.0 Add `stage-goal`, `pre-pr-run-record`, `agent-autonomy`,
+- [x] 1.0 Add `stage-goal`, `pre-pr-run-record`, `agent-autonomy`,
       `card-questions` and `loop-guard` to `after:` in this change's
       `.openspec.yaml`, once each directory is on `main`. Verify:
       `bun test bun/board-state-hygiene.test.ts` is green.
-- [ ] 1.1 Write the precondition tests in `bun/board-loop.test.ts`:
+      Evidence: all five sit under `openspec/changes/archive/2026-10-13-*`;
+      `bun bun/board-state.ts` lists the seven and blocks on
+      `board-state-per-project` alone; the hygiene test is 9 pass, 0 fail.
+- [x] 1.1 Write the precondition tests in `bun/board-loop.test.ts`:
       - `CLAUDECODE` set refuses before any stub is called, and the message
         says to start the runner from your own terminal [1]. An empty value
         refuses too [2];
@@ -39,7 +42,9 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
         brought nothing [31].
       All of these fail before 1.4. (Req: board-loop — The runner is the
       user's script and starts from a clean clone)
-- [ ] 1.2 Write the takeable tests:
+      Evidence: 11 cases, with the stubs in `bun/board-loop.fixture.ts`; all
+      failed before the runner existed.
+- [x] 1.2 Write the takeable tests:
       - no `proposed` change is idle, launches nothing and exits 0 [8]. Every
         group ticked is not takeable [9];
       - a single-group change is step 1 on `feat/<slug>` [10]. Group 1
@@ -51,7 +56,10 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
         A slug with no directory is refused [16];
       - a failing or missing `gh` leaves nothing takeable [17].
       (Req: board-loop — A pass takes only a takeable change)
-- [ ] 1.3 Write the stage and verdict tests:
+      Evidence: `bun/board-loop-takeable.test.ts`, beside the precondition
+      file for the 300-line cap; it also refuses a call naming anything but
+      one change, with the usage. All failed before the runner existed.
+- [x] 1.3 Write the stage and verdict tests:
       - a stub `goal-check` printing `goal met` gives `met`, exit 0, and one
         `loop`/`met`/`apply` record [22];
       - `claude` is called with `-p`, `--permission-mode auto` and
@@ -68,16 +76,27 @@ There are two groups, each a harness pull request: `feat/board-loop-1`, then
         record [29].
       (Req: board-loop — A pass carries one step unattended and records the
       check's verdict)
-- [ ] 1.4 Export `groups()` from `bun/turn-gate.ts`. Write `bun/board-loop.ts`:
+      Evidence: `bun/board-loop-stage.test.ts`. The constant is `pass()`'s
+      default limit, which the timeout case lowers through a two-line entry
+      module (`lowered()` in the fixture). All failed before the runner
+      existed.
+- [x] 1.4 Export `groups()` from `bun/turn-gate.ts`. Write `bun/board-loop.ts`:
       it refuses, then brings the clone up to date and installs, then builds
       the takeable list, takes the named slug, launches the session with
       `stage-goal`'s launch form, runs the check, records and exits.
       Verify: 1.1–1.3 are green, `bun test` is green, and the file is under
       the per-file cap in `bun/file-size.ts`.
-- [ ] 1.5 Add the runner to `README.md`'s *Consuming* section: started by
+      Evidence: `stage-goal` had already exported `groups()` for the goal
+      check, so `bun/turn-gate.ts` is untouched and needed no split. The
+      three runner files are 42 pass, 0 fail; `bun test` is 1423 pass,
+      0 fail; `bun/board-loop.ts` is 182 lines against the cap of 300.
+- [x] 1.5 Add the runner to `README.md`'s *Consuming* section: started by
       the user from a terminal of their own, in a clone used for nothing
       else, and what one pass does. Verify: `grep -n board-loop README.md`
       finds it, and it restates neither the limit nor the takeable rule.
+      Evidence: `grep -n board-loop README.md` finds line 67, which names
+      neither. The ledger bullet above it now names the board loop among
+      the writers, since a pass records there.
 - [ ] 1.6 The pull request's *Check by hand* gives the user the command for
       one live pass in a dedicated clone of the harness, on a change at
       `proposed`. It lists what to look at: the step's pull request, the

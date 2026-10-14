@@ -3,8 +3,9 @@
  * `PreToolUse` guard for every Bash call, registered in
  * `.claude/settings.json`. It blocks the prohibitions no permission entry can
  * express: a commit while `HEAD` is on `main` or on a branch whose pull request
- * has merged, a force-push wherever the flag sits, and the `gh` commands that
- * publish text on the user's behalf.
+ * has merged, a force-push wherever the flag sits, the `gh` commands that
+ * publish text on the user's behalf, a shell handed a program the line does not
+ * spell out, and a `bunx` that would install what it runs.
  *
  * It runs without an `if` field on purpose. A permission pattern — which is
  * what `if` takes — matches the command word literally, so `/usr/bin/git` and
@@ -19,22 +20,25 @@
  * non-blocking, so an event this script cannot decide takes the blocking one
  * as well.
  *
- * Reading the command line is `command-parse.ts`'s; what this file
- * holds is what the prohibitions themselves are, the reading of a `gh`
- * invocation excepted, which is `command-guard-gh.ts`'s.
+ * Reading the command line is `command-parse.ts`'s, and what one command
+ * invokes is `command-words.ts`'s; what this file holds is what the
+ * prohibitions themselves are, the reading of a `gh` invocation excepted,
+ * which is `command-guard-gh.ts`'s, and of a shell's program and a `bunx`'s
+ * options, which is `command-guard-exec.ts`'s.
  */
 
 import { existsSync } from "node:fs";
 import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
-import { ghApiWrite, ghPublish } from "./command-guard-gh.ts";
-import { commands, invocations, place, SHELLS } from "./command-parse.ts";
-import { blocker } from "./gate-ledger.ts";
 import {
-	FORCE,
-	PUSH_VALUE_OPTIONS,
-	REF_WIDE,
-	VALUE_OPTIONS,
-} from "./git-options.ts";
+	bunxInstall,
+	shellWords,
+	unreadProgram,
+} from "./command-guard-exec.ts";
+import { ghApiWrite, ghPublish } from "./command-guard-gh.ts";
+import { commands } from "./command-parse.ts";
+import { invocations, place, SHELLS } from "./command-words.ts";
+import { blocker } from "./gate-ledger.ts";
+import { FORCE, pushWords, REF_WIDE, VALUE_OPTIONS } from "./git-options.ts";
 
 /**
  * Blocks a push whose destination cannot be shown to exclude `main`. Two
@@ -117,16 +121,23 @@ function refuseStranded(target: string): void {
 }
 
 function check(command: string): void {
-	for (const part of commands(command)) {
+	for (const part of commands(command, block)) {
 		// Every candidate, not the first: past a wrapper the parser cannot tell
 		// an option's operand from the command it wraps, and a candidate naming
 		// nothing this file guards costs a comparison.
-		for (const [name, rest] of invocations(part)) {
-			// `bash -c "git push --force"`, and `bash -lc …` too: short flags
-			// bundle, so `-c` neither stands alone nor has to come first.
-			const dashC = rest.findIndex((word) => /^-[a-z]*c[a-z]*$/.test(word));
-			if (SHELLS.has(name) && dashC >= 0) {
-				check(rest.slice(dashC + 1).join(" "));
+		for (const [index, [name, rest]] of invocations(part).entries()) {
+			const unread = unreadProgram(part, name, rest, index === 0);
+			if (unread) block("unread-program", unread);
+			const bunx = bunxInstall(name, rest);
+			if (bunx) block("bunx-install", bunx);
+			// `bash -c "git push --force"`, `bash -lc …` and `bash -oc pipefail
+			// …` too: the program is the first operand after the options and
+			// their values, wherever the `c` stood. Every word from there is read
+			// as a program on its own, since one that looks like a redirection
+			// may be it, and joined to the next it could hide its last command.
+			const shell = SHELLS.has(name) ? shellWords(rest) : null;
+			if (shell?.command) {
+				for (const word of rest.slice(shell.start)) check(word);
 				continue;
 			}
 			if (name === "eval") {
@@ -189,7 +200,10 @@ const ELSEWHERE =
 	"Every directory the line may run in is checked, so a cd into another checkout from one on main is refused too; name that checkout with git -C <path> instead.";
 
 function checkPush(args: string[], targets: (string | null)[]): void {
-	if (args.some((arg) => FORCE.test(arg))) {
+	// Classified as git's parser reads them, so a push option's value — `-o
+	// --force` — is neither a switch nor an operand.
+	const { switches, operands } = pushWords(args);
+	if (switches.some((arg) => FORCE.test(arg))) {
 		block(
 			"force-push",
 			"command-guard: force-pushing is the user's, not the agent's — the boundary is the rewrite, not how carefully it is leased. Ask the user to run it.",
@@ -206,7 +220,7 @@ function checkPush(args: string[], targets: (string | null)[]): void {
 	// accept costs nothing. The length guard keeps bare `--`, which ends the
 	// options and names nothing, from matching all four.
 	if (
-		args.some(
+		switches.some(
 			(arg) => arg.length > 2 && REF_WIDE.some((opt) => opt.startsWith(arg)),
 		)
 	) {
@@ -226,13 +240,7 @@ function checkPush(args: string[], targets: (string | null)[]): void {
 		);
 	}
 
-	for (let at = 0; at < args.length; at++) {
-		const arg = args[at] ?? "";
-		if (arg.startsWith("-")) {
-			if (PUSH_VALUE_OPTIONS.has(arg)) at++;
-			continue;
-		}
-
+	for (const arg of operands) {
 		// Every operand, the repository among them: one word cannot be told from
 		// a refspec without the decision refused above, and a remote called
 		// `main` refuses a push that would have been allowed — the safe way to

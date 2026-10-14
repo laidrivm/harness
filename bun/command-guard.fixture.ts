@@ -10,7 +10,14 @@
  * here: a lifecycle hook belongs to the file it runs for, so each test file
  * registers `cleanup` itself.
  */
-import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	utimesSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -155,3 +162,17 @@ export const event = (command: unknown, description = "") => ({
 	tool_name: "Bash",
 	tool_input: { command, description },
 });
+
+/** The guard's verdict on `command` from a feature branch, with the rule it recorded. */
+export function verdict(command: string): {
+	code: number;
+	reason: string;
+	rule?: string;
+} {
+	const state = fabricate(undefined, "command-guard-state-");
+	const env = { ...process.env, XDG_STATE_HOME: state };
+	const { code, reason } = run(event(command), fabricate("feat/x"), env);
+	const ledger = join(state, "harness", "gates.jsonl");
+	if (!existsSync(ledger)) return { code, reason };
+	return { code, reason, rule: JSON.parse(readFileSync(ledger, "utf8")).rule };
+}

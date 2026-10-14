@@ -120,6 +120,44 @@ completes, name the next step and the exact command.
   owns the form of the change artefacts themselves and may not restate
   what those files already say.
 
+## Unattended stages
+
+A session that carries one stage of one change with nobody present
+(unattended, as `autonomy.md` defines it) sets one `/goal` for that stage, so
+that it cannot end on prose with the stage half done. The `stage-goal`
+capability fixes what makes each stage done. `bun/goal-check.ts` decides it,
+or `node_modules/harness/bun/goal-check.ts` in a consumer. Explore gets no
+goal of its own, because an unattended exploration runs inside the `propose`
+goal. A conversation gets no goal at all.
+
+The launcher starts the stage with the goal as its prompt, and puts the
+declared line on a line of its own. For step 2 of a change `demo` in a
+consumer:
+
+```text
+claude -p '/goal Carry step 2 of the OpenSpec change demo: /opsx:apply demo for its group 2, the pre-PR sequence, the push and the pull request.
+This session runs unattended.
+The goal is met when the last line of `bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push, opens with `goal met` — or when the final message opens with `BLOCKED —` and names what only the user can settle.'
+```
+
+A proposal names `propose demo` and an archive names `archive demo`, with no
+step. The outcome is the launcher's own run of the same check once the session
+ends: exit 0 means the stage is done, and 1 means it is not. Two other
+signals look like an outcome and are not:
+
+- `claude -p`'s exit status reads `0` whether the goal was met or Claude
+  Code's block cap ended the run.
+- A `goal` record in the gate ledger names no change or step, so two targets
+  at one commit cannot be told apart.
+
+A goal run that will not converge ends at the round ceiling `stage-goal`
+fixes. When the stops that the goal itself continued since the prompt reach
+it, the turn gate ends the session with a `goal-ceiling:` reason and a
+`goal`/`rounds`/`ceiling` record, and leaves the goal set. The check then
+still reports `goal open`. To go on, resume the session with a prompt, which
+starts the count again: `claude -p --resume <session id> 'go on'`. To give
+the stage up instead, run `/goal clear` in it.
+
 ## Across the stages
 
 Discipline every artefact of a change is written under, whichever stage
@@ -141,7 +179,15 @@ for them is already here.
   merges.
 - Copy a `MODIFIED` requirement whole from the live spec before editing it,
   and read each scenario it carries against the code that scenario describes
-  before rewording it — the delta re-asserts every line it copies.
+  before rewording it — the delta re-asserts every line it copies. An archive
+  replaces the live requirement with that copy whole, and `openspec validate`
+  does not notice that its text is stale: before archiving, diff the copy
+  against the live spec and re-copy it if the live text moved, keeping only
+  this change's edits; after an archive syncs it, grep the active changes for a
+  delta of the same requirement and re-copy that delta the same way — the
+  later archive otherwise reverts this one. Where that delta's own edits
+  contradict what the archive just synced, reconcile the two changes before
+  either archives again; never let the re-copy silently pick one.
 - Move the card in the same turn the stage moves. When a proposal merges, a
   step's branch opens, a pull request opens or merges, an archive begins, or a
   change is archived, the task's card reaches the status that stage means

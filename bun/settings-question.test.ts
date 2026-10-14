@@ -2,18 +2,12 @@
  * The question gate's registration as the check pins it, over a consumer
  * whose settings hold nothing but `PermissionRequest` groups: the rest of the
  * policy is `settings.test.ts`'s, and only this registration's message is read
- * here. Then the harness's own registration, which no check reads. That
+ * here. The harness's own registration is `self-pin.test.ts`'s [25]. That
  * `sync.ts` writes it into a consumer is `sync-settings.test.ts`'s loop over
  * every hook the harness registers [24].
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	mkdirSync,
-	mkdtempSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { QUESTION_GATE, QUESTION_MATCHER } from "./bootstrap.ts";
@@ -64,17 +58,6 @@ describe("the registration", () => {
 		],
 	])("%s is named", (_, groups) => {
 		expect(named(groups)).toBe(true);
-	});
-
-	// The harness is no consumer, so the check never reads its own settings,
-	// and a matcher drifting there would stop the gate without a word.
-	test("in the harness's own settings runs its gate under the matcher [25]", () => {
-		const own = JSON.parse(
-			readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"),
-		) as { hooks: { PermissionRequest: object[] } };
-		expect(own.hooks.PermissionRequest).toEqual([
-			group(QUESTION_MATCHER, 'bun "$CLAUDE_PROJECT_DIR/bun/question-gate.ts"'),
-		]);
 	});
 });
 

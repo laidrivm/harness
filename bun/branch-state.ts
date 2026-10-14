@@ -13,7 +13,8 @@
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
-const BASE = "refs/remotes/origin/main";
+/** The default branch, as this guard and `turn-gate.ts` both read it. */
+export const BASE = "refs/remotes/origin/main";
 
 /**
  * How old the base's last fetch may be, inclusive. It bounds how long a merge

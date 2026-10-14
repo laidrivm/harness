@@ -66,6 +66,16 @@ export const QUESTION_MATCHER = "^mcp__.+__notion-create-comment$";
 export const QUESTION_GATE = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/question-gate.ts"; if [ -f "$g" ]; then bun "$g"; fi ${MARK}`;
 
 /**
+ * The loop guard's registration, one text on both `PreToolUse` and
+ * `PostToolUseFailure` with no matcher: the script chooses its role from the
+ * event, and sees every tool. Before the install every call goes through and
+ * every failure passes uncounted; after it, the guard's exit code and its
+ * warning on stdout are the hook's. No `|| exit 2`: the guard is fail-open,
+ * as its header says.
+ */
+export const LOOP_GUARD = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/loop-guard.ts"; if [ -f "$g" ]; then bun "$g"; fi ${MARK}`;
+
+/**
  * The `SessionStart` notice: one line when the installed harness is not the
  * pinned one, as after a `git pull` that brought a bump, until `bun install`.
  * Claude Code adds a `SessionStart` hook's output to the session, so the
@@ -75,6 +85,10 @@ export const QUESTION_GATE = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/qu
  * package, which may predate any script, and a notice living there would be
  * missing in exactly the state it exists to name. Every path exits 0, and
  * `|| true` covers a bun that cannot start: a notice never stops a session.
+ *
+ * The pin is read from `devDependencies` when `dependencies` names none: the
+ * harness pins itself there, since a consumer would install a runtime
+ * self-pin and, through it, every earlier one.
  *
  * shortcut: the installed commit is read from `node_modules/harness/.bun-tag`,
  * which bun 1.4.2 writes as `<owner>-<repo>-<7 hex>` and documents nowhere; a
@@ -87,7 +101,8 @@ export const NOTICE = [
 	'if (!fs.existsSync(d + "/node_modules/harness")) {',
 	'console.log("The harness is not installed: run bun install."); process.exit(0); }',
 	"try {",
-	'const pin = (JSON.parse(fs.readFileSync(d + "/package.json", "utf8")).dependencies?.harness ?? "").match(/#([0-9a-f]{40})$/)?.[1];',
+	'const m = JSON.parse(fs.readFileSync(d + "/package.json", "utf8"));',
+	'const pin = (m.dependencies?.harness ?? m.devDependencies?.harness ?? "").match(/#([0-9a-f]{40})$/)?.[1];',
 	'const tag = fs.readFileSync(d + "/node_modules/harness/.bun-tag", "utf8").trim().match(/-([0-9a-f]{7,40})$/)?.[1];',
 	"if (pin && tag && !pin.startsWith(tag))",
 	'console.log("The installed harness is " + tag + ", the pin " + pin.slice(0, 7) + ": run bun install.");',
@@ -101,6 +116,7 @@ export const NOTICE = [
  * which hooks there are. A hook the harness adds is one entry here, and its
  * command ends with `MARK`. `sole` makes `settings.ts` refuse any
  * other hook under the same matcher; without it the hook need only be present.
+ * An entry with no matcher is registered, and checked, in a group with none.
  */
 export const HOOKS: {
 	event: string;
@@ -127,6 +143,12 @@ export const HOOKS: {
 		matcher: QUESTION_MATCHER,
 		command: QUESTION_GATE,
 		name: "harness question gate",
+	},
+	{ event: "PreToolUse", command: LOOP_GUARD, name: "harness loop guard" },
+	{
+		event: "PostToolUseFailure",
+		command: LOOP_GUARD,
+		name: "harness loop guard",
 	},
 	{ event: "UserPromptSubmit", command: TURN_MARK, name: "harness turn gate" },
 	{ event: "Stop", command: TURN_STOP, name: "harness turn gate" },

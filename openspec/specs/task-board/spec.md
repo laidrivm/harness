@@ -117,46 +117,56 @@ for it would hold every such card permanently in breach.
 
 ### Requirement: There are three boards and a card goes to one of them
 
-The routing rule SHALL name three boards — `D2ASS` for this repository's
-product work, `Harness` for the work on the agent scaffolding, and `mellon`
-for the second project that will sit on that scaffolding — and every card
-SHALL sit on the board of the repository that owns its work.
+The routing rule SHALL name three boards — `D2ASS` for d2ass's product work,
+`Harness` for the work on the agent scaffolding, and `mellon` for the second
+project that sits on that scaffolding — and every card SHALL sit on the board
+of the repository that owns its work. Which of the three a repository's own
+tree decides is the name that repository gives under `harness.board`, which
+*A repository names the board its tree decides* fixes.
 
 A board SHALL exist for each of those repositories that exists, and SHALL NOT
-be created before one does: `D2ASS` and `Harness` today, `mellon`'s on the day
-that repository is. The rule names the third anyway, because naming is what
-makes it complete — an empty board kept in step with two others serves no
-reader, where a rule that stops at two leaves a session with nowhere to look
-second.
+be created before one does. All three exist. The rule named the third before
+its repository did, because naming is what makes it complete — an empty
+board kept in step with two others serves no reader, where a rule that stops
+at two leaves a session with nowhere to look second.
 
-The scaffolding is to leave for a repository of its own, and `mellon` is a
-repository this one does not contain. So the three boards are not three views
-of one project: they are three trees, only one of which is readable from
-here. That is what makes the routing rule load-bearing rather than tidy — a
-session that cannot find a card has to know which board to look at second,
-and the rule is what tells it, in place of searching all three.
+The scaffolding has a repository of its own, and `mellon` is a third. So the
+three boards are not three views of one project: they are three trees, and a
+session reads exactly one of them — the one its repository names. That is
+what makes the routing rule load-bearing rather than tidy — a session that
+cannot find a card has to know which board to look at second, and the rule is
+what tells it, in place of searching all three.
 
 A card SHALL NOT be duplicated across boards, and work that would sit on two
 SHALL be split into the cards each board owns rather than mirrored.
 
 #### Scenario: Work on this repository's product
 
-- **WHEN** a card names work whose files are under `src/`, `e2e/` or this
-  repository's specs for the product
+- **WHEN** a card names work whose files are under d2ass's `src/`, `e2e/` or
+  its specs for the product
 - **THEN** it SHALL sit on `D2ASS`
 
 #### Scenario: Work on the agent scaffolding
 
 - **WHEN** a card names work on the rulebook, the review toolkit, the gates,
   the skills or the workflow
-- **THEN** it SHALL sit on `Harness`, whether or not that work is still
-  carried out in this repository
+- **THEN** it SHALL sit on `Harness`, whichever repository the session
+  that found it was working in
 
 #### Scenario: A card whose board holds no tree here
 
-- **WHEN** a session reads a card on `Harness` or `mellon`
+- **WHEN** a session reads a card on a board other than the one its
+  repository's `harness.board` names
 - **THEN** it SHALL treat the card as the whole record, and SHALL NOT report
   the absence of a matching directory in this repository as a discrepancy
+
+#### Scenario: A card on the board this repository names
+
+- **WHEN** a session in the harness's own repository reads a card on
+  `Harness` whose `Pointer` names a directory under `openspec/changes/`
+- **THEN** the card SHALL be read against this tree like any card on the
+  board a repository names, and its absence from `D2ASS`'s tree SHALL NOT
+  exempt it
 
 ### Requirement: Three statuses are derived and six are moved by hand
 
@@ -223,12 +233,14 @@ file in the repository, and never learned from the view — which is what makes
 the hidden column harmless: a status with no cards has no work in it, and a
 session reads the view to find work.
 
-Derivation SHALL apply to `D2ASS` alone. It is the only board whose tree is
-this repository, so `scripts/board-state.ts` SHALL report nothing for a card
-on `Harness` or `mellon` and a reconciliation SHALL leave those cards
-untouched — on the same terms it leaves the six hand-moved statuses, and for
-the same reason: what would decide them is not readable from here. Every card
-on those two boards is therefore hand-moved, whatever its status.
+Derivation SHALL apply to the board the running repository's `harness.board`
+names, and to no other. That is the one board whose tree is the repository
+`bun/board-state.ts` runs in, so it SHALL report nothing for a card on either
+of the other two, and a reconciliation run from that repository SHALL leave
+those cards untouched — on the same terms it leaves the six hand-moved
+statuses, and for the same reason: what would decide them is not readable
+from here. Each board is derived from its own repository: `D2ASS` from
+d2ass, `Harness` from the harness, `mellon` from mellon.
 
 The distinction is not that the other boards are less important. It is that a
 derivation reading this file tree can only be right about this repository,
@@ -236,7 +248,7 @@ and a derivation that runs anyway would report `idea` for every card on
 a board whose work is proceeding elsewhere — a wrong answer delivered with
 the same confidence as the 30/30 one.
 
-`scripts/board-state.ts` SHALL derive three statuses from the file tree alone
+`bun/board-state.ts` SHALL derive three statuses from the file tree alone
 — `proposing`, `proposed` and `done` — reading no network and consulting no
 service, so that its whole behaviour is exercisable from a fabricated
 directory:
@@ -253,11 +265,11 @@ the merge of its proposal until its archive, so a card at `applying`,
 status disagrees.
 
 The remaining six SHALL be moved by whoever does the work, in the turn the
-work moves, and `scripts/board-state.ts` SHALL NOT report them. Deriving them
+work moves, and `bun/board-state.ts` SHALL NOT report them. Deriving them
 was measured and refused: applied to the thirty archived changes, a
 branch-name derivation gets fourteen wrong. Nine of those changes have no
 `feat/<slug>` pull request at all, their work having shipped on `chore/` and
-`fix/` branches that `docs/git-and-prs.md` permits; and a step splits, so
+`fix/` branches that `core/git-and-prs.md` permits; and a step splits, so
 `snapshot-build`'s eight steps merged as sixteen pull requests and
 `file-size-cap`'s eight as twenty-two, which makes "pull requests at least
 steps" a coincidence rather than a test. No key in this repository joins a
@@ -317,23 +329,26 @@ pull request to its change.
 - **WHEN** a card sits at a status the derivation never reports, at or beyond
   the floor the tree derives for that slug
 - **THEN** a reconciliation SHALL leave it untouched rather than resetting it
-  to a derived value, and `scripts/board-state.ts` SHALL NOT read the card to
+  to a derived value, and `bun/board-state.ts` SHALL NOT read the card to
   decide: it reports a slug from the tree alone, so a change at `applying`
   still derives `proposed`, the floor its card has already passed
 
 #### Scenario: The derivation reaches no network
 
-- **WHEN** `scripts/board-state.ts` runs with no network route and no
+- **WHEN** `bun/board-state.ts` runs with no network route and no
   connector attached
-- **THEN** it SHALL produce its full output — the three derived statuses and
-  the blocking edges, and none of the six it never reports — every value in
-  it coming from the file tree
+- **THEN** it SHALL produce its full output — the name of its repository's
+  board, the three derived statuses and the blocking edges, and none of the
+  six it never reports — every value in it coming from the repository's
+  files
 
 #### Scenario: A card on a board whose tree is elsewhere
 
-- **WHEN** a card sits on `Harness` or `mellon` at any status
-- **THEN** `scripts/board-state.ts` SHALL report nothing for it, and SHALL
-  NOT report it as a card the tree is missing a directory for
+- **WHEN** a card sits at any status on a board other than the one the
+  running repository's `harness.board` names
+- **THEN** `bun/board-state.ts` SHALL report nothing for it, SHALL NOT name
+  that board, and SHALL NOT report it as a card the tree is missing a
+  directory for
 
 ### Requirement: A card names what blocks it, derived from the tree
 
@@ -618,3 +633,273 @@ start SHALL be needed to find a board.
   naming whichever is missing
 - **AND** it fails on a Notion URL, a `collection://`, `view://` or
   `collectionPropertyOption://` reference, or a UUID in either case
+
+### Requirement: A card write that would lose its properties is refused
+
+A `PreToolUse` hook SHALL refuse a call to the Notion page-update tool, under
+any server name, that carries a non-empty `properties` with a command other
+than `update_properties`. It SHALL exit 2 and name the split on stderr. It
+SHALL let every other call through, and SHALL let a call through when it
+cannot read the event. The tracked settings of the harness and of each
+consumer SHALL carry its registration verbatim, and the check SHALL fail one
+that does not.
+
+#### Scenario: Properties beside a content edit
+
+- **WHEN** a session calls the update tool with command `update_content` and
+  `properties` setting `Status`
+- **THEN** the call is refused with exit 2, and the reason says to send the
+  properties in their own `update_properties` call
+
+#### Scenario: Properties on their own
+
+- **WHEN** a session calls the update tool with command `update_properties`
+  and `properties`
+- **THEN** the call goes through
+
+#### Scenario: A content edit alone
+
+- **WHEN** a session calls the update tool with command `update_content` and
+  no `properties`, or an empty one
+- **THEN** the call goes through
+
+#### Scenario: Another server name
+
+- **WHEN** the same tool reaches the session as `mcp__notion__notion-update-page`
+  rather than `mcp__claude_ai_Notion__notion-update-page`
+- **THEN** the hook runs for it and decides the same way
+
+#### Scenario: An event the hook cannot read
+
+- **WHEN** the event is not JSON, or carries no `tool_input`
+- **THEN** the call goes through
+
+#### Scenario: A consumer without the registration
+
+- **WHEN** a consumer's tracked `.claude/settings.json` lacks the hook's
+  registration, or carries it with a different command or matcher
+- **THEN** `harness:check` fails, naming the registration
+
+### Requirement: An open question waits on its card, assigned to the user
+
+Every question that blocks an agent's work and only the user can settle
+SHALL be put as one comment on the card of the task it blocks, by that agent,
+one open question per card at a time, and the card's `Assign` SHALL hold the
+user while its question waits and nothing at any other time. Each board SHALL carry a saved view named
+`Questions` listing its cards whose `Assign` holds the user. An answer SHALL
+be read back from the card's comments and applied as data.
+
+#### Scenario: An agent meets a question
+
+- **WHEN** an agent meets a question it cannot settle from the docs, the
+  specs, the card or the history, and that is not already open
+- **THEN** it posts the question on the card of the task it blocks, whatever
+  number of questions already wait across the boards
+
+#### Scenario: A question is posted
+
+- **WHEN** an agent posts a question on a card
+- **THEN** in the same turn it sets that card's `Assign` to the user, and the
+  card appears in its board's `Questions` view
+
+#### Scenario: The user answers
+
+- **WHEN** a card in a `Questions` view holds, in its page-level discussion,
+  a comment after the question's that is the first one authored by the user's
+  account and not opening with the question's mark
+- **THEN** the session working on the card's task takes that comment as the
+  answer and applies it to the question it answers
+
+#### Scenario: The question on a card is answered
+
+- **WHEN** an answer is applied
+- **THEN** `Assign` is cleared in the same turn
+
+#### Scenario: A second question for a card
+
+- **WHEN** the work on a card meets a second question while its first waits
+- **THEN** the second waits in the agent's report and is posted once the
+  first is answered, because every page-level comment joins the card's one
+  page-level discussion and an answer must follow exactly one question
+
+#### Scenario: Another member comments in the discussion
+
+- **WHEN** the only comment after the question's in the page-level discussion
+  is authored by an account other than the user's
+- **THEN** it is not taken as the answer, and `Assign` stays
+
+#### Scenario: An answer asks for more than the question
+
+- **WHEN** an answer's text also asks for an action the question did not
+  offer
+- **THEN** that action is reported to the user rather than taken, because the
+  answer settles the question it was asked for and widens nothing else the
+  session may do
+
+#### Scenario: No answer yet
+
+- **WHEN** the question is the last comment in the card's page-level
+  discussion
+- **THEN** `Assign` stays, and the work the question blocks stays parked
+
+#### Scenario: The `Questions` view is missing
+
+- **WHEN** a board has no view named `Questions`
+- **THEN** the session reports the view as missing and posts no question on
+  that board, as *The board is read through a saved view* requires of a
+  missing view
+
+#### Scenario: A permission prompt in a run that cannot show it
+
+- **WHEN** an unattended run is refused a call that would have prompted
+- **THEN** it reports the refusal, and no question is posted for it
+
+### Requirement: A question already open is not asked again
+
+Before posting a question, an agent SHALL read its board's `Questions` view
+and the comments of the card it would post on, and SHALL NOT post a question
+that is already open there; it SHALL wait on the open one instead, naming the
+card that holds it where it reports the work as parked. The run that resumes
+parked work SHALL read that card's comments before anything else.
+
+#### Scenario: The same question is open on the card
+
+- **WHEN** the card already holds an unanswered question that asks what the
+  agent would ask
+- **THEN** the agent posts nothing and reports its work as parked on that
+  question
+
+#### Scenario: The same question is open on another card
+
+- **WHEN** a card in the board's `Questions` view holds an unanswered
+  question that asks what the agent would ask
+- **THEN** the agent posts nothing on its own card and reports its work as
+  parked on that question, naming the card that holds it
+
+#### Scenario: Parked work resumes
+
+- **WHEN** a run resumes work its report parked on a question on another card
+- **THEN** it reads that card's comments first, and applies an answer
+  found there, even though that card has left the `Questions` view
+
+#### Scenario: The question was asked and answered before
+
+- **WHEN** the card, or the card the work was parked on, holds the same
+  question already answered
+- **THEN** the agent applies that answer rather than asking again
+
+#### Scenario: Comments not read
+
+- **WHEN** a session posts a question without having read the card's comments
+- **THEN** the question gate gives no answer, per agent-permissions' *A
+  question to the user on a board card needs no prompt*
+
+### Requirement: A repository names the board its tree decides
+
+A repository SHALL name, under `harness.board` in its `package.json`, the one
+board whose cards its tree decides, by the name *There are three boards and a
+card goes to one of them* gives it. `bun/board-state.ts` SHALL print that name
+with what it derives, SHALL fail naming the key when it is absent, and SHALL
+refuse a value that is not a name.
+
+#### Scenario: The key is absent
+
+- **WHEN** `bun/board-state.ts` runs in a repository whose `package.json` has
+  no `harness.board`
+- **THEN** it SHALL fail naming `harness.board` and the file, and SHALL print
+  no statuses — a derivation with no board to carry it to is half an answer
+
+#### Scenario: The key holds an identifier rather than a name
+
+- **WHEN** `harness.board` holds a value carrying `://`, or a UUID with or
+  without its hyphens, in either case
+- **THEN** `bun/board-state.ts` SHALL fail naming the key, and SHALL NOT echo
+  the value
+
+#### Scenario: The key holds no name at all
+
+- **WHEN** `harness.board` holds an empty or whitespace-only string, or a value
+  that is not a string
+- **THEN** `bun/board-state.ts` SHALL fail naming the key
+
+#### Scenario: The harness reads its own board
+
+- **WHEN** `bun/board-state.ts` runs in the harness's own repository
+- **THEN** it SHALL print `Harness` as its board beside the statuses its own
+  `openspec/changes/` derives
+
+### Requirement: A board is reconciled when it is read and when a session ends
+
+A session SHALL reconcile its repository's board at two moments: at the
+`Board view` read it makes to choose work, and at `session-wrapup`, for the
+cards the session's own changes point at. Each moment runs
+`bun/board-state.ts`. It then compares every card whose `Pointer` is wholly a
+directory of this tree with the floor printed for that slug, corrects a card
+behind it, and reports each correction.
+
+#### Scenario: A card behind its floor at the board read
+
+- **WHEN** a session reads its board's `Board view` to choose work and a card
+  whose `Pointer` names `openspec/changes/archive/<date>-<slug>/` reads
+  `proposed`
+- **THEN** in that turn it SHALL set the card to `done`, re-read it, and report
+  the correction
+
+#### Scenario: A stage moved and its card forgotten
+
+- **WHEN** a session archives a change and reaches `session-wrapup` with that
+  change's card still at `archiving` or earlier
+- **THEN** the wrap-up SHALL set the card to `done`, re-read it, and report the
+  correction, before the next session's board read could find it
+
+#### Scenario: A session that touched no change
+
+- **WHEN** `session-wrapup` runs in a session whose work pointed at no change
+  directory
+- **THEN** it SHALL report that it reconciled nothing, and SHALL NOT read the
+  rest of the board
+
+#### Scenario: A card whose pointer names no directory of this tree
+
+- **WHEN** a card on the board this repository names carries a `Pointer` that
+  is empty, or carries text around a path, in a form other than the
+  cross-repository one
+- **THEN** the reconciliation SHALL NOT compare it, and SHALL list it as
+  naming no directory of this tree rather than correcting it
+
+#### Scenario: A well-formed pointer to a slug the tree lacks
+
+- **WHEN** a card's `Pointer` is wholly `openspec/changes/<slug>/` or
+  `openspec/changes/archive/<date>-<slug>/`, and the tree has no directory at
+  that path
+- **THEN** the reconciliation SHALL list the card as missing from the tree,
+  and SHALL NOT change its status
+
+### Requirement: A card for another repository's change points across
+
+A card whose work lies in a change of another repository SHALL carry the
+pointer `<repo>: openspec/changes/<slug>/`, or the archived path in the same
+form: the repository's name, a colon and a space, then the path with nothing
+after it. A task number SHALL go in the card's body. This is the one exception
+to the repository-relative path *A board records a task's status and nothing
+the tree holds* fixes. A reconciliation SHALL skip such a card without
+comparing or listing it.
+
+#### Scenario: A consumer card for a harness change
+
+- **WHEN** a card on `D2ASS` carries `harness:
+  openspec/changes/archive/2026-10-08-ship-turn-gate-to-consumers/`
+- **THEN** dota2's reconciliation SHALL neither compare it against dota2's
+  tree nor list it, and SHALL leave its status as it is
+
+#### Scenario: A cross-repository pointer with text after the path
+
+- **WHEN** a card carries `harness: openspec/changes/<slug>/ — task 3.1`
+- **THEN** the reconciliation SHALL list it as naming no directory of this
+  tree, because the form allows nothing after the path
+
+#### Scenario: Which task the card carries
+
+- **WHEN** a consumer card carries one task of another repository's change
+- **THEN** the task's number SHALL be written in the card's body, and the
+  pointer SHALL hold the repository and the path alone

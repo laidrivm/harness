@@ -17,8 +17,13 @@ stage. None of them launches one:
 - `board-state-per-project` names the board a tree decides, as `harness.board`.
 - `stage-goal` gives each stage its done-check, `bun/goal-check.ts`, and its
   launch form. It leaves "choosing and launching the next stage" to this card.
-- `loop-guard` and `stage-goal`'s ceiling end a session that goes round in
-  circles. Both leave wall-clock time to "whatever launches the session".
+- `loop-guard` refuses a call that keeps failing the same way, and
+  `stage-goal`'s ceiling ends a goal run at its twentieth continued stop,
+  never a turn that is still calling tools. Claude Code itself ends a goal
+  run sooner when the model stops calling tools (its block cap) or when its
+  evaluator judges the goal impossible, as `stage-goal` measured at apply.
+  None of these leaves a verdict, and both changes leave wall-clock time to
+  "whatever launches the session".
 - `agent-autonomy` says a session is unattended only when its starting prompt
   says so.
 
@@ -42,8 +47,8 @@ user's interactive checkout without needing worktrees.
      Otherwise it returns the clone to the default branch's fetched tip and
      runs `bun install --frozen-lockfile`. `bun install` is an `ask` in the
      tracked policy, which a session with nobody to answer cannot get past.
-     Once `self-pinned-gates` (harness#64) lands, the harness's own hooks
-     need the install too.
+     Since `self-pinned-gates`, the harness's own hooks run from
+     `node_modules/harness/` and need the install too.
   2. It collects the **takeable** changes from `bun/board-state.ts`. A change
      is takeable when it is `proposed`, nothing it names in `after:` is still
      open, `tasks.md` still has an unticked group, no open pull request sits
@@ -73,15 +78,15 @@ These are the next slices, each a card or a follow-up step of this one:
 - **Repeating the pass.** The loop runs one pass and stops. Running pass after
   pass is the next slice. That slice also covers the reasons a loop waits or
   stops: no work left, every card blocked or waiting on a question, the plan's
-  rate limit close (`rateLimits`), and a session that `loop-guard` or the
-  ceiling ended.
+  rate limit close (`rateLimits`), a session the ceiling ended, and one whose
+  calls `loop-guard` keeps refusing.
 - **Pull requests and CI on each pass.** A change whose pull request is open
   is skipped here, not worked. Ranking it first once a review arrives or CI
   finishes, and launching `/coderabbit` or a fix, is a later slice.
 - **The explore, propose and archive stages.** This slice carries apply steps
   only. Explore and propose are where the loop asks the most questions, so
-  they wait for `agent-autonomy` and `card-questions` to land. Archive waits
-  for a change to reach `applied`.
+  they get a slice of their own, built on `agent-autonomy` and
+  `card-questions`. Archive waits for a change to reach `applied`.
 - **Checking the card move.** The stage session moves its card, as
   `core/feature-workflow.md` requires of any session. The runner cannot read
   the board, because the script holds no token. A later pick session that
@@ -97,20 +102,18 @@ These are the next slices, each a card or a follow-up step of this one:
 ## Ordering
 
 `after:` names `gate-decision-ledger` and `board-state-per-project`, the two
-changes this builds on whose directories are on `main`. The others are still
-open pull requests, and `board-state` refuses an `after:` entry with no
-directory:
+changes this builds on whose directories were on `main` when it was proposed,
+and the five that task 1.0 added once their directories landed:
 
-- `stage-goal` (harness#65) provides the check and the launch form;
-- `pre-pr-run-record` (harness#57) provides the record that check reads;
-- `agent-autonomy` (harness#63) defines what "unattended" means in the stage
-  prompt;
-- `card-questions` (harness#56) gives a blocked session somewhere to leave its
-  question;
-- `loop-guard` (harness#66) ends a session that repeats a failing call, and
-  leaves wall-clock time to this runner.
+- `stage-goal` provides the check and the launch form;
+- `pre-pr-run-record` provides the record that check reads;
+- `agent-autonomy` defines what "unattended" means in the stage prompt;
+- `card-questions` gives a blocked session somewhere to leave its question;
+- `loop-guard` refuses a call that keeps failing the same way, and leaves
+  ending such a session, and wall-clock time, to this runner.
 
-Task 1.0 adds each of these to `after:` once its directory lands on `main`.
+All five were archived on 2026-10-13. `board-state-per-project` is the one
+still open, so `board-state` reports this change blocked until it archives.
 
 ## Capabilities
 
@@ -129,7 +132,7 @@ applies. Its requirements cite them rather than modify them.
 ## Impact
 
 - New `bun/board-loop.ts` with tests. It reuses `boardState()`, `turn-gate.ts`'s
-  `complete()`, and the ledger writer from `gate-decision-ledger`.
+  `groups()`, and the ledger writer from `gate-decision-ledger`.
 - `README.md`: one *Consuming* line.
 - Consumers gain the script on their next pin bump. Nothing is registered,
   and `check.ts` does not run it. This is no gate change, so no consumer tree

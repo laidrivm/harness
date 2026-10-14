@@ -212,3 +212,52 @@ describe("what is not a citation", () => {
 		expect(cited(dir)).toEqual([]);
 	});
 });
+
+describe("which lines a block comment encloses", () => {
+	test("a citation below a block that has closed counts", () => {
+		const dir = world(
+			'/* a\nb */\n// spec: capability/a-first-thing\ntest("acts", () => {});\n',
+			"A first thing",
+		);
+		expect(cited(dir)).toEqual(["capability/a-first-thing"]);
+		expect(problems(dir)).toEqual([]);
+	});
+
+	test("a citation below a block left open does not count", () => {
+		const dir = world(
+			'/* a\n// spec: capability/a-first-thing\ntest("acts", () => {});\n',
+			"A first thing",
+		);
+		expect(cited(dir)).toEqual([]);
+	});
+
+	test("a call on the line a block opens on is still a call", () => {
+		const dir = world(
+			'// spec: capability/a-first-thing\ntest("acts", () => {}); /* a\nb */\n',
+			"A first thing",
+		);
+		expect(cited(dir)).toEqual(["capability/a-first-thing"]);
+		expect(problems(dir)).toEqual([]);
+	});
+});
+
+// spec: spec-test-traceability/a-citation-below-an-escaped-quote
+describe("a citation below an escaped quote", () => {
+	test("the escape does not end the string, so its comment opener opens nothing", () => {
+		const dir = world(
+			'const s = "he said \\"/*\\"";\n// spec: capability/a-first-thing\ntest("acts", () => {});\n',
+			"A first thing",
+		);
+		expect(cited(dir)).toEqual(["capability/a-first-thing"]);
+		expect(problems(dir)).toEqual([]);
+	});
+
+	test("the control: the same source without the escaped quote", () => {
+		const dir = world(
+			'const s = "he said /*";\n// spec: capability/a-first-thing\ntest("acts", () => {});\n',
+			"A first thing",
+		);
+		expect(cited(dir)).toEqual(["capability/a-first-thing"]);
+		expect(problems(dir)).toEqual([]);
+	});
+});

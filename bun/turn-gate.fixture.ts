@@ -58,6 +58,16 @@ export function repo(files: Record<string, string> = {}): string {
 	return dir;
 }
 
+/**
+ * Publishes `HEAD` as `origin`'s `main`, replacing whatever it held, and
+ * fetches it, so `refs/remotes/origin/main` exists. `repo()` leaves that ref
+ * out, so every case that does not call this runs without it.
+ */
+export function publish(dir: string): void {
+	git(dir, "push", "origin", "+HEAD:refs/heads/main");
+	git(dir, "fetch", "origin");
+}
+
 /** An empty directory for the marks, so no case reads another's. */
 export const store = () => temp("turn-gate-store-");
 

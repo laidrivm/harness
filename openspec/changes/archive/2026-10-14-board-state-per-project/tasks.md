@@ -1,0 +1,166 @@
+# board-state-per-project — tasks
+
+Test tasks come from the proposal-stage `/zombies` run and are written before
+the code they cover (`core/testing.md` — TDD for edge cases). The bracketed
+numbers are that run's idea numbers, and all 24 are placed below. Ideas 25 to
+27 cover the two answers the user settled (proposal, *Settled with the user*).
+The comparison they exercise is the agent's rather than code's, so each is a
+check run against a real board, not a test.
+
+The open question still in proposal.md is taken at its stated default:
+`harness:check` does not require the key. A different answer from the user
+changes 1.3 before group 1 is applied.
+
+There are two groups. Group 1 is one harness pull request on
+`feat/board-state-per-project-1`. Group 2 is one change in each consumer,
+carried by the pull request that bumps its pin past group 1.
+
+## 1. The key, the command and the prose
+
+- [x] 1.1 Write the command tests in a new `bun/board-state-cli.test.ts`. Each
+      case runs `bun/board-state.ts` as a process against a fabricated
+      repository holding a `package.json`, with an environment built from
+      what the case needs and started in a directory with no `.env`. Every
+      case below fails before 1.3.
+      - The key is absent: the run exits non-zero naming `harness.board` and
+        the file [1], and stdout is empty [2]. `null` fails the same way [3].
+      - `""` [4], whitespace only [5], a number, an array and an object [19]
+        each fail naming the key.
+      - `"Harness"` with one complete change prints `Harness` beside that
+        change's `proposed` [6].
+      - The output names its own board exactly once and neither of the other
+        two names [8].
+      - Stdout parses as JSON whose keys are exactly `board`, `status` and
+        `edges` [14].
+      - `https://x`, `collection://x` and `view://x` are refused [9]. So are
+        an upper-case hyphenated UUID [10], a 32-hex UUID without hyphens
+        [11], and a UUID inside a longer name [12]. `D2ASS` is accepted [13].
+      - A refused value appears in neither stream [18].
+      - A malformed `package.json` fails naming the file, with stdout
+        empty [20].
+      - An `after:` typo in the tree still fails with today's message and no
+        board on stdout [21].
+
+      (Req: task-board — A repository names the board its tree decides,
+      §*The key is absent*, §*The key holds an identifier rather than a
+      name*, §*The key holds no name at all*)
+- [x] 1.2 Update `bun/board-state-hygiene.test.ts`. Keep *the output names no
+      board* for `boardState(tree)`, and add a case that the command, given
+      `"board": "Harness"`, names that board and no other [15]. Widen the
+      import allow-list to `./config.ts`, and have the module walk assert
+      that `config.ts` imports only `node:fs` and `node:path` [16]. Leave the
+      socket case's tokens as they are; it must keep passing over the new
+      source [17]. Add a case that the command run in this repository prints
+      `Harness` [7]. (Req: task-board — Three statuses are derived and six
+      are moved by hand, §*A card on a board whose tree is elsewhere*,
+      §*The derivation reaches no network*; A repository names the board its
+      tree decides, §*The harness reads its own board*)
+- [x] 1.3 Implement. Add `board: string` to `Config` in `bun/config.ts` with
+      its one-line comment. In `bun/board-state.ts`'s `import.meta.main`,
+      read the key through `read`, refuse a non-string, a blank string, a
+      value carrying `://`, or a UUID with or without hyphens in either case,
+      naming the key without the value, then print `{ board, status, edges }`
+      and leave `boardState` untouched. Update the module header, which says
+      the script answers for "this repository" alone. Add `"board":
+      "Harness"` to this repository's `package.json` `harness` object. The
+      new source may not name the service the socket case forbids. `bun
+      test` green, and both files under the cap that `bun/file-size.ts`
+      applies.
+- [x] 1.4 Run `bun bun/board-state.ts` here and record in this task's commit
+      message that it prints `Harness` and the statuses design.md measured,
+      plus this change's own slug.
+- [x] 1.5 Rewrite the two passages in `core/feature-workflow.md` that tie
+      derivation to `D2ASS`: "and only on `D2ASS`. The other six, and every
+      card on `Harness` or `mellon`, are honoured", and the closing sentence
+      of the board list. Say instead that each repository's
+      `harness.board` names its board. The session reconciles at the
+      `Board view` read it makes to choose work and again at
+      `session-wrapup`: it runs `bun/board-state.ts` and corrects each card
+      behind its floor whose `Pointer` is wholly a directory of this tree. It
+      skips a cross-repository pointer, and lists the cards whose pointer is
+      empty, decorated, or names a slug the tree lacks. State the
+      cross-repository form `<repo>: openspec/changes/<slug>/` where the
+      bullets say how a card's pointer is written, and say that a task number
+      goes in the body. Cite `task-board` for the statuses rather than
+      restating them. Then grep `core/`, `README.md` and `openspec/specs/`
+      for `only on`, `D2ASS alone` and `honoured rather than mechanised`, and
+      fix each site or name the change that will. (Req: task-board — A board
+      is reconciled when it is read and when a session ends, §*A card behind
+      its floor at the board read*, §*A card whose pointer names no
+      directory of this tree*; A card for another repository's change points
+      across)
+- [x] 1.6 In `core/skills/session-wrapup/SKILL.md` step 3, *Workflow state*,
+      add the reconciliation: run `bun/board-state.ts`, compare the cards
+      whose pointers name the change directories this session touched,
+      correct each behind its floor with `update_properties` and a re-read,
+      and report each correction beside the stage, or say that nothing was
+      reconciled. Amend the *Rules* bullet that names the only files the
+      skill may touch, so that it permits these card corrections. If
+      `gate-decision-ledger` or `capture-as-mechanism` merged first and
+      edited the skill, keep their lines. (Req: task-board — A board is
+      reconciled when it is read and when a session ends, §*A stage moved and
+      its card forgotten*, §*A session that touched no change*)
+- [x] 1.7 After group 1 merges, in the first session that reads `Board view`
+      on `Harness`: run the reconciliation, and report what it corrected and
+      what it listed [22] [24]. Expected to correct nothing, since every card
+      was moved by hand that turn. A correction it does make is reported, not
+      hidden.
+- [x] 1.8 In the same session, run `/session-wrapup` and confirm that step 3
+      reports the reconciliation of the cards for the changes the session
+      touched. A card the session moved behind its floor on purpose, for the
+      check, is corrected and reported [27]. Restore it by hand afterwards if
+      it was ahead.
+      — evidence: run on 2026-10-14 in the orchestrator session, where the
+      user invoked `/session-wrapup`. Step 3 ran `bun bun/board-state.ts` and
+      compared the 21 `Harness` cards whose `Pointer` names a change
+      directory the session touched. For the check, the card for this change
+      was moved from applying to explored, below its floor `proposed`; the
+      reconciliation set it to `proposed`, re-read it and reported it [27].
+      It was then restored to applying by hand, as it had been ahead. Listed
+      without a status change: the interpreter-prompt card, whose directory
+      exists only on an unmerged proposal branch, and three done cards whose
+      `Pointer` still names a pre-archive path (settings-local-sweep,
+      push-option-values, bot-reads-rulebook). 1.7 ran on 2026-10-12, so
+      this was a later session than the task names, not the same one.
+
+## 2. Each consumer
+
+- [x] 2.1 dota2, on a branch of its own checkout and never in a worktree, in
+      the pull request that bumps its pin past group 1: add `"board":
+      "D2ASS"` to the `harness` object, run `bun
+      node_modules/harness/bun/board-state.ts`, and confirm it prints `D2ASS`
+      beside the 47 slugs design.md measured, or the count its tree then
+      holds. Before reconciling, rewrite the `D2ASS` card for
+      `ship-turn-gate-to-consumers` task 3.1. Its pointer becomes `harness:
+      openspec/changes/archive/2026-10-08-ship-turn-gate-to-consumers/`,
+      and "task 3.1" moves into its body. Write the pointer with
+      `update_properties` and the task number with `update_content`, in two
+      calls, and re-read the card after both. Then reconcile `D2ASS` once and report the listed
+      cards [23]. The rewritten card is skipped and not listed [25]. Check
+      the other side of that by putting text after the path of one
+      cross-repository pointer temporarily: that card is listed [26]. Restore
+      it and re-read it afterwards.
+      — evidence: laidrivm/dota2#322, merged 2026-10-13, added `"board":
+      "D2ASS"`; `bun node_modules/harness/bun/board-state.ts` printed
+      `D2ASS` beside 47 slugs, 13 `proposed` and 34 `done`, the count
+      design.md measured. The card's `Pointer` was rewritten to `harness:
+      openspec/changes/archive/2026-10-08-ship-turn-gate-to-consumers/` with
+      `update_properties` and the card re-read. Its body already named task
+      3.1, so the `update_content` call the task plans was not needed: one
+      call sufficed where the wording assumed two. Reconciling `D2ASS` once
+      found 23 well-formed pointers (13 `proposed`, 10 archive directories
+      present), all at their floor, so it corrected nothing [23]; it skipped
+      the rewritten cross-repository card [25] and listed the 25 cards with
+      an empty `Pointer`. With " — task 3.1" put after that card's path
+      temporarily, it was listed as naming no directory [26]; the pointer
+      was then restored and the card re-read.
+- [x] 2.2 mellon, the same on its `main` with `"board": "mellon"`. Confirm it
+      prints `mellon` and an empty `status`. Rewrite the `mellon` card for
+      task 3.2 the same way, in the same two calls and a re-read, and
+      confirm that the reconciliation skips it [25].
+      — evidence: laidrivm/mellon#47, merged, added `"board": "mellon"`;
+      `board-state.ts` printed `mellon` and an empty `status`. The card's
+      `Pointer` was rewritten to its archive path with `update_properties`
+      and the card re-read; its body already named task 3.2, so here too one
+      call sufficed where the wording assumed two. The reconciliation skipped
+      the card [25] and listed the 31 cards with an empty `Pointer`.

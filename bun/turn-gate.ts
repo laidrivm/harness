@@ -8,14 +8,22 @@
  *
  * `bun turn-gate.ts stop` is the `Stop` half. It refuses, by exiting 2 with
  * the reason on stderr, to end a turn that left commits on the branch and
- * completed a task group of an active change, unless the final message
+ * completed a task group of an active change — one complete neither at the
+ * mark nor on `origin/main` as the turn ends — unless the final message
  * carries `BLOCKED` naming what only the user can settle, or carries a gate
  * line while the gate ledger holds the pre-PR runner's record of the tip in
  * this checkout.
  *
  * It refuses at most once per mark. A refused turn is continued, not
  * restarted, so no new mark is written. That bounds a condition the model
- * cannot satisfy to one turn, without reading `stop_hook_active`.
+ * cannot satisfy to one turn, and the bound reads no event field.
+ *
+ * The round ceiling does read one. Before it decides, the `stop` half counts
+ * the stops a goal continued (`stop_hook_active` true) since the mark. At the
+ * ceiling `goal-rounds.ts` fixes, it ends the session instead, printing
+ * `continue: false` and exiting 0, and records `goal`/`rounds`/`ceiling`. A
+ * refusal would only hand the goal another round. `commit-gates`' "SHALL NOT
+ * depend on a loop-protection field" is about the refusal, so the ceiling may.
  *
  * Whatever it cannot read — no mark, no message, no repository, a detached
  * `HEAD`, an event that is not JSON — ends the turn. This is fail-open on
@@ -38,7 +46,9 @@
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import { BASE } from "./branch-state.ts";
 import { ran, record } from "./gate-ledger.ts";
+import { countRound, resetRounds } from "./goal-rounds.ts";
 
 type Event = {
 	session_id?: unknown;
@@ -50,9 +60,10 @@ type Boxes = { ticked: number; open: number };
 
 /**
  * Every `## ` group of a task list with its boxes counted. A box inside a
- * fenced code block is an example, not a task.
+ * fenced code block is an example, not a task. Exported for the goal check,
+ * which reads a step's group by its place in this order.
  */
-function groups(text: string): Map<string, Boxes> {
+export function groups(text: string): Map<string, Boxes> {
 	const found = new Map<string, Boxes>();
 	let group: Boxes | undefined;
 	let fence: string | undefined;
@@ -113,6 +124,7 @@ export function mark(event: Event, store: string): void {
 	if (!file || typeof event.cwd !== "string") return;
 	mkdirSync(store, { recursive: true });
 	writeFileSync(file, git(event.cwd, "rev-parse", "-q", "--verify", "HEAD") ?? "");
+	resetRounds(file);
 }
 
 /**
@@ -160,10 +172,12 @@ function blobs(cwd: string, specs: string[]): string[] {
 }
 
 /**
- * Groups complete at `tip` that were not complete at the mark, as
- * `<heading> in <change dir>`. Both sides are read from git, never from a
- * record beside the mark. A group absent at the mark was not complete there,
- * so the turn that wrote and ticked it qualifies.
+ * Groups complete at `tip` that were complete neither at the mark nor on
+ * `BASE` as the turn ends, as `<heading> in <change dir>`. Every side is read
+ * from git, never from a record beside the mark. A group `BASE` holds complete
+ * came in by a pull, a fetch or a merge of `main`, and a missing `BASE` reads
+ * as empty, excluding nothing. A group absent at the mark was not complete
+ * there, so the turn that wrote and ticked it qualifies.
  */
 function completed(cwd: string, at: string, tip: string): string[] {
 	const paths = (
@@ -173,10 +187,12 @@ function completed(cwd: string, at: string, tip: string): string[] {
 	)
 		.split("\n")
 		.filter((path) => ACTIVE.test(path));
-	const texts = blobs(cwd, paths.flatMap((p) => [`${at}:${p}`, `${tip}:${p}`]));
+	const sides = [at, BASE, tip];
+	const texts = blobs(cwd, paths.flatMap((p) => sides.map((s) => `${s}:${p}`)));
 	return paths.flatMap((path, i) => {
-		const before = new Set(complete(texts[2 * i]));
-		return complete(texts[2 * i + 1])
+		const [atMark, onBase, atTip] = texts.slice(3 * i, 3 * i + 3);
+		const before = new Set([...complete(atMark), ...complete(onBase)]);
+		return complete(atTip)
 			.filter((heading) => !before.has(heading))
 			.map((heading) => `"${heading}" in ${path.replace(/tasks\.md$/, "")}`);
 	});
@@ -259,8 +275,15 @@ if (import.meta.main) {
 	let reason: string | undefined;
 	try {
 		const event = JSON.parse(await Bun.stdin.text());
+		const file = markFile(store, event);
+		// Before `decide`: a session that is ending gains nothing from a refusal.
+		const ceiling =
+			process.argv[2] !== "mark" && file ? countRound(event, file) : undefined;
 		if (process.argv[2] === "mark") mark(event, store);
-		else
+		else if (ceiling) {
+			record("goal", "ceiling", "rounds", event);
+			console.log(JSON.stringify({ continue: false, stopReason: ceiling }));
+		} else
 			reason = decide(event, store, (decision) =>
 				record("turn-gate", decision, "pre-pr-sequence", event),
 			);
