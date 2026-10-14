@@ -17,7 +17,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
 
 ## 1. The pick claims its card
 
-- [ ] 1.1 Write the claim tests in `bun/board-loop.test.ts`, under *the pick*:
+- [x] 1.1 Write the claim tests in `bun/board-loop.test.ts`, under *the pick*:
       - extend [21]: the pick prompt no longer reads "change nothing
         anywhere", and it tells the session to set `applying` on the card its
         `PICK:` line names, and on no other card [1];
