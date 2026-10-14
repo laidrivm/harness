@@ -61,7 +61,12 @@ Of the subcommands bun 1.4.2's `--help` lists, three run code handed to them,
 so they ask: `exec` (a shell script as text), `repl`, and `create`/`c` (a
 template fetched and run). `x` is exempt here, because the `bunx` card
 decides it. `run` hands its operand to the file rule when that operand is an
-existing file, and otherwise it is a `package.json` script, tracked text. The
+existing file. Otherwise it names a `package.json` script, which is exempt only
+as far as the tree vouches for it: the `package.json` it is read from is held
+to the file rule (tracked, no uncommitted or staged edit, else ask), and the
+script's own command line is read as a command line, so a script that runs an
+untracked file or inline code asks as typing that line would (PR #100 review).
+The
 flags `-e`, `--eval`, `-p` and `--print` need no special case: a flag as the
 first argument is no subcommand and no file, so it asks. The constant carries
 the version it was read from, and a test compares it with the installed `bun
