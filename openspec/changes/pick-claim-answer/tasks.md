@@ -36,7 +36,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
       Update the function's comment, which says it has nothing to write.
       Verify: 1.1 is green, the runner's three test files are green, and the
       file is under its cap in `bun/file-size.ts`.
-- [ ] 1.3 Search the four places `core/feature-workflow.md` names for the
+- [x] 1.3 Search the four places `core/feature-workflow.md` names for the
       claim this replaces, "the card is the stage session's to move" and the
       pick session that writes nothing. Reconcile each live site, or name
       `board-loop`'s archived design as history. `README.md`'s *Consuming*
