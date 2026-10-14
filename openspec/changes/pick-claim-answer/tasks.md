@@ -42,7 +42,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
       `board-loop`'s archived design as history. `README.md`'s *Consuming*
       line says the pick moves its card to `applying`. Verify: the grep in
       the pull request body.
-- [ ] 1.4 The pull request's *Check by hand* gives the user one live pass on a
+- [x] 1.4 The pull request's *Check by hand* gives the user one live pass on a
       change at `proposed`. The card must read `applying` before the runner
       prints `carrying …` [6], and it reports whether the stage session
       met an existing local step branch. Verify: the pull request body holds
