@@ -79,10 +79,11 @@ extend this design and fix it here, if the size limit allows — it does, and it
 ships as step 2, because step 1 had merged by then.
 
 So `cite()` tries `CITATION` only on a line where `comments` reports a line
-comment opening. `CITATION` still decides what the comment says, and it still
-requires nothing before the `//` on its line. The continuation walk is
-unchanged: the line after a line comment begins in code, so a continuation line
-that `//` leads is a line comment already. The comment list is the one
+comment opening with nothing before it — the rest of the line is that
+comment, so a template line that closes and then carries a comment of its own
+is no citation either. `CITATION` still decides what the comment says. The
+continuation walk is unchanged: the line after a line comment begins in code,
+so a continuation line that `//` leads is a line comment already. The comment list is the one
 `cite()` already takes for the enclosed lines, so no second walk is added.
 
 *Alternatives considered.* Dismissing the finding and writing fixtures with

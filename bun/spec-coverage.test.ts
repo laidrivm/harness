@@ -273,4 +273,13 @@ describe("a spec marker inside a template literal", () => {
 		expect(cited(dir)).toEqual(["capability/a-second-thing"]);
 		expect(problems(dir)).toEqual([]);
 	});
+
+	test("a comment after the template closes on that line cites nothing", () => {
+		const dir = world(
+			'const fixture = `\n// spec: capability/a-first-thing`; // note\ntest("acts", () => {});\n',
+			"A first thing",
+		);
+		expect(cited(dir)).toEqual([]);
+		expect(problems(dir)).toEqual([]);
+	});
 });
