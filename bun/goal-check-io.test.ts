@@ -137,6 +137,15 @@ describe("the pull request and the tree", () => {
 		]);
 	});
 
+	// spec: stage-goal/the-pull-request-was-closed-unmerged
+	test("a null record is no pull request, and the check still prints its line", () => {
+		const r = run(proposal(), ["propose", "demo"], { gh: { answer: "[null]", code: 0 } });
+		expect([r.code, r.last]).toEqual([
+			1,
+			expect.stringContaining("no open or merged pull request for feature"),
+		]);
+	});
+
 	// spec: stage-goal/the-pull-request-is-behind
 	test("a detached HEAD is open and names no branch", () => {
 		const dir = proposal();
