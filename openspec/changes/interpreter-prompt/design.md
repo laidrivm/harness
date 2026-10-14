@@ -53,7 +53,10 @@ The rest of `node_modules/` is not: no measured command runs a file there,
 and exempting it would let a script written into `node_modules/.cache/` pass
 (local CodeRabbit review). A file written into `node_modules/harness/` itself
 still passes, which the stated ceiling accepts, since the guard is not built
-for an adversary.
+for an adversary. Under bun's isolated linker `node_modules/harness` is a
+link into `node_modules/.bun/`, so its resolved path falls outside the
+exemption and asks. The three trees install hoisted, measured 2026-10-14, so
+only the hoisted layout is exempt.
 
 The operand resolves from every directory in the guard's `dirs` set, as `-C`
 does, and then to its real path: a tracked symlink puts only its target's
@@ -97,6 +100,10 @@ can be approved, as the `bunfig.toml` precedent records. Its reason clause
   Task 1.7 measures it before the step is called done. If it fails, the
   fallback is exit 2 for the same set. That fallback is a block, which this
   design rejected, so the user is asked first.
+- [An older Claude Code does not force a hook's `ask` in auto mode] → the
+  call then falls to the permission rules, which is today's behaviour, so no
+  version is worse off than now. Claude Code 2.1.299 was installed when this
+  was written (2026-10-14), and task 1.7 records the version it measures.
 - [Unattended sessions stall on a prompt] → agents are already told not to
   use interpreters. The prompt text names the tracked-script route.
 - [The JSON is malformed or mixed with other stdout] → Claude Code would
