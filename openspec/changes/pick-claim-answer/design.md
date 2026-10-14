@@ -126,6 +126,15 @@ account that does not open with `harness-question`, after the last one that
 does. The mark is the only thing that tells them apart: on `scan-lift` the
 question and the answer carry the same author.
 
+An agent's own comment cannot meet that condition without the user. The
+question gate (`bun/question-gate.ts`) lets an agent post a card comment
+without a prompt only when the comment opens with the mark. An unmarked one
+falls to the `ask` rule on `notion-create-comment`, and an unattended session
+refuses every prompt. The one way through is an attended session whose user
+approves an unmarked comment. That comment then counts as an answer, as it
+already does under `task-board`'s *The user answers*. This change reuses that
+definition and leaves it as it is.
+
 A false pick costs one stage session, which finds no answer and ends with
 `BLOCKED —`. The claim has then moved the card to `applying`, and it stays
 there with nothing to continue. The user moves it back. The session's
