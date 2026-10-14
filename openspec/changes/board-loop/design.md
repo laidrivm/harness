@@ -149,8 +149,13 @@ raised.
 
 Each session starts as the leader of its own process group, so ending it ends
 whatever it started too: a test run, a push, a `gh pr create`. At the limit
-the runner sends the group SIGTERM, then SIGKILL five seconds later, and waits
-until the group is gone (ten seconds at most) before it records `timeout`.
+the runner sends the group SIGTERM, then SIGKILL five seconds later. However
+the session ended, at the limit or on its own, the runner then ends what is
+left of the group the same way, background jobs included, and waits until it
+is gone (ten seconds at most) before it judges or records. Only `ESRCH` counts
+as gone: `EPERM` is a member this user cannot signal. A member still there
+after the wait ends the pass `refused`, or `timeout` past the limit, naming the
+group, rather than recording a clean outcome.
 A detached group is not the terminal's foreground group, so Ctrl-C reaches
 the runner alone. The runner then kills the group itself and exits 130,
 recording nothing, as an interrupted pass did before.
@@ -235,9 +240,10 @@ named follow-up.
   A session that reaches outside the clone to edit that copy is a deliberate
   attack, which no runner check stops.
 - [A child the session started keeps working in the clone, or pushes to
-  `origin`, after the pass recorded `timeout`] → Closed: the group is
-  signalled, not `claude` alone, and the pass returns only once the group is
-  gone. A member that leaves the group itself (`setsid`) escapes. Nothing the
+  `origin`, after the pass judged or recorded] → Closed: after every session
+  the group is signalled, not `claude` alone, and the pass goes on only once
+  the group is gone. Where it is not, the pass names the group instead of
+  recording a clean outcome. A member that leaves the group itself (`setsid`) escapes. Nothing the
   harness runs does that.
 - [The pinned check lags the harness's `main`] → It judges by the rules of
   the pin, as every other gate here does since `self-pinned-gates`. A change
