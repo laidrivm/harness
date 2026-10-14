@@ -2,11 +2,11 @@
 /**
  * One pass of the board loop: the user's own script, started from a terminal
  * of their own at the root of a clone used for nothing else. A short pick
- * session reads `Board view` and names the first takeable card in the board's
- * order. The pass carries that change's next apply step in a fresh, unattended
- * `claude -p` session under `stage-goal`'s launch form, then takes the
- * outcome from the goal check it runs itself, never from the session's exit
- * status.
+ * session reads `Board view`, names the first takeable card in the board's
+ * order and claims it. The pass carries that change's next apply step in a
+ * fresh, unattended `claude -p` session under `stage-goal`'s launch form, then
+ * takes the outcome from the goal check it runs itself, never from the
+ * session's exit status.
  *
  *   bun bun/board-loop.ts                        (the harness)
  *   bun node_modules/harness/bun/board-loop.ts   (a consumer)
@@ -105,13 +105,18 @@ function prompt(slug: string, step: number, check: string): string {
 	].join("\n");
 }
 
-/** The pick session's prompt: no goal, and nothing for it to write. */
+/**
+ * The pick session's prompt: no goal, and one write, the claim. The runner
+ * neither reads nor waits on that move, since it has no access to the board,
+ * and a pass that fails after it leaves the card at `applying` for the next.
+ */
 function pickPrompt(board: string, slugs: string[]): string {
 	return [
-		`Read the saved view named \`Board view\` of the Notion board ${board}, and change nothing anywhere.`,
+		`Read the saved view named \`Board view\` of the Notion board ${board}, and change nothing but the \`Status\` of the card you pick.`,
 		"This session runs unattended.",
 		`These changes are takeable: ${slugs.join(", ")}. A card's \`Pointer\` names its change as \`openspec/changes/<slug>/\`.`,
 		"Take the `applying` column before `proposed`, and each column in the order the view returns it. Find the first card whose pointer names one of those changes.",
+		"Before you answer, set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`, then fetch that card again, and write no other card or property. Leave a card already at `applying` unwritten. A write that fails changes nothing about your answer.",
 		"End with one line, `PICK: <slug>` for its change or `PICK: none` when no card names one, and write no other line starting `PICK:`.",
 	].join("\n");
 }
