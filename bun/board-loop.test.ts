@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { realpathSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { cleanup, git } from "./diff-budget.fixture.ts";
-import { advance, change, clone, commit, lowered, out, records, run, TICKED } from "./board-loop.fixture.ts";
+import { advance, change, clone, commit, lowered, out, records, run, TICKED, trusting } from "./board-loop.fixture.ts";
 
 /** Who may start the runner, the clone it starts from, the install and the pick. [n]: `/zombies` ideas. */
 
@@ -27,6 +27,23 @@ describe("started from a session", () => {
 });
 
 describe("the clone", () => {
+	// Claude Code ignores the tracked `permissions.allow` in a folder nobody trusted.
+	test.each([
+		["no ~/.claude.json", () => null],
+		["a ~/.claude.json that is not JSON", () => "{"],
+		["the trust dialog not accepted", (dir: string) => trusting(dir).replace("true", "false")],
+		["only a parent directory trusted", (dir: string) => trusting(dirname(dir))],
+	])("an untrusted clone refuses before fetching: %s", (_, json) => {
+		const { dir } = clone();
+		const r = run(dir, [], {}, { claudeJson: json(dir) });
+		expect(r.code).toBe(1);
+		expect(r.last).toStartWith("board-loop: refused");
+		expect(r.last).toContain(`run claude once in ${realpathSync(dir)}, accept the trust dialog`);
+		expect(r.calls).not.toContain("git fetch");
+		expect(r.calls).not.toContain("claude");
+		expect(records(r.state).map((x) => x.decision)).toEqual(["refused"]);
+	});
+
 	// spec: board-loop/an-edited-tracked-file
 	test("a tracked edit refuses [3]", () => {
 		const { dir } = clone();
