@@ -133,10 +133,17 @@ Closes `spec-test-traceability/a-spec-marker-inside-a-template-literal`.
       check that skipped a line beginning inside a block comment goes with it:
       no line comment opens on such a line with nothing before it, and the
       block-comment cases still pass
-- [ ] 2.4 Record the set of cited identifiers before and after 2.3 over this
+- [x] 2.4 Record the set of cited identifiers before and after 2.3 over this
       repository, d2ass and mellon, measured with `check()` over each tree,
       and say which citations moved and why (*A spec marker inside a template
-      literal*)
-- [ ] 2.5 Measure every capped file this step touched and record the numbers,
+      literal*). Measured with 2.2's and 2.3's `check()` over the same trees.
+      This repository: 307 cited before and after, the same set — the 306
+      `main` cites at the branch point and 2.2's own citation, which both
+      versions see — 253 uncited. d2ass: 216 cited before and after, the
+      same set, 195 uncited, so its `harness.uncitedFloor` does not move.
+      mellon: none either side. No tree held a `// spec:` line inside a
+      template literal, so the fix closes a hole nothing had yet fallen into
+- [x] 2.5 Measure every capped file this step touched and record the numbers,
       whether or not any is over (*change-slicing/No source file exceeds its
-      per-file cap*)
+      per-file cap*). Against the `.ts` cap of 300: `bun/spec-coverage.ts`
+      223, `bun/spec-coverage.test.ts` 276, none over
