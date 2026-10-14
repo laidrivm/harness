@@ -19,9 +19,9 @@
  * exit 0 for `met` and `idle` alone, so a shell loop stops where a person is
  * needed.
  */
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { record } from "./gate-ledger.ts";
 import { groups } from "./turn-gate.ts";
 
@@ -203,6 +203,11 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 	const check = join(real, "node_modules/harness/bun/goal-check.ts");
 	if (!existsSync(check))
 		return end("refused", "node_modules/harness/bun/goal-check.ts is missing — run bun install");
+	// The verdict runs a copy taken before any session, outside the clone, which an
+	// edit under `node_modules/harness/` cannot reach. Its imports all sit beside it.
+	const judge = mkdtempSync(join(tmpdir(), "board-loop-judge-"));
+	process.on("exit", () => rmSync(judge, { recursive: true, force: true }));
+	cpSync(dirname(check), judge, { recursive: true });
 
 	// Imported here: `root.ts`, under it, runs git as it loads, and a pass
 	// started from a session must have run nothing.
@@ -262,7 +267,7 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 	if (late) return end("timeout", `${target} ran past ${minutes}`);
 
 	// The check's own verdict at the commit the session left, never the exit status.
-	const verdict = sh("bun", check, "apply", slug, String(chosen.step));
+	const verdict = sh("bun", join(judge, "goal-check.ts"), "apply", slug, String(chosen.step));
 	const last = verdict.out.split("\n").at(-1) ?? "";
 	if (last.startsWith("goal met")) return end("met", target);
 	return end("open", `${target}: ${last || verdict.err || "the goal check printed nothing"}`);

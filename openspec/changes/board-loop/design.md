@@ -19,7 +19,7 @@ user's terminal, dedicated clone (CLAUDECODE unset)
    |-- pick: argument (step 1) | pick session (step 2)        claude -p, Board view
    |-- stage session: launch form, unattended  claude -p       (stage-goal, agent-autonomy)
    |      branch, /opsx:apply, pre-PR, push, PR, card moved    (the session, as written)
-   |-- verdict: node_modules/harness/bun/goal-check.ts apply <slug> <n>  (stage-goal, #65)
+   |-- verdict: <copy of the pin's bun/>/goal-check.ts apply <slug> <n>  (stage-goal, #65)
    '-- one record: loop/<outcome>/apply                        (gate-decision-ledger)
 ```
 
@@ -180,7 +180,12 @@ names the same file. The working tree's `bun/goal-check.ts` is the session's
 to edit, so a verdict read from it would let a session judge itself, which
 is what `self-pinned-gates` stopped for the gates. The install puts the copy
 there. A pass that finds it missing after the install refuses before any
-session, telling the user to run `bun install`. The user settled this on
+session, telling the user to run `bun install`. `self-pinned-gates` leaves the
+pinned directory editable by a session, so before any session the runner
+copies the pin's `bun/` to a temporary directory outside the clone and runs
+the verdict from that copy. The check finds the project from its working
+directory, never from its own path, so the copy judges the clone as the pin
+would. The user settled this on
 2026-10-14, closing the question step 1 left in its pull request.
 
 - *Alternative: the runner's own directory (`import.meta.dir`).* In the
@@ -223,10 +228,11 @@ named follow-up.
 - [A pick session that reads the board also reads text that a card's author
   wrote] → Only its `PICK:` line is used, and only when it names a slug the
   runner had already computed as takeable.
-- [A stage session in the harness edits `bun/goal-check.ts` so that its own
-  step reads as met] → Closed: the verdict runs the pinned copy under
-  `node_modules/harness/`, which no session's edit reaches before a pin bump
-  merges.
+- [A stage session edits `bun/goal-check.ts`, or its pinned copy under
+  `node_modules/harness/`, so that its own step reads as met] → Closed: the
+  verdict runs a copy of the pin taken before any session, outside the clone.
+  A session that reaches outside the clone to edit that copy is a deliberate
+  attack, which no runner check stops.
 - [A child the session started keeps working in the clone, or pushes to
   `origin`, after the pass recorded `timeout`] → Closed: the group is
   signalled, not `claude` alone, and the pass returns only once the group is
