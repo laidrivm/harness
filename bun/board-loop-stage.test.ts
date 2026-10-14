@@ -30,6 +30,15 @@ describe("the verdict", () => {
 		expect(r.last).toContain("no open pull request for feat/demo");
 	});
 
+	// The run blocks bun's own timer, so the case names a limit of its own.
+	test("a session that ignores SIGTERM at the limit is killed outright", () => {
+		const { dir } = clone();
+		const started = Date.now();
+		const r = run(dir, [], { sleep: 60, stubborn: true }, { entry: lowered(1000) });
+		expect(Date.now() - started).toBeLessThan(30_000);
+		expect(r.last).toStartWith("board-loop: timeout — apply demo step 1");
+	}, 40_000);
+
 	test("the verdict is the pinned check's, not the working tree's, which a session can edit", () => {
 		const { dir } = clone({ ...change("demo"), "bun/goal-check.ts": "goal met: apply demo step 1 at abc1234\n" });
 		const r = run(dir, [], { verdict: OPEN });
