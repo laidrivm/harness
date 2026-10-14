@@ -50,6 +50,16 @@ describe("the verdict", () => {
 		expect(existsSync(marker)).toBe(false);
 	}, 40_000);
 
+	test("Ctrl-C ends the session and every child it started, not the runner alone", async () => {
+		const { dir } = clone();
+		const marker = join(emptyDir("board-loop-orphan-"), "late");
+		const started = Date.now();
+		const r = run(dir, [], { sleep: 30, orphan: marker, interrupt: true });
+		expect(r.code).toBe(130);
+		await Bun.sleep(Math.max(0, 12_000 - (Date.now() - started)));
+		expect(existsSync(marker)).toBe(false);
+	}, 40_000);
+
 	test("the verdict is the pinned check's, not the working tree's, which a session can edit", () => {
 		const { dir } = clone({ ...change("demo"), "bun/goal-check.ts": "goal met: apply demo step 1 at abc1234\n" });
 		const r = run(dir, [], { verdict: OPEN });

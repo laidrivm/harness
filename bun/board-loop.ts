@@ -119,22 +119,44 @@ async function session(text: string, limit: number, capture = false) {
 	const flags = ["--permission-mode", "auto", "--permission-prompts", "none"];
 	// A file, not a pipe: a child the session leaves running could hold a pipe open and stall the pass.
 	const dir = capture ? mkdtempSync(join(tmpdir(), "board-loop-")) : "";
+	let interrupt: (() => void) | undefined;
 	try {
+		// Leader of its own process group, so a child it starts (a test run, a push) is signalled with it.
 		const run = Bun.spawn(["claude", "-p", text, ...flags], {
 			stdio: ["ignore", capture ? Bun.file(join(dir, "out")) : "inherit", "inherit"],
+			detached: true,
 		});
+		/** Signals the whole group; false once no member is left. */
+		const group = (signal: NodeJS.Signals | 0) => {
+			try {
+				process.kill(-run.pid, signal);
+				return true;
+			} catch {
+				return false;
+			}
+		};
+		// Ctrl-C reaches the terminal's foreground group, which a detached one is not.
+		interrupt = () => {
+			group("SIGKILL");
+			// `process.exit` skips the `finally` below.
+			if (capture) rmSync(dir, { recursive: true, force: true });
+			process.exit(130);
+		};
+		process.on("SIGINT", interrupt);
 		let late = false;
 		const timer = setTimeout(() => {
 			late = true;
-			run.kill();
-			// One that ignores SIGTERM is killed outright, so the pass never waits on it.
-			// shortcut: both signals reach `claude` alone; signal its group if a child is seen to outlive it.
-			setTimeout(() => run.kill("SIGKILL"), 5_000).unref();
+			group("SIGTERM");
+			// A member that ignores SIGTERM is killed outright.
+			setTimeout(() => group("SIGKILL"), 5_000).unref();
 		}, limit);
 		await run.exited;
 		clearTimeout(timer);
+		// Nothing the session started may go on working once the pass records `timeout`.
+		for (let wait = 0; late && wait < 100 && group(0); wait++) await Bun.sleep(100);
 		return { late, out: capture ? readFileSync(join(dir, "out"), "utf8") : "" };
 	} finally {
+		if (interrupt) process.off("SIGINT", interrupt);
 		if (capture) rmSync(dir, { recursive: true, force: true });
 	}
 }

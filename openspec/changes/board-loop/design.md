@@ -147,6 +147,14 @@ never stops. The user chose one hour on 2026-10-12. A step that needs longer
 is split into smaller task groups (`change-slicing`), and the limit is not
 raised.
 
+Each session starts as the leader of its own process group, so ending it ends
+whatever it started too: a test run, a push, a `gh pr create`. At the limit
+the runner sends the group SIGTERM, then SIGKILL five seconds later, and waits
+until the group is gone (ten seconds at most) before it records `timeout`.
+A detached group is not the terminal's foreground group, so Ctrl-C reaches
+the runner alone. The runner then kills the group itself and exits 130,
+recording nothing, as an interrupted pass did before.
+
 - *Alternative: `--max-turns`.* It counts model calls, which are not a
   measure of time, and `stage-goal` leaves it optional for a launcher.
 
@@ -219,6 +227,11 @@ named follow-up.
   step reads as met] → Closed: the verdict runs the pinned copy under
   `node_modules/harness/`, which no session's edit reaches before a pin bump
   merges.
+- [A child the session started keeps working in the clone, or pushes to
+  `origin`, after the pass recorded `timeout`] → Closed: the group is
+  signalled, not `claude` alone, and the pass returns only once the group is
+  gone. A member that leaves the group itself (`setsid`) escapes. Nothing the
+  harness runs does that.
 - [The pinned check lags the harness's `main`] → It judges by the rules of
   the pin, as every other gate here does since `self-pinned-gates`. A change
   to the check takes effect for the loop once a pin bump carries it.
