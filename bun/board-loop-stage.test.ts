@@ -60,10 +60,16 @@ describe("the verdict", () => {
 		expect(existsSync(marker)).toBe(false);
 	}, 40_000);
 
-	test("the verdict is the pinned check's, not the working tree's, which a session can edit", () => {
+	test.each([
+		["the working tree's check reads met", false],
+		["the session rewrites the pinned check to read met", true],
+	])("the verdict is the pin as installed before any session: %s", (_, tamper) => {
 		const { dir } = clone({ ...change("demo"), "bun/goal-check.ts": "goal met: apply demo step 1 at abc1234\n" });
-		const r = run(dir, [], { verdict: OPEN });
-		expect(r.calls).toContain(`bun ${realpathSync(dir)}/node_modules/harness/bun/goal-check.ts apply demo 1`);
+		const r = run(dir, [], { verdict: OPEN, tamper });
+		// A copy of the pin, outside the clone.
+		const verdict = r.calls.split("\n").find((line) => line.endsWith("goal-check.ts apply demo 1")) ?? "";
+		expect(verdict).toStartWith("bun /");
+		expect(verdict).not.toContain(realpathSync(dir));
 		expect(r.last).toStartWith("board-loop: open — apply demo step 1");
 		expect(r.last).toContain("no open pull request for feat/demo");
 	});
