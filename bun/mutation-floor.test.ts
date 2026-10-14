@@ -1,8 +1,7 @@
 /**
  * The arithmetic: which mutant statuses count as surviving, what a report the
- * check cannot read does, and what the count owes the floor. The disable
- * comments an exemption rests on are in `mutation-floor-exemptions.test.ts`,
- * and the command line in `mutation-floor-cli.test.ts`.
+ * check cannot read does, and what the count owes the floor. The command line
+ * is in `mutation-floor-cli.test.ts`.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";

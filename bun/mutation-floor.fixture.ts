@@ -2,8 +2,8 @@
  * What the mutation floor's test files build a case out of: a Stryker report
  * on disk, and the object shape one is made of.
  *
- * Its own module because the cases split across three files by what they
- * exercise and every one of them builds a report. A copy per file would drift
+ * Its own module because the cases split across two files by what they
+ * exercise and both of them build a report. A copy per file would drift
  * in the shape it writes — the key the check reads a mutant's status from —
  * while each file still passed.
  *
