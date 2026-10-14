@@ -12,12 +12,13 @@ steps.
 
 Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
 
-- [ ] 1.1 Add the failing case first, against `bun/spec-coverage.ts` as it
+- [x] 1.1 Add the failing case first, against `bun/spec-coverage.ts` as it
       stands, and record that it fails. A test file holding `const s = "he said
       \"/*\"";` and a `// spec:` citation below it, asserting the citation is
       found. A case that passes before the switch pins nothing — the control is
       the same source without the escaped quote, which the implementation
-      already handles (*A citation below an escaped quote*)
+      already handles (*A citation below an escaped quote*). Measured against
+      the strip: the case failed, alone of the file's 22, and the control passed
 - [x] 1.2 Cover `comments` in `bun/scan.test.ts` on the shapes the walk
       exists for and `blank`'s cases cannot reach, because they are about what
       is returned rather than what survives: a block comment's opening line
@@ -33,14 +34,18 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       the backtick closing it arrives — `comments` reports nothing past the
       opener, which is correct, so it is named here and `blank` is left as
       the design fixes it
-- [ ] 1.3 Switch `bun/spec-coverage.ts` to the export: derive which lines
+- [x] 1.3 Switch `bun/spec-coverage.ts` to the export: derive which lines
       sit inside a block comment from the comment list — a block opening on
       line *n* whose text spans *k* newlines encloses *n* through *n + k* — and
       delete the per-line strip with the `ponytail:` comment standing over it.
       1.1's case now passes. Keep two cases the derivation must not lose: a
       citation inside a commented-out block still does not count, and one below
-      a block that has closed still does (*A citation below an escaped quote*)
-- [ ] 1.4 Record the *set* of cited identifiers before and after 1.3, not only
+      a block that has closed still does (*A citation below an escaped quote*).
+      The lines marked are *n + 1* through *n + k*, the ones that begin inside
+      the block, which is what the strip computed: marking *n* as well would
+      skip a test call that a block opens after, measured by a probe that fails
+      the case pinning it
+- [x] 1.4 Record the *set* of cited identifiers before and after 1.3, not only
       the count, and set `FLOOR` to whatever the new count reads with the
       reason on its line. The count moves in either direction and neither is a
       defect on its own: a citation the old scanner dropped becomes visible and
@@ -49,7 +54,17 @@ Closes `spec-test-traceability/a-citation-below-an-escaped-quote`.
       literal today, measured, because the per-line strip only removes quoted
       spans that open and close on one line. Read the set difference and say
       which citations moved and why; a count compared alone cannot tell the two
-      apart (*A citation below an escaped quote*)
+      apart (*A citation below an escaped quote*). Measured with this branch's
+      `check()` over each tree. This repository: 302 cited before and after,
+      the same set, 253 uncited. mellon: none either side. d2ass: 214 cited
+      before and 216 after, nothing lost, two gained —
+      `review-bot-config/a-harness-rule-arrives-with-a-pin-bump` and
+      `review-bot-config/a-harness-rule-violated` in
+      `checks/coderabbit-config.test.ts`, dropped because the line comment on
+      its line 103 reads `src/** until`, whose `/*` the strip took for a block
+      opener that nothing closed. No `FLOOR` stands in this repository: the
+      floor is each consumer's `harness.uncitedFloor`, so d2ass's moves from
+      197 to 195, with that reason, in the bump that takes this change
 - [ ] 1.5 Compare the full set of describe paths across `bun/scan.test.ts`
       and `bun/spec-coverage.test.ts` before and after, per `core/testing.md`.
       The set changes by exactly 1.1's addition and 1.2's, and by nothing else
