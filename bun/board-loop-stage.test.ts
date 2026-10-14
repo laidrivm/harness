@@ -50,6 +50,26 @@ describe("the verdict", () => {
 		expect(existsSync(marker)).toBe(false);
 	}, 40_000);
 
+	test("a child left by a session that exited on its own is ended before the pass returns", async () => {
+		const { dir } = clone();
+		const marker = join(emptyDir("board-loop-orphan-"), "late");
+		const started = Date.now();
+		const r = run(dir, [], { orphan: marker });
+		expect(r.last).toBe("board-loop: met — apply demo step 1");
+		await Bun.sleep(Math.max(0, 12_000 - (Date.now() - started)));
+		expect(existsSync(marker)).toBe(false);
+	}, 40_000);
+
+	test("a group the runner cannot signal (EPERM) is not taken as gone: the pass refuses, naming it", () => {
+		const { dir } = clone();
+		// Signal 0 fails as it does for a member another user owns; real signals still go through.
+		const kill = `(pid, signal) => { if (signal === 0) throw Object.assign(new Error("EPERM"), { code: "EPERM" }); process.kill(pid, signal); }`;
+		const r = run(dir, [], {}, { entry: lowered(60_000, kill) });
+		expect(r.last).toStartWith("board-loop: refused — process group ");
+		expect(r.last).toContain("outlived");
+		expect(records(r.state).map((x) => x.decision)).toEqual(["refused"]);
+	}, 40_000);
+
 	test("Ctrl-C ends the session and every child it started, not the runner alone", async () => {
 		const { dir } = clone();
 		const marker = join(emptyDir("board-loop-orphan-"), "late");
