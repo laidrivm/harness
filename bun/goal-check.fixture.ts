@@ -27,17 +27,23 @@ export const out = (dir: string, ...args: string[]) =>
 	Bun.spawnSync(["git", ...args], { cwd: dir }).stdout.toString().trim();
 export const head = (dir: string) => out(dir, "rev-parse", "HEAD");
 
-type Gh = { answer: string; code: number } | null;
+/** What the stub `gh` answers, after failing its first `fails` calls. */
+type Gh = { answer: string; code: number; fails?: number } | null;
 
-/** `PATH` for the check: `git`, and a `gh` answering only the check's query. */
+/**
+ * `PATH` for the check: `git`, and a `gh` answering only the check's query.
+ * The stub appends a line to `calls` beside it on every call, so it can fail
+ * a set number of times and a case can count the tries.
+ */
 function bin(gh: Gh): string {
 	const dir = emptyDir("goal-check-bin-");
 	symlinkSync(Bun.which("git") ?? "git", join(dir, "git"));
 	if (!gh) return dir;
-	const query = "pr list --head feature --state open --json headRefOid";
+	const query = "pr list --head feature --state all --json headRefOid,state";
+	const calls = join(dir, "calls");
 	writeFileSync(
 		join(dir, "gh"),
-		`#!/bin/sh\nif [ "$*" = "${query}" ]; then printf '%s' '${gh.answer}'; exit ${gh.code}; fi\nexit 9\n`,
+		`#!/bin/sh\necho >> "${calls}"\nif [ $(wc -l < "${calls}") -le ${gh.fails ?? 0} ]; then exit 1; fi\nif [ "$*" = "${query}" ]; then printf '%s' '${gh.answer}'; exit ${gh.code}; fi\nexit 9\n`,
 	);
 	chmodSync(join(dir, "gh"), 0o755);
 	return dir;
@@ -45,7 +51,7 @@ function bin(gh: Gh): string {
 
 /** An open pull request whose head is the repository's `HEAD`. */
 const prAt = (dir: string) => ({
-	answer: JSON.stringify([{ headRefOid: head(dir) }]),
+	answer: JSON.stringify([{ headRefOid: head(dir), state: "OPEN" }]),
 	code: 0,
 });
 
@@ -82,7 +88,9 @@ export function stateWith(...lines: (object | string)[]): string {
 /**
  * The check run in `dir`. By default the ledger holds a passing run record of
  * `HEAD` and `gh` answers with an open pull request at `HEAD`, so a case
- * changes only the condition it is about.
+ * changes only the condition it is about. The check retries `gh` with no
+ * pause, so the tries are the ones that ship and no case sleeps; `calls` is
+ * how many it made.
  */
 export function run(
 	dir: string,
@@ -90,18 +98,26 @@ export function run(
 	opts: { gh?: Gh; state?: string; env?: Record<string, string> } = {},
 ) {
 	const state = opts.state ?? stateWith(runRecord(dir));
+	const path = bin(opts.gh === undefined ? prAt(dir) : opts.gh);
 	const call = Bun.spawnSync([process.execPath, check, ...args], {
 		cwd: dir,
 		env: {
-			PATH: bin(opts.gh === undefined ? prAt(dir) : opts.gh),
+			PATH: path,
 			HOME: emptyDir("goal-check-home-"),
 			XDG_STATE_HOME: state,
 			CLAUDE_CODE_SESSION_ID: "s-1",
+			GOAL_CHECK_RETRY_MS: "0",
 			...opts.env,
 		},
 	});
 	const text = call.stdout.toString().trim();
-	return { code: call.exitCode, last: text.split("\n").at(-1) ?? "", state };
+	let calls = 0;
+	try {
+		calls = readFileSync(join(path, "calls"), "utf8").split("\n").length - 1;
+	} catch {
+		// No stub `gh`, or the check never called it.
+	}
+	return { code: call.exitCode, last: text.split("\n").at(-1) ?? "", state, calls };
 }
 
 /** One gate's records in a state directory's ledger, the goal check's by default. */
