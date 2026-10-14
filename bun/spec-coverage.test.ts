@@ -223,6 +223,14 @@ describe("which lines a block comment encloses", () => {
 		expect(problems(dir)).toEqual([]);
 	});
 
+	test("a citation below a block left open does not count", () => {
+		const dir = world(
+			'/* a\n// spec: capability/a-first-thing\ntest("acts", () => {});\n',
+			"A first thing",
+		);
+		expect(cited(dir)).toEqual([]);
+	});
+
 	test("a call on the line a block opens on is still a call", () => {
 		const dir = world(
 			'// spec: capability/a-first-thing\ntest("acts", () => {}); /* a\nb */\n',
