@@ -7,7 +7,9 @@ import {
 	head,
 	ledger,
 	out,
+	pr,
 	proposal,
+	prs,
 	records,
 	run,
 	runRecord,
@@ -40,16 +42,70 @@ describe("the pull request and the tree", () => {
 	// spec: stage-goal/the-pull-request-is-behind
 	test("a pull request behind HEAD is open [27]", () => {
 		const dir = proposal();
-		const answer = JSON.stringify([{ headRefOid: out(dir, "rev-parse", "main") }]);
-		const r = run(dir, ["propose", "demo"], { gh: { answer, code: 0 } });
+		const gh = prs(pr(out(dir, "rev-parse", "main"), "OPEN"));
+		const r = run(dir, ["propose", "demo"], { gh });
 		expect(r.last).toContain(`not ${head(dir).slice(0, 7)}`);
 	});
 
 	// spec: stage-goal/the-pull-request-is-behind
-	test("no open pull request, a closed or merged one at HEAD, is open [28]", () => {
-		const gh = { answer: "[]", code: 0 };
-		const r = run(proposal(), ["propose", "demo"], { gh });
-		expect(r.last).toContain("no open pull request for feature");
+	test("no pull request at all is open [1] [28]", () => {
+		const r = run(proposal(), ["propose", "demo"], { gh: prs() });
+		expect(r.last).toContain("no open or merged pull request for feature");
+	});
+
+	// spec: stage-goal/the-pull-request-has-merged
+	test("a merged pull request at HEAD is met [2]", () => {
+		const dir = proposal();
+		const r = run(dir, ["propose", "demo"], { gh: prs(pr(head(dir), "MERGED")) });
+		expect([r.code, r.last]).toEqual([0, `goal met: propose demo at ${head(dir).slice(0, 7)}`]);
+	});
+
+	// spec: stage-goal/the-pull-request-has-merged
+	test("one commit read open, then merged, is met both times [15]", () => {
+		const dir = proposal();
+		const state = stateWith(runRecord(dir));
+		const codes = ["OPEN", "MERGED"].map(
+			(s) => run(dir, ["propose", "demo"], { gh: prs(pr(head(dir), s)), state }).code,
+		);
+		expect([codes, records(state).map((r) => r.decision)]).toEqual([
+			[0, 0],
+			["met", "met"],
+		]);
+	});
+
+	// spec: stage-goal/a-proposal-ready-for-review
+	test("a closed pull request at HEAD beside an open one at HEAD is met [4]", () => {
+		const dir = proposal();
+		const gh = prs(pr(head(dir), "CLOSED"), pr(head(dir), "OPEN"));
+		expect(run(dir, ["propose", "demo"], { gh }).code).toBe(0);
+	});
+
+	// spec: stage-goal/the-pull-request-is-behind
+	test.each([
+		["a merged one at an earlier commit, none at HEAD [5]", ["MERGED"]],
+		["a closed one at HEAD, an open one earlier [6]", ["CLOSED", "OPEN"]],
+	])("%s is open, naming the earlier head", (_, states) => {
+		const dir = proposal();
+		const main = out(dir, "rev-parse", "main");
+		// The closed one, where there is one, sits at HEAD and comes first.
+		const gh = prs(...states.map((s) => pr(s === "CLOSED" ? head(dir) : main, s)));
+		const r = run(dir, ["propose", "demo"], { gh });
+		expect(r.last).toContain(
+			`the pull request's head is ${main.slice(0, 7)}, not ${head(dir).slice(0, 7)}`,
+		);
+	});
+
+	// spec: stage-goal/the-pull-request-was-closed-unmerged
+	test.each([
+		["closed unmerged [13]", "CLOSED"],
+		["with no state [12]", undefined],
+	])("the only pull request at HEAD, %s, is open", (_, state) => {
+		const dir = proposal();
+		const r = run(dir, ["propose", "demo"], { gh: prs(pr(head(dir), state)) });
+		expect([r.code, r.last]).toEqual([
+			1,
+			expect.stringContaining("no open or merged pull request for feature"),
+		]);
 	});
 
 	// spec: stage-goal/the-pull-request-is-behind
