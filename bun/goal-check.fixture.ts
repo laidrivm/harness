@@ -43,7 +43,8 @@ function bin(gh: Gh): string {
 	const calls = join(dir, "calls");
 	writeFileSync(
 		join(dir, "gh"),
-		`#!/bin/sh\necho >> "${calls}"\nif [ $(wc -l < "${calls}") -le ${gh.fails ?? 0} ]; then exit 1; fi\nif [ "$*" = "${query}" ]; then printf '%s' '${gh.answer}'; exit ${gh.code}; fi\nexit 9\n`,
+		// Shell builtins alone count the calls: `PATH` holds no `wc`.
+		`#!/bin/sh\necho >> "${calls}"\nn=0; while read -r _; do n=$((n + 1)); done < "${calls}"\nif [ $n -le ${gh.fails ?? 0} ]; then exit 1; fi\nif [ "$*" = "${query}" ]; then printf '%s' '${gh.answer}'; exit ${gh.code}; fi\nexit 9\n`,
 	);
 	chmodSync(join(dir, "gh"), 0o755);
 	return dir;

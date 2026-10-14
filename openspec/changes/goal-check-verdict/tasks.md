@@ -59,7 +59,7 @@ One group, one harness pull request on `feat/goal-check-verdict`.
       Verify: all five fail before 1.4, 9 and 14 on the count of calls. The
       three cases that exist for an absent, failing or garbled `gh` keep
       passing, and none takes a measurable time.
-- [ ] 1.4 Implement in `bun/goal-check.ts` `pullRequest()`, as design.md
+- [x] 1.4 Implement in `bun/goal-check.ts` `pullRequest()`, as design.md
       D1-D3 set out:
       - the `--state all --json headRefOid,state` query;
       - `met` only for a record whose `headRefOid` is `HEAD` and whose `state`

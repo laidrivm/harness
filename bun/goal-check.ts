@@ -85,25 +85,41 @@ if (!ran(commit, top, "pass"))
 const branch = git("symbolic-ref", "--short", "-q", "HEAD");
 missing.push(...pullRequest(branch, commit));
 
-/** What is missing about the open pull request whose head should be `HEAD`. */
+/**
+ * What is missing about the pull request whose head should be `HEAD`: one of
+ * the branch's, open or merged, so a merge leaves the verdict where it was. One
+ * closed unmerged withdraws the step. A failed read is tried three times.
+ */
 function pullRequest(branch: string | undefined, commit: string): string[] {
 	if (!branch) return ["HEAD names no branch"];
-	let heads: string[];
-	try {
-		const query = ["gh", "pr", "list", "--head", branch, "--state", "open"];
-		const run = Bun.spawnSync([...query, "--json", "headRefOid"]);
-		if (run.exitCode !== 0) throw new Error();
-		heads = JSON.parse(run.stdout.toString()).map(
-			(pr: { headRefOid?: unknown }) => pr.headRefOid,
-		);
-	} catch {
-		// gh missing, unauthenticated or offline: an unknown is never met.
-		return ["the pull request's state could not be read"];
+	const listed = pullRequests(branch);
+	// gh missing, unauthenticated or offline on every try: an unknown is never met.
+	if (!listed) return ["the pull request's state could not be read"];
+	const live = listed.filter((pr) => pr?.state === "OPEN" || pr?.state === "MERGED");
+	if (live.some((pr) => pr?.headRefOid === commit)) return [];
+	if (live.length === 0) return [`no open or merged pull request for ${branch}`];
+	const theirs = String(live[0]?.headRefOid).slice(0, 7);
+	return [`the pull request's head is ${theirs}, not ${commit.slice(0, 7)}`];
+}
+
+type Listed = { headRefOid?: unknown; state?: unknown } | null;
+
+/** The branch's pull requests in every state, or undefined after three failed reads. */
+function pullRequests(branch: string): Listed[] | undefined {
+	const env = process.env.GOAL_CHECK_RETRY_MS ?? "";
+	const pause = /^\d+$/.test(env) ? Number(env) : 2000;
+	const query = ["gh", "pr", "list", "--head", branch, "--state", "all"];
+	for (let tries = 1; ; tries++) {
+		try {
+			const run = Bun.spawnSync([...query, "--json", "headRefOid,state"]);
+			const listed = run.exitCode === 0 && JSON.parse(run.stdout.toString());
+			if (Array.isArray(listed)) return listed;
+		} catch {
+			// A spawn that throws or output that is not JSON fails the try.
+		}
+		if (tries === 3) return undefined;
+		Bun.sleepSync(pause);
 	}
-	if (heads.includes(commit)) return [];
-	if (heads.length === 0) return [`no open pull request for ${branch}`];
-	const theirs = String(heads[0]).slice(0, 7);
-	return [`the open pull request's head is ${theirs}, not ${commit.slice(0, 7)}`];
 }
 
 const target = `${stage} ${change}${step ? ` step ${step}` : ""} at ${short}`;
