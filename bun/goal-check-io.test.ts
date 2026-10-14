@@ -39,6 +39,35 @@ describe("the pull request and the tree", () => {
 		expect(r.last).toContain("pull request's state could not be read");
 	});
 
+	// spec: stage-goal/a-read-that-fails-and-then-succeeds
+	test.each([
+		[1, "[7]"],
+		[2, "[8]"],
+	])("gh failing %i time(s) %s, then answering, is met", (fails) => {
+		const dir = proposal();
+		const gh = { ...prs(pr(head(dir), "OPEN")), fails };
+		expect(run(dir, ["propose", "demo"], { gh }).code).toBe(0);
+	});
+
+	// spec: stage-goal/the-pull-request-cannot-be-read
+	test.each([
+		// A fourth try would answer, so a fourth would be seen.
+		["failing three times [9]", { ...prs(), fails: 3 }],
+		["answering {} [14]", { answer: "{}", code: 0 }],
+	])("gh %s is open after three tries, not four", (_, gh) => {
+		const r = run(proposal(), ["propose", "demo"], { gh });
+		expect([r.last, r.calls]).toEqual([
+			expect.stringContaining("pull request's state could not be read"),
+			3,
+		]);
+	});
+
+	// spec: stage-goal/a-proposal-ready-for-review
+	test("a first try that answers is met after one call [10]", () => {
+		const r = run(proposal(), ["propose", "demo"]);
+		expect([r.code, r.calls]).toEqual([0, 1]);
+	});
+
 	// spec: stage-goal/the-pull-request-is-behind
 	test("a pull request behind HEAD is open [27]", () => {
 		const dir = proposal();

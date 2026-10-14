@@ -48,7 +48,7 @@ One group, one harness pull request on `feat/goal-check-verdict`.
       Verify: each met case fails before 1.4, and each open case asserts
       the wording it names rather than only the exit status, since before 1.4
       every case reads the state as unreadable.
-- [ ] 1.3 Write the retry cases in the same file:
+- [x] 1.3 Write the retry cases in the same file:
       - `fails: 1` [7] and `fails: 2` [8] are met
         (*A read that fails and then succeeds*);
       - `fails: 3` is open, says `the pull request's state could not be read`,
