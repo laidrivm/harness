@@ -173,13 +173,50 @@ describe("the pick", () => {
 		expect(r.calls).not.toContain("apply demo");
 	});
 
-	test("the pick prompt names the board by its harness.board value and lists the takeable slugs [21]", () => {
+	/** The pick session's prompt, the log up to the stage session. */
+	const pickOf = (dir: string) => run(dir).calls.split("\nclaude -p /goal")[0];
+
+	// spec: board-loop/a-picked-card-is-claimed
+	test("the pick prompt names the board by its harness.board value and lists the takeable slugs [21], and claims the picked card alone [1]", () => {
 		const { dir } = clone({ ...change("demo"), ...change("other"), ...change("spent", TICKED) });
-		const pick = run(dir).calls.split("\nclaude -p /goal")[0];
+		const pick = pickOf(dir);
 		expect(pick).toContain("`Board view` of the Notion board Demo");
 		expect(pick).toContain("\nThis session runs unattended.\n");
 		expect(pick).toContain("demo, other");
 		expect(pick).not.toContain("spent");
+		expect(pick).not.toContain("change nothing anywhere");
+		expect(pick).toContain("set the `Status` of the card your `PICK:` line names to `applying`");
+		expect(pick).toContain("write no other card or property");
+	});
+
+	// spec: board-loop/a-card-already-applying
+	test("the pick prompt leaves a card already at applying unwritten [2]", () => {
+		const { dir } = clone();
+		expect(pickOf(dir)).toContain("Leave a card already at `applying` unwritten.");
+	});
+
+	// spec: board-loop/a-picked-card-is-claimed
+	test("the pick prompt fetches the card again after the write [3]", () => {
+		const { dir } = clone();
+		expect(pickOf(dir)).toContain("then fetch that card again");
+	});
+
+	test("the stage session's prompt is still the launch form's three lines, with no claim [4]", () => {
+		const { dir } = clone();
+		const { calls } = run(dir);
+		const from = calls.indexOf("\nclaude -p /goal ") + 1;
+		const stage = calls.slice(from, calls.indexOf(" --permission-mode", from));
+		expect(stage.split("\n")).toHaveLength(3);
+		expect(stage).not.toContain("applying");
+		expect(stage).not.toContain("`Status`");
+	});
+
+	// The runner neither reads nor waits on the move: what the session says of it changes nothing.
+	test("a pick that says its move failed, above a valid PICK: line, still carries the step [5]", () => {
+		const { dir } = clone();
+		const r = run(dir, [], { pick: "The Status write was refused.\nPICK: demo" });
+		expect(staged(r.calls)).toBe(true);
+		expect(r.last).toBe("board-loop: met — apply demo step 1");
 	});
 
 	// spec: board-loop/a-pick-outside-the-list
