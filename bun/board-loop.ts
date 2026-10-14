@@ -126,8 +126,10 @@ async function session(text: string, limit: number, capture = false) {
 		let late = false;
 		const timer = setTimeout(() => {
 			late = true;
-			// shortcut: SIGTERM to `claude` alone; send SIGKILL to its group if one is seen to outlive it.
 			run.kill();
+			// One that ignores SIGTERM is killed outright, so the pass never waits on it.
+			// shortcut: both signals reach `claude` alone; signal its group if a child is seen to outlive it.
+			setTimeout(() => run.kill("SIGKILL"), 5_000).unref();
 		}, limit);
 		await run.exited;
 		clearTimeout(timer);

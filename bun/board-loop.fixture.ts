@@ -84,6 +84,8 @@ export type Stubs = {
 	claudeCode?: number | null;
 	/** Seconds the stage session runs for before exiting. */
 	sleep?: number;
+	/** Whether the stage session ignores SIGTERM. */
+	stubborn?: boolean;
 	/** What the pick session prints: `PICK: demo` unless given. */
 	pick?: string;
 	/** Seconds the pick session runs for, printing nothing. */
@@ -119,7 +121,8 @@ function bin(log: string, s: Stubs): string {
 		].join("\n"),
 	);
 	// The stage session's prompt opens with `/goal`; the pick session's does not.
-	const stage = s.sleep ? `exec /bin/sleep ${s.sleep}` : `exit ${s.claudeCode ?? 0}`;
+	// An ignored signal stays ignored across `exec`.
+	const stage = s.sleep ? `${s.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep ${s.sleep}` : `exit ${s.claudeCode ?? 0}`;
 	const pick = s.pickSleep
 		? `exec /bin/sleep ${s.pickSleep}`
 		: `${s.pickChild ? "/bin/sleep 30 2>/dev/null & " : ""}printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
