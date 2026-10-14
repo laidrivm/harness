@@ -198,7 +198,8 @@ tracked `permissions.allow`, so under `--permission-prompts none` every call
 it lists is refused, and the pass would fail looking like the loop's fault
 (seen live on 2026-10-13 in a fresh clone). Before it fetches, the runner reads
 `projects[<real path of the clone>].hasTrustDialogAccepted` from
-`~/.claude.json` and refuses unless it is `true`, telling the user to run
+`~/.claude.json`, or from `.claude.json` under `CLAUDE_CONFIG_DIR` when that is
+set, and refuses unless it is `true`, telling the user to run
 `claude` once in the clone, accept the dialog and `/exit`. Only the exact path
 counts: crediting a trusted parent could pass where Claude Code does not.
 

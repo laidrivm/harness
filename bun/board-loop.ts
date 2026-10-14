@@ -51,7 +51,9 @@ function sh(...args: string[]) {
  */
 function trusted(dir: string): boolean {
 	try {
-		const config = JSON.parse(readFileSync(join(homedir(), ".claude.json"), "utf8"));
+		// Where Claude Code keeps it: `CLAUDE_CONFIG_DIR` when set, the home otherwise.
+		const home = process.env.CLAUDE_CONFIG_DIR || homedir();
+		const config = JSON.parse(readFileSync(join(home, ".claude.json"), "utf8"));
 		return config?.projects?.[dir]?.hasTrustDialogAccepted === true;
 	} catch {
 		return false;
