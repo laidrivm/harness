@@ -109,12 +109,13 @@ function bin(log: string, s: Stubs): string {
 		stub("gh", `printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
 	const verdict = s.verdict ?? "goal met: apply demo step 1 at abc1234";
 	const pin = "node_modules/harness/bun";
-	const write = `mkdir -p ${pin} && printf 'checking\\n%s\\n' '${verdict}' > ${pin}/goal-check.ts; `;
+	// `PATH` holds the stubs alone, hence the absolute paths.
+	const write = `/bin/mkdir -p ${pin} && printf 'checking\\n%s\\n' '${verdict}' > ${pin}/goal-check.ts; `;
 	stub(
 		"bun",
 		[
 			`if [ "$1" = install ]; then ${s.pinned === false ? "" : write}echo 'the install says this'; exit ${s.install ?? 0}; fi`,
-			`cat "$1"`,
+			`/bin/cat "$1"`,
 		].join("\n"),
 	);
 	// The stage session's prompt opens with `/goal`; the pick session's does not.

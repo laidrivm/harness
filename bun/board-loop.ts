@@ -19,7 +19,7 @@
  * exit 0 for `met` and `idle` alone, so a shell loop stops where a person is
  * needed.
  */
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { record } from "./gate-ledger.ts";
@@ -175,6 +175,10 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 		console.error([install.out, install.err].filter(Boolean).join("\n"));
 		return end("refused", "bun install --frozen-lockfile failed, as printed above");
 	}
+	// The pinned copy, in the harness too: a session that edits the tree's check must not judge itself.
+	const check = join(real, "node_modules/harness/bun/goal-check.ts");
+	if (!existsSync(check))
+		return end("refused", "node_modules/harness/bun/goal-check.ts is missing — run bun install");
 
 	// Imported here: `root.ts`, under it, runs git as it loads, and a pass
 	// started from a session must have run nothing.
@@ -224,11 +228,10 @@ export async function pass(args: string[], limit = LIMIT): Promise<number> {
 		return end("refused", `the pick session named ${slug}: ${reasons.get(slug) ?? "no change of that name is takeable"}`);
 
 	const target = `apply ${slug} step ${chosen.step}`;
-	const check = join(import.meta.dir, "goal-check.ts");
 	console.log(`carrying ${target} on ${chosen.branch}`);
 	let late: boolean;
 	try {
-		({ late } = await session(prompt(slug, chosen.step, relative(top.out, check)), limit));
+		({ late } = await session(prompt(slug, chosen.step, relative(real, check)), limit));
 	} catch {
 		return end("refused", "claude could not be started");
 	}
