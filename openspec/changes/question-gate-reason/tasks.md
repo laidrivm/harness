@@ -84,7 +84,7 @@ One group, one pull request: `feat/question-gate-reason`.
       launch form's three lines" in `bun/board-loop.test.ts` to four lines
       [22]. Each fails before 1.6. (Req: stage-goal — An unattended stage runs
       under one goal on the check, §*A stage asks its question*)
-- [ ] 1.6 In `bun/board-loop.ts`, add the fourth line to `prompt()` from the
+- [x] 1.6 In `bun/board-loop.ts`, add the fourth line to `prompt()` from the
       imported `MARK` (design.md Decision 5). In `core/feature-workflow.md`,
       add the same line to the *Unattended stages* launch form, and say there
       that the answer, proposal and archive variants keep it. Name the mark in

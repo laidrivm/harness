@@ -25,6 +25,7 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { type Kill, session } from "./board-loop-session.ts";
 import { record } from "./gate-ledger.ts";
+import { MARK } from "./question-gate.ts";
 import { groups } from "./turn-gate.ts";
 
 /** A stage session's limit, fixed by the spec: a longer step is split, never given more. */
@@ -129,6 +130,8 @@ function prompt(slug: string, { step, branch, answer }: Step, check: string, res
 		`/goal Carry step ${step} of the OpenSpec change ${slug}: ${work}, the pre-PR sequence, the push and the pull request${instead}.${resume}`,
 		"This session runs unattended.",
 		`The goal is met when the last line of \`bun ${check} apply ${slug} ${step}\`, run after the last push, opens with \`goal met\` — or when the final message opens with \`BLOCKED —\` and names what only the user can settle.`,
+		// No apostrophe: the doc's form wraps the prompt in the shell's single quotes.
+		`A question only the user can settle goes on the card of the change as one page-level comment — \`page_id\` and \`markdown\` only, after reading that card and its comments — whose markdown opens with ${MARK}, its two backticks included.`,
 	].join("\n");
 }
 
