@@ -60,7 +60,7 @@ archive (#138) has merged.
 
 ## 2. An unpushed step branch does not stop the pass
 
-- [ ] 2.1 Write the unpushed-tip tests in `bun/board-loop.test.ts`, under
+- [x] 2.1 Write the unpushed-tip tests in `bun/board-loop.test.ts`, under
       *the clone*:
       - move the existing case *an unpushed tip refuses and leaves the branch
         checked out* onto `feat/other`, since `feat/demo` becomes a step
