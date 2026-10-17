@@ -1,5 +1,5 @@
 /**
- * The runner spawned in a clone of a bare `origin`, for the three
+ * The runner spawned in a clone of a bare `origin`, for the
  * `board-loop*.test.ts` files. Its environment has no `CLAUDECODE` (`bun test`
  * runs inside a session), a state directory and a home of its own, the
  * home's `.claude.json` trusting the clone, and a `PATH` of stubs
