@@ -39,8 +39,9 @@ questions will be frequent.
   `This session runs unattended.` (agent-autonomy). In such a session the
   question gate now answers `deny` to a comment it would otherwise pass.
   The denial carries a message that names the condition the comment failed
-  and what would make it a question. That message replaces Claude Code's
-  "do not retry", so the session can fix the comment and send it again.
+  and what would make it a question, so the session can fix the comment and
+  send it again. Whether it replaces Claude Code's "do not retry" or comes
+  beside it is unmeasured; the live check in task 1.8 records which.
   Where the starting prompt does not declare the session unattended, nothing
   changes: the gate gives no answer, and a person at the prompt may still
   approve a comment the gate does not recognise.
