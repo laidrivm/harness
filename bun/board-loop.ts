@@ -170,7 +170,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		return end("refused", "tracked files differ from HEAD — work the last session left");
 	// An unpushed tip may be a dead session's step branch: noted, and judged once the steps are known.
 	const unpushed = !sh("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out;
-	let noted = unpushed ? sh("git", "branch", "--show-current").out : "";
+	const noted = unpushed ? sh("git", "branch", "--show-current").out : "";
 	// No branch name keeps a detached HEAD's commits once the pass switches off it.
 	if (unpushed && !noted) return end("refused", "HEAD names no branch and is on no remote-tracking branch — unpushed work");
 	/** A refusal goes back to the noted branch first, so the next pass sees its tip again. */
@@ -275,7 +275,6 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	} catch {
 		return refuse("claude could not be started");
 	}
-	noted = ""; // The clone is the stage session's now: a refusal switches nothing under it.
 	const stageEnd = unclean(target, staged);
 	if (stageEnd !== undefined) return stageEnd;
 
