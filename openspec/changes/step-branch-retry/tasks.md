@@ -92,7 +92,7 @@ archive (#138) has merged.
       §*A dead session's unpushed commits*; The runner is the user's script
       and starts from a clean clone, §*Unpushed work*, §*Unpushed work on a
       detached HEAD*)
-- [ ] 2.2 In `bun/board-loop.ts`, refuse an unpushed tip at the start only
+- [x] 2.2 In `bun/board-loop.ts`, refuse an unpushed tip at the start only
       when `HEAD` names no branch. Note a named branch and go on. Once the
       takeable list and the answer candidates are computed, and before the
       idle check, refuse when the noted branch is no step's branch, after

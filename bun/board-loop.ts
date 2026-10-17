@@ -14,7 +14,9 @@
  *
  * It refuses inside a Claude Code session: an agent's `bun` call names no
  * `claude -p` for the classifier to refuse. It never discards work to
- * reach the default branch's tip, and it installs before any session, since
+ * reach the default branch's tip: it refuses a tracked edit, and an unpushed
+ * tip unless that is a step's branch, left for the session that carries the
+ * step. It installs before any session, since
  * `bun install` is an `ask` nobody would answer. Each pass ends on one line
  * and one `loop` record: `met`, `open`, `timeout`, `idle` or `refused`, with
  * exit 0 for `met` and `idle` alone, so a shell loop stops where a person is
@@ -164,8 +166,14 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		return end("refused", `not a trusted workspace — run claude once in ${real}, accept the trust dialog and /exit`);
 	if (sh("git", "status", "--porcelain", "--untracked-files=no").out)
 		return end("refused", "tracked files differ from HEAD — work the last session left");
-	if (!sh("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out)
-		return end("refused", "HEAD is on no remote-tracking branch — unpushed work");
+	// An unpushed tip may be a dead session's step branch: noted, and judged once the steps are known.
+	const unpushed = !sh("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out;
+	let noted = unpushed ? sh("git", "branch", "--show-current").out : "";
+	// No branch name keeps a detached HEAD's commits once the pass switches off it.
+	if (unpushed && !noted) return end("refused", "HEAD names no branch and is on no remote-tracking branch — unpushed work");
+	/** A refusal goes back to the noted branch first, so the next pass sees its tip again. */
+	const refuse = (detail: string) =>
+		end("refused", !noted || sh("git", "switch", "-q", noted).ok ? detail : `${detail}; switching back to ${noted} failed`);
 	for (const step of [
 		["fetch", "-q", "origin"],
 		["switch", "-q", DEFAULT],
@@ -175,20 +183,20 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		if (run.ok) continue;
 		console.error(run.err);
 		const why = step[0] === "merge" ? `${DEFAULT} cannot fast-forward to origin/${DEFAULT}` : `git ${step[0]} failed`;
-		return end("refused", `${why}; nothing was merged or reset`);
+		return refuse(`${why}; nothing was merged or reset`);
 	}
 	// A local main ahead of origin fast-forwards as "up to date", unpushed work and all.
 	if (sh("git", "rev-parse", "HEAD").out !== sh("git", "rev-parse", `origin/${DEFAULT}`).out)
-		return end("refused", `${DEFAULT} holds commits origin/${DEFAULT} lacks; nothing was merged or reset`);
+		return refuse(`${DEFAULT} holds commits origin/${DEFAULT} lacks; nothing was merged or reset`);
 	const install = sh("bun", "install", "--frozen-lockfile");
 	if (!install.ok) {
 		console.error([install.out, install.err].filter(Boolean).join("\n"));
-		return end("refused", "bun install --frozen-lockfile failed, as printed above");
+		return refuse("bun install --frozen-lockfile failed, as printed above");
 	}
 	// The pinned copy, in the harness too: a session that edits the tree's check must not judge itself.
 	const check = join(real, "node_modules/harness/bun/goal-check.ts");
 	if (!existsSync(check))
-		return end("refused", "node_modules/harness/bun/goal-check.ts is missing — run bun install");
+		return refuse("node_modules/harness/bun/goal-check.ts is missing — run bun install");
 	// The verdict runs a copy taken before any session, outside the clone, which an
 	// edit under `node_modules/harness/` cannot reach. Its imports all sit beside it.
 	const judge = mkdtempSync(join(tmpdir(), "board-loop-judge-"));
@@ -203,14 +211,14 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		named = board(top.out);
 	} catch (error) {
 		// Names the key, never the value.
-		return end("refused", (error as Error).message);
+		return refuse((error as Error).message);
 	}
 	let state: ReturnType<typeof boardState>;
 	try {
 		state = boardState(top.out);
 	} catch (error) {
 		console.error((error as Error).message);
-		return end("refused", "the tree does not derive a board state, as printed above");
+		return refuse("the tree does not derive a board state, as printed above");
 	}
 	// Takeable changes and answer candidates alike; `answer` tells them apart.
 	const steps = new Map<string, Step>();
@@ -223,6 +231,9 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 			console.log(`passed over ${name}: ${seen}`);
 		} else steps.set(name, seen);
 	}
+	if (noted && ![...steps.values()].some((s) => s.branch === noted))
+		return refuse(`unpushed work on ${noted}, which is no step's branch`);
+	if (noted) console.log(`leaving ${noted}, unpushed, for the pass that carries its step`);
 	if (steps.size === 0) return end("idle", "no change is takeable");
 	const listed = (answer: boolean) => [...steps].filter(([, s]) => s.answer === answer).map(([name]) => name);
 
@@ -231,13 +242,13 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const unclean = (what: string, { late, left }: { late: boolean; left?: number }) => {
 		const outlived = left ? `process group ${left} outlived ${what} — see pgrep -g ${left}` : "";
 		if (late) return end("timeout", [`${what} ran past ${minutes}`, outlived].filter(Boolean).join("; "));
-		if (left) return end("refused", outlived);
+		if (left) return refuse(outlived);
 	};
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
 		picked = await session(pickPrompt(named, listed(false), listed(true)), limit, kill, true);
 	} catch {
-		return end("refused", "claude could not be started");
+		return refuse("claude could not be started");
 	}
 	const pickEnd = unclean("the pick session", picked);
 	if (pickEnd !== undefined) return pickEnd;
@@ -245,11 +256,11 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	// Untrusted text: one exact line, naming a change this pass computed as takeable or a candidate.
 	const lines = picked.out.split("\n").filter((line) => line.startsWith("PICK:"));
 	const slug = lines.length === 1 ? /^PICK: (\w[\w.-]*)$/.exec(lines[0].trimEnd())?.[1] : undefined;
-	if (!slug) return end("refused", "the pick session returned not one exact PICK: line");
+	if (!slug) return refuse("the pick session returned not one exact PICK: line");
 	if (slug === "none") return end("idle", "the pick session found no takeable card on the board");
 	const chosen = steps.get(slug);
 	if (!chosen)
-		return end("refused", `the pick session named ${slug}: ${reasons.get(slug) ?? "no change of that name is takeable"}`);
+		return refuse(`the pick session named ${slug}: ${reasons.get(slug) ?? "no change of that name is takeable"}`);
 
 	const target = `apply ${slug} step ${chosen.step}`;
 	// The runner names the branch and never deletes, resets or pushes it.
@@ -260,8 +271,9 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	try {
 		staged = await session(prompt(slug, chosen, relative(real, check), resumed), limit, kill);
 	} catch {
-		return end("refused", "claude could not be started");
+		return refuse("claude could not be started");
 	}
+	noted = ""; // The clone is the stage session's now: a refusal switches nothing under it.
 	const stageEnd = unclean(target, staged);
 	if (stageEnd !== undefined) return stageEnd;
 
