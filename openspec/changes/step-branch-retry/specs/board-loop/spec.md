@@ -41,7 +41,9 @@ recreate or push the branch.
 A branch tip that no remote-tracking branch contains SHALL NOT stop the pass
 when its branch is the step branch of a change the pass computes as takeable
 or as an answer candidate. The runner SHALL switch from it to the default
-branch as from any other branch, and the branch SHALL keep its commits.
+branch as from any other branch, and the branch SHALL keep its commits. A
+pass refused after that switch SHALL first switch the clone back to the
+branch.
 
 #### Scenario: A dead session's unpushed commits
 
@@ -49,6 +51,12 @@ branch as from any other branch, and the branch SHALL keep its commits.
   and the branch holds a commit that no remote-tracking branch contains
 - **THEN** the pass goes on from the default branch's tip, the step branch
   keeps its tip, and a pass that carries that step continues the branch
+
+#### Scenario: Refused after the switch
+
+- **WHEN** a pass that switched from such a branch is refused, for example
+  because `bun install --frozen-lockfile` fails
+- **THEN** the clone is back on that branch at its tip
 
 ## MODIFIED Requirements
 

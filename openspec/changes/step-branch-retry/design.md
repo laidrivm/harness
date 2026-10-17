@@ -15,6 +15,7 @@ CLAUDECODE, trust, tracked edit          unchanged
 fetch, switch main, ff-only, install     unchanged
 consider() each change -> steps          unchanged
 *step 2: noted branch is no step's branch -> switch back to it, refuse
+*step 2: any refusal after the switch      -> switch back to it first
 pick session -> PICK: <slug>             unchanged
 *step 1: the step's branch exists?  -> continuation clause in line 1
 stage session, goal check                unchanged
@@ -139,7 +140,10 @@ back to it, so the next pass sees it again instead of forgetting it.
 
 The check moves later in the pass, after the takeable list is computed. A
 detached `HEAD` is still refused where it is today, before the fetch,
-because no branch name keeps its commits.
+because no branch name keeps its commits. Any refusal after the switch, such
+as a failed install, switches back to the noted branch first. Without that, a
+pass refused before the list exists would leave the clone on `main`, and the
+next pass would no longer see the unpushed tip.
 
 ### Narrow `task-board`'s scenario here
 
