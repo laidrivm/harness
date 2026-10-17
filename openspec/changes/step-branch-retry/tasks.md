@@ -43,7 +43,7 @@ archive (#138) has merged.
       `prompt()` a clause for the first line. The clause names the branch as
       one a session left and says to `git switch` to it rather than create
       it, and to carry on from what its commits hold. Verify: 1.1 is green,
-      the runner's three test files are green, and the file is under its cap
+      the runner's `board-loop*.test.ts` files are green, and the file is under its cap
       in `bun/file-size.ts`.
 - [x] 1.3 Name the clause in `core/feature-workflow.md`'s *Unattended stages*
       as one more change to the launch form's first line, beside the answer
@@ -60,7 +60,8 @@ archive (#138) has merged.
 
 ## 2. An unpushed step branch does not stop the pass
 
-- [x] 2.1 Write the unpushed-tip tests in `bun/board-loop.test.ts`, under
+- [x] 2.1 Write the unpushed-tip tests in `bun/board-loop-clone.test.ts`,
+      split from `bun/board-loop.test.ts` at its cap, under
       *the clone*:
       - move the existing case *an unpushed tip refuses and leaves the branch
         checked out* onto `feat/other`, since `feat/demo` becomes a step
@@ -100,8 +101,8 @@ archive (#138) has merged.
       also switches back to the noted branch first, so that a pass refused
       before the list exists forgets nothing. Otherwise print that the
       branch is left for its step. Update the module comment, which says the runner
-      never discards work. Verify: 2.1 is green, the runner's three test
-      files are green, and the file is under its cap in `bun/file-size.ts`.
+      never discards work. Verify: 2.1 is green, the runner's
+      `board-loop*.test.ts` files are green, and the file is under its cap in `bun/file-size.ts`.
 - [x] 2.3 Search the four places `feature-workflow.md` names for the claim
       this replaces: an unpushed tip always refuses, and "the next pass can
       take the answer again". Reconcile `README.md`'s *Consuming* line. Name
