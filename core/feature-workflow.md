@@ -142,8 +142,11 @@ The goal is met when the last line of `bun node_modules/harness/bun/goal-check.t
 
 An answer step, which the board loop launches once every group is ticked and
 the card holds the user's answer, changes only the first line: it names
-writing that answer into `tasks.md` as group N+1 and carrying that group, and
-the check names `apply demo` with N+1.
+writing that answer into `tasks.md` as group N+1 and carrying that group, or,
+for an answer that asks for a change of its own or would not fit one step,
+filing an `idea` card, clearing `Assign`, adding no group and ending on
+`BLOCKED —`. The check names `apply demo` with N+1, so the second route
+reads `goal open`.
 
 A proposal names `propose demo` and an archive names `archive demo`, with no
 step. The outcome is the launcher's own run of the same check once the session
