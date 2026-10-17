@@ -41,7 +41,7 @@ One group, one harness pull request on `feat/gh-timeout`.
       Verify: before 1.4, cases 3, 4 and 5 fail on their own explicit timeout
       rather than on an assertion, because the check waits out the 30 s
       sleep. Case 1 passes before 1.4 and after it.
-- [ ] 1.3 Write the runner's cases in `bun/board-loop-takeable.test.ts`, with
+- [x] 1.3 Write the runner's cases in `bun/board-loop-takeable.test.ts`, with
       `HARNESS_GH_TIMEOUT_MS` at `500` passed through `run()`'s `opts.env`:
       - `ghSleep: 30` passes `demo` over with
         `the pull request query failed`, and the pass ends
