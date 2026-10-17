@@ -20,7 +20,7 @@ One group, one pull request: `feat/question-gate-reason`.
       transcript shows, with its `<command-args>` text keeping its newlines.
       Add an `UNATTENDED` constant holding the declared line. Verify: the
       existing question-gate test files are green, unchanged.
-- [ ] 1.2 Write the unattended cases in a new
+- [x] 1.2 Write the unattended cases in a new
       `bun/question-gate-unattended.test.ts`. Under spec-citation comments for
       the new agent-permissions scenarios and gate-ledger's *A comment the
       question gate refuses*:
