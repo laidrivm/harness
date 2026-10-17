@@ -17,9 +17,10 @@ guard blocks for counts, including an event it could not read. The turn gate
 SHALL also record a turn that completed a task group and was let through
 because its final message reported, so that a count of refusals has a
 denominator. A call a guard allows SHALL NOT be recorded. The one exception
-is the question gate, which refuses nothing: it SHALL record each call it
-sees, as allowed or as passed to the prompt, as agent-permissions' *A question
-to the user on a board card needs no prompt* requires.
+is the question gate, which refuses only in an unattended session: it SHALL
+record each call it sees, as allowed, as passed to the prompt, or as
+refused, as agent-permissions' *A question to the user on a board card needs
+no prompt* requires.
 
 #### Scenario: A commit on main
 
@@ -48,6 +49,14 @@ to the user on a board card needs no prompt* requires.
 - **WHEN** the question gate answers `allow` to a question on a card
 - **THEN** the ledger gains one record naming the question gate, `allowed`,
   and the rule `question`
+
+#### Scenario: A comment the question gate refuses
+
+- **WHEN** the question gate answers `deny` to an unmarked comment in an
+  unattended session
+- **THEN** the ledger gains one record naming the question gate, `refused`,
+  and the rule `unmarked`, where the same comment with a person at the prompt
+  records `passed`
 
 #### Scenario: A turn that completed nothing
 
