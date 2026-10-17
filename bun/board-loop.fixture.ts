@@ -74,6 +74,8 @@ export type Stubs = {
 	/** What `gh pr list` prints, or `null` for no `gh` on `PATH`. */
 	gh?: string | null;
 	ghCode?: number;
+	/** Seconds `gh` sleeps before it answers. */
+	ghSleep?: number;
 	/** The exit status of `bun install --frozen-lockfile`. */
 	install?: number;
 	/** The pinned goal check's last line, which the install writes. */
@@ -116,7 +118,7 @@ function bin(log: string, s: Stubs): string {
 	};
 	stub("git", `exec '${REAL_GIT}' "$@"`);
 	if (s.gh !== null)
-		stub("gh", `printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
+		stub("gh", `${s.ghSleep ? `exec /bin/sleep ${s.ghSleep}\n` : ""}printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
 	const verdict = s.verdict ?? "goal met: apply demo step 1 at abc1234";
 	const pin = "node_modules/harness/bun";
 	// `PATH` holds the stubs alone, hence the absolute paths.

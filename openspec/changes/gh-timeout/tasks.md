@@ -13,7 +13,7 @@ One group, one harness pull request on `feat/gh-timeout`.
 
 ## 1. A pull request read that ends at its limit
 
-- [ ] 1.1 Give the stubs a hang, as design.md D4 sets out:
+- [x] 1.1 Give the stubs a hang, as design.md D4 sets out:
       - `bun/goal-check.fixture.ts`: `Gh` gains `hang?: boolean`. With it
         set, the stub's first `fails` calls run `exec /bin/sleep 30` instead
         of `exit 1`, after the call has been logged. `stubborn?: boolean`
