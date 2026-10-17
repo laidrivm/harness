@@ -52,7 +52,7 @@ archive (#138) has merged.
       "`git switch -c` fails", the claim `pick-claim-answer`'s design left
       unmeasured. Reconcile each live site, or name the archived design as
       history. Verify: the grep in the pull request body.
-- [ ] 1.4 The pull request's *Check by hand* gives the user one live pass. Its
+- [x] 1.4 The pull request's *Check by hand* gives the user one live pass. Its
       steps: stop a stage session after its first commit and push, and before
       its pull request. Start the next pass. The stage session must switch to
       the branch, not cut a new one, and the pull request must carry the
