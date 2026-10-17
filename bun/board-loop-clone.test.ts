@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
-import { advance, clone, commit, out, records, run, trusting } from "./board-loop.fixture.ts";
+import { advance, change, clone, commit, out, records, run, trusting } from "./board-loop.fixture.ts";
 
 /** Who may start the runner, and the clone it starts from. [n]: `/zombies` ideas. */
 
@@ -65,17 +65,64 @@ describe("the clone", () => {
 		expect(run(dir).last).toStartWith("board-loop: met");
 	});
 
-	// spec: board-loop/unpushed-work
-	test("an unpushed tip refuses and leaves the branch checked out [4]", () => {
-		const { dir } = clone();
-		git(dir, "switch", "-qc", "feat/demo");
-		commit(dir);
-		const tip = out(dir, "rev-parse", "HEAD");
-		const r = run(dir);
-		expect(r.last).toStartWith("board-loop: refused");
-		expect(r.last).toContain("unpushed");
-		const after = [out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")];
-		expect(after).toEqual(["feat/demo", tip]);
+	/** These [n] number `step-branch-retry`'s `/zombies` ideas. */
+	describe("an unpushed tip", () => {
+		const TWO = "## 1. A\n\n- [ ] 1.1 a\n\n## 2. B\n\n- [ ] 2.1 b\n";
+		/** Cuts `branch` from `HEAD` with one commit no remote holds, and returns its tip. */
+		const unpushed = (dir: string, branch: string) => {
+			git(dir, "switch", "-qc", branch);
+			commit(dir);
+			return out(dir, "rev-parse", "HEAD");
+		};
+		const none = (branch: string) => `unpushed work on ${branch}, which is no step's branch`;
+
+		// spec: board-loop/a-dead-session-s-unpushed-commits
+		test("on the step's own branch, the pass goes on from main's tip [13], the branch keeps its tip, and the stage continues it [19]", () => {
+			const { dir, origin } = clone();
+			const tip = unpushed(dir, "feat/demo");
+			advance(origin);
+			const r = run(dir);
+			expect(r.last).toBe("board-loop: met — apply demo step 1");
+			expect(r.text).toContain("leaving feat/demo, unpushed, for the pass that carries its step");
+			expect(r.calls).toContain("A session left the branch feat/demo: switch to it with `git switch feat/demo`");
+			expect(out(dir, "rev-parse", "feat/demo")).toBe(tip);
+			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")]).toEqual(["main", out(dir, "rev-parse", "origin/main")]);
+		});
+
+		// spec: board-loop/unpushed-work board-loop/refused-after-the-switch
+		test.each([
+			["no step's branch [15][16]", change("demo"), "feat/other", {}, none("feat/other"), false],
+			["another step's branch, demo being at step 1 [14]", change("demo", TWO), "feat/demo-2", {}, none("feat/demo-2"), false],
+			["no step's branch, with no takeable change [12]", {}, "feat/other", {}, none("feat/other"), false],
+			["the step's branch, with gh failing [18]", change("demo"), "feat/demo", { ghCode: 1 }, none("feat/demo"), false],
+			["the step's branch, with the install failing", change("demo"), "feat/demo", { install: 1 }, "bun install --frozen-lockfile failed", false],
+			["the step's branch, with a local main that cannot fast-forward", change("demo"), "feat/demo", {}, "main cannot fast-forward", true],
+		] as const)("on %s is refused, back on that branch at its tip", (_, tree, branch, stubs, why, diverged) => {
+			const { dir, origin } = clone(tree);
+			if (diverged) {
+				commit(dir);
+				advance(origin);
+			}
+			const tip = unpushed(dir, branch);
+			const r = run(dir, [], stubs);
+			expect(r.last).toStartWith("board-loop: refused");
+			expect(r.last).toContain(why);
+			expect(r.calls).not.toContain("claude");
+			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")]).toEqual([branch, tip]);
+		});
+
+		// spec: board-loop/unpushed-work-on-a-detached-head
+		test("on a detached HEAD is refused before any fetch [17]", () => {
+			const { dir } = clone();
+			git(dir, "switch", "-q", "--detach");
+			commit(dir);
+			const tip = out(dir, "rev-parse", "HEAD");
+			const r = run(dir);
+			expect(r.last).toStartWith("board-loop: refused — HEAD names no branch");
+			expect(r.last).toContain("unpushed");
+			expect(r.calls).not.toContain("git fetch");
+			expect(out(dir, "rev-parse", "HEAD")).toBe(tip);
+		});
 	});
 
 	// spec: board-loop/the-previous-pass-s-step-branch
