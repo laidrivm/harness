@@ -74,7 +74,7 @@ One group, one pull request: `feat/question-gate-reason`.
       prompt, and why it does where the session is declared unattended.
       Verify: 1.2, 1.3 and both existing question-gate files are green, and
       the file is under its cap in `bun/file-size.ts`.
-- [ ] 1.5 Write the launch form cases in `bun/board-loop-stage.test.ts`:
+- [x] 1.5 Write the launch form cases in `bun/board-loop-stage.test.ts`:
       - the stage prompt has four lines, and the fourth holds `MARK` imported
         from `bun/question-gate.ts`, together with `page_id`, `markdown` and
         "page-level" [20];
