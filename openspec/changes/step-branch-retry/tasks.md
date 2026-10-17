@@ -107,7 +107,7 @@ archive (#138) has merged.
       take the answer again". Reconcile `README.md`'s *Consuming* line. Name
       `board-loop`'s archived design as history. Verify: the grep in the pull
       request body.
-- [ ] 2.4 The pull request's *Check by hand* gives the user one live pass.
+- [x] 2.4 The pull request's *Check by hand* gives the user one live pass.
       Its steps: on a board where that card's change is the only takeable
       one, stop a stage session after a commit and before its push. Start the
       next pass. It must go on from `main`, and the stage session must
