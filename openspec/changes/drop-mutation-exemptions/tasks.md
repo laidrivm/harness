@@ -26,7 +26,7 @@
       refusal, its comment spelling and the one-mutator rule; leave the
       floor's own bullets and the `reports/mutation/` deletion note. This is
       d2ass work, done in the pull request that bumps the pin
-- [ ] 2.3 Search the four places `core/feature-workflow.md` names for a
+- [x] 2.3 Search the four places `core/feature-workflow.md` names for a
       sentence naming the exemption check, and correct or delete what no
       longer reads true. Three are grepped — this change's sibling artefacts,
       `openspec/specs/**` and the README ownership map — and the fourth, the
