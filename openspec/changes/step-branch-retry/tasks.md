@@ -17,7 +17,7 @@ archive (#138) has merged.
 
 ## 1. A step branch a session left is continued
 
-- [ ] 1.1 Write the continuation tests in `bun/board-loop-stage.test.ts`:
+- [x] 1.1 Write the continuation tests in `bun/board-loop-stage.test.ts`:
       - with no `feat/demo` in the clone or on `origin`, the prompt's first
         line carries no continuation clause [1];
       - a local `feat/demo` that no pull request used puts the clause in the
