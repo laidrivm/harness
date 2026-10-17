@@ -3,7 +3,8 @@
  * One pass of the board loop: the user's own script, started from a terminal
  * of their own at the root of a clone used for nothing else. A short pick
  * session reads `Board view`, names the first takeable card in the board's
- * order and claims it. The pass carries that change's next apply step in a
+ * order, a card whose question the user answered first, and claims it. The
+ * pass carries that change's next apply step, or the answer as step N+1, in a
  * fresh, unattended `claude -p` session under `stage-goal`'s launch form, then
  * takes the outcome from the goal check it runs itself, never from the
  * session's exit status.
@@ -33,7 +34,8 @@ export const LIMIT = 60 * 60 * 1000;
 const DEFAULT = "main";
 
 type Outcome = "met" | "open" | "timeout" | "idle" | "refused";
-type Step = { step: number; branch: string };
+/** `answer`: every group is ticked, so the step is N+1 and carries the answer on the card. */
+type Step = { step: number; branch: string; answer: boolean };
 
 /** A command's result; one that cannot start reads as failed, never thrown. */
 function sh(...args: string[]) {
@@ -70,15 +72,19 @@ function end(outcome: Outcome, detail: string): number {
 	return outcome === "met" || outcome === "idle" ? 0 : 1;
 }
 
-/** The step a `proposed` change would carry next, or why it cannot be taken. */
+/**
+ * The step a `proposed` change would carry next, or why it cannot be taken. A
+ * change with every group ticked is an answer candidate for step N+1, which
+ * only the pick session can tell from one with no answer on its card.
+ */
 function consider(slug: string, status: string, blocking: string[]): Step | string {
 	if (status !== "proposed") return `it is ${status}, not proposed`;
 	if (blocking.length) return `after: ${blocking.join(", ")} is still open`;
 	const found = [...groups(readFileSync(`openspec/changes/${slug}/tasks.md`, "utf8"))];
-	const step = found.findIndex(([, boxes]) => boxes.open > 0) + 1;
-	if (step === 0) return "every group is ticked";
-	// `git-and-prs.md`: a single group ships whole on `feat/<slug>`.
-	const branch = found.length === 1 ? `feat/${slug}` : `feat/${slug}-${step}`;
+	const answer = found.every(([, boxes]) => boxes.open === 0);
+	const step = answer ? found.length + 1 : found.findIndex(([, boxes]) => boxes.open > 0) + 1;
+	// `git-and-prs.md`: a single group ships whole on `feat/<slug>`; an answer makes it two.
+	const branch = found.length === 1 && !answer ? `feat/${slug}` : `feat/${slug}-${step}`;
 	const query = sh("gh", "pr", "list", "--head", branch, "--state", "all", "--json", "number,state");
 	let prs: { number?: unknown; state?: unknown }[];
 	try {
@@ -93,13 +99,16 @@ function consider(slug: string, status: string, blocking: string[]): Step | stri
 	if (open) return `pull request #${open.number} is open on ${branch}`;
 	// A squash-merged branch is never freed, and nor is a closed one.
 	if (prs.length) return `pull request #${prs[0].number} already used ${branch}`;
-	return { step, branch };
+	return { step, branch, answer };
 }
 
-/** The launch form `core/feature-workflow.md` fixes for an apply step. */
-function prompt(slug: string, step: number, check: string): string {
+/** The launch form `core/feature-workflow.md` fixes for an apply step, or its answer variant. */
+function prompt(slug: string, { step, answer }: Step, check: string): string {
+	const work = answer
+		? `write the answer on its card into its tasks.md as group ${step}, then /opsx:apply ${slug} for that group`
+		: `/opsx:apply ${slug} for its group ${step}`;
 	return [
-		`/goal Carry step ${step} of the OpenSpec change ${slug}: /opsx:apply ${slug} for its group ${step}, the pre-PR sequence, the push and the pull request.`,
+		`/goal Carry step ${step} of the OpenSpec change ${slug}: ${work}, the pre-PR sequence, the push and the pull request.`,
 		"This session runs unattended.",
 		`The goal is met when the last line of \`bun ${check} apply ${slug} ${step}\`, run after the last push, opens with \`goal met\` — or when the final message opens with \`BLOCKED —\` and names what only the user can settle.`,
 	].join("\n");
@@ -110,13 +119,14 @@ function prompt(slug: string, step: number, check: string): string {
  * neither reads nor waits on that move, since it has no access to the board,
  * and a pass that fails after it leaves the card at `applying` for the next.
  */
-function pickPrompt(board: string, slugs: string[]): string {
+function pickPrompt(board: string, slugs: string[], answers: string[]): string {
 	return [
 		`Read the saved view named \`Board view\` of the Notion board ${board}, and change nothing but the \`Status\` of the card you pick.`,
 		"This session runs unattended.",
-		`These changes are takeable: ${slugs.join(", ")}. A card's \`Pointer\` names its change as \`openspec/changes/<slug>/\`.`,
-		"Take the `applying` column before `proposed`, and each column in the order the view returns it. Find the first card whose pointer names one of those changes.",
-		"Before you answer, set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`, then fetch that card again, and write no other card or property. Write nothing when that line names no change listed above. Leave a card already at `applying` unwritten. A write that fails changes nothing about your answer.",
+		`These changes are takeable: ${slugs.join(", ") || "none"}. A card's \`Pointer\` names its change as \`openspec/changes/<slug>/\`.`,
+		`These changes are answer candidates: ${answers.join(", ") || "none"}. Take one only when its card's \`Assign\` holds the user and its page-level discussion, read with \`notion-get-comments\` and resolved discussions included, holds a comment that does not open with \`harness-question\` after the last one that does.`,
+		"Take an answered candidate's card first, from `applied` or `applying`, then the `applying` column, then `proposed`, and each in the order the view returns it. Find the first card whose pointer names a takeable change or an answered candidate.",
+		"Before you answer, set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`, or when it reads `applied` and names an answer candidate, then fetch that card again, and write no other card or property. Write nothing when that line names no change listed above. Leave a card already at `applying` unwritten. A write that fails changes nothing about your answer.",
 		"End with one line, `PICK: <slug>` for its change or `PICK: none` when no card names one, and write no other line starting `PICK:`.",
 	].join("\n");
 }
@@ -186,7 +196,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		console.error((error as Error).message);
 		return end("refused", "the tree does not derive a board state, as printed above");
 	}
-	const takeable = new Map<string, Step>();
+	// Takeable changes and answer candidates alike; `answer` tells them apart.
+	const steps = new Map<string, Step>();
 	const reasons = new Map<string, string>();
 	for (const [name, status] of Object.entries(state.status)) {
 		if (status === "done") continue;
@@ -194,9 +205,10 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		if (typeof seen === "string") {
 			reasons.set(name, seen);
 			console.log(`passed over ${name}: ${seen}`);
-		} else takeable.set(name, seen);
+		} else steps.set(name, seen);
 	}
-	if (takeable.size === 0) return end("idle", "no change is takeable");
+	if (steps.size === 0) return end("idle", "no change is takeable");
+	const listed = (answer: boolean) => [...steps].filter(([, s]) => s.answer === answer).map(([name]) => name);
 
 	const minutes = `${limit / 60_000} minutes`;
 	/** A session ends clean, or the pass names what outlived it and records no planned outcome. */
@@ -207,19 +219,19 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	};
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
-		picked = await session(pickPrompt(named, [...takeable.keys()]), limit, kill, true);
+		picked = await session(pickPrompt(named, listed(false), listed(true)), limit, kill, true);
 	} catch {
 		return end("refused", "claude could not be started");
 	}
 	const pickEnd = unclean("the pick session", picked);
 	if (pickEnd !== undefined) return pickEnd;
 	if (picked.out.trim()) console.log(picked.out.trim());
-	// Untrusted text: one exact line, naming a change this pass computed as takeable.
+	// Untrusted text: one exact line, naming a change this pass computed as takeable or a candidate.
 	const lines = picked.out.split("\n").filter((line) => line.startsWith("PICK:"));
 	const slug = lines.length === 1 ? /^PICK: (\w[\w.-]*)$/.exec(lines[0].trimEnd())?.[1] : undefined;
 	if (!slug) return end("refused", "the pick session returned not one exact PICK: line");
 	if (slug === "none") return end("idle", "the pick session found no takeable card on the board");
-	const chosen = takeable.get(slug);
+	const chosen = steps.get(slug);
 	if (!chosen)
 		return end("refused", `the pick session named ${slug}: ${reasons.get(slug) ?? "no change of that name is takeable"}`);
 
@@ -227,7 +239,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	console.log(`carrying ${target} on ${chosen.branch}`);
 	let staged: Awaited<ReturnType<typeof session>>;
 	try {
-		staged = await session(prompt(slug, chosen.step, relative(real, check)), limit, kill);
+		staged = await session(prompt(slug, chosen, relative(real, check)), limit, kill);
 	} catch {
 		return end("refused", "claude could not be started");
 	}

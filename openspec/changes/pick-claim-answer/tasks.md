@@ -90,7 +90,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
       takeable change, §*An answer's step*; A pass takes the first takeable
       card in the board's order, §*An answered card goes first*, §*A
       candidate with no answer*)
-- [ ] 2.4 In `bun/board-loop.ts`, make `consider()` return an answer candidate
+- [x] 2.4 In `bun/board-loop.ts`, make `consider()` return an answer candidate
       for an all-ticked change, and make the pass idle only when both lists
       are empty. Add the second list and the order to `pickPrompt`. Accept a
       `PICK:` from either list, and launch a candidate with the answer form.
