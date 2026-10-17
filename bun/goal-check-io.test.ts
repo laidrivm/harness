@@ -68,6 +68,28 @@ describe("the pull request and the tree", () => {
 		expect([r.code, r.calls]).toEqual([0, 1]);
 	});
 
+	// spec: stage-goal/a-read-that-never-answers
+	test.each([
+		["hangs [3]", false],
+		["hangs ignoring SIGTERM [5]", true],
+	])("gh that %s on every try is open after three calls", (_, stubborn) => {
+		const dir = proposal();
+		const gh = { ...prs(pr(head(dir), "OPEN")), fails: 3, hang: true, stubborn };
+		const r = run(dir, ["propose", "demo"], { gh, env: { HARNESS_GH_TIMEOUT_MS: "500" } });
+		expect([r.last, r.calls]).toEqual([expect.stringContaining("state could not be read"), 3]);
+	}, 15_000);
+
+	// spec: stage-goal/a-read-that-hangs-and-then-answers
+	test.each([
+		["a first try that hangs is met after two calls [4]", { fails: 1, hang: true }, "500", 2],
+		["a try answering inside the limit is met after one call [1]", { delay: 0.2 }, "2000", 1],
+	])("%s", (_, stub, limit, calls) => {
+		const dir = proposal();
+		const gh = { ...prs(pr(head(dir), "OPEN")), ...stub };
+		const r = run(dir, ["propose", "demo"], { gh, env: { HARNESS_GH_TIMEOUT_MS: limit } });
+		expect([r.code, r.calls]).toEqual([0, calls]);
+	}, 15_000);
+
 	// spec: stage-goal/the-pull-request-is-behind
 	test("a pull request behind HEAD is open [27]", () => {
 		const dir = proposal();

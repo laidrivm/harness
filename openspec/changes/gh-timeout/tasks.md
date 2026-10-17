@@ -24,7 +24,7 @@ One group, one harness pull request on `feat/gh-timeout`.
         the stub `gh` runs `exec /bin/sleep <n>` after logging when it is set.
       Verify: `bun test bun/goal-check-io.test.ts bun/board-loop-takeable.test.ts`
       stays green, since no case sets either field yet.
-- [ ] 1.2 Write the goal check's cases in `bun/goal-check-io.test.ts`, each
+- [x] 1.2 Write the goal check's cases in `bun/goal-check-io.test.ts`, each
       with `HARNESS_GH_TIMEOUT_MS` at `500` unless named:
       - `fails: 3, hang: true` reads `goal open`, says
         `the pull request's state could not be read`, and made three
