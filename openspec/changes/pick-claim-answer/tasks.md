@@ -58,7 +58,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
       it, under both server names in design.md, to the pick session and to an
       answer step's stage session. Record the result and the Claude Code
       version in the pull request.
-- [ ] 2.2 Write the candidate tests in `bun/board-loop-takeable.test.ts`:
+- [x] 2.2 Write the candidate tests in `bun/board-loop-takeable.test.ts`:
       - replace [9]: a tree whose only change has every group ticked starts
         the pick session [7];
       - a single-group ticked change queries `feat/<slug>-2` [8], and a

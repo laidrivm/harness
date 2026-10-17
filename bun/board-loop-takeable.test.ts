@@ -14,13 +14,49 @@ describe("nothing to take", () => {
 		expect([r.code, r.last]).toEqual([0, "board-loop: idle — no change is takeable"]);
 		expect(r.calls).not.toContain("claude");
 	});
+});
+
+/** An all-ticked change: an answer candidate for step N+1. These [n] number `pick-claim-answer`'s `/zombies` ideas. */
+describe("an answer candidate", () => {
+	// spec: board-loop/every-group-ticked
+	test("a tree whose only change has every group ticked starts the pick session [7]", () => {
+		const { dir } = clone(change("demo", TICKED));
+		const r = run(dir, [], { pick: "PICK: none" });
+		expect(r.calls).toContain("\nclaude -p ");
+		expect(r.last).toBe("board-loop: idle — the pick session found no takeable card on the board");
+	});
 
 	// spec: board-loop/every-group-ticked
-	test("a change with every group ticked is passed over [9]", () => {
+	test.each([
+		["single-group ticked change queries feat/demo-2 [8]", TICKED, "feat/demo-2"],
+		["three-group ticked change queries feat/demo-4 [10]", THREE.replaceAll("[ ]", "[x]"), "feat/demo-4"],
+	])("a %s", (_, tasks, branch) => {
+		const { dir } = clone(change("demo", tasks));
+		expect(run(dir).calls).toContain(`gh pr list --head ${branch} --state all`);
+	});
+
+	test("a change with one box left is a normal step [12]", () => {
+		const { dir } = clone(change("demo", "## 1. Only\n\n- [x] 1.1 a\n- [ ] 1.2 b\n"));
+		const { calls } = run(dir);
+		expect(calls).toContain("gh pr list --head feat/demo --state all");
+		expect(calls).toContain("/opsx:apply demo for its group 1,");
+	});
+
+	test.each([
+		["an open pull request on feat/demo-2 [18]", { gh: '[{"number":7,"state":"OPEN"}]' }, "pull request #7 is open on feat/demo-2"],
+		["a closed pull request on feat/demo-2 [19]", { gh: '[{"number":5,"state":"CLOSED"}]' }, "pull request #5 already used feat/demo-2"],
+		["a failing gh [21]", { gh: "", ghCode: 1 }, "the pull request query failed"],
+	])("%s passes the candidate over, naming why", (_, stubs, why) => {
 		const { dir } = clone(change("demo", TICKED));
-		const r = run(dir);
-		expect(r.text).toContain("passed over demo: every group is ticked");
-		expect(r.last).toStartWith("board-loop: idle");
+		const r = run(dir, [], stubs);
+		expect(r.text).toContain(`passed over demo: ${why}`);
+		expect(r.last).toBe("board-loop: idle — no change is takeable");
+		expect(r.calls).not.toContain("claude");
+	});
+
+	test("an open after: predecessor passes the candidate over, naming the blocker [20]", () => {
+		const { dir } = clone({ ...change("demo", TICKED, ["base"]), ...change("base") });
+		expect(run(dir).text).toContain("passed over demo: after: base is still open");
 	});
 });
 
