@@ -2,8 +2,8 @@
 
 ## Purpose
 
-What is mutated in this repository, what kills a mutant, how a survivor is
-admitted, and what the floor forbids. It exists because `src/model.ts` is at
+What is mutated in this repository, what kills a mutant, and what the floor
+forbids. It exists because `src/model.ts` is at
 100% line and function coverage from its own tests, so coverage can no longer
 tell a test that asserts a value from one that merely executes a line — and the
 model is the one place here where a wrong sign or a wrong boundary yields a
