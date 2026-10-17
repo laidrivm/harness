@@ -21,11 +21,14 @@
       `openspec/specs/mutation-floor/spec.md`, taking the whole *An equivalent
       mutant is admitted at the line it occupies* requirement and its four
       scenarios
-- [ ] 2.2 Remove the four bullets in `docs/testing.md` (in d2ass) §The
-      mutation floor that describe the directive's accepted form, its `all`
-      refusal, its comment spelling and the one-mutator rule; leave the
-      floor's own bullets and the `reports/mutation/` deletion note. This is
-      d2ass work, done in the pull request that bumps the pin
+- [x] 2.2 Hand the d2ass edit to the `D2ASS` card *Drop the exemption
+      bullets from `docs/testing.md` when the pin passes the validator's
+      removal*. The edit removes the four bullets in `docs/testing.md`
+      §The mutation floor that describe the directive's accepted form, its
+      `all` refusal, its comment spelling and the one-mutator rule, and
+      leaves the floor's own bullets and the `reports/mutation/` deletion
+      note. It is due once d2ass's pin passes this change's step 1. Until
+      then d2ass still runs the validator, and the bullets read true there
 - [x] 2.3 Search the four places `core/feature-workflow.md` names for a
       sentence naming the exemption check, and correct or delete what no
       longer reads true. Three are grepped — this change's sibling artefacts,
