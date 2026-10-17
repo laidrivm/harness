@@ -80,7 +80,7 @@ One group, one harness pull request on `feat/gh-timeout`.
       `gh`'s default of 30 records. Correct what the step makes false.
       Verify: the grep names no such site, and `bun/goal-check.ts` and
       `bun/board-loop.ts` each spawn `gh` only through `bun/pull-requests.ts`.
-- [ ] 1.6 `bun bun/pre-pr.ts` reports the step's diff within the budget. The
+- [x] 1.6 `bun bun/pre-pr.ts` reports the step's diff within the budget. The
       pull request body names *A pull request read that does not answer is a
       failed try* and *A pull request query that does not answer fails* as
       the requirements it closes.
