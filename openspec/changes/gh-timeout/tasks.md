@@ -74,7 +74,7 @@ One group, one harness pull request on `feat/gh-timeout`.
       `killSignal` removed, case 5 alone fails. With the variable's value
       divided by 1000, case 1 fails. Restore all three, and
       `bun test` is green.
-- [ ] 1.5 Grep `gh pr list`, `spawnSync` and `could not be read` across
+- [x] 1.5 Grep `gh pr list`, `spawnSync` and `could not be read` across
       `bun/`, `core/`, `openspec/specs/` and the README for a site that still
       describes either read as unbounded, or the runner's query as taking
       `gh`'s default of 30 records. Correct what the step makes false.
