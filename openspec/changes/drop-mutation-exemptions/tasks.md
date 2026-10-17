@@ -17,7 +17,7 @@
 
 ## 2. Move the requirement and the prose with it
 
-- [ ] 2.1 Sync the `REMOVED` delta into
+- [x] 2.1 Sync the `REMOVED` delta into
       `openspec/specs/mutation-floor/spec.md`, taking the whole *An equivalent
       mutant is admitted at the line it occupies* requirement and its four
       scenarios
