@@ -17,7 +17,7 @@ archive (#138) has merged.
 
 ## 1. A step branch a session left is continued
 
-- [ ] 1.1 Write the continuation tests in `bun/board-loop-stage.test.ts`:
+- [x] 1.1 Write the continuation tests in `bun/board-loop-stage.test.ts`:
       - with no `feat/demo` in the clone or on `origin`, the prompt's first
         line carries no continuation clause [1];
       - a local `feat/demo` that no pull request used puts the clause in the
@@ -37,7 +37,7 @@ archive (#138) has merged.
       [2]–[8] and [11] fail before 1.2, and [1] and [9] pass before and after.
       (Req: board-loop — A step branch a session left is continued, every
       scenario)
-- [ ] 1.2 In `bun/board-loop.ts`, after the pick names the step, look up its
+- [x] 1.2 In `bun/board-loop.ts`, after the pick names the step, look up its
       branch as `refs/heads/<branch>`, then `refs/remotes/origin/<branch>`.
       When either exists, print that the pass continues it, and give
       `prompt()` a clause for the first line. The clause names the branch as
@@ -45,14 +45,14 @@ archive (#138) has merged.
       it, and to carry on from what its commits hold. Verify: 1.1 is green,
       the runner's three test files are green, and the file is under its cap
       in `bun/file-size.ts`.
-- [ ] 1.3 Name the clause in `core/feature-workflow.md`'s *Unattended stages*
+- [x] 1.3 Name the clause in `core/feature-workflow.md`'s *Unattended stages*
       as one more change to the launch form's first line, beside the answer
       variant. Add one sentence to the board-loop part of `README.md`'s
       *Consuming*. Search the four places `feature-workflow.md` names for
       "`git switch -c` fails", the claim `pick-claim-answer`'s design left
       unmeasured. Reconcile each live site, or name the archived design as
       history. Verify: the grep in the pull request body.
-- [ ] 1.4 The pull request's *Check by hand* gives the user one live pass. Its
+- [x] 1.4 The pull request's *Check by hand* gives the user one live pass. Its
       steps: stop a stage session after its first commit and push, and before
       its pull request. Start the next pass. The stage session must switch to
       the branch, not cut a new one, and the pull request must carry the
