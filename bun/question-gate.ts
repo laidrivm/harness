@@ -4,23 +4,83 @@
  * `notion-create-comment` under any server name. It answers `allow` to the
  * prompt `policy-gate-beyond-bash`'s ask entry raises, only for a question to
  * the user on a board card (agent-permissions, *A question to the user on a
- * board card needs no prompt*); to anything else it gives no answer, so the
- * prompt stands, or, where a session cannot show one, the call is refused.
+ * board card needs no prompt*); to anything else, in a session with a person
+ * at the prompt, it gives no answer, so the prompt stands.
  *
- * It never answers `deny`: a call it does not recognise is still one the user
- * may approve at the prompt. Every fault — an unreadable event or transcript,
- * a crash, a bun that cannot start — is also no answer, so the gate fails
- * closed without `|| exit 2`.
+ * It never answers `deny` where a person may be at the prompt: a call it does
+ * not recognise is still one the user may approve there. Where the session's
+ * first prompt declares it unattended (agent-autonomy), no prompt can be shown
+ * and no answer is already a refusal, one Claude Code words as "do not retry".
+ * There it answers `deny` instead, with a message naming the failed condition
+ * and what would meet it, so the session can fix the comment and send it
+ * again. Every fault — an unreadable event or transcript, a crash, a bun that
+ * cannot start — is no answer, so the gate fails closed without `|| exit 2`.
  *
- * Each call is recorded in the gate ledger as `allowed` or `passed`, under the
- * first condition that failed, or `question`. The ledger is never read here.
+ * Each call is recorded in the gate ledger as `allowed`, `refused` or
+ * `passed`, under the first condition that failed, or `question`. The ledger
+ * is never read here.
  */
 import { readFileSync } from "node:fs";
 import { record } from "./gate-ledger.ts";
 
-const MARK = "`harness-question`";
+/** The mark a question opens with; the board loop's launch form names it. */
+export const MARK = "`harness-question`";
 const LIMIT = 1500;
 const BOARDS = ["D2ASS", "Harness", "mellon"];
+/** agent-autonomy's declared line, on a line of its own in the first prompt. */
+const UNATTENDED = "This session runs unattended.";
+
+/**
+ * What is wrong with the call under each condition `verdict` fails, and what
+ * would make it a question.
+ */
+const REMEDY: Record<string, string> = {
+	reply: "it replies in a thread. Post a new page-level comment, without `discussion_id` or `reply_to_comment_id`.",
+	anchored: "it is anchored on a passage. Send it without `selection_with_ellipsis`; the comment goes on the page.",
+	"rich-text": "its text is `rich_text`. Send the text as `markdown`, not `rich_text`.",
+	unmarked: `its text does not open with the mark. Send \`markdown\` that opens with ${MARK}, its backticks included, as its very first characters.`,
+	mention: "it mentions a user. Send it with no user mention.",
+	length: `it is too long. Keep \`markdown\` to at most ${LIMIT} characters, the mark included.`,
+	"not-a-card": `this session has not read the page as a card. Fetch the card with \`notion-fetch\` first; the page's parent must be one of the boards ${BOARDS.join(", ")}.`,
+	"comments-unread": "this session has not read the card's comments. Read them with `notion-get-comments` first.",
+	unreadable: "the gate could not read the call's page. Send a `page_id` that holds the card's 32-hex id.",
+};
+
+/** The reason a `deny` carries for `rule`. */
+const refusal = (rule: string) =>
+	`question-gate refused this comment (${rule}): ${REMEDY[rule]} This refusal is the comment's, not the tool's: fix it and call \`notion-create-comment\` again.`;
+
+/**
+ * Whether the session's first prompt, the first user line holding text rather
+ * than a tool result, holds the declared line on a line of its own. A
+ * transcript it cannot read, or one with no prompt, reads as attended.
+ */
+function unattended(path: unknown): boolean {
+	if (typeof path !== "string") return false;
+	let lines: string[];
+	try {
+		lines = readFileSync(path, "utf8").split("\n");
+	} catch {
+		return false;
+	}
+	for (const line of lines) {
+		let message: { role?: unknown; content?: unknown } | undefined;
+		try {
+			message = JSON.parse(line)?.message;
+		} catch {
+			continue;
+		}
+		if (message?.role !== "user") continue;
+		const { content } = message;
+		const parts = Array.isArray(content)
+			? content.filter((part) => part?.type === "text" && typeof part.text === "string")
+			: [];
+		if (typeof content !== "string" && parts.length === 0) continue;
+		const text = typeof content === "string" ? content : parts.map((part) => part.text).join("\n");
+		return text.split("\n").includes(UNATTENDED);
+	}
+	return false;
+}
 
 type Input = Record<string, unknown>;
 type Use = { name: string; input: Input; result?: string };
@@ -39,7 +99,9 @@ const id = (value: unknown) =>
  * shortcut: the transcript is Claude Code's own JSONL, whose shape is
  * undocumented — `tool_use` blocks in assistant lines, `tool_result` blocks in
  * user lines. A change to it makes every question `not-a-card`, which the
- * prompt then catches, rather than letting one through. Upgrade when the
+ * prompt then catches, or, in an unattended session, a refusal; never is one
+ * let through; `unattended` reads a transcript with no prompt it knows as
+ * attended. Upgrade when the
  * orchestrator's register records which cards a session holds.
  */
 function uses(path: string): Use[] {
@@ -144,7 +206,7 @@ function verdict(event: {
 
 if (import.meta.main) {
 	let event: Parameters<typeof verdict>[0] | null = null;
-	let rule = "unreadable";
+	let rule: string | undefined;
 	try {
 		event = JSON.parse(await Bun.stdin.text());
 		if (event) rule = verdict(event);
@@ -152,14 +214,27 @@ if (import.meta.main) {
 		// No answer, as the header says: an event this script cannot read
 		// leaves the prompt standing.
 	}
-	const allowed = rule === "question";
-	record("question-gate", allowed ? "allowed" : "passed", rule, event);
-	if (allowed)
+	// Only a verdict reached is refused: a fault before it is no answer, in any session.
+	const decision =
+		rule === "question"
+			? "allowed"
+			: rule && unattended(event?.transcript_path)
+				? "refused"
+				: "passed";
+	rule ??= "unreadable";
+	record("question-gate", decision, rule, event);
+	const answer =
+		decision === "allowed"
+			? { behavior: "allow" }
+			: decision === "refused"
+				? { behavior: "deny", message: refusal(rule) }
+				: undefined;
+	if (answer)
 		process.stdout.write(
 			JSON.stringify({
 				hookSpecificOutput: {
 					hookEventName: "PermissionRequest",
-					decision: { behavior: "allow" },
+					decision: answer,
 				},
 			}),
 		);

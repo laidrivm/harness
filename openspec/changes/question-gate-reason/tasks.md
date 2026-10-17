@@ -14,13 +14,13 @@ One group, one pull request: `feat/question-gate-reason`.
 
 ## 1. The launch form names the mark, and the gate says why it refused
 
-- [ ] 1.1 In `bun/question-gate.fixture.ts`, give `transcript()` a way to write
+- [x] 1.1 In `bun/question-gate.fixture.ts`, give `transcript()` a way to write
       user prompt lines before the calls. A prompt is a plain string, or a
       list of `text` parts, or the `/goal` command wrapper the incident's
       transcript shows, with its `<command-args>` text keeping its newlines.
       Add an `UNATTENDED` constant holding the declared line. Verify: the
       existing question-gate test files are green, unchanged.
-- [ ] 1.2 Write the unattended cases in a new
+- [x] 1.2 Write the unattended cases in a new
       `bun/question-gate-unattended.test.ts`. Under spec-citation comments for
       the new agent-permissions scenarios and gate-ledger's *A comment the
       question gate refuses*:
@@ -44,7 +44,7 @@ One group, one pull request: `feat/question-gate-reason`.
       Each case fails before 1.4, except [5]. (Req: agent-permissions — A
       question to the user on a board card needs no prompt; gate-ledger — Every
       gate refusal is recorded)
-- [ ] 1.3 In the same file, write the cases that decide unattended:
+- [x] 1.3 In the same file, write the cases that decide unattended:
       - a transcript with no prompt line, tool calls only, reads attended: no
         output, `passed` [1];
       - an empty first prompt reads attended [2];
@@ -66,7 +66,7 @@ One group, one pull request: `feat/question-gate-reason`.
       before it. (Req: agent-permissions — A question to the user on a board
       card needs no prompt, §*The line outside the first prompt*, §*The hook
       cannot read what it decides on*)
-- [ ] 1.4 In `bun/question-gate.ts`, export `MARK` and read the first prompt
+- [x] 1.4 In `bun/question-gate.ts`, export `MARK` and read the first prompt
       from the transcript as design.md Decision 2 sets out. Answer `deny` with
       the message from one rule-to-remedy table (Decision 3), built from
       `MARK`, `LIMIT` and `BOARDS`, and record `refused`. Rewrite the header
@@ -74,7 +74,7 @@ One group, one pull request: `feat/question-gate-reason`.
       prompt, and why it does where the session is declared unattended.
       Verify: 1.2, 1.3 and both existing question-gate files are green, and
       the file is under its cap in `bun/file-size.ts`.
-- [ ] 1.5 Write the launch form cases in `bun/board-loop-stage.test.ts`:
+- [x] 1.5 Write the launch form cases in `bun/board-loop-stage.test.ts`:
       - the stage prompt has four lines, and the fourth holds `MARK` imported
         from `bun/question-gate.ts`, together with `page_id`, `markdown` and
         "page-level" [20];
@@ -84,13 +84,13 @@ One group, one pull request: `feat/question-gate-reason`.
       launch form's three lines" in `bun/board-loop.test.ts` to four lines
       [22]. Each fails before 1.6. (Req: stage-goal — An unattended stage runs
       under one goal on the check, §*A stage asks its question*)
-- [ ] 1.6 In `bun/board-loop.ts`, add the fourth line to `prompt()` from the
+- [x] 1.6 In `bun/board-loop.ts`, add the fourth line to `prompt()` from the
       imported `MARK` (design.md Decision 5). In `core/feature-workflow.md`,
       add the same line to the *Unattended stages* launch form, and say there
       that the answer, proposal and archive variants keep it. Name the mark in
       the *Across the stages* question bullet, where it says "the gate's mark".
       Verify: 1.5 and the runner's three test files are green.
-- [ ] 1.7 Search the four places `core/feature-workflow.md` names for the
+- [x] 1.7 Search the four places `core/feature-workflow.md` names for the
       claims this replaces: "refuses nothing", "never answers `deny`",
       "gives every other call no answer", "the gate's mark", and "allowed or
       passed to the prompt". Reconcile each live site: `README.md` lines on
@@ -98,7 +98,7 @@ One group, one pull request: `feat/question-gate-reason`.
       comment, and any card on the boards that restates them. Name
       archived changes as history. Verify: the grep in the pull request
       body.
-- [ ] 1.8 The pull request's *Check by hand* names design.md Decision 1 for
+- [x] 1.8 The pull request's *Check by hand* names design.md Decision 1 for
       the user to confirm. It also names the deliberate live check from
       design.md's first risk. One unattended session posts an unmarked
       comment on a card, then the same question marked. Expect

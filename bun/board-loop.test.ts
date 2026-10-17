@@ -115,12 +115,12 @@ describe("the pick", () => {
 		expect(pick).toContain("or when it reads `applied` and names an answer candidate");
 	});
 
-	test("the stage session's prompt is still the launch form's three lines, with no claim [4]", () => {
+	test("the stage session's prompt is still the launch form's four lines, with no claim [4]", () => {
 		const { dir } = clone();
 		const { calls } = run(dir);
 		const from = calls.indexOf("\nclaude -p /goal ") + 1;
 		const stage = calls.slice(from, calls.indexOf(" --permission-mode", from));
-		expect(stage.split("\n")).toHaveLength(3);
+		expect(stage.split("\n")).toHaveLength(4);
 		expect(stage).not.toContain("applying");
 		expect(stage).not.toContain("`Status`");
 	});
