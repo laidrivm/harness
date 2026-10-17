@@ -27,8 +27,20 @@ export const out = (dir: string, ...args: string[]) =>
 	Bun.spawnSync(["git", ...args], { cwd: dir }).stdout.toString().trim();
 export const head = (dir: string) => out(dir, "rev-parse", "HEAD");
 
-/** What the stub `gh` answers, after failing its first `fails` calls. */
-type Gh = { answer: string; code: number; fails?: number } | null;
+/**
+ * What the stub `gh` answers, after failing its first `fails` calls. `hang`
+ * makes those calls sleep 30 s instead of exiting 1, and `stubborn` makes the
+ * sleep ignore `SIGTERM`, since an ignored signal stays ignored across `exec`.
+ * `delay` is the seconds a call sleeps before it answers.
+ */
+type Gh = {
+	answer: string;
+	code: number;
+	fails?: number;
+	hang?: boolean;
+	stubborn?: boolean;
+	delay?: number;
+} | null;
 
 /**
  * `PATH` for the check: `git`, and a `gh` answering only the check's query.
@@ -41,10 +53,12 @@ function bin(gh: Gh): string {
 	if (!gh) return dir;
 	const query = "pr list --head feature --state all --limit 1000 --json headRefOid,state";
 	const calls = join(dir, "calls");
+	// `PATH` holds no `sleep`, hence the absolute path.
+	const fail = gh.hang ? `${gh.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep 30` : "exit 1";
 	writeFileSync(
 		join(dir, "gh"),
 		// Shell builtins alone count the calls: `PATH` holds no `wc`.
-		`#!/bin/sh\necho >> "${calls}"\nn=0; while read -r _; do n=$((n + 1)); done < "${calls}"\nif [ $n -le ${gh.fails ?? 0} ]; then exit 1; fi\nif [ "$*" = "${query}" ]; then printf '%s' '${gh.answer}'; exit ${gh.code}; fi\nexit 9\n`,
+		`#!/bin/sh\necho >> "${calls}"\nn=0; while read -r _; do n=$((n + 1)); done < "${calls}"\nif [ $n -le ${gh.fails ?? 0} ]; then ${fail}; fi\n${gh.delay ? `/bin/sleep ${gh.delay}\n` : ""}if [ "$*" = "${query}" ]; then printf '%s' '${gh.answer}'; exit ${gh.code}; fi\nexit 9\n`,
 	);
 	chmodSync(join(dir, "gh"), 0o755);
 	return dir;

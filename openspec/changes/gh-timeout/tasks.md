@@ -13,7 +13,7 @@ One group, one harness pull request on `feat/gh-timeout`.
 
 ## 1. A pull request read that ends at its limit
 
-- [ ] 1.1 Give the stubs a hang, as design.md D4 sets out:
+- [x] 1.1 Give the stubs a hang, as design.md D4 sets out:
       - `bun/goal-check.fixture.ts`: `Gh` gains `hang?: boolean`. With it
         set, the stub's first `fails` calls run `exec /bin/sleep 30` instead
         of `exit 1`, after the call has been logged. `stubborn?: boolean`
@@ -24,7 +24,7 @@ One group, one harness pull request on `feat/gh-timeout`.
         the stub `gh` runs `exec /bin/sleep <n>` after logging when it is set.
       Verify: `bun test bun/goal-check-io.test.ts bun/board-loop-takeable.test.ts`
       stays green, since no case sets either field yet.
-- [ ] 1.2 Write the goal check's cases in `bun/goal-check-io.test.ts`, each
+- [x] 1.2 Write the goal check's cases in `bun/goal-check-io.test.ts`, each
       with `HARNESS_GH_TIMEOUT_MS` at `500` unless named:
       - `fails: 3, hang: true` reads `goal open`, says
         `the pull request's state could not be read`, and made three
@@ -41,7 +41,7 @@ One group, one harness pull request on `feat/gh-timeout`.
       Verify: before 1.4, cases 3, 4 and 5 fail on their own explicit timeout
       rather than on an assertion, because the check waits out the 30 s
       sleep. Case 1 passes before 1.4 and after it.
-- [ ] 1.3 Write the runner's cases in `bun/board-loop-takeable.test.ts`, with
+- [x] 1.3 Write the runner's cases in `bun/board-loop-takeable.test.ts`, with
       `HARNESS_GH_TIMEOUT_MS` at `500` passed through `run()`'s `opts.env`:
       - `ghSleep: 30` passes `demo` over with
         `the pull request query failed`, and the pass ends
@@ -52,7 +52,7 @@ One group, one harness pull request on `feat/gh-timeout`.
         `gh pr list --head feat/demo --state all --limit 1000 --json number,state` [6].
       Verify: before 1.4, cases 7 and 8 fail on their explicit timeout, and
       case 6 fails on the missing `--limit 1000`.
-- [ ] 1.4 Implement design.md D1 to D3:
+- [x] 1.4 Implement design.md D1 to D3:
       - `bun/pull-requests.ts` exports one read, taking a branch and the
         `--json` fields. It spawns the query with `timeout` and
         `killSignal: "SIGKILL"`, reads the limit from `HARNESS_GH_TIMEOUT_MS`
@@ -74,13 +74,13 @@ One group, one harness pull request on `feat/gh-timeout`.
       `killSignal` removed, case 5 alone fails. With the variable's value
       divided by 1000, case 1 fails. Restore all three, and
       `bun test` is green.
-- [ ] 1.5 Grep `gh pr list`, `spawnSync` and `could not be read` across
+- [x] 1.5 Grep `gh pr list`, `spawnSync` and `could not be read` across
       `bun/`, `core/`, `openspec/specs/` and the README for a site that still
       describes either read as unbounded, or the runner's query as taking
       `gh`'s default of 30 records. Correct what the step makes false.
       Verify: the grep names no such site, and `bun/goal-check.ts` and
       `bun/board-loop.ts` each spawn `gh` only through `bun/pull-requests.ts`.
-- [ ] 1.6 `bun bun/pre-pr.ts` reports the step's diff within the budget. The
+- [x] 1.6 `bun bun/pre-pr.ts` reports the step's diff within the budget. The
       pull request body names *A pull request read that does not answer is a
       failed try* and *A pull request query that does not answer fails* as
       the requirements it closes.
