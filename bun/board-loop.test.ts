@@ -178,7 +178,7 @@ describe("the pick", () => {
 
 	// spec: board-loop/a-picked-card-is-claimed
 	test("the pick prompt names the board by its harness.board value and lists the takeable slugs [21], and claims the picked card alone [1]", () => {
-		const { dir } = clone({ ...change("demo"), ...change("other"), ...change("spent", TICKED) });
+		const { dir } = clone({ ...change("demo"), ...change("other"), ...change("spent", undefined, ["demo"]) });
 		const pick = pickOf(dir);
 		expect(pick).toContain("`Board view` of the Notion board Demo");
 		expect(pick).toContain("\nThis session runs unattended.\n");
@@ -200,6 +200,22 @@ describe("the pick", () => {
 	test("the pick prompt fetches the card again after the write [3]", () => {
 		const { dir } = clone();
 		expect(pickOf(dir)).toContain("then fetch that card again");
+	});
+
+	test("a takeable change and an answer candidate each appear in their own list of the prompt only [11]", () => {
+		const { dir } = clone({ ...change("demo"), ...change("spent", TICKED) });
+		const lines = pickOf(dir).split("\n");
+		expect(lines.find((line) => line.startsWith("These changes are takeable:"))).toStartWith("These changes are takeable: demo.");
+		expect(lines.find((line) => line.startsWith("These changes are answer candidates:"))).toStartWith("These changes are answer candidates: spent.");
+	});
+
+	// spec: board-loop/an-answered-card-goes-first board-loop/a-candidate-with-no-answer
+	test("the pick prompt reads Assign and the discussion, resolved or not, after the last question [15], puts answered cards first from applied [16] and claims them from applied [17]", () => {
+		const { dir } = clone();
+		const pick = pickOf(dir);
+		for (const part of ["`Assign`", "`harness-question`", "resolved discussions included"]) expect(pick).toContain(part);
+		expect(pick).toContain("Take an answered candidate's card first, from `applied` or `applying`, then the `applying` column, then `proposed`");
+		expect(pick).toContain("or when it reads `applied` and names an answer candidate");
 	});
 
 	test("the stage session's prompt is still the launch form's three lines, with no claim [4]", () => {
@@ -231,7 +247,7 @@ describe("the pick", () => {
 
 	// spec: board-loop/a-pick-outside-the-list
 	test.each([
-		["a change that is not takeable [19]", { ...change("demo"), ...change("spent", TICKED) }, "PICK: spent", "spent: every group is ticked"],
+		["a change neither takeable nor a candidate [19][22]", { ...change("demo"), ...change("spent", undefined, ["demo"]) }, "PICK: spent", "spent: after: demo is still open"],
 		["a change with no directory [19]", change("demo"), "PICK: ghost", "ghost: no change of that name is takeable"],
 		["nothing at all [20]", change("demo"), "", "not one exact PICK: line"],
 		["no PICK: line [20]", change("demo"), "demo, I think", "not one exact PICK: line"],
