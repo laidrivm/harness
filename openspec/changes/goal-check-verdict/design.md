@@ -59,9 +59,10 @@ closing without a merge withdraws the step.
 *Alternatives.* Two queries, one for `open` and one for `merged`, double the
 calls that can fail. `gh pr view <branch>` reads only the newest pull request
 of a branch, so a closed one opened after a merged one would hide the merge.
-The 30-record default is kept: a branch is never reused once its pull request
-has merged (`core/git-and-prs.md`), so 30 pull requests on one branch name
-do not occur.
+Keeping `gh`'s 30-record default was rejected too. A branch is never reused
+once its pull request has merged (`core/git-and-prs.md`), so 30 pull requests
+on one branch name should not occur. But the limit costs one flag, and the
+check would otherwise rest on that convention holding.
 
 ### D2. Three tries, two seconds apart, for any failure
 
