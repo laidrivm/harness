@@ -78,7 +78,10 @@ None.
   for the consumer `scan-lift` names.
 - `openspec/specs/mutation-floor/spec.md` — one requirement removed.
 - `docs/testing.md` (in d2ass) §The mutation floor — the four bullets
-  describing the directive's accepted form go with it, in the pull request
-  that bumps the pin.
+  describing the directive's accepted form go with it, handed on to the
+  `D2ASS` card *Drop the exemption bullets from `docs/testing.md` when the
+  pin passes the validator's removal*. They are due once d2ass's pin passes
+  step 1, and are removed by hand, since the automatic bump opens no pull
+  request.
 - No dependency, workflow or runtime change. Nothing the application ships is
   touched.
