@@ -66,7 +66,7 @@ One group, one pull request: `feat/question-gate-reason`.
       before it. (Req: agent-permissions — A question to the user on a board
       card needs no prompt, §*The line outside the first prompt*, §*The hook
       cannot read what it decides on*)
-- [ ] 1.4 In `bun/question-gate.ts`, export `MARK` and read the first prompt
+- [x] 1.4 In `bun/question-gate.ts`, export `MARK` and read the first prompt
       from the transcript as design.md Decision 2 sets out. Answer `deny` with
       the message from one rule-to-remedy table (Decision 3), built from
       `MARK`, `LIMIT` and `BOARDS`, and record `refused`. Rewrite the header
