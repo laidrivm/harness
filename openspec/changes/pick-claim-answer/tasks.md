@@ -96,7 +96,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
       `PICK:` from either list, and launch a candidate with the answer form.
       Verify: 2.2 and 2.3 are green, `bun test` is green, and the file is under
       its cap.
-- [ ] 2.5 Where 2.1 found the call refused, pass the `--allowedTools` it names
+- [x] 2.5 Where 2.1 found the call refused, pass the `--allowedTools` it names
       in `bun/board-loop-session.ts`, and assert the flag in
       `bun/board-loop-stage.test.ts`. Otherwise record that nothing was
       needed. Verify: the case, or the line in the pull request.
