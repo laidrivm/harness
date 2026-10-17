@@ -99,8 +99,10 @@ One group, one pull request: `feat/question-gate-reason`.
       archived changes as history. Verify: the grep in the pull request
       body.
 - [ ] 1.8 The pull request's *Check by hand* names design.md Decision 1 for
-      the user to confirm. It also names the first live unattended question
-      after the merge, which should show `refused <rule>` then `allowed
-      question` for one session in the gate ledger, or the gate's message as
-      the tool result in its transcript. Verify: the pull request body holds
-      both.
+      the user to confirm. It also names the deliberate live check from
+      design.md's first risk. One unattended session posts an unmarked
+      comment on a card, then the same question marked. Expect
+      `refused unmarked` and then `allowed question` in the ledger, and the
+      gate's message as the first call's tool result. Record whether it
+      replaced the stock "do not retry" text. Verify: the pull request body
+      holds both.

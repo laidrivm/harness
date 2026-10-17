@@ -165,10 +165,15 @@ where it said "the gate's mark".
 
 - **The `deny` message is documented, not measured.** Whether it replaces
   Claude Code's "do not retry" in a `--permission-prompts none` run is read
-  from the docs only. → *Check by hand*: on the first live unattended
-  question after this merges, the ledger shows `refused <rule>` followed by
-  `allowed question` in the same session, or the transcript shows the gate's
-  message as the tool result.
+  from the docs only. Once the launch form names the mark, a live question
+  will most likely pass first time, so waiting for one proves nothing about
+  the refusal. → *Check by hand*, run on purpose after this merges: an
+  unattended session that is told to post an unmarked comment on a card
+  first, then the same question marked. The ledger should show
+  `refused unmarked` and then `allowed question` for that one session, and
+  the transcript should show the gate's message as the first call's tool
+  result. Record whether that message replaced Claude Code's stock "do not
+  retry" text or came with it.
 - **A session resumed by hand.** Someone who resumes an unattended session
   with `claude --resume` and sits at it gets refusals with a reason instead of
   a prompt, because the first prompt still declares the session unattended.
