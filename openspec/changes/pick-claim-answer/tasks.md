@@ -100,7 +100,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
       in `bun/board-loop-session.ts`, and assert the flag in
       `bun/board-loop-stage.test.ts`. Otherwise record that nothing was
       needed. Verify: the case, or the line in the pull request.
-- [ ] 2.6 In `core/feature-workflow.md`, add to the question bullet that an
+- [x] 2.6 In `core/feature-workflow.md`, add to the question bullet that an
       answer the loop carries counts as applied when its step's pull request
       opens, citing `task-board`. Add to *Unattended stages* that an answer
       step's first line names the answer it writes as group N+1. In
