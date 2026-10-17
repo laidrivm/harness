@@ -108,7 +108,8 @@ type Listed = { headRefOid?: unknown; state?: unknown } | null;
 function pullRequests(branch: string): Listed[] | undefined {
 	const env = process.env.GOAL_CHECK_RETRY_MS ?? "";
 	const pause = /^\d+$/.test(env) ? Number(env) : 2000;
-	const query = ["gh", "pr", "list", "--head", branch, "--state", "all"];
+	// gh lists 30 by default, newest first: closed ones could hide an older match.
+	const query = ["gh", "pr", "list", "--head", branch, "--state", "all", "--limit", "1000"];
 	for (let tries = 1; ; tries++) {
 		try {
 			const run = Bun.spawnSync([...query, "--json", "headRefOid,state"]);
