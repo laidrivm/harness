@@ -165,6 +165,36 @@ describe("the session", () => {
 	});
 });
 
+/** These [n] number `pick-claim-answer`'s `/zombies` ideas. */
+describe("an answer's step", () => {
+	// spec: board-loop/an-answer-s-step
+	test("a pick naming an answer candidate is judged by goal-check.ts apply <slug> 2 [9]", () => {
+		const { dir } = clone(change("demo", TICKED));
+		const r = run(dir);
+		expect(r.calls).toContain("goal-check.ts apply demo 2");
+		expect(r.last).toBe("board-loop: met — apply demo step 2");
+	});
+
+	test("a goal check printing tasks.md has no group 2 gives open [23]", () => {
+		const { dir } = clone(change("demo", TICKED));
+		const r = run(dir, [], { verdict: "goal open: apply demo step 2 at abc1234 — tasks.md has no group 2" });
+		expect(r.code).toBe(1);
+		expect(r.last).toBe("board-loop: open — apply demo step 2: goal open: apply demo step 2 at abc1234 — tasks.md has no group 2");
+	});
+
+	// spec: board-loop/an-answer-s-step
+	test("the answer form's first line writes the answer as group N+1 [13], then the unattended line and the check for apply <slug> N+1 [14]", () => {
+		const { dir } = clone(change("demo", TICKED));
+		const { calls } = run(dir);
+		const from = calls.indexOf("\nclaude -p /goal ") + 1;
+		const lines = calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
+		expect(lines).toHaveLength(3);
+		expect(lines[0]).toContain("write the answer on its card into its tasks.md as group 2, then /opsx:apply demo for that group,");
+		expect(lines[1]).toBe("This session runs unattended.");
+		expect(lines[2]).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push");
+	});
+});
+
 describe("one record and one line per pass", () => {
 	// spec: board-loop/every-pass-leaves-a-record
 	test("an unwritable state directory changes neither the line nor the exit [28]", () => {
@@ -197,7 +227,7 @@ describe("one record and one line per pass", () => {
 	// spec: board-loop/every-pass-leaves-a-record
 	test.each([
 		["refused", { install: 1 }, change("demo")],
-		["idle", {}, change("demo", TICKED)],
+		["idle", {}, {}],
 		["met", {}, change("demo")],
 	] as const)("a %s pass leaves exactly one loop record [29]", (decision, stubs, tree) => {
 		const { dir } = clone(tree);

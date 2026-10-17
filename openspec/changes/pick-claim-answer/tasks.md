@@ -70,7 +70,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
         `gh` leaves no candidate [21].
       (Req: board-loop — A pass takes only a takeable change, §*Every group
       ticked*, §*No takeable change*)
-- [ ] 2.3 Write the answer-step tests in `bun/board-loop.test.ts` and
+- [x] 2.3 Write the answer-step tests in `bun/board-loop.test.ts` and
       `bun/board-loop-stage.test.ts`:
       - a pick that names a candidate gets a verdict run of
         `goal-check.ts apply <slug> 2` [9]. A goal check printing
