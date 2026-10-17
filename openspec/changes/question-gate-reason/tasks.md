@@ -44,7 +44,7 @@ One group, one pull request: `feat/question-gate-reason`.
       Each case fails before 1.4, except [5]. (Req: agent-permissions — A
       question to the user on a board card needs no prompt; gate-ledger — Every
       gate refusal is recorded)
-- [ ] 1.3 In the same file, write the cases that decide unattended:
+- [x] 1.3 In the same file, write the cases that decide unattended:
       - a transcript with no prompt line, tool calls only, reads attended: no
         output, `passed` [1];
       - an empty first prompt reads attended [2];

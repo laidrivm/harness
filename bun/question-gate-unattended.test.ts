@@ -20,6 +20,7 @@ import {
 	type Prompt,
 	read,
 	run,
+	said,
 	scratch,
 	transcript,
 } from "./question-gate.fixture.ts";
@@ -122,5 +123,53 @@ describe("in an unattended session", () => {
 		writeFileSync(blocked, "");
 		const { out } = run(asked({ markdown: UNMARKED }, path()), blocked);
 		expect(decision(out)?.behavior).toBe("deny");
+	});
+});
+
+describe("which session is unattended", () => {
+	/** No answer and a `passed` record: the session reads as attended. */
+	const ATTENDED = { out: "", decisions: ["passed"] };
+	const seen = ({ out, ledger }: ReturnType<typeof run>) => ({
+		out,
+		decisions: ledger.map((r) => r.decision),
+	});
+
+	// spec: agent-permissions/a-person-at-the-prompt
+	// agent-permissions/the-line-outside-the-first-prompt
+	test.each([
+		["no prompt line, tool calls only [1]", []],
+		["an empty first prompt [2]", ["", STAGE]],
+		["the line only in the second prompt [7]", ["Carry step 2.", STAGE]],
+		["the line with a trailing space [9]", [`Carry step 2.\n${UNATTENDED} \nThe goal.`]],
+		["the line inside a longer line [9]", [`Carry step 2. ${UNATTENDED} The goal.`]],
+	] as [string, Prompt[]][])("%s reads attended: no answer, recorded passed", (_, prompts) => {
+		expect(seen(unmarked(...prompts))).toEqual(ATTENDED);
+	});
+
+	test.each([
+		["the line as the prompt's last line, no newline after it [10]", `Carry step 2.\n${UNATTENDED}`],
+		["the line inside the /goal wrapper [12]", { goal: `Carry step 2 of the OpenSpec change demo.\n${UNATTENDED}\nThe goal is met.` }],
+		["a prompt written as a list of text parts [13]", { parts: ["Read the brief.", `Carry step 2.\n${UNATTENDED}`] }],
+	] as [string, Prompt][])("%s reads unattended", (_, prompt) => {
+		expect(decision(unmarked(prompt).out)?.behavior).toBe("deny");
+	});
+
+	test("a user line holding only a tool_result is no prompt: the prompt after it is the first [14]", () => {
+		const path = transcript([fetched(CARD, "Harness"), comments(CARD)], [said(STAGE)]);
+		expect(decision(run(asked({ markdown: UNMARKED }, path)).out)?.behavior).toBe("deny");
+	});
+
+	// spec: agent-permissions/the-hook-cannot-read-what-it-decides-on
+	test("an event whose transcript_path does not exist gives no answer, recorded passed [16]", () => {
+		const missing = join(scratch(), "missing.jsonl");
+		expect(seen(run(asked({ markdown: UNMARKED }, missing)))).toEqual(ATTENDED);
+	});
+
+	test("an event that is not JSON gives no answer, recorded passed unreadable [17]", () => {
+		const { out, ledger } = run("{ not json");
+		expect({ out, ledger: ledger.map((r) => [r.decision, r.rule]) }).toEqual({
+			out: "",
+			ledger: [["passed", "unreadable"]],
+		});
 	});
 });
