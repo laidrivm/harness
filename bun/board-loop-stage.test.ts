@@ -171,6 +171,7 @@ describe("an answer's step", () => {
 	test("a pick naming an answer candidate is judged by goal-check.ts apply <slug> 2 [9]", () => {
 		const { dir } = clone(change("demo", TICKED));
 		const r = run(dir);
+		expect(r.text).toContain("carrying apply demo step 2 on feat/demo-2");
 		expect(r.calls).toContain("goal-check.ts apply demo 2");
 		expect(r.last).toBe("board-loop: met — apply demo step 2");
 	});

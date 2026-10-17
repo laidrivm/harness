@@ -23,6 +23,7 @@ describe("an answer candidate", () => {
 		const { dir } = clone(change("demo", TICKED));
 		const r = run(dir, [], { pick: "PICK: none" });
 		expect(r.calls).toContain("\nclaude -p ");
+		expect(r.calls).toContain("These changes are takeable: none.");
 		expect(r.last).toBe("board-loop: idle — the pick session found no takeable card on the board");
 	});
 
