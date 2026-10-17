@@ -107,7 +107,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
       `README.md`'s *Consuming* line, the pass lists the takeable changes and
       the answer candidates. Verify:
       `bun test` is green, and `grep -n board-loop README.md` reads that way.
-- [ ] 2.7 The pull request's *Check by hand* gives the user a live pass on a
+- [x] 2.7 The pull request's *Check by hand* gives the user a live pass on a
       card with an answered question in `applied`. The pass must carry step
       N+1, the card must move to `applying`, and `Assign` must be cleared in
       the turn the pull request opens [24]. (Req: task-board — An answer the
