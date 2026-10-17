@@ -115,3 +115,27 @@ describe("passed over, with the reason printed", () => {
 		expect(r.last).toStartWith("board-loop: idle");
 	});
 });
+
+/** These [n] number `gh-timeout`'s `/zombies` ideas. */
+describe("a pull request query that runs past its limit", () => {
+	const opts = { env: { HARNESS_GH_TIMEOUT_MS: "500" } };
+
+	// spec: board-loop/gh-hangs-on-the-query
+	test.each([
+		["one candidate [7]", ["demo"]],
+		["two candidates [8]", ["demo", "other"]],
+	])("gh hanging on %s passes each over, and the pass is idle", (_, slugs) => {
+		const { dir } = clone(Object.assign({}, ...slugs.map((slug) => change(slug))));
+		const r = run(dir, [], { ghSleep: 30 }, opts);
+		for (const slug of slugs)
+			expect(r.text).toContain(`passed over ${slug}: the pull request query failed`);
+		expect(r.last).toBe("board-loop: idle — no change is takeable");
+	}, 15_000);
+
+	test("the query asks for up to 1000 records [6]", () => {
+		const { dir } = clone();
+		expect(run(dir).calls).toContain(
+			"gh pr list --head feat/demo --state all --limit 1000 --json number,state",
+		);
+	});
+});

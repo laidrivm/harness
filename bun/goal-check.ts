@@ -17,6 +17,7 @@
  * so nothing decides from one, this check included.
  */
 import { ran, record } from "./gate-ledger.ts";
+import { readPullRequests } from "./pull-requests.ts";
 import { complete, groups } from "./turn-gate.ts";
 
 const git = (...args: string[]) => {
@@ -108,16 +109,10 @@ type Listed = { headRefOid?: unknown; state?: unknown } | null;
 function pullRequests(branch: string): Listed[] | undefined {
 	const env = process.env.GOAL_CHECK_RETRY_MS ?? "";
 	const pause = /^\d+$/.test(env) ? Number(env) : 2000;
-	// gh lists 30 by default, newest first: closed ones could hide an older match.
-	const query = ["gh", "pr", "list", "--head", branch, "--state", "all", "--limit", "1000"];
 	for (let tries = 1; ; tries++) {
-		try {
-			const run = Bun.spawnSync([...query, "--json", "headRefOid,state"]);
-			const listed = run.exitCode === 0 && JSON.parse(run.stdout.toString());
-			if (Array.isArray(listed)) return listed;
-		} catch {
-			// A spawn that throws or output that is not JSON fails the try.
-		}
+		// A read that fails or runs past its limit fails the try.
+		const listed = readPullRequests<Listed>(branch, "headRefOid,state");
+		if (listed) return listed;
 		if (tries === 3) return undefined;
 		Bun.sleepSync(pause);
 	}
