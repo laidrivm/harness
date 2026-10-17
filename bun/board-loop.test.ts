@@ -213,7 +213,8 @@ describe("the pick", () => {
 	test("the pick prompt reads Assign and the discussion, resolved or not, after the last question [15], puts answered cards first from applied [16] and claims them from applied [17]", () => {
 		const { dir } = clone();
 		const pick = pickOf(dir);
-		for (const part of ["`Assign`", "`harness-question`", "resolved discussions included"]) expect(pick).toContain(part);
+		for (const part of ["`Assign`", "resolved discussions included", "holds a comment opening with `harness-question` and, after the last such comment, one by the user `Assign` names", "A card with no such question is no answer."])
+			expect(pick).toContain(part);
 		expect(pick).toContain("Take an answered candidate's card first, from `applied` or `applying`, then the `applying` column, then `proposed`");
 		expect(pick).toContain("or when it reads `applied` and names an answer candidate");
 	});
