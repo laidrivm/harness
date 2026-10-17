@@ -14,7 +14,7 @@ One group, one pull request: `feat/question-gate-reason`.
 
 ## 1. The launch form names the mark, and the gate says why it refused
 
-- [ ] 1.1 In `bun/question-gate.fixture.ts`, give `transcript()` a way to write
+- [x] 1.1 In `bun/question-gate.fixture.ts`, give `transcript()` a way to write
       user prompt lines before the calls. A prompt is a plain string, or a
       list of `text` parts, or the `/goal` command wrapper the incident's
       transcript shows, with its `<command-args>` text keeping its newlines.
