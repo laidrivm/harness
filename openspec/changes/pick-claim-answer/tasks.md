@@ -50,7 +50,7 @@ then `feat/pick-claim-answer-2`. Both are cut once `board-loop`'s archive
 
 ## 2. An answered question makes its change takeable again
 
-- [ ] 2.1 Measure, in a dedicated clone, whether a `claude -p` session under
+- [x] 2.1 Measure, in a dedicated clone, whether a `claude -p` session under
       `--permission-mode auto --permission-prompts none` can call
       `notion-get-comments` on a card. This needs the user's terminal, so in
       an unattended run it goes to the card (unattended: card — hand the
