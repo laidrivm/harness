@@ -90,7 +90,7 @@ One group, one pull request: `feat/question-gate-reason`.
       that the answer, proposal and archive variants keep it. Name the mark in
       the *Across the stages* question bullet, where it says "the gate's mark".
       Verify: 1.5 and the runner's three test files are green.
-- [ ] 1.7 Search the four places `core/feature-workflow.md` names for the
+- [x] 1.7 Search the four places `core/feature-workflow.md` names for the
       claims this replaces: "refuses nothing", "never answers `deny`",
       "gives every other call no answer", "the gate's mark", and "allowed or
       passed to the prompt". Reconcile each live site: `README.md` lines on
