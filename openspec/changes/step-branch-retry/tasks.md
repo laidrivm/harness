@@ -102,7 +102,7 @@ archive (#138) has merged.
       branch is left for its step. Update the module comment, which says the runner
       never discards work. Verify: 2.1 is green, the runner's three test
       files are green, and the file is under its cap in `bun/file-size.ts`.
-- [ ] 2.3 Search the four places `feature-workflow.md` names for the claim
+- [x] 2.3 Search the four places `feature-workflow.md` names for the claim
       this replaces: an unpushed tip always refuses, and "the next pass can
       take the answer again". Reconcile `README.md`'s *Consuming* line. Name
       `board-loop`'s archived design as history. Verify: the grep in the pull
