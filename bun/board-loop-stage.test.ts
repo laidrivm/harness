@@ -204,6 +204,7 @@ describe("an answer's step", () => {
 describe("a step branch a session left", () => {
 	const stage = (calls: string) => {
 		const from = calls.indexOf("\nclaude -p /goal ") + 1;
+		expect(from).toBeGreaterThan(0); // else a "no clause" case passes on the pick's prompt
 		return calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
 	};
 	const clause = (b: string) =>
