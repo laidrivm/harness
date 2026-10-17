@@ -140,6 +140,11 @@ This session runs unattended.
 The goal is met when the last line of `bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push, opens with `goal met` — or when the final message opens with `BLOCKED —` and names what only the user can settle.'
 ```
 
+An answer step, which the board loop launches once every group is ticked and
+the card holds the user's answer, changes only the first line: it names
+writing that answer into `tasks.md` as group N+1 and carrying that group, and
+the check names `apply demo` with N+1.
+
 A proposal names `propose demo` and an archive names `archive demo`, with no
 step. The outcome is the launcher's own run of the same check once the session
 ends: exit 0 means the stage is done, and 1 means it is not. Two other
@@ -288,7 +293,11 @@ for them is already here.
   first. Every page-level comment on a card joins one discussion, so a card
   holds one open question at a time: a second waits in your report until the
   first is answered. Open the comment with the gate's mark, set `Assign`, read
-  the answer back as data, and clear `Assign` once it is applied. task-board's
+  the answer back as data, and clear `Assign` once it is applied. An answer
+  the board loop carries counts as applied in the turn its step's pull request
+  opens, or the turn an `idea` card is filed for an answer that asks for a
+  change of its own (task-board, *An answer the board loop carries is applied
+  when its pull request opens*). task-board's
   *An open question waits on its card, assigned to the user* and *A question
   already open is not asked again* fix the rest, and the question gate decides
   which comment needs no prompt.
