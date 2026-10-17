@@ -242,7 +242,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const unclean = (what: string, { late, left }: { late: boolean; left?: number }) => {
 		const outlived = left ? `process group ${left} outlived ${what} — see pgrep -g ${left}` : "";
 		if (late) return end("timeout", [`${what} ran past ${minutes}`, outlived].filter(Boolean).join("; "));
-		if (left) return refuse(outlived);
+		// Never `refuse()`: a switch back would move the tree under a process still running in it.
+		if (left) return end("refused", `${outlived}; the clone is left as the session left it`);
 	};
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {

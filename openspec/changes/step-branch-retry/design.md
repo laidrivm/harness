@@ -15,7 +15,8 @@ CLAUDECODE, trust, tracked edit          unchanged
 fetch, switch main, ff-only, install     unchanged
 consider() each change -> steps          unchanged
 *step 2: noted branch is no step's branch -> switch back to it, refuse
-*step 2: any refusal after the switch      -> switch back to it first
+*step 2: any refusal after the switch      -> switch back to it first,
+                                              unless a process group outlived its session
 pick session -> PICK: <slug>             unchanged
 *step 1: the step's branch exists?  -> continuation clause in line 1
 stage session, goal check                unchanged
@@ -143,7 +144,10 @@ detached `HEAD` is still refused where it is today, before the fetch,
 because no branch name keeps its commits. Any refusal after the switch, such
 as a failed install, switches back to the noted branch first. Without that, a
 pass refused before the list exists would leave the clone on `main`, and the
-next pass would no longer see the unpushed tip.
+next pass would no longer see the unpushed tip. The one exception is a
+refusal because a session's process group outlived it: a process still
+running may write to the tree, so the runner switches nothing under it and
+says the clone is left as the session left it (CodeRabbit on #147).
 
 ### Narrow `task-board`'s scenario here
 

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
-import { change, clone, commit, lowered, ONE, out, records, run, THREE, TICKED } from "./board-loop.fixture.ts";
+import { change, clone, commit, EPERM, lowered, ONE, out, records, run, THREE, TICKED } from "./board-loop.fixture.ts";
 
 /** The stage session, its verdict, and each pass's record. [n]: `/zombies` ideas. */
 
@@ -64,12 +64,9 @@ describe("the verdict", () => {
 		40_000,
 	);
 
-	// Signal 0 fails as it does for a member another user owns; real signals still go through.
-	const eperm = `(pid, signal) => { if (signal === 0) throw Object.assign(new Error("EPERM"), { code: "EPERM" }); process.kill(pid, signal); }`;
-
 	test("a group the runner cannot signal (EPERM) is not taken as gone: the pass refuses, naming it", () => {
 		const { dir } = clone();
-		const r = run(dir, [], {}, { entry: lowered(60_000, eperm) });
+		const r = run(dir, [], {}, { entry: lowered(60_000, EPERM) });
 		expect(r.last).toStartWith("board-loop: refused — process group ");
 		expect(r.last).toContain("outlived");
 		expect(records(r.state).map((x) => x.decision)).toEqual(["refused"]);
@@ -77,7 +74,7 @@ describe("the verdict", () => {
 
 	test("a group left past the limit keeps timeout, naming the group", () => {
 		const { dir } = clone();
-		const r = run(dir, [], { pickSleep: 30 }, { entry: lowered(1000, eperm) });
+		const r = run(dir, [], { pickSleep: 30 }, { entry: lowered(1000, EPERM) });
 		expect(r.last).toStartWith("board-loop: timeout — the pick session ran past");
 		expect(r.last).toContain("outlived the pick session");
 	}, 40_000);
