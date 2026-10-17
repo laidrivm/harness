@@ -79,6 +79,11 @@ archive (#138) has merged.
       - with `bun install` failing, an unpushed tip on `feat/demo` is
         refused, and the clone is back on `feat/demo` at its tip
         (§*Refused after the switch*);
+      - with a local `main` that cannot fast-forward to `origin/main`, an
+        unpushed tip on `feat/demo` is refused, and the clone is back on
+        `feat/demo` at its tip, never left on `main`. The existing
+        fast-forward cases start from a pushed `feat/demo`, so none of them
+        catches this (§*Refused after the switch*);
       - a detached `HEAD` with an unpushed commit is refused before any fetch
         [17].
       [13], [19], [14] and [18] fail before 2.2, or pass for the wrong reason
