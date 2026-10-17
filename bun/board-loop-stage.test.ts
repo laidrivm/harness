@@ -219,6 +219,7 @@ describe("a step branch a session left", () => {
 		["at step 2, feat/demo-2 is named and feat/demo-1 beside it is not [4]", THREE, local("feat/demo-1", "feat/demo-2"), "feat/demo-2"],
 		["a single group's feat/demo-1 gives no clause [5]", ONE, local("feat/demo-1"), null],
 		["at step 2, feat/demo-20 gives no clause [6]", THREE, local("feat/demo-20"), null],
+		["a tag named feat/demo gives no clause", ONE, (dir: string) => git(dir, "tag", "feat/demo"), null],
 		["an answer candidate's feat/demo-2 is named in the answer form [11]", TICKED, local("feat/demo-2"), "feat/demo-2"],
 	] as const)("%s", (_, tasks, arrange, named) => {
 		const { dir } = clone(change("demo", tasks));
