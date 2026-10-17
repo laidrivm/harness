@@ -40,10 +40,12 @@ by squash or by rebase keeps the `headRefOid` its branch had when it merged.
 
 ### D1. One query over every state, matched on head and state together
 
-The query becomes `gh pr list --head <branch> --state all --json
-headRefOid,state`. The condition holds when some record has `headRefOid`
-equal to the full `HEAD` and `state` equal to `OPEN` or `MERGED`. A record
-with any other state, or none, never satisfies it.
+The query becomes `gh pr list --head <branch> --state all --limit 1000
+--json headRefOid,state`. `gh` lists 30 records by default, newest first, so
+without the limit 30 later closed pull requests on the branch could hide an
+open or merged one at `HEAD`. The condition holds when some record has
+`headRefOid` equal to the full `HEAD` and `state` equal to `OPEN` or
+`MERGED`. A record with any other state, or none, never satisfies it.
 
 The open line names what was found:
 

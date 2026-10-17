@@ -39,7 +39,7 @@ function bin(gh: Gh): string {
 	const dir = emptyDir("goal-check-bin-");
 	symlinkSync(Bun.which("git") ?? "git", join(dir, "git"));
 	if (!gh) return dir;
-	const query = "pr list --head feature --state all --json headRefOid,state";
+	const query = "pr list --head feature --state all --limit 1000 --json headRefOid,state";
 	const calls = join(dir, "calls");
 	writeFileSync(
 		join(dir, "gh"),
