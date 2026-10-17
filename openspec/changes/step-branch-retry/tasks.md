@@ -76,6 +76,9 @@ archive (#138) has merged.
         not `idle` [12];
       - with `gh` failing, an unpushed tip on `feat/demo` is refused, and the
         clone is back on `feat/demo` [18];
+      - with `bun install` failing, an unpushed tip on `feat/demo` is
+        refused, and the clone is back on `feat/demo` at its tip
+        (§*Refused after the switch*);
       - a detached `HEAD` with an unpushed commit is refused before any fetch
         [17].
       [13], [19], [14] and [18] fail before 2.2, or pass for the wrong reason
@@ -88,8 +91,10 @@ archive (#138) has merged.
       when `HEAD` names no branch. Note a named branch and go on. Once the
       takeable list and the answer candidates are computed, and before the
       idle check, refuse when the noted branch is no step's branch, after
-      switching the clone back to it. Otherwise print that the branch is
-      left for its step. Update the module comment, which says the runner
+      switching the clone back to it. Any other refusal after the switch
+      also switches back to the noted branch first, so that a pass refused
+      before the list exists forgets nothing. Otherwise print that the
+      branch is left for its step. Update the module comment, which says the runner
       never discards work. Verify: 2.1 is green, the runner's three test
       files are green, and the file is under its cap in `bun/file-size.ts`.
 - [ ] 2.3 Search the four places `feature-workflow.md` names for the claim
@@ -98,7 +103,8 @@ archive (#138) has merged.
       `board-loop`'s archived design as history. Verify: the grep in the pull
       request body.
 - [ ] 2.4 The pull request's *Check by hand* gives the user one live pass.
-      Its steps: stop a stage session after a commit and before its push.
-      Start the next pass. It must go on from `main`, the pick must take the
-      same card first, and the stage session must continue the unpushed
-      branch. Verify: the pull request body holds it.
+      Its steps: on a board where that card's change is the only takeable
+      one, stop a stage session after a commit and before its push. Start the
+      next pass. It must go on from `main`, and the stage session must
+      continue the unpushed branch, its commit included. Verify: the pull
+      request body holds it.
