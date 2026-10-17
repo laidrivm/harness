@@ -45,8 +45,7 @@ completes, name the next step and the exact command.
   step differently instead of merging dead code.
 - Never put a task whose edit lands in another repository into this tree's
   `tasks.md`; file a card on that repository's board instead — the goal check
-  reads only this tree, so the step carrying that task can never read
-  `goal met`.
+  reads only this tree and cannot see whether that edit was made.
 - If a vendored best-practices skill (listed in the skills repo's
   `skills-lock.json`) covers the feature's domain, run the draft design
   through it before finalising and fold in what applies. If none covers
