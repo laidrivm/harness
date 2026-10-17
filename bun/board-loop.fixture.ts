@@ -150,6 +150,12 @@ function bin(log: string, s: Stubs): string {
 }
 
 /**
+ * A `kill` for `lowered()` whose signal 0 fails as it does for a member another
+ * user owns, so a session's group reads as outliving it; real signals still go through.
+ */
+export const EPERM = `(pid, signal) => { if (signal === 0) throw Object.assign(new Error("EPERM"), { code: "EPERM" }); process.kill(pid, signal); }`;
+
+/**
  * An entry module that runs one pass with the session limit lowered to `ms`,
  * which is how a case reaches the limit without waiting an hour. `kill`, the
  * source of a function, stands in for `process.kill`.

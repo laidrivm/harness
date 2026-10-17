@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
-import { advance, change, clone, commit, out, records, run, TICKED, trusting } from "./board-loop.fixture.ts";
+import { advance, change, clone, commit, EPERM, lowered, out, records, run, TICKED, trusting } from "./board-loop.fixture.ts";
 
 /** Who may start the runner, and the clone it starts from. [n]: `/zombies` ideas. */
 
@@ -128,6 +128,18 @@ describe("the clone", () => {
 			expect(r.calls).not.toContain("claude");
 			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")]).toEqual([branch, tip]);
 		});
+
+		// spec: board-loop/a-session-s-process-group-outlived-it
+		// The run blocks bun's own timer, so the case names a limit of its own.
+		test("on the step's branch, a session whose group outlived it is refused with the clone left where it is", () => {
+			const { dir } = clone();
+			unpushed(dir, "feat/demo");
+			const r = run(dir, [], {}, { entry: lowered(60_000, EPERM) });
+			expect(r.last).toStartWith("board-loop: refused — process group ");
+			expect(r.last).toEndWith("; the clone is left as the session left it");
+			expect(r.calls).not.toContain("git switch -q feat/demo");
+			expect(out(dir, "branch", "--show-current")).toBe("main");
+		}, 40_000);
 
 		// spec: board-loop/unpushed-work-on-a-detached-head
 		test("on a detached HEAD is refused before any fetch [17]", () => {

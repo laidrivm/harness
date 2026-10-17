@@ -99,7 +99,8 @@ archive (#138) has merged.
       idle check, refuse when the noted branch is no step's branch, after
       switching the clone back to it. Any other refusal after the switch
       also switches back to the noted branch first, so that a pass refused
-      before the list exists forgets nothing. Otherwise print that the
+      before the list exists forgets nothing, except one because a
+      session's process group outlived it, which switches nothing. Otherwise print that the
       branch is left for its step. Update the module comment, which says the runner
       never discards work. Verify: 2.1 is green, the runner's
       `board-loop*.test.ts` files are green, and the file is under its cap in `bun/file-size.ts`.
