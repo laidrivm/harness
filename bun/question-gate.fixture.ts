@@ -65,12 +65,42 @@ type Call = {
 	plain?: true;
 };
 
+/** The line agent-autonomy's unattended session carries in its first prompt. */
+export const UNATTENDED = "This session runs unattended.";
+
 /**
- * A transcript holding `calls` in order, each as the assistant line carrying
- * the tool use and the user line carrying its result, as Claude Code writes
- * them; `extra` lines are written verbatim after them.
+ * A user prompt: a plain string, a list of `text` parts, or the `/goal`
+ * command wrapper the board loop's stage session is recorded under, its
+ * `<command-args>` text keeping its newlines.
  */
-export function transcript(calls: Call[], extra: string[] = []): string {
+export type Prompt = string | { parts: string[] } | { goal: string };
+
+/** The user line Claude Code writes for `prompt`. */
+export const said = (prompt: Prompt) =>
+	JSON.stringify({
+		type: "user",
+		message: {
+			role: "user",
+			content:
+				typeof prompt === "string"
+					? prompt
+					: "parts" in prompt
+						? prompt.parts.map((text) => ({ type: "text", text }))
+						: `<command-message>goal</command-message>\n<command-name>/goal</command-name>\n<command-args>${prompt.goal}</command-args>`,
+		},
+	});
+
+/**
+ * A transcript holding `prompts` as user lines, then `calls` in order, each as
+ * the assistant line carrying the tool use and the user line carrying its
+ * result, as Claude Code writes them; `extra` lines are written verbatim after
+ * them.
+ */
+export function transcript(
+	calls: Call[],
+	extra: string[] = [],
+	prompts: Prompt[] = [],
+): string {
 	const lines = calls.flatMap((call, n) => [
 		JSON.stringify({
 			type: "assistant",
@@ -99,13 +129,13 @@ export function transcript(calls: Call[], extra: string[] = []): string {
 		}),
 	]);
 	const file = join(scratch(), "session.jsonl");
-	writeFileSync(file, [...lines, ...extra].join("\n"));
+	writeFileSync(file, [...prompts.map(said), ...lines, ...extra].join("\n"));
 	return file;
 }
 
-/** The card read the way a session reads it before asking. */
-export const read = () =>
-	transcript([fetched(CARD, "Harness"), comments(CARD)]);
+/** The card read the way a session reads it before asking, after `prompts`. */
+export const read = (...prompts: Prompt[]) =>
+	transcript([fetched(CARD, "Harness"), comments(CARD)], [], prompts);
 
 /** A `PermissionRequest` event for `notion-create-comment` with `input`. */
 export const event = (

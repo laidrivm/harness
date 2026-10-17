@@ -189,7 +189,7 @@ describe("an answer's step", () => {
 		const { calls } = run(dir);
 		const from = calls.indexOf("\nclaude -p /goal ") + 1;
 		const lines = calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
-		expect(lines).toHaveLength(3);
+		expect(lines).toHaveLength(4);
 		expect(lines[0]).toContain("write the answer on its card into its tasks.md as group 2, then /opsx:apply demo for that group,");
 		// task-board: an answer that asks for a change of its own files a card instead.
 		expect(lines[0]).toEndWith(
@@ -241,7 +241,7 @@ describe("a step branch a session left", () => {
 		git(dir, "switch", "-q", "main");
 		const r = run(dir);
 		const lines = stage(r.calls);
-		expect(lines).toHaveLength(3);
+		expect(lines).toHaveLength(4);
 		expect(lines[0]).toEndWith(`the push and the pull request.${clause("feat/demo")}`);
 		expect(lines[1]).toBe("This session runs unattended.");
 		expect(lines[2]).toBe(
