@@ -151,6 +151,11 @@ filing an `idea` card, clearing `Assign`, adding no group and ending on
 `BLOCKED —`. The check names `apply demo` with N+1, so the second route
 reads `goal open`.
 
+A step whose branch already exists, in the clone or on `origin`, because a
+session ended before its pull request, changes only the first line too: the
+board loop adds that a session left that branch, to `git switch` to it rather
+than create it, and to carry on from what its commits hold.
+
 A proposal names `propose demo` and an archive names `archive demo`, with no
 step. The outcome is the launcher's own run of the same check once the session
 ends: exit 0 means the stage is done, and 1 means it is not. Two other

@@ -45,7 +45,7 @@ archive (#138) has merged.
       it, and to carry on from what its commits hold. Verify: 1.1 is green,
       the runner's three test files are green, and the file is under its cap
       in `bun/file-size.ts`.
-- [ ] 1.3 Name the clause in `core/feature-workflow.md`'s *Unattended stages*
+- [x] 1.3 Name the clause in `core/feature-workflow.md`'s *Unattended stages*
       as one more change to the launch form's first line, beside the answer
       variant. Add one sentence to the board-loop part of `README.md`'s
       *Consuming*. Search the four places `feature-workflow.md` names for
