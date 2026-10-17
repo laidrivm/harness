@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
-import { change, clone, lowered, records, run, TICKED } from "./board-loop.fixture.ts";
+import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
+import { change, clone, commit, lowered, ONE, out, records, run, THREE, TICKED } from "./board-loop.fixture.ts";
 
 /** The stage session, its verdict, and each pass's record. [n]: `/zombies` ideas. */
 
@@ -197,6 +197,61 @@ describe("an answer's step", () => {
 		);
 		expect(lines[1]).toBe("This session runs unattended.");
 		expect(lines[2]).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push");
+	});
+});
+
+/** These [n] number `step-branch-retry`'s `/zombies` ideas. */
+describe("a step branch a session left", () => {
+	const stage = (calls: string) => {
+		const from = calls.indexOf("\nclaude -p /goal ") + 1;
+		expect(from).toBeGreaterThan(0); // else a "no clause" case passes on the pick's prompt
+		return calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
+	};
+	const clause = (b: string) =>
+		` A session left the branch ${b}: switch to it with \`git switch ${b}\` rather than create it, and carry on from what its commits hold.`;
+	const local = (...names: string[]) => (dir: string) => names.forEach((name) => git(dir, "branch", name));
+	const pushed = (name: string) => (dir: string) => git(dir, "push", "-q", "origin", `main:refs/heads/${name}`);
+
+	// spec: board-loop/no-branch-left board-loop/a-local-branch-a-session-left board-loop/a-branch-pushed-without-a-pull-request board-loop/an-answer-step-s-branch
+	test.each([
+		["no branch left gives no clause [1]", ONE, () => {}, null],
+		["a local feat/demo is named [2]", ONE, local("feat/demo"), "feat/demo"],
+		["a feat/demo on origin alone is named [3]", ONE, pushed("feat/demo"), "feat/demo"],
+		["at step 2, feat/demo-2 is named and feat/demo-1 beside it is not [4]", THREE, local("feat/demo-1", "feat/demo-2"), "feat/demo-2"],
+		["a single group's feat/demo-1 gives no clause [5]", ONE, local("feat/demo-1"), null],
+		["at step 2, feat/demo-20 gives no clause [6]", THREE, local("feat/demo-20"), null],
+		["a tag named feat/demo gives no clause", ONE, (dir: string) => git(dir, "tag", "feat/demo"), null],
+		["an answer candidate's feat/demo-2 is named in the answer form [11]", TICKED, local("feat/demo-2"), "feat/demo-2"],
+	] as const)("%s", (_, tasks, arrange, named) => {
+		const { dir } = clone(change("demo", tasks));
+		arrange(dir);
+		const [first] = stage(run(dir).calls);
+		expect(first).not.toContain("switch -c");
+		if (named === null) expect(first).not.toContain("A session left");
+		else expect(first).toEndWith(clause(named));
+		if (named === "feat/demo-2") expect(first).not.toContain("feat/demo-1");
+	});
+
+	// spec: board-loop/a-local-branch-a-session-left
+	test("the clause changes the first line alone [7], is announced before carrying [8], and the tip stays [9]", () => {
+		const { dir } = clone();
+		git(dir, "switch", "-qc", "feat/demo");
+		commit(dir);
+		const tip = out(dir, "rev-parse", "HEAD");
+		git(dir, "switch", "-q", "main");
+		const r = run(dir);
+		const lines = stage(r.calls);
+		expect(lines).toHaveLength(3);
+		expect(lines[0]).toEndWith(`the push and the pull request.${clause("feat/demo")}`);
+		expect(lines[1]).toBe("This session runs unattended.");
+		expect(lines[2]).toBe(
+			"The goal is met when the last line of `bun node_modules/harness/bun/goal-check.ts apply demo 1`, run after the last push, opens with `goal met` — or when the final message opens with `BLOCKED —` and names what only the user can settle.",
+		);
+		const said = r.text.indexOf("continuing feat/demo, which a session left");
+		expect(said).toBeGreaterThan(-1);
+		expect(said).toBeLessThan(r.text.indexOf("carrying apply demo step 1"));
+		expect(out(dir, "rev-parse", "feat/demo")).toBe(tip);
+		expect(r.last).toBe("board-loop: met — apply demo step 1");
 	});
 });
 

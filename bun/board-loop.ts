@@ -97,8 +97,18 @@ function consider(slug: string, status: string, blocking: string[]): Step | stri
 	return { step, branch, answer };
 }
 
-/** The launch form `core/feature-workflow.md` fixes for an apply step, or its answer variant. */
-function prompt(slug: string, { step, answer }: Step, check: string): string {
+/**
+ * Whether the step's branch exists, in the clone or on `origin` as the pass's
+ * fetch left it: a session that ended before its pull request left it.
+ */
+const left = (branch: string) =>
+	[`refs/heads/${branch}`, `refs/remotes/origin/${branch}`].some((ref) => sh("git", "rev-parse", "--verify", "-q", ref).ok);
+
+/**
+ * The launch form `core/feature-workflow.md` fixes for an apply step, or its
+ * answer variant, the first line naming a branch a session left.
+ */
+function prompt(slug: string, { step, branch, answer }: Step, check: string, resumed: boolean): string {
 	const work = answer
 		? `write the answer on its card into its tasks.md as group ${step}, then /opsx:apply ${slug} for that group`
 		: `/opsx:apply ${slug} for its group ${step}`;
@@ -106,8 +116,12 @@ function prompt(slug: string, { step, answer }: Step, check: string): string {
 	const instead = answer
 		? " — or, when the answer asks for a change of its own or its work would not fit one step, file an `idea` card for it, clear the card's `Assign`, add no group and end with `BLOCKED — <that card>`"
 		: "";
+	// Never `git switch -c`: a local branch makes it fail, and one on `origin` alone a second branch from main.
+	const resume = resumed
+		? ` A session left the branch ${branch}: switch to it with \`git switch ${branch}\` rather than create it, and carry on from what its commits hold.`
+		: "";
 	return [
-		`/goal Carry step ${step} of the OpenSpec change ${slug}: ${work}, the pre-PR sequence, the push and the pull request${instead}.`,
+		`/goal Carry step ${step} of the OpenSpec change ${slug}: ${work}, the pre-PR sequence, the push and the pull request${instead}.${resume}`,
 		"This session runs unattended.",
 		`The goal is met when the last line of \`bun ${check} apply ${slug} ${step}\`, run after the last push, opens with \`goal met\` — or when the final message opens with \`BLOCKED —\` and names what only the user can settle.`,
 	].join("\n");
@@ -235,10 +249,13 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		return end("refused", `the pick session named ${slug}: ${reasons.get(slug) ?? "no change of that name is takeable"}`);
 
 	const target = `apply ${slug} step ${chosen.step}`;
+	// The runner names the branch and never deletes, resets or pushes it.
+	const resumed = left(chosen.branch);
+	if (resumed) console.log(`continuing ${chosen.branch}, which a session left`);
 	console.log(`carrying ${target} on ${chosen.branch}`);
 	let staged: Awaited<ReturnType<typeof session>>;
 	try {
-		staged = await session(prompt(slug, chosen, relative(real, check)), limit, kill);
+		staged = await session(prompt(slug, chosen, relative(real, check), resumed), limit, kill);
 	} catch {
 		return end("refused", "claude could not be started");
 	}
