@@ -5,9 +5,9 @@ before the code it covers (`core/testing.md`). The numbers in brackets are
 that run's idea numbers. All eight are placed below or dispositioned in 1.4.
 
 Every case spawns its script through the existing fixture, with stubs alone
-on its `PATH`. Only a case that makes `gh` hang sets `HARNESS_GH_TIMEOUT_MS`,
-and that case passes `bun test` an explicit timeout above its worst case
-(design.md D3, D4).
+on its `PATH`. Only a case that needs a limit other than the one that ships
+sets `HARNESS_GH_TIMEOUT_MS`, and each such case passes `bun test` an
+explicit timeout above its worst case (design.md D3, D4).
 
 One group, one harness pull request on `feat/gh-timeout`.
 

@@ -80,9 +80,11 @@ case `core/git-and-prs.md` already makes unlikely.
 
 A read that has not exited 30 seconds after it started is killed with
 `SIGKILL` and fails. The goal check's worst case is then three limits and two
-pauses: 3 × 30 + 2 × 2 = 94 seconds. That is inside the two minutes Claude
-Code's Bash tool gives a call by default, so a stage session still gets the
-check's own line.
+pauses, which with the default pause of 2000 ms is 3 × 30 + 2 × 2 = 94
+seconds. That is inside the two minutes Claude Code's Bash tool gives a call
+by default, so a stage session still gets the check's own line. A
+`GOAL_CHECK_RETRY_MS` set above the default lengthens the bound by twice the
+difference.
 
 The failure the live run behind #131 met, a TLS handshake timeout, was `gh`
 failing on its own, and the retry already handles that. The limit exists for
@@ -106,8 +108,9 @@ The read takes its limit in milliseconds from `HARNESS_GH_TIMEOUT_MS` when
 that is a positive whole number (`/^[1-9]\d*$/`), and 30000 otherwise. Zero
 is refused because `spawnSync` reads a `timeout` of 0 as no limit at all (a
 probe on bun 1.4.2 let a 1.5 s command run to its end). The
-fixtures set it only in the cases that make `gh` hang, so every other case
-runs with the limit that ships.
+fixtures set it only in the cases that need a limit other than the one that
+ships (those that make `gh` hang, and the one that answers inside a limit), so
+every other case runs with the limit that ships.
 
 Both callers run as spawned processes in their tests, so a parameter cannot
 reach the read from a case. That is the reason D3 of `goal-check-verdict`
@@ -128,9 +131,9 @@ count tries work unchanged for a hang. In `bun/board-loop.fixture.ts` the
 `Stubs` type gains `ghSleep?: number`, the seconds the stub `gh` sleeps
 before it answers.
 
-Each hanging case passes `bun test` an explicit timeout above its worst case,
-because the spawn blocks the thread that would fire the default one
-(`core/rules.md`, Code).
+Each case that sets `HARNESS_GH_TIMEOUT_MS` passes `bun test` an explicit
+timeout above its worst case, because the spawn blocks the thread that would
+fire the default one (`core/rules.md`, Code).
 
 ### D5. Two ADDED requirements, no MODIFIED copy
 
