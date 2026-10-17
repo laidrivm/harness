@@ -21,15 +21,15 @@ gate accepts. It SHALL exit 0 for `met` and 1 for `open`.
 #### Scenario: A proposal ready for review
 
 - **WHEN** the change's `proposal.md` is in `HEAD`, the ledger holds a
-  `pre-pr` record of `pass` for the full `HEAD`, and an open pull request's
-  head is `HEAD`
+  `pre-pr` record of `pass` for the full `HEAD`, and a pull request whose
+  head is `HEAD` is open or merged
 - **THEN** `propose` reports `goal met` and exits 0
 
 #### Scenario: An apply step
 
 - **WHEN** the step's task group, counted in order among the `## ` groups of
   the change's `tasks.md` at `HEAD`, has at least one box and no unticked one,
-  and the record and the pull request hold as above
+  and the record and the pull request hold as above, open or merged
 - **THEN** `apply` reports `goal met`
 
 #### Scenario: An archive
@@ -51,6 +51,20 @@ gate accepts. It SHALL exit 0 for `met` and 1 for `open`.
 - **THEN** the check reports `goal open`, because a run that failed is no
   pass
 
+#### Scenario: The pull request has merged
+
+- **WHEN** the branch's pull request was merged with `HEAD` as its head, and
+  every other condition holds
+- **THEN** the check reports `goal met`, the same verdict it gave while the
+  pull request was open
+
+#### Scenario: The pull request was closed unmerged
+
+- **WHEN** the branch's only pull request has `HEAD` as its head and was
+  closed without a merge
+- **THEN** the check reports `goal open` and says no pull request of the
+  branch is open or merged
+
 #### Scenario: The pull request is behind
 
 - **WHEN** an open pull request exists but its head is an earlier commit
@@ -59,9 +73,16 @@ gate accepts. It SHALL exit 0 for `met` and 1 for `open`.
 #### Scenario: The pull request cannot be read
 
 - **WHEN** the pull request's state cannot be read, because `gh` is missing,
-  unauthenticated or offline
+  unauthenticated or offline, on every one of a bounded number of tries
+  made with a pause between them
 - **THEN** the check reports `goal open` and says the state was unreadable,
   because an unknown is never `met`
+
+#### Scenario: A read that fails and then succeeds
+
+- **WHEN** a try fails and a later one within the bound reads an open pull
+  request whose head is `HEAD`, and every other condition holds
+- **THEN** the check reports `goal met`, as if no try had failed
 
 #### Scenario: Uncommitted work
 
