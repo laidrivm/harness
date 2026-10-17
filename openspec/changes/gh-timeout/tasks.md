@@ -52,7 +52,7 @@ One group, one harness pull request on `feat/gh-timeout`.
         `gh pr list --head feat/demo --state all --limit 1000 --json number,state` [6].
       Verify: before 1.4, cases 7 and 8 fail on their explicit timeout, and
       case 6 fails on the missing `--limit 1000`.
-- [ ] 1.4 Implement design.md D1 to D3:
+- [x] 1.4 Implement design.md D1 to D3:
       - `bun/pull-requests.ts` exports one read, taking a branch and the
         `--json` fields. It spawns the query with `timeout` and
         `killSignal: "SIGKILL"`, reads the limit from `HARNESS_GH_TIMEOUT_MS`

@@ -25,6 +25,7 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { type Kill, session } from "./board-loop-session.ts";
 import { record } from "./gate-ledger.ts";
+import { readPullRequests } from "./pull-requests.ts";
 import { groups } from "./turn-gate.ts";
 
 /** A stage session's limit, fixed by the spec: a longer step is split, never given more. */
@@ -85,16 +86,10 @@ function consider(slug: string, status: string, blocking: string[]): Step | stri
 	const step = answer ? found.length + 1 : found.findIndex(([, boxes]) => boxes.open > 0) + 1;
 	// `git-and-prs.md`: a single group ships whole on `feat/<slug>`; an answer makes it two.
 	const branch = found.length === 1 && !answer ? `feat/${slug}` : `feat/${slug}-${step}`;
-	const query = sh("gh", "pr", "list", "--head", branch, "--state", "all", "--json", "number,state");
-	let prs: { number?: unknown; state?: unknown }[];
-	try {
-		prs = query.ok ? JSON.parse(query.out) : undefined;
-		if (!Array.isArray(prs)) throw new Error();
-	} catch {
-		// Never "no pull request": a missed open one would start a second
-		// session on a branch under review.
-		return "the pull request query failed";
-	}
+	const prs = readPullRequests<{ number?: unknown; state?: unknown }>(branch, "number,state");
+	// Never "no pull request": a missed open one would start a second
+	// session on a branch under review.
+	if (!prs) return "the pull request query failed";
 	const open = prs.find((pr) => pr.state === "OPEN");
 	if (open) return `pull request #${open.number} is open on ${branch}`;
 	// A squash-merged branch is never freed, and nor is a closed one.
