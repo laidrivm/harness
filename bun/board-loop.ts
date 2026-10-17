@@ -107,8 +107,12 @@ function prompt(slug: string, { step, answer }: Step, check: string): string {
 	const work = answer
 		? `write the answer on its card into its tasks.md as group ${step}, then /opsx:apply ${slug} for that group`
 		: `/opsx:apply ${slug} for its group ${step}`;
+	// task-board, *The answer asks for a change of its own*: the check then reads `open`, by design.
+	const instead = answer
+		? " — or, when the answer asks for a change of its own or its work would not fit one step, file an `idea` card for it, clear the card's `Assign`, add no group and end with `BLOCKED — <that card>`"
+		: "";
 	return [
-		`/goal Carry step ${step} of the OpenSpec change ${slug}: ${work}, the pre-PR sequence, the push and the pull request.`,
+		`/goal Carry step ${step} of the OpenSpec change ${slug}: ${work}, the pre-PR sequence, the push and the pull request${instead}.`,
 		"This session runs unattended.",
 		`The goal is met when the last line of \`bun ${check} apply ${slug} ${step}\`, run after the last push, opens with \`goal met\` — or when the final message opens with \`BLOCKED —\` and names what only the user can settle.`,
 	].join("\n");

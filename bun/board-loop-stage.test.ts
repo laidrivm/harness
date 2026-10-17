@@ -191,6 +191,10 @@ describe("an answer's step", () => {
 		const lines = calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
 		expect(lines).toHaveLength(3);
 		expect(lines[0]).toContain("write the answer on its card into its tasks.md as group 2, then /opsx:apply demo for that group,");
+		// task-board: an answer that asks for a change of its own files a card instead.
+		expect(lines[0]).toEndWith(
+			"the pull request — or, when the answer asks for a change of its own or its work would not fit one step, file an `idea` card for it, clear the card's `Assign`, add no group and end with `BLOCKED — <that card>`.",
+		);
 		expect(lines[1]).toBe("This session runs unattended.");
 		expect(lines[2]).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push");
 	});
