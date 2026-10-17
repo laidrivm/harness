@@ -98,7 +98,7 @@ One group, one pull request: `feat/question-gate-reason`.
       comment, and any card on the boards that restates them. Name
       archived changes as history. Verify: the grep in the pull request
       body.
-- [ ] 1.8 The pull request's *Check by hand* names design.md Decision 1 for
+- [x] 1.8 The pull request's *Check by hand* names design.md Decision 1 for
       the user to confirm. It also names the deliberate live check from
       design.md's first risk. One unattended session posts an unmarked
       comment on a card, then the same question marked. Expect
