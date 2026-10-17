@@ -206,7 +206,7 @@ function verdict(event: {
 
 if (import.meta.main) {
 	let event: Parameters<typeof verdict>[0] | null = null;
-	let rule = "unreadable";
+	let rule: string | undefined;
 	try {
 		event = JSON.parse(await Bun.stdin.text());
 		if (event) rule = verdict(event);
@@ -214,13 +214,14 @@ if (import.meta.main) {
 		// No answer, as the header says: an event this script cannot read
 		// leaves the prompt standing.
 	}
-	// An event that is no object reads as attended, as a fault must.
+	// Only a verdict reached is refused: a fault before it is no answer, in any session.
 	const decision =
 		rule === "question"
 			? "allowed"
-			: unattended(event?.transcript_path)
+			: rule && unattended(event?.transcript_path)
 				? "refused"
 				: "passed";
+	rule ??= "unreadable";
 	record("question-gate", decision, rule, event);
 	const answer =
 		decision === "allowed"
