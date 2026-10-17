@@ -74,7 +74,11 @@ export type Stubs = {
 	/** What `gh pr list` prints, or `null` for no `gh` on `PATH`. */
 	gh?: string | null;
 	ghCode?: number;
-	/** Seconds `gh` sleeps before it answers. */
+	/**
+	 * Seconds `gh` hangs, never answering: the stub `exec`s `sleep`, so the
+	 * runner's kill ends the process holding the pipe. A delayed answer is the
+	 * goal check fixture's `delay`; no runner case needs one.
+	 */
 	ghSleep?: number;
 	/** The exit status of `bun install --frozen-lockfile`. */
 	install?: number;
