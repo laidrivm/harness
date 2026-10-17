@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
-import { advance, change, clone, commit, out, records, run, trusting } from "./board-loop.fixture.ts";
+import { advance, change, clone, commit, out, records, run, TICKED, trusting } from "./board-loop.fixture.ts";
 
 /** Who may start the runner, and the clone it starts from. [n]: `/zombies` ideas. */
 
@@ -87,6 +87,24 @@ describe("the clone", () => {
 			expect(r.calls).toContain("A session left the branch feat/demo: switch to it with `git switch feat/demo`");
 			expect(out(dir, "rev-parse", "feat/demo")).toBe(tip);
 			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")]).toEqual(["main", out(dir, "rev-parse", "origin/main")]);
+		});
+
+		// spec: board-loop/a-dead-session-s-unpushed-commits
+		test("on an answer candidate's step branch, the pass goes on and carries that step", () => {
+			const { dir } = clone(change("demo", TICKED));
+			unpushed(dir, "feat/demo-2");
+			const r = run(dir);
+			expect(r.last).toBe("board-loop: met — apply demo step 2");
+			expect(r.calls).toContain("A session left the branch feat/demo-2:");
+		});
+
+		// spec: board-loop/refused-after-the-switch
+		test("on the step's branch, a refusal once the steps are known is back on that branch at its tip", () => {
+			const { dir } = clone();
+			const tip = unpushed(dir, "feat/demo");
+			const r = run(dir, [], { pick: "" });
+			expect(r.last).toStartWith("board-loop: refused — the pick session returned not one exact PICK: line");
+			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")]).toEqual(["feat/demo", tip]);
 		});
 
 		// spec: board-loop/unpushed-work board-loop/refused-after-the-switch
