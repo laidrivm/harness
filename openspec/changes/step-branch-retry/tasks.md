@@ -37,7 +37,7 @@ archive (#138) has merged.
       [2]–[8] and [11] fail before 1.2, and [1] and [9] pass before and after.
       (Req: board-loop — A step branch a session left is continued, every
       scenario)
-- [ ] 1.2 In `bun/board-loop.ts`, after the pick names the step, look up its
+- [x] 1.2 In `bun/board-loop.ts`, after the pick names the step, look up its
       branch as `refs/heads/<branch>`, then `refs/remotes/origin/<branch>`.
       When either exists, print that the pass continues it, and give
       `prompt()` a clause for the first line. The clause names the branch as
