@@ -12,8 +12,9 @@ Closes every scenario of `transcript-archive` §*An ended session's transcript
 is archived*, §*The archive is readable only by its owner*, §*Each archived
 session carries one metadata record*, §*Archiving a session again replaces its
 copy*, §*Archiving never stops a session*, §*The archive hook is registered
-with a timeout of 60 seconds*, and *A session past the period* of §*The
-archive keeps a session 180 days*.
+with a timeout of 60 seconds*, and *A session past the period* and *A
+temporary file with no copy beside it* of §*The archive keeps a session 180
+days*.
 
 - [ ] 1.1 Write the failing cases first in a new
       `bun/transcript-archive.test.ts`. Drive the hook as a subprocess fed an
@@ -30,7 +31,8 @@ archive keeps a session 180 days*.
       directory, and an export killed mid-copy that leaves the previous copy
       whole [19–24]
 - [ ] 1.3 Write the prune cases: 181 days pruned with `<id>/` and record,
-      179 days kept, both over the hook's own project directory [9, 10]
+      179 days kept, and a 181-day-old `.tmp` file with no copy beside it
+      deleted, all over the hook's own project directory [9, 10]
 - [ ] 1.4 Lift the state-directory resolution out of `ledgerFile()` in
       `bun/gate-ledger.ts` into one exported function that the ledger and the
       archive both call. Verify with `bun test bun/gate-ledger.test.ts`
@@ -74,9 +76,11 @@ transcript past the period* of §*The archive keeps a session 180 days*.
 - [ ] 2.1 Write the failing cases first in `bun/transcript-archive.test.ts`:
       no `projects/` directory, a killed session archived with `catch-up`
       and `null` `head`, a lagging transcript re-copied with the hook's record
-      kept, an unchanged session skipped and not rewritten, one unreadable
-      transcript counted as a failure, a transcript with no `cwd` or
-      `gitBranch`, a live source past 180 days neither archived nor failed,
+      kept, an unchanged session skipped and not rewritten, a matching copy
+      with no record given one, a file added and another removed under
+      `<id>/` with `<id>.jsonl` unchanged (local CodeRabbit review), one
+      unreadable transcript counted as a failure, a transcript with no `cwd`
+      or `gitBranch`, a live source past 180 days neither archived nor failed,
       the prune across every project, and the one count line [3, 11, 18,
       25–29]
 - [ ] 2.2 Add `--catch-up` to `bun/transcript-archive.ts`, walking every

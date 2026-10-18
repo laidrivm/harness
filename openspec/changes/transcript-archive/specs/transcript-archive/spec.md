@@ -119,10 +119,11 @@ or carries another timeout.
 ### Requirement: A catch-up archives the sessions no hook archived
 
 `--catch-up` SHALL walk every project directory under Claude Code's
-`projects/` and archive each session whose copy is missing or differs from the
-source in size or modification time. It SHALL write a record only where none
-exists, with `reason` `catch-up` and `head` `null`, and print one line
-counting what it archived, skipped, pruned and failed.
+`projects/` and archive each session that has no record, or whose
+`<id>.jsonl` or a file under `<id>/` has no copy, has left the source, or
+differs from its copy in size or modification time. It SHALL write a record
+only where none exists, with `reason` `catch-up` and `head` `null`, and print
+one line counting what it archived, skipped, pruned and failed.
 
 #### Scenario: A session the board loop killed
 
@@ -137,9 +138,22 @@ counting what it archived, skipped, pruned and failed.
 
 #### Scenario: An unchanged session
 
-- **WHEN** a session's copy matches its source
+- **WHEN** a session's copy matches its source and its record exists
 - **THEN** the catch-up rewrites neither the copy nor the record, and counts
   it as skipped
+
+#### Scenario: A copy whose record was never written
+
+- **WHEN** an export was killed after its transcript's rename and before its
+  record
+- **THEN** the catch-up writes the record
+
+#### Scenario: A change under the sibling directory only
+
+- **WHEN** a file was added under `<id>/` and another removed after the
+  export, and `<id>.jsonl` is unchanged
+- **THEN** the catch-up copies the added file and removes the other from the
+  copy
 
 #### Scenario: One unreadable session
 
@@ -151,12 +165,19 @@ counting what it archived, skipped, pruned and failed.
 A copy SHALL keep its source's modification time. The hook, over its project's
 directory, and the catch-up, over every directory, SHALL delete each session
 whose archived transcript was last modified more than 180 days ago, with its
-`<id>/` and record. The catch-up SHALL NOT archive a source older than that.
+`<id>/` and record, and each `.tmp` file last modified that long ago. The
+catch-up SHALL NOT archive a source older than that.
 
 #### Scenario: A session past the period
 
 - **WHEN** an archived transcript was last modified 181 days ago
 - **THEN** the next export deletes it, its directory and its record
+
+#### Scenario: A temporary file with no copy beside it
+
+- **WHEN** a first export was killed mid-copy, its source is gone, and the
+  `.tmp` file it left was last modified 181 days ago
+- **THEN** the next export deletes the `.tmp` file
 
 #### Scenario: A live transcript past the period
 

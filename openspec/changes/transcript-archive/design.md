@@ -92,12 +92,15 @@ The catch-up writes a record only where none exists. The hook's record holds
 `HEAD` and the real end reason, which a transcript cannot supply. It takes
 `cwd` and `branch` from the transcript's last line that carries them.
 
-shortcut: an `<id>/` is re-copied only when `<id>.jsonl` changed, on the
-unmeasured assumption that a subagent's result lands in the main transcript.
-Compare the directory too if a lagging `subagents/` file is ever seen.
+The catch-up compares `<id>.jsonl` and every file under `<id>/` by size and
+modification time, not the transcript alone: a `subagents/` or
+`tool-results/` file can change while the main transcript does not (local
+CodeRabbit review). A session with no record is exported even when its files
+match, since a kill can fall between a rename and the record.
 
 A `.tmp` file that a kill left behind is overwritten by the next export of
-that file, and the prune deletes it with its session.
+that file. The prune judges it by its own modification time, so one whose
+session never got a copy still goes.
 
 ### The hook prunes its own project; the catch-up prunes all
 
