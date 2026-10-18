@@ -88,6 +88,12 @@ under the clones directory.
 - **WHEN** the wrapper's own environment holds a variable it does not name
 - **THEN** the pass's environment does not hold it
 
+#### Scenario: The tokens stay out of process arguments
+
+- **WHEN** the pass is running
+- **THEN** no process's arguments hold the Claude Code token or the GitHub
+  token
+
 #### Scenario: Started from a Claude Code session
 
 - **WHEN** the wrapper is started with `CLAUDECODE` in its environment
