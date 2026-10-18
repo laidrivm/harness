@@ -8,22 +8,21 @@ Where this project restricts who may invoke a vendored skill, the restriction
 SHALL be carried by that skill's `disable-model-invocation` frontmatter.
 `CLAUDE.md` MUST NOT be the only thing preventing an invocation, and MUST NOT
 restate an instruction the skill's own `description` already carries.
-A skill whose run only reads, reports, or applies the fixes the review policy
-already lets the agent apply SHALL NOT carry the flag, so that an unattended
-session can run it.
+A skill under `core/skills/` SHALL carry the flag only when one of its steps
+is marked `(unattended: user`. The marker check SHALL fail on a skill that
+carries the flag without such a step.
 
 #### Scenario: A skill reserved for the user
 
-- **WHEN** a skill's run merges a pull request, as `/ship`'s does
+- **WHEN** a skill's run merges a pull request, as `/ship`'s does, and that
+  step is marked `(unattended: user`
 - **THEN** `ship/SKILL.md` carries `disable-model-invocation: true`
 
-#### Scenario: A review skill the agent runs itself
+#### Scenario: A flag with no step that stays with the user
 
-- **WHEN** a skill only reads and reports, or applies verified review
-  findings, as `/coderabbit`, `/first-five`, `/pr-brief` and `/review-order`
-  do
-- **THEN** its `SKILL.md` frontmatter does not set
-  `disable-model-invocation` to `true`, and `bun test` fails if it does
+- **WHEN** `coderabbit/SKILL.md` carries `disable-model-invocation: true` and
+  none of its steps is marked `(unattended: user`
+- **THEN** `bun test` fails, naming the file
 
 #### Scenario: A skill the agent is meant to run itself
 
