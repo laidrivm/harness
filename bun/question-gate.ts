@@ -27,7 +27,10 @@ import { record } from "./gate-ledger.ts";
 export const MARK = "`harness-question`";
 const LIMIT = 1500;
 const BOARDS = ["D2ASS", "Harness", "mellon"];
-/** agent-autonomy's declared line, on a line of its own in the first prompt. */
+/**
+ * agent-autonomy's declared line, on a line of its own in the first prompt,
+ * whitespace around it ignored.
+ */
 const UNATTENDED = "This session runs unattended.";
 
 /**
@@ -52,8 +55,9 @@ const refusal = (rule: string) =>
 
 /**
  * Whether the session's first prompt, the first user line holding text rather
- * than a tool result, holds the declared line on a line of its own. A
- * transcript it cannot read, or one with no prompt, reads as attended.
+ * than a tool result, holds the declared line on a line of its own, whitespace
+ * around it ignored. A transcript it cannot read, or one with no prompt, reads
+ * as attended.
  */
 function unattended(path: unknown): boolean {
 	if (typeof path !== "string") return false;
@@ -77,7 +81,8 @@ function unattended(path: unknown): boolean {
 			: [];
 		if (typeof content !== "string" && parts.length === 0) continue;
 		const text = typeof content === "string" ? content : parts.map((part) => part.text).join("\n");
-		return text.split("\n").includes(UNATTENDED);
+		// Trimmed: a terminal copy indents each line, and a CRLF prompt ends each in `\r`.
+		return text.split("\n").some((line) => line.trim() === UNATTENDED);
 	}
 	return false;
 }
