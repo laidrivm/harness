@@ -114,7 +114,11 @@ After the stage session the runner mints the installation token with
 `POST /app/installations/{id}/access_tokens`, body `{"repositories":
 [<name>], "permissions": {"contents": "write", "pull_requests": "write"}}`.
 Minted then, never before, it cannot reach the session, and its hour is not
-spent while the session runs. git gets it through `GIT_CONFIG_COUNT`,
+spent while the session runs. The push names
+`https://github.com/<owner>/<repo>.git` rather than `origin`, whose URL may be
+the SSH form: over SSH git would ignore the header below and push with the
+runner user's SSH key, or fail. The URL holds no token. git gets it through
+`GIT_CONFIG_COUNT`,
 `GIT_CONFIG_KEY_0=http.https://github.com/.extraheader` and
 `GIT_CONFIG_VALUE_0=AUTHORIZATION: basic <base64 of x-access-token:TOKEN>`,
 and `gh pr create` through `GH_TOKEN`, which outranks stored credentials. A
@@ -136,6 +140,11 @@ off the laptop.
   is a change of its own.
 - [On the laptop a session can still push as the user through the Keychain]
   → as today; the VPS board loop's separate user closes it.
+- [A session run as another Unix user would get the runner's `HOME` and
+  `XDG_STATE_HOME`, and the pre-PR record the runner's check reads would sit
+  where one of the two users cannot reach it] → this change runs both as one
+  user; the VPS board loop, which splits them, sets the session user's own
+  values and fixes where that record lives and who may write it.
 - [A step touching `.github/workflows/` is refused to the App] → the pass
   records `open` with the push's failure; that step's push is the user's.
 - [A blocked session's branch stays unpushed, out of the user's sight] → its
