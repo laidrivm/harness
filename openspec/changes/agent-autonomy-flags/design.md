@@ -6,149 +6,175 @@ The motivation is in proposal.md, *Why*. The requirements are in
 `specs/agent-permissions/spec.md` and `specs/agent-autonomy/spec.md`.
 
 What Claude Code does with the flag was read from its skills page on
-2026-10-18 and probed where a probe was possible:
+2026-10-18, and probed where a probe was possible.
 
-- The documentation says the flag hides the skill's description from the
-  model. When the model calls the skill anyway, Claude Code blocks the call
-  and tells it not to carry out the steps another way. The flag also keeps the
+- **The documentation** says the flag hides the skill's description from the
+  model. If the model calls the skill anyway, Claude Code blocks the call and
+  tells it not to carry out the steps another way. The flag also keeps the
   skill from being preloaded into a sub-agent, and from running when a
   scheduled task fires with the skill as its prompt. A `/name` at the start of
   the user's message still runs the skill directly.
-- Probed in a sub-agent session started from an orchestrator's brief: the
+- **Probed** in a sub-agent session started from an orchestrator's brief. The
   Skill tool refused `review-order` with "cannot be used with Skill tool due
   to disable-model-invocation … it is reserved for explicit user invocation".
-  None of the five flagged skills linked in this repository (`checklist`,
-  `coderabbit`, `first-five`, `review-order`, `session-wrapup`) appeared in
-  that session's skill listing. The orchestrator met the same refusal on
-  `coderabbit`.
-- Not probed: whether `claude -p` with a prompt that opens on `/name` runs a
-  flagged skill. The page does not say, and a sub-agent here may not start
+  None of the five flagged skills linked in this repository appeared in that
+  session's skill listing: `checklist`, `coderabbit`, `first-five`,
+  `review-order` and `session-wrapup`. The orchestrator met the same refusal
+  on `coderabbit`.
+- **Not probed**: whether `claude -p` with a prompt that opens on `/name` runs
+  a flagged skill. The page does not say, and a sub-agent here may not start
   `claude`. Nothing below depends on the answer.
-- `allowed-tools` grants its tools without a prompt for the turn that invokes
-  the skill, whoever invokes it. Deny and ask rules and hooks still apply.
+- **`allowed-tools`** grants its tools without a prompt for the turn that
+  invokes the skill, whoever invokes it. Deny rules, ask rules and hooks still
+  apply.
 
 `ship` step 5 invokes `coderabbit` through the Skill tool, and step 1 invokes
 `pr-brief` the same way. Both calls are refused today.
+
+Where each removed skill is referenced, outside the append-only history in
+`docs/context/`:
+
+| Skill | Referenced from |
+| --- | --- |
+| `code-review` | README skill table and severity note; `session-wrapup`'s example |
+| `checklist` | README skill table; `.claude/skills/checklist` in the harness, `d2ass` and `mellon` |
+| `first-five` | README skill table; `session-wrapup`'s example; the `.claude/skills/` link in all three checkouts |
+| `review-order` | README skill table; `session-wrapup`'s example; the `.claude/skills/` link in all three checkouts; `bun/check.test.ts` (fixture name) |
+| `pr-brief` | README skill table; `ship` steps 1 and 3; `triage`'s gate-line note |
+
+`bun/check.test.ts` names `review-order` only inside a fabricated consumer
+whose package lacks it. After the removal that case describes exactly what a
+consumer that misses the migration sees, so it stays. `skills-lock.json`
+lists none of the five, so all five are owned, and the README's *Skill
+provenance* section needs no edit.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Each flag stands for a risk its skill's run actually carries, and that
-  reason is written where a reviewer reads the change.
-- `/coderabbit` can run without anyone present, and still cannot burn a
-  session waiting for the bot.
+- A flag stands only where a step of its skill stays with the user, and a
+  check holds that.
+- `/coderabbit` and `/session-wrapup` can run without anyone present.
+  `/coderabbit` still cannot spend a session waiting for the bot.
 
 **Non-Goals:**
 
-- Writing a list of the flagged skills into a tracked doc (D4).
-- Changing what the kept skills do.
+- When `/session-wrapup` runs, and the handover to a fresh session. These
+  belong to the card the proposal names.
+- A tracked list of the flagged skills (D4).
 
 ## Decisions
 
-### D1. Which skills keep the flag
+### D1. The flag follows a `user` step
 
-A skill keeps the flag only when its run does more than read, report, or
-apply the fixes the review policy already lets the agent apply.
+A skill under `core/skills/` carries the flag only when one of its steps is
+marked `(unattended: user`. The table below records the user's settlement of
+2026-10-18.
 
-| Skill | Flag | Reason |
+| Skill | Outcome | Reason |
 | --- | --- | --- |
-| `coderabbit` | drop | It reads the pull request and applies verified fixes, as `/coderabbit-local` does unflagged. The risk was the wait, which D2 guards. |
-| `first-five` | drop | It reads the diff and reports. |
-| `review-order` | drop | It reads the diff and reports. |
-| `pr-brief` | drop | It reads the branch and prints a title and body. It opens and pushes nothing. |
-| `ship` | keep | It merges, which `autonomy.md` keeps with the user, and it sleeps for up to nine minutes waiting for the bot. |
-| `code-review` | keep | It can hand the diff to `codex`, `aider` or `goose`, and its `allowed-tools` grants those three without a prompt. Which outside agent sees the code is the user's call. |
-| `session-wrapup` | keep | The user decides when a session ends. It writes `docs/context/` and corrects board cards, with a Notion update granted in `allowed-tools`. |
-| `checklist` | keep | It writes `.claude/plans/<name>-checklist.md` from whatever plan is in context. Its description names no trigger, so a model could start it whenever any plan is in view. |
-
-Alternative: drop all eight and rely on the descriptions' "use when the user
-asks". That was rejected because a description is narration, and
-`agent-permissions` requires the restriction to be enforced. Another
-alternative was a `skillOverrides` entry in settings in place of the
-frontmatter. It was rejected because it has the same effect, and a consumer's
-settings would have to repeat it.
-
-### D2. `/coderabbit` reads once and never waits
-
-Step 1 of the skill reads the reviews (its third `gh api` call) before
-anything else. If none comes from a `coderabbitai` login, the run ends on
-`CODERABBIT gate: OPEN — no CodeRabbit review on PR #N yet.` The skill's
-rules gain one line: fetch once per run, and never sleep, poll, `--watch` or
-fetch again to see whether the bot has posted. When reviews exist but none is
-on the head commit, the run dispositions what is there and states below the
-gate line that `<sha>` has no review yet. That is the environment-fact rule
-the skill already has.
+| `ship` | keep | Its merge belongs to the user, and merging normally goes through CI. The step gets the `user` marker. |
+| `coderabbit` | drop | It reads the pull request and applies verified fixes, as the unflagged `/coderabbit-local` does. D2 guards the wait. |
+| `session-wrapup` | drop | Agents end their own sessions and wrap up on the way out (D3). |
+| `checklist`, `code-review`, `first-five`, `pr-brief`, `review-order` | remove | None of them is in a workflow or loop, and the user does not use them. `code-review` also collides with the bundled `/code-review`. |
 
 Alternatives considered:
 
-- Requiring a review of the head commit before reading anything. Rejected:
-  the bot can skip a commit (paused reviews, a path filter, the draft period),
-  and its findings on earlier commits would then be unreadable until it posts
-  again.
-- A hook that refuses `sleep` while `/coderabbit` runs. Rejected because the
-  cost of a wait is session time, not safety. `git-and-prs.md` already says
-  never to wait on a review bot. The skill's `allowed-tools` grants no
-  `sleep`, unlike `ship`'s.
+- A hand-written list of the flagged skills, pinned by a test. Rejected,
+  because the marker is the reason and a list would restate it.
+- A test over the skills that drop the flag, by name. Rejected, because it
+  enumerates what it covers, which the scan rule in `core/rules.md` forbids.
+- `skillOverrides` in settings. Rejected, because every consumer would have
+  to repeat it.
 
-### D3. Approval and markers
+### D2. `/coderabbit` waits for nothing
 
-`core/review-toolkit.md` stops treating the user's invocation as the approval
-for fixes. A verified finding is applied without asking because the review
-policy says so, and a wrong fix on an open pull request costs one more
-commit. Dismissing a Major or Critical stays the user's
-`(unattended: card — …)`. In the skill, step 5's generic "Wait for approval"
-and the project-override sentence on dismissals each get a `card` marker. The
-marker check in `bun/autonomy.ts` already scans `core/skills/`.
+Step 1 reads the head commit with `gh pr view --json headRefOid` and the
+reviews with the skill's existing `pulls/N/reviews` call. If no review from a
+`coderabbitai` login has a `commit_id` equal to the head commit, the run ends
+on `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.` and does
+nothing more. A run that finds a review of the head commit keeps the skill's
+existing re-fetch before its gate line. That is one more read to reconcile
+the bot's N + M, so a review that lands mid-run is dispositioned and is not
+merged past. It is never a sleep or a loop. One new rule states both halves.
+The `gh api graphql` line stays as it is, because
+`bun/command-guard-gh-api.test.ts` reads it from the file.
 
-### D4. No list of flagged skills outside their frontmatter
+Alternatives considered:
 
-`core/autonomy.md` gains one paragraph under `user`: a skill whose frontmatter
-carries the flag is a `user` step. It names no skills. The README already
-says the flag is recorded once, in the frontmatter, because a restatement
-drifts without breaking anything. The reasons in D1 live in this change,
-which a reviewer of a later flag change can find.
+- **Any bot review counts as landed.** Rejected by the user. Findings on an
+  earlier commit belong to a snapshot the branch has moved past.
+- **Ending every run after one read.** Rejected in the PR review of #152.
+  A review that lands while the first is being dispositioned would go
+  unread, and `/ship` would merge on the `PASS`.
+- **A hook refusing `sleep` while the skill runs.** Rejected, because a wait
+  costs time, not safety. `git-and-prs.md` already says never to wait on a
+  review bot, and the skill's `allowed-tools` grants no `sleep`.
 
-### D5. `first-five` loses `Bash(find:*)`
+### D3. `session-wrapup`'s steps, unattended
 
-`find` with `-delete` or `-exec` changes the tree. When `first-five` could
-only be started by the user, the grant covered a run the user had asked for.
-Once the model can start the skill, a model-started run would get the same
-grant. The skill uses `find` only to check that a path exists, and Glob does
-that lookup. `ls` and `grep` stay. The other three skills whose flag goes
-grant only git reads, `gh` reads and the file tools. `coderabbit`'s
-`Bash(gh api:*)` matches a write as well, but the command guard refuses that
-write (*GitHub write commands are denied*) whatever `allowed-tools` grants.
+| Step | Unattended |
+| --- | --- |
+| 1 Confidence check, 5 Pipeline yield | Reports and the append-only ledger. Nothing names the user. |
+| 2 Lessons learned | Proposes captures, and "the user decides what to keep". This step gets the marker `(unattended: card — hand each proposed capture on, and apply none)`, which matches `core/rules.md`'s own. |
+| 3 Workflow state, card corrections | Already writes the cards behind their floor. Nothing names the user. |
+| 4 Save point | Written when the session was exploratory. This is the handover a context-window wrap-up leaves, and no one is asked. |
 
-### D6. The test pins only the four that drop
+### D4. `core/autonomy.md` names no skill
 
-`bun/skill-flags.test.ts` parses each of the four skills' frontmatter with
-`Bun.YAML.parse`, the structure Claude Code reads, and fails if
-`disable-model-invocation` is `true`. It does not pin the four that keep the
-flag. `agent-permissions`' *The permission policy is pinned by a test* says
-that removing a skill's flag fails no test. Whether a kept flag should go is
-also a decision for review, not something a test can settle.
+One paragraph goes under `user`: a skill whose frontmatter carries the flag is
+a `user` step, so the session reports `BLOCKED` naming it and never carries out
+its steps by other means. The frontmatter and the marker stay the single
+source, as the README already says of the flag.
+
+### D5. The check reads frontmatter where Claude Code does
+
+`check()` in `bun/autonomy.ts` already reads every Markdown file under `core/`
+for markers. For each `core/skills/*/SKILL.md` it also parses the leading
+`---` block with `Bun.YAML.parse`, and treats the flag as set when the key is
+present and not `false`. A flagged skill whose file holds no
+`(unattended: user` marker is reported. A block that does not parse is
+reported too, since Claude Code would load such a skill with empty metadata. A
+file with no block carries no flag.
+
+### D6. `ship` writes its own title and body
+
+`ship` loses its dependence on `pr-brief`.
+
+- Step 1 states the gate rule itself. It collects every gate line emitted in
+  the session, takes the last one for each skill, and stops on any `BLOCKED`
+  or `OPEN`.
+- Step 3 writes the title and body to the project's pull request rules, which
+  is `core/git-and-prs.md` wherever the harness is installed. It stops and
+  asks when the project has no such rules (`card` by default).
+
+The other route was to make `ship` require a body handed to it. That was
+rejected because `ship` is user-only, and the user starting it does not
+expect to supply a body.
+
+### D7. Grants that model invocation newly reaches
+
+Removing the flag puts two grants within reach of a run the model starts.
+Each was checked against the guards that still apply:
+
+- `coderabbit` grants `Bash(gh api:*)`, which matches writes. The command
+  guard refuses those writes (*GitHub write commands are denied*), whatever
+  the grant says.
+- `session-wrapup` grants `Write` and a Notion page update. The Notion update
+  guard reads every such update, and the skill's prose keeps writes to
+  `docs/context/`.
 
 ## Risks / Trade-offs
 
-- [The descriptions of `coderabbit`, `first-five`, `pr-brief` and
-  `review-order` now sit in every session's skill listing, here and in each
-  consumer] → each description is a few hundred characters and says "use when
-  the user asks". The listing budget drops descriptions of rarely used skills
-  first.
-- [A model could start `first-five` or `review-order` when asked for "a
-  review"] → both only read. Starting one costs tokens, not state.
-- [`pr-brief`'s What/Why/Verify/Risk body does not match the body
-  `git-and-prs.md` asks for] → no checkout links `pr-brief`. The mismatch
-  exists whoever starts it, so it is filed as out of scope rather than fixed
-  here.
+- [Two more descriptions sit in every session's skill listing] → each is a
+  few hundred characters, and the listing budget drops the descriptions of
+  rarely used skills first.
+- [A consumer's pin bump fails on the dangling links] → the proposal's
+  *Impact* section says the bump deletes them, and the orchestrator files a
+  card on each consumer's board.
 
 ## Migration Plan
 
-Nothing to migrate. Consumers get the change with their next pin bump, and
-the skills they link change in place. Rollback is reverting the pull request.
-
-## Decisions for the user to check
-
-- D1's split: keeping `session-wrapup` and `checklist` user-only, and dropping
-  the flag from `pr-brief`. The recommended option was taken in each case.
+`d2ass` and `mellon` delete `.claude/skills/{checklist,first-five,review-order}`
+in the pull request that moves their pin past this change. Nothing else
+migrates. Rollback is a revert.
