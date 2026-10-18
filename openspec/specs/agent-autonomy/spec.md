@@ -16,7 +16,8 @@ take.
 
 A session SHALL be unattended only when the prompt or brief that started it
 holds the line `This session runs unattended.`, verbatim and on a line of its
-own. No other wording SHALL make a session unattended. Every other session
+own, ignoring whitespace around it. No other wording SHALL make a session
+unattended. Every other session
 SHALL be attended, and an attended session SHALL follow every step as its
 prose is written, markers included. A marker only says what an unattended
 session does in place of the step, and it never relaxes an attended one.
@@ -40,6 +41,15 @@ session does in place of the step, and it never relaxes an attended one.
 - **WHEN** a session is started by the prompt "Apply agent-autonomy
   overnight, I'm asleep", which lacks the line
 - **THEN** it is attended, and a step that waits on the user waits
+
+#### Scenario: A declared line copied from a terminal
+
+- **WHEN** a session is started by a prompt copied from a terminal, which
+  indents each line, so the line reads `  This session runs unattended.`,
+  or by a prompt whose lines end in a carriage return
+- **THEN** it is unattended, because only the whitespace around the line
+  differs; a line holding any other text beside the sentence still leaves
+  the session attended
 
 ### Requirement: Three classes say what an unattended session does at a step that names the user
 
