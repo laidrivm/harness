@@ -81,6 +81,9 @@ None.
   environment is an allowlist; the App's token and identity when one is
   configured. §*A step branch a session left is continued* stops forbidding
   the runner's push.
+- `agent-autonomy`: a session whose launcher pushes names the pull request's
+  title and body instead of pushing and opening it, added beside §*Three
+  classes say what an unattended session does at a step that names the user*.
 - `stage-goal`: the check gains a before-push form, which a session whose
   launcher pushes is held to. It is added beside §*An unattended stage runs
   under one goal on the check*, whose text it leaves true: the form still
