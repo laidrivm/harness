@@ -29,8 +29,11 @@ There is one group, shipped as one harness pull request on `feat/agent-autonomy-
       Verify: `grep -n "find" core/skills/first-five/SKILL.md` names no
       command to run.
 - [ ] 1.4 In `core/skills/coderabbit/SKILL.md`, implement design.md D2 and D3:
-      - in step 1, read the reviews first, and with none from a
-        `coderabbitai` login, end on the new gate line;
+      - in step 1, run the existing `pulls/N/reviews` call first, and with
+        no review from a `coderabbitai` login, end on the new gate line. Add
+        no new `gh` command form, and leave the `gh api graphql` line as it
+        stands, since `bun/command-guard-gh-api.test.ts` reads it from the
+        file;
       - add the line `CODERABBIT gate: OPEN — no CodeRabbit review on PR #N yet.`
         to step 6;
       - add a rule: fetch once per run, and never sleep, poll, `--watch` or
