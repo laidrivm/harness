@@ -141,8 +141,11 @@ A session that carries an OpenSpec stage with nobody present SHALL set one
 `goal met` for that stage and change, or by a final message that opens with
 `BLOCKED` and names what only the user can settle. The launcher SHALL judge
 the outcome by running the check for its own stage, change and step after the
-session ends, since a ledger record names no change or step. Explore and
-conversational sessions SHALL set no goal.
+session ends, since a ledger record names no change or step. The launch form
+SHALL name the mark agent-permissions' *A question to the user on a board
+card needs no prompt* fixes, character for character, and the form of the
+comment that carries a question. Explore and conversational sessions SHALL
+set no goal.
 
 #### Scenario: An apply step launched headless
 
@@ -155,6 +158,15 @@ conversational sessions SHALL set no goal.
 - **WHEN** the stage cannot go on without the user's decision
 - **THEN** the session ends on a named `BLOCKED`, and the check for that
   stage still reports `goal open`
+
+#### Scenario: A stage asks its question
+
+- **WHEN** a session launched in that form asks the user a question it
+  cannot settle from the docs, the specs, the card or the history
+- **THEN** its prompt has already named the mark, with its backticks, and
+  the comment's form: page-level, on the change's card, after that card and
+  its comments were read. Its first question can then pass the question gate
+  without the session having read the gate
 
 #### Scenario: Two targets at one commit
 
@@ -236,3 +248,24 @@ requirements as the check's.
 
 - **WHEN** the ledger cannot be written as the ceiling is reached
 - **THEN** the session still ends with the `goal-ceiling:` reason
+
+### Requirement: A pull request read that does not answer is a failed try
+
+The goal check SHALL end a read of the pull request's state that has not
+answered within a fixed time limit, and SHALL count it as one failed try of
+the bounded number that *A stage is done when the check says so* allows. The
+check SHALL therefore end within that number of limits and the pauses between
+them, whatever `gh` does.
+
+#### Scenario: A read that never answers
+
+- **WHEN** `gh` neither answers nor exits on any try
+- **THEN** each try ends at the limit, and after the last one the check
+  reports `goal open` and says the pull request's state could not be read
+
+#### Scenario: A read that hangs and then answers
+
+- **WHEN** the first try runs past the limit, a later one within the bound
+  reads an open pull request whose head is `HEAD`, and every other condition
+  holds
+- **THEN** the check reports `goal met`, as if no try had failed

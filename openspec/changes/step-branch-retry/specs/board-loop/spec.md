@@ -43,7 +43,8 @@ when its branch is the step branch of a change the pass computes as takeable
 or as an answer candidate. The runner SHALL switch from it to the default
 branch as from any other branch, and the branch SHALL keep its commits. A
 pass refused after that switch SHALL first switch the clone back to the
-branch.
+branch, unless it is refused because a session's process group outlived the
+session, which may still be writing to the tree.
 
 #### Scenario: A dead session's unpushed commits
 
@@ -57,6 +58,13 @@ branch.
 - **WHEN** a pass that switched from such a branch is refused, for example
   because `bun install --frozen-lockfile` fails
 - **THEN** the clone is back on that branch at its tip
+
+#### Scenario: A session's process group outlived it
+
+- **WHEN** a pass that switched from such a branch is refused because a
+  session's process group outlived the session
+- **THEN** the runner switches nothing, and the clone is left on the branch
+  and tree the session left
 
 ## MODIFIED Requirements
 

@@ -43,7 +43,7 @@ archive (#138) has merged.
       `prompt()` a clause for the first line. The clause names the branch as
       one a session left and says to `git switch` to it rather than create
       it, and to carry on from what its commits hold. Verify: 1.1 is green,
-      the runner's three test files are green, and the file is under its cap
+      the runner's `board-loop*.test.ts` files are green, and the file is under its cap
       in `bun/file-size.ts`.
 - [x] 1.3 Name the clause in `core/feature-workflow.md`'s *Unattended stages*
       as one more change to the launch form's first line, beside the answer
@@ -60,7 +60,8 @@ archive (#138) has merged.
 
 ## 2. An unpushed step branch does not stop the pass
 
-- [ ] 2.1 Write the unpushed-tip tests in `bun/board-loop.test.ts`, under
+- [x] 2.1 Write the unpushed-tip tests in `bun/board-loop-clone.test.ts`,
+      split from `bun/board-loop.test.ts` at its cap, under
       *the clone*:
       - move the existing case *an unpushed tip refuses and leaves the branch
         checked out* onto `feat/other`, since `feat/demo` becomes a step
@@ -92,22 +93,23 @@ archive (#138) has merged.
       §*A dead session's unpushed commits*; The runner is the user's script
       and starts from a clean clone, §*Unpushed work*, §*Unpushed work on a
       detached HEAD*)
-- [ ] 2.2 In `bun/board-loop.ts`, refuse an unpushed tip at the start only
+- [x] 2.2 In `bun/board-loop.ts`, refuse an unpushed tip at the start only
       when `HEAD` names no branch. Note a named branch and go on. Once the
       takeable list and the answer candidates are computed, and before the
       idle check, refuse when the noted branch is no step's branch, after
       switching the clone back to it. Any other refusal after the switch
       also switches back to the noted branch first, so that a pass refused
-      before the list exists forgets nothing. Otherwise print that the
+      before the list exists forgets nothing, except one because a
+      session's process group outlived it, which switches nothing. Otherwise print that the
       branch is left for its step. Update the module comment, which says the runner
-      never discards work. Verify: 2.1 is green, the runner's three test
-      files are green, and the file is under its cap in `bun/file-size.ts`.
-- [ ] 2.3 Search the four places `feature-workflow.md` names for the claim
+      never discards work. Verify: 2.1 is green, the runner's
+      `board-loop*.test.ts` files are green, and the file is under its cap in `bun/file-size.ts`.
+- [x] 2.3 Search the four places `feature-workflow.md` names for the claim
       this replaces: an unpushed tip always refuses, and "the next pass can
       take the answer again". Reconcile `README.md`'s *Consuming* line. Name
       `board-loop`'s archived design as history. Verify: the grep in the pull
       request body.
-- [ ] 2.4 The pull request's *Check by hand* gives the user one live pass.
+- [x] 2.4 The pull request's *Check by hand* gives the user one live pass.
       Its steps: on a board where that card's change is the only takeable
       one, stop a stage session after a commit and before its push. Start the
       next pass. It must go on from `main`, and the stage session must
