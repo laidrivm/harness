@@ -2,7 +2,7 @@
  * The question gate in a session whose first prompt declares it unattended:
  * the `deny` it answers there, the reason that `deny` carries, what it records,
  * and how the gate tells such a session from one with a person at the prompt.
- * [n]: `question-gate-reason`'s `/zombies` ideas.
+ * [n]: `question-gate-reason`'s `/zombies` ideas; [tn]: `unattended-line-trim`'s.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
@@ -140,16 +140,23 @@ describe("which session is unattended", () => {
 		["no prompt line, tool calls only [1]", []],
 		["an empty first prompt [2]", ["", STAGE]],
 		["the line only in the second prompt [7]", ["Carry step 2.", STAGE]],
-		["the line with a trailing space [9]", [`Carry step 2.\n${UNATTENDED} \nThe goal.`]],
 		["the line inside a longer line [9]", [`Carry step 2. ${UNATTENDED} The goal.`]],
+		["the indented line with text after it [t6]", [`Carry step 2.\n  ${UNATTENDED} Carry on.`]],
+		["the indented line without its full stop [t7]", [`Carry step 2.\n  ${UNATTENDED.slice(0, -1)}`]],
 	] as [string, Prompt[]][])("%s reads attended: no answer, recorded passed", (_, prompts) => {
 		expect(seen(unmarked(...prompts))).toEqual(ATTENDED);
 	});
 
+	// spec: agent-autonomy/a-declared-line-copied-from-a-terminal
 	test.each([
 		["the line as the prompt's last line, no newline after it [10]", `Carry step 2.\n${UNATTENDED}`],
 		["the line inside the /goal wrapper [12]", { goal: `Carry step 2 of the OpenSpec change demo.\n${UNATTENDED}\nThe goal is met.` }],
 		["a prompt written as a list of text parts [13]", { parts: ["Read the brief.", `Carry step 2.\n${UNATTENDED}`] }],
+		["the line indented by two spaces [t1]", `Carry step 2.\n  ${UNATTENDED}\n  The goal.`],
+		["the line ending in a carriage return [t2]", `Carry step 2.\r\n${UNATTENDED}\r\nThe goal.`],
+		["the line with a trailing space [t3]", `Carry step 2.\n${UNATTENDED} \nThe goal.`],
+		["the line led by a tab [t4]", `Carry step 2.\n\t${UNATTENDED}`],
+		["the stage prompt as a terminal copy gives it [t9]", STAGE.replaceAll("\n", "\n  ")],
 	] as [string, Prompt][])("%s reads unattended", (_, prompt) => {
 		expect(decision(unmarked(prompt).out)?.behavior).toBe("deny");
 	});

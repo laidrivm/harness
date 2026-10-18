@@ -7,7 +7,7 @@ before the code they cover (`core/testing.md`).
 
 ## 1. Read the declared line with the whitespace around it ignored
 
-- [ ] 1.1 In `bun/question-gate-unattended.test.ts`, under *which session is
+- [x] 1.1 In `bun/question-gate-unattended.test.ts`, under *which session is
       unattended*, write the cases:
       - the line indented by two spaces reads unattended [t1] —
         `// spec: agent-autonomy/a-declared-line-copied-from-a-terminal`;
