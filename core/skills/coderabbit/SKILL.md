@@ -24,7 +24,7 @@ Every CodeRabbit finding on the PR gets an explicit disposition — **fixed**, *
 
 ### 1. Fetch
 
-Read the head commit first, with `gh pr view N --json headRefOid`, then the third call below, the reviews. If no review from a `coderabbitai` login has a `commit_id` equal to the head commit, stop there and end on `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.`, naming the head commit's short SHA. Findings on an earlier commit belong to a snapshot the branch has moved past. Otherwise run the other three calls.
+Read the head commit first, with `gh pr view N --repo OWNER/REPO --json headRefOid`, then the third call below, the reviews. If no review from a `coderabbitai` login has a `commit_id` equal to the head commit, stop there and end on `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.`, naming the head commit's short SHA. Findings on an earlier commit belong to a snapshot the branch has moved past. Otherwise run the other three calls.
 
 ```bash
 gh api "repos/OWNER/REPO/pulls/N/comments?per_page=100" --paginate
