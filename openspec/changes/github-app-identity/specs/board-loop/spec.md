@@ -6,7 +6,7 @@
 
 The stage session SHALL push nothing and open no pull request. Once it and
 everything it started have ended, the runner SHALL push the step's branch to
-`origin`, never by force, and open its pull request against the default
+`origin`'s repository, never by force, and open its pull request against the default
 branch, only when `HEAD` is on that branch, the before-push goal check that
 `stage-goal` fixes reads `goal met`, and the session's final message names the
 pull request's title and body. Its verdict SHALL then be the full goal check.
@@ -79,9 +79,9 @@ the runner SHALL use its user's own credentials.
 #### Scenario: An App configured
 
 - **WHEN** both settings are present and the step is ready to push
-- **THEN** the push and the pull request are the App's, the token named only
-  the clone's repository, and the session's commits name `<app>[bot]` as
-  author and committer
+- **THEN** the push and the pull request are the App's, over HTTPS even when
+  `origin` is an SSH URL, the token named only the clone's repository, and the
+  session's commits name `<app>[bot]` as author and committer
 
 #### Scenario: Half an App
 
