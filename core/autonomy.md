@@ -10,13 +10,16 @@ answer.
 ## Unattended or attended
 
 A session is unattended only when the prompt or brief that started it holds
-this line, word for word and on a line of its own:
+this line, word for word and on a line of its own, ignoring whitespace around
+it:
 
 ```text
 This session runs unattended.
 ```
 
-The session looks for that exact line and for nothing else.
+The session looks for that exact sentence alone on its line, and for nothing
+else. An indent that a terminal copy adds, or a carriage return ending the
+line, changes nothing.
 
 - **Declared.** A runner starts a session with `/opsx:apply <slug>` followed
   by the line. At the step "Wait for the user's go-ahead", the session reads

@@ -134,7 +134,8 @@ goal of its own, because an unattended exploration runs inside the `propose`
 goal. A conversation gets no goal at all.
 
 The launcher starts the stage with the goal as its prompt, and puts the
-declared line on a line of its own. The fourth line names the question gate's
+declared line on a line of its own. A copy of the form from a terminal, which
+indents each line, still declares it. The fourth line names the question gate's
 mark, character for character, and the form of the comment that carries a
 question, so a stage's first question can pass the gate. For step 2 of a
 change `demo` in a consumer:
