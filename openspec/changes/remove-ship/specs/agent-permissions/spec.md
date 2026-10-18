@@ -20,8 +20,9 @@ carries the flag without such a step.
 
 #### Scenario: A flag with no step that stays with the user
 
-- **WHEN** `coderabbit/SKILL.md` carries `disable-model-invocation: true` and
-  none of its steps is marked `(unattended: user`
+- **WHEN** a skill's `SKILL.md` under `core/skills/` carries
+  `disable-model-invocation: true` and none of its steps is marked
+  `(unattended: user`
 - **THEN** `bun test` fails, naming the file
 
 #### Scenario: A skill the agent is meant to run itself
