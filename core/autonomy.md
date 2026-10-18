@@ -80,3 +80,9 @@ The session neither takes the step nor asks for it on a card, because a yes
 there would not let it take the step. It stops the work that needs the step
 and reports `BLOCKED`, naming the step, and the user takes it in a session of
 their own.
+
+A skill whose frontmatter carries `disable-model-invocation: true` is a `user`
+step. The session stops the work that needs it and reports `BLOCKED` naming
+the skill, and never carries out the skill's steps by other means. The
+frontmatter and the skill's own `user` marker are the single source of which
+skills these are, so this doc names none.

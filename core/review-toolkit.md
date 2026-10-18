@@ -55,26 +55,29 @@ design, because settling it is the user's.
   with the guideline files that the config's `code_guidelines` patterns match.
   A local review that skips them is a differently aligned reviewer, not a
   cheaper one.
-- `/coderabbit [pr]` — chews the bot's PR comments. Its
-  `disable-model-invocation` flag reserves it for the user, because the bot's
+- `/coderabbit [pr]` — chews the bot's PR comments. Run it once the bot has
+  reviewed the head commit, never to wait for that, because the bot's
   review arrives on its own schedule and waiting for it burns a session doing
   nothing — the cost is the wait, which a synchronous CLI review does not
   have, and that is the whole difference between this bullet and the one above
-  it. Once a PR is open, say so and stop —
+  it. A run that finds no review of the head commit ends `OPEN` after one
+  read. Once a PR is open, say so and stop —
   do not poll the checks, do not sleep on a timer, do not re-run `gh` to see
-  whether the bot has posted. Once the user does invoke it, dispose of the
+  whether the bot has posted. Once the review has landed, dispose of the
   findings on the same terms as `/coderabbit-local`: any verified finding
-  applied without asking, a Major or Critical dismissal put to the user,
-  Minor read and then fixed or skipped with its reason, overriding the skill's
-  "No fixes before approval". Invoking it is the approval for the fixes — the
-  user is present by definition, and a wrong fix on an open PR costs one more
-  commit on a branch already under review. A merged PR still collects reviews:
-  re-fetch it once after the merge, because a finding posted while it was being
-  merged exists in the API and in no report. The same holds before it: the
-  bot's review lands on its own schedule and can arrive after a local pass has
-  already reported, so treat `Actionable comments posted: N` as what one review
-  posted inline rather than what the pull request holds — a second review, and
-  a collapsed out-of-grid section, are each counted separately.
+  applied without asking, a Major or Critical dismissal put to the user
+  (unattended: card — hand it on with what the bot missed), Minor read and
+  then fixed or skipped with its reason, overriding the skill's "No fixes
+  before approval". This policy is the approval for the fixes, because a
+  wrong fix on an open PR costs one more commit on a branch already under
+  review, where a wrong dismissal reaches the merge. A merged PR still
+  collects reviews: re-fetch it once after the merge, because a finding
+  posted while it was being merged exists in the API and in no report. The
+  same holds before it: the bot's review lands on its own schedule and can
+  arrive after a local pass has already reported, so treat
+  `Actionable comments posted: N` as what one review posted inline rather than
+  what the pull request holds — a second review, and a collapsed out-of-grid
+  section, are each counted separately.
 
 ## The pre-PR sequence
 
@@ -123,4 +126,4 @@ adds or removes a directory under `openspec/changes/` — a test pins the tree's
 change set — then one pass of `/coderabbit-local` — one, not three.
 
 Your sequence ends there — the PR link is the deliverable. `/coderabbit`
-closes the loop on either, whenever the user chooses to run it.
+closes the loop on either, once the bot has reviewed the head commit.
