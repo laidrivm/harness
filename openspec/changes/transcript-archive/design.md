@@ -71,6 +71,18 @@ directory is atomic, so a kill mid-copy leaves the previous copy whole. The
 `<id>/` tree is copied file by file in this way, and a file that has left the
 source is removed from the copy.
 
+### One export of a session at a time
+
+A catch-up can walk into a session whose `SessionEnd` hook is exporting it at
+that moment. Both would write the same `.tmp` names, and both could find no
+record and then overwrite each other's. So each export of a session first
+creates `<id>.lock` beside its copy with an exclusive create, and removes it
+when done. The hook, which alone knows `HEAD` and the real end reason, waits
+for a held lock for up to 10 s of its 60 s timeout. The catch-up skips a
+locked session and counts it as skipped; the next catch-up takes it. A lock
+older than 120 s is a killed export's and is taken over. Inside the lock the
+read of the record and its rewrite cannot interleave with another export.
+
 ### The modification time is the retention clock
 
 A copy keeps its source's `mtime`, which is the session's last activity. That
@@ -88,9 +100,13 @@ project would miss exactly the sessions that SIGKILL ends. Walking the
 directory costs one `stat` per transcript. A session still running is copied
 as it stands, and its own hook replaces the copy when it ends.
 
-The catch-up writes a record only where none exists. The hook's record holds
-`HEAD` and the real end reason, which a transcript cannot supply. It takes
-`cwd` and `branch` from the transcript's last line that carries them.
+The catch-up writes a whole record only where none exists. The hook's record
+holds `HEAD` and the real end reason, which a transcript cannot supply, so a
+catch-up that replaces a copy keeps them. Every replacement refreshes
+`archived`, since it is the date of the export the copy now reflects. A
+record the catch-up wrote (`reason` `catch-up`) also gets `cwd` and `branch`
+again, from the transcript's last line that carries them, since the session
+may have switched branch after the earlier copy.
 
 The catch-up compares `<id>.jsonl` and every file under `<id>/` by size and
 modification time, not the transcript alone: a `subagents/` or
@@ -102,11 +118,15 @@ A `.tmp` file that a kill left behind is overwritten by the next export of
 that file. The prune judges it by its own modification time, so one whose
 session never got a copy still goes.
 
-### The hook prunes its own project; the catch-up prunes all
+### Every export prunes the whole archive
 
-A machine that never runs `session-wrapup`, such as the VPS, still keeps its
-archive bounded. One `readdir` and a `stat` per session cost the hook a few
-milliseconds.
+The hook and the catch-up both prune every project directory in the archive,
+not only the one they export into. A project that receives no later session
+— a clone removed from the VPS, a one-use scratchpad project — would
+otherwise keep its copies past 180 days, and a machine that never runs
+`session-wrapup`, such as the VPS, has no other pruner. One `readdir` per
+project and a `stat` per session cost the hook a few milliseconds. The prune
+deletes only inside the archive, so the hook still writes nothing outside it.
 
 ### A 60 s timeout, synchronous
 
