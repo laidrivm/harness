@@ -48,7 +48,8 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       stop file, lock, secrets, `trap '' HUP`, `env -i` run, stop file on any
       non-zero exit. The clones, state and secrets directories default to
       `~/clones`, `~/orchestrator` and `/run/secrets`. Each can be overridden
-      only through a variable the script names. Its header says why it hands
+      only through a variable the script names; the clones directory's is
+      `PASS_CLONES`. Its header says why it hands
       `CLAUDECODE` on rather than checking it. Verify with 1.1 on Linux, in CI
       (`ubuntu-latest`)
 - [ ] 1.3 In `bun/board-loop-clone.test.ts`, add the case with standard input
@@ -124,7 +125,8 @@ moves it*.
       prefix, anywhere under `orchestrator/` [36].
       `orchestrator/secrets/<file>` is ignored, per `git check-ignore` [37].
       The entrypoint writes exactly one `authorized_keys` line, carrying
-      `restrict,command=` and `pass.sh`, and exits non-zero when the public
+      `restrict,command=`, `PASS_CLONES=/home/agent/clones` and `pass.sh`,
+      and exits non-zero when the public
       key file is missing [38]. The image creates both users, `runner` with
       the fixed numeric uid the host README names, and the one rule that lets
       `runner` start a command as `agent` names `claude` alone; the README's
@@ -143,7 +145,8 @@ moves it*.
       that the build is first run by the user
 - [ ] 3.3 Add `orchestrator/compose.yaml` with the services `n8n` (the stock
       image, 2.38.2 or later, by digest), `runner` (one volume for
-      `/home/agent`, the secrets mounted, no published port) and
+      `/home/agent` and one for `/home/runner`, the secrets mounted, no
+      published port) and
       `cloudflared` (the tunnel token from its secret file). Add
       `orchestrator/secrets` to `.gitignore` with no trailing slash. Verify
       with 3.1 and `docker compose config` where Docker is available
