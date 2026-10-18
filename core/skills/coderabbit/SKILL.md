@@ -43,7 +43,7 @@ The fourth call returns each inline thread's `isResolved` and `isOutdated`, whic
 
 Reconcile the bot's total for each review — N plus any M — against your own count before reporting. When they differ, find the difference rather than trusting either: one inline comment may carry several findings.
 
-The bot re-reviews on every push, and a merged PR still accepts comments — so a finding posted after your last pass exists in the API and in no report. Before treating a PR as done, re-fetch once and reconcile against the bot's N + M again: a review submitted after your report is a review nobody has dispositioned.
+The bot re-reviews on every push, and a merged PR still accepts comments — so a finding posted after your last pass exists in the API and in no report. Before treating a PR as done, re-fetch once and reconcile against the bot's N + M again: a review submitted after your report is a review nobody has dispositioned. The re-fetch reads the head commit again too. If it moved since the first read and the bot has not reviewed the new head, end on the no-review `OPEN` line naming it, never on `PASS`.
 
 Keep only comments whose `user.login` starts with `coderabbitai`. Record for each: `id`, `path`, `line` (or `original_line`), `body`, `in_reply_to_id`.
 
