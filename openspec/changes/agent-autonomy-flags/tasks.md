@@ -67,10 +67,10 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
       passes. Reading the skill through meets *The head commit has no review
       yet*, *A review lands while the run disposes of the first* and *A
       landed review with a dismissal*.
-- [x] 1.6 Mark `session-wrapup` step 2 as design.md D3 sets out, and drop
-      `Write` from its `allowed-tools` (D7).
+- [x] 1.6 Mark `session-wrapup` step 2 as design.md D3 sets out, and replace
+      `Write` in its `allowed-tools` with `Edit(docs/context/**)` (D7).
       Verify: the marker check passes, step 2 holds the skill's only marker,
-      and `allowed-tools` no longer names `Write`.
+      and `allowed-tools` names no `Write` and grants `Edit(docs/context/**)`.
 - [x] 1.7 Write `core/autonomy.md`'s paragraph under `user` (D4). In
       `core/review-toolkit.md`'s `/coderabbit` bullet:
       - replace the flag's reason with "run it once the bot has reviewed the
