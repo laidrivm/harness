@@ -21,7 +21,7 @@ tree* and *A repository path ending in a space*.
       figures. Separate enumerations from the named-path query in
       `bun/settings.ts`, which is not a copy. An eighth that arrived since is
       the case this task exists for (*all three*). Measured 2026-10-18 at
-      `acfa023`: `ls-files` appears in eight call sites in this tree (its
+      `acfa023`: `ls-files` appears in nine call sites in this tree (its
       other hits are comments). Of the proposal's seven, the three script
       copies stand here — `bun/no-suppressions.ts`, `bun/spec-coverage.ts`,
       `bun/file-size.ts` — and are the three `PLAN.md` counted; the three in
