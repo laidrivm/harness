@@ -26,7 +26,7 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
       consumer's.
       Verify: `git grep -n "first-five\|review-order\|pr-brief\|code-review\|skills/checklist" -- ':!docs/context' ':!openspec/changes'`
       names only the `bun/check.test.ts` fixture. `bun test` passes.
-- [ ] 1.2 Add a `describe` block on flagged skills to `bun/autonomy.test.ts`.
+- [x] 1.2 Add a `describe` block on flagged skills to `bun/autonomy.test.ts`.
       Each case builds its tree with the existing `tree()` helper:
       - a `skills/x/SKILL.md` with no frontmatter reports nothing [1];
       - a flagged skill holding `(unattended: user — x)` reports nothing [2];

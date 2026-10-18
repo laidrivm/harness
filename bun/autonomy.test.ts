@@ -137,6 +137,58 @@ describe("the marker vocabulary", () => {
 	});
 });
 
+/** A skill whose frontmatter is `front` and whose body is `body`. */
+const skill = (front: string, body: string) => `---\nname: x\n${front}\n---\n\n# X\n\n${body}\n`;
+const FLAG = "disable-model-invocation: true";
+const UNMARKED = "core/skills/x/SKILL.md: carries disable-model-invocation with no (unattended: user step";
+
+describe("flagged skills", () => {
+	test("a skill with no frontmatter adds nothing", () => {
+		expect(check(tree({ "skills/x/SKILL.md": "# X\n\nWait for the user.\n" }))).toEqual([]);
+	});
+
+	test("a flagged skill holding a user marker passes", () => {
+		const dir = tree({ "skills/x/SKILL.md": skill(FLAG, "Merge it (unattended: user — x).") });
+		expect(check(dir)).toEqual([]);
+	});
+
+	// spec: agent-permissions/a-flag-with-no-step-that-stays-with-the-user
+	test("a flagged skill whose only markers are card fails, naming the file", () => {
+		const dir = tree({
+			"skills/x/SKILL.md": skill(FLAG, "Ask (unattended: card — x).\nWait (unattended: card — y)."),
+		});
+		expect(check(dir)).toEqual([UNMARKED]);
+	});
+
+	test("a flag set to false needs no marker", () => {
+		const dir = tree({ "skills/x/SKILL.md": skill("disable-model-invocation: false", "Wait.") });
+		expect(check(dir)).toEqual([]);
+	});
+
+	test("a flag written as the string true is a flag", () => {
+		const dir = tree({ "skills/x/SKILL.md": skill('disable-model-invocation: "true"', "Wait.") });
+		expect(check(dir)).toEqual([UNMARKED]);
+	});
+
+	test("a user marker wrapped after the colon counts", () => {
+		const dir = tree({ "skills/x/SKILL.md": skill(FLAG, "Merge it (unattended:\nuser — x).") });
+		expect(check(dir)).toEqual([]);
+	});
+
+	test("a user marker in the skill's references does not count", () => {
+		const dir = tree({
+			"skills/x/SKILL.md": skill(FLAG, "Wait."),
+			"skills/x/references/a.md": "Merge it (unattended: user — x).\n",
+		});
+		expect(check(dir)).toEqual([UNMARKED]);
+	});
+
+	test("frontmatter that is not YAML fails, naming the file", () => {
+		const dir = tree({ "skills/x/SKILL.md": skill("tools: [Read", "Wait.") });
+		expect(check(dir)).toEqual(["core/skills/x/SKILL.md: frontmatter is not YAML"]);
+	});
+});
+
 describe("the repository", () => {
 	const read = (path: string) => readFileSync(join(root, path), "utf8");
 
