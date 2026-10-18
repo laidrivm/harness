@@ -92,10 +92,15 @@ included. So:
   `~/.local/state/harness/gates.jsonl` and the clones, shared with `runner`
   through a common group so the runner can push what a session committed and
   read its pre-PR record. `claude -r` needs only that volume (explore: since
-  v2.1.223 it searches every project).
+  v2.1.223 it searches every project). `runner`'s home, `/home/runner`, is
+  a second persistent volume: it holds `~/orchestrator` (locks, stop files,
+  pass logs), which no session can reach. `pass.sh` runs as `runner`, so its
+  `~` is that volume, and the forced command below sets its clones directory
+  to `/home/agent/clones` through `PASS_CLONES`. Both volumes outlive a
+  recreated container.
 - n8n's SSH node connects to `runner` on the compose network. No port is
   published. The key's `authorized_keys` line is
-  `restrict,command="/opt/orchestrator/pass.sh \"$SSH_ORIGINAL_COMMAND\""`,
+  `restrict,command="PASS_CLONES=/home/agent/clones /opt/orchestrator/pass.sh \"$SSH_ORIGINAL_COMMAND\""`,
   written by the entrypoint from a secret file. n8n can name a clone and
   nothing else.
 - The SSH node returns the remote command's exit status as data (`code`) and
