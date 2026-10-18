@@ -18,7 +18,7 @@ run's idea numbers.
       Verify: it passes on the tree as it stands, with `ship` in both lists.
       Then remove only the `ship` row: the test fails naming `ship`. Restore
       the row from a copy taken first.
-- [ ] 1.2 Delete `core/skills/ship/` and its row in the README's skill table,
+- [x] 1.2 Delete `core/skills/ship/` and its row in the README's skill table,
       in one commit (design.md D1).
       Verify: `bun test bun/skills-table.test.ts bun/autonomy.test.ts`
       passes. The autonomy test's repository case now runs on a tree where
