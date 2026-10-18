@@ -28,7 +28,7 @@ before the code they cover (`core/testing.md`).
       the first prompt with the declared line after `trim()` (design.md D1),
       and say so in its comment and `UNATTENDED`'s.
       Verify: `bun test bun/question-gate-unattended.test.ts` passes whole.
-- [ ] 1.3 Say in `core/autonomy.md` that the line is read ignoring the
+- [x] 1.3 Say in `core/autonomy.md` that the line is read ignoring the
       whitespace around it, and in `core/feature-workflow.md` that a
       terminal copy of the launch form still declares it.
       Verify: `bun test` passes, `bun/autonomy.test.ts`'s check that the doc
