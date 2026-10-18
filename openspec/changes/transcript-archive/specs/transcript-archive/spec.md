@@ -74,6 +74,13 @@ copy of each file whole rather than a truncated one.
 - **THEN** the archive holds one `<id>.jsonl`, equal to the longer transcript,
   and one record naming the second end's reason
 
+#### Scenario: Two exports of one session at once
+
+- **WHEN** a catch-up reaches a session while that session's hook is
+  exporting it
+- **THEN** one export runs at a time, the copy of each file is whole, and the
+  record holds the hook's `head` and `reason`
+
 #### Scenario: An export killed mid-copy
 
 - **WHEN** the export is killed while it copies a file that a previous export
@@ -82,8 +89,7 @@ copy of each file whole rather than a truncated one.
 
 ### Requirement: Archiving never stops a session
 
-The hook SHALL exit 0 on every fault and write nothing outside its project's
-archive directory. An event whose `session_id` is not a plain name, or whose
+The hook SHALL exit 0 on every fault and write nothing outside the archive. An event whose `session_id` is not a plain name, or whose
 `transcript_path` is not `<session_id>.jsonl`, SHALL archive nothing.
 
 #### Scenario: A malformed event
@@ -121,9 +127,19 @@ or carries another timeout.
 `--catch-up` SHALL walk every project directory under Claude Code's
 `projects/` and archive each session that has no record, or whose
 `<id>.jsonl` or a file under `<id>/` has no copy, has left the source, or
-differs from its copy in size or modification time. It SHALL write a record
-only where none exists, with `reason` `catch-up` and `head` `null`, and print
-one line counting what it archived, skipped, pruned and failed.
+differs from its copy in size or modification time. It SHALL write a whole
+record only where none exists, with `reason` `catch-up` and `head` `null`.
+Replacing a copy, it SHALL refresh `archived`, refresh `cwd` and `branch` only
+in a record whose `reason` is `catch-up`, and keep the `head` and `reason` of
+any other. It SHALL skip, and count as skipped, a session another export
+holds, and print one line counting what it archived, skipped, pruned and
+failed.
+
+#### Scenario: A catch-up record after a branch switch
+
+- **WHEN** a catch-up copied a running session, the session switched branch,
+  and a later catch-up copies it again
+- **THEN** the record names the new branch and the later export's date
 
 #### Scenario: A session the board loop killed
 
@@ -162,8 +178,8 @@ one line counting what it archived, skipped, pruned and failed.
 
 ### Requirement: The archive keeps a session 180 days
 
-A copy SHALL keep its source's modification time. The hook, over its project's
-directory, and the catch-up, over every directory, SHALL delete each session
+A copy SHALL keep its source's modification time. The hook and the catch-up,
+each over every project directory in the archive, SHALL delete each session
 whose archived transcript was last modified more than 180 days ago, with its
 `<id>/` and record, and each `.tmp` file last modified that long ago. The
 catch-up SHALL NOT archive a source older than that.

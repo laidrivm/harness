@@ -29,16 +29,19 @@ days*.
       is not JSON, a `session_id` of `../x`, a `transcript_path` that does not
       end in `<session_id>.jsonl`, a missing transcript, an unwritable state
       directory, and an export killed mid-copy that leaves the previous copy
-      whole [19–24]
+      whole [19–24]. A held lock makes the hook wait and then export; a lock
+      older than 120 s is taken over [38]
 - [ ] 1.3 Write the prune cases: 181 days pruned with `<id>/` and record,
       179 days kept, and a 181-day-old `.tmp` file with no copy beside it
-      deleted, all over the hook's own project directory [9, 10]
+      deleted, over every project directory in the archive, including one
+      that holds no session of the exporting run [9, 10, 37]
 - [ ] 1.4 Lift the state-directory resolution out of `ledgerFile()` in
       `bun/gate-ledger.ts` into one exported function that the ledger and the
       archive both call. Verify with `bun test bun/gate-ledger.test.ts`
 - [ ] 1.5 Add `bun/transcript-archive.ts` as the design sets out: event
-      validation, temp-and-rename copy with mode and `mtime`, the record, and
-      the prune of its own project. Verify with 1.1–1.3
+      validation, the per-session `<id>.lock` (exclusive create, a 10 s wait,
+      taken over past 120 s), temp-and-rename copy with mode and `mtime`, the
+      record, and the prune of the whole archive. Verify with 1.1–1.3
 - [ ] 1.6 Add the `SessionEnd` entry to `HOOKS` in `bun/bootstrap.ts` with
       `timeout: 60`. Give the `HOOKS` shape an optional `timeout`, write it in
       `bun/sync-settings.ts`, and compare it in `bun/settings.ts` whenever the
@@ -82,7 +85,11 @@ transcript past the period* of §*The archive keeps a session 180 days*.
       unreadable transcript counted as a failure, a transcript with no `cwd`
       or `gitBranch`, a live source past 180 days neither archived nor failed,
       the prune across every project, and the one count line [3, 11, 18,
-      25–29]
+      25–29]. A catch-up meeting a session its hook holds skips and counts
+      it, and the hook's record survives both orders of the two exports
+      [39]. A catch-up record re-copied after a branch switch names the new
+      branch and the new `archived` date, while a hook record keeps its
+      `head` and `reason` and gets the new date [40]
 - [ ] 2.2 Add `--catch-up` to `bun/transcript-archive.ts`, walking every
       directory under `projects/` and reusing the hook's copy and prune.
       Verify with 2.1
