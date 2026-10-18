@@ -1,6 +1,6 @@
 ---
 name: coderabbit
-description: Chew through CodeRabbit's review comments on a PR — fetch them all, parse the severity line, drop Trivial/Minor into a "skipped, with reason" list, verify Major and above against the current code, show a fix / don't-fix plan, and apply only after approval. Use when the user asks to process, triage, or address CodeRabbit comments on a PR.
+description: Dispose of every CodeRabbit finding on a PR — read the bot's landed review of the head commit once, never wait for one (no review of HEAD ends OPEN), verify Major and above against the current code, apply verified fixes where the project's review policy says to, skip Trivial/Minor with a reason, and hold a Major-or-above dismissal for the user (handed on as a card when unattended). Use to process, triage, or address CodeRabbit comments on a PR.
 argument-hint: "[PR number] [--all]"
 allowed-tools: "Bash(gh api:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git status:*), Read, Edit, Grep, Glob"
 ---
