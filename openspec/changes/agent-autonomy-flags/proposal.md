@@ -86,6 +86,8 @@ None.
 
 - `agent-permissions`: *Who may invoke a skill is enforced, not narrated*
   ties the flag to a `user` step, and replaces its `/coderabbit` scenario.
+  *The permission policy is pinned by a test* stops calling the skill links
+  untracked, and names the marker check that reads a skill's flag.
 - `agent-autonomy`: three new requirements:
   - *A skill only the user may start is a `user` step*
   - *The bot's review is worked once it has landed on the head commit, never
