@@ -81,7 +81,7 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
       - make the closing "whenever the user chooses to run it" agree.
       Verify: `grep -rn "present by definition\|reserves it for the user\|whenever the user chooses" core/`
       prints nothing.
-- [ ] 1.8 Grep `disable-model-invocation`, `user-only` and `runs only when the
+- [x] 1.8 Grep `disable-model-invocation`, `user-only` and `runs only when the
       user` across `core/`, `README.md`, `openspec/specs/` and the active
       changes, and correct every site this step makes false. Name in the pull
       request body the `capture-as-mechanism` proposal's claim that
