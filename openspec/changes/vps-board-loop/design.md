@@ -95,9 +95,11 @@ included. So:
   nothing else.
 
 Execute Command in a custom n8n image is the alternative. Rejected for the
-reasons above. Windmill was compared on the card (scripts in git, Bash first
-class) and is not taken: the user chose n8n. It is reconsidered only if the
-host shows that n8n's SSH node cannot carry a pass (see Risks).
+reasons above. Windmill was compared on the card from the docs (scripts in
+git, Bash first class). The user chose n8n and asked (2026-10-18) for a
+measured spike of both before the host is built: task group 2 runs one pass
+under each, and n8n stays unless Windmill meets a criterion n8n fails, in
+which case the choice goes back to the user.
 
 ### `pass.sh` order and exits
 
@@ -216,10 +218,10 @@ to the webhook step.
 
 - [n8n's SSH node may cut a command that runs past an hour. A pass is a pick
   plus up to an hour of stage.] → `trap '' HUP` keeps the pass alive, and
-  the stop file still records its outcome. If the node does cut it, the first
-  passes show it. The fallback is a custom n8n image with `openssh-client`
-  and Execute Command running `ssh`. That is a follow-up change, and the one
-  case where Windmill is reconsidered.
+  the stop file still records its outcome. The spike (task group 2) measures
+  it with a 65-minute fake pass before the host is built. If the node cuts
+  it, the fallback is a custom n8n image with `openssh-client` and Execute
+  Command running `ssh`, weighed in the same table against Windmill.
 - [Pro/Max limits are meant for "ordinary, individual usage". Unattended
   volume may be throttled without warning.] → One pass an hour per
   repository. The stop file halts the loop on the first failure.

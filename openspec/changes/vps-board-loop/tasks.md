@@ -1,11 +1,13 @@
 # vps-board-loop — tasks
 
-Two task groups, so the change ships as `feat/vps-board-loop-1` and
-`feat/vps-board-loop-2`. Group 1's wrapper works on any Linux host from cron
-or a terminal, before n8n exists. Group 2 puts it under n8n. Numbers in
-brackets refer to the proposal-stage `/zombies` list in the PR. No task here
-runs anything on the VPS. What happens there is the user acts in
-`proposal.md`.
+Three task groups, so the change ships as `feat/vps-board-loop-1`,
+`feat/vps-board-loop-2` and `feat/vps-board-loop-3`. Group 1's wrapper works
+on any Linux host from cron or a terminal, before n8n exists. Group 2 is the
+spike that compares n8n with Windmill on that wrapper before the host is
+built. Group 3 puts the wrapper under the engine the spike confirms. Numbers in
+brackets refer to the proposal-stage `/zombies` list in the PR. Only group 2
+runs anything on the VPS, and it leaves nothing there. Everything else that
+happens there is the user acts in `proposal.md`.
 
 ## 1. The wrapper a host timer runs
 
@@ -64,13 +66,47 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       `bun test`
 - [ ] 1.5 Run `bun bun/check.ts` and `bun test`. Both pass
 
-## 2. The n8n host
+## 2. Spike: n8n against Windmill on one pass
+
+Closes no scenario: its output is a measured comparison in `design.md` and
+the engine group 3 builds on. It needs the user acts that give the host a
+Claude token and a GitHub token first, and the user's SSH key loaded on the
+machine that carries the step.
+
+- [ ] 2.1 On the VPS, in a throwaway directory outside any clone, start each
+      engine's stock image (n8n ≥ 2.38.2; Windmill's community edition) beside
+      a copy of group 1's runner, one engine at a time. Drive the same
+      scenario through each: a scheduled start of `pass.sh` against a clone
+      holding a fake runner that sleeps 65 minutes, then one real pass whose
+      stage prompt is a single trivial `claude -p` call. Record for each, with
+      what was read or run: a command past one hour survives or is cut; a
+      second start while the first runs is refused by a concurrency limit of
+      1; a webhook with a wrong `X-Hub-Signature-256` is rejected and a
+      repeated delivery ID is dropped; the Claude token works inside the
+      container and the run's `session_id` and `total_cost_usd` reach the
+      execution record; `claude -r` resumes across two runs; what the engine
+      shows when the subscription limit is hit, if it can be provoked cheaply;
+      a workflow exported to files, deleted and imported again comes back
+      runnable, with no secret in the files; the execution list is readable
+      from a phone through Cloudflare Access; and, for Windmill, which of
+      these the community edition withholds
+- [ ] 2.2 Write the results into `design.md` under a new *Spike: n8n against
+      Windmill* section, one row per criterion and engine. If n8n meets every
+      criterion Windmill meets, the decision stays n8n and group 3 proceeds.
+      If Windmill meets one that n8n fails, stop: put the table to the user
+      as the question on the card (unattended: card — hand the choice on, and
+      build neither host), and revise group 3 after the answer
+- [ ] 2.3 Tear both stacks down. Verify with `docker ps -a`, `docker volume
+      ls` and the throwaway directory gone that the VPS holds nothing from
+      the spike
+
+## 3. The n8n host
 
 Closes every scenario of `orchestrator` §*The orchestrator directory holds no
 secret* and §*Every pin in the orchestrator directory is exact and names what
 moves it*.
 
-- [ ] 2.1 Write the failing cases first in a new `orchestrator/layout.test.ts`,
+- [ ] 3.1 Write the failing cases first in a new `orchestrator/layout.test.ts`,
       and record that each fails before the files exist. Each check runs over
       fabricated input and over the tracked tree. Cover: no workflow file
       fails rather than passing empty [27]. The n8n floor compares
@@ -90,31 +126,31 @@ moves it*.
       key file is missing [38]. The image creates both users `runner` and
       `agent`, `/run/secrets` is owned by `runner` with mode 0400, and the
       one rule that lets `runner` start a command as `agent` names `claude`
-      alone [39]. Cite each scenario
-- [ ] 2.2 Add `orchestrator/runner/Dockerfile` and
+      alone [41]. Cite each scenario
+- [ ] 3.2 Add `orchestrator/runner/Dockerfile` and
       `orchestrator/runner/entrypoint.sh`. The image holds git, `gh`, bun
       1.4.2, `claude`, `openspec`, `coderabbit`, `flock` and `sshd`, and the
       users `runner` and `agent` as `design.md` fixes. `gh auth setup-git` is
       run in the image. Copy
       `orchestrator/pass.sh` to `/opt/orchestrator/`. Each pin is an exact
       version or a digest and carries the note `design.md` fixes. Verify with
-      2.1, and with `docker build` where Docker is available. Otherwise record
+      3.1, and with `docker build` where Docker is available. Otherwise record
       that the build is first run by the user
-- [ ] 2.3 Add `orchestrator/compose.yaml` with the services `n8n` (the stock
+- [ ] 3.3 Add `orchestrator/compose.yaml` with the services `n8n` (the stock
       image, 2.38.2 or later, by digest), `runner` (one volume for
       `/home/agent`, the secrets mounted, no published port) and
       `cloudflared` (the tunnel token from its secret file). Add
       `orchestrator/secrets` to `.gitignore` with no trailing slash. Verify
-      with 2.1 and `docker compose config` where Docker is available
-- [ ] 2.4 Write the hourly workflow by hand to the shape
+      with 3.1 and `docker compose config` where Docker is available
+- [ ] 3.4 Write the hourly workflow by hand to the shape
       `n8n export:workflow --backup` produces: a Schedule Trigger and an SSH
       node sending the clone name `harness`, with the keys `design.md`
       removes left out. Save it as `orchestrator/workflows/<id>.json`. Verify
-      with 2.1
-- [ ] 2.5 Write `orchestrator/README.md`, opening with a level-1 heading. It
+      with 3.1
+- [ ] 3.5 Write `orchestrator/README.md`, opening with a level-1 heading. It
       holds the host requirements, the user acts in `proposal.md`'s order, the
       export and import commands, the check of the three Notion tool names, and
       what to read before removing a stop file. It names no address and no
       account. Verify by reading every file under `orchestrator/` whole for an
       identifier before the commit (`git-and-prs.md`)
-- [ ] 2.6 Run `bun bun/check.ts` and `bun test`. Both pass
+- [ ] 3.6 Run `bun bun/check.ts` and `bun test`. Both pass
