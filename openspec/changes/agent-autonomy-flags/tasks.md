@@ -71,7 +71,7 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
       `Write` from its `allowed-tools` (D7).
       Verify: the marker check passes, step 2 holds the skill's only marker,
       and `allowed-tools` no longer names `Write`.
-- [ ] 1.7 Write `core/autonomy.md`'s paragraph under `user` (D4). In
+- [x] 1.7 Write `core/autonomy.md`'s paragraph under `user` (D4). In
       `core/review-toolkit.md`'s `/coderabbit` bullet:
       - replace the flag's reason with "run it once the bot has reviewed the
         head commit, never to wait for that";
