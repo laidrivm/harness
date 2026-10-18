@@ -121,7 +121,10 @@ runner user's SSH key, or fail. The URL holds no token. git gets it through
 `GIT_CONFIG_COUNT`,
 `GIT_CONFIG_KEY_0=http.https://github.com/.extraheader` and
 `GIT_CONFIG_VALUE_0=AUTHORIZATION: basic <base64 of x-access-token:TOKEN>`,
-and `gh pr create` through `GH_TOKEN`, which outranks stored credentials. A
+and `gh pr create` and the full goal check after it through `GH_TOKEN`, which
+outranks stored credentials: that check reads the pull request with `gh`, and
+a runner user with no stored `gh` login would otherwise read it as
+unreadable. A
 process's environment is readable by its own user alone, where an argument or
 a URL holding the token shows in `ps` to every user.
 

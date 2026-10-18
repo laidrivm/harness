@@ -73,8 +73,10 @@ When the runner's environment names an App's ID and the path of its private
 key, the runner SHALL push and open the pull request with an installation
 token minted after the stage session ends, for the clone's repository alone,
 and SHALL author and commit the session's commits as the App's `[bot]` user.
-The token SHALL reach no session, command line or file. With neither setting,
-the runner SHALL use its user's own credentials.
+The token SHALL reach no session, command line or file, and SHALL stay in the
+runner's environment as `GH_TOKEN` until the full goal check after the pull
+request has run. With neither setting, the runner SHALL use its user's own
+credentials.
 
 #### Scenario: An App configured
 
@@ -111,7 +113,8 @@ When the branch of the step a pass carries already exists, in the clone or on
 `origin`, the pass SHALL launch the stage session to continue it. The first
 line of the launch form SHALL name that branch as one a session left, and
 SHALL tell the session to switch to it rather than create it. The other lines
-of the launch form SHALL NOT change. The runner SHALL NOT delete, reset or
+SHALL be those of the launch form for a step with no branch left, including
+its `--before-push` check and its `PR-TITLE:` and `PR-BODY:` lines. The runner SHALL NOT delete, reset or
 recreate the branch, and SHALL push it only as *The runner pushes the step and
 opens its pull request* allows.
 
