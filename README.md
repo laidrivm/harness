@@ -16,16 +16,11 @@ The repository runs itself as its own consumer. `package.json` pins the harness 
 
 | Skill | What it does |
 |---|---|
-| `checklist` | Convert the current plan/review/task list in context into a persistent markdown checklist under `.claude/plans/` |
-| `code-review` | Review staged changes or a specific area, optionally delegating to a chosen agent |
 | `coderabbit` | Chew through CodeRabbit's PR comments: skip Trivial/Minor with a reason, verify Major+ against current code, plan, then apply after approval |
 | `coderabbit-local` | Run CodeRabbit via the `coderabbit` CLI on the branch's changes since it diverged (no PR needed), gated on `coderabbit doctor`, then triage as above |
 | `feature-generator` | Expand `spec.md` into a dependency-ordered `features.md`, and keep the two in sync |
-| `first-five` | Scan a diff against the First Five checklist (error handling, input boundaries, external calls, state mutations, assumed dependencies) |
 | `playwright-cli` | Vendored from [microsoft/playwright-cli](https://github.com/microsoft/playwright-cli) — reference for driving a browser via the Playwright CLI; do not edit, see Skill provenance |
-| `pr-brief` | Compose the PR title and description once the gates pass — reads the gate lines, the diff and the plan, writes nothing |
 | `preflight` | Production pre-flight checklist for a branch: env vars, config, migrations — everything needed once it merges |
-| `review-order` | Scannable review checklist grouped by feature, four-pass order (types, data flow, business logic, edge cases) |
 | `session-wrapup` | End-of-session debrief: confidence check, fix & capture pass, OpenSpec state + next command + the session's board cards reconciled, optional save-point doc, pipeline yield per review skill |
 | `ship` | Push, open or update the PR, wait for CodeRabbit on that SHA, work the findings, repeat, then merge on approval and return to an up-to-date base |
 | `spec-generator` | Turn a vague product idea (plus sketches/notes) into a structured product spec |
@@ -37,7 +32,7 @@ Whether a skill answers only to `/name` (`disable-model-invocation: true`) and w
 
 ## Severity
 
-One vocabulary everywhere: `🔴 Critical` > `🟠 Major` > `🟡 Minor` > `🔵 Trivial` — CodeRabbit's ladder, adopted because that one arrives from outside and can't be changed. `code-review` used to have its own five levels (Error/Warning/Suggestion/Nitpick); it doesn't any more. `triage` is the exception on purpose: its High/Medium/Low are risk tiers for budgeting attention, not severities of findings.
+One vocabulary everywhere: `🔴 Critical` > `🟠 Major` > `🟡 Minor` > `🔵 Trivial` — CodeRabbit's ladder, adopted because that one arrives from outside and can't be changed. `triage` is the exception on purpose: its High/Medium/Low are risk tiers for budgeting attention, not severities of findings.
 
 ## Gate lines
 

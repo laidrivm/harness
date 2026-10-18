@@ -71,10 +71,9 @@ Example:
 ```
 - triage: OPEN — 4 groups, 2 high-risk — High/Medium read
 - warm: PASS — 2 dependencies vetted, 0 findings, 0 acted on
-- first-five: 3 findings, 2 acted on (1 rejected: false positive on a retried job)
 - zombies: OPEN — 6 gaps, 6 acted on
 - coderabbit-local: PASS — 7 findings, 7 dispositioned (3 fixed, 4 skipped)
-- Not run: review-order, code-review, preflight
+- Not run: preflight
 - gates: command-guard block main-commit ×2, turn-gate refused pre-pr-sequence ×1
 ```
 
