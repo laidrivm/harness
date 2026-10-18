@@ -24,7 +24,7 @@ before the code they cover (`core/testing.md`).
       (Req: agent-autonomy — A session is attended unless the prompt that
       started it says otherwise; agent-permissions — A question to the user on
       a board card needs no prompt)
-- [ ] 1.2 In `bun/question-gate.ts`, have `unattended()` compare each line of
+- [x] 1.2 In `bun/question-gate.ts`, have `unattended()` compare each line of
       the first prompt with the declared line after `trim()` (design.md D1),
       and say so in its comment and `UNATTENDED`'s.
       Verify: `bun test bun/question-gate-unattended.test.ts` passes whole.
