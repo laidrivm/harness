@@ -72,7 +72,8 @@ tree* and *A repository path ending in a space*.
 - [x] 1.5 Measure `bun/tracked.ts`, `bun/tracked.test.ts` and
       `bun/no-suppressions.ts` against the 300-line cap and record the numbers
       (*change-slicing/No source file exceeds its per-file cap*). Measured:
-      44, 86 and 121 lines; `oversize()` reports nothing
+      44, 102 and 121 lines (`bun/tracked.test.ts` grew from 86 with the three
+      `/zombies` cases); `oversize()` reports nothing
 
 ## 2. Six more call sites and no eighth
 
@@ -87,23 +88,32 @@ Closes *A second listing is introduced*.
   `src/app/styles/styles.test.ts` (in d2ass) is d2ass work, done in the pull
   request that bumps the pin past group 2 — the `D2ASS` card *Reconcile the
   bun version sites* carries it, assertion counts included
-- [ ] 2.4 Switch the two path-only callers to `paths`:
-      `checks/readme-map.test.ts` (in d2ass, on the `D2ASS` card with 2.3),
-      which takes no root today and so escaped both earlier counts, and
-      `bun/file-size.test.ts`'s inline copy at line ~179. Neither applies
-      an `lstatSync` filter, on purpose — a tracked path deleted from the work
-      tree still carries an extension to rule on and a map row to satisfy — so
-      confirm the extension set and the row resolutions they assert are
-      unchanged, which is what proves the list is the right one — the unfiltered view is the
-      requirement's, not this caller's preference (*Every check reads the tree
-      through one tracked-file sweep*, *A second listing is introduced*)
+- 2.4 Switching the path-only caller `checks/readme-map.test.ts` (in d2ass)
+  to `paths` is d2ass work on the `D2ASS` card with 2.3: it takes no root
+  today and so escaped both earlier counts. It applies no `lstatSync` filter,
+  on purpose — a tracked path deleted from the work tree still carries a map
+  row to satisfy — so the switch confirms the row resolutions it asserts are
+  unchanged. `bun/file-size.test.ts`'s inline copy, once named here, is gone
+  (1.1)
+- [ ] 2.4a Switch the two copies that arrived since the proposal, which 1.1
+      found: `bun/repo-layout.ts` (`stray()`, the full four-step copy) to the
+      sweep, and `bun/review-config.ts` (`unreached()`, path-only, root passed
+      in) to `paths`. Record that each reports the same result on today's
+      tree before and after (*Every check reads the tree through one
+      tracked-file sweep*, *A second listing is introduced*)
 - [ ] 2.5 Write the check the criterion names: a test failing when any tracked
       source file other than `bun/tracked.ts` and `bun/tracked.test.ts`
       derives a tree listing of its own. What it matches is enumeration, not
       the command — `git rev-parse --show-toplevel`, and `git ls-files` with no
       literal path operand, which `--error-unmatch` alone, a directory or a
       glob does not supply. `bun/settings.ts` asks git about named paths and
-      must keep passing. Scope it by what it exempts, per `core/rules.md`, and
+      must keep passing. 1.1 found three more sites it must settle, each
+      switched or exempted with its reason in the check: `bun/check.ts`
+      (`ls-files -s -z -- <dir>`, a directory operand that reads the mode the
+      sweep does not return) and two tests that enumerate a fabricated
+      repository, `bun/repo-layout.test.ts` and
+      `bun/spec-coverage-sweep.test.ts`. Scope it by what it exempts, per
+      `core/rules.md`, and
       break-check it both ways — reintroduce one listing and watch it fail,
       and confirm `bun/settings.ts` does not trip it (*A second listing is
       introduced*)
