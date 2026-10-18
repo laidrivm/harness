@@ -88,6 +88,6 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
       `session-wrapup` runs only when the user invokes it, for that change to
       reconcile.
       Verify: every remaining hit describes `ship`, or the flag in general.
-- [ ] 1.9 `bun bun/pre-pr.ts` reports the step's diff under the failing
+- [x] 1.9 `bun bun/pre-pr.ts` reports the step's diff under the failing
       threshold. The pull request body names the requirements this change
       adds or modifies as the ones it closes.
