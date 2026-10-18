@@ -151,7 +151,7 @@ counting what it archived, skipped, pruned and failed.
 A copy SHALL keep its source's modification time. The hook, over its project's
 directory, and the catch-up, over every directory, SHALL delete each session
 whose archived transcript was last modified more than 180 days ago, with its
-`<id>/` and record. The catch-up SHALL not archive a source older than that.
+`<id>/` and record. The catch-up SHALL NOT archive a source older than that.
 
 #### Scenario: A session past the period
 

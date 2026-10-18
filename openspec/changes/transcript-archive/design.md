@@ -93,8 +93,11 @@ The catch-up writes a record only where none exists. The hook's record holds
 `cwd` and `branch` from the transcript's last line that carries them.
 
 shortcut: an `<id>/` is re-copied only when `<id>.jsonl` changed, on the
-assumption, unmeasured, that a subagent's result lands in the main transcript. Compare
-the directory too if a lagging `subagents/` file is ever seen.
+unmeasured assumption that a subagent's result lands in the main transcript.
+Compare the directory too if a lagging `subagents/` file is ever seen.
+
+A `.tmp` file that a kill left behind is overwritten by the next export of
+that file, and the prune deletes it with its session.
 
 ### The hook prunes its own project; the catch-up prunes all
 
@@ -126,7 +129,7 @@ its Rules line on what it may write names the archive.
 
 ## Risks / Trade-offs
 
-- [The 60 s ceiling is read from the docs, not measured] → task 1.6 ends a
+- [The 60 s ceiling is read from the docs, not measured] → task 1.8 ends a
   session whose transcript takes more than 1.5 s to copy and checks the copy
   is whole.
 - [A SIGTERM followed by SIGKILL 5 s later can cut an export short] → the
