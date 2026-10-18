@@ -50,7 +50,7 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
       Verify: `bun test bun/autonomy.test.ts` passes. Then put the flag back
       in `coderabbit`, watch the repository case fail naming it, and remove
       it again.
-- [ ] 1.5 Implement design.md D2 in `core/skills/coderabbit/SKILL.md`:
+- [x] 1.5 Implement design.md D2 in `core/skills/coderabbit/SKILL.md`:
       - step 1 reads the head commit with `gh pr view --json headRefOid`,
         then runs the existing reviews call. With no `coderabbitai` review
         of the head commit, it ends on
