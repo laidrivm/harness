@@ -1,6 +1,6 @@
 ---
 name: coderabbit
-description: Dispose of every CodeRabbit finding on a PR — read the bot's landed review of the head commit once, never wait for one (no review of HEAD ends OPEN), verify Major and above against the current code, apply verified fixes where the project's review policy says to, skip Trivial/Minor with a reason, and hold a Major-or-above dismissal for the user (handed on as a card when unattended). Use to process, triage, or address CodeRabbit comments on a PR.
+description: Dispose of every CodeRabbit finding on a PR — read the bot's landed review of the head commit once, never wait for one (no review of HEAD ends OPEN), verify Major and above against the current code, apply verified fixes where the project's review policy says to, skip Trivial by default, fix or skip each Minor with a reason, and hold a Major-or-above dismissal for the user (handed on as a card when unattended). Use to process, triage, or address CodeRabbit comments on a PR.
 argument-hint: "[PR number] [--all]"
 allowed-tools: "Bash(gh api:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git status:*), Read, Edit, Grep, Glob"
 ---
@@ -139,6 +139,8 @@ CODERABBIT gate: OPEN — 7 findings, 3 fixes awaiting approval.
 
 Wait for approval (unattended: card — hand the plan on, and apply nothing until it is approved). Then apply the approved fixes with `Edit`, and report what changed.
 
+Right before applying any fix, here or under the override below, read the head commit again. If it moved since step 1, re-fetch once and verify each finding against the new head before applying it. A fix verified against a head the branch has left is not verified.
+
 **The project overrides this.** If the repo's own review policy (`CLAUDE.md`, `docs/`, a gate the project defines) prescribes applying verified findings without asking, follow the project, not this skill: apply them before showing the plan, list them under `### Applied (N)`, and keep no approval gate on fixes at any severity. Where the project puts the approval on the dismissal instead, a 🟠 Major or 🔴 Critical you propose to reject or skip goes to the user with what the bot missed, and the gate stays OPEN until they settle it (unattended: card — hand it on with what the bot missed). Name the rule you followed in one line under the heading.
 
 ### 6. Gate line
@@ -155,7 +157,7 @@ It exists so a driving agent, PR template or hook can check the step ran and clo
 
 ## Rules
 
-- **Read, never wait.** A run that finds no review of the head commit reads once and ends `OPEN`. A run that finds one keeps its single re-fetch before the gate line, so a review that lands while the first is being dispositioned is dispositioned too. Neither sleeps, polls or loops: a review that has not landed is the next run's.
+- **Read, never wait.** A run that finds no review of the head commit reads once and ends `OPEN`. A run that finds one reads the head again before applying fixes (step 5) and keeps its single re-fetch before the gate line, so a review that lands while the first is being dispositioned is dispositioned too. Neither sleeps, polls or loops: a review that has not landed is the next run's.
 - **Never post to the PR.** No replies, no resolves, no reactions, no `gh pr comment`. Read-only against GitHub.
 - **The arithmetic must close.** Applied + fixing + not fixing + skipped = findings fetched. Print the total in the heading and re-check it before showing the plan — a finding that appears in no section is exactly the failure this skill exists to prevent.
 - **Skipped is a list, not a count.** One line per skipped finding with its path and reason, even for Trivial.

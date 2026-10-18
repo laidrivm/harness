@@ -162,10 +162,15 @@ Each was checked against the guards that still apply:
   the grant says.
 - `session-wrapup` grants `Write` and a Notion page update today. The Notion
   update guard reads every such update. The skill's prose limits writes to
-  `docs/context/`, but nothing enforces that limit, so the apply removes
-  `Write` from the grant (task 1.6) and the settled grant holds no `Write`. A wrap-up's two files then go through the session's own permission
-  settings, like any other edit. A `Write(path)` rule was not used to scope
-  the grant instead.
+  `docs/context/`, but nothing enforces that limit, so the apply replaces
+  the unscoped `Write` with `Edit(docs/context/**)` (task 1.6). That is
+  where the save point and the yield ledger sit, and an unattended wrap-up
+  can then write both without a prompt it could not answer. The grant is an
+  `Edit` rule because Claude Code checks file writes against `Edit(path)`
+  rules only. Those cover every built-in tool that edits files, `Write`
+  included, and a `Write(path)` rule is accepted but never consulted
+  (permissions page, read 2026-10-18). The bare path resolves against the
+  session's working directory.
 
 ## Risks / Trade-offs
 
