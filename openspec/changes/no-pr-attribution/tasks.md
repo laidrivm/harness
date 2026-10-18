@@ -25,7 +25,7 @@ before the code they cover (`core/testing.md`).
       missing export, then on every case but [z3].
       (Req: agent-permissions — Claude Code adds no attribution to a pull
       request body)
-- [ ] 1.2 In `bun/sync-settings.test.ts`, write the cases: no `attribution`
+- [x] 1.2 In `bun/sync-settings.test.ts`, write the cases: no `attribution`
       comes out as the harness's value with the check passing [z10], and one
       carrying `commit` comes out without it [z11] —
       `// spec: harness-updates/a-consumer-adopts-the-attribution-setting-through-the-sync`.

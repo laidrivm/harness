@@ -5,7 +5,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { HOOKS, MARK } from "./bootstrap.ts";
-import { ASK, DENY, settings } from "./settings.ts";
+import { ASK, ATTRIBUTION, DENY, settings } from "./settings.ts";
 import { syncSettings } from "./sync-settings.ts";
 import {
 	cleanup,
@@ -205,6 +205,19 @@ describe("the settings file", () => {
 			"Edit(b)",
 			"Edit(bunfig.toml)",
 		]);
+	});
+
+	// spec: harness-updates/a-consumer-adopts-the-attribution-setting-through-the-sync
+	test.each([
+		["no attribution [z10]", undefined],
+		["one carrying commit [z11]", { pr: "", commit: "", sessionUrl: false }],
+	])("settings with %s come out with the harness's", (_, attribution) => {
+		const dir = consumer({
+			[SETTINGS]: JSON.stringify(stale({ attribution })),
+		});
+		syncSettings(dir);
+		expect(parsed(dir).attribution).toEqual(ATTRIBUTION);
+		expect(settings(dir).join("\n")).not.toContain("attribution");
 	});
 
 	test("settings that are not JSON fail naming the file and write nothing", () => {
