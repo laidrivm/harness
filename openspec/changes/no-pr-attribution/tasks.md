@@ -7,7 +7,7 @@ before the code they cover (`core/testing.md`).
 
 ## 1. Fix `attribution` in the policy, the sync and the harness's own file
 
-- [ ] 1.1 In a new `bun/settings-attribution.test.ts`, over the fabricated
+- [x] 1.1 In a new `bun/settings-attribution.test.ts`, over the fabricated
       consumer of `bun/settings.fixture.ts`, write the cases:
       - no `attribution` key is named [z1] —
         `// spec: agent-permissions/a-consumer-without-the-setting`;

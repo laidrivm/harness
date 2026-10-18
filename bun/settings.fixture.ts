@@ -67,6 +67,7 @@ export const policy = () => ({
 		],
 		allow: ["Bash(bun test *)", "Read(docs/**)"],
 	},
+	attribution: { pr: "", sessionUrl: false } as unknown,
 	hooks: {
 		PreToolUse: [
 			{
