@@ -44,7 +44,7 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
       Keep its "nothing is exempt" walk, and update its header comment.
       Verify: the cases from 1.2 pass. The repository case fails until 1.4,
       naming `coderabbit`, `session-wrapup` and `ship`.
-- [ ] 1.4 Remove the flag from `coderabbit` and `session-wrapup`. Mark
+- [x] 1.4 Remove the flag from `coderabbit` and `session-wrapup`. Mark
       `ship`'s merge step `(unattended: user — leave the merge to the user and
       report BLOCKED naming the pull request)`.
       Verify: `bun test bun/autonomy.test.ts` passes. Then put the flag back

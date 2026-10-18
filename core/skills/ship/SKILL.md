@@ -89,7 +89,7 @@ Cap the loop at **three** round trips. If CodeRabbit still has findings on the f
 
 ### 6. Merge — ask first
 
-Show, in three lines: the PR URL, the number of round trips, and the final gate lines. Then ask for the merge explicitly and **wait for an answer**. Merging is not covered by any approval given earlier in the session.
+Show, in three lines: the PR URL, the number of round trips, and the final gate lines. Then ask for the merge explicitly and **wait for an answer**. Merging is not covered by any approval given earlier in the session (unattended: user — leave the merge to the user and report BLOCKED naming the pull request).
 
 On approval:
 
