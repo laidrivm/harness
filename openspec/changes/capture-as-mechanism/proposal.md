@@ -65,9 +65,10 @@ nothing in the loop asked whether one could.
    card alone: no prose arrives, and the lesson goes unprotected until the
    gate lands. The default here is both, because a card can sit in `idea`
    for weeks.
-2. **Where the count is taken.** `session-wrapup` runs only when the user
-   invokes it (`disable-model-invocation: true`), so a session that is never
-   wrapped up adds nothing to the count. A mechanical count, such as one
+2. **Where the count is taken.** `session-wrapup` runs when the user or,
+   since `agent-autonomy-flags`, the model invokes it — an unattended session
+   may wrap itself up — but a session that is never wrapped up still adds
+   nothing to the count. A mechanical count, such as one
    derived from git history at wrap-up, would not depend on the model
    remembering. It is also a larger change than one ledger line. The default
    here is the ledger line.

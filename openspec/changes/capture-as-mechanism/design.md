@@ -6,7 +6,8 @@ The loop lives in `core/rules.md`, the one file read at every session start,
 and reaches each consumer through `sync.ts`. Every line it gains is an
 always-on line, everywhere. The yield ledger is
 `docs/context/pipeline-yield-<yyyy-mm>.md`. Only `session-wrapup` writes it,
-append-only, and only when the user invokes the skill. The specs fix the
+append-only, whenever the skill runs — invoked by the user or, since
+`agent-autonomy-flags`, by the model in an unattended session. The specs fix the
 behaviour (see `specs/agent-rulebook/spec.md`). The proposal gives the
 motivation.
 
