@@ -83,4 +83,20 @@ describe("the tracked-file sweep", () => {
 		expect(files).toEqual(["a.ts"]);
 		expect(existsSync(join(root, "a.ts"))).toBe(true);
 	});
+
+	test("a repository tracking nothing lists nothing and still names its root", () => {
+		const dir = fabricate({});
+		expect(tracked(dir)).toEqual({ root: dir, paths: [], files: [] });
+	});
+
+	test("a path with a newline in its name is one entry, unquoted", () => {
+		const dir = fabricate({ "a\nb.ts": "" });
+		expect(tracked(dir).files).toEqual(["a\nb.ts"]);
+	});
+
+	test("outside any repository it throws rather than listing nothing", () => {
+		const parent = mkdtempSync(join(tmpdir(), "tracked-"));
+		made.push(parent);
+		expect(() => tracked(parent)).toThrow();
+	});
 });
