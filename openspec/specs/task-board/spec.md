@@ -928,8 +928,11 @@ card is answered* fires for an answer the loop carries.
 
 - **WHEN** a session carrying an answer ends with no pull request open for its
   step and no card filed
-- **THEN** the card's `Assign` still holds the user, so the next pass can take
-  the answer again
+- **THEN** the card's `Assign` still holds the user. A later pass takes the
+  answer again and continues the branch the session left (`board-loop`,
+  *A step branch a session left is continued*), once the clone holds nothing
+  that pass refuses (`board-loop`, *The runner is the user's script and
+  starts from a clean clone*)
 
 #### Scenario: The answer asks for a change of its own
 
