@@ -163,6 +163,8 @@ Rules about how work is carried out here. They do not age with the code.
 - Before a commit, run the build's own scan over every file the commit writes
   that the scan covers, since a fixture in a test can be valid input to the
   scan it tests.
+- Before applying a review finding to a change, grep its `design.md` for a
+  decision the fix reverses, and update that decision in the same commit.
 
 #### Safety
 
