@@ -4,11 +4,15 @@ The tests come from the proposal-stage `/zombies` run, and each one is written
 before the code it covers (`core/testing.md`). The numbers in brackets are
 that run's idea numbers, and 1.2 places all eight.
 
-This is one group and one harness pull request, on `feat/agent-autonomy-flags`.
-The five deleted skills are 462 of the roughly 600 lines this step changes.
+Group 1 is one harness pull request, on `feat/agent-autonomy-flags`.
+The five deleted skills are 462 of the roughly 600 lines that step changes.
 `bun bun/pre-pr.ts` is expected to warn but stay under its failing threshold.
-If it fails instead, split the step at 1.1: the removals become group 1, and
-1.2 to 1.8 become group 2.
+If it fails instead, split the step at 1.1: the removals stay in group 1, and
+1.2 to 1.8 move to a group of their own.
+
+Group 2 carries the user's answer on the change's card (2026-10-18): correct
+the live spec's stale claim about `.claude/skills/*` in this change, as a step
+of its own, on `feat/agent-autonomy-flags-2`.
 
 ## 1. Removals, flags, guard and prose
 
@@ -91,3 +95,29 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
 - [x] 1.9 `bun bun/pre-pr.ts` reports the step's diff under the failing
       threshold. The pull request body names the requirements this change
       adds or modifies as the ones it closes.
+
+## 2. The settings test's stale claim about skills
+
+- [x] 2.1 Copy *The permission policy is pinned by a test* whole from
+      `openspec/specs/agent-permissions/spec.md` into this change's
+      `specs/agent-permissions/spec.md`, under `MODIFIED Requirements`. Then
+      correct what it says of skills:
+      - the sentence calling `.claude/skills/*` untracked symlinks into a
+        separate repository becomes one naming where the check lives: the
+        skills sit in `core/skills/`, the links are tracked, and the marker
+        check in `bun/autonomy.ts` carries *Who may invoke a skill is
+        enforced, not narrated*;
+      - the scenario *A skill's frontmatter changes* stops saying no test can
+        carry the check, and names the marker check's failure instead.
+      Leave every other line as the live spec has it.
+      Verify: `git ls-files .claude/skills core/skills/ship/SKILL.md` lists
+      the links and the skill. `bunx --no-install openspec validate
+      agent-autonomy-flags --strict` passes. Diffing the copied requirement
+      against the live one shows only those two edits.
+- [x] 2.2 Name the requirement under `agent-permissions` in `proposal.md`'s
+      *Modified Capabilities*.
+      Verify: `grep -n "pinned by a test" openspec/changes/agent-autonomy-flags/proposal.md`
+      prints the line.
+- [ ] 2.3 `bun bun/pre-pr.ts` reports the step's diff under the failing
+      threshold. The pull request body names *The permission policy is
+      pinned by a test* as the requirement this step modifies.
