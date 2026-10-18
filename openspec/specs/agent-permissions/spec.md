@@ -1347,8 +1347,8 @@ prompts*.
 #### Scenario: A call the hook does not allow, in an unattended session
 
 - **WHEN** a session whose first prompt holds the line
-  `This session runs unattended.`, on a line of its own, makes a call that
-  fails any condition of *A question on a card*
+  `This session runs unattended.`, on a line of its own, ignoring whitespace
+  around it, makes a call that fails any condition of *A question on a card*
 - **THEN** the hook answers `deny` with a message that names the first
   condition the call failed and what would meet it, and the ledger records
   the call as refused under that condition
