@@ -1,7 +1,7 @@
 ---
 name: session-wrapup
 description: End-of-session ritual — confidence check on what was built, fix & capture pass for uncaptured lessons, OpenSpec workflow state with the next command and the session's board cards reconciled, an optional save-point doc for long exploratory sessions, and a pipeline-yield entry recording what each review skill actually found and what the harness's gates decided.
-allowed-tools: "Read, Write, Glob, Grep, Bash(git log:*), Bash(git status:*), Bash(git diff:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(bun bun/board-state.ts), Bash(bun node_modules/harness/bun/board-state.ts), mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page"
+allowed-tools: "Read, Glob, Grep, Bash(git log:*), Bash(git status:*), Bash(git diff:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(bun bun/board-state.ts), Bash(bun node_modules/harness/bun/board-state.ts), mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page"
 ---
 
 # Session Wrap-up
@@ -22,7 +22,7 @@ If multiple distinct things were built, score them separately.
 Run the fix & capture loop over the session: look for mistakes that got corrected, user pushback, approaches that were reversed, or friction that repeated.
 
 - For each, propose the capture: a rule (CLAUDE.md line), a skill edit (name the skill and the exact change), or a new memory.
-- **Propose, don't apply** — the user decides what to keep.
+- **Propose, don't apply** — the user decides what to keep (unattended: card — hand each proposed capture on, and apply none).
 - If the session was clean, say exactly: `Nothing to capture.` Don't invent lessons to fill the section.
 
 ## 3. Workflow state

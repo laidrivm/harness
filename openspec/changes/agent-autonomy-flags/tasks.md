@@ -67,7 +67,7 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
       passes. Reading the skill through meets *The head commit has no review
       yet*, *A review lands while the run disposes of the first* and *A
       landed review with a dismissal*.
-- [ ] 1.6 Mark `session-wrapup` step 2 as design.md D3 sets out, and drop
+- [x] 1.6 Mark `session-wrapup` step 2 as design.md D3 sets out, and drop
       `Write` from its `allowed-tools` (D7).
       Verify: the marker check passes, step 2 holds the skill's only marker,
       and `allowed-tools` no longer names `Write`.
