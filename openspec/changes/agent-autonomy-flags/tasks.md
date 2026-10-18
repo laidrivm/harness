@@ -118,6 +118,6 @@ of its own, on `feat/agent-autonomy-flags-2`.
       *Modified Capabilities*.
       Verify: `grep -n "pinned by a test" openspec/changes/agent-autonomy-flags/proposal.md`
       prints the line.
-- [ ] 2.3 `bun bun/pre-pr.ts` reports the step's diff under the failing
+- [x] 2.3 `bun bun/pre-pr.ts` reports the step's diff under the failing
       threshold. The pull request body names *The permission policy is
       pinned by a test* as the requirement this step modifies.
