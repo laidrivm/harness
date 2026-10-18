@@ -15,6 +15,8 @@ before the code they cover (`core/testing.md`).
       - the line with a trailing space reads unattended [t3], replacing
         `question-gate-reason`'s attended case [9];
       - the line led by a tab reads unattended [t4];
+      - the line between non-breaking spaces reads unattended [t10], added
+        by the pre-PR `/zombies` run (design.md D1);
       - the stage prompt with every line after the first indented by two
         spaces reads unattended [t9];
       - the indented line with text after the sentence reads attended [t6];

@@ -156,6 +156,7 @@ describe("which session is unattended", () => {
 		["the line ending in a carriage return [t2]", `Carry step 2.\r\n${UNATTENDED}\r\nThe goal.`],
 		["the line with a trailing space [t3]", `Carry step 2.\n${UNATTENDED} \nThe goal.`],
 		["the line led by a tab [t4]", `Carry step 2.\n\t${UNATTENDED}`],
+		["the line between non-breaking spaces [t10]", `Carry step 2.\n ${UNATTENDED} `],
 		["the stage prompt as a terminal copy gives it [t9]", STAGE.replaceAll("\n", "\n  ")],
 	] as [string, Prompt][])("%s reads unattended", (_, prompt) => {
 		expect(decision(unmarked(prompt).out)?.behavior).toBe("deny");
