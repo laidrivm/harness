@@ -23,7 +23,7 @@ run's idea numbers.
       Verify: `bun test bun/skills-table.test.ts bun/autonomy.test.ts`
       passes. The autonomy test's repository case now runs on a tree where
       no skill carries the flag.
-- [ ] 1.3 Drop the clause "— the prefix is what `ship` files it under" from
+- [x] 1.3 Drop the clause "— the prefix is what `ship` files it under" from
       `core/skills/triage/SKILL.md`, leaving the rest of the sentence intact
       (design.md D3). Read the paragraph back afterwards.
 - [ ] 1.4 Check that no site outside the records still names the skill. The
