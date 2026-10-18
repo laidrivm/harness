@@ -32,7 +32,7 @@ before the code they cover (`core/testing.md`).
       Verify: both fail.
       (Req: harness-updates — Sync writes every value the policy check
       dictates)
-- [ ] 1.3 In `bun/settings.ts`, export `ATTRIBUTION` and name a settings
+- [x] 1.3 In `bun/settings.ts`, export `ATTRIBUTION` and name a settings
       file whose `attribution` does not `Bun.deepEquals` it (design.md D1).
       In `bun/sync-settings.ts`, write it whole. Set it in
       `.claude/settings.json`.
