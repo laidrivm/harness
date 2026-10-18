@@ -61,7 +61,10 @@ entry, a hook or a CI check leaves this file the way it would leave
   <noreply@anthropic.com>`, naming the model that wrote the commit as the
   session states it (`Claude Opus 5.5 (1M context)`), and a pull request body
   carries no attribution line at all — no session URL, no run id, no
-  generated-with footer, whatever the harness offers by default.
+  generated-with footer, whatever the harness offers by default. The tracked
+  `.claude/settings.json` sets `attribution` to `{"pr": "", "sessionUrl":
+  false}`, so Claude Code adds neither the footer nor the session link, and
+  leaves `commit` unset, so it still writes the trailer.
 - Never configure a push to `main` — `remote.<name>.push`, `push.default` set
   to `matching`, `upstream` or `tracking`, `remote.<name>.mirror` — the guard
   reads the command's own words and cannot see a destination that comes from
