@@ -12,7 +12,7 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
 
 ## 1. Removals, flags, guard and prose
 
-- [ ] 1.1 Remove the five skills (design.md D1 and D6):
+- [x] 1.1 Remove the five skills (design.md D1 and D6):
       - delete `core/skills/{checklist,code-review,first-five,pr-brief,review-order}/`
         and the links `.claude/skills/{checklist,first-five,review-order}`;
       - drop their five rows from the README's skill table, and drop the

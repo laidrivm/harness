@@ -32,9 +32,7 @@ Stop, with the reason, if:
 - **HEAD is `<base>`** — there is nothing to ship. Never push or merge from the base branch.
 - **HEAD is detached** — `rev-parse` prints `HEAD`, and there is no branch to push or open a PR from.
 - **The tree is dirty** — say which files. Ask whether to commit them or stash; don't decide.
-- **A gate is `BLOCKED` or `OPEN`** this session — same rule as `pr-brief` step 1. The last gate line per skill counts.
-
-If `pr-brief` hasn't run and there is no PR yet, run it first (or ask the user to) — step 3 needs its title and body.
+- **A gate is `BLOCKED` or `OPEN`** this session. Collect every gate line emitted in the session (`TRIAGE`, `WARM`, `ZOMBIES`, `CODERABBIT`, `CODERABBIT-LOCAL`, and any re-emitted by whoever acted on them), and take the last one for each skill — that is the one that counts. Name the gate and what would clear it.
 
 ### 2. Push
 
@@ -50,13 +48,13 @@ Record the pushed SHA: `git rev-parse HEAD`. Call it `<sha>` — every wait in t
 gh pr view --json number,url,state,isDraft
 ```
 
-- **No PR** → create it from the `pr-brief` output:
+- **No PR** → write the title and body to the project's pull request rules — `core/git-and-prs.md` wherever the harness is installed — from the branch's log, its diff and its plan or OpenSpec change, then create it:
   ```bash
   gh pr create --base <base> --title "<title>" --body-file - <<'PR_BODY_END'
   <body>
   PR_BODY_END
   ```
-  The quoted delimiter keeps the shell from expanding the backticks and `$` a markdown body carries; a body in double quotes runs them. The closing `PR_BODY_END` must start its line, without the indent this list gives it. Check the body first: a line of it that is exactly `PR_BODY_END` would end the heredoc there and run the rest as shell commands, so pick a delimiter no line of the body equals. If the brief isn't in context, stop and ask for it. Never invent a title and body here.
+  The quoted delimiter keeps the shell from expanding the backticks and `$` a markdown body carries; a body in double quotes runs them. The closing `PR_BODY_END` must start its line, without the indent this list gives it. Check the body first: a line of it that is exactly `PR_BODY_END` would end the heredoc there and run the rest as shell commands, so pick a delimiter no line of the body equals. If the project has no pull request rules, stop and ask how to write the body.
 - **PR exists** → the push in step 2 already updated it. Report the URL and move on.
 - **PR is closed or merged** (`state` other than `OPEN`) → stop with `SHIP gate: BLOCKED`. The push landed on a branch nothing will merge.
 - **PR is a draft** (`isDraft` true) → stop with `SHIP gate: BLOCKED`. CodeRabbit skips drafts, so step 4 would wait for a review that never comes; marking it ready is the user's call.
