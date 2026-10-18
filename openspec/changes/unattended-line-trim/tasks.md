@@ -22,7 +22,7 @@ before the code they cover (`core/testing.md`).
       - the indented line with text after the sentence reads attended [t6];
       - the indented line without its full stop reads attended [t7].
       Verify: `bun test bun/question-gate-unattended.test.ts` fails exactly
-      [t1], [t2], [t3], [t4] and [t9]; the rest pass.
+      [t1], [t2], [t3], [t4], [t9] and [t10]; the rest pass.
       (Req: agent-autonomy — A session is attended unless the prompt that
       started it says otherwise; agent-permissions — A question to the user on
       a board card needs no prompt)
