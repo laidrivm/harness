@@ -87,11 +87,15 @@ moves it*.
       `orchestrator/secrets/<file>` is ignored, per `git check-ignore` [37].
       The entrypoint writes exactly one `authorized_keys` line, carrying
       `restrict,command=` and `pass.sh`, and exits non-zero when the public
-      key file is missing [38]. Cite each scenario
+      key file is missing [38]. The image creates both users `runner` and
+      `agent`, `/run/secrets` is owned by `runner` with mode 0400, and the
+      one rule that lets `runner` start a command as `agent` names `claude`
+      alone [39]. Cite each scenario
 - [ ] 2.2 Add `orchestrator/runner/Dockerfile` and
       `orchestrator/runner/entrypoint.sh`. The image holds git, `gh`, bun
       1.4.2, `claude`, `openspec`, `coderabbit`, `flock` and `sshd`, and the
-      user `agent`. `gh auth setup-git` is run in the image. Copy
+      users `runner` and `agent` as `design.md` fixes. `gh auth setup-git` is
+      run in the image. Copy
       `orchestrator/pass.sh` to `/opt/orchestrator/`. Each pin is an exact
       version or a digest and carries the note `design.md` fixes. Verify with
       2.1, and with `docker build` where Docker is available. Otherwise record

@@ -63,19 +63,31 @@ Alternative: `host/`. Rejected, because the router is not host configuration.
 ### The pass runs in a runner container, reached over SSH
 
 The card's constraint, *Sandbox per agent*, says the App's private key never
-enters the agent's sandbox, and n8n's credential store is where that key will
-sit once the App lands. An agent session inside n8n's container, as the explore
-sketched with Execute Command in a custom n8n image, would read that store
-(same uid, `/home/node/.n8n`). It would also inherit n8n's environment,
-`N8N_ENCRYPTION_KEY` included. So:
+enters the agent's sandbox. That key is not n8n's: under `github-app-identity`
+the runner itself reads it from a file and mints the push token after the
+session ends, and the user decided (ghapp card, 2026-10-18) that it lives on
+the VPS in a file only the runner's Unix user reads, with sessions run as a
+different user. n8n's credential store holds only the SSH key that reaches
+the runner. An agent session inside n8n's container, as the explore sketched
+with Execute Command in a custom n8n image, would still read that store (same
+uid, `/home/node/.n8n`) and inherit n8n's environment, `N8N_ENCRYPTION_KEY`
+included. So:
 
 - n8n runs the stock image. Execute Command stays disabled, as n8n 2.x ships
   it.
 - A `runner` service, built from `runner/Dockerfile`, holds git, `gh`, bun,
-  `claude`, `openspec`, `coderabbit`, `flock` and `sshd`. It holds the user
-  `agent`, whose home is one persistent volume: `~/.claude`, `~/.claude.json`,
-  `~/.local/state/harness/gates.jsonl` and the clones. `claude -r` needs only
-  that volume (explore: since v2.1.223 it searches every project).
+  `claude`, `openspec`, `coderabbit`, `flock` and `sshd`. It holds two users.
+  `runner` runs `pass.sh` and `board-loop.ts` and alone reads
+  `/run/secrets` (mode 0400, owned by `runner`). `agent` runs the pick and
+  stage sessions: `board-loop.ts` starts `claude` as `agent` through one fixed
+  `setpriv` (or `sudo -u agent` with a single-command rule) with the
+  allowlisted environment `github-app-identity` builds, so no session can
+  read a secret file or inherit a token beyond what that allowlist passes.
+  `agent`'s home is one persistent volume: `~/.claude`, `~/.claude.json`,
+  `~/.local/state/harness/gates.jsonl` and the clones, shared with `runner`
+  through a common group so the runner can push what a session committed and
+  read its pre-PR record. `claude -r` needs only that volume (explore: since
+  v2.1.223 it searches every project).
 - n8n's SSH node connects to `runner` on the compose network. No port is
   published. The key's `authorized_keys` line is
   `restrict,command="/opt/orchestrator/pass.sh \"$SSH_ORIGINAL_COMMAND\""`,
@@ -150,7 +162,9 @@ interpolation or an `environment:` literal. An SSH session does not inherit
 the container's environment anyway, so `pass.sh` reads the files itself. `gh`
 and git's credential helper (`gh auth setup-git`, run in the image) take
 `GH_TOKEN`. The n8n SSH key's private half lives only in n8n's credential
-store, entered by the user.
+store, entered by the user. Once `github-app-identity`'s second step lands,
+the App's private key joins them as one more secret file read by `runner`
+alone, named by `HARNESS_GITHUB_APP_KEY`; it never enters n8n.
 
 ### Workflows go through `export:workflow` / `import:workflow`
 
