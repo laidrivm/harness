@@ -8,6 +8,7 @@ cases first and records that they fail against the tree as it stands.
 ## 1. The runner pushes and opens the pull request
 
 Closes `stage-goal` §*The check before the push leaves out the pull request*,
+`agent-autonomy` §*A session whose launcher pushes names the pull request*,
 and `board-loop` §*The runner pushes the step and opens its pull request*,
 §*A session's environment is an allowlist* and §*A step branch a session left
 is continued*.
@@ -56,10 +57,14 @@ is continued*.
       `board-loop.ts` header and its "never deletes, resets or pushes" comment,
       `README.md`'s runner paragraph, `core/feature-workflow.md`'s *Unattended
       stages* (the board loop's variant beside the hand-launched form, which
-      stays as it is), and `core/autonomy.md`'s *Declared* bullet (under the
-      board loop the session names the pull request and the runner opens it);
-      verify with `git grep -n "the push and the pull request"` naming only
-      the hand-launched form
+      stays as it is), and each place that has an unattended session push or
+      open the pull request — `core/autonomy.md`'s *Declared* bullet and its
+      `agent` class, `core/feature-workflow.md`'s Stage 3 marker,
+      `core/review-toolkit.md`'s third-pass marker — saying that under the
+      board loop the session names the pull request and the runner opens it;
+      verify with `git grep -n -e "the push and the pull request" -e "open the
+      pull request" -e "opens the pull request" -- core README.md` that each
+      hit either names the board loop's case or is the hand-launched form
 
 ## 2. The runner pushes as the GitHub App
 
