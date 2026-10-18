@@ -12,8 +12,10 @@ findings that hold against the current code, and say which you skip and why.
 The report alone is never the deliverable — a turn ending on a gate line that
 reads `OPEN` over unapplied fixes is a turn abandoned halfway. Close it, or
 write `BLOCKED` and name what only the user can settle. `OPEN` over a proposed
-Major or Critical dismissal is the exception: that one ends the turn by
-design, because settling it is the user's.
+Major or Critical dismissal is one exception: that one ends the turn by
+design, because settling it is the user's. `/coderabbit`'s `OPEN` over a head
+commit the bot has not reviewed yet is the other: there is nothing to act on
+until the review lands, and the next run picks it up.
 
 ## The skills
 
