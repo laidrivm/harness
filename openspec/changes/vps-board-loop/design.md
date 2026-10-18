@@ -77,8 +77,13 @@ included. So:
   it.
 - A `runner` service, built from `runner/Dockerfile`, holds git, `gh`, bun,
   `claude`, `openspec`, `coderabbit`, `flock` and `sshd`. It holds two users.
-  `runner` runs `pass.sh` and `board-loop.ts` and alone reads
-  `/run/secrets` (mode 0400, owned by `runner`). `agent` runs the pick and
+  `runner` runs `pass.sh` and `board-loop.ts` and alone reads the secret
+  files. Compose mounts file-backed secrets as bind mounts and applies no
+  `uid`, `gid` or `mode` to them, so the files keep their host ownership: the
+  image gives `runner` a fixed numeric uid, and the host README has the user
+  make each file under `orchestrator/secrets` owned by that uid with mode
+  0400 and the directory 0500. `/run/secrets` stays traversable; what keeps
+  `agent` out is the files' owner and mode. `agent` runs the pick and
   stage sessions: `board-loop.ts` starts `claude` as `agent` through one fixed
   `setpriv` (or `sudo -u agent` with a single-command rule) with the
   allowlisted environment `github-app-identity` builds, so no session can
@@ -93,6 +98,11 @@ included. So:
   `restrict,command="/opt/orchestrator/pass.sh \"$SSH_ORIGINAL_COMMAND\""`,
   written by the entrypoint from a secret file. n8n can name a clone and
   nothing else.
+- The SSH node returns the remote command's exit status as data (`code`) and
+  does not fail on a non-zero one. The workflow therefore follows it with an
+  IF node on `code`, whose non-zero branch ends in a Stop and Error node, so
+  a failed or paused pass reads as failed in the execution list. The host
+  README records this behaviour at the first import.
 
 Execute Command in a custom n8n image is the alternative. Rejected for the
 reasons above. Windmill was compared on the card from the docs (scripts in
@@ -122,16 +132,20 @@ which case the choice goes back to the user.
    One lock per repository leaves concurrency across repositories, which is
    what "one clone per slot" means until slot 2 gives the runner a claim it
    can read.
-4. Read the secret files `claude_oauth_token` and `gh_token` from
-   `/run/secrets`. If either is missing or empty, that is a failure: go to
-   step 6 with status 1.
+4. Check that the secret files `claude_oauth_token` and `gh_token` exist
+   under `/run/secrets` and hold at least one non-whitespace character,
+   without loading either value into the wrapper's variables. A file that is
+   missing, empty or whitespace-only is a failure: go to step 6 with
+   status 1.
 5. `trap '' HUP`. Then, in the clone, run
    `env -i PATH=… HOME=… LANG=C.UTF-8 DISABLE_AUTOUPDATER=1 [CLAUDECODE=…] bash -c '…'`.
-   The child shell reads the two secret files, exports
+   Only the child shell reads the two secret files; it exports
    `CLAUDE_CODE_OAUTH_TOKEN` and `GH_TOKEN`, and `exec`s
    `bun node_modules/harness/bun/board-loop.ts`. No token value appears in a
    command's arguments, where `ps` would show it, and the script never turns
-   on `set -x`. The wrapper tees the output so its last line is kept. Ignoring `HUP` keeps an n8n
+   on `set -x`. The wrapper tees the whole output to
+   `~/orchestrator/passes/<UTC time>-<clone>.log` and keeps its last line.
+   Ignoring `HUP` keeps an n8n
    restart from killing a stage session halfway. `CLAUDECODE` is passed on
    only when set, so the runner's one refusal still decides. A second copy of
    that check in the wrapper would drift (`rules.md` Code).
@@ -141,7 +155,12 @@ which case the choice goes back to the user.
    signal), so the wrapper fails closed on every non-zero status.
 
 The pass's own record in the gate ledger is unchanged. The wrapper writes no
-ledger line: its outcomes are the n8n execution and the stop file.
+ledger line. A pass's durable result is on the runner's volume, whatever
+happens to the SSH channel: the ledger's `loop` record (outcome, for every
+pass), the pass log (its whole output) and, for a non-zero status, the stop
+file. The n8n execution is a view of the same pass that an n8n restart can
+cut short; nothing reads the outcome from it, so no reconnecting retrieval
+step is needed.
 
 ### Notion is the hosted MCP server
 

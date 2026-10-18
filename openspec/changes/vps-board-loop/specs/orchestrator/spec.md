@@ -109,7 +109,8 @@ under the clones directory.
 
 #### Scenario: A secret file missing
 
-- **WHEN** a secret file the wrapper reads is absent or empty
+- **WHEN** a secret file the wrapper reads is absent, empty or holds only
+  whitespace
 - **THEN** the wrapper starts no pass and exits non-zero, naming the file, and
   writes the stop file
 

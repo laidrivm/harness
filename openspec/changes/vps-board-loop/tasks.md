@@ -38,7 +38,9 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       process's arguments, per `ps`, hold either token's value [40]. `CLAUDECODE` set, empty and unset
       [17]. The pass's output reaches the wrapper's stdout [20]. `SIGHUP` to
       the wrapper mid-pass, where the pass completes and the stop file shows
-      its status [23]. Absent state and lock directories are created [25]. A
+      its status [23]. Every pass, exit 0 included, leaves its whole output in
+      `~/orchestrator/passes/<UTC time>-<clone>.log` [42]. Absent state, lock
+      and pass-log directories are created [25]. A
       happy tick ends on the runner's `idle` line and exits 0 [26]. Cite each
       scenario with `// spec: orchestrator/<slug>`. Skip the file when
       `flock` is not on `PATH`, with the reason in the skip's title
@@ -123,10 +125,13 @@ moves it*.
       `orchestrator/secrets/<file>` is ignored, per `git check-ignore` [37].
       The entrypoint writes exactly one `authorized_keys` line, carrying
       `restrict,command=` and `pass.sh`, and exits non-zero when the public
-      key file is missing [38]. The image creates both users `runner` and
-      `agent`, `/run/secrets` is owned by `runner` with mode 0400, and the
-      one rule that lets `runner` start a command as `agent` names `claude`
-      alone [41]. Cite each scenario
+      key file is missing [38]. The image creates both users, `runner` with
+      the fixed numeric uid the host README names, and the one rule that lets
+      `runner` start a command as `agent` names `claude` alone; the README's
+      provisioning step makes each secret file owned by that uid, mode 0400,
+      and its directory 0500 [41]. The workflow's SSH node is followed by an
+      IF node on `code` whose non-zero branch ends in Stop and Error [43].
+      Cite each scenario
 - [ ] 3.2 Add `orchestrator/runner/Dockerfile` and
       `orchestrator/runner/entrypoint.sh`. The image holds git, `gh`, bun
       1.4.2, `claude`, `openspec`, `coderabbit`, `flock` and `sshd`, and the
@@ -143,8 +148,9 @@ moves it*.
       `orchestrator/secrets` to `.gitignore` with no trailing slash. Verify
       with 3.1 and `docker compose config` where Docker is available
 - [ ] 3.4 Write the hourly workflow by hand to the shape
-      `n8n export:workflow --backup` produces: a Schedule Trigger and an SSH
-      node sending the clone name `harness`, with the keys `design.md`
+      `n8n export:workflow --backup` produces: a Schedule Trigger, an SSH
+      node sending the clone name `harness`, and the IF node on `code` with
+      its Stop and Error branch, with the keys `design.md`
       removes left out. Save it as `orchestrator/workflows/<id>.json`. Verify
       with 3.1
 - [ ] 3.5 Write `orchestrator/README.md`, opening with a level-1 heading. It
