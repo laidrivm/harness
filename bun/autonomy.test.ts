@@ -183,6 +183,34 @@ describe("flagged skills", () => {
 		expect(check(dir)).toEqual([UNMARKED]);
 	});
 
+	test("a user marker in another skill does not count", () => {
+		const dir = tree({
+			"skills/x/SKILL.md": skill(FLAG, "Wait."),
+			"skills/y/SKILL.md": skill(FLAG, "Merge it (unattended: user — x)."),
+		});
+		expect(check(dir)).toEqual([UNMARKED]);
+	});
+
+	test("a flag with an empty value is a flag", () => {
+		const dir = tree({ "skills/x/SKILL.md": skill("disable-model-invocation:", "Wait.") });
+		expect(check(dir)).toEqual([UNMARKED]);
+	});
+
+	test("frontmatter with CRLF line endings is read", () => {
+		const dir = tree({ "skills/x/SKILL.md": skill(FLAG, "Wait.").replace(/\n/g, "\r\n") });
+		expect(check(dir)).toEqual([UNMARKED]);
+	});
+
+	test("a thematic break later in the body is not frontmatter", () => {
+		const body = `# X\n\n---\n${FLAG}\n---\n\nWait.\n`;
+		expect(check(tree({ "skills/x/SKILL.md": body }))).toEqual([]);
+	});
+
+	test("a SKILL.md below a skill's directory is not read for the flag", () => {
+		const dir = tree({ "skills/x/sub/SKILL.md": skill(FLAG, "Wait.") });
+		expect(check(dir)).toEqual([]);
+	});
+
 	test("frontmatter that is not YAML fails, naming the file", () => {
 		const dir = tree({ "skills/x/SKILL.md": skill("tools: [Read", "Wait.") });
 		expect(check(dir)).toEqual(["core/skills/x/SKILL.md: frontmatter is not YAML"]);
