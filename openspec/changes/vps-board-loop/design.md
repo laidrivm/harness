@@ -112,8 +112,12 @@ host shows that n8n's SSH node cannot carry a pass (see Risks).
    `/run/secrets`. If either is missing or empty, that is a failure: go to
    step 6 with status 1.
 5. `trap '' HUP`. Then, in the clone, run
-   `env -i PATH=… HOME=… LANG=C.UTF-8 CLAUDE_CODE_OAUTH_TOKEN=… GH_TOKEN=… DISABLE_AUTOUPDATER=1 [CLAUDECODE=…] bun node_modules/harness/bun/board-loop.ts`,
-   and tee its output so its last line is kept. Ignoring `HUP` keeps an n8n
+   `env -i PATH=… HOME=… LANG=C.UTF-8 DISABLE_AUTOUPDATER=1 [CLAUDECODE=…] bash -c '…'`.
+   The child shell reads the two secret files, exports
+   `CLAUDE_CODE_OAUTH_TOKEN` and `GH_TOKEN`, and `exec`s
+   `bun node_modules/harness/bun/board-loop.ts`. No token value appears in a
+   command's arguments, where `ps` would show it, and the script never turns
+   on `set -x`. The wrapper tees the output so its last line is kept. Ignoring `HUP` keeps an n8n
    restart from killing a stage session halfway. `CLAUDECODE` is passed on
    only when set, so the runner's one refusal still decides. A second copy of
    that check in the wrapper would drift (`rules.md` Code).

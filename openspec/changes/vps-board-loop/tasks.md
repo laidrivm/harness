@@ -32,7 +32,8 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       missing, empty or whitespace-only writes the stop file, names the file
       and never starts the runner [13, 22]. `bun` missing from `PATH` writes the
       stop file [21]. The pass's environment holds only the allowlisted names,
-      with a sentinel variable absent [16]. `CLAUDECODE` set, empty and unset
+      with a sentinel variable absent [16]. While the fake runner runs, no
+      process's arguments, per `ps`, hold either token's value [40]. `CLAUDECODE` set, empty and unset
       [17]. The pass's output reaches the wrapper's stdout [20]. `SIGHUP` to
       the wrapper mid-pass, where the pass completes and the stop file shows
       its status [23]. Absent state and lock directories are created [25]. A
