@@ -11,6 +11,7 @@ import { dirname, join } from "node:path";
 import { HOOKS, MARK } from "./bootstrap.ts";
 import {
 	ASK,
+	ATTRIBUTION,
 	DENY,
 	EDIT_ASK,
 	EDIT_DENY,
@@ -22,6 +23,7 @@ type Group = { matcher?: string; hooks?: { command?: unknown }[] };
 type Settings = {
 	permissions?: { deny?: string[]; ask?: string[] };
 	hooks?: Record<string, Group[]>;
+	attribution?: unknown;
 };
 
 /**
@@ -102,6 +104,7 @@ function settingsText(text: string | undefined): string {
 		MCP_ASK,
 	);
 	config.permissions = permissions;
+	config.attribution = ATTRIBUTION;
 	const indent = text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";
 	return `${JSON.stringify(config, null, indent)}\n`;
 }

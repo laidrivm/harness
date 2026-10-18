@@ -2,7 +2,8 @@
  * The agent permission policy, read from the consumer's tracked
  * `.claude/settings.json` and `bunfig.toml`: what is refused, what prompts,
  * what is pre-approved, the hook that catches what a permission pattern
- * cannot express, and every other hook `bootstrap.ts` lists. The same for every consumer — strictness is not a value a
+ * cannot express, every other hook `bootstrap.ts` lists, and the attribution
+ * Claude Code adds. The same for every consumer — strictness is not a value a
  * project chooses.
  *
  * The deny and ask lists are compared whole. An exact list pins every word
@@ -61,6 +62,13 @@ export const ASK = MANIFEST_WRITES.map((c) => `Bash(${c} *)`);
 export const EDIT_DENY = "Edit(.npmrc)";
 export const EDIT_ASK = "Edit(bunfig.toml)";
 
+/**
+ * No pull request line and no session link; `commit` left unset keeps Claude
+ * Code's default `Co-Authored-By` trailer, the one `git-and-prs.md` asks for.
+ * Compared and synced whole, so a consumer cannot set `commit`.
+ */
+export const ATTRIBUTION = { pr: "", sessionUrl: false };
+
 /** The `[install]` section the release-age and exact-version gates rest on. */
 export const INSTALL = {
 	exact: true,
@@ -93,6 +101,7 @@ type Settings = {
 	permissions?: { deny?: string[]; ask?: string[]; allow?: string[] };
 	hooks?: Record<string, { matcher?: string; hooks?: Hook[] }[]>;
 	disableAllHooks?: unknown;
+	attribution?: unknown;
 };
 
 // Built from a char code rather than written into a regex literal, where the
@@ -232,6 +241,9 @@ export function settings(root: string): string[] {
 				say(`the ${matcher} hook is not the ${name} — ${fix}`);
 		}
 	}
+
+	if (!Bun.deepEquals(parsed.attribution, ATTRIBUTION))
+		say(`attribution is not ${JSON.stringify(ATTRIBUTION)} — ${fix}`);
 
 	if (!deny.includes(EDIT_DENY)) say(`${EDIT_DENY} is not denied`);
 	if (!ask.includes(EDIT_ASK)) say(`${EDIT_ASK} is not asked`);

@@ -90,6 +90,10 @@
 			"WebSearch"
 		]
 	},
+	"attribution": {
+		"pr": "",
+		"sessionUrl": false
+	},
 	"hooks": {
 		"PreToolUse": [
 			{
