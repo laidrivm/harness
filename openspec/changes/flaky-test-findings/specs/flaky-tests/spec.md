@@ -11,7 +11,8 @@ is refused before it runs or is committed.
 ### Requirement: A run that passes after an identical failed run is named as flaky
 
 When a Bash call's output shows a failing bun test run, and the same command
-later shows a passing run in the same session on the same tree, the watch SHALL
+later shows a passing run in the same session, from the same working directory,
+on the same tree, the watch SHALL
 tell the agent, through `additionalContext`, that the run is flaky rather than
 green, naming every test the failing runs named. The same tree means the same
 `HEAD`, the same uncommitted changes to tracked files, and the same untracked
@@ -41,6 +42,12 @@ files that are not ignored.
 - **WHEN** `bun test` fails and `bun test bun/a.test.ts` then passes
 - **THEN** the watch says nothing, because a narrower run is no evidence about
   the tests it did not run
+
+#### Scenario: The same command from another directory
+
+- **WHEN** `bun test` fails in one directory and the same command then passes
+  in another directory of the same tree
+- **THEN** the watch says nothing
 
 #### Scenario: A pass with no failure before it
 
@@ -181,13 +188,12 @@ installed, each registration SHALL exit 0 and decide nothing.
   installed yet
 - **THEN** each registration exits 0 with no output
 
-### Requirement: A test run is never retried by configuration
+### Requirement: The guard refuses a test run with a retry
 
 The command guard SHALL refuse a `bun test` invocation that carries
 `--retry`, in any spelling, and a `bun run <script>` invocation that forwards
-one. It SHALL NOT refuse `--rerun-each`. The consumer check SHALL fail a
-`retry` key under `[test]` in any tracked `bunfig.toml`, and a `retry` option
-in the code of any tracked source that imports `bun:test`.
+one. It SHALL NOT refuse `--rerun-each`, which finds flaky tests rather than
+hiding them.
 
 #### Scenario: A retry flag
 
@@ -204,6 +210,16 @@ in the code of any tracked source that imports `bun:test`.
 
 - **WHEN** the agent attempts `bun test --rerun-each=20`
 - **THEN** the guard allows the call
+
+### Requirement: The consumer check refuses a configured retry
+
+`harness:check` SHALL fail a `retry` key under `[test]` in any tracked
+`bunfig.toml`; a `retry` option passed to a test, `describe` or hook call in
+any tracked source that imports `bun:test`; and a `bun test` or `bun run`
+invocation carrying `--retry` in a command the tree holds — a tracked
+`package.json`'s `scripts` or `simple-git-hooks` values, a tracked workflow's
+`run:` step, a tracked file under `.githooks/` — read as the guard reads a
+command line.
 
 #### Scenario: A retry in bunfig
 
@@ -227,4 +243,27 @@ in the code of any tracked source that imports `bun:test`.
 
 - **WHEN** a tracked source that does not import `bun:test` carries
   `retry: true`, as an application's client options do
+- **THEN** `harness:check` reports nothing for it
+
+#### Scenario: A retry key in a test's fixture
+
+- **WHEN** a file importing `bun:test` builds `const policy = { retry: 3 }`
+  and hands it to the code under test, never to a test call
+- **THEN** `harness:check` reports nothing for it
+
+#### Scenario: A retry inside a script the agent runs
+
+- **WHEN** a tracked `package.json` defines `"test": "bun test --retry=2"`,
+  and the agent runs `bun run test`, which the guard allows
+- **THEN** `harness:check` fails, naming the file and the script
+
+#### Scenario: A retry in a workflow or a hook
+
+- **WHEN** a tracked workflow step runs `bun test --retry=1`, or
+  `.githooks/pre-push` does
+- **THEN** `harness:check` fails, naming the file
+
+#### Scenario: Running each test many times in a script
+
+- **WHEN** a tracked `package.json` script runs `bun test --rerun-each=5`
 - **THEN** `harness:check` reports nothing for it

@@ -40,9 +40,13 @@ The harness holds nothing against that today:
 - **The command guard** refuses `bun test --retry` in every spelling, and a
   `--retry` passed through `bun run <script>`. `--rerun-each`, which finds
   flakes rather than hiding them, stays allowed.
-- **`harness:check`** refuses `retry` under `[test]` in any tracked
-  `bunfig.toml`, and a `retry` option in any tracked source that imports
-  `bun:test`.
+- **`harness:check`** refuses three forms of a retry:
+  - `retry` under `[test]` in any tracked `bunfig.toml`;
+  - a `retry` option passed to a test call in any tracked source that
+    imports `bun:test`;
+  - a `--retry` in a command the tree holds, such as a `package.json` script,
+    a workflow step or a git hook. The guard sees only `bun run test`, so a
+    retry inside the script would pass it.
 - **`gh run rerun`, `gh run cancel` and `gh run delete`** move to `ask`,
   including the forms with a flag before the subcommand. They join the `Bash(`
   ask list that the policy check compares and the sync writes, so every
