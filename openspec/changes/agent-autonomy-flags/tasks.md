@@ -40,7 +40,7 @@ If it fails instead, split the step at 1.1: the removals become group 1, and
       - frontmatter that is not YAML is reported, naming the file [8].
       Verify: `bun test bun/autonomy.test.ts` fails on cases 3, 5, 7 and 8,
       and passes the rest.
-- [ ] 1.3 Extend `check()` in `bun/autonomy.ts` as design.md D5 sets out.
+- [x] 1.3 Extend `check()` in `bun/autonomy.ts` as design.md D5 sets out.
       Keep its "nothing is exempt" walk, and update its header comment.
       Verify: the cases from 1.2 pass. The repository case fails until 1.4,
       naming `coderabbit`, `session-wrapup` and `ship`.
