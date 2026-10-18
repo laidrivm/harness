@@ -47,10 +47,11 @@ nobody at a terminal. Webhooks and every later flow build on that host.
 - The GitHub App. Its sibling proposal `github-app-identity` comes after this
   one. Until the App lands, the loop pushes as the user, as it does from the
   laptop.
-- Windmill. It was considered and not taken, unless the host shows n8n cannot
-  run a pass (design.md).
-- Anything an agent would do on the VPS. No agent logs in there. The host's
-  address appears in no file.
+- Building a Windmill host. Task group 2 measures Windmill against n8n on one
+  pass and then removes both; a Windmill host would follow only if the user
+  chooses it from that table (design.md).
+- Anything an agent would do on the VPS beyond that spike. The host's address
+  appears in no file.
 
 ## User acts
 
