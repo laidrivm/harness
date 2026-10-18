@@ -654,12 +654,21 @@ Where this project restricts who may invoke a vendored skill, the restriction
 SHALL be carried by that skill's `disable-model-invocation` frontmatter.
 `CLAUDE.md` MUST NOT be the only thing preventing an invocation, and MUST NOT
 restate an instruction the skill's own `description` already carries.
+A skill under `core/skills/` SHALL carry the flag only when one of its steps
+is marked `(unattended: user`. The marker check SHALL fail on a skill that
+carries the flag without such a step.
 
 #### Scenario: A skill reserved for the user
 
-- **WHEN** `CLAUDE.md` reserves `/coderabbit` for the user
-- **THEN** `coderabbit/SKILL.md` carries `disable-model-invocation: true`
-- **AND** `CLAUDE.md` states the reason rather than the instruction
+- **WHEN** a skill's run merges a pull request, as `/ship`'s does, and that
+  step is marked `(unattended: user`
+- **THEN** `ship/SKILL.md` carries `disable-model-invocation: true`
+
+#### Scenario: A flag with no step that stays with the user
+
+- **WHEN** `coderabbit/SKILL.md` carries `disable-model-invocation: true` and
+  none of its steps is marked `(unattended: user`
+- **THEN** `bun test` fails, naming the file
 
 #### Scenario: A skill the agent is meant to run itself
 
@@ -680,9 +689,9 @@ expressing this spec's `deny`, `ask` and hook requirements, so a later
 hand-edit cannot drop the boundary silently. The check MUST read the tracked
 `.claude/settings.json` and never `.claude/settings.local.json`, which is
 gitignored and cannot be relied on. The requirement *Who may invoke a skill is
-enforced, not narrated* is outside what this test covers: `.claude/skills/*`
-are symlinks into a separate repository and are untracked here, so an assertion
-on a skill's frontmatter would pass for the author and fail in a clone.
+enforced, not narrated* is outside what this test covers: the skills sit in
+`core/skills/`, their `.claude/skills/*` links are tracked, and the marker
+check in `bun/autonomy.ts` reads each skill's frontmatter.
 
 The hook is pinned on two levels: that it is registered in the settings file,
 and that the script it points at behaves. Registration is a settings
@@ -734,9 +743,10 @@ repository would change its verdict with the branch.
 
 #### Scenario: A skill's frontmatter changes
 
-- **WHEN** `disable-model-invocation` is removed from a vendored skill
-- **THEN** no test in this repository fails, and the spec says so rather than
-  promising a check it cannot carry
+- **WHEN** `disable-model-invocation: true` is added to a skill under
+  `core/skills/` that marks no step `(unattended: user`
+- **THEN** the settings test still passes, and `bun test` fails on the marker
+  check, naming the file
 
 #### Scenario: A GitHub write entry is dropped
 
