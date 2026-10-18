@@ -57,8 +57,9 @@ nobody at a terminal. Webhooks and every later flow build on that host.
 Only the user does these, by hand, on the VPS or in a dashboard. The host
 README lists them in order:
 
-1. Create the Cloudflare tunnel for `hooks.laidrivm.com` and the auth in front
-   of the n8n UI, then put the tunnel token in the host's secrets directory.
+1. Create the Cloudflare tunnel for `hooks.laidrivm.com` and a Cloudflare
+   Access application on it (email, one-time code) in front of the n8n UI,
+   then put the tunnel token in the host's secrets directory.
 2. Run `claude setup-token` on the laptop, and save the token in the host's
    secrets directory. Save a fine-grained GitHub token there too, scoped to the
    repositories the loop pushes to.

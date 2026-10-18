@@ -205,8 +205,12 @@ nothing else".
 
 The n8n UI sits on `hooks.laidrivm.com` through a Cloudflare tunnel
 (`cloudflared` in compose). Its execution list shows each pass's output and
-each paused tick. The auth in front of it is a user act and is open (below).
-Webhook paths, and how they pass that auth, belong to the webhook step.
+each paused tick. In front of it sits Cloudflare Access on the hostname (the
+user's email, one-time code), and behind that n8n's own owner login — the
+user's decision of 2026-10-18, since n8n has had CVEs that bypassed its own
+checks. Access is a dashboard setting, a user act the host README names.
+Webhook paths, and the Access bypass they will need for `/webhook/*`, belong
+to the webhook step.
 
 ## Risks / Trade-offs
 
@@ -241,7 +245,5 @@ anywhere.
 
 ## Open Questions
 
-- The auth in front of the n8n UI: Cloudflare Access on the hostname (the
-  user's email, one-time code) in front of n8n's own owner login, or n8n's
-  login alone. Either way the tasks do not change: Access is a dashboard
-  setting, and the host README names the user's choice.
+None. The auth in front of the n8n UI was settled by the user on
+2026-10-18 (*Phone access* above).
