@@ -38,6 +38,6 @@ before the code they cover (`core/testing.md`).
       `.claude/settings.json`.
       Verify: `bun test` passes whole, the existing second-sync case [z12]
       included.
-- [ ] 1.4 Say in `core/git-and-prs.md` which setting removes the footer, and
+- [x] 1.4 Say in `core/git-and-prs.md` which setting removes the footer, and
       that a commit keeps its trailer.
       Verify: `bun test` passes.
