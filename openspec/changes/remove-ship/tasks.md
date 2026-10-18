@@ -9,7 +9,7 @@ run's idea numbers.
 
 ## 1. Remove the skill and the prose that names it
 
-- [ ] 1.1 Write `bun/skills-table.test.ts` over the real tree. It reads the
+- [x] 1.1 Write `bun/skills-table.test.ts` over the real tree. It reads the
       backticked first cell of each row in the README's `## Skills` table,
       and the skills from `git ls-files` of `core/skills/*/SKILL.md`, since
       only tracked files count. It checks two things:
