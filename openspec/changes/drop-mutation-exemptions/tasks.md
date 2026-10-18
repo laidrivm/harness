@@ -40,10 +40,18 @@
 
 ## 3. Prove the gate still holds
 
-- [ ] 3.1 `bun test` — the surviving mutation-floor cases, `scan.test.ts` and
-      `module-classes.test.ts` all pass, and the count of files drops by one
-- [ ] 3.2 `bun run typecheck` and `bun run lint` clean, no unused import left
-      behind by the deletions
+- [ ] 3.1 `bun test` — `bun/mutation-floor.test.ts`,
+      `bun/mutation-floor-cli.test.ts` and `bun/scan.test.ts` all pass, and
+      `bun/mutation-floor-exemptions.test.ts` is no longer among the files run
+- [ ] 3.2 No import left unread by the deletions: every name imported by
+      `bun/mutation-floor.ts`, `bun/mutation-floor-cli.test.ts` and
+      `bun/mutation-floor.fixture.ts` is used in its file. The harness defines
+      no `typecheck` or `lint` script, so this is read, not run
+- 3.2a `src/app/module-classes.test.ts` (in d2ass), and d2ass's
+  `bun run typecheck` and `bun run lint`, are d2ass work, run in the pull
+  request that bumps d2ass's pin past this change — the `D2ASS` card *Drop the
+  exemption bullets from `docs/testing.md` when the pin passes the validator's
+  removal* carries them
 - [ ] 3.3 `bun/spec-coverage-floor.test.ts` passes with `FLOOR`
       unchanged at whatever `bun/spec-coverage.ts` reads when this runs —
       the four scenarios left the specs rather than the citations, so the
@@ -51,8 +59,9 @@
       Not a figure: the floor was 385 when this was written and 402 once
       `notion-task-board` synced, and naming one would fail this step for the
       wrong reason
-- [ ] 3.4 Run the real gate end to end: `rm -rf reports/mutation`,
-      `bunx --no-install stryker run` (in d2ass), `bun bun/mutation-floor.ts` —
-      it exits 0 against `FLOOR = 66`
+- 3.4 The real gate end to end — `rm -rf reports/mutation`,
+  `bunx --no-install stryker run` (in d2ass), `bun bun/mutation-floor.ts`
+  exiting 0 against `FLOOR = 66` — is d2ass work on the same `D2ASS` card as
+  3.2a, run in the same pull request: Stryker runs only there
 - [ ] 3.5 `bash bun/diff-budget.sh origin/main` reports the branch's size,
       and the PR body carries an `oversize:` line only if it must
