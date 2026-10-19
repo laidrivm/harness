@@ -52,7 +52,7 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       `PASS_CLONES`. Its header says why it hands
       `CLAUDECODE` on rather than checking it. Verify with 1.1 on Linux, in CI
       (`ubuntu-latest`)
-- [ ] 1.3 In `bun/board-loop-clone.test.ts`, add the case with standard input
+- [x] 1.3 In `bun/board-loop-clone.test.ts`, add the case with standard input
       from `/dev/null` and no `TERM`: the pass ends as the fixture's default
       pass does, with the same line and record. Cite
       `board-loop/started-with-no-terminal`. Cite

@@ -210,7 +210,7 @@ export function run(
 	dir: string,
 	args: string[] = [],
 	s: Stubs = {},
-	opts: { env?: Record<string, string>; state?: string; entry?: string; claudeJson?: string | null } = {},
+	opts: { env?: Record<string, string>; state?: string; entry?: string; claudeJson?: string | null; stdin?: number } = {},
 ) {
 	const log = join(emptyDir("board-loop-log-"), "calls");
 	writeFileSync(log, "");
@@ -220,6 +220,7 @@ export function run(
 	if (claudeJson !== null) writeFileSync(join(home, ".claude.json"), claudeJson);
 	const call = Bun.spawnSync([process.execPath, opts.entry ?? runner, ...args], {
 		cwd: dir,
+		stdin: opts.stdin,
 		env: {
 			PATH: bin(log, s),
 			HOME: home,
