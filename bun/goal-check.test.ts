@@ -1,12 +1,15 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, emptyDir, repo } from "./diff-budget.fixture.ts";
+import { cleanup, emptyDir, git, repo } from "./diff-budget.fixture.ts";
 import {
 	archived,
 	CHANGE,
 	head,
 	out,
+	prs,
 	proposal,
+	records,
 	run,
 	runRecord,
 	stateWith,
@@ -14,6 +17,7 @@ import {
 	TWO,
 	tasks,
 } from "./goal-check.fixture.ts";
+import { reported } from "./turn-gate.ts";
 
 /**
  * The goal check's verdict for each stage, and the run record it reads. The
@@ -165,5 +169,71 @@ describe("the run record", () => {
 		const state = stateWith(runRecord(dir), goal);
 		const r = run(dir, ["apply", "demo", "1"], { state });
 		expect(r.last).toMatch(/^goal open: .*1\. First/);
+	});
+});
+
+/** These [n] number `github-app-identity`'s `/zombies` ideas. */
+describe("the before-push form", () => {
+	const BEFORE = ["apply", "demo", "2", "--before-push"];
+
+	// spec: stage-goal/ready-with-no-pull-request
+	test("a ready step with no pull request and no gh on PATH is met [1]", () => {
+		const r = run(tasks(TWO), BEFORE, { gh: null });
+		expect([r.code, r.last]).toEqual([0, expect.stringMatching(/^goal met: apply demo step 2 at \w{7}, before the push$/)]);
+	});
+
+	// spec: stage-goal/ready-with-no-pull-request
+	test("it makes no gh call, whatever gh would answer [2]", () => {
+		const r = run(tasks(TWO), BEFORE, { gh: prs() });
+		expect([r.code, r.calls]).toEqual([0, 0]);
+	});
+
+	// spec: stage-goal/something-else-missing
+	test.each([
+		["a detached HEAD [3]", (d: string) => git(d, "switch", "-q", "--detach"), "HEAD names no branch"],
+		["a missing record [4]", () => {}, "no passing pre-PR run record for"],
+		["a tracked edit [5]", (d: string) => writeFileSync(join(d, CHANGE, "tasks.md"), "edited\n"), "tracked files differ from HEAD"],
+	])("%s is open, naming it", (_, arrange, reason) => {
+		const dir = tasks(TWO);
+		const state = reason.startsWith("no passing") ? stateWith() : stateWith(runRecord(dir));
+		arrange(dir);
+		const r = run(dir, BEFORE, { gh: null, state });
+		expect([r.code, r.last]).toEqual([1, expect.stringMatching(/^goal open: .*, before the push — /)]);
+		expect(r.last).toContain(reason);
+	});
+
+	// spec: stage-goal/the-flag-out-of-place
+	test.each([
+		["misplaced [6]", ["apply", "demo", "--before-push", "2"]],
+		["first [6]", ["--before-push", "apply", "demo", "2"]],
+		["doubled [7]", [...BEFORE, "--before-push"]],
+		["misspelt [8]", ["apply", "demo", "2", "--before-pushed"]],
+		["misspelt on propose [8]", ["propose", "demo", "--beforepush"]],
+	])("the flag %s prints the usage, exits 2 and records nothing", (_, args) => {
+		const r = run(tasks(TWO), args);
+		expect([r.code, r.last, records(r.state)]).toEqual([2, expect.stringMatching(/^usage:/), []]);
+	});
+
+	// spec: stage-goal/ready-with-no-pull-request
+	test.each([
+		["propose [9]", proposal, ["propose", "demo", "--before-push"]],
+		["archive [9]", () => archived(), ["archive", "demo", "--before-push"]],
+	])("it is accepted on %s", (_, make, args) => {
+		expect(run(make(), args, { gh: null }).code).toBe(0);
+	});
+
+	// spec: stage-goal/ready-with-no-pull-request
+	test("its last line names the form, is no gate line, and records as the full check does [9]", () => {
+		const r = run(tasks(TWO), BEFORE, { gh: null });
+		expect(r.last).toEndWith(", before the push");
+		expect(reported(r.last)).toBe(false);
+		expect(records(r.state).map(({ decision, rule }) => [decision, rule])).toEqual([["met", "apply"]]);
+	});
+
+	// spec: stage-goal/the-full-check-is-unchanged
+	test("without the flag, no pull request is still open", () => {
+		const r = run(tasks(TWO), ["apply", "demo", "2"], { gh: prs() });
+		expect([r.code, r.last]).toEqual([1, expect.stringContaining("no open or merged pull request for feature")]);
+		expect(r.last).not.toContain("before the push");
 	});
 });
