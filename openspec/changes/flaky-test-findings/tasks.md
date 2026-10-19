@@ -241,6 +241,8 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
         nothing (local review) [79];
       - `test.each(rows)("x", fn, { retry: 1 })` fails [80];
       - `test.if(cond)("x", fn, { retry: 1 })` fails (plan review);
+      - `test.concurrent.failing("x", fn, { retry: 1 })` fails, as a chain
+        no list names (plan review);
       - `describe("x", { retry: 1 }, fn)` fails [81];
       - a `package.json` script `"test": "bun test --retry=2"` fails, naming
         the file and the script (local review) [82];
