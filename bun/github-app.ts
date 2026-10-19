@@ -58,7 +58,9 @@ async function call(path: string, field: string, type: "string" | "number", bear
 	const headers: Record<string, string> = { accept: "application/vnd.github+json" };
 	if (bearer) headers.authorization = `Bearer ${bearer}`;
 	const url = `${process.env.GITHUB_API_URL ?? "https://api.github.com"}${path}`;
-	const init = { method: body ? "POST" : "GET", headers, body: body ? JSON.stringify(body) : undefined };
+	// Bounded, so a stalled API ends the pass rather than holding it.
+	const signal = AbortSignal.timeout(30_000);
+	const init = { method: body ? "POST" : "GET", headers, body: body ? JSON.stringify(body) : undefined, signal };
 	const answer = await fetch(url, init).catch((error: Error) => {
 		throw new Error(`GitHub's API could not be reached for ${path}: ${error.message}`);
 	});
