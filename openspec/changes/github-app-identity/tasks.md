@@ -48,7 +48,7 @@ is continued*.
       `gh pr create`) and call it from `pass()` between the stage session and
       the verdict, capturing the stage session's output and printing it after;
       see 1.3 pass and `bun bun/file-size.ts` keep `board-loop.ts` under 300
-- [ ] 1.7 Change the stage prompt in `bun/board-loop.ts`: the first line says
+- [x] 1.7 Change the stage prompt in `bun/board-loop.ts`: the first line says
       the runner pushes and opens the pull request, the condition names
       `--before-push`, and a new line asks for `PR-TITLE:` and `PR-BODY:`;
       update `board-loop-stage.test.ts`'s prompt cases for the plain, resume

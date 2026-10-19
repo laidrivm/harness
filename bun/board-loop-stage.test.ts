@@ -9,6 +9,9 @@ import { change, clone, commit, EPERM, lowered, ONE, out, records, run, THREE, T
 afterAll(cleanup);
 
 const OPEN = "goal open: apply demo step 1 at abc1234 — no open pull request for feat/demo";
+/** The launch form's fifth line, in every form. */
+const TITLED =
+	"When the pull request is to open, end the final message with a line `PR-TITLE: <title>`, then a line `PR-BODY:` with the body below it to the end; when a gate line holds the pull request back, write neither.";
 
 describe("the verdict", () => {
 	// spec: board-loop/the-step-met-its-goal
@@ -150,15 +153,16 @@ describe("the session", () => {
 		}
 	});
 
-	// spec: stage-goal/an-apply-step-launched-headless
-	test("the prompt is the launch form: unattended, the apply goal, the slug and the step [24]", () => {
+	// spec: stage-goal/an-apply-step-launched-headless board-loop/a-step-ready-to-push
+	test("the prompt is the launch form: unattended, the apply goal, the slug and the step [24], the runner pushing [25]", () => {
 		const { dir } = clone();
 		const { calls } = run(dir);
 		expect(calls).toContain(
-			"/goal Carry step 1 of the OpenSpec change demo: /opsx:apply demo for its group 1,",
+			"/goal Carry step 1 of the OpenSpec change demo: /opsx:apply demo for its group 1 and the pre-PR sequence, up to a committed HEAD on the branch of the step — the runner, not this session, pushes that branch and opens the pull request.\n",
 		);
 		expect(calls).toContain("\nThis session runs unattended.\n");
-		expect(calls).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 1`, run after the last push");
+		expect(calls).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 1 --before-push`, run after the last commit");
+		expect(calls).toContain(`\n${TITLED} --permission-mode`);
 	});
 });
 
@@ -186,14 +190,15 @@ describe("an answer's step", () => {
 		const { calls } = run(dir);
 		const from = calls.indexOf("\nclaude -p /goal ") + 1;
 		const lines = calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
-		expect(lines).toHaveLength(4);
-		expect(lines[0]).toContain("write the answer on its card into its tasks.md as group 2, then /opsx:apply demo for that group,");
+		expect(lines).toHaveLength(5);
+		expect(lines[0]).toContain("write the answer on its card into its tasks.md as group 2, then /opsx:apply demo for that group and the pre-PR sequence,");
 		// task-board: an answer that asks for a change of its own files a card instead.
 		expect(lines[0]).toEndWith(
 			"the pull request — or, when the answer asks for a change of its own or its work would not fit one step, file an `idea` card for it, clear the card's `Assign`, add no group and end with `BLOCKED — <that card>`.",
 		);
 		expect(lines[1]).toBe("This session runs unattended.");
-		expect(lines[2]).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push");
+		expect(lines[2]).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 2 --before-push`, run after the last commit");
+		expect(lines[4]).toBe(TITLED);
 	});
 });
 
@@ -238,12 +243,13 @@ describe("a step branch a session left", () => {
 		git(dir, "switch", "-q", "main");
 		const r = run(dir);
 		const lines = stage(r.calls);
-		expect(lines).toHaveLength(4);
-		expect(lines[0]).toEndWith(`the push and the pull request.${clause("feat/demo")}`);
+		expect(lines).toHaveLength(5);
+		expect(lines[0]).toEndWith(`opens the pull request.${clause("feat/demo")}`);
 		expect(lines[1]).toBe("This session runs unattended.");
 		expect(lines[2]).toBe(
-			"The goal is met when the last line of `bun node_modules/harness/bun/goal-check.ts apply demo 1`, run after the last push, opens with `goal met` — or when the final message opens with `BLOCKED —` and names what only the user can settle.",
+			"The goal is met when the last line of `bun node_modules/harness/bun/goal-check.ts apply demo 1 --before-push`, run after the last commit, opens with `goal met` — or when the final message opens with `BLOCKED —` and names what only the user can settle.",
 		);
+		expect(lines[4]).toBe(TITLED);
 		const said = r.text.indexOf("continuing feat/demo, which a session left");
 		expect(said).toBeGreaterThan(-1);
 		expect(said).toBeLessThan(r.text.indexOf("carrying apply demo step 1"));

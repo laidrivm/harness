@@ -29,7 +29,7 @@ describe("the launch form's question line", () => {
 		const { dir } = clone(change("demo", tasks));
 		const lines = stage(run(dir).calls);
 		const doc = readFileSync(join(import.meta.dir, "../core/feature-workflow.md"), "utf8");
-		expect(lines).toHaveLength(4);
+		expect(lines).toHaveLength(5);
 		for (const part of [MARK, "`page_id`", "`markdown`", "page-level"]) expect(lines[3]).toContain(part);
 		// The doc's form closes the shell's single quote on this line.
 		expect(doc.split("\n").filter((line) => line.startsWith("A question only the user"))).toEqual([`${lines[3]}'`]);
