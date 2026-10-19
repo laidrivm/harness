@@ -81,7 +81,9 @@ review docs.
 
 Under the orchestrator each `/coderabbit` run is a fresh session, so the
 count cannot come from memory. The run counts the distinct `commit_id`s of
-the bot's reviews on the pull request. Its step 1 already reads that list.
+CodeRabbit's reviews on the pull request (a login starting with
+`coderabbitai`, never the App's `laidrivm-harness-agent[bot]`, which this
+change names too). Its step 1 already reads that list.
 `ship` counted pushes. A push the bot reviewed is a reviewed commit, and a
 clean review leaves no review object, so it ends the loop and is never
 counted.
