@@ -94,6 +94,6 @@ configured*.
       before the pick session, the token minted after the stage session, the
       identity added to the allowlisted environment; see 2.2 pass and
       `board-loop.ts` stay under 300
-- [ ] 2.5 Name the two settings, that both or neither are set, and that the
+- [x] 2.5 Name the two settings, that both or neither are set, and that the
       key's file stays the runner user's alone in `README.md`'s runner
       paragraph; verify by reading the paragraph back
