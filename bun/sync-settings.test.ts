@@ -4,7 +4,7 @@
  * the script's own entry point are in `sync-bunfig.test.ts`.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { HOOKS, MARK } from "./bootstrap.ts";
+import { ARCHIVE, HOOKS, MARK, registration } from "./bootstrap.ts";
 import { ASK, ATTRIBUTION, DENY, settings } from "./settings.ts";
 import { syncSettings } from "./sync-settings.ts";
 import {
@@ -96,12 +96,12 @@ describe("the settings file", () => {
 		}
 		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
 		syncSettings(dir);
-		for (const { event, matcher, command } of HOOKS)
+		for (const hook of HOOKS)
 			expect(
-				parsed(dir).hooks[event].filter((g: Group) => g.matcher === matcher),
-			).toEqual([
-				expect.objectContaining({ hooks: [{ type: "command", command }] }),
-			]);
+				parsed(dir).hooks[hook.event].filter(
+					(g: Group) => g.matcher === hook.matcher,
+				),
+			).toEqual([expect.objectContaining({ hooks: [registration(hook)] })]);
 	});
 
 	test("a matcher group the removal empties is dropped, not left empty", () => {
@@ -142,11 +142,25 @@ describe("the settings file", () => {
 	test("an event left with no hooks once a previous version's are gone is dropped", () => {
 		const config = stale();
 		Object.assign(config.hooks, {
-			SessionEnd: [{ hooks: [{ type: "command", command: old("bye.ts") }] }],
+			PreCompact: [{ hooks: [{ type: "command", command: old("bye.ts") }] }],
 		});
 		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
 		syncSettings(dir);
-		expect(Object.keys(parsed(dir).hooks)).not.toContain("SessionEnd");
+		expect(Object.keys(parsed(dir).hooks)).not.toContain("PreCompact");
+	});
+
+	// spec: transcript-archive/a-registration-with-no-timeout
+	test("the archive registered with no timeout is written with 60, and then passes [33]", () => {
+		const config = stale();
+		Object.assign(config.hooks, {
+			SessionEnd: [{ hooks: [{ type: "command", command: ARCHIVE }] }],
+		});
+		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
+		syncSettings(dir);
+		expect(parsed(dir).hooks.SessionEnd).toEqual([
+			{ hooks: [{ type: "command", command: ARCHIVE, timeout: 60 }] },
+		]);
+		expect(settings(dir)).toEqual([]);
 	});
 
 	test("a deny list with no Bash entries gets them after the project's own", () => {

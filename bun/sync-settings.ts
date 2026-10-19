@@ -8,7 +8,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { HOOKS, MARK } from "./bootstrap.ts";
+import { HOOKS, MARK, registration } from "./bootstrap.ts";
 import {
 	ASK,
 	ATTRIBUTION,
@@ -83,10 +83,10 @@ function settingsText(text: string | undefined): string {
 			return kept.length ? [{ ...group, hooks: kept }] : [];
 		});
 	}
-	for (const { event, matcher, command } of HOOKS)
-		(hooks[event] ??= []).push({
-			...(matcher === undefined ? {} : { matcher }),
-			hooks: [{ type: "command", command } as { command: string }],
+	for (const hook of HOOKS)
+		(hooks[hook.event] ??= []).push({
+			...(hook.matcher === undefined ? {} : { matcher: hook.matcher }),
+			hooks: [registration(hook)],
 		});
 	// An event whose only hooks were a previous version's, and which the
 	// harness no longer registers, would otherwise be left as an empty list.

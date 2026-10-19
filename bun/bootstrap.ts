@@ -76,6 +76,14 @@ export const QUESTION_GATE = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/qu
 export const LOOP_GUARD = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/loop-guard.ts"; if [ -f "$g" ]; then bun "$g"; fi ${MARK}`;
 
 /**
+ * The `SessionEnd` transcript archive, registered with a `timeout` of 60 s,
+ * the most Claude Code allows, since the event's hooks otherwise share 1.5 s.
+ * Before the install it does nothing; it exits 0 on every fault, and a
+ * `SessionEnd` hook cannot stop the session anyway.
+ */
+export const ARCHIVE = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/transcript-archive.ts"; if [ -f "$g" ]; then bun "$g"; fi ${MARK}`;
+
+/**
  * The `SessionStart` notice: one line when the installed harness is not the
  * pinned one, as after a `git pull` that brought a bump, until `bun install`.
  * Claude Code adds a `SessionStart` hook's output to the session, so the
@@ -117,6 +125,7 @@ export const NOTICE = [
  * command ends with `MARK`. `sole` makes `settings.ts` refuse any
  * other hook under the same matcher; without it the hook need only be present.
  * An entry with no matcher is registered, and checked, in a group with none.
+ * A `timeout` is written with the hook and checked whenever the entry has one.
  */
 export const HOOKS: {
 	event: string;
@@ -124,6 +133,7 @@ export const HOOKS: {
 	command: string;
 	name: string;
 	sole?: true;
+	timeout?: number;
 }[] = [
 	{
 		event: "PreToolUse",
@@ -153,4 +163,17 @@ export const HOOKS: {
 	{ event: "UserPromptSubmit", command: TURN_MARK, name: "harness turn gate" },
 	{ event: "Stop", command: TURN_STOP, name: "harness turn gate" },
 	{ event: "SessionStart", command: NOTICE, name: "harness stale-install notice" },
+	{
+		event: "SessionEnd",
+		command: ARCHIVE,
+		name: "harness transcript archive",
+		timeout: 60,
+	},
 ];
+
+/** The hook object a `HOOKS` entry is registered as in the settings. */
+export const registration = ({ command, timeout }: (typeof HOOKS)[number]) => ({
+	type: "command",
+	command,
+	...(timeout === undefined ? {} : { timeout }),
+});
