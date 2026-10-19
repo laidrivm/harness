@@ -36,10 +36,13 @@ if [[ ! $name =~ $segment ]] || [ ! -d "$dir/.git" ]; then
 	exit 2
 fi
 
-if [ -e "$stop" ]; then
+# Exits 3 while the stop file exists.
+paused() {
+	[ -e "$stop" ] || return 0
 	echo "orchestrator: paused — $stop: $(head -n 1 "$stop"); remove it to resume"
 	exit 3
-fi
+}
+paused
 
 # The lock is the repository's, so a clone over HTTPS and one over SSH share
 # it: scheme://host/<owner>/<repo> or user@host:<owner>/<repo>, `.git` dropped.
@@ -70,6 +73,9 @@ elif [ "$held" != 0 ]; then
 	echo "orchestrator: flock failed on $lock"
 	exit "$held"
 fi
+# Again under the lock: a pass that failed after the first check wrote its
+# stop file before it let the lock go.
+paused
 
 for file in claude_oauth_token gh_token; do
 	# grep reads the file, so no token enters this shell's variables.
