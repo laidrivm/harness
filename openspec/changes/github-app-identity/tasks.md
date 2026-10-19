@@ -19,7 +19,7 @@ is continued*.
       exit 2 with nothing recorded for the flag misplaced, doubled or
       misspelt; accepted on `propose` and `archive`; the last line names the
       form and is no gate line [1–9]
-- [ ] 1.2 Write the failing environment cases in
+- [x] 1.2 Write the failing environment cases in
       `bun/board-loop-session.test.ts`, the stub `claude` writing its
       environment to a file: `GH_TOKEN` (empty included), `GITHUB_TOKEN`,
       `GH_ENTERPRISE_TOKEN`, `SSH_AUTH_SOCK`, both App settings, `CLAUDECODE`
