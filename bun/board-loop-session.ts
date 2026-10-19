@@ -12,8 +12,9 @@ export type Kill = (pid: number, signal: NodeJS.Signals | 0) => void;
 /**
  * The variables a session gets of the runner's, and no others: an allowlist,
  * since a denylist would pass the next credential nobody listed. None carries
- * a GitHub credential, an SSH agent or an App setting; Claude's own credential
- * is the session's by necessity. `XDG_STATE_HOME` must pass, so the pre-PR
+ * a GitHub credential, an SSH agent or an App setting; a credential stored
+ * under `HOME` or `XDG_CONFIG_HOME` stays readable, which the VPS's separate
+ * session user closes. Claude's own credential is the session's by necessity. `XDG_STATE_HOME` must pass, so the pre-PR
  * record a session writes is the one the runner's check reads.
  */
 const PASSED = new Set([
