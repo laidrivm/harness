@@ -44,7 +44,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
 
 ## 2. The flake watch
 
-- [ ] 2.1 **User act, before any code.** The user runs the event probe from a
+- [x] 2.1 **User act, before any code.** The user runs the event probe from a
       scratch kit: a settings file whose `PostToolUse` and
       `PostToolUseFailure` hooks dump the event to a file, in a throwaway
       repository holding one test that fails once. A session does not run
@@ -57,7 +57,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
 
       If any answer differs from design.md D4, amend D4 through
       `/opsx:update` before 2.3.
-- [ ] 2.2 Write `bun/flake-watch.test.ts`. Each case spawns the script with an
+- [x] 2.2 Write `bun/flake-watch.test.ts`. Each case spawns the script with an
       event on stdin, a temp store, a temp `XDG_STATE_HOME` and a fixture git
       repository. All of these fail before 2.3.
       - The empty case:
@@ -135,7 +135,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
       is named as flaky*, *A test run is read from its output*, *The watch
       never blocks*, *Each flaky finding is recorded in the gate ledger* and
       *The watch fails open*; gate-ledger, *Every gate refusal is recorded*.
-- [ ] 2.3 Write `bun/flake-watch.ts` as design.md D2 and D4–D7 set out:
+- [x] 2.3 Write `bun/flake-watch.ts` as design.md D2 and D4–D7 set out:
       - the reader, the tree fingerprint and the decision as pure exported
         functions;
       - the store written beside the final file and renamed into place;
@@ -149,7 +149,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
 
       Verify: 2.2 is green and the file is under its cap in
       `bun/file-size.ts`.
-- [ ] 2.4 Write the registration cases in `bun/settings.test.ts` and
+- [x] 2.4 Write the registration cases in `bun/settings.test.ts` and
       `bun/sync-settings.test.ts`, failing before 2.5:
       - a consumer whose settings lack the watch's `PostToolUse` or
         `PostToolUseFailure` registration fails the check, which names the
@@ -166,18 +166,18 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
         from both places [44].
 
       Requirement: flaky-tests, *Every consumer session runs the watch*.
-- [ ] 2.5 Add the two `HOOKS` entries to `bun/bootstrap.ts`, matcher `Bash`,
+- [x] 2.5 Add the two `HOOKS` entries to `bun/bootstrap.ts`, matcher `Bash`,
       not `sole`, with no `if`. Write them into the tracked
       `.claude/settings.json` with the sync, so the harness's own sessions
       register exactly what consumers get
       (harness-updates, *The harness's own sessions run its gates from its
       pin*). They take effect in those sessions at the next self-pin bump.
       Verify: 2.4 and the whole `bun test` are green.
-- [ ] 2.6 Measure the watch on a Bash call that is no test run: 50 runs a
+- [x] 2.6 Measure the watch on a Bash call that is no test run: 50 runs a
       round, three rounds, as the command guard's header records its own.
       Write the figure into the header. Verify: the header names the date
       and the range.
-- [ ] 2.7 In `core/testing.md`, delete the stopgap's first clause, which the
+- [x] 2.7 In `core/testing.md`, delete the stopgap's first clause, which the
       watch's hint now carries. Point the bullet at `bun/flake-watch.ts`
       instead, keeping "never re-run a failed run unchanged without naming a
       cause" and the retry clause. In `README.md`, add a bullet for the watch
