@@ -14,7 +14,7 @@ import {
 	utimesSync,
 	writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
 	archive,
 	cleanup,
@@ -45,6 +45,10 @@ describe("a fault", () => {
 		["a transcript_path not <session_id>.jsonl [21]", (path: string) => ({
 			session_id: "s2",
 			transcript_path: path,
+		})],
+		["a transcript_path climbing out of its project", (path: string) => ({
+			session_id: "x",
+			transcript_path: `${dirname(path)}/../x.jsonl`,
 		})],
 		["a relative transcript_path", () => ({
 			session_id: "s1",
