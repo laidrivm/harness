@@ -145,7 +145,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
       - a `shortcut:` comment naming command normalisation as the upgrade
         (design.md, Risks);
       - a `shortcut:` comment naming pruning of the store, as the loop
-        guard's does.
+        guard's older `ponytail:` comment does.
 
       Verify: 2.2 is green and the file is under its cap in
       `bun/file-size.ts`.
