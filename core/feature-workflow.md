@@ -106,7 +106,8 @@ completes, name the next step and the exact command.
   (`gh pr create`, ready for review — see Git & PRs) with the description per
   Git & PRs. Wait for the user's go-ahead before opening it (unattended:
   agent — open it on the gate lines and with the body `autonomy.md`'s
-  `agent` sets out).
+  `agent` sets out; under the board loop, push nothing and name the pull
+  request's title and body instead, and the runner opens it).
 
 ## Stage 4 — Archive
 
@@ -150,8 +151,21 @@ A question only the user can settle goes on the card of the change as one page-l
 The answer, proposal and archive variants below keep that fourth line as it
 stands.
 
+The board loop pushes for the session it launches, so its form changes the
+first and third lines and adds a fifth. The first line ends the work at the
+pre-PR sequence and a committed `HEAD` on the step's branch, and says that the
+runner, not the session, pushes that branch and opens the pull request. The
+third names the check's before-push form, `goal-check.ts apply demo 2
+--before-push`, run after the last commit, which holds every condition but the
+pull request's. The fifth asks the session, when the pull request is to open,
+to end its final message with a `PR-TITLE: <title>` line and then a `PR-BODY:`
+line with the body below it, and to write neither when a gate line holds the
+pull request back. The runner pushes and opens with them, and its verdict is
+the full check.
+
 An answer step, which the board loop launches once every group is ticked and
-the card holds the user's answer, changes only the first line: it names
+the card holds the user's answer, changes only the first line of the board
+loop's form: it names
 writing that answer into `tasks.md` as group N+1 and carrying that group, or,
 for an answer that asks for a change of its own or would not fit one step,
 filing an `idea` card, clearing `Assign`, adding no group and ending on

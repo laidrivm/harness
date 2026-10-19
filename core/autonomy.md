@@ -23,7 +23,8 @@ line, changes nothing.
 
 - **Declared.** A runner starts a session with `/opsx:apply <slug>` followed
   by the line. At the step "Wait for the user's go-ahead", the session reads
-  the step's `agent` marker and opens the pull request itself.
+  the step's `agent` marker and opens the pull request itself — or, under the
+  board loop, whose runner pushes and opens it, names its title and body.
 - **Not declared.** The prompt reads "Apply it overnight, I'm asleep". The
   line is missing, so the session is attended, whatever the wording suggests.
   At the same step it offers the pull request and waits.
@@ -51,7 +52,9 @@ answered by a brief that says to explore and propose.
 
 The session takes the step itself, and records in its report or in the pull
 request's body what it did in the user's stead. It opens a pull request when
-every gate line reads `PASS`, with two exceptions:
+every gate line reads `PASS` — under the board loop it pushes nothing and ends
+its final message with a `PR-TITLE:` line and a `PR-BODY:` line, the body
+below it, and the runner opens it — with two exceptions:
 
 - `CODERABBIT-LOCAL` reading `OPEN` only over a 🟠 Major or 🔴 Critical
   dismissal it proposes;

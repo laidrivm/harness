@@ -41,7 +41,7 @@ export async function session(text: string, limit: number, kill: Kill, capture =
 	const dir = capture ? mkdtempSync(join(tmpdir(), "board-loop-")) : "";
 	let interrupt: (() => void) | undefined;
 	try {
-		// Leader of its own process group, so a child it starts (a test run, a push) is signalled with it.
+		// Leader of its own process group, so a child it starts (a test run, say) is signalled with it.
 		const run = Bun.spawn(["claude", "-p", text, ...flags], {
 			stdio: ["ignore", capture ? Bun.file(join(dir, "out")) : "inherit", "inherit"],
 			env: allowed(process.env),
