@@ -179,6 +179,11 @@ tree fingerprint and the failing names seen on that tree.
   deletes the entry.
 - **A passing run on another tree** deletes the entry silently.
 
+Two calls writing at once can lose one of the two writes, as the loop guard's
+count can. A lost write drops a name from the hint, or drops the entry so
+that no hint is given. That is the silent side: no lock is taken, and no
+false finding comes of it.
+
 Test names are held here, unlike the loop guard's hashes-only count, because
 the passing run's output does not list them. The file is private (`0600`),
 sits outside every tree, and the OS clears it.
@@ -257,8 +262,11 @@ Three checks join `harness:check`:
   comments is excluded. In the same blanked source, a
   property key `retry` (written `retry:` or as the shorthand `{ retry }`) is
   a problem only in an object literal that is itself an argument of a call
-  to `test`, `it`, `describe` or a hook, with any `.each`, `.only`, `.skip`,
-  `.todo` or `.if(…)` chain between the name and the call. The walk tracks
+  to `test`, `it`, `describe` or a hook, with any chain of member accesses
+  and calls between the name and the call. bun 1.4.2 has more than a dozen
+  modifiers (`.each(…)`, `.if(…)`, `.skipIf(…)`, `.concurrent`, `.failing`
+  among them, probe 2026-10-19), so the walk follows any chain rather than a
+  list that a bun release would outdate. The walk tracks
   the bracket position from the call's `(` rather than counting depth
   (`core/rules.md`). A `retry` key in a fixture handed to the code under test
   is not a problem: `dota2`'s retry-policy tests are where one would come
