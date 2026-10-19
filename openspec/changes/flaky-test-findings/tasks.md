@@ -80,7 +80,9 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
           later pass does [8];
         - two sessions keep separate entries [9];
         - a sub-agent and its parent keep separate entries [10];
-        - two processes writing at once leave a store that parses [11].
+        - two processes writing at once leave a store that parses [11];
+        - a fail naming `a` on tree T, an edit, then a fail naming `b` and a
+          pass on the new tree, names `b` only (plan review).
       - The boundary cases:
         - a tracked file edited between the runs gives no hint [12];
         - an untracked file created between them gives no hint [13];
@@ -89,6 +91,8 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
         - an ignored file changed between them still gives the hint, pinning
           design.md's stated false-positive side [15];
         - a commit between them gives no hint [16];
+        - staging a tracked edit between them, with no content change, still
+          gives the hint (plan review);
         - the same command from another `cwd` of the same tree gives no
           hint [17];
         - a `2 fail` summary with no `(fail)` line, then a pass, gives the
@@ -108,7 +112,8 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
           asserts that the watch's reader finds its name and its count, so a
           reporter change fails here [25];
         - a pass whose ` 0 fail` arrives only in `tool_response.stderr` is
-          read [26].
+          read [26];
+        - the store file is created with mode `0600` (plan review).
       - The exception cases:
         - a non-JSON event exits 0 with no output [27];
         - a session id holding `/` or `..` decides nothing [28];
@@ -217,6 +222,8 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
       - a tracked `email-service/bunfig.toml` with the same fails [60];
       - an untracked `bunfig.toml` with it reports nothing [61];
       - `[test] rerunEach = 3` reports nothing [62];
+      - a `retry` key under a table other than `[test]` reports nothing
+        (plan review);
       - an unparseable tracked `bunfig.toml` throws, naming the file [64];
       - `{ retry: 2 }` in a file importing `bun:test` fails, naming the file
         and the line [65];
@@ -233,12 +240,17 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
       - `const policy = { retry: 3 }` handed to the code under test reports
         nothing (local review) [79];
       - `test.each(rows)("x", fn, { retry: 1 })` fails [80];
+      - `test.if(cond)("x", fn, { retry: 1 })` fails (plan review);
       - `describe("x", { retry: 1 }, fn)` fails [81];
       - a `package.json` script `"test": "bun test --retry=2"` fails, naming
         the file and the script (local review) [82];
       - a `simple-git-hooks` value carrying `bun test --retry=1` fails [83];
       - a workflow `run: bun test --retry=1` fails [84];
+      - the same on the second line of a multi-line `run: |` block fails
+        (plan review);
       - a `.githooks/pre-push` line `bun test --retry=1` fails [85];
+      - a `.githooks/pre-push` comment `# bun test --retry=1` reports nothing
+        (plan review);
       - a script running `bun test --rerun-each=5` reports nothing [86].
 
       Requirement: flaky-tests, *The consumer check refuses a configured
