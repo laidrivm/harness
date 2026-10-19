@@ -179,7 +179,9 @@ A consumer keys a hand-off by repository, number, SHA and kind. The same key
 can arrive twice: when the mark fails, the next run judges the head again.
 Printing before marking makes a hand-off at least once. Marking first would
 make it at most once, and a run killed between the two would then lose it
-without a trace.
+without a trace. So `marked` means the head was judged and its mark is written
+next. A mark that then fails leaves the printed line as it stands. Standard
+error names the pull request and the SHA, and the run exits 1.
 
 ### The mark
 
