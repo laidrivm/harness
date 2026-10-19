@@ -89,6 +89,8 @@ export async function mint(app: App): Promise<string> {
  * The variables that push and open as the App: git's extra header and `gh`'s
  * `GH_TOKEN`. An environment is readable by its own user alone, where an
  * argument or a URL holding the token shows in `ps` to every user.
+ * shortcut: entry 0 replaces any `GIT_CONFIG_*` the runner was started with;
+ * append after its count if a runner ever needs its own.
  */
 export const credentials = (token: string) => ({
 	GH_TOKEN: token,
