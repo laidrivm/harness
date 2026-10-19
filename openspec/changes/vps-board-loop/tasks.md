@@ -16,7 +16,7 @@ per repository*, §*A failed pass pauses the timer until the user removes the
 stop file* and §*The wrapper starts the pass with the environment it names*,
 and both of `board-loop` §*A timer the user set up may start the runner*.
 
-- [ ] 1.1 Write the failing cases first in a new `orchestrator/pass.test.ts`,
+- [x] 1.1 Write the failing cases first in a new `orchestrator/pass.test.ts`,
       and record that each fails before `pass.sh` exists. Each case runs
       `orchestrator/pass.sh` with `HOME`, the clones directory and the secrets
       directory pointed at a temporary tree. The clone there holds a fake
