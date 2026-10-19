@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
-import { clone, commit, lowered, out, records, run } from "./board-loop.fixture.ts";
+import { change, clone, commit, lowered, out, records, run, TICKED } from "./board-loop.fixture.ts";
 
 /**
  * The runner's push and pull request after the stage session, and what keeps
@@ -43,6 +43,21 @@ describe("a step ready to push", () => {
 	test("the session's final message is printed after it [19]", () => {
 		const { dir } = clone();
 		expect(run(dir).text).toContain("Done.\nPR-TITLE: Carry demo\nPR-BODY:\nThe body.");
+	});
+
+	// spec: board-loop/a-step-ready-to-push
+	test("a body of several lines reaches gh whole", () => {
+		const { dir } = clone();
+		const said = "PR-TITLE: Carry demo\nPR-BODY:\nFirst.\n\n- second\n--third";
+		expect(run(dir, [], { said }).body).toBe("First.\n\n- second\n--third");
+	});
+
+	// spec: board-loop/a-step-ready-to-push
+	test("an answer step pushes and opens feat/demo-2", () => {
+		const { dir } = clone(change("demo", TICKED));
+		const r = run(dir);
+		expect(calls(r.calls, "git push")).toEqual(["git push origin refs/heads/feat/demo-2:refs/heads/feat/demo-2"]);
+		expect(calls(r.calls, "gh pr create")).toEqual([CREATE.replace("feat/demo", "feat/demo-2")]);
 	});
 
 	// spec: board-loop/a-step-ready-to-push

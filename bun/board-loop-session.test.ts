@@ -70,4 +70,10 @@ describe.each([
 			undefined,
 		]);
 	});
+
+	// spec: board-loop/what-a-session-needs
+	test("passes Claude's own credential, which the session cannot run without", () => {
+		const { env } = seen(capture, { CLAUDE_CODE_OAUTH_TOKEN: "oauth", ANTHROPIC_API_KEY: "key" });
+		expect([env.get("CLAUDE_CODE_OAUTH_TOKEN"), env.get("ANTHROPIC_API_KEY")]).toEqual(["oauth", "key"]);
+	});
 });
