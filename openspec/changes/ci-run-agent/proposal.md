@@ -23,14 +23,15 @@ failure or says why it cannot.
     no flow takes.
 - **The PR → session table**, a JSON Lines file on the runner's own volume. The
   board-loop runner starts each stage session with a session id of its own
-  choosing, and appends one record when it opens or finds that step's pull
-  request. A pull request with no record is not the loop's, and no flow starts
-  an agent for it.
+  choosing, and appends one record naming the step's branch before it pushes
+  that branch. A pull request whose branch has no record is not the loop's,
+  and no flow starts an agent for it.
 - **The CI flow**, on `workflow_run` `completed` with `conclusion: failure`.
   It acts only on runs of the repository itself, never a fork's, and only on
   branches `feat/` and `spec/`:
-  - The runner reads the failed jobs' logs with `gh run view <id>
-    --log-failed` and hands them to the session as a file.
+  - The runner reads the failed jobs' logs of the attempt the event names
+    with `gh run view <id> --attempt <n> --log-failed`, and hands them to the
+    session as a file.
   - It resumes the pull request's session with `claude -r`, under
     `--json-schema`. The session fixes the failure in new commits, or answers
     `BLOCKED —` with a question on its card.
@@ -89,8 +90,8 @@ after.
 
 - `orchestrator`: gains the event handler (signature, deliveries, routing),
   the CI flow, its attempt limit, the scheduled and flaky routes.
-- `board-loop`: gains *The runner records the session of each pull request it
-  opens*.
+- `board-loop`: gains *The runner records the session of each step it
+  pushes*.
 
 ## Impact
 

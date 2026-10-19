@@ -74,15 +74,15 @@ The CI flow SHALL act on a `workflow_run` event only when its action is
 `completed`, its conclusion is `failure`, its head repository is the
 repository itself, and that repository has a clone on the host. A run on a
 `feat/` or `spec/` branch SHALL start an agent only for an open pull request
-whose head is still the run's `head_sha` and which the PR → session table
-holds; the agent SHALL resume that session in the clone the table names.
+whose head is still the run's `head_sha` and whose branch the PR → session
+table holds; the agent SHALL resume that session in the clone the table names.
 
 #### Scenario: A failed run on a step's pull request
 
-- **WHEN** a run on the branch of an open pull request the table holds fails,
-  and the pull request's head is the run's `head_sha`
-- **THEN** the flow resumes that pull request's session in its clone, with the
-  failed jobs' logs in a file it names
+- **WHEN** a run on the branch of an open pull request fails, the table holds
+  that branch, and the pull request's head is the run's `head_sha`
+- **THEN** the flow resumes the session the table names in its clone, with
+  the failed jobs' logs of the attempt the event names in a file it names
 
 #### Scenario: A run that did not fail
 
@@ -99,8 +99,8 @@ holds; the agent SHALL resume that session in the clone the table names.
 
 #### Scenario: A pull request with no session
 
-- **WHEN** the table holds no record of the pull request, or the run's branch
-  has no open pull request
+- **WHEN** the table holds no record of the run's branch, or the branch has no
+  open pull request
 - **THEN** the flow starts nothing, posts nothing, and prints the pull
   request's number or the branch
 
