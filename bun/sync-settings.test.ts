@@ -104,6 +104,20 @@ describe("the settings file", () => {
 			]);
 	});
 
+	test("a sync over a previous version's watch leaves one registration per event [42]", () => {
+		const config = stale({});
+		Object.assign(config.hooks, {
+			PostToolUse: [
+				{ matcher: "Bash", hooks: [{ type: "command", command: old("flake-watch.ts") }] },
+			],
+		});
+		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
+		syncSettings(dir);
+		const watches = (event: string) =>
+			JSON.stringify(parsed(dir).hooks[event]).split("flake-watch.ts").length - 1;
+		expect([watches("PostToolUse"), watches("PostToolUseFailure")]).toEqual([1, 1]);
+	});
+
 	test("a matcher group the removal empties is dropped, not left empty", () => {
 		const dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });
 		syncSettings(dir);

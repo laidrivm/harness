@@ -164,6 +164,55 @@ describe("the loop guard's registrations", () => {
 	});
 });
 
+describe("the flake watch's registrations", () => {
+	type Group = { matcher?: string; hooks: object[] };
+	const report = (change: (hooks: Record<string, Group[]>) => void) =>
+		settings(
+			consumer(changed((c) => change(c.hooks as Record<string, Group[]>))),
+		).join("\n");
+	/** The policy's group on `event` that holds the watch, and nothing else. */
+	const group = (hooks: Record<string, Group[]>, event: string) => {
+		const found = (hooks[event] ?? []).filter((g) =>
+			JSON.stringify(g).includes("flake-watch.ts"),
+		);
+		expect(found).toHaveLength(1);
+		return found[0] as Group;
+	};
+	const named = (event: string) =>
+		`the ${event} hook is not the harness flake watch — run bun node_modules/harness/bun/sync.ts`;
+
+	// spec: flaky-tests/a-consumer-without-the-watch
+	test.each(["PostToolUse", "PostToolUseFailure"])(
+		"missing on %s is named, with the command that writes it [38]",
+		(event) => {
+			const text = report((hooks) => {
+				const gone = group(hooks, event);
+				hooks[event] = hooks[event]?.filter((g) => g !== gone) ?? [];
+			});
+			expect(text).toContain(named(event));
+		},
+	);
+
+	// spec: flaky-tests/a-registration-narrowed-by-if
+	test.each([
+		["narrowed by `if` [39]", { if: "Bash(bun test *)" }],
+		["run in the background [40]", { async: true }],
+	])("a registration %s is named", (_, departure) => {
+		const text = report((hooks) => {
+			const narrowed = group(hooks, "PostToolUse");
+			narrowed.hooks = [{ ...narrowed.hooks[0], ...departure }];
+		});
+		expect(text).toContain(named("PostToolUse"));
+	});
+
+	test("a registration moved to a group with no matcher is named [41]", () => {
+		const text = report((hooks) => {
+			delete group(hooks, "PostToolUseFailure").matcher;
+		});
+		expect(text).toContain(named("PostToolUseFailure"));
+	});
+});
+
 describe("the permission lists", () => {
 	test("a denied manager dropped is named", () => {
 		const config = changed((c) => {

@@ -76,6 +76,15 @@ export const QUESTION_GATE = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/qu
 export const LOOP_GUARD = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/loop-guard.ts"; if [ -f "$g" ]; then bun "$g"; fi ${MARK}`;
 
 /**
+ * The flake watch's registration, one text on both `PostToolUse` and
+ * `PostToolUseFailure` under matcher `Bash` with no `if`: the script reads the
+ * call's output, since a list of test commands would miss every wrapper.
+ * Before the install every call passes unread; after it, the watch's hint on
+ * stdout is the hook's. No `|| exit 2`: the watch never blocks.
+ */
+export const FLAKE_WATCH = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/flake-watch.ts"; if [ -f "$g" ]; then bun "$g"; fi ${MARK}`;
+
+/**
  * The `SessionStart` notice: one line when the installed harness is not the
  * pinned one, as after a `git pull` that brought a bump, until `bun install`.
  * Claude Code adds a `SessionStart` hook's output to the session, so the
@@ -149,6 +158,18 @@ export const HOOKS: {
 		event: "PostToolUseFailure",
 		command: LOOP_GUARD,
 		name: "harness loop guard",
+	},
+	{
+		event: "PostToolUse",
+		matcher: "Bash",
+		command: FLAKE_WATCH,
+		name: "harness flake watch",
+	},
+	{
+		event: "PostToolUseFailure",
+		matcher: "Bash",
+		command: FLAKE_WATCH,
+		name: "harness flake watch",
 	},
 	{ event: "UserPromptSubmit", command: TURN_MARK, name: "harness turn gate" },
 	{ event: "Stop", command: TURN_STOP, name: "harness turn gate" },
