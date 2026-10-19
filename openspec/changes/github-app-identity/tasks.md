@@ -26,7 +26,7 @@ is continued*.
       and `CLAUDE_PROJECT_DIR` absent from the pick and the stage session;
       `PATH`, `HOME`, `XDG_STATE_HOME` and every `LC_*` passed unchanged, and
       `XLC_ALL` not [10–16]
-- [ ] 1.3 Write the failing push cases in a new `bun/board-loop-push.test.ts`
+- [x] 1.3 Write the failing push cases in a new `bun/board-loop-push.test.ts`
       through `board-loop.fixture.ts`, whose `gh` stub learns to tell
       `pr list` from `pr create` and whose stage stub learns to print a final
       message: one push of exactly the step's ref with no `--force`, then one

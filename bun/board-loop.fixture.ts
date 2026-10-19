@@ -20,6 +20,8 @@ export const ONE = "## 1. Only\n\n- [ ] 1.1 a\n";
 export const THREE =
 	"## 1. First\n\n- [x] 1.1 a\n\n## 2. Second\n\n- [ ] 2.1 b\n\n## 3. Third\n\n- [ ] 3.1 c\n";
 export const TICKED = "## 1. Only\n\n- [x] 1.1 a\n";
+/** The stage session's final message unless a case gives one. */
+export const SAID = "Done.\nPR-TITLE: Carry demo\nPR-BODY:\nThe body.";
 
 type Tree = Record<string, string>;
 
@@ -84,6 +86,19 @@ export type Stubs = {
 	install?: number;
 	/** The pinned goal check's last line, which the install writes. */
 	verdict?: string;
+	/** Its last line under `--before-push`: met unless given. */
+	beforePush?: string;
+	/** The exit status of `gh pr create`, which saves its stdin as the body. */
+	createCode?: number;
+	/**
+	 * The branch the stage session switches to, creating it when it is missing:
+	 * the step's unless given, for the fixture's trees.
+	 */
+	branch?: string;
+	/** Whether the stage session commits on that branch. */
+	commits?: boolean;
+	/** The stage session's final message: a title and a body unless given. */
+	said?: string;
 	/** `false` for an install that leaves no pinned goal check. */
 	pinned?: boolean;
 	/** The session's exit status, or `null` for no `claude` on `PATH`. */
@@ -121,16 +136,19 @@ function bin(log: string, s: Stubs): string {
 		chmodSync(file, 0o755);
 	};
 	stub("git", `exec '${REAL_GIT}' "$@"`);
+	const create = `if [ "$1 $2" = "pr create" ]; then /bin/cat > '${log}.body'; exit ${s.createCode ?? 0}; fi\n`;
 	if (s.gh !== null)
-		stub("gh", `${s.ghSleep ? `exec /bin/sleep ${s.ghSleep}\n` : ""}printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
+		stub("gh", `${s.ghSleep ? `exec /bin/sleep ${s.ghSleep}\n` : ""}${create}printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
 	const verdict = s.verdict ?? "goal met: apply demo step 1 at abc1234";
+	const before = s.beforePush ?? "goal met: apply demo step 1 at abc1234, before the push";
 	const pin = "node_modules/harness/bun";
-	// `PATH` holds the stubs alone, hence the absolute paths.
-	const write = `/bin/mkdir -p ${pin} && printf 'checking\\n%s\\n' '${verdict}' > ${pin}/goal-check.ts; `;
+	// `PATH` holds the stubs alone, hence the absolute paths. The before-push line sits beside the pin.
+	const write = `/bin/mkdir -p ${pin} && printf 'checking\\n%s\\n' '${verdict}' > ${pin}/goal-check.ts && printf '%s\\n' '${before}' > ${pin}/before-push; `;
 	stub(
 		"bun",
 		[
 			`if [ "$1" = install ]; then ${s.pinned === false ? "" : write}echo 'the install says this'; exit ${s.install ?? 0}; fi`,
+			`if [ "$5" = --before-push ]; then /bin/cat "\${1%/*}/before-push"; exit; fi`,
 			`/bin/cat "$1"`,
 		].join("\n"),
 	);
@@ -139,9 +157,16 @@ function bin(log: string, s: Stubs): string {
 	const leave = (file?: string) =>
 		file ? `(trap '' TERM; /bin/sleep 8; echo late > '${file}') >/dev/null 2>&1 & ` : "";
 	const child = leave(s.orphan);
+	// shortcut: the step's branch from the prompt's step alone, right for this file's trees; pass `branch` otherwise.
+	const named = s.branch
+		? `b='${s.branch}'; `
+		: `s=\${2#/goal Carry step }; s=\${s%% *}; b=feat/demo-$s; [ "$s" = 1 ] && b=feat/demo; `;
+	const commits = s.commits ? "git -c user.email=t@example.com -c user.name=T commit -q --allow-empty -m step; " : "";
+	const ready = `${named}{ git switch -q "$b" 2>/dev/null || git switch -qc "$b"; }; ${commits}printf '%s\\n' '${s.said ?? SAID}'; `;
+	const forge = `printf 'goal met: forged\\n' | /usr/bin/tee ${pin}/goal-check.ts ${pin}/before-push >/dev/null; `;
 	const stage = s.sleep
 		? `${child}${s.interrupt ? "/bin/sleep 0.5; kill -INT $PPID; " : ""}${s.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep ${s.sleep}`
-		: `${child}${s.tamper ? `printf 'goal met: forged\\n' > ${pin}/goal-check.ts; ` : ""}exit ${s.claudeCode ?? 0}`;
+		: `${child}${s.tamper ? forge : ""}${ready}exit ${s.claudeCode ?? 0}`;
 	const pick = s.pickSleep
 		? `exec /bin/sleep ${s.pickSleep}`
 		: `${leave(s.pickOrphan)}${s.pickChild ? "/bin/sleep 30 2>/dev/null & " : ""}printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
@@ -203,12 +228,19 @@ export function run(
 		},
 	});
 	const text = `${call.stdout}${call.stderr}`.trim();
+	let body: string | undefined;
+	try {
+		body = readFileSync(`${log}.body`, "utf8");
+	} catch {
+		// No `gh pr create` ran.
+	}
 	return {
 		code: call.exitCode,
 		text,
 		last: call.stdout.toString().trim().split("\n").at(-1) ?? "",
 		calls: readFileSync(log, "utf8"),
 		state,
+		body,
 	};
 }
 
