@@ -40,7 +40,7 @@ describe("an answer candidate", () => {
 		const { dir } = clone(change("demo", "## 1. Only\n\n- [x] 1.1 a\n- [ ] 1.2 b\n"));
 		const { calls } = run(dir);
 		expect(calls).toContain("gh pr list --head feat/demo --state all");
-		expect(calls).toContain("/opsx:apply demo for its group 1,");
+		expect(calls).toContain("/opsx:apply demo for its group 1 and");
 	});
 
 	test.each([

@@ -114,11 +114,13 @@ function prompt(slug: string, { step, branch, answer }: Step, check: string, res
 		? ` A session left the branch ${branch}: switch to it with \`git switch ${branch}\` rather than create it, and carry on from what its commits hold.`
 		: "";
 	return [
-		`/goal Carry step ${step} of the OpenSpec change ${slug}: ${work}, the pre-PR sequence, the push and the pull request${instead}.${resume}`,
+		`/goal Carry step ${step} of the OpenSpec change ${slug}: ${work} and the pre-PR sequence, up to a committed HEAD on the branch of the step — the runner, not this session, pushes that branch and opens the pull request${instead}.${resume}`,
 		"This session runs unattended.",
-		`The goal is met when the last line of \`bun ${check} apply ${slug} ${step}\`, run after the last push, opens with \`goal met\` — or when the final message opens with \`BLOCKED —\` and names what only the user can settle.`,
+		`The goal is met when the last line of \`bun ${check} apply ${slug} ${step} --before-push\`, run after the last commit, opens with \`goal met\` — or when the final message opens with \`BLOCKED —\` and names what only the user can settle.`,
 		// No apostrophe: the doc's form wraps the prompt in the shell's single quotes.
 		`A question only the user can settle goes on the card of the change as one page-level comment — \`page_id\` and \`markdown\` only, after reading that card and its comments — whose markdown opens with ${MARK}, its two backticks included.`,
+		// `board-loop-push.ts` reads these two, as the pass reads `PICK:`.
+		"When the pull request is to open, end the final message with a line `PR-TITLE: <title>`, then a line `PR-BODY:` with the body below it to the end; when a gate line holds the pull request back, write neither.",
 	].join("\n");
 }
 
