@@ -1,0 +1,71 @@
+/**
+ * What a board-loop pass does between the stage session and its verdict: the
+ * session pushes nothing and opens nothing, so the runner pushes the step's
+ * branch and opens its pull request, with its user's own git and `gh`
+ * credentials, and only for a step that is ready — the before-push goal check
+ * met, run from the judge copy, `HEAD` on the step's branch, and a title and a
+ * body named in the session's final message.
+ */
+
+/** A command's result; one that cannot start reads as failed, never thrown. */
+export function sh(...args: string[]) {
+	try {
+		const run = Bun.spawnSync(args);
+		const text = (b: Buffer) => b.toString().trim();
+		return { ok: run.exitCode === 0, out: text(run.stdout), err: text(run.stderr) };
+	} catch {
+		return { ok: false, out: "", err: `${args[0]}: not found` };
+	}
+}
+
+/**
+ * The pull request's title and body from the session's final message, or what
+ * the message lacks. Untrusted text, read as `PICK:` is: one `PR-TITLE:` line,
+ * then one `PR-BODY:` line with the body after it to the end, neither empty.
+ */
+export function named(said: string): { title: string; body: string } | string {
+	const lines = said.split("\n");
+	const at = (mark: string) => lines.flatMap((line, i) => (line.startsWith(mark) ? [i] : []));
+	const [titles, bodies] = [at("PR-TITLE:"), at("PR-BODY:")];
+	if (titles.length !== 1) return "the final message holds not one PR-TITLE: line";
+	if (bodies.length !== 1) return "the final message holds not one PR-BODY: line";
+	if (bodies[0] < titles[0]) return "PR-BODY: comes before PR-TITLE:";
+	// `trim` drops the CR a CRLF message leaves on the title.
+	const title = lines[titles[0]].slice("PR-TITLE:".length).trim();
+	const body = lines.slice(bodies[0]).join("\n").slice("PR-BODY:".length).trim();
+	if (!title) return "the PR-TITLE: line is empty";
+	if (!body) return "nothing follows PR-BODY:";
+	return { title, body };
+}
+
+/**
+ * Pushes `branch` and opens its pull request against `base`, or says why not.
+ * `check` is the goal check's call, which runs here with `--before-push`.
+ * Undefined once the push went through, so the full check decides, a pull
+ * request already at `HEAD` included; otherwise the reason the pass is `open`.
+ */
+export function publish(said: string, check: string[], branch: string, base: string): string | undefined {
+	const before = sh("bun", ...check, "--before-push");
+	const last = before.out.split("\n").at(-1) ?? "";
+	if (!last.startsWith("goal met")) return last || before.err || "the before-push check printed nothing";
+	const on = sh("git", "symbolic-ref", "--short", "-q", "HEAD").out;
+	if (on !== branch) return `HEAD is on ${on || "no branch"}, not ${branch}; nothing was pushed`;
+	const pr = named(said);
+	if (typeof pr === "string") return pr;
+	const ref = `refs/heads/${branch}`;
+	// Exactly the step's ref, never forced, never retried: a branch that moved on origin is the user's.
+	const push = sh("git", "push", "origin", `${ref}:${ref}`);
+	if (!push.ok) {
+		console.error([push.out, push.err].filter(Boolean).join("\n"));
+		return `origin refused the push of ${branch}, as printed above`;
+	}
+	const create = ["gh", "pr", "create", "--base", base, "--head", branch, "--title", pr.title, "--body-file", "-"];
+	try {
+		// The body on stdin, where none of its lines can read as a flag.
+		const run = Bun.spawnSync(create, { stdin: Buffer.from(pr.body) });
+		if (run.exitCode !== 0) console.error(run.stderr.toString().trim());
+	} catch {
+		console.error("gh: not found");
+	}
+	return undefined;
+}
