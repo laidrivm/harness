@@ -66,7 +66,7 @@ ISO date of the export. A value that cannot be read SHALL be `null`.
 
 A session archived again, as after a resume, SHALL leave one copy holding the
 latest transcript and one record. An export cut short SHALL leave the previous
-copy of each file whole rather than a truncated one.
+copy of each file, the record included, whole rather than a truncated one.
 
 #### Scenario: A resumed session ends again
 
@@ -128,8 +128,8 @@ or carries another timeout.
 `projects/` and archive each session that has no record, or whose
 `<id>.jsonl` or a file under `<id>/` has no copy, has left the source, or
 differs from its copy in size or modification time. It SHALL write a whole
-record only where none exists, with `reason` `catch-up` and `head` `null`.
-Replacing a copy, it SHALL refresh `archived`, refresh `cwd` and `branch` only
+record only where none exists, with `reason` `catch-up` and `head` `null`; a
+record that cannot be read or parsed counts as none. Replacing a copy, it SHALL refresh `archived`, refresh `cwd` and `branch` only
 in a record whose `reason` is `catch-up`, and keep the `head` and `reason` of
 any other. It SHALL skip, and count as skipped, a session another export
 holds, and print one line counting what it archived, skipped, pruned and
@@ -163,6 +163,12 @@ failed.
 - **WHEN** an export was killed after its transcript's rename and before its
   record
 - **THEN** the catch-up writes the record
+
+#### Scenario: A record that does not parse
+
+- **WHEN** a session's copy matches its source and its `<id>.meta.json` is
+  not a JSON object
+- **THEN** the catch-up writes a whole record with `reason` `catch-up`
 
 #### Scenario: A change under the sibling directory only
 

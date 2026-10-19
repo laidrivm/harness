@@ -68,6 +68,8 @@ to rewrite the file. A file per session is replaced and deleted with its copy.
 Each file is written to `<name>.tmp` beside its target, given its mode and its
 source's modification time, then renamed over the target. A rename inside one
 directory is atomic, so a kill mid-copy leaves the previous copy whole. The
+record is written the same way, and a record that does not parse counts as
+none, so the catch-up writes it again (CodeRabbit review). The
 `<id>/` tree is copied file by file in this way, and a file that has left the
 source is removed from the copy.
 

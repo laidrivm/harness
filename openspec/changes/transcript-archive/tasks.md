@@ -80,7 +80,8 @@ transcript past the period* of §*The archive keeps a session 180 days*.
       no `projects/` directory, a killed session archived with `catch-up`
       and `null` `head`, a lagging transcript re-copied with the hook's record
       kept, an unchanged session skipped and not rewritten, a matching copy
-      with no record given one, a file added and another removed under
+      with no record given one, and one whose record does not parse [41], a
+      file added and another removed under
       `<id>/` with `<id>.jsonl` unchanged (local CodeRabbit review), one
       unreadable transcript counted as a failure, a transcript with no `cwd`
       or `gitBranch`, a live source past 180 days neither archived nor failed,
