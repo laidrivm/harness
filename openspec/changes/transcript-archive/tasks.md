@@ -16,7 +16,7 @@ with a timeout of 60 seconds*, and *A session past the period* and *A
 temporary file with no copy beside it* of §*The archive keeps a session 180
 days*.
 
-- [ ] 1.1 Write the failing cases first in a new
+- [x] 1.1 Write the failing cases first in a new
       `bun/transcript-archive.test.ts`. Drive the hook as a subprocess fed an
       event on stdin, with `XDG_STATE_HOME` and `CLAUDE_CONFIG_DIR` in a
       temporary directory, and record that each fails. Cover the copy with
@@ -25,24 +25,24 @@ days*.
       `transcripts/`, a relative `XDG_STATE_HOME`, the kept `mtime`, the
       record in a checkout and outside one, and a clean `git status` [1, 2,
       4–8, 12–17, 30]
-- [ ] 1.2 In the same file, write the fault cases, each exiting 0: input that
+- [x] 1.2 In the same file, write the fault cases, each exiting 0: input that
       is not JSON, a `session_id` of `../x`, a `transcript_path` that does not
       end in `<session_id>.jsonl`, a missing transcript, an unwritable state
       directory, and an export killed mid-copy that leaves the previous copy
       whole [19–24]. A held lock makes the hook wait and then export; a lock
       older than 120 s is taken over [38]
-- [ ] 1.3 Write the prune cases: 181 days pruned with `<id>/` and record,
+- [x] 1.3 Write the prune cases: 181 days pruned with `<id>/` and record,
       179 days kept, and a 181-day-old `.tmp` file with no copy beside it
       deleted, over every project directory in the archive, including one
       that holds no session of the exporting run [9, 10, 37]
-- [ ] 1.4 Lift the state-directory resolution out of `ledgerFile()` in
+- [x] 1.4 Lift the state-directory resolution out of `ledgerFile()` in
       `bun/gate-ledger.ts` into one exported function that the ledger and the
       archive both call. Verify with `bun test bun/gate-ledger.test.ts`
-- [ ] 1.5 Add `bun/transcript-archive.ts` as the design sets out: event
+- [x] 1.5 Add `bun/transcript-archive.ts` as the design sets out: event
       validation, the per-session `<id>.lock` (exclusive create, a 10 s wait,
       taken over past 120 s), temp-and-rename copy with mode and `mtime`, the
       record, and the prune of the whole archive. Verify with 1.1–1.3
-- [ ] 1.6 Add the `SessionEnd` entry to `HOOKS` in `bun/bootstrap.ts` with
+- [x] 1.6 Add the `SessionEnd` entry to `HOOKS` in `bun/bootstrap.ts` with
       `timeout: 60`. Give the `HOOKS` shape an optional `timeout`, write it in
       `bun/sync-settings.ts`, and compare it in `bun/settings.ts` whenever the
       entry has one. Write the failing cases first in `bun/settings.test.ts`
@@ -54,7 +54,7 @@ days*.
       not, and keep it passing. `bun/settings.fixture.ts` writes each
       registration by hand, so it gains the `SessionEnd` entry with its
       timeout
-- [ ] 1.7 Add the registration to the harness's tracked
+- [x] 1.7 Add the registration to the harness's tracked
       `.claude/settings.json` in the consumer text `HOOKS` gives it, as
       0bb2942 did for the loop guard — not through `bun/sync.ts`, which would
       also write a `harness/` copy of the rules into this tree. `bun/self-pin.test.ts`
@@ -66,7 +66,7 @@ days*.
       by a `sleep` in a scratch copy of the hook) and confirm the archive is
       whole. Record the Claude Code version in the pull request (unattended:
       card — hand the measurement on)
-- [ ] 1.9 Add one bullet to `README.md`'s ownership list naming the hook, the
+- [x] 1.9 Add one bullet to `README.md`'s ownership list naming the hook, the
       archive's place, its modes and its 180-day period, and grep `README.md`
       and `core/` for a statement the hook makes false
 
