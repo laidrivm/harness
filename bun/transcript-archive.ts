@@ -122,7 +122,7 @@ function lock(path: string): boolean {
 /**
  * Deletes, in every project directory of the archive, each session whose
  * copied transcript is past `KEEP` with its `<id>/` and record, and each
- * `.tmp` or `.lock` past it, which a killed export left.
+ * `.tmp`, `.lock` or lone `<id>/` past it, which a killed export left.
  */
 function prune(root: string): void {
 	const old = (path: string) => Date.now() - statSync(path).mtimeMs > KEEP;
@@ -132,6 +132,13 @@ function prune(root: string): void {
 		for (const name of readdirSync(dir)) {
 			const path = join(dir, name);
 			if (/\.(tmp|lock)$/.test(name) && old(path)) rmSync(path, { force: true });
+			// A first export killed between the mirror and the copy leaves `<id>/`
+			// alone; the entry may already be gone with its `.jsonl` above.
+			const lone =
+				statSync(path, { throwIfNoEntry: false })?.isDirectory() &&
+				!existsSync(`${path}.jsonl`) &&
+				!existsSync(`${path}.lock`);
+			if (lone && old(path)) rmSync(path, { recursive: true, force: true });
 			if (!name.endsWith(".jsonl") || !old(path)) continue;
 			const id = name.slice(0, -".jsonl".length);
 			for (const gone of [path, join(dir, id), join(dir, `${id}.meta.json`)])
