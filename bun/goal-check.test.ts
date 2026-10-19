@@ -202,6 +202,12 @@ describe("the before-push form", () => {
 		expect(r.last).toContain(reason);
 	});
 
+	// spec: stage-goal/something-else-missing
+	test("an incomplete group is still open before the push", () => {
+		const r = run(tasks(TWO), ["apply", "demo", "1", "--before-push"], { gh: null });
+		expect([r.code, r.last]).toEqual([1, expect.stringContaining('group "1. First" is not complete')]);
+	});
+
 	// spec: stage-goal/the-flag-out-of-place
 	test.each([
 		["misplaced [6]", ["apply", "demo", "--before-push", "2"]],
