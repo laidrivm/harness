@@ -1,16 +1,19 @@
 /**
  * What a board-loop pass does between the stage session and its verdict: the
  * session pushes nothing and opens nothing, so the runner pushes the step's
- * branch and opens its pull request, with its user's own git and `gh`
- * credentials, and only for a step that is ready — the before-push goal check
+ * branch and opens its pull request, as the GitHub App `github-app.ts` reads
+ * when one is configured and with its user's own git and `gh` credentials
+ * otherwise, and only for a step that is ready — the before-push goal check
  * met, run from the judge copy, `HEAD` on the step's branch, and a title and a
  * body named in the session's final message.
  */
+import { type App, credentials, mint } from "./github-app.ts";
 
 /** A command's result; one that cannot start reads as failed, never thrown. */
 export function sh(...args: string[]) {
 	try {
-		const run = Bun.spawnSync(args);
+		// Named, not left to the default, which misses a variable `publish` sets once the process runs.
+		const run = Bun.spawnSync(args, { env: process.env });
 		const text = (b: Buffer) => b.toString().trim();
 		return { ok: run.exitCode === 0, out: text(run.stdout), err: text(run.stderr) };
 	} catch {
@@ -44,7 +47,7 @@ export function named(said: string): { title: string; body: string } | string {
  * Undefined once the push went through, so the full check decides, a pull
  * request already at `HEAD` included; otherwise the reason the pass is `open`.
  */
-export function publish(said: string, check: string[], branch: string, base: string): string | undefined {
+export async function publish(said: string, check: string[], branch: string, base: string, app?: App) {
 	const before = sh("bun", ...check, "--before-push");
 	const last = before.out.split("\n").at(-1) ?? "";
 	if (!last.startsWith("goal met")) return last || before.err || "the before-push check printed nothing";
@@ -52,9 +55,20 @@ export function publish(said: string, check: string[], branch: string, base: str
 	if (on !== branch) return `HEAD is on ${on || "no branch"}, not ${branch}; nothing was pushed`;
 	const pr = named(said);
 	if (typeof pr === "string") return pr;
+	if (app) {
+		try {
+			// Minted now, so no session can reach it. Into the runner's own environment, for the push,
+			// `gh` and the full check after it, which reads the pull request with `gh`.
+			Object.assign(process.env, credentials(await mint(app)));
+		} catch (error) {
+			return `the App's token could not be minted: ${(error as Error).message}; nothing was pushed`;
+		}
+	}
 	const ref = `refs/heads/${branch}`;
+	// Over HTTPS as the App, even where `origin` is SSH: over SSH git ignores the header and uses a key of its own.
+	const to = app ? `https://github.com/${app.owner}/${app.repo}.git` : "origin";
 	// Exactly the step's ref, never forced, never retried: a branch that moved on origin is the user's.
-	const push = sh("git", "push", "origin", `${ref}:${ref}`);
+	const push = sh("git", "push", to, `${ref}:${ref}`);
 	if (!push.ok) {
 		console.error([push.out, push.err].filter(Boolean).join("\n"));
 		return `origin refused the push of ${branch}, as printed above`;
@@ -62,10 +76,9 @@ export function publish(said: string, check: string[], branch: string, base: str
 	const create = ["gh", "pr", "create", "--base", base, "--head", branch, "--title", pr.title, "--body-file", "-"];
 	try {
 		// The body on stdin, where none of its lines can read as a flag.
-		const run = Bun.spawnSync(create, { stdin: Buffer.from(pr.body) });
+		const run = Bun.spawnSync(create, { stdin: Buffer.from(pr.body), env: process.env });
 		if (run.exitCode !== 0) console.error(run.stderr.toString().trim());
 	} catch {
 		console.error("gh: not found");
 	}
-	return undefined;
 }

@@ -184,6 +184,7 @@ describe("the GitHub App", () => {
 		key = join(emptyDir("board-loop-key-"), "app.pem");
 		const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs1", format: "pem" } });
 		writeFileSync(key, privateKey, { mode: 0o600 });
+		writeFileSync(`${key}.junk`, "SECRET-CONTENTS\n");
 	});
 	afterAll(() => server.stop(true));
 
@@ -209,10 +210,7 @@ describe("the GitHub App", () => {
 		["a whitespace-only key path [37]", () => ({ ...both(), HARNESS_GITHUB_APP_KEY: "  " }), "HARNESS_GITHUB_APP_KEY is blank"],
 		["a non-numeric ID [38]", () => ({ ...both(), HARNESS_GITHUB_APP_ID: "seven" }), "HARNESS_GITHUB_APP_ID is no number"],
 		["a key that cannot be read [45]", () => ({ ...both(), HARNESS_GITHUB_APP_KEY: `${key}.missing` }), ".pem.missing, which holds"],
-		["a key file holding no key [45]", () => {
-			writeFileSync(`${key}.junk`, "SECRET-CONTENTS\n");
-			return { ...both(), HARNESS_GITHUB_APP_KEY: `${key}.junk` };
-		}, ".pem.junk, which holds"],
+		["a key file holding no key [45]", () => ({ ...both(), HARNESS_GITHUB_APP_KEY: `${key}.junk` }), ".pem.junk, which holds"],
 	])("%s refuses before any session or API call", async (_, env, reason) => {
 		const r = await pass(github().dir, env());
 		expect([r.calls.includes("claude "), requests]).toEqual([false, []]);
@@ -223,8 +221,10 @@ describe("the GitHub App", () => {
 
 	// spec: board-loop/half-an-app
 	test("an origin that names no GitHub repository refuses, its URL unprinted", async () => {
-		const { dir } = clone();
-		git(dir, "remote", "set-url", "origin", "https://user:SECRET@gitlab.example/o/demo.git");
+		const { dir, origin } = clone();
+		const url = "https://user:SECRET@gitlab.example/o/demo.git";
+		git(dir, "remote", "set-url", "origin", url);
+		git(dir, "config", `url.${origin}.insteadOf`, url);
 		const r = await pass(dir, both());
 		expect([r.calls.includes("claude "), requests]).toEqual([false, []]);
 		expect(r.last).toBe("board-loop: refused — origin's URL names no GitHub repository");
