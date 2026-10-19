@@ -113,8 +113,11 @@ Execute Command in a custom n8n image is the alternative. Rejected for the
 reasons above. Windmill was compared on the card from the docs (scripts in
 git, Bash first class). The user chose n8n and asked (2026-10-18) for a
 measured spike of both before the host is built: task group 2 runs one pass
-under each, and n8n stays unless Windmill meets a criterion n8n fails, in
-which case the choice goes back to the user.
+under each, and its table goes to the user whatever it shows: n8n is no
+default the table has to beat (user, 2026-10-20). The table also asks how
+each engine takes an extension that updates from upstream without a fork and
+reaches Claude on the subscription, or an OpenAI-compatible endpoint routing
+to a local model.
 
 ### `pass.sh` order and exits
 
