@@ -46,6 +46,10 @@ describe("a fault", () => {
 			session_id: "s2",
 			transcript_path: path,
 		})],
+		["a relative transcript_path", () => ({
+			session_id: "s1",
+			transcript_path: "s1.jsonl",
+		})],
 		["a transcript that does not exist [22]", (path: string) => ({
 			session_id: "gone",
 			transcript_path: join(path, "..", "gone.jsonl"),
@@ -54,6 +58,7 @@ describe("a fault", () => {
 		const m = machine();
 		const path = session(m, "s1");
 		put(join(m.config, "projects", "x.jsonl"), "{}\n");
+		put(join(m.cwd, "s1.jsonl"), "{}\n");
 		expect(archive(m, input(path))).toBe(0);
 		expect(readdirSync(m.state)).toEqual([]);
 	});
@@ -79,6 +84,7 @@ describe("a fault", () => {
 		expect(archive(m, event(m, path, { reason: "logout" }))).toBe(0);
 		expect(readFileSync(join(copy, "tool-results", "r.txt"), "utf8")).toBe("old");
 		expect(JSON.parse(readFileSync(`${copy}.meta.json`, "utf8")).reason).toBe("clear");
+		expect(existsSync(`${copy}.lock`)).toBe(false);
 	});
 });
 
@@ -128,8 +134,8 @@ describe("the prune", () => {
 
 	// spec: transcript-archive/a-session-past-the-period
 	test("deletes a session 181 days old with its <id>/ and record, in any project [9] [37]", () => {
-		const aged = { "old.jsonl": 181, "old/subagents/a.jsonl": 0, "old.meta.json": 0 };
-		expect(after(aged, ["old.jsonl", "old", "old.meta.json"])).toEqual([]);
+		const aged = { "old.jsonl": 181, "old/subagents/a.jsonl": 0, "old.meta.json": 0, "old.lock": 181 };
+		expect(after(aged, ["old.jsonl", "old", "old.meta.json", "old.lock"])).toEqual([]);
 	});
 
 	test("keeps a session 179 days old [10]", () => {
