@@ -11,6 +11,9 @@
  *   bun goal-check.ts apply <change> <step>
  *   bun goal-check.ts archive <change>
  *
+ * `--before-push`, last, holds every condition but the pull request's, for a
+ * session whose launcher pushes and opens it; `HEAD` must still name a branch.
+ *
  * Its last line opens `goal met` or `goal open`, never a gate line: the turn
  * gate would read one as the pre-PR sequence's report. Each verdict is
  * recorded in the gate ledger for counting. A record names no change or step,
@@ -29,9 +32,12 @@ const git = (...args: string[]) => {
 const has = (path: string) => git("cat-file", "-e", `HEAD:${path}`) !== undefined;
 const show = (path: string) => git("show", `HEAD:${path}`);
 
-const [stage, change, step, ...rest] = process.argv.slice(2);
+const args = process.argv.slice(2);
+// Last alone: anywhere else, twice or misspelt, it leaves an argument the shape refuses.
+const before = args.at(-1) === "--before-push";
+const [stage, change, step, ...rest] = before ? args.slice(0, -1) : args;
 const usage =
-	"usage: goal-check.ts propose|archive <change> | apply <change> <step>";
+	"usage: goal-check.ts propose|archive <change> | apply <change> <step> [--before-push]";
 const shaped =
 	["propose", "apply", "archive"].includes(stage) &&
 	// A path segment, so it can neither climb out of `openspec/changes/` nor
@@ -84,7 +90,10 @@ if (!ran(commit, top, "pass"))
 	missing.push(`no passing pre-PR run record for ${short}`);
 
 const branch = git("symbolic-ref", "--short", "-q", "HEAD");
-missing.push(...pullRequest(branch, commit));
+// Before the push the launcher pushes and opens, so only the branch it pushes is asked for.
+if (before) {
+	if (!branch) missing.push("HEAD names no branch");
+} else missing.push(...pullRequest(branch, commit));
 
 /**
  * What is missing about the pull request whose head should be `HEAD`: one of
@@ -118,7 +127,7 @@ function pullRequests(branch: string): Listed[] | undefined {
 	}
 }
 
-const target = `${stage} ${change}${step ? ` step ${step}` : ""} at ${short}`;
+const target = `${stage} ${change}${step ? ` step ${step}` : ""} at ${short}${before ? ", before the push" : ""}`;
 const met = missing.length === 0;
 console.log(met ? `goal met: ${target}` : `goal open: ${target} — ${missing.join("; ")}`);
 // The writer prefers CLAUDE_PROJECT_DIR, which can name another checkout; the

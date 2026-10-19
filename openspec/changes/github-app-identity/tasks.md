@@ -39,7 +39,7 @@ is continued*.
       error; an existing pull request at `HEAD` ending `met`; any other create
       failure ending `open`; a tampered pin unable to make the before-push run
       read met; a resumed branch on `origin` pushed fast-forward [17–23, 26–34]
-- [ ] 1.4 Add `--before-push` to `bun/goal-check.ts` as design.md says, and
+- [x] 1.4 Add `--before-push` to `bun/goal-check.ts` as design.md says, and
       see 1.1 pass with the rest of `goal-check*.test.ts` unchanged
 - [ ] 1.5 Build each session's `env` from the allowlist in
       `bun/board-loop-session.ts`, and see 1.2 pass
