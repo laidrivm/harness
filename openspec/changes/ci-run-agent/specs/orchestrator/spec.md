@@ -123,8 +123,8 @@ Before a session starts on a failed run, the CI flow SHALL post a comment on
 the pull request as the App, opening with the attempt mark and naming the
 run, its `head_sha` and the attempt's number. It SHALL count attempts as the
 App's comments that open with that mark, and SHALL start at most one attempt
-per `head_sha`. At the fourth failure it SHALL start no fix, post the limit
-mark, and have the session put a question on its card and end `BLOCKED —`.
+per `head_sha`. At the fourth failure it SHALL start no fix, post a comment
+opening with the limit mark, and have the session put a question on its card and end `BLOCKED —`.
 
 #### Scenario: The first three failures
 
@@ -159,7 +159,7 @@ mark, and have the session put a question on its card and end `BLOCKED —`.
 
 ### Requirement: A fix reaches the pull request only as new commits the runner pushes
 
-The session SHALL push nothing and run no CI. It SHALL end with a structured
+The session SHALL push nothing. It SHALL end with a structured
 answer naming its outcome, `fixed`, `blocked` or `flaky`, and a summary. The
 runner SHALL push the pull request's branch, never by force, only for `fixed`,
 and only when `HEAD` is on that branch and holds the run's `head_sha` and at
