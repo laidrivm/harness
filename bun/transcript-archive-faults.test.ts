@@ -152,4 +152,14 @@ describe("the prune", () => {
 	test("deletes a .tmp file 181 days old with no copy beside it", () => {
 		expect(after({ "gone.jsonl.tmp": 181 }, ["gone.jsonl.tmp"])).toEqual([]);
 	});
+
+	// spec: transcript-archive/a-session-past-the-period
+	test("deletes a session directory 181 days old with no transcript beside it (CodeRabbit)", () => {
+		const m = machine();
+		const lone = join(m.state, "harness", "transcripts", "-gone-clone", "lone");
+		put(join(lone, "subagents", "a.jsonl"), "x");
+		utimesSync(lone, ago(181 * DAY), ago(181 * DAY));
+		archive(m, event(m, session(m, "s1")));
+		expect(existsSync(lone)).toBe(false);
+	});
 });
