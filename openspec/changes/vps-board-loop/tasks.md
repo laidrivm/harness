@@ -44,7 +44,7 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       happy tick ends on the runner's `idle` line and exits 0 [26]. Cite each
       scenario with `// spec: orchestrator/<slug>`. Skip the file when
       `flock` is not on `PATH`, with the reason in the skip's title
-- [ ] 1.2 Add `orchestrator/pass.sh` in the order `design.md` fixes: name,
+- [x] 1.2 Add `orchestrator/pass.sh` in the order `design.md` fixes: name,
       stop file, lock, secrets, `trap '' HUP`, `env -i` run, stop file on any
       non-zero exit. The clones, state and secrets directories default to
       `~/clones`, `~/orchestrator` and `/run/secrets`. Each can be overridden
