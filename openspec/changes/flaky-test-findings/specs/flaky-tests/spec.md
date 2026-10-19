@@ -74,8 +74,15 @@ files that are not ignored.
 
 The watch SHALL decide a run's outcome from bun's reporter in the call's
 output, never from the call's exit code or the command's spelling: a `(fail)`
-line or a nonzero `fail` count is a failing run, and a `0 fail` count with no
-`(fail)` line is a passing run. Output carrying neither SHALL be no test run.
+line or a nonzero `fail` count is a failing run, and a `0 fail` count with a
+nonzero `pass` count and no `(fail)` line is a passing run. Output carrying
+neither, a run of `0 pass` and `0 fail` included, SHALL be no test run.
+
+#### Scenario: A run whose every test was skipped
+
+- **WHEN** a run fails, and the same command on the same tree then reports
+  `0 pass` and `0 fail` because the failing test is now skipped
+- **THEN** the watch names no flaky test, since no test passed
 
 #### Scenario: A piped run that hides the exit code
 
@@ -215,7 +222,9 @@ hiding them.
 
 `harness:check` SHALL fail a `retry` key under `[test]` in any tracked
 `bunfig.toml`; a `retry` option passed to a test, `describe` or hook call in
-any tracked source that imports `bun:test`; and a `bun test` or `bun run`
+any tracked source that imports `bun:test` or whose name `bun test` discovers
+as a test file (`*.test.*`, `*_test.*`, `*.spec.*`, `*_spec.*`), where the
+same calls are globals with no import; and a `bun test` or `bun run`
 invocation carrying `--retry` in a command the tree holds — a tracked
 `package.json`'s `scripts` or `simple-git-hooks` values, a tracked workflow's
 `run:` step, a tracked file under `.githooks/` — read as the guard reads a
@@ -233,6 +242,12 @@ command line.
   test's options
 - **THEN** `harness:check` fails, naming the file and the line
 
+#### Scenario: A retry on a global test call
+
+- **WHEN** a tracked `widget.test.ts` that does not import `bun:test` calls
+  the global `test("name", fn, { retry: 2 })`
+- **THEN** `harness:check` fails, naming the file and the line
+
 #### Scenario: The word in a string or a comment
 
 - **WHEN** a file importing `bun:test` names `retry:` only inside a string, a
@@ -241,8 +256,8 @@ command line.
 
 #### Scenario: A retry key outside test code
 
-- **WHEN** a tracked source that does not import `bun:test` carries
-  `retry: true`, as an application's client options do
+- **WHEN** a tracked source that neither imports `bun:test` nor has a test
+  file's name carries `retry: true`, as an application's client options do
 - **THEN** `harness:check` reports nothing for it
 
 #### Scenario: A retry key in a test's fixture

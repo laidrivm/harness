@@ -43,7 +43,8 @@ The harness holds nothing against that today:
 - **`harness:check`** refuses three forms of a retry:
   - `retry` under `[test]` in any tracked `bunfig.toml`;
   - a `retry` option passed to a test call in any tracked source that
-    imports `bun:test`;
+    imports `bun:test` or carries a test file's name, where `bun test`
+    provides the same calls as globals;
   - a `--retry` in a command the tree holds, such as a `package.json` script,
     a workflow step or a git hook. The guard sees only `bun run test`, so a
     retry inside the script would pass it.
@@ -111,7 +112,8 @@ The change cannot finish without these, and only the user can do them:
   registrations and the new ask entries. Neither consumer's tree trips the
   new check. At their `main` on 2026-10-19:
   - `dota2` and `mellon` have no `[test] retry` in a `bunfig.toml`;
-  - neither has a `retry` key in a file importing `bun:test`;
+  - neither has a `retry` key in a file importing `bun:test`, and GitHub's
+    code search finds `retry` in no test file of either;
   - neither passes `--retry` in a script.
 - The settings sync writes the hooks for every consumer. Each Bash call pays
   one more bun start on its post-call event: the command guard measured
