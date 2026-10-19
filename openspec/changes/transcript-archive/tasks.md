@@ -61,7 +61,7 @@ days*.
       compares each registered hook object whole as `{ type, command }`, so
       add the entry's `timeout` to the expected object, then confirm it
       passes [35]
-- [ ] 1.8 Measure the timeout in an attended session: end a session whose
+- [x] 1.8 Measure the timeout in an attended session: end a session whose
       transcript takes more than 1.5 s to copy (a large one, or a copy slowed
       by a `sleep` in a scratch copy of the hook) and confirm the archive is
       whole. Record the Claude Code version in the pull request (unattended:
