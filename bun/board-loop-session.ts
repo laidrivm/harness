@@ -10,6 +10,26 @@ import { join } from "node:path";
 export type Kill = (pid: number, signal: NodeJS.Signals | 0) => void;
 
 /**
+ * The variables a session gets of the runner's, and no others: an allowlist,
+ * since a denylist would pass the next credential nobody listed. None carries
+ * a GitHub credential, an SSH agent or an App setting; Claude's own credential
+ * is the session's by necessity. `XDG_STATE_HOME` must pass, so the pre-PR
+ * record a session writes is the one the runner's check reads.
+ */
+const PASSED = new Set([
+	"PATH", "HOME", "USER", "LOGNAME", "SHELL", "TERM", "LANG", "TMPDIR", "TZ",
+	"XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME",
+	"CLAUDE_CONFIG_DIR", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN",
+	"HARNESS_GH_TIMEOUT_MS", "GOAL_CHECK_RETRY_MS",
+]);
+
+/** The runner's environment cut to the allowlist; every `LC_*` passes, by its whole prefix. */
+const allowed =(env: NodeJS.ProcessEnv) =>
+	Object.fromEntries(
+		Object.entries(env).filter(([name, value]) => value !== undefined && (PASSED.has(name) || name.startsWith("LC_"))),
+	) as Record<string, string>;
+
+/**
  * One `claude -p` session, ended at `limit`, and everything it started ended
  * with it, however it exits. `capture` keeps its output rather than showing
  * it. `left` names its process group when a member outlived the bounded wait.
@@ -24,6 +44,7 @@ export async function session(text: string, limit: number, kill: Kill, capture =
 		// Leader of its own process group, so a child it starts (a test run, a push) is signalled with it.
 		const run = Bun.spawn(["claude", "-p", text, ...flags], {
 			stdio: ["ignore", capture ? Bun.file(join(dir, "out")) : "inherit", "inherit"],
+			env: allowed(process.env),
 			detached: true,
 		});
 		const group = (signal: NodeJS.Signals) => {

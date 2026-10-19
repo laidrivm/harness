@@ -41,7 +41,7 @@ is continued*.
       read met; a resumed branch on `origin` pushed fast-forward [17–23, 26–34]
 - [x] 1.4 Add `--before-push` to `bun/goal-check.ts` as design.md says, and
       see 1.1 pass with the rest of `goal-check*.test.ts` unchanged
-- [ ] 1.5 Build each session's `env` from the allowlist in
+- [x] 1.5 Build each session's `env` from the allowlist in
       `bun/board-loop-session.ts`, and see 1.2 pass
 - [ ] 1.6 Add `bun/board-loop-push.ts` (the title and body parse, the
       before-push run from the judge copy, the branch check, the push and
