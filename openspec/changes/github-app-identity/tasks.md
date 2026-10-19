@@ -78,7 +78,7 @@ configured*.
       naming one repository and exactly `contents` and `pull_requests` at
       `write`; the bot name and email; `origin` parsed in its HTTPS, SSH and
       `ssh://` forms, another host or extra segments refused [35, 39–43]
-- [ ] 2.2 Write the failing runner cases in `bun/board-loop-push.test.ts`:
+- [x] 2.2 Write the failing runner cases in `bun/board-loop-push.test.ts`:
       one setting alone, an empty or whitespace-only one, a non-numeric ID, an
       unreadable key (its path named, its contents not) and a failing
       `GET /app` each refuse before any session; a failed mint after the
