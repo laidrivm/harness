@@ -22,8 +22,10 @@ never does.
   it to comment on the card. It puts the question in its final message
   instead: a line `QUESTION: <card id>`, then the text. Once the session has
   ended, the runner checks the text as the question gate checks a comment:
-  the mark, at most 1500 characters, no mention, and a card on one of the
-  three boards. It also checks that no question already waits on that card.
+  the mark, at most 1500 characters, no mention. The card must be the
+  carried change's, on the repository's own board, which is narrower than
+  the gate's three boards. It also checks that no question already waits on
+  that card.
   Then it posts the question from the integration and sets the card's
   `Assign` to the user.
 - **A session the runner asks for posts no comment itself.** The runner marks

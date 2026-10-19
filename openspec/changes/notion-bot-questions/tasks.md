@@ -64,7 +64,9 @@ question*.
       followed only by another member's comment still waits; one followed by
       the user's unmarked comment does not [22]. A plain backticked mark
       counts as a question as well as a code run [23]. A data source titled
-      `Harness copy` refused [24]. A parent of type `database_id` or `page_id`
+      `Harness copy`, or `mellon` from the harness's clone, refused [24]. A
+      `Pointer` naming another change, or the carried one with text after
+      it, refused [24a]. A parent of type `database_id` or `page_id`
       refused [25]. A 404 on the page read prints the status and posts nothing
       [26]. A stub that never answers ends at the timeout, which the test
       shortens, and prints the error's name [27]. A failed `POST` leaves no
@@ -90,7 +92,7 @@ question*.
       variable the runner sets is the gate's exported name and value [39].
       Text that is unmarked and also too long is still `unmarked` once the
       checks are lifted [40]
-- [ ] 2.6 Lift the text checks, `BOARDS` and `REMEDY` into exports of
+- [ ] 2.6 Lift the text checks and `REMEDY` into exports of
       `bun/question-gate.ts`, switch `verdict()` to them, and add the refusal
       under `HARNESS_RUNNER_ASKS`; see 2.5 pass with the rest of
       `question-gate*.test.ts` unchanged
