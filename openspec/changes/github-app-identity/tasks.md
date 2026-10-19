@@ -13,7 +13,7 @@ and `board-loop` §*The runner pushes the step and opens its pull request*,
 §*A session's environment is an allowlist* and §*A step branch a session left
 is continued*.
 
-- [ ] 1.1 Write the failing `--before-push` cases in `bun/goal-check.test.ts`:
+- [x] 1.1 Write the failing `--before-push` cases in `bun/goal-check.test.ts`:
       met with no pull request and no `gh` on `PATH`, no `gh` call made; open
       naming a detached `HEAD`, a missing record, a tracked edit; usage and
       exit 2 with nothing recorded for the flag misplaced, doubled or
