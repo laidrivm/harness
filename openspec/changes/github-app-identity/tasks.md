@@ -88,7 +88,7 @@ configured*.
       carrying the extra header through `GIT_CONFIG_*` and `gh` getting
       `GH_TOKEN`; an `origin` in SSH form still pushed to the HTTPS URL with
       the header, never over SSH; with no settings, no API call and no header [36–38, 44–52]
-- [ ] 2.3 Add `bun/github-app.ts` (the JWT with `node:crypto`'s `sign`, the
+- [x] 2.3 Add `bun/github-app.ts` (the JWT with `node:crypto`'s `sign`, the
       four calls) and see 2.1 pass
 - [ ] 2.4 Wire it into `pass()` and `board-loop-push.ts`: the identity read
       before the pick session, the token minted after the stage session, the
