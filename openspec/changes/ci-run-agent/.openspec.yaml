@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-10-20
+after:
+  - vps-board-loop
+  - github-app-identity
