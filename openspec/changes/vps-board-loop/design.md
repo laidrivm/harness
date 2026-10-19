@@ -148,8 +148,10 @@ which case the choice goes back to the user.
    `CLAUDE_CODE_OAUTH_TOKEN` and `GH_TOKEN`, and `exec`s
    `bun node_modules/harness/bun/board-loop.ts`. No token value appears in a
    command's arguments, where `ps` would show it, and the script never turns
-   on `set -x`. The wrapper tees the whole output to
-   `~/orchestrator/passes/<UTC time>-<clone>.log` and keeps its last line.
+   on `set -x`. The wrapper writes the whole output to
+   `~/orchestrator/passes/<UTC time>-<clone>.log`, prints it once the pass
+   ends and keeps its last line. Not through `tee`: a dropped connection
+   would end `tee` on its next write, and the pass with it on its own.
    Ignoring `HUP` keeps an n8n
    restart from killing a stage session halfway. `CLAUDECODE` is passed on
    only when set, so the runner's one refusal still decides. A second copy of
