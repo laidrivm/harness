@@ -59,7 +59,7 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       `board-loop/a-timer-started-inside-a-claude-code-session` on the
       existing `CLAUDECODE` cases, which already cover it [39]. Verify with
       `bun test bun/board-loop-clone.test.ts`
-- [ ] 1.4 Update the docs. In `README.md`, under Layout, add one sentence for
+- [x] 1.4 Update the docs. In `README.md`, under Layout, add one sentence for
       `orchestrator/`. In the board loop's paragraph, add the host timer the
       user set up (`orchestrator/pass.sh`) beside "a terminal of their own",
       and add that two passes at once need two clones, never two worktrees of
@@ -67,7 +67,10 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       terminal of their own" and "only the user starts it" across the tree,
       `openspec/specs/**` included, and reconcile each site. Verify with
       `bun test`
-- [ ] 1.5 Run `bun bun/check.ts` and `bun test`. Both pass
+- [x] 1.5 Run `bun bun/check.ts` and `bun test`. Both pass. Applied: `bun
+      test` passes. `check.ts` is the consumer's entry point and cannot run
+      in this tree, which has no `bunfig.toml` and no `harness.rootFiles` or
+      `harness.suppressions`; it fails alike on `main`
 
 ## 2. Spike: n8n against Windmill on one pass
 
