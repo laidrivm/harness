@@ -8,7 +8,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { HOOKS } from "./bootstrap.ts";
+import { HOOKS, registration } from "./bootstrap.ts";
 
 type Entry = { matcher?: string; hooks?: { command?: string }[] };
 
@@ -21,14 +21,15 @@ describe("the harness's own hook registrations", () => {
 	// spec: harness-updates/a-registration-is-missing-from-the-harness-s-settings
 	test.each(HOOKS.map((hook) => [`${hook.name} (${hook.event})`, hook]))(
 		"%s is registered in its consumer text",
-		(_, { event, matcher, command, sole }) => {
-			// The whole hook object, so an `if`, `async` or other type that would
-			// stop it running or blocking fails here — no check reads these settings.
-			const registered = (hooks()[event] ?? [])
-				.filter((entry) => entry.matcher === matcher)
+		(_, hook) => {
+			// The whole hook object, so an `if`, `async`, other type or other
+			// timeout that would stop it running, blocking or finishing fails here
+			// — no check reads these settings.
+			const registered = (hooks()[hook.event] ?? [])
+				.filter((entry) => entry.matcher === hook.matcher)
 				.flatMap((entry) => entry.hooks ?? []);
-			expect(registered).toContainEqual({ type: "command", command });
-			if (sole) expect(registered).toHaveLength(1);
+			expect(registered).toContainEqual(registration(hook));
+			if (hook.sole) expect(registered).toHaveLength(1);
 		},
 	);
 
