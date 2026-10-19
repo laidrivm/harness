@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createPrivateKey, generateKeyPairSync, verify } from "node:crypto";
-import { credentials, identity, jwt, mint, repository } from "./github-app.ts";
+import { configured, credentials, identity, jwt, mint, repository } from "./github-app.ts";
 
 /**
  * The GitHub App's calls, against a stand-in API reached through
@@ -18,6 +18,8 @@ const app = { id: "7", key: createPrivateKey(pair.privateKey), owner: "o", repo:
 /** Each request the stand-in saw: its method, path, `Authorization` and body. */
 let seen: { method: string; path: string; auth: string | null; body: string }[] = [];
 let server: ReturnType<typeof Bun.serve>;
+/** A path the stand-in answers OK with an empty object. */
+let empty = "";
 const api = process.env.GITHUB_API_URL;
 
 beforeAll(() => {
@@ -32,6 +34,7 @@ beforeAll(() => {
 				"/repos/o/demo/installation": { id: 99 },
 				"/app/installations/99/access_tokens": { token: "ghs_minted" },
 			};
+			if (path === empty) return Response.json({});
 			return path in answers ? Response.json(answers[path]) : new Response("no", { status: 404 });
 		},
 	});
@@ -106,6 +109,28 @@ describe("the calls", () => {
 		expect(failed).not.toContain("PRIVATE KEY");
 	});
 
+	// spec: board-loop/github-does-not-answer
+	test("an OK answer missing its field rejects naming the path and the field", async () => {
+		empty = "/app";
+		const failed = await identity(app).then(
+			() => "",
+			(e: Error) => e.message,
+		);
+		empty = "";
+		expect(failed).toBe("GitHub's API answered /app with no slug");
+	});
+
+	// spec: board-loop/github-does-not-answer
+	test("an API that cannot be reached rejects naming the path", async () => {
+		process.env.GITHUB_API_URL = "http://127.0.0.1:1";
+		const failed = await mint(app).then(
+			() => "",
+			(e: Error) => e.message,
+		);
+		process.env.GITHUB_API_URL = server.url.origin;
+		expect(failed).toStartWith("GitHub's API could not be reached for /repos/o/demo/installation: ");
+	});
+
 	test("the push's credentials carry the token as git's extra header and as GH_TOKEN", () => {
 		expect(credentials("ghs_t")).toEqual({
 			GH_TOKEN: "ghs_t",
@@ -113,6 +138,14 @@ describe("the calls", () => {
 			GIT_CONFIG_KEY_0: "http.https://github.com/.extraheader",
 			GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${Buffer.from("x-access-token:ghs_t").toString("base64")}`,
 		});
+	});
+});
+
+describe("the settings", () => {
+	// spec: board-loop/half-an-app
+	test("an ID with whitespace around it is no number, never trimmed", () => {
+		const env = { HARNESS_GITHUB_APP_ID: " 7", HARNESS_GITHUB_APP_KEY: "/unread" };
+		expect(() => configured(env, "https://github.com/o/demo.git")).toThrow("HARNESS_GITHUB_APP_ID is no number");
 	});
 });
 
