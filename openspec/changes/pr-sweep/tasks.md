@@ -61,8 +61,9 @@ when one is configured*. Of that requirement, it closes *No App*.
       - The line and the mark: every fixed key is present. `reason` is absent
         for `marked` and `updated`. `handoffs` and `detail` are always arrays
         [16]. Standard output holds only JSON lines [17]. The mark goes to the
-        head SHA with `harness/sweep` and `success` [19]. A failed status write
-        reads `failed` and keeps the hand-offs [21].
+        head SHA with `harness/sweep` and `success`, after the line is printed
+        [19]. A failed status write leaves the printed line as it was, names
+        the pull request on standard error and exits 1 [21].
 - [ ] 1.3 Export the time limit from `bun/pull-requests.ts`, its two callers
       unchanged, and see `bun test bun/goal-check bun/board-loop` stay green
 - [ ] 1.4 Add `bun/pr-sweep.ts` as `design.md` fixes: the argument, the

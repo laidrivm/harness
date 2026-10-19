@@ -189,15 +189,17 @@ its kind, its recipient and its detail.
 
 #### Scenario: A line printed before its mark fails
 
-- **WHEN** the status write fails after the hand-offs were judged
-- **THEN** the line reads `failed` and still carries the hand-offs
+- **WHEN** the status write fails after a `marked` line was printed
+- **THEN** the line stands as printed with its hand-offs, standard error names
+  the pull request and the SHA, and the run exits 1
 
-### Requirement: A judged head is marked after its line is decided
+### Requirement: A judged head is marked after its line is printed
 
 For a head judged as `marked`, the sweep SHALL write one commit status on it,
 context `harness/sweep` and state `success`, whose description names the
-hand-off kinds or says there were none. It SHALL write it only after the
-hand-offs are decided, and SHALL write no status for any other outcome.
+hand-off kinds or says there were none. It SHALL write it only after that
+pull request's line is printed, and SHALL write no status for any other
+outcome.
 
 #### Scenario: The mark names the hand-offs
 
@@ -209,8 +211,8 @@ hand-offs are decided, and SHALL write no status for any other outcome.
 
 The sweep SHALL exit 2, with no call made, when its argument is not one
 `<owner>/<repo>` whose two parts are valid GitHub names, the whole value
-anchored. It SHALL exit 1 when the listing fails or any line reads `failed`,
-and 0 otherwise.
+anchored. It SHALL exit 1 when the listing fails, any line reads `failed` or
+any mark fails, and 0 otherwise.
 
 #### Scenario: A bad argument
 
