@@ -8,8 +8,8 @@ against the tree as it stands.
 ## 1. Name the bot and cap the rounds
 
 Closes `agent-permissions` §*The rule against writing under the user's name
-names the App's bot* and `agent-autonomy` §*A pull request's bot review gets
-at most three rounds*.
+names the App's bot* and `agent-autonomy` §*A pull request gets CodeRabbit's
+fixes for at most three rounds*.
 
 - [ ] 1.1 Write the failing cases in a new `bun/review-docs.test.ts`. Each
       case cites its scenario in a `// spec:` comment and reads the doc at
@@ -46,7 +46,7 @@ at most three rounds*.
       of the App's (`github-app-identity`). Add the id and email nowhere
       (design.md, D1). Verify: the 1.1 cases for this bullet pass.
 - [ ] 1.3 Edit `core/review-toolkit.md`'s `/coderabbit [pr]` bullet. Add the
-      cap of three rounds, a round being the bot's review of one commit,
+      cap of three rounds, a round being CodeRabbit's review of one commit,
       counted from the pull request's reviews (design.md, D4). Then add what
       happens at a fourth round whose review carries a finding to apply: the
       run applies none, ends on `CODERABBIT gate: BLOCKED` naming the cap,

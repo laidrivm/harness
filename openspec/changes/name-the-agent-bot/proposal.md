@@ -22,7 +22,7 @@ rounds today.
   from the board loop's runner or the orchestrator, never from inside a
   session.
 - **The round cap moves into the policy.** `core/review-toolkit.md`'s
-  `/coderabbit` bullet caps a pull request at three rounds of the bot's
+  `/coderabbit` bullet caps a pull request at three rounds of CodeRabbit's
   review. The bullet says what a run does when it reaches a fourth review that
   still carries a finding to apply. Attended, it applies nothing, reports the
   findings and stops. Unattended, it hands them on as a question on the card,
@@ -59,8 +59,8 @@ None.
 
 - `agent-permissions`: an added requirement, *The rule against writing under
   the user's name names the App's bot*.
-- `agent-autonomy`: an added requirement, *A pull request's bot review gets
-  at most three rounds*.
+- `agent-autonomy`: an added requirement, *A pull request gets CodeRabbit's
+  fixes for at most three rounds*.
 
 ## Impact
 
