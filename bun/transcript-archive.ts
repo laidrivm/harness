@@ -28,7 +28,7 @@ import {
 	utimesSync,
 	writeFileSync,
 } from "node:fs";
-import { basename, dirname, isAbsolute, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { stateDir } from "./gate-ledger.ts";
 
 /** How long the archive keeps a session, judged by its transcript's mtime. */
@@ -145,11 +145,12 @@ function main(input: string): void {
 	const event: Event | null = JSON.parse(input);
 	const id = event?.session_id;
 	const path = event?.transcript_path;
-	// A plain name, and the transcript Claude Code names after it, so neither
-	// can point the copy outside its project directory.
+	// A plain name, and the transcript Claude Code names after it in a named
+	// directory, with no `.` or `..` segment, so neither can point the copy
+	// outside its project directory.
 	if (typeof id !== "string" || !/^[\w-]+$/.test(id)) return;
-	if (typeof path !== "string" || !isAbsolute(path)) return;
-	if (basename(path) !== `${id}.jsonl`) return;
+	if (typeof path !== "string" || resolve(path) !== path) return;
+	if (basename(path) !== `${id}.jsonl` || !basename(dirname(path))) return;
 	if (!statSync(path, { throwIfNoEntry: false })?.isFile()) return;
 	const root = join(stateDir(), "harness", "transcripts");
 	const project = join(root, basename(dirname(path)));
