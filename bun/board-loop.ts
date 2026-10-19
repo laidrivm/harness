@@ -5,9 +5,10 @@
  * session reads `Board view`, names the first takeable card in the board's
  * order, a card whose question the user answered first, and claims it. The
  * pass carries that change's next apply step, or the answer as step N+1, in a
- * fresh, unattended `claude -p` session under `stage-goal`'s launch form, then
- * takes the outcome from the goal check it runs itself, never from the
- * session's exit status.
+ * fresh, unattended `claude -p` session under `stage-goal`'s launch form, which
+ * pushes nothing. The runner then pushes the step's branch and opens its pull
+ * request when the session left it ready, and takes the outcome from the goal
+ * check it runs itself, never from the session's exit status.
  *
  *   bun bun/board-loop.ts                        (the harness)
  *   bun node_modules/harness/bun/board-loop.ts   (a consumer)

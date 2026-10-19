@@ -49,7 +49,8 @@ until the review lands, and the next run picks it up.
   early the moment a review returns nothing above 🟡 Minor, and if Major or
   above survives the third, report it and stop rather than starting a fourth
   (unattended: agent — push and open the pull request, listing the finding
-  as still open).
+  as still open; under the board loop, name the pull request with that
+  listing in its body, and the runner opens it).
   Collect Minor findings across all passes and report them once at the end,
   each fixed or skipped with its reason. The CLI looks for
   `.coderabbit.yaml` on its own only while no `--config` is given, and the

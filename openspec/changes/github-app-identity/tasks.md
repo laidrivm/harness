@@ -53,7 +53,7 @@ is continued*.
       `--before-push`, and a new line asks for `PR-TITLE:` and `PR-BODY:`;
       update `board-loop-stage.test.ts`'s prompt cases for the plain, resume
       and answer forms [24, 25]
-- [ ] 1.8 Reconcile the restating sites, read back after the edit: the
+- [x] 1.8 Reconcile the restating sites, read back after the edit: the
       `board-loop.ts` header and its "never deletes, resets or pushes" comment,
       `README.md`'s runner paragraph, `core/feature-workflow.md`'s *Unattended
       stages* (the board loop's variant beside the hand-launched form, which
