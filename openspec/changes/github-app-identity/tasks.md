@@ -43,7 +43,7 @@ is continued*.
       see 1.1 pass with the rest of `goal-check*.test.ts` unchanged
 - [x] 1.5 Build each session's `env` from the allowlist in
       `bun/board-loop-session.ts`, and see 1.2 pass
-- [ ] 1.6 Add `bun/board-loop-push.ts` (the title and body parse, the
+- [x] 1.6 Add `bun/board-loop-push.ts` (the title and body parse, the
       before-push run from the judge copy, the branch check, the push and
       `gh pr create`) and call it from `pass()` between the stage session and
       the verdict, capturing the stage session's output and printing it after;

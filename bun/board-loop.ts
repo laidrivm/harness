@@ -25,6 +25,7 @@
 import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
+import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session } from "./board-loop-session.ts";
 import { record } from "./gate-ledger.ts";
 import { readPullRequests } from "./pull-requests.ts";
@@ -40,17 +41,6 @@ const DEFAULT = "main";
 type Outcome = "met" | "open" | "timeout" | "idle" | "refused";
 /** `answer`: every group is ticked, so the step is N+1 and carries the answer on the card. */
 type Step = { step: number; branch: string; answer: boolean };
-
-/** A command's result; one that cannot start reads as failed, never thrown. */
-function sh(...args: string[]) {
-	try {
-		const run = Bun.spawnSync(args);
-		const text = (b: Buffer) => b.toString().trim();
-		return { ok: run.exitCode === 0, out: text(run.stdout), err: text(run.stderr) };
-	} catch {
-		return { ok: false, out: "", err: `${args[0]}: not found` };
-	}
-}
 
 /**
  * Whether Claude Code's config trusts `dir`, keyed by its real path. The path
@@ -264,21 +254,26 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		return refuse(`the pick session named ${slug}: ${reasons.get(slug) ?? "no change of that name is takeable"}`);
 
 	const target = `apply ${slug} step ${chosen.step}`;
-	// The runner names the branch and never deletes, resets or pushes it.
+	// The runner names the branch, never deletes or resets it, and pushes it only once the step is ready.
 	const resumed = left(chosen.branch);
 	if (resumed) console.log(`continuing ${chosen.branch}, which a session left`);
 	console.log(`carrying ${target} on ${chosen.branch}`);
 	let staged: Awaited<ReturnType<typeof session>>;
 	try {
-		staged = await session(prompt(slug, chosen, relative(real, check), resumed), limit, kill);
+		// Captured, for its title and body: in text mode it prints nothing before its final message.
+		staged = await session(prompt(slug, chosen, relative(real, check), resumed), limit, kill, true);
 	} catch {
 		return refuse("claude could not be started");
 	}
 	const stageEnd = unclean(target, staged);
 	if (stageEnd !== undefined) return stageEnd;
+	if (staged.out.trim()) console.log(staged.out.trim());
 
+	const judged = [join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
+	const unready = publish(staged.out, judged, chosen.branch, DEFAULT);
+	if (unready !== undefined) return end("open", `${target}: ${unready}`);
 	// The check's own verdict at the commit the session left, never the exit status.
-	const verdict = sh("bun", join(judge, "goal-check.ts"), "apply", slug, String(chosen.step));
+	const verdict = sh("bun", ...judged);
 	const last = verdict.out.split("\n").at(-1) ?? "";
 	if (last.startsWith("goal met")) return end("met", target);
 	return end("open", `${target}: ${last || verdict.err || "the goal check printed nothing"}`);
