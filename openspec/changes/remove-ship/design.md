@@ -49,10 +49,13 @@ Each scenario is rewritten to describe a skill, without naming one:
   old heading, which leaves `/ship` named in the live spec. The criterion is
   renamed, and no test cites either name.
 - `agent-permissions`: the heading *A skill reserved for the user* stays, and
-  only its body changes.
+  only its body changes. So does the body of *A flag with no step that stays
+  with the user*, which named `coderabbit/SKILL.md`; its heading, which
+  `bun/autonomy.test.ts` cites, stays.
 
-Neither scenario is cited by a `// spec:` comment. The renamed criterion
-stays uncited, so the count of uncited criteria does not move.
+Neither scenario that named `ship` is cited by a `// spec:` comment. The
+renamed criterion stays uncited, so the count of uncited criteria does not
+move.
 
 ### D3. The triage clause is dropped, not reworded
 

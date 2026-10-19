@@ -64,7 +64,8 @@ None.
   `/ship`.
 - `agent-permissions`: the scenario *A skill reserved for the user* under
   *Who may invoke a skill is enforced, not narrated* names no particular
-  skill.
+  skill, and nor does its scenario *A flag with no step that stays with the
+  user*, which named `coderabbit/SKILL.md`.
 
 ## Impact
 
