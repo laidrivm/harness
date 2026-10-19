@@ -115,8 +115,10 @@ The fourth line of the stage launch form becomes: a question only the user
 can settle goes in the final message, never on the card, as a line
 `QUESTION: <the card's id>` with the question below it, opening with the
 mark. The runner posts it after the session. The line comes before any
-`PR-TITLE:`. The runner reads it as untrusted text, as `named()` reads the
-pull request's title and body:
+`PR-TITLE:`. The session still reads the card, its comments and the
+`Questions` view first, as `task-board`'s *A question already open is not
+asked again* asks of an agent about to ask. The runner reads the line as
+untrusted text, as `named()` reads the pull request's title and body:
 
 - exactly one line starts `QUESTION:`, and it does not come after `PR-BODY:`,
   whose body runs to the end;
