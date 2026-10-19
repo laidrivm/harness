@@ -44,15 +44,16 @@ reach a session.
 When the integration is configured and a stage session ends clean, the
 runner SHALL read the final message for a `QUESTION: <card id>` line and the
 text below it. It SHALL post that text from the integration on that card only
-when the question gate's checks on a comment's text pass, the card's parent
-data source is one of the three boards, and no question waits unanswered
-there. It SHALL then set `Assign` to the user alone, and print one line
-saying what it did. The pass's outcome SHALL stay the goal check's.
+when the question gate's checks on a comment's text pass, the card sits on
+the board `harness.board` names with a `Pointer` that is wholly the carried
+change's directory, and no question waits unanswered there. It SHALL then
+set `Assign` to the user alone, and print one line saying what it did. The pass's outcome SHALL stay the goal check's.
 
 #### Scenario: A question posted
 
-- **WHEN** the final message holds one `QUESTION:` line naming a card on
-  `Harness` on which no question waits, and below it text that opens
+- **WHEN**, in the harness's clone, the final message holds one `QUESTION:`
+  line naming the carried change's card on `Harness`, on which no question
+  waits, and below it text that opens
   with the mark and is at most 1500 characters long
 - **THEN** the runner posts the text as a page-level comment from the
   integration, sets the card's `Assign` to the user alone, prints that it did
@@ -86,10 +87,17 @@ saying what it did. The pass's outcome SHALL stay the goal check's.
 
 #### Scenario: A page that is not a card
 
-- **WHEN** the page's parent data source is not one of the three boards, or
-  Notion answers the read of the page with an error
+- **WHEN** the page's parent data source is not the board `harness.board`
+  names, or Notion answers the read of the page with an error
 - **THEN** the runner posts nothing and prints the reason, with Notion's
   status where it answered one
+
+#### Scenario: The card of another change
+
+- **WHEN** the card's `Pointer` is not wholly
+  `openspec/changes/<slug>/` for the change the pass carries
+- **THEN** the runner posts nothing and prints that the card is not the
+  carried change's
 
 #### Scenario: A question already waits
 

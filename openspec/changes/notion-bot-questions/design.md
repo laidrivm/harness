@@ -42,8 +42,7 @@ on the card under the user's name; the same runner on the laptop, with no
 token, works as it does today.
 
 **Non-Goals:** the proposal's. Besides those: rendering the question's
-markdown, retrying a failed post, and checking that a card's `Pointer` names
-the change the pass carries.
+markdown, and retrying a failed post.
 
 ## Decisions
 
@@ -130,12 +129,15 @@ untrusted text, as `named()` reads the pull request's title and body:
 
 `verdict()`'s three checks on the text (`unmarked`, `mention`, `length`)
 move into one exported function of `bun/question-gate.ts`. Both the gate and
-the runner call it. `BOARDS` and `REMEDY` are exported beside it, so the
-runner prints the gate's own words (`rules.md` Code: logic written twice is
-lifted into one module both callers import). The gate's other conditions do
-not apply. The runner always posts a page-level comment, with rich text it
-builds itself. In place of the gate's `comments-unread`, the runner reads the
-comments itself, as below.
+the runner call it. `REMEDY` is exported beside it, so the runner prints the
+gate's own words (`rules.md` Code: logic written twice is lifted into one
+module both callers import). The gate's other conditions do not apply. The
+runner always posts a page-level comment, with rich text it builds itself.
+In place of the gate's `not-a-card`, it checks the card more narrowly than
+the gate's three boards. The card must sit on the board `harness.board`
+names, which the runner already reads, and carry the carried change's
+`Pointer`, so a session cannot steer the integration to another card. In
+place of `comments-unread`, the runner reads the comments itself, as below.
 
 ### Five REST calls, in order, each stopping the rest on failure
 
@@ -143,8 +145,10 @@ The base is `HARNESS_NOTION_API_URL`, `https://api.notion.com` by default, so
 a test can serve it with `Bun.serve`. Every call sends `Notion-Version:
 2025-09-03` and has a 30 s timeout.
 
-1. `GET /v1/pages/{id}`: its `parent` must be a `data_source_id`.
-2. `GET /v1/data_sources/{id}`: its title must be one of `BOARDS`.
+1. `GET /v1/pages/{id}`: its `parent` must be a `data_source_id`, and the
+   plain text of its `Pointer` property must be wholly
+   `openspec/changes/<slug>/`.
+2. `GET /v1/data_sources/{id}`: its title must be wholly the board's name.
 3. `GET /v1/comments?block_id={id}`, following `next_cursor`: the
    page-level comments. A question waits when the last comment opening with
    the mark has none after it by `user` that does not open with it. In the
