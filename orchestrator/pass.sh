@@ -28,9 +28,10 @@ pause() {
 	printf '%s exit %s: %s\n' "$(date -u +%Y%m%dT%H%M%SZ)" "$1" "$2" >"$stop"
 }
 
-# The whole value: one path segment, never `.`, `..` or an option.
+# The whole value: one path segment, never `.`, `..` or an option. A clone's
+# `.git` is a directory; a worktree's is a file, and no pass pushes from one.
 segment='^[A-Za-z0-9][A-Za-z0-9._-]*$'
-if [[ ! $name =~ $segment ]] || [ ! -e "$dir/.git" ]; then
+if [[ ! $name =~ $segment ]] || [ ! -d "$dir/.git" ]; then
 	echo "orchestrator: no clone named '$name' under $clones" >&2
 	exit 2
 fi
@@ -47,7 +48,8 @@ url=${url%.git}
 part='[A-Za-z0-9][A-Za-z0-9._-]*'
 repository="^([a-z][a-z0-9+.-]*://[^/]+/|[^/:]+:)($part)/($part)$"
 if [[ ! $url =~ $repository ]]; then
-	echo "orchestrator: the origin of $dir names no owner and repository: $url" >&2
+	# Not the URL itself, which can carry a credential.
+	echo "orchestrator: the origin of $dir names no owner and repository" >&2
 	exit 2
 fi
 # GitHub reads both names case-blind.

@@ -124,6 +124,16 @@ describe.skipIf(skip)(`pass.sh${skip ? " — skipped: flock is not on PATH; CI's
 		});
 
 		// spec: orchestrator/a-clone-name-that-leaves-the-clones-directory
+		test("a worktree, whose `.git` is a file, is no clone and exits 2", () => {
+			const h = host();
+			clone(h, "repo");
+			mkdirSync(join(h.clones, "tree"));
+			writeFileSync(join(h.clones, "tree/.git"), `gitdir: ${join(h.clones, "repo/.git")}\n`);
+			expect(tick(h, "tree").code).toBe(2);
+			expect(existsSync(h.state)).toBe(false);
+		});
+
+		// spec: orchestrator/a-clone-name-that-leaves-the-clones-directory
 		test.each([
 			"https://github.com/repo.git",
 			"git@github.com:repo.git",
