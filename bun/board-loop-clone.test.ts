@@ -8,6 +8,17 @@ import { advance, change, clone, commit, EPERM, lowered, out, records, run, TICK
 
 afterAll(cleanup);
 
+/**
+ * Whether the pass stood on the default branch at `origin`'s tip when the first
+ * session started: the stage session switches to its step's branch, so the
+ * clone's state afterwards cannot say.
+ */
+const fromMain = (dir: string, calls: string) => {
+	const lines = calls.split("\n");
+	const before = lines.slice(0, lines.findIndex((line) => line.startsWith("claude ")));
+	return before.includes("git switch -q main") && out(dir, "rev-parse", "main") === out(dir, "rev-parse", "origin/main");
+};
+
 describe("started from a session", () => {
 	// spec: board-loop/started-from-an-agent-s-shell
 	test.each([
@@ -86,7 +97,7 @@ describe("the clone", () => {
 			expect(r.text).toContain("leaving feat/demo, unpushed, for the pass that carries its step");
 			expect(r.calls).toContain("A session left the branch feat/demo: switch to it with `git switch feat/demo`");
 			expect(out(dir, "rev-parse", "feat/demo")).toBe(tip);
-			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")]).toEqual(["main", out(dir, "rev-parse", "origin/main")]);
+			expect(fromMain(dir, r.calls)).toBe(true);
 		});
 
 		// spec: board-loop/a-dead-session-s-unpushed-commits
@@ -164,8 +175,7 @@ describe("the clone", () => {
 		advance(origin);
 		const r = run(dir);
 		expect(r.last).toStartWith("board-loop: met");
-		expect(out(dir, "branch", "--show-current")).toBe("main");
-		expect(out(dir, "rev-parse", "HEAD")).toBe(out(dir, "rev-parse", "origin/main"));
+		expect(fromMain(dir, r.calls)).toBe(true);
 	});
 
 	// spec: board-loop/the-previous-pass-s-step-branch
