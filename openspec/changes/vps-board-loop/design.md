@@ -136,7 +136,9 @@ which case the choice goes back to the user.
    card at `applying` while the first stage session has no pull request yet.
    One lock per repository leaves concurrency across repositories, which is
    what "one clone per slot" means until slot 2 gives the runner a claim it
-   can read.
+   can read. Once the lock is taken, step 2 runs again: a pass that failed
+   between the first check and the lock wrote its stop file before letting
+   the lock go.
 4. Check that the secret files `claude_oauth_token` and `gh_token` exist
    under `/run/secrets` and hold at least one non-whitespace character,
    without loading either value into the wrapper's variables. A file that is
