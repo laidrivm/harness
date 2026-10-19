@@ -71,7 +71,7 @@ is continued*.
 Closes `board-loop` §*The runner pushes as the GitHub App when one is
 configured*.
 
-- [ ] 2.1 Write the failing cases in a new `bun/github-app.test.ts` against a
+- [x] 2.1 Write the failing cases in a new `bun/github-app.test.ts` against a
       `Bun.serve` API reached through `GITHUB_API_URL`, with a PKCS#1 key from
       `generateKeyPairSync`: the JWT verifies with `iss`, `iat` = now − 60 and
       `exp` = now + 540; the installation lookup path; the token request body
