@@ -26,7 +26,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
 
 ## 1. The stopgap rule
 
-- [ ] 1.1 Add one bullet to `core/testing.md`, after the bullet on suites that
+- [x] 1.1 Add one bullet to `core/testing.md`, after the bullet on suites that
       may skip:
       > A test that failed and then passed on an unchanged tree is a flaky
       > test, never a green run: report it by name as a `flaky` finding and
