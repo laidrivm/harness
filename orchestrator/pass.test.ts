@@ -206,6 +206,36 @@ describe.skipIf(skip)(`pass.sh${skip ? " — skipped: flock is not on PATH; CI's
 			expect(readFileSync(stop(h, "repo"), "utf8")).toContain(" exit 127: ");
 		});
 
+		// spec: orchestrator/the-runner-cannot-start
+		test("the runner's file missing from the clone writes the stop file", () => {
+			const h = host();
+			const dir = clone(h, "repo");
+			rmSync(join(dir, "node_modules/harness/bun/board-loop.ts"));
+			const r = tick(h, "repo");
+			expect(r.code).not.toBe(0);
+			expect(readFileSync(stop(h, "repo"), "utf8")).toContain(` exit ${r.code}: `);
+		});
+
+		test("flock failing for a reason other than a held lock writes the stop file and starts no pass", () => {
+			const h = host();
+			clone(h, "repo");
+			const stub = emptyDir("orchestrator-flock-");
+			writeFileSync(join(stub, "flock"), "#!/bin/sh\nexit 1\n", { mode: 0o755 });
+			const r = tick(h, "repo", {}, `${stub}:${PATH}`);
+			expect(r.code).toBe(1);
+			expect(readFileSync(stop(h, "repo"), "utf8")).toContain(" exit 1: orchestrator: flock failed on ");
+			expect(starts(h, "repo")).toBe(0);
+		});
+
+		test("a stop file pauses its own clone alone: a clone of another repository still runs", () => {
+			const h = host();
+			clone(h, "one", { status: 1 });
+			clone(h, "two", { url: "git@github.com:owner/other.git" });
+			tick(h, "one");
+			const r = tick(h, "two");
+			expect([r.code, r.last]).toEqual([0, IDLE]);
+		});
+
 		// spec: orchestrator/a-secret-file-missing
 		test.each([
 			["a missing", "claude_oauth_token", null],
