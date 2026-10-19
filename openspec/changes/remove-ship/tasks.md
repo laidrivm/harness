@@ -26,7 +26,7 @@ run's idea numbers.
 - [x] 1.3 Drop the clause "— the prefix is what `ship` files it under" from
       `core/skills/triage/SKILL.md`, leaving the rest of the sentence intact
       (design.md D3). Read the paragraph back afterwards.
-- [ ] 1.4 Check that no site outside the records still names the skill. The
+- [x] 1.4 Check that no site outside the records still names the skill. The
       live specs change at archive (design.md D4).
       Verify: ``git grep -n -E '`ship`|/ship\b|skills/ship' -- ':!openspec' ':!docs/context'``
       prints nothing, since the step leaves no other site. Then `bun test`
