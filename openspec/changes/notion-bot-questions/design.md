@@ -150,7 +150,9 @@ a test can serve it with `Bun.serve`. Every call sends `Notion-Version:
    `openspec/changes/<slug>/`.
 2. `GET /v1/data_sources/{id}`: its title must be wholly the board's name.
 3. `GET /v1/comments?block_id={id}`, following `next_cursor`: the
-   page-level comments. A question waits when the last comment opening with
+   page-level comments, every page collected, then ordered by `created_time`,
+   ties kept in the order the API returned them (CodeRabbit review). A
+   question waits when the last comment opening with
    the mark has none after it by `user` that does not open with it. A
    comment is by `user` when its `created_by.id` and `user`, each brought to
    32 lower-case hex digits, are equal: the settings take either form. In the
