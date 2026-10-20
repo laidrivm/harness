@@ -137,13 +137,15 @@ question and the card's comments as data. When the triage ends naming a
 source, a verbatim quote and an answer, the source is a Markdown file
 (`*.md`) tracked in the clone or the id of a comment by the user's account on
 that card, and the quote, whitespace normalised, appears in that file at
-`HEAD` or that comment's text, the runner SHALL read the card's comments
-again and, when no comment opening with the mark or with `harness-answer`
-appeared since its read before the triage, post the answer from the
+`HEAD` or that comment's text, the runner SHALL check the page's parent, the
+board's title and the carried `Pointer` again, read the card's comments
+again and, when all three still hold and no comment opening with the mark,
+nor a `harness-answer` comment by the integration's own id, appeared since
+its read before the triage, post the answer from the
 integration as a page-level comment opening with `harness-answer` and holding
-the quote and the source, and SHALL set no `Assign`. The runner SHALL read
-the comments again, and post nothing when such a comment appeared, before
-posting the question on every other ending too. Any other source SHALL be one
+the quote and the source, and SHALL set no `Assign`. The runner SHALL make
+the same checks, and post nothing when one fails, before posting the
+question on every other ending too. Any other source SHALL be one
 that does not hold. On any
 other ending the runner SHALL post the question as that requirement fixes.
 The pass's outcome SHALL stay the goal check's.
@@ -168,6 +170,12 @@ The pass's outcome SHALL stay the goal check's.
   quote the source does not hold
 - **THEN** the runner posts the question as it would on `ESCALATE`, and
   prints that the source did not hold
+
+#### Scenario: A card moved or re-pointed while the triage ran
+
+- **WHEN** the card's `Pointer` changed, or the page left the board, while the
+  triage ran
+- **THEN** the runner posts neither the answer nor the question
 
 #### Scenario: A question posted while the triage ran
 
