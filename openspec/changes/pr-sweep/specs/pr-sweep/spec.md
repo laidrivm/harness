@@ -35,22 +35,34 @@ marked.
 - **WHEN** an agent pull request is a draft
 - **THEN** its line reads `skipped`, and no status is written
 
-### Requirement: A head the sweep marked is not judged again
+### Requirement: A marked head hands off each kind once
 
-The sweep SHALL treat a head SHA as handled when a commit status with context
-`harness/sweep` exists on it, and SHALL then make no call about that pull
-request beyond the listing. A new head SHA SHALL be judged.
+The `harness/sweep` status on a head SHA SHALL record the hand-off kinds given
+at that SHA. At a marked head the sweep SHALL judge mergeability, freshness
+and CI again, SHALL NOT judge drift or the description again, and SHALL hand
+off no kind the mark already names. A new head SHA SHALL be judged in full.
 
-#### Scenario: A marked head
+#### Scenario: A marked head with nothing new
 
-- **WHEN** the head SHA carries a `harness/sweep` status
-- **THEN** the line reads `skipped` and no other call is made for that pull
-  request
+- **WHEN** a marked head is still fresh and its checks read as when it was
+  marked
+- **THEN** the line reads `skipped`, and no status is written
+
+#### Scenario: The base moves after the mark
+
+- **WHEN** the base gains a commit after a green head was marked
+- **THEN** the next run updates the branch and the line reads `updated`
+
+#### Scenario: CI turns red after the mark
+
+- **WHEN** a check on a head marked with no `ci` hand-off later fails
+- **THEN** the line carries a `ci` hand-off, the mark is rewritten naming
+  `ci`, and the run after it hands off nothing for that SHA
 
 #### Scenario: A push after the mark
 
 - **WHEN** a commit is pushed on top of a marked head
-- **THEN** the next run judges the new head
+- **THEN** the next run judges the new head in full
 
 ### Requirement: A branch behind its base is updated by merge only
 
@@ -149,6 +161,12 @@ re-run, cancel or delete a CI run.
 - **THEN** the line carries a `ci` hand-off to `ciflow` naming that check, the
   head is marked, and no run is re-run
 
+#### Scenario: A queued re-run
+
+- **WHEN** a check's earlier run passed and a re-run of it is queued with no
+  start time
+- **THEN** that check counts as pending, and the line reads `waiting`
+
 #### Scenario: A check re-run green by someone else
 
 - **WHEN** a check's earlier run failed and its latest run passed
@@ -196,8 +214,9 @@ its kind, its recipient and its detail.
 ### Requirement: A judged head is marked after its line is printed
 
 For a head judged as `marked`, the sweep SHALL write one commit status on it,
-context `harness/sweep` and state `success`, whose description names the
-hand-off kinds or says there were none. It SHALL write it only after that
+context `harness/sweep` and state `success`, whose description names every
+kind handed off at that SHA, an earlier mark's included, or says there were
+none. It SHALL write it only after that
 pull request's line is printed, and SHALL write no status for any other
 outcome.
 
