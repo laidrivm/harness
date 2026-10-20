@@ -8,7 +8,9 @@ The goal check and the board loop's runner SHALL read a branch's pull
 requests in one read, through GitHub's REST endpoint that lists a
 repository's pull requests filtered by head and in every state, and SHALL
 make no GraphQL call for it. The repository and the head's owner SHALL be the
-owner and name that the URL `origin` resolves to ends in. Each pull request
+owner and name that the URL `origin` resolves to ends in, and a pull request
+whose head repository is not that repository, compared without regard to
+case, SHALL be left out of the read. Each pull request
 SHALL be read as its number, a state — `OPEN` when the API says `open`,
 `MERGED` when it says `closed` and gives a merge time, `CLOSED` otherwise —
 and its head commit, so that *A stage is done when the check says so* and
@@ -49,6 +51,14 @@ a list.
 - **WHEN** a fork has a pull request from a branch named as the step's
 - **THEN** the read asks only for heads in `origin`'s owner, so that pull
   request is not the branch's
+
+#### Scenario: A fork in the same owner
+
+- **WHEN** the API lists, beside the branch's own pull request, one whose
+  head repository is another repository of `origin`'s owner, or one whose
+  head repository is gone
+- **THEN** the read leaves that pull request out, and both callers decide on
+  the branch's own alone
 
 #### Scenario: `origin` in each form
 

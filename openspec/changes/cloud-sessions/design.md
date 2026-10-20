@@ -115,11 +115,16 @@ its `undefined` for a failed read, and drops its `fields` parameter. It runs
 gh api "repos/<owner>/<repo>/pulls?head=<owner>:<encoded branch>&state=all&per_page=100"
 ```
 
-and translates each element to `{ number, state, headRefOid }`: `OPEN` for
-`open`, `MERGED` for `closed` with a non-null `merged_at`, `CLOSED`
-otherwise, `headRefOid` from `head.sha`. `goal-check.ts` and `board-loop.ts`
-read those fields as they read `gh pr list`'s today, so neither decides
-differently. The branch is passed through `encodeURIComponent`. REST lists
+keeps only the elements whose `head.repo.full_name` equals `<owner>/<repo>`
+without regard to case — the `head` filter names an owner, not a
+repository, so a fork in the same owner would pass it, and a head whose
+repository is gone reads `null` — and translates each element kept to
+`{ number, state, headRefOid }`: `OPEN` for `open`, `MERGED` for `closed`
+with a non-null `merged_at`, `CLOSED` otherwise, `headRefOid` from
+`head.sha`. `goal-check.ts` and `board-loop.ts` read those fields as they
+read `gh pr list`'s today, so neither decides differently, save that a
+fork's pull request, which `gh pr list --head` also matched, no longer
+counts. The branch is passed through `encodeURIComponent`. REST lists
 newest first, as `gh pr list` did, so the pull request each caller names is
 the same one.
 
@@ -170,17 +175,17 @@ safe for the agent to run. It reports, in order:
 - whether the turn gate's mark for this session exists in the `turn-gate`
   directory under the temp directory, which shows its `UserPromptSubmit`
   half ran from the pin;
-- on `main`, what `git commit --allow-empty -m cloud-probe` answers — the
-  command guard refusing it is the pass; elsewhere, the branch and that it
-  skipped;
+- on `main`, what `git commit --dry-run --allow-empty -m cloud-probe`
+  answers — the command guard refuses any `commit` on `main`, flags aside,
+  so its refusal is the pass, and `--dry-run` creates no commit if it fails
+  to; elsewhere, the branch and that it skipped;
 - the last line of `bun node_modules/harness/bun/goal-check.ts propose
   <slug>`, for the change its one parameter names (`cloud-sessions` in the
   trial), where `no open or merged pull request for <branch>` shows
   the REST read answered and `could not be read` shows it did not.
 
-It never pushes, posts or edits a file; a commit the guard fails to refuse
-stays on the disposable VM, and the report says so. It ends with one line
-per item.
+It never commits, pushes, posts or edits a file. It ends with one line per
+item.
 
 *Alternative considered.* A tracked list of routine prompts with a test. It
 would be a copy of text whose original lives in claude.ai, and drift there
@@ -194,9 +199,12 @@ Group 4 asks an attended cloud session for one call the gate does not allow:
 a comment on this change's card whose text does not open with the mark. The
 gate gives no answer there, so the prompt shows and the user declines it. The
 gate records every call it sees, so a `question-gate` record in the VM's
-`gates.jsonl` for that call shows the hook fired, and none shows it did not.
-Only in the second case is a `PreToolUse` copy filed, as an `idea` card, not
-built here.
+`gates.jsonl` for that call shows the hook fired. Its absence shows the hook
+did not fire only when the same file holds the command guard's refusal of the
+probe's commit: bun then starts and the ledger is writable, so a gate that
+ran would have left its line. Without that refusal the result is
+inconclusive and is recorded as such. Only when the hook did not fire is a
+`PreToolUse` copy filed, as an `idea` card, not built here.
 
 ### D9. Four groups
 
