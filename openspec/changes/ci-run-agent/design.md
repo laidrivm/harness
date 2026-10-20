@@ -101,7 +101,12 @@ A delivery whose file exists is a duplicate, exit 0, unless the file holds a
 pid that is no longer running (`kill(pid, 0)` answers `ESRCH`), or holds
 neither a pid nor `acted`. That handler ended before acting, by an exit or by
 being killed, so the file is replaced and the delivery handled. This covers the crash a removal on exit would miss
-(local and PR review, 2026-10-20). An `acted` file, or the pid of a handler
+(local and PR review, 2026-10-20). The replacement is exclusive: the handler
+first renames the dead marker to `<delivery>.<own pid>.dead`, then creates
+its own through the same temporary file and `link()`, and removes the
+tombstone. A rename is atomic, so when two handlers find one dead marker only
+one rename succeeds; the other's fails with `ENOENT`, and it treats the
+delivery as a duplicate (PR review). An `acted` file, or the pid of a handler
 still waiting on the lock, keeps the delivery a duplicate. GitHub retries
 nothing the engine answered with a 2xx, so a redelivery is the user's, from
 the webhook's *Recent deliveries*. `shortcut: a recycled pid reads as still

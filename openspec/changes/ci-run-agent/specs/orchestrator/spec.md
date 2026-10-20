@@ -81,6 +81,13 @@ The ids of deliveries a flow acted on SHALL be kept.
   GitHub redelivers
 - **THEN** the redelivery is handled
 
+#### Scenario: Two handlers recover one dead marker
+
+- **WHEN** two handlers receive the same delivery id at the same moment, and
+  its marker holds a pid that is no longer running
+- **THEN** exactly one replaces the marker and acts, and the other treats the
+  delivery as a duplicate
+
 #### Scenario: A redelivery while the first copy waits
 
 - **WHEN** the handler that recorded the id is still running, waiting on the
