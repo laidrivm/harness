@@ -164,7 +164,10 @@ laptop.
   the step's branch, it appends one line:
   `{"repo":"<owner>/<name>","branch":"<b>","session":"<uuid>","clone":"<dir>","at":"<ISO UTC>"}`.
   It writes with one `appendFileSync`; a line well under 4 KiB is appended
-  whole. The directory is created mode 0700 and the file 0600. `repo` comes
+  whole. The directory is created mode 0700 and the file 0600; a file that
+  already exists is set to 0600 before the append, and when its last line
+  lacks a newline, as an interrupted write leaves it, the record starts with
+  one (CodeRabbit on #198). `repo` comes
   from the App's settings or from a GitHub `origin`; any other `origin`
   records it empty, a line the lookup skips, since its URL can hold a
   credential. A failed write pushes nothing and the pass records `open`, so no

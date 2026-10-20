@@ -61,6 +61,24 @@ describe("an append", () => {
 		expect([statSync(dirname(file)).mode & 0o777, statSync(file).mode & 0o777]).toEqual([0o700, 0o600]);
 	});
 
+	// spec: board-loop/a-step-ready-to-push
+	test("sets a table that exists readable by others to 0600 [35]", () => {
+		const file = table();
+		mkdirSync(dirname(file), { recursive: true });
+		writeFileSync(file, "", { mode: 0o644 });
+		append(step("o/r", "feat/x", "s"), file);
+		expect(statSync(file).mode & 0o777).toBe(0o600);
+	});
+
+	// spec: board-loop/a-step-ready-to-push
+	test("starts a new line after a last line left unended [36]", () => {
+		const file = table();
+		mkdirSync(dirname(file), { recursive: true });
+		writeFileSync(file, `{"repo":"o/r","branch":"feat/x","session":"cut`);
+		append(step("o/r", "feat/x", "new"), file);
+		expect(lookup("o/r", "feat/x", file)?.session).toBe("new");
+	});
+
 	// spec: board-loop/the-table-cannot-be-written
 	test("throws where the table's directory cannot be made [26]", () => {
 		const file = table();

@@ -4,7 +4,7 @@
  * on the step's pull request. The runner writes it; only the orchestrator reads
  * it. Keyed by branch, since the pull request's number exists only after the push.
  */
-import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -22,7 +22,15 @@ export const table = () => join(homedir(), "orchestrator", "pr-sessions.jsonl");
  */
 export function append(step: Step, file = table()) {
 	mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-	appendFileSync(file, `${JSON.stringify({ ...step, at: new Date().toISOString() })}\n`, { mode: 0o600 });
+	let cut = "";
+	if (existsSync(file)) {
+		// `mode` applies only on creation: a table made another way keeps its mode until set here.
+		chmodSync(file, 0o600);
+		const text = readFileSync(file, "utf8");
+		// A last line an interrupted write left unended would swallow this record.
+		if (text && !text.endsWith("\n")) cut = "\n";
+	}
+	appendFileSync(file, `${cut}${JSON.stringify({ ...step, at: new Date().toISOString() })}\n`, { mode: 0o600 });
 }
 
 /**
