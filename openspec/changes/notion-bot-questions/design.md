@@ -297,7 +297,11 @@ session before it posts anything. This is a `claude -p` run with no goal,
 started like a stage session: the session user, a clean environment, no
 token. It may read the clone and do nothing else. The prompt holds the
 unattended line, the question, and the card's comments the runner already
-fetched, as untrusted data, so the triage needs no Notion access. It ends on
+fetched, as untrusted data, so the triage needs no Notion access. It also
+holds decision 8's rule: end on `ESCALATE` for a choice, and for anything a
+written source does not settle. The runner cannot tell a choice from an
+answered question; it checks only that a source holds, so this line of the
+prompt is what sends a choice to the user (CodeRabbit on #191). It ends on
 one of two:
 
 - `ANSWER-SOURCE: <source>`, then `ANSWER-QUOTE:` and the words of the
