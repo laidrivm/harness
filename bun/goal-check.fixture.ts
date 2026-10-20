@@ -71,7 +71,8 @@ function bin(gh: Gh): string {
 export const pr = (sha: string, state?: string) => ({
 	state: state === undefined ? undefined : state === "OPEN" ? "open" : "closed",
 	merged_at: state === "MERGED" ? "2026-10-20T00:00:00Z" : null,
-	head: { sha, repo: { full_name: "o/demo" } },
+	head: { sha, repo: { id: 1, full_name: "o/demo" } },
+	base: { repo: { id: 1, full_name: "o/demo" } },
 });
 
 /** A `gh` that answers at once with these pull requests. */

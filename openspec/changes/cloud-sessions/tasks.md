@@ -29,9 +29,9 @@ API*.
       or `%`, fails with no `gh` call [16, 17]; an `insteadOf` rewrite is
       followed [18]; no `gh pr` or `gh api graphql` call [19]; a non-object
       element, one whose `head.repo` is `null`, and one from another
-      repository of the same owner are left out, and one whose
-      `head.repo.full_name` differs from `origin`'s only in case is kept
-      [20, review of #185]; a JSON object, a 403
+      repository of the same owner are left out, compared by repository id,
+      and one whose name differs from `origin`'s, by case or by a rename, is
+      kept [20, review of #185, review of #190]; a JSON object, a 403
       exit and output that is not JSON each fail [21, 22, 24]
 - [x] 1.2 Move the `gh` stubs in `bun/goal-check.fixture.ts` and
       `bun/board-loop.fixture.ts` to the REST query and its answer's shape,

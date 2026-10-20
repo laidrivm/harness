@@ -29,7 +29,8 @@ export function remoteRepository(url: string) {
 
 export type Pull = { number: unknown; state: "OPEN" | "MERGED" | "CLOSED"; headRefOid: unknown };
 
-type Listed = { number?: unknown; state?: unknown; merged_at?: unknown; head?: { sha?: unknown; repo?: { full_name?: unknown } | null } } | null;
+type Repo = { id?: unknown } | null;
+type Listed = { number?: unknown; state?: unknown; merged_at?: unknown; head?: { sha?: unknown; repo?: Repo }; base?: { repo?: Repo } } | null;
 
 /**
  * The branch's pull requests in every state, newest first, or undefined for a
@@ -43,6 +44,7 @@ export function readPullRequests(branch: string): Pull[] | undefined {
 		const found = url.exitCode === 0 ? remoteRepository(url.stdout.toString().trim()) : undefined;
 		if (!found) return undefined;
 		const full = `${found.owner}/${found.repo}`;
+		// shortcut: the head filter uses origin's owner, so an owner transfer origin has not caught up with finds nothing; upgrade by reading the owner from `gh api repos/<full>` if one happens.
 		// shortcut: one page of 100, the newest; page with --paginate if a branch ever holds more pull requests than that.
 		const query = `repos/${full}/pulls?head=${found.owner}:${encodeURIComponent(branch)}&state=all&per_page=100`;
 		// SIGKILL: a `gh` that ignores the default SIGTERM holds `spawnSync` past
@@ -51,9 +53,10 @@ export function readPullRequests(branch: string): Pull[] | undefined {
 		const listed: unknown = run.exitCode === 0 && JSON.parse(run.stdout.toString());
 		if (!Array.isArray(listed)) return undefined;
 		// `head` filters by owner alone: a fork in the same owner passes it, and a gone head reads `null`.
+		// Compared by id, not name: after a rename the API names the repository by its new name while origin may keep the old one.
 		const own = (pr: Listed) => {
-			const name = pr?.head?.repo?.full_name;
-			return typeof name === "string" && name.toLowerCase() === full.toLowerCase();
+			const id = pr?.head?.repo?.id;
+			return typeof id === "number" && id === pr?.base?.repo?.id;
 		};
 		return (listed as Listed[]).filter(own).map((pr) => ({
 			number: pr?.number,

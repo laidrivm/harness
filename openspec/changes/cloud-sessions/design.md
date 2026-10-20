@@ -115,10 +115,11 @@ its `undefined` for a failed read, and drops its `fields` parameter. It runs
 gh api "repos/<owner>/<repo>/pulls?head=<owner>:<encoded branch>&state=all&per_page=100"
 ```
 
-keeps only the elements whose `head.repo.full_name` equals `<owner>/<repo>`
-without regard to case — the `head` filter names an owner, not a
-repository, so a fork in the same owner would pass it, and a head whose
-repository is gone reads `null` — and translates each element kept to
+keeps only the elements whose `head.repo.id` equals `base.repo.id` — the
+`head` filter names an owner, not a repository, so a fork in the same owner
+would pass it, and a head whose repository is gone reads `null`; ids, not
+names, since after a rename the API gives the new name while `origin` may
+keep the old one (review of #190) — and translates each element kept to
 `{ number, state, headRefOid }`: `OPEN` for `open`, `MERGED` for `closed`
 with a non-null `merged_at`, `CLOSED` otherwise, `headRefOid` from
 `head.sha`. `goal-check.ts` and `board-loop.ts` read those fields as they
