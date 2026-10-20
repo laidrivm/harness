@@ -23,8 +23,8 @@ and SHALL report each finding left.
 #### Scenario: A fourth round with a finding to apply, attended
 
 - **WHEN** an attended session runs `/coderabbit` on a pull request whose
-  CodeRabbit reviews name four distinct commits, and the head commit's review carries a
-  verified finding
+  CodeRabbit reviews name four distinct commits, and the head commit's review
+  carries a verified finding the run would apply
 - **THEN** it applies nothing, reports each finding left with its severity,
   file and line, and ends on `CODERABBIT gate: BLOCKED` naming the cap
 
