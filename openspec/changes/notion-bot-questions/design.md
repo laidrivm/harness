@@ -306,15 +306,20 @@ one of two:
 - `ESCALATE`.
 
 A source is one of two kinds, and nothing else: a Markdown file (`*.md`)
-tracked in the clone, optionally with `#` and a heading or line, or the id of
-a comment by the user on that card. Decision 8 names what may settle a
+tracked on the default branch as `origin` holds it, optionally with `#` and a
+heading or line, or the id of a comment by the user on that card. Decision 8 names what may settle a
 question — a spec, a design, the rulebook or docs, or the user's own earlier
 answer — and in this repository every one of those is a Markdown file. Code
 and configuration are not on the list: a tracked `.ts` or `.json` file could
 otherwise authorise an answer no written decision gives (CodeRabbit on #191).
-The runner checks the source exists — `git ls-files` for a path ending in
-`.md`, or the fetched comments for an id — and that the quote, whitespace
-normalised, appears in it: in the file at `HEAD`, or in that comment's text.
+The runner checks the source exists — `git ls-tree` of `origin/<default>`,
+freshly fetched, for a path ending in `.md`, or the fetched comments for an
+id — and that the quote, whitespace normalised, appears in it: in the file as
+`origin/<default>` holds it (`git show`), or in that comment's text. Never
+`HEAD`: the clone sits on the step's branch, whose `design.md` and `tasks.md`
+the session that asked has just written, so a quote from there could answer
+the session's question with its own words. What the default branch holds was
+merged by the user.
 Existence alone would let the triage cite a real file that says nothing of
 the kind (CodeRabbit on #191). A quote that is not there is a source that
 does not hold. Right before posting, the runner repeats REST steps 1 and 2

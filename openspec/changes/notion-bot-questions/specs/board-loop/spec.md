@@ -135,9 +135,10 @@ runner SHALL start a triage session, with no goal, that may read the clone
 and nothing else. It SHALL hold no token, and its prompt SHALL carry the
 question and the card's comments as data. When the triage ends naming a
 source, a verbatim quote and an answer, the source is a Markdown file
-(`*.md`) tracked in the clone or the id of a comment by the user's account on
-that card, and the quote, whitespace normalised, appears in that file at
-`HEAD` or that comment's text, the runner SHALL check the page's parent, the
+(`*.md`) tracked on the default branch as `origin` holds it, never the
+step's branch, or the id of a comment by the user's account on
+that card, and the quote, whitespace normalised, appears in that file as the
+default branch holds it or in that comment's text, the runner SHALL check the page's parent, the
 board's title and the carried `Pointer` again, read the card's comments
 again and, when all three still hold and no comment opening with the mark,
 nor a `harness-answer` comment by the integration's own id, appeared since
@@ -165,9 +166,16 @@ The pass's outcome SHALL stay the goal check's.
 
 #### Scenario: A source that does not hold
 
-- **WHEN** the triage names a path the clone does not track, a tracked file
-  that is not Markdown, a comment id that is not the user's on that card, or a
-  quote the source does not hold
+- **WHEN** the triage names a path the default branch does not track, a
+  tracked file that is not Markdown, a comment id that is not the user's on
+  that card, or a quote the source does not hold
+
+#### Scenario: A quote only the step's branch holds
+
+- **WHEN** the triage quotes a `design.md` whose quoted words exist on the
+  step's branch, which the asking session wrote, and not on the default branch
+- **THEN** the source does not hold, and the runner posts the question as it
+  would on `ESCALATE`
 - **THEN** the runner posts the question as it would on `ESCALATE`, and
   prints that the source did not hold
 
