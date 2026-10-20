@@ -5,11 +5,11 @@
 ### Requirement: An event is handled only once its signature verifies
 
 The handler SHALL take the request's body as bytes and its event, delivery and
-signature headers as one argument, and SHALL refuse a header value of the wrong
-shape. It SHALL compute the body's HMAC-SHA256 with the webhook secret, a file
-only the runner's user reads, and SHALL act on nothing before that HMAC matches
-the signature. It SHALL print one line naming its verdict, exit 0 for an event
-it handled or ignored, and exit non-zero for one it refused.
+signature headers as one argument, refusing a value of the wrong shape. It
+SHALL act on nothing before the body's HMAC-SHA256 under the webhook secret, a
+file only the runner's user reads, matches the signature in a constant-time
+comparison. It SHALL print one line naming its verdict, and exit 0 for an
+event it handled or ignored and non-zero for one it refused.
 
 #### Scenario: A valid delivery of an event no flow takes
 
@@ -47,9 +47,10 @@ it handled or ignored, and exit non-zero for one it refused.
 ### Requirement: A delivery is handled at most once
 
 The handler SHALL record each verified delivery id before it acts, and SHALL
-ignore a delivery whose id it has already recorded. When it exits non-zero
-before any flow posted to GitHub or started a session, it SHALL forget the id,
-so that GitHub's redelivery is handled.
+ignore a delivery whose id it has already recorded. An id whose handler ended,
+by any exit or by being killed, before any flow posted to GitHub or started a
+session SHALL count as not recorded, so that GitHub's redelivery is handled.
+The ids of deliveries a flow acted on SHALL be kept.
 
 #### Scenario: GitHub redelivers a handled delivery
 
@@ -67,6 +68,18 @@ so that GitHub's redelivery is handled.
 - **WHEN** the handler fails before posting anything or starting a session,
   and GitHub redelivers
 - **THEN** the redelivery is handled
+
+#### Scenario: A handler killed before acting
+
+- **WHEN** the handler is killed after recording the id and before any flow
+  posted or started a session, and GitHub redelivers
+- **THEN** the redelivery is handled
+
+#### Scenario: A redelivery while the first copy waits
+
+- **WHEN** the handler that recorded the id is still running, waiting on the
+  repository's lock
+- **THEN** the redelivery is a duplicate
 
 ### Requirement: A failed CI run starts an agent only for a pull request the loop opened
 
@@ -119,12 +132,13 @@ table holds; the agent SHALL resume that session in the clone the table names.
 
 ### Requirement: A pull request gets at most three fix attempts
 
-Before a session starts on a failed run, the CI flow SHALL post a comment on
-the pull request as the App, opening with the attempt mark and naming the
-run, its `head_sha` and the attempt's number. It SHALL count attempts as the
-App's comments that open with that mark, and SHALL start at most one attempt
-per `head_sha`. At the fourth failure it SHALL start no fix, post a comment
-opening with the limit mark, and have the session put a question on its card and end `BLOCKED —`.
+Before a session starts on a failed run, the CI flow SHALL post, as the App, a
+pull request comment opening with the attempt mark and naming the run, its
+`head_sha` and the attempt's number. Attempts SHALL be the App's comments
+opening with that mark, at most one per `head_sha`, checked before the count.
+A failure on a new `head_sha` after three attempts SHALL start no fix: the
+flow posts a comment opening with the limit mark, and the session puts a
+question on its card and ends `BLOCKED —`.
 
 #### Scenario: The first three failures
 
@@ -135,7 +149,7 @@ opening with the limit mark, and have the session put a question on its card and
 #### Scenario: The fourth failure
 
 - **WHEN** a run fails on a pull request that holds three attempt comments by
-  the App
+  the App, none of them naming the run's `head_sha`
 - **THEN** the flow posts the limit comment, and the session it resumes changes
   nothing, puts one question on the card naming the pull request and the three
   runs, and ends `BLOCKED —`
