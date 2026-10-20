@@ -255,10 +255,13 @@ running it. The statuses it wrote stay on their SHAs and decide nothing.
 
 ## Open Questions
 
-- Decision 2 allows the loop's credential as an author. Under
-  `vps-board-loop` that credential is a token of the user's own account, so
-  the user's hand-made `feat/` and `spec/` pull requests are swept too. Once
-  the App opens every loop pull request, the credential's login could stop
-  being an allowed author while the App is configured. The spec follows the
-  decision as recorded, and the question stays open until the user answers
-  it.
+None. Two the proposal's pull request put to the user are settled (user,
+2026-10-20):
+
+- Decision 2 stands with the App configured: the loop credential's login
+  stays an allowed author. Under `vps-board-loop` that credential is a token
+  of the user's own account, so the user's hand-made `feat/` and `spec/` pull
+  requests are swept too, and that is accepted.
+- The description check runs once per green head, except a head that merges
+  the base, as *A green head's description is checked unless the head merges
+  the base* fixes.
