@@ -4,6 +4,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import {
+	chmodSync,
 	existsSync,
 	mkdirSync,
 	readdirSync,
@@ -12,6 +13,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { HOOKS } from "./bootstrap.ts";
 import {
 	cleanup,
 	failed,
@@ -147,18 +149,22 @@ describe("the many cases", () => {
 
 describe("the interface cases", () => {
 	// spec: flaky-tests/a-push-whose-pre-push-hook-runs-the-suite
-	test("a pass answers under the event it arrived on [24]", () => {
+	test("a pass answers under each event `HOOKS` registers it on [24] [44]", () => {
 		const dir = repo();
 		// A push refused after its suite passed is a pass seen on a failure.
-		const passes = [
-			passed(dir),
-			failed(dir, `${PASSING}\nerror: failed to push`),
-		];
-		const answered = passes.map(
-			(pass) =>
-				JSON.parse(play([failed(dir), pass])).hookSpecificOutput.hookEventName,
+		const pass = {
+			PostToolUse: passed(dir),
+			PostToolUseFailure: failed(dir, `${PASSING}\nerror: failed to push`),
+		};
+		const events = HOOKS.filter((h) => h.name === "harness flake watch").map(
+			(h) => h.event as keyof typeof pass,
 		);
-		expect(answered).toEqual(["PostToolUse", "PostToolUseFailure"]);
+		expect(events).toEqual(["PostToolUse", "PostToolUseFailure"]);
+		const answered = events.map(
+			(event) =>
+				JSON.parse(play([failed(dir), pass[event]])).hookSpecificOutput.hookEventName,
+		);
+		expect(answered).toEqual(events);
 	});
 
 	test("the installed bun's reporter is read for the name and the count [25]", () => {
@@ -218,9 +224,17 @@ describe("the exception cases", () => {
 		expect(play([failed(dir), passed(dir)], tmp)).toBe("");
 	});
 
+	test("a store directory others can open decides nothing", () => {
+		const tmp = temp();
+		mkdirSync(join(tmp, "flake-watch"), { mode: 0o777 });
+		chmodSync(join(tmp, "flake-watch"), 0o777); // past the umask
+		const dir = repo();
+		expect(play([failed(dir), passed(dir)], tmp)).toBe("");
+	});
+
 	test("a garbage store file counts as empty [31]", () => {
 		const tmp = temp();
-		mkdirSync(join(tmp, "flake-watch"));
+		mkdirSync(join(tmp, "flake-watch"), { mode: 0o700 });
 		writeFileSync(join(tmp, "flake-watch", "s1"), "{garbage");
 		const dir = repo();
 		expect(hint(play([failed(dir), passed(dir)], tmp))).toContain("grp > flips");
