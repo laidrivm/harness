@@ -196,7 +196,8 @@ builds, and merges inert before that.
       Check the environment and the flags [70] and the prompt's data [71].
       Cover `ESCALATE` [72], a `claude` that cannot start [73], a failed
       answer post [74] and the pass's outcome [75]. Cover a quote the cited
-      file at `HEAD` does not hold, and one that differs from it only in
+      file on `origin`'s default branch does not hold, including one only
+      the step's branch holds [92], and one that differs from it only in
       whitespace [85]; a quote absent from the cited comment [86]; and a
       question that appears on the card while the triage runs, which posts
       neither the answer nor the question [87]. Cover a tracked file that is
