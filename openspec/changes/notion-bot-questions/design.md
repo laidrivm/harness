@@ -149,6 +149,13 @@ message names the `QUESTION:` line. The name and its value are exported from
 `bun/question-gate.ts` and imported by the runner (`rules.md` Code: a name one
 system looks up in another is pinned where it is defined).
 
+The runner also launches both sessions with `--disallowedTools` naming
+`mcp__*__notion-create-comment`, so Claude Code itself refuses the call
+whether or not the hook sees the variable. The variable is what lets the
+gate's refusal name `QUESTION:`; the withheld tool is what fails closed. A
+question therefore never falls back to the user's account where the
+integration is configured (decision 7; CodeRabbit on #191).
+
 ### The `QUESTION:` form
 
 The fourth line of the stage launch form becomes: a question only the user
@@ -293,15 +300,24 @@ unattended line, the question, and the card's comments the runner already
 fetched, as untrusted data, so the triage needs no Notion access. It ends on
 one of two:
 
-- `ANSWER-SOURCE: <source>`, then `ANSWER:` and the text;
+- `ANSWER-SOURCE: <source>`, then `ANSWER-QUOTE:` and the words of the
+  source that settle the question, copied verbatim, then `ANSWER:` and the
+  text;
 - `ESCALATE`.
 
 A source is a path tracked in the clone, optionally with `#` and a heading or
 line, or the id of a comment by the user on that card. The runner checks the
-source exists: `git ls-files` for a path, or the fetched comments for an id.
-With a source that holds, it posts
-`` `harness-answer` <text>\nSource: <source> `` from the integration and sets
-no `Assign`. The next pass's pick session finds the answer and carries it, as
+source exists — `git ls-files` for a path, or the fetched comments for an id —
+and that the quote, whitespace normalised, appears in it: in the file at
+`HEAD`, or in that comment's text. Existence alone would let the triage cite
+a real file that says nothing of the kind (CodeRabbit on #191). A quote that
+is not there is a source that does not hold. Right before posting, the runner
+reads the card's comments again (REST step 3) and posts nothing while a
+question waits there, since the triage may have run for minutes. With a
+source that holds, it posts
+`` `harness-answer` <text>\n> <quote>\nSource: <source> `` from the
+integration and sets no `Assign`, so the user sees the words the answer rests
+on. The next pass's pick session finds the answer and carries it, as
 it carries the user's. On `ESCALATE`, a source that does not hold, a time
 limit of ten minutes passed, or any failure, the runner posts the question as
 group 2 does. A doubt therefore always ends with the user.
@@ -343,10 +359,21 @@ REST step 3 check, *a question waits*, takes the same rule.
 - [Connecting a database may not give the integration its cards] → a user
   act checks it before the first pass relies on it. Until then, step 1 fails
   with Notion's status, and the pass prints the question it did not post.
+- [A verbatim quote can still be cited out of context] → the comment shows
+  the quote beside the answer, and the user's comment after it overrides it
+  (decision 9).
+- [Two posts can still cross between the second comment read and the post]
+  → the window is one REST call long, not the triage's minutes; Notion offers
+  no conditional post, and a second question is the user's to ignore.
 - [Hooks may not inherit the session's environment] → the gate then reads
-  the variable as unset and allows a marked question from the user's
-  account, as today. The launch form's line still asks for `QUESTION:`. The
-  fail-safe side is today's behaviour.
+  the variable as unset, but the tool is withheld at launch, so the call is
+  refused all the same and nothing goes out under the user's account. Only
+  the refusal's wording loses its pointer to `QUESTION:`, which the launch
+  form's line already names.
+- [`--disallowedTools` may not take the `*` server wildcard] → task 2.4's
+  stub logs the argument, and task 2.8 probes the real CLI once with a
+  session that tries the call; if the wildcard is not honoured, the runner
+  names the connector's server as the hook's matcher sees it.
 - [The API may list unresolved comments only] → a question the user resolved
   unanswered counts as not waiting, so a new one may follow it. The pick
   session still reads resolved discussions for answers.

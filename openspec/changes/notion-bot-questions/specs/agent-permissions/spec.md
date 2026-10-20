@@ -12,7 +12,16 @@ The `deny`
 SHALL name the `QUESTION:` line, and the gate SHALL record the call as
 refused. In such a session this requirement SHALL take precedence over
 *A question to the user on a board card needs no prompt*, which holds
-unchanged in every other session.
+unchanged in every other session. The runner SHALL also launch such a session
+with `notion-create-comment` withheld from its tools, so the call is refused
+even where the hook cannot read the variable.
+
+#### Scenario: A hook that cannot read the variable
+
+- **WHEN** a session the runner asks for calls `notion-create-comment` and the
+  gate's hook does not see the variable
+- **THEN** the call is still refused, because the tool was withheld at launch,
+  and no comment is posted from the user's account
 
 #### Scenario: A question in a session the runner asks for
 
