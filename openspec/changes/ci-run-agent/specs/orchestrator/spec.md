@@ -136,6 +136,9 @@ Before a session starts on a failed run, the CI flow SHALL post, as the App, a
 pull request comment opening with the attempt mark and naming the run, its
 `head_sha` and the attempt's number. Attempts SHALL be the App's comments
 opening with that mark, at most one per `head_sha`, checked before the count.
+The flow SHALL check the comments and post its own under the repository's
+lock it took before reading the pull request, and hold that lock until the
+session ends, so no two deliveries for one repository check at once.
 A failure on a new `head_sha` after three attempts SHALL start no fix: the
 flow posts a comment opening with the limit mark, and the session puts a
 question on its card and ends `BLOCKED —`.
@@ -164,6 +167,12 @@ question on its card and ends `BLOCKED —`.
 - **WHEN** a second workflow fails on a `head_sha` that already has an attempt
   comment
 - **THEN** the flow starts no second attempt for it
+
+#### Scenario: Two workflows fail on one commit at once
+
+- **WHEN** two deliveries for two failed runs on one `head_sha` arrive at the
+  same moment
+- **THEN** exactly one attempt comment is posted and one session starts
 
 #### Scenario: A mark someone else wrote
 
