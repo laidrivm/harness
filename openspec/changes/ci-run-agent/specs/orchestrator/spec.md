@@ -14,7 +14,7 @@ event it handled or ignored and non-zero for one it refused.
 #### Scenario: A valid delivery of an event no flow takes
 
 - **WHEN** a correctly signed delivery names an event no flow handles, `ping`
-  included
+  included, whether or not the App's settings are on the host
 - **THEN** the handler starts nothing, prints that it ignored the event, and
   exits 0
 
@@ -75,6 +75,12 @@ The ids of deliveries a flow acted on SHALL be kept.
   posted or started a session, and GitHub redelivers
 - **THEN** the redelivery is handled
 
+#### Scenario: A marker left half-written
+
+- **WHEN** the recorded marker holds neither a pid nor the acted state, and
+  GitHub redelivers
+- **THEN** the redelivery is handled
+
 #### Scenario: A redelivery while the first copy waits
 
 - **WHEN** the handler that recorded the id is still running, waiting on the
@@ -87,8 +93,10 @@ The CI flow SHALL act on a `workflow_run` event only when its action is
 `completed`, its conclusion is `failure`, its head repository is the
 repository itself, and that repository has a clone on the host. A run on a
 `feat/` or `spec/` branch SHALL start an agent only for an open pull request
-whose head is still the run's `head_sha` and whose branch the PR → session
-table holds; the agent SHALL resume that session in the clone the table names.
+the App opened, whose head is still the run's `head_sha`, and whose branch the
+PR → session table holds; the agent SHALL resume that session in the clone
+the table names. A run whose latest attempt is newer than the event's and has
+not succeeded SHALL start nothing, since that attempt's own event follows.
 
 #### Scenario: A failed run on a step's pull request
 
@@ -124,6 +132,19 @@ table holds; the agent SHALL resume that session in the clone the table names.
 - **THEN** the flow starts nothing, since the newer commit's run is its own
   event
 
+#### Scenario: A newer attempt of the run
+
+- **WHEN** the run's latest attempt is newer than the event's and is still
+  running or has failed
+- **THEN** the flow starts nothing and posts no attempt
+
+#### Scenario: A pull request on the loop's branch that the App did not open
+
+- **WHEN** the table holds the run's branch, but the open pull request on it
+  was opened by anyone but the App
+- **THEN** the flow starts nothing, posts nothing, and prints the pull
+  request's number
+
 #### Scenario: A pass holds the repository
 
 - **WHEN** a board-loop pass or another flow holds the repository's lock
@@ -138,7 +159,9 @@ pull request comment opening with the attempt mark and naming the run, its
 opening with that mark, at most one per `head_sha`, checked before the count.
 The flow SHALL check the comments and post its own under the repository's
 lock it took before reading the pull request, and hold that lock until the
-session ends, so no two deliveries for one repository check at once.
+push and the clone's cleanup after the session have ended, so no two
+deliveries for one repository check at once and no pass writes to the clone
+while the flow does.
 A failure on a new `head_sha` after three attempts SHALL start no fix: the
 flow posts a comment opening with the limit mark, and the session puts a
 question on its card and ends `BLOCKED —`.
@@ -186,8 +209,10 @@ The session SHALL push nothing. It SHALL end with a structured
 answer naming its outcome, `fixed`, `blocked` or `flaky`, and a summary. The
 runner SHALL push the pull request's branch, never by force, only for `fixed`,
 and only when `HEAD` is on that branch and holds the run's `head_sha` and at
-least one commit after it. Neither the runner nor the session SHALL re-run,
-cancel or delete a CI run.
+least one commit after it, and only when the tree holds no tracked change and
+no untracked file. A tree that does SHALL be left as it is, on its branch,
+with the runner exiting non-zero naming the clone, whatever the outcome.
+Neither the runner nor the session SHALL re-run, cancel or delete a CI run.
 
 #### Scenario: A fix
 
@@ -201,6 +226,13 @@ cancel or delete a CI run.
 - **WHEN** the session answers `fixed`, but `HEAD` no longer holds the run's
   `head_sha`, holds no new commit, or is on another branch
 - **THEN** the runner pushes nothing and exits non-zero naming which
+
+#### Scenario: A session that left changes uncommitted
+
+- **WHEN** the session answers `fixed` or `blocked`, and the tree holds a
+  tracked change or an untracked file
+- **THEN** the runner pushes nothing, leaves the clone on that branch and
+  tree, and exits non-zero naming the clone
 
 #### Scenario: Blocked, or no answer
 
