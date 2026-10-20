@@ -11,7 +11,7 @@ import { join } from "node:path";
 
 const EXACT = /^\d+\.\d+\.\d+$/;
 const SETUP = /npm i -g bun@([^\s`'"]+)/;
-const PINNED = /^\s*bun-version:\s*["']?([^"'\s]+)["']?\s*$/gm;
+const PINNED = /^\s*bun-version:\s*["']?([^"'\s#]+)["']?\s*(?:#.*)?$/gm;
 
 /** Each problem with `root`'s bun sites, as a line naming what and where. */
 function problems(root: string): string[] {
@@ -85,6 +85,12 @@ describe("the bun version sites", () => {
 
 	test("a quoted bun-version is read [44]", () => {
 		expect(problems(tree(SETUP_LINE, { "a.yml": step('"1.4.2"'), "b.yml": step("'1.4.2'") }))).toEqual([]);
+	});
+
+	// spec: cloud-sessions/a-bump-misses-a-site
+	test("a pin with a YAML comment after it is read, and its mismatch fails (review of #194)", () => {
+		const [line] = problems(tree(SETUP_LINE, { "a.yml": step("1.4.2"), "b.yml": step("1.5.0 # upgraded") }));
+		expect(line).toContain(".github/workflows/b.yml 1.5.0");
 	});
 
 	// spec: cloud-sessions/a-bump-misses-a-site
