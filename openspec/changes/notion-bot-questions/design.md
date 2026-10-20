@@ -392,8 +392,6 @@ other member (user, 2026-10-20). That keeps `task-board`'s *Another member
 comments in the discussion*. The settings stay a file, not environment
 variables (user, 2026-10-20).
 
-Open for the user, and not blocking groups 1 to 3:
-
-- A comment of the user's that comes after a `harness-answer` the loop has
-  already carried into a step. Is it a new answer to carry, as the rule reads
-  today, or a note? This change reads it as a new answer.
+A comment of the user's that comes after a `harness-answer` the loop has
+already carried into a step is a new answer, and the loop carries it too: the
+user's word overrides the bot's (user, 2026-10-20).
