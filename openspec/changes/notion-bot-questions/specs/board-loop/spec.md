@@ -134,21 +134,24 @@ id before the pick session and name it in the pick prompt as the author of
 runner SHALL start a triage session, with no goal, that may read the clone
 and nothing else. It SHALL hold no token, and its prompt SHALL carry the
 question and the card's comments as data. When the triage ends naming a
-source, a verbatim quote and an answer, the source is a path tracked in the
-clone or the id of a comment by the user's account on that card, and the
-quote, whitespace normalised, appears in that file at `HEAD` or that
-comment's text, the runner SHALL read the card's comments again and, while no
-question waits there, post the answer from the integration as a page-level
-comment opening with `harness-answer` and holding the quote and the source,
-and SHALL set no `Assign`. The runner SHALL read the comments again before
-posting the question on every other ending too. On any
+source, a verbatim quote and an answer, the source is a Markdown file
+(`*.md`) tracked in the clone or the id of a comment by the user's account on
+that card, and the quote, whitespace normalised, appears in that file at
+`HEAD` or that comment's text, the runner SHALL read the card's comments
+again and, when no comment opening with the mark or with `harness-answer`
+appeared since its read before the triage, post the answer from the
+integration as a page-level comment opening with `harness-answer` and holding
+the quote and the source, and SHALL set no `Assign`. The runner SHALL read
+the comments again, and post nothing when such a comment appeared, before
+posting the question on every other ending too. Any other source SHALL be one
+that does not hold. On any
 other ending the runner SHALL post the question as that requirement fixes.
 The pass's outcome SHALL stay the goal check's.
 
 #### Scenario: An answer already written
 
-- **WHEN** the triage ends with a source that is a path tracked in the clone,
-  and an answer
+- **WHEN** the triage ends with a source that is a Markdown file tracked in
+  the clone, a quote that file holds, and an answer
 - **THEN** the runner posts a comment opening with `harness-answer` that holds
   the answer and the source, sets no `Assign`, and prints that it answered
 
@@ -160,17 +163,18 @@ The pass's outcome SHALL stay the goal check's.
 
 #### Scenario: A source that does not hold
 
-- **WHEN** the triage names a path the clone does not track, a comment id
-  that is not the user's on that card, or a quote the source does not hold
+- **WHEN** the triage names a path the clone does not track, a tracked file
+  that is not Markdown, a comment id that is not the user's on that card, or a
+  quote the source does not hold
 - **THEN** the runner posts the question as it would on `ESCALATE`, and
   prints that the source did not hold
 
 #### Scenario: A question posted while the triage ran
 
-- **WHEN** a question opening with the mark appears on the card while the
-  triage runs
+- **WHEN** a comment opening with the mark or with `harness-answer` appears on
+  the card while the triage runs, whether or not the user has answered it
 - **THEN** the runner posts neither the answer nor the question, and prints
-  that a question already waits
+  that the card changed during the triage
 
 #### Scenario: A triage that fails
 
