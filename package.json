@@ -3,7 +3,7 @@
 	"version": "0.0.0",
 	"private": true,
 	"devDependencies": {
-		"harness": "github:laidrivm/harness#840570b811c8535c0db75c11a27cb494135a72b5"
+		"harness": "github:laidrivm/harness#fbbe995a856199afc49c10cc68b08df6ce05c3b3"
 	},
 	"harness": {
 		"board": "Harness",
