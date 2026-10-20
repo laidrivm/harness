@@ -8,15 +8,15 @@
  */
 import { createPrivateKey, type KeyObject, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { remoteRepository } from "./pull-requests.ts";
 
 export type App = { id: string; key: KeyObject; owner: string; repo: string };
 
 /** The owner and name a GitHub URL names, HTTPS, SSH or `ssh://`, or undefined for any other. */
 export function repository(url: string) {
-	const found = /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([\w-]+)\/([\w.-]+?)(?:\.git)?$/.exec(url);
-	// A dot path would move the API call's path out of the repository's.
-	if (!found || found[2] === "." || found[2] === "..") return undefined;
-	return { owner: found[1], repo: found[2] };
+	// GitHub's host alone, then exactly two segments: a token must never go to a proxy.
+	const github = /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)[^/]+\/[^/]+$/;
+	return github.test(url) ? remoteRepository(url) : undefined;
 }
 
 /**

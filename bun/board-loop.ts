@@ -83,7 +83,7 @@ function consider(slug: string, status: string, blocking: string[]): Step | stri
 	const step = answer ? found.length + 1 : found.findIndex(([, boxes]) => boxes.open > 0) + 1;
 	// `git-and-prs.md`: a single group ships whole on `feat/<slug>`; an answer makes it two.
 	const branch = found.length === 1 && !answer ? `feat/${slug}` : `feat/${slug}-${step}`;
-	const prs = readPullRequests<{ number?: unknown; state?: unknown }>(branch, "number,state");
+	const prs = readPullRequests(branch);
 	// Never "no pull request": a missed open one would start a second
 	// session on a branch under review.
 	if (!prs) return "the pull request query failed";
