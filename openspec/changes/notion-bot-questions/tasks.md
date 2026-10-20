@@ -60,7 +60,9 @@ question*.
       and the bearer header. The comment's body holds a code-annotated mark
       run, then the rest as plain text, and the `PATCH` body sets
       `Assign.people` alone to the user [20]. A question on the second page of
-      comments, reached through `next_cursor`, still found [21]. A question
+      comments, reached through `next_cursor`, still found [21]; pages served
+      out of `created_time` order still give the latest question and the
+      first answer after it (CodeRabbit review). A question
       followed only by another member's comment still waits; one followed by
       the user's unmarked comment does not [22], even when the configured
       `user` is unhyphenated and `created_by.id` is a UUID [22a]. A plain backticked mark
