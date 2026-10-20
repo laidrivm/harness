@@ -180,10 +180,11 @@ safe for the agent to run. It reports, in order:
 
 It never pushes, posts or edits a file; a commit the guard fails to refuse
 stays on the disposable VM, and the report says so. It ends with one line
-per item. A tracked
-list of routine prompts with a test was the other way; it would be a copy of
-text whose original lives in claude.ai, and drift there is what the rule is
-written against.
+per item.
+
+*Alternative considered.* A tracked list of routine prompts with a test. It
+would be a copy of text whose original lives in claude.ai, and drift there
+is what the rule is written against.
 
 ### D8. The question gate is checked live before anything is built for it
 
