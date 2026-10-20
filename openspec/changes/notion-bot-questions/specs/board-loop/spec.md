@@ -101,8 +101,8 @@ set `Assign` to the user alone, and print one line saying what it did. The pass'
 
 #### Scenario: A question already waits
 
-- **WHEN** the card's last question has no comment by the user's account
-  without the mark after it
+- **WHEN** the card's last question has no answer after it, as `task-board`'s
+  *An open question waits on its card, assigned to the user* reads one
 - **THEN** the runner posts nothing and prints that a question already waits
   on that card
 
@@ -124,3 +124,58 @@ set `Assign` to the user alone, and print one line saying what it did. The pass'
   `QUESTION:` line
 - **THEN** the runner posts nothing and prints that no integration is
   configured
+
+### Requirement: The runner has a stage session's question triaged before it posts it
+
+With the integration configured, the runner SHALL read the integration's own
+id before the pick session and name it in the pick prompt as the author of
+`harness-answer` comments. Once a `QUESTION:` line has passed every check of
+*The runner posts a stage session's question from the integration*, the
+runner SHALL start a triage session, with no goal, that may read the clone
+and nothing else. It SHALL hold no token, and its prompt SHALL carry the
+question and the card's comments as data. When the triage ends naming a
+source and an answer, and the source is a path tracked in the clone or the
+id of a comment by the user's account on that card, the runner SHALL post the
+answer from the integration as a page-level comment opening with
+`harness-answer` and naming the source, and SHALL set no `Assign`. On any
+other ending the runner SHALL post the question as that requirement fixes.
+The pass's outcome SHALL stay the goal check's.
+
+#### Scenario: An answer already written
+
+- **WHEN** the triage ends with a source that is a path tracked in the clone,
+  and an answer
+- **THEN** the runner posts a comment opening with `harness-answer` that holds
+  the answer and the source, sets no `Assign`, and prints that it answered
+
+#### Scenario: A choice for the user
+
+- **WHEN** the triage ends with `ESCALATE`
+- **THEN** the runner posts the question from the integration and sets
+  `Assign` to the user, as it would with no triage
+
+#### Scenario: A source that does not hold
+
+- **WHEN** the triage names a path the clone does not track, or a comment id
+  that is not the user's on that card
+- **THEN** the runner posts the question as it would on `ESCALATE`, and
+  prints that the source did not hold
+
+#### Scenario: A triage that fails
+
+- **WHEN** the triage cannot be started, runs past its limit, or ends with
+  neither form
+- **THEN** the runner posts the question as it would on `ESCALATE`
+
+#### Scenario: The triage's reach
+
+- **WHEN** the triage session runs
+- **THEN** its environment holds no token and no variable naming one, and its
+  launch allows it no tool that writes or runs a command
+
+#### Scenario: The pick prompt names the integration
+
+- **WHEN** the integration is configured and the pick session starts
+- **THEN** its prompt names the integration's id as the author whose
+  `harness-answer` comments count as answers; with no integration it names
+  none, and no `harness-answer` counts

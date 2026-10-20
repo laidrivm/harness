@@ -10,6 +10,11 @@ can post there under an identity of its own, with a token that, like the
 GitHub App's key (`github-app-identity`), only the runner holds. The session
 never does.
 
+The user then widened it (2026-10-20): no question goes out under their name,
+attended or not. Sessions on the laptop get an integration of their own. A
+question whose answer is already written is answered by a triage before it
+reaches the user.
+
 ## What Changes
 
 - **The answer follows the last question, whoever posted it.** A question is
@@ -32,11 +37,28 @@ never does.
   such a session in its environment, and the question gate then refuses
   every comment there, naming the `QUESTION:` line. That way nothing the
   session writes on a card appears under the user's name.
-- **Without the integration nothing changes.** The laptop's runner never
-  holds the token. It launches sessions as it does today, and they ask
-  through the question gate.
-- The integration writes only the question and `Assign`. `Status`, `Pointer`
-  and card text stay with the user's connector, as today.
+- **A laptop session asks through an integration of its own.** A second
+  internal integration, with comment capabilities only, keeps its token in a
+  0600 file on the laptop. A session there, attended or not, posts its
+  question with `bun bun/notion-ask.ts <card id> <file>` and sets `Assign`
+  through the user's connector. Where that file exists, the question gate
+  refuses a question from the user's account and names the command.
+- **A triage answers what is already written.** Before the runner posts a
+  stage session's question, a read-only `claude -p` triage looks for an
+  answer already written in a spec, a design, the rulebook, the docs or the
+  user's earlier answer on the card. With one, whose source the runner
+  checks, the integration posts it as a comment opening with
+  `harness-answer` and naming that source, and no `Assign` is set. Any
+  choice, or any doubt, goes on to the user as the question.
+- **The answer rule gains the triage's answer.** After the last question, the
+  answer is the user's first unmarked comment, or, with none, the VPS
+  integration's first `harness-answer`. A comment of the user's overrides it.
+- **Without either settings file nothing changes.** A machine without the
+  VPS integration's file or the ask file runs sessions as it does today, and
+  they ask through the question gate.
+- The VPS integration writes only questions, the triage's answers and
+  `Assign`; the laptop's writes only questions. `Status`, `Pointer` and card
+  text stay with the user's connector, as today.
 
 ### User acts
 
@@ -56,6 +78,15 @@ Only the user can do these. No task of this change does them.
   Notion notified them of the comment or of the `Assign` write. Nothing in
   this change depends on the answer. It decides whether a later change needs
   a mention.
+- Before group 3 is used: create a second internal integration, "harness
+  ask", with Read comments and Insert comments alone. Connect it to the
+  `D2ASS`, `Harness` and `mellon` boards. Put its token and the user's
+  Notion id in the laptop's `~/.config/harness/notion-ask.json`, mode 0600.
+  Then check two facts and record them on the card: that the command posts
+  on a card of each board, and that it gets a refusal on a page outside
+  them.
+- Before group 4 relies on it: read one triage answer back through the
+  connector and note on the card how its author shows.
 
 ## Non-goals
 
@@ -66,9 +97,10 @@ Only the user can do these. No task of this change does them.
   answer the loop carries is the open idea card *Say when an answer counts as
   applied now that the runner opens the step's pull request*, and this change
   leaves it to that card.
-- A session started by hand, or a worker another session briefs. Nothing
-  reads its final message the way the runner does, so it asks as it does
-  today.
+- Triage for a laptop question. The triage runs beside the VPS token, and a
+  laptop question goes straight to the card (`design.md`, *Three paths to a
+  card*).
+- A triage that settles a choice. Every choice goes on to the user.
 - Mentioning the user in a question.
 
 ## Capabilities
@@ -80,15 +112,18 @@ None.
 ### Modified Capabilities
 
 - `task-board`: *An open question waits on its card, assigned to the user*
-  says who posts a question, and when the answer counts as following it.
-- `board-loop`: gains the integration's settings and the runner's post of a
-  stage session's question.
+  says who posts a question, and what counts as its answer, the triage's
+  included. It gains *A session asks through the ask integration where one
+  is configured*.
+- `board-loop`: gains the integration's settings, the runner's post of a
+  stage session's question, and the triage before it.
 - `stage-goal`: *An unattended stage runs under one goal on the check* lets a
-  launcher that posts questions name the `QUESTION:` line in place of the
+  launcher name the `QUESTION:` line or the ask command in place of the
   comment's form.
 - `agent-permissions`: gains *A session whose launcher posts its questions
-  posts no comment*, which sits beside *A question to the user on a board
-  card needs no prompt*.
+  posts no comment* and *A question goes to the ask command where one is
+  configured*, both beside *A question to the user on a board card needs no
+  prompt*.
 
 ## Impact
 
@@ -98,7 +133,15 @@ None.
 - A new `bun/notion-bot.ts`: the settings file, the `QUESTION:` parse, and
   the REST calls, with `fetch` and no dependency.
 - `bun/question-gate.ts`: the comment checks lifted out for the runner to
-  import, and the refusal in a session the runner asks for.
+  import, the refusal in a session the runner asks for, the refusal of a
+  question where the ask settings exist, and the `harness-answer` mark.
 - `bun/board-loop-session.ts`: one variable added to a session's environment
   when the runner asks for it.
+- A new `bun/notion-ask.ts`: the ask command, on `notion-bot.ts`'s settings
+  read and REST calls.
+- A new `bun/notion-triage.ts`: the triage session and the check of its
+  source, called before the question's post; and the integration's id in the
+  pick prompt.
+- `.claude/settings.json`: an allow entry for the ask command; the README
+  names the entry a consumer adds.
 - `core/feature-workflow.md` and `README.md`.

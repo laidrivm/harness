@@ -14,7 +14,9 @@ SHALL name the mark agent-permissions' *A question to the user on a board
 card needs no prompt* fixes, character for character, and the form of the
 comment that carries a question. A launcher that posts the session's question
 itself SHALL name the final-message form `board-loop` fixes for it in place of
-the comment's form, the mark still included. Explore and conversational
+the comment's form, the mark still included. Otherwise, a launcher that finds
+the ask settings file SHALL name the ask command `task-board` fixes in place
+of the comment's form, the mark still included. Explore and conversational
 sessions SHALL set no goal.
 
 #### Scenario: An apply step launched headless
@@ -45,6 +47,13 @@ sessions SHALL set no goal.
 - **THEN** its prompt has already named the mark, with its backticks, and the
   `QUESTION:` line with the question below it, and has said that the session
   posts no comment itself
+
+#### Scenario: A stage launched where the ask integration is configured
+
+- **WHEN** a launcher that does not post questions finds the ask settings
+  file and starts a stage session
+- **THEN** the session's prompt names the mark, with its backticks, and the
+  ask command with the card id and the file that holds the question
 
 #### Scenario: Two targets at one commit
 

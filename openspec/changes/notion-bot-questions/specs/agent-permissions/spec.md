@@ -39,3 +39,38 @@ unchanged in every other session.
 - **WHEN** the runner sets the variable and the gate reads it
 - **THEN** both read its name and its value from the one module that defines
   them
+
+### Requirement: A question goes to the ask command where one is configured
+
+Where the ask settings file exists under the user's config home, the question
+gate SHALL answer `deny` to a `notion-create-comment` call that meets every
+condition of *A question on a card*, in any session, attended or not. The
+`deny` SHALL name the ask command, and the gate SHALL record the call as
+refused. The gate SHALL read whether the file exists and nothing of its
+contents. Every other call SHALL be decided as *A question to the user on a
+board card needs no prompt* fixes. In a session carrying the runner's
+variable, *A session whose launcher posts its questions posts no comment*
+SHALL decide first.
+
+#### Scenario: A question on a machine with the ask settings
+
+- **WHEN** an attended session calls `notion-create-comment` with a comment
+  that would meet every condition of *A question on a card*, and the ask
+  settings file exists
+- **THEN** the gate answers `deny` with a message naming the ask command, no
+  comment is posted from the user's account, and the ledger records the call
+  as refused
+
+#### Scenario: A comment that is not a question
+
+- **WHEN** the ask settings file exists and a session calls
+  `notion-create-comment` with a comment that fails a condition of *A
+  question on a card*
+- **THEN** the gate decides as *A question to the user on a board card needs
+  no prompt* fixes, so the prompt stands where it can be shown
+
+#### Scenario: No ask settings
+
+- **WHEN** the ask settings file is missing
+- **THEN** the gate decides every call as *A question to the user on a board
+  card needs no prompt* fixes
