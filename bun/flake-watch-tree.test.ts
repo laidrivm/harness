@@ -67,6 +67,13 @@ describe("the same tree", () => {
 		expect(play([failed(dir), passed(join(dir, "sub"))])).toBe("");
 	});
 
+	test("an untracked file created outside the run's directory gives no hint", () => {
+		const dir = repo();
+		const sub = join(dir, "sub");
+		mkdirSync(sub);
+		expect(play([failed(sub), write(dir, "new.test.ts", "x\n"), passed(sub)])).toBe("");
+	});
+
 	test("fail on tree T, pass on U, then pass on T gives no hint [23]", () => {
 		const dir = repo();
 		const steps = [
