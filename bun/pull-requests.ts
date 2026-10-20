@@ -6,7 +6,7 @@
  */
 
 /** The limit in ms: `HARNESS_GH_TIMEOUT_MS` when it is a positive whole number, 30 s otherwise. */
-function limit(): number {
+export function limit(): number {
 	const env = process.env.HARNESS_GH_TIMEOUT_MS ?? "";
 	// Never 0: `spawnSync` reads a timeout of 0 as no limit at all.
 	return /^[1-9]\d*$/.test(env) ? Number(env) : 30_000;
