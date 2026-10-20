@@ -173,9 +173,10 @@ export function watch(event: Event, dir: string): { hint: string; head: string }
 	// Written beside and renamed into place, so a reader never sees half a
 	// store. Two calls at once can lose one write, which drops a name or a
 	// hint: the silent side. Written before the hint, so a pass whose entry
-	// could not be deleted never names the same run twice.
+	// could not be deleted never names the same run twice. Created exclusively,
+	// so a link planted at the partial's name is never followed.
 	const partial = `${file}.${process.pid}`;
-	writeFileSync(partial, JSON.stringify(next.store), { mode: 0o600 });
+	writeFileSync(partial, JSON.stringify(next.store), { mode: 0o600, flag: "wx" });
 	renameSync(partial, file);
 	if (next.flaky) return { hint: hint(next.flaky), head: seen.head };
 }
