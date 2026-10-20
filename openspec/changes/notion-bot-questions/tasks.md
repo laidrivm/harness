@@ -199,7 +199,11 @@ builds, and merges inert before that.
       file at `HEAD` does not hold, and one that differs from it only in
       whitespace [85]; a quote absent from the cited comment [86]; and a
       question that appears on the card while the triage runs, which posts
-      neither the answer nor the question [87]
+      neither the answer nor the question [87]. Cover a tracked file that is
+      not Markdown (a `.ts` and a `.json` holding the quote), which escalates
+      [88]; and a question that appears and is answered by the user while
+      the triage runs, so that none waits at the second read, which still
+      posts neither the answer nor the question [89]
 - [ ] 4.3 Write the failing answer-rule cases in `bun/board-loop.test.ts` and
       `bun/notion-bot.test.ts`. Cover the pick prompt naming the id [76], a
       triage answer that unblocks [77], and the user's comment winning in

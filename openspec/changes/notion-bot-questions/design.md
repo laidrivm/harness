@@ -305,15 +305,26 @@ one of two:
   text;
 - `ESCALATE`.
 
-A source is a path tracked in the clone, optionally with `#` and a heading or
-line, or the id of a comment by the user on that card. The runner checks the
-source exists — `git ls-files` for a path, or the fetched comments for an id —
-and that the quote, whitespace normalised, appears in it: in the file at
-`HEAD`, or in that comment's text. Existence alone would let the triage cite
-a real file that says nothing of the kind (CodeRabbit on #191). A quote that
-is not there is a source that does not hold. Right before posting, the runner
-reads the card's comments again (REST step 3) and posts nothing while a
-question waits there, since the triage may have run for minutes. With a
+A source is one of two kinds, and nothing else: a Markdown file (`*.md`)
+tracked in the clone, optionally with `#` and a heading or line, or the id of
+a comment by the user on that card. Decision 8 names what may settle a
+question — a spec, a design, the rulebook or docs, or the user's own earlier
+answer — and in this repository every one of those is a Markdown file. Code
+and configuration are not on the list: a tracked `.ts` or `.json` file could
+otherwise authorise an answer no written decision gives (CodeRabbit on #191).
+The runner checks the source exists — `git ls-files` for a path ending in
+`.md`, or the fetched comments for an id — and that the quote, whitespace
+normalised, appears in it: in the file at `HEAD`, or in that comment's text.
+Existence alone would let the triage cite a real file that says nothing of
+the kind (CodeRabbit on #191). A quote that is not there is a source that
+does not hold. Right before posting, the runner reads the card's comments
+again (REST step 3) and compares them with the ones it read before the
+triage. If any comment opening with the mark or with `harness-answer`
+appeared since, it posts nothing, whether or not the user has already
+answered that question (CodeRabbit on #191): the triage was judged against
+comments that are no longer the card's state. Checking only whether a
+question still waits would let a question asked and answered during the
+triage pass, and the stale answer or question would follow it. With a
 source that holds, it posts
 `` `harness-answer` <text>\n> <quote>\nSource: <source> `` from the
 integration and sets no `Assign`, so the user sees the words the answer rests
