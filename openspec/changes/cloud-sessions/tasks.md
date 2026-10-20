@@ -25,8 +25,9 @@ API*.
       `CLOSED` [8, 9]; the query ends in `per_page=100` with no
       `--paginate` [10]; a branch holding `&`, `#` and `/` is encoded [11];
       `origin` in HTTPS, scp, proxy and local-path form, a trailing slash
-      included, gives `o/r` [12–15]; one segment, or a segment holding a space
-      or `%`, fails with no `gh` call [16, 17]; an `insteadOf` rewrite is
+      included, gives `o/r` [12–15]; one segment, a segment holding a space
+      or `%`, or one of dots alone, fails with no `gh` call [16, 17, review of
+      #190]; an `insteadOf` rewrite is
       followed [18]; no `gh pr` or `gh api graphql` call [19]; a non-object
       element, one whose `head.repo` is `null`, and one from another
       repository of the same owner are left out, compared by repository id,

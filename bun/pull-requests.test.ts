@@ -107,6 +107,9 @@ describe("the repository origin names", () => {
 		["one segment", "https://github.com/r", "[16]"],
 		["a segment holding a space", "/srv/o p/r", "[17]"],
 		["a segment holding %", "https://github.com/o/r%20x", "[17]"],
+		["a repository of dots alone, .git stripped", "https://github.com/o/....git", "[17, review of #190]"],
+		["a repository of dots alone", "https://github.com/o/...", "[17, review of #190]"],
+		["an owner of dots alone", "https://github.com/.../r", "[17, review of #190]"],
 	])("%s fails with no gh call %s", (_, origin) => {
 		expect(read({ origin })).toEqual({ result: "failed", calls: [] });
 	});
