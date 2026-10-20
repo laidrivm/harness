@@ -133,7 +133,8 @@ id before the pick session and name it in the pick prompt as the author of
 *The runner posts a stage session's question from the integration*, the
 runner SHALL start a triage session, with no goal, that may read the clone
 and nothing else. It SHALL hold no token, and its prompt SHALL carry the
-question and the card's comments as data. When the triage ends naming a
+question and the card's comments as data, and the rule that a choice, or
+anything no written source settles, ends with `ESCALATE`. When the triage ends naming a
 source, a verbatim quote and an answer, the source is a Markdown file
 (`*.md`) tracked on the default branch as `origin` holds it, never the
 step's branch, or the id of a comment by the user's account on

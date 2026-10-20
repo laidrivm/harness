@@ -194,7 +194,8 @@ builds, and merges inert before that.
       the answer posted with no `Assign` [64], a failed answer post that sets
       `Assign` [93], two source lines [65], an untracked path [66], a path leaving the
       clone [67], another card's comment id [68] and the time limit [69].
-      Check the environment and the flags [70] and the prompt's data [71].
+      Check the environment and the flags [70] and the prompt's data and its
+      rule that a choice ends with `ESCALATE` [71].
       Cover `ESCALATE` [72], a `claude` that cannot start [73], a failed
       answer post [74] and the pass's outcome [75]. Cover a quote the cited
       file on `origin`'s default branch does not hold, including one only
