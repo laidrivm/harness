@@ -28,7 +28,10 @@ API*.
       included, gives `o/r` [12–15]; one segment, or a segment holding a space
       or `%`, fails with no `gh` call [16, 17]; an `insteadOf` rewrite is
       followed [18]; no `gh pr` or `gh api graphql` call [19]; a non-object
-      element reads as neither open nor merged [20]; a JSON object, a 403
+      element, one whose `head.repo` is `null`, and one from another
+      repository of the same owner are left out, and one whose
+      `head.repo.full_name` differs from `origin`'s only in case is kept
+      [20, review of #185]; a JSON object, a 403
       exit and output that is not JSON each fail [21, 22, 24]
 - [ ] 1.2 Move the `gh` stubs in `bun/goal-check.fixture.ts` and
       `bun/board-loop.fixture.ts` to the REST query and its answer's shape,
@@ -131,8 +134,10 @@ cloud disagrees.
       the first tool call ran after the install or met the bootstrap's hint
 - [ ] 4.2 **User act, in the same session.** Ask it to post a comment on
       this change's card whose text does not open with the mark, decline the
-      prompt that shows, and have it print the `question-gate` lines of
-      `gates.jsonl`. Record whether one names the call
+      prompt that shows, and have it print the `question-gate` and
+      `command-guard` lines of `gates.jsonl`. Record whether one names the
+      call, and whether the guard's refusal of 4.1's commit is there, which
+      design.md D8 needs before an absent line can mean the hook did not fire
 - [ ] 4.3 **User act.** Create the trial routine: once a day, repository
       `harness`, environment `harness`, prompt `This session runs
       unattended.` and, on the next line, `/cloud-probe cloud-sessions`.
@@ -140,7 +145,7 @@ cloud disagrees.
       the routine off
 - [ ] 4.4 Where 4.1–4.3 disagree with design.md — D1's order against the
       first tool call, D6's parse against `origin`'s form, D8's hook — amend
-      it through `/opsx:update` in this group's branch; if the question gate
-      did not fire, file an `idea` card on the `Harness` board for a
-      `PreToolUse` copy (unattended: card — file it and name it in the
+      it through `/opsx:update` in this group's branch; if 4.2 shows, as D8
+      reads it, that the question gate did not fire, file an `idea` card on
+      the `Harness` board for a `PreToolUse` copy (unattended: card — file it and name it in the
       report). Verify: `openspec validate cloud-sessions` passes
