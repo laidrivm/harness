@@ -14,7 +14,7 @@ reason.
 Closes `stage-goal` §*A branch's pull requests are read through GitHub's REST
 API*.
 
-- [ ] 1.1 Write the failing cases in a new `bun/pull-requests.test.ts`, with a
+- [x] 1.1 Write the failing cases in a new `bun/pull-requests.test.ts`, with a
       `gh` stub on `PATH` that logs its arguments and a fixture repository
       whose `origin` each case sets: an empty list is a list [1]; no `origin`
       fails with no `gh` call [2]; `open`, `closed` with `merged_at` and
@@ -33,18 +33,18 @@ API*.
       `head.repo.full_name` differs from `origin`'s only in case is kept
       [20, review of #185]; a JSON object, a 403
       exit and output that is not JSON each fail [21, 22, 24]
-- [ ] 1.2 Move the `gh` stubs in `bun/goal-check.fixture.ts` and
+- [x] 1.2 Move the `gh` stubs in `bun/goal-check.fixture.ts` and
       `bun/board-loop.fixture.ts` to the REST query and its answer's shape,
       give each fixture repository an `origin`, and change the assertions in
       `goal-check-io.test.ts`, `goal-check.test.ts`,
       `board-loop-takeable.test.ts` and the timeout cases that read
       `gh pr list` calls or GraphQL-shaped output; the hanging `gh` is killed
       at `HARNESS_GH_TIMEOUT_MS` on the REST call [23, 25, 26]. See them fail
-- [ ] 1.3 Rewrite `readPullRequests` in `bun/pull-requests.ts` as design.md
+- [x] 1.3 Rewrite `readPullRequests` in `bun/pull-requests.ts` as design.md
       D5 and D6 say, its `fields` parameter dropped, the `per_page` limit in
       a `shortcut:` comment; update its two callers. See 1.1 and 1.2 pass and
       the whole `bun test` green
-- [ ] 1.4 Reconcile the sites that name the old read: the header of
+- [x] 1.4 Reconcile the sites that name the old read: the header of
       `bun/pull-requests.ts`, the `gh` stub comment in
       `bun/board-loop.fixture.ts`, and any hit of
       `git grep -n -e "gh pr list" -e "headRefOid" -- bun core README.md

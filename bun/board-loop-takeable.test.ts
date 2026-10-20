@@ -6,6 +6,13 @@ import { change, clone, ONE, run, THREE, TICKED } from "./board-loop.fixture.ts"
 
 afterAll(cleanup);
 
+/** The REST read of a branch's pull requests, as the stub `gh` logs it. */
+const query = (branch: string) => `gh api repos/o/demo/pulls?head=o:${encodeURIComponent(branch)}&state=all`;
+
+/** One pull request of the fixture's `o/demo`, as the REST endpoint lists it. */
+const listed = (number: number, state: string, merged = false) =>
+	JSON.stringify([{ number, state, merged_at: merged ? "2026-10-20T00:00:00Z" : null, head: { sha: "abc", repo: { full_name: "o/demo" } } }]);
+
 describe("nothing to take", () => {
 	// spec: board-loop/no-takeable-change
 	test("a tree with no proposed change is idle, launches nothing and exits 0 [8]", () => {
@@ -33,19 +40,19 @@ describe("an answer candidate", () => {
 		["three-group ticked change queries feat/demo-4 [10]", THREE.replaceAll("[ ]", "[x]"), "feat/demo-4"],
 	])("a %s", (_, tasks, branch) => {
 		const { dir } = clone(change("demo", tasks));
-		expect(run(dir).calls).toContain(`gh pr list --head ${branch} --state all`);
+		expect(run(dir).calls).toContain(query(branch));
 	});
 
 	test("a change with one box left is a normal step [12]", () => {
 		const { dir } = clone(change("demo", "## 1. Only\n\n- [x] 1.1 a\n- [ ] 1.2 b\n"));
 		const { calls } = run(dir);
-		expect(calls).toContain("gh pr list --head feat/demo --state all");
+		expect(calls).toContain(query("feat/demo"));
 		expect(calls).toContain("/opsx:apply demo for its group 1 and");
 	});
 
 	test.each([
-		["an open pull request on feat/demo-2 [18]", { gh: '[{"number":7,"state":"OPEN"}]' }, "pull request #7 is open on feat/demo-2"],
-		["a closed pull request on feat/demo-2 [19]", { gh: '[{"number":5,"state":"CLOSED"}]' }, "pull request #5 already used feat/demo-2"],
+		["an open pull request on feat/demo-2 [18]", { gh: listed(7, "open") }, "pull request #7 is open on feat/demo-2"],
+		["a closed pull request on feat/demo-2 [19]", { gh: listed(5, "closed") }, "pull request #5 already used feat/demo-2"],
 		["a failing gh [21]", { gh: "", ghCode: 1 }, "the pull request query failed"],
 	])("%s passes the candidate over, naming why", (_, stubs, why) => {
 		const { dir } = clone(change("demo", TICKED));
@@ -66,7 +73,7 @@ describe("the step", () => {
 	test("a single-group change is step 1 on feat/<slug> [10]", () => {
 		const { dir } = clone(change("demo", ONE));
 		const r = run(dir);
-		expect(r.calls).toContain("gh pr list --head feat/demo --state all");
+		expect(r.calls).toContain(query("feat/demo"));
 		expect(r.calls).toContain("goal-check.ts apply demo 1");
 	});
 
@@ -74,7 +81,7 @@ describe("the step", () => {
 	test("group 1 ticked of three is step 2 on feat/<slug>-2 [11]", () => {
 		const { dir } = clone(change("demo", THREE));
 		const r = run(dir);
-		expect(r.calls).toContain("gh pr list --head feat/demo-2 --state all");
+		expect(r.calls).toContain(query("feat/demo-2"));
 		expect(r.calls).toContain("goal-check.ts apply demo 2");
 	});
 });
@@ -89,17 +96,17 @@ describe("passed over, with the reason printed", () => {
 	// spec: board-loop/a-step-waiting-for-the-user-s-merge
 	test("an open pull request on the step's branch [13]", () => {
 		const { dir } = clone();
-		const r = run(dir, [], { gh: '[{"number":7,"state":"OPEN"}]' });
+		const r = run(dir, [], { gh: listed(7, "open") });
 		expect(r.text).toContain("passed over demo: pull request #7 is open on feat/demo");
 		expect(r.calls).not.toContain("claude");
 	});
 
 	test.each([
-		["closed", "CLOSED"],
-		["merged", "MERGED"],
-	])("a %s pull request that used the branch name [14]", (_, state) => {
+		["closed", false],
+		["merged", true],
+	])("a %s pull request that used the branch name [14]", (_, merged) => {
 		const { dir } = clone();
-		const r = run(dir, [], { gh: `[{"number":5,"state":"${state}"}]` });
+		const r = run(dir, [], { gh: listed(5, "closed", merged) });
 		expect(r.text).toContain("passed over demo: pull request #5 already used feat/demo");
 	});
 
@@ -132,10 +139,8 @@ describe("a pull request query that runs past its limit", () => {
 		expect(r.last).toBe("board-loop: idle — no change is takeable");
 	}, 15_000);
 
-	test("the query asks for up to 1000 records [6]", () => {
+	test("the query asks for one page of 100 records [6]", () => {
 		const { dir } = clone();
-		expect(run(dir).calls).toContain(
-			"gh pr list --head feat/demo --state all --limit 1000 --json number,state",
-		);
+		expect(run(dir).calls).toContain(`${query("feat/demo")}&per_page=100\n`);
 	});
 });

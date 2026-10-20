@@ -54,7 +54,9 @@ export function commit(dir: string, tree: Tree = { "note.txt": `${Math.random()}
  * `package.json` names the board `Demo` unless `tree` holds one of its own.
  */
 export function clone(tree: Tree = change("demo")) {
-	const origin = emptyDir("board-loop-origin-");
+	// Its path ends in `o/demo`, the repository the pull request read names.
+	const origin = join(emptyDir("board-loop-origin-"), "o", "demo");
+	mkdirSync(origin, { recursive: true });
 	git(origin, "init", "-q", "--bare", "-b", "main");
 	const dir = emptyDir("board-loop-clone-");
 	git(dir, "init", "-q", "-b", "main");
@@ -73,7 +75,7 @@ export function advance(origin: string, tree?: Tree) {
 }
 
 export type Stubs = {
-	/** What `gh pr list` prints, or `null` for no `gh` on `PATH`. */
+	/** What `gh api` prints for the branch's pull requests, or `null` for no `gh` on `PATH`. */
 	gh?: string | null;
 	ghCode?: number;
 	/**
