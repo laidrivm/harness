@@ -22,8 +22,8 @@ export function remoteRepository(url: string) {
 	const path = /^[a-z][a-z\d+.-]*:\/\/[^/]*(\/.*)$/i.exec(url)?.[1] ?? /^[^/:]+:(.*)$/.exec(url)?.[1] ?? url;
 	const parts = path.replace(/\/+$/, "").replace(/\.git$/, "").split("/");
 	const [owner, repo] = parts.slice(-2);
-	// A dot path would move the API call's path out of the repository's.
-	const name = (s?: string) => s !== undefined && /^[\w.-]+$/.test(s) && s !== "." && s !== "..";
+	// A segment of dots alone would move the API call's path out of the repository's, or name none.
+	const name = (s?: string) => s !== undefined && /^[\w.-]+$/.test(s) && !/^\.+$/.test(s);
 	return parts.length >= 2 && name(owner) && name(repo) ? { owner, repo } : undefined;
 }
 
