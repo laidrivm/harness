@@ -15,9 +15,9 @@
  */
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { bunTestRetry } from "./command-guard-exec.ts";
+import { bunTestRetry, shellWords } from "./command-guard-exec.ts";
 import { commands } from "./command-parse.ts";
-import { invocations } from "./command-words.ts";
+import { invocations, SHELLS } from "./command-words.ts";
 import { blank } from "./scan.ts";
 import { tracked } from "./tracked.ts";
 
@@ -112,7 +112,24 @@ function retried(text: string): boolean {
 		// shortcut: a command the guard's parser refuses is not read for a retry; read it if one ever hides one.
 		return false;
 	}
-	return parts.some((part) => invocations(part).some(([name, rest]) => bunTestRetry(name, rest)));
+	// A `sh -c` program and an `eval`'s words are read as the guard reads them.
+	return parts.some((part) =>
+		invocations(part).some(([name, rest]) => {
+			if (bunTestRetry(name, rest)) return true;
+			const shell = SHELLS.has(name) ? shellWords(rest) : null;
+			if (shell?.command) return rest.slice(shell.start).some(retried);
+			return name === "eval" && retried(rest.join(" "));
+		}),
+	);
+}
+
+/** `parse` of a tracked file, its failure naming the file. */
+function parsed<T>(path: string, parse: () => T): T {
+	try {
+		return parse();
+	} catch (error) {
+		throw new Error(`${path}: ${(error as Error).message}`);
+	}
 }
 
 type Workflow = { jobs?: Record<string, { steps?: { run?: unknown }[] } | null> };
@@ -125,12 +142,7 @@ export function testRetry(root: string): string[] {
 		const read = () => readFileSync(join(root, path), "utf8");
 		const name = basename(path);
 		if (name === "bunfig.toml") {
-			let config: { test?: { retry?: unknown } };
-			try {
-				config = Bun.TOML.parse(read()) as typeof config;
-			} catch (error) {
-				throw new Error(`${path}: ${(error as Error).message}`);
-			}
+			const config = parsed(path, () => Bun.TOML.parse(read())) as { test?: { retry?: unknown } };
 			if (config.test?.retry !== undefined) problems.push(`${path}: [test] retry hides a flaky test`);
 		} else if (SOURCE.test(name)) {
 			const source = read();
@@ -138,12 +150,12 @@ export function testRetry(root: string): string[] {
 			if (!TEST_FILE.test(name) && !importsBunTest(source, code)) continue;
 			for (const key of retries(code)) problems.push(`${path}:${line(source, key)}: a test retry hides a flaky test`);
 		} else if (name === "package.json") {
-			const json = JSON.parse(read()) as Record<string, unknown>;
+			const json = (parsed(path, () => JSON.parse(read())) ?? {}) as Record<string, unknown>;
 			for (const field of ["scripts", "simple-git-hooks"])
 				for (const [key, value] of Object.entries((json[field] ?? {}) as Record<string, unknown>))
 					if (typeof value === "string" && retried(value)) problems.push(`${path}: ${field} ${key} runs bun with --retry`);
 		} else if (/^\.github\/workflows\/[^/]+\.ya?ml$/.test(path)) {
-			const jobs = (Bun.YAML.parse(read()) as Workflow | null)?.jobs ?? {};
+			const jobs = (parsed(path, () => Bun.YAML.parse(read())) as Workflow | null)?.jobs ?? {};
 			for (const [job, body] of Object.entries(jobs))
 				for (const step of body?.steps ?? [])
 					if (typeof step?.run === "string" && retried(step.run)) problems.push(`${path}: job ${job} runs bun with --retry`);

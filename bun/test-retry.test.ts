@@ -134,8 +134,22 @@ describe("a retry in a command the tree holds", () => {
 		["a workflow run: [84]", ".github/workflows/ci.yml", "jobs:\n  t:\n    steps:\n      - run: bun test --retry=1\n"],
 		["the second line of a run: | block (plan review)", ".github/workflows/ci.yml", "jobs:\n  t:\n    steps:\n      - run: |\n          bun install\n          bun test --retry=1\n"],
 		["a .githooks/pre-push line [85]", ".githooks/pre-push", "#!/bin/sh\nbun test --retry=1\n"],
+		["a script's sh -c program (CodeRabbit on #199)", "package.json", JSON.stringify({ scripts: { test: "sh -c 'bun test --retry=1'" } })],
+		["a hook's eval (CodeRabbit on #199)", ".githooks/pre-push", "#!/bin/sh\neval bun test --retry=1\n"],
 	])("%s fails", (_, path, text) => {
 		expect(found({ [path]: text }).join("\n")).toContain(path);
+	});
+
+	test.each([
+		["package.json", "{"],
+		[".github/workflows/ci.yml", "jobs: [\n"],
+	])("a malformed %s throws naming it (CodeRabbit on #199)", (path, text) => {
+		const dir = repo({ [path]: text });
+		expect(() => testRetry(dir)).toThrow(path);
+	});
+
+	test("a package.json holding null reports nothing (CodeRabbit on #199)", () => {
+		expect(found({ "package.json": "null" })).toEqual([]);
 	});
 
 	// spec: flaky-tests/running-each-test-many-times-in-a-script
