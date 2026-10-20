@@ -39,7 +39,7 @@ and §*A delivery is handled at most once*.
 
 - [ ] 2.1 Write the failing cases in a new `bun/on-event.test.ts`, running the
       handler as a process with a temporary home and `PASS_SECRETS` pointed
-      at a temporary secrets directory [1–19, 59, 60, 62, 63].
+      at a temporary secrets directory [1–19, 59, 60, 62, 63, 68].
       Cite each scenario as `// spec: orchestrator/<slug>`
 - [ ] 2.2 Add `bun/on-event.ts` in the order `design.md` fixes (shape,
       body, secret, signature, delivery, routing, then the App settings for
