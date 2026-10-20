@@ -52,7 +52,8 @@ describe("the empty case", () => {
 		const tmp = temp();
 		const dir = repo();
 		play([failed(dir, "Exit code 128\nfatal: not a git command"), passed(dir)], tmp);
-		expect(existsSync(join(tmp, "flake-watch"))).toBe(false);
+		// The pass makes the directory, as every test run does; no entry is written.
+		expect(readdirSync(join(tmp, "flake-watch"))).toEqual([]);
 	});
 });
 
@@ -230,6 +231,26 @@ describe("the exception cases", () => {
 		chmodSync(join(tmp, "flake-watch"), 0o777); // past the umask
 		const dir = repo();
 		expect(play([failed(dir), passed(dir)], tmp)).toBe("");
+	});
+
+	// The race CodeRabbit named on #192 (another user makes the directory
+	// between a check and the read) has no deterministic window, so these pin
+	// the order that closes it: the directory is made and checked before any read.
+	test("a test run makes the private store directory before it reads the store", () => {
+		const tmp = temp();
+		play([passed(repo())], tmp);
+		expect(statSync(join(tmp, "flake-watch")).mode & 0o777).toBe(0o700);
+	});
+
+	test("a store file in a directory others can open is neither read nor written", () => {
+		const tmp = temp();
+		const store = join(tmp, "flake-watch");
+		mkdirSync(store, { mode: 0o777 });
+		chmodSync(store, 0o777); // past the umask
+		writeFileSync(join(store, "s1"), "{}");
+		const dir = repo();
+		expect(play([failed(dir), passed(dir)], tmp)).toBe("");
+		expect(readFileSync(join(store, "s1"), "utf8")).toBe("{}");
 	});
 
 	test("a garbage store file counts as empty [31]", () => {

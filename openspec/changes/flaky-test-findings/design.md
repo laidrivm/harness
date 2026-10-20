@@ -194,7 +194,9 @@ sits outside every tree, and the OS clears it. `$TMPDIR` falls back to a
 shared `/tmp`, so a store directory that is not this user's own, or that
 anyone else can open, is neither read nor written: another user could
 otherwise list the session ids or plant an entry whose names reach the hint
-(CodeRabbit on #181).
+(CodeRabbit on #181). The watch makes the directory (`0700`) and checks it
+before its first read, so no directory can appear between a check and the
+read (CodeRabbit on #192).
 
 ### D7. The hint
 
