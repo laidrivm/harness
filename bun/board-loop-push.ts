@@ -5,9 +5,11 @@
  * when one is configured and with its user's own git and `gh` credentials
  * otherwise, and only for a step that is ready — the before-push goal check
  * met, run from the judge copy, `HEAD` on the step's branch, and a title and a
- * body named in the session's final message.
+ * body named in the session's final message. Just before the push it records
+ * the step's session in the PR → session table (`pr-sessions.ts`).
  */
-import { type App, credentials, mint } from "./github-app.ts";
+import { type App, credentials, mint, repository } from "./github-app.ts";
+import { append, table } from "./pr-sessions.ts";
 
 /** A command's result; one that cannot start reads as failed, never thrown. */
 export function sh(...args: string[]) {
@@ -44,10 +46,18 @@ export function named(said: string): { title: string; body: string } | string {
 /**
  * Pushes `branch` and opens its pull request against `base`, or says why not.
  * `check` is the goal check's call, which runs here with `--before-push`.
+ * `carried` names the stage session and the clone it ran in, for the table.
  * Undefined once the push went through, so the full check decides, a pull
  * request already at `HEAD` included; otherwise the reason the pass is `open`.
  */
-export async function publish(said: string, check: string[], branch: string, base: string, app?: App) {
+export async function publish(
+	said: string,
+	check: string[],
+	branch: string,
+	base: string,
+	carried: { session: string; clone: string },
+	app?: App,
+) {
 	const before = sh("bun", ...check, "--before-push");
 	const last = before.out.split("\n").at(-1) ?? "";
 	if (!last.startsWith("goal met")) return last || before.err || "the before-push check printed nothing";
@@ -63,6 +73,14 @@ export async function publish(said: string, check: string[], branch: string, bas
 		} catch (error) {
 			return `the App's token could not be minted: ${(error as Error).message}; nothing was pushed`;
 		}
+	}
+	// Recorded before the push, so no pull request of the loop's exists that the table does not name.
+	// A non-GitHub `origin` records no repository, a line the lookup skips; its URL can hold a credential.
+	const where = app ?? repository(sh("git", "config", "--get", "remote.origin.url").out);
+	try {
+		append({ repo: where ? `${where.owner}/${where.repo}` : "", branch, ...carried });
+	} catch (error) {
+		return `the PR → session table ${table()} could not be written: ${(error as Error).message}; nothing was pushed`;
 	}
 	const ref = `refs/heads/${branch}`;
 	// Over HTTPS as the App, even where `origin` is SSH: over SSH git ignores the header and uses a key of its own.

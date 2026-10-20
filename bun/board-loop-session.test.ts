@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { clone, run } from "./board-loop.fixture.ts";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 
 /**
@@ -75,5 +76,16 @@ describe.each([
 	test("passes Claude's own credential, which the session cannot run without", () => {
 		const { env } = seen(capture, { CLAUDE_CODE_OAUTH_TOKEN: "oauth", ANTHROPIC_API_KEY: "key" });
 		expect([env.get("CLAUDE_CODE_OAUTH_TOKEN"), env.get("ANTHROPIC_API_KEY")]).toEqual(["oauth", "key"]);
+	});
+});
+
+describe("the stage session's id", () => {
+	// spec: board-loop/a-step-ready-to-push
+	test("is the one the PR → session table records, and the pick session gets none [25]", () => {
+		const { dir } = clone();
+		const r = run(dir);
+		const ids = [...r.calls.matchAll(/--session-id (\S+)/g)].map((m) => m[1]);
+		const [row] = readFileSync(join(r.home, "orchestrator", "pr-sessions.jsonl"), "utf8").split("\n").filter(Boolean);
+		expect(ids).toEqual([JSON.parse(row).session]);
 	});
 });

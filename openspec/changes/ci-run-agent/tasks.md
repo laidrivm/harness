@@ -14,7 +14,7 @@ and 4 need `github-app-identity`'s group 2 merged.
 Closes `board-loop` §*The runner records the session of each step it
 pushes*.
 
-- [ ] 1.1 Write the failing cases in a new `bun/pr-sessions.test.ts`: a
+- [x] 1.1 Write the failing cases in a new `bun/pr-sessions.test.ts`: a
       missing file reads as no session; the last of two lines for one branch
       wins; one branch name in two repositories; a truncated line or one
       lacking `session` skipped [20, 22–24]. Add the push cases to
@@ -23,13 +23,17 @@ pushes*.
       no push appends nothing; an unwritable table pushes nothing, opens
       nothing and records `open` naming the path [21, 26–28]. Add to `bun/board-loop-session.test.ts`
       that the stage session is launched with `--session-id` equal to the
-      recorded id [25]
-- [ ] 1.2 Add `bun/pr-sessions.ts` (append, lookup) as `design.md` fixes,
+      recorded id [25]. Applied: against the tree as it stood,
+      `pr-sessions.test.ts` and `board-loop-push.test.ts` failed to load (no
+      `pr-sessions.ts`), and [25] failed, finding no table. The fixture's home
+      can now be the case's own, and its `git push` stub saves the table as
+      the push finds it, which is how [21] proves the line came first
+- [x] 1.2 Add `bun/pr-sessions.ts` (append, lookup) as `design.md` fixes,
       give `session()` an extra-flags argument, launch the stage session with
       `--session-id`, and append from `board-loop-push.ts`. Verify with 1.1
       and with `bun bun/file-size.ts`, which must keep `board-loop.ts` under
       300 lines
-- [ ] 1.3 In `README.md`'s runner paragraph, name the table and that only the
+- [x] 1.3 In `README.md`'s runner paragraph, name the table and that only the
       orchestrator reads it. Verify by reading the paragraph back
 
 ## 2. The event handler and the engine's call

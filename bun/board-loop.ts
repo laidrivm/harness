@@ -274,9 +274,10 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	if (resumed) console.log(`continuing ${chosen.branch}, which a session left`);
 	console.log(`carrying ${target} on ${chosen.branch}`);
 	let staged: Awaited<ReturnType<typeof session>>;
+	const id = crypto.randomUUID();
 	try {
 		// Captured, for its title and body: in text mode it prints nothing before its final message.
-		staged = await session(prompt(slug, chosen, relative(real, check), resumed), limit, kill, true, as);
+		staged = await session(prompt(slug, chosen, relative(real, check), resumed), limit, kill, true, as, ["--session-id", id]);
 	} catch {
 		return refuse("claude could not be started");
 	}
@@ -285,7 +286,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	if (staged.out.trim()) console.log(staged.out.trim());
 
 	const judged = [join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
-	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, app);
+	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app);
 	if (unready !== undefined) return end("open", `${target}: ${unready}`);
 	// The check's own verdict at the commit the session left, never the exit status.
 	const verdict = sh("bun", ...judged);
