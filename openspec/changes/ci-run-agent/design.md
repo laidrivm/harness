@@ -77,7 +77,9 @@ clone and the handler reads the webhook secret and the App's key.
 
 ### The signature is checked before anything is parsed
 
-The secret is `/run/secrets/github_webhook_secret`, a compose secret file like
+The secret is `github_webhook_secret` in the secrets directory `pass.sh` reads,
+`PASS_SECRETS` or `/run/secrets` by default, so a test points it at a
+temporary directory (PR review). It is a compose secret file like
 `vps-board-loop`'s others: owned by the runner's uid, mode 0400, never in
 n8n's store and never in a session's environment. The handler reads it whole,
 trimming one trailing newline. A missing, empty or whitespace-only file is
@@ -87,16 +89,18 @@ lengths. Only then does it parse the JSON.
 
 ### A delivery id is a file created exclusively
 
-After the signature, the handler creates
-`~/orchestrator/deliveries/<delivery>` with the `wx` flag and writes its own
-pid into it. Two simultaneous copies race on the create, and one loses. Just
-before a flow first posts to GitHub or starts a session, the handler rewrites
-the file to `acted`.
+After the signature, the handler writes its own pid to a temporary file
+beside `~/orchestrator/deliveries/<delivery>`, then `link()`s it to that
+name. The link fails when the name exists, so the marker appears whole or
+not at all, and of two simultaneous copies one loses. Just before a flow
+first posts to GitHub or starts a session, the handler writes `acted` to a
+temporary file and renames it over the marker, so a kill mid-write never
+leaves it half rewritten (PR review).
 
 A delivery whose file exists is a duplicate, exit 0, unless the file holds a
-pid that is no longer running (`kill(pid, 0)` answers `ESRCH`). That handler
-ended before acting, by an exit or by being killed, so the file is replaced
-and the delivery handled. This covers the crash a removal on exit would miss
+pid that is no longer running (`kill(pid, 0)` answers `ESRCH`), or holds
+neither a pid nor `acted`. That handler ended before acting, by an exit or by
+being killed, so the file is replaced and the delivery handled. This covers the crash a removal on exit would miss
 (local and PR review, 2026-10-20). An `acted` file, or the pid of a handler
 still waiting on the lock, keeps the delivery a duplicate. GitHub retries
 nothing the engine answered with a 2xx, so a redelivery is the user's, from
@@ -108,10 +112,12 @@ bytes per delivery); prune by age once it holds more than a few thousand.`
 ### Routing is a table of event names
 
 `on-event.ts` maps `workflow_run` to `bun/ci-run.ts`, and later flows add
-their names. Any other event, `ping` included, is `ignored` with exit 0. The
-App's settings are required: without both, the handler refuses before routing.
-The attempt count is the App's comments, and no flow may push as the user. So
-the handler never runs on the laptop.
+their names. Any other event, `ping` included, is `ignored` with exit 0,
+before the App's settings are read, so a webhook's `ping` reads `ignored`
+before the App exists (PR review). An event a flow takes needs the App's
+settings: without both, the handler refuses it. The attempt count is the
+App's comments, and no flow may push as the user. So no flow runs on the
+laptop.
 
 ### The CI flow's order
 
@@ -131,8 +137,10 @@ the handler never runs on the laptop.
    clone's `origin` as `pass.sh` derives it, never from the payload. The
    handler waits on it with `flock -w 7200` where `pass.sh` uses `-n`, because
    a dropped event is lost and a pass ends within its hour. At the bound it
-   exits 1. It holds the lock until the session ends, so the check and the
-   post in *Attempts* are one step against every other delivery (PR review).
+   exits 1. It holds the lock until the push and the clone's cleanup after the
+   session have ended, so the check and the post in *Attempts* are one step
+   against every other delivery, and no pass writes to the clone or pushes
+   while the flow still does (PR review).
 5. Mint the token for this repository with `actions: read`, `contents: write`
    and `pull_requests: write`. `github-app.ts` gains a permissions argument.
    Then re-read, under the lock, the run (`GET /actions/runs/<id>`) and the
@@ -161,7 +169,11 @@ the handler never runs on the laptop.
   request on it comes from GitHub. The last line whose `repo` and `branch`
   match wins, so a step that a later session continued resumes the later
   session. A line that does not parse, or lacks a field, is skipped. A branch
-  matching no line has no session.
+  matching no line has no session. The open pull request's author must also
+  be the App's `<slug>[bot]`, which opens every pull request of the loop's
+  on the host. A record holds when the push succeeded and `gh pr create`
+  failed; a pull request someone else then opens on that branch is not the
+  loop's, and has no session (PR review).
 - **No session:** the flow starts nothing and posts nothing. A pull request the
   loop did not open belongs to whoever opened it: the user, or a session on the
   laptop that may still be pushing to it. Starting a fresh session there would
@@ -176,7 +188,10 @@ On the pull request route, after the re-read:
    `head_sha`, the run is stale and ignored.
 2. If the run's latest attempt has the conclusion `success` and its
    `run_attempt` is greater than the event's, the run is flaky. Start a fresh
-   session with the flaky prompt, and post no attempt.
+   session with the flaky prompt, and post no attempt. If its `run_attempt`
+   is greater and it has not succeeded, it is running or failed, and its own
+   event follows; this one is stale and ignored, so no attempt is spent on
+   the older attempt's logs (PR review).
 3. List the pull request's comments. Keep those whose author is the App's
    `<slug>[bot]` (from `GET /app`) and whose body opens with
    `` `harness-ci-attempt` `` or `` `harness-ci-limit` ``. A limit comment
@@ -259,7 +274,11 @@ clone's `package.json` names under `harness.board`, naming the workflow and the
 run, unless a card that is not `done` already names that workflow. Neither
 changes a file. The runner checks that `HEAD` and the tree are unchanged.
 
-After the session, the runner acts on the outcome:
+After the session, the runner first checks the tree. A tracked change or an
+untracked file left behind, whatever the outcome, means push nothing, switch
+nothing, keep the log file, and exit 1 naming the clone, as the board loop
+leaves the branch and tree a session left when it cannot trust them (PR
+review). Otherwise it acts on the outcome:
 
 - **`fixed`:** push only when `HEAD` is on the branch,
   `git merge-base --is-ancestor <head_sha> HEAD` holds, and `HEAD` is not
@@ -268,8 +287,9 @@ After the session, the runner acts on the outcome:
 - **`blocked` or `flaky`:** push nothing.
 - **No answer that matches the schema:** exit 1 after the cleanup.
 
-Then the runner deletes the log file and switches the clone back to the branch
-it found. Unpushed commits stay on the pull request's branch.
+Then the runner deletes the log file, switches the clone back to the branch
+it found, and only then releases the lock. Unpushed commits stay on the pull
+request's branch.
 
 ## Risks / Trade-offs
 
