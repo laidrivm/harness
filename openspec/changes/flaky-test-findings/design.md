@@ -190,7 +190,11 @@ false finding comes of it.
 
 Test names are held here, unlike the loop guard's hashes-only count, because
 the passing run's output does not list them. The file is private (`0600`),
-sits outside every tree, and the OS clears it.
+sits outside every tree, and the OS clears it. `$TMPDIR` falls back to a
+shared `/tmp`, so a store directory that is not this user's own, or that
+anyone else can open, is neither read nor written: another user could
+otherwise list the session ids or plant an entry whose names reach the hint
+(CodeRabbit on #181).
 
 ### D7. The hint
 

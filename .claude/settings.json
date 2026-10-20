@@ -131,6 +131,15 @@
 						"command": "g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/loop-guard.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi # harness-managed"
 					}
 				]
+			},
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/flake-watch.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi # harness-managed"
+					}
+				]
 			}
 		],
 		"PermissionRequest": [
@@ -181,6 +190,17 @@
 						"type": "command",
 						"command": "g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/transcript-archive.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi # harness-managed",
 						"timeout": 60
+					}
+				]
+			}
+		],
+		"PostToolUse": [
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/flake-watch.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi # harness-managed"
 					}
 				]
 			}

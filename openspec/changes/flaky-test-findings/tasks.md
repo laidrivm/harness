@@ -158,7 +158,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 4.7's user act.
 
 ## 3. Registering the watch
 
-- [ ] 3.1 Write the registration cases in `bun/settings.test.ts`,
+- [x] 3.1 Write the registration cases in `bun/settings.test.ts`,
       `bun/sync-settings.test.ts` and, beside the loop guard's own,
       `bun/bootstrap.test.ts`, failing before 3.2:
       - a consumer whose settings lack the watch's `PostToolUse` or
@@ -176,14 +176,26 @@ in `ASK`. Claude Code's half, that those entries prompt, is 4.7's user act.
         from both places [44].
 
       Requirement: flaky-tests, *Every consumer session runs the watch*.
-- [ ] 3.2 Add the two `HOOKS` entries to `bun/bootstrap.ts`, matcher `Bash`,
+
+      Applied: [38]–[41] sit in a new `bun/settings-watch.test.ts`, since in
+      `bun/settings.test.ts` (263 lines) they would pass the 300-line cap;
+      [44] is `bun/flake-watch.test.ts`'s [24] case, which now reads the
+      events from `HOOKS`. Before 3.2 these, [42] and [43] failed (8 fail, 74
+      pass), as did `bun/self-pin.test.ts`'s two cases for the watch.
+- [x] 3.2 Add the two `HOOKS` entries to `bun/bootstrap.ts`, matcher `Bash`,
       not `sole`, with no `if`. Write them into the tracked
       `.claude/settings.json` with the sync, so the harness's own sessions
       register exactly what consumers get
       (harness-updates, *The harness's own sessions run its gates from its
       pin*). They take effect in those sessions at the next self-pin bump.
       Verify: 3.1 and the whole `bun test` are green.
-- [ ] 3.3 In `core/testing.md`, delete the stopgap's first clause, which the
+
+      Applied with the store-directory fix CodeRabbit raised on #181: a store
+      directory that is not this user's own, or that others can open, is
+      neither read nor written (design.md D6; its case fails without the fix).
+      `.claude/settings.json` is edited to the form `sync-settings.ts` writes,
+      which `bun/self-pin.test.ts` pins entry by entry.
+- [x] 3.3 In `core/testing.md`, delete the stopgap's first clause, which the
       watch's hint now carries. Point the bullet at `bun/flake-watch.ts`
       instead, keeping "never re-run a failed run unchanged without naming a
       cause" and the retry clause. In `README.md`, add a bullet for the watch
