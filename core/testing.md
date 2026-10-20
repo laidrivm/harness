@@ -34,11 +34,11 @@ single-source rule this file inherits.
 - A suite that may skip locally fails the CI job that owns it when it skips
   there — supply what it needs, and assert it ran.
 - A test that failed and then passed on an unchanged tree is a flaky test,
-  never a green run, and `bun/flake-watch.ts` names one to you as it
-  happens: never re-run a failed run unchanged without first naming the
-  cause you suspect; and never configure a retry (`--retry`, a test's
-  `retry` option, `[test] retry`) — a stopgap until change
-  `flaky-test-findings` lands its step 3, which holds this last clause.
+  never a green run: report it by name as a `flaky` finding and file a card
+  for it; never re-run a failed run unchanged without first naming the cause
+  you suspect; and never configure a retry (`--retry`, a test's `retry`
+  option, `[test] retry`) — a stopgap until change `flaky-test-findings`
+  lands: its step 3 holds the first clause and its step 4 the last.
 - Route `/zombies` findings by layer: Zero/One/Many/Boundaries/Interface/
   Exceptions → unit or integration tests; Simple scenarios marked
   `(e2e candidate)` → the Playwright smoke suite.
