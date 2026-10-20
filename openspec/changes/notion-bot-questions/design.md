@@ -317,10 +317,15 @@ The runner checks the source exists — `git ls-files` for a path ending in
 normalised, appears in it: in the file at `HEAD`, or in that comment's text.
 Existence alone would let the triage cite a real file that says nothing of
 the kind (CodeRabbit on #191). A quote that is not there is a source that
-does not hold. Right before posting, the runner reads the card's comments
-again (REST step 3) and compares them with the ones it read before the
-triage. If any comment opening with the mark or with `harness-answer`
-appeared since, it posts nothing, whether or not the user has already
+does not hold. Right before posting, the runner repeats REST steps 1 and 2
+— the page's parent, the board's title and the carried `Pointer` — since a
+card moved or re-pointed during the triage is no longer the change's card
+(CodeRabbit on #191), and on any mismatch posts nothing. It then reads the
+card's comments again (REST step 3) and compares them with the ones it read
+before the triage. If any comment opening with the mark, or a
+`harness-answer` comment whose `created_by.id` is the integration's own id,
+appeared since, it posts nothing — a `harness-answer` mark from anyone else
+is plain text and suppresses nothing (CodeRabbit on #191) — whether or not the user has already
 answered that question (CodeRabbit on #191): the triage was judged against
 comments that are no longer the card's state. Checking only whether a
 question still waits would let a question asked and answered during the

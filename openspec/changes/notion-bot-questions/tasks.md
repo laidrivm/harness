@@ -203,7 +203,10 @@ builds, and merges inert before that.
       not Markdown (a `.ts` and a `.json` holding the quote), which escalates
       [88]; and a question that appears and is answered by the user while
       the triage runs, so that none waits at the second read, which still
-      posts neither the answer nor the question [89]
+      posts neither the answer nor the question [89]; a `Pointer` changed
+      or a page moved during the triage, which posts nothing [90]; a
+      `harness-answer` comment by another author during the triage, which
+      suppresses nothing [91]
 - [ ] 4.3 Write the failing answer-rule cases in `bun/board-loop.test.ts` and
       `bun/notion-bot.test.ts`. Cover the pick prompt naming the id [76], a
       triage answer that unblocks [77], and the user's comment winning in
