@@ -209,7 +209,7 @@ to today's behaviour.
 
 ## Open Questions
 
-None that change what gets built. Whether "a comment by a human" in decision
-5 admits a member other than the user is read here as no. That keeps
-`task-board`'s *Another member comments in the discussion*. The proposal's
-pull request puts the reading to the user.
+None that change what gets built. "A comment by a human" in decision 5 is the
+user's account alone, and no other member (user, 2026-10-20). That keeps
+`task-board`'s *Another member comments in the discussion*. The settings stay
+a file, not environment variables (user, 2026-10-20).
