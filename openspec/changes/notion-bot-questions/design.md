@@ -151,7 +151,9 @@ a test can serve it with `Bun.serve`. Every call sends `Notion-Version:
 2. `GET /v1/data_sources/{id}`: its title must be wholly the board's name.
 3. `GET /v1/comments?block_id={id}`, following `next_cursor`: the
    page-level comments. A question waits when the last comment opening with
-   the mark has none after it by `user` that does not open with it. In the
+   the mark has none after it by `user` that does not open with it. A
+   comment is by `user` when its `created_by.id` and `user`, each brought to
+   32 lower-case hex digits, are equal: the settings take either form. In the
    API a comment opens with the mark when its first rich-text run is
    code-annotated `harness-question`, or when its plain text starts with the
    backticked mark.
@@ -168,8 +170,9 @@ questions on the card.
 ### Where it sits in the pass
 
 The call sits after the stage session's clean end and the print of its
-output, and before `publish`. A failed push then still leaves the question
-posted. It prints one line, `question: posted on <id>, Assign set`, or
+output, and before `publish`, so the post never waits on the push. A session
+that asks has usually not met its before-push check, and then `publish`
+pushes nothing. It prints one line, `question: posted on <id>, Assign set`, or
 `question: not posted — <reason>`, and changes neither the outcome nor the
 `loop` record. A session that asks usually ends `BLOCKED —`, so the check
 reads `goal open` and the pass is `open`, as it is today. The code lives in a
