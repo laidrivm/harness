@@ -56,9 +56,10 @@ API*.
 Closes `cloud-sessions` §*A cloud session installs the harness as it starts*
 and §*The cloud environment's setup script installs CI's bun*, and
 `agent-autonomy` §*A routine's prompt is the declared line and one tracked
-skill*.
+skill*, and `agent-permissions` §*GitHub write commands are denied* for its
+two new scenarios.
 
-- [ ] 2.1 Write the failing cases in `bun/bootstrap-notice.test.ts`, with a
+- [x] 2.1 Write the failing cases in `bun/bootstrap-notice.test.ts`, with a
       `bun` stub ahead on `PATH` that logs an `install` call, answers it with
       the exit and output the case sets, and hands `-e` to the real bun: no
       install with `CLAUDE_CODE_REMOTE` unset, empty, `TRUE`, `1` or
@@ -69,19 +70,26 @@ skill*.
       bun's last line, or with no empty quote when bun printed nothing, then
       the notice's not-installed line, and exits 0 [33–35]; no `bun` on
       `PATH` exits 0 [36]; with the real bun in a temp project whose lockfile
-      disagrees with `package.json`, neither file changes [37]
-- [ ] 2.2 Write the failing cases in a new `bun/bun-version.test.ts` against
+      disagrees with `package.json`, neither file changes [37]. Applied: before
+      the prefix the six install cases failed and the seven no-install and
+      no-bun cases already held
+- [x] 2.2 Write the failing cases in a new `bun/bun-version.test.ts` against
       fabricated trees and then the real one: no setup script line, and no
       workflow `bun-version`, each fail naming what is missing [39, 40]; all
       sites at one version pass [41]; two workflows that disagree fail naming
       each [42]; `bun@1.4` and `bun@latest` are no exact version [43]; a
       quoted `bun-version` is read [44]; a missed README bump snippet fails
-      naming `README.md` and both versions [45]. The real tree fails until 2.4
-- [ ] 2.3 Prefix `NOTICE` in `bun/bootstrap.ts` as design.md D1 and D2 say,
+      naming `README.md` and both versions [45]. The real tree fails until 2.4.
+      Applied: the real tree failed, naming the missing setup line, until 2.4
+- [x] 2.3 Prefix `NOTICE` in `bun/bootstrap.ts` as design.md D1 and D2 say,
       and rewrite its comment to name the install and why it runs here; write
       the new text into the tracked `.claude/settings.json` with the sync, and
-      see 2.1, the settings and sync tests [38] and the whole `bun test` pass
-- [ ] 2.4 Add the README's *Cloud sessions* section: one repository
+      see 2.1, the settings and sync tests [38] and the whole `bun test` pass.
+      Applied: the tracked hook text was edited to `NOTICE`'s, since `sync.ts`
+      run here would also write a `harness/` copy of `core/`;
+      `self-pin.test.ts` holds the two equal. The whole `bun test` runs at
+      pre-push
+- [x] 2.4 Add the README's *Cloud sessions* section: one repository
       attached, Trusted network, no variables or secrets; the setup script
       line `npm i -g bun@1.4.2` and, beside it, that nothing updates it but a
       hand edit of every `bun-version` site; the install at session start;
@@ -92,19 +100,34 @@ skill*.
       therefore runs `bun install` before any other command" and the
       consumer bullet on the `SessionStart` hook to name the cloud install.
       See 2.2 pass on the real tree
-- [ ] 2.5 Add a *Routines* section to `core/autonomy.md` stating the rule
+- [x] 2.5 Add a *Routines* section to `core/autonomy.md` stating the rule
       the `agent-autonomy` delta fixes, with the trial routine's two lines as
       its example; verify it against `core/rules.md`'s quality bar by reading
       it back
-- [ ] 2.6 Add `core/skills/cloud-probe/SKILL.md` as design.md D7 lists it,
+- [x] 2.6 Add `core/skills/cloud-probe/SKILL.md` as design.md D7 lists it,
       with no `disable-model-invocation`, its link
       `.claude/skills/cloud-probe` → `../../core/skills/cloud-probe`, and its
       row in the README's skill table; see the skills-table and marker tests
       pass [46]
-- [ ] 2.7 Search the four places for the statements this group changes —
+- [x] 2.7 Search the four places for the statements this group changes —
       "lets only the install through", "runs `bun install` before any other
       command", "The harness is not installed" — and reconcile each hit or
-      name the change that will
+      name the change that will. Applied: README's *Working on the harness*
+      sentence names the cloud install; its bootstrap bullet and both
+      not-installed lines in `bun/bootstrap.ts` still hold, since the
+      bootstrap's text is unchanged; `openspec/specs/` and `core/` hold none
+- [x] 2.8 Write the failing cases in a new `bun/command-guard-gh-pulls.test.ts`:
+      `POST` to `repos/o/r/pulls`, named by `-X`, `--method` or `--method=post`,
+      or implied by fields, or with `--input`, and with read flags beside, is
+      allowed; a `POST` to `pulls/1`, `pulls/1/comments`, `pulls/`, a query
+      string, `issues`, a prefixed or extra path segment, `..` for either name,
+      `{owner}/{repo}` and `graphql` blocks; `PATCH`, `PUT`, `DELETE`, or any
+      method flag beside `POST` blocks; an unlisted flag or a second operand
+      blocks (user, 2026-10-20; design.md D10). Then let `ghApiWrite` in
+      `bun/command-guard-gh.ts` through on exactly that endpoint, and see the
+      new file and every `bun/command-guard*.test.ts` pass. Applied: 7 allowed
+      cases failed before the change and the 19 refusals already held; after
+      it the guard files run 305 pass, 0 fail
 
 ## 3. The self-pin past groups 1 and 2
 

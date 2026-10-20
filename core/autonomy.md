@@ -34,6 +34,22 @@ change nothing for it. A missing line leads to a stall, never to an act the
 user did not want. An orchestrator copies the line into each worker's brief,
 because a worker cannot see its parent's prompt.
 
+## Routines
+
+A routine's prompt is two lines: the unattended line above, then one call of
+a skill the repository tracks or its pinned harness ships, with that skill's
+parameters. It holds no step of a procedure. The prompt is stored in
+claude.ai, where nothing reviews it and nothing notices it drift, so the
+steps live in the skill, which changes through a pull request like the rest
+of the tree. A skill installed only on the user's own machine breaks the
+rule: the routine's fresh clone does not hold it. The harness's trial
+routine:
+
+```text
+This session runs unattended.
+/cloud-probe cloud-sessions
+```
+
 ## The classes
 
 A step names its class inline, in the form shown here:

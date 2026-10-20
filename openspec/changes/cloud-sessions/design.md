@@ -206,11 +206,26 @@ ran would have left its line. Without that refusal the result is
 inconclusive and is recorded as such. Only when the hook did not fire is a
 `PreToolUse` copy filed, as an `idea` card, not built here.
 
+### D10. The guard lets exactly the pull-request endpoint through
+
+`gh pr create` reads GraphQL, which the cloud refuses, and the cloud's
+built-in GitHub tool passes no gate. The user chose the third way (user,
+2026-10-20, on the card): `ghApiWrite` in `bun/command-guard-gh.ts` allows a
+`gh api` call whose one operand is wholly `repos/<owner>/<repo>/pulls`, whose
+method flags all say `POST` or which has none, and whose other flags read or
+carry the body (`-f`, `-F`, `--input`). That endpoint only opens a pull
+request, the act `gh pr create` already performs unblocked, so nothing wider
+is allowed than before. The path is anchored on both ends, each name is
+GitHub's name characters and not `.` or `..`, and a query string, a second
+operand, another method or a flag the read list does not name keeps the
+refusal. `{owner}/{repo}` placeholders are refused too: the session names
+the repository it read from `origin`.
+
 ### D9. Four groups
 
 1. The REST read: code and tests, nothing cloud-specific.
 2. The install prefix, the setup script and its test, the README section,
-   the routine rule and `cloud-probe`.
+   the routine rule, `cloud-probe`, and D10's guard rule.
 3. After both merge: the self-pin moved past them.
 4. After that merges: the live checks, recorded in the pull request's
    *Check by hand* list, and the design amended through `/opsx:update` where
@@ -238,7 +253,8 @@ own merge because a cloud session and a routine clone `main`.
   without a word] → the README says to attach `harness` alone, and
   `cloud-probe` reports the missing install.
 - [`gh pr view`, `gh pr create` and the `coderabbit` skill's GraphQL read
-  fail in the cloud] → out of scope; see the open question.
+  fail in the cloud] → a cloud session opens its pull request through the
+  endpoint D10 allows; `gh pr view` and the skill's read stay out of scope.
 - [A consumer's cloud session prints a failed install at every start once it
   bumps] → that is the 403 its card starts from, and locally nothing changes.
 
@@ -253,7 +269,4 @@ off, as today.
 
 ## Open Questions
 
-- How a cloud session opens its pull request. `gh pr create` reads GraphQL,
-  `gh api -X POST repos/<o>/<r>/pulls` is a write the guard refuses, and the
-  cloud's built-in tool for it passes no gate. Nothing in this change's tasks
-  depends on the answer; it is the user's to settle, and it is left open.
+None. How a cloud session opens its pull request is D10.
