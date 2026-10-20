@@ -72,7 +72,7 @@ export const copyOf = (m: Machine, id: string, project = "-work-p") =>
 export function spawned(m: Machine, input: unknown, vars: object = {}) {
 	const text = typeof input === "string" ? input : JSON.stringify(input);
 	return [
-		["sh", "-c", 'umask 022; exec bun "$0"', hook],
+		["sh", "-c", 'umask 022; exec bun "$0" "$@"', hook],
 		{
 			cwd: m.cwd,
 			env: {
@@ -90,3 +90,10 @@ export function spawned(m: Machine, input: unknown, vars: object = {}) {
 /** Runs the hook on `input` to its end; its exit code. */
 export const archive = (m: Machine, input: unknown, vars: object = {}) =>
 	Bun.spawnSync(...spawned(m, input, vars)).exitCode;
+
+/** Runs `--catch-up` to its end, with nothing on stdin; its exit code and stdout. */
+export function catchUp(m: Machine, vars: object = {}) {
+	const [argv, options] = spawned(m, "", vars);
+	const run = Bun.spawnSync([...argv, "--catch-up"], options);
+	return { code: run.exitCode, out: run.stdout.toString() };
+}

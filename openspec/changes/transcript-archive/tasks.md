@@ -76,7 +76,7 @@ Closes every scenario of `transcript-archive` §*A catch-up archives the
 sessions no hook archived* and §*The wrap-up runs the catch-up*, and *A live
 transcript past the period* of §*The archive keeps a session 180 days*.
 
-- [ ] 2.1 Write the failing cases first in `bun/transcript-archive.test.ts`:
+- [x] 2.1 Write the failing cases first in `bun/transcript-archive.test.ts`:
       no `projects/` directory, a killed session archived with `catch-up`
       and `null` `head`, a lagging transcript re-copied with the hook's record
       kept, an unchanged session skipped and not rewritten, a matching copy
@@ -90,15 +90,27 @@ transcript past the period* of §*The archive keeps a session 180 days*.
       it, and the hook's record survives both orders of the two exports
       [39]. A catch-up record re-copied after a branch switch names the new
       branch and the new `archived` date, while a hook record keeps its
-      `head` and `reason` and gets the new date [40]
-- [ ] 2.2 Add `--catch-up` to `bun/transcript-archive.ts`, walking every
+      `head` and `reason` and gets the new date [40]. Applied: the cases sit in
+      a new `bun/transcript-archive-catch-up.test.ts`, since
+      `transcript-archive.test.ts` would pass its 300-line cap. Against the
+      tree as it stood, 17 of 18 failed; the one that passed is the hook's
+      record surviving a catch-up that runs first, which the hook's rewrite
+      already gave
+- [x] 2.2 Add `--catch-up` to `bun/transcript-archive.ts`, walking every
       directory under `projects/` and reusing the hook's copy and prune.
-      Verify with 2.1
-- [ ] 2.3 In `core/skills/session-wrapup/SKILL.md`, add the catch-up to step
+      Verify with 2.1. Applied: the flag is read in `transcript-archive.ts`,
+      and the walk lives in `bun/transcript-archive-catch-up.ts`, which
+      imports the hook's copy, lock and prune; the hook acts only when run
+      directly, so the import has no side effect. The count line reads
+      `catch-up: archived N, skipped N, pruned N, failed N`, pruned counting
+      sessions. 2.1 passes, with the rest of `transcript-archive*.test.ts`
+- [x] 2.3 In `core/skills/session-wrapup/SKILL.md`, add the catch-up to step
       3 (Workflow state), with both spellings of the command, the line it
       prints going in the report. Add both commands to `allowed-tools` and
       name the archive in the Rules line on what the skill may write. Write
       the failing test first: it reads the skill, finds both commands under
       the step 3 heading and in `allowed-tools`, and cites §*The wrap-up runs
       the catch-up*. Verify by running the step on a state directory holding
-      a killed session [36]
+      a killed session [36]. Applied: the test is in the same new file; the
+      step's command was run on a fabricated state directory holding a killed
+      session ([27]). No live `session-wrapup` run has used it yet
