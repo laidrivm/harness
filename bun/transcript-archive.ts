@@ -12,7 +12,9 @@
  * created exclusively, keeps a second export of the session out.
  *
  * It never stops a session: every fault exits 0, and it writes nothing outside
- * the archive.
+ * the archive. With `--catch-up` it reads no event: it archives every session
+ * under Claude Code's `projects/` that no hook archived or whose copy fell
+ * behind, prunes, and prints one count line. `session-wrapup` runs it.
  */
 import {
 	chmodSync,
@@ -46,7 +48,7 @@ type Event = {
 };
 
 /** Directory `path`, made 0700 even where it existed with other modes. */
-function folder(path: string): void {
+export function folder(path: string): void {
 	mkdirSync(path, { recursive: true, mode: 0o700 });
 	chmodSync(path, 0o700);
 }
@@ -97,14 +99,14 @@ function git(cwd: string | null, ...args: string[]): string | null {
 }
 
 /**
- * Takes the lock at `path`, waiting up to `WAIT` for another export's and
+ * Takes the lock at `path`, waiting up to `wait` for another export's and
  * taking over one older than `STALE`; whether it was taken.
  *
  * shortcut: two exports taking over one stale lock at once can both run;
  * the renames still leave each file whole. Upgrade if a third mode appears.
  */
-function lock(path: string): boolean {
-	const until = Date.now() + WAIT;
+export function lock(path: string, wait = WAIT): boolean {
+	const until = Date.now() + wait;
 	for (;;) {
 		try {
 			closeSync(openSync(path, "wx", 0o600));
@@ -122,10 +124,11 @@ function lock(path: string): boolean {
 /**
  * Deletes, in every project directory of the archive, each session whose
  * copied transcript is past `KEEP` with its `<id>/` and record, and each
- * `.tmp`, `.lock` or lone `<id>/` past it, which a killed export left.
+ * `.tmp`, `.lock` or lone `<id>/` past it, which a killed export left; how
+ * many sessions it deleted.
  */
-function prune(root: string): void {
-	const old = (path: string) => Date.now() - statSync(path).mtimeMs > KEEP;
+export function prune(root: string): number {
+	let pruned = 0;
 	for (const project of readdirSync(root, { withFileTypes: true })) {
 		if (!project.isDirectory()) continue;
 		const dir = join(root, project.name);
@@ -143,9 +146,28 @@ function prune(root: string): void {
 			const id = name.slice(0, -".jsonl".length);
 			for (const gone of [path, join(dir, id), join(dir, `${id}.meta.json`)])
 				rmSync(gone, { recursive: true, force: true });
+			pruned++;
 		}
 	}
+	return pruned;
 }
+
+/** Whether `path` was last modified longer ago than the archive keeps a session. */
+export const old = (path: string) => Date.now() - statSync(path).mtimeMs > KEEP;
+
+/** Copies session `id`'s `<id>/` and transcript from `dir` into `project`. */
+export function files(dir: string, id: string, project: string): void {
+	const tree = join(dir, id);
+	if (existsSync(tree)) mirror(tree, join(project, id));
+	else rmSync(join(project, id), { recursive: true, force: true });
+	copy(join(dir, `${id}.jsonl`), join(project, `${id}.jsonl`));
+}
+
+/** Writes session `id`'s record into `project`. */
+export const write = (project: string, id: string, record: object) =>
+	replace(join(project, `${id}.meta.json`), (tmp) =>
+		writeFileSync(tmp, `${JSON.stringify(record)}\n`),
+	);
 
 /** Archives the session `input` names, if it names one that exists. */
 function main(input: string): void {
@@ -166,30 +188,29 @@ function main(input: string): void {
 	const held = join(project, `${id}.lock`);
 	if (!lock(held)) return;
 	try {
-		const tree = join(dirname(path), id);
-		if (existsSync(tree)) mirror(tree, join(project, id));
-		else rmSync(join(project, id), { recursive: true, force: true });
-		copy(path, join(project, `${id}.jsonl`));
+		files(dirname(path), id, project);
 		const cwd = typeof event?.cwd === "string" ? event.cwd : null;
-		const record = {
+		write(project, id, {
 			session_id: id,
 			cwd,
 			branch: git(cwd, "symbolic-ref", "--short", "-q", "HEAD"),
 			head: git(cwd, "rev-parse", "--verify", "-q", "HEAD"),
 			reason: typeof event?.reason === "string" ? event.reason : null,
 			archived: new Date().toISOString().slice(0, 10),
-		};
-		replace(join(project, `${id}.meta.json`), (tmp) =>
-			writeFileSync(tmp, `${JSON.stringify(record)}\n`),
-		);
+		});
 	} finally {
 		rmSync(held, { force: true });
 	}
 	prune(root);
 }
 
-try {
-	main(await Bun.stdin.text());
-} catch {
-	// Archiving never stops a session: a fault leaves the previous copy.
-}
+// The catch-up imports this module's copy, lock and prune, so only a direct run acts.
+if (import.meta.main && process.argv.includes("--catch-up")) {
+	const { catchUp } = await import("./transcript-archive-catch-up.ts");
+	console.log(catchUp());
+} else if (import.meta.main)
+	try {
+		main(await Bun.stdin.text());
+	} catch {
+		// Archiving never stops a session: a fault leaves the previous copy.
+	}

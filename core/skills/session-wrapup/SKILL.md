@@ -1,7 +1,7 @@
 ---
 name: session-wrapup
 description: End-of-session ritual — confidence check on what was built, fix & capture pass for uncaptured lessons, OpenSpec workflow state with the next command and the session's board cards reconciled, an optional save-point doc for long exploratory sessions, and a pipeline-yield entry recording what each review skill actually found and what the harness's gates decided.
-allowed-tools: "Read, Edit(docs/context/**), Glob, Grep, Bash(git log:*), Bash(git status:*), Bash(git diff:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(bun bun/board-state.ts), Bash(bun node_modules/harness/bun/board-state.ts), mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page"
+allowed-tools: "Read, Edit(docs/context/**), Glob, Grep, Bash(git log:*), Bash(git status:*), Bash(git diff:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(bun bun/board-state.ts), Bash(bun node_modules/harness/bun/board-state.ts), Bash(bun bun/transcript-archive.ts --catch-up), Bash(bun node_modules/harness/bun/transcript-archive.ts --catch-up), mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page"
 ---
 
 # Session Wrap-up
@@ -30,6 +30,8 @@ Run the fix & capture loop over the session: look for mistakes that got correcte
 State which OpenSpec stage the work is in, named by its `/opsx:` command (explore / propose / apply / verify / sync / archive), or by the project's own stage name where it defines one — or "not using OpenSpec this session" — and give the **exact command to run first next session**, copy-pasteable. A command that cuts a branch fetches first and names its start point: `git fetch origin && git switch -c <name> --no-track origin/main`. If work stopped mid-task, one line on where.
 
 Then reconcile the board for this session's own work. Run the harness's `bun/board-state.ts` (`bun node_modules/harness/bun/board-state.ts` in a consumer) and compare each card whose `Pointer` names a change directory this session touched with the floor printed for that slug. Set each card behind its floor with `update_properties`, re-read it, and report the correction beside the stage. A session whose work pointed at no change directory says `Reconciled nothing.` and does not read the rest of the board.
+
+Last, archive the transcripts no `SessionEnd` hook archived — a session the board loop killed, or one whose transcript grew after its hook. Run `bun bun/transcript-archive.ts --catch-up` (`bun node_modules/harness/bun/transcript-archive.ts --catch-up` in a consumer) and put the one line it prints in the report.
 
 ## 4. Save point
 
@@ -80,5 +82,5 @@ Example:
 
 - Always all five headings, in order — steps that don't apply get their one-line skip note, not silence.
 - Ground every claim in the actual session: quote the correction, name the file, cite the commit. No generic retrospective filler.
-- The only files this skill may touch are the step-4 save point and the step-5 yield ledger, and the ledger is append-only. The only other write is step 3's card corrections. Everything else is a report.
+- The only files this skill may touch are the step-4 save point and the step-5 yield ledger, and the ledger is append-only. The only other writes are step 3's card corrections and the transcript archive its catch-up writes, outside the tree. Everything else is a report.
 - **Never leave step 5 out because "nothing interesting ran".** A session where no review skill ran is itself the data point — record it as `Not run: <all of them>`.
