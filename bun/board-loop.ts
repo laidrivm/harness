@@ -31,6 +31,7 @@ import { dirname, join, relative } from "node:path";
 import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session } from "./board-loop-session.ts";
 import { record } from "./gate-ledger.ts";
+import { configured, identity } from "./github-app.ts";
 import { readPullRequests } from "./pull-requests.ts";
 import { MARK } from "./question-gate.ts";
 import { groups } from "./turn-gate.ts";
@@ -240,9 +241,18 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		// Never `refuse()`: a switch back would move the tree under a process still running in it.
 		if (left) return end("refused", `${outlived}; the clone is left as the session left it`);
 	};
+	// The App, when one is configured, and its bot's identity for both sessions' commits, before either.
+	let app: ReturnType<typeof configured>;
+	let as: Record<string, string> = {};
+	try {
+		app = configured(process.env, sh("git", "config", "--get", "remote.origin.url").out);
+		if (app) as = await identity(app);
+	} catch (error) {
+		return refuse((error as Error).message);
+	}
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
-		picked = await session(pickPrompt(named, listed(false), listed(true)), limit, kill, true);
+		picked = await session(pickPrompt(named, listed(false), listed(true)), limit, kill, true, as);
 	} catch {
 		return refuse("claude could not be started");
 	}
@@ -266,7 +276,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	let staged: Awaited<ReturnType<typeof session>>;
 	try {
 		// Captured, for its title and body: in text mode it prints nothing before its final message.
-		staged = await session(prompt(slug, chosen, relative(real, check), resumed), limit, kill, true);
+		staged = await session(prompt(slug, chosen, relative(real, check), resumed), limit, kill, true, as);
 	} catch {
 		return refuse("claude could not be started");
 	}
@@ -275,7 +285,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	if (staged.out.trim()) console.log(staged.out.trim());
 
 	const judged = [join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
-	const unready = publish(staged.out, judged, chosen.branch, DEFAULT);
+	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, app);
 	if (unready !== undefined) return end("open", `${target}: ${unready}`);
 	// The check's own verdict at the commit the session left, never the exit status.
 	const verdict = sh("bun", ...judged);

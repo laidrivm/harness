@@ -71,14 +71,14 @@ is continued*.
 Closes `board-loop` §*The runner pushes as the GitHub App when one is
 configured*.
 
-- [ ] 2.1 Write the failing cases in a new `bun/github-app.test.ts` against a
+- [x] 2.1 Write the failing cases in a new `bun/github-app.test.ts` against a
       `Bun.serve` API reached through `GITHUB_API_URL`, with a PKCS#1 key from
       `generateKeyPairSync`: the JWT verifies with `iss`, `iat` = now − 60 and
       `exp` = now + 540; the installation lookup path; the token request body
       naming one repository and exactly `contents` and `pull_requests` at
       `write`; the bot name and email; `origin` parsed in its HTTPS, SSH and
       `ssh://` forms, another host or extra segments refused [35, 39–43]
-- [ ] 2.2 Write the failing runner cases in `bun/board-loop-push.test.ts`:
+- [x] 2.2 Write the failing runner cases in `bun/board-loop-push.test.ts`:
       one setting alone, an empty or whitespace-only one, a non-numeric ID, an
       unreadable key (its path named, its contents not) and a failing
       `GET /app` each refuse before any session; a failed mint after the
@@ -88,12 +88,12 @@ configured*.
       carrying the extra header through `GIT_CONFIG_*` and `gh` getting
       `GH_TOKEN`; an `origin` in SSH form still pushed to the HTTPS URL with
       the header, never over SSH; with no settings, no API call and no header [36–38, 44–52]
-- [ ] 2.3 Add `bun/github-app.ts` (the JWT with `node:crypto`'s `sign`, the
+- [x] 2.3 Add `bun/github-app.ts` (the JWT with `node:crypto`'s `sign`, the
       four calls) and see 2.1 pass
-- [ ] 2.4 Wire it into `pass()` and `board-loop-push.ts`: the identity read
+- [x] 2.4 Wire it into `pass()` and `board-loop-push.ts`: the identity read
       before the pick session, the token minted after the stage session, the
       identity added to the allowlisted environment; see 2.2 pass and
       `board-loop.ts` stay under 300
-- [ ] 2.5 Name the two settings, that both or neither are set, and that the
+- [x] 2.5 Name the two settings, that both or neither are set, and that the
       key's file stays the runner user's alone in `README.md`'s runner
       paragraph; verify by reading the paragraph back

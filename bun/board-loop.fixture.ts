@@ -135,8 +135,10 @@ function bin(log: string, s: Stubs): string {
 		writeFileSync(file, `#!/bin/sh\necho "${name} $*" >> '${log}'\n${body}\n`);
 		chmodSync(file, 0o755);
 	};
-	stub("git", `exec '${REAL_GIT}' "$@"`);
-	const create = `if [ "$1 $2" = "pr create" ]; then /bin/cat > '${log}.body'; exit ${s.createCode ?? 0}; fi\n`;
+	// The push, the create, each session and the full check save the environment they saw.
+	const saw = (what: string) => `/usr/bin/env > '${log}.${what}-env'`;
+	stub("git", `[ "$1" = push ] && ${saw("push")}\nexec '${REAL_GIT}' "$@"`);
+	const create = `if [ "$1 $2" = "pr create" ]; then ${saw("create")}; /bin/cat > '${log}.body'; exit ${s.createCode ?? 0}; fi\n`;
 	if (s.gh !== null)
 		stub("gh", `${s.ghSleep ? `exec /bin/sleep ${s.ghSleep}\n` : ""}${create}printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
 	const verdict = s.verdict ?? "goal met: apply demo step 1 at abc1234";
@@ -149,7 +151,7 @@ function bin(log: string, s: Stubs): string {
 		[
 			`if [ "$1" = install ]; then ${s.pinned === false ? "" : write}echo 'the install says this'; exit ${s.install ?? 0}; fi`,
 			`if [ "$5" = --before-push ]; then /bin/cat "\${1%/*}/before-push"; exit; fi`,
-			`/bin/cat "$1"`,
+			`${saw("check")}; /bin/cat "$1"`,
 		].join("\n"),
 	);
 	// The stage session's prompt opens with `/goal`; the pick session's does not.
@@ -170,7 +172,8 @@ function bin(log: string, s: Stubs): string {
 	const pick = s.pickSleep
 		? `exec /bin/sleep ${s.pickSleep}`
 		: `${leave(s.pickOrphan)}${s.pickChild ? "/bin/sleep 30 2>/dev/null & " : ""}printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
-	if (s.claudeCode !== null) stub("claude", `case "$2" in\n/goal*) ${stage} ;;\n*) ${pick} ;;\nesac`);
+	if (s.claudeCode !== null)
+		stub("claude", `case "$2" in\n/goal*) ${saw("stage")}; ${stage} ;;\n*) ${saw("pick")}; ${pick} ;;\nesac`);
 	return dir;
 }
 
@@ -201,48 +204,63 @@ export const trusting = (...dirs: string[]) =>
 		projects: Object.fromEntries(dirs.map((d) => [realpathSync(d), { hasTrustDialogAccepted: true }])),
 	});
 
-/**
- * One pass in `dir`, under the stubs `s`. `args` is only for the usage
- * refusal. The fixture home's `.claude.json` is `claudeJson`, `null` for none,
- * and trusts `dir` unless given.
- */
-export function run(
-	dir: string,
-	args: string[] = [],
-	s: Stubs = {},
-	opts: { env?: Record<string, string>; state?: string; entry?: string; claudeJson?: string | null; stdin?: number } = {},
-) {
+type Opts = { env?: Record<string, string>; state?: string; entry?: string; claudeJson?: string | null; stdin?: number };
+
+/** What one pass is spawned as, and where it leaves its log and its ledger. */
+function prepare(dir: string, args: string[], s: Stubs, opts: Opts) {
 	const log = join(emptyDir("board-loop-log-"), "calls");
 	writeFileSync(log, "");
 	const state = opts.state ?? emptyDir("board-loop-state-");
 	const home = emptyDir("board-loop-home-");
 	const claudeJson = opts.claudeJson === undefined ? trusting(dir) : opts.claudeJson;
 	if (claudeJson !== null) writeFileSync(join(home, ".claude.json"), claudeJson);
-	const call = Bun.spawnSync([process.execPath, opts.entry ?? runner, ...args], {
-		cwd: dir,
-		stdin: opts.stdin,
-		env: {
-			PATH: bin(log, s),
-			HOME: home,
-			XDG_STATE_HOME: state,
-			...opts.env,
-		},
-	});
-	const text = `${call.stdout}${call.stderr}`.trim();
-	let body: string | undefined;
+	const argv = [process.execPath, opts.entry ?? runner, ...args];
+	return { argv, env: { PATH: bin(log, s), HOME: home, XDG_STATE_HOME: state, ...opts.env }, log, state };
+}
+
+/** A file's text, or undefined where no call wrote it. */
+const saved = (file: string) => {
 	try {
-		body = readFileSync(`${log}.body`, "utf8");
+		return readFileSync(file, "utf8");
 	} catch {
-		// No `gh pr create` ran.
+		return undefined;
 	}
+};
+
+/** What a pass left: its output, the stubs' log, the body `gh pr create` read and each environment saved. */
+function result(code: number | null, stdout: string, stderr: string, log: string, state: string) {
 	return {
-		code: call.exitCode,
-		text,
-		last: call.stdout.toString().trim().split("\n").at(-1) ?? "",
+		code,
+		text: `${stdout}${stderr}`.trim(),
+		last: stdout.trim().split("\n").at(-1) ?? "",
 		calls: readFileSync(log, "utf8"),
 		state,
-		body,
+		body: saved(`${log}.body`),
+		/** The environment `push`, `create`, `pick`, `stage` or `check` saw, or undefined where none ran. */
+		env: (what: string) => {
+			const lines = saved(`${log}.${what}-env`)?.split("\n").filter(Boolean);
+			return lines && Object.fromEntries(lines.map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]));
+		},
 	};
+}
+
+/**
+ * One pass in `dir`, under the stubs `s`. `args` is only for the usage
+ * refusal. The fixture home's `.claude.json` is `claudeJson`, `null` for none,
+ * and trusts `dir` unless given.
+ */
+export function run(dir: string, args: string[] = [], s: Stubs = {}, opts: Opts = {}) {
+	const { argv, env, log, state } = prepare(dir, args, s, opts);
+	const call = Bun.spawnSync(argv, { cwd: dir, stdin: opts.stdin, env });
+	return result(call.exitCode, call.stdout.toString(), call.stderr.toString(), log, state);
+}
+
+/** `run` without blocking, for a case whose stand-in API answers from the test's own process. */
+export async function runAsync(dir: string, s: Stubs = {}, opts: Opts = {}) {
+	const { argv, env, log, state } = prepare(dir, [], s, opts);
+	const child = Bun.spawn(argv, { cwd: dir, env, stdout: "pipe", stderr: "pipe" });
+	const [stdout, stderr] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text()]);
+	return result(await child.exited, stdout, stderr, log, state);
 }
 
 /** The `loop` records in a state directory's ledger. */

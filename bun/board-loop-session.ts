@@ -33,9 +33,11 @@ const allowed =(env: NodeJS.ProcessEnv) =>
 /**
  * One `claude -p` session, ended at `limit`, and everything it started ended
  * with it, however it exits. `capture` keeps its output rather than showing
- * it. `left` names its process group when a member outlived the bounded wait.
+ * it. `as` is the commit identity the runner adds to the allowlist's
+ * variables. `left` names its process group when a member outlived the
+ * bounded wait.
  */
-export async function session(text: string, limit: number, kill: Kill, capture = false) {
+export async function session(text: string, limit: number, kill: Kill, capture = false, as: Record<string, string> = {}) {
 	// Auto mode with nothing to answer prompts; never a bypass of permissions.
 	const flags = ["--permission-mode", "auto", "--permission-prompts", "none"];
 	// A file, not a pipe: a child the session leaves running could hold a pipe open and stall the pass.
@@ -45,7 +47,7 @@ export async function session(text: string, limit: number, kill: Kill, capture =
 		// Leader of its own process group, so a child it starts (a test run, say) is signalled with it.
 		const run = Bun.spawn(["claude", "-p", text, ...flags], {
 			stdio: ["ignore", capture ? Bun.file(join(dir, "out")) : "inherit", "inherit"],
-			env: allowed(process.env),
+			env: { ...allowed(process.env), ...as },
 			detached: true,
 		});
 		const group = (signal: NodeJS.Signals) => {
