@@ -11,7 +11,7 @@ Closes `agent-permissions` §*The rule against writing under the user's name
 names the App's bot* and `agent-autonomy` §*A pull request gets CodeRabbit's
 fixes for at most three rounds*.
 
-- [ ] 1.1 Write the failing cases in a new `bun/review-docs.test.ts`. Each
+- [x] 1.1 Write the failing cases in a new `bun/review-docs.test.ts`. Each
       case cites its scenario in a `// spec:` comment and reads the doc at
       the test's own run, inside the case. Prose is compared with whitespace
       normalised, as `bun/autonomy.test.ts` does. The cases:
@@ -37,15 +37,17 @@ fixes for at most three rounds*.
       - that bullet says nothing is posted in the pull request at the cap
         [15].
       Run `bun test bun/review-docs.test.ts` and record that it fails on the
-      two bullets as they stand.
-- [ ] 1.2 Edit `core/git-and-prs.md`'s bullet *Send, reply, comment or review
+      two bullets as they stand. Applied: 4 pass, 5 fail; the five are the
+      cases that read the two bullets, and the four that pass are the
+      negative and helper cases.
+- [x] 1.2 Edit `core/git-and-prs.md`'s bullet *Send, reply, comment or review
       under the user's name …*. Keep its sentences. Add that the App
       `laidrivm-harness-agent` writes as itself and shows as
       `laidrivm-harness-agent[bot]`, only from the board loop's runner or
       the orchestrator, never from inside a session, which holds no token
       of the App's (`github-app-identity`). Add the id and email nowhere
       (design.md, D1). Verify: the 1.1 cases for this bullet pass.
-- [ ] 1.3 Edit `core/review-toolkit.md`'s `/coderabbit [pr]` bullet. Add the
+- [x] 1.3 Edit `core/review-toolkit.md`'s `/coderabbit [pr]` bullet. Add the
       cap of three rounds, a round being CodeRabbit's review of one commit,
       counted from the pull request's reviews (design.md, D4). Then add what
       happens at a fourth round whose review carries a finding to apply: the
@@ -54,11 +56,13 @@ fixes for at most three rounds*.
       `(unattended: card — …)` as one question on the card with nothing
       posted in the pull request (design.md, D5). Verify: every 1.1 case
       passes.
-- [ ] 1.4 Run `/zombies` without arguments over the diff. Read the
+- [x] 1.4 Run `/zombies` without arguments over the diff. Read the
       behavioural items [9, 11, 14, 16] against the two bullets: a session's
       own conduct, which no bun test can run. Each of them is disposed
-      there, in prose.
-- [ ] 1.5 Grep the four places for the wording that each edit makes
+      there, in prose. Applied: the run found that [14] was missing, so the
+      marker now says that the question waits behind one already open, and
+      that two case labels were swapped; both are fixed.
+- [x] 1.5 Grep the four places for the wording that each edit makes
       incomplete: `under the user's name`, `round trip`, `three rounds`,
       `fourth`. Reconcile every site the change makes false, and name the
       site in the pull request's body. The `remove-ship` archive and
