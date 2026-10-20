@@ -131,16 +131,20 @@ describe("a catch-up", () => {
 	});
 
 	// spec: transcript-archive/one-unreadable-session
-	test("archives the others when one transcript cannot be read, counting one failure [25]", () => {
-		const m = machine();
-		const bad = session(m, "s1");
-		session(m, "s2", "ok\n", {}, "-work-q");
-		chmodSync(bad, 0o000);
-		const run = catchUp(m);
-		chmodSync(bad, 0o600);
-		expect(run).toEqual({ code: 0, out: line(1, 0, 0, 1) });
-		expect(read(`${copyOf(m, "s2", "-work-q")}.jsonl`)).toBe("ok\n");
-	});
+	// Root reads a mode-000 file, so the case would archive both sessions.
+	test.skipIf(process.getuid?.() === 0)(
+		"archives the others when one transcript cannot be read, counting one failure [25] (skipped as root, which reads it anyway)",
+		() => {
+			const m = machine();
+			const bad = session(m, "s1");
+			session(m, "s2", "ok\n", {}, "-work-q");
+			chmodSync(bad, 0o000);
+			const run = catchUp(m);
+			chmodSync(bad, 0o600);
+			expect(run).toEqual({ code: 0, out: line(1, 0, 0, 1) });
+			expect(read(`${copyOf(m, "s2", "-work-q")}.jsonl`)).toBe("ok\n");
+		},
+	);
 
 	// Root reads a mode-000 directory, so the case would pass without the catch.
 	test.skipIf(process.getuid?.() === 0)(
