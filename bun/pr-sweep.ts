@@ -3,8 +3,9 @@
  * One sweep over a repository's open agent pull requests:
  * `bun bun/pr-sweep.ts <owner>/<repo>`. It updates a branch behind its base,
  * hands off what needs an agent or the CI flow as one JSON line per pull
- * request on standard output, and marks each head it judged with the
- * `harness/sweep` status, so the next run hands off no kind twice at one SHA
+ * request on standard output, and marks each head it judged, unless its checks
+ * or mergeability are still pending, with the `harness/sweep` status, so the
+ * next run hands off no kind twice at one SHA
  * (`openspec/changes/pr-sweep/design.md`).
  *
  * It reads no clone and takes no lock: every call names the repository, and
