@@ -99,7 +99,10 @@ entry, a hook or a CI check leaves this file the way it would leave
   report what you would have written and let them send it. Opening the pull
   request they asked for is not that, and nor is a question the question gate
   lets through without a prompt (`agent-permissions`, *A question to the user
-  on a board card needs no prompt*).
+  on a board card needs no prompt*). The GitHub App `laidrivm-harness-agent`
+  writes as itself, shown as `laidrivm-harness-agent[bot]`, and only from the
+  board loop's runner or the orchestrator — never from inside a session, which
+  holds no token of the App's (`github-app-identity`).
 - Never re-run a check whose own output already proved it passed and whose
   inputs have not changed since — a later command's success is not that proof.
 - Never wait on a result someone else produces — CI, a review bot, a queue:
