@@ -136,7 +136,7 @@ Needs groups 1 and 2 merged. Closes no requirement: the gates and the goal
 check a cloud session runs come from `node_modules/harness/`, so group 4 can
 read them live only once the pin holds this change's code.
 
-- [ ] 3.1 Move the self-pin to the `main` commit holding groups 1 and 2 whose
+- [x] 3.1 Move the self-pin to the `main` commit holding groups 1 and 2 whose
       `test` run passed, as README's *Working on the harness* says.
       `bun install` prompts, so the user approves it (unattended: user —
       report `BLOCKED`, naming the command). Verify: the lockfile's workspace

@@ -15,7 +15,7 @@ cites its scenario as `// spec: pr-sweep/<slug>`.
 Closes every scenario of `pr-sweep` but those of §*The sweep writes as the App
 when one is configured*. Of that requirement, it closes *No App*.
 
-- [ ] 1.1 Write the failing selection and exit cases in a new
+- [x] 1.1 Write the failing selection and exit cases in a new
       `bun/pr-sweep.test.ts`. No open pull request prints nothing and exits 0
       [1]. Non-agent pull requests get the listing alone and no line [2].
       `feat`, `feature/x` and `FEAT/x` are not agent branches, while
@@ -33,8 +33,13 @@ when one is configured*. Of that requirement, it closes *No App*.
       `o r`, `o/r` with a newline, `-o/r`, and an owner of 40 characters [12].
       A failed `gh api user` exits 1 before the listing [29]. A failed or
       timed-out listing exits 1 [22, 31]. Two pull requests, one `failed` and
-      one `marked`, print both lines in listing order and exit 1 [4]
-- [ ] 1.2 Write the failing judgement cases in a new
+      one `marked`, print both lines in listing order and exit 1 [4].
+      Applied: before `bun/pr-sweep.ts` existed, 1.1 and 1.2 together ran 59
+      fail and 2 pass of 61. The two that passed are the failed and the
+      timed-out listing, which a missing script also meets: it exits 1 and
+      prints nothing. The stub `gh` and the builders are in
+      `bun/pr-sweep.fixture.ts`, shared by both files
+- [x] 1.2 Write the failing judgement cases in a new
       `bun/pr-sweep-judge.test.ts`:
       - Mergeability `UNKNOWN` reads `waiting` [35]. `CONFLICTING`, even when
         behind, gives a `conflict` hand-off with no `update-branch`, and is
@@ -72,19 +77,23 @@ when one is configured*. Of that requirement, it closes *No App*.
         head SHA with `harness/sweep` and `success`, after the line is printed
         [19]. A failed status write leaves the printed line as it was, names
         the pull request on standard error and exits 1 [21].
-- [ ] 1.3 Export the time limit from `bun/pull-requests.ts`, its two callers
+- [x] 1.3 Export the time limit from `bun/pull-requests.ts`, its two callers
       unchanged, and see `bun test bun/goal-check bun/board-loop` stay green
-- [ ] 1.4 Add `bun/pr-sweep.ts` as `design.md` fixes: the argument, the
+- [x] 1.4 Add `bun/pr-sweep.ts` as `design.md` fixes: the argument, the
       credential's login, the listing, the order of judgement, the drift
       check through `drift` and `pinOf` over temporary directories, the line,
       and the mark. See 1.1 and 1.2 pass, and `bun bun/file-size.ts` keep
       each file under its cap
-- [ ] 1.5 In `README.md`, under *Consuming*, add a paragraph after the board
+- [x] 1.5 In `README.md`, under *Consuming*, add a paragraph after the board
       loop's: what one run does, that it takes `<owner>/<repo>`, reads no
       clone, re-runs no CI, prints one JSON line per agent pull request, and
       marks with `harness/sweep`. Nothing starts it yet. Verify by reading it
       back
-- [ ] 1.6 Run `bun bun/check.ts` and `bun test`. Both pass
+- [x] 1.6 Run `bun bun/check.ts` and `bun test`. Both pass. Applied: `bun
+      test` is the check here, run by the pre-push before the push.
+      `check.ts` is the consumer's entry point and cannot run in this tree,
+      which has no `bunfig.toml` and no `harness.rootFiles` or
+      `harness.suppressions`; it fails alike on `main`
 
 ## 2. The sweep writes as the App
 
