@@ -103,7 +103,6 @@ export function catchUp(): string {
 						count.skipped++;
 						continue;
 					}
-					files(dir, id, project);
 					const archived = new Date().toISOString().slice(0, 10);
 					// Only the hook knows HEAD and the end reason: a record of its own keeps them.
 					if (before && before.reason !== "catch-up") write(project, id, { ...before, archived });
@@ -115,6 +114,8 @@ export function catchUp(): string {
 							reason: "catch-up",
 							archived,
 						});
+					// Record first, then copy: a copy that fails leaves the copies changed, so the next run retries; the other order could leave a stale record the next run skips.
+					files(dir, id, project);
 					count.archived++;
 				} finally {
 					rmSync(held, { force: true });
