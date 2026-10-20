@@ -142,6 +142,25 @@ describe("a catch-up", () => {
 		expect(read(`${copyOf(m, "s2", "-work-q")}.jsonl`)).toBe("ok\n");
 	});
 
+	// Root reads a mode-000 directory, so the case would pass without the catch.
+	test.skipIf(process.getuid?.() === 0)(
+		"archives and prunes the others when a project directory cannot be listed, counting one failure (skipped as root, which lists it anyway)",
+		() => {
+			const m = machine();
+			const bad = join(session(m, "s1"), "..");
+			session(m, "s2", "ok\n", {}, "-work-q");
+			const old = join(m.state, "harness", "transcripts", "-gone-clone", "old.jsonl");
+			put(old, "x");
+			utimesSync(old, ago(181 * DAY), ago(181 * DAY));
+			chmodSync(bad, 0o000);
+			const run = catchUp(m);
+			chmodSync(bad, 0o700);
+			expect(run).toEqual({ code: 0, out: line(1, 0, 1, 1) });
+			expect(read(`${copyOf(m, "s2", "-work-q")}.jsonl`)).toBe("ok\n");
+			expect(existsSync(old)).toBe(false);
+		},
+	);
+
 	// spec: transcript-archive/a-live-transcript-past-the-period
 	test("neither archives nor fails a live transcript last modified 181 days ago [11]", () => {
 		const m = machine();

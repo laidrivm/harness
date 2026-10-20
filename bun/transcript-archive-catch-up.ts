@@ -63,7 +63,7 @@ function last(path: string): { cwd: string | null; branch: string | null } {
  * Archives every session under Claude Code's `projects/` with no record, or
  * whose files differ from their copy, then prunes; the one count line. A
  * locked session is skipped, a source past the period ignored, and a session
- * that throws counted as failed.
+ * or a project directory that throws counted as failed.
  */
 export function catchUp(): string {
 	const config = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
@@ -73,7 +73,15 @@ export function catchUp(): string {
 	const dirs = existsSync(projects) ? readdirSync(projects, { withFileTypes: true }) : [];
 	for (const entry of dirs.filter((d) => d.isDirectory())) {
 		const dir = join(projects, entry.name);
-		for (const name of readdirSync(dir)) {
+		let names: string[];
+		try {
+			names = readdirSync(dir);
+		} catch {
+			// A project gone since the listing, or one that cannot be read, is one failure, not the run's end.
+			count.failed++;
+			continue;
+		}
+		for (const name of names) {
 			const id = name.slice(0, -".jsonl".length);
 			if (!name.endsWith(".jsonl") || !/^[\w-]+$/.test(id)) continue;
 			try {
