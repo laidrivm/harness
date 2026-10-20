@@ -38,7 +38,7 @@ single-source rule this file inherits.
   for it; never re-run a failed run unchanged without first naming the cause
   you suspect; and never configure a retry (`--retry`, a test's `retry`
   option, `[test] retry`) — a stopgap until change `flaky-test-findings`
-  lands: its step 2 holds the first clause and its step 3 the last.
+  lands: its step 3 holds the first clause and its step 4 the last.
 - Route `/zombies` findings by layer: Zero/One/Many/Boundaries/Interface/
   Exceptions → unit or integration tests; Simple scenarios marked
   `(e2e candidate)` → the Playwright smoke suite.
