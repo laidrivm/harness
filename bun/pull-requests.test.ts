@@ -41,11 +41,12 @@ function read(c: Case = {}) {
 }
 
 /** A pull request as the REST endpoint lists it. */
-const el = (number: number, state: string, merged_at: unknown = null, full_name = "o/r") => ({
+const el = (number: number, state: string, merged_at: unknown = null, full_name = "o/r", id = 1) => ({
 	number,
 	state,
 	merged_at,
-	head: { sha: `s${number}`, repo: { full_name } },
+	head: { sha: `s${number}`, repo: { id, full_name } },
+	base: { repo: { id: 1, full_name: "o/r" } },
 });
 const answer = (...list: unknown[]) => JSON.stringify(list);
 const QUERY = "api repos/o/r/pulls?head=o:feat%2Fx&state=all&per_page=100";
@@ -117,10 +118,17 @@ describe("the repository origin names", () => {
 	});
 
 	// spec: stage-goal/a-fork-in-the-same-owner
-	test("a non-object, a gone head repository and another repository are left out; case is ignored [20]", () => {
+	test("a non-object, a gone head repository and another repository are left out; the name is not compared [20]", () => {
 		const gone = { ...el(2, "open"), head: { sha: "s2", repo: null } };
-		const list = [5, null, gone, el(3, "open", null, "o/fork"), el(4, "open", null, "O/R")];
+		const noBase = { ...el(6, "open"), base: { repo: null } };
+		const list = [5, null, gone, noBase, el(3, "open", null, "o/r", 2), el(4, "open", null, "O/R")];
 		expect(read({ answer: answer(...list) }).result).toEqual([{ number: 4, state: "OPEN", headRefOid: "s4" }]);
+	});
+
+	// spec: stage-goal/a-renamed-repository
+	test("a repository renamed since origin was set keeps its own pull requests (review of #190)", () => {
+		const renamed = { ...el(7, "open", null, "o/renamed"), base: { repo: { id: 1, full_name: "o/renamed" } } };
+		expect(read({ answer: answer(renamed) }).result).toEqual([{ number: 7, state: "OPEN", headRefOid: "s7" }]);
 	});
 
 	// spec: stage-goal/a-fork-s-branch-of-the-same-name

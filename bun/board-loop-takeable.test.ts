@@ -11,7 +11,7 @@ const query = (branch: string) => `gh api repos/o/demo/pulls?head=o:${encodeURIC
 
 /** One pull request of the fixture's `o/demo`, as the REST endpoint lists it. */
 const listed = (number: number, state: string, merged = false) =>
-	JSON.stringify([{ number, state, merged_at: merged ? "2026-10-20T00:00:00Z" : null, head: { sha: "abc", repo: { full_name: "o/demo" } } }]);
+	JSON.stringify([{ number, state, merged_at: merged ? "2026-10-20T00:00:00Z" : null, head: { sha: "abc", repo: { id: 1, full_name: "o/demo" } }, base: { repo: { id: 1 } } }]);
 
 describe("nothing to take", () => {
 	// spec: board-loop/no-takeable-change
