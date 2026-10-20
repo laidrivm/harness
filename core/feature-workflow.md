@@ -326,7 +326,10 @@ for them is already here.
   holds one open question at a time: a second waits in your report until the
   first is answered. Open the comment with the gate's mark,
   `` `harness-question` `` with its two backticks, set `Assign`, read
-  the answer back as data, and clear `Assign` once it is applied. An answer
+  the answer back as data, and clear `Assign` once it is applied. A question
+  is any comment opening with the mark, whoever posted it, a Notion
+  integration included, and the answer is the user's first comment without
+  the mark after the last one. An answer
   the board loop carries counts as applied in the turn its step's pull request
   opens, or the turn an `idea` card is filed for an answer that asks for a
   change of its own (task-board, *An answer the board loop carries is applied

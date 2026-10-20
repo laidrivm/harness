@@ -20,7 +20,7 @@
  * so nothing decides from one, this check included.
  */
 import { ran, record } from "./gate-ledger.ts";
-import { readPullRequests } from "./pull-requests.ts";
+import { type Pull, readPullRequests } from "./pull-requests.ts";
 import { complete, groups } from "./turn-gate.ts";
 
 const git = (...args: string[]) => {
@@ -103,7 +103,7 @@ if (before) {
 function pullRequest(branch: string | undefined, commit: string): string[] {
 	if (!branch) return ["HEAD names no branch"];
 	const listed = pullRequests(branch);
-	// gh missing, unauthenticated or offline on every try: an unknown is never met.
+	// gh missing, unauthenticated or offline, or no `origin` to name, on every try: an unknown is never met.
 	if (!listed) return ["the pull request's state could not be read"];
 	const live = listed.filter((pr) => pr?.state === "OPEN" || pr?.state === "MERGED");
 	if (live.some((pr) => pr?.headRefOid === commit)) return [];
@@ -112,15 +112,13 @@ function pullRequest(branch: string | undefined, commit: string): string[] {
 	return [`the pull request's head is ${theirs}, not ${commit.slice(0, 7)}`];
 }
 
-type Listed = { headRefOid?: unknown; state?: unknown } | null;
-
 /** The branch's pull requests in every state, or undefined after three failed reads. */
-function pullRequests(branch: string): Listed[] | undefined {
+function pullRequests(branch: string): Pull[] | undefined {
 	const env = process.env.GOAL_CHECK_RETRY_MS ?? "";
 	const pause = /^\d+$/.test(env) ? Number(env) : 2000;
 	for (let tries = 1; ; tries++) {
 		// A read that fails or runs past its limit fails the try.
-		const listed = readPullRequests<Listed>(branch, "headRefOid,state");
+		const listed = readPullRequests(branch);
 		if (listed) return listed;
 		if (tries === 3) return undefined;
 		Bun.sleepSync(pause);

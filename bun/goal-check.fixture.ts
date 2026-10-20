@@ -18,7 +18,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { emptyDir, repo } from "./diff-budget.fixture.ts";
+import { emptyDir, git, repo } from "./diff-budget.fixture.ts";
 
 const check = join(import.meta.dir, "goal-check.ts");
 export const CHANGE = "openspec/changes/demo";
@@ -51,7 +51,7 @@ function bin(gh: Gh): string {
 	const dir = emptyDir("goal-check-bin-");
 	symlinkSync(Bun.which("git") ?? "git", join(dir, "git"));
 	if (!gh) return dir;
-	const query = "pr list --head feature --state all --limit 1000 --json headRefOid,state";
+	const query = "api repos/o/demo/pulls?head=o:feature&state=all&per_page=100";
 	const calls = join(dir, "calls");
 	// `PATH` holds no `sleep`, hence the absolute path.
 	const fail = gh.hang ? `${gh.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep 30` : "exit 1";
@@ -64,8 +64,16 @@ function bin(gh: Gh): string {
 	return dir;
 }
 
-/** A pull request as `gh` lists it; an undefined state is left out. */
-export const pr = (headRefOid: string, state?: string) => ({ headRefOid, state });
+/**
+ * A pull request of `o/demo` as the REST endpoint lists it, from the state the
+ * read translates it to; an undefined state is left out, and reads `CLOSED`.
+ */
+export const pr = (sha: string, state?: string) => ({
+	state: state === undefined ? undefined : state === "OPEN" ? "open" : "closed",
+	merged_at: state === "MERGED" ? "2026-10-20T00:00:00Z" : null,
+	head: { sha, repo: { id: 1, full_name: "o/demo" } },
+	base: { repo: { id: 1, full_name: "o/demo" } },
+});
 
 /** A `gh` that answers at once with these pull requests. */
 export const prs = (...list: object[]) => ({ answer: JSON.stringify(list), code: 0 });
@@ -116,6 +124,11 @@ export function run(
 	opts: { gh?: Gh; state?: string; env?: Record<string, string> } = {},
 ) {
 	const state = opts.state ?? stateWith(runRecord(dir));
+	// The read names its repository from `origin`, which the stub answers for;
+	// a directory outside any repository stays as the case made it.
+	const ok = (...args: string[]) => Bun.spawnSync(["git", ...args], { cwd: dir }).exitCode === 0;
+	if (ok("rev-parse", "--git-dir") && !ok("remote", "get-url", "origin"))
+		git(dir, "remote", "add", "origin", "https://github.com/o/demo.git");
 	const path = bin(opts.gh === undefined ? prAt(dir) : opts.gh);
 	const call = Bun.spawnSync([process.execPath, check, ...args], {
 		cwd: dir,

@@ -4,7 +4,7 @@
  * even one too old to hold any harness script, and never fail the session.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NOTICE } from "./bootstrap.ts";
@@ -137,5 +137,108 @@ describe("the stale-install notice on a development-dependency pin", () => {
 	test("a development pin at no full commit prints nothing", () => {
 		const dir = pinned({ devDependencies: { harness: "github:laidrivm/harness#main" } });
 		expect(notice(dir)).toEqual({ code: 0, out: "" });
+	});
+});
+
+/**
+ * A `bun` ahead on `PATH` that logs an `install` call with its directory and
+ * answers it with `STUB_OUT` (escapes read by `printf %b`) and `STUB_CODE`,
+ * and hands anything else, the notice's `-e`, to the real bun.
+ */
+function stub(): { path: string; log: string } {
+	const dir = mkdtempSync(join(tmpdir(), "harness-bun-stub-"));
+	made.push(dir);
+	const log = join(dir, "install.log");
+	const script = [
+		"#!/bin/sh",
+		'if [ "$1" = install ]; then',
+		'printf "%s|%s\\n" "$*" "$PWD" >> "$STUB_LOG"',
+		'[ -n "$STUB_OUT" ] && printf "%b\\n" "$STUB_OUT"',
+		'exit "${STUB_CODE:-0}"',
+		"fi",
+		`exec "${process.execPath}" "$@"`,
+	].join("\n");
+	writeFileSync(join(dir, "bun"), script, { mode: 0o755 });
+	return { path: `${dir}:${process.env.PATH}`, log };
+}
+
+const CURRENT = { ".bun-tag": "laidrivm-harness-eddf1fd" };
+
+function cloud(dir: string, env: Record<string, string | undefined> = {}) {
+	const bun = stub();
+	const run = notice(dir, { PATH: bun.path, STUB_LOG: bun.log, CLAUDE_CODE_REMOTE: "true", ...env });
+	const calls = existsSync(bun.log) ? readFileSync(bun.log, "utf8").trim().split("\n") : [];
+	return { ...run, calls };
+}
+
+describe("the cloud install before the notice", () => {
+	// spec: cloud-sessions/a-local-session
+	test.each([[undefined], [""], ["TRUE"], ["1"], ["true "], ["false"]])(
+		"CLAUDE_CODE_REMOTE=%p installs nothing [27, 28, 30]",
+		(value) => {
+			expect(cloud(project(CURRENT), { CLAUDE_CODE_REMOTE: value })).toEqual({ code: 0, out: "", calls: [] });
+		},
+	);
+
+	// spec: cloud-sessions/a-cloud-session-starts-on-a-fresh-clone
+	// spec: cloud-sessions/no-package-code-runs-unprompted
+	// spec: cloud-sessions/the-notice-never-races-the-install
+	test("true installs from the lockfile in the project, with no scripts, and prints nothing [29]", () => {
+		const dir = project(CURRENT);
+		expect(cloud(dir)).toEqual({ code: 0, out: "", calls: [`install --frozen-lockfile --ignore-scripts|${dir}`] });
+	});
+
+	test("with no CLAUDE_PROJECT_DIR it installs in the working directory [31]", () => {
+		// The spawn's working directory reaches the shell resolved (`/private/var` on macOS).
+		const dir = realpathSync(project(CURRENT));
+		expect(cloud(dir, { CLAUDE_PROJECT_DIR: undefined }).calls).toEqual([
+			`install --frozen-lockfile --ignore-scripts|${dir}`,
+		]);
+	});
+
+	test("a project directory holding a space is installed whole [32]", () => {
+		const dir = join(project(), "with space");
+		mkdirSync(join(dir, "node_modules/harness"), { recursive: true });
+		writeFileSync(join(dir, "package.json"), "{}");
+		expect(cloud(dir).calls).toEqual([`install --frozen-lockfile --ignore-scripts|${dir}`]);
+	});
+
+	// spec: cloud-sessions/the-install-fails
+	test("a failed install prints one line with bun's last line, then the not-installed line, and exits 0 [33, 35]", () => {
+		const { code, out } = cloud(project(), { STUB_OUT: "resolving\\nerror: GET tarball - 403", STUB_CODE: "1" });
+		expect(code).toBe(0);
+		const lines = out.trim().split("\n");
+		expect(lines).toHaveLength(2);
+		expect(lines[0]).toContain("install failed");
+		expect(lines[0]).toEndWith(": error: GET tarball - 403");
+		expect(lines[1]).toContain("not installed");
+	});
+
+	test("a failed install that printed nothing names no empty quote [34]", () => {
+		const first = cloud(project(), { STUB_CODE: "1" }).out.split("\n")[0] ?? "";
+		expect(first).toContain("install failed");
+		expect(first).not.toContain(":");
+	});
+
+	test("no bun on PATH still exits 0 [36]", () => {
+		expect(notice(project(), { CLAUDE_CODE_REMOTE: "true", PATH: "/nonexistent" }).code).toBe(0);
+	});
+
+	// spec: cloud-sessions/a-lockfile-that-disagrees-with-the-manifest
+	test("with the real bun, a lockfile behind the manifest changes neither file [37]", () => {
+		const dir = project();
+		for (const name of ["dep", "dep2"]) {
+			mkdirSync(join(dir, name));
+			writeFileSync(join(dir, name, "package.json"), JSON.stringify({ name, version: "1.0.0" }));
+		}
+		writeFileSync(join(dir, "package.json"), JSON.stringify({ dependencies: { dep: "file:./dep" } }));
+		expect(Bun.spawnSync(["bun", "install"], { cwd: dir }).exitCode).toBe(0);
+		rmSync(join(dir, "node_modules"), { recursive: true, force: true });
+		writeFileSync(join(dir, "package.json"), JSON.stringify({ dependencies: { dep: "file:./dep", dep2: "file:./dep2" } }));
+		const before = [readFileSync(join(dir, "package.json"), "utf8"), readFileSync(join(dir, "bun.lock"), "utf8")];
+		const { code, out } = notice(dir, { CLAUDE_CODE_REMOTE: "true" });
+		expect(code).toBe(0);
+		expect(out).toContain("install failed");
+		expect([readFileSync(join(dir, "package.json"), "utf8"), readFileSync(join(dir, "bun.lock"), "utf8")]).toEqual(before);
 	});
 });
