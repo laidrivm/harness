@@ -27,14 +27,7 @@
  */
 
 import { createHash } from "node:crypto";
-import {
-	existsSync,
-	lstatSync,
-	mkdirSync,
-	readFileSync,
-	renameSync,
-	writeFileSync,
-} from "node:fs";
+import { lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { record } from "./gate-ledger.ts";
@@ -174,8 +167,10 @@ export function watch(event: Event, dir: string): { hint: string; head: string }
 	if (!run) return;
 	const file = join(dir, agent == null ? session : `${session}.${agent}`);
 	// `tmpdir()` is a shared `/tmp` where `TMPDIR` is unset: a store directory
-	// another user made, or can open, is never read or written.
-	if (existsSync(dir) && !mine(dir)) return;
+	// another user made, or can open, is never read or written. Made and checked
+	// before the read, so no directory can appear between a check and the read.
+	mkdirSync(dir, { recursive: true, mode: 0o700 });
+	if (!mine(dir)) return;
 	const store = load(file);
 	// shortcut: the key is the exact command, so a re-run through another pipe
 	// (`bun test` then `bun test 2>&1 | tail`) is missed; normalise the command
@@ -185,8 +180,6 @@ export function watch(event: Event, dir: string): { hint: string; head: string }
 	const seen = tree(cwd);
 	if (!seen) return;
 	const next = decide(store, key, run, seen.print);
-	mkdirSync(dir, { recursive: true, mode: 0o700 });
-	if (!mine(dir)) return; // made by another user since the check above
 	// Written beside and renamed into place, so a reader never sees half a
 	// store. Two calls at once can lose one write, which drops a name or a
 	// hint: the silent side. Written before the hint, so a pass whose entry
