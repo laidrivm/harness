@@ -22,7 +22,12 @@ when one is configured*. Of that requirement, it closes *No App*.
       `spec/x` is one [10]. Login `app/<slug>` with `is_bot` matches only when
       an App is configured, and `<slug>` and `<slug>[bot]` never match
       [14, 46]. A draft reads `skipped` with no status, and so does a marked
-      head, with no other call. A fork prints no line [45]. A `harness/sweep`
+      head with nothing new. A fork prints no line [45]. At a marked head
+      (review of PR 182): a moved base reads `updated`. A check that turned
+      red under a mark without `ci` gives one `ci` hand-off and a rewritten
+      mark naming `ci` beside the kinds it named before, and the run after it hands off nothing. Neither
+      drift nor the description is fetched. The status description is read
+      only when a hand-off would follow. A `harness/sweep`
       status in a state other than `success` still marks [15]. Each of these
       arguments exits 2 with no `gh` run: empty, `o/r/x`, `o/..`, `o/.`,
       `o r`, `o/r` with a newline, `-o/r`, and an owner of 40 characters [12].
@@ -49,7 +54,10 @@ when one is configured*. Of that requirement, it closes *No App*.
         every run, a failed fetch included [30].
       - CI: a pending check reads `waiting` naming it. No check reads
         `waiting` with `no checks` [40]. Earlier failed and latest passed
-        counts as passed, the reverse as failed [5, 6]. One job name in two
+        counts as passed, the reverse as failed [5, 6]. A queued re-run with
+        no `startedAt` after a passed run counts as pending, and on a tie
+        of `startedAt` a pending run wins, then a failed one (review of PR
+        182). One job name in two
         workflows is two keys [7]. `CANCELLED`, `TIMED_OUT` and status
         `ERROR` count as failed, `NEUTRAL` and `SKIPPED` as passed, and
         `EXPECTED` as pending [41]. Two failed checks are named in one `ci`

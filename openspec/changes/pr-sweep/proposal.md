@@ -18,7 +18,7 @@ agent and names, as records, what does.
 - It acts only on agent pull requests: a `feat/` or `spec/` branch in the same
   repository, authored by the GitHub App or by the runner's own credential.
   It skips drafts. (user decision, 2026-10-18)
-- Per pull request, at a head SHA it has not yet marked:
+- Per pull request, at its head SHA:
   - a branch behind its base is updated by merge (`gh pr update-branch`
     without `--rebase`), never rewritten;
   - a merge conflict, a drifted `harness/` copy (what `check.ts`'s drift check
@@ -32,8 +32,9 @@ agent and names, as records, what does.
 - The sweep re-runs no CI. A failed check is handed off by name and never
   turned green by a retry (see the `flaky-test-findings` change).
 - No state is stored. A judged head is marked with a commit status from the
-  sweep's identity, context `harness/sweep`, and a marked head is not judged
-  again.
+  sweep's identity, context `harness/sweep`, naming the kinds handed off
+  there. A marked head is still checked for a moved base and a change in CI,
+  but no kind is handed off twice at one SHA.
 - With the GitHub App configured, every write goes out as the App, through a
   token minted for that repository alone. Without the App, the sweep uses the
   runner user's own `gh` credential, as the board loop's runner does.

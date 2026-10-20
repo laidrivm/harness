@@ -80,10 +80,9 @@ environment before any App token is set. When that call fails, only the App is
 allowed. When there is no App either, the run exits 1, since nothing could be
 listed.
 
-### The order of judgement at an unmarked head
+### The order of judgement
 
-1. `harness/sweep` on the head → `skipped` (`marked`). A draft → `skipped`
-   (`draft`).
+1. A draft → `skipped` (`draft`).
 2. `mergeable` `UNKNOWN` → `waiting` (`mergeability`).
 3. `mergeable` `CONFLICTING` → a `conflict` hand-off, marked. `update-branch`
    would fail on it every hour. The card's list did not name the conflict.
@@ -100,6 +99,17 @@ listed.
 7. Any check failed → a `ci` hand-off, marked.
 8. Otherwise → a `description` hand-off unless the head is a merge from the
    base, marked.
+
+A head that carries `harness/sweep` goes through the same steps without 5 and
+8. A SHA settles both, and the first judgement already handed them off or
+found nothing. The base can move under a marked head, and CI at its SHA can
+change, so steps 2–4, 6 and 7 run on every run. That is the point of a sweep:
+an hour after a green head was marked, `main` may have moved on. A step that
+would hand off a kind the mark's description already names hands off nothing.
+With nothing new the line reads `skipped` (`marked`). The description is read
+with `gh api repos/<r>/commits/<sha>/status` only when a step would hand
+something off, because the rollup carries no status descriptions. This reads
+decision 6 as "handled" per kind and SHA, not as "never looked at again".
 
 ### Behind is read from the compare API, not `mergeStateStatus`
 
@@ -137,8 +147,12 @@ out public repositories.
 The rollup can hold several runs of one check: the diff-budget workflow runs
 again on `edited`, and PR #176 holds two `budget` runs. Each entry is keyed as
 `<workflowName> / <name>` for a check run (the name alone when `workflowName`
-is empty) and as `context` for a commit status. The entry with the latest
-`startedAt` counts for its key, and `harness/sweep` is left out. A check run
+is empty) and as `context` for a commit status, and `harness/sweep` is left
+out. Among one key's check runs, a run with no `startedAt` has not started.
+It counts as the latest and so as pending, since a queued re-run has no start
+time yet. Otherwise the latest `startedAt` counts, and on a tie a pending run
+wins, then a failed one. The rollup holds the latest state of each status
+context, as the combined status does, so a status needs no ordering. A check run
 is passed when it is `COMPLETED` with conclusion `SUCCESS`, `NEUTRAL` or
 `SKIPPED`, and pending while it is not `COMPLETED`. A status is passed when it
 is `SUCCESS` and pending when it is `PENDING` or `EXPECTED`. Everything else
@@ -187,7 +201,10 @@ error names the pull request and the SHA, and the run exits 1.
 
 `gh api -X POST repos/<r>/statuses/<sha> -f state=success
 -f context=harness/sweep -f description=<…>`. The description reads
-`handed off: <kinds, comma-separated>` or `nothing to hand off`. The state is
+`handed off: <kinds, comma-separated>`, naming every kind given at that SHA,
+an earlier mark's included, or `nothing to hand off`. A new hand-off at a
+marked head writes the status again, and the latest status of a context is
+the one GitHub keeps. The state is
 `success` whatever was handed off. The status says the sweep handled the SHA,
 not that the PR is good, and a `failure` would show a second red check beside
 the one being handed off. GitHub allows 1,000 statuses per SHA and context.
@@ -217,9 +234,10 @@ rather than this one copying it (`rules.md` Code).
   push is refused as a non-fast-forward. The hand-off flows, which are later
   changes, must merge the remote tip first (`git-and-prs.md`). The board loop
   works only on branches with no pull request yet, so it never meets this.
-- [Anyone with push access can write a `harness/sweep` status] → that makes
-  the sweep skip a head. Only the user and the App hold push access, and
-  sessions hold no token.
+- [Anyone with push access can write a `harness/sweep` status] → that keeps
+  the sweep from handing off the kinds it names at that head, and from
+  judging drift and the description there. Only the user and the App hold
+  push access, and sessions hold no token.
 - [Two runs overlapping on one repository] → both may update a branch or
   hand off twice. The consumer's key absorbs a duplicate hand-off. Running one
   sweep per repository at a time belongs to the engine.
