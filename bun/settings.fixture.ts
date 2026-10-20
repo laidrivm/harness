@@ -11,6 +11,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
+	ARCHIVE,
 	BOOTSTRAP,
 	LOOP_GUARD,
 	NOTICE,
@@ -101,6 +102,9 @@ export const policy = () => ({
 		SessionStart: [{ hooks: [{ type: "command", command: NOTICE } as Hook] }] as
 			| { hooks: Hook[] }[]
 			| undefined,
+		SessionEnd: [
+			{ hooks: [{ type: "command", command: ARCHIVE, timeout: 60 } as Hook] },
+		] as { hooks: Hook[] }[] | undefined,
 	},
 });
 

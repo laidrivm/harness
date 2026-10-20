@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { realpathSync, writeFileSync } from "node:fs";
+import { closeSync, openSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { advance, change, clone, commit, EPERM, lowered, out, records, run, TICKED, trusting } from "./board-loop.fixture.ts";
@@ -20,7 +20,7 @@ const fromMain = (dir: string, calls: string) => {
 };
 
 describe("started from a session", () => {
-	// spec: board-loop/started-from-an-agent-s-shell
+	// spec: board-loop/started-from-an-agent-s-shell board-loop/a-timer-started-inside-a-claude-code-session
 	test.each([
 		["set [1]", "1"],
 		["empty [2]", ""],
@@ -30,6 +30,19 @@ describe("started from a session", () => {
 		expect(r.code).toBe(1);
 		expect(r.last).toContain("from a terminal of your own");
 		expect(r.calls).toBe("");
+	});
+});
+
+describe("started by a timer", () => {
+	// spec: board-loop/started-with-no-terminal
+	// The fixture's environment holds no TERM.
+	test("standard input from /dev/null and no TERM end as the default pass does", () => {
+		const { dir } = clone();
+		const stdin = openSync("/dev/null", "r");
+		const r = run(dir, [], {}, { stdin });
+		closeSync(stdin);
+		expect([r.code, r.last]).toEqual([0, "board-loop: met — apply demo step 1"]);
+		expect(records(r.state).map(({ decision, rule }) => [decision, rule])).toEqual([["met", "apply"]]);
 	});
 });
 

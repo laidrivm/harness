@@ -16,7 +16,7 @@ per repository*, §*A failed pass pauses the timer until the user removes the
 stop file* and §*The wrapper starts the pass with the environment it names*,
 and both of `board-loop` §*A timer the user set up may start the runner*.
 
-- [ ] 1.1 Write the failing cases first in a new `orchestrator/pass.test.ts`,
+- [x] 1.1 Write the failing cases first in a new `orchestrator/pass.test.ts`,
       and record that each fails before `pass.sh` exists. Each case runs
       `orchestrator/pass.sh` with `HOME`, the clones directory and the secrets
       directory pointed at a temporary tree. The clone there holds a fake
@@ -44,7 +44,7 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       happy tick ends on the runner's `idle` line and exits 0 [26]. Cite each
       scenario with `// spec: orchestrator/<slug>`. Skip the file when
       `flock` is not on `PATH`, with the reason in the skip's title
-- [ ] 1.2 Add `orchestrator/pass.sh` in the order `design.md` fixes: name,
+- [x] 1.2 Add `orchestrator/pass.sh` in the order `design.md` fixes: name,
       stop file, lock, secrets, `trap '' HUP`, `env -i` run, stop file on any
       non-zero exit. The clones, state and secrets directories default to
       `~/clones`, `~/orchestrator` and `/run/secrets`. Each can be overridden
@@ -52,14 +52,14 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       `PASS_CLONES`. Its header says why it hands
       `CLAUDECODE` on rather than checking it. Verify with 1.1 on Linux, in CI
       (`ubuntu-latest`)
-- [ ] 1.3 In `bun/board-loop-clone.test.ts`, add the case with standard input
+- [x] 1.3 In `bun/board-loop-clone.test.ts`, add the case with standard input
       from `/dev/null` and no `TERM`: the pass ends as the fixture's default
       pass does, with the same line and record. Cite
       `board-loop/started-with-no-terminal`. Cite
       `board-loop/a-timer-started-inside-a-claude-code-session` on the
       existing `CLAUDECODE` cases, which already cover it [39]. Verify with
       `bun test bun/board-loop-clone.test.ts`
-- [ ] 1.4 Update the docs. In `README.md`, under Layout, add one sentence for
+- [x] 1.4 Update the docs. In `README.md`, under Layout, add one sentence for
       `orchestrator/`. In the board loop's paragraph, add the host timer the
       user set up (`orchestrator/pass.sh`) beside "a terminal of their own",
       and add that two passes at once need two clones, never two worktrees of
@@ -67,7 +67,10 @@ and both of `board-loop` §*A timer the user set up may start the runner*.
       terminal of their own" and "only the user starts it" across the tree,
       `openspec/specs/**` included, and reconcile each site. Verify with
       `bun test`
-- [ ] 1.5 Run `bun bun/check.ts` and `bun test`. Both pass
+- [x] 1.5 Run `bun bun/check.ts` and `bun test`. Both pass. Applied: `bun
+      test` passes. `check.ts` is the consumer's entry point and cannot run
+      in this tree, which has no `bunfig.toml` and no `harness.rootFiles` or
+      `harness.suppressions`; it fails alike on `main`
 
 ## 2. Spike: n8n against Windmill on one pass
 
@@ -92,13 +95,23 @@ machine that carries the step.
       a workflow exported to files, deleted and imported again comes back
       runnable, with no secret in the files; the execution list is readable
       from a phone through Cloudflare Access; and, for Windmill, which of
-      these the community edition withholds
+      these the community edition withholds. One more criterion, from the
+      docs and a minimal build (user, 2026-10-20): whether the engine takes
+      an extension — a plugin, community node or module — installed beside
+      the stock image rather than in a fork, so the engine still updates from
+      upstream, through which an LLM step reaches Claude on the subscription
+      (the `claude` CLI on a `setup-token` token) and not the API; failing
+      that, an OpenAI-compatible endpoint such as OpenRouter, which can route
+      to a locally deployed model or custom inference. Build the smallest
+      such extension for each engine, call it once, and record whether it
+      survived an engine update. A self-hosted tool the docs show meeting
+      this where both engines fail joins the table as a row read from its
+      docs, without a run
 - [ ] 2.2 Write the results into `design.md` under a new *Spike: n8n against
-      Windmill* section, one row per criterion and engine. If n8n meets every
-      criterion Windmill meets, the decision stays n8n and group 3 proceeds.
-      If Windmill meets one that n8n fails, stop: put the table to the user
-      as the question on the card (unattended: card — hand the choice on, and
-      build neither host), and revise group 3 after the answer
+      Windmill* section, one row per criterion and engine. Whatever the
+      results, stop: put the table to the user as the question on the card,
+      with a recommendation (unattended: card — hand the choice on, and build
+      neither host), and revise group 3 after the answer (user, 2026-10-20)
 - [ ] 2.3 Tear both stacks down. Verify with `docker ps -a`, `docker volume
       ls` and the throwaway directory gone that the VPS holds nothing from
       the spike

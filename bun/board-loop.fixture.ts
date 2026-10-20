@@ -204,7 +204,7 @@ export const trusting = (...dirs: string[]) =>
 		projects: Object.fromEntries(dirs.map((d) => [realpathSync(d), { hasTrustDialogAccepted: true }])),
 	});
 
-type Opts = { env?: Record<string, string>; state?: string; entry?: string; claudeJson?: string | null };
+type Opts = { env?: Record<string, string>; state?: string; entry?: string; claudeJson?: string | null; stdin?: number };
 
 /** What one pass is spawned as, and where it leaves its log and its ledger. */
 function prepare(dir: string, args: string[], s: Stubs, opts: Opts) {
@@ -251,7 +251,7 @@ function result(code: number | null, stdout: string, stderr: string, log: string
  */
 export function run(dir: string, args: string[] = [], s: Stubs = {}, opts: Opts = {}) {
 	const { argv, env, log, state } = prepare(dir, args, s, opts);
-	const call = Bun.spawnSync(argv, { cwd: dir, env });
+	const call = Bun.spawnSync(argv, { cwd: dir, stdin: opts.stdin, env });
 	return result(call.exitCode, call.stdout.toString(), call.stderr.toString(), log, state);
 }
 

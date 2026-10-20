@@ -11,9 +11,11 @@ assumes a terminal. Nothing stops two passes on one clone. The card's explore
 of 2026-10-18 found both.
 
 The user settled the following on the card (2026-10-17 and 2026-10-18). They
-are fixed here and not reopened:
+are fixed here and not reopened, but for the engine, which the spike in task
+group 2 puts back to the user (2026-10-20); group 3's n8n-specific decisions
+are revised after that answer:
 
-- **Engine: n8n**, pinned at 2.38.2 or later. That floor covers
+- **Engine: n8n, until the spike's answer**, pinned at 2.38.2 or later. That floor covers
   CVE-2026-56357, fixed in 2.5.0, and CVE-2026-86080, fixed in 2.38.2.
 - **Claude on the host through `claude setup-token`**, with no user login on
   the VPS. The token cannot fetch claude.ai connectors, so Notion reaches the
@@ -113,8 +115,11 @@ Execute Command in a custom n8n image is the alternative. Rejected for the
 reasons above. Windmill was compared on the card from the docs (scripts in
 git, Bash first class). The user chose n8n and asked (2026-10-18) for a
 measured spike of both before the host is built: task group 2 runs one pass
-under each, and n8n stays unless Windmill meets a criterion n8n fails, in
-which case the choice goes back to the user.
+under each, and its table goes to the user whatever it shows: n8n is no
+default the table has to beat (user, 2026-10-20). The table also asks how
+each engine takes an extension that updates from upstream without a fork and
+reaches Claude on the subscription, or an OpenAI-compatible endpoint routing
+to a local model.
 
 ### `pass.sh` order and exits
 
@@ -136,7 +141,9 @@ which case the choice goes back to the user.
    card at `applying` while the first stage session has no pull request yet.
    One lock per repository leaves concurrency across repositories, which is
    what "one clone per slot" means until slot 2 gives the runner a claim it
-   can read.
+   can read. Once the lock is taken, step 2 runs again: a pass that failed
+   between the first check and the lock wrote its stop file before letting
+   the lock go.
 4. Check that the secret files `claude_oauth_token` and `gh_token` exist
    under `/run/secrets` and hold at least one non-whitespace character,
    without loading either value into the wrapper's variables. A file that is
@@ -148,8 +155,10 @@ which case the choice goes back to the user.
    `CLAUDE_CODE_OAUTH_TOKEN` and `GH_TOKEN`, and `exec`s
    `bun node_modules/harness/bun/board-loop.ts`. No token value appears in a
    command's arguments, where `ps` would show it, and the script never turns
-   on `set -x`. The wrapper tees the whole output to
-   `~/orchestrator/passes/<UTC time>-<clone>.log` and keeps its last line.
+   on `set -x`. The wrapper writes the whole output to
+   `~/orchestrator/passes/<UTC time>-<clone>.log`, prints it once the pass
+   ends and keeps its last line. Not through `tee`: a dropped connection
+   would end `tee` on its next write, and the pass with it on its own.
    Ignoring `HUP` keeps an n8n
    restart from killing a stage session halfway. `CLAUDECODE` is passed on
    only when set, so the runner's one refusal still decides. A second copy of

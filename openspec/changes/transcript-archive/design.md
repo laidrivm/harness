@@ -118,7 +118,8 @@ match, since a kill can fall between a rename and the record.
 
 A `.tmp` file that a kill left behind is overwritten by the next export of
 that file. The prune judges it by its own modification time, so one whose
-session never got a copy still goes.
+session never got a copy still goes. So does the `<id>/` a first export
+killed between the two leaves, once its lock is gone too (CodeRabbit review).
 
 ### Every export prunes the whole archive
 

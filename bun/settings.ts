@@ -84,6 +84,7 @@ type Hook = {
 	async?: unknown;
 	asyncRewake?: unknown;
 	shell?: unknown;
+	timeout?: unknown;
 };
 
 /**
@@ -205,7 +206,10 @@ export function settings(root: string): string[] {
 			"disableAllHooks turns every hook off, the guard and turn gate included",
 		);
 	const fix = "run bun node_modules/harness/bun/sync.ts";
-	for (const { event, matcher, command, name, sole } of HOOKS) {
+	for (const { event, matcher, command, name, sole, timeout } of HOOKS) {
+		// The timeout decides whether a hook finishes, so it is pinned too.
+		const same = (h: Hook) =>
+			h.command === command && (timeout === undefined || h.timeout === timeout);
 		// A hook registered with no matcher counts only in a group with none:
 		// one behind a matcher does not run for every tool.
 		const hooks = (parsed.hooks?.[event] ?? [])
@@ -221,7 +225,7 @@ export function settings(root: string): string[] {
 					h.type === "command" &&
 					h.if === undefined &&
 					blocking(h) &&
-					h.command === command,
+					same(h),
 			);
 			if (!runs) say(`the ${event} hook is not the ${name} — ${fix}`);
 			continue;
@@ -237,7 +241,7 @@ export function settings(root: string): string[] {
 				say(
 					`the ${matcher} hook cannot block: \`async\`, \`asyncRewake\`, \`args\` or a non-bash \`shell\``,
 				);
-			if (hook.command !== command)
+			if (!same(hook))
 				say(`the ${matcher} hook is not the ${name} — ${fix}`);
 		}
 	}

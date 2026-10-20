@@ -31,12 +31,16 @@ function project(event: Event): string {
 	}
 }
 
-/** The ledger's path. The turn gate reads it back to find the runner's record. */
-export function ledgerFile(): string {
+/** The user's state directory, which the ledger and the transcript archive share. */
+export function stateDir(): string {
 	// The XDG spec ignores a relative value, which would land in the tree.
 	const xdg = process.env.XDG_STATE_HOME ?? "";
-	const state = isAbsolute(xdg) ? xdg : join(homedir(), ".local", "state");
-	return join(state, "harness", "gates.jsonl");
+	return isAbsolute(xdg) ? xdg : join(homedir(), ".local", "state");
+}
+
+/** The ledger's path. The turn gate reads it back to find the runner's record. */
+export function ledgerFile(): string {
+	return join(stateDir(), "harness", "gates.jsonl");
 }
 
 /**

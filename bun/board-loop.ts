@@ -1,7 +1,9 @@
 #!/usr/bin/env bun
 /**
  * One pass of the board loop: the user's own script, started from a terminal
- * of their own at the root of a clone used for nothing else. A short pick
+ * of their own or a host timer they set up (`orchestrator/pass.sh`), at the
+ * root of a clone used for nothing else. Two passes at once need two clones,
+ * never two worktrees of one. A short pick
  * session reads `Board view`, names the first takeable card in the board's
  * order, a card whose question the user answered first, and claims it. The
  * pass carries that change's next apply step, or the answer as step N+1, in a

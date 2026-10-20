@@ -4,7 +4,7 @@
  * say is that consumer's check to report.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { BOOTSTRAP, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
+import { ARCHIVE, BOOTSTRAP, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
 import { settings } from "./settings.ts";
 import {
 	BUNFIG,
@@ -161,6 +161,23 @@ describe("the loop guard's registrations", () => {
 			for (const group of groups) group.matcher = "Edit";
 		});
 		expect(text).toContain("the PreToolUse hook is not the harness loop guard");
+	});
+});
+
+describe("the transcript archive's registration", () => {
+	// spec: transcript-archive/a-registration-with-no-timeout
+	test.each([
+		["no timeout [31]", {}],
+		["a timeout of 30 [32]", { timeout: 30 }],
+		["async [34]", { timeout: 60, async: true }],
+	])("with %s is named", (_, departure) => {
+		const hook = { type: "command", command: ARCHIVE, ...departure } as Hook;
+		const config = changed((c) => {
+			c.hooks.SessionEnd = [{ hooks: [hook] }];
+		});
+		expect(settings(consumer(config)).join("\n")).toContain(
+			"the SessionEnd hook is not the harness transcript archive",
+		);
 	});
 });
 
