@@ -42,9 +42,9 @@ describe("which pull requests are judged", () => {
 		["feature/x", {}],
 		["FEAT/x", {}],
 		["feat/x", { author: { login: "someone" } }],
-		["feat/x", { author: { login: "app/laidrivm-harness-agent", is_bot: true } }],
-		["feat/x", { author: { login: "laidrivm-harness-agent" } }],
-		["feat/x", { author: { login: "laidrivm-harness-agent[bot]" } }],
+		["feat/x", { author: { login: "app/demo-agent", is_bot: true } }],
+		["feat/x", { author: { login: "demo-agent" } }],
+		["feat/x", { author: { login: "demo-agent[bot]" } }],
 		["feat/x", { isCrossRepository: true }],
 	])("%s %j gets the listing alone and no line [2, 10, 14, 45]", (headRefName, over) => {
 		const r = sweep(listing([pull(1, { headRefName, ...over })]));
@@ -66,7 +66,7 @@ describe("which pull requests are judged", () => {
 
 	// spec: pr-sweep/no-app
 	test("with no App, no token is minted and the bot is no author [46]", () => {
-		const bot = pull(1, { author: { login: "app/laidrivm-harness-agent", is_bot: true } });
+		const bot = pull(1, { author: { login: "app/demo-agent", is_bot: true } });
 		const r = sweep(listing([bot]));
 		expect(r.calls).toEqual([LOGIN, LIST]);
 	});
