@@ -69,9 +69,6 @@ Only the user can do these; a task that needs one says so.
   Routines carry timer flows that read and report.
 - The cloud's built-in GitHub tools, which post as the user past Bash, where
   neither the command guard nor `deny` sees them. Named in design.md's risks.
-- Opening a pull request from a cloud session. `gh pr create` is GraphQL and
-  `gh api -X POST …/pulls` is a write the guard refuses; design.md leaves the
-  route open.
 - Keeping `gates.jsonl` past the VM, and running `.githooks` there: CI runs
   `bun test` and the diff budget on every pull request.
 - A `PreToolUse` copy of the question gate, unless group 4 finds the
@@ -92,6 +89,10 @@ Only the user can do these; a task that needs one says so.
 - `agent-autonomy`: gains *A routine's prompt is the declared line and one
   tracked skill*, beside *A session is attended unless the prompt that
   started it says otherwise*.
+- `agent-permissions`: *GitHub write commands are denied* lets through the
+  one `gh api` write that opens a pull request, the act `gh pr create`
+  performs, since a cloud session cannot run `gh pr create` (user,
+  2026-10-20; design.md D10).
 
 ## Impact
 
