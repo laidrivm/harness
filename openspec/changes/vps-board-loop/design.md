@@ -11,9 +11,11 @@ assumes a terminal. Nothing stops two passes on one clone. The card's explore
 of 2026-10-18 found both.
 
 The user settled the following on the card (2026-10-17 and 2026-10-18). They
-are fixed here and not reopened:
+are fixed here and not reopened, but for the engine, which the spike in task
+group 2 puts back to the user (2026-10-20); group 3's n8n-specific decisions
+are revised after that answer:
 
-- **Engine: n8n**, pinned at 2.38.2 or later. That floor covers
+- **Engine: n8n, until the spike's answer**, pinned at 2.38.2 or later. That floor covers
   CVE-2026-56357, fixed in 2.5.0, and CVE-2026-86080, fixed in 2.38.2.
 - **Claude on the host through `claude setup-token`**, with no user login on
   the VPS. The token cannot fetch claude.ai connectors, so Notion reaches the
