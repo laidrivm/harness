@@ -306,8 +306,9 @@ one of two:
 - `ESCALATE`.
 
 A source is one of two kinds, and nothing else: a Markdown file (`*.md`)
-tracked on the default branch as `origin` holds it, optionally with `#` and a
-heading or line, or the id of a comment by the user on that card. Decision 8 names what may settle a
+tracked on the default branch as `origin` holds it, with no `#` fragment,
+since the quote is checked against the whole file (CodeRabbit on #191), or the
+id of a comment by the user on that card. Decision 8 names what may settle a
 question — a spec, a design, the rulebook or docs, or the user's own earlier
 answer — and in this repository every one of those is a Markdown file. Code
 and configuration are not on the list: a tracked `.ts` or `.json` file could
@@ -335,11 +336,16 @@ answered that question (CodeRabbit on #191): the triage was judged against
 comments that are no longer the card's state. Checking only whether a
 question still waits would let a question asked and answered during the
 triage pass, and the stale answer or question would follow it. With a
-source that holds, it posts
+source that holds, it posts the question as group 2 does but sets no
+`Assign`, then
 `` `harness-answer` <text>\n> <quote>\nSource: <source> `` from the
-integration and sets no `Assign`, so the user sees the words the answer rests
-on. The next pass's pick session finds the answer and carries it, as
-it carries the user's. On `ESCALATE`, a source that does not hold, a time
+integration, so the user sees the words the answer rests on. The question
+comes first because `task-board` reads an answer only after the last
+question: an answer alone would follow none, or an older question it does not
+answer (CodeRabbit on #191). If the answer's post fails, the runner sets
+`Assign` as group 2 does, and the question waits for the user. The next
+pass's pick session finds the answer and carries it, as it carries the
+user's, though no `Assign` names the user. On `ESCALATE`, a source that does not hold, a time
 limit of ten minutes passed, or any failure, the runner posts the question as
 group 2 does. A doubt therefore always ends with the user.
 
@@ -373,7 +379,10 @@ integration's own id once, with `GET /v1/users/me` next to the settings, and
 names it in the pick prompt. A pick without that id, a laptop runner's,
 counts no `harness-answer`. Every answer the triage gives is to a question a
 VPS-launched session asked, and the VPS loop is the one that carries it. The
-REST step 3 check, *a question waits*, takes the same rule.
+REST step 3 check, *a question waits*, takes the same rule. The pick's
+condition that `Assign` holds the user applies to the user's answer only: a
+card the triage answered has no `Assign` set, and the pick takes it on the
+integration's `harness-answer` after its last question.
 
 ## Risks / Trade-offs
 

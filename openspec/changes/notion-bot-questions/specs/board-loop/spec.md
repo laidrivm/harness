@@ -142,9 +142,10 @@ default branch holds it or in that comment's text, the runner SHALL check the pa
 board's title and the carried `Pointer` again, read the card's comments
 again and, when all three still hold and no comment opening with the mark,
 nor a `harness-answer` comment by the integration's own id, appeared since
-its read before the triage, post the answer from the
-integration as a page-level comment opening with `harness-answer` and holding
-the quote and the source, and SHALL set no `Assign`. The runner SHALL make
+its read before the triage, post the question from the integration, then the
+answer from the integration as a page-level comment opening with
+`harness-answer` and holding the quote and the source, and SHALL set no
+`Assign` unless the answer's post fails. The runner SHALL make
 the same checks, and post nothing when one fails, before posting the
 question on every other ending too. Any other source SHALL be one
 that does not hold. On any
@@ -153,10 +154,16 @@ The pass's outcome SHALL stay the goal check's.
 
 #### Scenario: An answer already written
 
-- **WHEN** the triage ends with a source that is a Markdown file tracked in
-  the clone, a quote that file holds, and an answer
-- **THEN** the runner posts a comment opening with `harness-answer` that holds
-  the answer and the source, sets no `Assign`, and prints that it answered
+- **WHEN** the triage ends with a source that is a Markdown file tracked on
+  the default branch, a quote that file holds there, and an answer
+- **THEN** the runner posts the question, then a comment opening with
+  `harness-answer` that holds the answer and the source, sets no `Assign`,
+  and prints that it answered
+
+#### Scenario: The answer's post fails
+
+- **WHEN** the question is posted and the answer's post fails
+- **THEN** the runner sets `Assign` to the user, as it would on `ESCALATE`
 
 #### Scenario: A choice for the user
 
@@ -169,6 +176,8 @@ The pass's outcome SHALL stay the goal check's.
 - **WHEN** the triage names a path the default branch does not track, a
   tracked file that is not Markdown, a comment id that is not the user's on
   that card, or a quote the source does not hold
+- **THEN** the runner posts the question as it would on `ESCALATE`, and
+  prints that the source did not hold
 
 #### Scenario: A quote only the step's branch holds
 
@@ -176,8 +185,6 @@ The pass's outcome SHALL stay the goal check's.
   step's branch, which the asking session wrote, and not on the default branch
 - **THEN** the source does not hold, and the runner posts the question as it
   would on `ESCALATE`
-- **THEN** the runner posts the question as it would on `ESCALATE`, and
-  prints that the source did not hold
 
 #### Scenario: A card moved or re-pointed while the triage ran
 
@@ -187,8 +194,9 @@ The pass's outcome SHALL stay the goal check's.
 
 #### Scenario: A question posted while the triage ran
 
-- **WHEN** a comment opening with the mark or with `harness-answer` appears on
-  the card while the triage runs, whether or not the user has answered it
+- **WHEN** a comment opening with the mark, or one opening with
+  `harness-answer` by the integration's own id, appears on the card while the
+  triage runs, whether or not the user has answered it
 - **THEN** the runner posts neither the answer nor the question, and prints
   that the card changed during the triage
 
@@ -208,5 +216,7 @@ The pass's outcome SHALL stay the goal check's.
 
 - **WHEN** the integration is configured and the pick session starts
 - **THEN** its prompt names the integration's id as the author whose
-  `harness-answer` comments count as answers; with no integration it names
-  none, and no `harness-answer` counts
+  `harness-answer` comments count as answers, and takes a card whose last
+  question that integration's `harness-answer` follows though `Assign` does
+  not hold the user; with no integration it names none, and no
+  `harness-answer` counts
