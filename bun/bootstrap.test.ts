@@ -1,6 +1,6 @@
 /**
- * The bootstrap hook and the turn gate's, Notion guard's, question gate's, loop
- * guard's and flake watch's registrations run as Claude Code runs them: the command
+ * The bootstrap hook and the turn gate's, Notion guard's, question gate's and
+ * loop guard's registrations run as Claude Code runs them: the command
  * through a shell, the event as JSON on stdin, in a project with no harness
  * installed and then with one.
  */
@@ -240,17 +240,5 @@ describe("the loop guard's registrations", () => {
 			stdout: "warned\n",
 			stderr: "refused\n",
 		});
-	});
-});
-
-describe("the flake watch's registrations", () => {
-	// spec: flaky-tests/before-the-watch-is-installed
-	test("on each event, before the install, exit 0 with nothing printed [43]", () => {
-		const commands = HOOKS.filter((h) => h.name === "harness flake watch").map(
-			(h) => h.command,
-		);
-		expect(commands).toHaveLength(2);
-		for (const command of commands)
-			expect(turn(command, gated())).toEqual({ code: 0, stdout: "", stderr: "" });
 	});
 });

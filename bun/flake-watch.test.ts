@@ -1,8 +1,6 @@
 /**
  * What the flake watch names, what it records, and how it fails open. What
- * counts as the same tree and as a test run is `flake-watch-tree.test.ts`'s;
- * that the harness registers it is `settings.test.ts`'s and
- * `self-pin.test.ts`'s.
+ * counts as the same tree and as a test run is `flake-watch-tree.test.ts`'s.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import {
@@ -14,7 +12,6 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { HOOKS } from "./bootstrap.ts";
 import {
 	cleanup,
 	failed,
@@ -150,23 +147,18 @@ describe("the many cases", () => {
 
 describe("the interface cases", () => {
 	// spec: flaky-tests/a-push-whose-pre-push-hook-runs-the-suite
-	test("a pass answers under each event `HOOKS` registers it on [24] [44]", () => {
+	test("a pass answers under the event it arrived on [24]", () => {
 		const dir = repo();
 		// A push refused after its suite passed is a pass seen on a failure.
-		const pass = {
-			PostToolUse: passed(dir),
-			PostToolUseFailure: failed(dir, `${PASSING}\nerror: failed to push`),
-		};
-		const events = HOOKS.filter((h) => h.name === "harness flake watch").map(
-			(h) => h.event as keyof typeof pass,
+		const passes = [
+			passed(dir),
+			failed(dir, `${PASSING}\nerror: failed to push`),
+		];
+		const answered = passes.map(
+			(pass) =>
+				JSON.parse(play([failed(dir), pass])).hookSpecificOutput.hookEventName,
 		);
-		expect(events).toEqual(["PostToolUse", "PostToolUseFailure"]);
-		const answered = events.map(
-			(event) =>
-				JSON.parse(play([failed(dir), pass[event]])).hookSpecificOutput
-					.hookEventName,
-		);
-		expect(answered).toEqual(events);
+		expect(answered).toEqual(["PostToolUse", "PostToolUseFailure"]);
 	});
 
 	test("the installed bun's reporter is read for the name and the count [25]", () => {

@@ -12,7 +12,6 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
 	BOOTSTRAP,
-	FLAKE_WATCH,
 	LOOP_GUARD,
 	NOTICE,
 	NOTION_GUARD,
@@ -31,12 +30,6 @@ export const cleanup = () => {
 };
 
 export type Hook = { type: string; command: string; if?: string };
-
-/** The flake watch's group, one per event it is registered on. */
-const watch = (): { matcher?: string; hooks: object[] } => ({
-	matcher: "Bash",
-	hooks: [{ type: "command", command: FLAKE_WATCH }],
-});
 
 export const policy = () => ({
 	permissions: {
@@ -90,10 +83,8 @@ export const policy = () => ({
 				hooks: object[];
 			},
 		],
-		PostToolUse: [watch()],
 		PostToolUseFailure: [
 			{ hooks: [{ type: "command", command: LOOP_GUARD } as object] },
-			watch(),
 		],
 		PermissionRequest: [
 			{

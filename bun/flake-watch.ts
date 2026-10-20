@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 /**
- * The flake watch: one script on `PostToolUse` and `PostToolUseFailure`,
- * registered on `Bash` with no `if`, since a list of test commands would miss
- * every script and hook that wraps a suite. It reads bun's reporter from the
- * call's output, and when a command that failed passes in the same session,
+ * The flake watch: one script reading a Bash call's `PostToolUse` or
+ * `PostToolUseFailure` event, whatever the command, since a list of test
+ * commands would miss every script and hook that wraps a suite. It reads bun's
+ * reporter from the call's output, and when a command that failed passes in the same session,
  * from the same directory, on the same tree, it tells the agent the run is
  * flaky, naming the tests the failing runs named, and records one `flaky`
  * finding in the gate ledger. The rules are
@@ -22,8 +22,8 @@
  * tree. The ledger gets no name, command or output. Git runs only on a failing
  * run, or on a passing one whose command has an entry; a call that is no test
  * run costs one bun start and one JSON parse, and a pass with no entry one
- * file read besides. On a call that is no test run, the watch measured 14.0-15.2 ms per call (50 runs per round, three
- * rounds, 2026-10-20).
+ * file read besides. On a call that is no test run, the watch measured
+ * 14.0-15.2 ms per call (50 runs per round, three rounds, 2026-10-20).
  */
 
 import { createHash } from "node:crypto";
