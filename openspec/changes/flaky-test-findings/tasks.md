@@ -208,7 +208,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 4.7's user act.
 
 ## 4. Retry refusals and the `gh run` ask entries
 
-- [ ] 4.1 Write the guard cases in `bun/command-guard-retry.test.ts`, each
+- [x] 4.1 Write the guard cases in `bun/command-guard-retry.test.ts`, each
       failing before 4.2:
       - `bun test --retry=3` is blocked, naming `--retry` [45];
       - `bun test --retry 3` is blocked [46];
@@ -229,11 +229,13 @@ in `ASK`. Claude Code's half, that those entries prompt, is 4.7's user act.
       - `/usr/local/bin/bun test --retry=1` is blocked [58].
 
       Requirement: flaky-tests, *The guard refuses a test run with a retry*.
-- [ ] 4.2 Add the check beside `bunxInstall` in `bun/command-guard-exec.ts`
+      Applied: against the tree as it stood, the 10 refusals failed and the
+      5 allowed lines passed.
+- [x] 4.2 Add the check beside `bunxInstall` in `bun/command-guard-exec.ts`
       and call it from `bun/command-guard.ts` under `bun-test-retry`
       (design.md D9). Name the new prohibition in the guard's header.
       Verify: 4.1 is green.
-- [ ] 4.3 Write the check cases in `bun/test-retry.test.ts` against fixture
+- [x] 4.3 Write the check cases in `bun/test-retry.test.ts` against fixture
       repositories, each failing before 4.4:
       - a root `bunfig.toml` with `[test] retry = 2` fails, naming the
         file [59];
@@ -274,15 +276,21 @@ in `ASK`. Claude Code's half, that those entries prompt, is 4.7's user act.
       - a script running `bun test --rerun-each=5` reports nothing [86].
 
       Requirement: flaky-tests, *The consumer check refuses a configured
-      retry*.
-- [ ] 4.4 Write the check as its own module and add it to `gates()` in
+      retry*. Applied: before 4.4 the file failed as a whole on the missing
+      `bun/test-retry.ts` import.
+- [x] 4.4 Write the check as its own module and add it to `gates()` in
       `bun/check.ts` (design.md D10). Verify:
       - 4.3 is green;
       - `bun run harness:check` on this tree reports nothing new [73];
       - running the scan over every file the commit writes finds nothing, as
         `core/rules.md` asks of a fixture that can be valid input to its own
         scan.
-- [ ] 4.5 Write the ask cases, each failing before 4.6:
+
+      Applied: 4.3 is green, 28 cases. `harness:check` cannot run in this
+      tree (no `bunfig.toml`, no `harness.rootFiles`), so `testRetry` was run
+      on its own over the harness, `d2ass` and `mellon`: none reports anything,
+      `bun/test-retry.test.ts` included.
+- [x] 4.5 Write the ask cases, each failing before 4.6:
       - in `bun/settings.test.ts`, a fixture whose `ask` lacks
         `Bash(gh run * rerun *)` fails the check [75];
       - in `bun/sync-settings.test.ts`, a sync into a consumer lacking the
@@ -297,11 +305,17 @@ in `ASK`. Claude Code's half, that those entries prompt, is 4.7's user act.
         (plan review).
 
       Requirement: agent-permissions, *Re-running, cancelling or deleting a
-      CI run prompts*.
-- [ ] 4.6 Add the `gh run` entries to `ASK` in `bun/settings.ts`, after
+      CI run prompts*. Applied: the cases other than [76] sit in a new
+      `bun/settings-gh-run.test.ts`, beside a `settings.test.ts` near its
+      cap. Before 4.6, [75], [76] and the `ASK` case failed; [77], [78] and
+      the reading cases already held, as pins.
+- [x] 4.6 Add the `gh run` entries to `ASK` in `bun/settings.ts`, after
       the manifest entries (design.md D8). Write them into the tracked
       `.claude/settings.json` with the sync. Verify: 4.5 and the whole
-      `bun test` are green.
+      `bun test` are green. Applied: the six entries were written into
+      `.claude/settings.json` by hand, since `sync.ts` run here would also
+      write a `harness/` copy of `core/`; the settings, sync and self-pin
+      tests read them back. The whole `bun test` runs at the pre-push.
 - [ ] 4.7 **User act, before merge.** In a live session with
       `Bash(gh run *)` allowed:
       - `gh run -R o/r rerun 1` prompts;
@@ -311,7 +325,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 4.7's user act.
 
       Record the answers in the pull request's *Check by hand* list. If a
       form does not prompt, amend D8 through `/opsx:update` before merging.
-- [ ] 4.8 In `core/testing.md`, delete the stopgap's retry clause, which the
+- [x] 4.8 In `core/testing.md`, delete the stopgap's retry clause, which the
       guard and the check now hold (agent-rulebook, *A mechanised prohibition
       leaves its prose home*). Search the four places for the old wording.
       Verify: grep shows "configure a retry" nowhere.

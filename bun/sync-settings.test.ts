@@ -211,6 +211,14 @@ describe("the settings file", () => {
 		]);
 	});
 
+	// spec: agent-permissions/a-consumer-adopts-the-entries-through-the-sync
+	test("a consumer lacking the gh run entries gets them in the harness's order [76]", () => {
+		const dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });
+		syncSettings(dir);
+		const bash = parsed(dir).permissions.ask.filter((e: string) => e.startsWith("Bash(gh run"));
+		expect(bash).toEqual(["rerun", "cancel", "delete"].flatMap((s) => [`Bash(gh run ${s} *)`, `Bash(gh run * ${s} *)`]));
+	});
+
 	// spec: harness-updates/a-consumer-adopts-the-mcp-ask-entries-through-the-sync
 	test("interleaved mcp__ ask entries collapse into the four where the first stood [17] [18] [19] [22]", () => {
 		const config = stale();

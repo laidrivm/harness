@@ -20,6 +20,7 @@ import { stray } from "./repo-layout.ts";
 import { settings } from "./settings.ts";
 import { check as citations, gauge, uncited } from "./spec-coverage.ts";
 import { CORE, drift } from "./sync.ts";
+import { testRetry } from "./test-retry.ts";
 
 /** What git tracks under `dir` in `root`, with the mode it records for each. */
 function tracked(root: string, dir: string): { mode: string; path: string }[] {
@@ -143,6 +144,7 @@ export function gates(root: string): string[] {
 		),
 		...citations(root).problems,
 		...gauge(uncited(root), count, why),
+		...testRetry(root),
 	];
 }
 
