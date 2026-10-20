@@ -106,7 +106,11 @@ question*.
 - [ ] 2.8 Wire it into `pass()`. Read the settings before the pick session.
       Choose the launch form's fourth line. Pass the variable through an
       extra environment argument to `session()` in
-      `bun/board-loop-session.ts`, so that only the runner adds it. Make the
+      `bun/board-loop-session.ts`, so that only the runner adds it, together
+      with `--disallowedTools mcp__*__notion-create-comment` on both
+      sessions' command lines; see the stub log name it [84]. Probe the real
+      CLI once with a session that tries the call, and record whether the
+      wildcard was honoured (design.md *Risks*). Make the
       call after the stage session's clean end and before `publish`. See 2.4
       pass. Keep `bun/board-loop.ts` under the cap `bun bun/file-size.ts`
       reports; if it would pass the cap, move `prompt()` and `pickPrompt()`
@@ -191,7 +195,11 @@ builds, and merges inert before that.
       clone [67], another card's comment id [68] and the time limit [69].
       Check the environment and the flags [70] and the prompt's data [71].
       Cover `ESCALATE` [72], a `claude` that cannot start [73], a failed
-      answer post [74] and the pass's outcome [75]
+      answer post [74] and the pass's outcome [75]. Cover a quote the cited
+      file at `HEAD` does not hold, and one that differs from it only in
+      whitespace [85]; a quote absent from the cited comment [86]; and a
+      question that appears on the card while the triage runs, which posts
+      neither the answer nor the question [87]
 - [ ] 4.3 Write the failing answer-rule cases in `bun/board-loop.test.ts` and
       `bun/notion-bot.test.ts`. Cover the pick prompt naming the id [76], a
       triage answer that unblocks [77], and the user's comment winning in
