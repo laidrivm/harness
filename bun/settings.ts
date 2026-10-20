@@ -58,7 +58,20 @@ export const MCP_ASK = [
  * values this check compares, not a second copy of them.
  */
 export const DENY = [...MANAGERS, ...GH_WRITES].map((c) => `Bash(${c} *)`);
-export const ASK = MANIFEST_WRITES.map((c) => `Bash(${c} *)`);
+/**
+ * A re-run would turn a red CI run green without naming the flaky test, so it
+ * prompts, as cancelling or deleting a run does. The second form catches a flag
+ * before the subcommand (`gh run -R o/r rerun 1`). `ask` is evaluated before
+ * `allow`, so a consumer's own `Bash(gh run *)` needs no edit
+ * (flaky-test-findings D8).
+ */
+const GH_RUN_WRITES = ["rerun", "cancel", "delete"].flatMap((sub) => [
+	`gh run ${sub}`,
+	`gh run * ${sub}`,
+]);
+export const ASK = [...MANIFEST_WRITES, ...GH_RUN_WRITES].map(
+	(c) => `Bash(${c} *)`,
+);
 export const EDIT_DENY = "Edit(.npmrc)";
 export const EDIT_ASK = "Edit(bunfig.toml)";
 

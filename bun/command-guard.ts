@@ -5,7 +5,8 @@
  * express: a commit while `HEAD` is on `main` or on a branch whose pull request
  * has merged, a force-push wherever the flag sits, the `gh` commands that
  * publish text on the user's behalf, a shell handed a program the line does not
- * spell out, and a `bunx` that would install what it runs.
+ * spell out, a `bunx` that would install what it runs, and a test run that
+ * retries a failing test until it passes.
  *
  * It runs without an `if` field on purpose. A permission pattern — which is
  * what `if` takes — matches the command word literally, so `/usr/bin/git` and
@@ -30,6 +31,7 @@
 import { existsSync } from "node:fs";
 import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
 import {
+	bunTestRetry,
 	bunxInstall,
 	shellWords,
 	unreadProgram,
@@ -130,6 +132,8 @@ function check(command: string): void {
 			if (unread) block("unread-program", unread);
 			const bunx = bunxInstall(name, rest);
 			if (bunx) block("bunx-install", bunx);
+			const retry = bunTestRetry(name, rest);
+			if (retry) block("bun-test-retry", retry);
 			// `bash -c "git push --force"`, `bash -lc …` and `bash -oc pipefail
 			// …` too: the program is the first operand after the options and
 			// their values, wherever the `c` stood. Every word from there is read

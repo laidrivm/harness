@@ -36,9 +36,7 @@ single-source rule this file inherits.
 - A test that failed and then passed on an unchanged tree is a flaky test,
   never a green run, and `bun/flake-watch.ts` names one to you as it
   happens: never re-run a failed run unchanged without first naming the
-  cause you suspect; and never configure a retry (`--retry`, a test's
-  `retry` option, `[test] retry`) — a stopgap until change
-  `flaky-test-findings` lands its step 4, which holds this last clause.
+  cause you suspect.
 - Route `/zombies` findings by layer: Zero/One/Many/Boundaries/Interface/
   Exceptions → unit or integration tests; Simple scenarios marked
   `(e2e candidate)` → the Playwright smoke suite.

@@ -1,7 +1,8 @@
 /**
  * What `command-guard.ts` refuses of a program handed to a shell: a shell,
- * `source`, `.` or `eval` whose program the line does not spell out, and a
- * `bunx` that would install what it runs. Decided by where the program comes
+ * `source`, `.` or `eval` whose program the line does not spell out, a
+ * `bunx` that would install what it runs, and a `bun test` or `bun run` that
+ * carries `--retry`. Decided by where the program comes
  * from — standard input, a substitution, an expansion — never by what
  * produced it, so no list of downloaders stands here. Each check returns the
  * reason rather than blocking, because the exit code and the ledger id are the
@@ -151,4 +152,27 @@ export function bunxInstall(name: string, rest: string[]): string | undefined {
 		if (words[at] === "-p" || words[at] === "--package") at++;
 	}
 	return `command-guard: \`${name === "bun" ? "bun x" : "bunx"}\` without --no-install installs a package the project does not have and runs it, past the dependency check and the release-age gate. Run an installed tool with \`bunx --no-install <tool>\`; a package not yet installed is the user's to add.`;
+}
+
+/**
+ * Why `name` with `rest` is a `bun test` carrying `--retry`, or a `bun run`
+ * carrying it before or after the script's name, or nothing. The subcommand
+ * is found as `bunxInstall` finds `x`. After `run` the guard cannot read what
+ * the script runs, so the flag refuses whatever the script is; a `--retry`
+ * that is only another flag's value (`bun test -t --retry`) refuses too, the
+ * side the guard errs on (flaky-test-findings D9).
+ */
+export function bunTestRetry(name: string, rest: string[]): string | undefined {
+	if (name !== "bun") return undefined;
+	const sub = rest.findIndex(
+		(word, at) =>
+			word === "test" ||
+			word === "run" ||
+			!(word.startsWith("-") || rest[at - 1]?.startsWith("-")),
+	);
+	const verb = rest[sub];
+	if (verb !== "test" && verb !== "run") return undefined;
+	const retry = (word: string) => word === "--retry" || word.startsWith("--retry=");
+	if (!rest.slice(sub + 1).some(retry)) return undefined;
+	return `command-guard: \`bun ${verb}\` with \`--retry\` reruns a failing test until it passes, which hides a flaky test instead of naming it. Run the suite once; a test that fails and then passes unchanged is named as flaky and filed as a card (\`core/testing.md\`). \`--rerun-each\` stays allowed for finding one.`;
 }
