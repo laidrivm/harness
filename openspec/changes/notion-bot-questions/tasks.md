@@ -1,8 +1,10 @@
 # notion-bot-questions — tasks
 
-Two groups, shipped as `feat/notion-bot-questions-1` and
-`feat/notion-bot-questions-2`. Numbers in brackets refer to the
-proposal-stage `/zombies` list in the proposal's pull request. Each group
+Four groups, shipped as `feat/notion-bot-questions-1` to
+`feat/notion-bot-questions-4`. Groups 1 and 2 are the proposal of #184;
+groups 3 and 4 come from the user's extension (2026-10-20). Each group ships
+alone, in order. Numbers in brackets refer to the proposal-stage `/zombies`
+lists: [1]–[41] in #184, [42]–[83] in the extension's pull request. Each group
 writes its failing cases first and records that they fail against the tree as
 it stands. No task calls Notion: every Notion response in a test comes from a
 `Bun.serve` stub reached through `HARNESS_NOTION_API_URL`. The user acts in
@@ -125,3 +127,88 @@ question*.
       Verify with `git grep -n -e "page-level comment" -e "sets \`Assign\`"
       -e "set \`Assign\`" -- core README.md` that each hit names either the
       runner's case or the session's own
+
+## 3. A laptop session asks through the ask integration
+
+Closes `task-board` §*A session asks through the ask integration where one is
+configured*, `agent-permissions` §*A question goes to the ask command where
+one is configured*, and `stage-goal` §*An unattended stage runs under one
+goal on the check*, for §*A stage launched where the ask integration is
+configured*. Needs no orchestrator.
+
+- [ ] 3.1 Write the failing cases in a new `bun/notion-ask.test.ts` against a
+      `Bun.serve` stub. Cover no settings file [42], an empty question file
+      [43], a question posted [44], and a waiting question on the second page
+      [45]. Cover a `harness-answer` that does not unblock [46], 1500 against
+      1501 characters [47], the settings modes [48], a bad token [49] and a
+      card id with text after it [50]. Check the call order, with no page read
+      and no `PATCH` [51], and that `notion-bot.json` is never read in its
+      place [52]. Cover a 404 on the comments read [53], a failed `POST` [54]
+      and a missing question file [55]
+- [ ] 3.2 Write the failing gate cases in a new
+      `bun/question-gate-ask.test.ts`. Cover no settings file [56], a
+      conforming question denied naming the command [57], and an empty file
+      counted as present [58]. A directory at the path also counts as present,
+      since the gate reads existence alone [59]. A reply gets no answer [60],
+      and `HARNESS_RUNNER_ASKS` wins [61]
+- [ ] 3.3 Add `bun/notion-ask.ts` on `notion-bot.ts`'s settings read and
+      REST calls, as `design.md` *The ask command and its settings* says, and
+      see 3.1 pass. Take the settings read's path as an argument rather than
+      writing it a second time
+- [ ] 3.4 Add the gate's `ask` refusal in `bun/question-gate.ts`, after the
+      runner's, and see 3.2 pass with the rest of `question-gate*.test.ts`
+      unchanged
+- [ ] 3.5 Write the failing launch-form case [62] in
+      `bun/board-loop-question.test.ts`, then make the runner name the ask
+      command when it finds `notion-ask.json` and no VPS settings
+- [ ] 3.6 Add `Bash(bun bun/notion-ask.ts *)` to `.claude/settings.json`'s
+      allow list, and run `bun test bun/settings*.test.ts`
+- [ ] 3.7 Reconcile the restating sites, and read each one back after the
+      edit:
+      - `core/feature-workflow.md`'s question bullet and its hand-launched
+        forms name the ask command with its condition;
+      - `README.md` names `notion-ask.json`, its mode, that it stays on the
+        laptop, and the allow entry a consumer adds.
+
+      Verify with `git grep -n -e "notion-create-comment" -e "question gate"
+      -- core README.md` that each hit is true with the ask settings present
+
+## 4. The triage, and its answer counted
+
+Closes `board-loop` §*The runner has a stage session's question triaged
+before it posts it*, and `task-board` §*An open question waits on its card,
+assigned to the user*, for §*The triage's answer*, §*The user after the
+triage* and §*A `harness-answer` from another author*. It acts only where
+group 2's settings are, which is the VPS host `vps-board-loop` group 3
+builds, and merges inert before that.
+
+- [ ] 4.1 Probe once, on a stub session, which `claude -p` flags leave the
+      triage able to read the clone and nothing else. Record the flags and
+      what each refused in `design.md`'s *The triage*, and use them in 4.4
+- [ ] 4.2 Write the failing triage cases in a new `bun/notion-triage.test.ts`,
+      with a stub `claude`. Cover no `QUESTION:` line [63], an answer posted
+      [64], two source lines [65], an untracked path [66], a path leaving the
+      clone [67], another card's comment id [68] and the time limit [69].
+      Check the environment and the flags [70] and the prompt's data [71].
+      Cover `ESCALATE` [72], a `claude` that cannot start [73], a failed
+      answer post [74] and the pass's outcome [75]
+- [ ] 4.3 Write the failing answer-rule cases in `bun/board-loop.test.ts` and
+      `bun/notion-bot.test.ts`. Cover the pick prompt naming the id [76], a
+      triage answer that unblocks [77], and the user's comment winning in
+      either order [78, 79]. Cover id normalisation [80], another author
+      [81], a failed `GET /v1/users/me` [82] and no integration [83]
+- [ ] 4.4 Add `bun/notion-triage.ts` as `design.md` *The triage* says. Call it
+      from the runner between the question's checks and its post, and see 4.2
+      pass. Keep `bun/board-loop.ts` under its cap
+- [ ] 4.5 Read the integration's id with `GET /v1/users/me` beside the
+      settings, name it in `pickPrompt()`, and extend REST step 3's
+      *a question waits* to the triage's answer. See 4.3 pass with the rest
+      of `board-loop*.test.ts` unchanged
+- [ ] 4.6 Reconcile the restating sites, and read each one back after the
+      edit:
+      - `core/feature-workflow.md`'s answer rule names the triage's answer
+        and that the user's comment overrides it;
+      - `README.md`'s runner paragraph names the triage and its limit.
+
+      Verify with `git grep -n -e "first comment" -e "the answer" -- core
+      README.md` that each hit names both sources or is about another answer

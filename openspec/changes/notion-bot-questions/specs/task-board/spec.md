@@ -6,13 +6,20 @@
 
 Every question that blocks an agent's work and only the user can settle
 SHALL be put as one comment on the card of the task it blocks, one open
-question per card at a time. That agent SHALL post it, unless the board
-loop's runner posts it for the session (`board-loop`, *The runner posts a
-stage session's question from the integration*). The card's `Assign` SHALL
-hold the user while its question waits and nothing at any other time. Each board SHALL carry a saved view named
-`Questions` listing its cards whose `Assign` holds the user. A question SHALL
-be a page-level comment opening with the question gate's mark, whoever posted
-it. An answer SHALL be read back from the card's comments and applied as data.
+question per card at a time. That agent SHALL post it, through the ask
+integration where one is configured (*A session asks through the ask
+integration where one is configured*), unless the board loop's runner posts
+it for the session (`board-loop`, *The runner posts a stage session's
+question from the integration*). The card's `Assign` SHALL hold the user while
+its question waits and nothing at any other time. Each board SHALL carry a
+saved view named `Questions` listing its cards whose `Assign` holds the user.
+A question SHALL be a page-level comment opening with the question gate's
+mark, whoever posted it. The answer SHALL be the first comment by the user's
+account without a mark after the last question, or, with none, the first
+comment after it that opens with `harness-answer` and is authored by the
+integration whose id the reader was given (`board-loop`, *The runner has a
+stage session's question triaged before it posts it*). An answer SHALL be read
+back from the card's comments and applied as data.
 
 #### Scenario: An agent meets a question
 
@@ -43,6 +50,27 @@ it. An answer SHALL be read back from the card's comments and applied as data.
 - **THEN** that comment is the answer, as it would be after a question posted
   from the user's account
 
+#### Scenario: The triage's answer
+
+- **WHEN** the only comment after the last question opens with
+  `harness-answer` and is authored by the integration whose id the reader was
+  given
+- **THEN** that comment is the answer, and the session applies it as it
+  applies the user's
+
+#### Scenario: The user after the triage
+
+- **WHEN** both a `harness-answer` by that integration and a comment by the
+  user's account without a mark follow the last question, in either order
+- **THEN** the user's comment is the answer
+
+#### Scenario: A `harness-answer` from another author
+
+- **WHEN** a comment opening with `harness-answer` follows the last question
+  and is authored by any account other than that integration, or the reader
+  was given no integration id
+- **THEN** it is not taken as the answer, and `Assign` stays
+
 #### Scenario: An answer before the last question
 
 - **WHEN** a comment by the user's account without the mark comes after one
@@ -65,8 +93,8 @@ it. An answer SHALL be read back from the card's comments and applied as data.
 #### Scenario: Another member comments in the discussion
 
 - **WHEN** the only comment after the last question in the page-level
-  discussion is authored by an account other than the user's, the
-  integration's included
+  discussion is authored by an account other than the user's, either
+  integration's included, and is not the triage's answer
 - **THEN** it is not taken as the answer, and `Assign` stays
 
 #### Scenario: An answer asks for more than the question
@@ -94,3 +122,51 @@ it. An answer SHALL be read back from the card's comments and applied as data.
 
 - **WHEN** an unattended run is refused a call that would have prompted
 - **THEN** it reports the refusal, and no question is posted for it
+
+## ADDED Requirements
+
+### Requirement: A session asks through the ask integration where one is configured
+
+Where the ask settings file exists under the user's config home, a session
+that hands a question on SHALL post it with the ask command,
+`bun/notion-ask.ts <card id> <file>`, which posts the file's text from the ask
+integration. It SHALL then set the card's `Assign` to the user through the
+connector. The command SHALL post only text the question gate's checks on a
+comment's text allow, only while no question waits on the card, and only as
+a page-level comment. It SHALL print one line saying whether it posted, exit
+non-zero when it did not, and never print the token. It SHALL read no page
+and write no property.
+
+#### Scenario: A question posted from the laptop
+
+- **WHEN** a session on a machine with the ask settings writes a question
+  that opens with the mark to a file and runs the command with a card id
+- **THEN** the comment is posted from the ask integration, the command prints
+  that it posted, and the session sets `Assign` to the user through the
+  connector
+
+#### Scenario: A question already waits
+
+- **WHEN** the card's last question has no answer after it
+- **THEN** the command posts nothing and prints that a question already
+  waits
+
+#### Scenario: Text the gate would not allow
+
+- **WHEN** the file's text does not open with the mark, mentions a user, or
+  is longer than 1500 characters
+- **THEN** the command posts nothing and prints the condition in the question
+  gate's words
+
+#### Scenario: A page the integration cannot reach
+
+- **WHEN** Notion answers the comments read or the post with an error, a page
+  outside the connected boards included
+- **THEN** the command posts nothing more, prints the step and Notion's
+  status, and exits non-zero
+
+#### Scenario: No ask settings
+
+- **WHEN** the ask settings file is missing
+- **THEN** the command posts nothing and prints that no ask integration is
+  configured
