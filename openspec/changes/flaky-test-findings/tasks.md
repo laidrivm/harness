@@ -12,17 +12,19 @@ The explore flagged one question as unverified: whether
 design.md D3 registers the watch with no `if`. Its replacement is idea [39]:
 an `if` on the registration fails the check.
 
-There are three groups, each a harness pull request:
+There are four groups, each a harness pull request:
 
 1. The stopgap rule.
-2. The flake watch, which deletes the rule's clause it now holds.
-3. The retry refusals and the `gh run` ask entries, which delete the rule's
+2. The flake watch, written and measured but registered nowhere: with its
+   registration it came to 859 lines, over the 800-line diff budget.
+3. Its registration, which deletes the rule's clause the watch now holds.
+4. The retry refusals and the `gh run` ask entries, which delete the rule's
    last mechanised clause.
 
 Every new scenario's test carries a `// spec:` citation, so the uncited count
 does not rise when the change is archived. For the four agent-permissions
 scenarios on what prompts, the test reaches the harness's half, the entries
-in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
+in `ASK`. Claude Code's half, that those entries prompt, is 4.7's user act.
 
 ## 1. The stopgap rule
 
@@ -33,8 +35,8 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
       > file a card for it; never re-run a failed run unchanged without first
       > naming the cause you suspect; and never configure a retry (`--retry`,
       > a test's `retry` option, `[test] retry`) — a stopgap until change
-      > `flaky-test-findings` lands: its step 2 holds the first clause and
-      > its step 3 the last.
+      > `flaky-test-findings` lands: its step 3 holds the first clause and
+      > its step 4 the last.
 
       Verify:
       - the bullet meets `core/rules.md`'s quality bar;
@@ -44,7 +46,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
 
 ## 2. The flake watch
 
-- [ ] 2.1 **User act, before any code.** The user runs the event probe from a
+- [x] 2.1 **User act, before any code.** The user runs the event probe from a
       scratch kit: a settings file whose `PostToolUse` and
       `PostToolUseFailure` hooks dump the event to a file, in a throwaway
       repository holding one test that fails once. A session does not run
@@ -57,7 +59,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
 
       If any answer differs from design.md D4, amend D4 through
       `/opsx:update` before 2.3.
-- [ ] 2.2 Write `bun/flake-watch.test.ts`. Each case spawns the script with an
+- [x] 2.2 Write `bun/flake-watch.test.ts`. Each case spawns the script with an
       event on stdin, a temp store, a temp `XDG_STATE_HOME` and a fixture git
       repository. All of these fail before 2.3.
       - The empty case:
@@ -135,7 +137,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
       is named as flaky*, *A test run is read from its output*, *The watch
       never blocks*, *Each flaky finding is recorded in the gate ledger* and
       *The watch fails open*; gate-ledger, *Every gate refusal is recorded*.
-- [ ] 2.3 Write `bun/flake-watch.ts` as design.md D2 and D4–D7 set out:
+- [x] 2.3 Write `bun/flake-watch.ts` as design.md D2 and D4–D7 set out:
       - the reader, the tree fingerprint and the decision as pure exported
         functions;
       - the store written beside the final file and renamed into place;
@@ -149,8 +151,16 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
 
       Verify: 2.2 is green and the file is under its cap in
       `bun/file-size.ts`.
-- [ ] 2.4 Write the registration cases in `bun/settings.test.ts` and
-      `bun/sync-settings.test.ts`, failing before 2.5:
+- [x] 2.4 Measure the watch on a Bash call that is no test run: 50 runs a
+      round, three rounds, as the command guard's header records its own.
+      Write the figure into the header. Verify: the header names the date
+      and the range.
+
+## 3. Registering the watch
+
+- [ ] 3.1 Write the registration cases in `bun/settings.test.ts`,
+      `bun/sync-settings.test.ts` and, beside the loop guard's own,
+      `bun/bootstrap.test.ts`, failing before 3.2:
       - a consumer whose settings lack the watch's `PostToolUse` or
         `PostToolUseFailure` registration fails the check, which names the
         missing hook and the sync command [38];
@@ -166,18 +176,14 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
         from both places [44].
 
       Requirement: flaky-tests, *Every consumer session runs the watch*.
-- [ ] 2.5 Add the two `HOOKS` entries to `bun/bootstrap.ts`, matcher `Bash`,
+- [ ] 3.2 Add the two `HOOKS` entries to `bun/bootstrap.ts`, matcher `Bash`,
       not `sole`, with no `if`. Write them into the tracked
       `.claude/settings.json` with the sync, so the harness's own sessions
       register exactly what consumers get
       (harness-updates, *The harness's own sessions run its gates from its
       pin*). They take effect in those sessions at the next self-pin bump.
-      Verify: 2.4 and the whole `bun test` are green.
-- [ ] 2.6 Measure the watch on a Bash call that is no test run: 50 runs a
-      round, three rounds, as the command guard's header records its own.
-      Write the figure into the header. Verify: the header names the date
-      and the range.
-- [ ] 2.7 In `core/testing.md`, delete the stopgap's first clause, which the
+      Verify: 3.1 and the whole `bun test` are green.
+- [ ] 3.3 In `core/testing.md`, delete the stopgap's first clause, which the
       watch's hint now carries. Point the bullet at `bun/flake-watch.ts`
       instead, keeping "never re-run a failed run unchanged without naming a
       cause" and the retry clause. In `README.md`, add a bullet for the watch
@@ -188,10 +194,10 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
       (`feature-workflow.md`, *Across the stages*) for the old wording.
       Verify: grep shows the deleted clause nowhere.
 
-## 3. Retry refusals and the `gh run` ask entries
+## 4. Retry refusals and the `gh run` ask entries
 
-- [ ] 3.1 Write the guard cases in `bun/command-guard-retry.test.ts`, each
-      failing before 3.2:
+- [ ] 4.1 Write the guard cases in `bun/command-guard-retry.test.ts`, each
+      failing before 4.2:
       - `bun test --retry=3` is blocked, naming `--retry` [45];
       - `bun test --retry 3` is blocked [46];
       - `bun --bun test --retry=1 a.test.ts` is blocked [47];
@@ -211,12 +217,12 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
       - `/usr/local/bin/bun test --retry=1` is blocked [58].
 
       Requirement: flaky-tests, *The guard refuses a test run with a retry*.
-- [ ] 3.2 Add the check beside `bunxInstall` in `bun/command-guard-exec.ts`
+- [ ] 4.2 Add the check beside `bunxInstall` in `bun/command-guard-exec.ts`
       and call it from `bun/command-guard.ts` under `bun-test-retry`
       (design.md D9). Name the new prohibition in the guard's header.
-      Verify: 3.1 is green.
-- [ ] 3.3 Write the check cases in `bun/test-retry.test.ts` against fixture
-      repositories, each failing before 3.4:
+      Verify: 4.1 is green.
+- [ ] 4.3 Write the check cases in `bun/test-retry.test.ts` against fixture
+      repositories, each failing before 4.4:
       - a root `bunfig.toml` with `[test] retry = 2` fails, naming the
         file [59];
       - a tracked `email-service/bunfig.toml` with the same fails [60];
@@ -257,14 +263,14 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
 
       Requirement: flaky-tests, *The consumer check refuses a configured
       retry*.
-- [ ] 3.4 Write the check as its own module and add it to `gates()` in
+- [ ] 4.4 Write the check as its own module and add it to `gates()` in
       `bun/check.ts` (design.md D10). Verify:
-      - 3.3 is green;
+      - 4.3 is green;
       - `bun run harness:check` on this tree reports nothing new [73];
       - running the scan over every file the commit writes finds nothing, as
         `core/rules.md` asks of a fixture that can be valid input to its own
         scan.
-- [ ] 3.5 Write the ask cases, each failing before 3.6:
+- [ ] 4.5 Write the ask cases, each failing before 4.6:
       - in `bun/settings.test.ts`, a fixture whose `ask` lacks
         `Bash(gh run * rerun *)` fails the check [75];
       - in `bun/sync-settings.test.ts`, a sync into a consumer lacking the
@@ -280,11 +286,11 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
 
       Requirement: agent-permissions, *Re-running, cancelling or deleting a
       CI run prompts*.
-- [ ] 3.6 Add the `gh run` entries to `ASK` in `bun/settings.ts`, after
+- [ ] 4.6 Add the `gh run` entries to `ASK` in `bun/settings.ts`, after
       the manifest entries (design.md D8). Write them into the tracked
-      `.claude/settings.json` with the sync. Verify: 3.5 and the whole
+      `.claude/settings.json` with the sync. Verify: 4.5 and the whole
       `bun test` are green.
-- [ ] 3.7 **User act, before merge.** In a live session with
+- [ ] 4.7 **User act, before merge.** In a live session with
       `Bash(gh run *)` allowed:
       - `gh run -R o/r rerun 1` prompts;
       - a bare `gh run rerun` prompts;
@@ -293,7 +299,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 3.7's user act.
 
       Record the answers in the pull request's *Check by hand* list. If a
       form does not prompt, amend D8 through `/opsx:update` before merging.
-- [ ] 3.8 In `core/testing.md`, delete the stopgap's retry clause, which the
+- [ ] 4.8 In `core/testing.md`, delete the stopgap's retry clause, which the
       guard and the check now hold (agent-rulebook, *A mechanised prohibition
       leaves its prose home*). Search the four places for the old wording.
       Verify: grep shows "configure a retry" nowhere.

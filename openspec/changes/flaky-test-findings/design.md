@@ -48,17 +48,21 @@ See `proposal.md` for the motivation. The pieces this change builds on:
 
 ## Decisions
 
-### D1. Three groups, the rule first
+### D1. Four groups, the rule first
 
 The explore put the rule and the hook in one group. They split here so the
 rule is a working stopgap with something to replace:
 
 1. **The rule** in `core/testing.md`, on its own. It says it is a stopgap,
    and which group's mechanism removes each of its clauses.
-2. **The hook.** It removes the rule's "report it by name and file a card"
-   clause, because its hint now carries that request. The clause that remains
-   is "name a cause before re-running a failed run", which no hook can check.
-3. **The retry refusals and the `gh run` ask entries.** This group removes
+2. **The hook**, with its cases and its measured cost, registered nowhere.
+   It and its registration came to 859 lines in one pull request, over the
+   800-line diff budget, so the script lands first and runs in no session.
+3. **The hook's registration.** It removes the rule's "report it by name and
+   file a card" clause, because the hint, which now reaches every session,
+   carries that request. The clause that remains is "name a cause before
+   re-running a failed run", which no hook can check.
+4. **The retry refusals and the `gh run` ask entries.** This group removes
    the rule's "configure no retry" clause, which is then mechanised
    (agent-rulebook, *A mechanised prohibition leaves its prose home*).
 
@@ -216,7 +220,7 @@ whatever else allows it* already relies on. So the consumers' own
 `Bash(gh run *)` allow entries, present in both `dota2` and `mellon`, need no
 edit. A bare `Bash(gh run <sub> *)` matching the subcommand with no arguments
 rests on the same behaviour as `Bash(bun i *)` matching a bare `bun i`, which
-that requirement's scenarios already state. Group 3's user act confirms both
+that requirement's scenarios already state. Group 4's user act confirms both
 forms in a live session.
 
 The API spelling, `gh api -X POST …/runs/<id>/rerun`, is already refused by
