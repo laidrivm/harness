@@ -111,8 +111,20 @@ export const ARCHIVE = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/transcri
  * which bun 1.4.2 writes as `<owner>-<repo>-<7 hex>` and documents nowhere; a
  * bun that changes it makes the notice fall silent rather than wrong. Upgrade
  * when bun documents where an installed git dependency's commit is recorded.
+ *
+ * In a cloud session (`CLAUDE_CODE_REMOTE` exactly `true`) it first installs
+ * from the lockfile, with no lifecycle script: the VM's clone is fresh at
+ * every start, and a hook's command passes neither the Bash bootstrap nor an
+ * `ask` entry, which would otherwise stop the agent's own `bun install` there
+ * with a prompt nobody answers (cloud-sessions D1, D2). In the same command,
+ * so the notice runs after it rather than racing it; a failure prints one line
+ * and the notice then says what is missing.
  */
 export const NOTICE = [
+	'if [ "$CLAUDE_CODE_REMOTE" = true ]; then',
+	'o=$(cd "${CLAUDE_PROJECT_DIR:-.}" && bun install --frozen-lockfile --ignore-scripts 2>&1) ||',
+	'{ l=$(printf "%s" "$o" | tail -n 1); echo "The harness cloud install failed${l:+: $l}"; };',
+	"fi;",
 	"bun -e 'const fs = require(\"node:fs\");",
 	'const d = process.env.CLAUDE_PROJECT_DIR ?? ".";',
 	'if (!fs.existsSync(d + "/node_modules/harness")) {',

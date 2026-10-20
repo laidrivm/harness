@@ -153,6 +153,7 @@ export function ghApiWrite(rest: string[]): string | undefined {
 	if (rest[api] !== "api") return undefined;
 	// Every word but `api` itself: a flag written before it reaches it too.
 	const { flags, operands } = parse(rest.filter((_, at) => at !== api));
+	if (opensPullRequest(flags, operands)) return undefined;
 	const methods = flags.filter(({ name }) => name === "method");
 	// Any flag naming a write, not the last: gh honours the last, and blocking
 	// on any one errs the way the guard resolves every uncertainty.
@@ -170,6 +171,31 @@ export function ghApiWrite(rest: string[]): string | undefined {
 }
 
 const isField = (name: string) => name === "field" || name === "raw-field";
+
+/** A GitHub owner or repository name, never `.` or `..`, which a path would resolve. */
+const NAME = String.raw`(?!\.\.?/)[A-Za-z0-9._-]+`;
+/** The endpoint that opens a pull request, whole: no other path, no query string. */
+const PULLS = new RegExp(`^/?repos/${NAME}/${NAME}/pulls$`);
+
+/**
+ * Whether the call opens a pull request and does nothing else: `POST`, named
+ * or implied by a parameter, to exactly `repos/<owner>/<repo>/pulls`. That is
+ * the act `gh pr create` already performs, and a cloud session cannot run
+ * `gh pr create`, which reads GraphQL (cloud-sessions, user 2026-10-20). Every
+ * method flag must say `POST`, and every other flag must read or carry the
+ * body; one operand, so no second path rides along.
+ */
+function opensPullRequest(flags: Flag[], operands: string[]): boolean {
+	return (
+		operands.length === 1 &&
+		PULLS.test(operands[0] ?? "") &&
+		flags.every(({ name, value }) =>
+			name === "method"
+				? value.toUpperCase() === "POST"
+				: READ_FLAGS.has(name) || isField(name) || name === "input",
+		)
+	);
+}
 
 /**
  * Whether a `graphql` call reads: its document is inline as a `query` field,

@@ -13,15 +13,15 @@ it stands. No task calls Notion: every Notion response in a test comes from a
 Closes `task-board` §*An open question waits on its card, assigned to the
 user*, for the wording of the answer rule.
 
-- [ ] 1.1 Write the failing case in `bun/board-loop.test.ts`: the pick
+- [x] 1.1 Write the failing case in `bun/board-loop.test.ts`: the pick
       prompt's answer clause takes the first comment by the user `Assign`
       names that does not open with the mark, after the last comment that
       does, whichever account posted that one, the integration included. It
       still names `include_resolved: true` and the page-level discussion alone
       [41]
-- [ ] 1.2 Reword the answer clause of `pickPrompt()` in `bun/board-loop.ts`
+- [x] 1.2 Reword the answer clause of `pickPrompt()` in `bun/board-loop.ts`
       and see 1.1 pass with the rest of `board-loop*.test.ts` unchanged
-- [ ] 1.3 Reconcile the restating sites. In `core/feature-workflow.md`'s
+- [x] 1.3 Reconcile the restating sites. In `core/feature-workflow.md`'s
       question bullet (*Across the stages*), say that a question is a comment
       opening with the mark, whoever posted it, and that the answer follows
       the last one. Then run `git grep -n -e "after the question's" -e "after
