@@ -62,7 +62,8 @@ question*.
       `Assign.people` alone to the user [20]. A question on the second page of
       comments, reached through `next_cursor`, still found [21]. A question
       followed only by another member's comment still waits; one followed by
-      the user's unmarked comment does not [22]. A plain backticked mark
+      the user's unmarked comment does not [22], even when the configured
+      `user` is unhyphenated and `created_by.id` is a UUID [22a]. A plain backticked mark
       counts as a question as well as a code run [23]. A data source titled
       `Harness copy`, or `mellon` from the harness's clone, refused [24]. A
       `Pointer` naming another change, or the carried one with text after
