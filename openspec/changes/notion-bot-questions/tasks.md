@@ -190,8 +190,9 @@ builds, and merges inert before that.
       triage able to read the clone and nothing else. Record the flags and
       what each refused in `design.md`'s *The triage*, and use them in 4.4
 - [ ] 4.2 Write the failing triage cases in a new `bun/notion-triage.test.ts`,
-      with a stub `claude`. Cover no `QUESTION:` line [63], an answer posted
-      [64], two source lines [65], an untracked path [66], a path leaving the
+      with a stub `claude`. Cover no `QUESTION:` line [63], the question then
+      the answer posted with no `Assign` [64], a failed answer post that sets
+      `Assign` [93], two source lines [65], an untracked path [66], a path leaving the
       clone [67], another card's comment id [68] and the time limit [69].
       Check the environment and the flags [70] and the prompt's data [71].
       Cover `ESCALATE` [72], a `claude` that cannot start [73], a failed
@@ -210,7 +211,7 @@ builds, and merges inert before that.
       suppresses nothing [91]
 - [ ] 4.3 Write the failing answer-rule cases in `bun/board-loop.test.ts` and
       `bun/notion-bot.test.ts`. Cover the pick prompt naming the id [76], a
-      triage answer that unblocks [77], and the user's comment winning in
+      triage answer that unblocks a card whose `Assign` is empty [77], and the user's comment winning in
       either order [78, 79]. Cover id normalisation [80], another author
       [81], a failed `GET /v1/users/me` [82] and no integration [83]
 - [ ] 4.4 Add `bun/notion-triage.ts` as `design.md` *The triage* says. Call it
