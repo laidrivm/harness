@@ -16,6 +16,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { linkSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { flow } from "./ci-run.ts";
 
 type Verdict = "handled" | "ignored" | "duplicate" | "refused" | "failed";
 
@@ -128,16 +129,23 @@ async function handle(args: string[]): Promise<[Verdict, string]> {
 	// timingSafeEqual throws on unequal lengths.
 	if (given.length !== expected.length || !timingSafeEqual(given, expected))
 		return ["refused", "the signature does not match the body"];
+	const text = bytes.toString("utf8");
 	try {
-		JSON.parse(bytes.toString("utf8"));
+		JSON.parse(text);
 	} catch {
 		return ["refused", "the body is no JSON"];
 	}
-	if (!claim(join(homedir(), "orchestrator", "deliveries"), delivery))
-		return ["duplicate", `delivery ${delivery} is another handler's`];
-	// No flow takes an event yet: the CI flow adds `workflow_run`.
-	return ["ignored", `no flow takes ${event}`];
+	const route = FLOWS[event];
+	// The attempt count is the App's comments, and no flow may push as the user.
+	const { HARNESS_GITHUB_APP_ID: id, HARNESS_GITHUB_APP_KEY: key } = process.env;
+	if (route && !(id?.trim() && key?.trim())) return ["failed", `the App's settings are not set, so no flow takes ${event}`];
+	const dir = join(homedir(), "orchestrator", "deliveries");
+	if (!claim(dir, delivery)) return ["duplicate", `delivery ${delivery} is another handler's`];
+	return route ? route(text, join(dir, delivery)) : ["ignored", `no flow takes ${event}`];
 }
+
+/** The flows, by the event each takes; any other event is ignored before the App's settings are read. */
+const FLOWS: Record<string, (body: string, marker: string) => Promise<[Verdict, string]>> = { workflow_run: flow };
 
 if (import.meta.main) {
 	let verdict: Verdict;

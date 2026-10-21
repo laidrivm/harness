@@ -1,16 +1,18 @@
 # ci-run-agent — tasks
 
-Five groups, so the change ships as `feat/ci-run-agent-1` to
-`feat/ci-run-agent-5`. Each group writes its failing cases first and records
+Six groups, so the change ships as `feat/ci-run-agent-1` to
+`feat/ci-run-agent-6`. Each group writes its failing cases first and records
 that they fail against the tree as it stands. Numbers in brackets refer to the
 proposal-stage `/zombies` list in the proposal's pull request; 59–61, added
 at that pull request's review, and 62–67, added at the plan's, are listed in
-the plan's, and 68 is *Two handlers recover one dead marker*. Groups 2 to 4
+the plan's, and 68 is *Two handlers recover one dead marker*. Groups 2 to 5
 are the engine-neutral handler and flows, and wait on nothing still open:
-`github-app-identity`, which groups 3 and 4 need, is archived. Group 5, the
+`github-app-identity`, which groups 3 to 5 need, is archived. Group 6, the
 engine's call, needs both the engine that `vps-board-loop`'s spike confirmed
 and that change's group 3 merged on it (moved out of group 2 on 2026-10-21,
-so the handler need not wait for the engine choice).
+so the handler need not wait for the engine choice). The pull request flow
+was one group until 2026-10-21, when it passed the diff budget: group 3 now
+decides up to the attempt comment, and group 4 runs the session after it.
 
 ## 1. The runner records each step's session
 
@@ -56,11 +58,12 @@ and §*A delivery is handled at most once*.
       body, secret, signature, delivery, routing), with every
       event ignored until group 3 routes `workflow_run`. Verify with 2.1
 
-## 3. The CI flow on a pull request
+## 3. The CI flow's decision on a pull request
 
 Closes `orchestrator` §*A failed CI run starts an agent only for a pull
-request the loop opened*, §*A pull request gets at most three fix attempts*
-and §*A fix reaches the pull request only as new commits the runner pushes*.
+request the loop opened* and §*A pull request gets at most three fix
+attempts*, up to the comment posted before the session; group 4 starts the
+session.
 
 - [x] 3.1 Probe `--json-schema` on a stub session in a clone with the
       harness's hooks registered. Record whether `structured_output` arrives
@@ -68,37 +71,57 @@ and §*A fix reaches the pull request only as new commits the runner pushes*.
       parse to a `CI-OUTCOME:` last line before 3.3, as `design.md`'s risk
       says. Applied (2026-10-21, Claude Code 2.1.306): it arrives, so the
       parse stays `--json-schema`; `design.md`'s risk records the probe
-- [ ] 3.2 Write the failing cases in a new `bun/ci-run.test.ts` against a
-      `Bun.serve` API through `GITHUB_API_URL`, a stub `claude` and a stub
-      `gh`, with a clone fixture [17, 18, 29–54, 61, 64–67]
-- [ ] 3.3 Add `bun/ci-run.ts`. Give `github-app.ts`'s mint a permissions
-      argument, and route `workflow_run` to the flow from `on-event.ts`,
-      which refuses a routed event without the App's settings and marks the
-      delivery acted before the flow first posts or starts a session.
-      Verify with 3.2 and `bun test`
-- [ ] 3.4 Reconcile the sites that say a fix is a person's job, or that
+- [x] 3.2 Write the failing cases in a new `bun/ci-run.test.ts`, run
+      through the handler against a `Bun.serve` API through `GITHUB_API_URL`
+      and a clone fixture [17, 18, 29, 30 (the comment), 31–37, 39, 40,
+      42–45, 51, 61, 64, 65, 67]. Applied: against the tree as it stood the
+      file failed to load (no `ci-run.ts`). A stub `flock` that runs its
+      command stands in for the lock everywhere but the two cases that need
+      a real one, which run on Linux as `pass.sh`'s do
+- [x] 3.3 Add `bun/ci-run.ts` up to the attempt or limit comment: filter,
+      route, clone, lock, mint, re-read, the tracked-edit refusal and the
+      attempts. Route `workflow_run` to it from `on-event.ts`, which refuses
+      a routed event without the App's settings and marks the delivery
+      acted before the flow first posts. Verify with 3.2. Applied: the
+      mint's permissions argument was already there (`pr-sweep` added it),
+      and `github-app.ts` now exports the API call it wraps, which the flow
+      reads and posts through
+
+## 4. The CI flow's session on a pull request
+
+Closes `orchestrator` §*A fix reaches the pull request only as new commits
+the runner pushes*, and the session the two requirements group 3 closes
+start.
+
+- [ ] 4.1 Write the failing cases in `bun/ci-run.test.ts` with a stub
+      `claude` and a stub `gh` [30 (the log file), 41, 46–50, 52–54, 66]
+- [ ] 4.2 Add the session to `bun/ci-run.ts`: the branch's fetch and
+      fast-forward, the log file, the session with `--json-schema`, the
+      outcome, the tree check, the push and the cleanup. Verify with 4.1 and
+      `bun test`
+- [ ] 4.3 Reconcile the sites that say a fix is a person's job, or that
       `gh run view` is the agent's: grep `core/` and `README.md` for
       `--log-failed`, and `core/autonomy.md` for CI. Verify by reading each
       hit back
 
-## 4. The scheduled and flaky routes
+## 5. The scheduled and flaky routes
 
 Closes `orchestrator` §*A failed scheduled run files an idea card* and §*A
 run that passed on a later attempt is a flaky finding*.
 
-- [ ] 4.1 Write the failing cases in `bun/ci-run.test.ts` for the two fresh
+- [ ] 5.1 Write the failing cases in `bun/ci-run.test.ts` for the two fresh
       session routes [38, 55–58]
-- [ ] 4.2 Add both routes to `bun/ci-run.ts`. Verify with 4.1 and `bun test`
-- [ ] 4.3 Remove from `core/testing.md` the line saying CI flakes wait for
+- [ ] 5.2 Add both routes to `bun/ci-run.ts`. Verify with 5.1 and `bun test`
+- [ ] 5.3 Remove from `core/testing.md` the line saying CI flakes wait for
       this flow, if the stopgap still carries one. Verify with
       `git grep -n "run_attempt" core`
 
-## 5. The engine's webhook call
+## 6. The engine's webhook call
 
 Needs both the engine that `vps-board-loop`'s spike confirmed and that change's
 group 3 merged on it.
 
-- [ ] 5.1 Copy `bun/` into the runner image at `/opt/orchestrator/bun/`,
+- [ ] 6.1 Copy `bun/` into the runner image at `/opt/orchestrator/bun/`,
       root-owned, and add `github_webhook_secret` to the secret files the host
       README provisions. Add the engine's webhook workflow under
       `orchestrator/workflows/`: it answers at once, then calls the handler
@@ -106,6 +129,6 @@ group 3 merged on it.
       call needs (for SSH, a second forced-command key). Extend
       `orchestrator/layout.test.ts` for both. Verify with
       `bun test orchestrator`
-- [ ] 5.2 Write the user acts of `proposal.md` into the host README in order,
+- [ ] 6.2 Write the user acts of `proposal.md` into the host README in order,
       and record there that a `ping` from each repository's new webhook prints
       `ignored`. Verify by reading the README back
