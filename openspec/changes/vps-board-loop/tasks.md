@@ -79,7 +79,7 @@ the engine group 3 builds on. It needs the user acts that give the host a
 Claude token and a GitHub token first, and the user's SSH key loaded on the
 machine that carries the step.
 
-- [ ] 2.1 On the VPS, in a throwaway directory outside any clone, start each
+- [x] 2.1 On the VPS, in a throwaway directory outside any clone, start each
       engine's stock image (n8n ≥ 2.38.2; Windmill's community edition) beside
       a copy of group 1's runner, one engine at a time. Drive the same
       scenario through each: a scheduled start of `pass.sh` against a clone
@@ -108,7 +108,11 @@ machine that carries the step.
       this where both engines fail joins the table as a row read from its
       docs, without a run.
       2026-10-21: the secret-free rows are run and recorded in `design.md`
-      *Spike: n8n against Windmill*. The token and Cloudflare rows are open
+      *Spike: n8n against Windmill*. 2026-10-22: the token and Cloudflare
+      rows are run and recorded there as rows 8–12. The subscription limit
+      was not provoked: a failed `claude -p` was forced with an invalid
+      token instead (row 10), since burning the limit would lock the user's
+      own sessions for hours
 - [ ] 2.2 Write the results into `design.md` under a new *Spike: n8n against
       Windmill* section, one row per criterion and engine. Whatever the
       results, stop: put the table to the user as the question on the card,
