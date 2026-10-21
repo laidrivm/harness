@@ -52,10 +52,11 @@ per repository at `~runner/push/<owner>/<repo>`, two segments, since a hyphen
 inside an owner or a repository name would make a joined `<owner>-<repo>`
 name two repositories. Each pass it fetches the push clone, reads
 `devDependencies.harness` from `origin/main:package.json` with `git show` and
-`jq` (`github:laidrivm/harness#<commit>`), takes the part after `#`, and
-checks the harness clone out detached at that commit, forced and cleaned. A
-part that is not exactly 40 lowercase hex characters starts no pass and is
-named in the stop file.
+`jq` (`github:laidrivm/harness#<commit>`), takes the part after `#`, fetches
+that commit into the harness clone from the harness's own remote, and checks
+the clone out detached at it, forced and cleaned. A part that is not exactly
+40 lowercase hex characters, or a commit the fetch does not bring, starts no
+pass and is named in the stop file.
 The board loop, the goal check and `github-app.ts` import only `node:` and
 `bun:` modules, so the checkout needs no install. The judge copy is that
 checkout's `goal-check.ts`.

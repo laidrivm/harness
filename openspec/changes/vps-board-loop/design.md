@@ -67,13 +67,12 @@ Alternative: `host/`. Rejected, because the router is not host configuration.
 ### The pass runs in a runner container, reached over SSH
 
 The card's constraint, *Sandbox per agent*, says the App's private key never
-enters the agent's sandbox. That key is not n8n's: under `github-app-identity`
-the runner itself reads it from a file and mints the push token after the
-session ends, and the user decided (ghapp card, 2026-10-18) that it lives on
-the VPS in a file only the runner's Unix user reads, with sessions run as a
-different user. `runner-isolation` narrows that: a key-holder user alone
-reads the key and mints `runner` an hourly token (user, 2026-10-21). n8n's credential store holds only the SSH key that reaches
-the runner. An agent session inside n8n's container, as the explore sketched
+enters the agent's sandbox. That key is not n8n's either. On the host a
+key-holder user alone reads it and mints `runner` an hourly token
+(`runner-isolation`, user, 2026-10-21); `runner` never reads the key file.
+This supersedes the ghapp card's 2026-10-18 reading, under which the runner's
+own Unix user read it. Sessions run as a third user, `agent`. n8n's
+credential store holds only the SSH key that reaches the runner. An agent session inside n8n's container, as the explore sketched
 with Execute Command in a custom n8n image, would still read that store (same
 uid, `/home/node/.n8n`) and inherit n8n's environment, `N8N_ENCRYPTION_KEY`
 included. So:
@@ -81,8 +80,10 @@ included. So:
 - n8n runs the stock image. Execute Command stays disabled, as n8n 2.x ships
   it.
 - A `runner` service, built from `runner/Dockerfile`, holds git, `gh`, bun,
-  `claude`, `openspec`, `coderabbit`, `flock` and `sshd`. It holds two users.
-  `runner` runs `pass.sh` and `board-loop.ts` and alone reads the secret
+  `claude`, `openspec`, `coderabbit`, `flock` and `sshd`. This group gives it
+  two users; `runner-isolation` group 3 adds the key holder and a second
+  sudoers rule, `/opt/orchestrator/mint` as the key holder, and its
+  `layout.test.ts` cases pin both rules. `runner` runs `pass.sh` and `board-loop.ts` and alone reads the secret
   files this group provisions; the App's key, which `runner-isolation`
   group 3 adds, is the key holder's alone. Compose mounts file-backed secrets as bind mounts and applies no
   `uid`, `gid` or `mode` to them, so the files keep their host ownership: the
@@ -91,8 +92,8 @@ included. So:
   0400 and the directory 0500. `/run/secrets` stays traversable; what keeps
   `agent` out is the files' owner and mode. `agent` runs the pick and
   stage sessions: `board-loop.ts` starts `claude` as `agent` through
-  `sudo -u agent /opt/orchestrator/as-agent`, the one command the sudoers
-  rule names (`runner-isolation` *Three users* rejects `setpriv`), with the
+  `sudo -u agent /opt/orchestrator/as-agent`, the one command this group's
+  sudoers rule names (`runner-isolation` *Three users* rejects `setpriv`), with the
   allowlisted environment `github-app-identity` builds, so no session can
   read a secret file or inherit a token beyond what that allowlist passes.
   `agent`'s home is one persistent volume: `~/.claude`, `~/.claude.json`,
@@ -172,6 +173,15 @@ to a local model.
    the status. The user's decision says "exits 1". The runner itself exits 0
    or 1. Any other status means the pass did not run as designed (127, a
    signal), so the wrapper fails closed on every non-zero status.
+
+Steps 4 and 5 are the wrapper on `main` today. `runner-isolation` groups 1
+and 2 replace step 5 before the App key reaches the host: the board loop runs
+from `runner`'s own harness checkout with the push clone as its working
+directory, every command in the session's clone goes through
+`/opt/orchestrator/as-agent`, and the pass exports no `GH_TOKEN`; only the
+push and the pull request's calls read the PAT file, and with the App
+configured nothing does. Its spec's *The wrapper starts the pass with the
+environment it names* states the result.
 
 The pass's own record in the gate ledger is unchanged. The wrapper writes no
 ledger line. A pass's durable result is on the runner's volume, whatever
