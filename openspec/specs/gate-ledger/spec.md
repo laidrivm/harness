@@ -20,7 +20,9 @@ denominator. A call a guard allows SHALL NOT be recorded. The one exception
 is the question gate, which refuses only in an unattended session: it SHALL
 record each call it sees, as allowed, as passed to the prompt, or as
 refused, as agent-permissions' *A question to the user on a board card needs
-no prompt* requires.
+no prompt* requires. The flake watch refuses nothing: it SHALL record each
+flaky run it names, as flaky-tests' *Each flaky finding is recorded in the
+gate ledger* requires, so that the wrap-up counts flakes beside refusals.
 
 #### Scenario: A commit on main
 
@@ -57,6 +59,12 @@ no prompt* requires.
 - **THEN** the ledger gains one record naming the question gate, `refused`,
   and the rule `unmarked`, where the same comment with a person at the prompt
   records `passed`
+
+#### Scenario: A flaky run named
+
+- **WHEN** the flake watch names a run that passed after an identical failed
+  run on the same tree
+- **THEN** the ledger gains one record naming the flake watch and `flaky`
 
 #### Scenario: A turn that completed nothing
 
