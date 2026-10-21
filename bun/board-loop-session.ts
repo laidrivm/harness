@@ -34,12 +34,19 @@ const allowed =(env: NodeJS.ProcessEnv) =>
  * One `claude -p` session, ended at `limit`, and everything it started ended
  * with it, however it exits. `capture` keeps its output rather than showing
  * it. `as` is the commit identity the runner adds to the allowlist's
- * variables. `left` names its process group when a member outlived the
- * bounded wait.
+ * variables, and `extra` flags it adds to the command line. `left` names its
+ * process group when a member outlived the bounded wait.
  */
-export async function session(text: string, limit: number, kill: Kill, capture = false, as: Record<string, string> = {}) {
+export async function session(
+	text: string,
+	limit: number,
+	kill: Kill,
+	capture = false,
+	as: Record<string, string> = {},
+	extra: string[] = [],
+) {
 	// Auto mode with nothing to answer prompts; never a bypass of permissions.
-	const flags = ["--permission-mode", "auto", "--permission-prompts", "none"];
+	const flags = ["--permission-mode", "auto", "--permission-prompts", "none", ...extra];
 	// A file, not a pipe: a child the session leaves running could hold a pipe open and stall the pass.
 	const dir = capture ? mkdtempSync(join(tmpdir(), "board-loop-")) : "";
 	let interrupt: (() => void) | undefined;

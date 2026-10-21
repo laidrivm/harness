@@ -1,6 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { change, clone, commit, lowered, out, records, run, TICKED } from "./board-loop.fixture.ts";
+import { lookup } from "./pr-sessions.ts";
 
 /**
  * The runner's push and pull request after the stage session, and what keeps
@@ -151,5 +154,66 @@ describe("the push or the pull request fails", () => {
 		const { dir } = clone();
 		const r = run(dir, [], { createCode: 1, verdict: OPEN });
 		expect(r.last).toBe(`board-loop: open — apply demo step 1: ${OPEN}`);
+	});
+});
+
+describe("the PR → session table", () => {
+	const TABLE = join("orchestrator", "pr-sessions.jsonl");
+	const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+	const rows = (home: string) =>
+		readFileSync(join(home, TABLE), "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
+	/** A clone whose `origin` reads as a GitHub URL while git still reaches the bare one. */
+	const github = () => {
+		const made = clone();
+		git(made.dir, "remote", "set-url", "origin", "https://github.com/o/demo.git");
+		git(made.dir, "config", `url.${made.origin}.insteadOf`, "https://github.com/o/demo.git");
+		return made;
+	};
+
+	// spec: board-loop/a-step-ready-to-push
+	test("a push appends one line with every field before it runs [21]", () => {
+		const { dir } = github();
+		const r = run(dir);
+		const [row] = rows(r.home);
+		expect(rows(r.home).length).toBe(1);
+		expect([row.repo, row.branch, row.clone]).toEqual(["o/demo", "feat/demo", realpathSync(dir)]);
+		expect(row.session).toMatch(UUID);
+		expect(r.pushTable?.trim()).toBe(JSON.stringify(row));
+		expect(r.last).toBe("board-loop: met — apply demo step 1");
+	});
+
+	// spec: board-loop/a-step-continued-by-a-second-session
+	test("a continued branch appends a line for the new session, which a lookup finds [28]", () => {
+		const { dir } = github();
+		git(dir, "push", "-q", "origin", "main:refs/heads/feat/demo");
+		const home = emptyDir("board-loop-home-");
+		mkdirSync(join(home, "orchestrator"));
+		const older = { repo: "o/demo", branch: "feat/demo", session: "older", clone: "/c", at: "2026-10-19T00:00:00.000Z" };
+		writeFileSync(join(home, TABLE), `${JSON.stringify(older)}\n`);
+		const r = run(dir, [], { commits: true }, { home });
+		const [, latest] = rows(home);
+		expect(latest.session).toMatch(UUID);
+		expect(lookup("o/demo", "feat/demo", join(home, TABLE))?.session).toBe(latest.session);
+		expect(r.last).toBe("board-loop: met — apply demo step 1");
+	});
+
+	// spec: board-loop/a-step-not-ready
+	test("no push appends nothing [27]", () => {
+		const { dir } = clone();
+		const r = run(dir, [], { beforePush: OPEN });
+		expect([calls(r.calls, "git push"), existsSync(join(r.home, TABLE))]).toEqual([[], false]);
+	});
+
+	// spec: board-loop/the-table-cannot-be-written
+	test("an unwritable table pushes nothing, opens nothing and is open naming it [26]", () => {
+		const { dir } = clone();
+		const home = emptyDir("board-loop-home-");
+		writeFileSync(join(home, "orchestrator"), "a file where the directory goes");
+		const r = run(dir, [], {}, { home });
+		expect([calls(r.calls, "git push"), calls(r.calls, "gh pr create")]).toEqual([[], []]);
+		expect(r.last).toStartWith("board-loop: open — apply demo step 1: the PR → session table ");
+		expect(r.last).toContain(join(home, TABLE));
+		expect(records(r.state).map((x) => x.decision)).toEqual(["open"]);
+		expect(out(dir, "branch", "--list", "feat/demo")).toContain("feat/demo");
 	});
 });

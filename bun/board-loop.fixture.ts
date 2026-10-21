@@ -139,7 +139,9 @@ function bin(log: string, s: Stubs): string {
 	};
 	// The push, the create, each session and the full check save the environment they saw.
 	const saw = (what: string) => `/usr/bin/env > '${log}.${what}-env'`;
-	stub("git", `[ "$1" = push ] && ${saw("push")}\nexec '${REAL_GIT}' "$@"`);
+	// The push also saves the PR → session table as it stands at that moment.
+	const table = `/bin/cat "$HOME/orchestrator/pr-sessions.jsonl" > '${log}.push-table' 2>/dev/null`;
+	stub("git", `[ "$1" = push ] && { ${saw("push")}; ${table}; }\nexec '${REAL_GIT}' "$@"`);
 	const create = `if [ "$1 $2" = "pr create" ]; then ${saw("create")}; /bin/cat > '${log}.body'; exit ${s.createCode ?? 0}; fi\n`;
 	if (s.gh !== null)
 		stub("gh", `${s.ghSleep ? `exec /bin/sleep ${s.ghSleep}\n` : ""}${create}printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
@@ -206,18 +208,18 @@ export const trusting = (...dirs: string[]) =>
 		projects: Object.fromEntries(dirs.map((d) => [realpathSync(d), { hasTrustDialogAccepted: true }])),
 	});
 
-type Opts = { env?: Record<string, string>; state?: string; entry?: string; claudeJson?: string | null; stdin?: number };
+type Opts = { env?: Record<string, string>; state?: string; entry?: string; claudeJson?: string | null; stdin?: number; home?: string };
 
 /** What one pass is spawned as, and where it leaves its log and its ledger. */
 function prepare(dir: string, args: string[], s: Stubs, opts: Opts) {
 	const log = join(emptyDir("board-loop-log-"), "calls");
 	writeFileSync(log, "");
 	const state = opts.state ?? emptyDir("board-loop-state-");
-	const home = emptyDir("board-loop-home-");
+	const home = opts.home ?? emptyDir("board-loop-home-");
 	const claudeJson = opts.claudeJson === undefined ? trusting(dir) : opts.claudeJson;
 	if (claudeJson !== null) writeFileSync(join(home, ".claude.json"), claudeJson);
 	const argv = [process.execPath, opts.entry ?? runner, ...args];
-	return { argv, env: { PATH: bin(log, s), HOME: home, XDG_STATE_HOME: state, ...opts.env }, log, state };
+	return { argv, env: { PATH: bin(log, s), HOME: home, XDG_STATE_HOME: state, ...opts.env }, log, state, home };
 }
 
 /** A file's text, or undefined where no call wrote it. */
@@ -230,14 +232,17 @@ const saved = (file: string) => {
 };
 
 /** What a pass left: its output, the stubs' log, the body `gh pr create` read and each environment saved. */
-function result(code: number | null, stdout: string, stderr: string, log: string, state: string) {
+function result(code: number | null, stdout: string, stderr: string, log: string, state: string, home: string) {
 	return {
 		code,
 		text: `${stdout}${stderr}`.trim(),
 		last: stdout.trim().split("\n").at(-1) ?? "",
 		calls: readFileSync(log, "utf8"),
 		state,
+		home,
 		body: saved(`${log}.body`),
+		/** The PR → session table as the push found it, or undefined where no push ran or no table existed. */
+		pushTable: saved(`${log}.push-table`),
 		/** The environment `push`, `create`, `pick`, `stage` or `check` saw, or undefined where none ran. */
 		env: (what: string) => {
 			const lines = saved(`${log}.${what}-env`)?.split("\n").filter(Boolean);
@@ -252,17 +257,17 @@ function result(code: number | null, stdout: string, stderr: string, log: string
  * and trusts `dir` unless given.
  */
 export function run(dir: string, args: string[] = [], s: Stubs = {}, opts: Opts = {}) {
-	const { argv, env, log, state } = prepare(dir, args, s, opts);
+	const { argv, env, log, state, home } = prepare(dir, args, s, opts);
 	const call = Bun.spawnSync(argv, { cwd: dir, stdin: opts.stdin, env });
-	return result(call.exitCode, call.stdout.toString(), call.stderr.toString(), log, state);
+	return result(call.exitCode, call.stdout.toString(), call.stderr.toString(), log, state, home);
 }
 
 /** `run` without blocking, for a case whose stand-in API answers from the test's own process. */
 export async function runAsync(dir: string, s: Stubs = {}, opts: Opts = {}) {
-	const { argv, env, log, state } = prepare(dir, [], s, opts);
+	const { argv, env, log, state, home } = prepare(dir, [], s, opts);
 	const child = Bun.spawn(argv, { cwd: dir, env, stdout: "pipe", stderr: "pipe" });
 	const [stdout, stderr] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text()]);
-	return result(await child.exited, stdout, stderr, log, state);
+	return result(await child.exited, stdout, stderr, log, state, home);
 }
 
 /** The `loop` records in a state directory's ledger. */
