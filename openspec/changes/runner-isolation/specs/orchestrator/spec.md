@@ -18,12 +18,13 @@ clone, its `node_modules` included.
 
 - **WHEN** the repository's `main` pins a harness commit other than the one
   the runner's checkout holds
-- **THEN** the pass runs that pinned commit, read from `main`, never from the
-  session's branch
+- **THEN** the runner fetches that commit into its checkout and the pass runs
+  it, read from `main`, never from the session's branch
 
 #### Scenario: The pin names no full commit
 
-- **WHEN** the part of `main`'s harness pin after `#` is not a full commit
+- **WHEN** the part of `main`'s harness pin after `#` is not a full commit, or
+  the fetch from the harness's remote does not bring it
 - **THEN** no pass starts, and the stop file names the value
 
 ### Requirement: The runner runs nothing in a session's clone as itself

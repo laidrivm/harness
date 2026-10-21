@@ -32,8 +32,10 @@ checkout*, §*The runner runs nothing in a session's clone as itself* and
       does not load; with no launcher set, a pass runs as today. In the push
       clone, `HEAD` names the step branch at the bundle's tip before the goal
       check, and the goal check finds the record the session's clone made of
-      that tip. A pin whose part after `#` is not a full commit starts no
-      pass, naming the value; two repositories whose `<owner>-<repo>` would
+      that tip. A pin that moved past the harness clone's last fetch is
+      fetched before the checkout; a pin whose part after `#` is not a full
+      commit, or that the fetch does not bring, starts no pass, naming the
+      value; two repositories whose `<owner>-<repo>` would
       coincide get two push clones
 - [ ] 1.3 Add the launcher path to `bun/board-loop.ts` and
       `bun/board-loop-session.ts` (`HARNESS_AS_AGENT`, `HARNESS_CLONE`), the
