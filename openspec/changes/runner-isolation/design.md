@@ -140,12 +140,16 @@ group 4 has merged.
 file's path, `HARNESS_GH_TOKEN_FILE`, and `publish()` reads it only for the
 push, the `gh pr create` and the check that reads the pull request after it,
 handing the value to those processes' environments alone. With the App
-configured `pass.sh` passes no path. Any other `gh` call in the pass runs
-unauthenticated; task 2.1 lists them.
+configured `pass.sh` passes no path, and its secret check (`vps-board-loop`
+step 4) neither requires nor opens `gh_token`, so an App-only host holds no
+PAT file at all. Any other `gh` call in the pass runs unauthenticated; task
+2.1 lists them.
 
 ### The key holder
 
-The App's key file is owned by the key holder, mode 0400. The mint helper is
+The App's key file is owned by the key holder, mode 0400, in a directory of
+its own the key holder owns, outside `orchestrator/secrets`, whose 0500
+`runner`-owned directory would keep the key holder out. The mint helper is
 `github-app.ts`'s `mint()` copied into the image, root-owned: the key holder
 must not run code `runner` can write, so it never runs the runner's checkout.
 It takes `<owner>/<repo>` and the permissions as arguments, refuses a

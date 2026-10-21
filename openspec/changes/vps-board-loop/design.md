@@ -88,8 +88,11 @@ included. So:
   group 3 adds, is the key holder's alone. Compose mounts file-backed secrets as bind mounts and applies no
   `uid`, `gid` or `mode` to them, so the files keep their host ownership: the
   image gives `runner` a fixed numeric uid, and the host README has the user
-  make each file under `orchestrator/secrets` owned by that uid with mode
-  0400 and the directory 0500. `/run/secrets` stays traversable; what keeps
+  make each file this group provisions under `orchestrator/secrets` owned by
+  that uid with mode 0400 and the directory 0500. The App's key is not one of
+  them: `runner-isolation` puts it in a directory of its own, owned by the
+  key holder's fixed uid with mode 0400, since a 0500 directory `runner` owns
+  would keep the key holder out. `/run/secrets` stays traversable; what keeps
   `agent` out is the files' owner and mode. `agent` runs the pick and
   stage sessions: `board-loop.ts` starts `claude` as `agent` through
   `sudo -u agent /opt/orchestrator/as-agent`, the one command this group's
@@ -175,8 +178,9 @@ to a local model.
    signal), so the wrapper fails closed on every non-zero status.
 
 Steps 4 and 5 are the wrapper on `main` today. `runner-isolation` groups 1
-and 2 replace step 5 before the App key reaches the host: the board loop runs
-from `runner`'s own harness checkout with the push clone as its working
+and 2 replace them before the App key reaches the host. With the App
+configured, step 4 neither requires nor opens `gh_token`. In step 5 the board
+loop runs from `runner`'s own harness checkout with the push clone as its working
 directory, every command in the session's clone goes through
 `/opt/orchestrator/as-agent`, and the pass exports no `GH_TOKEN`; only the
 push and the pull request's calls read the PAT file, and with the App

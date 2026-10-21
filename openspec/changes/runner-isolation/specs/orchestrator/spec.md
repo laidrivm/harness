@@ -102,7 +102,8 @@ nothing else; with the App configured it SHALL not read that file.
 #### Scenario: The App is configured
 
 - **WHEN** the pass runs with the App's settings
-- **THEN** the user's token file is never opened
+- **THEN** the user's token file is never opened, and a host with no such
+  file starts the pass
 
 ### Requirement: Only the key holder reads the App's private key
 
