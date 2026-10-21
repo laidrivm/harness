@@ -50,13 +50,15 @@ const WITHHELD = "--disallowedTools mcp__*__notion-create-comment";
 const ASKED = `BLOCKED — a choice only the user can make\nQUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}`;
 const POSTED = `question: posted on ${CARD}, Assign set`;
 
-/** A runner home holding the settings file at `mode`, and the calls a stand-in Notion saw. */
-function configured(mode = 0o600) {
+/** A runner home holding each settings file named, at `mode`. */
+function configured(mode = 0o600, ...names: string[]) {
 	const home = emptyDir("board-loop-home-");
 	mkdirSync(join(home, ".config/harness"), { recursive: true });
-	const file = join(home, ".config/harness/notion-bot.json");
-	writeFileSync(file, JSON.stringify({ token: TOKEN, user: USER }));
-	chmodSync(file, mode);
+	for (const name of names.length ? names : ["notion-bot.json"]) {
+		const file = join(home, ".config/harness", name);
+		writeFileSync(file, JSON.stringify({ token: TOKEN, user: USER }));
+		chmodSync(file, mode);
+	}
 	return home;
 }
 
@@ -102,6 +104,24 @@ describe("the runner posts the question", () => {
 		expect(lines).toHaveLength(5);
 		for (const part of ["`QUESTION: ", MARK, "posts no comment"]) expect(lines[3]).toContain(part);
 		expect(forms()).toContain(lines[3]);
+	});
+
+	// spec: stage-goal/a-stage-launched-where-the-ask-integration-is-configured
+	test("ask settings alone: the fourth line names the ask command and the mark, as the doc's variant does, and nothing is withheld [62]", async () => {
+		const { dir } = clone();
+		const r = await pass(dir, {}, configured(0o600, "notion-ask.json"));
+		const lines = stage(r.calls);
+		expect(lines).toHaveLength(5);
+		for (const part of ["`bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`", MARK]) expect(lines[3]).toContain(part);
+		expect(forms()).toContain(lines[3]);
+		for (const s of ["pick", "stage"]) expect(r.env(s)?.[RUNNER_ASKS.name]).toBeUndefined();
+		expect(r.calls).not.toContain("--disallowedTools");
+	});
+
+	test("both settings files: the runner posts, so the fourth line names QUESTION: [62]", async () => {
+		const { dir } = clone();
+		const lines = stage((await pass(dir, {}, configured(0o600, "notion-bot.json", "notion-ask.json"))).calls);
+		expect(lines[3]).toContain("`QUESTION: ");
 	});
 
 	// spec: board-loop/a-usable-settings-file agent-permissions/a-hook-that-cannot-read-the-variable

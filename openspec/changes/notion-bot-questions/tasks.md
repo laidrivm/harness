@@ -150,7 +150,7 @@ one is configured*, and `stage-goal` §*An unattended stage runs under one
 goal on the check*, for §*A stage launched where the ask integration is
 configured*. Needs no orchestrator.
 
-- [ ] 4.1 Write the failing cases in a new `bun/notion-ask.test.ts` against a
+- [x] 4.1 Write the failing cases in a new `bun/notion-ask.test.ts` against a
       `Bun.serve` stub. Cover no settings file [42], an empty question file
       [43], a question posted [44], and a waiting question on the second page
       [45]. Cover a `harness-answer` that does not unblock [46], 1500 against
@@ -159,25 +159,25 @@ configured*. Needs no orchestrator.
       and no `PATCH` [51], and that `notion-bot.json` is never read in its
       place [52]. Cover a 404 on the comments read [53], a failed `POST` [54]
       and a missing question file [55]
-- [ ] 4.2 Write the failing gate cases in a new
+- [x] 4.2 Write the failing gate cases in a new
       `bun/question-gate-ask.test.ts`. Cover no settings file [56], a
       conforming question denied naming the command [57], and an empty file
       counted as present [58]. A directory at the path also counts as present,
       since the gate reads existence alone [59]. A reply gets no answer [60],
       and `HARNESS_RUNNER_ASKS` wins [61]
-- [ ] 4.3 Add `bun/notion-ask.ts` on `notion-bot.ts`'s settings read and
+- [x] 4.3 Add `bun/notion-ask.ts` on `notion-bot.ts`'s settings read and
       REST calls, as `design.md` *The ask command and its settings* says, and
       see 4.1 pass. Take the settings read's path as an argument rather than
       writing it a second time
-- [ ] 4.4 Add the gate's `ask` refusal in `bun/question-gate.ts`, after the
+- [x] 4.4 Add the gate's `ask` refusal in `bun/question-gate.ts`, after the
       runner's, and see 4.2 pass with the rest of `question-gate*.test.ts`
       unchanged
-- [ ] 4.5 Write the failing launch-form case [62] in
+- [x] 4.5 Write the failing launch-form case [62] in
       `bun/board-loop-question.test.ts`, then make the runner name the ask
       command when it finds `notion-ask.json` and no VPS settings
-- [ ] 4.6 Add `Bash(bun bun/notion-ask.ts *)` to `.claude/settings.json`'s
+- [x] 4.6 Add `Bash(bun bun/notion-ask.ts *)` to `.claude/settings.json`'s
       allow list, and run `bun test bun/settings*.test.ts`
-- [ ] 4.7 Reconcile the restating sites, and read each one back after the
+- [x] 4.7 Reconcile the restating sites, and read each one back after the
       edit:
       - `core/feature-workflow.md`'s question bullet and its hand-launched
         forms name the ask command with its condition;

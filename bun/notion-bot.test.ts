@@ -9,8 +9,8 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { named } from "./board-loop-push.ts";
-import { asked, settings, where } from "./notion-bot.ts";
-import { MARK, REMEDY } from "./question-gate.ts";
+import { asked, settings } from "./notion-bot.ts";
+import { MARK, REMEDY, where } from "./question-gate.ts";
 
 const dirs: string[] = [];
 afterAll(() => {

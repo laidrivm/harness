@@ -138,7 +138,8 @@ The launcher starts the stage with the goal as its prompt, and puts the
 declared line on a line of its own. A copy of the form from a terminal, which
 indents each line, still declares it. The fourth line names the question gate's
 mark, character for character, and the form of the comment that carries a
-question, so a stage's first question can pass the gate. For step 2 of a
+question, so a stage's first question can pass the gate; on a machine with
+the ask settings it names the ask command instead (below). For step 2 of a
 change `demo` in a consumer:
 
 ```text
@@ -171,7 +172,16 @@ becomes:
 A question only the user can settle goes in the final message, never on the card, since this session posts no comment: after reading that card and its comments, write a line `QUESTION: <the id of the card of the change>` before any `PR-TITLE:` line, with the question below it, opening with `harness-question`, its two backticks included — the runner posts it.
 ```
 
-The hand-launched forms keep the fourth line above.
+Otherwise, where the launcher finds the ask settings, `notion-ask.json` under
+the user's config home (see the README), the fourth line names the ask
+command instead, in the board loop's form and the hand-launched ones alike:
+
+```text
+A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with `harness-question`, its two backticks included, run `bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`, then set the `Assign` of the card to the user.
+```
+
+Without the ask settings, the hand-launched forms keep the fourth line
+above.
 
 An answer step, which the board loop launches once every group is ticked and
 the card holds the user's answer, changes only the first line of the board
@@ -342,14 +352,18 @@ for them is already here.
   the mark after the last one. A session the board loop's runner launches
   with the Notion integration posts no comment: it names its question in
   its final message, and the runner posts the question from the integration
-  and sets `Assign`. An answer
+  and sets `Assign`. On a machine with the ask settings, any other session
+  posts its question with the ask command, `bun/notion-ask.ts <card id>
+  <file>`, from the ask integration, and sets `Assign` itself; the question
+  gate refuses it from the user's account there. An answer
   the board loop carries counts as applied in the turn its step's pull request
   opens, or the turn an `idea` card is filed for an answer that asks for a
   change of its own (task-board, *An answer the board loop carries is applied
   when its pull request opens*). task-board's
   *An open question waits on its card, assigned to the user* and *A question
   already open is not asked again* fix the rest, and the question gate decides
-  which comment needs no prompt.
+  which comment needs no prompt, or, with the ask settings, which goes to the
+  ask command.
 - List the files a plan routes, moves or deletes, and confirm each exists,
   before the plan is written.
 - Cite the requirement that fixes a value; never restate the value in another
