@@ -32,8 +32,12 @@ Decisions the user took on that card, fixed here and not reopened:
    account. `main` is protected by a ruleset: a pull request with one
    approval.
 3. The board loop lives on the VPS (change `vps-board-loop`). Routines carry
-   only timer flows that read and report.
-4. One trial routine, once a day, switched off after the spike.
+   only timer flows that read and report. Superseded 2026-10-21 (user): timer
+   and trigger flows, audits and blog reading included, run on the VPS too,
+   from the engine's schedule or a systemd timer; a routine stays an option,
+   under D7's rule, and none is planned.
+4. One trial routine, once a day, switched off after the spike. Deferred
+   2026-10-21 (user), with the other live checks, to a card of their own.
 
 ## Goals / Non-Goals
 
@@ -146,7 +150,8 @@ a proxy URL. A URL that yields no two such segments fails the read before
 *Alternative considered.* `gh api repos/{owner}/{repo}/…`, whose placeholders
 `gh` fills from the clone's remotes. It needs a remote on a host `gh` knows,
 and what the cloud clone's `origin` reads is unprobed; the parse works for
-either. Task 4.1 reads it live.
+either. Unverified live: the live checks that would read it are a card of
+their own (user, 2026-10-21).
 
 `github-app-identity`'s group 2 plans an `origin` parse of its own in
 `bun/github-app.ts`, refusing every host but GitHub's. Whichever lands second
@@ -158,10 +163,10 @@ twice; the host check stays the App's, since a token must not go to a proxy.
 `core/autonomy.md` gains a short *Routines* section stating the rule the
 `agent-autonomy` delta fixes, and README's *Cloud sessions* points to it. No
 test can read a routine's prompt, which is stored in claude.ai; the rule is
-what the user applies when creating one, and the trial routine is its first
-case.
+what the user applies when creating one, and the trial routine of the
+deferred live checks would be its first case.
 
-The trial routine needs a skill to call, so the change adds an owned one,
+A routine needs a skill to call, so the change adds an owned one,
 `core/skills/cloud-probe/SKILL.md`, linked at `.claude/skills/cloud-probe`,
 with a row in README's skill table. It carries no `disable-model-invocation`:
 `agent-permissions`' *Who may invoke a skill is enforced, not narrated* fails
@@ -196,8 +201,10 @@ is what the rule is written against.
 
 Whether Claude Code fires `PermissionRequest` in the cloud is undocumented,
 and the spike shows a routine prompts, which is the event that hook answers.
-Group 4 asks an attended cloud session for one call the gate does not allow:
-a comment on this change's card whose text does not open with the mark. The
+The live checks ask an attended cloud session for one call the gate does not
+allow: a comment on this change's card whose text does not open with the
+mark. They are deferred to a card of their own (user, 2026-10-21), so
+whether the hook fires in the cloud stays unverified until they run. The
 gate gives no answer there, so the prompt shows and the user declines it. The
 gate records every call it sees, so a `question-gate` record in the VM's
 `gates.jsonl` for that call shows the hook fired. Its absence shows the hook
@@ -222,19 +229,18 @@ operand, another method or a flag the read list does not name keeps the
 refusal. `{owner}/{repo}` placeholders are refused too: the session names
 the repository it read from `origin`.
 
-### D9. Four groups
+### D9. Three groups
 
 1. The REST read: code and tests, nothing cloud-specific.
 2. The install prefix, the setup script and its test, the README section,
    the routine rule, `cloud-probe`, and D10's guard rule.
 3. After both merge: the self-pin moved past them.
-4. After that merges: the live checks, recorded in the pull request's
-   *Check by hand* list, and the design amended through `/opsx:update` where
-   they disagree with it.
 
-Group 4 waits on the pin because the gates and the goal check a cloud
-session runs come from `node_modules/harness/`, a merged commit, and on its
-own merge because a cloud session and a routine clone `main`.
+The live checks were a fourth group; the user deferred them to a card of
+their own (2026-10-21), since the timer flows that would have used routines
+run on the VPS. They wait on the pin, because the gates and the goal check a
+cloud session runs come from `node_modules/harness/`, a merged commit, and
+amend this design where the cloud disagrees with it.
 
 ## Risks / Trade-offs
 
@@ -249,7 +255,7 @@ own merge because a cloud session and a routine clone `main`.
   it and the diff budget on every pull request.
 - [Claude Code may hand the first tool call over before `SessionStart` ends]
   → the bootstrap then refuses it with its hint and a `bun install` the
-  agent runs prompts; task 4.1 reads which happens.
+  agent runs prompts; the deferred live checks read which happens.
 - [A session with two repositories reads no hooks, so the harness is off
   without a word] → the README says to attach `harness` alone, and
   `cloud-probe` reports the missing install.
@@ -263,8 +269,8 @@ own merge because a cloud session and a routine clone `main`.
 
 Group 1 merges and changes nothing visible locally. Group 2 merges; the
 next local session's notice is unchanged, and consumers receive the prefix
-at their next bump. Group 3 moves the pin, and group 4 runs the checks.
-Rolling back
+at their next bump. Group 3 moves the pin; the live checks are a card of
+their own. Rolling back
 is reverting a group's pull request; the cloud then starts with the harness
 off, as today.
 

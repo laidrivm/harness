@@ -1,6 +1,8 @@
 # cloud-sessions — tasks
 
-Four groups, so the change ships as `feat/cloud-sessions-1` to `-4`.
+Three groups, so the change ships as `feat/cloud-sessions-1` to `-3`. The
+live checks in the cloud, once a fourth group, are a card of their own
+(user, 2026-10-21; design.md D9).
 Numbers in brackets are the ideas of the proposal-stage `/zombies` run listed
 in the proposal's pull request. Each group writes its failing cases first and
 records that they fail against the tree as it stands. Every test closing a
@@ -133,43 +135,11 @@ two new scenarios.
 ## 3. The self-pin past groups 1 and 2
 
 Needs groups 1 and 2 merged. Closes no requirement: the gates and the goal
-check a cloud session runs come from `node_modules/harness/`, so group 4 can
-read them live only once the pin holds this change's code.
+check a cloud session runs come from `node_modules/harness/`, so the deferred
+live checks can read them only once the pin holds this change's code.
 
 - [x] 3.1 Move the self-pin to the `main` commit holding groups 1 and 2 whose
       `test` run passed, as README's *Working on the harness* says.
       `bun install` prompts, so the user approves it (unattended: user —
       report `BLOCKED`, naming the command). Verify: the lockfile's workspace
       block names the pin once, and a new session's notice prints nothing
-
-## 4. Live checks in the cloud
-
-Needs group 3 merged. Closes no requirement; it reads live what no test can,
-records it in this group's pull request, and amends the design where the
-cloud disagrees.
-
-- [ ] 4.1 **User act.** Start one cloud session on
-      `harness` alone, in the `harness` environment, with the prompt
-      `/cloud-probe cloud-sessions`. Record in the pull request's *Check by
-      hand* list: no prompt for `bun install` and the install at the pin; the
-      form of `origin`'s URL; the turn gate's mark present; the commit on
-      `main` refused by the command guard; the goal check's last line naming
-      no pull request for `main` rather than an unreadable state; and whether
-      the first tool call ran after the install or met the bootstrap's hint
-- [ ] 4.2 **User act, in the same session.** Ask it to post a comment on
-      this change's card whose text does not open with the mark, decline the
-      prompt that shows, and have it print the `question-gate` and
-      `command-guard` lines of `gates.jsonl`. Record whether one names the
-      call, and whether the guard's refusal of 4.1's commit is there, which
-      design.md D8 needs before an absent line can mean the hook did not fire
-- [ ] 4.3 **User act.** Create the trial routine: once a day, repository
-      `harness`, environment `harness`, prompt `This session runs
-      unattended.` and, on the next line, `/cloud-probe cloud-sessions`.
-      After its first run, record its final message beside 4.1's and switch
-      the routine off
-- [ ] 4.4 Where 4.1–4.3 disagree with design.md — D1's order against the
-      first tool call, D6's parse against `origin`'s form, D8's hook — amend
-      it through `/opsx:update` in this group's branch; if 4.2 shows, as D8
-      reads it, that the question gate did not fire, file an `idea` card on
-      the `Harness` board for a `PreToolUse` copy (unattended: card — file it and name it in the
-      report). Verify: `openspec validate cloud-sessions` passes

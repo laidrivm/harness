@@ -14,9 +14,9 @@ because a routine's prompt is stored outside the repository, where nothing
 reviews it and nothing notices it drift. `core/autonomy.md` SHALL state the
 rule, and the README's *Cloud sessions* section SHALL point to it.
 
-#### Scenario: The trial routine
+#### Scenario: A routine that probes the cloud
 
-- **WHEN** the user creates the harness's trial routine
+- **WHEN** the user creates a routine on the harness that runs `cloud-probe`
 - **THEN** its prompt is `This session runs unattended.` and, on the next
   line, `/cloud-probe cloud-sessions`, a skill tracked under `core/skills/`
   and its one parameter
