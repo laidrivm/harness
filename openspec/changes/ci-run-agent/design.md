@@ -247,12 +247,15 @@ Before the session, the runner works in the clone:
 - It notes the branch the clone is on.
 - It refuses a tracked edit, as the board loop does.
 - It fetches the pull request's branch, switches to it and fast-forwards it.
-  `HEAD` must then be the run's `head_sha`.
+  `HEAD` must then be the run's `head_sha`. The fetch is from the URL the push
+  uses, as the App, into `origin/<branch>` (apply, 2026-10-22). A clone that
+  cannot be brought there fails after the cleanup, its attempt spent.
 - It writes `gh run view <id> -R <repo> --attempt <n> --log-failed` to
   `/home/agent/ci-logs/<run>-<n>.log`, readable by `agent`'s group. `<n>` is
   the event's `run_attempt`, never the run's latest: a re-run started since
   would otherwise hand the session another attempt's logs, or none (local
-  review, 2026-10-20).
+  review, 2026-10-20). `HARNESS_CI_LOGS` names another directory, which only
+  the tests do; a `gh` that fails fails the flow after the cleanup.
 
 The runner runs `gh` here with the token in `GH_TOKEN`, so no token is ever in
 a session (`github-app-identity`, decision 3). The command is the settled one;
@@ -266,7 +269,12 @@ claude -r <session> -p '<prompt>' --json-schema '<schema>' --output-format json 
 ```
 
 `board-loop-session.ts`'s `session()` gains the extra flags, so the process
-group and the limit are handled once. The schema:
+group and the limit are handled once. As a stage session's, its commits are
+the App's bot's, the identity `github-app.ts` reads, so the host's `agent`
+needs no git identity of its own (apply, 2026-10-22). The runner moves into
+the clone only for the session, never starting `bun` there, so no
+`bunfig.toml` a session can write is read. A session that cannot start
+reads as no answer. The schema:
 
 ```json
 {"type":"object","required":["outcome","summary"],"additionalProperties":false,
