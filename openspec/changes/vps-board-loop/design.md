@@ -350,7 +350,8 @@ the n8n UI was settled by the user on 2026-10-18 (*Phone access* above).
 
 Task 2.1's secret-free rows, run on the VPS on 2026-10-21, and its token
 and Cloudflare rows, run on 2026-10-21 to 22 in a second, short bring-up
-(rows 8–12). The choice of engine goes to the user (task 2.2).
+(rows 8–12). Row 13 is still open. The choice of engine goes to the user
+(task 2.2).
 
 The host is Ubuntu 24.04.4 (kernel 6.8.0-138), with 2 vCPU, 3.7 GiB RAM and
 a 38 GB disk. Docker is `docker.io` 29.1.3 with `docker-compose-v2` 2.40.3,
@@ -376,6 +377,7 @@ held placeholder text, and every port was bound to 127.0.0.1.
 | 10 | T3: a failed `claude -p`, forced with an invalid token rather than by burning the limit | `exit=1`, `is_error: true`, `401`; `pass.sh` wrote its stop file. **The execution shows Success**, and the overview counts no failed run. | The same: `terminal_reason: "api_error"` in the log, stop file written, **a green check**. |
 | 11 | T4: Cloudflare Access from a phone; GitHub's webhook path open, everything else behind the login | **Works.** From outside, `/webhook/github` answered from n8n itself: 202 for a good signature, 401 for a wrong or missing one. `/`, the chat at `/webhook/<id>/chat` and another webhook path answered 302 to the Access login. On the user's phone: the Access login, the n8n UI, the execution list (cut off on the right at phone width) and the chat (`pong: …`) all worked. The user: "могло быть и лучше, но в целом осилить можно". | **Works.** The bypassed job path answered from Windmill itself (`401 Unauthorized`, no token in the URL); `/` and another job path answered 302 to the Access login. On the user's phone: the Windmill login, the Runs list with each job's args and logs, and a run started from the script's form (which finished `exit=0`). The user, against n8n: "как будто получше, да. Но не прям сильно". |
 | 12 | T5: load. The harness's whole `bun test` from `main` in the runner, while T1 ran | 2208 pass, 0 fail, 176 s. The host's used memory peaked at 1191 MiB (2628 MiB available at its lowest); n8n at 430 MiB; the runner's CPU at 108 % of 200 %. | 2208 pass, 0 fail, 176 s. The host peaked at 1147 MiB used (2672 MiB available); server 243 MiB, Postgres 113 MiB, two workers under 50 MiB each; the runner's CPU at 113 %. |
+| 13 | T6: control through a CLI or MCP, so the user can drive the engine by chatting with a session (user, 2026-10-22) | open: not run | open: not run |
 
 With both stacks up, about 1.4 GiB of the 3.7 GiB was in use.
 
@@ -418,7 +420,7 @@ What binds group 3 whichever engine is chosen:
 
 ### Recommendation
 
-n8n. Its webhook rejection is a real 401, which GitHub's delivery log shows
+Provisional until row 13 is run. n8n. Its webhook rejection is a real 401, which GitHub's delivery log shows
 as a failure. Its hosted chat page already gives the phone a control
 surface. Windmill CE withholds concurrency limits and the HTTP-routes API,
 so its webhook URL holds a token and answers 200 to a forged delivery. The
