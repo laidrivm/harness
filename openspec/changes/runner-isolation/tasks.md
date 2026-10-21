@@ -1,0 +1,91 @@
+# runner-isolation — tasks
+
+Three groups, shipped as `feat/runner-isolation-1` to
+`feat/runner-isolation-3`, in order. Groups 1 and 2 are inert on the laptop:
+with no launcher or mint command set, the runner runs as it does today.
+Group 3 edits the image and host README that `vps-board-loop` group 3 adds,
+and starts only once that group has merged. Each group writes its failing
+cases first and records that they fail against the tree as it stands; cite
+each scenario as `// spec: orchestrator/<slug>`. The user acts in
+`proposal.md` are no task of this change.
+
+## 1. Nothing of the session's runs as the runner
+
+Closes `orchestrator` §*The runner runs harness code only from its own
+checkout*, §*The runner runs nothing in a session's clone as itself* and
+§*The runner pushes from its own push clone, a commit whose tests passed*.
+
+- [ ] 1.1 Probe whether `bun --config=<empty file>` stops a `bunfig.toml`
+      `preload` in the working directory from loading, and record the result
+      in `design.md` *Nothing runs as `runner` in a session's clone*. If it
+      does not, switch the design to the empty-directory fallback it names
+      before 1.3
+- [ ] 1.2 Write the failing cases in `bun/board-loop-isolation.test.ts`, with
+      a stub launcher that logs each command it is handed and a stub
+      `claude`: every command whose working directory is the session's
+      clone goes through the launcher; an edited
+      `node_modules/harness/bun/goal-check.ts` in the session's clone is never
+      run; the push comes from the push clone, after the bundle's fetch, for
+      exactly the bundle's tip; a tip with no pre-PR record pushes nothing;
+      the push clone runs no hook; a `bunfig.toml` preload in the pushed tree
+      does not load; with no launcher set, a pass runs as today
+- [ ] 1.3 Add the launcher path to `bun/board-loop.ts` and
+      `bun/board-loop-session.ts` (`HARNESS_AS_AGENT`, `HARNESS_CLONE`), the
+      bundle and push-clone steps to `bun/board-loop-push.ts`, and to
+      `orchestrator/pass.sh` the harness checkout at the pin read from the
+      push clone's `origin/main`. Verify with 1.2, `orchestrator/pass.test.ts`
+      and `bun test`
+- [ ] 1.4 Add to `core/git-and-prs.md`'s hook rule its one exception, the
+      runner's push from its push clone on the host for a commit whose pre-PR
+      record names its SHA, and say the same beside `publish()`. Verify by
+      reading both back and running `bun test bun/review-docs.test.ts`
+
+## 2. The tokens' reach
+
+Closes `orchestrator` §*The user's GitHub token reaches only the push*,
+§*Only the key holder reads the App's private key* and the App scenario of
+§*The wrapper starts the pass with the environment it names*.
+
+- [ ] 2.1 List every `gh` and authenticated call a pass makes, with
+      `git grep -n -e '"gh"' -e GH_TOKEN bun/board-loop*.ts bun/goal-check.ts`,
+      and record in `design.md` *The GitHub token's reach* which run
+      unauthenticated
+- [ ] 2.2 Write the failing cases: `pass.sh`'s pass environment holds no
+      `GH_TOKEN`, holds the App's id and mint command when they are set, and
+      no key path; `publish()` reads `HARNESS_GH_TOKEN_FILE` only for the
+      push, the pull request and the check after it, and never with the App
+      configured; `mint()` with `HARNESS_GITHUB_APP_MINT` runs that command and
+      returns its stdout, with the token in no argument; the mint helper
+      refuses an unlisted repository and a permission outside the fixed set,
+      naming each; `credentials()` appends after an inherited
+      `GIT_CONFIG_COUNT`
+- [ ] 2.3 Implement 2.2 in `orchestrator/pass.sh`, `bun/board-loop-push.ts`
+      and `bun/github-app.ts`, and add the mint helper
+      `bun/github-app-mint.ts`. Remove `credentials()`'s `shortcut:`. Verify
+      with 2.2, `orchestrator/pass.test.ts` and `bun test`
+
+## 3. The host's users
+
+Closes `orchestrator` §*The session user reads no secret file* and the
+user scenario of §*Remote Control runs on the saved login alone, and a
+failing login is reported*. Needs `vps-board-loop` group 3 merged.
+
+- [ ] 3.1 Write the failing cases in `orchestrator/layout.test.ts`: the image
+      creates `runner`, `agent` and the key holder with fixed uids; sudoers
+      holds exactly the two rules `design.md` *Three users* names; its
+      `env_keep` equals the session allowlist in `bun/board-loop-session.ts`;
+      the mint helper and its repository list are root-owned under
+      `/opt/orchestrator`; the remote-control script starts the server as
+      `runner`
+- [ ] 3.2 Add to the image the key holder, the two sudoers rules, the
+      launcher `orchestrator/as-agent` and the mint helper's copy, and to
+      `orchestrator/README.md` the owner and mode of every secret file, the
+      key holder's key file among them. Verify with 3.1 and `docker build`
+      where Docker is available
+- [ ] 3.3 Add `orchestrator/reach-check.sh`, which as `agent` tries to read
+      every secret file the README provisions and as `runner` the App's key,
+      and exits non-zero naming each file it could read. Add it to the host
+      README's bring-up, after the secrets are placed. Verify with a test
+      that runs it over a temporary directory whose modes it sets
+- [ ] 3.4 **User act.** Run `reach-check.sh` on the host after the App key is
+      placed, and record its output in the pull request
