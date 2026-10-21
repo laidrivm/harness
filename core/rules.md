@@ -166,6 +166,8 @@ Rules about how work is carried out here. They do not age with the code.
 - Before applying a review finding to a change, grep its `design.md`, where it
   has one, for a decision the fix reverses, and update that decision in the
   same commit.
+- Before citing a script's exit code as a check, confirm the script runs that
+  check when invoked — a module with no entry point exits 0 and proves nothing.
 
 #### Safety
 
