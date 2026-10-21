@@ -71,7 +71,8 @@ enters the agent's sandbox. That key is not n8n's: under `github-app-identity`
 the runner itself reads it from a file and mints the push token after the
 session ends, and the user decided (ghapp card, 2026-10-18) that it lives on
 the VPS in a file only the runner's Unix user reads, with sessions run as a
-different user. n8n's credential store holds only the SSH key that reaches
+different user. `runner-isolation` narrows that: a key-holder user alone
+reads the key and mints `runner` an hourly token (user, 2026-10-21). n8n's credential store holds only the SSH key that reaches
 the runner. An agent session inside n8n's container, as the explore sketched
 with Execute Command in a custom n8n image, would still read that store (same
 uid, `/home/node/.n8n`) and inherit n8n's environment, `N8N_ENCRYPTION_KEY`
@@ -82,14 +83,16 @@ included. So:
 - A `runner` service, built from `runner/Dockerfile`, holds git, `gh`, bun,
   `claude`, `openspec`, `coderabbit`, `flock` and `sshd`. It holds two users.
   `runner` runs `pass.sh` and `board-loop.ts` and alone reads the secret
-  files. Compose mounts file-backed secrets as bind mounts and applies no
+  files this group provisions; the App's key, which `runner-isolation`
+  group 3 adds, is the key holder's alone. Compose mounts file-backed secrets as bind mounts and applies no
   `uid`, `gid` or `mode` to them, so the files keep their host ownership: the
   image gives `runner` a fixed numeric uid, and the host README has the user
   make each file under `orchestrator/secrets` owned by that uid with mode
   0400 and the directory 0500. `/run/secrets` stays traversable; what keeps
   `agent` out is the files' owner and mode. `agent` runs the pick and
-  stage sessions: `board-loop.ts` starts `claude` as `agent` through one fixed
-  `setpriv` (or `sudo -u agent` with a single-command rule) with the
+  stage sessions: `board-loop.ts` starts `claude` as `agent` through
+  `sudo -u agent /opt/orchestrator/as-agent`, the one command the sudoers
+  rule names (`runner-isolation` *Three users* rejects `setpriv`), with the
   allowlisted environment `github-app-identity` builds, so no session can
   read a secret file or inherit a token beyond what that allowlist passes.
   `agent`'s home is one persistent volume: `~/.claude`, `~/.claude.json`,
@@ -294,8 +297,12 @@ host, which `claude remote-control` (server mode) spawns, up to its
   since the login is a file in that user's home. That user is `runner`
   (user, 2026-10-21): a phone session reaches the PAT, the Notion bot's token
   and hourly App tokens, never the App key, which a key-holder user alone
-  reads. `runner-isolation` fixes the users, the secret files' owners and
-  the test that a session cannot read them.
+  reads. It reaches them exactly as a pass does: the PAT and the Notion
+  token by reading their `runner`-owned files, an App token by running
+  `/opt/orchestrator/mint` through its sudoers rule, which prints one token
+  and stores none. `runner-isolation` fixes the users, every secret file's
+  path, owner and mode in the host README, and the reach check that a
+  session cannot read them.
 
 ## Risks / Trade-offs
 

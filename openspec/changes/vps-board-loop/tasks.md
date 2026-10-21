@@ -153,9 +153,11 @@ spike's choice of engine. The App key goes on the host only after
       and exits non-zero when the public
       key file is missing [38]. The image creates both users, `runner` with
       the fixed numeric uid the host README names, and the one rule that lets
-      `runner` start a command as `agent` names one command, the launcher
-      `runner-isolation` adds; the README's
-      provisioning step makes each secret file owned by that uid, mode 0400,
+      `runner` start a command as `agent` names one command,
+      `/opt/orchestrator/as-agent`, the launcher `runner-isolation` adds and
+      `board-loop.ts` runs; the README's provisioning step makes each secret
+      file this group provisions (the App key is `runner-isolation`
+      group 3's, owned by the key holder) owned by that uid, mode 0400,
       and its directory 0500 [41]. The workflow's SSH node is followed by an
       IF node on `code` whose non-zero branch ends in Stop and Error [43].
       Cite each scenario
