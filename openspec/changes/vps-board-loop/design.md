@@ -324,8 +324,9 @@ host, which `claude remote-control` (server mode) spawns, up to its
   the safe side.
 - [The claude.ai login's lifetime is not documented, and a Remote Control
   session that outlives it stops until the user signs in again.] → A timer
-  runs `claude auth status` in the remote-control user's environment and
-  reads the three-day warning, and a failing or expiring login is reported
+  runs `claude auth status` in the remote-control user's environment, with
+  the three token variables cleared so none of them stands in for the
+  saved login, and reads the three-day warning, and a failing or expiring login is reported
   to the user. The docs show that warning at startup and do not say whether
   `claude auth status` prints it; task 3.6 records which, and if it does not,
   the check catches the login only once it has failed. Where it reports —
