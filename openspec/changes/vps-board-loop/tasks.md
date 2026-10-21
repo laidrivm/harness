@@ -106,7 +106,9 @@ machine that carries the step.
       such extension for each engine, call it once, and record whether it
       survived an engine update. A self-hosted tool the docs show meeting
       this where both engines fail joins the table as a row read from its
-      docs, without a run
+      docs, without a run.
+      2026-10-21: the secret-free rows are run and recorded in `design.md`
+      *Spike: n8n against Windmill*. The token and Cloudflare rows are open
 - [ ] 2.2 Write the results into `design.md` under a new *Spike: n8n against
       Windmill* section, one row per criterion and engine. Whatever the
       results, stop: put the table to the user as the question on the card,
@@ -114,7 +116,12 @@ machine that carries the step.
       neither host), and revise group 3 after the answer (user, 2026-10-20)
 - [ ] 2.3 Tear both stacks down. Verify with `docker ps -a`, `docker volume
       ls` and the throwaway directory gone that the VPS holds nothing from
-      the spike
+      the spike.
+      2026-10-21: the secret-free bring-up is torn down: `docker ps -a`,
+      `docker volume ls` and `docker images` are empty, only the default
+      networks remain, and `/root/spike-2026-10-21` is gone. Docker 29.1.3
+      and compose 2.40.3 from Ubuntu's repository stay installed. The token
+      bring-up is torn down the same way
 
 ## 3. The n8n host
 

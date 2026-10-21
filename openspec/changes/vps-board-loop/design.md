@@ -280,5 +280,61 @@ anywhere.
 
 ## Open Questions
 
-None. The auth in front of the n8n UI was settled by the user on
-2026-10-18 (*Phone access* above).
+The engine: task 2.2 puts the table below to the user. The auth in front of
+the n8n UI was settled by the user on 2026-10-18 (*Phone access* above).
+
+## Spike: n8n against Windmill
+
+Task 2.1's secret-free rows, run on the VPS on 2026-10-21. The rows that
+need a token or Cloudflare are still open and need a second, short
+bring-up; the choice of engine goes to the user (task 2.2).
+
+The host is Ubuntu 24.04.4 (kernel 6.8.0-138), with 2 vCPU, 3.7 GiB RAM and
+a 38 GB disk. Docker is `docker.io` 29.1.3 with `docker-compose-v2` 2.40.3,
+from Ubuntu's repository. The engines ran were n8n 2.44.4, bumped to 2.45.0
+(stock `docker.n8n.io/n8nio/n8n`), and Windmill CE 1.364.3, bumped to
+1.365.0 (`ghcr.io/windmill-labs/windmill`: server, one or two workers and
+Postgres 16). Each sat beside a copy of `orchestrator/pass.sh` from `main`
+in a Debian runner container, reached over SSH with a throwaway key made on
+the VPS. The fake runner was a `bun` stub that sleeps. Every secret file
+held placeholder text, and every port was bound to 127.0.0.1.
+
+| # | Criterion | n8n | Windmill CE |
+|---|---|---|---|
+| 1 | A scheduled 65-minute command | **Survives.** Schedule Trigger → SSH node → `pass.sh` ran 00:59:24–02:04:24, `success`, `exit=0`. | **Survives.** Schedule → bash script → `ssh runner pass.sh`, with the script's `timeout: 5400`, ran 01:10:00–02:15:00, `success`. |
+| 2 | A second start while the first runs | `N8N_CONCURRENCY_PRODUCTION_LIMIT=1` **queues** it and never refuses. The limit is instance-wide: a webhook sent during the pass waited over 20 s in the same queue, past GitHub's 10 s timeout. | `concurrent_limit: 1` is **ignored**; the worker logs `Concurrent limits are an EE feature only, ignoring constraints`. The schedule skips the ticks that would overlap. With one worker a webhook waited over 20 s behind the pass; a second worker answered in 0.11 s. |
+| 3 | A wrong `X-Hub-Signature-256` rejected, a repeated delivery dropped | **Works, in a Code node**: raw-body Webhook → Code (`crypto` HMAC, `timingSafeEqual`, delivery IDs in the workflow's static data) → Respond. A good delivery 202; wrong, missing or tampered 401; a repeat 200, dropped. Needs `NODE_FUNCTION_ALLOW_BUILTIN=crypto` and `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`. The GitHub Trigger node verifies by itself but registers its hook through the API, so it needs a token. | **Works, in a script**, through the script webhook with `raw=true` and the two headers included. Good accepted, wrong or tampered rejected, a repeat dropped. **But** a rejection is HTTP 200 with an error body, since a script webhook cannot set its status, so GitHub's delivery log reads it as delivered. The URL GitHub holds must carry a Windmill token. The HTTP-routes API, which would allow a route without one, answers 404 on this image. |
+| 4 | Export, delete, import: runnable, no secret in the files | **Works.** `export:workflow --backup`, delete, `import:workflow --separate`, `publish:workflow --id`, restart: the webhook and the chat answer again. No secret in the files; a credential appears as its id and name. The export carries `staticData`, the delivery IDs, which is state and should be stripped before git. | **Works.** `wmill sync pull`, delete, `wmill sync push`: the scripts come back and run. The secret variable is exported as its encrypted value, which git should not hold: pull with `--skip-secrets`. Schedules are left out unless `--include-schedules`. |
+| 5 | An extension beside the stock image calling `claude`; `session_id` and `total_cost_usd` in the execution; survives a bump | **Works, survives.** A ~35-line custom node in the data volume runs a stub `claude -p … --output-format json`; both fields reach the execution record. After the bump the node still loads. | **Works, survives.** No plugin: a bash script runs the stub from a mounted volume, and its JSON is the job's stored result. After the bump it still runs. |
+| 6 | What Windmill CE withholds | — | Seen here: concurrency limits, the audit log's content (`EE only`), the HTTP-routes API (404). From the docs, not run: the worker-group UI and git sync from the UI; the CLI sync works in CE. |
+| 7 | A phone-usable control surface (user, 2026-10-21) | **Hosted chat works**: a public Chat Trigger page took a typed message, ran the stub and showed the reply with its session id and cost. Run, pause and stop work through the REST calls the UI uses. | An anonymous public app is served without login, but no chat-like app was built. Every script has a run form for a logged-in user. Run, pause and cancel work through REST. |
+| — | A real `claude -p` pass; the token in the container; `claude -r` across two runs; the subscription limit | needs secrets | needs secrets |
+| — | The execution list from a phone through Cloudflare Access | needs Cloudflare | needs Cloudflare |
+
+With both stacks up, about 1.4 GiB of the 3.7 GiB was in use.
+
+What binds group 3 whichever engine is chosen:
+
+1. **`pass.sh`'s `flock` is the real exclusion.** Neither engine refuses a
+   second start: n8n queues it and Windmill CE ignores its limit. A second
+   pass by hand printed `busy` and exited 0 under both.
+2. **An engine's cancel does not stop the pass.** `pass.sh` ignores HUP
+   (`trap '' HUP`, *Risks* above), so a cancelled job left the runner's
+   process running and the lock held. Group 3 needs a stop path of its own
+   on the runner side.
+3. **n8n's concurrency limit is instance-wide.** Set at 1, it queues every
+   webhook and chat message behind a pass of up to an hour, so it stays
+   unset or high, or the pass is started detached and the engine waits on
+   nothing.
+4. **The host is tight.** An engine, a runner, `claude` sessions and the
+   pre-push `bun test` on 2 vCPU and 3.7 GiB have not run together. The
+   token bring-up measures it.
+
+### Recommendation
+
+n8n. Its webhook rejection is a real 401, which GitHub's delivery log shows
+as a failure. Its hosted chat page already gives the phone a control
+surface. Windmill CE withholds concurrency limits and the HTTP-routes API,
+so its webhook URL holds a token and answers 200 to a forged delivery. The
+caveats above hold for n8n too: the lock, not the engine, excludes a second
+pass, and the concurrency limit stays off the webhook path.
