@@ -8,9 +8,9 @@ at that pull request's review, and 62–67, added at the plan's, are listed in
 the plan's, and 68 is *Two handlers recover one dead marker*. Groups 2 to 4
 are the engine-neutral handler and flows, and wait on nothing still open:
 `github-app-identity`, which groups 3 and 4 need, is archived. Group 5, the
-engine's call, needs `vps-board-loop`'s group 3 merged, on the engine its
-spike confirmed (moved out of group 2 on 2026-10-21, so the handler need not
-wait for the engine choice).
+engine's call, needs both the engine that `vps-board-loop`'s spike confirmed
+and that change's group 3 merged on it (moved out of group 2 on 2026-10-21,
+so the handler need not wait for the engine choice).
 
 ## 1. The runner records each step's session
 
@@ -94,7 +94,8 @@ run that passed on a later attempt is a flaky finding*.
 
 ## 5. The engine's webhook call
 
-Needs `vps-board-loop`'s group 3 merged, on the engine its spike confirmed.
+Needs both the engine that `vps-board-loop`'s spike confirmed and that change's
+group 3 merged on it.
 
 - [ ] 5.1 Copy `bun/` into the runner image at `/opt/orchestrator/bun/`,
       root-owned, and add `github_webhook_secret` to the secret files the host
