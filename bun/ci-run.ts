@@ -2,12 +2,15 @@
  * The CI flow `on-event.ts` routes a `workflow_run` delivery to. From the
  * payload alone it drops a run that did not fail, a fork's, and one on a
  * branch the loop does not push; it finds the clone the PR → session table
- * names, then takes the repository's lock and re-runs itself under it. There,
- * as the App, it re-reads the run and the pull request and posts the next
- * attempt comment, or the limit comment after three, then resumes the
- * table's session on the failed logs and pushes what it fixed.
+ * names, or the repository's own for a scheduled run, then takes the
+ * repository's lock and re-runs itself under it. There, as the App, it
+ * re-reads the run and the pull request and posts the next attempt comment,
+ * or the limit comment after three, then resumes the table's session on the
+ * failed logs and pushes what it fixed. A scheduled run, or one a later
+ * attempt passed, gets a fresh session that files a card and changes nothing.
  * `ci-run-agent`'s design fixes the order.
  */
+import { randomUUID } from "node:crypto";
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -74,11 +77,17 @@ export async function flow(body: string, marker: string): Promise<Outcome> {
 		return ["ignored", `the run did not fail (${action}, ${run?.conclusion})`];
 	const name = repo?.full_name;
 	if (!name || run.head_repository?.full_name !== name) return ["ignored", "the run is a fork's"];
-	if (run.event === "schedule" && run.head_branch === repo?.default_branch)
-		return ["ignored", "a scheduled run: that route is not built yet"];
-	if (!/^(feat|spec)\//.test(run.head_branch)) return ["ignored", `branch ${run.head_branch} is neither feat/ nor spec/`];
-	const row = lookup(name, run.head_branch);
-	if (!row) return ["ignored", `the table holds no session for ${run.head_branch}`];
+	let row: { clone: string; session: string } | undefined;
+	if (run.event === "schedule") {
+		if (run.head_branch !== repo?.default_branch)
+			return ["ignored", `a scheduled run on ${run.head_branch}, not the default branch`];
+		// `HARNESS_CI_CLONES` names another directory, which only the tests do; no session is resumed.
+		row = { clone: join(process.env.HARNESS_CI_CLONES || "/home/agent/clones", name.split("/")[1]), session: "" };
+	} else {
+		if (!/^(feat|spec)\//.test(run.head_branch)) return ["ignored", `branch ${run.head_branch} is neither feat/ nor spec/`];
+		row = lookup(name, run.head_branch);
+		if (!row) return ["ignored", `the table holds no session for ${run.head_branch}`];
+	}
 	const origin = originOf(row.clone)?.repo;
 	if (!origin || `${origin.owner}/${origin.repo}`.toLowerCase() !== name.toLowerCase())
 		return ["ignored", `no clone of ${name}: ${row.clone}`];
@@ -106,9 +115,23 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
 	if (!app) return ["failed", "the App's settings are not set"];
 	const token = await mint(app, { actions: "read", contents: "write", pull_requests: "write" });
 	const base = `/repos/${app.owner}/${app.repo}`;
+	const shown = `${run.html_url} (${run.name ?? "a workflow"}) at ${run.head_sha}`;
+	if (run.event === "schedule") {
+		acted(marker);
+		Object.assign(process.env, credentials(token));
+		return fresh(clone, app, run, `scheduled run ${run.html_url} failed on ${run.head_branch}`, (log) =>
+			[
+				`Scheduled CI run ${shown} failed on ${run.head_branch}, the default branch of ${app.owner}/${app.repo}.`,
+				`The failed jobs' logs are in ${log}: read them there, never with gh.`,
+				"File one idea card naming the workflow and the run on the board this clone's package.json names under harness.board,",
+				"unless a card that is not done already names that workflow's failure.",
+				"Change no file and make no commit. Answer blocked, naming the card in the summary.",
+			].join("\n"),
+		);
+	}
 	const latest = (await request(`${base}/actions/runs/${run.id}`, token)) as Run;
-	// A later attempt that passed is the flaky route's, not built yet; one still running or failed has its own event.
-	if (latest.run_attempt > run.run_attempt)
+	// A newer attempt still running or failed has its own event; one that passed makes this run flaky, below.
+	if (latest.run_attempt > run.run_attempt && latest.conclusion !== "success")
 		return ["ignored", `attempt ${latest.run_attempt} of the run is newer (${latest.conclusion ?? "running"})`];
 	const head = encodeURIComponent(`${app.owner}:${run.head_branch}`);
 	const [pull] = (await request(`${base}/pulls?state=open&head=${head}`, token)) as Pull[];
@@ -117,6 +140,18 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
 	if (pull.user?.login !== bot) return ["ignored", `#${pull.number} is not the App's`];
 	if (pull.head?.sha !== run.head_sha) return ["ignored", `#${pull.number} moved past ${run.head_sha}: the run is stale`];
 	if (git(clone, "status", "--porcelain", "--untracked-files=no") !== "") return ["failed", `${clone} holds a tracked edit`];
+	if (latest.run_attempt > run.run_attempt) {
+		acted(marker);
+		Object.assign(process.env, credentials(token));
+		return fresh(clone, app, run, `attempt ${latest.run_attempt} of the run passed: flaky on #${pull.number}`, (log) =>
+			[
+				`CI run ${shown} failed on attempt ${run.run_attempt} on #${pull.number}, and attempt ${latest.run_attempt} of it passed.`,
+				`The failed attempt's logs are in ${log}: read them there, never with gh.`,
+				"File the flaky finding as the card core/testing.md asks for, naming the tests that failed in that attempt.",
+				"Change no file and make no commit. Answer flaky, naming the card in the summary.",
+			].join("\n"),
+		);
+	}
 	const comments: Comment[] = [];
 	for (let page = 1; ; page++) {
 		const next = (await request(`${base}/issues/${pull.number}/comments?per_page=100&page=${page}`, token)) as Comment[];
@@ -135,7 +170,6 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
 	Object.assign(process.env, credentials(token));
 	const n = attempts.length + 1;
 	const fixing = n <= ATTEMPTS;
-	const shown = `${run.html_url} (${run.name ?? "a workflow"}) at ${run.head_sha}`;
 	let said: string;
 	let ask: (log: string) => string;
 	if (fixing) {
@@ -173,9 +207,7 @@ async function resume(clone: string, app: App, run: Run, id: string, ask: (log: 
 	// Its commits are the App's bot's, as a board-loop stage's are; read before the clone changes, so a failure leaves it as found.
 	const as = await identity(app);
 	const back = git(clone, "symbolic-ref", "--short", "-q", "HEAD") ?? git(clone, "rev-parse", "HEAD");
-	const logs = process.env.HARNESS_CI_LOGS || "/home/agent/ci-logs";
-	// The event's attempt, never the run's latest: a re-run started since would hand over another attempt's logs.
-	const log = join(logs, `${run.id}-${run.run_attempt}.log`);
+	const log = logOf(run);
 	const done = (outcome: Outcome): Outcome => {
 		rmSync(log, { force: true });
 		if (back) git(clone, "checkout", "-q", back);
@@ -187,26 +219,8 @@ async function resume(clone: string, app: App, run: Run, id: string, ask: (log: 
 		git(clone, "merge", "-q", "--ff-only", `origin/${branch}`) !== undefined;
 	const head = git(clone, "rev-parse", "HEAD");
 	if (!ready || head !== run.head_sha) return done(["failed", `${clone} could not be brought to ${branch} at ${run.head_sha}`]);
-	const repo = `${app.owner}/${app.repo}`;
-	const view = Bun.spawnSync(["gh", "run", "view", String(run.id), "-R", repo, "--attempt", String(run.run_attempt), "--log-failed"], {
-		env: process.env,
-	});
-	if (view.exitCode !== 0) return done(["failed", `the failed logs of run ${run.id} could not be read`]);
-	mkdirSync(logs, { recursive: true });
-	// Readable by the session user's group, which the host gives the directory.
-	writeFileSync(log, view.stdout, { mode: 0o640 });
-	// `session()` starts `claude` where the runner is. Moved only now, not spawned in the clone, so
-	// `bun` itself never read a `bunfig.toml` a session can write.
-	process.chdir(clone);
-	let answer: { outcome?: unknown; summary?: unknown } | undefined;
-	let late = false;
-	try {
-		// A session that cannot start reads as no answer, so the clone is still put back.
-		const ended = await session(ask(log), HOUR, process.kill, true, as, ["-r", id, "--json-schema", SCHEMA, "--output-format", "json"]);
-		late = ended.late;
-		answer = JSON.parse(ended.out).structured_output;
-	} catch {}
-	const outcome = !late && typeof answer?.summary === "string" ? OUTCOMES.find((o) => o === answer?.outcome) : undefined;
+	if (!logged(app, run, log)) return done(["failed", `the failed logs of run ${run.id} could not be read`]);
+	const outcome = await answered(clone, ask(log), as, ["-r", id]);
 	if (git(clone, "status", "--porcelain") !== "")
 		return ["failed", `the session left ${clone} with uncommitted changes; nothing pushed, the clone left as it is`];
 	if (!outcome) return done(["failed", "the session gave no answer that matches the schema; nothing pushed"]);
@@ -219,6 +233,56 @@ async function resume(clone: string, app: App, run: Run, id: string, ask: (log: 
 		return done(["failed", `${branch} no longer holds ${run.head_sha}; nothing pushed`]);
 	if (!pushRef(over(app), branch).ok) return done(["failed", `GitHub refused the push of ${branch}; neither forced nor retried`]);
 	return done(["handled", `pushed ${branch} at ${fixed}`]);
+}
+
+/**
+ * The scheduled and flaky routes' session: a fresh one in the clone, on the
+ * event's failed logs, that files a card and changes nothing. The clone is
+ * not switched; a session that moved `HEAD` or the tree leaves it as it is,
+ * with the log file, for the user.
+ */
+async function fresh(clone: string, app: App, run: Run, said: string, ask: (log: string) => string): Promise<Outcome> {
+	const as = await identity(app);
+	const [head, tree] = [git(clone, "rev-parse", "HEAD"), git(clone, "status", "--porcelain")];
+	const log = logOf(run);
+	if (!logged(app, run, log)) return ["failed", `${said}; the failed logs of run ${run.id} could not be read`];
+	const outcome = await answered(clone, ask(log), as, ["--session-id", randomUUID()]);
+	if (git(clone, "rev-parse", "HEAD") !== head || git(clone, "status", "--porcelain") !== tree)
+		return ["failed", `${said}; the session changed ${clone}, which is left as it is`];
+	rmSync(log, { force: true });
+	if (!outcome) return ["failed", `${said}; the session gave no answer that matches the schema`];
+	return ["handled", `${said}; the session answered ${outcome}`];
+}
+
+/** The event's attempt's log file, never the run's latest: a re-run started since would hand over another attempt's logs. */
+const logOf = (run: Run) => join(process.env.HARNESS_CI_LOGS || "/home/agent/ci-logs", `${run.id}-${run.run_attempt}.log`);
+
+/** Writes the event's attempt's failed logs to `log` with the runner's `gh`; false when `gh` fails. */
+function logged(app: App, run: Run, log: string) {
+	const repo = `${app.owner}/${app.repo}`;
+	const view = Bun.spawnSync(["gh", "run", "view", String(run.id), "-R", repo, "--attempt", String(run.run_attempt), "--log-failed"], {
+		env: process.env,
+	});
+	if (view.exitCode !== 0) return false;
+	mkdirSync(dirname(log), { recursive: true });
+	// Readable by the session user's group, which the host gives the directory.
+	writeFileSync(log, view.stdout, { mode: 0o640 });
+	return true;
+}
+
+/** Runs a session in the clone and reads its outcome, or undefined for no answer that matches the schema. */
+async function answered(clone: string, prompt: string, as: Record<string, string>, extra: string[]) {
+	// `session()` starts `claude` where the runner is. Moved only now, not spawned in the clone, so
+	// `bun` itself never read a `bunfig.toml` a session can write.
+	process.chdir(clone);
+	try {
+		const ended = await session(prompt, HOUR, process.kill, true, as, [...extra, "--json-schema", SCHEMA, "--output-format", "json"]);
+		const answer = JSON.parse(ended.out).structured_output as { outcome?: unknown; summary?: unknown } | undefined;
+		return !ended.late && typeof answer?.summary === "string" ? OUTCOMES.find((o) => o === answer?.outcome) : undefined;
+	} catch {
+		// A session that cannot start reads as no answer, so the clone is still put back.
+		return undefined;
+	}
 }
 
 // Run by `flow()` under the lock; the verdict is its last line.
