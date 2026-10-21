@@ -162,3 +162,40 @@ SHALL be no older than 2.38.2.
 
 - **WHEN** the n8n image's tag is below 2.38.2
 - **THEN** the suite fails, naming the tag and the floor
+
+### Requirement: Remote Control runs on the saved login alone, and a failing login is reported
+
+The process that runs `claude remote-control` on the host SHALL start with
+none of `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` and
+`ANTHROPIC_AUTH_TOKEN` in its environment, so the user's saved claude.ai login
+is the credential it uses; the setup-token SHALL reach only the unattended
+passes. A check SHALL run `claude auth status` on a timer in that process's
+environment and SHALL report to the user a login that fails or carries the
+expiry warning.
+
+#### Scenario: A token variable in the remote-control files
+
+- **WHEN** the tracked script or unit that starts `claude remote-control` sets
+  or passes on `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or
+  `ANTHROPIC_AUTH_TOKEN`
+- **THEN** the suite fails, naming the file and the variable
+
+#### Scenario: A token variable inherited by the script
+
+- **WHEN** the script that starts `claude remote-control` is run with any of
+  the three variables in its environment
+- **THEN** `claude` starts without them
+
+#### Scenario: A login that fails
+
+- **WHEN** `claude auth status` exits non-zero in the remote-control user's
+  environment
+- **THEN** the check exits non-zero, printing one line that says the login
+  failed, and the user is told
+
+#### Scenario: A login about to expire
+
+- **WHEN** `claude auth status` succeeds and its output carries the expiry
+  warning
+- **THEN** the check exits non-zero, printing one line that names the
+  warning, and the user is told

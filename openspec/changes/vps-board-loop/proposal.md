@@ -33,7 +33,9 @@ nobody at a terminal. Webhooks and every later flow build on that host.
 - Concurrent passes get one full clone each, never a worktree. The Safety rule
   on pushing from a worktree is unchanged.
 - Host requirements written down: the trust dialog once per clone, Claude on
-  the host through `claude setup-token`, Notion as a configured MCP server,
+  the host through `claude setup-token` for the unattended passes and the
+  user's claude.ai login for Remote Control alone, Notion as a configured MCP
+  server,
   `gh` through a token file, a persistent home volume, `core.hooksPath` per
   clone.
 
@@ -73,6 +75,11 @@ README lists them in order:
 5. Import the workflow, publish it, and restart n8n.
 6. When a pass pauses the loop, read the stop file and the pass's output, then
    remove the stop file.
+7. For Remote Control (user, 2026-10-21), once the runner card settles which
+   user runs it: in a `tmux` session on the host, `claude auth login` (the
+   URL opens on any device, the phone included), then `claude remote-control`
+   once in a clone's directory, trusting it and enabling Remote Control.
+   Renew the login from the phone when the login check reports.
 
 ## Capabilities
 
@@ -81,7 +88,8 @@ README lists them in order:
 - `orchestrator`: the host that starts unattended agent runs. In this change
   that means the timer's wrapper (one pass per repository, the stop file, the
   environment it passes on) and what the tracked `orchestrator/` directory may
-  hold (no secret, exact pins, each naming what moves it). Later flows add
+  hold (no secret, exact pins, each naming what moves it), and the Remote
+  Control server's environment and its login check. Later flows add
   their requirements here.
 
 ### Modified Capabilities

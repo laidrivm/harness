@@ -119,8 +119,12 @@ machine that carries the step.
 ## 3. The n8n host
 
 Closes every scenario of `orchestrator` §*The orchestrator directory holds no
-secret* and §*Every pin in the orchestrator directory is exact and names what
-moves it*.
+secret*, §*Every pin in the orchestrator directory is exact and names what
+moves it* and §*Remote Control runs on the saved login alone, and a failing
+login is reported*. Tasks 3.6–3.9, Remote Control (`design.md` *Remote Control
+on the host*), wait on the card *Keep the runner from running code a session
+can write while the App key or a token is in reach* as well as on the
+spike's choice of engine: that card settles which user runs the server.
 
 - [ ] 3.1 Write the failing cases first in a new `orchestrator/layout.test.ts`,
       and record that each fails before the files exist. Each check runs over
@@ -175,4 +179,33 @@ moves it*.
       what to read before removing a stop file. It names no address and no
       account. Verify by reading every file under `orchestrator/` whole for an
       identifier before the commit (`git-and-prs.md`)
-- [ ] 3.6 Run `bun bun/check.ts` and `bun test`. Both pass
+- [ ] 3.6 **User act.** On the host, in a `tmux` session as the user the
+      runner card names: `claude auth login`, opening the printed URL on any
+      device (the phone will do) and pasting the code back; then, in a
+      clone's directory, `claude remote-control` once, answering `y` to trust
+      the directory and to *Enable Remote Control?*. Record in the pull
+      request that `claude auth status` exits 0, what `claude auth status
+      --text` prints (whether it names the login's expiry, which 3.8 reads),
+      and that the Claude app lists the host
+- [ ] 3.7 Write the failing cases in `orchestrator/layout.test.ts`, then add
+      `orchestrator/remote-control.sh`, which starts `claude remote-control`
+      inside a named `tmux` session in the clone directory it is given and
+      restarts it when it exits, and, if one is used, a systemd unit that
+      starts that script and nothing else. Cover: the script or the unit
+      setting or passing on `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or
+      `ANTHROPIC_AUTH_TOKEN` fails the suite, naming the file and the
+      variable; the script clears all three from its environment before it
+      starts `claude`. Cite each scenario
+- [ ] 3.8 Write the failing cases, then add the login check: a script the
+      engine's timer runs daily in the remote-control user's environment,
+      which runs `claude auth status` and exits non-zero, printing one line
+      that names the reason, when the status fails or its output carries the
+      expiry warning. Wire its non-zero exit to the report the engine gives a
+      failed run (`design.md` *Risks*). Cite each scenario
+- [ ] 3.9 Add to `orchestrator/README.md` the user act 3.6, the restart of a
+      stopped server (`claude remote-control` in the same `tmux` session),
+      the renewal from the phone when the check reports, and that no token
+      variable may reach the remote-control process. Add one line to the
+      root `README.md`'s orchestrator paragraph naming Remote Control as the
+      phone's second path
+- [ ] 3.10 Run `bun bun/check.ts` and `bun test`. Both pass
