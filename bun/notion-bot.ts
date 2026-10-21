@@ -143,9 +143,10 @@ export async function post(
 			const at = cursor ? `&start_cursor=${encodeURIComponent(cursor)}` : "";
 			const listed = await call("the comments read", `/v1/comments?block_id=${card}${at}`);
 			comments.push(...(Array.isArray(listed?.results) ? listed.results : []));
-			const next = listed?.has_more && typeof listed.next_cursor === "string" ? listed.next_cursor : undefined;
-			if (next !== undefined && next === cursor) throw new Error("the comments read repeated its cursor");
-			cursor = next;
+			// More pages behind no cursor, or behind the one just read, would end the read short.
+			if (listed?.has_more && (typeof listed.next_cursor !== "string" || !listed.next_cursor || listed.next_cursor === cursor))
+				throw new Error("the comments read gave no new cursor");
+			cursor = listed?.has_more ? listed.next_cursor : undefined;
 		} while (cursor);
 		if (waits(comments, user)) return not(`a question already waits on ${card}`);
 		const rest = text.slice(MARK.length);
