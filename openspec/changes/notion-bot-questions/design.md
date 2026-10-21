@@ -167,8 +167,9 @@ mark. The runner posts it after the session. The line comes before any
 asked again* asks of an agent about to ask. The runner reads the line as
 untrusted text, as `named()` reads the pull request's title and body:
 
-- exactly one line starts `QUESTION:`, and it does not come after `PR-BODY:`,
-  whose body runs to the end;
+- exactly one line starts `QUESTION:`, and it does not come after `PR-TITLE:`
+  or `PR-BODY:`, whose body runs to the end — one between the two would read
+  `PR-BODY:` and the body as its text (CodeRabbit on #202);
 - its value, trimmed, is wholly 32 hex digits or a UUID;
 - the question is the lines below it, up to a `PR-TITLE:` line or the end,
   trimmed.

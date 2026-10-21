@@ -114,6 +114,7 @@ describe("the QUESTION: line", () => {
 	test.each([
 		["two lines [11]", `QUESTION: ${CARD}\n${QUESTION}\nQUESTION: ${CARD}\n${QUESTION}`, "more than one"],
 		["one after PR-BODY: [12]", `PR-TITLE: t\nPR-BODY:\nb\nQUESTION: ${CARD}\n${QUESTION}`, "after PR-BODY:"],
+		["one between PR-TITLE: and PR-BODY: [12]", `PR-TITLE: t\nQUESTION: ${CARD}\n${QUESTION}\nPR-BODY:\nb`, "after PR-TITLE:"],
 		["an id with text after it [15]", `QUESTION: ${CARD} please\n${QUESTION}`, "card id"],
 		["a short id", `QUESTION: ${CARD.slice(1)}\n${QUESTION}`, "card id"],
 	])("%s posts nothing and says why", (_, said, why) => {
