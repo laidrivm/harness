@@ -261,7 +261,10 @@ The command posts as the integration, never as the user. So it is not the act
 the `notion-create-comment` ask entry guards, which is sending as the user.
 It is a tracked command with the gate's checks inside, not a throwaway
 script (`rules.md` Safety). The harness's `.claude/settings.json` allows it
-as `Bash(bun bun/notion-ask.ts *)`. `sync-settings.ts` writes no allow entry,
+as `Bash(bun bun/notion-ask.ts *)`, and also in the
+`node_modules/harness/` form, since the launch form names the pinned command
+as it names the pinned check, so a board-loop pass in the harness can run it.
+`sync-settings.ts` writes no allow entry,
 so the README tells a consumer to add the `node_modules/harness/` form to its
 own allow list. Without that entry, an attended session prompts for the
 command and an unattended one is refused and reports the question unposted.
@@ -276,7 +279,8 @@ nothing else.
 When the ask settings file exists, the question gate answers `deny` to a call
 that meets every condition of *A question on a card*, in any session, the
 attended ones included. Its message names the ask command and is recorded as
-`refused` under the rule `ask`. The gate reads only whether the file exists,
+`refused` under the rule `ask`. Unlike the gate's other refusals, it does not
+ask for the call again, which would be refused the same way. The gate reads only whether the file exists,
 never its contents. Every other call keeps today's answer, so a comment that
 is not a question still prompts and the user may approve it. Under
 `HARNESS_RUNNER_ASKS` the runner's refusal comes first.

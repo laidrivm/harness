@@ -2,24 +2,19 @@
  * The board loop's Notion integration: the settings file the runner reads, the
  * `QUESTION:` line it reads from a stage session's final message, and the five
  * REST calls that post the question from the integration and set `Assign`
- * (`openspec/changes/notion-bot-questions/design.md`). The token reaches
- * `fetch` only as a header, and no line this module prints or throws holds it.
+ * (`openspec/changes/notion-bot-questions/design.md`). The ask command makes
+ * two of those calls with its own settings. The token reaches `fetch` only as a
+ * header, and no line this module prints or throws holds it.
  */
 import { readFileSync, statSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { fault, MARK, REMEDY } from "./question-gate.ts";
 
 const VERSION = "2025-09-03";
 /** A Notion id, as a whole value: 32 hex digits, alone or in a UUID's form. */
-const ID = /^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+export const ID = /^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 export type Settings = { token: string; user: string };
 export type Asked = { card: string; text: string };
-
-/** `name` under the user's config home: `XDG_CONFIG_HOME`, else `~/.config`. */
-export const where = (name: string, env: Record<string, string | undefined> = process.env) =>
-	join(env.XDG_CONFIG_HOME || join(env.HOME || homedir(), ".config"), "harness", name);
 
 /**
  * The settings at `path`, or `undefined` when no file is there. A file the
@@ -74,9 +69,13 @@ export function asked(said: string): Asked | string | undefined {
 	const below = lines.slice(at[0] + 1);
 	const end = below.findIndex((line) => line.startsWith("PR-TITLE:"));
 	const text = (end === -1 ? below : below.slice(0, end)).join("\n").trim();
+	return failed(text) ?? { card, text };
+}
+
+/** Why the question gate's text checks refuse `text`, in its words, or `undefined`. */
+export function failed(text: string): string | undefined {
 	const rule = fault(text);
 	if (rule) return `the question fails the question gate (${rule}): ${REMEDY[rule]}`;
-	return { card, text };
 }
 
 type Run = { plain_text?: unknown; annotations?: { code?: unknown } };
@@ -100,20 +99,10 @@ function waits(comments: Comment[], user: string): boolean {
 	return last !== -1 && !ordered.slice(last + 1).some((c) => !marked(c) && hex(c.created_by?.id) === hex(user));
 }
 
-/**
- * Posts `asked` on its card from the integration and sets `Assign` to the
- * user, after checking the card is the carried change's on `board` and no
- * question waits there. Returns the one line the runner prints. No call is
- * retried: a second post would put two questions on the card.
- */
-export async function post(
-	{ token, user }: Settings,
-	{ card, text }: Asked,
-	{ board, slug }: { board: string; slug: string },
-	timeout = 30_000,
-): Promise<string> {
+/** A REST call with `token`, which throws naming the step and Notion's status or the error's name. */
+export function client(token: string, timeout = 30_000) {
 	const base = process.env.HARNESS_NOTION_API_URL || "https://api.notion.com";
-	const call = async (step: string, path: string, method = "GET", body?: unknown) => {
+	return async (step: string, path: string, method = "GET", body?: unknown) => {
 		let response: Response;
 		try {
 			response = await fetch(`${base}${path}`, {
@@ -129,6 +118,52 @@ export async function post(
 		if (!response.ok) throw new Error(`${step} answered ${response.status}`);
 		return response.json();
 	};
+}
+type Call = ReturnType<typeof client>;
+
+/** REST step 3: every page of the card's comments, then whether a question waits there for `user`. */
+export async function waiting(call: Call, card: string, user: string): Promise<boolean> {
+	const comments: Comment[] = [];
+	const read = new Set<string>();
+	let cursor: string | undefined;
+	do {
+		const at = cursor ? `&start_cursor=${encodeURIComponent(cursor)}` : "";
+		const listed = await call("the comments read", `/v1/comments?block_id=${card}${at}`);
+		comments.push(...(Array.isArray(listed?.results) ? listed.results : []));
+		// More pages behind no cursor would end the read short; behind one already read, never end it.
+		if (listed?.has_more && (typeof listed.next_cursor !== "string" || !listed.next_cursor || read.has(listed.next_cursor)))
+			throw new Error("the comments read gave no new cursor");
+		cursor = listed?.has_more ? listed.next_cursor : undefined;
+		if (cursor) read.add(cursor);
+	} while (cursor);
+	return waits(comments, user);
+}
+
+/** REST step 4: the page-level comment, a code-annotated mark run, then the rest of the text. */
+export function comment(call: Call, card: string, text: string): Promise<unknown> {
+	const rest = text.slice(MARK.length);
+	return call("the comment's post", "/v1/comments", "POST", {
+		parent: { page_id: card },
+		rich_text: [
+			{ type: "text", text: { content: "harness-question" }, annotations: { code: true } },
+			...(rest ? [{ type: "text", text: { content: rest } }] : []),
+		],
+	});
+}
+
+/**
+ * Posts `asked` on its card from the integration and sets `Assign` to the
+ * user, after checking the card is the carried change's on `board` and no
+ * question waits there. Returns the one line the runner prints. No call is
+ * retried: a second post would put two questions on the card.
+ */
+export async function post(
+	{ token, user }: Settings,
+	{ card, text }: Asked,
+	{ board, slug }: { board: string; slug: string },
+	timeout = 30_000,
+): Promise<string> {
+	const call = client(token, timeout);
 	const not = (why: string) => `question: not posted — ${why}`;
 	try {
 		const page = await call("the page read", `/v1/pages/${card}`);
@@ -137,28 +172,8 @@ export async function post(
 			return not(`${card} is not the card of ${slug}`);
 		const source = await call("the board read", `/v1/data_sources/${page.parent.data_source_id}`);
 		if (plain(source?.title) !== board) return not(`${card} is not on the board ${board}`);
-		const comments: Comment[] = [];
-		const read = new Set<string>();
-		let cursor: string | undefined;
-		do {
-			const at = cursor ? `&start_cursor=${encodeURIComponent(cursor)}` : "";
-			const listed = await call("the comments read", `/v1/comments?block_id=${card}${at}`);
-			comments.push(...(Array.isArray(listed?.results) ? listed.results : []));
-			// More pages behind no cursor would end the read short; behind one already read, never end it.
-			if (listed?.has_more && (typeof listed.next_cursor !== "string" || !listed.next_cursor || read.has(listed.next_cursor)))
-				throw new Error("the comments read gave no new cursor");
-			cursor = listed?.has_more ? listed.next_cursor : undefined;
-			if (cursor) read.add(cursor);
-		} while (cursor);
-		if (waits(comments, user)) return not(`a question already waits on ${card}`);
-		const rest = text.slice(MARK.length);
-		await call("the comment's post", "/v1/comments", "POST", {
-			parent: { page_id: card },
-			rich_text: [
-				{ type: "text", text: { content: "harness-question" }, annotations: { code: true } },
-				...(rest ? [{ type: "text", text: { content: rest } }] : []),
-			],
-		});
+		if (await waiting(call, card, user)) return not(`a question already waits on ${card}`);
+		await comment(call, card, text);
 	} catch (error) {
 		return not((error as Error).message);
 	}

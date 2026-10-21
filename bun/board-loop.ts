@@ -33,9 +33,9 @@ import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session } from "./board-loop-session.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
-import { asked, post, type Settings, settings, where } from "./notion-bot.ts";
+import { asked, post, type Settings, settings } from "./notion-bot.ts";
 import { readPullRequests } from "./pull-requests.ts";
-import { RUNNER_ASKS } from "./question-gate.ts";
+import { ASK_SETTINGS, RUNNER_ASKS, where } from "./question-gate.ts";
 import { groups } from "./turn-gate.ts";
 
 /** A stage session's limit, fixed by the spec: a longer step is split, never given more. */
@@ -239,7 +239,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const id = crypto.randomUUID();
 	try {
 		// Captured, for its title and body: in text mode it prints nothing before its final message.
-		staged = await session(prompt(slug, chosen, relative(real, check), resumed, !!bot), limit, kill, true, as, [
+		const asks = bot ? "runner" : existsSync(where(ASK_SETTINGS)) ? "ask" : undefined;
+		staged = await session(prompt(slug, chosen, relative(real, check), resumed, asks), limit, kill, true, as, [
 			"--session-id",
 			id,
 			...withheld,

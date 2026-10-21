@@ -19,14 +19,28 @@
  * In a session the board loop's runner launches with `RUNNER_ASKS`, it answers
  * `deny` to every comment it can read, a question included, since the runner
  * posts that session's questions (agent-permissions, *A session whose launcher
- * posts its questions posts no comment*).
+ * posts its questions posts no comment*). Otherwise, where the ask settings
+ * file exists, it answers `deny` to a question in any session, attended or
+ * not, since the ask command posts it (*A question goes to the ask command
+ * where one is configured*). It reads whether the file exists, never its
+ * contents.
  *
  * Each call is recorded in the gate ledger as `allowed`, `refused` or
  * `passed`, under the first condition that failed, or `question`. The ledger
  * is never read here.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { record } from "./gate-ledger.ts";
+
+/** `name` under the user's config home: `XDG_CONFIG_HOME`, else `~/.config`. */
+export const where = (name: string, env: Record<string, string | undefined> = process.env) =>
+	join(env.XDG_CONFIG_HOME || join(env.HOME || homedir(), ".config"), "harness", name);
+/** The ask command's settings, beside the runner's `notion-bot.json` and never read in its place. */
+export const ASK_SETTINGS = "notion-ask.json";
+/** The ask command as a consumer runs it, from the pin. */
+export const ASK_COMMAND = "bun node_modules/harness/bun/notion-ask.ts";
 
 /** The mark a question opens with; the board loop's launch form names it. */
 export const MARK = "`harness-question`";
@@ -50,6 +64,7 @@ const UNATTENDED = "This session runs unattended.";
 export const REMEDY: Record<string, string> = {
 	runner:
 		"the runner that launched this session posts its questions. Post no comment: end the final message with a line `QUESTION: <the card's id>` and the question below it, opening with the mark.",
+	ask: `on this machine a question goes to the ask command, never from the user's account. Write the question to a file, opening with the mark, run \`${ASK_COMMAND} <the card's id> <that file>\` (\`bun bun/notion-ask.ts\` in the harness itself), then set the card's \`Assign\` to the user.`,
 	reply: "it replies in a thread. Post a new page-level comment, without `discussion_id` or `reply_to_comment_id`.",
 	anchored: "it is anchored on a passage. Send it without `selection_with_ellipsis`; the comment goes on the page.",
 	"rich-text": "its text is `rich_text`. Send the text as `markdown`, not `rich_text`.",
@@ -61,9 +76,9 @@ export const REMEDY: Record<string, string> = {
 	unreadable: "the gate could not read the call's page. Send a `page_id` that holds the card's 32-hex id.",
 };
 
-/** The reason a `deny` carries for `rule`. */
+/** The reason a `deny` carries for `rule`: an `ask` refusal is the tool's, so it never asks for a second call. */
 const refusal = (rule: string) =>
-	`question-gate refused this comment (${rule}): ${REMEDY[rule]} This refusal is the comment's, not the tool's: fix it and call \`notion-create-comment\` again.`;
+	`question-gate refused this comment (${rule}): ${REMEDY[rule]}${rule === "ask" ? "" : " This refusal is the comment's, not the tool's: fix it and call `notion-create-comment` again."}`;
 
 /**
  * Whether the session's first prompt, the first user line holding text rather
@@ -240,6 +255,8 @@ if (import.meta.main) {
 	try {
 		event = JSON.parse(await Bun.stdin.text());
 		if (event) rule = runner && comments(event) ? "runner" : verdict(event);
+		// Existence alone: an empty file or a directory there still means the user chose the ask command.
+		if (rule === "question" && existsSync(where(ASK_SETTINGS))) rule = "ask";
 	} catch {
 		// No answer, as the header says: an event this script cannot read
 		// leaves the prompt standing.
@@ -248,7 +265,7 @@ if (import.meta.main) {
 	const decision =
 		rule === "question"
 			? "allowed"
-			: rule === "runner" || (rule && unattended(event?.transcript_path))
+			: rule === "runner" || rule === "ask" || (rule && unattended(event?.transcript_path))
 				? "refused"
 				: "passed";
 	rule ??= "unreadable";

@@ -2,7 +2,7 @@
  * The two prompts of a board-loop pass: the stage session's launch form, as
  * `core/feature-workflow.md` fixes it, and the pick session's.
  */
-import { MARK } from "./question-gate.ts";
+import { ASK_COMMAND, MARK } from "./question-gate.ts";
 
 /** `answer`: every group is ticked, so the step is N+1 and carries the answer on the card. */
 export type Step = { step: number; branch: string; answer: boolean };
@@ -10,9 +10,10 @@ export type Step = { step: number; branch: string; answer: boolean };
 /**
  * The launch form `core/feature-workflow.md` fixes for an apply step, or its
  * answer variant, the first line naming a branch a session left. `asks`: the
- * runner posts the session's question from the Notion integration.
+ * runner posts the session's question from the Notion integration, or the
+ * session posts it with the ask command, or, unset, from the user's account.
  */
-export function prompt(slug: string, { step, branch, answer }: Step, check: string, resumed: boolean, asks: boolean): string {
+export function prompt(slug: string, { step, branch, answer }: Step, check: string, resumed: boolean, asks?: "runner" | "ask"): string {
 	const work = answer
 		? `write the answer on its card into its tasks.md as group ${step}, then /opsx:apply ${slug} for that group`
 		: `/opsx:apply ${slug} for its group ${step}`;
@@ -29,9 +30,11 @@ export function prompt(slug: string, { step, branch, answer }: Step, check: stri
 		"This session runs unattended.",
 		`The goal is met when the last line of \`bun ${check} apply ${slug} ${step} --before-push\`, run after the last commit, opens with \`goal met\` — or when the final message opens with \`BLOCKED —\` and names what only the user can settle.`,
 		// No apostrophe: the doc's form wraps the prompt in the shell's single quotes.
-		asks
+		asks === "runner"
 			? `A question only the user can settle goes in the final message, never on the card, since this session posts no comment: after reading that card and its comments, write a line \`QUESTION: <the id of the card of the change>\` before any \`PR-TITLE:\` line, with the question below it, opening with ${MARK}, its two backticks included — the runner posts it.`
-			: `A question only the user can settle goes on the card of the change as one page-level comment — \`page_id\` and \`markdown\` only, after reading that card and its comments — whose markdown opens with ${MARK}, its two backticks included.`,
+			: asks === "ask"
+				? `A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with ${MARK}, its two backticks included, run \`${ASK_COMMAND} <the id of the card of the change> <that file>\`, then set the \`Assign\` of the card to the user.`
+				: `A question only the user can settle goes on the card of the change as one page-level comment — \`page_id\` and \`markdown\` only, after reading that card and its comments — whose markdown opens with ${MARK}, its two backticks included.`,
 		// `board-loop-push.ts` reads these two, as the pass reads `PICK:`.
 		"When the pull request is to open, end the final message with a line `PR-TITLE: <title>`, then a line `PR-BODY:` with the body below it to the end; when a gate line holds the pull request back, write neither.",
 	].join("\n");
