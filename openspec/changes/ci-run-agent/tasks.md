@@ -120,8 +120,10 @@ run that passed on a later attempt is a flaky finding*.
 - [x] 5.2 Add both routes to `bun/ci-run.ts`. Verify with 5.1 and `bun test`
 - [x] 5.3 Remove from `core/testing.md` the line saying CI flakes wait for
       this flow, if the stopgap still carries one. Verify with
-      `git grep -n "run_attempt" core` (2026-10-22: no hit; `core/testing.md`
-      carries no such line, so nothing was removed)
+      `git grep -niE "flak|later attempt" core/testing.md` and reading each
+      hit (2026-10-22: the hits are one rule, lines 36–37, on
+      `flake-watch.ts` for local runs; no line says CI flakes wait for this
+      flow, so nothing was removed)
 
 ## 6. The engine's webhook call
 
