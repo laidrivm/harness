@@ -204,8 +204,8 @@ and the spike shows a routine prompts, which is the event that hook answers.
 The live checks ask an attended cloud session for one call the gate does not
 allow: a comment on this change's card whose text does not open with the
 mark. They are deferred to a card of their own (user, 2026-10-21), so
-whether the hook fires in the cloud stays unverified until they run. The
-gate gives no answer there, so the prompt shows and the user declines it. The
+whether the hook fires in the cloud stays unverified until they run. When
+they run, the gate gives no answer there, so the prompt shows and the user declines it. The
 gate records every call it sees, so a `question-gate` record in the VM's
 `gates.jsonl` for that call shows the hook fired. Its absence shows the hook
 did not fire only when the same file holds the command guard's refusal of the
