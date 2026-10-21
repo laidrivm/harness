@@ -48,7 +48,8 @@ clone that a command of its own then executes.
 
 ### Requirement: The runner pushes from its own push clone, a commit whose tests passed
 
-The runner SHALL push from a push clone it alone writes, into which it takes
+The runner SHALL make every push, the board loop's and the CI flow's fix push
+alike, from a push clone it alone writes, into which it takes
 the session's commits from a bundle the session user writes. It SHALL push a
 commit only when the goal check, run with that commit checked out on its step
 branch, finds a passing pre-PR record the session's clone made of that
@@ -65,6 +66,20 @@ configuration from the pushed tree.
 - **WHEN** the bundle's tip has no passing pre-PR record
 - **THEN** the runner pushes nothing and the pass ends `open`, naming the
   missing record
+
+#### Scenario: The CI flow's fix push
+
+- **WHEN** a CI fix session answers `fixed` and its bundle's tip is a new
+  commit on top of the run's `head_sha` with a passing pre-PR record
+- **THEN** the runner pushes that tip from its push clone, with no hook and
+  no force, and the App's token never enters the session's clone
+
+#### Scenario: A CI fix with no pre-PR record
+
+- **WHEN** a CI fix session answers `fixed` and its tip has no passing pre-PR
+  record
+- **THEN** the runner pushes nothing and the flow exits 1, naming the missing
+  record
 
 #### Scenario: A preload in the pushed tree
 

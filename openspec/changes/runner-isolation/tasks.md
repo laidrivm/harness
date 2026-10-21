@@ -4,7 +4,8 @@ Three groups, shipped as `feat/runner-isolation-1` to
 `feat/runner-isolation-3`, in order. Groups 1 and 2 are inert on the laptop:
 with no launcher or mint command set, the runner runs as it does today.
 Group 3 edits the image and host README that `vps-board-loop` group 3 adds,
-and starts only once that group has merged. Each group writes its failing
+and starts only once that group has merged. Task 1.5 needs `ci-run-agent`'s
+group 4 merged. Each group writes its failing
 cases first and records that they fail against the tree as it stands; cite
 each scenario as `// spec: orchestrator/<slug>`. The user acts in
 `proposal.md` are no task of this change.
@@ -45,6 +46,17 @@ checkout*, §*The runner runs nothing in a session's clone as itself* and
       runner's push from its push clone on the host for a commit whose pre-PR
       record names its SHA, and say the same beside `publish()`. Verify by
       reading both back and running `bun test bun/review-docs.test.ts`
+- [ ] 1.5 Carry `design.md` *The CI flow's push* into `ci-run-agent`. Write
+      the failing cases in `bun/ci-run.test.ts`: the fix push comes from the
+      push clone, for a tip on top of `head_sha` with a passing pre-PR record;
+      a tip with none pushes nothing and exits 1 naming it; the fetch with the
+      App's token runs in the push clone, and `agent` reads the branch from
+      its bundle; every git command in the session's clone goes through the
+      launcher. Then change `bun/ci-run.ts`, the fix prompt (run the pre-PR
+      check before `fixed`), the note beside `pushRef()`, and every line of
+      `ci-run-agent`'s design or the `orchestrator` spec that puts the fetch
+      or the push in the session's clone. Verify with those cases and
+      `bun test`
 
 ## 2. The tokens' reach
 

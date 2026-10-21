@@ -106,6 +106,33 @@ Leaving the hook on and stripping the tokens from its environment was weighed
 and rejected: the hook would still run as `runner`, which reads the PAT and
 Notion token files from disk.
 
+### The CI flow's push
+
+`ci-run-agent`'s fix push (`bun/ci-run.ts`, through `pushRef` and `over` in
+`bun/board-loop-push.ts`) is the runner's second push, and decision 1a covers
+it the same way. Its design on `main` fetches the pull request's branch as the
+App, checks the tree and pushes, all in the session's clone as `runner`. Under
+this change:
+
+- `runner` fetches the branch as the App into its push clone and bundles it
+  for `agent`, which fetches the bundle into its clone through the launcher.
+  The App's token never enters the session's clone or `agent`'s environment.
+- After a `fixed` answer, `agent` bundles the branch, excluding `<head_sha>`;
+  `runner` fetches it into the push clone and checks the branch out at the
+  tip with `git checkout -f -B`.
+- There it applies the flow's own rule (`HEAD` is not `<head_sha>`, and
+  `<head_sha>` is its ancestor) and then `--before-push`, which needs a
+  passing pre-PR record the session's clone made of the tip. The fix prompt
+  therefore asks the session to run the pre-PR check before it answers
+  `fixed`; a tip without a record pushes nothing, and the flow exits 1 naming
+  it.
+- The push runs no hook and no force, from the push clone, as the board
+  loop's does. The tree check after the session runs as `agent` through the
+  launcher.
+
+Task 1.5 carries this into `ci-run-agent`'s code and text once that change's
+group 4 has merged.
+
 ### The GitHub token's reach
 
 `pass.sh` exports no GitHub token. With no App configured it passes the PAT

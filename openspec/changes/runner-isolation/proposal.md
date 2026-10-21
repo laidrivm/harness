@@ -24,7 +24,8 @@ session can write while the App key or a token is in reach*, recon of
   preload run with no secret in reach. The launcher also starts `claude`,
   which closes the gap that the code starting a session as `agent` belonged
   to no change.
-- The runner pushes from a push clone of its own. It takes the session's
+- Every push the runner makes, the board loop's and the CI flow's fix push
+  alike, comes from a push clone of its own. It takes the session's
   commits as a `git bundle` that `agent` writes, and pushes a commit only
   when the goal check finds a passing pre-PR record for its SHA. That push
   runs no pre-push hook; CI is the hard check. **BREAKING** for the rule in
@@ -85,5 +86,6 @@ None.
 - `bun/board-loop.ts`, `bun/board-loop-session.ts`, `bun/board-loop-push.ts`,
   `bun/github-app.ts`.
 - `core/git-and-prs.md` (the hook rule's exception).
-- `ci-run-agent`'s session group runs its session and push through the same
-  launcher and push clone.
+- `bun/ci-run.ts` and `ci-run-agent`'s text: its fetch, session and fix push
+  go through the same launcher, bundles and push clone, and its fix prompt
+  asks for the pre-PR check (task 1.5).
