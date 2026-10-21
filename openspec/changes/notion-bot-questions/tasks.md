@@ -100,7 +100,7 @@ questions posts no comment*, and `stage-goal` §*An unattended stage runs
 under one goal on the check*, for §*A stage whose launcher posts its
 question*.
 
-- [ ] 3.1 Write the failing pass cases in `bun/board-loop-question.test.ts`
+- [x] 3.1 Write the failing pass cases in `bun/board-loop-question.test.ts`
       through `board-loop.fixture.ts`, whose stub `claude` learns to write its
       environment and print a `QUESTION:` message. With no settings file, the
       stage prompt keeps today's fourth line and neither session carries
@@ -113,7 +113,7 @@ question*.
       configured [34]. The fourth line of the stage prompt, with settings,
       names `QUESTION:`, the mark and that the session posts no comment, and
       matches the variant in `core/feature-workflow.md` [35]
-- [ ] 3.2 Wire it into `pass()`. Read the settings before the pick session.
+- [x] 3.2 Wire it into `pass()`. Read the settings before the pick session.
       Choose the launch form's fourth line. Pass the variable through an
       extra environment argument to `session()` in
       `bun/board-loop-session.ts`, so that only the runner adds it, together
@@ -125,7 +125,7 @@ question*.
       pass. Keep `bun/board-loop.ts` under the cap `bun bun/file-size.ts`
       reports; if it would pass the cap, move `prompt()` and `pickPrompt()`
       into a module of their own in the same commit
-- [ ] 3.3 Reconcile the restating sites, and read each one back after the
+- [x] 3.3 Reconcile the restating sites, and read each one back after the
       edit:
       - the comment above `pickPrompt()`, which says the runner has no access
         to the board, now says that it reads no card's `Status`;

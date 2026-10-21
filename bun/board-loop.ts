@@ -28,12 +28,14 @@
 import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
+import { pickPrompt, prompt, type Step } from "./board-loop-prompt.ts";
 import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session } from "./board-loop-session.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
+import { asked, post, type Settings, settings, where } from "./notion-bot.ts";
 import { readPullRequests } from "./pull-requests.ts";
-import { MARK } from "./question-gate.ts";
+import { RUNNER_ASKS } from "./question-gate.ts";
 import { groups } from "./turn-gate.ts";
 
 /** A stage session's limit, fixed by the spec: a longer step is split, never given more. */
@@ -43,8 +45,6 @@ export const LIMIT = 60 * 60 * 1000;
 const DEFAULT = "main";
 
 type Outcome = "met" | "open" | "timeout" | "idle" | "refused";
-/** `answer`: every group is ticked, so the step is N+1 and carries the answer on the card. */
-type Step = { step: number; branch: string; answer: boolean };
 
 /**
  * Whether Claude Code's config trusts `dir`, keyed by its real path. The path
@@ -100,50 +100,6 @@ function consider(slug: string, status: string, blocking: string[]): Step | stri
  */
 const left = (branch: string) =>
 	[`refs/heads/${branch}`, `refs/remotes/origin/${branch}`].some((ref) => sh("git", "rev-parse", "--verify", "-q", ref).ok);
-
-/**
- * The launch form `core/feature-workflow.md` fixes for an apply step, or its
- * answer variant, the first line naming a branch a session left.
- */
-function prompt(slug: string, { step, branch, answer }: Step, check: string, resumed: boolean): string {
-	const work = answer
-		? `write the answer on its card into its tasks.md as group ${step}, then /opsx:apply ${slug} for that group`
-		: `/opsx:apply ${slug} for its group ${step}`;
-	// task-board, *The answer asks for a change of its own*: the check then reads `open`, by design.
-	const instead = answer
-		? " — or, when the answer asks for a change of its own or its work would not fit one step, file an `idea` card for it, clear the card's `Assign`, add no group and end with `BLOCKED — <that card>`"
-		: "";
-	// Never `git switch -c`: a local branch makes it fail, and one on `origin` alone a second branch from main.
-	const resume = resumed
-		? ` A session left the branch ${branch}: switch to it with \`git switch ${branch}\` rather than create it, and carry on from what its commits hold.`
-		: "";
-	return [
-		`/goal Carry step ${step} of the OpenSpec change ${slug}: ${work} and the pre-PR sequence, up to a committed HEAD on the branch of the step — the runner, not this session, pushes that branch and opens the pull request${instead}.${resume}`,
-		"This session runs unattended.",
-		`The goal is met when the last line of \`bun ${check} apply ${slug} ${step} --before-push\`, run after the last commit, opens with \`goal met\` — or when the final message opens with \`BLOCKED —\` and names what only the user can settle.`,
-		// No apostrophe: the doc's form wraps the prompt in the shell's single quotes.
-		`A question only the user can settle goes on the card of the change as one page-level comment — \`page_id\` and \`markdown\` only, after reading that card and its comments — whose markdown opens with ${MARK}, its two backticks included.`,
-		// `board-loop-push.ts` reads these two, as the pass reads `PICK:`.
-		"When the pull request is to open, end the final message with a line `PR-TITLE: <title>`, then a line `PR-BODY:` with the body below it to the end; when a gate line holds the pull request back, write neither.",
-	].join("\n");
-}
-
-/**
- * The pick session's prompt: no goal, and one write, the claim. The runner
- * neither reads nor waits on that move, since it has no access to the board,
- * and a pass that fails after it leaves the card at `applying` for the next.
- */
-function pickPrompt(board: string, slugs: string[], answers: string[]): string {
-	return [
-		`Read the saved view named \`Board view\` of the Notion board ${board}, and change nothing but the \`Status\` of the card you pick.`,
-		"This session runs unattended.",
-		`These changes are takeable: ${slugs.join(", ") || "none"}. A card's \`Pointer\` names its change as \`openspec/changes/<slug>/\`.`,
-		`These changes are answer candidates: ${answers.join(", ") || "none"}. Take one only when its card's \`Assign\` holds the user and its page-level discussion, read with \`notion-get-comments\` with \`include_resolved: true\` (the default leaves resolved ones out) and never a comment on a block, holds a comment opening with \`harness-question\` and, after the last such comment, one by the user \`Assign\` names that does not open with it. That last question counts whichever account posted it, a Notion integration included. A card with no such question is no answer.`,
-		"Take an answered candidate's card first, from `applied` or `applying`, then the `applying` column, then `proposed`, and each in the order the view returns it. Find the first card whose pointer names a takeable change or an answered candidate.",
-		"Before you answer, set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`, or when it reads `applied` and names an answer candidate, then fetch that card again, and write no other card or property. Write nothing when that line names no change listed above. Leave a card already at `applying` unwritten. A write that fails changes nothing about your answer.",
-		"End with one line, `PICK: <slug>` for its change or `PICK: none` when no card names one, and write no other line starting `PICK:`.",
-	].join("\n");
-}
 
 /** One pass. `limit` and `kill` are replaced only by a test, through an entry module. */
 export async function pass(args: string[], limit = LIMIT, kill: Kill = process.kill): Promise<number> {
@@ -242,17 +198,23 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		if (left) return end("refused", `${outlived}; the clone is left as the session left it`);
 	};
 	// The App, when one is configured, and its bot's identity for both sessions' commits, before either.
+	// The Notion integration's settings too: its token stays in this process, a header to `fetch` alone.
 	let app: ReturnType<typeof configured>;
 	let as: Record<string, string> = {};
+	let bot: Settings | undefined;
 	try {
 		app = configured(process.env, sh("git", "config", "--get", "remote.origin.url").out);
 		if (app) as = await identity(app);
+		bot = settings(where("notion-bot.json"));
 	} catch (error) {
 		return refuse((error as Error).message);
 	}
+	// The gate refuses every comment where it sees the variable; the withheld tool, where it does not.
+	if (bot) as = { ...as, [RUNNER_ASKS.name]: RUNNER_ASKS.value };
+	const withheld = bot ? ["--disallowedTools", "mcp__*__notion-create-comment"] : [];
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
-		picked = await session(pickPrompt(named, listed(false), listed(true)), limit, kill, true, as);
+		picked = await session(pickPrompt(named, listed(false), listed(true)), limit, kill, true, as, withheld);
 	} catch {
 		return refuse("claude could not be started");
 	}
@@ -277,13 +239,27 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const id = crypto.randomUUID();
 	try {
 		// Captured, for its title and body: in text mode it prints nothing before its final message.
-		staged = await session(prompt(slug, chosen, relative(real, check), resumed), limit, kill, true, as, ["--session-id", id]);
+		staged = await session(prompt(slug, chosen, relative(real, check), resumed, !!bot), limit, kill, true, as, [
+			"--session-id",
+			id,
+			...withheld,
+		]);
 	} catch {
 		return refuse("claude could not be started");
 	}
 	const stageEnd = unclean(target, staged);
 	if (stageEnd !== undefined) return stageEnd;
 	if (staged.out.trim()) console.log(staged.out.trim());
+	// Before the push, so the post never waits on it; neither changes the outcome.
+	const question = asked(staged.out);
+	if (question !== undefined)
+		console.log(
+			!bot
+				? "question: not posted — no integration is configured"
+				: typeof question === "string"
+					? `question: not posted — ${question}`
+					: await post(bot, question, { board: named, slug }),
+		);
 
 	const judged = [join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
 	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app);

@@ -407,9 +407,14 @@ integration's `harness-answer` after its last question.
   the refusal's wording loses its pointer to `QUESTION:`, which the launch
   form's line already names.
 - [`--disallowedTools` may not take the `*` server wildcard] → task 3.1's
-  stub logs the argument, and task 3.2 probes the real CLI once with a
-  session that tries the call; if the wildcard is not honoured, the runner
-  names the connector's server as the hook's matcher sees it.
+  stub logs the argument, and task 3.2 probed the real CLI once (Claude Code
+  2.1.305, 2026-10-21). A `claude -p` session asked to list its tools, with
+  no call made, listed `mcp__claude_ai_Notion__notion-get-comments` alone
+  under `--disallowedTools mcp__*__notion-create-comment`, and both tools
+  without it, so the wildcard is honoured. The probe listed the tools rather
+  than tried the call: a call the flag let through would have posted under
+  the user's name. If a later release stops honouring it, the runner names
+  the connector's server as the hook's matcher sees it.
 - [The API may list unresolved comments only] → a question the user resolved
   unanswered counts as not waiting, so a new one may follow it. The pick
   session still reads resolved discussions for answers.
