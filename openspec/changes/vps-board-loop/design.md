@@ -199,9 +199,9 @@ interpolation or an `environment:` literal. An SSH session does not inherit
 the container's environment anyway, so `pass.sh` reads the files itself. `gh`
 and git's credential helper (`gh auth setup-git`, run in the image) take
 `GH_TOKEN`. The n8n SSH key's private half lives only in n8n's credential
-store, entered by the user. Once `github-app-identity`'s second step lands,
-the App's private key joins them as one more secret file read by `runner`
-alone, named by `HARNESS_GITHUB_APP_KEY`; it never enters n8n.
+store, entered by the user. The App's private key is one more secret file, read by a key-holder user
+alone, which mints `runner` an hourly token (`runner-isolation`); it never
+enters n8n.
 
 ### Workflows go through `export:workflow` / `import:workflow`
 
@@ -289,15 +289,13 @@ host, which `claude remote-control` (server mode) spawns, up to its
   with the environment it names.
   The login and the token sit on one host without one overriding the other.
 - **Which user it runs as, and what it reaches.** The login opens the user's
-  claude.ai connectors to the host, not only the model. One fixed point: the
-  user that runs `claude auth login` is the user that runs the server and
-  the login check, since the login is a file in that user's home. Which
-  Unix user that is, which clones and files it can read, how its secrets
-  are mounted, whether the App key or a token is in its reach, and the test
-  that a session cannot read the token files are the card *Keep the runner from
-  running code a session can write while the App key or a token is in
-  reach* to settle; this change does not decide them, and group 3 builds the
-  server only once that card has.
+  claude.ai connectors to the host, not only the model. The user that runs
+  `claude auth login` is the user that runs the server and the login check,
+  since the login is a file in that user's home. That user is `runner`
+  (user, 2026-10-21): a phone session reaches the PAT, the Notion bot's token
+  and hourly App tokens, never the App key, which a key-holder user alone
+  reads. `runner-isolation` fixes the users, the secret files' owners and
+  the test that a session cannot read them.
 
 ## Risks / Trade-offs
 

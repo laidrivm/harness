@@ -129,9 +129,9 @@ Closes every scenario of `orchestrator` §*The orchestrator directory holds no
 secret*, §*Every pin in the orchestrator directory is exact and names what
 moves it* and §*Remote Control runs on the saved login alone, and a failing
 login is reported*. Tasks 3.6–3.9, Remote Control (`design.md` *Remote Control
-on the host*), wait on the card *Keep the runner from running code a session
-can write while the App key or a token is in reach* as well as on the
-spike's choice of engine: that card settles which user runs the server.
+on the host*), run the server as `runner` (user, 2026-10-21) and wait on the
+spike's choice of engine. The App key goes on the host only after
+`runner-isolation` group 3, which edits this group's image and README.
 
 - [ ] 3.1 Write the failing cases first in a new `orchestrator/layout.test.ts`,
       and record that each fails before the files exist. Each check runs over
@@ -153,7 +153,8 @@ spike's choice of engine: that card settles which user runs the server.
       and exits non-zero when the public
       key file is missing [38]. The image creates both users, `runner` with
       the fixed numeric uid the host README names, and the one rule that lets
-      `runner` start a command as `agent` names `claude` alone; the README's
+      `runner` start a command as `agent` names one command, the launcher
+      `runner-isolation` adds; the README's
       provisioning step makes each secret file owned by that uid, mode 0400,
       and its directory 0500 [41]. The workflow's SSH node is followed by an
       IF node on `code` whose non-zero branch ends in Stop and Error [43].
@@ -186,8 +187,7 @@ spike's choice of engine: that card settles which user runs the server.
       what to read before removing a stop file. It names no address and no
       account. Verify by reading every file under `orchestrator/` whole for an
       identifier before the commit (`git-and-prs.md`)
-- [ ] 3.6 **User act.** On the host, in a `tmux` session as the user the
-      runner card names: `claude auth login`, opening the printed URL on any
+- [ ] 3.6 **User act.** On the host, in a `tmux` session as `runner`: `claude auth login`, opening the printed URL on any
       device (the phone will do) and pasting the code back; then, in a
       clone's directory, `claude remote-control` once, answering `y` to trust
       the directory and to *Enable Remote Control?*. Record in the pull
