@@ -105,8 +105,13 @@ async function decide(body: string, clone: string, marker: string): Promise<Outc
 	if (pull.user?.login !== bot) return ["ignored", `#${pull.number} is not the App's`];
 	if (pull.head?.sha !== run.head_sha) return ["ignored", `#${pull.number} moved past ${run.head_sha}: the run is stale`];
 	if (git(clone, "status", "--porcelain", "--untracked-files=no") !== "") return ["failed", `${clone} holds a tracked edit`];
-	// shortcut: the first 100 comments only; follow the `Link` header once a loop's pull request carries more.
-	const comments = (await request(`${base}/issues/${pull.number}/comments?per_page=100`, token)) as Comment[];
+	const comments: Comment[] = [];
+	for (let page = 1; ; page++) {
+		const next = (await request(`${base}/issues/${pull.number}/comments?per_page=100&page=${page}`, token)) as Comment[];
+		if (!Array.isArray(next)) throw new Error(`the comments of #${pull.number} are not a list`);
+		comments.push(...next);
+		if (next.length < 100) break;
+	}
 	const marks = comments.filter((c) => c.user?.login === bot).map((c) => c.body ?? "");
 	if (marks.some((b) => b.startsWith(LIMIT))) return ["ignored", `#${pull.number} is past its limit`];
 	const attempts = marks.filter((b) => b.startsWith(ATTEMPT));
