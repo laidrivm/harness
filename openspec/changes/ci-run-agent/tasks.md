@@ -62,11 +62,12 @@ Closes `orchestrator` §*A failed CI run starts an agent only for a pull
 request the loop opened*, §*A pull request gets at most three fix attempts*
 and §*A fix reaches the pull request only as new commits the runner pushes*.
 
-- [ ] 3.1 Probe `--json-schema` on a stub session in a clone with the
+- [x] 3.1 Probe `--json-schema` on a stub session in a clone with the
       harness's hooks registered. Record whether `structured_output` arrives
       with the turn gate and `Stop` hooks in place. If it does not, switch the
       parse to a `CI-OUTCOME:` last line before 3.3, as `design.md`'s risk
-      says
+      says. Applied (2026-10-21, Claude Code 2.1.306): it arrives, so the
+      parse stays `--json-schema`; `design.md`'s risk records the probe
 - [ ] 3.2 Write the failing cases in a new `bun/ci-run.test.ts` against a
       `Bun.serve` API through `GITHUB_API_URL`, a stub `claude` and a stub
       `gh`, with a clone fixture [17, 18, 29–54, 61, 64–67]

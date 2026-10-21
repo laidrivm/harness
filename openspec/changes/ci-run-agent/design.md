@@ -313,7 +313,16 @@ request's branch.
   `github-app-identity` set it aside for that reason.] → Group 3 probes it
   first, on a stub session with the turn gate registered. If the hooks swallow
   the answer, the fallback is a last line `CI-OUTCOME: <outcome>`, parsed as
-  `PICK:` is. That changes the parse, not the spec.
+  `PICK:` is. That changes the parse, not the spec. Probed 2026-10-21 on
+  Claude Code 2.1.306, in a clone of this repository with the pinned
+  harness's hooks: `claude -p … --json-schema <the schema> --output-format
+  json --tools ""` returned `structured_output` matching the schema, and the
+  turn gate's `mark` and `stop` halves both wrote their state for that
+  session. The probe ran without `--permission-mode auto`, which this
+  laptop's own auto mode refused to launch, and in a clone that was never
+  trusted, so its permission allow list was ignored; neither decides
+  whether hooks run. Not probed: a `Stop` hook that refuses the stop, which
+  only a session that moved `HEAD` meets.
 - [A flaky run is seen only when the user re-ran it before the handler took
   the lock, since `success` is never delivered.] → Accepted. The agent can
   still answer `flaky` from the log, and a later success is the `pr-sweep`'s.
