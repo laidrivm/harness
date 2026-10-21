@@ -292,8 +292,9 @@ host, which `claude remote-control` (server mode) spawns, up to its
   claude.ai connectors to the host, not only the model. One fixed point: the
   user that runs `claude auth login` is the user that runs the server and
   the login check, since the login is a file in that user's home. Which
-  Unix user that is, which clones and files it can read, and whether the
-  App key or a token is in its reach are the card *Keep the runner from
+  Unix user that is, which clones and files it can read, how its secrets
+  are mounted, whether the App key or a token is in its reach, and the test
+  that a session cannot read the token files are the card *Keep the runner from
   running code a session can write while the App key or a token is in
   reach* to settle; this change does not decide them, and group 3 builds the
   server only once that card has.

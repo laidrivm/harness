@@ -196,8 +196,9 @@ spike's choice of engine: that card settles which user runs the server.
       at once is not started again before the wait; the script or the unit
       setting or passing on `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or
       `ANTHROPIC_AUTH_TOKEN` fails the suite, naming the file and the
-      variable; the script clears all three from its environment before it
-      starts `claude`. Cite each scenario
+      variable; the script clears all three inside the command it hands
+      `tmux`, not only in its own environment, since a `tmux` server already
+      running keeps the environment it started with. Cite each scenario
 - [ ] 3.8 Write the failing cases, then add the login check: a script the
       engine's timer runs daily in the remote-control user's environment,
       which runs `claude auth status`, with `--text` when 3.6 found the
