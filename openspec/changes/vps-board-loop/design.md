@@ -17,10 +17,12 @@ are revised after that answer:
 
 - **Engine: n8n, until the spike's answer**, pinned at 2.38.2 or later. That floor covers
   CVE-2026-56357, fixed in 2.5.0, and CVE-2026-86080, fixed in 2.38.2.
-- **Claude on the host through `claude setup-token`**, with no user login on
-  the VPS. The token cannot fetch claude.ai connectors, so Notion reaches the
-  pick session as a separately configured MCP server. Remote Control is given
-  up. Phone access is the orchestrator's own UI, behind auth.
+- **Claude on the host through `claude setup-token`** for every unattended
+  pass. The token cannot fetch claude.ai connectors, so Notion reaches the
+  pick session as a separately configured MCP server. Phone access is the
+  orchestrator's own UI, behind auth. The 2026-10-18 decision also had no
+  user login on the VPS and gave Remote Control up; the user reversed that
+  part on 2026-10-21 (*Remote Control on the host* below).
 - **Until the GitHub App lands, the loop pushes as the user**, the way it does
   from the laptop.
 - **The n8n workflows, the Dockerfile and compose (and later the router) live
@@ -245,7 +247,51 @@ user's email, one-time code), and behind that n8n's own owner login — the
 user's decision of 2026-10-18, since n8n has had CVEs that bypassed its own
 checks. Access is a dashboard setting, a user act the host README names.
 Webhook paths, and the Access bypass they will need for `/webhook/*`, belong
-to the webhook step.
+to the webhook step. The second path from the phone is Remote Control, below.
+
+### Remote Control on the host (user, 2026-10-21)
+
+The user reversed one part of the 2026-10-18 decision. Remote Control was
+given up then because the claude.ai login on the VPS would expire and need
+redoing, not for its reach. The user accepts a login that lasts and that can
+be renewed from the phone. What it gives: a Claude Code session on the host
+driven from the Claude app, and new sessions started from the app on the
+host, which `claude remote-control` (server mode) spawns, up to its
+`--capacity` (32 by default).
+
+- **The login.** `claude auth login` once, by the user, in a `tmux` session
+  on the host: it prints a URL to open on any device and reads the code back
+  from the terminal, so a phone browser and a phone SSH client are enough.
+  On Linux the login is the file `~/.claude/.credentials.json`, mode 0600,
+  and Claude Code renews it on its own; it warns three days before it expires
+  (`Your login expires in 3 days · run /login to renew`). How long it lasts
+  is not documented. With Trusted Devices on, the phone side asks again once
+  the sign-in is 18 hours old.
+- **Two one-time prompts.** In the project directory, `claude remote-control`
+  asks to trust the directory and then *Enable Remote Control?*. Neither can
+  be answered ahead, and without a terminal the command exits with
+  `Workspace not trusted`, so the user answers both in the same `tmux`
+  session. The home directory never saves trust, so the server runs in a
+  clone's directory.
+- **The process.** The server runs inside `tmux`, which the docs name for a
+  command that must outlive the SSH session. A systemd unit is not
+  documented, so if group 3 wraps the `tmux` session in one, the unit starts
+  `tmux` and nothing else. The server exits after about ten minutes without
+  a network, so the wrapper restarts it.
+- **Beside the unattended passes.** `CLAUDE_CODE_OAUTH_TOKEN`,
+  `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` in a process's environment
+  take precedence over the saved login and stop Remote Control. So the
+  remote-control process's environment names none of them, and the
+  setup-token reaches only the `claude -p` passes, which `pass.sh` starts
+  with the environment it names.
+  The login and the token sit on one host without one overriding the other.
+- **Which user it runs as, and what it reaches.** The login opens the user's
+  claude.ai connectors to the host, not only the model. Which Unix user runs
+  the server, which clones and files it can read, and whether the App key or
+  a token is in its reach are the card *Keep the runner from running code a
+  session can write while the App key or a token is in reach* to settle;
+  this change does not decide them, and group 3 builds the server only once
+  that card has.
 
 ## Risks / Trade-offs
 
@@ -270,6 +316,16 @@ to the webhook step.
   the lock is held, so it exits busy. From any session, `CLAUDECODE` reaches
   the runner, which refuses. The stop file that follows pauses the loop:
   the safe side.
+- [The claude.ai login's lifetime is not documented, and a Remote Control
+  session that outlives it stops until the user signs in again.] → A timer
+  runs `claude auth status` in the remote-control user's environment and
+  reads the three-day warning, and a failing or expiring login is reported
+  to the user. The docs show that warning at startup and do not say whether
+  `claude auth status` prints it; task 3.6 records which, and if it does not,
+  the check catches the login only once it has failed. Where it reports —
+  a card on the board or the engine's own alert — follows the engine group 3
+  builds on. The unattended passes run on
+  the setup-token, so an expired login stops only Remote Control.
 
 ## Migration Plan
 
