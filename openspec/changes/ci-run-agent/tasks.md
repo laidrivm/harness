@@ -115,12 +115,13 @@ start.
 Closes `orchestrator` §*A failed scheduled run files an idea card* and §*A
 run that passed on a later attempt is a flaky finding*.
 
-- [ ] 5.1 Write the failing cases in `bun/ci-run.test.ts` for the two fresh
+- [x] 5.1 Write the failing cases in `bun/ci-run.test.ts` for the two fresh
       session routes [38, 55–58]
-- [ ] 5.2 Add both routes to `bun/ci-run.ts`. Verify with 5.1 and `bun test`
-- [ ] 5.3 Remove from `core/testing.md` the line saying CI flakes wait for
+- [x] 5.2 Add both routes to `bun/ci-run.ts`. Verify with 5.1 and `bun test`
+- [x] 5.3 Remove from `core/testing.md` the line saying CI flakes wait for
       this flow, if the stopgap still carries one. Verify with
-      `git grep -n "run_attempt" core`
+      `git grep -n "run_attempt" core` (2026-10-22: no hit; `core/testing.md`
+      carries no such line, so nothing was removed)
 
 ## 6. The engine's webhook call
 

@@ -550,3 +550,79 @@ describe("the session after the comment", () => {
 		expect(seen(h, "gh-calls")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
 	});
 });
+
+describe("the scheduled and flaky routes", () => {
+	const scheduled = (run: Record<string, unknown> = {}) => payload({ event: "schedule", head_branch: "main", name: "nightly", ...run });
+	/** The clones' directory the scheduled route reads, with `r` the host's clone in it. */
+	const clones = (h: Host) => {
+		const dir = join(h.root, "clones");
+		mkdirSync(dir, { recursive: true });
+		if (!existsSync(join(dir, "r"))) symlinkSync(h.clone, join(dir, "r"));
+		return { HARNESS_CI_CLONES: dir };
+	};
+	const seen = (h: Host, file: string) => readFileSync(join(h.home, file), "utf8");
+	const table = (h: Host) => readFileSync(join(h.home, "orchestrator", "pr-sessions.jsonl"), "utf8");
+	const status = (h: Host) => Bun.spawnSync(["git", "-C", h.clone, "status", "--porcelain"]).stdout.toString();
+	/** The session was a new one, never the table's resumed. */
+	const fresh = (h: Host) => {
+		const argv = seen(h, "claude-argv").split("\n");
+		expect(argv).toContain("--session-id");
+		expect(argv).not.toContain("-r");
+	};
+	const commit = "echo b > b.txt && git add b.txt && git commit -qm b\n";
+
+	// spec: orchestrator/a-nightly-audit-fails
+	test("a failed scheduled run on the default branch: a fresh session in the repository's clone, no table line, tree and HEAD unchanged [55]", async () => {
+		const h = host();
+		const before = table(h);
+		const r = await deliver(h, scheduled(), { env: clones(h) });
+		expect([r.code, r.held, api.posted]).toEqual([0, "acted", []]);
+		expect(r.line).toBe("event: handled — scheduled run https://github.com/o/r/actions/runs/5 failed on main; the session answered blocked");
+		fresh(h);
+		const argv = seen(h, "claude-argv");
+		for (const named of ["harness.board", "nightly", "https://github.com/o/r/actions/runs/5", join(h.logs, "5-1.log")]) expect(argv).toContain(named);
+		expect(seen(h, "claude-pwd").trim()).toBe(realpathSync(h.clone));
+		expect([table(h), rev(h.clone, "HEAD"), status(h)]).toEqual([before, SHA, ""]);
+		expect(seen(h, "gh-calls")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
+	});
+
+	test.each([
+		["a commit", commit],
+		["a changed file", "echo c >> a.txt\n"],
+	])("a scheduled session that made %s: exit 1 naming the clone [56]", async (_, script) => {
+		const h = host();
+		writeFileSync(join(h.home, "claude-act"), script);
+		const r = await deliver(h, scheduled(), { env: clones(h) });
+		expect(r.code).toBe(1);
+		expect(r.line).toMatch(/^event: failed — .*changed/);
+		expect(r.line).toContain(join(h.root, "clones", "r"));
+		expect(rev(h.bare, "refs/heads/main")).toBe(SHA);
+	});
+
+	test("a scheduled run on another branch is ignored [57]", async () => {
+		const h = host();
+		ignored(await deliver(h, scheduled({ head_branch: "feat/x" }), { env: clones(h) }), /scheduled run on feat\/x/);
+		expect(api.permissions).toBeUndefined();
+	});
+
+	test("a success on the event's own attempt is no flaky run: attempt 1/3 as for any failure [38]", async () => {
+		const h = host();
+		api.latest = { run_attempt: 1, conclusion: "success" };
+		const r = await deliver(h, payload());
+		expect(r.line).toBe(`event: handled — attempt 1/3 posted on #7; ${BLOCKED}`);
+	});
+
+	// spec: orchestrator/a-failure-the-user-re-ran-green
+	test("a later attempt that passed: no attempt comment, a fresh session on the failed attempt's logs, nothing pushed [58]", async () => {
+		const h = host();
+		api.latest = { run_attempt: 2, conclusion: "success" };
+		writeFileSync(join(h.home, "claude-out"), answer("flaky"));
+		const r = await deliver(h, payload());
+		expect([r.code, r.held, api.posted]).toEqual([0, "acted", []]);
+		expect(r.line).toBe("event: handled — attempt 2 of the run passed: flaky on #7; the session answered flaky");
+		fresh(h);
+		expect(seen(h, "claude-argv")).toContain("core/testing.md");
+		expect(seen(h, "gh-calls")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
+		expect([rev(h.bare, "refs/heads/feat/x"), status(h)]).toEqual([SHA, ""]);
+	});
+});

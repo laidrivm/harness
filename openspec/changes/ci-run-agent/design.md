@@ -136,11 +136,12 @@ laptop.
    `workflow_run.head_repository.full_name` must equal
    `repository.full_name`.
 2. Route. A run whose `event` is `schedule` on `repository.default_branch`
-   takes the scheduled route. Any other run needs a branch starting `feat/` or
-   `spec/`, and takes the pull request route. Everything else is ignored,
-   naming the filter.
+   takes the scheduled route; one on any other branch is ignored. Any other
+   run needs a branch starting `feat/` or `spec/`, and takes the pull request
+   route. Everything else is ignored, naming the filter.
 3. Find the clone. For a pull request, the clone is the one the table names.
-   For a scheduled run, it is `/home/agent/clones/<repository name>`. In both
+   For a scheduled run, it is `/home/agent/clones/<repository name>`;
+   `HARNESS_CI_CLONES` names another directory, which only the tests do. In both
    cases the clone's `origin`, parsed as `github-app.ts` parses it, must name
    the repository. Otherwise the run is ignored as having no clone.
 4. Take the repository's lock: the file `pass.sh` locks, keyed from the
@@ -158,7 +159,9 @@ laptop.
    Then re-read, under the lock, the run (`GET /actions/runs/<id>`) and the
    pull request.
 6. The pull request route goes on in *Attempts*. The scheduled route starts a
-   fresh session.
+   fresh session straight after the mint, re-reading nothing: it has no pull
+   request, and a newer attempt of a scheduled run is still a failure of the
+   night's (apply, 2026-10-22).
 
 ### The PR → session table
 
@@ -300,6 +303,13 @@ attempt's tests. The scheduled prompt files an `idea` card on the board the
 clone's `package.json` names under `harness.board`, naming the workflow and the
 run, unless a card that is not `done` already names that workflow. Neither
 changes a file. The runner checks that `HEAD` and the tree are unchanged.
+Both answer through the same schema, the scheduled prompt asking for
+`blocked` and the flaky one for `flaky`, each naming the card in the summary;
+the outcome decides nothing, but no answer that matches is exit 1, so a
+session that never started is not taken as a card filed. Neither switches the
+clone, since neither needs the branch; a session that moved `HEAD` or the
+tree is exit 1 naming the clone, which stays as it is with the log file
+(apply, 2026-10-22).
 
 After the session, the runner first checks the tree. A tracked change or an
 untracked file left behind, whatever the outcome, means push nothing, switch
