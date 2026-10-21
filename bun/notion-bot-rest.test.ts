@@ -45,8 +45,8 @@ type Stub = {
 	post?: number;
 	patch?: number;
 	hang?: boolean;
-	/** Every comments page says more follows and names this as its cursor. */
-	stuck?: string | null;
+	/** Every comments page says more follows and names this as its cursor, or these in turn. */
+	stuck?: string | null | string[];
 };
 type Seen = { call: string; version: string | null; auth: string | null; body: unknown };
 
@@ -69,6 +69,10 @@ function notion(stub: Stub = {}): Seen[] {
 				return req.method === "PATCH" ? json({}, stub.patch) : json(stub.page ?? PAGE, stub.status);
 			if (url.pathname.startsWith("/v1/data_sources/")) return json(stub.source ?? SOURCE);
 			if (req.method === "POST") return json({}, stub.post);
+			if (Array.isArray(stub.stuck)) {
+				const read = seen.filter((s) => s.call.startsWith("GET /v1/comments")).length - 1;
+				return json({ results: [], has_more: true, next_cursor: stub.stuck[read % stub.stuck.length] });
+			}
 			if (stub.stuck !== undefined) return json({ results: [], has_more: true, next_cursor: stub.stuck });
 			const pages = stub.comments ?? [[]];
 			const at = Number(url.searchParams.get("start_cursor") ?? 0);
@@ -146,6 +150,7 @@ describe("a question already waits", () => {
 		["repeats its cursor", "same", 2],
 		["says more follows with no cursor", null, 1],
 		["says more follows with an empty cursor", "", 1],
+		["comes back to a cursor already read", ["A", "B"], 3],
 	])("a comments read that %s posts nothing", async (_, stuck, reads) => {
 		const seen = notion({ stuck });
 		expect(await line()).toBe("question: not posted — the comments read gave no new cursor");
