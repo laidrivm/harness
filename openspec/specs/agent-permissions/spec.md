@@ -83,7 +83,14 @@ superset, and a deny entry can only ever be redundant, never wrong.
 Those three are subcommand names, and `gh api` addresses the same endpoints
 while naming no subcommand at all. The guard SHALL therefore also block a
 `gh api` invocation that cannot be shown to be a read, and SHALL NOT block one
-that can. A read is a call whose `--method` or `-X` names `GET` or `HEAD`,
+that can, nor one that opens a pull request. A call opens a pull request when
+its one operand is wholly `repos/<owner>/<repo>/pulls`, with an optional
+leading `/`, each name GitHub's name characters and neither `.` nor `..`, no
+query string; when every method flag it carries names `POST`, or it carries
+none; and when every other flag reads or carries the body. That endpoint does
+nothing but open a pull request, the act `gh pr create` performs and this
+requirement keeps allowed, and a cloud session cannot run `gh pr create`,
+which reads GraphQL. A read is a call whose `--method` or `-X` names `GET` or `HEAD`,
 whatever parameters it carries, or one naming no method and carrying no
 parameter flag — `-f`, `-F`, `--field`, `--raw-field` or `--input` — since
 `gh api` sends `GET` by default and switches to `POST` as soon as a parameter
@@ -168,6 +175,21 @@ command.
 - **WHEN** the agent attempts `gh api -X GET /search/issues -f q=repo:o/r`
 - **THEN** the call is not blocked, because an explicit `GET` sends the
   parameters as a query string
+
+#### Scenario: A pull request opened through the endpoint
+
+- **WHEN** the agent attempts
+  `gh api -X POST repos/o/r/pulls -f title=t -f head=feat/x -f base=main`,
+  with or without the method flag, or with the body from `--input`
+- **THEN** the guard allows the call, as it allows `gh pr create`
+
+#### Scenario: A write to another endpoint is still refused
+
+- **WHEN** the agent attempts a `POST` to `repos/o/r/pulls/1`, to
+  `repos/o/r/pulls` with a query string, to a path with `..` for a name, or
+  `-X PATCH` to `repos/o/r/pulls`, or adds a flag that neither reads nor
+  carries the body
+- **THEN** the guard blocks the call
 
 ### Requirement: The git prohibitions are enforced by a hook
 
