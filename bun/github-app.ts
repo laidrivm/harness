@@ -54,8 +54,8 @@ export function jwt(id: string, key: KeyObject, now = Math.floor(Date.now() / 10
 	return `${data}.${base64url(sign("sha256", Buffer.from(data), key))}`;
 }
 
-/** One API call's answer, `field` of it, which must be `type`; anything else throws naming the path. */
-async function call(path: string, field: string, type: "string" | "number", bearer?: string, body?: unknown) {
+/** One API call's parsed answer, a POST of `body` when there is one; an unreachable API or a failed call throws naming the path. */
+export async function request(path: string, bearer?: string, body?: unknown): Promise<unknown> {
 	const headers: Record<string, string> = { accept: "application/vnd.github+json" };
 	if (bearer) headers.authorization = `Bearer ${bearer}`;
 	const url = `${process.env.GITHUB_API_URL ?? "https://api.github.com"}${path}`;
@@ -66,7 +66,12 @@ async function call(path: string, field: string, type: "string" | "number", bear
 		throw new Error(`GitHub's API could not be reached for ${path}: ${error.message}`);
 	});
 	if (!answer.ok) throw new Error(`GitHub's API answered ${path} with ${answer.status}`);
-	const value = ((await answer.json().catch(() => ({}))) as Record<string, unknown>)[field];
+	return answer.json().catch(() => ({}));
+}
+
+/** One API call's answer, `field` of it, which must be `type`; anything else throws naming the path. */
+async function call(path: string, field: string, type: "string" | "number", bearer?: string, body?: unknown) {
+	const value = ((await request(path, bearer, body)) as Record<string, unknown> | null)?.[field];
 	if (typeof value !== type) throw new Error(`GitHub's API answered ${path} with no ${field}`);
 	return String(value);
 }

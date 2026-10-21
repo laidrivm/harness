@@ -147,7 +147,9 @@ laptop.
    clone's `origin` as `pass.sh` derives it, never from the payload. The
    handler waits on it with `flock -w 7200` where `pass.sh` uses `-n`, because
    a dropped event is lost and a pass ends within its hour. At the bound it
-   exits 1. It holds the lock until the push and the clone's cleanup after the
+   exits 1. Bun opens no `flock` of its own, so the flow re-runs
+   `ci-run.ts` under `flock`, the payload on its stdin, and reads that
+   process's verdict from its last line (apply, 2026-10-21). It holds the lock until the push and the clone's cleanup after the
    session have ended, so the check and the post in *Attempts* are one step
    against every other delivery, and no pass writes to the clone or pushes
    while the flow still does (PR review).
@@ -198,7 +200,8 @@ laptop.
 
 ### Attempts are the App's marked comments on the pull request
 
-On the pull request route, after the re-read:
+On the pull request route, after the re-read and the refusal of a tracked
+edit in the clone (*The session*), which so costs no attempt:
 
 1. If the pull request is closed, or its head has moved off the run's
    `head_sha`, the run is stale and ignored.
@@ -340,6 +343,6 @@ request's branch.
 
 ## Migration Plan
 
-All five groups merge inert: nothing calls the handler until the engine's
+All six groups merge inert: nothing calls the handler until the engine's
 workflow is imported and a repository's webhook exists. To stop the flow,
 disable the webhook on GitHub. The table and the comments stay, harmless.
