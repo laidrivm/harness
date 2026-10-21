@@ -226,8 +226,9 @@ whatever else allows it* already relies on. So the consumers' own
 `Bash(gh run *)` allow entries, present in both `dota2` and `mellon`, need no
 edit. A bare `Bash(gh run <sub> *)` matching the subcommand with no arguments
 rests on the same behaviour as `Bash(bun i *)` matching a bare `bun i`, which
-that requirement's scenarios already state. Group 4's user act confirms both
-forms in a live session.
+that requirement's scenarios already state. Group 4's user act confirmed both
+forms in a live session on 2026-10-21: the four write forms prompted, the
+three read forms did not (task 4.7).
 
 The API spelling, `gh api -X POST …/runs/<id>/rerun`, is already refused by
 the guard's `gh api` write check.
