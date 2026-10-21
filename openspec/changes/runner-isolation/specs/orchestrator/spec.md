@@ -21,6 +21,11 @@ clone, its `node_modules` included.
 - **THEN** the pass runs that pinned commit, read from `main`, never from the
   session's branch
 
+#### Scenario: The pin names no full commit
+
+- **WHEN** the part of `main`'s harness pin after `#` is not a full commit
+- **THEN** no pass starts, and the stop file names the value
+
 ### Requirement: The runner runs nothing in a session's clone as itself
 
 Every git, bun or `claude` command the runner runs in a session's clone SHALL
@@ -45,7 +50,8 @@ clone that a command of its own then executes.
 
 The runner SHALL push from a push clone it alone writes, into which it takes
 the session's commits from a bundle the session user writes. It SHALL push a
-commit only when the goal check finds a passing pre-PR record for that
+commit only when the goal check, run with that commit checked out on its step
+branch, finds a passing pre-PR record the session's clone made of that
 commit's SHA. That push SHALL run no hook, and the runner's bun SHALL load no
 configuration from the pushed tree.
 

@@ -48,10 +48,14 @@ it is, and the code that starts a session as `agent` is owned by this change.
 ### The runner's own harness checkout
 
 `pass.sh` keeps a clone of the harness at `~runner/harness` and a push clone
-per repository at `~runner/push/<owner>-<repo>`. Each pass it fetches the push
-clone, reads the pin from `origin/main:package.json`
-(`devDependencies.harness`, a full commit) with `git show` and `jq`, and
-checks the harness clone out detached at that commit, forced and cleaned.
+per repository at `~runner/push/<owner>/<repo>`, two segments, since a hyphen
+inside an owner or a repository name would make a joined `<owner>-<repo>`
+name two repositories. Each pass it fetches the push clone, reads
+`devDependencies.harness` from `origin/main:package.json` with `git show` and
+`jq` (`github:laidrivm/harness#<commit>`), takes the part after `#`, and
+checks the harness clone out detached at that commit, forced and cleaned. A
+part that is not exactly 40 lowercase hex characters starts no pass and is
+named in the stop file.
 The board loop, the goal check and `github-app.ts` import only `node:` and
 `bun:` modules, so the checkout needs no install. The judge copy is that
 checkout's `goal-check.ts`.
@@ -82,9 +86,14 @@ runner runs bun from an empty directory and points git at the push clone with
 After a stage session, `agent` writes `git bundle create` of the step branch,
 excluding `origin/main`, into a directory `runner` can read. `runner` fetches
 the bundle into its push clone: a bundle carries objects and refs, never
-config or hooks. The goal check runs `--before-push` there, which already
-refuses a tip without a passing pre-PR record. Only then does the runner push
-the exact SHA.
+config or hooks. The runner then checks out the step branch at the bundle's
+tip with `git checkout -f -B <branch> <tip>`, so `HEAD` names that branch and
+holds exactly that commit, which `--before-push` reads both of. The goal check
+runs `--before-push` there. Today it matches a pre-PR record by commit and by
+the checkout's top level, and the record was made in the session's clone, so
+with `HARNESS_CLONE` set it matches the top level against that clone's path
+instead; the SHA is the same, since a bundle keeps it. It still refuses a tip
+without a passing record. Only then does the runner push the SHA it checked.
 
 The push clone is created with an empty `--template` and its
 `core.hooksPath` set to an empty root-owned directory, so no hook runs.

@@ -28,10 +28,16 @@ checkout*, §*The runner runs nothing in a session's clone as itself* and
       run; the push comes from the push clone, after the bundle's fetch, for
       exactly the bundle's tip; a tip with no pre-PR record pushes nothing;
       the push clone runs no hook; a `bunfig.toml` preload in the pushed tree
-      does not load; with no launcher set, a pass runs as today
+      does not load; with no launcher set, a pass runs as today. In the push
+      clone, `HEAD` names the step branch at the bundle's tip before the goal
+      check, and the goal check finds the record the session's clone made of
+      that tip. A pin whose part after `#` is not a full commit starts no
+      pass, naming the value; two repositories whose `<owner>-<repo>` would
+      coincide get two push clones
 - [ ] 1.3 Add the launcher path to `bun/board-loop.ts` and
       `bun/board-loop-session.ts` (`HARNESS_AS_AGENT`, `HARNESS_CLONE`), the
-      bundle and push-clone steps to `bun/board-loop-push.ts`, and to
+      bundle and push-clone steps to `bun/board-loop-push.ts`, the record's
+      top level from `HARNESS_CLONE` to `bun/goal-check.ts`, and to
       `orchestrator/pass.sh` the harness checkout at the pin read from the
       push clone's `origin/main`. Verify with 1.2, `orchestrator/pass.test.ts`
       and `bun test`
@@ -47,9 +53,10 @@ Closes `orchestrator` §*The user's GitHub token reaches only the push*,
 §*The wrapper starts the pass with the environment it names*.
 
 - [ ] 2.1 List every `gh` and authenticated call a pass makes, with
-      `git grep -n -e '"gh"' -e GH_TOKEN bun/board-loop*.ts bun/goal-check.ts`,
-      and record in `design.md` *The GitHub token's reach* which run
-      unauthenticated
+      `git grep -n -e '"gh"' -e GH_TOKEN` over `bun/board-loop*.ts`,
+      `bun/goal-check.ts` and every module they import (`bun/pull-requests.ts`
+      runs the goal check's `gh api` reads), and record in `design.md` *The
+      GitHub token's reach* which run unauthenticated
 - [ ] 2.2 Write the failing cases: `pass.sh`'s pass environment holds no
       `GH_TOKEN`, holds the App's id and mint command when they are set, and
       no key path; `publish()` reads `HARNESS_GH_TOKEN_FILE` only for the
