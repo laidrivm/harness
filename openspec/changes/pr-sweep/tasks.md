@@ -100,7 +100,7 @@ when one is configured*. Of that requirement, it closes *No App*.
 Closes `pr-sweep` §*The sweep writes as the App when one is configured*:
 *The App configured* and *One setting alone*.
 
-- [ ] 2.1 Write the failing cases in `bun/pr-sweep.test.ts`, against a
+- [x] 2.1 Write the failing cases in `bun/pr-sweep.test.ts`, against a
       `Bun.serve` API reached through `GITHUB_API_URL` and a PKCS#1 key from
       `generateKeyPairSync`. One setting alone, or one that is empty or
       whitespace-only, exits 1 and lists nothing [13, 32]. A failed mint exits
@@ -109,14 +109,22 @@ Closes `pr-sweep` §*The sweep writes as the App when one is configured*:
       `statuses` at `write` and `checks` at `read` [47]. `gh api user` runs
       with no App token in its environment. Every later `gh` call gets the
       token through `GH_TOKEN` [48]. No spawned process's arguments hold the
-      token [34]. The App's `app/<slug>` is then an allowed author [46]
-- [ ] 2.2 Make `github-app.ts`'s token request take its permission set from
+      token [34]. The App's `app/<slug>` is then an allowed author [46].
+      Applied: before 2.2 and 2.3, the nine App cases failed while group 1's
+      30 held. A login that cannot be read leaves the App the one allowed
+      author, as design.md *The listing* says, and `app/<slug>` without
+      `is_bot` is no author. The fixture gained `sweepAsync`, so the
+      stand-in API answers from the test's own process, and logs each call's
+      `GH_TOKEN`
+- [x] 2.2 Make `github-app.ts`'s token request take its permission set from
       the caller. Pass the board loop's two from `board-loop-push.ts`, and see
       `bun/github-app.test.ts` and `bun/board-loop-push.test.ts` still pass,
       with the board loop's request body unchanged
-- [ ] 2.3 Wire the App into `bun/pr-sweep.ts`: the settings through
+- [x] 2.3 Wire the App into `bun/pr-sweep.ts`: the settings through
       `github-app.ts`, the login read first, then one token minted for the run.
       See 2.1 pass
-- [ ] 2.4 Add to the README paragraph from 1.5: the two settings, both or
+- [x] 2.4 Add to the README paragraph from 1.5: the two settings, both or
       neither, and that with them every write is the App's. Verify by reading
-      it back. Then run `bun bun/check.ts` and `bun test`. Both pass
+      it back. Then run `bun bun/check.ts` and `bun test`. Both pass. Applied:
+      `bun test` is the check here, run by the pre-push before the push, as
+      in 1.6

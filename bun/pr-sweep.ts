@@ -10,12 +10,15 @@
  *
  * It reads no clone and takes no lock: every call names the repository, and
  * the drift check writes only temporary directories it removes. It re-runs no
- * CI. Group 1 runs with the inherited `gh` credential; nothing starts it yet.
+ * CI. With the App's two settings it writes as the App, through one token
+ * minted for the run; without them, as the inherited `gh` credential. Nothing
+ * starts it yet.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pinOf } from "./bump-pin.ts";
+import { configured, mint, slug } from "./github-app.ts";
 import { limit } from "./pull-requests.ts";
 import { drift } from "./sync.ts";
 
@@ -41,7 +44,7 @@ type Pull = {
 	headRefName: string;
 	headRefOid: string;
 	baseRefName: string;
-	author?: { login?: string };
+	author?: { login?: string; is_bot?: boolean };
 	isCrossRepository: boolean;
 	isDraft: boolean;
 	mergeable: string;
@@ -52,7 +55,7 @@ type Verdict = { outcome: string; reason?: string; handoffs?: Handoff[]; mark?: 
 
 /** One `gh` call, killed at the limit `pull-requests.ts` applies; `err` is never empty on a failure. */
 function gh(...args: string[]) {
-	const p = Bun.spawnSync(["gh", ...args], { timeout: limit(), killSignal: "SIGKILL" });
+	const p = Bun.spawnSync(["gh", ...args], { env: process.env, timeout: limit(), killSignal: "SIGKILL" });
 	const err = p.stderr.toString().trim() || `gh ${args.slice(0, 2).join(" ")} exited ${p.exitCode ?? "on a signal"}`;
 	return { ok: p.exitCode === 0, out: p.stdout.toString(), err };
 }
@@ -175,19 +178,37 @@ function judge(repo: string, pr: Pull): Verdict {
 	return { outcome: "marked", handoffs: fresh, mark: describe([...before, ...fresh.map((h) => h.kind)]) };
 }
 
-function main(argv: string[]): number {
+async function main(argv: string[]): Promise<number> {
 	const repo = argv[0] ?? "";
 	if (argv.length !== 1 || !NAME.test(repo) || /\/\.\.?$/.test(repo)) {
 		console.error(`usage: bun bun/pr-sweep.ts <owner>/<repo> — not one: ${JSON.stringify(argv)}`);
 		return 2;
 	}
+	let app: ReturnType<typeof configured>;
+	try {
+		app = configured(process.env, `https://github.com/${repo}`);
+	} catch (e) {
+		console.error(`pr-sweep: ${(e as Error).message}`);
+		return 1;
+	}
 	// Read before any App token is set, so it is the credential's own login.
 	const user = gh("api", "user", "--jq", ".login");
-	if (!user.ok) {
+	if (!user.ok && !app) {
 		console.error(`pr-sweep: the credential's login could not be read, and no App is configured — ${user.err}`);
 		return 1;
 	}
-	const login = user.out.trim();
+	const login = user.ok ? user.out.trim() : undefined;
+	let bot: string | undefined;
+	if (app) {
+		try {
+			bot = `app/${await slug(app)}`;
+			// Into the sweep's own environment, which every later `gh` inherits: never an argument, which `ps` shows.
+			process.env.GH_TOKEN = await mint(app, { contents: "write", pull_requests: "write", statuses: "write", checks: "read" });
+		} catch (e) {
+			console.error(`pr-sweep: the App's token could not be minted — ${(e as Error).message}`);
+			return 1;
+		}
+	}
 	const listed = gh("pr", "list", "--repo", repo, "--state", "open", "--limit", "1000", "--json", FIELDS);
 	let pulls: unknown;
 	try {
@@ -201,7 +222,9 @@ function main(argv: string[]): number {
 	}
 	let code = 0;
 	for (const pr of pulls as Pull[]) {
-		const agent = /^(feat|spec)\//.test(pr.headRefName) && !pr.isCrossRepository && pr.author?.login === login;
+		const by = pr.author?.login;
+		const allowed = (login !== undefined && by === login) || (bot !== undefined && by === bot && pr.author?.is_bot === true);
+		const agent = /^(feat|spec)\//.test(pr.headRefName) && !pr.isCrossRepository && allowed;
 		if (!agent) continue;
 		let verdict: Verdict;
 		try {
@@ -222,4 +245,4 @@ function main(argv: string[]): number {
 	return code;
 }
 
-process.exit(main(process.argv.slice(2)));
+process.exit(await main(process.argv.slice(2)));
