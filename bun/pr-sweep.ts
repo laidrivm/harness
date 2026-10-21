@@ -6,7 +6,7 @@
  * request on standard output, and marks each head it judged, unless its checks
  * or mergeability are still pending, with the `harness/sweep` status, so the
  * next run hands off no kind twice at one SHA
- * (`openspec/changes/pr-sweep/design.md`).
+ * (`openspec/changes/archive/2026-10-21-pr-sweep/design.md`).
  *
  * It reads no clone and takes no lock: every call names the repository, and
  * the drift check writes only temporary directories it removes. It re-runs no
