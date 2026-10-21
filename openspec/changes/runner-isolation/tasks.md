@@ -73,7 +73,8 @@ Closes `orchestrator` §*The user's GitHub token reaches only the push*,
       GitHub token's reach* which run unauthenticated
 - [ ] 2.2 Write the failing cases: `pass.sh`'s pass environment holds no
       `GH_TOKEN`, holds the App's id and mint command when they are set, and
-      no key path; `publish()` reads `HARNESS_GH_TOKEN_FILE` only for the
+      no key path; with the App's settings `pass.sh` starts the pass when
+      `gh_token` is absent and never opens it; `publish()` reads `HARNESS_GH_TOKEN_FILE` only for the
       push, the pull request and the check after it, and never with the App
       configured; `mint()` with `HARNESS_GITHUB_APP_MINT` runs that command and
       returns its stdout, with the token in no argument; the mint helper
