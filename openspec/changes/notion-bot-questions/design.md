@@ -73,11 +73,11 @@ A question takes the first path that applies:
 
 1. **A session the runner launches with the VPS integration** names it in a
    `QUESTION:` line. The runner hands it to the triage, then posts the
-   triage's answer or the question from that integration (groups 2 and 4).
+   triage's answer or the question from that integration (groups 2, 3 and 5).
 2. **Any session on a machine with the ask settings**, attended or not, a
    worker another session briefs and the hand-launched forms in
    `core/feature-workflow.md` included, posts it with the ask command, from
-   the second integration (group 3). It needs no reader of its final
+   the second integration (group 4). It needs no reader of its final
    message, so it reaches the sessions decision 4 left on the user's
    account.
 3. **Anywhere else**, a consumer's laptop with no settings for one, it goes
@@ -229,7 +229,7 @@ reads `goal open` and the pass is `open`, as it is today. The code lives in a
 new `bun/notion-bot.ts`. `bun/board-loop.ts` gains the read before the pick,
 the prompt's variant and the call.
 
-### The ask command and its settings (group 3)
+### The ask command and its settings (group 4)
 
 `bun/notion-ask.ts <card id> <file>` reads the question from the file it names
 and posts it from the second integration. A file, which the session writes
@@ -270,7 +270,7 @@ use it beyond the command. The user accepted that with (3в). What it buys is
 one comment from an integration that can comment on three boards and do
 nothing else.
 
-### The gate sends a question to the ask command (group 3)
+### The gate sends a question to the ask command (group 4)
 
 When the ask settings file exists, the question gate answers `deny` to a call
 that meets every condition of *A question on a card*, in any session, the
@@ -290,7 +290,7 @@ comment's form, when the runner finds the ask settings, as it names
 hand-launched forms name both, each with its condition. The first question
 from such a session therefore needs no refusal to find its way.
 
-### The triage (group 4)
+### The triage (group 5)
 
 On path 1, once the runner has checked a `QUESTION:` line, it starts a triage
 session before it posts anything. This is a `claude -p` run with no goal,
@@ -340,18 +340,18 @@ answered that question (CodeRabbit on #191): the triage was judged against
 comments that are no longer the card's state. Checking only whether a
 question still waits would let a question asked and answered during the
 triage pass, and the stale answer or question would follow it. With a
-source that holds, it posts the question as group 2 does but sets no
+source that holds, it posts the question as groups 2 and 3 do but sets no
 `Assign`, then
 `` `harness-answer` <text>\n> <quote>\nSource: <source> `` from the
 integration, so the user sees the words the answer rests on. The question
 comes first because `task-board` reads an answer only after the last
 question: an answer alone would follow none, or an older question it does not
 answer (CodeRabbit on #191). If the answer's post fails, the runner sets
-`Assign` as group 2 does, and the question waits for the user. The next
+`Assign` as groups 2 and 3 do, and the question waits for the user. The next
 pass's pick session finds the answer and carries it, as it carries the
 user's, though no `Assign` names the user. On `ESCALATE`, a source that does not hold, a time
 limit of ten minutes passed, or any failure, the runner posts the question as
-group 2 does. A doubt therefore always ends with the user.
+groups 2 and 3 do. A doubt therefore always ends with the user.
 
 The triage answers only what is already written, and every choice goes on to
 the user (decision 8). That is the test `task-board`'s *An agent meets a
@@ -364,10 +364,11 @@ written answer the triage cites. No requirement of `agent-autonomy` changes.
 
 The code lives in a new `bun/notion-triage.ts`, since `bun/board-loop.ts`
 has no room under its cap. The triage needs only the runner and the VPS
-settings, not the workflow engine. It acts wherever group 2's settings are, which is the VPS host that
-`vps-board-loop` group 3 builds. Until that host exists, group 4 merges inert.
+settings, not the workflow engine. It acts wherever the settings groups 2
+and 3 read are, which is the VPS host that `vps-board-loop` group 3 builds.
+Until that host exists, group 5 merges inert.
 
-### `harness-answer` counts as the answer (group 4)
+### `harness-answer` counts as the answer (group 5)
 
 The answer rule gains one source. After the last question, the answer is the
 first comment by the user without a mark. With none, it is the first comment
@@ -404,8 +405,8 @@ integration's `harness-answer` after its last question.
   refused all the same and nothing goes out under the user's account. Only
   the refusal's wording loses its pointer to `QUESTION:`, which the launch
   form's line already names.
-- [`--disallowedTools` may not take the `*` server wildcard] → task 2.4's
-  stub logs the argument, and task 2.8 probes the real CLI once with a
+- [`--disallowedTools` may not take the `*` server wildcard] → task 3.1's
+  stub logs the argument, and task 3.2 probes the real CLI once with a
   session that tries the call; if the wildcard is not honoured, the runner
   names the connector's server as the hook's matcher sees it.
 - [The API may list unresolved comments only] → a question the user resolved
@@ -438,11 +439,12 @@ integration's `harness-answer` after its last question.
 
 ## Migration Plan
 
-Step 1 changes the rule's wording alone. Step 2 merges inert: with no
+Step 1 changes the rule's wording alone. Step 2 adds the module and the
+gate's refusal, which nothing calls or sets yet. Step 3 merges inert: with no
 settings file, every pass runs as it does today. It acts once the user acts
 in `proposal.md` are done on the VPS. Deleting the file returns the runner
-to today's behaviour. Step 3 merges inert on any machine without
-`notion-ask.json`. Step 4 merges inert without the VPS settings, and acts on
+to today's behaviour. Step 4 merges inert on any machine without
+`notion-ask.json`. Step 5 merges inert without the VPS settings, and acts on
 the VPS host `vps-board-loop` group 3 builds. Deleting `notion-ask.json`
 returns the laptop to path 3.
 

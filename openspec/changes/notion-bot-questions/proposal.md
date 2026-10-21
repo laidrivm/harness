@@ -78,14 +78,14 @@ Only the user can do these. No task of this change does them.
   Notion notified them of the comment or of the `Assign` write. Nothing in
   this change depends on the answer. It decides whether a later change needs
   a mention.
-- Before group 3 is used: create a second internal integration, "harness
+- Before group 4 is used: create a second internal integration, "harness
   ask", with Read comments and Insert comments alone. Connect it to the
   `D2ASS`, `Harness` and `mellon` boards. Put its token and the user's
   Notion id in the laptop's `~/.config/harness/notion-ask.json`, mode 0600.
   Then check two facts and record them on the card: that the command posts
   on a card of each board, and that it gets a refusal on a page outside
   them.
-- Before group 4 relies on it: read one triage answer back through the
+- Before group 5 relies on it: read one triage answer back through the
   connector and note on the card how its author shows.
 
 ## Non-goals
