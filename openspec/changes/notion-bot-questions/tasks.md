@@ -1,8 +1,9 @@
 # notion-bot-questions — tasks
 
-Four groups, shipped as `feat/notion-bot-questions-1` to
-`feat/notion-bot-questions-4`. Groups 1 and 2 are the proposal of #184;
-groups 3 and 4 come from the user's extension (2026-10-20). Each group ships
+Five groups, shipped as `feat/notion-bot-questions-1` to
+`feat/notion-bot-questions-5`. Groups 1 to 3 are the proposal of #184, its
+second group split in two to fit the diff budget; groups 4 and 5 come from
+the user's extension (2026-10-20). Each group ships
 alone, in order. Numbers in brackets refer to the proposal-stage `/zombies`
 lists: [1]–[41] in #184, [42]–[83] in the extension's pull request. Each group
 writes its failing cases first and records that they fail against the tree as
@@ -33,16 +34,13 @@ user*, for the wording of the answer rule.
 
 ## 2. The runner posts the question from the integration
 
-Closes `board-loop` §*The runner reads the Notion integration's settings from
-its own user's file* and §*The runner posts a stage session's question from
-the integration*, `agent-permissions` §*A session whose launcher posts its
-questions posts no comment*, and `stage-goal` §*An unattended stage runs
-under one goal on the check*, for §*A stage whose launcher posts its
-question*.
+Closes no requirement on its own: it adds the settings read, the parse, the
+REST calls and the gate's refusal, which nothing calls or sets until group 3
+wires them into the pass, so it merges inert.
 
 - [x] 2.1 Write the failing settings cases in a new `bun/notion-bot.test.ts`.
-      No file: no call to Notion, today's launch form, and no
-      `HARNESS_RUNNER_ASKS` [1]. Modes 0600 and 0400 accepted, 0640 and 0604
+      No file reads as no integration [1]; the pass's half of [1] is
+      3.1's. Modes 0600 and 0400 accepted, 0640 and 0604
       refused [2]. An empty, whitespace-only or space-holding token refused
       [3]. A user id accepted as 32 hex digits or as a UUID, and refused at 31
       digits or with a trailing character [4]. The file found under a set
@@ -78,17 +76,6 @@ question*.
       `PATCH` [28]. A failed `PATCH` prints that the question is posted and
       `Assign` is not set, and sends no second `POST` [29]. No printed line
       holds the token [30]
-- [ ] 2.4 Write the failing pass cases in `bun/board-loop-question.test.ts`
-      through `board-loop.fixture.ts`, whose stub `claude` learns to write its
-      environment and print a `QUESTION:` message. The token is in neither
-      session's environment, nor in any argument the stubs log [8]. A
-      timed-out stage session makes no call [31]. A posted question leaves
-      the outcome the goal check's [32]. The question is posted before the
-      push, so a refused push still prints the posted line [33]. A
-      `QUESTION:` line with no settings file prints that no integration is
-      configured [34]. The fourth line of the stage prompt, with settings,
-      names `QUESTION:`, the mark and that the session posts no comment, and
-      matches the variant in `core/feature-workflow.md` [35]
 - [x] 2.5 Write the failing gate cases in `bun/question-gate-unattended.test.ts`.
       With `HARNESS_RUNNER_ASKS=1`, a conforming question is answered `deny`
       with a message naming `QUESTION:`, and recorded `refused` under
@@ -103,7 +90,30 @@ question*.
       `question-gate*.test.ts` unchanged
 - [x] 2.7 Add `bun/notion-bot.ts`, holding the settings read, the parse and
       the five calls, as `design.md` says; see 2.1–2.3 pass
-- [ ] 2.8 Wire it into `pass()`. Read the settings before the pick session.
+
+## 3. The runner posts the question from the integration — the pass
+
+Closes `board-loop` §*The runner reads the Notion integration's settings from
+its own user's file* and §*The runner posts a stage session's question from
+the integration*, `agent-permissions` §*A session whose launcher posts its
+questions posts no comment*, and `stage-goal` §*An unattended stage runs
+under one goal on the check*, for §*A stage whose launcher posts its
+question*.
+
+- [ ] 3.1 Write the failing pass cases in `bun/board-loop-question.test.ts`
+      through `board-loop.fixture.ts`, whose stub `claude` learns to write its
+      environment and print a `QUESTION:` message. With no settings file, the
+      stage prompt keeps today's fourth line and neither session carries
+      `HARNESS_RUNNER_ASKS` [1]. The token is in neither
+      session's environment, nor in any argument the stubs log [8]. A
+      timed-out stage session makes no call [31]. A posted question leaves
+      the outcome the goal check's [32]. The question is posted before the
+      push, so a refused push still prints the posted line [33]. A
+      `QUESTION:` line with no settings file prints that no integration is
+      configured [34]. The fourth line of the stage prompt, with settings,
+      names `QUESTION:`, the mark and that the session posts no comment, and
+      matches the variant in `core/feature-workflow.md` [35]
+- [ ] 3.2 Wire it into `pass()`. Read the settings before the pick session.
       Choose the launch form's fourth line. Pass the variable through an
       extra environment argument to `session()` in
       `bun/board-loop-session.ts`, so that only the runner adds it, together
@@ -111,11 +121,11 @@ question*.
       sessions' command lines; see the stub log name it [84]. Probe the real
       CLI once with a session that tries the call, and record whether the
       wildcard was honoured (design.md *Risks*). Make the
-      call after the stage session's clean end and before `publish`. See 2.4
+      call after the stage session's clean end and before `publish`. See 3.1
       pass. Keep `bun/board-loop.ts` under the cap `bun bun/file-size.ts`
       reports; if it would pass the cap, move `prompt()` and `pickPrompt()`
       into a module of their own in the same commit
-- [ ] 2.9 Reconcile the restating sites, and read each one back after the
+- [ ] 3.3 Reconcile the restating sites, and read each one back after the
       edit:
       - the comment above `pickPrompt()`, which says the runner has no access
         to the board, now says that it reads no card's `Status`;
@@ -132,7 +142,7 @@ question*.
       -e "set \`Assign\`" -- core README.md` that each hit names either the
       runner's case or the session's own
 
-## 3. A laptop session asks through the ask integration
+## 4. A laptop session asks through the ask integration
 
 Closes `task-board` §*A session asks through the ask integration where one is
 configured*, `agent-permissions` §*A question goes to the ask command where
@@ -140,7 +150,7 @@ one is configured*, and `stage-goal` §*An unattended stage runs under one
 goal on the check*, for §*A stage launched where the ask integration is
 configured*. Needs no orchestrator.
 
-- [ ] 3.1 Write the failing cases in a new `bun/notion-ask.test.ts` against a
+- [ ] 4.1 Write the failing cases in a new `bun/notion-ask.test.ts` against a
       `Bun.serve` stub. Cover no settings file [42], an empty question file
       [43], a question posted [44], and a waiting question on the second page
       [45]. Cover a `harness-answer` that does not unblock [46], 1500 against
@@ -149,25 +159,25 @@ configured*. Needs no orchestrator.
       and no `PATCH` [51], and that `notion-bot.json` is never read in its
       place [52]. Cover a 404 on the comments read [53], a failed `POST` [54]
       and a missing question file [55]
-- [ ] 3.2 Write the failing gate cases in a new
+- [ ] 4.2 Write the failing gate cases in a new
       `bun/question-gate-ask.test.ts`. Cover no settings file [56], a
       conforming question denied naming the command [57], and an empty file
       counted as present [58]. A directory at the path also counts as present,
       since the gate reads existence alone [59]. A reply gets no answer [60],
       and `HARNESS_RUNNER_ASKS` wins [61]
-- [ ] 3.3 Add `bun/notion-ask.ts` on `notion-bot.ts`'s settings read and
+- [ ] 4.3 Add `bun/notion-ask.ts` on `notion-bot.ts`'s settings read and
       REST calls, as `design.md` *The ask command and its settings* says, and
-      see 3.1 pass. Take the settings read's path as an argument rather than
+      see 4.1 pass. Take the settings read's path as an argument rather than
       writing it a second time
-- [ ] 3.4 Add the gate's `ask` refusal in `bun/question-gate.ts`, after the
-      runner's, and see 3.2 pass with the rest of `question-gate*.test.ts`
+- [ ] 4.4 Add the gate's `ask` refusal in `bun/question-gate.ts`, after the
+      runner's, and see 4.2 pass with the rest of `question-gate*.test.ts`
       unchanged
-- [ ] 3.5 Write the failing launch-form case [62] in
+- [ ] 4.5 Write the failing launch-form case [62] in
       `bun/board-loop-question.test.ts`, then make the runner name the ask
       command when it finds `notion-ask.json` and no VPS settings
-- [ ] 3.6 Add `Bash(bun bun/notion-ask.ts *)` to `.claude/settings.json`'s
+- [ ] 4.6 Add `Bash(bun bun/notion-ask.ts *)` to `.claude/settings.json`'s
       allow list, and run `bun test bun/settings*.test.ts`
-- [ ] 3.7 Reconcile the restating sites, and read each one back after the
+- [ ] 4.7 Reconcile the restating sites, and read each one back after the
       edit:
       - `core/feature-workflow.md`'s question bullet and its hand-launched
         forms name the ask command with its condition;
@@ -177,19 +187,19 @@ configured*. Needs no orchestrator.
       Verify with `git grep -n -e "notion-create-comment" -e "question gate"
       -- core README.md` that each hit is true with the ask settings present
 
-## 4. The triage, and its answer counted
+## 5. The triage, and its answer counted
 
 Closes `board-loop` §*The runner has a stage session's question triaged
 before it posts it*, and `task-board` §*An open question waits on its card,
 assigned to the user*, for §*The triage's answer*, §*The user after the
 triage* and §*A `harness-answer` from another author*. It acts only where
-group 2's settings are, which is the VPS host `vps-board-loop` group 3
-builds, and merges inert before that.
+the settings groups 2 and 3 read are, which is the VPS host
+`vps-board-loop` group 3 builds, and merges inert before that.
 
-- [ ] 4.1 Probe once, on a stub session, which `claude -p` flags leave the
+- [ ] 5.1 Probe once, on a stub session, which `claude -p` flags leave the
       triage able to read the clone and nothing else. Record the flags and
-      what each refused in `design.md`'s *The triage*, and use them in 4.4
-- [ ] 4.2 Write the failing triage cases in a new `bun/notion-triage.test.ts`,
+      what each refused in `design.md`'s *The triage*, and use them in 5.4
+- [ ] 5.2 Write the failing triage cases in a new `bun/notion-triage.test.ts`,
       with a stub `claude`. Cover no `QUESTION:` line [63], the question then
       the answer posted with no `Assign` [64], a failed answer post that sets
       `Assign` [93], two source lines [65], an untracked path [66], a path leaving the
@@ -210,19 +220,19 @@ builds, and merges inert before that.
       or a page moved during the triage, which posts nothing [90]; a
       `harness-answer` comment by another author during the triage, which
       suppresses nothing [91]
-- [ ] 4.3 Write the failing answer-rule cases in `bun/board-loop.test.ts` and
+- [ ] 5.3 Write the failing answer-rule cases in `bun/board-loop.test.ts` and
       `bun/notion-bot.test.ts`. Cover the pick prompt naming the id [76], a
       triage answer that unblocks a card whose `Assign` is empty [77], and the user's comment winning in
       either order [78, 79]. Cover id normalisation [80], another author
       [81], a failed `GET /v1/users/me` [82] and no integration [83]
-- [ ] 4.4 Add `bun/notion-triage.ts` as `design.md` *The triage* says. Call it
-      from the runner between the question's checks and its post, and see 4.2
+- [ ] 5.4 Add `bun/notion-triage.ts` as `design.md` *The triage* says. Call it
+      from the runner between the question's checks and its post, and see 5.2
       pass. Keep `bun/board-loop.ts` under its cap
-- [ ] 4.5 Read the integration's id with `GET /v1/users/me` beside the
+- [ ] 5.5 Read the integration's id with `GET /v1/users/me` beside the
       settings, name it in `pickPrompt()`, and extend REST step 3's
-      *a question waits* to the triage's answer. See 4.3 pass with the rest
+      *a question waits* to the triage's answer. See 5.3 pass with the rest
       of `board-loop*.test.ts` unchanged
-- [ ] 4.6 Reconcile the restating sites, and read each one back after the
+- [ ] 5.6 Reconcile the restating sites, and read each one back after the
       edit:
       - `core/feature-workflow.md`'s answer rule names the triage's answer
         and that the user's comment overrides it;
