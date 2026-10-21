@@ -49,13 +49,13 @@ wires them into the pass, so it merges inert.
       holds the token's value [7]
 - [x] 2.2 Write the failing `QUESTION:` parse cases in `bun/notion-bot.test.ts`.
       No line: no call [9]. One line and its text, parsed [10]. Two lines
-      [11], or one after `PR-BODY:` [12], post nothing. The text ends before
+      [11], or one after `PR-TITLE:` or `PR-BODY:` [12], post nothing. The text ends before
       `PR-TITLE:`, and `named()` still reads the title and the body [13]. 1500
       characters posted, 1501 not, counted as the gate counts them [14]. An id
       with text after it refused [15]. A CRLF message's id read trimmed [16].
       Empty text read as `unmarked` [17]. A mention [18], and the mark after
       the first characters [19], refused in the gate's words
-- [x] 2.3 Write the failing REST cases in `bun/notion-bot.test.ts` against a
+- [x] 2.3 Write the failing REST cases in `bun/notion-bot-rest.test.ts` against a
       `Bun.serve` stub. The five calls in order, each with `Notion-Version`
       and the bearer header. The comment's body holds a code-annotated mark
       run, then the rest as plain text, and the `PATCH` body sets

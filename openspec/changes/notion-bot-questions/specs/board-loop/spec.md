@@ -74,7 +74,7 @@ set `Assign` to the user alone, and print one line saying what it did. The pass'
 #### Scenario: A malformed question line
 
 - **WHEN** the final message holds two `QUESTION:` lines, one after the
-  `PR-BODY:` line, or one whose value is not, as a whole, a card id of 32
+  `PR-TITLE:` or the `PR-BODY:` line, or one whose value is not, as a whole, a card id of 32
   hexadecimal digits with or without a UUID's hyphens
 - **THEN** the runner posts nothing and prints why
 

@@ -57,7 +57,7 @@ export function settings(path: string): Settings | undefined {
 /**
  * The question a final message names, `undefined` when it names none, or why
  * nothing is posted. Untrusted text, read as `named()` reads the title: one
- * `QUESTION:` line before any `PR-BODY:`, and the text below it to a
+ * `QUESTION:` line before any `PR-TITLE:` or `PR-BODY:`, and the text below it to a
  * `PR-TITLE:` line or the end, checked as the question gate checks a comment's.
  */
 export function asked(said: string): Asked | string | undefined {
@@ -67,6 +67,8 @@ export function asked(said: string): Asked | string | undefined {
 	if (at.length > 1) return "the final message holds more than one QUESTION: line";
 	const body = lines.findIndex((line) => line.startsWith("PR-BODY:"));
 	if (body !== -1 && body < at[0]) return "the QUESTION: line comes after PR-BODY:";
+	const title = lines.findIndex((line) => line.startsWith("PR-TITLE:"));
+	if (title !== -1 && title < at[0]) return "the QUESTION: line comes after PR-TITLE:";
 	const card = lines[at[0]].slice("QUESTION:".length).trim();
 	if (!ID.test(card)) return "the QUESTION: line names no card id";
 	const below = lines.slice(at[0] + 1);
@@ -141,7 +143,9 @@ export async function post(
 			const at = cursor ? `&start_cursor=${encodeURIComponent(cursor)}` : "";
 			const listed = await call("the comments read", `/v1/comments?block_id=${card}${at}`);
 			comments.push(...(Array.isArray(listed?.results) ? listed.results : []));
-			cursor = listed?.has_more && typeof listed.next_cursor === "string" ? listed.next_cursor : undefined;
+			const next = listed?.has_more && typeof listed.next_cursor === "string" ? listed.next_cursor : undefined;
+			if (next !== undefined && next === cursor) throw new Error("the comments read repeated its cursor");
+			cursor = next;
 		} while (cursor);
 		if (waits(comments, user)) return not(`a question already waits on ${card}`);
 		const rest = text.slice(MARK.length);
