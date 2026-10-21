@@ -106,7 +106,12 @@ first renames the dead marker to `<delivery>.<own pid>.dead`, then creates
 its own through the same temporary file and `link()`, and removes the
 tombstone. A rename is atomic, so when two handlers find one dead marker only
 one rename succeeds; the other's fails with `ENOENT`, and it treats the
-delivery as a duplicate (PR review). An `acted` file, or the pid of a handler
+delivery as a duplicate (PR review). A rename that comes after the other
+handler's recovery takes its live marker instead, so the handler compares the
+tombstone with the content it judged dead, and on a difference links the
+tombstone back and treats the delivery as a duplicate (apply, 2026-10-21).
+`shortcut: a third copy arriving between that rename and the link back also
+wins; record it if a delivery is ever seen handled twice.` An `acted` file, or the pid of a handler
 still waiting on the lock, keeps the delivery a duplicate. GitHub retries
 nothing the engine answered with a 2xx, so a redelivery is the user's, from
 the webhook's *Recent deliveries*. `shortcut: a recycled pid reads as still
@@ -305,7 +310,7 @@ request's branch.
 ## Risks / Trade-offs
 
 - [`--json-schema` with the harness's `Stop` hooks is unprobed;
-  `github-app-identity` set it aside for that reason.] → Group 2 probes it
+  `github-app-identity` set it aside for that reason.] → Group 3 probes it
   first, on a stub session with the turn gate registered. If the hooks swallow
   the answer, the fallback is a last line `CI-OUTCOME: <outcome>`, parsed as
   `PICK:` is. That changes the parse, not the spec.
@@ -326,6 +331,6 @@ request's branch.
 
 ## Migration Plan
 
-All four groups merge inert: nothing calls the handler until the engine's
+All five groups merge inert: nothing calls the handler until the engine's
 workflow is imported and a repository's webhook exists. To stop the flow,
 disable the webhook on GitHub. The table and the comments stay, harmless.
