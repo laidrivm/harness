@@ -1849,7 +1849,9 @@ bullet's prohibition and its refused `gh` writes SHALL stay as they are.
 with a flag between them, so a broad `Bash(gh run *)` allow entry in any
 settings source does not let one through. A CI run re-run until it is green
 hides a flaky test, and the user decides when that is worth doing. The reads
-of `gh run` SHALL NOT prompt.
+of `gh run` SHALL NOT prompt unless an argument after `gh run` is the word
+`rerun`, `cancel` or `delete`, which the flag-between form's `*` matches as
+any text.
 
 #### Scenario: Re-running a failed run
 
