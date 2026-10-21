@@ -190,15 +190,18 @@ spike's choice of engine: that card settles which user runs the server.
 - [ ] 3.7 Write the failing cases in `orchestrator/layout.test.ts`, then add
       `orchestrator/remote-control.sh`, which starts `claude remote-control`
       inside a named `tmux` session in the clone directory it is given and
-      restarts it when it exits, and, if one is used, a systemd unit that
-      starts that script and nothing else. Cover: the script or the unit
+      restarts it when it exits, waiting 30 seconds before each restart
+      (`design.md` *Remote Control on the host*), and, if one is used, a
+      systemd unit that starts that script and nothing else. Cover: a `claude` that exits
+      at once is not started again before the wait; the script or the unit
       setting or passing on `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or
       `ANTHROPIC_AUTH_TOKEN` fails the suite, naming the file and the
       variable; the script clears all three from its environment before it
       starts `claude`. Cite each scenario
 - [ ] 3.8 Write the failing cases, then add the login check: a script the
       engine's timer runs daily in the remote-control user's environment,
-      which runs `claude auth status` and exits non-zero, printing one line
+      which runs `claude auth status`, with `--text` when 3.6 found the
+      expiry only in that output, and exits non-zero, printing one line
       that names the reason, when the status fails or its output carries the
       expiry warning. Wire its non-zero exit to the report the engine gives a
       failed run (`design.md` *Risks*). Cite each scenario

@@ -277,7 +277,10 @@ host, which `claude remote-control` (server mode) spawns, up to its
   command that must outlive the SSH session. A systemd unit is not
   documented, so if group 3 wraps the `tmux` session in one, the unit starts
   `tmux` and nothing else. The server exits after about ten minutes without
-  a network, so the wrapper restarts it.
+  a network, so the wrapper restarts it, waiting between attempts so a
+  command that exits at once does not spin. It sets no attempt limit, since
+  a server that left over a lost network must come back once the network
+  does.
 - **Beside the unattended passes.** `CLAUDE_CODE_OAUTH_TOKEN`,
   `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` in a process's environment
   take precedence over the saved login and stop Remote Control. So the
@@ -286,12 +289,14 @@ host, which `claude remote-control` (server mode) spawns, up to its
   with the environment it names.
   The login and the token sit on one host without one overriding the other.
 - **Which user it runs as, and what it reaches.** The login opens the user's
-  claude.ai connectors to the host, not only the model. Which Unix user runs
-  the server, which clones and files it can read, and whether the App key or
-  a token is in its reach are the card *Keep the runner from running code a
-  session can write while the App key or a token is in reach* to settle;
-  this change does not decide them, and group 3 builds the server only once
-  that card has.
+  claude.ai connectors to the host, not only the model. One fixed point: the
+  user that runs `claude auth login` is the user that runs the server and
+  the login check, since the login is a file in that user's home. Which
+  Unix user that is, which clones and files it can read, and whether the
+  App key or a token is in its reach are the card *Keep the runner from
+  running code a session can write while the App key or a token is in
+  reach* to settle; this change does not decide them, and group 3 builds the
+  server only once that card has.
 
 ## Risks / Trade-offs
 
