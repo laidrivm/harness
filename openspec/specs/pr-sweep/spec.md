@@ -252,9 +252,9 @@ any mark fails, and 0 otherwise.
 ### Requirement: The sweep writes as the App when one is configured
 
 With `HARNESS_GITHUB_APP_ID` and `HARNESS_GITHUB_APP_KEY` both set, the sweep
-SHALL make every GitHub call after reading its own credential's login with an
-installation token for the swept repository alone, minted at the start of the
-run. With neither set, it SHALL use the runner user's own `gh` credential.
+SHALL read its own credential's login, then mint with the App's JWT an
+installation token for the swept repository alone, and make every later
+GitHub call with that token. With neither set, it SHALL use the runner user's own `gh` credential.
 With one alone, it SHALL exit 1 before any call about a pull request.
 
 #### Scenario: The App configured
