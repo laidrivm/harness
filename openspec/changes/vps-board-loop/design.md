@@ -329,6 +329,12 @@ What binds group 3 whichever engine is chosen:
 4. **The host is tight.** An engine, a runner, `claude` sessions and the
    pre-push `bun test` on 2 vCPU and 3.7 GiB have not run together. The
    token bring-up measures it.
+5. **The chat page sits under the webhook path.** n8n serves a Chat
+   Trigger at `/webhook/<id>/chat`, so the `/webhook/*` Access bypass
+   (*Phone access*) would make the spike's public chat a public control
+   surface. Before the chat starts or stops a pass, the bypass names
+   GitHub's webhook paths alone and the chat stays behind Access; the
+   Cloudflare row checks it.
 
 ### Recommendation
 
