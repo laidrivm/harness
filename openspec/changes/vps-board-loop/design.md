@@ -348,9 +348,9 @@ the n8n UI was settled by the user on 2026-10-18 (*Phone access* above).
 
 ## Spike: n8n against Windmill
 
-Task 2.1's secret-free rows, run on the VPS on 2026-10-21. The rows that
-need a token or Cloudflare are still open and need a second, short
-bring-up; the choice of engine goes to the user (task 2.2).
+Task 2.1's secret-free rows, run on the VPS on 2026-10-21, and its token
+and Cloudflare rows, run on 2026-10-21 to 22 in a second, short bring-up
+(rows 8–12). The choice of engine goes to the user (task 2.2).
 
 The host is Ubuntu 24.04.4 (kernel 6.8.0-138), with 2 vCPU, 3.7 GiB RAM and
 a 38 GB disk. Docker is `docker.io` 29.1.3 with `docker-compose-v2` 2.40.3,
@@ -371,10 +371,23 @@ held placeholder text, and every port was bound to 127.0.0.1.
 | 5 | An extension beside the stock image calling `claude`; `session_id` and `total_cost_usd` in the execution; survives a bump | **Works, survives.** A ~35-line custom node in the data volume runs a stub `claude -p … --output-format json`; both fields reach the execution record. After the bump the node still loads. | **Works, survives.** No plugin: a bash script runs the stub from a mounted volume, and its JSON is the job's stored result. After the bump it still runs. |
 | 6 | What Windmill CE withholds | — | Seen here: concurrency limits, the audit log's content (`EE only`), the HTTP-routes API (404). From the docs, not run: the worker-group UI and git sync from the UI; the CLI sync works in CE. |
 | 7 | A phone-usable control surface (user, 2026-10-21) | **Hosted chat works**: a public Chat Trigger page took a typed message, ran the stub and showed the reply with its session id and cost. Run, pause and stop work through the REST calls the UI uses. | An anonymous public app is served without login, but no chat-like app was built. Every script has a run form for a logged-in user. Run, pause and cancel work through REST. |
-| — | A real `claude -p` pass; the token in the container; `claude -r` across two runs; the subscription limit | needs secrets | needs secrets |
-| — | The execution list from a phone through Cloudflare Access | needs Cloudflare | needs Cloudflare |
+| 8 | T1: a real `claude -p` stage, started by the engine, on the `setup-token` token in the container | **Works.** The Schedule Trigger at 23:13 started the pass, but the first token file held only a fragment (401 `Invalid bearer token`). After the user rewrote it, a pass at 23:23 ran `claude -p --model haiku --tools ""`: `exit=0`, `result "ok"`, `session_id` and `total_cost_usd` (0.00065) in the SSH node's output, which is the execution record. | **Works.** The schedule fired at 23:32: `exit=0`, `result "ok"`, `session_id` and `total_cost_usd` (0.000037) in the job's logs. A bash script's stored result is its last line only, so the fields sit in the logs, not the result. |
+| 9 | T2: `claude -r` across two runs, `~/.claude` on the runner's volume | **Works.** The next pass resumed the same `session_id` and answered the word the first one was given (`lantern`). | **Works.** The same, on a fresh session. |
+| 10 | T3: a failed `claude -p`, forced with an invalid token rather than by burning the limit | `exit=1`, `is_error: true`, `401`; `pass.sh` wrote its stop file. **The execution shows Success**, and the overview counts no failed run. | The same: `terminal_reason: "api_error"` in the log, stop file written, **a green check**. |
+| 11 | T4: Cloudflare Access from a phone; GitHub's webhook path open, everything else behind the login | **Works.** From outside, `/webhook/github` answered from n8n itself: 202 for a good signature, 401 for a wrong or missing one. `/`, the chat at `/webhook/<id>/chat` and another webhook path answered 302 to the Access login. On the user's phone: the Access login, the n8n UI, the execution list (cut off on the right at phone width) and the chat (`pong: …`) all worked. The user: "могло быть и лучше, но в целом осилить можно". | **Works.** The bypassed job path answered from Windmill itself (`401 Unauthorized`, no token in the URL); `/` and another job path answered 302 to the Access login. On the user's phone: the Windmill login, the Runs list with each job's args and logs, and a run started from the script's form (which finished `exit=0`). The user, against n8n: "как будто получше, да. Но не прям сильно". |
+| 12 | T5: load. The harness's whole `bun test` from `main` in the runner, while T1 ran | 2208 pass, 0 fail, 176 s. The host's used memory peaked at 1191 MiB (2628 MiB available at its lowest); n8n at 430 MiB; the runner's CPU at 108 % of 200 %. | 2208 pass, 0 fail, 176 s. The host peaked at 1147 MiB used (2672 MiB available); server 243 MiB, Postgres 113 MiB, two workers under 50 MiB each; the runner's CPU at 113 %. |
 
 With both stacks up, about 1.4 GiB of the 3.7 GiB was in use.
+
+The token bring-up (rows 8–12) ran one engine at a time beside the same
+runner: Debian with bun 1.4.2, Claude Code 2.1.307 and `pass.sh` from
+`main`, its stage a `bun` script making one `claude -p` call in a throwaway
+clone that held nothing else. `cloudflared` 2026.10.3 carried
+`hooks.laidrivm.com` to the engine under the alias `engine`. The Claude
+token and the tunnel token were root-owned 0600 files on the host, each
+copied into a volume only its one container mounted. No App key or PAT was
+on the host; `gh_token` held placeholder text. The seven `claude -p` calls,
+the user's run from the phone among them, cost about 0.0016 USD in all.
 
 What binds group 3 whichever engine is chosen:
 
@@ -389,15 +402,19 @@ What binds group 3 whichever engine is chosen:
    webhook and chat message behind a pass of up to an hour, so it stays
    unset or high, or the pass is started detached and the engine waits on
    nothing.
-4. **The host is tight.** An engine, a runner, `claude` sessions and the
-   pre-push `bun test` on 2 vCPU and 3.7 GiB have not run together. The
-   token bring-up measures it.
+4. **The host holds one pass.** An engine, a runner, one `claude` session
+   and the whole `bun test` ran together under 1.2 GiB used and about one
+   of the two vCPUs (row 12). That is one pass at a time, the lock's limit
+   anyway; a second slot is unmeasured.
 5. **The chat page sits under the webhook path.** n8n serves a Chat
-   Trigger at `/webhook/<id>/chat`, so the `/webhook/*` Access bypass
-   (*Phone access*) would make the spike's public chat a public control
-   surface. Before the chat starts or stops a pass, the bypass names
-   GitHub's webhook paths alone and the chat stays behind Access; the
-   Cloudflare row checks it.
+   Trigger at `/webhook/<id>/chat`, so a `/webhook/*` Access bypass
+   (*Phone access*) would make the chat a public control surface. The
+   bypass names GitHub's webhook paths alone, and row 11 checked that the
+   chat stays behind Access.
+6. **The engine reports a failed pass as a success.** Row 10: both engines
+   marked the run green because the spike's command ended on `echo
+   pass_status=$?`. Group 3's command has to end on the pass's own status,
+   so a failed pass is a failed execution in the list the phone reads.
 
 ### Recommendation
 
@@ -407,3 +424,12 @@ surface. Windmill CE withholds concurrency limits and the HTTP-routes API,
 so its webhook URL holds a token and answers 200 to a forged delivery. The
 caveats above hold for n8n too: the lock, not the engine, excludes a second
 pass, and the concurrency limit stays off the webhook path.
+
+The token rows leave this standing. Rows 8–10 and 12 came out the same on
+both engines. Row 11 gave Windmill a slight edge on the phone, in the
+user's words "не прям сильно", from its Runs list and run form; n8n's
+answer there is its chat page. A small edge in reading runs does not
+outweigh a webhook that tells GitHub a forged delivery was accepted and
+needs a token in the URL GitHub holds. Neither engine's concurrency limit
+is used: Windmill CE's is EE-only, n8n's is instance-wide and stays unset,
+and `pass.sh`'s lock does the excluding.
