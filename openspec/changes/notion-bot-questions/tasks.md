@@ -40,7 +40,7 @@ questions posts no comment*, and `stage-goal` §*An unattended stage runs
 under one goal on the check*, for §*A stage whose launcher posts its
 question*.
 
-- [ ] 2.1 Write the failing settings cases in a new `bun/notion-bot.test.ts`.
+- [x] 2.1 Write the failing settings cases in a new `bun/notion-bot.test.ts`.
       No file: no call to Notion, today's launch form, and no
       `HARNESS_RUNNER_ASKS` [1]. Modes 0600 and 0400 accepted, 0640 and 0604
       refused [2]. An empty, whitespace-only or space-holding token refused
@@ -49,7 +49,7 @@ question*.
       `XDG_CONFIG_HOME` and under `~/.config` [5]. Not JSON, a JSON array, or
       a directory at the path, each refused, naming the file [6]. No refusal
       holds the token's value [7]
-- [ ] 2.2 Write the failing `QUESTION:` parse cases in `bun/notion-bot.test.ts`.
+- [x] 2.2 Write the failing `QUESTION:` parse cases in `bun/notion-bot.test.ts`.
       No line: no call [9]. One line and its text, parsed [10]. Two lines
       [11], or one after `PR-BODY:` [12], post nothing. The text ends before
       `PR-TITLE:`, and `named()` still reads the title and the body [13]. 1500
@@ -57,7 +57,7 @@ question*.
       with text after it refused [15]. A CRLF message's id read trimmed [16].
       Empty text read as `unmarked` [17]. A mention [18], and the mark after
       the first characters [19], refused in the gate's words
-- [ ] 2.3 Write the failing REST cases in `bun/notion-bot.test.ts` against a
+- [x] 2.3 Write the failing REST cases in `bun/notion-bot.test.ts` against a
       `Bun.serve` stub. The five calls in order, each with `Notion-Version`
       and the bearer header. The comment's body holds a code-annotated mark
       run, then the rest as plain text, and the `PATCH` body sets
@@ -101,7 +101,7 @@ question*.
       `bun/question-gate.ts`, switch `verdict()` to them, and add the refusal
       under `HARNESS_RUNNER_ASKS`; see 2.5 pass with the rest of
       `question-gate*.test.ts` unchanged
-- [ ] 2.7 Add `bun/notion-bot.ts`, holding the settings read, the parse and
+- [x] 2.7 Add `bun/notion-bot.ts`, holding the settings read, the parse and
       the five calls, as `design.md` says; see 2.1–2.3 pass
 - [ ] 2.8 Wire it into `pass()`. Read the settings before the pick session.
       Choose the launch form's fourth line. Pass the variable through an
