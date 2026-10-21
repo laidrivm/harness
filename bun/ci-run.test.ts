@@ -42,7 +42,7 @@ beforeAll(() => {
 	server = Bun.serve({
 		port: 0,
 		async fetch(req) {
-			const { pathname } = new URL(req.url);
+			const { pathname, searchParams } = new URL(req.url);
 			const body = req.method === "POST" ? await req.json() : undefined;
 			if (pathname === "/app") return Response.json({ slug: "loop-app" });
 			if (pathname === "/repos/o/r/installation") return Response.json({ id: 9 });
@@ -53,7 +53,10 @@ beforeAll(() => {
 			if (pathname === "/repos/o/r/actions/runs/5") return Response.json(api.latest);
 			if (pathname === "/repos/o/r/pulls") return Response.json(api.pulls);
 			if (pathname === "/repos/o/r/issues/7/comments") {
-				if (req.method === "GET") return Response.json(api.comments);
+				if (req.method === "GET") {
+					const [page, per] = [Number(searchParams.get("page") ?? 1), Number(searchParams.get("per_page") ?? 30)];
+					return Response.json(api.comments.slice((page - 1) * per, page * per));
+				}
 				if (api.failPost) return new Response("down", { status: 500 });
 				// The next read sees it, as GitHub's does.
 				api.comments.push({ user: { login: BOT }, body: body.body });
@@ -292,6 +295,13 @@ describe("the attempts", () => {
 	test("after the limit comment nothing is posted [33]", async () => {
 		const h = host();
 		api.comments = [mark(BOT, `${LIMIT} — done`)];
+		ignored(await deliver(h, payload()), /limit/);
+		expect(api.posted).toEqual([]);
+	});
+
+	test("a limit comment past the first hundred still stops the flow", async () => {
+		const h = host();
+		api.comments = [...Array.from({ length: 100 }, () => mark("laidrivm", "lgtm")), mark(BOT, `${LIMIT} — done`)];
 		ignored(await deliver(h, payload()), /limit/);
 		expect(api.posted).toEqual([]);
 	});
