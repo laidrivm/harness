@@ -23,6 +23,13 @@ export function sh(...args: string[]) {
 	}
 }
 
+/** Over HTTPS as the App, even where `origin` is SSH: over SSH git ignores the header and uses a key of its own. */
+export const over = (app: App) => `https://github.com/${app.owner}/${app.repo}.git`;
+
+/** Exactly `branch`'s ref to `to`, never forced, never retried: a branch that moved on origin is the user's. */
+export const pushRef = (to: string, branch: string) =>
+	sh("git", "push", to, `refs/heads/${branch}:refs/heads/${branch}`);
+
 /**
  * The pull request's title and body from the session's final message, or what
  * the message lacks. Untrusted text, read as `PICK:` is: one `PR-TITLE:` line,
@@ -82,11 +89,7 @@ export async function publish(
 	} catch (error) {
 		return `the PR → session table ${table()} could not be written: ${(error as Error).message}; nothing was pushed`;
 	}
-	const ref = `refs/heads/${branch}`;
-	// Over HTTPS as the App, even where `origin` is SSH: over SSH git ignores the header and uses a key of its own.
-	const to = app ? `https://github.com/${app.owner}/${app.repo}.git` : "origin";
-	// Exactly the step's ref, never forced, never retried: a branch that moved on origin is the user's.
-	const push = sh("git", "push", to, `${ref}:${ref}`);
+	const push = pushRef(app ? over(app) : "origin", branch);
 	if (!push.ok) {
 		console.error([push.out, push.err].filter(Boolean).join("\n"));
 		return `origin refused the push of ${branch}, as printed above`;

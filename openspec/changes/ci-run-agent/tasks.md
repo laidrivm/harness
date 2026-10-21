@@ -93,16 +93,22 @@ Closes `orchestrator` §*A fix reaches the pull request only as new commits
 the runner pushes*, and the session the two requirements group 3 closes
 start.
 
-- [ ] 4.1 Write the failing cases in `bun/ci-run.test.ts` with a stub
-      `claude` and a stub `gh` [30 (the log file), 41, 46–50, 52–54, 66]
-- [ ] 4.2 Add the session to `bun/ci-run.ts`: the branch's fetch and
+- [x] 4.1 Write the failing cases in `bun/ci-run.test.ts` with a stub
+      `claude` and a stub `gh` [30 (the log file), 41, 46–50, 52–54, 66].
+      Applied: against the tree as it stood 15 cases failed and 30 passed;
+      the fixture's clone now has a bare origin behind GitHub's URL, so the
+      fetch and the push are real
+- [x] 4.2 Add the session to `bun/ci-run.ts`: the branch's fetch and
       fast-forward, the log file, the session with `--json-schema`, the
       outcome, the tree check, the push and the cleanup. Verify with 4.1 and
-      `bun test`
-- [ ] 4.3 Reconcile the sites that say a fix is a person's job, or that
+      `bun test`. Applied: the push is `board-loop-push.ts`'s, lifted into
+      `pushRef` and `over` so both callers share it
+- [x] 4.3 Reconcile the sites that say a fix is a person's job, or that
       `gh run view` is the agent's: grep `core/` and `README.md` for
       `--log-failed`, and `core/autonomy.md` for CI. Verify by reading each
-      hit back
+      hit back. Applied (2026-10-22): neither grep has a hit, and no line in
+      `core/` or `README.md` says a failed run is a person's to fix, so
+      nothing changed
 
 ## 5. The scheduled and flaky routes
 
