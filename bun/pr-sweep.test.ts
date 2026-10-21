@@ -2,8 +2,11 @@
  * The sweep's selection, its exit statuses and its marked heads. The
  * judgement of one head is in `pr-sweep-judge.test.ts`.
  */
-import { afterAll, describe, expect, test } from "bun:test";
-import { cleanup } from "./diff-budget.fixture.ts";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { generateKeyPairSync } from "node:crypto";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import {
 	commit,
 	compare,
@@ -19,6 +22,7 @@ import {
 	sha,
 	status,
 	sweep,
+	sweepAsync,
 } from "./pr-sweep.fixture.ts";
 
 afterAll(cleanup);
@@ -156,5 +160,100 @@ describe("the argument and the exit status", () => {
 			[2, "marked"],
 		]);
 		expect(r.code).toBe(1);
+	});
+});
+
+/**
+ * The App, against a stand-in API in this process reached through
+ * `GITHUB_API_URL`, and a key made for the run: no case reaches GitHub or
+ * holds a real key.
+ */
+describe("the GitHub App", () => {
+	const TOKEN = "ghs_minted";
+	const BOT = { login: "app/demo-agent", is_bot: true };
+	const ANSWERS: Record<string, unknown> = {
+		"/app": { slug: "demo-agent" },
+		"/repos/o/r/installation": { id: 99 },
+		"/app/installations/99/access_tokens": { token: TOKEN },
+	};
+	/** Each request the stand-in saw, and the one path it answers with a 500. */
+	let requests: { call: string; body: string }[] = [];
+	let failing = "";
+	let server: ReturnType<typeof Bun.serve>;
+	let key = "";
+	beforeAll(() => {
+		server = Bun.serve({
+			port: 0,
+			async fetch(req) {
+				const path = new URL(req.url).pathname;
+				requests.push({ call: `${req.method} ${path}`, body: await req.text() });
+				return path === failing ? new Response("down", { status: 500 }) : Response.json(ANSWERS[path] ?? {});
+			},
+		});
+		key = join(emptyDir("pr-sweep-key-"), "app.pem");
+		const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs1", format: "pem" } });
+		writeFileSync(key, privateKey, { mode: 0o600 });
+	});
+	afterAll(() => server.stop(true));
+
+	const both = () => ({ HARNESS_GITHUB_APP_ID: "7", HARNESS_GITHUB_APP_KEY: key });
+	/** One sweep with `env` beside the stand-in's URL, its log cleared first. */
+	const run = (table: Record<string, object>, env: Record<string, string>, failed = "") => {
+		[requests, failing] = [[], failed];
+		return sweepAsync(table, { GITHUB_API_URL: server.url.origin, ...env });
+	};
+
+	// spec: pr-sweep/one-setting-alone
+	test.each([
+		["the ID alone [13]", () => ({ HARNESS_GITHUB_APP_ID: "7" }), "HARNESS_GITHUB_APP_KEY is unset"],
+		["the key alone [13]", () => ({ HARNESS_GITHUB_APP_KEY: key }), "HARNESS_GITHUB_APP_ID is unset"],
+		["an empty ID [32]", () => ({ ...both(), HARNESS_GITHUB_APP_ID: "" }), "HARNESS_GITHUB_APP_ID is blank"],
+		["a whitespace-only key path [32]", () => ({ ...both(), HARNESS_GITHUB_APP_KEY: " " }), "HARNESS_GITHUB_APP_KEY is blank"],
+	])("%s exits 1 naming it, and lists nothing", async (_, env, reason) => {
+		const r = await run(listing([pull(1)], green(1)), env());
+		expect([r.code, r.out, r.calls, requests]).toEqual([1, "", [], []]);
+		expect(r.err).toContain(reason);
+	});
+
+	test("a failed mint exits 1 and lists nothing [33]", async () => {
+		const r = await run(listing([pull(1)], green(1)), both(), "/repos/o/r/installation");
+		expect([r.code, r.out, r.calls]).toEqual([1, "", [LOGIN]]);
+		expect(r.err).toContain("/repos/o/r/installation");
+	});
+
+	// spec: pr-sweep/the-app-configured
+	test("the token names the swept repository alone, with the sweep's four permissions [47]", async () => {
+		await run(listing([]), both());
+		const asked = requests.find((q) => q.call === "POST /app/installations/99/access_tokens");
+		expect(JSON.parse(asked?.body ?? "{}")).toEqual({
+			repositories: ["r"],
+			permissions: { contents: "write", pull_requests: "write", statuses: "write", checks: "read" },
+		});
+	});
+
+	// spec: pr-sweep/the-app-configured
+	test("the login is read with no token; every later gh call gets it through GH_TOKEN, never an argument [48, 34]", async () => {
+		const r = await run(listing([pull(1)], green(1)), both());
+		expect(r.lines.map((l) => l.outcome)).toEqual(["marked"]);
+		expect(r.calls.length).toBeGreaterThan(2);
+		expect(r.calls[0]).toBe(LOGIN);
+		expect(r.tokens).toEqual(["", ...r.calls.slice(1).map(() => TOKEN)]);
+		expect(r.calls.filter((c) => c.includes(TOKEN))).toEqual([]);
+	});
+
+	// spec: pr-sweep/an-agent-branch-by-an-allowed-author
+	test("the App's app/<slug> bot is an allowed author beside the credential's login, and not without is_bot [46]", async () => {
+		const human = pull(3, { author: { login: "app/demo-agent", is_bot: false } });
+		const r = await run(listing([pull(1, { author: BOT }), pull(2), human], { ...green(1), ...green(2) }), both());
+		expect(r.lines.map((l) => [l.pr, l.outcome])).toEqual([
+			[1, "marked"],
+			[2, "marked"],
+		]);
+	});
+
+	test("a login that cannot be read leaves the App the one allowed author", async () => {
+		const table = { ...listing([pull(1, { author: BOT }), pull(2)], green(1)), [LOGIN]: { code: 1, err: "HTTP 401" } };
+		const r = await run(table, both());
+		expect([r.code, r.lines.map((l) => l.pr)]).toEqual([0, [1]]);
 	});
 });

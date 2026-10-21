@@ -1,6 +1,7 @@
 /**
- * The GitHub App the board loop's runner pushes as, when its environment names
- * one: `HARNESS_GITHUB_APP_ID` and `HARNESS_GITHUB_APP_KEY`, the path of the
+ * The GitHub App the board loop's runner pushes as, and `pr-sweep.ts` writes
+ * as, when its environment names one: `HARNESS_GITHUB_APP_ID` and
+ * `HARNESS_GITHUB_APP_KEY`, the path of the
  * App's private key. Everything else is asked of the API at `GITHUB_API_URL`,
  * read as `bump.ts` reads it: the bot's identity before any session, and an
  * installation token for the clone's repository alone after the stage session,
@@ -70,20 +71,23 @@ async function call(path: string, field: string, type: "string" | "number", bear
 	return String(value);
 }
 
+/** The App's slug, from `GET /app`: its pull requests' author is `app/<slug>`, its commits' `<slug>[bot]`. */
+export const slug = (app: App) => call("/app", "slug", "string", jwt(app.id, app.key));
+
 /** The `GIT_*` variables that author and commit a session's work as the App's bot user. */
 export async function identity(app: App): Promise<Record<string, string>> {
-	const name = `${await call("/app", "slug", "string", jwt(app.id, app.key))}[bot]`;
+	const name = `${await slug(app)}[bot]`;
 	const email = `${await call(`/users/${encodeURIComponent(name)}`, "id", "number")}+${name}@users.noreply.github.com`;
 	return { GIT_AUTHOR_NAME: name, GIT_AUTHOR_EMAIL: email, GIT_COMMITTER_NAME: name, GIT_COMMITTER_EMAIL: email };
 }
 
-/** An installation token for the App's one repository, able to write its contents and pull requests alone. */
-export async function mint(app: App): Promise<string> {
+/** An installation token for the App's one repository, holding the `permissions` its caller names and no more. */
+export async function mint(app: App, permissions: Record<string, "read" | "write">): Promise<string> {
 	const bearer = jwt(app.id, app.key);
 	const installation = await call(`/repos/${app.owner}/${app.repo}/installation`, "id", "number", bearer);
 	return call(`/app/installations/${installation}/access_tokens`, "token", "string", bearer, {
 		repositories: [app.repo],
-		permissions: { contents: "write", pull_requests: "write" },
+		permissions,
 	});
 }
 

@@ -69,7 +69,7 @@ export async function publish(
 		try {
 			// Minted now, so no session can reach it. Into the runner's own environment, for the push,
 			// `gh` and the full check after it, which reads the pull request with `gh`.
-			Object.assign(process.env, credentials(await mint(app)));
+			Object.assign(process.env, credentials(await mint(app, { contents: "write", pull_requests: "write" })));
 		} catch (error) {
 			return `the App's token could not be minted: ${(error as Error).message}; nothing was pushed`;
 		}

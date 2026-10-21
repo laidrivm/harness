@@ -14,6 +14,8 @@ const pair = generateKeyPairSync("rsa", {
 	publicKeyEncoding: { type: "spki", format: "pem" },
 });
 const app = { id: "7", key: createPrivateKey(pair.privateKey), owner: "o", repo: "demo" };
+/** The board loop's two, which `board-loop-push.ts` passes. */
+const BOARD = { contents: "write", pull_requests: "write" } as const;
 
 /** Each request the stand-in saw: its method, path, `Authorization` and body. */
 let seen: { method: string; path: string; auth: string | null; body: string }[] = [];
@@ -80,7 +82,7 @@ describe("the calls", () => {
 	// spec: board-loop/an-app-configured
 	test("the installation is looked up for the repository with the JWT [42]", async () => {
 		seen = [];
-		await mint(app);
+		await mint(app, BOARD);
 		expect(seen.map((r) => `${r.method} ${r.path}`)).toEqual([
 			"GET /repos/o/demo/installation",
 			"POST /app/installations/99/access_tokens",
@@ -91,7 +93,7 @@ describe("the calls", () => {
 	// spec: board-loop/an-app-configured
 	test("the token names one repository and exactly contents and pull_requests at write [41]", async () => {
 		seen = [];
-		expect(await mint(app)).toBe("ghs_minted");
+		expect(await mint(app, BOARD)).toBe("ghs_minted");
 		expect(JSON.parse(seen[1].body)).toEqual({
 			repositories: ["demo"],
 			permissions: { contents: "write", pull_requests: "write" },
@@ -100,7 +102,7 @@ describe("the calls", () => {
 
 	// spec: board-loop/github-does-not-answer
 	test("an answer that is not OK rejects naming the path, never the key", async () => {
-		const failed = await mint({ ...app, repo: "missing" }).then(
+		const failed = await mint({ ...app, repo: "missing" }, BOARD).then(
 			() => "",
 			(e: Error) => e.message,
 		);
@@ -123,7 +125,7 @@ describe("the calls", () => {
 	// spec: board-loop/github-does-not-answer
 	test("an API that cannot be reached rejects naming the path", async () => {
 		process.env.GITHUB_API_URL = "http://127.0.0.1:1";
-		const failed = await mint(app).then(
+		const failed = await mint(app, BOARD).then(
 			() => "",
 			(e: Error) => e.message,
 		);

@@ -1,7 +1,8 @@
 /**
  * What the sweep's two test files need: `bun/pr-sweep.ts` run with a stub
  * `gh` first on `PATH`. The stub answers each call from the case's table,
- * keyed by the call's whole argument string, logs every call, and exits 9 on
+ * keyed by the call's whole argument string, logs every call and the
+ * `GH_TOKEN` it saw, and exits 9 on
  * a call the table lacks, so an unexpected call shows in `calls` and fails.
  *
  * The stub is a shell `case`, not a bun script: a case makes a dozen calls,
@@ -77,8 +78,8 @@ export const listing = (pulls: object[], rest: Table = {}): Table => ({
 	...rest,
 });
 
-/** Runs the sweep against `table`; `lines` are its stdout lines parsed. */
-export function sweep(table: Table, args: string[] = [R], env: Record<string, string> = {}) {
+/** The stub `gh` for `table`, and what the sweep is spawned with. */
+function prepare(table: Table, args: string[], env: Record<string, string>) {
 	const dir = emptyDir("pr-sweep-");
 	const bin = join(dir, "bin");
 	const tmp = join(dir, "tmp");
@@ -93,25 +94,45 @@ export function sweep(table: Table, args: string[] = [R], env: Record<string, st
 	});
 	writeFileSync(
 		join(bin, "gh"),
-		`#!/bin/sh\nprintf '%s\\n' "$*" >> '${dir}/calls'\ncase "$*" in\n${arms.join("\n")}\n*) exit 9;;\nesac\n`,
+		`#!/bin/sh\nprintf '%s\\n' "$*" >> '${dir}/calls'\nprintf '%s\\n' "\${GH_TOKEN-}" >> '${dir}/tokens'\ncase "$*" in\n${arms.join("\n")}\n*) exit 9;;\nesac\n`,
 	);
 	chmodSync(join(bin, "gh"), 0o755);
-	const p = Bun.spawnSync(["bun", script, ...args], {
-		env: { PATH: `${bin}:${process.env.PATH}`, HOME: dir, TMPDIR: tmp, ...env },
-	});
-	const out = p.stdout.toString();
-	let calls: string[] = [];
+	return { dir, tmp, argv: ["bun", script, ...args], env: { PATH: `${bin}:${process.env.PATH}`, HOME: dir, TMPDIR: tmp, ...env } };
+}
+
+/** A file's lines, or none where no call wrote it. */
+const logged = (file: string) => {
 	try {
-		calls = readFileSync(join(dir, "calls"), "utf8").trimEnd().split("\n");
+		return readFileSync(file, "utf8").replace(/\n$/, "").split("\n");
 	} catch {
-		// No call at all: the file was never written.
+		return [];
 	}
+};
+
+/** What a run left; `tokens` is the `GH_TOKEN` each call saw, in `calls`' order. */
+function result(dir: string, tmp: string, code: number | null, out: string, err: string) {
 	return {
-		code: p.exitCode,
+		code,
 		out,
 		lines: out.trim() ? out.trim().split("\n").map((l) => JSON.parse(l)) : [],
-		err: p.stderr.toString(),
-		calls,
+		err,
+		calls: logged(join(dir, "calls")),
+		tokens: logged(join(dir, "tokens")),
 		left: readdirSync(tmp),
 	};
+}
+
+/** Runs the sweep against `table`; `lines` are its stdout lines parsed. */
+export function sweep(table: Table, args: string[] = [R], env: Record<string, string> = {}) {
+	const { dir, tmp, argv, env: full } = prepare(table, args, env);
+	const p = Bun.spawnSync(argv, { env: full });
+	return result(dir, tmp, p.exitCode, p.stdout.toString(), p.stderr.toString());
+}
+
+/** `sweep` without blocking, for a case whose stand-in API answers from the test's own process. */
+export async function sweepAsync(table: Table, env: Record<string, string>) {
+	const { dir, tmp, argv, env: full } = prepare(table, [R], env);
+	const child = Bun.spawn(argv, { env: full, stdout: "pipe", stderr: "pipe" });
+	const [out, err] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text()]);
+	return result(dir, tmp, await child.exited, out, err);
 }
