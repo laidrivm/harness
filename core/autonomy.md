@@ -36,14 +36,16 @@ because a worker cannot see its parent's prompt.
 
 ## Routines
 
-A routine's prompt is two lines: the unattended line above, then one call of
-a skill the repository tracks or its pinned harness ships, with that skill's
+Timer and trigger flows, audits and blog reading included, run on the
+orchestrator's VPS; a routine is an option only for a flow with no home
+there. A routine's prompt is two lines: the unattended line above, then one
+call of a skill the repository tracks or its pinned harness ships, with that skill's
 parameters. It holds no step of a procedure. The prompt is stored in
 claude.ai, where nothing reviews it and nothing notices it drift, so the
 steps live in the skill, which changes through a pull request like the rest
 of the tree. A skill installed only on the user's own machine breaks the
-rule: the routine's fresh clone does not hold it. The harness's trial
-routine:
+rule: the routine's fresh clone does not hold it. A routine probing whether
+the harness runs in the cloud:
 
 ```text
 This session runs unattended.
