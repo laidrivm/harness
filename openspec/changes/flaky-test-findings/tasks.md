@@ -316,7 +316,7 @@ in `ASK`. Claude Code's half, that those entries prompt, is 4.7's user act.
       `.claude/settings.json` by hand, since `sync.ts` run here would also
       write a `harness/` copy of `core/`; the settings, sync and self-pin
       tests read them back. The whole `bun test` runs at the pre-push.
-- [ ] 4.7 **User act, before merge.** In a live session with
+- [x] 4.7 **User act, before merge.** In a live session with
       `Bash(gh run *)` allowed:
       - `gh run -R o/r rerun 1` prompts;
       - a bare `gh run rerun` prompts;
@@ -325,6 +325,14 @@ in `ASK`. Claude Code's half, that those entries prompt, is 4.7's user act.
 
       Record the answers in the pull request's *Check by hand* list. If a
       form does not prompt, amend D8 through `/opsx:update` before merging.
+      Applied after #199 merged, since the pull request could not hold the
+      answer (user, live session on the updated checkout, 2026-10-21):
+      `gh run -R laidrivm/harness rerun 1`, a bare `gh run rerun`,
+      `gh run cancel 1` and `gh run delete 1` each prompted and were
+      declined; `gh run view 1` and `gh run watch 1` ran without a prompt and
+      answered 404 for run 1, and `gh run list` ran without a prompt and
+      listed the runs. Every form behaves as D8 says; D8 stands. An earlier
+      run on a checkout without #199 prompted for none, as expected.
 - [x] 4.8 In `core/testing.md`, delete the stopgap's retry clause, which the
       guard and the check now hold (agent-rulebook, *A mechanised prohibition
       leaves its prose home*). Search the four places for the old wording.
