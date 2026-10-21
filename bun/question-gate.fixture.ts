@@ -157,14 +157,15 @@ export const asked = (extra: object = {}, path?: string) =>
 
 /**
  * The gate's verdict on `stdin`, exactly as given, and the ledger it left.
- * `state` names the ledger's directory, a file there making it unwritable.
+ * `state` names the ledger's directory, a file there making it unwritable;
+ * `env` is added to the hook's environment.
  */
-export function run(stdin: string, state?: string) {
+export function run(stdin: string, state?: string, env: Record<string, string> = {}) {
 	const dir = scratch();
 	const home = state ?? join(dir, "state");
 	const call = Bun.spawnSync(["bun", script], {
 		cwd: dir,
-		env: { PATH: process.env.PATH, HOME: dir, XDG_STATE_HOME: home },
+		env: { PATH: process.env.PATH, HOME: dir, XDG_STATE_HOME: home, ...env },
 		stdin: Buffer.from(stdin),
 		stdout: "pipe",
 		stderr: "pipe",

@@ -16,6 +16,11 @@
  * again. Every fault — an unreadable event or transcript, a crash, a bun that
  * cannot start — is no answer, so the gate fails closed without `|| exit 2`.
  *
+ * In a session the board loop's runner launches with `RUNNER_ASKS`, it answers
+ * `deny` to every comment it can read, a question included, since the runner
+ * posts that session's questions (agent-permissions, *A session whose launcher
+ * posts its questions posts no comment*).
+ *
  * Each call is recorded in the gate ledger as `allowed`, `refused` or
  * `passed`, under the first condition that failed, or `question`. The ledger
  * is never read here.
@@ -26,6 +31,11 @@ import { record } from "./gate-ledger.ts";
 /** The mark a question opens with; the board loop's launch form names it. */
 export const MARK = "`harness-question`";
 const LIMIT = 1500;
+/**
+ * The variable the board loop's runner adds to a session whose questions it
+ * posts from the Notion integration. There every comment is refused.
+ */
+export const RUNNER_ASKS = { name: "HARNESS_RUNNER_ASKS", value: "1" };
 const BOARDS = ["D2ASS", "Harness", "mellon"];
 /**
  * agent-autonomy's declared line, on a line of its own in the first prompt,
@@ -35,9 +45,11 @@ const UNATTENDED = "This session runs unattended.";
 
 /**
  * What is wrong with the call under each condition `verdict` fails, and what
- * would make it a question.
+ * would make it a question. The runner prints the text checks' entries too.
  */
-const REMEDY: Record<string, string> = {
+export const REMEDY: Record<string, string> = {
+	runner:
+		"the runner that launched this session posts its questions. Post no comment: end the final message with a line `QUESTION: <the card's id>` and the question below it, opening with the mark.",
 	reply: "it replies in a thread. Post a new page-level comment, without `discussion_id` or `reply_to_comment_id`.",
 	anchored: "it is anchored on a passage. Send it without `selection_with_ellipsis`; the comment goes on the page.",
 	"rich-text": "its text is `rich_text`. Send the text as `markdown`, not `rich_text`.",
@@ -163,6 +175,20 @@ function board(result: string): string | undefined {
 	return ancestors?.[1].match(/<parent-data-source [^>]*name="([^"]*)"/)?.[1];
 }
 
+/**
+ * The first of the text's conditions it fails, or `undefined`: shared by the
+ * gate and the runner, which posts text it reads from a final message.
+ */
+export function fault(text: unknown): "unmarked" | "mention" | "length" | undefined {
+	if (typeof text !== "string" || !text.startsWith(MARK)) return "unmarked";
+	if (text.includes("<mention-user")) return "mention";
+	if ([...text].length > LIMIT) return "length";
+}
+
+/** Whether the event is a call of the connector's `notion-create-comment`, under any server name. */
+const comments = (event: { tool_name?: unknown }) =>
+	typeof event.tool_name === "string" && /^mcp__.+__notion-create-comment$/.test(event.tool_name);
+
 /** The first condition the call fails, or `question` when it fails none. */
 function verdict(event: {
 	tool_name?: unknown;
@@ -171,8 +197,7 @@ function verdict(event: {
 }): string {
 	const input = event.tool_input;
 	if (
-		typeof event.tool_name !== "string" ||
-		!/^mcp__.+__notion-create-comment$/.test(event.tool_name) ||
+		!comments(event) ||
 		typeof input !== "object" ||
 		input === null
 	)
@@ -181,10 +206,8 @@ function verdict(event: {
 		return "reply";
 	if (input.selection_with_ellipsis !== undefined) return "anchored";
 	if (input.rich_text !== undefined) return "rich-text";
-	const text = input.markdown;
-	if (typeof text !== "string" || !text.startsWith(MARK)) return "unmarked";
-	if (text.includes("<mention-user")) return "mention";
-	if ([...text].length > LIMIT) return "length";
+	const text = fault(input.markdown);
+	if (text) return text;
 	const page = id(input.page_id);
 	if (!page || typeof event.transcript_path !== "string") return "unreadable";
 	let calls: Use[];
@@ -212,9 +235,11 @@ function verdict(event: {
 if (import.meta.main) {
 	let event: Parameters<typeof verdict>[0] | null = null;
 	let rule: string | undefined;
+	// Exactly the runner's value: any other decides as without it.
+	const runner = process.env[RUNNER_ASKS.name] === RUNNER_ASKS.value;
 	try {
 		event = JSON.parse(await Bun.stdin.text());
-		if (event) rule = verdict(event);
+		if (event) rule = runner && comments(event) ? "runner" : verdict(event);
 	} catch {
 		// No answer, as the header says: an event this script cannot read
 		// leaves the prompt standing.
@@ -223,7 +248,7 @@ if (import.meta.main) {
 	const decision =
 		rule === "question"
 			? "allowed"
-			: rule && unattended(event?.transcript_path)
+			: rule === "runner" || (rule && unattended(event?.transcript_path))
 				? "refused"
 				: "passed";
 	rule ??= "unreadable";

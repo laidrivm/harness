@@ -89,7 +89,7 @@ question*.
       configured [34]. The fourth line of the stage prompt, with settings,
       names `QUESTION:`, the mark and that the session posts no comment, and
       matches the variant in `core/feature-workflow.md` [35]
-- [ ] 2.5 Write the failing gate cases in `bun/question-gate-unattended.test.ts`.
+- [x] 2.5 Write the failing gate cases in `bun/question-gate-unattended.test.ts`.
       With `HARNESS_RUNNER_ASKS=1`, a conforming question is answered `deny`
       with a message naming `QUESTION:`, and recorded `refused` under
       `runner` [36]. The values `true`, `0` and empty decide as today [37].
@@ -97,7 +97,7 @@ question*.
       variable the runner sets is the gate's exported name and value [39].
       Text that is unmarked and also too long is still `unmarked` once the
       checks are lifted [40]
-- [ ] 2.6 Lift the text checks and `REMEDY` into exports of
+- [x] 2.6 Lift the text checks and `REMEDY` into exports of
       `bun/question-gate.ts`, switch `verdict()` to them, and add the refusal
       under `HARNESS_RUNNER_ASKS`; see 2.5 pass with the rest of
       `question-gate*.test.ts` unchanged

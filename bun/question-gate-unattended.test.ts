@@ -7,6 +7,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fault, RUNNER_ASKS } from "./question-gate.ts";
 import {
 	CARD,
 	MARK,
@@ -179,5 +180,54 @@ describe("which session is unattended", () => {
 			out: "",
 			ledger: [["passed", "unreadable"]],
 		});
+	});
+});
+
+describe("in a session the runner asks for", () => {
+	const asks = { [RUNNER_ASKS.name]: RUNNER_ASKS.value };
+
+	// spec: agent-permissions/a-question-in-a-session-the-runner-asks-for
+	// agent-permissions/one-name-in-both-places
+	test("a conforming question is answered deny naming QUESTION:, recorded refused under runner [36] [39]", () => {
+		const { out, ledger } = run(asked({}, read(STAGE)), undefined, asks);
+		const { behavior, message } = decision(out);
+		expect(behavior).toBe("deny");
+		expect(message).toStartWith("question-gate refused this comment (runner): ");
+		expect(message).toContain("`QUESTION: <the card's id>`");
+		expect(ledger.map((r) => [r.decision, r.rule])).toEqual([["refused", "runner"]]);
+	});
+
+	test("an attended session is refused too", () => {
+		expect(decision(run(asked({}, read()), undefined, asks).out).behavior).toBe("deny");
+	});
+
+	// spec: agent-permissions/the-variable-with-another-value
+	test.each(["true", "0", ""])("the value %p decides as today [37]", (value) => {
+		const { ledger } = run(asked({}, read(STAGE)), undefined, { [RUNNER_ASKS.name]: value });
+		expect(ledger.map((r) => [r.decision, r.rule])).toEqual([["allowed", "question"]]);
+	});
+
+	test("an event that is not JSON gets no answer [38]", () => {
+		const { out, ledger } = run("{ not json", undefined, asks);
+		expect({ out, ledger: ledger.map((r) => [r.decision, r.rule]) }).toEqual({
+			out: "",
+			ledger: [["passed", "unreadable"]],
+		});
+	});
+});
+
+describe("the text checks, lifted", () => {
+	test("text unmarked and too long is unmarked [40]", () => {
+		expect(fault(`no mark ${"q".repeat(1500)}`)).toBe("unmarked");
+	});
+
+	test.each([
+		[QUESTION, undefined],
+		[`${QUESTION} <mention-user url="user://u"/>`, "mention"],
+		[`${MARK} ${"q".repeat(1500)}`, "length"],
+		[`${MARK} ${"q".repeat(1500 - MARK.length - 1)}`, undefined],
+		[42, "unmarked"],
+	])("%p reads %p", (text, rule) => {
+		expect(fault(text)).toBe(rule);
 	});
 });
