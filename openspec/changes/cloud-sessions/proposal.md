@@ -34,14 +34,14 @@ the REST API`, seen live on 2026-10-20).
   found, as intended.
 - `core/autonomy.md` gains the rule that a routine's prompt is the line
   `This session runs unattended.` and one call of a tracked skill with its
-  parameters, never a procedure. A new owned skill, `cloud-probe`, is what the
-  trial routine calls: it reports what the live checks below read and pushes
-  nothing.
-- A third group moves the self-pin past the first two. The last group is
-  the live checks no test can make, run by the user in a cloud session and
-  in the trial routine: the command guard refuses a commit on `main`, the
-  turn gate runs, the question gate's `PermissionRequest` hook fires, and the
-  goal check reads a pull request through REST.
+  parameters, never a procedure. A new owned skill, `cloud-probe`, reports
+  whether the harness installed and its gates run, and pushes nothing.
+- A third group moves the self-pin past the first two. The live checks no
+  test can make — in a cloud session and a trial routine: the command guard
+  refuses a commit on `main`, the turn gate runs, the question gate's
+  `PermissionRequest` hook fires, and the goal check reads a pull request
+  through REST — are deferred to a card of their own (user, 2026-10-21), so
+  what they would have read stays unverified live.
 
 ### User acts
 
@@ -54,11 +54,6 @@ Only the user can do these; a task that needs one says so.
   secrets.
 - Approve the `bun install` that moves the self-pin (task 3.1), which
   prompts.
-- Run the live checks of group 4 in a cloud session and in the trial routine,
-  and paste each session's final message where the task says.
-- Create the trial routine — schedule once a day, repository `harness`,
-  environment `harness`, the prompt task 4.3 gives — and switch it off once
-  group 4 has recorded its run.
 
 ## Non-goals
 
@@ -66,13 +61,16 @@ Only the user can do these; a task that needs one says so.
   cloud trial; their `github:laidrivm/harness#…` pin gets 403 from the proxy,
   which serves tarballs only for the session's repositories.
 - The board loop in a routine: it stays on the VPS (change `vps-board-loop`).
-  Routines carry timer flows that read and report.
+  Timer and trigger flows run there too, audits and blog reading included
+  (user, 2026-10-21); a routine remains an option, under the rule above.
+- The live checks in a cloud session and a trial routine: a card of their
+  own (user, 2026-10-21).
 - The cloud's built-in GitHub tools, which post as the user past Bash, where
   neither the command guard nor `deny` sees them. Named in design.md's risks.
 - Keeping `gates.jsonl` past the VM, and running `.githooks` there: CI runs
   `bun test` and the diff budget on every pull request.
-- A `PreToolUse` copy of the question gate, unless group 4 finds the
-  `PermissionRequest` hook does not fire in the cloud.
+- A `PreToolUse` copy of the question gate, unless the deferred live checks
+  find the `PermissionRequest` hook does not fire in the cloud.
 
 ## Capabilities
 
