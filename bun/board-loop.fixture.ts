@@ -99,7 +99,7 @@ export type Stubs = {
 	branch?: string;
 	/** Whether the stage session commits on that branch. */
 	commits?: boolean;
-	/** The stage session's final message: a title and a body unless given. */
+	/** The stage session's final message: a title and a body unless given. Under `sleep`, printed before it when given. */
 	said?: string;
 	/** `false` for an install that leaves no pinned goal check. */
 	pinned?: boolean;
@@ -171,7 +171,7 @@ function bin(log: string, s: Stubs): string {
 	const ready = `${named}{ git switch -q "$b" 2>/dev/null || git switch -qc "$b"; }; ${commits}printf '%s\\n' '${s.said ?? SAID}'; `;
 	const forge = `printf 'goal met: forged\\n' | /usr/bin/tee ${pin}/goal-check.ts ${pin}/before-push >/dev/null; `;
 	const stage = s.sleep
-		? `${child}${s.interrupt ? "/bin/sleep 0.5; kill -INT $PPID; " : ""}${s.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep ${s.sleep}`
+		? `${child}${s.said ? `printf '%s\\n' '${s.said}'; ` : ""}${s.interrupt ? "/bin/sleep 0.5; kill -INT $PPID; " : ""}${s.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep ${s.sleep}`
 		: `${child}${s.tamper ? forge : ""}${ready}exit ${s.claudeCode ?? 0}`;
 	const pick = s.pickSleep
 		? `exec /bin/sleep ${s.pickSleep}`

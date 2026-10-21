@@ -33,8 +33,9 @@ const allowed =(env: NodeJS.ProcessEnv) =>
 /**
  * One `claude -p` session, ended at `limit`, and everything it started ended
  * with it, however it exits. `capture` keeps its output rather than showing
- * it. `as` is the commit identity the runner adds to the allowlist's
- * variables, and `extra` flags it adds to the command line. `left` names its
+ * it. `as` holds the variables the runner adds to the allowlist's, the commit
+ * identity and the question gate's signal, and `extra` flags it adds to the
+ * command line. `left` names its
  * process group when a member outlived the bounded wait.
  */
 export async function session(

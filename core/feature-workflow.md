@@ -163,6 +163,16 @@ line with the body below it, and to write neither when a gate line holds the
 pull request back. The runner pushes and opens with them, and its verdict is
 the full check.
 
+Where the board loop's runner finds the Notion integration's settings, it
+posts the stage session's question itself, and the fourth line of its form
+becomes:
+
+```text
+A question only the user can settle goes in the final message, never on the card, since this session posts no comment: after reading that card and its comments, write a line `QUESTION: <the id of the card of the change>` before any `PR-TITLE:` line, with the question below it, opening with `harness-question`, its two backticks included — the runner posts it.
+```
+
+The hand-launched forms keep the fourth line above.
+
 An answer step, which the board loop launches once every group is ticked and
 the card holds the user's answer, changes only the first line of the board
 loop's form: it names
@@ -329,7 +339,10 @@ for them is already here.
   the answer back as data, and clear `Assign` once it is applied. A question
   is any comment opening with the mark, whoever posted it, a Notion
   integration included, and the answer is the user's first comment without
-  the mark after the last one. An answer
+  the mark after the last one. A session the board loop's runner launches
+  with the Notion integration posts no comment: it names its question in
+  its final message, and the runner posts the question from the integration
+  and sets `Assign`. An answer
   the board loop carries counts as applied in the turn its step's pull request
   opens, or the turn an `idea` card is filed for an answer that asks for a
   change of its own (task-board, *An answer the board loop carries is applied
