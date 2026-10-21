@@ -124,8 +124,11 @@ machine that carries the step.
       2026-10-21: the secret-free bring-up is torn down: `docker ps -a`,
       `docker volume ls` and `docker images` are empty, only the default
       networks remain, and `/root/spike-2026-10-21` is gone. Docker 29.1.3
-      and compose 2.40.3 from Ubuntu's repository stay installed. The task
-      stays open until the token bring-up is torn down the same way
+      and compose 2.40.3 from Ubuntu's repository stay installed. 2026-10-22:
+      the token bring-up is torn down the same way, its token files shredded
+      and the `spike` user removed; the tunnel and the Access applications
+      stay for group 3. The task stays open while row 13 (T6) needs one more
+      bring-up
 
 ## 3. The n8n host
 
