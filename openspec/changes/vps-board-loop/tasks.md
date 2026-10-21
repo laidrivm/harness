@@ -204,7 +204,10 @@ spike's choice of engine: that card settles which user runs the server.
       which runs `claude auth status`, with `--text` when 3.6 found the
       expiry only in that output, and exits non-zero, printing one line
       that names the reason, when the status fails or its output carries the
-      expiry warning. Wire its non-zero exit to the report the engine gives a
+      expiry warning. It clears `CLAUDE_CODE_OAUTH_TOKEN`,
+      `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` before it runs, since
+      any of them the timer passes on overrides the saved login and passes
+      an expired one. Wire its non-zero exit to the report the engine gives a
       failed run (`design.md` *Risks*). Cite each scenario
 - [ ] 3.9 Add to `orchestrator/README.md` the user act 3.6, the restart of a
       stopped server (`claude remote-control` in the same `tmux` session),
