@@ -87,15 +87,23 @@ configuration from the pushed tree.
 - **WHEN** the pushed tree holds a `bunfig.toml` with a `preload`
 - **THEN** no bun process the runner starts loads it
 
-### Requirement: The user's GitHub token reaches only the push
+### Requirement: The user's GitHub token reaches only the push and the pull-request reads
 
 The pass's environment SHALL hold no GitHub token. With no App configured, the
 runner SHALL read the user's token from its secret file for the push, the
-pull request it opens and the check that reads that pull request, and for
+pull request it opens, the check that reads that pull request and
+`readPullRequests()`, handing it to that call's process alone, and for
 nothing else; with the App configured it SHALL not read that file. The
 pass's `gh` SHALL read its configuration from an empty directory the pass
 owns, never from a login stored in the runner's home. With the App configured,
 `readPullRequests()` SHALL read with a token from the key holder's mint.
+
+#### Scenario: A PAT-only host on a private repository
+
+- **WHEN** a pass with no App configured selects a card in a private
+  repository
+- **THEN** `readPullRequests()` reads that repository's pull requests with the
+  user's token, and no other process of the pass holds it
 
 #### Scenario: A login stored in the runner's home
 

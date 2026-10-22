@@ -154,8 +154,11 @@ either. Any other `gh` call in the pass therefore runs unauthenticated; task
 2.1 lists them. One needs a credential on a private repository:
 `readPullRequests()`, which the board loop's selection and the goal check
 call. With the App configured it gets a token from the key holder's mint;
-without the App it runs unauthenticated, so a PAT-only host supports public
-repositories, and a private one's failed read stops the pass, naming it.
+without the App it reads the PAT from `HARNESS_GH_TOKEN_FILE` for that call
+alone, handing the value to that process's environment, never to the pass.
+The user widened decision 2(a) to this on 2026-10-22, since a private
+repository is planned soon and an unauthenticated read cannot see its pull
+requests.
 
 ### The key holder
 
