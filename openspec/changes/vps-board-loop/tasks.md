@@ -112,7 +112,9 @@ machine that carries the step.
       rows are run and recorded there as rows 8–12. The subscription limit
       was not provoked: a failed `claude -p` was forced with an invalid
       token instead (row 10), since burning the limit would lock the user's
-      own sessions for hours
+      own sessions for hours. Also 2026-10-22: row 13 (control through MCP
+      and a CLI) is run on both engines, and Windmill is re-run on 1.846.1,
+      recorded under *Windmill 1.846.1*
 - [ ] 2.2 Write the results into `design.md` under a new *Spike: n8n against
       Windmill* section, one row per criterion and engine. Whatever the
       results, stop: put the table to the user as the question on the card,

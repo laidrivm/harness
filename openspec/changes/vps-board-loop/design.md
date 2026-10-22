@@ -350,7 +350,9 @@ the n8n UI was settled by the user on 2026-10-18 (*Phone access* above).
 
 Task 2.1's secret-free rows, run on the VPS on 2026-10-21, and its token
 and Cloudflare rows, run on 2026-10-21 to 22 in a second, short bring-up
-(rows 8–12). Row 13 is still open. The choice of engine goes to the user
+(rows 8–12), then on 2026-10-22 control through MCP and a CLI (row 13) and
+a re-run of Windmill on its current release, 1.846.1, since the rows above
+ran 1.365 (*Windmill 1.846.1* below). The choice of engine goes to the user
 (task 2.2).
 
 The host is Ubuntu 24.04.4 (kernel 6.8.0-138), with 2 vCPU, 3.7 GiB RAM and
@@ -377,7 +379,7 @@ held placeholder text, and every port was bound to 127.0.0.1.
 | 10 | T3: a failed `claude -p`, forced with an invalid token rather than by burning the limit | `exit=1`, `is_error: true`, `401`; `pass.sh` wrote its stop file. **The execution shows Success**, and the overview counts no failed run. | The same: `terminal_reason: "api_error"` in the log, stop file written, **a green check**. |
 | 11 | T4: Cloudflare Access from a phone; GitHub's webhook path open, everything else behind the login | **Works.** From outside, `/webhook/github` answered from n8n itself: 202 for a good signature, 401 for a wrong or missing one. `/`, the chat at `/webhook/<id>/chat` and another webhook path answered 302 to the Access login. On the user's phone: the Access login, the n8n UI, the execution list (cut off on the right at phone width) and the chat (`pong: …`) all worked. The user: "могло быть и лучше, но в целом осилить можно". | **Works.** The bypassed job path answered from Windmill itself (`401 Unauthorized`, no token in the URL); `/` and another job path answered 302 to the Access login. On the user's phone: the Windmill login, the Runs list with each job's args and logs, and a run started from the script's form (which finished `exit=0`). The user, against n8n: "как будто получше, да. Но не прям сильно". |
 | 12 | T5: load. The harness's whole `bun test` from `main` in the runner, while T1 ran | 2208 pass, 0 fail, 176 s. The host's used memory peaked at 1191 MiB (2628 MiB available at its lowest); n8n at 430 MiB; the runner's CPU at 108 % of 200 %. | 2208 pass, 0 fail, 176 s. The host peaked at 1147 MiB used (2672 MiB available); server 243 MiB, Postgres 113 MiB, two workers under 50 MiB each; the runner's CPU at 113 %. |
-| 13 | T6: control through a CLI or MCP, so the user can drive the engine by chatting with a session (user, 2026-10-22) | open: not run | open: not run |
+| 13 | T6: control through MCP or a CLI, so the user can drive the engine by chatting with a session (user, 2026-10-22). Each call made from the VPS to `https://hooks.laidrivm.com` as a laptop client would, with an Access service token (Service Auth policy) | **MCP works; the CLI cannot run.** The instance MCP at `/mcp-server/http`, enabled by the owner, with its own bearer key: `search_workflows` lists, `execute_workflow` starts a run and returns its id, `get_workflow_execution` gives the status and each node's output (the pass's `spike:` line), and `unpublish_workflow` / `publish_workflow` toggle the whole workflow, its schedule with it; there is no per-trigger toggle. The same server also creates and edits workflows. `@n8n/cli` 0.23.0 (public API key) lists, reads executions and activates or deactivates, but has no command that starts a workflow and no way to add a header, so it cannot pass Access: through the tunnel it fails on the login page. | **MCP and the CLI both work through Access** (1.846.1). MCP at `/api/mcp/w/<workspace>/mcp`, with a token carrying the `mcp:all` scope (without it: `missing mcp scope`): each script is a tool, and a call runs it and returns its last line; `listJobs`, `getJob` and `getJobLogs` give status and logs; `updateSchedule` pauses a schedule with `paused_until`, with no enable switch in MCP. `wmill` 1.846.1 with `HEADERS=CF-Access-Client-Id:…,CF-Access-Client-Secret:…`: `script list`, `script run` streaming the run's log, `job list`, `job get`, `job logs`, `schedule disable` / `enable`. |
 
 With both stacks up, about 1.4 GiB of the 3.7 GiB was in use.
 
@@ -390,6 +392,31 @@ token and the tunnel token were root-owned 0600 files on the host, each
 copied into a volume only its one container mounted. No App key or PAT was
 on the host; `gh_token` held placeholder text. The seven `claude -p` calls,
 the user's run from the phone among them, cost about 0.0016 USD in all.
+
+### Windmill 1.846.1
+
+The rows above ran Windmill CE 1.365, a release from July 2024. On
+2026-10-22 the same bring-up ran its current release, 1.846.1 (published
+2026-10-21), with the same runner, tunnel and Access:
+
+| Row | Windmill CE 1.846.1 |
+|---|---|
+| 3: a wrong signature, and the token in the URL | **Changed.** HTTP routes now work in CE. A route at `/api/r/github` with `authentication_method: none` runs a script whose preprocessor hands it the raw body and the headers, and the script sets the status with `windmill_status_code`. Through the tunnel: 202 for a good signature, 401 for a wrong one, and no token in the URL. After a script is redeployed, the route ran the previous version until its router refreshed, within a minute. |
+| 8: T1 | Works: the schedule fired at 00:11, `exit=0`, `session_id` and `total_cost_usd` in the job's logs. |
+| 9: T2 | Works: the same `session_id`, `lantern`. |
+| 10: T3 | **Changed by the script, not the engine.** The script now ends on the pass's status, so the run with an invalid token is a failed job: a red ✕ in Runs and in its chart. |
+| 11: T4 | Works, and the user found it clearly better than both 1.365 and n8n: "Интерфейс заметно улучшился". Runs, logs, the run form and the paused schedule read well on the phone. |
+| 12: T5 | 2221 pass, 0 fail, 179 s. The host peaked at 1245 MiB used (2574 MiB available at its lowest); server 404 MiB, Postgres 300 MiB, workers about 100 MiB each; the runner's CPU at 112 %. The image is 6.1 GB on disk. |
+| 13: T6 | In the main table. |
+
+**Decision (user, 2026-10-22): an engine token and the Access service
+token may live on the laptop**, so a session there can drive the engine by
+chat. It is an exception to keeping every key and token on the host. Two
+limits keep it narrow: the engine token carries only the scopes chat
+control needs, never one that deploys code, since a deployed script runs
+on a worker that reaches the runner; and the Access service token is
+allowed by a Service Auth policy on `hooks.laidrivm.com` alone. During the
+spike both tokens stayed on the VPS.
 
 What binds group 3 whichever engine is chosen:
 
@@ -417,21 +444,29 @@ What binds group 3 whichever engine is chosen:
    marked the run green because the spike's command ended on `echo
    pass_status=$?`. Group 3's command has to end on the pass's own status,
    so a failed pass is a failed execution in the list the phone reads.
+   Windmill fails the job on a non-zero exit. n8n's SSH node does not: a
+   pass that exited 3 left a successful execution, so n8n needs a node
+   after it that fails the run on a non-zero code.
 
 ### Recommendation
 
-Provisional until row 13 is run. n8n. Its webhook rejection is a real 401, which GitHub's delivery log shows
-as a failure. Its hosted chat page already gives the phone a control
-surface. Windmill CE withholds concurrency limits and the HTTP-routes API,
-so its webhook URL holds a token and answers 200 to a forged delivery. The
-caveats above hold for n8n too: the lock, not the engine, excludes a second
-pass, and the concurrency limit stays off the webhook path.
+Windmill CE 1.846.1. Against 1.365 it removed the reasons n8n led on
+(2026-10-21): an HTTP route answers 202 or 401 with no token in the URL,
+and a non-zero exit fails the job. It now leads where the user looks and
+where a session drives it:
 
-The token rows leave this standing. Rows 8–10 and 12 came out the same on
-both engines. Row 11 gave Windmill a slight edge on the phone, in the
-user's words "не прям сильно", from its Runs list and run form; n8n's
-answer there is its chat page. A small edge in reading runs does not
-outweigh a webhook that tells GitHub a forged delivery was accepted and
-needs a token in the URL GitHub holds. Neither engine's concurrency limit
-is used: Windmill CE's is EE-only, n8n's is instance-wide and stays unset,
-and `pass.sh`'s lock does the excluding.
+- on the phone, by the user's judgement (row 11 on 1.846.1);
+- through Access from a laptop, where MCP and `wmill` both list, run, read
+  status and logs and toggle a schedule (row 13). n8n's MCP does as much,
+  but its CLI cannot start a run or pass Access, and its SSH node leaves a
+  failed pass green until a node is added.
+
+What n8n keeps: a ready chat page, a lighter footprint (n8n peaked at
+430 MiB against Windmill's server and Postgres at about 700 MiB), and a
+2 GB image against 6 GB. The host held either with over 2.5 GiB free.
+Neither engine's concurrency limit is used: `pass.sh`'s lock does the
+excluding, n8n's limit is instance-wide and stays unset, and Windmill CE's
+was EE-only on 1.365 and was not re-checked on 1.846.1.
+
+On 2026-10-21 the recommendation was n8n, for its 401 and its chat page,
+against a Windmill 1.365 that answered 200 and held a token in the URL.
