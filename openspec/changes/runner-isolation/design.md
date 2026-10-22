@@ -211,8 +211,12 @@ that index, instead of setting the count to 1. This removes its `shortcut:`.
   The card *Let only the runner write the gate ledger a session's tests are
   judged by*. Until then CI fails an untested pull request.
 - [The root session can leave config in `runner`'s clones that a later pass
-  runs.] → The user drives it; the passes re-check out the harness clone
-  forced and cleaned each time.
+  runs.] → A forced checkout leaves `.git/config` and `.git/hooks` as they
+  are, so before any runner-side git command each pass rewrites both
+  clones' `.git/config` to the values `pass.sh` sets at creation (the
+  remote, `core.hooksPath=/dev/null`) and empties `.git/hooks`; it stops
+  naming the clone if either cannot be reset. The group that adds the
+  bundle push carries the task and its case.
 - [The mint helper moves only when the image is rebuilt.] → Its pin note says
   so, as every image pin's does.
 - [Two lists of variable names, in the code and in sudoers.] → The test above.

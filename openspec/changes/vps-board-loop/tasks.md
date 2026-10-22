@@ -190,9 +190,11 @@ after `runner-isolation` group 3, which edits this group's image and README.
       3.1, and with `docker build` where Docker is available. Otherwise record
       that the build is first run by the user
 - [ ] 3.3 Write the failing cases in `orchestrator/pass.test.ts`, then add
-      `orchestrator/stop.sh` (`design.md` *Stopping a pass*). Cover: a bad
-      name exits 2 as `pass.sh`'s guard does; no pass holding the lock prints
-      `idle` and writes no stop file; a running fake pass gets TERM, the
+      `orchestrator/stop.sh`, and have `pass.sh` write `<lock>.pid` (`design.md`
+      *Stopping a pass*). Cover: a bad name exits 2 as `pass.sh`'s guard
+      does; no pass holding the lock prints `idle`, removes a stale marker,
+      signals nothing and writes no stop file; another repository's running
+      pass is left alone; a running fake pass gets TERM, the
       lock frees, and the stop file's last line is `stopped by hand`, so the
       next tick prints the paused line. Skip without `flock`, as 1.1 does.
       Cite each scenario
@@ -202,9 +204,10 @@ after `runner-isolation` group 3, which edits this group's image and README.
       Windmill image 1.846.1 or later by digest; `runner` (one volume for
       `/home/agent` and one for `/home/runner`, the secrets mounted, no
       published port); and `cloudflared` (the tunnel token from its secret
-      file). Find whether Windmill takes its database URL from a file and
-      record it in `design.md` *Secrets*. Add `orchestrator/secrets` to
-      `.gitignore` with no trailing slash. Verify with 3.1 and `docker
+      file). Find whether Windmill takes its database URL from a file; if
+      not, build it in each service's `command` from the `db_password`
+      secret (`design.md` *Secrets*), never a `.env`. Record it there.
+      Add `orchestrator/secrets` to `.gitignore` with no trailing slash. Verify with 3.1 and `docker
       compose config` where Docker is available
 - [ ] 3.5 Write `orchestrator/windmill/` by hand to the shape `wmill sync
       pull --skip-secrets --include-schedules` writes: the bash pass script
