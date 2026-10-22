@@ -258,7 +258,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		// Captured, for its title and body: in text mode it prints nothing before its final message.
 		const asks = bot ? "runner" : existsSync(where(ASK_SETTINGS)) ? "ask" : undefined;
 		const flags = ["--session-id", id, ...withheld];
-		staged = await session(prompt(slug, chosen, relative(real, check), resumed, asks), limit, kill, true, as, flags, under);
+		staged = await session(prompt(slug, chosen, relative(real, check), resumed, asks, bot?.self, bot?.user), limit, kill, true, as, flags, under);
 	} catch {
 		return refuse("claude could not be started");
 	}
