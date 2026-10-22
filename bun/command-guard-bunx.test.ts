@@ -35,11 +35,12 @@ describe("a bunx that installs what it runs", () => {
 		"bun --hot app.ts x",
 	])("%s blocks", (line) => installs(line));
 
+	// The interpreter check refuses an option before bun's subcommand; not this one.
 	test.each([
 		"bun run --cwd x script",
 		"bun --cwd /tmp test x.test.ts",
 		"bun --cwd /tmp x --no-install tsc",
-	])("%s runs", (line) => expect(verdict(line).code).toBe(0));
+	])("%s is not refused as an install", (line) => expect(verdict(line).rule).not.toBe("bunx-install"));
 
 	// spec: agent-permissions/the-flag-after-the-package
 	test("the flag after the package blocks", () => {
