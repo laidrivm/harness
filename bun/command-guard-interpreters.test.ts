@@ -138,6 +138,17 @@ describe("an interpreter given program text the guard cannot read", () => {
 		asks("python3 run.py", dir);
 	});
 
+	// node runs a directory's untracked index.js; git's checks pass the tracked directory
+	test("a tracked directory holding an untracked file asks [10]", () => {
+		const { dir } = checkout();
+		mkdirSync(join(dir, "src"));
+		writeFileSync(join(dir, "src/a.js"), "1\n");
+		git(dir, "add", "src");
+		git(dir, "commit", "-m", "src");
+		writeFileSync(join(dir, "src/index.js"), "1\n");
+		asks("node src", dir);
+	});
+
 	// spec: agent-permissions/a-path-the-guard-cannot-resolve
 	test.each(['bun "$SCRATCH/x.ts"', "cd $(mktemp -d) && bun pre.ts"])(
 		"%s asks [18, 19]",
