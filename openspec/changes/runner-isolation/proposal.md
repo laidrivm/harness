@@ -34,7 +34,8 @@ session can write while the App key or a token is in reach*, recon of
 - The user's PAT reaches only the push step and the pull-request reads, and
   none of them when the App is configured (decision 2a, widened to the reads
   on 2026-10-22 for a private repository).
-- A third user, the key holder, alone reads the App's private key. The runner
+- A third user, the key holder, alone among the automated users reads the
+  App's private key. The runner
   asks it for a token for one repository, valid for an hour, with
   permissions from a fixed set. The user first chose to leave this to a later
   card and then, answering the Remote Control follow-up, asked for it now

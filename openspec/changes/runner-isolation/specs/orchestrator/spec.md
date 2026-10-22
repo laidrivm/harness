@@ -127,7 +127,11 @@ owns, never from a login stored in the runner's home. With the App configured,
 
 ### Requirement: Only the key holder reads the App's private key
 
-The App's private key SHALL be readable by the key-holder user alone. The
+The App's private key SHALL be readable by the key-holder user alone among
+the host's unprivileged users; no automated `runner` or session user SHALL
+read it. Root reads every file, and the user's emergency root session MAY
+read the key while it runs (`design.md` *Remote Control is the user's root
+session*). The
 runner SHALL obtain an installation token only by asking the key holder for
 one repository; the token SHALL last at most an hour and carry permissions
 from a fixed set, and it SHALL never appear in a process's arguments.

@@ -71,8 +71,9 @@ Alternative: `host/`. Rejected, because the router is not host configuration.
 
 The card's constraint, *Sandbox per agent*, says the App's private key never
 enters the agent's sandbox. That key is not the engine's either. On the host a
-key-holder user alone reads it and mints `runner` an hourly token
-(`runner-isolation`, user, 2026-10-21); `runner` never reads the key file.
+key-holder user alone among the automated users reads it and mints `runner`
+an hourly token (`runner-isolation`, user, 2026-10-21); `runner` never reads
+the key file. Root, and so the user's emergency session, reads it too.
 This supersedes the ghapp card's 2026-10-18 reading, under which the runner's
 own Unix user read it. Sessions run as a third user, `agent`. The engine
 holds only the SSH key that reaches the runner, as a secret variable. A
@@ -212,8 +213,12 @@ A cancelled job leaves the pass running and its lock held (spike point 2),
 since `pass.sh` ignores HUP. So the runner carries
 `/opt/orchestrator/stop.sh <clone>`, which the user runs on the host, from
 the emergency session or `docker compose exec`: it validates the name as
-step 1 does, sends TERM to the process group of the pass that holds that
-repository's lock, waits for the lock to free and writes the stop file with
+step 1 does and finds the pass through a marker. `pass.sh`, once it holds
+the lock, writes its process group to `<lock>.pid` beside that
+repository's lock. `stop.sh` first tries the lock without waiting: if it
+gets it, no pass runs, so it removes any stale marker, prints `idle` and
+signals nothing. Otherwise it sends TERM to the marker's process group,
+waits for the lock to free and writes the stop file with
 the line `stopped by hand`, so the next tick pauses until the user removes
 it. The engine's forced-command key cannot reach it: that key runs
 `pass.sh` alone.
@@ -238,8 +243,9 @@ the host and is mounted at `/run/secrets/`. No secret goes through compose's
 `${VAR}` interpolation or an `environment:` literal. Postgres reads
 `POSTGRES_PASSWORD_FILE`; how Windmill's server and workers take the
 database URL from that file is checked at task 3.4, and if they read only an
-environment value, the README has the user write it to an untracked `.env`
-beside compose, the one value that path carries. An SSH session does not inherit
+environment value, each Windmill service's compose `command` builds
+`DATABASE_URL` from `/run/secrets/db_password` in a shell and then `exec`s
+the binary, so no `.env` or literal ever holds it. An SSH session does not inherit
 the container's environment anyway, so `pass.sh` reads the files itself. `gh`
 and git's credential helper (`gh auth setup-git`, run in the image) take
 `GH_TOKEN`. The engine's SSH key's private half lives only in a Windmill
