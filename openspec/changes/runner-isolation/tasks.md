@@ -164,6 +164,9 @@ Closes `orchestrator` §*The session user reads no secret file*. Needs
       `pass.sh` stats the session's clone (`[ -d "$dir/.git" ]`) as `runner`.
       Route both through the launcher, with a case each in
       `bun/board-loop-isolation.test.ts` and `orchestrator/pass.test.ts`.
-      Verify with those cases and `bun test`
+      The fix sits in `session()` itself, so the CI flow's call in
+      `bun/ci-run.ts`, which hands it `process.kill`, is stopped the same way
+      and a stalled CI session cannot hold the repository's lock; one case in
+      `bun/ci-run.test.ts` covers it. Verify with those cases and `bun test`
 - [ ] 5.5 **User act.** Run `reach-check.sh` on the host after the App key is
       placed, and record its output in the pull request
