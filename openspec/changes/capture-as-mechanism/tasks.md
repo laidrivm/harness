@@ -10,7 +10,7 @@ One group, so the change ships whole on `feat/capture-as-mechanism`.
 
 ## 1. The question, and its count
 
-- [ ] 1.1 In `core/rules.md`, add the capture step's first bullet. It asks
+- [x] 1.1 In `core/rules.md`, add the capture step's first bullet. It asks
       whether a mechanism (a test over the code the lesson is about, or a
       gate: a `harness:check` check, a hook, a permission entry) can hold
       the lesson. Under it go three sub-bullets: add the test in the same
@@ -33,7 +33,7 @@ One group, so the change ships whole on `feat/capture-as-mechanism`.
       Record the always-on line count before and after in the commit
       message. (Req: agent-rulebook — A captured lesson is weighed as a
       mechanism before it is written as prose)
-- [ ] 1.2 In `core/skills/session-wrapup/SKILL.md`, make step 2 tag every
+- [x] 1.2 In `core/skills/session-wrapup/SKILL.md`, make step 2 tag every
       proposed capture with one of `mechanism`, `card + rule`, `rule`,
       `skill edit`, `memory`. Make step 5 append exactly one line,
       `- captures: N mechanism, N card + rule, N rule, N skill edit,
@@ -52,7 +52,7 @@ One group, so the change ships whole on `feat/capture-as-mechanism`.
       Update the skill's `description` and the `README.md` row only if they
       enumerate step 5's contents, so they don't drift. (Req:
       agent-rulebook — The yield ledger counts captures by kind)
-- [ ] 1.3 Grep `core/`, `README.md` and `openspec/specs/` for every site that
+- [x] 1.3 Grep `core/`, `README.md` and `openspec/specs/` for every site that
       restates the capture routing or step 5's lines, and reconcile each one.
       If `gate-decision-ledger` has merged first, rebase over its step-5
       edit and keep both lines (design.md, *One ledger line…*). `bun test`
