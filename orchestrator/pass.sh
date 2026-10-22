@@ -3,10 +3,11 @@
 # at most one per repository at a time, and none after a failed pass until the
 # user removes its stop file by hand.
 #
-#   pass.sh <clone>
+#   pass.sh <clone> [<owner>/<repo>]
 #
 # <clone> is one directory name under the clones directory, PASS_CLONES
-# (~/clones by default). The state directory, PASS_STATE (~/orchestrator),
+# (~/clones by default). <owner>/<repo> is the repository the engine's job
+# names, and the clone's origin must name the same one. The state directory, PASS_STATE (~/orchestrator),
 # holds <clone>.stop, locks/ and passes/, where each pass's whole output is
 # kept. The secret files are read from PASS_SECRETS (/run/secrets).
 #
@@ -14,7 +15,10 @@
 # session user. With it set, the pass runs in a push clone under PASS_PUSH
 # (~/push), from its harness checkout under PASS_HARNESS (~/harness) at main's pin,
 # and every bun the runner starts keeps the tree's bunfig.toml and .env out;
-# a pin it cannot check out exits 1, as a failed pass does.
+# a pin it cannot check out exits 1, as a failed pass does. There the job must
+# name the repository, since `agent` writes the clone's origin, and both runner
+# clones are reset each pass to hooks under PASS_HOOKS (/opt/orchestrator/hooks),
+# an empty root-owned directory.
 #
 # Exits 2 for a name that is no clone, 3 while the stop file exists, 0 while
 # another pass holds the repository's lock, and otherwise the pass's status.
@@ -26,6 +30,7 @@ clones=${PASS_CLONES:-$HOME/clones}
 state=${PASS_STATE:-$HOME/orchestrator}
 secrets=${PASS_SECRETS:-/run/secrets}
 name=${1-}
+named=${2-}
 dir=$clones/$name
 stop=$state/$name.stop
 
@@ -48,6 +53,13 @@ if [[ ! $name =~ $segment ]] || [ ! -d "$dir/.git" ]; then
 	echo "orchestrator: no clone named '$name' under $clones" >&2
 	exit 2
 fi
+part='[A-Za-z0-9][A-Za-z0-9._-]*'
+# On the host the job's name is the only one `runner` owns; nothing of the clone is read without it.
+if [ $# -gt 2 ] || { { [ -n "${PASS_AS_AGENT-}" ] || [ $# = 2 ]; } && [[ ! $named =~ ^($part)/($part)$ ]]; }; then
+	echo "orchestrator: the job names no <owner>/<repo> for '$name'" >&2
+	exit 2
+fi
+named=$(printf '%s' "$named" | tr '[:upper:]' '[:lower:]')
 
 # Exits 3 while the stop file exists.
 paused() {
@@ -68,7 +80,6 @@ if [ -n "${PASS_AS_AGENT-}" ]; then
 fi
 origin=$("${as[@]}" git -C "$dir" config --get remote.origin.url)
 url=${origin%.git}
-part='[A-Za-z0-9][A-Za-z0-9._-]*'
 repository="^([a-z][a-z0-9+.-]*://[^/]+/|[^/:]+:)($part)/($part)$"
 if [[ ! $url =~ $repository ]]; then
 	# Not the URL itself, which can carry a credential.
@@ -79,6 +90,11 @@ fi
 owner=$(printf '%s' "${BASH_REMATCH[2]}" | tr '[:upper:]' '[:lower:]')
 repo=$(printf '%s' "${BASH_REMATCH[3]}" | tr '[:upper:]' '[:lower:]')
 key=$owner-$repo
+# A session can point its clone's origin anywhere; a pass then would clone and run what it names.
+if [ -n "$named" ] && [ "$owner/$repo" != "$named" ]; then
+	mkdir -p "$state" || exit 1
+	halt "the clone $dir names $owner/$repo, not $named, the repository the job names"
+fi
 
 mkdir -p "$state/locks" "$state/passes" || exit 1
 lock=$state/locks/$key.lock
@@ -116,9 +132,17 @@ if [ -n "${PASS_AS_AGENT-}" ]; then
 	push=${PASS_PUSH:-$HOME/push}/$owner/$repo
 	# Per repository, as the lock is: a shared checkout could move to another pin under a running pass.
 	harness=${PASS_HARNESS:-$HOME/harness}/$owner/$repo
-	if [ ! -d "$push/.git" ]; then
-		{ mkdir -p "${push%/*}" && git clone -q --template= "$origin" "$push"; } || halt "the push clone $push could not be made"
-	fi
+	hooks=${PASS_HOOKS:-/opt/orchestrator/hooks}
+	[ -d "$hooks" ] && [ -z "$(ls -A "$hooks")" ] || halt "the hooks directory $hooks is missing or not empty"
+	# Rewrites a runner clone's config to what this script sets, $2 its remote, and empties its hooks,
+	# before any git command there: a forced checkout leaves both as the root session may have left them.
+	reset() {
+		{ [ -d "$1/.git" ] || { mkdir -p "$1" && git init -q --template= "$1"; }; } &&
+			printf '[core]\n\trepositoryformatversion = 0\n\tbare = false\n\thooksPath = %s\n%s' "$hooks" "${2-}" >"$1/.git/config" &&
+			rm -rf "$1/.git/hooks" && mkdir "$1/.git/hooks" || halt "the clone $1 could not be reset"
+	}
+	reset "$push" "$(printf '[remote "origin"]\n\turl = https://github.com/%s.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n' "$owner/$repo")"
+	reset "$harness"
 	{ git -C "$push" fetch -q origin && git -C "$push" checkout -qf --detach origin/main; } ||
 		halt "the push clone $push could not check out origin/main"
 	pin=$(git -C "$push" show origin/main:package.json | jq -r '.devDependencies.harness // empty')
@@ -126,8 +150,7 @@ if [ -n "${PASS_AS_AGENT-}" ]; then
 	[[ $pin =~ ^github:($part)/($part)#([0-9a-f]{40})$ ]] || halt "the harness pin '$pin' on main names no full commit"
 	sha=${BASH_REMATCH[3]}
 	# Fetched from the remote the pin names each pass, so a pin that moved is there before the checkout.
-	{ [ -d "$harness/.git" ] || { mkdir -p "${harness%/*}" && git init -q "$harness"; }; } &&
-		git -C "$harness" fetch -q "https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}.git" "$sha" &&
+	git -C "$harness" fetch -q "https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}.git" "$sha" &&
 		git -C "$harness" checkout -qf --detach "$sha" && git -C "$harness" clean -qfdx ||
 		halt "the harness pin '$pin': its commit could not be fetched and checked out"
 	loop=$harness/bun/board-loop.ts

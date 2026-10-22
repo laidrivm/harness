@@ -27,6 +27,21 @@ clone, its `node_modules` included.
   the fetch from the harness's remote does not bring it
 - **THEN** no pass starts, and the stop file names the value
 
+#### Scenario: The session's clone names another repository
+
+- **WHEN** the engine's job names no repository, or the session's clone's
+  `origin` names one other than the repository the job names
+- **THEN** no pass starts, and no push clone or harness checkout is made or
+  read
+
+#### Scenario: Config left in a runner clone
+
+- **WHEN** the push clone's or the harness checkout's `.git/config` sets a
+  command, or its `.git/hooks` holds a hook
+- **THEN** the pass rewrites that config and empties those hooks before its
+  first git command there, and a clone it cannot reset stops the pass,
+  named
+
 ### Requirement: The runner runs nothing in a session's clone as itself
 
 Every git, bun or `claude` command the runner runs in a session's clone SHALL

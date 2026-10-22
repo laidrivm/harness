@@ -69,8 +69,10 @@ whose tests passed*.
       runner's push from its push clone on the host for a commit whose pre-PR
       record names its SHA, and say the same beside `publish()`. Verify by
       reading both back and running `bun test bun/review-docs.test.ts`
-- [ ] 2.4 Write the failing cases in `orchestrator/pass.test.ts`, then change
-      `orchestrator/pass.sh` (`design.md` *Risks*): before the runner's first
+- [x] 2.4 Write the failing cases in `orchestrator/pass-pin.test.ts`, where
+      the launcher's cases run, then change
+      `orchestrator/pass.sh` (`design.md` *Risks*, *The repository is the
+      job's*): before the runner's first
       git command each pass rewrites both runner clones' `.git/config` to the
       values `pass.sh` sets at creation (the remote,
       `core.hooksPath` at the empty root-owned directory `design.md` names
