@@ -61,6 +61,8 @@ function committed(path: string, dirs: Set<string | null>): boolean {
 		const at = place(from, path);
 		if (at === null || !existsSync(at)) return false;
 		const real = realpathSync(at);
+		// a tracked directory passes both git checks while it holds an untracked entry point
+		if (!statSync(real).isFile()) return false;
 		const top = git(dirname(real), "rev-parse", "--show-toplevel");
 		if (top === null) return false;
 		const inside = relative(realpathSync(top), real);
