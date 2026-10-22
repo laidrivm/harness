@@ -31,8 +31,9 @@ session can write while the App key or a token is in reach*, recon of
   runs no pre-push hook; CI is the hard check. **BREAKING** for the rule in
   `core/git-and-prs.md`: it gains one exception, for this push clone alone
   (user, 2026-10-21, decision 1a).
-- The user's PAT reaches only the push step, and not even that when the App
-  is configured (decision 2a).
+- The user's PAT reaches only the push step and the pull-request reads, and
+  none of them when the App is configured (decision 2a, widened to the reads
+  on 2026-10-22 for a private repository).
 - A third user, the key holder, alone reads the App's private key. The runner
   asks it for a token for one repository, valid for an hour, with
   permissions from a fixed set. The user first chose to leave this to a later

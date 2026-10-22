@@ -67,7 +67,8 @@ checkout*, §*The runner runs nothing in a session's clone as itself* and
 
 ## 2. The tokens' reach
 
-Closes `orchestrator` §*The user's GitHub token reaches only the push*,
+Closes `orchestrator` §*The user's GitHub token reaches only the push and the
+pull-request reads*,
 §*Only the key holder reads the App's private key* and the App scenario of
 §*The wrapper starts the pass with the environment it names*.
 
@@ -76,14 +77,15 @@ Closes `orchestrator` §*The user's GitHub token reaches only the push*,
       `bun/goal-check.ts` and every module they import (`bun/pull-requests.ts`
       runs the goal check's `gh api` reads), and record in `design.md` *The
       GitHub token's reach* which run unauthenticated; hand
-      `readPullRequests()` the mint's token when the App is configured
+      `readPullRequests()` the mint's token when the App is configured, and
+      the PAT from `HARNESS_GH_TOKEN_FILE` for that call alone when it is not
 - [ ] 2.2 Write the failing cases: `pass.sh`'s pass environment holds no
       `GH_TOKEN`, holds the App's id and mint command when they are set, and
       no key path; it sets `GH_CONFIG_DIR` to an empty directory the pass
       owns, so a `gh` login written into the test's home is not found; with the App's settings `pass.sh` starts the pass when
-      `gh_token` is absent and never opens it; `publish()` reads `HARNESS_GH_TOKEN_FILE` only for the
-      push, the pull request and the check after it, and never with the App
-      configured; `mint()` with `HARNESS_GITHUB_APP_MINT` runs that command and
+      `gh_token` is absent and never opens it; `publish()` and `readPullRequests()` read
+      `HARNESS_GH_TOKEN_FILE` only for the push, the pull request, the check
+      after it and the pull-request read, and never with the App configured; `mint()` with `HARNESS_GITHUB_APP_MINT` runs that command and
       returns its stdout, with the token in no argument; the mint helper
       refuses an unlisted repository and a permission outside the fixed set,
       naming each; `credentials()` appends after an inherited
