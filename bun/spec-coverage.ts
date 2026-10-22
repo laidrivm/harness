@@ -12,6 +12,7 @@ import { lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { comments } from "./scan.ts";
 import { counted, validated } from "./spec-criteria.ts";
+import { tracked } from "./tracked.ts";
 
 /**
  * A citation identifier. Anchored at both ends, so `capability/A Thing` is a
@@ -115,39 +116,30 @@ function cite(path: string, text: string) {
  */
 const TEST_FILE = /[._](?:test|spec)\.(?:[cm][jt]s|[jt]sx?)$/;
 
-/** Tracked test files, listed at the repository root whatever `cwd` is. */
-function tests(root: string): string[] {
-	const ls = Bun.spawnSync(["git", "ls-files", "-z"], { cwd: root });
-	if (ls.exitCode !== 0) throw new Error(ls.stderr.toString());
-	return ls.stdout
-		.toString()
-		.split("\0")
-		.filter(
-			(path) =>
-				TEST_FILE.test(path) &&
-				!`/${path}`.includes("/node_modules/") &&
-				// Bun does not discover a test under a dot-directory, so counting a
-				// citation from one would mark a criterion closed by a test that
-				// never runs — measured: `bun test` reports "0 test files matching"
-				// for a suite under `.hidden/`.
-				!path.split("/").some((segment) => segment.startsWith(".")),
-		);
+/** The test files among `paths`, tracked paths relative to the root. */
+function tests(paths: string[]): string[] {
+	return paths.filter(
+		(path) =>
+			TEST_FILE.test(path) &&
+			!`/${path}`.includes("/node_modules/") &&
+			// Bun does not discover a test under a dot-directory, so counting a
+			// citation from one would mark a criterion closed by a test that
+			// never runs — measured: `bun test` reports "0 test files matching"
+			// for a suite under `.hidden/`.
+			!path.split("/").some((segment) => segment.startsWith(".")),
+	);
 }
 
 /** Everything the check knows about one repository. */
 export function check(cwd?: string) {
-	const top = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], { cwd });
-	if (top.exitCode !== 0) throw new Error(top.stderr.toString());
-	// Only the terminator git adds, not `trim()`: a repository whose path ends
-	// in a space is unusual and not this check's to corrupt.
-	const root = top.stdout.toString().replace(/\n$/, "");
+	const { root, paths } = tracked(cwd);
 
 	const criteria = counted(root);
 	// Grouped rather than a set: three headings repeat under different
 	// requirements today, and a slug matching two of them is an error only
 	// once a test cites it — until then both simply count as uncited.
 	const known = Map.groupBy(validated(root), (c) => c.id);
-	const files = tests(root);
+	const files = tests(paths);
 	const problems: string[] = [];
 	const citations: Citation[] = [];
 	for (const path of files) {

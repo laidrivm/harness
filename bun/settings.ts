@@ -13,6 +13,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { HOOKS } from "./bootstrap.ts";
+import { tracked } from "./tracked.ts";
 
 /** Every package manager a consumer does not use. */
 const MANAGERS = ["npx", "npm", "pnpm", "yarn"];
@@ -286,16 +287,9 @@ export function settings(root: string): string[] {
 			`bunfig.toml: [install] is not exactly ${JSON.stringify(INSTALL)}`,
 		);
 
-	// Both pathspecs: `**/.npmrc` matches at depth and not at the root.
-	const npmrc = Bun.spawnSync(
-		["git", "ls-files", "--", "**/.npmrc", ".npmrc"],
-		{
-			cwd: root,
-		},
-	);
-	if (npmrc.exitCode !== 0) throw new Error(npmrc.stderr.toString());
-	for (const path of npmrc.stdout.toString().split("\n").filter(Boolean))
-		problems.push(`${path}: tracked, and bun reads it as a registry source`);
+	for (const path of tracked(root).paths)
+		if (path === ".npmrc" || path.endsWith("/.npmrc"))
+			problems.push(`${path}: tracked, and bun reads it as a registry source`);
 
 	return problems;
 }

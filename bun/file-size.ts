@@ -9,8 +9,9 @@
  * one nobody has measured. Markdown is bounded by the always-on context budget
  * where it matters, and JSON and YAML are read by key rather than by line.
  */
-import { lstatSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { tracked } from "./tracked.ts";
 
 /** Longest a file of each extension may be, inclusive. */
 const CAPS: Record<string, number> = {
@@ -59,37 +60,19 @@ export type Oversize = { path: string; count: number; cap: number };
 /**
  * Every tracked file over its cap in the repository containing `cwd`.
  *
- * The listing is taken at the repository root, never at `cwd`, the shape
- * `no-suppressions.ts` uses: `git ls-files` run in a subdirectory
- * reports only what is under it and names it relative to it, so a check run
- * from a subdirectory would miss the tree above and resolve the rest to nothing.
- *
  * Tracked only, so a file present for its author and absent from a clone
  * cannot fail one machine and no other.
  */
 export function oversize(cwd?: string): Oversize[] {
-	const top = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], { cwd });
-	if (top.exitCode !== 0) throw new Error(top.stderr.toString());
-	// Only the terminator git adds, not `trim()`: a repository whose path ends
-	// in a space is unusual and not this check's to corrupt.
-	const root = top.stdout.toString().replace(/\n$/, "");
-
-	const ls = Bun.spawnSync(["git", "ls-files", "-z"], { cwd: root });
-	if (ls.exitCode !== 0) throw new Error(ls.stderr.toString());
+	const { root, files } = tracked(cwd);
 
 	const found: Oversize[] = [];
 	let read = 0;
-	// `-z` terminates rather than separates, so the last field is empty and
-	// would otherwise resolve to the root itself and be read as a directory.
-	for (const path of ls.stdout.toString().split("\0").filter(Boolean)) {
+	for (const path of files) {
 		const cap = capOf(path);
 		if (cap === undefined) continue;
-		const full = join(root, path);
-		// Regular files only: the entry may be tracked but deleted from the work
-		// tree, a symlink, or a submodule's gitlink, which reads as a directory.
-		if (!lstatSync(full, { throwIfNoEntry: false })?.isFile()) continue;
 		read++;
-		const lines = count(readFileSync(full, "utf8"));
+		const lines = count(readFileSync(join(root, path), "utf8"));
 		if (lines > cap) found.push({ path, count: lines, cap });
 	}
 
