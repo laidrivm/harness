@@ -103,7 +103,8 @@ user-bound names among them would still carry `runner`'s values, so the
 launcher sets `HOME`, `USER` and `LOGNAME` to `agent`'s and unsets
 `CLAUDE_CONFIG_DIR`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME` and `XDG_CACHE_HOME`
 before it executes: `claude` and the trust check below then read `agent`'s own
-configuration. `XDG_STATE_HOME` passes, since the pass sets it to `agent`'s.
+configuration. `XDG_STATE_HOME` passes; the pass sets none (*The push*), so
+the session's ledger is `agent`'s default.
 
 The board loop runs with the push clone as its working directory and names
 the session's clone in `HARNESS_CLONE`. Every bun process the runner starts
@@ -134,10 +135,17 @@ the checkout's top level, and the record was made in the session's clone, so
 with `HARNESS_CLONE` set it matches the top level against that clone's path
 instead; the SHA is the same, since a bundle keeps it. The record sits in
 `agent`'s ledger, which `gate-ledger.ts` keeps 0600 in a 0700 directory, so
-the pass sets the session's `XDG_STATE_HOME` to `/home/agent/.local/state`
-(`env -i` drops it otherwise) and the goal check reads that ledger through
-the launcher as `agent`, never as `runner`. It still refuses a tip
-without a passing record. Only then does the runner push the SHA it checked.
+the goal check reads that ledger through the launcher as `agent`, never as
+`runner`, resolving the state directory in `agent`'s shell by
+`stateDir()`'s rule, and takes the clone's top level as `agent`'s `pwd -P`
+there. The pass sets no `XDG_STATE_HOME` (`env -i`), so the launcher's
+`HOME` alone places the session's ledger and the check's read of it; group 2
+dropped the fixed `/home/agent/.local/state` this paragraph first named, a
+host path that would hold the same file. It still refuses a tip
+without a passing record, the pre-push check and the full one after the push
+alike. Only then does the runner push the SHA it checked. The bundle goes to
+the runner over the launcher's stdout, into a file of the runner's, so
+`agent` needs no directory the runner reads.
 
 The push clone is created with an empty `--template` and its
 `core.hooksPath` set to an empty root-owned directory, so no hook runs.

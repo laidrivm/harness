@@ -1,19 +1,20 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { realpathSync } from "node:fs";
+import { chmodSync, existsSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
-import { change, clone, run, type Stubs, trusting } from "./board-loop.fixture.ts";
+import { advance, change, clone, out, run, type Stubs, trusting } from "./board-loop.fixture.ts";
 
 /** A pass on the host: in a push clone of its own, every command in the session's clone through the launcher. */
 
 afterAll(cleanup);
 
-/** A session's clone and a push clone of the same `origin`. */
+/** A session's clone and a push clone of the same `origin`, its hooks pointed at an empty directory as `pass.sh` points them. */
 function pair(tree = change("demo")) {
 	const { dir, origin } = clone(tree);
 	const push = emptyDir("board-loop-push-");
 	git(push, "clone", "-q", origin, ".");
-	return { dir, push };
+	git(push, "config", "core.hooksPath", emptyDir("board-loop-hooks-"));
+	return { dir, push, origin };
 }
 
 /** One pass in `push`, with the stand-in launcher and `dir` as the session's clone. */
@@ -69,7 +70,8 @@ describe("the harness the runner runs", () => {
 	// spec: orchestrator/a-session-edits-the-harness-copy-in-its-clone
 	test("an edited goal check in the session's clone is never run; the runner's own copy judges", () => {
 		const { dir, push } = pair();
-		const r = launched(dir, push, { tamper: true });
+		// A commit, so the step has a tip to carry into the push clone and judge there.
+		const r = launched(dir, push, { tamper: true, commits: true });
 		expect(r.last).not.toContain("goal met");
 		const judged = calls(r.where).filter(({ call }) => call.startsWith("bun ") && !call.startsWith("bun install"));
 		expect(judged.length).toBeGreaterThan(0);
@@ -83,9 +85,59 @@ describe("the harness the runner runs", () => {
 	// The flags' effect on bun 1.4.2 is task 1.1's probe; `pass.sh` starts the board loop itself with them.
 	test("every bun the runner starts carries the flags that keep a tree's bunfig.toml and .env out", () => {
 		const { dir, push } = pair();
-		const ran = calls(launched(dir, push).where).filter(({ who, call }) => who === "runner" && call.startsWith("bun "));
+		const ran = calls(launched(dir, push, { commits: true }).where).filter(({ who, call }) => who === "runner" && call.startsWith("bun "));
 		expect(ran.length).toBeGreaterThan(0);
 		for (const { call } of ran) expect(call).toStartWith("bun --config=/dev/null --no-env-file ");
+	});
+
+	// The before-push check's verdict is the stub's; the goal check's own reading of the session's
+	// record through the launcher is `goal-check.test.ts`'s.
+	describe("the push from the push clone", () => {
+		const rev = (where: string, ref: string) => out(where, "rev-parse", ref);
+
+		// spec: orchestrator/a-commit-with-a-passing-pre-pr-record
+		test("pushes exactly the bundle's tip, from the push clone, checked out on the step branch first", () => {
+			const { dir, push, origin } = pair();
+			const r = launched(dir, push, { commits: true });
+			const tip = rev(dir, "feat/demo");
+			expect(rev(origin, "feat/demo")).toBe(tip);
+			expect(r.beforeHead).toBe(`feat/demo\n${tip}\n`);
+			const pushes = calls(r.where).filter(({ call }) => call.startsWith("git push"));
+			expect(pushes.map(({ who, cwd }) => [who, cwd])).toEqual([["runner", realpathSync(push)]]);
+			// The bundle came out of the session's clone through the launcher, and went into the push clone after it.
+			const order = calls(r.where).map(({ who, call }) => `${who} ${call.split(" ").slice(0, 3).join(" ")}`);
+			expect(order.indexOf("agent git bundle create")).toBeGreaterThan(-1);
+			expect(order.indexOf("agent git bundle create")).toBeLessThan(order.lastIndexOf("runner git fetch -q"));
+		});
+
+		test("a bundle whose base is newer than the push clone's origin/main imports after the push clone's fetch", () => {
+			const { dir, push, origin } = pair();
+			advance(origin);
+			launched(dir, push, { commits: true });
+			expect(rev(origin, "feat/demo")).toBe(rev(dir, "feat/demo"));
+		});
+
+		// spec: orchestrator/a-commit-with-no-pre-pr-record
+		test("a tip the before-push check finds no record of pushes nothing", () => {
+			const { dir, push, origin } = pair();
+			const missing = "goal open: apply demo step 1 at abc1234, before the push — no passing pre-PR run record for abc1234";
+			const r = launched(dir, push, { commits: true, beforePush: missing });
+			expect(r.last).toBe(`board-loop: open — apply demo step 1: ${missing}`);
+			expect(r.calls).not.toContain("git push");
+			expect(Bun.spawnSync(["git", "rev-parse", "--verify", "-q", "feat/demo"], { cwd: origin }).exitCode).not.toBe(0);
+		});
+
+		test("a hook left in the push clone's .git/hooks never runs", () => {
+			const { dir, push, origin } = pair();
+			const marker = join(emptyDir("board-loop-marker-"), "hooked");
+			for (const name of ["pre-push", "post-checkout", "reference-transaction"]) {
+				writeFileSync(join(push, ".git/hooks", name), `#!/bin/sh\ntouch '${marker}'\n`);
+				chmodSync(join(push, ".git/hooks", name), 0o755);
+			}
+			launched(dir, push, { commits: true });
+			expect(rev(origin, "feat/demo")).toBe(rev(dir, "feat/demo"));
+			expect(existsSync(marker)).toBe(false);
+		});
 	});
 
 	test("with no launcher set, a pass runs in its clone as today, judged by a copy taken from it", () => {

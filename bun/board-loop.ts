@@ -274,7 +274,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		);
 
 	const judged = [...bun, join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
-	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app);
+	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app, under);
 	if (unready !== undefined) return end("open", `${target}: ${unready}`);
 	// The check's own verdict at the commit the session left, never the exit status.
 	const verdict = sh("bun", ...judged);
