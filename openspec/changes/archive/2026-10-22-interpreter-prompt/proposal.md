@@ -1,5 +1,8 @@
 # interpreter-prompt
 
+Group 2 turned the prompt proposed here into a refusal, once task 1.7 showed
+that a local `allow` rule silences a hook's `ask` (design *Ask, not block*).
+
 ## Why
 
 `bun/command-guard.ts` reads a shell's `-c` text and an `eval`'s, so `bash -c

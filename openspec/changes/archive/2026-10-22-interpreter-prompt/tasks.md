@@ -83,24 +83,32 @@ text the guard cannot read prompts* but
 Task 1.7 found that a local `allow` silences the hook's `ask`; the user agreed
 to the exit-2 fallback (card, 2026-10-22). See design *Ask, not block*.
 
-- [ ] 2.1 Rewrite the `agent-permissions` delta requirement and its scenarios
+- [x] 2.1 Rewrite the `agent-permissions` delta requirement and its scenarios
       from "prompts" to "is refused": the guard exits 2, writes the reasons on
       stderr and records `block`. Replace *A local allow entry does not grant
       it* with a scenario a test can cite: the same line is refused with a
       local `allow` present, since the hook decides before any rule. Update
       `gate-ledger` §*A prompt a guard asks for is recorded* to match
-- [ ] 2.2 Turn the 1.1 cases from "exits 0 with one `ask` object" into
+- [x] 2.2 Turn the 1.1 cases from "exits 0 with one `ask` object" into
       "exits 2, stdout empty, stderr names the interpreter and the
       tracked-script route", and record that each fails before 2.3. Keep the
-      1.2 controls unchanged, and the block-wins case
-- [ ] 2.3 In `bun/command-guard.ts`, emit the collected reasons through
+      1.2 controls unchanged, and the block-wins case.
+      Before 2.3, 51 of the file's 66 cases failed: every refusal case, the
+      two-reasons and record cases, and the new local-allow and unattended
+      cases. Ten cases in `command-guard-exec.test.ts` and
+      `command-guard-bunx.test.ts` had passed on the `ask`'s exit 0 while
+      running an untracked script; the exec ones now run in a checkout that
+      tracks their scripts, and the three bunx ones assert only that the
+      `bunx` check is not the refusal
+- [x] 2.3 In `bun/command-guard.ts`, emit the collected reasons through
       `blocker()` from `bun/gate-ledger.ts` once the line is read, in place
       of the `ask` object (around lines 288–297). Update the header comment's
       third outcome. Verify with 2.2
-- [ ] 2.4 Unattended passes: a block refuses at once under every permission
+- [x] 2.4 Unattended passes: a block refuses at once under every permission
       mode, so the stall the card's 2026-10-22 task names is gone. Add one
       case that runs the guard as a pass session would (no terminal attached)
       and asserts exit 2 within the hook's own run, then close that card item
-- [ ] 2.5 Re-propose the 1.8 wording for the last Safety rule in
+- [x] 2.5 Re-propose the 1.8 wording for the last Safety rule in
       `core/rules.md`, since "a prompt can be approved" is no longer its
-      reason (unattended: card — hand the wording on)
+      reason (unattended: card — hand the wording on). Proposed in the pull
+      request; the rule is edited once the user approves the wording
