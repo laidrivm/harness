@@ -220,10 +220,11 @@ before it posts it*, for its other scenarios. It acts only where the
 settings groups 2 and 3 read are, which is the VPS host `vps-board-loop`
 group 3 builds, and merges inert before that.
 
-- [ ] 6.1 Probe once, on a stub session, which `claude -p` flags leave the
+- [x] 6.1 Probe once, on a stub session, which `claude -p` flags leave the
       triage able to read the clone and nothing else. Record the flags and
       what each refused in `design.md`'s *The triage*, and use them in 6.3
-- [ ] 6.2 Write the failing triage cases in a new `bun/notion-triage.test.ts`,
+- [x] 6.2 Write the failing triage cases in a new `bun/notion-triage.test.ts`,
+      and those of a whole pass in `bun/notion-triage-pass.test.ts`,
       with a stub `claude`. Cover no `QUESTION:` line [63], the question then
       the answer posted with no `Assign` [64], a failed answer post that sets
       `Assign` [93], two source lines [65], an untracked path [66], a path leaving the
@@ -244,8 +245,8 @@ group 3 builds, and merges inert before that.
       or a page moved during the triage, which posts nothing [90]; a
       `harness-answer` comment by another author during the triage, which
       suppresses nothing [91]
-- [ ] 6.3 Add `bun/notion-triage.ts` as `design.md` *The triage* says. Call it
+- [x] 6.3 Add `bun/notion-triage.ts` as `design.md` *The triage* says. Call it
       from the runner between the question's checks and its post, and see 6.2
       pass. Keep `bun/board-loop.ts` under its cap
-- [ ] 6.4 Reconcile `README.md`'s runner paragraph: it names the triage and
+- [x] 6.4 Reconcile `README.md`'s runner paragraph: it names the triage and
       its limit. Read it back after the edit

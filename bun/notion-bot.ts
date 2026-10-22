@@ -7,7 +7,7 @@
  * header, and no line this module prints or throws holds it.
  */
 import { readFileSync, statSync } from "node:fs";
-import { fault, MARK, REMEDY } from "./question-gate.ts";
+import { fault, REMEDY } from "./question-gate.ts";
 
 const VERSION = "2025-09-03";
 /** A Notion id, as a whole value: 32 hex digits, alone or in a UUID's form. */
@@ -80,12 +80,14 @@ export function failed(text: string): string | undefined {
 }
 
 type Run = { plain_text?: unknown; annotations?: { code?: unknown } };
-type Comment = { created_by?: { id?: unknown }; created_time?: unknown; rich_text?: Run[] };
+/** A comment as the API returns it: untrusted, so every field is checked where it is read. */
+export type Comment = { id?: unknown; created_by?: { id?: unknown }; created_time?: unknown; rich_text?: Run[] };
 
-const plain = (runs: unknown) =>
+export const plain = (runs: unknown) =>
 	Array.isArray(runs) ? runs.map((run: Run) => (typeof run?.plain_text === "string" ? run.plain_text : "")).join("") : "";
 /** An id as 32 lower-case hex digits: the settings take either form, the API gives a UUID. */
-const hex = (id: unknown) => (typeof id === "string" ? id.replaceAll("-", "").toLowerCase() : "");
+export const hex = (id: unknown) => (typeof id === "string" ? id.replaceAll("-", "").toLowerCase() : "");
+const by = (comment: Comment, id: string) => hex(comment.created_by?.id) === hex(id);
 /** Whether `comment` opens with `mark` as the API shows it: a code run of it, or text opening with it backticked. */
 const opens = (mark: string) => (comment: Comment) => {
 	const first = comment.rich_text?.[0];
@@ -103,7 +105,6 @@ function waits(comments: Comment[], user: string, self?: string): boolean {
 	// Stable: ties keep the order the API returned them.
 	const ordered = comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time)));
 	const last = ordered.findLastIndex(marked);
-	const by = (c: Comment, id: string) => hex(c.created_by?.id) === hex(id);
 	return (
 		last !== -1 &&
 		!ordered.slice(last + 1).some((c) => (!marked(c) && !answered(c) && by(c, user)) || (self !== undefined && answered(c) && by(c, self)))
@@ -141,6 +142,11 @@ export async function own(token: string, timeout = 30_000): Promise<string> {
 
 /** REST step 3: every page of the card's comments, then whether a question waits there for `user`. */
 export async function waiting(call: Call, card: string, user: string, self?: string): Promise<boolean> {
+	return waits(await discussion(call, card), user, self);
+}
+
+/** Every page of the card's page-level comments, following `next_cursor`. */
+async function discussion(call: Call, card: string): Promise<Comment[]> {
 	const comments: Comment[] = [];
 	const read = new Set<string>();
 	let cursor: string | undefined;
@@ -154,51 +160,92 @@ export async function waiting(call: Call, card: string, user: string, self?: str
 		cursor = listed?.has_more ? listed.next_cursor : undefined;
 		if (cursor) read.add(cursor);
 	} while (cursor);
-	return waits(comments, user, self);
+	return comments;
 }
 
-/** REST step 4: the page-level comment, a code-annotated mark run, then the rest of the text. */
-export function comment(call: Call, card: string, text: string): Promise<unknown> {
-	const rest = text.slice(MARK.length);
-	return call("the comment's post", "/v1/comments", "POST", {
+/**
+ * REST step 4: the page-level comment, a code-annotated run of `mark`, which
+ * `text` opens with backticked, then the rest of the text, in runs of the 2000
+ * characters Notion takes in one.
+ */
+export function comment(call: Call, card: string, text: string, mark = "harness-question"): Promise<unknown> {
+	const rest = text.slice(mark.length + 2).match(/[\s\S]{1,2000}/g) ?? [];
+	return call(mark === "harness-answer" ? "the answer's post" : "the comment's post", "/v1/comments", "POST", {
 		parent: { page_id: card },
 		rich_text: [
-			{ type: "text", text: { content: "harness-question" }, annotations: { code: true } },
-			...(rest ? [{ type: "text", text: { content: rest } }] : []),
+			{ type: "text", text: { content: mark }, annotations: { code: true } },
+			...rest.map((content) => ({ type: "text", text: { content } })),
 		],
 	});
+}
+
+/** What the triage left: an answer the runner checked, and the line it prints. */
+export type Triaged = { answer?: { source: string; quote: string; text: string }; note: string };
+
+/** REST steps 1 and 2: why `card` is not the carried change's card on `board`, or `undefined`. */
+async function carded(call: Call, card: string, board: string, slug: string): Promise<string | undefined> {
+	const page = await call("the page read", `/v1/pages/${card}`);
+	if (page?.parent?.type !== "data_source_id") return `${card} is not a card on a board`;
+	if (plain(page.properties?.Pointer?.rich_text) !== `openspec/changes/${slug}/`) return `${card} is not the card of ${slug}`;
+	const source = await call("the board read", `/v1/data_sources/${page.parent.data_source_id}`);
+	if (plain(source?.title) !== board) return `${card} is not on the board ${board}`;
 }
 
 /**
  * Posts `asked` on its card from the integration and sets `Assign` to the
  * user, after checking the card is the carried change's on `board` and no
- * question waits there. Returns the one line the runner prints. No call is
- * retried: a second post would put two questions on the card.
+ * question waits there. With `triage`, its answer, when the runner checked
+ * one, follows the question instead of `Assign`, and steps 1 to 3 run again
+ * first, since the triage was judged against the card as it was. Returns the
+ * lines the runner prints. No call is retried: a second post would put two
+ * questions on the card.
  */
 export async function post(
 	{ token, user, self }: Settings,
 	{ card, text }: Asked,
 	{ board, slug }: { board: string; slug: string },
 	timeout = 30_000,
+	triage?: (comments: Comment[]) => Promise<Triaged>,
 ): Promise<string> {
 	const call = client(token, timeout);
-	const not = (why: string) => `question: not posted — ${why}`;
+	const said: string[] = [];
+	const say = (line: string) => [...said, line].join("\n");
+	const not = (why: string) => say(`question: not posted — ${why}`);
+	let answer: Triaged["answer"];
 	try {
-		const page = await call("the page read", `/v1/pages/${card}`);
-		if (page?.parent?.type !== "data_source_id") return not(`${card} is not a card on a board`);
-		if (plain(page.properties?.Pointer?.rich_text) !== `openspec/changes/${slug}/`)
-			return not(`${card} is not the card of ${slug}`);
-		const source = await call("the board read", `/v1/data_sources/${page.parent.data_source_id}`);
-		if (plain(source?.title) !== board) return not(`${card} is not on the board ${board}`);
-		if (await waiting(call, card, user, self)) return not(`a question already waits on ${card}`);
+		const why = await carded(call, card, board, slug);
+		if (why) return not(why);
+		const before = await discussion(call, card);
+		if (waits(before, user, self)) return not(`a question already waits on ${card}`);
+		if (triage) {
+			const ended = await triage(before);
+			said.push(ended.note);
+			answer = ended.answer;
+			const moved = await carded(call, card, board, slug);
+			if (moved) return not(moved);
+			// A `harness-answer` from anyone but the integration is plain text, and suppresses nothing.
+			const known = new Set(before.map((c) => c.id));
+			const fresh = (c: Comment) => !known.has(c.id) && (marked(c) || (self !== undefined && answered(c) && by(c, self)));
+			if ((await discussion(call, card)).some(fresh)) return not("the card changed during the triage");
+		}
 		await comment(call, card, text);
 	} catch (error) {
 		return not((error as Error).message);
 	}
+	if (answer) {
+		const quoted = answer.quote.split("\n").map((line) => `> ${line}`).join("\n");
+		try {
+			await comment(call, card, `\`harness-answer\` ${answer.text}\n${quoted}\nSource: ${answer.source}`, "harness-answer");
+			return say(`question: posted on ${card} and answered from ${answer.source}`);
+		} catch (error) {
+			// The question stands with no answer: it waits for the user, as on `ESCALATE`.
+			said.push(`answer: not posted — ${(error as Error).message}`);
+		}
+	}
 	try {
 		await call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: [{ id: user }] } } });
 	} catch (error) {
-		return `question: posted on ${card}, Assign not set — ${(error as Error).message}`;
+		return say(`question: posted on ${card}, Assign not set — ${(error as Error).message}`);
 	}
-	return `question: posted on ${card}, Assign set`;
+	return say(`question: posted on ${card}, Assign set`);
 }
