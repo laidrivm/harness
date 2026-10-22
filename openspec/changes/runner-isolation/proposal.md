@@ -39,10 +39,10 @@ session can write while the App key or a token is in reach*, recon of
   permissions from a fixed set. The user first chose to leave this to a later
   card and then, answering the Remote Control follow-up, asked for it now
   ("Это делаем сразу"); the later answer stands.
-- Remote Control's login and server run as `runner`. A session started from
-  the phone therefore sees the PAT, the Notion bot's token and the hourly App
-  tokens, but never the App key. The user accepted that trade-off for the
-  convenience of a phone session with everything at hand.
+- Remote Control runs as none of these users. On 2026-10-22 the user
+  replaced the standing server as `runner` with a session they start by hand
+  over ssh as root and end when done; it reaches every secret, the App key
+  included, while it runs, which the user accepts for the emergency path.
 - A test proves `agent` cannot read any secret file, and that `runner` cannot
   read the App key.
 - `pass.sh` passes the App's id and the key holder's mint command to the pass,
@@ -64,8 +64,7 @@ session can write while the App key or a token is in reach*, recon of
 
 1. Create the key holder's App key file on the host, owned by that user, mode
    0400. The key is generated on the host, never on the laptop.
-2. Run `claude auth login` and the first `claude remote-control` as `runner`
-   (vps-board-loop task 3.6).
+2. Run `reach-check.sh` on the host after the App key is placed (task 3.4).
 
 ## Capabilities
 
@@ -76,8 +75,8 @@ None.
 ### Modified Capabilities
 
 - `orchestrator`: the runner's own harness checkout and push clone, the
-  launcher for `agent`, the key holder, the PAT's reach, Remote Control's
-  user, and the secret files' reach. The capability is introduced by
+  launcher for `agent`, the key holder, the PAT's reach, and the secret
+  files' reach. The capability is introduced by
   `vps-board-loop`, which this change follows.
 
 ## Impact

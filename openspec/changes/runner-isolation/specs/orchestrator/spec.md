@@ -153,8 +153,8 @@ from a fixed set, and it SHALL never appear in a process's arguments.
 ### Requirement: The session user reads no secret file
 
 The session user SHALL be unable to read any secret file on the host: the
-GitHub token, the Notion bot's token, the App's key, the runner's claude.ai
-login, and the SSH and tunnel keys.
+GitHub token, the Notion bot's token, the App's key, the claude.ai login in
+root's home, and the SSH and tunnel keys.
 
 #### Scenario: Each secret file, as the session user
 
@@ -213,47 +213,3 @@ clones directory.
 - **WHEN** the host configures the App
 - **THEN** the pass's environment holds the App's id and the mint command, and
   no path to the App's key
-
-### Requirement: Remote Control runs on the saved login alone, and a failing login is reported
-
-The process that runs `claude remote-control` on the host SHALL run as the
-runner user and SHALL start with
-none of `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` and
-`ANTHROPIC_AUTH_TOKEN` in its environment, so the user's saved claude.ai login
-is the credential it uses; the setup-token SHALL reach only the unattended
-passes. A check SHALL run `claude auth status` on a timer in that process's
-environment and SHALL report to the user a login that fails or carries the
-expiry warning.
-
-#### Scenario: A token variable in the remote-control files
-
-- **WHEN** the tracked script or unit that starts `claude remote-control` sets
-  or passes on `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or
-  `ANTHROPIC_AUTH_TOKEN`
-- **THEN** the suite fails, naming the file and the variable
-
-#### Scenario: A token variable inherited by the script
-
-- **WHEN** the script that starts `claude remote-control` is run with any of
-  the three variables in its environment
-- **THEN** `claude` starts without them
-
-#### Scenario: A login that fails
-
-- **WHEN** `claude auth status` exits non-zero in the remote-control user's
-  environment
-- **THEN** the check exits non-zero, printing one line that says the login
-  failed, and the user is told
-
-#### Scenario: A login about to expire
-
-- **WHEN** `claude auth status` succeeds and its output carries the expiry
-  warning
-- **THEN** the check exits non-zero, printing one line that names the
-  warning, and the user is told
-
-#### Scenario: The user it runs as
-
-- **WHEN** the tracked script or unit starts `claude remote-control`
-- **THEN** it starts it as the runner user, and that process cannot read the
-  App's key
