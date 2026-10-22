@@ -4,7 +4,8 @@
 #
 # The key is the secret variable f/orchestrator/runner_ssh_key, the private
 # key base64-encoded on one line, read by its path alone.
-set -eu
+# pipefail: a failed read stops here, not at ssh with an empty key.
+set -euo pipefail
 key=$(mktemp)
 trap 'rm -f "$key"' EXIT
 printf 'Authorization: Bearer %s\n' "$WM_TOKEN" \
