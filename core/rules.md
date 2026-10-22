@@ -14,6 +14,16 @@ capture it exactly like a bug, so future runs don't repeat the old style:
 
 1. Fix the code.
 2. Capture the lesson, in the same turn, before treating the task as done:
+   - Unless it's a one-off (last bullet), first ask whether a mechanism can
+     hold it — a test over the code it is about, or a gate: a `harness:check`
+     check, a hook, a permission entry:
+     - a test the branch can add → add it in the same turn, and write no rule;
+     - a gate change → file a card on the board of the repository that would
+       ship it, and write the rule below as its stop-gap, which leaves under
+       *A mechanised prohibition leaves its prose home* once the gate lands;
+     - none that would not block far more than the rule intends → write the
+       rule, and tell the user why no mechanism fits (unattended: card — the
+       card carries the reason).
    - If it's about how code should be written here → propose a one-line rule
      for the matching sublist of "Rules" below — Code, Process or Safety —
      and add it after the user confirms (unattended: card — hand the wording

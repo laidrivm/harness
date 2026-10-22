@@ -33,7 +33,7 @@ A Claude Code cloud session or routine on this repository runs the harness as a 
 | `feature-generator` | Expand `spec.md` into a dependency-ordered `features.md`, and keep the two in sync |
 | `playwright-cli` | Vendored from [microsoft/playwright-cli](https://github.com/microsoft/playwright-cli) — reference for driving a browser via the Playwright CLI; do not edit, see Skill provenance |
 | `preflight` | Production pre-flight checklist for a branch: env vars, config, migrations — everything needed once it merges |
-| `session-wrapup` | End-of-session debrief: confidence check, fix & capture pass, OpenSpec state + next command + the session's board cards reconciled, optional save-point doc, pipeline yield per review skill |
+| `session-wrapup` | End-of-session debrief: confidence check, fix & capture pass, OpenSpec state + next command + the session's board cards reconciled, optional save-point doc, pipeline yield per review skill, gate and capture kind |
 | `spec-generator` | Turn a vague product idea (plus sketches/notes) into a structured product spec |
 | `triage` | Group a diff into feature areas with risk tiers to decide where review time goes |
 | `warm` | Vet dependencies a branch adds against the WARM check (Worth it, Alive, Right-sized, Maintained securely) plus a supply-chain Safety check (install scripts, typosquatting, release freshness) |
