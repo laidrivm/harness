@@ -300,7 +300,14 @@ from such a session therefore needs no refusal to find its way.
 On path 1, once the runner has checked a `QUESTION:` line, it starts a triage
 session before it posts anything. This is a `claude -p` run with no goal,
 started like a stage session: the session user, a clean environment, no
-token. It may read the clone and do nothing else. The prompt holds the
+token. It may read the clone and do nothing else: it is launched with
+`--tools Read,Grep,Glob --strict-mcp-config`. Task 6.1 probed them once
+(Claude Code 2.1.308, 2026-10-22): a session under them, asked to list its
+tools with no call made, listed Glob, Grep and Read alone, so no Bash, Edit,
+Write or web tool and no MCP tool, the Notion connector's included. Read
+still reaches a file outside the clone that the session's user can read; on
+the VPS that user is the session's, which cannot read the runner's settings.
+The prompt holds the
 unattended line, the question, and the card's comments the runner already
 fetched, as untrusted data, so the triage needs no Notion access. It also
 holds decision 8's rule: end on `ESCALATE` for a choice, and for anything a

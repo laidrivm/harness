@@ -34,6 +34,7 @@ import { type Kill, session } from "./board-loop-session.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
 import { asked, own, post, type Settings, settings } from "./notion-bot.ts";
+import { triage } from "./notion-triage.ts";
 import { readPullRequests } from "./pull-requests.ts";
 import { ASK_SETTINGS, RUNNER_ASKS, where } from "./question-gate.ts";
 import { groups } from "./turn-gate.ts";
@@ -272,7 +273,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 				? "question: not posted — no integration is configured"
 				: typeof question === "string"
 					? `question: not posted — ${question}`
-					: await post(bot, question, { board: named, slug }),
+					: await post(bot, question, { board: named, slug }, undefined, triage(question.text, { at, under, limit, kill, base: DEFAULT, user: bot.user })),
 		);
 
 	const judged = [...bun, join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
