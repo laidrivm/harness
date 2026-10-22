@@ -202,6 +202,11 @@ describe("an interpreter given program text the guard cannot read", () => {
 		asks("bun run check", bad);
 	});
 
+	// bun runs `pre<name>` and `post<name>` around `<name>` (probed on 1.4.2)
+	test.each(["prebuild", "postbuild"])("a %s script is read too", (hook) => {
+		asks("bun run build", scripted(JSON.stringify({ scripts: { build: "true", [hook]: 'python3 -c "1"' } })));
+	});
+
 	test("a script that runs itself is read once, not without end", () => {
 		passes("bun run self", scripted(JSON.stringify({ scripts: { self: "true || bun run self" } })));
 	});
