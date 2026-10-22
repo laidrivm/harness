@@ -32,16 +32,18 @@ SHALL be asked about unless one of the following holds:
   elsewhere under `node_modules/`;
 - it is `bun` and its first argument is a subcommand that the installed
   `bun --help` lists, or an alias that help names, other than `exec`, `repl`
-  and `create` with its alias `c`, which run code handed to them. `run` given
-  an operand that is an existing file applies the rule above to that file.
-  `run` given a script name applies it to the `package.json` the script is
-  read from, and reads the script's command line as a command line, so a
-  script that runs an untracked file or inline code asks as typing it would.
+  and `create` with its alias `c`, which run code handed to them. `run`
+  resolves its operand as bun does: a script of the nearest `package.json`
+  first, even over a same-name file or directory, which applies the rule above
+  to that `package.json` and reads the script's command line as a command
+  line, so a script that runs an untracked file or inline code asks as typing
+  it would; else a regular file, to which it applies the rule above.
 
 The resolution of uncertainty goes towards asking. A path the guard cannot
 resolve statically, such as one carrying `$`, behind an unresolvable `cd` or
 through a symlink it cannot follow, is asked about. So is a git call of this
-check that fails, and an option of the interpreter standing before its file.
+check that fails, and an option of the interpreter standing before its file,
+or of `bun run` before its script.
 An interpreter that reads its program from standard input, given no argument
 or `-`, is asked about too, because the guard cannot read that program either.
 
@@ -129,7 +131,8 @@ interpreter runs, such as anything encoded and handed to `make`, `find -exec`,
 
 - **WHEN** the agent attempts `bun run check` where `package.json` is
   untracked or carries an uncommitted or staged edit, or where the `check`
-  script's command line is `bun x.ts` and `x.ts` is untracked
+  script's command line, or its `precheck` or `postcheck` script's, is
+  `bun x.ts` and `x.ts` is untracked, or `bun run --filter check evil`
 - **THEN** the guard asks, because the script's text or what it runs is not in
   the tree a reviewer reads
 

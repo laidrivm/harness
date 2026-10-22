@@ -5,7 +5,11 @@
 `check()` in `bun/command-guard.ts` walks every invocation that
 `command-parse.ts` resolves. It recurses into a shell's `-c` text and into
 `eval`, blocks on `git` and `gh`, and lets everything else pass with no
-decision. Each block is `blocker()` in `bun/gate-ledger.ts`, which writes stderr,
+decision. Since this was written (2026-10-13) it also blocks a shell, `source`
+or `eval` handed a program the line does not spell out, a `bunx` that would
+install, and a test run carrying `--retry`; those checks live in
+`bun/command-guard-exec.ts` and return a reason the same way. They are the
+shell-stdin and `bunx` checks this change leaves alone (re-read 2026-10-22). Each block is `blocker()` in `bun/gate-ledger.ts`, which writes stderr,
 records the block and exits 2. The guard has no outcome between allowing and
 blocking. The `gh` checks live in `bun/command-guard-gh.ts`, which returns a
 reason and leaves the exit and the ledger id to the guard. This change
@@ -66,13 +70,21 @@ name in the tree. Only an interpreter given a file pays for the git reads.
 
 Of the subcommands bun 1.4.2's `--help` lists, three run code handed to them,
 so they ask: `exec` (a shell script as text), `repl`, and `create`/`c` (a
-template fetched and run). `x` is exempt here, because the `bunx` card
-decides it. `run` hands its operand to the file rule when that operand is an
-existing file. Otherwise it names a `package.json` script, which is exempt only
-as far as the tree vouches for it: the `package.json` it is read from is held
-to the file rule (tracked, no uncommitted or staged edit, else ask), and the
-script's own command line is read as a command line, so a script that runs an
-untracked file or inline code asks as typing that line would (PR #100 review).
+template fetched and run). `x` is exempt here, because the `bunx` check
+decides it. `run` resolves its operand as bun does, from each directory the
+line may run in: a script of the nearest `package.json` first, even over a
+same-name file or directory (probed on bun 1.4.2, PR #222 review), else a
+regular file, which the file rule decides. A script is exempt only as far as
+the tree vouches for it: the `package.json` it is read from is held to the
+file rule (tracked, no uncommitted or staged edit, else ask) and parsed as the
+JSONC bun accepts, an unparseable one asking; the script's own command line is
+read as a command line, so a script that runs an untracked file or inline code
+asks as typing that line would (PR #100 review), and a script that runs itself
+is read once. Its `pre<name>` and `post<name>` scripts, which bun runs around
+it (probed on bun 1.4.2), are read the same way (PR #222 review). An option
+before `run`'s script asks, as one before an interpreter's file does:
+`--filter check evil` runs `evil` in the packages `check` selects, and
+`--cwd` moves the `package.json` the script comes from (PR #222 review).
 The
 flags `-e`, `--eval`, `-p` and `--print` need no special case: a flag as the
 first argument is no subcommand and no file, so it asks. The constant carries
@@ -86,7 +98,10 @@ still exits at once. After `check(command)` returns, the guard writes one
 JSON object to stdout, records one ledger line under the first reason's id
 and exits 0. The ids are `inline-code`, `untracked-script` and `stdin-code`.
 Nothing else may reach stdout on that path, because Claude Code reads stdout
-as the decision.
+as the decision. The module is handed the guard's `check` as well as `dirs`
+(applied 2026-10-22), because a `package.json` script's command line is read
+as a typed line, so a block in it still blocks and an ask in it joins the
+line's asks.
 
 ### The prose rule stays
 

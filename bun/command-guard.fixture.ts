@@ -155,7 +155,11 @@ export function run(
 		),
 		stderr: "pipe",
 	});
-	return { code: call.exitCode, reason: call.stderr.toString() };
+	return {
+		code: call.exitCode,
+		reason: call.stderr.toString(),
+		out: call.stdout.toString(),
+	};
 }
 
 export const event = (command: unknown, description = "") => ({
