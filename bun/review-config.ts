@@ -11,6 +11,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { Glob } from "bun";
+import { tracked } from "./tracked.ts";
 
 const CONFIG = ".coderabbit.yaml";
 const KEY = "knowledge_base.code_guidelines.filePatterns";
@@ -79,9 +80,9 @@ function indexed(root: string, from: string): string[] {
 export function unreached(root: string): string[] {
 	const named = patterns(root);
 	if (typeof named === "string") return [named];
-	const ls = Bun.spawnSync(["git", "ls-files", "-z"], { cwd: root });
-	if (ls.exitCode !== 0) throw new Error(ls.stderr.toString());
-	const tracked = ls.stdout.toString().split("\0").filter(Boolean);
+	// Paths, not files: a pattern ruling on a tracked path is reached whether or
+	// not the work tree holds it.
+	const { paths } = tracked(root);
 	const globs = named.map((p) => new Glob(p));
 	const docs = new Set([
 		RULEBOOK,
@@ -91,11 +92,11 @@ export function unreached(root: string): string[] {
 	// A glob matches a path string whether or not the file exists, so a doc
 	// the tree lacks would otherwise read as reached.
 	const absent = ["CLAUDE.md", ...docs].filter(
-		(d) => !EXEMPT.has(d) && !tracked.includes(d),
+		(d) => !EXEMPT.has(d) && !paths.includes(d),
 	);
 	return [
 		...named
-			.filter((_, i) => !tracked.some((f) => globs[i]?.match(f)))
+			.filter((_, i) => !paths.some((f) => globs[i]?.match(f)))
 			.map((p) => `${CONFIG}: pattern "${p}" matches no tracked file`),
 		...absent.map((d) => `${d}: indexed by the rulebook but not tracked`),
 		...[...docs]

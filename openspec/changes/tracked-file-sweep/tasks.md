@@ -79,11 +79,20 @@ tree* and *A repository path ending in a space*.
 
 Closes *A second listing is introduced*.
 
-- [ ] 2.1 Switch `bun/spec-coverage.ts` — `check()`'s root and `tests()`'s
+- [x] 2.1 Switch `bun/spec-coverage.ts` — `check()`'s root and `tests()`'s
       listing are the same sweep. Record the uncited count before and after; it
-      does not move (*A second listing is introduced*)
-- [ ] 2.2 Switch `bun/file-size.ts`. Record the file count it measures
-      before and after (*A second listing is introduced*)
+      does not move (*A second listing is introduced*). Recorded 2026-10-22
+      at `a95c5c7`: 270 uncited and 103 test files before and after.
+      `tests()` takes `paths`, not `files`, so `check().files` still names a
+      tracked test deleted from the work tree, and the loop's own `lstatSync`
+      guard stays. The archive of `drop-mutation-exemptions`, running in
+      parallel, syncs a spec and may move the 270
+- [x] 2.2 Switch `bun/file-size.ts`. Record the file count it measures
+      before and after (*A second listing is introduced*). It takes `files`,
+      so its own `lstatSync` guard went with the listing. Recorded: the same
+      three files over their cap before and after (`bun/ci-run.test.ts` 628,
+      `bun/on-event.test.ts` 314, `orchestrator/pass.test.ts` 381);
+      `bun/settings.ts`, at 301 before, drops out because 2.5 shortened it
 - 2.3 Switching `src/app/module-classes.test.ts` (in d2ass) and
   `src/app/styles/styles.test.ts` (in d2ass) is d2ass work, done in the pull
   request that bumps the pin past group 2 — the `D2ASS` card *Reconcile the
@@ -95,13 +104,16 @@ Closes *A second listing is introduced*.
   row to satisfy — so the switch confirms the row resolutions it asserts are
   unchanged. `bun/file-size.test.ts`'s inline copy, once named here, is gone
   (1.1)
-- [ ] 2.4a Switch the two copies that arrived since the proposal, which 1.1
+- [x] 2.4a Switch the two copies that arrived since the proposal, which 1.1
       found: `bun/repo-layout.ts` (`stray()`, the full four-step copy) to the
       sweep, and `bun/review-config.ts` (`unreached()`, path-only, root passed
       in) to `paths`. Record that each reports the same result on today's
       tree before and after (*Every check reads the tree through one
-      tracked-file sweep*, *A second listing is introduced*)
-- [ ] 2.5 Write the check the criterion names: a test failing when any tracked
+      tracked-file sweep*, *A second listing is introduced*). Recorded:
+      `stray(root, {})` names 7 root files before and after (this tree's
+      `package.json` holds no `harness.rootFiles`, so the list is passed
+      empty); `unreached(root)` reports nothing before and after
+- [x] 2.5 Write the check the criterion names: a test failing when any tracked
       source file other than `bun/tracked.ts` and `bun/tracked.test.ts`
       derives a tree listing of its own. What it matches is enumeration, not
       the command — `git rev-parse --show-toplevel`, and `git ls-files` with no
@@ -116,10 +128,34 @@ Closes *A second listing is introduced*.
       `core/rules.md`, and
       break-check it both ways — reintroduce one listing and watch it fail,
       and confirm `bun/settings.ts` does not trip it (*A second listing is
-      introduced*)
-- [ ] 2.6 Delete the three "the shape `bun/no-suppressions.ts` uses"
+      introduced*). Written in `bun/tracked.test.ts`, which the requirement
+      exempts, so the pattern it holds trips nothing: it matches `ls-files`
+      as a quoted spawn argument or inside a Bun shell template, not the
+      backticked prose in comments, and not `--show-toplevel` alone, which a
+      dozen files take for the root without listing anything. Red before:
+      it named `bun/file-size.ts`, `bun/repo-layout.ts`,
+      `bun/review-config.ts`, `bun/settings.ts` and `bun/spec-coverage.ts`.
+      `bun/settings.ts`'s `**/.npmrc` is a glob, which the requirement counts
+      as enumerating, so it switched to `paths` filtered on the name rather
+      than taking an exemption. Exempted, each with its reason in
+      `OWN_LISTING`: `bun/check.ts` (one directory with `-s`, for the mode),
+      `bun/flake-watch.ts` (a new site since 1.1: it lists untracked files,
+      which the sweep never returns), `bun/repo-layout.test.ts` and
+      `bun/spec-coverage-sweep.test.ts` (fabricated repositories). A query
+      naming literal paths also trips the scan and takes an exemption saying
+      so — none exists today. Break-checked: a fabricated repository holding
+      a spawn listing and a shell listing fails, naming both, and its
+      backticked prose and `--show-toplevel` file do not; a stale exemption
+      fails its own case
+- [x] 2.6 Delete the three "the shape `bun/no-suppressions.ts` uses"
       comments left behind at the switched sites: the comment existed because
       the code could not be shared, and it now points at a file that no longer
-      owns the sweep (*A second listing is introduced*)
-- [ ] 2.7 Measure every switched file against its cap and record the numbers
-      (*change-slicing/No source file exceeds its per-file cap*)
+      owns the sweep (*A second listing is introduced*). Two stood, in
+      `bun/file-size.ts` and `bun/repo-layout.ts`; both went with the listing
+      they explained. The third was already gone
+- [x] 2.7 Measure every switched file against its cap and record the numbers
+      (*change-slicing/No source file exceeds its per-file cap*). Measured
+      with `wc -l`, since `bun bun/file-size.ts` has no entry point and
+      measures nothing: `bun/spec-coverage.ts` 216, `bun/file-size.ts` 84,
+      `bun/repo-layout.ts` 135, `bun/review-config.ts` 107,
+      `bun/settings.ts` 295, `bun/tracked.test.ts` 163

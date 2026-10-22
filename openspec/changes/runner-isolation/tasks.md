@@ -61,12 +61,23 @@ whose tests passed*.
       ledger and read through the launcher
 - [ ] 2.2 Add the bundle and push-clone steps to `bun/board-loop-push.ts`,
       the record's top level from `HARNESS_CLONE` and the ledger read through
-      the launcher to `bun/goal-check.ts`, and the session's fixed
-      `XDG_STATE_HOME`. Verify with 2.1 and `bun test`
+      the launcher to `bun/goal-check.ts` — for the pre-push check and the
+      final one alike, so in launcher mode neither misses the session's
+      record — and the session's fixed `XDG_STATE_HOME`. Verify with 2.1 and
+      `bun test`
 - [ ] 2.3 Add to `core/git-and-prs.md`'s hook rule its one exception, the
       runner's push from its push clone on the host for a commit whose pre-PR
       record names its SHA, and say the same beside `publish()`. Verify by
       reading both back and running `bun test bun/review-docs.test.ts`
+- [ ] 2.4 Write the failing cases in `orchestrator/pass.test.ts`, then change
+      `orchestrator/pass.sh` (`design.md` *Risks*): before the runner's first
+      git command each pass rewrites both runner clones' `.git/config` to the
+      values `pass.sh` sets at creation (the remote,
+      `core.hooksPath=/dev/null`) and empties `.git/hooks`, and a clone it
+      cannot reset stops the pass, named; the owner and repository come from
+      the value `runner` owns, never the session clone's
+      `remote.origin.url`, and a session clone whose origin names another
+      repository starts no pass. Verify with those cases and `bun test`
 
 ## 3. The CI flow's push
 
@@ -117,17 +128,20 @@ pull-request reads*,
 
 ## 5. The host's users
 
-Closes `orchestrator` §*The session user reads no secret file* and the
-user scenario of §*Remote Control runs on the saved login alone, and a
-failing login is reported*. Needs `vps-board-loop` group 3 merged.
+Closes `orchestrator` §*The session user reads no secret file*. Needs
+`vps-board-loop` group 3 merged.
 
 - [ ] 5.1 Write the failing cases in `orchestrator/layout.test.ts`: the image
       creates `runner`, `agent` and the key holder with fixed uids; sudoers
       holds exactly the two rules `design.md` *Three users* names; its
       `env_keep` equals the session allowlist in `bun/board-loop-session.ts`;
       the mint helper and its repository list are root-owned under
-      `/opt/orchestrator`; the remote-control script starts the server as
-      `runner`; the image writes no `gh` hosts file into `runner`'s home
+      `/opt/orchestrator`; the image writes no `gh` hosts file into
+      `runner`'s home, and installs `jq`; a command run through
+      `as-agent` sees `agent`'s `HOME`, `USER` and `LOGNAME` and none of
+      `CLAUDE_CONFIG_DIR`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME` and
+      `XDG_CACHE_HOME`, so `claude` and the trust check read `agent`'s
+      `.claude.json`
 - [ ] 5.2 Add to the image the key holder, the two sudoers rules, the
       launcher `orchestrator/as-agent` and the mint helper's copy, and to
       `orchestrator/README.md` the owner and mode of every secret file, the
@@ -138,5 +152,12 @@ failing login is reported*. Needs `vps-board-loop` group 3 merged.
       and exits non-zero naming each file it could read. Add it to the host
       README's bring-up, after the secrets are placed. Verify with a test
       that runs it over a temporary directory whose modes it sets
-- [ ] 5.4 **User act.** Run `reach-check.sh` on the host after the App key is
+- [ ] 5.4 Fix the two cross-user calls group 1 left: `session()` in
+      `bun/board-loop-session.ts` signals the session's group with
+      `kill(-pid)`, which `runner` cannot send to `agent`'s processes, and
+      `pass.sh` stats the session's clone (`[ -d "$dir/.git" ]`) as `runner`.
+      Route both through the launcher, with a case each in
+      `bun/board-loop-isolation.test.ts` and `orchestrator/pass.test.ts`.
+      Verify with those cases and `bun test`
+- [ ] 5.5 **User act.** Run `reach-check.sh` on the host after the App key is
       placed, and record its output in the pull request

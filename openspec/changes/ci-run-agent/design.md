@@ -29,8 +29,8 @@ here and not reopened:
 6. A failed scheduled run with no pull request files an `idea` card on that
    project's board.
 7. A flaky run is a finding, never re-run until green.
-8. n8n's GitHub Trigger has no `workflow_run`, so the entry is a plain webhook
-   whose HMAC the receiver checks. The CodeRabbit flow will share that entry.
+8. The entry is a plain webhook, not an engine's GitHub trigger, whose HMAC
+   the receiver checks. The CodeRabbit flow will share that entry.
 
 ## Goals / Non-Goals
 
@@ -81,7 +81,7 @@ The secret is `github_webhook_secret` in the secrets directory `pass.sh` reads,
 `PASS_SECRETS` or `/run/secrets` by default, so a test points it at a
 temporary directory (PR review). It is a compose secret file like
 `vps-board-loop`'s others: owned by the runner's uid, mode 0400, never in
-n8n's store and never in a session's environment. The handler reads it whole,
+the engine's store and never in a session's environment. The handler reads it whole,
 trimming one trailing newline. A missing, empty or whitespace-only file is
 exit 1, naming the path. It computes `sha256=` plus the hex HMAC-SHA256 of the
 raw bytes and compares the two with `timingSafeEqual`, after checking their
