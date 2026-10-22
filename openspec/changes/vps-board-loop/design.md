@@ -475,8 +475,14 @@ workers left out), and a 2 GB image against 6 GB. Under the whole load the
 host peaks were close, 1191 MiB used with n8n against 1245 MiB with
 Windmill 1.846.1 (row 12), and the host held either with over 2.5 GiB free.
 Neither engine's concurrency limit is used: `pass.sh`'s lock does the
-excluding, n8n's limit is instance-wide and stays unset, and Windmill CE's
-was EE-only on 1.365 and was not re-checked on 1.846.1.
+excluding, and n8n's limit is instance-wide and stays unset. Windmill's is
+still EE-only on 1.846.1, read from the source rather than re-run: CE
+stores the setting with HTTP 200 and ignores it, logging only an ERROR line
+(`backend/windmill-queue/src/jobs.rs` near line 4893;
+https://github.com/windmill-labs/windmill/issues/10840, maintainer-confirmed).
+The CE guard that covers schedule and webhook runs alike is a worker tag
+served by exactly one worker, so a second run queues rather than overlaps;
+`pass.sh`'s `flock` stays the real guarantee.
 
 On 2026-10-21 the recommendation was n8n, for its 401 and its chat page,
 against a Windmill 1.365 that answered 200 and held a token in the URL.
