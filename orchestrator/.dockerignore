@@ -1,0 +1,2 @@
+# The runner's build context is this directory; its secrets never enter it.
+secrets

@@ -164,7 +164,8 @@ function bin(log: string, s: Stubs): string {
 			// The runner's flags that keep a tree's `bunfig.toml` and `.env` out, logged above and dropped here.
 			`while [ "$1" = --config=/dev/null ] || [ "$1" = --no-env-file ]; do shift; done`,
 			`if [ "$1" = install ]; then ${s.pinned === false ? "" : write}echo 'the install says this'; exit ${s.install ?? 0}; fi`,
-			`if [ "$5" = --before-push ]; then /bin/cat "\${1%/*}/before-push"; exit; fi`,
+			// The branch and commit the check found checked out; the runner's own copy has no line beside it.
+			`if [ "$5" = --before-push ]; then { '${REAL_GIT}' symbolic-ref --short HEAD; '${REAL_GIT}' rev-parse HEAD; } > '${log}.before-head'; [ -f "\${1%/*}/before-push" ] && /bin/cat "\${1%/*}/before-push" || printf '%s\\n' '${before}'; exit; fi`,
 			`${saw("check")}; /bin/cat "$1"`,
 		].join("\n"),
 	);
@@ -255,6 +256,8 @@ function result(code: number | null, stdout: string, stderr: string, log: string
 		state,
 		home,
 		body: saved(`${log}.body`),
+		/** The branch and commit checked out when the before-push check ran. */
+		beforeHead: saved(`${log}.before-head`),
 		/** The PR → session table as the push found it, or undefined where no push ran or no table existed. */
 		pushTable: saved(`${log}.push-table`),
 		/** The environment `push`, `create`, `pick`, `stage` or `check` saw, or undefined where none ran. */

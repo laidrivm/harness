@@ -1,0 +1,11 @@
+summary: Hourly board-loop pass
+description: ssh to the runner, which runs pass.sh for the clone harness; the job's status is the pass's.
+lock: ''
+kind: script
+tag: pass
+timeout: 5400
+schema:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  type: object
+  properties: {}
+  required: []
