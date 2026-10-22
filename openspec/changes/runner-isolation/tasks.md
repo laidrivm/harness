@@ -37,7 +37,8 @@ checkout*, §*The runner runs nothing in a session's clone as itself* and
       does not load; with no launcher set, a pass runs as today. In the push
       clone, `HEAD` names the step branch at the bundle's tip before the goal
       check, and the goal check finds the record the session's clone made of
-      that tip. A pin that moved past the harness clone's last fetch is
+      that tip, written as `agent` in its 0600 ledger and read through the
+      launcher. A pin that moved past the harness clone's last fetch is
       fetched before the checkout; a pin whose part after `#` is not a full
       commit, or that the fetch does not bring, starts no pass, naming the
       value; two repositories whose `<owner>-<repo>` would
@@ -45,7 +46,8 @@ checkout*, §*The runner runs nothing in a session's clone as itself* and
 - [ ] 1.3 Add the launcher path to `bun/board-loop.ts` and
       `bun/board-loop-session.ts` (`HARNESS_AS_AGENT`, `HARNESS_CLONE`), the
       bundle and push-clone steps to `bun/board-loop-push.ts`, the record's
-      top level from `HARNESS_CLONE` to `bun/goal-check.ts`, and to
+      top level from `HARNESS_CLONE` and the ledger read through the launcher
+      to `bun/goal-check.ts`, the session's fixed `XDG_STATE_HOME`, and to
       `orchestrator/pass.sh` the harness checkout at the pin read from the
       push clone's `origin/main`, with its origin lookup in the session's
       clone run through the launcher. Verify with 1.2, `orchestrator/pass.test.ts`

@@ -98,7 +98,11 @@ holds exactly that commit, which `--before-push` reads both of. The goal check
 runs `--before-push` there. Today it matches a pre-PR record by commit and by
 the checkout's top level, and the record was made in the session's clone, so
 with `HARNESS_CLONE` set it matches the top level against that clone's path
-instead; the SHA is the same, since a bundle keeps it. It still refuses a tip
+instead; the SHA is the same, since a bundle keeps it. The record sits in
+`agent`'s ledger, which `gate-ledger.ts` keeps 0600 in a 0700 directory, so
+the pass sets the session's `XDG_STATE_HOME` to `/home/agent/.local/state`
+(`env -i` drops it otherwise) and the goal check reads that ledger through
+the launcher as `agent`, never as `runner`. It still refuses a tip
 without a passing record. Only then does the runner push the SHA it checked.
 
 The push clone is created with an empty `--template` and its
