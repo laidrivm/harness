@@ -1,6 +1,6 @@
 ---
 name: session-wrapup
-description: End-of-session ritual — confidence check on what was built, fix & capture pass for uncaptured lessons, OpenSpec workflow state with the next command and the session's board cards reconciled, an optional save-point doc for long exploratory sessions, and a pipeline-yield entry recording what each review skill actually found and what the harness's gates decided.
+description: End-of-session ritual — confidence check on what was built, fix & capture pass for uncaptured lessons, OpenSpec workflow state with the next command and the session's board cards reconciled, an optional save-point doc for long exploratory sessions, and a pipeline-yield entry recording what each review skill actually found, what the harness's gates decided and what the session's lessons became.
 allowed-tools: "Read, Edit(docs/context/**), Glob, Grep, Bash(git log:*), Bash(git status:*), Bash(git diff:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(bun bun/board-state.ts), Bash(bun node_modules/harness/bun/board-state.ts), Bash(bun bun/transcript-archive.ts --catch-up), Bash(bun node_modules/harness/bun/transcript-archive.ts --catch-up), mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page"
 ---
 
@@ -21,7 +21,7 @@ If multiple distinct things were built, score them separately.
 
 Run the fix & capture loop over the session: look for mistakes that got corrected, user pushback, approaches that were reversed, or friction that repeated.
 
-- For each, propose the capture: a rule (CLAUDE.md line), a skill edit (name the skill and the exact change), or a new memory.
+- For each, propose the capture the loop routes it to, tagged with its kind: `mechanism` (a test the branch adds), `card + rule` (a card for a gate, with its stop-gap rule), `rule` (a rule, saying why no mechanism fits), `skill edit` (name the skill and the exact change), or `memory` (a new memory).
 - **Propose, don't apply** — the user decides what to keep (unattended: card — hand each proposed capture on, and apply none).
 - If the session was clean, say exactly: `Nothing to capture.` Don't invent lessons to fill the section.
 
@@ -63,6 +63,8 @@ jq -rs --arg top "<top>" --arg since "<since>" '[.[] | select(.at >= $since and 
 
 Write its output as `- gates: <output>`. A record under a subdirectory of `<top>` counts, because a session started there records the subdirectory. If the file does not exist yet, write `- gates: none fired`.
 
+Then one `captures` line counting step 2's proposals by kind, all five kinds in this order, zeros included: `- captures: N mechanism, N card + rule, N rule, N skill edit, N memory`. A capture the user declined still counts under the kind it was proposed as, and `Nothing to capture.` gives a line of zeros.
+
 A skill that ran and found nothing is the point of this step, not a boring result — record it as `0 findings`. Over a month of sessions this is what shows which step of the pipeline has never once caught anything, so the pipeline gets shortened on evidence instead of by feel. Count only findings the skill itself reported; don't reclassify them.
 
 Append the same lines to `docs/context/pipeline-yield-<yyyy-mm>.md` under a `## <yyyy-mm-dd> — <branch>` heading (get the date with `date +%F` and the month with `date +%Y-%m` — a new month starts a new file; create the file with a `# Pipeline yield` heading if it doesn't exist). Append only — never rewrite or prune earlier sessions; the value is in the accumulation.
@@ -76,6 +78,7 @@ Example:
 - coderabbit-local: PASS — 7 findings, 7 dispositioned (3 fixed, 4 skipped)
 - Not run: preflight
 - gates: command-guard block main-commit ×2, turn-gate refused pre-pr-sequence ×1
+- captures: 0 mechanism, 1 card + rule, 1 rule, 0 skill edit, 0 memory
 ```
 
 ## Rules
