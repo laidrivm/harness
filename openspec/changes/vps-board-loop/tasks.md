@@ -198,8 +198,11 @@ after `runner-isolation` group 3, which edits this group's image and README.
       lock frees, and the stop file's last line is `stopped by hand`, so the
       next tick prints the paused line; the stop file exists before TERM
       is sent, so a tick that takes the lock the moment it frees pauses
-      too. Skip without `flock`, as 1.1 does.
-      Cite each scenario
+      too. Skip without `flock`, as 1.1 does. The host and the emergency
+      session reach it only through `docker compose exec -u runner runner
+      /opt/orchestrator/stop.sh <clone>`, the one invocation 3.7's README
+      gives, since the marker's process group is the runner's PID
+      namespace's. Cite each scenario
 - [ ] 3.4 Add `orchestrator/compose.yaml` with the services `db` (Postgres
       16), `windmill_server`, `windmill_worker_pass` (one replica,
       `WORKER_TAGS=pass`), `windmill_worker` (every other tag), each

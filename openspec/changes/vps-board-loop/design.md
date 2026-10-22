@@ -211,9 +211,13 @@ step is needed.
 
 A cancelled job leaves the pass running and its lock held (spike point 2),
 since `pass.sh` ignores HUP. So the runner carries
-`/opt/orchestrator/stop.sh <clone>`, which the user runs on the host, from
-the emergency session or `docker compose exec`: it validates the name as
-step 1 does and finds the pass through a marker. `pass.sh`, once it holds
+`/opt/orchestrator/stop.sh <clone>`. The user, from a host shell or the
+emergency session alike, runs it only as `docker compose exec -u runner
+runner /opt/orchestrator/stop.sh <clone>`: the marker holds a process group
+in the runner's PID namespace, which a `kill` on the host would miss or
+mistake for a host process, and running as `runner` gives the stop file it
+writes the owner one from `pass.sh` has. It validates the name as step 1 does and
+finds the pass through a marker. `pass.sh`, once it holds
 the lock, writes its process group to `<lock>.pid` beside that
 repository's lock. `stop.sh` first tries the lock without waiting: if it
 gets it, no pass runs, so it removes any stale marker, prints `idle` and

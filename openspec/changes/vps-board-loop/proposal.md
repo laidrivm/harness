@@ -81,7 +81,8 @@ README lists them in order:
 5. Push the workspace with `wmill sync push --skip-secrets
    --include-schedules`.
 6. When a pass pauses the loop, read the stop file and the pass's output, then
-   remove the stop file. To stop a running pass, run `stop.sh` on the host.
+   remove the stop file. To stop a running pass, run `docker compose exec
+   -u runner runner /opt/orchestrator/stop.sh <clone>` on the host.
 7. For the emergency session (user, 2026-10-22), when needed: ssh to the
    host as root, `claude auth login` (the URL opens on any device, the phone
    included), start `claude` with Remote Control in the harness checkout,
