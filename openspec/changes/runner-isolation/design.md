@@ -77,11 +77,13 @@ two lists are one name looked up in two systems (`rules.md` Code).
 The board loop runs with the push clone as its working directory and names
 the session's clone in `HARNESS_CLONE`. Every bun process the runner starts
 gets `--config` naming an empty root-owned file and `--no-env-file`, so no
-`bunfig.toml` or `.env` in a working directory loads. Task 1.1 probes that
-`--config` replaces the working directory's file rather than adding to it,
-and that `--no-env-file` keeps a `.env` out. If either does not, the
-runner runs bun from an empty directory and points git at the push clone with
-`GIT_DIR` and `GIT_WORK_TREE`. The workspace trust check reads the session's
+`bunfig.toml` or `.env` in a working directory loads. Task 1.1 probed both on
+bun 1.4.2 (2026-10-22): `--config=<empty file>` replaces the working
+directory's file, so neither its top-level nor its `[test]` `preload` loads
+under `bun <file>` or `bun test`, and `--no-env-file` keeps a `.env` out of
+both, the flags placed before or after `test`. The fallback, running bun from
+an empty directory with git pointed at the push clone through `GIT_DIR` and
+`GIT_WORK_TREE`, is therefore not needed. The workspace trust check reads the session's
 clone (`HARNESS_CLONE`) in `agent`'s Claude Code configuration, since
 `claude` runs there as `agent`, never the push clone in `runner`'s.
 
