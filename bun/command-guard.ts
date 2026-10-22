@@ -19,13 +19,17 @@
  * Exit 0 allows and exit 2 blocks, with the reason on stderr — those are the
  * only two codes Claude Code reads as a decision. Every other non-zero code is
  * non-blocking, so an event this script cannot decide takes the blocking one
- * as well.
+ * as well. The third outcome is a prompt: an interpreter given program text
+ * the guard cannot read exits 0 with an `ask` object on stdout, which a local
+ * `allow` rule cannot silence. A block anywhere in the line outranks it, and
+ * only an interpreter given a file pays for that check's git reads.
  *
  * Reading the command line is `command-parse.ts`'s, and what one command
  * invokes is `command-words.ts`'s; what this file holds is what the
  * prohibitions themselves are, the reading of a `gh` invocation excepted,
- * which is `command-guard-gh.ts`'s, and of a shell's program and a `bunx`'s
- * options, which is `command-guard-exec.ts`'s.
+ * which is `command-guard-gh.ts`'s, of a shell's program and a `bunx`'s
+ * options, which is `command-guard-exec.ts`'s, and of what an interpreter is
+ * asked about, which is `command-guard-interpreters.ts`'s.
  */
 
 import { existsSync } from "node:fs";
@@ -37,9 +41,10 @@ import {
 	unreadProgram,
 } from "./command-guard-exec.ts";
 import { ghApiWrite, ghPublish } from "./command-guard-gh.ts";
+import { type Ask, interpreter } from "./command-guard-interpreters.ts";
 import { commands } from "./command-parse.ts";
 import { invocations, place, SHELLS } from "./command-words.ts";
-import { blocker } from "./gate-ledger.ts";
+import { blocker, record } from "./gate-ledger.ts";
 import { FORCE, pushWords, REF_WIDE, VALUE_OPTIONS } from "./git-options.ts";
 
 /**
@@ -83,6 +88,9 @@ if (typeof command !== "string") {
 const dirs = new Set<string | null>([
 	typeof payload?.cwd === "string" ? payload.cwd : process.cwd(),
 ]);
+
+/** What the line would be asked about; decided after the walk, never during it. */
+const asks: Ask[] = [];
 
 /**
  * The branch `HEAD` points at in `cwd` — the `-C` target when the command
@@ -148,6 +156,8 @@ function check(command: string): void {
 				check(rest.join(" "));
 				continue;
 			}
+			const asked = interpreter(name, rest, dirs, index === 0, check);
+			if (asked) asks.push(asked);
 			if (name === "cd" || name === "pushd" || name === "popd") {
 				// `popd` returns to a stack this reader does not keep; bare `cd` goes home.
 				const operand = rest.find(
@@ -274,3 +284,14 @@ function checkPush(args: string[], targets: (string | null)[]): void {
 }
 
 check(command);
+
+// Only once the whole line is read, so a block anywhere outranks a prompt.
+// Nothing else may reach stdout here: Claude Code reads it as the decision.
+const [head] = asks;
+if (head) {
+	const permissionDecisionReason = asks.map((one) => one.reason).join(" ");
+	const decision = { hookEventName: "PreToolUse", permissionDecision: "ask" };
+	const output = { ...decision, permissionDecisionReason };
+	process.stdout.write(`${JSON.stringify({ hookSpecificOutput: output })}\n`);
+	record("command-guard", "ask", head.id, payload);
+}
