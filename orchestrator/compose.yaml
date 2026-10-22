@@ -44,6 +44,7 @@ services:
   # The pass's own worker: one, so a second start queues behind the first.
   windmill_worker_pass:
     <<: *windmill
+    secrets: [database_url, runner_known_hosts]
     environment:
       MODE: worker
       WORKER_GROUP: pass
@@ -65,7 +66,7 @@ services:
       context: .
       dockerfile: runner/Dockerfile
     restart: unless-stopped
-    secrets: [claude_oauth_token, gh_token, runner_ssh_pubkey]
+    secrets: [claude_oauth_token, gh_token, runner_ssh_pubkey, runner_host_key]
     volumes:
       - agent_home:/home/agent
       - runner_home:/home/runner
@@ -84,6 +85,10 @@ secrets:
     file: ./secrets/gh_token
   runner_ssh_pubkey:
     file: ./secrets/runner_ssh_pubkey
+  runner_host_key:
+    file: ./secrets/runner_host_key
+  runner_known_hosts:
+    file: ./secrets/runner_known_hosts
   tunnel_token:
     file: ./secrets/tunnel_token
   db_password:

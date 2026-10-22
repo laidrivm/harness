@@ -240,7 +240,9 @@ after `runner-isolation` group 5, which edits this group's image and README.
       holds the host requirements, the user acts in `proposal.md`'s order, the
       `wmill sync` commands, `db_password` made with `openssl rand -hex 32`
       and `database_url` from the same value, the SSH key's variable entered
-      base64-encoded on one line, `tunnel_token` owned by uid 65532, and
+      base64-encoded on one line, `runner_host_key` made once with
+      `ssh-keygen -t ed25519 -N ''` and `runner_known_hosts` as `runner`
+      followed by its public half, `tunnel_token` owned by uid 65532, and
       [41]'s README case added to `layout.test.ts`,
       the check of the three Notion tool names, what to
       read before removing a stop file, `stop.sh`, the laptop clients and

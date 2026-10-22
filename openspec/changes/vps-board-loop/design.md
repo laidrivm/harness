@@ -247,7 +247,13 @@ change, which would widen the matchers. It is never a configuration step.
 ### Secrets are compose secret files
 
 The secret files are `claude_oauth_token`, `gh_token`, `runner_ssh_pubkey`,
-`tunnel_token`, `db_password` and `database_url`. Each sits under
+`runner_host_key`, `runner_known_hosts`, `tunnel_token`, `db_password` and
+`database_url`. `runner_host_key` is `sshd`'s one host key, installed by the
+entrypoint, and the image bakes in none, so a rebuild keeps it.
+`runner_known_hosts` is its public half as one `runner <key>` line, mounted
+into the pass worker alone: the pass script's `ssh` checks the host key
+against it, so another container on the compose network answering as
+`runner` fails the pass rather than reporting one. Each sits under
 `orchestrator/secrets/` on the host and is mounted at `/run/secrets/`. No
 secret goes through compose's `${VAR}` interpolation or an `environment:`
 literal. Postgres reads `POSTGRES_PASSWORD_FILE`. Windmill's server and

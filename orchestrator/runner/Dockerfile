@@ -55,8 +55,8 @@ RUN useradd --create-home --uid 1500 --user-group --shell /bin/bash runner \
 	&& echo 'runner ALL=(agent) NOPASSWD: /opt/orchestrator/as-agent' >/etc/sudoers.d/as-agent \
 	&& chmod 0440 /etc/sudoers.d/as-agent \
 	&& mkdir -p /run/sshd \
-	&& ssh-keygen -A \
-	&& printf 'PasswordAuthentication no\nAllowUsers runner\n' >/etc/ssh/sshd_config.d/runner.conf
+	&& rm -f /etc/ssh/ssh_host_* \
+	&& printf 'PasswordAuthentication no\nAllowUsers runner\nHostKey /etc/ssh/ssh_host_ed25519_key\n' >/etc/ssh/sshd_config.d/runner.conf
 
 COPY --chmod=0755 pass.sh /opt/orchestrator/pass.sh
 COPY --chmod=0755 runner/entrypoint.sh /opt/orchestrator/entrypoint.sh
