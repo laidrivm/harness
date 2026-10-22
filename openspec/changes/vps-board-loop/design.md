@@ -86,11 +86,11 @@ deployed script reaches, so no session runs there. So:
   every other tag.
 - A `runner` service, built from `runner/Dockerfile`, holds git, `gh`, bun,
   `claude`, `openspec`, `coderabbit`, `flock` and `sshd`. This group gives it
-  two users; `runner-isolation` group 3 adds the key holder and a second
+  two users; `runner-isolation` group 5 adds the key holder and a second
   sudoers rule, `/opt/orchestrator/mint` as the key holder, and its
   `layout.test.ts` cases pin both rules. `runner` runs `pass.sh` and `board-loop.ts` and alone reads the secret
   files this group provisions; the App's key, which `runner-isolation`
-  group 3 adds, is the key holder's alone. Compose mounts file-backed secrets as bind mounts and applies no
+  group 5 adds, is the key holder's alone. Compose mounts file-backed secrets as bind mounts and applies no
   `uid`, `gid` or `mode` to them, so the files keep their host ownership: the
   image gives `runner` a fixed numeric uid, and the host README has the user
   make each file this group provisions under `orchestrator/secrets` owned by
@@ -189,7 +189,7 @@ below).
    signal), so the wrapper fails closed on every non-zero status.
 
 Steps 4 and 5 are the wrapper on `main` today. `runner-isolation` groups 1
-and 2 replace them before the App key reaches the host. With the App
+to 4 replace them before the App key reaches the host. With the App
 configured, step 4 neither requires nor opens `gh_token`. In step 5 the board
 loop runs from `runner`'s own harness checkout with the push clone as its working
 directory, every command in the session's clone goes through

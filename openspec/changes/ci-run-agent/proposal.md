@@ -13,8 +13,8 @@ failure or says why it cannot.
 ## What Changes
 
 - **The event handler**, `bun/on-event.ts`, an engine-neutral command run as
-  the runner's Unix user. The engine (n8n or Windmill, whichever
-  `vps-board-loop`'s spike confirms) only receives the HTTP request and calls
+  the runner's Unix user. The engine (Windmill, which
+  `vps-board-loop` settled on) only receives the HTTP request and calls
   it with the raw body and three headers. The handler:
   - verifies `X-Hub-Signature-256` itself, against a webhook secret only the
     runner's user reads;

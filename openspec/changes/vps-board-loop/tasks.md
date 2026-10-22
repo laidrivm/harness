@@ -145,7 +145,7 @@ Closes every scenario of `orchestrator` §*The orchestrator directory holds no
 secret*, §*Every pin in the orchestrator directory is exact and names what
 moves it*, §*A pass is stopped on the runner, never through the engine* and
 §*No tracked file starts Remote Control*. The App key goes on the host only
-after `runner-isolation` group 3, which edits this group's image and README.
+after `runner-isolation` group 5, which edits this group's image and README.
 
 - [ ] 3.1 Write the failing cases first in a new `orchestrator/layout.test.ts`,
       and record that each fails before the files exist. Each check runs over
@@ -178,7 +178,7 @@ after `runner-isolation` group 3, which edits this group's image and README.
       `/opt/orchestrator/as-agent`, the launcher `runner-isolation` adds and
       `board-loop.ts` runs; the README's provisioning step makes each secret
       file this group provisions (the App key is `runner-isolation`
-      group 3's, owned by the key holder) owned by that uid, mode 0400,
+      group 5's, owned by the key holder) owned by that uid, mode 0400,
       and its directory 0500 [41]. Cite each scenario
 - [ ] 3.2 Add `orchestrator/runner/Dockerfile` and
       `orchestrator/runner/entrypoint.sh`. The image holds git, `gh`, bun

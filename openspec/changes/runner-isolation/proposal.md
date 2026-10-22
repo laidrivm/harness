@@ -59,13 +59,13 @@ session can write while the App key or a token is in reach*, recon of
   untested push meanwhile.
 - The laptop. There the runner and the session are one user by accepted
   limit, and no App key is present. Nothing changes for it.
-- The engine. n8n or Windmill starts `pass.sh` either way.
+- The engine. Windmill starts `pass.sh`, and nothing here depends on it.
 
 ## User acts
 
 1. Create the key holder's App key file on the host, owned by that user, mode
    0400. The key is generated on the host, never on the laptop.
-2. Run `reach-check.sh` on the host after the App key is placed (task 3.4).
+2. Run `reach-check.sh` on the host after the App key is placed (task 5.5).
 
 ## Capabilities
 
@@ -89,4 +89,4 @@ None.
 - `core/git-and-prs.md` (the hook rule's exception).
 - `bun/ci-run.ts` and `ci-run-agent`'s text: its fetch, session and fix push
   go through the same launcher, bundles and push clone, and its fix prompt
-  asks for the pre-PR check (task 1.5).
+  asks for the pre-PR check (task 3.1).
