@@ -3,6 +3,7 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readFileSync,
 	realpathSync,
 	rmSync,
 	symlinkSync,
@@ -98,5 +99,65 @@ describe("the tracked-file sweep", () => {
 		const parent = mkdtempSync(join(tmpdir(), "tracked-"));
 		made.push(parent);
 		expect(() => tracked(parent)).toThrow();
+	});
+});
+
+/**
+ * The tracked source files allowed a listing of git's index of their own, each
+ * with why. Every other tracked source file is scanned. A query naming literal
+ * paths enumerates nothing, but it trips this scan too: add it here, saying so.
+ */
+const OWN_LISTING: Record<string, string> = {
+	"bun/tracked.ts": "the sweep itself",
+	"bun/tracked.test.ts": "fabricates repositories, and holds the pattern below",
+	"bun/check.ts":
+		"lists one directory with `-s`, for the mode the sweep does not return",
+	"bun/flake-watch.ts":
+		"lists untracked files to fingerprint the tree, and the sweep reads tracked files only",
+	"bun/repo-layout.test.ts":
+		"enumerates a fabricated repository to build its expectation",
+	"bun/spec-coverage-sweep.test.ts":
+		"asks whether a fabricated repository tracks a directory",
+};
+
+const SOURCE = /\.(?:[cm]?[jt]sx?)$/;
+
+// `git ls-files` passed as a spawn argument, or run through Bun's shell. Only
+// `ls-files` lists the tree: `rev-parse --show-toplevel` alone yields the root,
+// which a dozen files take without listing anything. The prose mentions in
+// comments are backticked words, never a quoted argument or a `$` template.
+const LISTING = /["']ls-files["']|\$`[^`]*\bls-files\b/;
+
+/** Tracked source files outside `OWN_LISTING` that derive a listing. */
+function ownListings(cwd: string): string[] {
+	const { root, files } = tracked(cwd);
+	return files.filter(
+		(path) =>
+			SOURCE.test(path) &&
+			!(path in OWN_LISTING) &&
+			LISTING.test(readFileSync(join(root, path), "utf8")),
+	);
+}
+
+describe("one listing", () => {
+	// spec: tracked-file-sweep/a-second-listing-is-introduced
+	test("no tracked source file outside the exemptions lists the tree itself", () => {
+		expect(ownListings(import.meta.dir)).toEqual([]);
+	});
+
+	test("a reintroduced listing fails, naming its file", () => {
+		const dir = fabricate({
+			"bun/tracked.ts": 'spawn(["git", "ls-files", "-z"]);',
+			"bun/gate.ts": 'Bun.spawnSync(["git", "ls-files", "-z"]);',
+			"bun/shell.ts": "await Bun.$`git ls-files -z`;",
+			"bun/prose.ts": "// `git ls-files` run in a subdirectory lists less",
+			"bun/root.ts": 'spawn(["git", "rev-parse", "--show-toplevel"]);',
+		});
+		expect(ownListings(dir)).toEqual(["bun/gate.ts", "bun/shell.ts"]);
+	});
+
+	test("every exemption still names a tracked file", () => {
+		const { files } = tracked(import.meta.dir);
+		for (const path of Object.keys(OWN_LISTING)) expect(files).toContain(path);
 	});
 });
