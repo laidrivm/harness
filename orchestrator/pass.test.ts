@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 import { CLAUDE, clone, GH, host, IDLE, lock, NO_BUN, OPEN, PATH, passEnv, release, running, skip, starts, stop, tick, URL } from "./pass.fixture.ts";
