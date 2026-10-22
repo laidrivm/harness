@@ -217,7 +217,7 @@ describe("the triage's answer in the pick", () => {
 	test("settings: the pick prompt names the integration's id as the harness-answer author, Assign or not, the user's comment first [76] [77] [78] [79]", async () => {
 		const { dir } = clone();
 		const prompt = pick((await pass(dir, {}, configured())).calls);
-		for (const part of [`\`harness-answer\` whose author's id is ${BOT}`, "whether or not its `Assign` holds the user", "in either order, the user's is the answer", "A `harness-answer` by any other author is no answer."])
+		for (const part of [`\`harness-answer\` whose author's id is ${BOT}`, "whether or not its `Assign` holds the user", `one by the user, whose id is ${USER}, also follows`, "in either order, the user's is the answer", "A `harness-answer` by any other author is no answer.", "that opens with neither `harness-question` nor `harness-answer`"])
 			expect(prompt).toContain(part);
 	});
 
