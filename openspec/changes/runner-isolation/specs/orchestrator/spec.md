@@ -69,9 +69,10 @@ clone that a command of its own then executes.
 The runner SHALL make every push, the board loop's and the CI flow's fix push
 alike, from a push clone it alone writes, into which it takes
 the session's commits from a bundle the session user writes. It SHALL push a
-commit only when the goal check, run with that commit checked out on its step
-branch, finds a passing pre-PR record the session's clone made of that
-commit's SHA. That push SHALL run no hook, and the runner's bun SHALL load no
+commit only when a passing pre-PR record the session's clone made of that
+commit's SHA is found with that commit checked out there: by the goal check
+on its step branch for the board loop's push, and by the same record read for
+the CI flow's. That push SHALL run no hook, and the runner's bun SHALL load no
 configuration from the pushed tree.
 
 #### Scenario: A commit with a passing pre-PR record

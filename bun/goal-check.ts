@@ -19,7 +19,7 @@
  * recorded in the gate ledger for counting. A record names no change or step,
  * so nothing decides from one, this check included.
  */
-import { ran, record } from "./gate-ledger.ts";
+import { ran, ranUnder, record } from "./gate-ledger.ts";
 import { type Pull, readPullRequests } from "./pull-requests.ts";
 import { complete, groups } from "./turn-gate.ts";
 
@@ -89,14 +89,8 @@ if (stage === "archive") {
 // On the host the record is the session's: made in its clone, in `agent`'s 0600 ledger, which only
 // the launcher reads. The runner's own ledger and checkout never stand in for them.
 const launcher = process.env.HARNESS_AS_AGENT?.split(" ").filter(Boolean) ?? [];
-const agent = (...cmd: string[]) => {
-	const run = Bun.spawnSync([...launcher, process.env.HARNESS_CLONE ?? "", ...cmd]);
-	return run.exitCode === 0 ? run.stdout.toString() : undefined;
-};
-// `stateDir()`'s rule, in the session user's shell, so it reads that user's environment.
-const AGENT_LEDGER = 'd=${XDG_STATE_HOME-}; case $d in /*) ;; *) d=$HOME/.local/state ;; esac; cat "$d/harness/gates.jsonl"';
 const recorded = launcher.length
-	? ran(commit, agent("pwd", "-P")?.trim(), "pass", agent("sh", "-c", AGENT_LEDGER) ?? "")
+	? ranUnder([...launcher, process.env.HARNESS_CLONE ?? ""], commit)
 	: ran(commit, top, "pass");
 if (!recorded) missing.push(`no passing pre-PR run record for ${short}`);
 
