@@ -136,7 +136,7 @@ if [ -n "${PASS_AS_AGENT-}" ]; then
 	named=("HARNESS_AS_AGENT=$PASS_AS_AGENT" "HARNESS_CLONE=$dir")
 fi
 
-# A dropped connection (an n8n restart) must not end the pass halfway.
+# A dropped connection (a Windmill restart) must not end the pass halfway.
 trap '' HUP
 log=$state/passes/$(date -u +%Y%m%dT%H%M%SZ)-$name.log
 cd "$here" || exit 1

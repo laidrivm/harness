@@ -73,7 +73,8 @@ whose tests passed*.
       `orchestrator/pass.sh` (`design.md` *Risks*): before the runner's first
       git command each pass rewrites both runner clones' `.git/config` to the
       values `pass.sh` sets at creation (the remote,
-      `core.hooksPath=/dev/null`) and empties `.git/hooks`, and a clone it
+      `core.hooksPath` at the empty root-owned directory `design.md` names
+      for the push clone) and empties `.git/hooks`, and a clone it
       cannot reset stops the pass, named; the owner and repository come from
       the value `runner` owns, never the session clone's
       `remote.origin.url`, and a session clone whose origin names another

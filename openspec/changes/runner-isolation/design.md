@@ -230,7 +230,8 @@ that index, instead of setting the count to 1. This removes its `shortcut:`.
   runs.] → A forced checkout leaves `.git/config` and `.git/hooks` as they
   are, so before any runner-side git command each pass rewrites both
   clones' `.git/config` to the values `pass.sh` sets at creation (the
-  remote, `core.hooksPath=/dev/null`) and empties `.git/hooks`; it stops
+  remote, `core.hooksPath` at the empty root-owned directory) and empties
+  `.git/hooks`; it stops
   naming the clone if either cannot be reset. The group that adds the
   bundle push carries the task and its case.
 - [`pass.sh` takes the owner and repository from `remote.origin.url` in the

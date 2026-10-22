@@ -165,6 +165,9 @@ Rules about how work is carried out here. They do not age with the code.
 - Pass a CI gate the base it measures from as the checked-out merge commit's
   first parent, never `pull_request.base.sha`, which does not follow the base
   branch.
+- Merge `origin/main` into a branch before pushing it whenever main has moved
+  since the branch last merged it — the push hook tests the branch, CI tests
+  its merge with main.
 - Pass `--full-tree` to a `git ls-tree` whose pathspec names a path from the
   repository root — a working directory below the root resolves it against
   itself and lists nothing.
