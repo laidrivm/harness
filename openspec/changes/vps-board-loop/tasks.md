@@ -2,9 +2,10 @@
 
 Three task groups, so the change ships as `feat/vps-board-loop-1`,
 `feat/vps-board-loop-2` and `feat/vps-board-loop-3`. Group 1's wrapper works
-on any Linux host from cron or a terminal, before n8n exists. Group 2 is the
-spike that compares n8n with Windmill on that wrapper before the host is
-built. Group 3 puts the wrapper under the engine the spike confirms. Numbers in
+on any Linux host from cron or a terminal, before an engine exists. Group 2
+is the spike that compared n8n with Windmill on that wrapper before the host
+is built. Group 3 puts the wrapper under Windmill CE, the engine the user
+chose from it (2026-10-22). Numbers in
 brackets refer to the proposal-stage `/zombies` list in the PR. Only group 2
 runs anything on the VPS, and it leaves nothing there. Everything else that
 happens there is the user acts in `proposal.md`.
@@ -115,11 +116,13 @@ machine that carries the step.
       own sessions for hours. Also 2026-10-22: row 13 (control through MCP
       and a CLI) is run on both engines, and Windmill is re-run on 1.846.1,
       recorded under *Windmill 1.846.1*
-- [ ] 2.2 Write the results into `design.md` under a new *Spike: n8n against
+- [x] 2.2 Write the results into `design.md` under a new *Spike: n8n against
       Windmill* section, one row per criterion and engine. Whatever the
       results, stop: put the table to the user as the question on the card,
       with a recommendation (unattended: card — hand the choice on, and build
-      neither host), and revise group 3 after the answer (user, 2026-10-20)
+      neither host), and revise group 3 after the answer (user, 2026-10-20).
+      2026-10-22: the user chose Windmill CE 1.846.1 with no chat page, and
+      a manual root session for Remote Control; group 3 is revised to match
 - [x] 2.3 Tear both stacks down. Verify with `docker ps -a`, `docker volume
       ls` and the throwaway directory gone that the VPS holds nothing from
       the spike.
@@ -136,25 +139,30 @@ machine that carries the step.
       removed; the service token itself is the user's to keep or revoke, and
       the bypass keeps `/api/r/github` for Windmill's route
 
-## 3. The n8n host
+## 3. The Windmill host
 
 Closes every scenario of `orchestrator` §*The orchestrator directory holds no
 secret*, §*Every pin in the orchestrator directory is exact and names what
-moves it* and §*Remote Control runs on the saved login alone, and a failing
-login is reported*. Tasks 3.6–3.9, Remote Control (`design.md` *Remote Control
-on the host*), run the server as `runner` (user, 2026-10-21) and wait on the
-spike's choice of engine. The App key goes on the host only after
-`runner-isolation` group 3, which edits this group's image and README.
+moves it*, §*A pass is stopped on the runner, never through the engine* and
+§*No tracked file starts Remote Control*. The App key goes on the host only
+after `runner-isolation` group 3, which edits this group's image and README.
 
 - [ ] 3.1 Write the failing cases first in a new `orchestrator/layout.test.ts`,
       and record that each fails before the files exist. Each check runs over
-      fabricated input and over the tracked tree. Cover: no workflow file
-      fails rather than passing empty [27]. The n8n floor compares
-      numerically: 2.38.1 fails, while 2.38.2 and 2.100.0 pass [28]. The
-      workflow's trigger is hourly, and its SSH node refers to the `runner`
-      credential by name [29]. Each of these fails, naming its file and key or
-      line: `meta`, `shared` or `pinData` in a workflow, and a credential with
-      an `id` [30, 31]. A literal value for a token, key, secret or password
+      fabricated input and over the tracked tree. Cover: no script under
+      `orchestrator/windmill/` fails rather than passing empty [27]. The
+      Windmill floor compares numerically: 1.846.0 fails, while 1.846.1 and
+      1.1000.0 pass, and a server and a worker image on different versions
+      fail [28]. The pass script carries the tag `pass`, a `timeout` of at
+      least 5400 and no `concurrent_limit`, and its schedule is hourly and
+      on the script, not a flow [29]. The script's last command is the `ssh`
+      call, so its status is the job's; a command after it fails the suite
+      [43]. A variable file carrying a `value` fails, naming the file [30,
+      31]. In compose, the worker service tagged `pass` has one replica and
+      `WORKER_TAGS=pass`, and no other worker takes `pass`. A tracked file
+      under `orchestrator/` other than its README that starts `claude
+      remote-control` or passes `--remote-control` fails, naming the file.
+      A literal value for a token, key, secret or password
       variable in compose, naming the service [32]. A `FROM` or `image:`
       without `@sha256:` [33]. A pinned line without its note [34]. An `ARG`
       version that is not a full `x.y.z` [35]. An IPv4 literal other than
@@ -171,70 +179,66 @@ spike's choice of engine. The App key goes on the host only after
       `board-loop.ts` runs; the README's provisioning step makes each secret
       file this group provisions (the App key is `runner-isolation`
       group 3's, owned by the key holder) owned by that uid, mode 0400,
-      and its directory 0500 [41]. The workflow's SSH node is followed by an
-      IF node on `code` whose non-zero branch ends in Stop and Error [43].
-      Cite each scenario
+      and its directory 0500 [41]. Cite each scenario
 - [ ] 3.2 Add `orchestrator/runner/Dockerfile` and
       `orchestrator/runner/entrypoint.sh`. The image holds git, `gh`, bun
       1.4.2, `claude`, `openspec`, `coderabbit`, `flock` and `sshd`, and the
       users `runner` and `agent` as `design.md` fixes. `gh auth setup-git` is
-      run in the image. Copy
-      `orchestrator/pass.sh` to `/opt/orchestrator/`. Each pin is an exact
+      run in the image. Copy `orchestrator/pass.sh` and
+      `orchestrator/stop.sh` to `/opt/orchestrator/`. Each pin is an exact
       version or a digest and carries the note `design.md` fixes. Verify with
       3.1, and with `docker build` where Docker is available. Otherwise record
       that the build is first run by the user
-- [ ] 3.3 Add `orchestrator/compose.yaml` with the services `n8n` (the stock
-      image, 2.38.2 or later, by digest), `runner` (one volume for
+- [ ] 3.3 Write the failing cases in `orchestrator/pass.test.ts`, then add
+      `orchestrator/stop.sh`, and have `pass.sh` write `<lock>.pid` (`design.md`
+      *Stopping a pass*). Cover: a bad name exits 2 as `pass.sh`'s guard
+      does; no pass holding the lock prints `idle`, removes a stale marker,
+      signals nothing and writes no stop file; another repository's running
+      pass is left alone; a running fake pass gets TERM, the
+      lock frees, and the stop file's last line is `stopped by hand`, so the
+      next tick prints the paused line; the stop file exists before TERM
+      is sent, so a tick that takes the lock the moment it frees pauses
+      too. Skip without `flock`, as 1.1 does. The host and the emergency
+      session reach it only through `docker compose exec -u runner runner
+      /opt/orchestrator/stop.sh <clone>`, the one invocation 3.7's README
+      gives, since the marker's process group is the runner's PID
+      namespace's. Cite each scenario
+- [ ] 3.4 Add `orchestrator/compose.yaml` with the services `db` (Postgres
+      16), `windmill_server`, `windmill_worker_pass` (one replica,
+      `WORKER_TAGS=pass`), `windmill_worker` (every other tag), each
+      Windmill image 1.846.1 or later by digest; `runner` (one volume for
       `/home/agent` and one for `/home/runner`, the secrets mounted, no
-      published port) and
-      `cloudflared` (the tunnel token from its secret file). Add
-      `orchestrator/secrets` to `.gitignore` with no trailing slash. Verify
-      with 3.1 and `docker compose config` where Docker is available
-- [ ] 3.4 Write the hourly workflow by hand to the shape
-      `n8n export:workflow --backup` produces: a Schedule Trigger, an SSH
-      node sending the clone name `harness`, and the IF node on `code` with
-      its Stop and Error branch, with the keys `design.md`
-      removes left out. Save it as `orchestrator/workflows/<id>.json`. Verify
-      with 3.1
-- [ ] 3.5 Write `orchestrator/README.md`, opening with a level-1 heading. It
+      published port); and `cloudflared` (the tunnel token from its secret
+      file). Find whether Windmill takes its database URL from a file; if
+      not, build it in each service's `command` from the `db_password`
+      secret (`design.md` *Secrets*), never a `.env`, refusing a value
+      outside `[0-9a-f]`; 3.1 asserts that check is in each such
+      `command`. Record it there.
+      Add `orchestrator/secrets` to `.gitignore` with no trailing slash. Verify with 3.1 and `docker
+      compose config` where Docker is available
+- [ ] 3.5 Write `orchestrator/windmill/` by hand to the shape `wmill sync
+      pull --skip-secrets --include-schedules` writes: the bash pass script
+      (tag `pass`, `timeout` 5400, `ssh` to `runner` with the clone name
+      `harness` and the key from its variable's path, ending on that call)
+      and its hourly schedule. Verify with 3.1
+- [ ] 3.6 **User act.** After the first bring-up, create in Windmill a token
+      limited to running, reading and scheduling the pass's own path, and
+      record in the pull request whether MCP accepts it and whether it is
+      refused when it tries to deploy a script. The README then names the
+      client chat control uses from the laptop: MCP on that token, or `wmill`
+      with `HEADERS` when no such MCP token exists (`design.md` *Phone
+      access*)
+- [ ] 3.7 Write `orchestrator/README.md`, opening with a level-1 heading. It
       holds the host requirements, the user acts in `proposal.md`'s order, the
-      export and import commands, the check of the three Notion tool names, and
-      what to read before removing a stop file. It names no address and no
-      account. Verify by reading every file under `orchestrator/` whole for an
-      identifier before the commit (`git-and-prs.md`)
-- [ ] 3.6 **User act.** On the host, in a `tmux` session as `runner`: `claude auth login`, opening the printed URL on any
-      device (the phone will do) and pasting the code back; then, in a
-      clone's directory, `claude remote-control` once, answering `y` to trust
-      the directory and to *Enable Remote Control?*. Record in the pull
-      request that `claude auth status` exits 0, what `claude auth status
-      --text` prints (whether it names the login's expiry, which 3.8 reads),
-      and that the Claude app lists the host
-- [ ] 3.7 Write the failing cases in `orchestrator/layout.test.ts`, then add
-      `orchestrator/remote-control.sh`, which starts `claude remote-control`
-      inside a named `tmux` session in the clone directory it is given and
-      restarts it when it exits, waiting 30 seconds before each restart
-      (`design.md` *Remote Control on the host*), and, if one is used, a
-      systemd unit that starts that script and nothing else. Cover: a `claude` that exits
-      at once is not started again before the wait; the script or the unit
-      setting or passing on `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or
-      `ANTHROPIC_AUTH_TOKEN` fails the suite, naming the file and the
-      variable; the script clears all three inside the command it hands
-      `tmux`, not only in its own environment, since a `tmux` server already
-      running keeps the environment it started with. Cite each scenario
-- [ ] 3.8 Write the failing cases, then add the login check: a script the
-      engine's timer runs daily in the remote-control user's environment,
-      which runs `claude auth status`, with `--text` when 3.6 found the
-      expiry only in that output, and exits non-zero, printing one line
-      that names the reason, when the status fails or its output carries the
-      expiry warning. It clears `CLAUDE_CODE_OAUTH_TOKEN`,
-      `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` before it runs, since
-      any of them the timer passes on overrides the saved login and passes
-      an expired one. Wire its non-zero exit to the report the engine gives a
-      failed run (`design.md` *Risks*). Cite each scenario
-- [ ] 3.9 Add to `orchestrator/README.md` the user act 3.6, the restart of a
-      stopped server (`claude remote-control` in the same `tmux` session),
-      the renewal from the phone when the check reports, and that no token
-      variable may reach the remote-control process. Add one line to the
-      root `README.md`'s orchestrator paragraph naming Remote Control as the
-      phone's second path
-- [ ] 3.10 Run `bun bun/check.ts` and `bun test`. Both pass
+      `wmill sync` commands, `db_password` made with `openssl rand -hex 32`,
+      the check of the three Notion tool names, what to
+      read before removing a stop file, `stop.sh`, the laptop clients and
+      their tokens' limits, and the emergency session: ssh as root, `claude
+      auth login` once, start `claude` with Remote Control in the harness
+      checkout, end it when done; its login refresh is manual, and root's
+      shell exports none of the three token variables. It names no address
+      and no account. Verify by reading every file under `orchestrator/`
+      whole for an identifier before the commit (`git-and-prs.md`)
+- [ ] 3.8 Add one line to the root `README.md`'s orchestrator paragraph
+      naming the emergency session as the phone's second path
+- [ ] 3.9 Run `bun test`. It passes

@@ -35,7 +35,7 @@ launcher configured, the runner runs as it does today.
 | User | Runs | Reads |
 |---|---|---|
 | `agent` | the pick and stage sessions, git in its clones, the bundle | its clones, the Claude Code token (the session's by necessity), the Notion MCP login |
-| `runner` | `pass.sh`, the board loop, the goal check, the push, Remote Control | its own checkout and push clones, the PAT file, the Notion bot's token, its claude.ai login |
+| `runner` | `pass.sh`, the board loop, the goal check, the push | its own checkout and push clones, the PAT file, the Notion bot's token |
 | key holder | the mint helper alone | the App's private key |
 
 `runner` may start exactly two commands as another user, both root-owned:
@@ -184,17 +184,21 @@ App's id and the mint command, not `HARNESS_GITHUB_APP_KEY`.
 
 The user first chose (a), a later card, then answered the Remote Control
 follow-up with "Это делаем сразу": with Remote Control as `runner`, the key
-must not be `runner`'s. The later, more specific answer stands.
+must not be `runner`'s. The later, more specific answer stands. On
+2026-10-22 the user moved Remote Control off `runner` (below); the key
+holder stays, since `runner`'s own code and its dependencies still run
+beside every token `runner` reads.
 
-### Remote Control as `runner`
+### Remote Control is the user's root session (user, 2026-10-22)
 
-The login, the server and the login check run as `runner`, in a clone of
-`runner`'s own kept for that use, never the harness checkout or a push clone
-the passes run from. A phone session therefore reaches what `runner` reaches:
-the PAT file, the Notion bot's token, the mint helper, and the runner's
-clones. It never reaches the App's key. The user accepted this for a phone
-session with everything at hand (2026-10-21); the worst case is a set of
-tokens the user can revoke, not the key.
+No user this change fixes runs Remote Control. It replaces the 2026-10-21
+plan, a standing server as `runner` in a clone of its own, with a session the
+user starts by hand over ssh as root and ends when done (`vps-board-loop`
+*The emergency session*). Its login is a file in root's home, refreshed by
+hand. While it runs it reaches every secret on the host, the App's key
+included; the user accepts that for the emergency path, which nothing starts
+on its own. The three users above, and the reach check, cover the automated
+flows alone.
 
 ### `GIT_CONFIG_COUNT`
 
@@ -206,10 +210,13 @@ that index, instead of setting the count to 1. This removes its `shortcut:`.
 - [A session can append a forged pre-PR record, and the push trusts it.] →
   The card *Let only the runner write the gate ledger a session's tests are
   judged by*. Until then CI fails an untested pull request.
-- [A phone session as `runner` can leave config in `runner`'s clones that a
-  later pass runs.] → It runs with `runner`'s reach, which the phone session
-  already had; the key stays out. The passes re-check out the harness clone
-  forced and cleaned each time.
+- [The root session can leave config in `runner`'s clones that a later pass
+  runs.] → A forced checkout leaves `.git/config` and `.git/hooks` as they
+  are, so before any runner-side git command each pass rewrites both
+  clones' `.git/config` to the values `pass.sh` sets at creation (the
+  remote, `core.hooksPath=/dev/null`) and empties `.git/hooks`; it stops
+  naming the clone if either cannot be reset. The group that adds the
+  bundle push carries the task and its case.
 - [The mint helper moves only when the image is rebuilt.] → Its pin note says
   so, as every image pin's does.
 - [Two lists of variable names, in the code and in sudoers.] → The test above.

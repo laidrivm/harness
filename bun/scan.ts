@@ -241,6 +241,20 @@ export const blank = (source: string, language: keyof typeof SYNTAX): string =>
 	walk(source, language).out.join("");
 
 /**
+ * `source` with only its comments' text replaced by spaces, strings and code
+ * kept — for a pattern that must match inside a string but not in prose.
+ */
+export function uncomment(
+	source: string,
+	language: keyof typeof SYNTAX,
+): string {
+	const out = source.split("");
+	for (const { from, to } of walk(source, language).found)
+		for (let k = from; k < to; k++) if (out[k] !== "\n") out[k] = " ";
+	return out.join("");
+}
+
+/**
  * Every comment in `source`, its own text and the line it opens on.
  *
  * Read out of the source at the offsets the scan reached rather than out of

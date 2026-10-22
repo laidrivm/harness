@@ -12,22 +12,25 @@ of 2026-10-18 found both.
 
 The user settled the following on the card (2026-10-17 and 2026-10-18). They
 are fixed here and not reopened, but for the engine, which the spike in task
-group 2 puts back to the user (2026-10-20); group 3's n8n-specific decisions
-are revised after that answer:
+group 2 put back to the user (2026-10-20) and the user answered on
+2026-10-22:
 
-- **Engine: n8n, until the spike's answer**, pinned at 2.38.2 or later. That floor covers
-  CVE-2026-56357, fixed in 2.5.0, and CVE-2026-86080, fixed in 2.38.2.
+- **Engine: Windmill CE, pinned at 1.846.1 or later** (user, 2026-10-22,
+  after the spike; *Spike: n8n against Windmill* and its *Recommendation*
+  below). That floor is the release on which HTTP routes answer in CE; 1.365
+  answered 404. n8n was the engine until that answer.
 - **Claude on the host through `claude setup-token`** for every unattended
   pass. The token cannot fetch claude.ai connectors, so Notion reaches the
   pick session as a separately configured MCP server. Phone access is the
   orchestrator's own UI, behind auth. The 2026-10-18 decision also had no
   user login on the VPS and gave Remote Control up; the user reversed that
-  part on 2026-10-21 (*Remote Control on the host* below).
+  part on 2026-10-21, and on 2026-10-22 narrowed it to a session started by
+  hand (*The emergency session* below).
 - **Until the GitHub App lands, the loop pushes as the user**, the way it does
   from the laptop.
-- **The n8n workflows, the Dockerfile and compose (and later the router) live
-  as a directory in this public repository**, with no secret in it. Every
-  sensitive value is substituted on the host.
+- **The engine's scripts and schedules, the Dockerfile and compose (and later
+  the router) live as a directory in this public repository**, with no
+  secret in it. Every sensitive value is substituted on the host.
 - **A pass that exits 1 pauses the timer** until the user removes a stop file
   by hand.
 - **Domain `hooks.laidrivm.com` on Cloudflare.** The PR sweep runs hourly
@@ -54,8 +57,8 @@ router, webhooks) land beside the timer. Layout:
 
 - `compose.yaml`
 - `runner/Dockerfile` and `runner/entrypoint.sh`
-- `pass.sh`
-- `workflows/<id>.json`
+- `pass.sh` and `stop.sh`
+- `windmill/`, the workspace as `wmill sync pull` writes it
 - `README.md`
 - `*.test.ts`
 
@@ -67,18 +70,20 @@ Alternative: `host/`. Rejected, because the router is not host configuration.
 ### The pass runs in a runner container, reached over SSH
 
 The card's constraint, *Sandbox per agent*, says the App's private key never
-enters the agent's sandbox. That key is not n8n's either. On the host a
-key-holder user alone reads it and mints `runner` an hourly token
-(`runner-isolation`, user, 2026-10-21); `runner` never reads the key file.
+enters the agent's sandbox. That key is not the engine's either. On the host a
+key-holder user alone among the automated users reads it and mints `runner`
+an hourly token (`runner-isolation`, user, 2026-10-21); `runner` never reads
+the key file. Root, and so the user's emergency session, reads it too.
 This supersedes the ghapp card's 2026-10-18 reading, under which the runner's
-own Unix user read it. Sessions run as a third user, `agent`. n8n's
-credential store holds only the SSH key that reaches the runner. An agent session inside n8n's container, as the explore sketched
-with Execute Command in a custom n8n image, would still read that store (same
-uid, `/home/node/.n8n`) and inherit n8n's environment, `N8N_ENCRYPTION_KEY`
-included. So:
+own Unix user read it. Sessions run as a third user, `agent`. The engine
+holds only the SSH key that reaches the runner, as a secret variable. A
+session on an engine worker would reach that variable and whatever a
+deployed script reaches, so no session runs there. So:
 
-- n8n runs the stock image. Execute Command stays disabled, as n8n 2.x ships
-  it.
+- Windmill runs its stock images: the server, Postgres 16 and two worker
+  services. One, tagged `pass`, has exactly one worker and runs the pass
+  script alone, so a second start queues behind the first; the other takes
+  every other tag.
 - A `runner` service, built from `runner/Dockerfile`, holds git, `gh`, bun,
   `claude`, `openspec`, `coderabbit`, `flock` and `sshd`. This group gives it
   two users; `runner-isolation` group 3 adds the key holder and a second
@@ -109,36 +114,41 @@ included. So:
   `~` is that volume, and the forced command below sets its clones directory
   to `/home/agent/clones` through `PASS_CLONES`. Both volumes outlive a
   recreated container.
-- n8n's SSH node connects to `runner` on the compose network. No port is
-  published. The key's `authorized_keys` line is
+- The pass script, a bash script on the `pass` worker, runs `ssh runner
+  <clone>` on the compose network. No port is published. The key's
+  `authorized_keys` line is
   `restrict,command="PASS_CLONES=/home/agent/clones /opt/orchestrator/pass.sh \"$SSH_ORIGINAL_COMMAND\""`,
-  written by the entrypoint from a secret file. n8n can name a clone and
-  nothing else.
-- The SSH node returns the remote command's exit status as data (`code`) and
-  does not fail on a non-zero one. The workflow therefore follows it with an
-  IF node on `code`, whose non-zero branch ends in a Stop and Error node, so
-  a failed or paused pass reads as failed in the execution list. The host
-  README records this behaviour at the first import.
+  written by the entrypoint from a secret file. The engine can name a clone
+  and nothing else.
+- The script ends on `ssh`'s status, which is the pass's own, and Windmill
+  fails a job that exits non-zero (spike row 10 on 1.846.1), so a failed or
+  paused pass reads as failed in Runs. The spike's `echo pass_status=$?` hid
+  that (point 6 below).
+- The hourly schedule is a script schedule, never a flow's. A script's next
+  tick is queued only when the previous run ends, so the schedule never
+  overlaps itself; a flow's `no_flow_overlap` once stopped rescheduling for
+  good after one database error (windmill-labs/windmill#10168).
+- No script sets a concurrency limit. Windmill CE stores `concurrent_limit`
+  and ignores it, logging one ERROR line (windmill-labs/windmill#10840,
+  confirmed in the 1.846.1 source), so a set limit would only read as a
+  guard. The one-worker tag queues a second start; `pass.sh`'s `flock` stays
+  the guarantee.
 
-Execute Command in a custom n8n image is the alternative. Rejected for the
-reasons above. Windmill was compared on the card from the docs (scripts in
-git, Bash first class). The user chose n8n and asked (2026-10-18) for a
-measured spike of both before the host is built: task group 2 runs one pass
-under each, and its table goes to the user whatever it shows: n8n is no
-default the table has to beat (user, 2026-10-20). The table also asks how
-each engine takes an extension that updates from upstream without a fork and
-reaches Claude on the subscription, or an OpenAI-compatible endpoint routing
-to a local model.
+n8n was the alternative, and the engine until 2026-10-22. The spike ran one
+pass under each (task group 2), and the user chose Windmill from its table:
+an HTTP route answers 202 or 401 with no token in the URL, Runs reads better
+on the phone, and `wmill` and MCP drive it through Access (*Recommendation*
+below).
 
 ### `pass.sh` order and exits
 
 1. Validate the clone name: `^[A-Za-z0-9][A-Za-z0-9._-]*$`, not `..`, and a
    git clone under `~/clones`. The guard anchors the whole value (`rules.md`
-   Code). On failure: exit 2. No lock, no stop file, because what n8n sent is
-   no pass.
+   Code). On failure: exit 2. No lock, no stop file, because what the engine sent
+   is no pass.
 2. If `~/orchestrator/<clone>.stop` exists: print
    `orchestrator: paused — <file>: <its first line>; remove it to resume` and
-   exit 3. A paused tick reads as failed in n8n's execution list on purpose:
+   exit 3. A paused tick reads as failed in the engine's Runs on purpose:
    the loop is waiting on the user.
 3. Take the lock: `flock -n -E 75` on `~/orchestrator/locks/<key>.lock`.
    `<key>` is `<owner>-<repo>`, the last two path segments of the clone's
@@ -168,8 +178,9 @@ to a local model.
    `~/orchestrator/passes/<UTC time>-<clone>.log`, prints it once the pass
    ends and keeps its last line. Not through `tee`: a dropped connection
    would end `tee` on its next write, and the pass with it on its own.
-   Ignoring `HUP` keeps an n8n
-   restart from killing a stage session halfway. `CLAUDECODE` is passed on
+   Ignoring `HUP` keeps an engine
+   restart or a cancelled job from killing a stage session halfway, so the
+   pass is stopped by `stop.sh` alone (*Stopping a pass* below). `CLAUDECODE` is passed on
    only when set, so the runner's one refusal still decides. A second copy of
    that check in the wrapper would drift (`rules.md` Code).
 6. Non-zero: write the stop file (UTC time, status, last line) and exit with
@@ -192,9 +203,30 @@ The pass's own record in the gate ledger is unchanged. The wrapper writes no
 ledger line. A pass's durable result is on the runner's volume, whatever
 happens to the SSH channel: the ledger's `loop` record (outcome, for every
 pass), the pass log (its whole output) and, for a non-zero status, the stop
-file. The n8n execution is a view of the same pass that an n8n restart can
+file. The engine's job is a view of the same pass that an engine restart can
 cut short; nothing reads the outcome from it, so no reconnecting retrieval
 step is needed.
+
+### Stopping a pass
+
+A cancelled job leaves the pass running and its lock held (spike point 2),
+since `pass.sh` ignores HUP. So the runner carries
+`/opt/orchestrator/stop.sh <clone>`. The user, from a host shell or the
+emergency session alike, runs it only as `docker compose exec -u runner
+runner /opt/orchestrator/stop.sh <clone>`: the marker holds a process group
+in the runner's PID namespace, which a `kill` on the host would miss or
+mistake for a host process, and running as `runner` gives the stop file it
+writes the owner one from `pass.sh` has. It validates the name as step 1 does and
+finds the pass through a marker. `pass.sh`, once it holds
+the lock, writes its process group to `<lock>.pid` beside that
+repository's lock. `stop.sh` first tries the lock without waiting: if it
+gets it, no pass runs, so it removes any stale marker, prints `idle` and
+signals nothing. Otherwise it writes the stop file with the line
+`stopped by hand` first, then sends TERM to the marker's process group and
+waits for the lock to free. In that order a tick that takes the freed lock
+reads the stop file at step 3's recheck and pauses until the user removes
+it; TERM ends the wrapper before its own step 6 could write one. The engine's forced-command key cannot reach it: that key runs
+`pass.sh` alone.
 
 ### Notion is the hosted MCP server
 
@@ -210,34 +242,34 @@ change, which would widen the matchers. It is never a configuration step.
 
 ### Secrets are compose secret files
 
-The secret files are `claude_oauth_token`, `gh_token`, `runner_ssh_pubkey`
-and `tunnel_token`. Each sits under `orchestrator/secrets/` on the host and is
-mounted at `/run/secrets/`. No secret goes through compose's `${VAR}`
-interpolation or an `environment:` literal. An SSH session does not inherit
+The secret files are `claude_oauth_token`, `gh_token`, `runner_ssh_pubkey`,
+`tunnel_token` and `db_password`. Each sits under `orchestrator/secrets/` on
+the host and is mounted at `/run/secrets/`. No secret goes through compose's
+`${VAR}` interpolation or an `environment:` literal. Postgres reads
+`POSTGRES_PASSWORD_FILE`; how Windmill's server and workers take the
+database URL from that file is checked at task 3.4, and if they read only an
+environment value, each Windmill service's compose `command` builds
+`DATABASE_URL` from `/run/secrets/db_password` in a shell and then `exec`s
+the binary, so no `.env` or literal ever holds it. The README generates
+`db_password` as 64 hex characters (`openssl rand -hex 32`), and that
+`command` refuses a value outside `[0-9a-f]`, since a raw `@`, `:`, `/`,
+`?`, `#` or `%` in a URL's userinfo is read as URL syntax. An SSH session does not inherit
 the container's environment anyway, so `pass.sh` reads the files itself. `gh`
 and git's credential helper (`gh auth setup-git`, run in the image) take
-`GH_TOKEN`. The n8n SSH key's private half lives only in n8n's credential
-store, entered by the user. The App's private key is one more secret file, read by a key-holder user
+`GH_TOKEN`. The engine's SSH key's private half lives only in a Windmill
+secret variable, entered by the user. The App's private key is one more secret file, read by a key-holder user
 alone, which mints `runner` an hourly token (`runner-isolation`); it never
-enters n8n.
+enters the engine.
 
-### Workflows go through `export:workflow` / `import:workflow`
+### The workspace goes through `wmill sync`
 
-n8n's built-in source control is paid. Export with
-`n8n export:workflow --backup --output=<dir>`, which writes one pretty file
-per workflow. Then delete `meta`, `shared` and `pinData`, and each
-credential's `id`. A test refuses those keys, so a careless export fails the
-suite rather than shipping an instance id. To deploy:
-
-```text
-n8n import:workflow --separate --input=orchestrator/workflows
-n8n publish:workflow --id=<id>
-```
-
-Then restart n8n, which reads a CLI import only at start. A workflow's
-credential is referred to by name (`runner`). If the import does not bind a
-name-only credential, the user picks it once in the node. That is measured at
-the first import and recorded in the host README.
+Git sync from the UI is EE; the CLI's sync works in CE (spike row 4). Pull
+with `wmill sync pull --skip-secrets --include-schedules` into
+`orchestrator/windmill/`: a secret variable then carries no value, not even
+the encrypted one, and the hourly schedule comes with its script. A test
+refuses a variable file that carries a value. To deploy, the same flags on
+`wmill sync push`. A script that refers to the SSH key does so by the
+variable's path alone, which the user fills once in the UI.
 
 ### Pins and their notes
 
@@ -245,9 +277,11 @@ Every pin is moved by hand, because no Dependabot or Renovate config exists
 here. Each `FROM`/`image:` line carries an `@sha256:` digest. Each tool
 version (bun as CI's `1.4.2`, `gh`, `claude`, `openspec`, `coderabbit`)
 sits in an `ARG` with a full version. Every pin carries a comment, the same on
-each line: `# moved by hand — nothing updates this pin`. For n8n's image the
-comment adds: re-read n8n's security advisories when moving it. The floor
-2.38.2 is a test, so a downgrade fails.
+each line: `# moved by hand — nothing updates this pin`. For Windmill's
+images (server and workers on one version) and Postgres 16 the comment adds:
+re-read the release notes and security advisories when moving it. Windmill's
+floor 1.846.1 is a test, so a downgrade fails, and the server and worker
+images must carry the same version.
 
 ### Clones, not worktrees
 
@@ -258,75 +292,59 @@ nothing else".
 
 ### Phone access
 
-The n8n UI sits on `hooks.laidrivm.com` through a Cloudflare tunnel
-(`cloudflared` in compose). Its execution list shows each pass's output and
-each paused tick. In front of it sits Cloudflare Access on the hostname (the
-user's email, one-time code), and behind that n8n's own owner login — the
-user's decision of 2026-10-18, since n8n has had CVEs that bypassed its own
-checks. Access is a dashboard setting, a user act the host README names.
-Webhook paths, and the Access bypass they will need for `/webhook/*`, belong
-to the webhook step. The second path from the phone is Remote Control, below.
+Windmill's UI sits on `hooks.laidrivm.com` through a Cloudflare tunnel
+(`cloudflared` in compose). Runs shows each pass's log and each paused tick
+as a failed job. In front of it sits Cloudflare Access on the hostname (the
+user's email), and behind that Windmill's own login — the user's decision of
+2026-10-18 for any engine's UI. Access is a dashboard setting, a user act
+the host README names. The one Access bypass is `/api/r/github`, the HTTP
+route GitHub's webhook calls; it is live and checked (spike, 1.846.1), and
+the route's script, which verifies the signature and answers 202 or 401
+through `windmill_status_code`, belongs to `ci-run-agent`'s engine call.
+There is no chat page (user, 2026-10-22).
 
-### Remote Control on the host (user, 2026-10-21)
+Two clients reach the engine from the laptop by the user's decision of
+2026-10-22 (*Windmill 1.846.1* below): `wmill` with an Access service token
+in `HEADERS`, and MCP, on an engine token limited to running, reading and
+scheduling the pass's own paths, never `mcp:all`. Task 3.6 checks whether
+Windmill issues an MCP token that narrow; without one, chat control goes
+through `wmill` alone. The service token passes Access only through a
+Service Auth policy on `hooks.laidrivm.com`.
 
-The user reversed one part of the 2026-10-18 decision. Remote Control was
-given up then because the claude.ai login on the VPS would expire and need
-redoing, not for its reach. The user accepts a login that lasts and that can
-be renewed from the phone. What it gives: a Claude Code session on the host
-driven from the Claude app, and new sessions started from the app on the
-host, which `claude remote-control` (server mode) spawns, up to its
-`--capacity` (32 by default).
+### The emergency session (user, 2026-10-22)
 
-- **The login.** `claude auth login` once, by the user, in a `tmux` session
-  on the host: it prints a URL to open on any device and reads the code back
-  from the terminal, so a phone browser and a phone SSH client are enough.
-  On Linux the login is the file `~/.claude/.credentials.json`, mode 0600,
-  and Claude Code renews it on its own; it warns three days before it expires
-  (`Your login expires in 3 days · run /login to renew`). How long it lasts
-  is not documented. With Trusted Devices on, the phone side asks again once
-  the sign-in is 18 hours old.
-- **Two one-time prompts.** In the project directory, `claude remote-control`
-  asks to trust the directory and then *Enable Remote Control?*. Neither can
-  be answered ahead, and without a terminal the command exits with
-  `Workspace not trusted`, so the user answers both in the same `tmux`
-  session. The home directory never saves trust, so the server runs in a
-  clone's directory.
-- **The process.** The server runs inside `tmux`, which the docs name for a
-  command that must outlive the SSH session. A systemd unit is not
-  documented, so if group 3 wraps the `tmux` session in one, the unit starts
-  `tmux` and nothing else. The server exits after about ten minutes without
-  a network, so the wrapper restarts it, waiting between attempts so a
-  command that exits at once does not spin. It sets no attempt limit, since
-  a server that left over a lost network must come back once the network
-  does.
+The user reversed the 2026-10-18 *no login on the VPS* on 2026-10-21 for a
+standing Remote Control server, then on 2026-10-22 replaced that server with
+a session started by hand: the user, over ssh as root, runs `claude auth
+login` once, then starts `claude` with Remote Control in the harness
+checkout, and ends it when done. Nothing on the host starts it or keeps it
+up: no `tmux` wrapper, no restart, no timer. From that session the user
+drives the engine through `wmill`, the passes through `stop.sh`, the
+containers and the host, and Notion if needed.
+
+- **What it reaches.** As root it reaches every secret on the host, the
+  App's key included, for as long as it runs. The user accepts that: it is
+  the emergency path, started and watched by the user, and the automated
+  flows keep the users `runner-isolation` fixes.
+- **The login.** It is a file in root's home, `~/.claude/.credentials.json`,
+  mode 0600. Its refresh is manual: no check watches it, and an expired
+  login is found when the user next starts the session, which then runs
+  `claude auth login` again.
 - **Beside the unattended passes.** `CLAUDE_CODE_OAUTH_TOKEN`,
   `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` in a process's environment
-  take precedence over the saved login and stop Remote Control. So the
-  remote-control process's environment names none of them, and the
-  setup-token reaches only the `claude -p` passes, which `pass.sh` starts
-  with the environment it names.
-  The login and the token sit on one host without one overriding the other.
-- **Which user it runs as, and what it reaches.** The login opens the user's
-  claude.ai connectors to the host, not only the model. The user that runs
-  `claude auth login` is the user that runs the server and the login check,
-  since the login is a file in that user's home. That user is `runner`
-  (user, 2026-10-21): a phone session reaches the PAT, the Notion bot's token
-  and hourly App tokens, never the App key, which a key-holder user alone
-  reads. It reaches them exactly as a pass does: the PAT and the Notion
-  token by reading their `runner`-owned files, an App token by running
-  `/opt/orchestrator/mint` through its sudoers rule, which prints one token
-  and stores none. `runner-isolation` fixes the users, every secret file's
-  path, owner and mode in the host README, and the reach check that a
-  session cannot read them.
+  take precedence over the saved login and stop Remote Control. Root's shell
+  exports none of them; the setup-token reaches only the `claude -p` passes,
+  which `pass.sh` starts with the environment it names. No tracked file
+  but the host README, which documents the session, starts Claude Code with
+  Remote Control.
 
 ## Risks / Trade-offs
 
-- [n8n's SSH node may cut a command that runs past an hour. A pass is a pick
-  plus up to an hour of stage.] → `trap '' HUP` keeps the pass alive, and
-  the stop file still records its outcome. The spike (task group 2) measures
-  it with a 65-minute fake pass before the host is built. If the node cuts
-  it, the fallback is a custom n8n image with `openssh-client` and Execute
-  Command running `ssh`, weighed in the same table against Windmill.
+- [The engine may cut a command that runs past an hour. A pass is a pick
+  plus up to an hour of stage.] → Spike row 1: a 65-minute command survived
+  under a script `timeout` of 5400 s, which the pass script sets. `trap ''
+  HUP` keeps the pass alive if the job is cut anyway, and the stop file
+  still records its outcome.
 - [Pro/Max limits are meant for "ordinary, individual usage". Unattended
   volume may be throttled without warning.] → One pass an hour per
   repository. The stop file halts the loop on the first failure.
@@ -342,17 +360,12 @@ host, which `claude remote-control` (server mode) spawns, up to its
   the lock is held, so it exits busy. From any session, `CLAUDECODE` reaches
   the runner, which refuses. The stop file that follows pauses the loop:
   the safe side.
-- [The claude.ai login's lifetime is not documented, and a Remote Control
-  session that outlives it stops until the user signs in again.] → A timer
-  runs `claude auth status` in the remote-control user's environment, with
-  the three token variables cleared so none of them stands in for the
-  saved login, and reads the three-day warning, and a failing or expiring login is reported
-  to the user. The docs show that warning at startup and do not say whether
-  `claude auth status` prints it; task 3.6 records which, and if it does not,
-  the check catches the login only once it has failed. Where it reports —
-  a card on the board or the engine's own alert — follows the engine group 3
-  builds on. The unattended passes run on
-  the setup-token, so an expired login stops only Remote Control.
+- [The emergency session's login may have expired when the user needs it.]
+  → The user signs in again from the same ssh session; `claude auth login`
+  prints a URL any device opens. The unattended passes run on the
+  setup-token, so an expired login stops nothing else.
+- [The emergency session runs as root beside every secret.] → It runs only
+  while the user has it open, and no tracked file starts it.
 
 ## Migration Plan
 
@@ -363,8 +376,8 @@ anywhere.
 
 ## Open Questions
 
-The engine: task 2.2 puts the table below to the user. The auth in front of
-the n8n UI was settled by the user on 2026-10-18 (*Phone access* above).
+None. The engine was settled by the user on 2026-10-22 (task 2.2), the
+auth in front of its UI on 2026-10-18 (*Phone access* above).
 
 ## Spike: n8n against Windmill
 
@@ -506,3 +519,10 @@ served by exactly one worker, so a second run queues rather than overlaps;
 
 On 2026-10-21 the recommendation was n8n, for its 401 and its chat page,
 against a Windmill 1.365 that answered 200 and held a token in the URL.
+
+**Decision (user, 2026-10-22): Windmill CE 1.846.1, with no chat page.**
+Points 3 and 5 above concern n8n alone and lapse with it. Group 3's sizes
+come from row 12 on 1.846.1: under the whole load the host peaked at
+1245 MiB used of 3.7 GiB (server 404 MiB, Postgres 300 MiB, workers about
+100 MiB each, the runner's CPU at 112 %), and the 6.1 GB image fits the
+38 GB disk.

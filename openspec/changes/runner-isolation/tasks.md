@@ -100,17 +100,16 @@ pull-request reads*,
 
 ## 3. The host's users
 
-Closes `orchestrator` §*The session user reads no secret file* and the
-user scenario of §*Remote Control runs on the saved login alone, and a
-failing login is reported*. Needs `vps-board-loop` group 3 merged.
+Closes `orchestrator` §*The session user reads no secret file*. Needs
+`vps-board-loop` group 3 merged.
 
 - [ ] 3.1 Write the failing cases in `orchestrator/layout.test.ts`: the image
       creates `runner`, `agent` and the key holder with fixed uids; sudoers
       holds exactly the two rules `design.md` *Three users* names; its
       `env_keep` equals the session allowlist in `bun/board-loop-session.ts`;
       the mint helper and its repository list are root-owned under
-      `/opt/orchestrator`; the remote-control script starts the server as
-      `runner`; the image writes no `gh` hosts file into `runner`'s home
+      `/opt/orchestrator`; the image writes no `gh` hosts file into
+      `runner`'s home
 - [ ] 3.2 Add to the image the key holder, the two sudoers rules, the
       launcher `orchestrator/as-agent` and the mint helper's copy, and to
       `orchestrator/README.md` the owner and mode of every secret file, the
