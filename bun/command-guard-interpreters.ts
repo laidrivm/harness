@@ -161,8 +161,12 @@ export function interpreter(
 	else if (name === "bun" && BUN_SUBCOMMANDS.has(file)) {
 		if (RUNS_CODE.has(file))
 			return ask(`bun ${file}`, "inline-code", "code to run that no file in the tree holds");
-		const operand = words.slice(1).find((word) => !word.startsWith("-"));
-		return file === "run" && operand ? bunRun(operand, dirs, read) : undefined;
+		if (file !== "run") return undefined;
+		// an option may take the next word as its value or pick another package
+		const at = words.findIndex((word, index) => index > 0 && !word.startsWith("-"));
+		if (at > 1)
+			return ask("bun run", "untracked-script", `the option \`${words[1]}\` before its script, which may change what runs`);
+		return at === 1 ? bunRun(words[1], dirs, read) : undefined;
 	}
 	return committed(file, dirs)
 		? undefined

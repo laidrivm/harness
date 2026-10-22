@@ -81,7 +81,10 @@ JSONC bun accepts, an unparseable one asking; the script's own command line is
 read as a command line, so a script that runs an untracked file or inline code
 asks as typing that line would (PR #100 review), and a script that runs itself
 is read once. Its `pre<name>` and `post<name>` scripts, which bun runs around
-it (probed on bun 1.4.2), are read the same way (PR #222 review).
+it (probed on bun 1.4.2), are read the same way (PR #222 review). An option
+before `run`'s script asks, as one before an interpreter's file does:
+`--filter check evil` runs `evil` in the packages `check` selects, and
+`--cwd` moves the `package.json` the script comes from (PR #222 review).
 The
 flags `-e`, `--eval`, `-p` and `--print` need no special case: a flag as the
 first argument is no subcommand and no file, so it asks. The constant carries

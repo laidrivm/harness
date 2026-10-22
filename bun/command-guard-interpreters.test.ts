@@ -207,6 +207,12 @@ describe("an interpreter given program text the guard cannot read", () => {
 		asks("bun run build", scripted(JSON.stringify({ scripts: { build: "true", [hook]: 'python3 -c "1"' } })));
 	});
 
+	// `--filter check evil` runs `evil` in the packages `check` selects
+	test.each(["bun run --filter check evil", "bun run --cwd x check", "bun run --bun check"])(
+		"%s asks: an option before the script may change what runs",
+		(line) => void asks(line),
+	);
+
 	test("a script that runs itself is read once, not without end", () => {
 		passes("bun run self", scripted(JSON.stringify({ scripts: { self: "true || bun run self" } })));
 	});
