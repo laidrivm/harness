@@ -153,6 +153,24 @@ describe("the runner image", () => {
 		expect(r.stderr.toString()).toContain("absent");
 	});
 
+	test("the entrypoint exits non-zero when the host key file is missing [38]", () => {
+		const dir = emptyDir("orchestrator-key-");
+		writeFileSync(join(dir, "pub"), "ssh-ed25519 AAAA engine\n");
+		const r = Bun.spawnSync(["sh", join(root, entry), "true"], { env: { PATH: process.env.PATH ?? "", PUBKEY_FILE: join(dir, "pub"), HOSTKEY_FILE: join(dir, "absent") } });
+		expect(r.exitCode).not.toBe(0);
+		expect(r.stderr.toString()).toContain("absent");
+	});
+
+	test("the engine checks the runner's host key against the pinned known_hosts, and the image bakes in none", () => {
+		const call = read("orchestrator/windmill/f/orchestrator/pass.sh");
+		expect(call).toContain("-o StrictHostKeyChecking=yes -o UserKnownHostsFile=/run/secrets/runner_known_hosts");
+		expect(call).not.toContain("StrictHostKeyChecking=no");
+		const services = composed().services as Record<string, { secrets?: string[] }>;
+		expect(services.windmill_worker_pass.secrets).toContain("runner_known_hosts");
+		expect(services.runner.secrets).toContain("runner_host_key");
+		expect(read(dockerfile)).not.toContain("ssh-keygen -A");
+	});
+
 	test("the image creates runner with a fixed uid and agent, and one sudoers rule naming /opt/orchestrator/as-agent [41]", () => {
 		const text = read(dockerfile);
 		expect(text).toMatch(/useradd[^\n]*--uid \d+[^\n]* runner\b/);
