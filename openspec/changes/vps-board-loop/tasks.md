@@ -196,7 +196,9 @@ after `runner-isolation` group 3, which edits this group's image and README.
       signals nothing and writes no stop file; another repository's running
       pass is left alone; a running fake pass gets TERM, the
       lock frees, and the stop file's last line is `stopped by hand`, so the
-      next tick prints the paused line. Skip without `flock`, as 1.1 does.
+      next tick prints the paused line; the stop file exists before TERM
+      is sent, so a tick that takes the lock the moment it frees pauses
+      too. Skip without `flock`, as 1.1 does.
       Cite each scenario
 - [ ] 3.4 Add `orchestrator/compose.yaml` with the services `db` (Postgres
       16), `windmill_server`, `windmill_worker_pass` (one replica,
@@ -206,7 +208,9 @@ after `runner-isolation` group 3, which edits this group's image and README.
       published port); and `cloudflared` (the tunnel token from its secret
       file). Find whether Windmill takes its database URL from a file; if
       not, build it in each service's `command` from the `db_password`
-      secret (`design.md` *Secrets*), never a `.env`. Record it there.
+      secret (`design.md` *Secrets*), never a `.env`, refusing a value
+      outside `[0-9a-f]`; 3.1 asserts that check is in each such
+      `command`. Record it there.
       Add `orchestrator/secrets` to `.gitignore` with no trailing slash. Verify with 3.1 and `docker
       compose config` where Docker is available
 - [ ] 3.5 Write `orchestrator/windmill/` by hand to the shape `wmill sync
@@ -223,7 +227,8 @@ after `runner-isolation` group 3, which edits this group's image and README.
       access*)
 - [ ] 3.7 Write `orchestrator/README.md`, opening with a level-1 heading. It
       holds the host requirements, the user acts in `proposal.md`'s order, the
-      `wmill sync` commands, the check of the three Notion tool names, what to
+      `wmill sync` commands, `db_password` made with `openssl rand -hex 32`,
+      the check of the three Notion tool names, what to
       read before removing a stop file, `stop.sh`, the laptop clients and
       their tokens' limits, and the emergency session: ssh as root, `claude
       auth login` once, start `claude` with Remote Control in the harness

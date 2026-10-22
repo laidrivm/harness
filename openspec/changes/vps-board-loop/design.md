@@ -217,10 +217,11 @@ step 1 does and finds the pass through a marker. `pass.sh`, once it holds
 the lock, writes its process group to `<lock>.pid` beside that
 repository's lock. `stop.sh` first tries the lock without waiting: if it
 gets it, no pass runs, so it removes any stale marker, prints `idle` and
-signals nothing. Otherwise it sends TERM to the marker's process group,
-waits for the lock to free and writes the stop file with
-the line `stopped by hand`, so the next tick pauses until the user removes
-it. The engine's forced-command key cannot reach it: that key runs
+signals nothing. Otherwise it writes the stop file with the line
+`stopped by hand` first, then sends TERM to the marker's process group and
+waits for the lock to free. In that order a tick that takes the freed lock
+reads the stop file at step 3's recheck and pauses until the user removes
+it; TERM ends the wrapper before its own step 6 could write one. The engine's forced-command key cannot reach it: that key runs
 `pass.sh` alone.
 
 ### Notion is the hosted MCP server
@@ -245,7 +246,10 @@ the host and is mounted at `/run/secrets/`. No secret goes through compose's
 database URL from that file is checked at task 3.4, and if they read only an
 environment value, each Windmill service's compose `command` builds
 `DATABASE_URL` from `/run/secrets/db_password` in a shell and then `exec`s
-the binary, so no `.env` or literal ever holds it. An SSH session does not inherit
+the binary, so no `.env` or literal ever holds it. The README generates
+`db_password` as 64 hex characters (`openssl rand -hex 32`), and that
+`command` refuses a value outside `[0-9a-f]`, since a raw `@`, `:`, `/`,
+`?`, `#` or `%` in a URL's userinfo is read as URL syntax. An SSH session does not inherit
 the container's environment anyway, so `pass.sh` reads the files itself. `gh`
 and git's credential helper (`gh auth setup-git`, run in the image) take
 `GH_TOKEN`. The engine's SSH key's private half lives only in a Windmill
