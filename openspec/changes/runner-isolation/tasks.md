@@ -73,7 +73,8 @@ Closes `orchestrator` §*The user's GitHub token reaches only the push*,
       GitHub token's reach* which run unauthenticated
 - [ ] 2.2 Write the failing cases: `pass.sh`'s pass environment holds no
       `GH_TOKEN`, holds the App's id and mint command when they are set, and
-      no key path; with the App's settings `pass.sh` starts the pass when
+      no key path; it sets `GH_CONFIG_DIR` to an empty directory the pass
+      owns, so a `gh` login written into the test's home is not found; with the App's settings `pass.sh` starts the pass when
       `gh_token` is absent and never opens it; `publish()` reads `HARNESS_GH_TOKEN_FILE` only for the
       push, the pull request and the check after it, and never with the App
       configured; `mint()` with `HARNESS_GITHUB_APP_MINT` runs that command and
@@ -98,7 +99,7 @@ failing login is reported*. Needs `vps-board-loop` group 3 merged.
       `env_keep` equals the session allowlist in `bun/board-loop-session.ts`;
       the mint helper and its repository list are root-owned under
       `/opt/orchestrator`; the remote-control script starts the server as
-      `runner`
+      `runner`; the image writes no `gh` hosts file into `runner`'s home
 - [ ] 3.2 Add to the image the key holder, the two sudoers rules, the
       launcher `orchestrator/as-agent` and the mint helper's copy, and to
       `orchestrator/README.md` the owner and mode of every secret file, the

@@ -142,7 +142,11 @@ push, the `gh pr create` and the check that reads the pull request after it,
 handing the value to those processes' environments alone. With the App
 configured `pass.sh` passes no path, and its secret check (`vps-board-loop`
 step 4) neither requires nor opens `gh_token`, so an App-only host holds no
-PAT file at all. Any other `gh` call in the pass runs unauthenticated; task
+PAT file at all. `pass.sh` also points `GH_CONFIG_DIR` at an empty directory
+the pass owns, since `gh` with no `GH_TOKEN` falls back to a login stored in
+`~/.config/gh/hosts.yml`, and one left in `runner`'s persistent home would
+hand the whole pass a token again; the provisioned home holds no such file
+either. Any other `gh` call in the pass therefore runs unauthenticated; task
 2.1 lists them.
 
 ### The key holder
