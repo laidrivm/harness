@@ -190,7 +190,9 @@ writing that answer into `tasks.md` as group N+1 and carrying that group, or,
 for an answer that asks for a change of its own or would not fit one step,
 filing an `idea` card, clearing `Assign`, adding no group and ending on
 `BLOCKED —`. The check names `apply demo` with N+1, so the second route
-reads `goal open`.
+reads `goal open`. Where the runner has a Notion integration, the line also
+names which comment the answer is, by the user's id and the integration's,
+since a card the triage answered has no `Assign`.
 
 A step whose branch already exists, in the clone or on `origin`, because a
 session ended before its pull request, changes only the first line too: the

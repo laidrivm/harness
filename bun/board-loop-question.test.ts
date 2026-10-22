@@ -217,8 +217,17 @@ describe("the triage's answer in the pick", () => {
 	test("settings: the pick prompt names the integration's id as the harness-answer author, Assign or not, the user's comment first [76] [77] [78] [79]", async () => {
 		const { dir } = clone();
 		const prompt = pick((await pass(dir, {}, configured())).calls);
-		for (const part of [`\`harness-answer\` whose author's id is ${BOT}`, "whether or not its `Assign` holds the user", `one by the user, whose id is ${USER}, also follows`, "in either order, the user's is the answer", "A `harness-answer` by any other author is no answer.", "that opens with neither `harness-question` nor `harness-answer`"])
+		for (const part of [`\`harness-answer\` whose author's id is ${BOT}`, "whether or not its `Assign` holds the user", `one by the user, whose id is ${USER}, opening with neither \`harness-question\` nor \`harness-answer\` also follows`, "in either order, the user's is the answer", "A `harness-answer` by any other author is no answer.", "that opens with neither `harness-question` nor `harness-answer`"])
 			expect(prompt).toContain(part);
+	});
+
+	// spec: task-board/the-user-after-the-triage
+	test("settings: an answer step's first line names which comment is the answer, by both ids, with no apostrophe [85]", async () => {
+		const { dir } = clone(change("demo", TICKED));
+		const first = stage((await pass(dir, {}, configured())).calls)[0];
+		for (const part of [`the first comment by the user, whose id is ${USER}, opening with neither`, `or else the \`harness-answer\` by ${BOT}`])
+			expect(first).toContain(part);
+		expect(first.slice(first.indexOf("(after"), first.indexOf(") into"))).not.toContain("'");
 	});
 
 	// spec: task-board/a-harness-answer-from-another-author
