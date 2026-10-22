@@ -25,6 +25,8 @@ function stand() {
 	const h = { root, home: join(root, "home"), clones: join(root, "clones"), secrets: join(root, "secrets"), gh: join(root, "gh"), bin: join(root, "bin"), hooks: join(root, "hooks") };
 	for (const dir of [h.home, h.clones, h.secrets, h.gh, h.bin, h.hooks]) mkdirSync(dir);
 	for (const file of ["claude_oauth_token", "gh_token"]) writeFileSync(join(h.secrets, file), "throwaway\n");
+	// In the runner's own config, since `pass.sh` drops every `GIT_*` it inherits.
+	writeFileSync(join(h.home, ".gitconfig"), `[url "${h.gh}/"]\n\tinsteadOf = https://github.com/\n`);
 	// Locking is `pass.sh`'s own tests' subject; these stand it in, so they also run where no `flock` is.
 	const stub = (name: string, body: string) => {
 		writeFileSync(join(h.bin, name), `#!/bin/sh\n${body}\n`);
@@ -70,14 +72,11 @@ const env = (h: Stand) => ({
 	PASS_SECRETS: h.secrets,
 	PASS_AS_AGENT: join(h.bin, "as-agent"),
 	PASS_HOOKS: h.hooks,
-	GIT_CONFIG_COUNT: "1",
-	GIT_CONFIG_KEY_0: `url.${h.gh}/.insteadOf`,
-	GIT_CONFIG_VALUE_0: "https://github.com/",
 });
 
 /** One tick for `clone`, which the engine's job says holds `named`; `null` names no repository. */
-function tick(h: Stand, clone = "repo", named: string | null = "owner/repo") {
-	const p = Bun.spawnSync([bash, script, clone, ...(named === null ? [] : [named])], { cwd: h.root, env: env(h) });
+function tick(h: Stand, clone = "repo", named: string | null = "owner/repo", extra: Record<string, string> = {}) {
+	const p = Bun.spawnSync([bash, script, clone, ...(named === null ? [] : [named])], { cwd: h.root, env: { ...env(h), ...extra } });
 	const out = p.stdout.toString();
 	const first = out.split("\n")[0];
 	return { code: p.exitCode, out, ran: first.startsWith("{") ? JSON.parse(first) : undefined };
@@ -245,6 +244,16 @@ describe("the runner's clones are reset each pass", () => {
 		expect(Bun.spawnSync(["git", "config", "--get", "remote.origin.url"], { cwd: push }).stdout.toString().trim()).toBe(
 			"https://github.com/owner/repo.git",
 		);
+	});
+
+	test("git configuration in the pass's environment never reaches the runner's clones", () => {
+		const h = stand();
+		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		const elsewhere = join(h.root, "elsewhere");
+		plant(join(elsewhere, "x"), "post-checkout", join(h.root, "hooked"));
+		const hooks = { GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "core.hooksPath", GIT_CONFIG_VALUE_0: join(elsewhere, "x/.git/hooks") };
+		expect(tick(h, "repo", "owner/repo", hooks).ran.version).toBe("one");
+		expect(existsSync(join(h.root, "hooked"))).toBe(false);
 	});
 
 	test("a clone it cannot reset stops the pass, naming the clone", () => {

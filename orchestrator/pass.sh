@@ -33,6 +33,9 @@ name=${1-}
 named=${2-}
 dir=$clones/$name
 stop=$state/$name.stop
+# Git reads `GIT_DIR`, `GIT_CONFIG_*` and the rest over any clone's own config, so the
+# reset below holds only when none is inherited; the runner's ~/.gitconfig still applies.
+unset "${!GIT_@}"
 
 # Writes the stop file: the UTC time, the status and the last line.
 pause() {
