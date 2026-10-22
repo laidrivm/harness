@@ -57,10 +57,29 @@ that commit into the harness clone from the harness's own remote, and checks
 the clone out detached at it, forced and cleaned. A part that is not exactly
 40 lowercase hex characters, or a commit the fetch does not bring, starts no
 pass and is named in the stop file.
-`pass.sh` creates either clone the first time it is missing, fetches from the
-remote the pin names (`https://github.com/<owner>/<repo>.git`), and leaves
-the push clone detached at `origin/main`, where the board loop reads the board
-state the session's clone fast-forwards to.
+`pass.sh` creates either clone the first time it is missing, with `git init`
+and an empty `--template`, and fetches the push clone from
+`https://github.com/<owner>/<repo>.git` and the harness clone from the remote
+the pin names. It leaves the push clone detached at `origin/main`, where the
+board loop reads the board state the session's clone fast-forwards to.
+
+### The repository is the job's, never the clone's (group 2)
+
+`<owner>/<repo>` is the second argument the engine's job hands `pass.sh`
+(`pass.sh <clone> <owner>/<repo>`), set where the user defines the job, which
+no session reaches. On the host, launcher mode refuses a tick without it
+(exit 2, as a bad clone name) before it reads anything of the session's
+clone. The session's clone's `origin` is still read, through the launcher,
+and must name the same repository, case-blind, on `github.com`, where the
+push clone fetches and publishes; one that names another repository or
+host pauses the pass, naming it, before any runner clone is made or fetched.
+The lock key, both runner clones' paths and the push clone's remote all come
+from the job's name. The laptop, with no launcher, keeps reading the
+repository from its own clone's `origin`.
+
+A root-owned list of clone → repository beside the launcher was the
+alternative. Rejected: it is a second place to keep in step with the job,
+and the job already names its clone.
 The board loop, the goal check and `github-app.ts` import only `node:` and
 `bun:` modules, so the checkout needs no install. The judge copy is that
 checkout's `goal-check.ts`.
@@ -85,7 +104,8 @@ user-bound names among them would still carry `runner`'s values, so the
 launcher sets `HOME`, `USER` and `LOGNAME` to `agent`'s and unsets
 `CLAUDE_CONFIG_DIR`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME` and `XDG_CACHE_HOME`
 before it executes: `claude` and the trust check below then read `agent`'s own
-configuration. `XDG_STATE_HOME` passes, since the pass sets it to `agent`'s.
+configuration. `XDG_STATE_HOME` passes; the pass sets none (*The push*), so
+the session's ledger is `agent`'s default.
 
 The board loop runs with the push clone as its working directory and names
 the session's clone in `HARNESS_CLONE`. Every bun process the runner starts
@@ -116,10 +136,17 @@ the checkout's top level, and the record was made in the session's clone, so
 with `HARNESS_CLONE` set it matches the top level against that clone's path
 instead; the SHA is the same, since a bundle keeps it. The record sits in
 `agent`'s ledger, which `gate-ledger.ts` keeps 0600 in a 0700 directory, so
-the pass sets the session's `XDG_STATE_HOME` to `/home/agent/.local/state`
-(`env -i` drops it otherwise) and the goal check reads that ledger through
-the launcher as `agent`, never as `runner`. It still refuses a tip
-without a passing record. Only then does the runner push the SHA it checked.
+the goal check reads that ledger through the launcher as `agent`, never as
+`runner`, resolving the state directory in `agent`'s shell by
+`stateDir()`'s rule, and takes the clone's top level as `agent`'s `pwd -P`
+there. The pass sets no `XDG_STATE_HOME` (`env -i`), so the launcher's
+`HOME` alone places the session's ledger and the check's read of it; group 2
+dropped the fixed `/home/agent/.local/state` this paragraph first named, a
+host path that would hold the same file. It still refuses a tip
+without a passing record, the pre-push check and the full one after the push
+alike. Only then does the runner push the SHA it checked. The bundle goes to
+the runner over the launcher's stdout, into a file of the runner's, so
+`agent` needs no directory the runner reads.
 
 The push clone is created with an empty `--template` and its
 `core.hooksPath` set to an empty root-owned directory, so no hook runs.
@@ -231,15 +258,16 @@ that index, instead of setting the count to 1. This removes its `shortcut:`.
   are, so before any runner-side git command each pass rewrites both
   clones' `.git/config` to the values `pass.sh` sets at creation (the
   remote, `core.hooksPath` at the empty root-owned directory) and empties
-  `.git/hooks`; it stops
-  naming the clone if either cannot be reset. The group that adds the
-  bundle push carries the task and its case.
-- [`pass.sh` takes the owner and repository from `remote.origin.url` in the
+  `.git/hooks`, with every `GIT_*` variable it inherited unset first, since
+  one such as `GIT_CONFIG_COUNT` outranks a clone's config; it stops
+  naming the clone if either cannot be reset, and stops when the hooks
+  directory (`PASS_HOOKS`, `/opt/orchestrator/hooks`) is missing or not
+  empty. Group 2 does this.
+- [`pass.sh` took the owner and repository from `remote.origin.url` in the
   session's clone, which `agent` writes, so a session could point the next
   pass's push clone and harness pin at a repository of its own.] → Group 2
-  takes them from a value `runner` owns instead — the repository the engine's
-  job names — and refuses a session clone whose origin names another. Until
-  then launcher mode stays unset, as it is until group 5.
+  takes them from the repository the engine's job names (*The repository is
+  the job's*) and pauses on a session clone whose origin names another.
 - [The mint helper moves only when the image is rebuilt.] → Its pin note says
   so, as every image pin's does.
 - [Two lists of variable names, in the code and in sudoers.] → The test above.

@@ -212,4 +212,6 @@ not age with the code.
 - Never run an act the command guard or a permission entry refuses or asks
   about — a commit, a push, a `gh` write, a package command, an edit to a gated
   file — through an interpreter (`python3 -c`, `bun -e`, `node -e`) or a
-  throwaway script; both read only the call's own words, so the act walks past.
+  throwaway script, committed or not; the guard refuses only the program text
+  it cannot read, so a committed script carrying the act reads to both checks
+  as an ordinary call and walks past.

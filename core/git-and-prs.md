@@ -122,7 +122,12 @@ they route through `CLAUDE.md`'s fix & capture loop like every other rule.
 
 - Never bypass a git hook with `--no-verify`, `SKIP_SIMPLE_GIT_HOOKS` or a
   `core.hooksPath` override; run it or ask (unattended: user — report the
-  hook's failure as `BLOCKED`, and never ask to bypass it).
+  hook's failure as `BLOCKED`, and never ask to bypass it). The one
+  exception: the board loop's runner on the host pushes from its own push
+  clone, whose `core.hooksPath` names an empty directory, a commit whose
+  passing pre-PR record names its SHA — the tests ran as the session user
+  before the push, and a hook there would run the branch's code as the
+  runner, beside its tokens.
 - Never chain a commit onto a check in one command — the check runs, prints,
   and does not stop it; read its result first.
 - Treat an edit to the `simple-git-hooks` *block* in `package.json` as a gate

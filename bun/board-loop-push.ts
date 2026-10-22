@@ -6,8 +6,12 @@
  * otherwise, and only for a step that is ready — the before-push goal check
  * met, run from the judge copy, `HEAD` on the step's branch, and a title and a
  * body named in the session's final message. Just before the push it records
- * the step's session in the PR → session table (`pr-sessions.ts`).
+ * the step's session in the PR → session table (`pr-sessions.ts`). On the host
+ * it pushes from its own push clone, never the session's.
  */
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { type App, credentials, mint, repository } from "./github-app.ts";
 import { append, table } from "./pr-sessions.ts";
 
@@ -51,11 +55,46 @@ export function named(said: string): { title: string; body: string } | string {
 }
 
 /**
+ * On the host: takes `branch` from the session's clone into the push clone the
+ * pass runs in, as a bundle the session user writes, which carries objects and
+ * refs and never config or hooks, and checks it out there at the bundle's tip.
+ * `under` is the launcher's words and the session's clone. The push clone
+ * fetches `origin` first, so a `base` that moved during the session is there
+ * for the bundle's prerequisite. Undefined once `HEAD` names `branch` at the
+ * tip; otherwise why nothing was pushed.
+ */
+export function carry(under: string[], branch: string, base: string): string | undefined {
+	const dir = mkdtempSync(join(tmpdir(), "board-loop-bundle-"));
+	try {
+		const file = join(dir, "step.bundle");
+		// On stdout, into the runner's own file: the session user needs no directory the runner reads.
+		const made = Bun.spawnSync([...under, "git", "bundle", "create", "-", `refs/heads/${branch}`, `^refs/remotes/origin/${base}`]);
+		if (made.exitCode !== 0) return `the session's clone could not bundle ${branch}; nothing was pushed`;
+		writeFileSync(file, made.stdout);
+		for (const [what, ...from] of [["origin", "origin"], ["the bundle", file, `refs/heads/${branch}`]]) {
+			const run = sh("git", "fetch", "-q", ...from);
+			if (run.ok) continue;
+			console.error(run.err);
+			return `the push clone could not fetch ${what}; nothing was pushed`;
+		}
+		const tip = sh("git", "rev-parse", "--verify", "-q", "FETCH_HEAD^{commit}").out;
+		if (!tip || !sh("git", "checkout", "-qf", "-B", branch, tip).ok)
+			return `the push clone could not check out ${branch} at the bundle's tip; nothing was pushed`;
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
+/**
  * Pushes `branch` and opens its pull request against `base`, or says why not.
  * `check` is the goal check's call, which runs here with `--before-push`.
  * `carried` names the stage session and the clone it ran in, for the table.
  * Undefined once the push went through, so the full check decides, a pull
  * request already at `HEAD` included; otherwise the reason the pass is `open`.
+ * `under`, on the host, makes it `carry` the branch into the push clone first.
+ * There the push runs no hook, the one exception `git-and-prs.md`'s hook rule
+ * makes: the push clone's hooks are an empty directory, and the before-push
+ * check found the session's passing pre-PR record of this SHA.
  */
 export async function publish(
 	said: string,
@@ -64,7 +103,10 @@ export async function publish(
 	base: string,
 	carried: { session: string; clone: string },
 	app?: App,
+	under: string[] = [],
 ) {
+	const carriedOver = under.length ? carry(under, branch, base) : undefined;
+	if (carriedOver !== undefined) return carriedOver;
 	const before = sh("bun", ...check, "--before-push");
 	const last = before.out.split("\n").at(-1) ?? "";
 	if (!last.startsWith("goal met")) return last || before.err || "the before-push check printed nothing";
