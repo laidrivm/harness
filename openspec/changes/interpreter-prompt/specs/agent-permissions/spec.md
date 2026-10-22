@@ -32,11 +32,12 @@ SHALL be asked about unless one of the following holds:
   elsewhere under `node_modules/`;
 - it is `bun` and its first argument is a subcommand that the installed
   `bun --help` lists, or an alias that help names, other than `exec`, `repl`
-  and `create` with its alias `c`, which run code handed to them. `run` given
-  an operand that is an existing file applies the rule above to that file.
-  `run` given a script name applies it to the `package.json` the script is
-  read from, and reads the script's command line as a command line, so a
-  script that runs an untracked file or inline code asks as typing it would.
+  and `create` with its alias `c`, which run code handed to them. `run`
+  resolves its operand as bun does: a script of the nearest `package.json`
+  first, even over a same-name file or directory, which applies the rule above
+  to that `package.json` and reads the script's command line as a command
+  line, so a script that runs an untracked file or inline code asks as typing
+  it would; else a regular file, to which it applies the rule above.
 
 The resolution of uncertainty goes towards asking. A path the guard cannot
 resolve statically, such as one carrying `$`, behind an unresolvable `cd` or

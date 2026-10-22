@@ -171,6 +171,40 @@ describe("an interpreter given program text the guard cannot read", () => {
 		git(bare, "commit", "-m", "a");
 		asks("bun run check", bare);
 	});
+
+	/** A checkout whose committed `package.json` is `manifest`, plus `extra`. */
+	function scripted(manifest: string, extra: (dir: string) => void = () => {}) {
+		const { dir } = checkout();
+		writeFileSync(join(dir, "package.json"), manifest);
+		extra(dir);
+		git(dir, "add", ".");
+		git(dir, "commit", "-m", "scripts");
+		return dir;
+	}
+
+	// bun runs a package script before a same-name file or directory
+	test("a script shadowing a committed file or directory is still read", () => {
+		const dir = scripted(
+			JSON.stringify({ scripts: { build: 'python3 -c "1"', "pre.ts": 'python3 -c "1"' } }),
+			(dir) => {
+				mkdirSync(join(dir, "build"));
+				writeFileSync(join(dir, "build/a"), "1\n");
+			},
+		);
+		asks("bun run build", dir);
+		asks("bun run pre.ts", dir);
+	});
+
+	test("a JSONC package.json has its script read", () => {
+		const dir = scripted('{\n // note\n "scripts": { "check": "bun pre.ts", },\n}\n');
+		passes("bun run check", dir);
+		const bad = scripted('{\n "scripts": { "check": "bun pre.ts",\n');
+		asks("bun run check", bad);
+	});
+
+	test("a script that runs itself is read once, not without end", () => {
+		passes("bun run self", scripted(JSON.stringify({ scripts: { self: "true || bun run self" } })));
+	});
 });
 
 describe("the controls, which pass before and after", () => {

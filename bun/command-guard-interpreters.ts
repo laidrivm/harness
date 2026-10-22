@@ -10,7 +10,7 @@
  * ledger id are the guard's.
  */
 
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { shellWords } from "./command-guard-exec.ts";
 import { OPEN_REDIRECTION, place, SHELLS } from "./command-words.ts";
@@ -80,25 +80,49 @@ function manifest(from: string): string | null {
 	}
 }
 
+/** The scripts of `file`, read as the JSONC bun accepts, or `null` when unreadable. */
+function scripts(file: string): Record<string, unknown> | null {
+	try {
+		return (Bun.JSONC.parse(readFileSync(file, "utf8")) as { scripts?: Record<string, unknown> })?.scripts ?? {};
+	} catch {
+		return null;
+	}
+}
+
+/** The scripts being read, so a script that runs itself is read once. */
+const reading = new Set<string>();
+
 /**
- * `bun run <operand>`: a file the file rule decides, else a script of the
- * `package.json` it is read from, which must itself be committed and whose
- * command line `read` checks as the guard checks a typed line.
+ * `bun run <operand>` from each directory the line may run in: bun runs a
+ * script of the nearest `package.json` before a same-name file, so a script
+ * is read first — its `package.json` must be committed, and `read` checks its
+ * command line as the guard checks a typed line. Otherwise the operand must
+ * be a regular file the file rule passes.
  */
 function bunRun(operand: string, dirs: Set<string | null>, read: (line: string) => void): Ask | undefined {
-	const files = [...dirs].map((from) => place(from, operand));
-	if (files.some((file) => file !== null && existsSync(file)))
-		return committed(operand, dirs)
-			? undefined
-			: ask("bun run", "untracked-script", "a file the repository does not hold as committed");
+	const none = ask("bun run", "untracked-script", `\`${operand}\`, which no committed package.json names as a script`);
 	for (const from of dirs) {
-		const file = from === null ? null : manifest(from);
-		const script = file && committed(file, new Set([from]))
-			? JSON.parse(readFileSync(file, "utf8"))?.scripts?.[operand]
-			: undefined;
-		if (typeof script !== "string")
-			return ask("bun run", "untracked-script", `\`${operand}\`, which no committed package.json names as a script`);
-		read(script);
+		if (from === null) return none;
+		const file = manifest(from);
+		const found = file === null ? {} : scripts(file);
+		if (found === null) return none;
+		const script = found[operand];
+		if (typeof script === "string") {
+			if (!committed(file as string, new Set([from]))) return none;
+			const key = `${file}\0${operand}`;
+			if (reading.has(key)) continue;
+			reading.add(key);
+			try {
+				read(script);
+			} finally {
+				reading.delete(key);
+			}
+			continue;
+		}
+		const at = place(from, operand);
+		if (at === null || !existsSync(at) || !statSync(at).isFile()) return none;
+		if (!committed(operand, new Set([from])))
+			return ask("bun run", "untracked-script", "a file the repository does not hold as committed");
 	}
 	return undefined;
 }

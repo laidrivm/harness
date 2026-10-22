@@ -71,12 +71,16 @@ name in the tree. Only an interpreter given a file pays for the git reads.
 Of the subcommands bun 1.4.2's `--help` lists, three run code handed to them,
 so they ask: `exec` (a shell script as text), `repl`, and `create`/`c` (a
 template fetched and run). `x` is exempt here, because the `bunx` check
-decides it. `run` hands its operand to the file rule when that operand is an
-existing file. Otherwise it names a `package.json` script, which is exempt only
-as far as the tree vouches for it: the `package.json` it is read from is held
-to the file rule (tracked, no uncommitted or staged edit, else ask), and the
-script's own command line is read as a command line, so a script that runs an
-untracked file or inline code asks as typing that line would (PR #100 review).
+decides it. `run` resolves its operand as bun does, from each directory the
+line may run in: a script of the nearest `package.json` first, even over a
+same-name file or directory (probed on bun 1.4.2, PR #222 review), else a
+regular file, which the file rule decides. A script is exempt only as far as
+the tree vouches for it: the `package.json` it is read from is held to the
+file rule (tracked, no uncommitted or staged edit, else ask) and parsed as the
+JSONC bun accepts, an unparseable one asking; the script's own command line is
+read as a command line, so a script that runs an untracked file or inline code
+asks as typing that line would (PR #100 review), and a script that runs itself
+is read once.
 The
 flags `-e`, `--eval`, `-p` and `--print` need no special case: a flag as the
 first argument is no subcommand and no file, so it asks. The constant carries
