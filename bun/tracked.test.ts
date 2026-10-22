@@ -113,6 +113,8 @@ const OWN_LISTING: Record<string, string> = {
 	"bun/tracked.test.ts": "fabricates repositories, and holds the pattern below",
 	"bun/check.ts":
 		"lists one directory with `-s`, for the mode the sweep does not return",
+	"bun/command-guard-interpreters.ts":
+		"asks with `--error-unmatch` whether one named file is tracked",
 	"bun/flake-watch.ts":
 		"lists untracked files to fingerprint the tree, and the sweep reads tracked files only",
 	"bun/repo-layout.test.ts":
