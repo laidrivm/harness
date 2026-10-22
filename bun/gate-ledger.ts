@@ -50,19 +50,22 @@ export function ledgerFile(): string {
  * worktree nested there, measured against its own base refs. A ledger that
  * cannot be read, or a torn line, holds none. Given `decision`, only a run
  * that ended so counts: the goal check asks for a pass, the turn gate for any.
+ * `ledger` is another user's ledger as read for the caller, in place of this one's.
  */
 export function ran(
 	commit: string,
 	top: string | undefined,
 	decision?: string,
+	ledger?: string,
 ): boolean {
 	if (!top) return false;
-	let text = "";
-	try {
-		text = readFileSync(ledgerFile(), "utf8");
-	} catch {
-		return false;
-	}
+	let text = ledger ?? "";
+	if (ledger === undefined)
+		try {
+			text = readFileSync(ledgerFile(), "utf8");
+		} catch {
+			return false;
+		}
 	return text.split("\n").some((line) => {
 		try {
 			const parsed = JSON.parse(line) ?? {};

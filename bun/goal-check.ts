@@ -86,8 +86,19 @@ if (stage === "archive") {
 	if (!moved) missing.push(`no ${archive}<date>-${change}/ in HEAD`);
 }
 
-if (!ran(commit, top, "pass"))
-	missing.push(`no passing pre-PR run record for ${short}`);
+// On the host the record is the session's: made in its clone, in `agent`'s 0600 ledger, which only
+// the launcher reads. The runner's own ledger and checkout never stand in for them.
+const launcher = process.env.HARNESS_AS_AGENT?.split(" ").filter(Boolean) ?? [];
+const agent = (...cmd: string[]) => {
+	const run = Bun.spawnSync([...launcher, process.env.HARNESS_CLONE ?? "", ...cmd]);
+	return run.exitCode === 0 ? run.stdout.toString() : undefined;
+};
+// `stateDir()`'s rule, in the session user's shell, so it reads that user's environment.
+const AGENT_LEDGER = 'd=${XDG_STATE_HOME-}; case $d in /*) ;; *) d=$HOME/.local/state ;; esac; cat "$d/harness/gates.jsonl"';
+const recorded = launcher.length
+	? ran(commit, agent("pwd", "-P")?.trim(), "pass", agent("sh", "-c", AGENT_LEDGER) ?? "")
+	: ran(commit, top, "pass");
+if (!recorded) missing.push(`no passing pre-PR run record for ${short}`);
 
 const branch = git("symbolic-ref", "--short", "-q", "HEAD");
 // Before the push the launcher pushes and opens, so only the branch it pushes is asked for.

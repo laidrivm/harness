@@ -50,7 +50,7 @@ checkout* and §*The runner runs nothing in a session's clone as itself*.
 Closes `orchestrator` §*The runner pushes from its own push clone, a commit
 whose tests passed*.
 
-- [ ] 2.1 Write the failing cases in `bun/board-loop-isolation.test.ts`: a
+- [x] 2.1 Write the failing cases in `bun/board-loop-isolation.test.ts`: a
       bundle whose prerequisite is newer than the push clone's `origin/main`
       imports after the push clone's fetch; the push comes from the push
       clone, after the bundle's fetch, for exactly the bundle's tip; a tip
@@ -58,14 +58,16 @@ whose tests passed*.
       the push clone, `HEAD` names the step branch at the bundle's tip
       before the goal check, and the goal check finds the record the
       session's clone made of that tip, written as `agent` in its 0600
-      ledger and read through the launcher
-- [ ] 2.2 Add the bundle and push-clone steps to `bun/board-loop-push.ts`,
+      ledger and read through the launcher (those two in
+      `bun/goal-check.test.ts`, which runs the check itself)
+- [x] 2.2 Add the bundle and push-clone steps to `bun/board-loop-push.ts`,
       the record's top level from `HARNESS_CLONE` and the ledger read through
       the launcher to `bun/goal-check.ts` — for the pre-push check and the
       final one alike, so in launcher mode neither misses the session's
-      record — and the session's fixed `XDG_STATE_HOME`. Verify with 2.1 and
+      record. The pass sets no `XDG_STATE_HOME`, so the launcher's `HOME`
+      places the ledger (`design.md` *The push*). Verify with 2.1 and
       `bun test`
-- [ ] 2.3 Add to `core/git-and-prs.md`'s hook rule its one exception, the
+- [x] 2.3 Add to `core/git-and-prs.md`'s hook rule its one exception, the
       runner's push from its push clone on the host for a commit whose pre-PR
       record names its SHA, and say the same beside `publish()`. Verify by
       reading both back and running `bun test bun/review-docs.test.ts`

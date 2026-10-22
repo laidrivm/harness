@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { chmodSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git, repo } from "./diff-budget.fixture.ts";
 import {
@@ -241,5 +241,48 @@ describe("the before-push form", () => {
 		const r = run(tasks(TWO), ["apply", "demo", "2"], { gh: prs() });
 		expect([r.code, r.last]).toEqual([1, expect.stringContaining("no open or merged pull request for feature")]);
 		expect(r.last).not.toContain("before the push");
+	});
+});
+
+/** On the host: the runner's push clone at the tip, the record in the session user's ledger. */
+describe("with a launcher", () => {
+	/** A launcher that enters the clone it is handed, as `agent` with `agent`'s state directory, and logs each call. */
+	function launcher(state: string) {
+		const bin = emptyDir("goal-check-launcher-");
+		const log = join(bin, "log");
+		writeFileSync(
+			join(bin, "as-agent"),
+			`#!/bin/sh\necho "$*" >> '${log}'\ncd "$1" || exit 1\nshift\nexport XDG_STATE_HOME='${state}' PATH="$PATH:/usr/bin:/bin"\nexec "$@"\n`,
+		);
+		chmodSync(join(bin, "as-agent"), 0o755);
+		return { path: join(bin, "as-agent"), log };
+	}
+
+	// spec: orchestrator/a-commit-with-a-passing-pre-pr-record
+	test.each([
+		["before the push", ["apply", "demo", "2", "--before-push"], null],
+		["after it", ["apply", "demo", "2"], undefined],
+	])("%s, the session's clone's record of the tip, read through the launcher, is met", (_, args, gh) => {
+		const push = tasks(TWO);
+		const session = realpathSync(emptyDir("goal-check-session-"));
+		const as = launcher(stateWith({ ...runRecord(push), project: session }));
+		const env = { HARNESS_AS_AGENT: as.path, HARNESS_CLONE: session };
+		// The runner's own ledger holds the push clone's record, which must not count.
+		const r = run(push, args, { gh, env, state: stateWith(runRecord(push)) });
+		expect([r.code, r.last]).toEqual([0, expect.stringMatching(/^goal met: /)]);
+		expect(readFileSync(as.log, "utf8")).toContain(`${session} `);
+	});
+
+	// spec: orchestrator/a-commit-with-no-pre-pr-record
+	test("a record of the push clone in the runner's own ledger does not count", () => {
+		const push = tasks(TWO);
+		const session = realpathSync(emptyDir("goal-check-session-"));
+		const as = launcher(stateWith());
+		const r = run(push, ["apply", "demo", "2", "--before-push"], {
+			gh: null,
+			env: { HARNESS_AS_AGENT: as.path, HARNESS_CLONE: session },
+			state: stateWith(runRecord(push)),
+		});
+		expect([r.code, r.last]).toEqual([1, expect.stringContaining("no passing pre-PR run record for")]);
 	});
 });
