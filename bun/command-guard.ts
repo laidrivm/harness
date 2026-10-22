@@ -287,5 +287,10 @@ function checkPush(args: string[], targets: (string | null)[]): void {
 check(command);
 
 // Only once the whole line is read, so a git block anywhere keeps its own id.
+// One literal call per id, so each id is found where it is blocked; the last
+// takes the remaining member of `Refusal["id"]`.
 const [head] = refusals;
-if (head) block(head.id, refusals.map((one) => one.reason).join(" "));
+const why = refusals.map((one) => one.reason).join(" ");
+if (head?.id === "inline-code") block("inline-code", why);
+if (head?.id === "stdin-code") block("stdin-code", why);
+if (head) block("untracked-script", why);

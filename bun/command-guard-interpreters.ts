@@ -15,7 +15,7 @@ import { dirname, join, relative } from "node:path";
 import { shellWords } from "./command-guard-exec.ts";
 import { OPEN_REDIRECTION, place, SHELLS } from "./command-words.ts";
 
-export type Refusal = { id: string; reason: string };
+export type Refusal = { id: "inline-code" | "stdin-code" | "untracked-script"; reason: string };
 
 /**
  * `bun`'s subcommands and the aliases its help names, read from bun 1.4.2's
@@ -39,7 +39,7 @@ const args = (rest: string[]) =>
 			!/^[0-9]*[<>]/.test(word) && !OPEN_REDIRECTION.test(rest[at - 1] ?? ""),
 	);
 
-const refuse = (name: string, id: string, what: string): Refusal => ({
+const refuse = (name: string, id: Refusal["id"], what: string): Refusal => ({
 	id,
 	reason: `command-guard: \`${name}\` is given ${what}, so the guard cannot read the program it runs and refuses it — a local \`allow\` rule would silence a prompt. To run it, commit the script and run it by its path.`,
 });
