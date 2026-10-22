@@ -7,11 +7,11 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { BUN_SUBCOMMANDS, interpreter } from "./command-guard-interpreters.ts";
+import { interpreter } from "./command-guard-interpreters.ts";
 import { cleanup, event, fabricate, git, run } from "./command-guard.fixture.ts";
 
 /**
- * What `command-guard.ts` asks about of an interpreter given program text it
+ * What `command-guard.ts` refuses of an interpreter given program text it
  * cannot read (interpreter-prompt). Numbers are the proposal's /zombies items.
  * Every line here is a string the guard reads; none of them is ever run.
  */
@@ -69,14 +69,12 @@ function answer(command: string, dir = base.dir) {
 	return { ...result, records };
 }
 
-function asks(command: string, dir = base.dir) {
-	const { code, out, records } = answer(command, dir);
-	expect(code).toBe(0);
-	const decision = JSON.parse(out).hookSpecificOutput;
-	expect(decision.hookEventName).toBe("PreToolUse");
-	expect(decision.permissionDecision).toBe("ask");
-	expect(records.map((r) => r.decision)).toEqual(["ask"]);
-	return decision.permissionDecisionReason as string;
+function refused(command: string, dir = base.dir) {
+	const { code, out, reason, records } = answer(command, dir);
+	expect({ code, out }).toEqual({ code: 2, out: "" });
+	expect(reason).toContain("commit the script and run it by its path");
+	expect(records.map((r) => r.decision)).toEqual(["block"]);
+	return reason;
 }
 
 function passes(command: string, dir = base.dir) {
@@ -99,15 +97,15 @@ describe("an interpreter given program text the guard cannot read", () => {
 		'php -r "1;"',
 		'deno eval "1"',
 		"python3 -v",
-	])("%s asks, naming the interpreter [1, 3]", (line) => {
+	])("%s is refused, naming the interpreter [1, 3]", (line) => {
 		const name = (line.split(" ")[0] ?? "").split("/").pop() ?? "";
-		expect(asks(line)).toContain(`\`${name}\``);
+		expect(refused(line)).toContain(`\`${name}\``);
 	});
 
 	// spec: agent-permissions/inline-code-behind-a-wrapper
 	test.each(['env FOO=1 python3 -c "print(1)"', 'command node -e "1"'])(
-		"%s asks as it does unwrapped [7]",
-		(line) => void asks(line),
+		"%s is refused as it is unwrapped [7]",
+		(line) => void refused(line),
 	);
 
 	// spec: agent-permissions/code-on-standard-input
@@ -117,7 +115,7 @@ describe("an interpreter given program text the guard cannot read", () => {
 		"node -",
 		"bun -",
 		"node",
-	])("%s asks [9]", (line) => void asks(line));
+	])("%s is refused [9]", (line) => void refused(line));
 
 	// spec: agent-permissions/a-throwaway-script
 	test.each([
@@ -128,59 +126,59 @@ describe("an interpreter given program text the guard cannot read", () => {
 		"bun node_modules/.cache/x.ts",
 		"bun link.ts",
 		"bun node_modules/harness/out.ts",
-	])("%s asks [10, 14, 15, 16]", (line) => void asks(line));
+	])("%s is refused [10, 14, 15, 16]", (line) => void refused(line));
 
-	test("a tracked script with an uncommitted or a staged edit asks [10]", () => {
+	test("a tracked script with an uncommitted or a staged edit is refused [10]", () => {
 		const { dir } = checkout();
 		writeFileSync(join(dir, "run.py"), "2\n");
-		asks("python3 run.py", dir);
+		refused("python3 run.py", dir);
 		git(dir, "add", "run.py");
-		asks("python3 run.py", dir);
+		refused("python3 run.py", dir);
 	});
 
 	// node runs a directory's untracked index.js; git's checks pass the tracked directory
-	test("a tracked directory holding an untracked file asks [10]", () => {
+	test("a tracked directory holding an untracked file is refused [10]", () => {
 		const { dir } = checkout();
 		mkdirSync(join(dir, "src"));
 		writeFileSync(join(dir, "src/a.js"), "1\n");
 		git(dir, "add", "src");
 		git(dir, "commit", "-m", "src");
 		writeFileSync(join(dir, "src/index.js"), "1\n");
-		asks("node src", dir);
+		refused("node src", dir);
 	});
 
 	// spec: agent-permissions/a-path-the-guard-cannot-resolve
 	test.each(['bun "$SCRATCH/x.ts"', "cd $(mktemp -d) && bun pre.ts"])(
-		"%s asks [18, 19]",
-		(line) => void asks(line),
+		"%s is refused [18, 19]",
+		(line) => void refused(line),
 	);
 
-	test("a file outside any work tree asks [20]", () => {
-		asks(`bun ${base.scratch}/x.ts`, base.scratch);
+	test("a file outside any work tree is refused [20]", () => {
+		refused(`bun ${base.scratch}/x.ts`, base.scratch);
 	});
 
 	// spec: agent-permissions/a-bun-subcommand-that-runs-code-handed-to-it
 	test.each(['bun exec "git push --force"', "bun repl", "bun create x", "bun c x", "bun run /tmp/x.ts"])(
-		"%s asks [21]",
-		(line) => void asks(line),
+		"%s is refused [21]",
+		(line) => void refused(line),
 	);
 
 	// spec: agent-permissions/a-package-script-the-tree-does-not-vouch-for
 	test.each(["bun run stray", "bun run inline", "bun run missing"])(
-		"%s asks: its script runs what the tree does not hold",
-		(line) => void asks(line),
+		"%s is refused: its script runs what the tree does not hold",
+		(line) => void refused(line),
 	);
 
-	test("bun run check asks when package.json is edited or untracked", () => {
+	test("bun run check is refused when package.json is edited or untracked", () => {
 		const { dir } = checkout();
 		writeFileSync(join(dir, "package.json"), '{"scripts":{"check":"bun pre.ts"}}');
-		asks("bun run check", dir);
+		refused("bun run check", dir);
 		const bare = fabricate("feat/x");
 		writeFileSync(join(bare, "package.json"), '{"scripts":{"check":"true"}}');
 		writeFileSync(join(bare, "a"), "");
 		git(bare, "add", "a");
 		git(bare, "commit", "-m", "a");
-		asks("bun run check", bare);
+		refused("bun run check", bare);
 	});
 
 	/** A checkout whose committed `package.json` is `manifest`, plus `extra`. */
@@ -202,26 +200,26 @@ describe("an interpreter given program text the guard cannot read", () => {
 				writeFileSync(join(dir, "build/a"), "1\n");
 			},
 		);
-		asks("bun run build", dir);
-		asks("bun run pre.ts", dir);
+		refused("bun run build", dir);
+		refused("bun run pre.ts", dir);
 	});
 
 	test("a JSONC package.json has its script read", () => {
 		const dir = scripted('{\n // note\n "scripts": { "check": "bun pre.ts", },\n}\n');
 		passes("bun run check", dir);
 		const bad = scripted('{\n "scripts": { "check": "bun pre.ts",\n');
-		asks("bun run check", bad);
+		refused("bun run check", bad);
 	});
 
 	// bun runs `pre<name>` and `post<name>` around `<name>` (probed on 1.4.2)
 	test.each(["prebuild", "postbuild"])("a %s script is read too", (hook) => {
-		asks("bun run build", scripted(JSON.stringify({ scripts: { build: "true", [hook]: 'python3 -c "1"' } })));
+		refused("bun run build", scripted(JSON.stringify({ scripts: { build: "true", [hook]: 'python3 -c "1"' } })));
 	});
 
 	// `--filter check evil` runs `evil` in the packages `check` selects
 	test.each(["bun run --filter check evil", "bun run --cwd x check", "bun run --bun check"])(
-		"%s asks: an option before the script may change what runs",
-		(line) => void asks(line),
+		"%s is refused: an option before the script may change what runs",
+		(line) => void refused(line),
 	);
 
 	test("a script that runs itself is read once, not without end", () => {
@@ -257,16 +255,17 @@ describe("the controls, which pass before and after", () => {
 });
 
 describe("one decision per command", () => {
-	test("two asks write one object and record one line under the first [5]", () => {
-		const { code, out, records } = answer('python3 -c 1; node -e 1');
-		expect(code).toBe(0);
-		expect(out.trim().split("\n")).toHaveLength(1);
-		expect(records.map((r) => [r.decision, r.rule])).toEqual([["ask", "inline-code"]]);
+	test("two refusals name both and record one line under the first [5]", () => {
+		const { code, reason, records } = answer('python3 -c 1; node -e 1');
+		expect(code).toBe(2);
+		expect(reason).toContain("`python3`");
+		expect(reason).toContain("`node`");
+		expect(records.map((r) => [r.decision, r.rule])).toEqual([["block", "inline-code"]]);
 	});
 
 	// spec: agent-permissions/a-block-in-the-same-command-wins
-	// spec: gate-ledger/a-prompt-overtaken-by-a-block
-	test("a block anywhere in the command wins over an ask [6]", () => {
+	// spec: gate-ledger/an-interpreter-refusal-overtaken-by-a-git-block
+	test("a git block anywhere in the command keeps its own id [6]", () => {
 		const { code, out, records } = answer(
 			'python3 -c "print(1)"; git commit -m fix',
 			fabricate("main"),
@@ -275,23 +274,27 @@ describe("one decision per command", () => {
 		expect(records.map((r) => [r.decision, r.rule])).toEqual([["block", "main-commit"]]);
 	});
 
-	// spec: gate-ledger/inline-code-asked-about
-	test("the record names the guard, ask and the id, and no command line", () => {
+	// spec: gate-ledger/inline-code-refused
+	test("the record names the guard, block and the id, and no command line", () => {
 		const { records } = answer('python3 -c "print(1)"');
 		expect(records).toHaveLength(1);
-		expect(records[0]).toMatchObject({ gate: "command-guard", decision: "ask", rule: "inline-code" });
+		expect(records[0]).toMatchObject({ gate: "command-guard", decision: "block", rule: "inline-code" });
 		expect(JSON.stringify(records[0])).not.toContain("print");
 	});
-});
 
-describe("the bun subcommands", () => {
-	test("the constant matches the installed bun --help in both directions [17]", () => {
-		const help = Bun.spawnSync(["bun", "--help"]).stdout.toString();
-		const block = help.slice(help.indexOf("Commands:"), help.indexOf("Learn more"));
-		const listed = new Set([
-			...[...block.matchAll(/^ {2}([a-z]+)\s/gm)].map((m) => m[1]),
-			...[...block.matchAll(/\(bun ([a-z]+)\)/g)].map((m) => m[1]),
-		]);
-		expect([...BUN_SUBCOMMANDS].sort()).toEqual([...listed].sort());
+	// spec: agent-permissions/a-local-allow-entry-does-not-let-it-through
+	test("a local allow entry for the interpreter changes nothing", () => {
+		const { dir } = checkout();
+		mkdirSync(join(dir, ".claude"));
+		const allow = { permissions: { allow: ["Bash(python3 *)"] } };
+		writeFileSync(join(dir, ".claude/settings.local.json"), JSON.stringify(allow));
+		refused('python3 -c "print(1)"', dir);
+	});
+
+	// a pass runs `--permission-mode auto --permission-prompts none`, no terminal
+	test("an unattended pass session is refused within the hook's own run", () => {
+		const unattended = { ...event('python3 -c "print(1)"'), permission_mode: "auto" };
+		const { code, out } = run(unattended, base.dir);
+		expect({ code, out }).toEqual({ code: 2, out: "" });
 	});
 });

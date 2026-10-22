@@ -1,5 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { cleanup, verdict } from "./command-guard.fixture.ts";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { cleanup, fabricate, git, verdict } from "./command-guard.fixture.ts";
 
 /**
  * What `command-guard.ts` refuses of a shell whose program the line does not
@@ -11,7 +13,17 @@ import { cleanup, verdict } from "./command-guard.fixture.ts";
 
 afterAll(cleanup);
 
-const unread = (command: string) => {
+/** A checkout tracking the scripts below, which the interpreter check would refuse untracked. */
+function tracking() {
+	const dir = fabricate("feat/x");
+	mkdirSync(join(dir, "bun"));
+	for (const file of ["script.sh", "env.sh", "bun/diff-budget.sh"]) writeFileSync(join(dir, file), "true\n");
+	git(dir, "add", ".");
+	git(dir, "commit", "-m", "scripts");
+	return dir;
+}
+
+const unread =(command: string) => {
 	const { code, rule } = verdict(command);
 	expect({ code, rule }).toEqual({ code: 2, rule: "unread-program" });
 };
@@ -114,7 +126,7 @@ describe("where a shell's options end and its program begins", () => {
 	});
 
 	test("an expansion among a script's arguments runs", () => {
-		expect(verdict('bash script.sh "$HOME"').code).toBe(0);
+		expect(verdict('bash script.sh "$HOME"', tracking()).code).toBe(0);
 	});
 
 	// spec: agent-permissions/a-substitution-after-a-literal-c-string
@@ -146,7 +158,7 @@ describe("where a shell's options end and its program begins", () => {
 	});
 
 	test("an -s after the script is the script's", () => {
-		expect(verdict("bash script.sh -s").code).toBe(0);
+		expect(verdict("bash script.sh -s", tracking()).code).toBe(0);
 	});
 
 	test("a stdin flag outranks a version query", () => {
@@ -169,7 +181,7 @@ describe("where a shell's options end and its program begins", () => {
 
 	test.each([". ./env.sh", "source ./env.sh", 'eval "git status"'])(
 		"%s runs",
-		(line) => expect(verdict(line).code).toBe(0),
+		(line) => expect(verdict(line, tracking()).code).toBe(0),
 	);
 
 	test("a builtin after a wrapper that runs builtins is read", () => {
@@ -184,7 +196,7 @@ describe("where a shell's options end and its program begins", () => {
 });
 
 describe("a program the line spells out still runs", () => {
-	const runs = (line: string) => expect(verdict(line).code).toBe(0);
+	const runs = (line: string) => expect(verdict(line, tracking()).code).toBe(0);
 
 	// spec: agent-permissions/a-script-of-the-repository-still-runs
 	test.each([

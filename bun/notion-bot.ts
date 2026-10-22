@@ -98,14 +98,17 @@ const answered = opens("harness-answer");
 
 /**
  * Whether the last question has no answer after it: no comment by `user` that
- * does not open with the mark, and no `harness-answer` by `self`, the
+ * opens with neither mark, and no `harness-answer` by `self`, the
  * integration's own id, when one was read.
  */
 function waits(comments: Comment[], user: string, self?: string): boolean {
 	// Stable: ties keep the order the API returned them.
 	const ordered = comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time)));
 	const last = ordered.findLastIndex(marked);
-	return last !== -1 && !ordered.slice(last + 1).some((c) => (!marked(c) && by(c, user)) || (self !== undefined && answered(c) && by(c, self)));
+	return (
+		last !== -1 &&
+		!ordered.slice(last + 1).some((c) => (!marked(c) && !answered(c) && by(c, user)) || (self !== undefined && answered(c) && by(c, self)))
+	);
 }
 
 /** A REST call with `token`, which throws naming the step and Notion's status or the error's name. */

@@ -184,6 +184,7 @@ describe("the triage's answer", () => {
 	test.each([
 		["from the ask integration [81]", [question(ASKED), answer("2026-10-20T10:00:00Z", "11112222333344445555666677778888")], BOT],
 		["from another member [81]", [question(ASKED), answer("2026-10-20T10:00:00Z", USER.replace("0", "9"))], BOT],
+		["from the user, a mark and so no reply of theirs [81]", [question(ASKED), answer("2026-10-20T10:00:00Z", USER)], BOT],
 		["read with no integration id [83]", [question(ASKED), answer("2026-10-20T10:00:00Z")], undefined],
 	])("a harness-answer %s answers nothing", async (_, comments, self) => {
 		notion({ comments: [comments] });

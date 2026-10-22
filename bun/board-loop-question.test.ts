@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { change, clone, commit, lowered, ONE, run, runAsync, SAID, type Stubs, TICKED } from "./board-loop.fixture.ts";
-import { CARD, configured, TOKEN } from "./notion-bot.fixture.ts";
+import { CARD, configured, TOKEN, USER } from "./notion-bot.fixture.ts";
 import { MARK, RUNNER_ASKS } from "./question-gate.ts";
 
 /**
@@ -203,7 +203,7 @@ describe("the triage's answer in the pick", () => {
 	test("settings: the pick prompt names the integration's id as the harness-answer author, Assign or not, the user's comment first [76] [77] [78] [79]", async () => {
 		const { dir } = clone();
 		const prompt = pick((await pass(dir, {}, configured())).calls);
-		for (const part of [`\`harness-answer\` whose author's id is ${BOT}`, "whether or not its `Assign` holds the user", "in either order, the user's is the answer", "A `harness-answer` by any other author is no answer."])
+		for (const part of [`\`harness-answer\` whose author's id is ${BOT}`, "whether or not its `Assign` holds the user", `one by the user, whose id is ${USER}, also follows`, "in either order, the user's is the answer", "A `harness-answer` by any other author is no answer.", "that opens with neither `harness-question` nor `harness-answer`"])
 			expect(prompt).toContain(part);
 	});
 
