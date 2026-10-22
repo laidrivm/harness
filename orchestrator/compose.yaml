@@ -1,0 +1,97 @@
+# The host's stack (design.md, *The pass runs in a runner container*). Every
+# secret is a file under ./secrets, mounted at /run/secrets; none goes through
+# ${VAR} or an environment literal. No port is published: the tunnel is the
+# only way in.
+name: orchestrator
+
+x-windmill: &windmill
+  # moved by hand — nothing updates this pin; re-read the release notes and security advisories when moving it, and keep the server and both workers on one version
+  image: ghcr.io/windmill-labs/windmill:1.846.1@sha256:1c394f5c436b5e7716fab8cc9001e35024507e84b41fac9b1cca767b10eaa43d
+  restart: unless-stopped
+  secrets: [database_url]
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  db:
+    # moved by hand — nothing updates this pin; re-read the release notes and security advisories when moving it
+    image: postgres:16@sha256:9e2cf6287f25c3151f4c9421ccce2b17f3e60061c111a29165e0d2cdd9ff0a97
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: windmill
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes: [db_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Windmill reads the whole URL from DATABASE_URL_FILE (windmill-common
+  # get_database_url, 1.846.1), so no command has to build it.
+  windmill_server:
+    <<: *windmill
+    environment:
+      MODE: server
+      DATABASE_URL_FILE: /run/secrets/database_url
+    networks:
+      default:
+        # The tunnel's public hostname points at engine:8080.
+        aliases: [engine]
+
+  # The pass's own worker: one, so a second start queues behind the first.
+  windmill_worker_pass:
+    <<: *windmill
+    environment:
+      MODE: worker
+      WORKER_GROUP: pass
+      WORKER_TAGS: pass
+      DATABASE_URL_FILE: /run/secrets/database_url
+    deploy:
+      replicas: 1
+
+  # Every other tag, so a webhook never waits behind a pass.
+  windmill_worker:
+    <<: *windmill
+    environment:
+      MODE: worker
+      WORKER_GROUP: default
+      DATABASE_URL_FILE: /run/secrets/database_url
+
+  runner:
+    build:
+      context: .
+      dockerfile: runner/Dockerfile
+    restart: unless-stopped
+    secrets: [claude_oauth_token, gh_token, runner_ssh_pubkey]
+    volumes:
+      - agent_home:/home/agent
+      - runner_home:/home/runner
+
+  cloudflared:
+    # moved by hand — nothing updates this pin
+    image: cloudflare/cloudflared:2026.10.3@sha256:faa8e0a1475f137c910be6025f43c8e4092fdd35461b31e19fd1390657a1ff39
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run", "--token-file", "/run/secrets/tunnel_token"]
+    secrets: [tunnel_token]
+
+secrets:
+  claude_oauth_token:
+    file: ./secrets/claude_oauth_token
+  gh_token:
+    file: ./secrets/gh_token
+  runner_ssh_pubkey:
+    file: ./secrets/runner_ssh_pubkey
+  tunnel_token:
+    file: ./secrets/tunnel_token
+  db_password:
+    file: ./secrets/db_password
+  database_url:
+    file: ./secrets/database_url
+
+volumes:
+  db_data:
+  agent_home:
+  runner_home:

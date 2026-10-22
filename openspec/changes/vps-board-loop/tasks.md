@@ -147,7 +147,7 @@ moves it*, §*A pass is stopped on the runner, never through the engine* and
 §*No tracked file starts Remote Control*. The App key goes on the host only
 after `runner-isolation` group 5, which edits this group's image and README.
 
-- [ ] 3.1 Write the failing cases first in a new `orchestrator/layout.test.ts`,
+- [x] 3.1 Write the failing cases first in a new `orchestrator/layout.test.ts`,
       and record that each fails before the files exist. Each check runs over
       fabricated input and over the tracked tree. Cover: no script under
       `orchestrator/windmill/` fails rather than passing empty [27]. The
@@ -179,8 +179,10 @@ after `runner-isolation` group 5, which edits this group's image and README.
       `board-loop.ts` runs; the README's provisioning step makes each secret
       file this group provisions (the App key is `runner-isolation`
       group 5's, owned by the key holder) owned by that uid, mode 0400,
-      and its directory 0500 [41]. Cite each scenario
-- [ ] 3.2 Add `orchestrator/runner/Dockerfile` and
+      and its directory 0500 [41]. Cite each scenario. [41]'s README half
+      moved to 3.7, which writes the README. Before the files existed 10 of
+      the 18 cases failed; the 8 over fabricated input alone passed
+- [x] 3.2 Add `orchestrator/runner/Dockerfile` and
       `orchestrator/runner/entrypoint.sh`. The image holds git, `gh`, bun
       1.4.2, `claude`, `openspec`, `coderabbit`, `flock` and `sshd`, and the
       users `runner` and `agent` as `design.md` fixes. `gh auth setup-git` is
@@ -188,9 +190,12 @@ after `runner-isolation` group 5, which edits this group's image and README.
       `orchestrator/stop.sh` to `/opt/orchestrator/`. Each pin is an exact
       version or a digest and carries the note `design.md` fixes. Verify with
       3.1, and with `docker build` where Docker is available. Otherwise record
-      that the build is first run by the user
+      that the build is first run by the user. `stop.sh`'s copy moved to
+      3.3, which adds the file. No Docker daemon ran on the laptop
+      (2026-10-22), so the build is first run by the user
 - [ ] 3.3 Write the failing cases in `orchestrator/pass.test.ts`, then add
-      `orchestrator/stop.sh`, and have `pass.sh` write `<lock>.pid` (`design.md`
+      `orchestrator/stop.sh`, copied to `/opt/orchestrator/` by the
+      runner's Dockerfile, and have `pass.sh` write `<lock>.pid` (`design.md`
       *Stopping a pass*). Cover: a bad name exits 2 as `pass.sh`'s guard
       does; no pass holding the lock prints `idle`, removes a stale marker,
       signals nothing and writes no stop file; another repository's running
@@ -203,7 +208,7 @@ after `runner-isolation` group 5, which edits this group's image and README.
       /opt/orchestrator/stop.sh <clone>`, the one invocation 3.7's README
       gives, since the marker's process group is the runner's PID
       namespace's. Cite each scenario
-- [ ] 3.4 Add `orchestrator/compose.yaml` with the services `db` (Postgres
+- [x] 3.4 Add `orchestrator/compose.yaml` with the services `db` (Postgres
       16), `windmill_server`, `windmill_worker_pass` (one replica,
       `WORKER_TAGS=pass`), `windmill_worker` (every other tag), each
       Windmill image 1.846.1 or later by digest; `runner` (one volume for
@@ -215,8 +220,11 @@ after `runner-isolation` group 5, which edits this group's image and README.
       outside `[0-9a-f]`; 3.1 asserts that check is in each such
       `command`. Record it there.
       Add `orchestrator/secrets` to `.gitignore` with no trailing slash. Verify with 3.1 and `docker
-      compose config` where Docker is available
-- [ ] 3.5 Write `orchestrator/windmill/` by hand to the shape `wmill sync
+      compose config` where Docker is available. Windmill 1.846.1 reads
+      `DATABASE_URL_FILE`, so a `database_url` secret file replaces the
+      `command`, recorded in `design.md` *Secrets*; `docker compose config`
+      passed over placeholder secret files
+- [x] 3.5 Write `orchestrator/windmill/` by hand to the shape `wmill sync
       pull --skip-secrets --include-schedules` writes: the bash pass script
       (tag `pass`, `timeout` 5400, `ssh` to `runner` with the clone name
       `harness` and the key from its variable's path, ending on that call)
@@ -230,7 +238,10 @@ after `runner-isolation` group 5, which edits this group's image and README.
       access*)
 - [ ] 3.7 Write `orchestrator/README.md`, opening with a level-1 heading. It
       holds the host requirements, the user acts in `proposal.md`'s order, the
-      `wmill sync` commands, `db_password` made with `openssl rand -hex 32`,
+      `wmill sync` commands, `db_password` made with `openssl rand -hex 32`
+      and `database_url` from the same value, the SSH key's variable entered
+      base64-encoded on one line, `tunnel_token` owned by uid 65532, and
+      [41]'s README case added to `layout.test.ts`,
       the check of the three Notion tool names, what to
       read before removing a stop file, `stop.sh`, the laptop clients and
       their tokens' limits, and the emergency session: ssh as root, `claude

@@ -94,7 +94,11 @@ deployed script reaches, so no session runs there. So:
   `uid`, `gid` or `mode` to them, so the files keep their host ownership: the
   image gives `runner` a fixed numeric uid, and the host README has the user
   make each file this group provisions under `orchestrator/secrets` owned by
-  that uid with mode 0400 and the directory 0500. The App's key is not one of
+  that uid with mode 0400 and the directory 0500. One file is not: the
+  tunnel token, which `cloudflared` reads as its image's `nonroot` uid,
+  65532, so it is owned by that uid. Postgres's entrypoint reads its
+  password file as root before it drops to `postgres`, and Windmill runs as
+  root, so their files stay `runner`'s (task 3.4). The App's key is not one of
   them: `runner-isolation` puts it in a directory of its own, owned by the
   key holder's fixed uid with mode 0400, since a 0500 directory `runner` owns
   would keep the key holder out. `/run/secrets` stays traversable; what keeps
@@ -243,21 +247,23 @@ change, which would widen the matchers. It is never a configuration step.
 ### Secrets are compose secret files
 
 The secret files are `claude_oauth_token`, `gh_token`, `runner_ssh_pubkey`,
-`tunnel_token` and `db_password`. Each sits under `orchestrator/secrets/` on
-the host and is mounted at `/run/secrets/`. No secret goes through compose's
-`${VAR}` interpolation or an `environment:` literal. Postgres reads
-`POSTGRES_PASSWORD_FILE`; how Windmill's server and workers take the
-database URL from that file is checked at task 3.4, and if they read only an
-environment value, each Windmill service's compose `command` builds
-`DATABASE_URL` from `/run/secrets/db_password` in a shell and then `exec`s
-the binary, so no `.env` or literal ever holds it. The README generates
-`db_password` as 64 hex characters (`openssl rand -hex 32`), and that
-`command` refuses a value outside `[0-9a-f]`, since a raw `@`, `:`, `/`,
-`?`, `#` or `%` in a URL's userinfo is read as URL syntax. An SSH session does not inherit
+`tunnel_token`, `db_password` and `database_url`. Each sits under
+`orchestrator/secrets/` on the host and is mounted at `/run/secrets/`. No
+secret goes through compose's `${VAR}` interpolation or an `environment:`
+literal. Postgres reads `POSTGRES_PASSWORD_FILE`. Windmill's server and
+workers read the whole database URL from `DATABASE_URL_FILE`
+(`get_database_url` in `windmill-common`, read at 1.846.1, task 3.4), so no
+compose `command` builds it: the README writes `database_url` from the same
+value as `db_password`. That value is 64 hex characters (`openssl rand -hex
+32`), since a raw `@`, `:`, `/`, `?`, `#` or `%` in a URL's userinfo is
+read as URL syntax. `cloudflared` reads `tunnel_token` through
+`--token-file`. An SSH session does not inherit
 the container's environment anyway, so `pass.sh` reads the files itself. `gh`
 and git's credential helper (`gh auth setup-git`, run in the image) take
 `GH_TOKEN`. The engine's SSH key's private half lives only in a Windmill
-secret variable, entered by the user. The App's private key is one more secret file, read by a key-holder user
+secret variable, `f/orchestrator/runner_ssh_key`, entered by the user
+base64-encoded on one line, so the pass script decodes the API's JSON string
+with `tr` and `base64` alone. The App's private key is one more secret file, read by a key-holder user
 alone, which mints `runner` an hourly token (`runner-isolation`); it never
 enters the engine.
 
