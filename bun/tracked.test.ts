@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { uncomment } from "./scan.ts";
 import { tracked } from "./tracked.ts";
 
 const made: string[] = [];
@@ -125,8 +126,8 @@ const SOURCE = /\.(?:[cm]?[jt]sx?)$/;
 // `ls-files` inside a quoted string on one line — a spawn argument or a
 // `sh -c` command — or run through Bun's shell. Only `ls-files` lists the tree:
 // `rev-parse --show-toplevel` alone yields the root, which a dozen files take
-// without listing anything. The prose mentions in comments are backticked
-// words, never a quoted string or a `$` template.
+// without listing anything. Matched against the source with its comments
+// blanked, so prose quoting the command is not a listing.
 const LISTING = /["'][^"'\n]*\bls-files\b[^"'\n]*["']|\$`[^`]*\bls-files\b/;
 
 /** Tracked source files outside `OWN_LISTING` that derive a listing. */
@@ -136,7 +137,7 @@ function ownListings(cwd: string): string[] {
 		(path) =>
 			SOURCE.test(path) &&
 			!(path in OWN_LISTING) &&
-			LISTING.test(readFileSync(join(root, path), "utf8")),
+			LISTING.test(uncomment(readFileSync(join(root, path), "utf8"), "ts")),
 	);
 }
 
@@ -153,6 +154,7 @@ describe("one listing", () => {
 			"bun/shell.ts": "await Bun.$`git ls-files -z`;",
 			"bun/sh.ts": 'Bun.spawnSync(["sh", "-c", "git ls-files -z"]);',
 			"bun/prose.ts": "// `git ls-files` run in a subdirectory lists less",
+			"bun/quoted.ts": '// "git ls-files" is documented here\n/* \'ls-files -z\' */',
 			"bun/root.ts": 'spawn(["git", "rev-parse", "--show-toplevel"]);',
 		});
 		expect(ownListings(dir)).toEqual([
