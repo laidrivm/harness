@@ -251,7 +251,10 @@ Before the session, the runner works in the clone:
 - It refuses a tracked edit, as the board loop does.
 - It fetches the pull request's branch, switches to it and fast-forwards it.
   `HEAD` must then be the run's `head_sha`. The fetch is from the URL the push
-  uses, as the App, into `origin/<branch>` (apply, 2026-10-22). A clone that
+  uses, as the App, into `origin/<branch>` (apply, 2026-10-22). On the host
+  that fetch runs in the runner's push clone, and the clone takes the branch
+  from a bundle beside the run's log, through the launcher
+  (`runner-isolation`, *The CI flow's push*). A clone that
   cannot be brought there fails after the cleanup, its attempt spent.
 - It writes `gh run view <id> -R <repo> --attempt <n> --log-failed` to
   `/home/agent/ci-logs/<run>-<n>.log`, readable by `agent`'s group. `<n>` is
@@ -276,7 +279,8 @@ group and the limit are handled once. As a stage session's, its commits are
 the App's bot's, the identity `github-app.ts` reads, so the host's `agent`
 needs no git identity of its own (apply, 2026-10-22). The runner moves into
 the clone only for the session, never starting `bun` there, so no
-`bunfig.toml` a session can write is read. A session that cannot start
+`bunfig.toml` a session can write is read; on the host it never enters it,
+and the launcher starts the session there as `agent`. A session that cannot start
 reads as no answer. The schema:
 
 ```json
@@ -320,7 +324,11 @@ review). Otherwise it acts on the outcome:
 - **`fixed`:** push only when `HEAD` is on the branch,
   `git merge-base --is-ancestor <head_sha> HEAD` holds, and `HEAD` is not
   `<head_sha>`. The push is `board-loop-push.ts`'s, as the App, never by force.
-  A refused push is exit 1, neither forced nor retried.
+  A refused push is exit 1, neither forced nor retried. On the host the branch
+  is carried into the push clone first and pushed from there, only once a
+  passing pre-PR record of its tip is found (`runner-isolation`, *The CI
+  flow's push*), so the fix prompt asks the session to run the pre-PR
+  sequence before it answers `fixed`.
 - **`blocked` or `flaky`:** push nothing.
 - **No answer that matches the schema:** exit 1 after the cleanup.
 
