@@ -415,8 +415,13 @@ chat. It is an exception to keeping every key and token on the host. Two
 limits keep it narrow: the engine token carries only the scopes chat
 control needs, never one that deploys code, since a deployed script runs
 on a worker that reaches the runner; and the Access service token is
-allowed by a Service Auth policy on `hooks.laidrivm.com` alone. During the
-spike both tokens stayed on the VPS.
+allowed by a Service Auth policy on `hooks.laidrivm.com` alone. So the
+laptop's token is never the spike's `mcp:all` one, whose tools also create
+and update scripts and flows: it is limited to running, reading and
+scheduling the pass's own paths. Whether Windmill issues an MCP token that
+narrow is unchecked; group 3 checks it, and without one chat control goes
+through `wmill` on such a token instead. During the spike both tokens
+stayed on the VPS.
 
 What binds group 3 whichever engine is chosen:
 
@@ -451,19 +456,24 @@ What binds group 3 whichever engine is chosen:
 ### Recommendation
 
 Windmill CE 1.846.1. Against 1.365 it removed the reasons n8n led on
-(2026-10-21): an HTTP route answers 202 or 401 with no token in the URL,
-and a non-zero exit fails the job. It now leads where the user looks and
-where a session drives it:
+(2026-10-21): an HTTP route answers 202 or 401 with no token in the URL.
+The red failed job is the script's doing, not the release's: the script
+now ends on the pass's status, and Windmill fails a job on a non-zero
+exit; 1.365 never met one, since its script ended on `echo`. It
+now leads where the user looks and where a session drives it:
 
 - on the phone, by the user's judgement (row 11 on 1.846.1);
-- through Access from a laptop, where MCP and `wmill` both list, run, read
-  status and logs and toggle a schedule (row 13). n8n's MCP does as much,
+- through Access from a laptop, where MCP and `wmill` both list, run and
+  read status and logs; MCP only pauses a schedule, and `wmill` disables
+  and enables one (row 13). n8n's MCP does as much,
   but its CLI cannot start a run or pass Access, and its SSH node leaves a
   failed pass green until a node is added.
 
-What n8n keeps: a ready chat page, a lighter footprint (n8n peaked at
-430 MiB against Windmill's server and Postgres at about 700 MiB), and a
-2 GB image against 6 GB. The host held either with over 2.5 GiB free.
+What n8n keeps: a ready chat page, lighter containers (n8n peaked at
+430 MiB against Windmill's server and Postgres at about 700 MiB, its
+workers left out), and a 2 GB image against 6 GB. Under the whole load the
+host peaks were close, 1191 MiB used with n8n against 1245 MiB with
+Windmill 1.846.1 (row 12), and the host held either with over 2.5 GiB free.
 Neither engine's concurrency limit is used: `pass.sh`'s lock does the
 excluding, n8n's limit is instance-wide and stays unset, and Windmill CE's
 was EE-only on 1.365 and was not re-checked on 1.846.1.
