@@ -12,7 +12,7 @@
 #
 # On the host PASS_AS_AGENT names the launcher that runs a command as the
 # session user. With it set, the pass runs in a push clone under PASS_PUSH
-# (~/push), from the harness checkout PASS_HARNESS (~/harness) at main's pin,
+# (~/push), from its harness checkout under PASS_HARNESS (~/harness) at main's pin,
 # and every bun the runner starts keeps the tree's bunfig.toml and .env out;
 # a pin it cannot check out exits 1, as a failed pass does.
 #
@@ -114,7 +114,8 @@ named=()
 if [ -n "${PASS_AS_AGENT-}" ]; then
 	# Two segments: a hyphen inside a name would make `<owner>-<repo>` name two repositories.
 	push=${PASS_PUSH:-$HOME/push}/$owner/$repo
-	harness=${PASS_HARNESS:-$HOME/harness}
+	# Per repository, as the lock is: a shared checkout could move to another pin under a running pass.
+	harness=${PASS_HARNESS:-$HOME/harness}/$owner/$repo
 	if [ ! -d "$push/.git" ]; then
 		{ mkdir -p "${push%/*}" && git clone -q --template= "$origin" "$push"; } || halt "the push clone $push could not be made"
 	fi
@@ -125,7 +126,7 @@ if [ -n "${PASS_AS_AGENT-}" ]; then
 	[[ $pin =~ ^github:($part)/($part)#([0-9a-f]{40})$ ]] || halt "the harness pin '$pin' on main names no full commit"
 	sha=${BASH_REMATCH[3]}
 	# Fetched from the remote the pin names each pass, so a pin that moved is there before the checkout.
-	{ [ -d "$harness/.git" ] || git init -q "$harness"; } &&
+	{ [ -d "$harness/.git" ] || { mkdir -p "${harness%/*}" && git init -q "$harness"; }; } &&
 		git -C "$harness" fetch -q "https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}.git" "$sha" &&
 		git -C "$harness" checkout -qf --detach "$sha" && git -C "$harness" clean -qfdx ||
 		halt "the harness pin '$pin': its commit could not be fetched and checked out"

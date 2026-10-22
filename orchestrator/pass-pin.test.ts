@@ -114,6 +114,15 @@ describe("pass.sh with a launcher", () => {
 		expect(tick(h).ran.version).toBe("two");
 	});
 
+	// The lock is per repository, so a checkout two repositories shared could change under a running pass.
+	test("each repository runs its own pin from its own harness checkout", () => {
+		const h = stand();
+		repository(h, "owner/one", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })), "one");
+		repository(h, "owner/two", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("two") })), "two");
+		expect([tick(h, "one").ran.version, tick(h, "two").ran.version]).toEqual(["one", "two"]);
+		for (const name of ["one", "two"]) expect(existsSync(join(h.home, "harness/owner", name, ".git"))).toBe(true);
+	});
+
 	// spec: orchestrator/the-pin-names-no-full-commit
 	test.each([
 		["a short commit", "github:laidrivm/harness#abc1234"],

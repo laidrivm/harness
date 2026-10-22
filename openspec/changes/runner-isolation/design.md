@@ -80,7 +80,12 @@ variable holds the launcher's words, split on spaces (`sudo -n -u agent
 rest, since the runner itself may not enter `agent`'s home. sudo resets
 the environment, so the sudoers entry keeps exactly the session allowlist's
 names (`env_keep`); a test reads both and fails on any difference, since the
-two lists are one name looked up in two systems (`rules.md` Code).
+two lists are one name looked up in two systems (`rules.md` Code). The
+user-bound names among them would still carry `runner`'s values, so the
+launcher sets `HOME`, `USER` and `LOGNAME` to `agent`'s and unsets
+`CLAUDE_CONFIG_DIR`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME` and `XDG_CACHE_HOME`
+before it executes: `claude` and the trust check below then read `agent`'s own
+configuration. `XDG_STATE_HOME` passes, since the pass sets it to `agent`'s.
 
 The board loop runs with the push clone as its working directory and names
 the session's clone in `HARNESS_CLONE`. Every bun process the runner starts
@@ -231,5 +236,5 @@ Lands in five groups: the launcher, the push, the CI flow's push, the tokens'
 reach and the host's users. Groups 1 to 4 change the code and `pass.sh`, and
 are inert on the laptop. Group 5 changes the image and README that
 `vps-board-loop` group 3 adds, and needs it merged. The App key goes on the
-host only after group 5. Rollback: unset `HARNESS_AS_AGENT` and the mint
-command, and the runner runs as it does today.
+host only after group 5. Rollback: unset `PASS_AS_AGENT`, `HARNESS_AS_AGENT`
+and the mint command, and the runner runs as it does today.
