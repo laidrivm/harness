@@ -1,0 +1,6 @@
+schedule: 0 0 * * * *
+timezone: UTC
+script_path: f/orchestrator/pass
+is_flow: false
+args: {}
+enabled: true
