@@ -22,9 +22,10 @@ still deny the call but cannot approve it silently. Across hooks the order is
 does not say whether an `allow` rule suppresses a hook's `ask`. That is the
 card's whole premise, so task 1.7 measures it.
 
-**Goals:** a prompt for every spelling the guard already resolves, which a
-local `allow` cannot silence, and every documented agent command in the three
-trees still passing. **Non-Goals:** see the proposal.
+**Goals:** a decision for every spelling the guard already resolves, which a
+local `allow` cannot silence — a prompt, then a refusal once task 1.7 showed
+an `allow` silences the prompt — and every documented agent command in the
+three trees still passing. **Non-Goals:** see the proposal.
 
 ## Decisions
 
@@ -103,21 +104,24 @@ the version it was read from, and a test compares it with the installed `bun
 
 ### One decision per command, after the walk
 
-`check()` collects `ask` reasons rather than acting on them, and `block`
-still exits at once. After `check(command)` returns, the guard writes one
-JSON object to stdout, records one ledger line under the first reason's id
-and exits 0. The ids are `inline-code`, `untracked-script` and `stdin-code`.
-Nothing else may reach stdout on that path, because Claude Code reads stdout
-as the decision. The module is handed the guard's `check` as well as `dirs`
-(applied 2026-10-22), because a `package.json` script's command line is read
-as a typed line, so a block in it still blocks and an ask in it joins the
-line's asks.
+`check()` collects the interpreter reasons rather than acting on them, and
+every other block still exits at once. After `check(command)` returns, the
+guard joins the reasons and refuses through `blocker()` under the first
+reason's id (group 2; group 1 wrote an `ask` object to stdout and exited 0).
+The ids are `inline-code`, `untracked-script` and `stdin-code`. Deciding
+last keeps a git or `gh` prohibition's own id on a line that carries both.
+The module is handed the guard's `check` as well as `dirs` (applied
+2026-10-22), because a `package.json` script's command line is read as a
+typed line, so a block in it still blocks and a refusal in it joins the
+line's refusals.
 
 ### The prose rule stays
 
-The last Safety rule in `core/rules.md` keeps its subject, because a prompt
-can be approved, as the `bunfig.toml` precedent records. Its reason clause
-("the act walks past") stops being true, so task 1.8 proposes a rewording.
+The last Safety rule in `core/rules.md` keeps its subject: a committed script
+carrying a refused act reads to the guard and to the permission rules as an
+ordinary call. Its reason clause ("the act walks past") no longer covers the
+interpreter given unread text, which the guard now refuses, so task 2.5
+re-proposes the wording, and the rule changes once the user approves it.
 
 ## Risks / Trade-offs
 
@@ -126,12 +130,10 @@ can be approved, as the `bunfig.toml` precedent records. Its reason clause
   fallback is exit 2 for the same set. That fallback is a block, which this
   design rejected, so the user is asked first. It failed (2026-10-22, see
   *Ask, not block*), and the user agreed to the block.
-- [An older Claude Code does not force a hook's `ask` in auto mode] → the
-  call then falls to the permission rules, which is today's behaviour, so no
-  version is worse off than now. Claude Code 2.1.299 was installed when this
-  was written (2026-10-14), and task 1.7 records the version it measures.
-- [Unattended sessions stall on a prompt] → agents are already told not to
-  use interpreters. The prompt text names the tracked-script route.
-- [The JSON is malformed or mixed with other stdout] → Claude Code would
-  ignore it and fall back to the permission rules, which is the gap itself.
-  A test parses the guard's whole stdout as one object.
+- [An older Claude Code does not force a hook's `ask` in auto mode] → moot
+  since group 2: exit 2 blocks in every version and mode.
+- [Unattended sessions stall on a prompt] → gone with group 2: a pass session
+  is refused within the hook's own run, and a test runs the guard as one.
+- [A harmless one-liner the user would have approved is refused] → the
+  accepted cost of the block. The reason names the route that runs: commit
+  the script and run it by its path.
