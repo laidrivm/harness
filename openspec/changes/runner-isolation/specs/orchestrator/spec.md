@@ -92,7 +92,15 @@ configuration from the pushed tree.
 The pass's environment SHALL hold no GitHub token. With no App configured, the
 runner SHALL read the user's token from its secret file for the push, the
 pull request it opens and the check that reads that pull request, and for
-nothing else; with the App configured it SHALL not read that file.
+nothing else; with the App configured it SHALL not read that file. The
+pass's `gh` SHALL read its configuration from an empty directory the pass
+owns, never from a login stored in the runner's home.
+
+#### Scenario: A login stored in the runner's home
+
+- **WHEN** `runner`'s home holds a `gh` login and a pass runs a `gh` call
+  other than the push, the pull request and its check
+- **THEN** that call finds no stored login and runs unauthenticated
 
 #### Scenario: The pass's environment
 
