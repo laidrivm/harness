@@ -31,7 +31,8 @@ clone, its `node_modules` included.
 
 Every git, bun or `claude` command the runner runs in a session's clone SHALL
 run as the session user through one launcher, with the environment the
-session allowlist names and no secret. The runner SHALL read nothing from that
+session allowlist names and no secret but the Claude Code token `claude`
+needs. The runner SHALL read nothing from that
 clone that a command of its own then executes.
 
 #### Scenario: A hook or a config command in the session's clone
@@ -114,7 +115,9 @@ owns, never from a login stored in the runner's home. With the App configured,
 #### Scenario: The pass's environment
 
 - **WHEN** a pass is running, before its push
-- **THEN** no process of the pass holds `GH_TOKEN` or the token file's value
+- **THEN** the pass's environment holds neither `GH_TOKEN` nor the token
+  file's value, and only the subprocess of a pull-request read the token's
+  reach names receives that value
 
 #### Scenario: The App is configured
 

@@ -17,7 +17,8 @@ checkout*, §*The runner runs nothing in a session's clone as itself* and
 §*The runner pushes from its own push clone, a commit whose tests passed*.
 
 - [ ] 1.1 Probe whether `bun --config=<empty file>` stops a `bunfig.toml`
-      `preload` in the working directory from loading, and record the result
+      `preload` in the working directory from loading, and whether
+      `--no-env-file` stops its `.env` on bun 1.4.2; record the result
       in `design.md` *Nothing runs as `runner` in a session's clone*. If it
       does not, switch the design to the empty-directory fallback it names
       before 1.3
