@@ -1,8 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { change, clone, commit, lowered, ONE, run, runAsync, SAID, type Stubs, TICKED } from "./board-loop.fixture.ts";
+import { CARD, configured, TOKEN, USER } from "./notion-bot.fixture.ts";
 import { MARK, RUNNER_ASKS } from "./question-gate.ts";
 
 /**
@@ -42,25 +43,10 @@ describe("the launch form's question line", () => {
 	});
 });
 
-const TOKEN = "ntn_secret0value";
-const USER = "0123456789abcdef0123456789abcdef";
-const CARD = "aaaabbbbccccddddeeeeffff00001111";
 const WITHHELD = "--disallowedTools mcp__*__notion-create-comment";
 /** A final message naming a question, then the pull request's title and body. */
 const ASKED = `BLOCKED — a choice only the user can make\nQUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}`;
 const POSTED = `question: posted on ${CARD}, Assign set`;
-
-/** A runner home holding each settings file named, at `mode`. */
-function configured(mode = 0o600, ...names: string[]) {
-	const home = emptyDir("board-loop-home-");
-	mkdirSync(join(home, ".config/harness"), { recursive: true });
-	for (const name of names.length ? names : ["notion-bot.json"]) {
-		const file = join(home, ".config/harness", name);
-		writeFileSync(file, JSON.stringify({ token: TOKEN, user: USER }));
-		chmodSync(file, mode);
-	}
-	return home;
-}
 
 /** The integration's own id, as `GET /v1/users/me` answers it; `me`, that read's status. */
 const BOT = "ffffeeee-dddd-cccc-bbbb-aaaa99998888";

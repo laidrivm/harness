@@ -123,6 +123,9 @@ export type Stubs = {
 	pickSleep?: number;
 	/** Whether the pick session leaves a child running that holds its output open. */
 	pickChild?: boolean;
+	/** What the triage session prints, `ESCALATE` unless given, and the seconds it runs for first. */
+	triage?: string;
+	triageSleep?: number;
 };
 
 /**
@@ -184,8 +187,10 @@ function bin(log: string, s: Stubs): string {
 	const pick = s.pickSleep
 		? `exec /bin/sleep ${s.pickSleep}`
 		: `${leave(s.pickOrphan)}${s.pickChild ? "/bin/sleep 30 2>/dev/null & " : ""}printf '%s\\n' '${s.pick ?? "PICK: demo"}'; exit ${s.claudeCode ?? 0}`;
+	// The triage's prompt opens as `notion-triage.ts`'s does.
+	const triage = `${s.triageSleep ? `/bin/sleep ${s.triageSleep}; ` : ""}printf '%s\\n' '${s.triage ?? "ESCALATE"}'`;
 	if (s.claudeCode !== null)
-		stub("claude", `case "$2" in\n/goal*) ${saw("stage")}; ${stage} ;;\n*) ${saw("pick")}; ${pick} ;;\nesac`);
+		stub("claude", `case "$2" in\n/goal*) ${saw("stage")}; ${stage} ;;\n"Decide whether"*) ${saw("triage")}; ${triage} ;;\n*) ${saw("pick")}; ${pick} ;;\nesac`);
 	return dir;
 }
 
