@@ -80,14 +80,18 @@ gets `--config` naming an empty root-owned file, so no `bunfig.toml` in a
 working directory loads. Task 1.1 probes that `--config` replaces the
 working directory's file rather than adding to it. If it does not, the
 runner runs bun from an empty directory and points git at the push clone with
-`GIT_DIR` and `GIT_WORK_TREE`.
+`GIT_DIR` and `GIT_WORK_TREE`. The workspace trust check reads the session's
+clone (`HARNESS_CLONE`) in `agent`'s Claude Code configuration, since
+`claude` runs there as `agent`, never the push clone in `runner`'s.
 
 ### The push
 
 After a stage session, `agent` writes `git bundle create` of the step branch,
-excluding `origin/main`, into a directory `runner` can read. `runner` fetches
-the bundle into its push clone: a bundle carries objects and refs, never
-config or hooks. The runner then checks out the step branch at the bundle's
+excluding `origin/main`, into a directory `runner` can read. `runner` first
+fetches `origin` in its push clone, so the bundle's prerequisite, the
+session's `origin/main`, is there even when `main` moved during the session,
+then fetches the bundle: a bundle carries objects and refs, never config or
+hooks. The runner then checks out the step branch at the bundle's
 tip with `git checkout -f -B <branch> <tip>`, so `HEAD` names that branch and
 holds exactly that commit, which `--before-push` reads both of. The goal check
 runs `--before-push` there. Today it matches a pre-PR record by commit and by
@@ -147,7 +151,11 @@ the pass owns, since `gh` with no `GH_TOKEN` falls back to a login stored in
 `~/.config/gh/hosts.yml`, and one left in `runner`'s persistent home would
 hand the whole pass a token again; the provisioned home holds no such file
 either. Any other `gh` call in the pass therefore runs unauthenticated; task
-2.1 lists them.
+2.1 lists them. One needs a credential on a private repository:
+`readPullRequests()`, which the board loop's selection and the goal check
+call. With the App configured it gets a token from the key holder's mint;
+without the App it runs unauthenticated, so a PAT-only host supports public
+repositories, and a private one's failed read stops the pass, naming it.
 
 ### The key holder
 
