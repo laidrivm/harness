@@ -258,7 +258,8 @@ that index, instead of setting the count to 1. This removes its `shortcut:`.
   are, so before any runner-side git command each pass rewrites both
   clones' `.git/config` to the values `pass.sh` sets at creation (the
   remote, `core.hooksPath` at the empty root-owned directory) and empties
-  `.git/hooks`; it stops
+  `.git/hooks`, with every `GIT_*` variable it inherited unset first, since
+  one such as `GIT_CONFIG_COUNT` outranks a clone's config; it stops
   naming the clone if either cannot be reset, and stops when the hooks
   directory (`PASS_HOOKS`, `/opt/orchestrator/hooks`) is missing or not
   empty. Group 2 does this.
