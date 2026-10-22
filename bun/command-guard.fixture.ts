@@ -168,14 +168,14 @@ export const event = (command: unknown, description = "") => ({
 });
 
 /** The guard's verdict on `command` from a feature branch, with the rule it recorded. */
-export function verdict(command: string): {
+export function verdict(command: string, dir = fabricate("feat/x")): {
 	code: number;
 	reason: string;
 	rule?: string;
 } {
 	const state = fabricate(undefined, "command-guard-state-");
 	const env = { ...process.env, XDG_STATE_HOME: state };
-	const { code, reason } = run(event(command), fabricate("feat/x"), env);
+	const { code, reason } = run(event(command), dir, env);
 	const ledger = join(state, "harness", "gates.jsonl");
 	if (!existsSync(ledger)) return { code, reason };
 	return { code, reason, rule: JSON.parse(readFileSync(ledger, "utf8")).rule };

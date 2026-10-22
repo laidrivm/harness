@@ -1,13 +1,13 @@
 /**
- * What `command-guard.ts` asks about rather than blocks: an interpreter given
+ * What `command-guard.ts` refuses once the line is read: an interpreter given
  * program text the guard does not read — inline code, standard input, or a
  * file the tree does not hold as committed (interpreter-prompt). Stated by
  * what it exempts: a version or help query, a shell's `-c` text (read by the
  * guard itself), a file tracked unchanged from `HEAD` or installed under the
  * repository's top-level `node_modules/harness/`, and the bun subcommands
- * that run no code handed to them. Uncertainty asks. Each check returns the
- * reason rather than deciding, because the exit, the stdout object and the
- * ledger id are the guard's.
+ * that run no code handed to them. Uncertainty refuses. Each check returns the
+ * reason rather than deciding, because the exit and the ledger id are the
+ * guard's.
  */
 
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
@@ -15,7 +15,7 @@ import { dirname, join, relative } from "node:path";
 import { shellWords } from "./command-guard-exec.ts";
 import { OPEN_REDIRECTION, place, SHELLS } from "./command-words.ts";
 
-export type Ask = { id: string; reason: string };
+export type Refusal = { id: "inline-code" | "stdin-code" | "untracked-script"; reason: string };
 
 /**
  * `bun`'s subcommands and the aliases its help names, read from bun 1.4.2's
@@ -39,9 +39,9 @@ const args = (rest: string[]) =>
 			!/^[0-9]*[<>]/.test(word) && !OPEN_REDIRECTION.test(rest[at - 1] ?? ""),
 	);
 
-const ask = (name: string, id: string, what: string): Ask => ({
+const refuse = (name: string, id: Refusal["id"], what: string): Refusal => ({
 	id,
-	reason: `command-guard: \`${name}\` is given ${what}, so the guard cannot read the program it runs and asks you instead. To run without asking, commit the script and run it by its path.`,
+	reason: `command-guard: \`${name}\` is given ${what}, so the guard cannot read the program it runs and refuses it — a local \`allow\` rule would silence a prompt. To run it, commit the script and run it by its path.`,
 });
 
 /** git's answer in `cwd`, or `null` when the call fails. */
@@ -101,8 +101,8 @@ const reading = new Set<string>();
  * command line as the guard checks a typed line. Otherwise the operand must
  * be a regular file the file rule passes.
  */
-function bunRun(operand: string, dirs: Set<string | null>, read: (line: string) => void): Ask | undefined {
-	const none = ask("bun run", "untracked-script", `\`${operand}\`, which no committed package.json names as a script`);
+function bunRun(operand: string, dirs: Set<string | null>, read: (line: string) => void): Refusal | undefined {
+	const none = refuse("bun run", "untracked-script", `\`${operand}\`, which no committed package.json names as a script`);
 	for (const from of dirs) {
 		if (from === null) return none;
 		const file = manifest(from);
@@ -126,13 +126,13 @@ function bunRun(operand: string, dirs: Set<string | null>, read: (line: string) 
 		const at = place(from, operand);
 		if (at === null || !existsSync(at) || !statSync(at).isFile()) return none;
 		if (!committed(operand, new Set([from])))
-			return ask("bun run", "untracked-script", "a file the repository does not hold as committed");
+			return refuse("bun run", "untracked-script", "a file the repository does not hold as committed");
 	}
 	return undefined;
 }
 
 /**
- * Why `name` with `rest` is asked about, or nothing. `first` says `name` is
+ * Why `name` with `rest` is refused, or nothing. `first` says `name` is
  * the line's first candidate, the only place a wrapper can run the builtins
  * `source` and `.`. A shell given no script file is the shell-stdin check's,
  * and `bun x` the `bunx` check's.
@@ -143,7 +143,7 @@ export function interpreter(
 	dirs: Set<string | null>,
 	first: boolean,
 	read: (line: string) => void,
-): Ask | undefined {
+): Refusal | undefined {
 	const words = args(rest);
 	if (words.length === 1 && (words[0] === "--version" || words[0] === "--help"))
 		return undefined;
@@ -157,20 +157,20 @@ export function interpreter(
 		if (!first || file === undefined) return undefined;
 	} else if (!INTERPRETER.test(name)) return undefined;
 	else if (file === undefined || file === "-")
-		return ask(name, "stdin-code", "its program on standard input");
+		return refuse(name, "stdin-code", "its program on standard input");
 	else if (file.startsWith("-"))
-		return ask(name, "inline-code", `the option \`${file}\` before any file, which may carry code inline`);
+		return refuse(name, "inline-code", `the option \`${file}\` before any file, which may carry code inline`);
 	else if (name === "bun" && BUN_SUBCOMMANDS.has(file)) {
 		if (RUNS_CODE.has(file))
-			return ask(`bun ${file}`, "inline-code", "code to run that no file in the tree holds");
+			return refuse(`bun ${file}`, "inline-code", "code to run that no file in the tree holds");
 		if (file !== "run") return undefined;
 		// an option may take the next word as its value or pick another package
 		const at = words.findIndex((word, index) => index > 0 && !word.startsWith("-"));
 		if (at > 1)
-			return ask("bun run", "untracked-script", `the option \`${words[1]}\` before its script, which may change what runs`);
+			return refuse("bun run", "untracked-script", `the option \`${words[1]}\` before its script, which may change what runs`);
 		return at === 1 ? bunRun(words[1], dirs, read) : undefined;
 	}
 	return committed(file, dirs)
 		? undefined
-		: ask(name, "untracked-script", `\`${file}\`, which the repository does not hold as committed`);
+		: refuse(name, "untracked-script", `\`${file}\`, which the repository does not hold as committed`);
 }
