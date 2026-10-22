@@ -113,7 +113,9 @@ function bunRun(operand: string, dirs: Set<string | null>, read: (line: string) 
 			if (reading.has(key)) continue;
 			reading.add(key);
 			try {
-				read(script);
+				// bun runs `pre<name>` and `post<name>` around the script itself
+				for (const line of [found[`pre${operand}`], script, found[`post${operand}`]])
+					if (typeof line === "string") read(line);
 			} finally {
 				reading.delete(key);
 			}

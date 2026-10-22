@@ -130,7 +130,8 @@ interpreter runs, such as anything encoded and handed to `make`, `find -exec`,
 
 - **WHEN** the agent attempts `bun run check` where `package.json` is
   untracked or carries an uncommitted or staged edit, or where the `check`
-  script's command line is `bun x.ts` and `x.ts` is untracked
+  script's command line, or its `precheck` or `postcheck` script's, is
+  `bun x.ts` and `x.ts` is untracked
 - **THEN** the guard asks, because the script's text or what it runs is not in
   the tree a reviewer reads
 
