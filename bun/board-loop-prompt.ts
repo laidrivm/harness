@@ -12,10 +12,16 @@ export type Step = { step: number; branch: string; answer: boolean };
  * answer variant, the first line naming a branch a session left. `asks`: the
  * runner posts the session's question from the Notion integration, or the
  * session posts it with the ask command, or, unset, from the user's account.
+ * `self`, `user`: as `pickPrompt` takes them, so the stage session picks the
+ * answer the pick did on a card whose `Assign` names nobody.
  */
-export function prompt(slug: string, { step, branch, answer }: Step, check: string, resumed: boolean, asks?: "runner" | "ask"): string {
+export function prompt(slug: string, { step, branch, answer }: Step, check: string, resumed: boolean, asks?: "runner" | "ask", self?: string, user?: string): string {
+	// No apostrophe, as below.
+	const which = self
+		? ` (after the last \`harness-question\`, the first comment by the user, whose id is ${user}, opening with neither \`harness-question\` nor \`harness-answer\`, or else the \`harness-answer\` by ${self}, the Notion integration of the runner)`
+		: "";
 	const work = answer
-		? `write the answer on its card into its tasks.md as group ${step}, then /opsx:apply ${slug} for that group`
+		? `write the answer on its card${which} into its tasks.md as group ${step}, then /opsx:apply ${slug} for that group`
 		: `/opsx:apply ${slug} for its group ${step}`;
 	// task-board, *The answer asks for a change of its own*: the check then reads `open`, by design.
 	const instead = answer
@@ -50,7 +56,7 @@ export function prompt(slug: string, { step, branch, answer }: Step, check: stri
  */
 export function pickPrompt(board: string, slugs: string[], answers: string[], self?: string, user?: string): string {
 	const triaged = self
-		? ` Take one too, whether or not its \`Assign\` holds the user, when after the last such comment its discussion holds one opening with \`harness-answer\` whose author's id is ${self}, the runner's Notion integration; when one by the user, whose id is ${user}, also follows that question, in either order, the user's is the answer. A \`harness-answer\` by any other author is no answer.`
+		? ` Take one too, whether or not its \`Assign\` holds the user, when after the last such comment its discussion holds one opening with \`harness-answer\` whose author's id is ${self}, the runner's Notion integration; when one by the user, whose id is ${user}, opening with neither \`harness-question\` nor \`harness-answer\` also follows that question, in either order, the user's is the answer. A \`harness-answer\` by any other author is no answer.`
 		: " No comment opening with `harness-answer` is an answer.";
 	return [
 		`Read the saved view named \`Board view\` of the Notion board ${board}, and change nothing but the \`Status\` of the card you pick.`,
