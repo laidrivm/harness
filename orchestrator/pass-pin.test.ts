@@ -202,6 +202,23 @@ describe("the repository the engine's job names", () => {
 		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
 		expect(tick(h, "repo", "Owner/Repo").ran.version).toBe("one");
 	});
+
+	test("a session's clone on another host starts no pass, though it names the job's repository", () => {
+		const h = stand();
+		const dir = repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		git(dir, "remote", "set-url", "origin", "git@other.example:owner/repo.git");
+		const r = tick(h);
+		expect(r.code).toBe(1);
+		expect(stopped(h)).toContain("other.example");
+		expect(existsSync(join(h.home, "push"))).toBe(false);
+	});
+
+	test("an SSH origin on github.com runs", () => {
+		const h = stand();
+		const dir = repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		git(dir, "remote", "set-url", "origin", "git@GitHub.com:owner/repo.git");
+		expect(tick(h).ran.version).toBe("one");
+	});
 });
 
 describe("the runner's clones are reset each pass", () => {
@@ -248,6 +265,17 @@ describe("the runner's clones are reset each pass", () => {
 		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
 		writeFileSync(join(h.hooks, "pre-push"), "#!/bin/sh\n");
 		const r = tick(h);
+		expect(r.code).toBe(1);
+		expect(stopped(h)).toContain(h.hooks);
+	});
+
+	test("a hooks directory it cannot list stops the pass", () => {
+		const h = stand();
+		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		writeFileSync(join(h.hooks, "pre-push"), "#!/bin/sh\n");
+		chmodSync(h.hooks, 0o111);
+		const r = tick(h);
+		chmodSync(h.hooks, 0o755);
 		expect(r.code).toBe(1);
 		expect(stopped(h)).toContain(h.hooks);
 	});

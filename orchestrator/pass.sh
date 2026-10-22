@@ -89,11 +89,21 @@ fi
 # GitHub reads both names case-blind.
 owner=$(printf '%s' "${BASH_REMATCH[2]}" | tr '[:upper:]' '[:lower:]')
 repo=$(printf '%s' "${BASH_REMATCH[3]}" | tr '[:upper:]' '[:lower:]')
+# The host alone: scheme, credential and port dropped.
+host=${BASH_REMATCH[1]#*://}
+host=${host%[/:]}
+host=${host##*@}
+host=$(printf '%s' "${host%%:*}" | tr '[:upper:]' '[:lower:]')
 key=$owner-$repo
 # A session can point its clone's origin anywhere; a pass then would clone and run what it names.
 if [ -n "$named" ] && [ "$owner/$repo" != "$named" ]; then
 	mkdir -p "$state" || exit 1
 	halt "the clone $dir names $owner/$repo, not $named, the repository the job names"
+fi
+# The push clone fetches and publishes on GitHub, so a clone on another host would work from another repository.
+if [ -n "${PASS_AS_AGENT-}" ] && [ "$host" != github.com ]; then
+	mkdir -p "$state" || exit 1
+	halt "the clone $dir fetches from $host, not github.com, where the push clone publishes"
 fi
 
 mkdir -p "$state/locks" "$state/passes" || exit 1
@@ -133,7 +143,10 @@ if [ -n "${PASS_AS_AGENT-}" ]; then
 	# Per repository, as the lock is: a shared checkout could move to another pin under a running pass.
 	harness=${PASS_HARNESS:-$HOME/harness}/$owner/$repo
 	hooks=${PASS_HOOKS:-/opt/orchestrator/hooks}
-	[ -d "$hooks" ] && [ -z "$(ls -A "$hooks")" ] || halt "the hooks directory $hooks is missing or not empty"
+	# A listing that fails prints nothing, which must not read as empty.
+	if [ ! -d "$hooks" ] || ! entries=$(ls -A "$hooks") || [ -n "$entries" ]; then
+		halt "the hooks directory $hooks is missing, unreadable or not empty"
+	fi
 	# Rewrites a runner clone's config to what this script sets, $2 its remote, and empties its hooks,
 	# before any git command there: a forced checkout leaves both as the root session may have left them.
 	reset() {

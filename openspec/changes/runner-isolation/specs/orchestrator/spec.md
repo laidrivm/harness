@@ -30,7 +30,8 @@ clone, its `node_modules` included.
 #### Scenario: The session's clone names another repository
 
 - **WHEN** the engine's job names no repository, or the session's clone's
-  `origin` names one other than the repository the job names
+  `origin` names one other than the repository the job names, or a host
+  other than `github.com`
 - **THEN** no pass starts, and no push clone or harness checkout is made or
   read
 
