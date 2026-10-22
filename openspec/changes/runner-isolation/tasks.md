@@ -24,7 +24,11 @@ checkout*, §*The runner runs nothing in a session's clone as itself* and
 - [ ] 1.2 Write the failing cases in `bun/board-loop-isolation.test.ts`, with
       a stub launcher that logs each command it is handed and a stub
       `claude`: every command whose working directory is the session's
-      clone goes through the launcher; an edited
+      clone goes through the launcher, and so does one naming it with `-C`
+      or `--git-dir`; the trust check reads the session's clone in `agent`'s
+      config, so a trusted session clone starts beside an untrusted push
+      clone; a bundle whose prerequisite is newer than the push clone's
+      `origin/main` imports after the push clone's fetch; an edited
       `node_modules/harness/bun/goal-check.ts` in the session's clone is never
       run; the push comes from the push clone, after the bundle's fetch, for
       exactly the bundle's tip; a tip with no pre-PR record pushes nothing;
@@ -42,7 +46,8 @@ checkout*, §*The runner runs nothing in a session's clone as itself* and
       bundle and push-clone steps to `bun/board-loop-push.ts`, the record's
       top level from `HARNESS_CLONE` to `bun/goal-check.ts`, and to
       `orchestrator/pass.sh` the harness checkout at the pin read from the
-      push clone's `origin/main`. Verify with 1.2, `orchestrator/pass.test.ts`
+      push clone's `origin/main`, with its origin lookup in the session's
+      clone run through the launcher. Verify with 1.2, `orchestrator/pass.test.ts`
       and `bun test`
 - [ ] 1.4 Add to `core/git-and-prs.md`'s hook rule its one exception, the
       runner's push from its push clone on the host for a commit whose pre-PR
@@ -70,7 +75,8 @@ Closes `orchestrator` §*The user's GitHub token reaches only the push*,
       `git grep -n -e '"gh"' -e GH_TOKEN` over `bun/board-loop*.ts`,
       `bun/goal-check.ts` and every module they import (`bun/pull-requests.ts`
       runs the goal check's `gh api` reads), and record in `design.md` *The
-      GitHub token's reach* which run unauthenticated
+      GitHub token's reach* which run unauthenticated; hand
+      `readPullRequests()` the mint's token when the App is configured
 - [ ] 2.2 Write the failing cases: `pass.sh`'s pass environment holds no
       `GH_TOKEN`, holds the App's id and mint command when they are set, and
       no key path; it sets `GH_CONFIG_DIR` to an empty directory the pass

@@ -94,7 +94,8 @@ runner SHALL read the user's token from its secret file for the push, the
 pull request it opens and the check that reads that pull request, and for
 nothing else; with the App configured it SHALL not read that file. The
 pass's `gh` SHALL read its configuration from an empty directory the pass
-owns, never from a login stored in the runner's home.
+owns, never from a login stored in the runner's home. With the App configured,
+`readPullRequests()` SHALL read with a token from the key holder's mint.
 
 #### Scenario: A login stored in the runner's home
 
@@ -158,8 +159,10 @@ login, and the SSH and tunnel keys.
 The wrapper SHALL start the pass with an environment holding only the
 variables it names: the path, the home, the locale, the Claude Code token
 read from the host's secret file, the App's id and the key holder's mint
-command when the host configures the App, the setting that keeps Claude Code
-from updating itself, and `CLAUDECODE` when its own environment holds it. It
+command when the host configures the App, `HARNESS_GH_TOKEN_FILE` when it
+does not, `HARNESS_AS_AGENT`, `GH_CONFIG_DIR` naming the pass's empty `gh`
+configuration, the setting that keeps Claude Code from updating itself, and
+`CLAUDECODE` when its own environment holds it. It
 SHALL accept a clone only by a name that is a single path segment under the
 clones directory.
 

@@ -183,7 +183,8 @@ configured, step 4 neither requires nor opens `gh_token`. In step 5 the board
 loop runs from `runner`'s own harness checkout with the push clone as its working
 directory, every command in the session's clone goes through
 `/opt/orchestrator/as-agent`, and the pass exports no `GH_TOKEN`; only the
-push and the pull request's calls read the PAT file, and with the App
+push, the `gh pr create` and the check that reads that pull request read the
+PAT file, and with the App
 configured nothing does. Its spec's *The wrapper starts the pass with the
 environment it names* states the result.
 
