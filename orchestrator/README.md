@@ -54,7 +54,7 @@ is then deleted. `db_password` is 64 hex characters, since a raw `@`, `:` or
 
 Then the owners and modes. Every file is owned by `runner`'s uid, which the
 runner's Dockerfile fixes, except `tunnel_token`, which `cloudflared` reads as
-uid 65532:
+uid 65532, and `engine_key`, which stays root's until step 4 deletes it:
 
 ```sh
 chown 1500:1500 claude_oauth_token gh_token runner_ssh_pubkey runner_host_key runner_known_hosts db_password database_url
