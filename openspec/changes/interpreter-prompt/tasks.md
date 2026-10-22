@@ -1,6 +1,7 @@
 # interpreter-prompt — tasks
 
-One task group, so the change ships whole on `feat/interpreter-prompt`.
+Two task groups: the prompt (group 1, shipped in #222), then the block that
+replaced it once task 1.7 measured the prompt (group 2).
 
 The `agent-permissions` delta adds one requirement and modifies none. It
 qualifies *The git prohibitions are enforced by a hook* from beside it, whose
@@ -60,7 +61,7 @@ text the guard cannot read prompts* but
 - [x] 1.6 Run `bun test`. Every existing guard case still passes unedited,
       which is the control for the scenarios of the hook requirement this
       change qualifies
-- [ ] 1.7 Measure whether a local `allow` grant silences the hook's `ask`:
+- [x] 1.7 Measure whether a local `allow` grant silences the hook's `ask`:
       with `Bash(python3 *)` in `.claude/settings.local.json`, run `python3
       -c "print(1)"` in an attended session and refuse the prompt. This needs
       the user, so in an unattended run it goes to the card (unattended:
@@ -68,9 +69,38 @@ text the guard cannot read prompts* but
       version in the pull request. If no prompt appears, stop and put the
       exit-2 fallback to the user. No test can cite this scenario, so it
       counts against the spec-coverage floor once the change is archived.
-      Open (2026-10-22): applied unattended, so the measurement is handed to
-      the user on the card
+      Measured by the user (2026-10-22, card): no prompt appeared and the
+      command ran, so a local `allow` silences the hook's `ask`. Claude Code
+      2.1.308 (installed on the measuring machine that day). The user agreed
+      to the exit-2 fallback; group 2 switches to it
 - [x] 1.8 Propose a rewording of the last Safety rule in `core/rules.md`.
       Its reason clause stops being true once this ships. Hand the wording on
       through fix & capture rather than editing the rule
       (unattended: card — hand the wording on)
+
+## 2. The guard blocks what it asked about
+
+Task 1.7 found that a local `allow` silences the hook's `ask`; the user agreed
+to the exit-2 fallback (card, 2026-10-22). See design *Ask, not block*.
+
+- [ ] 2.1 Rewrite the `agent-permissions` delta requirement and its scenarios
+      from "prompts" to "is refused": the guard exits 2, writes the reasons on
+      stderr and records `block`. Replace *A local allow entry does not grant
+      it* with a scenario a test can cite: the same line is refused with a
+      local `allow` present, since the hook decides before any rule. Update
+      `gate-ledger` §*A prompt a guard asks for is recorded* to match
+- [ ] 2.2 Turn the 1.1 cases from "exits 0 with one `ask` object" into
+      "exits 2, stdout empty, stderr names the interpreter and the
+      tracked-script route", and record that each fails before 2.3. Keep the
+      1.2 controls unchanged, and the block-wins case
+- [ ] 2.3 In `bun/command-guard.ts`, emit the collected reasons through
+      `blocker()` from `bun/gate-ledger.ts` once the line is read, in place
+      of the `ask` object (around lines 288–297). Update the header comment's
+      third outcome. Verify with 2.2
+- [ ] 2.4 Unattended passes: a block refuses at once under every permission
+      mode, so the stall the card's 2026-10-22 task names is gone. Add one
+      case that runs the guard as a pass session would (no terminal attached)
+      and asserts exit 2 within the hook's own run, then close that card item
+- [ ] 2.5 Re-propose the 1.8 wording for the last Safety rule in
+      `core/rules.md`, since "a prompt can be approved" is no longer its
+      reason (unattended: card — hand the wording on)

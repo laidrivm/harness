@@ -37,6 +37,16 @@ Unattended, the prompt is a stall under auto mode and a refusal under
 `autonomy.md` asks. A block was rejected: the Safety rule forbids routing a
 refused act *through* an interpreter, not using one.
 
+**Reversed 2026-10-22 by the task 1.7 measurement.** With `Bash(python3 *)`
+in `.claude/settings.local.json`, `python3 -c "print(1)"` ran with no prompt
+on Claude Code 2.1.308: a matching `allow` rule silences the hook's `ask`, so
+the prompt guards nothing a "don't ask again" has once granted. The user
+agreed to the fallback on the card: the same set is blocked, exit 2 through
+`blocker()`, with the reason naming the tracked-script route. A block also
+settles the unattended case — it refuses at once under every permission mode,
+where an `ask` stalled a pass under auto mode until the session timed out.
+Group 2 carries the switch.
+
 ### What counts as unread program text
 
 A listed interpreter asks unless an exemption holds. The check is stated by
@@ -114,7 +124,8 @@ can be approved, as the `bunfig.toml` precedent records. Its reason clause
 - [A hook `ask` loses to an `allow` rule] → then the card's premise fails.
   Task 1.7 measures it before the step is called done. If it fails, the
   fallback is exit 2 for the same set. That fallback is a block, which this
-  design rejected, so the user is asked first.
+  design rejected, so the user is asked first. It failed (2026-10-22, see
+  *Ask, not block*), and the user agreed to the block.
 - [An older Claude Code does not force a hook's `ask` in auto mode] → the
   call then falls to the permission rules, which is today's behaviour, so no
   version is worse off than now. Claude Code 2.1.299 was installed when this
