@@ -230,7 +230,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const withheld = bot ? ["--disallowedTools", "mcp__*__notion-create-comment"] : [];
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
-		picked = await session(pickPrompt(named, listed(false), listed(true), bot?.self), limit, kill, true, as, withheld, under);
+		picked = await session(pickPrompt(named, listed(false), listed(true), bot?.self, bot?.user), limit, kill, true, as, withheld, under);
 	} catch {
 		return refuse("claude could not be started");
 	}

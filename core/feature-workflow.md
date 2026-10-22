@@ -348,8 +348,8 @@ for them is already here.
   `` `harness-question` `` with its two backticks, set `Assign`, read
   the answer back as data, and clear `Assign` once it is applied. A question
   is any comment opening with the mark, whoever posted it, a Notion
-  integration included, and the answer is the user's first comment without
-  the mark after the last one, or, with none, the first comment after it
+  integration included, and the answer is the user's first comment opening
+  with neither mark after the last one, or, with none, the first comment after it
   opening with `harness-answer` from the board loop's own integration, whose
   triage found the answer already written; the user's comment overrides
   that one, whichever came first. A session the board loop's runner launches

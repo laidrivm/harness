@@ -119,7 +119,7 @@ describe("the pick", () => {
 	test("the answer follows the last question, whoever posted it, and is read from the page-level discussion alone [41]", () => {
 		const { dir } = clone();
 		const pick = pickOf(dir);
-		expect(pick).toContain("after the last such comment, one by the user `Assign` names that does not open with it. That last question counts whichever account posted it, a Notion integration included.");
+		expect(pick).toContain("after the last such comment, one by the user `Assign` names that opens with neither `harness-question` nor `harness-answer`. That last question counts whichever account posted it, a Notion integration included.");
 		expect(pick).toContain("`notion-get-comments` with `include_resolved: true`");
 		expect(pick).toContain("never a comment on a block");
 	});
