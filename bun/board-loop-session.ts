@@ -35,7 +35,8 @@ const allowed =(env: NodeJS.ProcessEnv) =>
  * with it, however it exits. `capture` keeps its output rather than showing
  * it. `as` holds the variables the runner adds to the allowlist's, the commit
  * identity and the question gate's signal, and `extra` flags it adds to the
- * command line. `left` names its
+ * command line. `under` is the launcher's words and the session's clone on
+ * the host, which `claude` then runs in as `agent`. `left` names its
  * process group when a member outlived the bounded wait.
  */
 export async function session(
@@ -45,6 +46,7 @@ export async function session(
 	capture = false,
 	as: Record<string, string> = {},
 	extra: string[] = [],
+	under: string[] = [],
 ) {
 	// Auto mode with nothing to answer prompts; never a bypass of permissions.
 	const flags = ["--permission-mode", "auto", "--permission-prompts", "none", ...extra];
@@ -53,7 +55,7 @@ export async function session(
 	let interrupt: (() => void) | undefined;
 	try {
 		// Leader of its own process group, so a child it starts (a test run, say) is signalled with it.
-		const run = Bun.spawn(["claude", "-p", text, ...flags], {
+		const run = Bun.spawn([...under, "claude", "-p", text, ...flags], {
 			stdio: ["ignore", capture ? Bun.file(join(dir, "out")) : "inherit", "inherit"],
 			env: { ...allowed(process.env), ...as },
 			detached: true,

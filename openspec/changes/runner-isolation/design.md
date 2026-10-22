@@ -57,6 +57,10 @@ that commit into the harness clone from the harness's own remote, and checks
 the clone out detached at it, forced and cleaned. A part that is not exactly
 40 lowercase hex characters, or a commit the fetch does not bring, starts no
 pass and is named in the stop file.
+`pass.sh` creates either clone the first time it is missing, fetches from the
+remote the pin names (`https://github.com/<owner>/<repo>.git`), and leaves
+the push clone detached at `origin/main`, where the board loop reads the board
+state the session's clone fast-forwards to.
 The board loop, the goal check and `github-app.ts` import only `node:` and
 `bun:` modules, so the checkout needs no install. The judge copy is that
 checkout's `goal-check.ts`.
@@ -69,14 +73,18 @@ copy would move only on a rebuild, apart from the pin the repository's own
 
 With `HARNESS_AS_AGENT` set (by `pass.sh`), the board loop starts every
 command whose working directory is the session's clone through that launcher:
-`claude`, and git (the fast-forward, the branch reads, the bundle). sudo resets
+`claude`, and git (the fast-forward, the branch reads, the bundle). The
+variable holds the launcher's words, split on spaces (`sudo -n -u agent
+/opt/orchestrator/as-agent` on the host), and a command runs as
+`<words> <clone> <command…>`: the launcher enters the clone and executes the
+rest, since the runner itself may not enter `agent`'s home. sudo resets
 the environment, so the sudoers entry keeps exactly the session allowlist's
 names (`env_keep`); a test reads both and fails on any difference, since the
 two lists are one name looked up in two systems (`rules.md` Code).
 
 The board loop runs with the push clone as its working directory and names
 the session's clone in `HARNESS_CLONE`. Every bun process the runner starts
-gets `--config` naming an empty root-owned file and `--no-env-file`, so no
+gets `--config=/dev/null` and `--no-env-file`, so no
 `bunfig.toml` or `.env` in a working directory loads. Task 1.1 probed both on
 bun 1.4.2 (2026-10-22): `--config=<empty file>` replaces the working
 directory's file, so neither its top-level nor its `[test]` `preload` loads
@@ -84,7 +92,8 @@ under `bun <file>` or `bun test`, and `--no-env-file` keeps a `.env` out of
 both, the flags placed before or after `test`. The fallback, running bun from
 an empty directory with git pointed at the push clone through `GIT_DIR` and
 `GIT_WORK_TREE`, is therefore not needed. The workspace trust check reads the session's
-clone (`HARNESS_CLONE`) in `agent`'s Claude Code configuration, since
+clone (`HARNESS_CLONE`) in `agent`'s Claude Code configuration, read
+through the launcher, since
 `claude` runs there as `agent`, never the push clone in `runner`'s.
 
 ### The push
@@ -142,7 +151,7 @@ this change:
   loop's does. The tree check after the session runs as `agent` through the
   launcher.
 
-Task 1.5 carries this into `ci-run-agent`'s code and text once that change's
+Task 3.1 carries this into `ci-run-agent`'s code and text once that change's
 group 4 has merged.
 
 ### The GitHub token's reach
@@ -158,7 +167,7 @@ the pass owns, since `gh` with no `GH_TOKEN` falls back to a login stored in
 `~/.config/gh/hosts.yml`, and one left in `runner`'s persistent home would
 hand the whole pass a token again; the provisioned home holds no such file
 either. Any other `gh` call in the pass therefore runs unauthenticated; task
-2.1 lists them. One needs a credential on a private repository:
+4.1 lists them. One needs a credential on a private repository:
 `readPullRequests()`, which the board loop's selection and the goal check
 call. With the App configured it gets a token from the key holder's mint;
 without the App it reads the PAT from `HARNESS_GH_TOKEN_FILE` for that call
@@ -218,8 +227,9 @@ that index, instead of setting the count to 1. This removes its `shortcut:`.
 
 ## Migration Plan
 
-Lands in three groups. Groups 1 and 2 change the code and `pass.sh`, and are
-inert on the laptop. Group 3 changes the image and README that
+Lands in five groups: the launcher, the push, the CI flow's push, the tokens'
+reach and the host's users. Groups 1 to 4 change the code and `pass.sh`, and
+are inert on the laptop. Group 5 changes the image and README that
 `vps-board-loop` group 3 adds, and needs it merged. The App key goes on the
-host only after group 3. Rollback: unset `HARNESS_AS_AGENT` and the mint
+host only after group 5. Rollback: unset `HARNESS_AS_AGENT` and the mint
 command, and the runner runs as it does today.

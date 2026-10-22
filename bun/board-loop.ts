@@ -49,12 +49,13 @@ type Outcome = "met" | "open" | "timeout" | "idle" | "refused";
 /**
  * Whether Claude Code's config trusts `dir`, keyed by its real path. The path
  * itself only: crediting a trusted parent could pass where Claude Code does not.
+ * `read` is the config as the session's user read it, on the host.
  */
-function trusted(dir: string): boolean {
+function trusted(dir: string, read?: string): boolean {
 	try {
 		// Where Claude Code keeps it: `CLAUDE_CONFIG_DIR` when set, the home otherwise.
 		const home = process.env.CLAUDE_CONFIG_DIR || homedir();
-		const config = JSON.parse(readFileSync(join(home, ".claude.json"), "utf8"));
+		const config = JSON.parse(read ?? readFileSync(join(home, ".claude.json"), "utf8"));
 		return config?.projects?.[dir]?.hasTrustDialogAccepted === true;
 	} catch {
 		return false;
@@ -98,8 +99,8 @@ function consider(slug: string, status: string, blocking: string[]): Step | stri
  * Whether the step's branch exists, in the clone or on `origin` as the pass's
  * fetch left it: a session that ended before its pull request left it.
  */
-const left = (branch: string) =>
-	[`refs/heads/${branch}`, `refs/remotes/origin/${branch}`].some((ref) => sh("git", "rev-parse", "--verify", "-q", ref).ok);
+const left = (at: typeof sh, branch: string) =>
+	[`refs/heads/${branch}`, `refs/remotes/origin/${branch}`].some((ref) => at("git", "rev-parse", "--verify", "-q", ref).ok);
 
 /** One pass. `limit` and `kill` are replaced only by a test, through an entry module. */
 export async function pass(args: string[], limit = LIMIT, kill: Kill = process.kill): Promise<number> {
@@ -107,53 +108,66 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	if ("CLAUDECODE" in process.env)
 		return end("refused", "a Claude Code session started it — start the runner from a terminal of your own");
 	if (args.length) return end("refused", "usage: board-loop.ts — it takes no argument and follows Board view");
+	// On the host the pass runs in its push clone, and the session's clone is `agent`'s: every command
+	// there runs as `<launcher words> <clone> <command…>`, and every bun of the runner's keeps a tree's
+	// bunfig.toml and .env out. With no launcher the clone is the one the pass runs in.
+	const launcher = process.env.HARNESS_AS_AGENT?.split(" ").filter(Boolean) ?? [];
+	if (launcher.length && !process.env.HARNESS_CLONE)
+		return end("refused", "HARNESS_AS_AGENT is set and HARNESS_CLONE names no clone");
+	const bun = launcher.length ? ["--config=/dev/null", "--no-env-file"] : [];
 
 	const top = sh("git", "rev-parse", "--show-toplevel");
 	if (!top.ok) return end("refused", "not inside a git repository");
 	process.chdir(top.out);
+	const under = launcher.length ? [...launcher, process.env.HARNESS_CLONE as string] : [];
+	const at = (...cmd: string[]) => sh(...under, ...cmd);
 	// In a folder nobody trusted Claude Code ignores the tracked `permissions.allow`,
 	// so under `--permission-prompts none` the session's every unlisted call is refused.
-	const real = realpathSync(top.out);
-	if (!trusted(real))
+	const real = launcher.length ? at("pwd", "-P").out : realpathSync(top.out);
+	const config = launcher.length ? at("sh", "-c", 'cat "${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"').out : undefined;
+	if (!trusted(real, config))
 		return end("refused", `not a trusted workspace — run claude once in ${real}, accept the trust dialog and /exit`);
-	if (sh("git", "status", "--porcelain", "--untracked-files=no").out)
+	if (at("git", "status", "--porcelain", "--untracked-files=no").out)
 		return end("refused", "tracked files differ from HEAD — work the last session left");
 	// An unpushed tip may be a dead session's step branch: noted, and judged once the steps are known.
-	const unpushed = !sh("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out;
-	const noted = unpushed ? sh("git", "branch", "--show-current").out : "";
+	const unpushed = !at("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out;
+	const noted = unpushed ? at("git", "branch", "--show-current").out : "";
 	// No branch name keeps a detached HEAD's commits once the pass switches off it.
 	if (unpushed && !noted) return end("refused", "HEAD names no branch and is on no remote-tracking branch — unpushed work");
 	/** A refusal goes back to the noted branch first, so the next pass sees its tip again. */
 	const refuse = (detail: string) =>
-		end("refused", !noted || sh("git", "switch", "-q", noted).ok ? detail : `${detail}; switching back to ${noted} failed`);
+		end("refused", !noted || at("git", "switch", "-q", noted).ok ? detail : `${detail}; switching back to ${noted} failed`);
 	for (const step of [
 		["fetch", "-q", "origin"],
 		["switch", "-q", DEFAULT],
 		["merge", "--ff-only", "-q", `origin/${DEFAULT}`],
 	]) {
-		const run = sh("git", ...step);
+		const run = at("git", ...step);
 		if (run.ok) continue;
 		console.error(run.err);
 		const why = step[0] === "merge" ? `${DEFAULT} cannot fast-forward to origin/${DEFAULT}` : `git ${step[0]} failed`;
 		return refuse(`${why}; nothing was merged or reset`);
 	}
 	// A local main ahead of origin fast-forwards as "up to date", unpushed work and all.
-	if (sh("git", "rev-parse", "HEAD").out !== sh("git", "rev-parse", `origin/${DEFAULT}`).out)
+	if (at("git", "rev-parse", "HEAD").out !== at("git", "rev-parse", `origin/${DEFAULT}`).out)
 		return refuse(`${DEFAULT} holds commits origin/${DEFAULT} lacks; nothing was merged or reset`);
-	const install = sh("bun", "install", "--frozen-lockfile");
+	const install = at("bun", "install", "--frozen-lockfile");
 	if (!install.ok) {
 		console.error([install.out, install.err].filter(Boolean).join("\n"));
 		return refuse("bun install --frozen-lockfile failed, as printed above");
 	}
 	// The pinned copy, in the harness too: a session that edits the tree's check must not judge itself.
 	const check = join(real, "node_modules/harness/bun/goal-check.ts");
-	if (!existsSync(check))
+	if (launcher.length ? !at("test", "-f", check).ok : !existsSync(check))
 		return refuse("node_modules/harness/bun/goal-check.ts is missing — run bun install");
 	// The verdict runs a copy taken before any session, outside the clone, which an
 	// edit under `node_modules/harness/` cannot reach. Its imports all sit beside it.
-	const judge = mkdtempSync(join(tmpdir(), "board-loop-judge-"));
-	process.on("exit", () => rmSync(judge, { recursive: true, force: true }));
-	cpSync(dirname(check), judge, { recursive: true });
+	// On the host, the runner's own checkout at the pin, which no session writes.
+	const judge = launcher.length ? import.meta.dir : mkdtempSync(join(tmpdir(), "board-loop-judge-"));
+	if (!launcher.length) {
+		process.on("exit", () => rmSync(judge, { recursive: true, force: true }));
+		cpSync(dirname(check), judge, { recursive: true });
+	}
 
 	// Imported here: `root.ts`, under it, runs git as it loads, and a pass
 	// started from a session must have run nothing.
@@ -214,7 +228,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const withheld = bot ? ["--disallowedTools", "mcp__*__notion-create-comment"] : [];
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
-		picked = await session(pickPrompt(named, listed(false), listed(true)), limit, kill, true, as, withheld);
+		picked = await session(pickPrompt(named, listed(false), listed(true)), limit, kill, true, as, withheld, under);
 	} catch {
 		return refuse("claude could not be started");
 	}
@@ -232,7 +246,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 
 	const target = `apply ${slug} step ${chosen.step}`;
 	// The runner names the branch, never deletes or resets it, and pushes it only once the step is ready.
-	const resumed = left(chosen.branch);
+	const resumed = left(at, chosen.branch);
 	if (resumed) console.log(`continuing ${chosen.branch}, which a session left`);
 	console.log(`carrying ${target} on ${chosen.branch}`);
 	let staged: Awaited<ReturnType<typeof session>>;
@@ -240,11 +254,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	try {
 		// Captured, for its title and body: in text mode it prints nothing before its final message.
 		const asks = bot ? "runner" : existsSync(where(ASK_SETTINGS)) ? "ask" : undefined;
-		staged = await session(prompt(slug, chosen, relative(real, check), resumed, asks), limit, kill, true, as, [
-			"--session-id",
-			id,
-			...withheld,
-		]);
+		const flags = ["--session-id", id, ...withheld];
+		staged = await session(prompt(slug, chosen, relative(real, check), resumed, asks), limit, kill, true, as, flags, under);
 	} catch {
 		return refuse("claude could not be started");
 	}
@@ -262,7 +273,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 					: await post(bot, question, { board: named, slug }),
 		);
 
-	const judged = [join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
+	const judged = [...bun, join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
 	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app);
 	if (unready !== undefined) return end("open", `${target}: ${unready}`);
 	// The check's own verdict at the commit the session left, never the exit status.

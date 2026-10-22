@@ -134,9 +134,14 @@ function bin(log: string, s: Stubs): string {
 	const dir = emptyDir("board-loop-bin-");
 	const stub = (name: string, body: string) => {
 		const file = join(dir, name);
-		writeFileSync(file, `#!/bin/sh\necho "${name} $*" >> '${log}'\n${body}\n`);
+		// The second log names who ran each call, and where: `agent` once the launcher started it.
+		const where = `echo "\${AS_AGENT:-runner} $PWD ${name} $*" >> '${log}.cwd'`;
+		writeFileSync(file, `#!/bin/sh\necho "${name} $*" >> '${log}'\n${where}\n${body}\n`);
 		chmodSync(file, 0o755);
 	};
+	// The launcher's stand-in: enters the clone it is handed and runs the rest there, marked as `agent`'s.
+	// The system's tools follow the stubs on its `PATH`, as sudo's `secure_path` gives them on the host.
+	stub("as-agent", `cd "$1" || exit 1\nshift\nexport AS_AGENT=agent PATH="$PATH:/usr/bin:/bin"\nexec "$@"`);
 	// The push, the create, each session and the full check save the environment they saw.
 	const saw = (what: string) => `/usr/bin/env > '${log}.${what}-env'`;
 	// The push also saves the PR → session table as it stands at that moment.
@@ -153,6 +158,8 @@ function bin(log: string, s: Stubs): string {
 	stub(
 		"bun",
 		[
+			// The runner's flags that keep a tree's `bunfig.toml` and `.env` out, logged above and dropped here.
+			`while [ "$1" = --config=/dev/null ] || [ "$1" = --no-env-file ]; do shift; done`,
 			`if [ "$1" = install ]; then ${s.pinned === false ? "" : write}echo 'the install says this'; exit ${s.install ?? 0}; fi`,
 			`if [ "$5" = --before-push ]; then /bin/cat "\${1%/*}/before-push"; exit; fi`,
 			`${saw("check")}; /bin/cat "$1"`,
@@ -238,6 +245,8 @@ function result(code: number | null, stdout: string, stderr: string, log: string
 		text: `${stdout}${stderr}`.trim(),
 		last: stdout.trim().split("\n").at(-1) ?? "",
 		calls: readFileSync(log, "utf8"),
+		/** Each stub call as `<runner|agent> <working directory> <name> <arguments>`. */
+		where: saved(`${log}.cwd`) ?? "",
 		state,
 		home,
 		body: saved(`${log}.body`),

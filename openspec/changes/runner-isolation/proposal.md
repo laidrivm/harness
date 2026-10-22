@@ -89,4 +89,4 @@ None.
 - `core/git-and-prs.md` (the hook rule's exception).
 - `bun/ci-run.ts` and `ci-run-agent`'s text: its fetch, session and fix push
   go through the same launcher, bundles and push clone, and its fix prompt
-  asks for the pre-PR check (task 1.5).
+  asks for the pre-PR check (task 3.1).
