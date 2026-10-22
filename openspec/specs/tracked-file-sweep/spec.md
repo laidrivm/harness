@@ -1,15 +1,21 @@
-# tracked-file-sweep — delta spec
+# tracked-file-sweep Specification
 
-## ADDED Requirements
+## Purpose
+How a check reads the repository's files: through one shared sweep of the
+tracked files, taken at the root, with a view of the paths and a view of the
+regular files among them, so no check derives a listing of its own.
 
+## Requirements
 ### Requirement: Every check reads the tree through one tracked-file sweep
 
 A check that reads the repository's files SHALL obtain them from a single
 shared sweep rather than deriving its own listing, and SHALL apply its own
 filter to that sweep's result. No tracked source file other than
-`bun/tracked.ts` and `bun/tracked.test.ts` SHALL invoke
-`git rev-parse --show-toplevel` or `git ls-files` to enumerate the tree — the
-sweep's own test is exempt because fabricating a repository is what it does.
+`bun/tracked.ts` and the files the suite's check exempts SHALL invoke
+`git rev-parse --show-toplevel` or `git ls-files` to enumerate the tree. The
+check names each exemption with its reason — the sweep's own test because
+fabricating a repository is what it does, and a file whose listing reads what
+the sweep does not return, such as an index mode or untracked files.
 Asking git about a named path is not enumerating the tree and is not covered:
 `git ls-files --error-unmatch <path>` and a listing scoped to literal paths
 both answer a question about paths the caller already holds. A query naming no
@@ -61,8 +67,8 @@ space is unusual and not a check's to corrupt.
 
 #### Scenario: A second listing is introduced
 
-- **WHEN** a tracked source file other than `bun/tracked.ts` and
-  `bun/tracked.test.ts` invokes `git ls-files` or
+- **WHEN** a tracked source file other than `bun/tracked.ts` and the check's
+  exemptions invokes `git ls-files` or
   `git rev-parse --show-toplevel` to enumerate the tree
 - **THEN** a check in the suite fails, naming that file — the filter belongs at
   the call site and the listing does not
