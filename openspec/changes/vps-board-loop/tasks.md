@@ -120,7 +120,7 @@ machine that carries the step.
       results, stop: put the table to the user as the question on the card,
       with a recommendation (unattended: card — hand the choice on, and build
       neither host), and revise group 3 after the answer (user, 2026-10-20)
-- [ ] 2.3 Tear both stacks down. Verify with `docker ps -a`, `docker volume
+- [x] 2.3 Tear both stacks down. Verify with `docker ps -a`, `docker volume
       ls` and the throwaway directory gone that the VPS holds nothing from
       the spike.
       2026-10-21: the secret-free bring-up is torn down: `docker ps -a`,
@@ -129,8 +129,12 @@ machine that carries the step.
       and compose 2.40.3 from Ubuntu's repository stay installed. 2026-10-22:
       the token bring-up is torn down the same way, its token files shredded
       and the `spike` user removed; the tunnel and the Access applications
-      stay for group 3. The task stays open while row 13 (T6) needs one more
-      bring-up
+      stay for group 3. 2026-10-22, later: the third bring-up (row 13 and
+      Windmill 1.846.1) is torn down the same way, with every token, key and
+      password file shredded; `docker ps -a`, `docker volume ls` and `docker
+      images` are empty. In Access the spike's Service Auth policy is
+      removed; the service token itself is the user's to keep or revoke, and
+      the bypass keeps `/api/r/github` for Windmill's route
 
 ## 3. The n8n host
 
