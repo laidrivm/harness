@@ -8,7 +8,7 @@ The agent harness shared by several projects. It ships as a package (`package.js
 
 `bun/` holds what assumes Bun and TypeScript: the command guard and the hook text that boots it, the gates, and `check.ts`, which runs every check over a consumer's tree.
 
-`orchestrator/` holds what a host of the user's own runs to start passes with nobody at a terminal: `pass.sh`, the wrapper a timer runs for one board-loop pass, at most one per repository at a time and none after a failed pass until the user removes its stop file.
+`orchestrator/` holds what a host of the user's own runs to start passes with nobody at a terminal: `pass.sh`, the wrapper a timer runs for one board-loop pass, at most one per repository at a time and none after a failed pass until the user removes its stop file. From the phone the user reaches it two ways: Windmill's UI, and for an emergency a Claude Code session they start by hand over SSH as root, with Remote Control (`orchestrator/README.md`).
 
 ## Working on the harness
 

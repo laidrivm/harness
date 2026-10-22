@@ -223,11 +223,15 @@ emergency session alike, runs it only as `docker compose exec -u runner
 runner /opt/orchestrator/stop.sh <clone>`: the marker holds a process group
 in the runner's PID namespace, which a `kill` on the host would miss or
 mistake for a host process, and running as `runner` gives the stop file it
-writes the owner one from `pass.sh` has. It validates the name as step 1 does and
-finds the pass through a marker. `pass.sh`, once it holds
-the lock, writes its process group to `<lock>.pid` beside that
-repository's lock. `stop.sh` first tries the lock without waiting: if it
-gets it, no pass runs, so it removes any stale marker, prints `idle` and
+writes the owner one from `pass.sh` has. It validates the name as step 1 does, sourcing the
+one guard both scripts share (`clone-name.sh`), and finds the pass through a
+marker. `pass.sh`, once it holds the lock, writes `<pid> <clone>` to
+`<lock>.pid` beside that repository's lock, and removes it when the pass
+ends: the forced command makes `pass.sh` a session leader, so its pid names
+its process group. `stop.sh` reads the marker naming its clone, so it needs
+neither the clone's origin nor the launcher, and with none it prints
+`idle`. It then tries that lock without waiting: if it
+gets it, no pass runs, so it removes the stale marker, prints `idle` and
 signals nothing. Otherwise it writes the stop file with the line
 `stopped by hand` first, then sends TERM to the marker's process group and
 waits for the lock to free. In that order a tick that takes the freed lock

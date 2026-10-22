@@ -193,7 +193,7 @@ after `runner-isolation` group 5, which edits this group's image and README.
       that the build is first run by the user. `stop.sh`'s copy moved to
       3.3, which adds the file. No Docker daemon ran on the laptop
       (2026-10-22), so the build is first run by the user
-- [ ] 3.3 Write the failing cases in `orchestrator/pass.test.ts`, then add
+- [x] 3.3 Write the failing cases in `orchestrator/pass.test.ts`, then add
       `orchestrator/stop.sh`, copied to `/opt/orchestrator/` by the
       runner's Dockerfile, and have `pass.sh` write `<lock>.pid` (`design.md`
       *Stopping a pass*). Cover: a bad name exits 2 as `pass.sh`'s guard
@@ -207,7 +207,14 @@ after `runner-isolation` group 5, which edits this group's image and README.
       session reach it only through `docker compose exec -u runner runner
       /opt/orchestrator/stop.sh <clone>`, the one invocation 3.7's README
       gives, since the marker's process group is the runner's PID
-      namespace's. Cite each scenario
+      namespace's. Cite each scenario. The cases went to a new
+      `orchestrator/stop.test.ts`, since `pass.test.ts` was past the
+      300-line cap, with the fabricated host lifted into `pass.fixture.ts`
+      for both; the name guard is one file both scripts source,
+      `clone-name.sh`. With no `flock` on the laptop they first ran in CI.
+      The forced command and the pass script now hand `pass.sh` the clone
+      and `<owner>/<repo>` as two words, as `runner-isolation` group 2
+      settled, and a layout case runs the forced command over a stub
 - [x] 3.4 Add `orchestrator/compose.yaml` with the services `db` (Postgres
       16), `windmill_server`, `windmill_worker_pass` (one replica,
       `WORKER_TAGS=pass`), `windmill_worker` (every other tag), each
@@ -236,7 +243,7 @@ after `runner-isolation` group 5, which edits this group's image and README.
       client chat control uses from the laptop: MCP on that token, or `wmill`
       with `HEADERS` when no such MCP token exists (`design.md` *Phone
       access*)
-- [ ] 3.7 Write `orchestrator/README.md`, opening with a level-1 heading. It
+- [x] 3.7 Write `orchestrator/README.md`, opening with a level-1 heading. It
       holds the host requirements, the user acts in `proposal.md`'s order, the
       `wmill sync` commands, `db_password` made with `openssl rand -hex 32`
       and `database_url` from the same value, the SSH key's variable entered
@@ -252,6 +259,7 @@ after `runner-isolation` group 5, which edits this group's image and README.
       shell exports none of the three token variables. It names no address
       and no account. Verify by reading every file under `orchestrator/`
       whole for an identifier before the commit (`git-and-prs.md`)
-- [ ] 3.8 Add one line to the root `README.md`'s orchestrator paragraph
+- [x] 3.8 Add one line to the root `README.md`'s orchestrator paragraph
       naming the emergency session as the phone's second path
-- [ ] 3.9 Run `bun test`. It passes
+- [x] 3.9 Run `bun test`. It passes: 2380 tests, 0 fail (2026-10-22, macOS,
+      where the `flock` cases skip; CI runs them)
