@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { cleanup, emptyDir, git } from "../bun/diff-budget.fixture.ts";
 
@@ -22,8 +22,8 @@ const runner = (version: string) =>
 
 function stand() {
 	const root = emptyDir("orchestrator-pin-");
-	const h = { root, home: join(root, "home"), clones: join(root, "clones"), secrets: join(root, "secrets"), gh: join(root, "gh"), bin: join(root, "bin") };
-	for (const dir of [h.home, h.clones, h.secrets, h.gh, h.bin]) mkdirSync(dir);
+	const h = { root, home: join(root, "home"), clones: join(root, "clones"), secrets: join(root, "secrets"), gh: join(root, "gh"), bin: join(root, "bin"), hooks: join(root, "hooks") };
+	for (const dir of [h.home, h.clones, h.secrets, h.gh, h.bin, h.hooks]) mkdirSync(dir);
 	for (const file of ["claude_oauth_token", "gh_token"]) writeFileSync(join(h.secrets, file), "throwaway\n");
 	// Locking is `pass.sh`'s own tests' subject; these stand it in, so they also run where no `flock` is.
 	const stub = (name: string, body: string) => {
@@ -69,13 +69,15 @@ const env = (h: Stand) => ({
 	PASS_CLONES: h.clones,
 	PASS_SECRETS: h.secrets,
 	PASS_AS_AGENT: join(h.bin, "as-agent"),
+	PASS_HOOKS: h.hooks,
 	GIT_CONFIG_COUNT: "1",
 	GIT_CONFIG_KEY_0: `url.${h.gh}/.insteadOf`,
 	GIT_CONFIG_VALUE_0: "https://github.com/",
 });
 
-function tick(h: Stand, clone = "repo") {
-	const p = Bun.spawnSync([bash, script, clone], { cwd: h.root, env: env(h) });
+/** One tick for `clone`, which the engine's job says holds `named`; `null` names no repository. */
+function tick(h: Stand, clone = "repo", named: string | null = "owner/repo") {
+	const p = Bun.spawnSync([bash, script, clone, ...(named === null ? [] : [named])], { cwd: h.root, env: env(h) });
 	const out = p.stdout.toString();
 	const first = out.split("\n")[0];
 	return { code: p.exitCode, out, ran: first.startsWith("{") ? JSON.parse(first) : undefined };
@@ -119,7 +121,7 @@ describe("pass.sh with a launcher", () => {
 		const h = stand();
 		repository(h, "owner/one", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })), "one");
 		repository(h, "owner/two", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("two") })), "two");
-		expect([tick(h, "one").ran.version, tick(h, "two").ran.version]).toEqual(["one", "two"]);
+		expect([tick(h, "one", "owner/one").ran.version, tick(h, "two", "owner/two").ran.version]).toEqual(["one", "two"]);
 		for (const name of ["one", "two"]) expect(existsSync(join(h.home, "harness/owner", name, ".git"))).toBe(true);
 	});
 
@@ -145,8 +147,108 @@ describe("pass.sh with a launcher", () => {
 		const pin = pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") }));
 		repository(h, "a-b/c", pin, "first");
 		repository(h, "a/b-c", pin, "second");
-		const [first, second] = [tick(h, "first"), tick(h, "second")];
+		const [first, second] = [tick(h, "first", "a-b/c"), tick(h, "second", "a/b-c")];
 		expect(realpathSync(first.ran.cwd)).toBe(realpathSync(join(h.home, "push/a-b/c")));
 		expect(realpathSync(second.ran.cwd)).toBe(realpathSync(join(h.home, "push/a/b-c")));
+	});
+});
+
+/** A hook `name` in `dir`'s `.git/hooks` that leaves `marker` behind when it runs. */
+function plant(dir: string, name: string, marker: string) {
+	const hook = join(dir, ".git/hooks", name);
+	mkdirSync(dirname(hook), { recursive: true });
+	writeFileSync(hook, `#!/bin/sh\ntouch '${marker}'\n`);
+	chmodSync(hook, 0o755);
+}
+
+describe("the repository the engine's job names", () => {
+	// spec: orchestrator/the-sessions-clone-names-another-repository
+	test("a job that names no repository starts no pass, before the session's clone is read", () => {
+		const h = stand();
+		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		const r = tick(h, "repo", null);
+		expect(r.code).toBe(2);
+		expect(r.ran).toBeUndefined();
+		expect(existsSync(join(h.root, "launched"))).toBe(false);
+		expect(existsSync(join(h.home, "push"))).toBe(false);
+	});
+
+	test.each([["a name that is no <owner>/<repo>", "owner"], ["a third segment", "owner/repo/x"]])(
+		"%s starts no pass",
+		(_, named) => {
+			const h = stand();
+			repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+			expect(tick(h, "repo", named).code).toBe(2);
+			expect(existsSync(join(h.home, "push"))).toBe(false);
+		},
+	);
+
+	test("a session's clone whose origin names another repository starts no pass, and the stop file names both", () => {
+		const h = stand();
+		const pin = pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") }));
+		repository(h, "owner/repo", pin);
+		const dir = repository(h, "evil/repo", pin, "evil");
+		const r = tick(h, "evil", "owner/repo");
+		expect(r.code).toBe(1);
+		expect(r.ran).toBeUndefined();
+		expect(stopped(h, "evil")).toContain("evil/repo");
+		expect(stopped(h, "evil")).toContain("owner/repo");
+		expect(existsSync(join(h.home, "push"))).toBe(false);
+		expect(existsSync(join(dir, ".git"))).toBe(true);
+	});
+
+	test("GitHub reads both names case-blind", () => {
+		const h = stand();
+		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		expect(tick(h, "repo", "Owner/Repo").ran.version).toBe("one");
+	});
+});
+
+describe("the runner's clones are reset each pass", () => {
+	// spec: orchestrator/config-left-in-a-runner-clone
+	test("a hook and a config command left in either clone never run, and both configs are rewritten", () => {
+		const h = stand();
+		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		expect(tick(h).code).toBe(0);
+		const push = join(h.home, "push/owner/repo");
+		const harness = join(h.home, "harness/owner/repo");
+		for (const dir of [push, harness]) {
+			plant(dir, "post-checkout", join(h.root, `hooked-${dir === push ? "push" : "harness"}`));
+			git(dir, "config", "core.fsmonitor", `touch '${join(h.root, "monitored")}'`);
+			git(dir, "config", "core.hooksPath", ".git/hooks");
+		}
+		expect(tick(h).ran.version).toBe("one");
+		for (const marker of ["hooked-push", "hooked-harness", "monitored"]) expect(existsSync(join(h.root, marker))).toBe(false);
+		for (const dir of [push, harness]) {
+			const config = readFileSync(join(dir, ".git/config"), "utf8");
+			expect(config).not.toContain("fsmonitor");
+			expect(config).toContain(`hooksPath = ${h.hooks}`);
+			expect(readdirSync(join(dir, ".git/hooks"))).toEqual([]);
+		}
+		expect(Bun.spawnSync(["git", "config", "--get", "remote.origin.url"], { cwd: push }).stdout.toString().trim()).toBe(
+			"https://github.com/owner/repo.git",
+		);
+	});
+
+	test("a clone it cannot reset stops the pass, naming the clone", () => {
+		const h = stand();
+		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		expect(tick(h).code).toBe(0);
+		const config = join(h.home, "push/owner/repo/.git/config");
+		rmSync(config);
+		mkdirSync(config);
+		const r = tick(h);
+		expect(r.code).toBe(1);
+		expect(r.ran).toBeUndefined();
+		expect(stopped(h)).toContain(join(h.home, "push/owner/repo"));
+	});
+
+	test("a hooks directory that is not empty stops the pass", () => {
+		const h = stand();
+		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		writeFileSync(join(h.hooks, "pre-push"), "#!/bin/sh\n");
+		const r = tick(h);
+		expect(r.code).toBe(1);
+		expect(stopped(h)).toContain(h.hooks);
 	});
 });

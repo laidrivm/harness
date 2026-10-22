@@ -119,11 +119,14 @@ deployed script reaches, so no session runs there. So:
   to `/home/agent/clones` through `PASS_CLONES`. Both volumes outlive a
   recreated container.
 - The pass script, a bash script on the `pass` worker, runs `ssh runner
-  <clone>` on the compose network. No port is published. The key's
+  <clone> <owner>/<repo>` on the compose network. No port is published. The key's
   `authorized_keys` line is
-  `restrict,command="PASS_CLONES=/home/agent/clones /opt/orchestrator/pass.sh \"$SSH_ORIGINAL_COMMAND\""`,
-  written by the entrypoint from a secret file. The engine can name a clone
-  and nothing else.
+  `restrict,command="set -f; PASS_CLONES=/home/agent/clones exec /opt/orchestrator/pass.sh $SSH_ORIGINAL_COMMAND"`,
+  written by the entrypoint from a secret file. The words split on spaces,
+  with globbing off, and `pass.sh` refuses a third and anchors each whole
+  value. The engine can name a clone and the repository it holds, and
+  nothing else; `runner-isolation` *The repository is the job's* says why
+  the second is the job's.
 - The script ends on `ssh`'s status, which is the pass's own, and Windmill
   fails a job that exits non-zero (spike row 10 on 1.846.1), so a failed or
   paused pass reads as failed in Runs. The spike's `echo pass_status=$?` hid

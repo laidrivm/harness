@@ -57,10 +57,28 @@ that commit into the harness clone from the harness's own remote, and checks
 the clone out detached at it, forced and cleaned. A part that is not exactly
 40 lowercase hex characters, or a commit the fetch does not bring, starts no
 pass and is named in the stop file.
-`pass.sh` creates either clone the first time it is missing, fetches from the
-remote the pin names (`https://github.com/<owner>/<repo>.git`), and leaves
-the push clone detached at `origin/main`, where the board loop reads the board
-state the session's clone fast-forwards to.
+`pass.sh` creates either clone the first time it is missing, with `git init`
+and an empty `--template`, and fetches the push clone from
+`https://github.com/<owner>/<repo>.git` and the harness clone from the remote
+the pin names. It leaves the push clone detached at `origin/main`, where the
+board loop reads the board state the session's clone fast-forwards to.
+
+### The repository is the job's, never the clone's (group 2)
+
+`<owner>/<repo>` is the second argument the engine's job hands `pass.sh`
+(`pass.sh <clone> <owner>/<repo>`), set where the user defines the job, which
+no session reaches. On the host, launcher mode refuses a tick without it
+(exit 2, as a bad clone name) before it reads anything of the session's
+clone. The session's clone's `origin` is still read, through the launcher,
+and must name the same repository, case-blind; one that names another
+pauses the pass, naming both, before any runner clone is made or fetched.
+The lock key, both runner clones' paths and the push clone's remote all come
+from the job's name. The laptop, with no launcher, keeps reading the
+repository from its own clone's `origin`.
+
+A root-owned list of clone → repository beside the launcher was the
+alternative. Rejected: it is a second place to keep in step with the job,
+and the job already names its clone.
 The board loop, the goal check and `github-app.ts` import only `node:` and
 `bun:` modules, so the checkout needs no install. The judge copy is that
 checkout's `goal-check.ts`.
@@ -232,14 +250,14 @@ that index, instead of setting the count to 1. This removes its `shortcut:`.
   clones' `.git/config` to the values `pass.sh` sets at creation (the
   remote, `core.hooksPath` at the empty root-owned directory) and empties
   `.git/hooks`; it stops
-  naming the clone if either cannot be reset. The group that adds the
-  bundle push carries the task and its case.
-- [`pass.sh` takes the owner and repository from `remote.origin.url` in the
+  naming the clone if either cannot be reset, and stops when the hooks
+  directory (`PASS_HOOKS`, `/opt/orchestrator/hooks`) is missing or not
+  empty. Group 2 does this.
+- [`pass.sh` took the owner and repository from `remote.origin.url` in the
   session's clone, which `agent` writes, so a session could point the next
   pass's push clone and harness pin at a repository of its own.] → Group 2
-  takes them from a value `runner` owns instead — the repository the engine's
-  job names — and refuses a session clone whose origin names another. Until
-  then launcher mode stays unset, as it is until group 5.
+  takes them from the repository the engine's job names (*The repository is
+  the job's*) and pauses on a session clone whose origin names another.
 - [The mint helper moves only when the image is rebuilt.] → Its pin note says
   so, as every image pin's does.
 - [Two lists of variable names, in the code and in sudoers.] → The test above.
