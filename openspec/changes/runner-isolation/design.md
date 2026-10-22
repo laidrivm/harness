@@ -70,8 +70,9 @@ board loop reads the board state the session's clone fast-forwards to.
 no session reaches. On the host, launcher mode refuses a tick without it
 (exit 2, as a bad clone name) before it reads anything of the session's
 clone. The session's clone's `origin` is still read, through the launcher,
-and must name the same repository, case-blind; one that names another
-pauses the pass, naming both, before any runner clone is made or fetched.
+and must name the same repository, case-blind, on `github.com`, where the
+push clone fetches and publishes; one that names another repository or
+host pauses the pass, naming it, before any runner clone is made or fetched.
 The lock key, both runner clones' paths and the push clone's remote all come
 from the job's name. The laptop, with no launcher, keeps reading the
 repository from its own clone's `origin`.
