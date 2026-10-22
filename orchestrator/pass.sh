@@ -49,9 +49,9 @@ halt() {
 	exit 1
 }
 
-# The whole value: one path segment, never `.`, `..` or an option. A clone's
-# `.git` is a directory; a worktree's is a file, and no pass pushes from one.
-segment='^[A-Za-z0-9][A-Za-z0-9._-]*$'
+# Without the shared guard an empty pattern would match every name.
+. "$(dirname "${BASH_SOURCE[0]}")/clone-name.sh" || exit 2
+# A clone's `.git` is a directory; a worktree's is a file, and no pass pushes from one.
 if [[ ! $name =~ $segment ]] || [ ! -d "$dir/.git" ]; then
 	echo "orchestrator: no clone named '$name' under $clones" >&2
 	exit 2
@@ -127,6 +127,9 @@ fi
 # Again under the lock: a pass that failed after the first check wrote its
 # stop file before it let the lock go.
 paused
+# stop.sh finds the pass here. The forced command makes pass.sh a session
+# leader, so its pid names the process group TERM ends.
+printf '%s %s\n' "$$" "$name" >"$lock.pid"
 
 for file in claude_oauth_token gh_token; do
 	# grep reads the file, so no token enters this shell's variables.
@@ -188,6 +191,8 @@ env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 DISABLE_AUTOUPDATER=1 ${CLAUDECODE
 		export CLAUDE_CODE_OAUTH_TOKEN GH_TOKEN && shift && exec bun "$@"' pass "$secrets" "${flags[@]}" "$loop" \
 	>"$log" 2>&1
 status=$?
+# Before the lock frees, so no marker outlives its pass to name a reused pid.
+rm -f "$lock.pid"
 
 # Any non-zero status pauses: the runner exits 0 or 1, so another (127, a
 # signal) means the pass did not run as designed.

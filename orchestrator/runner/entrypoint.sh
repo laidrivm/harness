@@ -1,7 +1,8 @@
 #!/bin/sh
 # Writes runner's one authorized_keys line from the engine's public key, then
-# runs the command (sshd). The key reaches pass.sh alone, with the clone name
-# the engine sends: the engine can name a clone and nothing else.
+# runs the command (sshd). The key reaches pass.sh alone, with the words the
+# engine sends split on spaces and globbing off: the engine can name a clone
+# and its repository and nothing else, since pass.sh refuses a third word.
 #
 # It installs sshd's one host key from a secret file, whose public half the
 # engine pins, so a rebuild keeps the key and a stand-in on the network fails.
@@ -22,7 +23,7 @@ done
 install -o root -g root -m 0600 "$host" /etc/ssh/ssh_host_ed25519_key
 
 install -d -o runner -g runner -m 0700 /home/runner/.ssh
-printf 'restrict,command="PASS_CLONES=/home/agent/clones /opt/orchestrator/pass.sh \\"$SSH_ORIGINAL_COMMAND\\"" %s\n' "$(head -n 1 "$key")" >/home/runner/.ssh/authorized_keys
+printf 'restrict,command="set -f; PASS_CLONES=/home/agent/clones exec /opt/orchestrator/pass.sh $SSH_ORIGINAL_COMMAND" %s\n' "$(head -n 1 "$key")" >/home/runner/.ssh/authorized_keys
 chown runner:runner /home/runner/.ssh/authorized_keys
 chmod 0600 /home/runner/.ssh/authorized_keys
 

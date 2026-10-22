@@ -59,6 +59,8 @@ RUN useradd --create-home --uid 1500 --user-group --shell /bin/bash runner \
 	&& printf 'PasswordAuthentication no\nAllowUsers runner\nHostKey /etc/ssh/ssh_host_ed25519_key\n' >/etc/ssh/sshd_config.d/runner.conf
 
 COPY --chmod=0755 pass.sh /opt/orchestrator/pass.sh
+COPY --chmod=0755 stop.sh /opt/orchestrator/stop.sh
+COPY --chmod=0644 clone-name.sh /opt/orchestrator/clone-name.sh
 COPY --chmod=0755 runner/entrypoint.sh /opt/orchestrator/entrypoint.sh
 
 ENTRYPOINT ["/opt/orchestrator/entrypoint.sh"]

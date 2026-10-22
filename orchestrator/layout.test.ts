@@ -179,4 +179,48 @@ describe("the runner image", () => {
 		expect(rules).toHaveLength(1);
 		expect(rules[0]).toContain("runner ALL=(agent) NOPASSWD: /opt/orchestrator/as-agent");
 	});
+
+	test("the image copies pass.sh, stop.sh and the name guard both source to /opt/orchestrator/", () => {
+		const text = read(dockerfile);
+		for (const file of ["pass.sh", "stop.sh", "clone-name.sh"]) expect(text).toContain(` ${file} /opt/orchestrator/${file}`);
+	});
+
+	// spec: orchestrator/a-clone-name-that-leaves-the-clones-directory
+	test("the forced command hands pass.sh the engine's words split, with globbing off [38]", () => {
+		const line = read(entry).split("\n").find((l) => l.includes("authorized_keys") && l.includes(">")) ?? "";
+		const command = (/command="(.*?)" %s/.exec(line)?.[1] ?? "").replaceAll('\\"', '"');
+		expect(command).toStartWith("set -f; ");
+		const dir = emptyDir("orchestrator-forced-");
+		const stub = join(dir, "pass.sh");
+		writeFileSync(stub, '#!/bin/sh\nprintf "%s\\n" "$PASS_CLONES" "$@"\n', { mode: 0o755 });
+		const r = Bun.spawnSync(["bash", "-c", command.replace("/opt/orchestrator/pass.sh", stub)], {
+			cwd: dir,
+			env: { PATH: process.env.PATH ?? "", SSH_ORIGINAL_COMMAND: "harness owner/repo *" },
+		});
+		expect(r.stdout.toString().split("\n")).toEqual(["/home/agent/clones", "harness", "owner/repo", "*", ""]);
+	});
+
+	test("the engine's ssh call names the clone and the repository the job runs [38]", () => {
+		const call = read("orchestrator/windmill/f/orchestrator/pass.sh").trim().split("\n").at(-1) ?? "";
+		expect(call).toMatch(/ runner@runner [A-Za-z0-9][A-Za-z0-9._-]* [A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/);
+	});
+});
+
+describe("the host README", () => {
+	const readme = "orchestrator/README.md";
+
+	test("opens with a level-1 heading", () => {
+		expect(read(readme)).toStartWith("# ");
+	});
+
+	test("makes each secret file owned by runner's uid, mode 0400, its directory 0500, and the tunnel token owned by 65532 [41]", () => {
+		const uid = /useradd[^\n]*--uid (\d+)[^\n]* runner\b/.exec(read("orchestrator/runner/Dockerfile"))?.[1];
+		const text = read(readme);
+		expect(uid).toBeDefined();
+		for (const part of [`chown ${uid}:${uid}`, "chmod 0400", "chmod 0500", "chown 65532:65532 tunnel_token"]) expect(text).toContain(part);
+	});
+
+	test("gives stop.sh's one invocation", () => {
+		expect(read(readme)).toContain("docker compose exec -u runner runner /opt/orchestrator/stop.sh");
+	});
 });
