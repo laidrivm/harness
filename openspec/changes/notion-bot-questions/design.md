@@ -363,7 +363,10 @@ answer (CodeRabbit on #191). If the answer's post fails, the runner sets
 pass's pick session finds the answer and carries it, as it carries the
 user's, though no `Assign` names the user. On `ESCALATE`, a source that does not hold, a time
 limit of ten minutes passed, or any failure, the runner posts the question as
-groups 2 and 3 do. A doubt therefore always ends with the user.
+groups 2 and 3 do. A doubt therefore always ends with the user. The runner
+prints how the triage ended on a line of its own, `triage: …`, above the
+question's line, and a failed answer post on another, `answer: not posted —
+…`, so the one line of groups 2 and 3 becomes two or three.
 
 The triage answers only what is already written, and every choice goes on to
 the user (decision 8). That is the test `task-board`'s *An agent meets a
