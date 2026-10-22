@@ -22,8 +22,8 @@ capture it exactly like a bug, so future runs don't repeat the old style:
        ship it, and write the rule below as its stop-gap, which leaves under
        *A mechanised prohibition leaves its prose home* once the gate lands;
      - none that would not block far more than the rule intends → write the
-       rule, and tell the user why no mechanism fits (unattended: card — the
-       card carries the reason).
+       rule below, and tell the user why no mechanism fits (unattended: card —
+       the card carries the reason).
    - If no test took it and it's about how code should be written here →
      propose a one-line rule for the matching sublist of "Rules" below —
      Code, Process or Safety — and add it after the user confirms
