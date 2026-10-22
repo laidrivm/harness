@@ -122,11 +122,12 @@ const OWN_LISTING: Record<string, string> = {
 
 const SOURCE = /\.(?:[cm]?[jt]sx?)$/;
 
-// `git ls-files` passed as a spawn argument, or run through Bun's shell. Only
-// `ls-files` lists the tree: `rev-parse --show-toplevel` alone yields the root,
-// which a dozen files take without listing anything. The prose mentions in
-// comments are backticked words, never a quoted argument or a `$` template.
-const LISTING = /["']ls-files["']|\$`[^`]*\bls-files\b/;
+// `ls-files` inside a quoted string on one line — a spawn argument or a
+// `sh -c` command — or run through Bun's shell. Only `ls-files` lists the tree:
+// `rev-parse --show-toplevel` alone yields the root, which a dozen files take
+// without listing anything. The prose mentions in comments are backticked
+// words, never a quoted string or a `$` template.
+const LISTING = /["'][^"'\n]*\bls-files\b[^"'\n]*["']|\$`[^`]*\bls-files\b/;
 
 /** Tracked source files outside `OWN_LISTING` that derive a listing. */
 function ownListings(cwd: string): string[] {
@@ -150,10 +151,15 @@ describe("one listing", () => {
 			"bun/tracked.ts": 'spawn(["git", "ls-files", "-z"]);',
 			"bun/gate.ts": 'Bun.spawnSync(["git", "ls-files", "-z"]);',
 			"bun/shell.ts": "await Bun.$`git ls-files -z`;",
+			"bun/sh.ts": 'Bun.spawnSync(["sh", "-c", "git ls-files -z"]);',
 			"bun/prose.ts": "// `git ls-files` run in a subdirectory lists less",
 			"bun/root.ts": 'spawn(["git", "rev-parse", "--show-toplevel"]);',
 		});
-		expect(ownListings(dir)).toEqual(["bun/gate.ts", "bun/shell.ts"]);
+		expect(ownListings(dir)).toEqual([
+			"bun/gate.ts",
+			"bun/sh.ts",
+			"bun/shell.ts",
+		]);
 	});
 
 	test("every exemption still names a tracked file", () => {
