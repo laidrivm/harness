@@ -33,7 +33,7 @@ import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session } from "./board-loop-session.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
-import { asked, post, type Settings, settings } from "./notion-bot.ts";
+import { asked, own, post, type Settings, settings } from "./notion-bot.ts";
 import { readPullRequests } from "./pull-requests.ts";
 import { ASK_SETTINGS, RUNNER_ASKS, where } from "./question-gate.ts";
 import { groups } from "./turn-gate.ts";
@@ -220,6 +220,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		app = configured(process.env, sh("git", "config", "--get", "remote.origin.url").out);
 		if (app) as = await identity(app);
 		bot = settings(where("notion-bot.json"));
+		// The author whose `harness-answer` counts, named to the pick and to REST step 3.
+		if (bot) bot.self = await own(bot.token);
 	} catch (error) {
 		return refuse((error as Error).message);
 	}
@@ -228,7 +230,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const withheld = bot ? ["--disallowedTools", "mcp__*__notion-create-comment"] : [];
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
-		picked = await session(pickPrompt(named, listed(false), listed(true)), limit, kill, true, as, withheld, under);
+		picked = await session(pickPrompt(named, listed(false), listed(true), bot?.self), limit, kill, true, as, withheld, under);
 	} catch {
 		return refuse("claude could not be started");
 	}

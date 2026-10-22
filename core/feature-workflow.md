@@ -349,7 +349,10 @@ for them is already here.
   the answer back as data, and clear `Assign` once it is applied. A question
   is any comment opening with the mark, whoever posted it, a Notion
   integration included, and the answer is the user's first comment without
-  the mark after the last one. A session the board loop's runner launches
+  the mark after the last one, or, with none, the first comment after it
+  opening with `harness-answer` from the board loop's own integration, whose
+  triage found the answer already written; the user's comment overrides
+  that one, whichever came first. A session the board loop's runner launches
   with the Notion integration posts no comment: it names its question in
   its final message, and the runner posts the question from the integration
   and sets `Assign`. On a machine with the ask settings, any other session

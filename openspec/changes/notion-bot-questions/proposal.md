@@ -85,7 +85,7 @@ Only the user can do these. No task of this change does them.
   Then check two facts and record them on the card: that the command posts
   on a card of each board, and that it gets a refusal on a page outside
   them.
-- Before group 5 relies on it: read one triage answer back through the
+- Before group 6 relies on it: read one triage answer back through the
   connector and note on the card how its author shows.
 
 ## Non-goals

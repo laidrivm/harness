@@ -62,12 +62,18 @@ function configured(mode = 0o600, ...names: string[]) {
 	return home;
 }
 
+/** The integration's own id, as `GET /v1/users/me` answers it; `me`, that read's status. */
+const BOT = "ffffeeee-dddd-cccc-bbbb-aaaa99998888";
+let me = 200;
 const seen: string[] = [];
+/** The one call a pass with the settings makes before any question. */
+const READ = ["GET /v1/users/me"];
 const notion = Bun.serve({
 	port: 0,
 	fetch(req) {
 		const url = new URL(req.url);
 		seen.push(`${req.method} ${url.pathname}`);
+		if (url.pathname === "/v1/users/me") return Response.json({ object: "user", type: "bot", id: BOT }, { status: me });
 		if (url.pathname.startsWith("/v1/pages/"))
 			return Response.json({
 				parent: { type: "data_source_id", data_source_id: "ds1" },
@@ -171,10 +177,10 @@ describe("the runner posts the question", () => {
 	});
 
 	// spec: board-loop/no-question
-	test("no QUESTION: line: no call and nothing printed about a question", async () => {
+	test("no QUESTION: line: no call past the id read and nothing printed about a question", async () => {
 		const { dir } = clone();
 		const r = await pass(dir, {}, configured());
-		expect(seen).toEqual([]);
+		expect(seen).toEqual(READ);
 		expect(r.text).not.toContain("question:");
 	});
 
@@ -191,14 +197,46 @@ describe("the runner posts the question", () => {
 		const { dir } = clone();
 		const r = await pass(dir, { said: `QUESTION: ${CARD}x\n${MARK} Ship?` }, configured());
 		expect(r.text).toContain("question: not posted — the QUESTION: line names no card id");
-		expect(seen).toEqual([]);
+		expect(seen).toEqual(READ);
 	});
 
 	// spec: board-loop/a-session-that-did-not-end-clean
-	test("a stage session past its limit makes no call [31]", async () => {
+	test("a stage session past its limit makes no call past the id read [31]", async () => {
 		const { dir } = clone();
 		const r = await pass(dir, { said: ASKED, sleep: 60 }, configured(), lowered(5000));
 		expect(r.last).toStartWith("board-loop: timeout — apply demo step 1");
-		expect(seen).toEqual([]);
+		expect(seen).toEqual(READ);
 	}, 40_000);
+});
+
+describe("the triage's answer in the pick", () => {
+	/** The pick session's prompt: the log up to the stage session. */
+	const pick = (calls: string) => calls.split("\nclaude -p /goal")[0];
+
+	// spec: board-loop/the-pick-prompt-names-the-integration task-board/the-user-after-the-triage
+	test("settings: the pick prompt names the integration's id as the harness-answer author, Assign or not, the user's comment first [76] [77] [78] [79]", async () => {
+		const { dir } = clone();
+		const prompt = pick((await pass(dir, {}, configured())).calls);
+		for (const part of [`\`harness-answer\` whose author's id is ${BOT}`, "whether or not its `Assign` holds the user", "in either order, the user's is the answer", "A `harness-answer` by any other author is no answer."])
+			expect(prompt).toContain(part);
+	});
+
+	// spec: task-board/a-harness-answer-from-another-author
+	test("no settings: the pick prompt names no id, and no harness-answer counts [83]", async () => {
+		const { dir } = clone();
+		const prompt = pick((await pass(dir, {})).calls);
+		expect(prompt).toContain("No comment opening with `harness-answer` is an answer.");
+		expect(prompt).not.toContain(BOT);
+	});
+
+	test("a failed id read refuses the pass before any session, naming the step, never the token [82]", async () => {
+		const { dir } = clone();
+		me = 401;
+		const r = await pass(dir, {}, configured()).finally(() => {
+			me = 200;
+		});
+		expect(r.last).toBe("board-loop: refused — the integration's id read answered 401");
+		expect(r.calls).not.toContain("claude ");
+		expect(r.text).not.toContain(TOKEN);
+	});
 });
