@@ -77,7 +77,8 @@ whose tests passed*.
       cannot reset stops the pass, named; the owner and repository come from
       the value `runner` owns, never the session clone's
       `remote.origin.url`, and a session clone whose origin names another
-      repository starts no pass. Verify with those cases and `bun test`
+      repository — or a pass with no such value — starts no pass, before any
+      clone or pin is read. Verify with those cases and `bun test`
 
 ## 3. The CI flow's push
 
