@@ -5,7 +5,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import type { Server } from "bun";
-import { post } from "./notion-bot.ts";
+import { own, post } from "./notion-bot.ts";
 
 const servers: Server[] = [];
 afterAll(() => {
@@ -45,6 +45,8 @@ type Stub = {
 	post?: number;
 	patch?: number;
 	hang?: boolean;
+	me?: number;
+	meId?: string;
 	/** Every comments page says more follows and names this as its cursor, or these in turn. */
 	stuck?: string | null | string[];
 };
@@ -65,6 +67,7 @@ function notion(stub: Stub = {}): Seen[] {
 			});
 			if (stub.hang) return new Promise<Response>(() => {});
 			const json = (value: unknown, status = 200) => Response.json(value, { status });
+			if (url.pathname === "/v1/users/me") return json({ object: "user", type: "bot", id: stub.meId ?? BOT }, stub.me);
 			if (url.pathname.startsWith("/v1/pages/"))
 				return req.method === "PATCH" ? json({}, stub.patch) : json(stub.page ?? PAGE, stub.status);
 			if (url.pathname.startsWith("/v1/data_sources/")) return json(stub.source ?? SOURCE);
@@ -85,9 +88,9 @@ function notion(stub: Stub = {}): Seen[] {
 	return seen;
 }
 
-/** The line `post` prints, which never holds the token [30]. */
-async function line(carried = CARRIED, timeout?: number): Promise<string> {
-	const printed = await post({ token: TOKEN, user: USER }, { card: CARD, text: TEXT }, carried, timeout);
+/** The line `post` prints, which never holds the token [30]; `self`, the integration's own id as read. */
+async function line(carried = CARRIED, timeout?: number, self?: string): Promise<string> {
+	const printed = await post({ token: TOKEN, user: USER, self }, { card: CARD, text: TEXT }, carried, timeout);
 	expect(printed).not.toContain(TOKEN);
 	return printed;
 }
@@ -156,6 +159,55 @@ describe("a question already waits", () => {
 		expect(await line()).toBe("question: not posted — the comments read gave no new cursor");
 		expect(calls(seen).filter((c) => c === "GET /v1/comments")).toHaveLength(reads);
 		expect(calls(seen)).not.toContain("POST /v1/comments");
+	});
+});
+
+describe("the triage's answer", () => {
+	const ASKED = "2026-10-20T09:00:00Z";
+	/** A `harness-answer` as the integration posts one: a code run, then the answer. */
+	const answer = (time: string, author = BOT) =>
+		said(author, time, { plain_text: "harness-answer", annotations: { code: true } }, { plain_text: " One group." });
+
+	// spec: task-board/the-triages-answer task-board/the-user-after-the-triage
+	test.each([
+		["the integration's harness-answer alone [77]", [question(ASKED), answer("2026-10-20T10:00:00Z")], BOT],
+		["a harness-answer, then the user's reply [78]", [question(ASKED), answer("2026-10-20T10:00:00Z"), reply("2026-10-20T11:00:00Z")], BOT],
+		["the user's reply, then a harness-answer [79]", [question(ASKED), reply("2026-10-20T10:00:00Z"), answer("2026-10-20T11:00:00Z")], BOT],
+		["an id read as a UUID, matched by its hex digits [80]", [question(ASKED), answer("2026-10-20T10:00:00Z")], "ffffeeee-dddd-cccc-bbbb-aaaa99998888"],
+		["a backticked mark in plain text [77]", [question(ASKED), said(BOT, "2026-10-20T10:00:00Z", { plain_text: "`harness-answer` One group." })], BOT],
+	])("%s answers the question, and the new one is posted", async (_, comments, self) => {
+		notion({ comments: [comments] });
+		expect(await line(CARRIED, undefined, self)).toBe(POSTED);
+	});
+
+	// spec: task-board/a-harness-answer-from-another-author
+	test.each([
+		["from the ask integration [81]", [question(ASKED), answer("2026-10-20T10:00:00Z", "11112222333344445555666677778888")], BOT],
+		["from another member [81]", [question(ASKED), answer("2026-10-20T10:00:00Z", USER.replace("0", "9"))], BOT],
+		["read with no integration id [83]", [question(ASKED), answer("2026-10-20T10:00:00Z")], undefined],
+	])("a harness-answer %s answers nothing", async (_, comments, self) => {
+		notion({ comments: [comments] });
+		expect(await line(CARRIED, undefined, self)).toBe(`question: not posted — a question already waits on ${CARD}`);
+	});
+});
+
+describe("the integration's own id", () => {
+	test("is read with GET /v1/users/me, with the version and the bearer", async () => {
+		const seen = notion();
+		expect(await own(TOKEN)).toBe(BOT);
+		expect(seen.map((s) => [s.call, s.version, s.auth])).toEqual([["GET /v1/users/me", "2025-09-03", `Bearer ${TOKEN}`]]);
+	});
+
+	test.each([
+		["a 401", { me: 401 }, "the integration's id read answered 401"],
+		["no id in the answer", { meId: "not-an-id" }, "the integration's id read gave no Notion id"],
+	])("%s throws, naming the step, never the token [82]", async (_, stub, why) => {
+		notion(stub);
+		const thrown = await own(TOKEN).then(
+			() => "",
+			(error: Error) => error.message,
+		);
+		expect(thrown).toBe(why);
 	});
 });
 

@@ -44,13 +44,18 @@ export function prompt(slug: string, { step, branch, answer }: Step, check: stri
  * The pick session's prompt: no goal, and one write, the claim. The runner
  * neither reads nor waits on that move, since it reads no card's `Status`,
  * and a pass that fails after it leaves the card at `applying` for the next.
+ * `self`: the runner's Notion integration's id, whose `harness-answer` is the
+ * triage's answer; with none, no `harness-answer` counts.
  */
-export function pickPrompt(board: string, slugs: string[], answers: string[]): string {
+export function pickPrompt(board: string, slugs: string[], answers: string[], self?: string): string {
+	const triaged = self
+		? ` Take one too, whether or not its \`Assign\` holds the user, when after the last such comment its discussion holds one opening with \`harness-answer\` whose author's id is ${self}, the runner's Notion integration; when one by the user also follows that question, in either order, the user's is the answer. A \`harness-answer\` by any other author is no answer.`
+		: " No comment opening with `harness-answer` is an answer.";
 	return [
 		`Read the saved view named \`Board view\` of the Notion board ${board}, and change nothing but the \`Status\` of the card you pick.`,
 		"This session runs unattended.",
 		`These changes are takeable: ${slugs.join(", ") || "none"}. A card's \`Pointer\` names its change as \`openspec/changes/<slug>/\`.`,
-		`These changes are answer candidates: ${answers.join(", ") || "none"}. Take one only when its card's \`Assign\` holds the user and its page-level discussion, read with \`notion-get-comments\` with \`include_resolved: true\` (the default leaves resolved ones out) and never a comment on a block, holds a comment opening with \`harness-question\` and, after the last such comment, one by the user \`Assign\` names that does not open with it. That last question counts whichever account posted it, a Notion integration included. A card with no such question is no answer.`,
+		`These changes are answer candidates: ${answers.join(", ") || "none"}. Take one only when its card's \`Assign\` holds the user and its page-level discussion, read with \`notion-get-comments\` with \`include_resolved: true\` (the default leaves resolved ones out) and never a comment on a block, holds a comment opening with \`harness-question\` and, after the last such comment, one by the user \`Assign\` names that does not open with it. That last question counts whichever account posted it, a Notion integration included. A card with no such question is no answer.${triaged}`,
 		"Take an answered candidate's card first, from `applied` or `applying`, then the `applying` column, then `proposed`, and each in the order the view returns it. Find the first card whose pointer names a takeable change or an answered candidate.",
 		"Before you answer, set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`, or when it reads `applied` and names an answer candidate, then fetch that card again, and write no other card or property. Write nothing when that line names no change listed above. Leave a card already at `applying` unwritten. A write that fails changes nothing about your answer.",
 		"End with one line, `PICK: <slug>` for its change or `PICK: none` when no card names one, and write no other line starting `PICK:`.",

@@ -1,9 +1,10 @@
 # notion-bot-questions — tasks
 
-Five groups, shipped as `feat/notion-bot-questions-1` to
-`feat/notion-bot-questions-5`. Groups 1 to 3 are the proposal of #184, its
-second group split in two to fit the diff budget; groups 4 and 5 come from
-the user's extension (2026-10-20). Each group ships
+Six groups, shipped as `feat/notion-bot-questions-1` to
+`feat/notion-bot-questions-6`. Groups 1 to 3 are the proposal of #184, its
+second group split in two to fit the diff budget; groups 4 to 6 come from
+the user's extension (2026-10-20), its triage group split in two, the
+answer rule before the triage, for the same reason. Each group ships
 alone, in order. Numbers in brackets refer to the proposal-stage `/zombies`
 lists: [1]–[41] in #184, [42]–[83] in the extension's pull request. Each group
 writes its failing cases first and records that they fail against the tree as
@@ -187,19 +188,42 @@ configured*. Needs no orchestrator.
       Verify with `git grep -n -e "notion-create-comment" -e "question gate"
       -- core README.md` that each hit is true with the ask settings present
 
-## 5. The triage, and its answer counted
+## 5. The triage's answer counted
+
+Closes `task-board` §*An open question waits on its card, assigned to the
+user*, for §*The triage's answer*, §*The user after the triage* and §*A
+`harness-answer` from another author*, and `board-loop` §*The runner has a
+stage session's question triaged before it posts it*, for §*The pick prompt
+names the integration*. Nothing posts a `harness-answer` until group 6, so
+it merges inert.
+
+- [x] 5.1 Write the failing answer-rule cases in
+      `bun/board-loop-question.test.ts` and `bun/notion-bot-rest.test.ts`,
+      beside their Notion stubs. Cover the pick prompt naming the id [76], a
+      triage answer that unblocks a card whose `Assign` is empty [77], and the user's comment winning in
+      either order [78, 79]. Cover id normalisation [80], another author
+      [81], a failed `GET /v1/users/me` [82] and no integration [83]
+- [x] 5.2 Read the integration's id with `GET /v1/users/me` beside the
+      settings, name it in `pickPrompt()`, and extend REST step 3's
+      *a question waits* to the triage's answer. See 5.1 pass with the rest
+      of `board-loop*.test.ts` unchanged
+- [x] 5.3 Reconcile `core/feature-workflow.md`'s answer rule: it names the
+      triage's answer and that the user's comment overrides it. Read it back
+      after the edit, and verify with `git grep -n -e "first comment" -e "the
+      answer" -- core README.md` that each hit names both sources or is about
+      another answer
+
+## 6. The triage
 
 Closes `board-loop` §*The runner has a stage session's question triaged
-before it posts it*, and `task-board` §*An open question waits on its card,
-assigned to the user*, for §*The triage's answer*, §*The user after the
-triage* and §*A `harness-answer` from another author*. It acts only where
-the settings groups 2 and 3 read are, which is the VPS host
-`vps-board-loop` group 3 builds, and merges inert before that.
+before it posts it*, for its other scenarios. It acts only where the
+settings groups 2 and 3 read are, which is the VPS host `vps-board-loop`
+group 3 builds, and merges inert before that.
 
-- [ ] 5.1 Probe once, on a stub session, which `claude -p` flags leave the
+- [ ] 6.1 Probe once, on a stub session, which `claude -p` flags leave the
       triage able to read the clone and nothing else. Record the flags and
-      what each refused in `design.md`'s *The triage*, and use them in 5.4
-- [ ] 5.2 Write the failing triage cases in a new `bun/notion-triage.test.ts`,
+      what each refused in `design.md`'s *The triage*, and use them in 6.3
+- [ ] 6.2 Write the failing triage cases in a new `bun/notion-triage.test.ts`,
       with a stub `claude`. Cover no `QUESTION:` line [63], the question then
       the answer posted with no `Assign` [64], a failed answer post that sets
       `Assign` [93], two source lines [65], an untracked path [66], a path leaving the
@@ -220,23 +244,8 @@ the settings groups 2 and 3 read are, which is the VPS host
       or a page moved during the triage, which posts nothing [90]; a
       `harness-answer` comment by another author during the triage, which
       suppresses nothing [91]
-- [ ] 5.3 Write the failing answer-rule cases in `bun/board-loop.test.ts` and
-      `bun/notion-bot.test.ts`. Cover the pick prompt naming the id [76], a
-      triage answer that unblocks a card whose `Assign` is empty [77], and the user's comment winning in
-      either order [78, 79]. Cover id normalisation [80], another author
-      [81], a failed `GET /v1/users/me` [82] and no integration [83]
-- [ ] 5.4 Add `bun/notion-triage.ts` as `design.md` *The triage* says. Call it
-      from the runner between the question's checks and its post, and see 5.2
+- [ ] 6.3 Add `bun/notion-triage.ts` as `design.md` *The triage* says. Call it
+      from the runner between the question's checks and its post, and see 6.2
       pass. Keep `bun/board-loop.ts` under its cap
-- [ ] 5.5 Read the integration's id with `GET /v1/users/me` beside the
-      settings, name it in `pickPrompt()`, and extend REST step 3's
-      *a question waits* to the triage's answer. See 5.3 pass with the rest
-      of `board-loop*.test.ts` unchanged
-- [ ] 5.6 Reconcile the restating sites, and read each one back after the
-      edit:
-      - `core/feature-workflow.md`'s answer rule names the triage's answer
-        and that the user's comment overrides it;
-      - `README.md`'s runner paragraph names the triage and its limit.
-
-      Verify with `git grep -n -e "first comment" -e "the answer" -- core
-      README.md` that each hit names both sources or is about another answer
+- [ ] 6.4 Reconcile `README.md`'s runner paragraph: it names the triage and
+      its limit. Read it back after the edit

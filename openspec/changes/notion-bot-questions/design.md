@@ -295,7 +295,7 @@ comment's form, when the runner finds the ask settings, as it names
 hand-launched forms name both, each with its condition. The first question
 from such a session therefore needs no refusal to find its way.
 
-### The triage (group 5)
+### The triage (group 6)
 
 On path 1, once the runner has checked a `QUESTION:` line, it starts a triage
 session before it posts anything. This is a `claude -p` run with no goal,
@@ -371,7 +371,7 @@ The code lives in a new `bun/notion-triage.ts`, since `bun/board-loop.ts`
 has no room under its cap. The triage needs only the runner and the VPS
 settings, not the workflow engine. It acts wherever the settings groups 2
 and 3 read are, which is the VPS host that `vps-board-loop` group 3 builds.
-Until that host exists, group 5 merges inert.
+Until that host exists, group 6 merges inert.
 
 ### `harness-answer` counts as the answer (group 5)
 
@@ -454,8 +454,9 @@ gate's refusal, which nothing calls or sets yet. Step 3 merges inert: with no
 settings file, every pass runs as it does today. It acts once the user acts
 in `proposal.md` are done on the VPS. Deleting the file returns the runner
 to today's behaviour. Step 4 merges inert on any machine without
-`notion-ask.json`. Step 5 merges inert without the VPS settings, and acts on
-the VPS host `vps-board-loop` group 3 builds. Deleting `notion-ask.json`
+`notion-ask.json`. Step 5 counts a `harness-answer` nothing posts yet. Step
+6 merges inert without the VPS settings, and acts on the VPS host
+`vps-board-loop` group 3 builds. Deleting `notion-ask.json`
 returns the laptop to path 3.
 
 ## Open Questions

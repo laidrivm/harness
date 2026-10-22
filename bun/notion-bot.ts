@@ -13,7 +13,8 @@ const VERSION = "2025-09-03";
 /** A Notion id, as a whole value: 32 hex digits, alone or in a UUID's form. */
 export const ID = /^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
-export type Settings = { token: string; user: string };
+/** `self`: the integration's own id, read with `own()`; none reads no `harness-answer` as an answer. */
+export type Settings = { token: string; user: string; self?: string };
 export type Asked = { card: string; text: string };
 
 /**
@@ -85,18 +86,25 @@ const plain = (runs: unknown) =>
 	Array.isArray(runs) ? runs.map((run: Run) => (typeof run?.plain_text === "string" ? run.plain_text : "")).join("") : "";
 /** An id as 32 lower-case hex digits: the settings take either form, the API gives a UUID. */
 const hex = (id: unknown) => (typeof id === "string" ? id.replaceAll("-", "").toLowerCase() : "");
-/** A question as the API shows one: a code run of the mark, or text opening with the backticked mark. */
-const marked = (comment: Comment) => {
+/** Whether `comment` opens with `mark` as the API shows it: a code run of it, or text opening with it backticked. */
+const opens = (mark: string) => (comment: Comment) => {
 	const first = comment.rich_text?.[0];
-	return (first?.annotations?.code === true && first.plain_text === "harness-question") || plain(comment.rich_text).startsWith(MARK);
+	return (first?.annotations?.code === true && first.plain_text === mark) || plain(comment.rich_text).startsWith(`\`${mark}\``);
 };
+const marked = opens("harness-question");
+const answered = opens("harness-answer");
 
-/** Whether the last question has no comment after it by `user` that does not open with the mark. */
-function waits(comments: Comment[], user: string): boolean {
+/**
+ * Whether the last question has no answer after it: no comment by `user` that
+ * does not open with the mark, and no `harness-answer` by `self`, the
+ * integration's own id, when one was read.
+ */
+function waits(comments: Comment[], user: string, self?: string): boolean {
 	// Stable: ties keep the order the API returned them.
 	const ordered = comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time)));
 	const last = ordered.findLastIndex(marked);
-	return last !== -1 && !ordered.slice(last + 1).some((c) => !marked(c) && hex(c.created_by?.id) === hex(user));
+	const by = (c: Comment, id: string) => hex(c.created_by?.id) === hex(id);
+	return last !== -1 && !ordered.slice(last + 1).some((c) => (!marked(c) && by(c, user)) || (self !== undefined && answered(c) && by(c, self)));
 }
 
 /** A REST call with `token`, which throws naming the step and Notion's status or the error's name. */
@@ -121,8 +129,15 @@ export function client(token: string, timeout = 30_000) {
 }
 type Call = ReturnType<typeof client>;
 
+/** The integration's own id, read with `token`; throws naming the step, as `client` does. */
+export async function own(token: string, timeout = 30_000): Promise<string> {
+	const me = await client(token, timeout)("the integration's id read", "/v1/users/me");
+	if (typeof me?.id !== "string" || !ID.test(me.id)) throw new Error("the integration's id read gave no Notion id");
+	return me.id;
+}
+
 /** REST step 3: every page of the card's comments, then whether a question waits there for `user`. */
-export async function waiting(call: Call, card: string, user: string): Promise<boolean> {
+export async function waiting(call: Call, card: string, user: string, self?: string): Promise<boolean> {
 	const comments: Comment[] = [];
 	const read = new Set<string>();
 	let cursor: string | undefined;
@@ -136,7 +151,7 @@ export async function waiting(call: Call, card: string, user: string): Promise<b
 		cursor = listed?.has_more ? listed.next_cursor : undefined;
 		if (cursor) read.add(cursor);
 	} while (cursor);
-	return waits(comments, user);
+	return waits(comments, user, self);
 }
 
 /** REST step 4: the page-level comment, a code-annotated mark run, then the rest of the text. */
@@ -158,7 +173,7 @@ export function comment(call: Call, card: string, text: string): Promise<unknown
  * retried: a second post would put two questions on the card.
  */
 export async function post(
-	{ token, user }: Settings,
+	{ token, user, self }: Settings,
 	{ card, text }: Asked,
 	{ board, slug }: { board: string; slug: string },
 	timeout = 30_000,
@@ -172,7 +187,7 @@ export async function post(
 			return not(`${card} is not the card of ${slug}`);
 		const source = await call("the board read", `/v1/data_sources/${page.parent.data_source_id}`);
 		if (plain(source?.title) !== board) return not(`${card} is not on the board ${board}`);
-		if (await waiting(call, card, user)) return not(`a question already waits on ${card}`);
+		if (await waiting(call, card, user, self)) return not(`a question already waits on ${card}`);
 		await comment(call, card, text);
 	} catch (error) {
 		return not((error as Error).message);
