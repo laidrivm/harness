@@ -156,7 +156,8 @@ temporary Windmill token that can write (one day's expiry), point `wmill` at
 the hostname and push the scripts, the hourly schedule and the webhook's
 route. `wmill.yaml` limits the push to `f/orchestrator/` and skips variables,
 resources and resource types, so it cannot delete the workspace's own; `wmill`
-reads it from the directory it runs in, hence the `cd`:
+reads it from the directory it runs in, hence the `cd`, chained so a failed
+`cd` pushes nothing from the wrong directory:
 
 ```sh
 bun add -g windmill-cli@<the engine's version>
@@ -164,9 +165,8 @@ read -rs CF_ID
 read -rs CF_SECRET
 read -rs WM_TOKEN
 export HEADERS="CF-Access-Client-Id: $CF_ID,CF-Access-Client-Secret: $CF_SECRET"
-cd <this repository's checkout>/orchestrator/windmill
 wmill workspace add <name> <workspace id> https://<hostname> --token "$WM_TOKEN"
-wmill sync push --skip-secrets --include-schedules --include-triggers
+cd <this repository's checkout>/orchestrator/windmill && wmill sync push --skip-secrets --include-schedules --include-triggers
 ```
 
 Each `read -rs` takes a value pasted at the terminal, so none lands in the
