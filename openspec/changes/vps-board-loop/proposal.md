@@ -69,8 +69,9 @@ README lists them in order:
    only `/api/r/github`, then put the tunnel token in the host's secrets
    directory.
 2. Run `claude setup-token` on the laptop, and save the token in the host's
-   secrets directory. Save a fine-grained GitHub token there too, scoped to the
-   repositories the loop pushes to.
+   secrets directory. No GitHub token of the user's goes there: the host
+   pushes and opens pull requests as the GitHub App alone, whose key arrives
+   with `runner-isolation`'s group 5.
 3. Put the database password in the secrets directory, build and start the
    stack, set Windmill's admin login, and give Windmill the runner's SSH key
    as a secret variable.

@@ -21,10 +21,15 @@ email login. Add one more Access application, with a Bypass policy, on the
 path `/api/r/github` alone, which GitHub's webhook calls. Keep the tunnel's
 token for step 3.
 
-## 2. The tokens
+## 2. The token
 
-On the laptop, run `claude setup-token` and keep the token it prints. Create a
-fine-grained GitHub token scoped to the repositories the loop pushes to.
+On the laptop, run `claude setup-token` and keep the token it prints.
+
+The host holds no GitHub token of the user's. It pushes, opens and reads pull
+requests as the GitHub App alone, whose key and key-holder user arrive with
+`runner-isolation`'s group 5 (task 5.5). Until then a pass refuses at its
+secret check, naming the missing file, and pauses the clone; the schedule
+stays disabled until then anyway (step 6).
 
 ## 3. The secret files
 
@@ -37,7 +42,6 @@ umask 077
 mkdir secrets
 cd secrets
 cat > claude_oauth_token
-cat > gh_token
 cat > tunnel_token
 openssl rand -hex 32 > db_password
 printf 'postgres://postgres:%s@db:5432/windmill?sslmode=disable\n' "$(cat db_password)" > database_url
@@ -57,7 +61,7 @@ runner's Dockerfile fixes, except `tunnel_token`, which `cloudflared` reads as
 uid 65532, and `engine_key`, which stays root's until step 4 deletes it:
 
 ```sh
-chown 1500:1500 claude_oauth_token gh_token runner_ssh_pubkey runner_host_key runner_known_hosts db_password database_url
+chown 1500:1500 claude_oauth_token runner_ssh_pubkey runner_host_key runner_known_hosts db_password database_url
 chown 65532:65532 tunnel_token
 chmod 0400 *
 cd ..

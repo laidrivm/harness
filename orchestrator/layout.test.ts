@@ -171,6 +171,13 @@ describe("the runner image", () => {
 		expect(read(dockerfile)).not.toContain("ssh-keygen -A");
 	});
 
+	test("the host is App-only: the runner mounts no gh_token, and the README writes none", () => {
+		const compose = composed() as { services: Record<string, { secrets?: string[] }>; secrets: Record<string, unknown> };
+		expect(compose.services.runner.secrets).not.toContain("gh_token");
+		expect(Object.keys(compose.secrets)).not.toContain("gh_token");
+		expect(read("orchestrator/README.md")).not.toContain("gh_token");
+	});
+
 	test("the image creates runner with a fixed uid and agent, and one sudoers rule naming /opt/orchestrator/as-agent [41]", () => {
 		const text = read(dockerfile);
 		expect(text).toMatch(/useradd[^\n]*--uid \d+[^\n]* runner\b/);

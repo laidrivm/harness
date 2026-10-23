@@ -197,7 +197,10 @@ below).
 
 Steps 4 and 5 are the wrapper on `main` today. `runner-isolation` groups 1
 to 4 replace them before the App key reaches the host. With the App
-configured, step 4 neither requires nor opens `gh_token`. In step 5 the board
+configured, step 4 neither requires nor opens `gh_token`. The host is
+App-only (the user's decision of 2026-10-23): it holds no `gh_token`, so until
+those groups land step 4 refuses every pass there, naming the missing file,
+and the schedule stays disabled meanwhile. In step 5 the board
 loop runs from `runner`'s own harness checkout with the push clone as its working
 directory, every command in the session's clone goes through
 `/opt/orchestrator/as-agent`, and the pass exports no `GH_TOKEN`; only the
@@ -253,7 +256,7 @@ change, which would widen the matchers. It is never a configuration step.
 
 ### Secrets are compose secret files
 
-The secret files are `claude_oauth_token`, `gh_token`, `runner_ssh_pubkey`,
+The secret files are `claude_oauth_token`, `runner_ssh_pubkey`,
 `runner_host_key`, `runner_known_hosts`, `tunnel_token`, `db_password` and
 `database_url`. `runner_host_key` is `sshd`'s one host key, installed by the
 entrypoint, and the image bakes in none, so a rebuild keeps it.
@@ -370,8 +373,9 @@ containers and the host, and Notion if needed.
 - [`--max-budget-usd` is a client-side estimate.] → It is not used here. The
   stage session's limit stays the runner's hour.
 - [Pushing as the user means a compromised session acts as the user.] → The
-  GitHub token is fine-grained to the loop's repositories. The App replaces
-  it (`github-app-identity`).
+  host never pushes as the user: it holds no PAT and pushes as the App alone
+  (`github-app-identity`, `runner-isolation`), by the user's decision of
+  2026-10-23. A PAT stays only where no App is configured, off the host.
 - [`flock` is absent on macOS, so `pass.sh`'s cases skip on the laptop.] →
   CI's `ubuntu-latest` runs them. The skip names that reason, so a skipped
   case is never read as a pass.
