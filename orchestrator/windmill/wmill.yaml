@@ -9,6 +9,9 @@ codebases: []
 skipVariables: true
 skipResources: true
 skipResourceTypes: true
+# Workspace-level, so the includes above do not scope them.
+skipWorkspaceDependencies: true
+skipDatatableMigrations: true
 skipSecrets: true
 includeSchedules: true
 includeTriggers: true
