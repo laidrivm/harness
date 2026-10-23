@@ -50,18 +50,25 @@ mv engine_key.pub runner_ssh_pubkey
 ssh-keygen -t ed25519 -N '' -C runner -f runner_host_key
 printf 'runner %s\n' "$(cut -d ' ' -f 1,2 runner_host_key.pub)" > runner_known_hosts
 rm runner_host_key.pub
+openssl rand -hex 32 > github_webhook_secret
+ssh-keygen -t ed25519 -N '' -C event -f event_key
+mv event_key.pub runner_event_pubkey
 ```
 
-`engine_key` is the engine's private key: it goes into Windmill in step 4 and
-is then deleted. `db_password` is 64 hex characters, since a raw `@`, `:` or
-`/` in the URL's password would read as URL syntax.
+`engine_key` is the engine's private key for the pass, `event_key` its key for
+webhooks: both go into Windmill in step 4 and are then deleted. `db_password`
+is 64 hex characters, since a raw `@`, `:` or `/` in the URL's password would
+read as URL syntax. `github_webhook_secret` is the secret each repository's
+webhook signs with (step 10).
 
 Then the owners and modes. Every file is owned by `runner`'s uid, which the
 runner's Dockerfile fixes, except `tunnel_token`, which `cloudflared` reads as
-uid 65532, and `engine_key`, which stays root's until step 4 deletes it:
+uid 65532, and `engine_key` and `event_key`, which stay root's until step 4
+deletes them:
 
 ```sh
 chown 1500:1500 claude_oauth_token runner_ssh_pubkey runner_host_key runner_known_hosts db_password database_url
+chown 1500:1500 github_webhook_secret runner_event_pubkey
 chown 65532:65532 tunnel_token
 chmod 0400 *
 cd ..
@@ -78,11 +85,13 @@ this directory's list above.
 docker compose up -d --build
 ```
 
-The runner refuses to start without `runner_ssh_pubkey` or `runner_host_key`.
-Open the hostname from step 1, pass Access, and set Windmill's admin login.
-In the workspace, create the secret variable `f/orchestrator/runner_ssh_key`
-and paste `engine_key` base64-encoded on one line, the output of
-`base64 -w 0 secrets/engine_key`. Then `rm secrets/engine_key`.
+The runner refuses to start without `runner_ssh_pubkey`, `runner_host_key` or
+`runner_event_pubkey`. Open the hostname from step 1, pass Access, and set
+Windmill's admin login. In the workspace, create the secret variable
+`f/orchestrator/runner_ssh_key` and paste `engine_key` base64-encoded on one
+line, the output of `base64 -w 0 secrets/engine_key`. Then
+`rm secrets/engine_key`. Do the same for `f/orchestrator/runner_event_key`
+with `base64 -w 0 secrets/event_key`, then `rm secrets/event_key`.
 
 ## 5. The clones
 
@@ -116,10 +125,11 @@ docker compose exec -u agent -it runner coderabbit auth login
 ## 6. The workspace
 
 From the laptop, with `wmill` pointed at the hostname and an Access service
-token in `HEADERS` (step 9), push the scripts and the hourly schedule:
+token in `HEADERS` (step 9), push the scripts, the hourly schedule and the
+webhook's route:
 
 ```sh
-wmill sync push --skip-secrets --include-schedules
+wmill sync push --skip-secrets --include-schedules --include-triggers
 ```
 
 The pass script sends the clone `harness` and its repository; another clone
@@ -174,3 +184,25 @@ engine's code:
   paths, never `mcp:all`, for MCP. Whether Windmill issues an MCP token that
   narrow is checked at the first bring-up; without one, chat control goes
   through `wmill` alone.
+
+## 10. The CI flow's webhook
+
+`ci-run-agent`'s flow: a failed CI run on one of the loop's pull requests
+starts an agent that fixes it or says why it cannot. Its acts, in order:
+
+1. The webhook secret is `secrets/github_webhook_secret`, made in step 3.
+2. Give the GitHub App the repository permission *Actions: read-only*, and
+   accept it on each installation: reading a run and its logs needs it.
+3. On each repository the loop serves, add a webhook: payload URL
+   `https://<hostname>/api/r/github`, content type `application/json`, the
+   secret printed by `cat secrets/github_webhook_secret` on the host as root,
+   and the *Workflow runs* event alone.
+4. The Access bypass on `/api/r/github` is step 1's; nothing else is open.
+
+GitHub sends a `ping` when the webhook is created. In Windmill's Runs it is a
+job of `f/orchestrator/event` whose log reads
+`event: ignored — no flow takes ping`. A failed job there names why instead: a
+refused signature means the webhook's secret differs from the file. The route
+answers GitHub before the handler runs, so *Recent deliveries* reads every
+delivery as delivered; Runs is where a refusal shows. To stop the flow,
+disable the webhook on GitHub.

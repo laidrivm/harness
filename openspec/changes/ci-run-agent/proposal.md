@@ -106,7 +106,8 @@ after.
   - `bun/github-app.ts`: the permissions a token asks for;
   - `orchestrator/runner/Dockerfile`: the image carries the handler;
   - the host README and `README.md`.
-- The engine's webhook workflow under `orchestrator/workflows/`, for the
-  engine the spike confirms.
+- The engine's webhook route and script under
+  `orchestrator/windmill/f/orchestrator/`, for Windmill, the engine the spike
+  confirmed.
 - Consumers: the new files land inert under `node_modules/harness/`, as
   `orchestrator/` does.

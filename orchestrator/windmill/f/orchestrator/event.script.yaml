@@ -1,0 +1,19 @@
+summary: GitHub webhook event
+description: Hands a webhook's three headers and raw body to the runner's event handler over the event key; the job's status is the handler's.
+lock: ''
+kind: script
+has_preprocessor: true
+# The handler waits up to 7200 s for a pass's lock, then a fix runs up to an hour;
+# 900 s more covers the ssh and setup around them, so the job never ends before the handler's verdict.
+timeout: 11700
+schema:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  type: object
+  properties:
+    line:
+      type: string
+      description: X-GitHub-Event, X-GitHub-Delivery and X-Hub-Signature-256, separated by single spaces
+    body:
+      type: string
+      description: the request's raw body
+  required: [line, body]
