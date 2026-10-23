@@ -133,6 +133,7 @@ the pass's whole output, `/home/runner/orchestrator/passes/<time>-<clone>.log`:
 ```sh
 docker compose exec -u runner runner cat /home/runner/orchestrator/<clone>.stop
 docker compose exec -u runner runner ls /home/runner/orchestrator/passes
+docker compose exec -u runner runner cat /home/runner/orchestrator/passes/<time>-<clone>.log
 docker compose exec -u runner runner rm /home/runner/orchestrator/<clone>.stop
 ```
 
