@@ -35,7 +35,7 @@ launcher configured, the runner runs as it does today.
 | User | Runs | Reads |
 |---|---|---|
 | `agent` | the pick and stage sessions, git in its clones, the bundle | its clones, the Claude Code token (the session's by necessity), the Notion MCP login |
-| `runner` | `pass.sh`, the board loop, the goal check, the push | its own checkout and push clones, the PAT file, the Notion bot's token |
+| `runner` | `pass.sh`, the board loop, the goal check, the push | its own checkout and push clones, the Notion bot's token |
 | key holder | the mint helper alone | the App's private key |
 
 `runner` may start exactly two commands as another user, both root-owned:
@@ -156,8 +156,8 @@ for a commit whose pre-PR record names its SHA. The tests did run, as `agent`
 before the bundle, and CI runs them again on the pull request.
 
 Leaving the hook on and stripping the tokens from its environment was weighed
-and rejected: the hook would still run as `runner`, which reads the PAT and
-Notion token files from disk.
+and rejected: the hook would still run as `runner`, which reads the Notion
+token file from disk and starts the mint command.
 
 ### The CI flow's push
 
@@ -193,25 +193,35 @@ group 4 has merged.
 
 ### The GitHub token's reach
 
-`pass.sh` exports no GitHub token. With no App configured it passes the PAT
-file's path, `HARNESS_GH_TOKEN_FILE`, and `publish()` reads it only for the
-push, the `gh pr create` and the check that reads the pull request after it,
-handing the value to those processes' environments alone. With the App
-configured `pass.sh` passes no path, and its secret check (`vps-board-loop`
-step 4) neither requires nor opens `gh_token`, so an App-only host holds no
-PAT file at all. `pass.sh` also points `GH_CONFIG_DIR` at an empty directory
-the pass owns, since `gh` with no `GH_TOKEN` falls back to a login stored in
-`~/.config/gh/hosts.yml`, and one left in `runner`'s persistent home would
-hand the whole pass a token again; the provisioned home holds no such file
-either. Any other `gh` call in the pass therefore runs unauthenticated; task
-4.1 lists them. One needs a credential on a private repository:
-`readPullRequests()`, which the board loop's selection and the goal check
-call. With the App configured it gets a token from the key holder's mint;
-without the App it reads the PAT from `HARNESS_GH_TOKEN_FILE` for that call
-alone, handing the value to that process's environment, never to the pass.
-The user widened decision 2(a) to this on 2026-10-22, since a private
-repository is planned soon and an unauthenticated read cannot see its pull
-requests.
+The host is App-only (the user's decision of 2026-10-23, `vps-board-loop`
+*Decisions*), so `pass.sh` reads no token file of the user's and has no
+branch for one. Decision 2(a), widened on 2026-10-22 to the PAT on the push
+and the pull-request reads, planned that branch for a host with no App. None
+remains: `pass.sh` runs on the host alone, which the Windmill job calls, and
+the laptop runs `board-loop.ts` itself with the user's own `gh` login. A
+wrapper with the App's id or its mint command unset starts no pass, naming the
+setting, so before group 5 provisions the key holder every pass there pauses.
+
+`pass.sh` exports no GitHub token. It hands the pass the App's id and the mint
+command, never a key path, and points `GH_CONFIG_DIR` at an empty directory
+the pass owns and removes after it, since `gh` with no `GH_TOKEN` falls back to
+a login stored in `~/.config/gh/hosts.yml`, and one left in `runner`'s
+persistent home would hand the whole pass a token again.
+
+What a pass sends to GitHub (task 4.1, `git grep -n -e '"gh"' -e GH_TOKEN` over
+`bun/board-loop*.ts`, `bun/goal-check.ts` and their imports):
+
+| Call | Where | Credential |
+|---|---|---|
+| the App's slug | `identity()` before any session | the mint's `--slug` |
+| `GET /users/<slug>[bot]` | `identity()` | none: a public read |
+| the branch's pull requests | `readPullRequests()`, the selection and the full check | a `pull_requests` read token minted for that read alone |
+| the push, `gh pr create`, the full check | `publish()` | a `contents` and `pull_requests` write token minted after the stage session |
+| `git fetch` of the push clone and of the harness pin | `pass.sh`, `carry()` | none |
+
+The fetches run unauthenticated, which a private repository refuses: task 4.4
+mints a `contents` read token for them before the private repository moves
+to the loop.
 
 ### The key holder
 
@@ -226,9 +236,15 @@ repository its root-owned list does not name and any permission outside
 (read), and prints the token on stdout. Installation tokens last an hour.
 
 `github-app.ts` gains one branch: with `HARNESS_GITHUB_APP_MINT` set, `mint()`
-runs that command through sudo and reads the token from its stdout, and no
-key path is needed in the runner's environment. `configured()` then needs the
-App's id and the mint command, not `HARNESS_GITHUB_APP_KEY`.
+runs that command, which names sudo itself, and reads the token from its
+stdout, and no key path is needed in the runner's environment. `configured()`
+then needs the App's id and the mint command, not `HARNESS_GITHUB_APP_KEY`.
+`slug()` asks the same command with `--slug`, since `GET /app` takes the JWT
+only the key signs. The helper is `bun/github-app-mint.ts`; the call both
+`github-app.ts` and `readPullRequests()` make is `bun/github-app-minted.ts`.
+The helper reads the App's id and the repository list from root's
+`/etc/orchestrator/app/`, and the key from `/var/lib/orchestrator-key/`, the
+key holder's; group 5 provisions all three.
 
 The user first chose (a), a later card, then answered the Remote Control
 follow-up with "Это делаем сразу": with Remote Control as `runner`, the key
@@ -283,5 +299,7 @@ Lands in five groups: the launcher, the push, the CI flow's push, the tokens'
 reach and the host's users. Groups 1 to 4 change the code and `pass.sh`, and
 are inert on the laptop. Group 5 changes the image and README that
 `vps-board-loop` group 3 adds, and needs it merged. The App key goes on the
-host only after group 5. Rollback: unset `PASS_AS_AGENT`, `HARNESS_AS_AGENT`
-and the mint command, and the runner runs as it does today.
+host only after group 5. Rollback: unset `PASS_AS_AGENT` and
+`HARNESS_AS_AGENT`, and the runner runs in the session's clone as before; the
+App's id and the mint command stay, since the host reaches GitHub through
+nothing else.

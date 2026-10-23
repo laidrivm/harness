@@ -9,7 +9,9 @@
 # (~/clones by default). <owner>/<repo> is the repository the engine's job
 # names, and the clone's origin must name the same one. The state directory, PASS_STATE (~/orchestrator),
 # holds <clone>.stop, locks/ and passes/, where each pass's whole output is
-# kept. The secret files are read from PASS_SECRETS (/run/secrets).
+# kept. The secret files are read from PASS_SECRETS (/run/secrets). GitHub is
+# reached as the App alone: HARNESS_GITHUB_APP_ID and HARNESS_GITHUB_APP_MINT,
+# the key holder's mint command, must be set, and reach the pass with no key path.
 #
 # On the host PASS_AS_AGENT names the launcher that runs a command as the
 # session user. With it set, the pass runs in a push clone under PASS_PUSH
@@ -131,9 +133,11 @@ paused
 # leader, so its pid names the process group TERM ends.
 printf '%s %s\n' "$$" "$name" >"$lock.pid"
 
-for file in claude_oauth_token gh_token; do
-	# grep reads the file, so no token enters this shell's variables.
-	grep -q '[^[:space:]]' "$secrets/$file" 2>/dev/null || halt "$secrets/$file is missing or holds no token"
+# grep reads the file, so no token enters this shell's variables.
+grep -q '[^[:space:]]' "$secrets/claude_oauth_token" 2>/dev/null || halt "$secrets/claude_oauth_token is missing or holds no token"
+# The host reaches GitHub as the App alone, through the key holder's mint: no token file of the user's is read.
+for setting in HARNESS_GITHUB_APP_ID HARNESS_GITHUB_APP_MINT; do
+	[ -n "${!setting-}" ] || halt "$setting is unset — the host pushes and reads as the GitHub App alone"
 done
 
 # On the host the pass runs the runner's own checkout of the harness, at the
@@ -181,18 +185,22 @@ fi
 # A dropped connection (a Windmill restart) must not end the pass halfway.
 trap '' HUP
 log=$state/passes/$(date -u +%Y%m%dT%H%M%SZ)-$name.log
+# gh's config is a fresh empty directory, never ~/.config/gh, whose stored login would hand the pass a token.
+gh=$(mktemp -d "$state/gh.XXXXXX") || halt "no empty gh config directory could be made under $state"
 cd "$here" || exit 1
-# Only the child shell reads the tokens, so no command's arguments hold one.
+# Only the child shell reads the token, so no command's arguments hold one.
 # The output goes to the log, and reaches stdout once the pass ends, never
 # through `tee`: a dropped connection would end `tee` on its next write, and
 # the pass with it on its own.
 env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 DISABLE_AUTOUPDATER=1 ${CLAUDECODE+"CLAUDECODE=$CLAUDECODE"} "${named[@]}" \
-	bash -c 'CLAUDE_CODE_OAUTH_TOKEN=$(<"$1/claude_oauth_token") && GH_TOKEN=$(<"$1/gh_token") &&
-		export CLAUDE_CODE_OAUTH_TOKEN GH_TOKEN && shift && exec bun "$@"' pass "$secrets" "${flags[@]}" "$loop" \
+	GH_CONFIG_DIR="$gh" HARNESS_GITHUB_APP_ID="$HARNESS_GITHUB_APP_ID" HARNESS_GITHUB_APP_MINT="$HARNESS_GITHUB_APP_MINT" \
+	bash -c 'CLAUDE_CODE_OAUTH_TOKEN=$(<"$1/claude_oauth_token") && export CLAUDE_CODE_OAUTH_TOKEN &&
+		shift && exec bun "$@"' pass "$secrets" "${flags[@]}" "$loop" \
 	>"$log" 2>&1
 status=$?
 # Before the lock frees, so no marker outlives its pass to name a reused pid.
 rm -f "$lock.pid"
+rm -rf "$gh"
 
 # Any non-zero status pauses: the runner exits 0 or 1, so another (127, a
 # signal) means the pass did not run as designed.
