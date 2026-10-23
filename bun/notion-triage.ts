@@ -1,6 +1,6 @@
 /**
- * The triage of a stage session's question (`openspec/changes/
- * notion-bot-questions/design.md`, *The triage*): a `claude -p` session with
+ * The triage of a stage session's question (`openspec/changes/archive/
+ * 2026-10-22-notion-bot-questions/design.md`, *The triage*): a `claude -p` session with
  * no goal that may read the clone and nothing else, asked whether a written
  * source already settles the question, and the runner's check that the source
  * it names holds. A doubt of any kind ends with the question posted for the
