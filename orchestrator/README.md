@@ -274,12 +274,13 @@ serves) and `app-key/` (the key holder's) from `orchestrator/`.
    alone, never the laptop.
 2. As root, in `orchestrator/`, one command per line; `<key>` is the
    downloaded file, `<id>` the App's id, and `repositories` takes one
-   `<owner>/<repo>` line per repository the loop serves:
+   `<owner>/<repo>` line per repository the loop serves, each repository a
+   further argument of the one `printf`, which writes the whole list:
 
    ```sh
    mkdir -p app app-key
    printf '%s\n' '<id>' > app/id
-   printf '%s\n' '<owner>/<repo>' > app/repositories
+   printf '%s\n' '<owner>/<repo>' '<owner>/<another repo>' > app/repositories
    chmod 0755 app
    chmod 0444 app/id app/repositories
    install -m 0400 -o 1502 -g 1502 <key> app-key/app.pem

@@ -32,17 +32,21 @@ const allowed =(env: NodeJS.ProcessEnv) =>
 
 /**
  * A `kill` sent as the session's own user, through the launcher: the kernel
- * refuses `runner` a signal to `agent`'s group. A failure reads as ESRCH, so a
- * group whose only member left is the root-owned sudo, which ends with its
- * command, reads as gone.
+ * refuses `runner` a signal to `agent`'s group. A refused `kill` reads as
+ * ESRCH, so a group whose only member left is the root-owned sudo, which ends
+ * with its command, reads as gone; a launcher that fails before `kill` runs
+ * reads as a group still alive.
  */
 const through =
 	(under: string[]): Kill =>
 	(pid, signal) => {
 		const name = signal === 0 ? "0" : signal.replace(/^SIG/, "");
-		// No `--`: dash, the image's sh, reads it after a signal as a pid and fails, which reads as ESRCH.
-		const run = Bun.spawnSync([...under, "sh", "-c", 'kill -$0 "$1"', name, String(pid)], { stdio: ["ignore", "ignore", "ignore"] });
-		if (run.exitCode !== 0) throw Object.assign(new Error(`kill ${name} ${pid} failed`), { code: "ESRCH" });
+		// From `/`, not the clone: a session may remove its clone while a child of it runs on.
+		const at = [...under.slice(0, -1), "/"];
+		// No `--`: dash, the image's sh, reads it after a signal as a pid and fails.
+		const run = Bun.spawnSync([...at, "sh", "-c", 'kill -$0 "$1" 2>/dev/null || exit 3', name, String(pid)], { stdio: ["ignore", "ignore", "ignore"] });
+		if (run.exitCode === 3) throw Object.assign(new Error(`kill ${name} ${pid} failed`), { code: "ESRCH" });
+		if (run.exitCode !== 0) throw Object.assign(new Error(`the launcher failed before kill ${name} ${pid}`), { code: "ELAUNCH" });
 	};
 
 /**

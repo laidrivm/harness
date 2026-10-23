@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmodSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { clone, run } from "./board-loop.fixture.ts";
-import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
+import { cleanup, emptyDir, ended } from "./diff-budget.fixture.ts";
 
 /**
  * The environment a board-loop session starts with. `session()` is driven
@@ -77,6 +77,50 @@ describe.each([
 		const { env } = seen(capture, { CLAUDE_CODE_OAUTH_TOKEN: "oauth", ANTHROPIC_API_KEY: "key" });
 		expect([env.get("CLAUDE_CODE_OAUTH_TOKEN"), env.get("ANTHROPIC_API_KEY")]).toEqual(["oauth", "key"]);
 	});
+});
+
+/**
+ * A session through a stand-in launcher that enters the clone as `as-agent`
+ * does, whose stub `claude` leaves `sleep` running and removes the clone;
+ * the runner's own signals are refused, as across users. `refuse` makes the
+ * launcher fail every `sh` it is asked to run.
+ */
+function abandoned(refuse = false) {
+	const dir = emptyDir("board-loop-gone-");
+	const clone = join(dir, "clone");
+	mkdirSync(clone);
+	const pidfile = join(dir, "left-pid");
+	writeFileSync(join(dir, "claude"), `#!/bin/sh\nsleep 30 >/dev/null 2>&1 &\necho $! > '${pidfile}'\ncd /\nrm -rf '${clone}'\n`);
+	const launcher = join(dir, "as-agent");
+	writeFileSync(launcher, `#!/bin/sh\n${refuse ? '[ "$2" = sh ] && exit 1\n' : ""}cd "$1" || exit 2\nshift\nexec "$@"\n`);
+	for (const file of ["claude", "as-agent"]) chmodSync(join(dir, file), 0o755);
+	const entry = join(dir, "entry.ts");
+	const across = `() => { throw Object.assign(new Error("EPERM"), { code: "EPERM" }); }`;
+	writeFileSync(
+		entry,
+		`import { session } from ${JSON.stringify(module)};\nconst r = await session("PICK", 60_000, ${across}, false, {}, [], [${JSON.stringify(launcher)}, ${JSON.stringify(clone)}]);\nconsole.log(JSON.stringify({ left: r.left ?? null }));\n`,
+	);
+	const run = Bun.spawnSync([process.execPath, entry], { cwd: dir, env: { PATH: `${dir}:/usr/bin:/bin`, HOME: emptyDir("board-loop-home-") } });
+	const left = Number(readFileSync(pidfile, "utf8"));
+	return { code: run.exitCode, left: JSON.parse(run.stdout.toString()).left, child: left };
+}
+
+describe("a session's group, signalled through the launcher", () => {
+	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
+	test("a child is ended though the session removed its clone, since the signal runs from a directory that outlives it", () => {
+		const r = abandoned();
+		expect([r.code, r.left, ended(r.child)]).toEqual([0, null, true]);
+	}, 30_000);
+
+	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
+	test("a launcher that fails reads as a group still alive, never as one gone, so the child is named as left", () => {
+		const r = abandoned(true);
+		try {
+			expect([r.code, r.left === null, ended(r.child)]).toEqual([0, false, false]);
+		} finally {
+			process.kill(r.child, "SIGKILL");
+		}
+	}, 40_000);
 });
 
 describe("the stage session's id", () => {

@@ -7,8 +7,8 @@ import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 
 afterAll(cleanup);
 
-/** A secrets directory holding `files` at their modes, and a key at `key`'s; `null` leaves the key absent. */
-function check(files: Record<string, number>, key: number | null) {
+/** A secrets directory holding `files` at their modes, and a key at `key`'s; `null` leaves the key absent. `as` overrides an identity switch's prefix. */
+function check(files: Record<string, number>, key: number | null, as: Record<string, string> = {}) {
 	const root = emptyDir("orchestrator-reach-");
 	const secrets = join(root, "secrets");
 	mkdirSync(secrets);
@@ -21,7 +21,7 @@ function check(files: Record<string, number>, key: number | null) {
 		writeFileSync(path, "throwaway\n");
 		chmodSync(path, key);
 	}
-	const env = { PATH: process.env.PATH ?? "", REACH_SECRETS: secrets, REACH_KEY: path, REACH_AS_AGENT: "", REACH_AS_RUNNER: "" };
+	const env = { PATH: process.env.PATH ?? "", REACH_SECRETS: secrets, REACH_KEY: path, REACH_AS_AGENT: "", REACH_AS_RUNNER: "", ...as };
 	const r = Bun.spawnSync(["sh", join(import.meta.dir, "reach-check.sh")], { env });
 	return { code: r.exitCode, out: r.stdout.toString(), secrets, path };
 }
@@ -44,6 +44,15 @@ describe.skipIf(process.getuid?.() === 0)("reach-check.sh", () => {
 		const r = check({ claude_oauth_token: 0o000 }, 0o444);
 		expect(r.code).toBe(1);
 		expect(r.out.trim().split("\n")).toEqual([`reach-check: agent reads ${r.path}`, `reach-check: runner reads ${r.path}`]);
+	});
+
+	// A failed switch would read as every read refused.
+	test.each([
+		["REACH_AS_AGENT", "agent"],
+		["REACH_AS_RUNNER", "runner"],
+	])("a switch that cannot run (%s) is no pass, naming the user", (name, user) => {
+		const r = check({ claude_oauth_token: 0o000 }, 0o000, { [name]: "false" });
+		expect([r.code, r.out.trim()]).toEqual([1, `reach-check: cannot switch to ${user}`]);
 	});
 
 	test("an absent key is no pass: the check cannot say who reads it", () => {
