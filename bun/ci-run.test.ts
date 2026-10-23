@@ -625,6 +625,32 @@ describe("the scheduled and flaky routes", () => {
 		expect(seen(h, "gh-calls")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
 		expect([rev(h.bare, "refs/heads/feat/x"), status(h)]).toEqual([SHA, ""]);
 	});
+
+	// spec: orchestrator/it-fails-again-the-next-night
+	test("the next night's failure of the same workflow tells its fresh session to file no card while an open one names that workflow", async () => {
+		const h = host();
+		const env = clones(h);
+		await deliver(h, scheduled(), { env });
+		const r = await deliver(h, scheduled({ id: 6, html_url: "https://github.com/o/r/actions/runs/6" }), { env });
+		expect([r.code, api.posted]).toEqual([0, []]);
+		fresh(h);
+		// The runner keeps no card state: whether a card is open is the session's read of the board, which only a live run shows.
+		const prompt = seen(h, "claude-argv").replace(/\s+/g, " ");
+		expect(prompt).toContain("File one idea card naming the workflow and the run");
+		expect(prompt).toContain("unless a card that is not done already names that workflow's failure.");
+		expect([rev(h.clone, "HEAD"), status(h)]).toEqual([SHA, ""]);
+	});
+
+	// spec: orchestrator/a-failure-that-failed-again
+	test("a run that failed on attempt 2 after attempt 1 is handled as any failure: attempt 1/3, on attempt 2's logs", async () => {
+		const h = host();
+		api.latest = { run_attempt: 2, conclusion: "failure" };
+		const r = await deliver(h, payload({ run_attempt: 2 }));
+		expect([r.code, r.line]).toEqual([0, `event: handled — attempt 1/3 posted on #7; ${BLOCKED}`]);
+		expect(api.posted).toEqual([`${ATTEMPT} 1/3 — https://github.com/o/r/actions/runs/5 at ${SHA}`]);
+		expect(seen(h, "claude-argv")).toContain(join(h.logs, "5-2.log"));
+		expect(seen(h, "gh-calls")).toBe("run view 5 -R o/r --attempt 2 --log-failed\n");
+	});
 });
 
 describe("on the host, through the launcher", () => {
