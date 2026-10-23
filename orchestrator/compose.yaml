@@ -35,6 +35,8 @@ services:
     <<: *windmill
     environment:
       MODE: server
+      # Windmill listens on 8000 unless PORT names another; the tunnel targets 8080.
+      PORT: 8080
       DATABASE_URL_FILE: /run/secrets/database_url
     networks:
       default:

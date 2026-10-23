@@ -73,7 +73,12 @@ export function endsOnSsh(path: string, text: string): string[] {
 export const variableValues = (files: Parsed[]) =>
 	files.filter((f) => f.doc.value !== undefined && f.doc.value !== null && f.doc.value !== "").map((f) => `${f.path}: carries a value`);
 
-type Service = { image?: string; environment?: Record<string, unknown> | string[]; deploy?: { replicas?: number } };
+type Service = {
+	image?: string;
+	environment?: Record<string, unknown> | string[];
+	deploy?: { replicas?: number };
+	networks?: { default?: { aliases?: string[] } };
+};
 
 /** A service's environment as name → value, from either compose form. */
 function env(s: Service): Record<string, string> {
@@ -96,6 +101,9 @@ export function compose(doc: Doc): string[] {
 		if (env(pass).WORKER_TAGS !== "pass") wrong.push("windmill_worker_pass: WORKER_TAGS is not pass");
 	}
 	for (const [name] of takers) if (name !== "windmill_worker_pass") wrong.push(`${name}: takes the tag pass`);
+	// The tunnel's origin is http://engine:8080 (README step 1), and Windmill otherwise listens on 8000.
+	for (const [name, s] of Object.entries(services))
+		if (s.networks?.default?.aliases?.includes("engine") && env(s).PORT !== "8080") wrong.push(`${name}: serves engine on a port other than 8080`);
 	for (const [name, s] of Object.entries(services))
 		for (const [k, v] of Object.entries(env(s)))
 			if (SECRETISH.test(k) && !v.startsWith("/run/secrets/")) wrong.push(`${name}: ${k} is a literal, not a secret file`);
