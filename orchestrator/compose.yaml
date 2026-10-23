@@ -76,6 +76,9 @@ services:
     volumes:
       - agent_home:/home/agent
       - runner_home:/home/runner
+      # The App's id and repository list, root's, and the key holder's own directory with the App's key (README step 11).
+      - ./app:/etc/orchestrator/app:ro
+      - ./app-key:/var/lib/orchestrator-key:ro
 
   cloudflared:
     # moved by hand — nothing updates this pin

@@ -3,4 +3,6 @@
 .claude/worktrees
 node_modules
 orchestrator/secrets
+orchestrator/app
+orchestrator/app-key
 orchestrator/windmill/wmill-lock.yaml

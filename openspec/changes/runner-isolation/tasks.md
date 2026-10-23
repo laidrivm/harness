@@ -142,7 +142,7 @@ App-only (user, 2026-10-23), so the PAT path these tasks first planned,
 Closes `orchestrator` §*The session user reads no secret file*. Needs
 `vps-board-loop` group 3 merged.
 
-- [ ] 5.1 Write the failing cases in `orchestrator/layout.test.ts`: the image
+- [x] 5.1 Write the failing cases in `orchestrator/layout.test.ts`: the image
       creates `runner`, `agent` and the key holder with fixed uids; sudoers
       holds exactly the two rules `design.md` *Three users* names; its
       `env_keep` equals the session allowlist in `bun/board-loop-session.ts`;
@@ -152,18 +152,24 @@ Closes `orchestrator` §*The session user reads no secret file*. Needs
       `as-agent` sees `agent`'s `HOME`, `USER` and `LOGNAME` and none of
       `CLAUDE_CONFIG_DIR`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME` and
       `XDG_CACHE_HOME`, so `claude` and the trust check read `agent`'s
-      `.claude.json`
-- [ ] 5.2 Add to the image the key holder, the two sudoers rules, the
+      `.claude.json`. Done in `orchestrator/users.test.ts`, as `layout.test.ts`
+      sits at the 300-line cap; `env_keep` also holds the commit identity and
+      the question gate's signal the runner adds, and the repository list is
+      root's under `/etc/orchestrator/app/`, where group 4's mint reads it
+- [x] 5.2 Add to the image the key holder, the two sudoers rules, the
       launcher `orchestrator/as-agent` and the mint helper's copy, and to
       `orchestrator/README.md` the owner and mode of every secret file, the
       key holder's key file among them. Verify with 5.1 and `docker build`
-      where Docker is available
-- [ ] 5.3 Add `orchestrator/reach-check.sh`, which as `agent` tries to read
+      where Docker is available. Done, with the forced command handing
+      `pass.sh` the launcher, the mint and the App's id, compose mounting the
+      App's two directories, the empty hooks directory and `jq`; `docker
+      build` is the host's first, since the laptop runs no Docker daemon
+- [x] 5.3 Add `orchestrator/reach-check.sh`, which as `agent` tries to read
       every secret file the README provisions and as `runner` the App's key,
       and exits non-zero naming each file it could read. Add it to the host
       README's bring-up, after the secrets are placed. Verify with a test
       that runs it over a temporary directory whose modes it sets
-- [ ] 5.4 Fix the two cross-user calls group 1 left: `session()` in
+- [x] 5.4 Fix the two cross-user calls group 1 left: `session()` in
       `bun/board-loop-session.ts` signals the session's group with
       `kill(-pid)`, which `runner` cannot send to `agent`'s processes, and
       `pass.sh` stats the session's clone (`[ -d "$dir/.git" ]`) as `runner`.
@@ -175,6 +181,9 @@ Closes `orchestrator` §*The session user reads no secret file*. Needs
       in `bun/ci-run.test.ts` where a direct signal to the session's group is
       refused, as across users: the flow still ends the session, exits, and
       leaves the repository's lock free for the next run. Verify with those
-      cases and `bun test`
+      cases and `bun test`. Done; `pass.sh`'s case sits in `pass-pin.test.ts`
+      beside the launcher's others, and the CI flow's shows the leftover child
+      ended through the launcher, since one user cannot be refused its own
+      group
 - [ ] 5.5 **User act.** Run `reach-check.sh` on the host after the App key is
       placed, and record its output in the pull request

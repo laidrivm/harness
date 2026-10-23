@@ -669,7 +669,7 @@ describe("on the host, through the launcher", () => {
 	let tools = "";
 	beforeAll(() => {
 		tools = emptyDir("ci-run-host-");
-		writeFileSync(join(tools, "as-agent"), '#!/bin/sh\ncd "$1" || exit 1\nshift\nexport AS_AGENT=agent\nexec "$@"\n', { mode: 0o755 });
+		writeFileSync(join(tools, "as-agent"), '#!/bin/sh\necho "$*" >> "$HOME/as-agent-calls"\ncd "$1" || exit 1\nshift\nexport AS_AGENT=agent\nexec "$@"\n', { mode: 0o755 });
 		writeFileSync(
 			join(tools, "git"),
 			`#!/bin/sh\nprintf '%s|%s|%s\\n' "\${AS_AGENT:-runner}" "$(pwd -P)" "$*" >> "$HOME/git-calls"\nexec ${Bun.which("git")} "$@"\n`,
@@ -728,4 +728,16 @@ describe("on the host, through the launcher", () => {
 		expect(r.line).toMatch(/no passing pre-PR run record for [0-9a-f]{7}/);
 		expect(rev(h.bare, "refs/heads/feat/x")).toBe(SHA);
 	});
+
+	// `runner` may not signal `agent`'s group, so a child the session left, holding the lock's descriptor, is ended as `agent`.
+	test("a child the session left running is ended through the launcher, so the repository's lock is free once the flow exits", async () => {
+		const h = host();
+		const { env } = onHost(h);
+		writeFileSync(join(h.home, "claude-act"), `sleep 30 >/dev/null 2>&1 &\necho $! > "$HOME/left-pid"\n`);
+		const r = await deliver(h, payload(), { env, tools: `${free}:${tools}` });
+		expect(r.code).toBe(0);
+		const left = Number(readFileSync(join(h.home, "left-pid"), "utf8"));
+		expect(() => process.kill(left, 0)).toThrow();
+		expect(readFileSync(join(h.home, "as-agent-calls"), "utf8")).toMatch(/ sh -c kill -\$0 -- "\$1" TERM -\d+\n/);
+	}, 40_000);
 });

@@ -1,0 +1,10 @@
+# runner may start exactly two commands as another user, both root-owned
+# (runner-isolation design, *Three users*). sudo resets the environment: the
+# launcher keeps the session allowlist in bun/board-loop-session.ts and the
+# variables the runner adds to it, the commit identity and the question gate's
+# signal; the mint keeps none.
+Defaults!/opt/orchestrator/as-agent env_keep = "PATH HOME USER LOGNAME SHELL TERM LANG TMPDIR TZ XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_CACHE_HOME CLAUDE_CONFIG_DIR ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN HARNESS_GH_TIMEOUT_MS GOAL_CHECK_RETRY_MS LC_* GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL HARNESS_RUNNER_ASKS"
+# No pseudo-terminal: the session stays in the process group runner starts, which agent then signals.
+Defaults!/opt/orchestrator/as-agent !use_pty
+runner ALL=(agent) NOPASSWD: /opt/orchestrator/as-agent
+runner ALL=(keyholder) NOPASSWD: /opt/orchestrator/mint

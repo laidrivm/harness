@@ -53,8 +53,7 @@ halt() {
 
 # Without the shared guard an empty pattern would match every name.
 . "$(dirname "${BASH_SOURCE[0]}")/clone-name.sh" || exit 2
-# A clone's `.git` is a directory; a worktree's is a file, and no pass pushes from one.
-if [[ ! $name =~ $segment ]] || [ ! -d "$dir/.git" ]; then
+if [[ ! $name =~ $segment ]]; then
 	echo "orchestrator: no clone named '$name' under $clones" >&2
 	exit 2
 fi
@@ -65,6 +64,18 @@ if [ $# -gt 2 ] || { { [ -n "${PASS_AS_AGENT-}" ] || [ $# = 2 ]; } && [[ ! $name
 	exit 2
 fi
 named=$(printf '%s' "$named" | tr '[:upper:]' '[:lower:]')
+# On the host the clone is the session user's, so every look at it, this check included, runs as
+# that user, through the launcher PASS_AS_AGENT names (its words, split on spaces).
+as=()
+if [ -n "${PASS_AS_AGENT-}" ]; then
+	read -ra as <<<"$PASS_AS_AGENT"
+	as+=("$dir")
+fi
+# A clone's `.git` is a directory; a worktree's is a file, and no pass pushes from one.
+if ! "${as[@]}" test -d "$dir/.git"; then
+	echo "orchestrator: no clone named '$name' under $clones" >&2
+	exit 2
+fi
 
 # Exits 3 while the stop file exists.
 paused() {
@@ -76,13 +87,6 @@ paused
 
 # The lock is the repository's, so a clone over HTTPS and one over SSH share
 # it: scheme://host/<owner>/<repo> or user@host:<owner>/<repo>, `.git` dropped.
-# On the host the clone is the session user's, so even this lookup runs as
-# that user, through the launcher PASS_AS_AGENT names (its words, split on spaces).
-as=()
-if [ -n "${PASS_AS_AGENT-}" ]; then
-	read -ra as <<<"$PASS_AS_AGENT"
-	as+=("$dir")
-fi
 origin=$("${as[@]}" git -C "$dir" config --get remote.origin.url)
 url=${origin%.git}
 repository="^([a-z][a-z0-9+.-]*://[^/]+/|[^/:]+:)($part)/($part)$"
