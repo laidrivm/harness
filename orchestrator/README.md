@@ -125,8 +125,13 @@ the page that fails to load, and hand it to the waiting session from a second
 shell on the host:
 
 ```sh
-docker compose exec -u agent runner curl -s '<the failed address>'
+read -rs CALLBACK
+docker compose exec -u agent runner curl -s "$CALLBACK"
+unset CALLBACK
 ```
+
+`read -rs` takes the pasted address, whose `code` is an authorisation grant,
+so it lands in no shell history.
 
 Copying the URL out of a Claude session in Terminal.app needs View → Allow
 Mouse Reporting off (⌘R). The URL and the address belong to one attempt: a
@@ -150,7 +155,8 @@ From the laptop, with the Access service token of step 9 in `HEADERS` and a
 temporary Windmill token that can write (one day's expiry), point `wmill` at
 the hostname and push the scripts, the hourly schedule and the webhook's
 route. `wmill.yaml` limits the push to `f/orchestrator/` and skips variables,
-resources and resource types, so it cannot delete the workspace's own:
+resources and resource types, so it cannot delete the workspace's own; `wmill`
+reads it from the directory it runs in, hence the `cd`:
 
 ```sh
 bun add -g windmill-cli@<the engine's version>
@@ -158,6 +164,7 @@ read -rs CF_ID
 read -rs CF_SECRET
 read -rs WM_TOKEN
 export HEADERS="CF-Access-Client-Id: $CF_ID,CF-Access-Client-Secret: $CF_SECRET"
+cd <this repository's checkout>/orchestrator/windmill
 wmill workspace add <name> <workspace id> https://<hostname> --token "$WM_TOKEN"
 wmill sync push --skip-secrets --include-schedules --include-triggers
 ```
