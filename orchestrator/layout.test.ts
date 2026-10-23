@@ -42,11 +42,11 @@ describe("the engine's workspace", () => {
 		expect(windmillImages(windmill)).toEqual([]);
 	});
 
-	test("the pass script carries the tag pass, a timeout of at least 5400 and no concurrent_limit, and its schedule is hourly, on the script [29]", () => {
-		const s = [{ path: "x.schedule.yaml", doc: { script_path: "f/p", is_flow: false, schedule: "0 0 * * * *" } }];
+	test("the pass script carries the tag pass, a timeout of at least 5400 and no concurrent_limit, and its schedule is hourly, on the script and pushed disabled [29]", () => {
+		const s = [{ path: "x.schedule.yaml", doc: { script_path: "f/p", is_flow: false, schedule: "0 0 * * * *", enabled: false } }];
 		expect(passScript("f/p", { tag: "pass", timeout: 5400 }, s)).toEqual([]);
 		expect(passScript("f/p", { tag: "default", timeout: 3600, concurrent_limit: 1 }, s)).toHaveLength(3);
-		expect(passScript("f/p", { tag: "pass", timeout: 5400 }, [{ path: "y", doc: { script_path: "f/p", is_flow: true, schedule: "*/5 * * * *" } }])).toHaveLength(2);
+		expect(passScript("f/p", { tag: "pass", timeout: 5400 }, [{ path: "y", doc: { script_path: "f/p", is_flow: true, schedule: "*/5 * * * *", enabled: true } }])).toHaveLength(3);
 		const pass = scripts.find((p) => yaml(p).tag === "pass");
 		expect(pass).toBeDefined();
 		const path = (pass as string).slice(wm.length).replace(/\.script\.yaml$/, "");

@@ -57,6 +57,8 @@ export function passScript(path: string, meta: Doc, schedules: Parsed[]): string
 	for (const s of own) {
 		if (s.doc.is_flow !== false) wrong.push(`${s.path}: is_flow is not false`);
 		if (!HOURLY.test(String(s.doc.schedule).trim())) wrong.push(`${s.path}: ${String(s.doc.schedule)} is not hourly`);
+		// A pass before runner-isolation's launcher only pauses the clone, so the user enables it by hand.
+		if (s.doc.enabled !== false) wrong.push(`${s.path}: is pushed enabled`);
 	}
 	return wrong;
 }

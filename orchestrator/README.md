@@ -123,9 +123,9 @@ wmill sync push --skip-secrets --include-schedules
 ```
 
 The pass script sends the clone `harness` and its repository; another clone
-needs its own script. Leave the schedule disabled until `runner-isolation`
-adds the launcher that runs the sessions as `agent` (its group 5), then
-enable it in Windmill.
+needs its own script. The schedule is pushed disabled: leave it so until
+`runner-isolation` adds the launcher that runs the sessions as `agent` (its
+group 5), then enable it in Windmill.
 
 ## 7. A paused loop and a stopped pass
 
