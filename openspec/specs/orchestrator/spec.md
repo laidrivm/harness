@@ -77,11 +77,13 @@ exit non-zero, naming the file. Nothing but the user SHALL remove it.
 ### Requirement: The wrapper starts the pass with the environment it names
 
 The wrapper SHALL start the pass with an environment holding only the
-variables it names: the path, the home, the locale, the Claude Code token and
-the GitHub token read from the host's secret files, the setting that keeps
-Claude Code from updating itself, and `CLAUDECODE` when its own environment
-holds it. It SHALL accept a clone only by a name that is a single path segment
-under the clones directory.
+variables it names: the path, the home, the locale, the Claude Code token
+read from the host's secret file, the App's id and the key holder's mint
+command, `HARNESS_AS_AGENT`, `GH_CONFIG_DIR` naming the pass's empty `gh`
+configuration, the setting that keeps Claude Code from updating itself, and
+`CLAUDECODE` when its own environment holds it. It
+SHALL accept a clone only by a name that is a single path segment under the
+clones directory.
 
 #### Scenario: The host's other variables
 
@@ -91,7 +93,7 @@ under the clones directory.
 #### Scenario: The tokens stay out of process arguments
 
 - **WHEN** the pass is running
-- **THEN** no process's arguments hold the Claude Code token or the GitHub
+- **THEN** no process's arguments hold the Claude Code token or a GitHub
   token
 
 #### Scenario: Started from a Claude Code session
