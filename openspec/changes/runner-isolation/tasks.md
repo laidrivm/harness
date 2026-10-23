@@ -90,7 +90,7 @@ whose tests passed*.
 Closes the CI part of `orchestrator` §*The runner pushes from its own push
 clone, a commit whose tests passed*.
 
-- [ ] 3.1 Carry `design.md` *The CI flow's push* into `ci-run-agent`. Write
+- [x] 3.1 Carry `design.md` *The CI flow's push* into `ci-run-agent`. Write
       the failing cases in `bun/ci-run.test.ts`: the fix push comes from the
       push clone, for a tip on top of `head_sha` with a passing pre-PR record;
       a tip with none pushes nothing and exits 1 naming it; the fetch with the

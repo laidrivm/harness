@@ -78,6 +78,23 @@ export function ran(
 	});
 }
 
+// `stateDir()`'s rule, in the session user's shell, so it reads that user's environment.
+const AGENT_LEDGER = 'd=${XDG_STATE_HOME-}; case $d in /*) ;; *) d=$HOME/.local/state ;; esac; cat "$d/harness/gates.jsonl"';
+
+/**
+ * On the host, whether the session's clone holds a passing pre-PR record of
+ * `commit`: read through `under`, the launcher's words and the clone, as the
+ * session user, from that user's 0600 ledger and against that user's view of
+ * the clone's top level. The runner's own ledger never stands in for it.
+ */
+export function ranUnder(under: string[], commit: string): boolean {
+	const agent = (...cmd: string[]) => {
+		const run = Bun.spawnSync([...under, ...cmd]);
+		return run.exitCode === 0 ? run.stdout.toString() : undefined;
+	};
+	return ran(commit, agent("pwd", "-P")?.trim(), "pass", agent("sh", "-c", AGENT_LEDGER) ?? "");
+}
+
 /**
  * Appends one record. Best-effort and silent: a gate whose log is unwritable
  * must decide exactly as it would have, so every error is swallowed here.

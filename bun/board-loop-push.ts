@@ -30,7 +30,11 @@ export function sh(...args: string[]) {
 /** Over HTTPS as the App, even where `origin` is SSH: over SSH git ignores the header and uses a key of its own. */
 export const over = (app: App) => `https://github.com/${app.owner}/${app.repo}.git`;
 
-/** Exactly `branch`'s ref to `to`, never forced, never retried: a branch that moved on origin is the user's. */
+/**
+ * Exactly `branch`'s ref to `to`, never forced, never retried: a branch that moved on origin is the user's.
+ * From the working directory's repository, which on the host is the runner's push clone for both the board
+ * loop and the CI flow, never the session's clone.
+ */
 export const pushRef = (to: string, branch: string) =>
 	sh("git", "push", to, `refs/heads/${branch}:refs/heads/${branch}`);
 
