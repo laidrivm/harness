@@ -1,7 +1,7 @@
 # The orchestrator host
 
 The board loop on its own VPS: Windmill runs one pass an hour, over SSH, in a
-runner container that holds the clones (`openspec/changes/vps-board-loop/`).
+runner container that holds the clones (`openspec/specs/orchestrator/`).
 Every step below is the user's, by hand. Placeholders in angle brackets stand
 for the host's own values; this file names no address and no account.
 

@@ -640,3 +640,64 @@ The pass's outcome SHALL stay the goal check's.
   question that integration's `harness-answer` follows though `Assign` does
   not hold the user; with no integration it names none, and no
   `harness-answer` counts
+
+### Requirement: A timer the user set up may start the runner
+
+The runner SHALL accept a start by a timer the user set up on a host of their
+own, as `orchestrator` fixes, and SHALL then behave as it does when started
+from the user's terminal. It SHALL require no terminal: no TTY on standard
+input and no `TERM` in its environment. The refusal for `CLAUDECODE` in *The
+runner is the user's script and starts from a clean clone* SHALL apply
+whatever started it.
+
+#### Scenario: Started with no terminal
+
+- **WHEN** the runner starts with standard input not a TTY, no `TERM`, and no
+  `CLAUDECODE`
+- **THEN** the pass runs as it would from a terminal, and its line and record
+  are the same
+
+#### Scenario: A timer started inside a Claude Code session
+
+- **WHEN** a timer's command starts the runner with `CLAUDECODE` in its
+  environment
+- **THEN** the runner refuses, as *Started from an agent's shell* fixes
+
+### Requirement: The runner records the session of each step it pushes
+
+The runner SHALL start each stage session with a session id it chose. Before
+it pushes a step's branch, it SHALL append one record to the PR → session
+table naming the repository, the branch, the session id, the clone and the
+time. When the record cannot be written, the runner SHALL push nothing and
+open nothing, and the pass SHALL record `open` naming the table.
+
+#### Scenario: A step ready to push
+
+- **WHEN** the runner is about to push a step's branch
+- **THEN** the table's last line names that repository, branch, the stage
+  session's id and the clone, and the push follows
+
+#### Scenario: A step continued by a second session
+
+- **WHEN** a later pass continues the step's branch in a new session and
+  pushes it
+- **THEN** a second record names the new session, and a lookup returns it
+
+#### Scenario: A step not ready
+
+- **WHEN** the step is not ready, so the runner reaches no push
+- **THEN** the table is unchanged
+
+#### Scenario: A push refused after the record
+
+- **WHEN** the record is appended and the push is then refused
+- **THEN** the record stays: a branch never pushed has no pull request whose
+  failure looks it up, and a later push of the branch appends a newer record,
+  which the lookup returns
+
+#### Scenario: The table cannot be written
+
+- **WHEN** appending the record fails
+- **THEN** the runner pushes nothing and opens nothing, the pass records
+  `open` naming the table's path, and the branch keeps its commits for the
+  pass that continues it

@@ -105,7 +105,7 @@ export const starts = (h: Host, name: string) => {
 	return existsSync(file) ? readFileSync(file, "utf8").trim().split("\n").length : 0;
 };
 export const stop = (h: Host, name: string) => join(h.state, `${name}.stop`);
-export const lock = (h: Host) => join(h.state, "locks/owner-repo.lock");
+export const lock = (h: Host) => join(h.state, "locks/owner+repo.lock");
 /** The environment the runner printed, its first line of output. */
 export const passEnv = (out: string): Record<string, string> => JSON.parse(out.split("\n")[0]);
 

@@ -197,6 +197,23 @@ describe("the PR → session table", () => {
 		expect(r.last).toBe("board-loop: met — apply demo step 1");
 	});
 
+	// spec: board-loop/a-push-refused-after-the-record
+	test("a refused push keeps the record it appended [35]", () => {
+		const { dir, origin } = github();
+		const other = emptyDir("board-loop-other-");
+		git(other, "clone", "-q", origin, ".");
+		git(other, "switch", "-qc", "feat/demo");
+		commit(other);
+		git(other, "push", "-q", "origin", "feat/demo");
+		git(dir, "branch", "feat/demo");
+		git(dir, "switch", "-q", "feat/demo");
+		commit(dir);
+		git(dir, "switch", "-q", "main");
+		const r = run(dir);
+		expect(r.text).toContain("[rejected]");
+		expect(rows(r.home).map((row) => row.branch)).toEqual(["feat/demo"]);
+	});
+
 	// spec: board-loop/a-step-not-ready
 	test("no push appends nothing [27]", () => {
 		const { dir } = clone();
