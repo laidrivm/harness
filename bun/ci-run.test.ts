@@ -382,11 +382,21 @@ describe("the delivery and the App's settings", () => {
 });
 
 describe("the repository's lock", () => {
-	test("is the file pass.sh locks: <state>/locks/<owner>-<repo>.lock, lower-cased [67]", () => {
+	test("is the file pass.sh locks, its key run from pass.sh's own lines, one per pair [67]", () => {
 		const state = process.env.PASS_STATE;
 		process.env.PASS_STATE = "/state";
+		// The two keys are kept in step by hand across bash and TS, so run pass.sh's own derivation.
+		const sh = readFileSync(join(import.meta.dir, "../orchestrator/pass.sh"), "utf8").split("\n");
+		const from = (start: string) => sh.findIndex((l) => l.startsWith(start));
+		const derive = `${sh[from("part=")]}\n${sh.slice(from("url="), from("key=") + 1).join("\n")}\nprintf %s "$key"`;
+		const keyOf = (origin: string) => Bun.spawnSync(["bash", "-c", derive], { env: { origin, dir: "x" } }).stdout.toString();
 		try {
-			expect(lockOf("Laid", "Harness")).toBe("/state/locks/laid-harness.lock");
+			for (const [origin, owner, repo] of [
+				["https://github.com/Laid-Drivm/Harness.git", "Laid-Drivm", "Harness"],
+				["git@github.com:laid/drivm-harness.git", "laid", "drivm-harness"],
+			])
+				expect(lockOf(owner, repo)).toBe(`/state/locks/${keyOf(origin)}.lock`);
+			expect(lockOf("Laid-Drivm", "Harness")).not.toBe(lockOf("laid", "drivm-harness"));
 		} finally {
 			if (state === undefined) delete process.env.PASS_STATE;
 			else process.env.PASS_STATE = state;

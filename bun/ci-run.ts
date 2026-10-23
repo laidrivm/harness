@@ -50,7 +50,7 @@ const SCHEMA = JSON.stringify({
 
 /** The file `pass.sh` locks for the repository, keyed as it keys it, so a pass and a flow never share a clone. */
 export const lockOf = (owner: string, repo: string) =>
-	join(process.env.PASS_STATE || join(homedir(), "orchestrator"), "locks", `${owner}-${repo}`.toLowerCase() + ".lock");
+	join(process.env.PASS_STATE || join(homedir(), "orchestrator"), "locks", `${owner}+${repo}`.toLowerCase() + ".lock");
 
 /** The repository a clone's `origin` names, as `github-app.ts` reads it. */
 const originOf = (clone: string) => {
