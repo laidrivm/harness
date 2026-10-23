@@ -1,11 +1,14 @@
 defaultTs: bun
+# Only the pass's own folder: a push deletes whatever the scope holds that this
+# tree does not, and the workspace's built-ins and the hand-made variables live
+# only in the engine.
 includes:
-  - f/**
+  - f/orchestrator/**
 excludes: []
 codebases: []
-skipVariables: false
-skipResources: false
-skipResourceTypes: false
+skipVariables: true
+skipResources: true
+skipResourceTypes: true
 skipSecrets: true
 includeSchedules: true
 includeTriggers: true

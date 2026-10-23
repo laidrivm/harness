@@ -283,7 +283,7 @@ describe("the engine's webhook call", () => {
 		const meta = yaml(`${ev}.script.yaml`);
 		expect(meta.tag).toBeUndefined();
 		expect(meta.timeout).toBeGreaterThan(7200 + 3600);
-		expect(yaml(`${wm}wmill.yaml`).includeTriggers).toBe(true);
+		expect(yaml(`${wm}wmill.yaml`)).toMatchObject({ includes: ["f/orchestrator/**"], skipVariables: true, skipResources: true, skipResourceTypes: true, skipSecrets: true, includeTriggers: true });
 	});
 
 	test("the event script passes the three headers and the raw body over ssh to a pinned runner", () => {
