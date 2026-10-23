@@ -174,11 +174,16 @@ this change:
   `runner` fetches it into the push clone and checks the branch out at the
   tip with `git checkout -f -B`.
 - There it applies the flow's own rule (`HEAD` is not `<head_sha>`, and
-  `<head_sha>` is its ancestor) and then `--before-push`, which needs a
-  passing pre-PR record the session's clone made of the tip. The fix prompt
-  therefore asks the session to run the pre-PR check before it answers
-  `fixed`; a tip without a record pushes nothing, and the flow exits 1 naming
-  it.
+  `<head_sha>` is its ancestor) and then asks for a passing pre-PR record the
+  session's clone made of the tip. The flow knows no change or step for the
+  goal check's `--before-push` form, so it reads the record as that check
+  does, with `ranUnder()` in `gate-ledger.ts`, which both call (apply,
+  2026-10-22). The fix prompt therefore asks the session to run the pre-PR
+  check before it answers `fixed`; a tip without a record pushes nothing, and
+  the flow exits 1 naming it.
+- The push clone is `pass.sh`'s, `<PASS_PUSH>/<owner>/<repo>`, which the
+  flow shares under the same repository lock. The bundle for `agent` sits
+  beside the run's log, where `agent`'s group already reads, and goes with it.
 - The push runs no hook and no force, from the push clone, as the board
   loop's does. The tree check after the session runs as `agent` through the
   launcher.

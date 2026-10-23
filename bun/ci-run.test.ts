@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createHmac, generateKeyPairSync, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { lockOf } from "./ci-run.ts";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
@@ -624,5 +624,71 @@ describe("the scheduled and flaky routes", () => {
 		expect(seen(h, "claude-argv")).toContain("core/testing.md");
 		expect(seen(h, "gh-calls")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
 		expect([rev(h.bare, "refs/heads/feat/x"), status(h)]).toEqual([SHA, ""]);
+	});
+});
+
+describe("on the host, through the launcher", () => {
+	/** The launcher's stand-in, which enters the clone it is handed and marks what it starts as `agent`'s, and a `git` logging who ran it, where. */
+	let tools = "";
+	beforeAll(() => {
+		tools = emptyDir("ci-run-host-");
+		writeFileSync(join(tools, "as-agent"), '#!/bin/sh\ncd "$1" || exit 1\nshift\nexport AS_AGENT=agent\nexec "$@"\n', { mode: 0o755 });
+		writeFileSync(
+			join(tools, "git"),
+			`#!/bin/sh\nprintf '%s|%s|%s\\n' "\${AS_AGENT:-runner}" "$(pwd -P)" "$*" >> "$HOME/git-calls"\nexec ${Bun.which("git")} "$@"\n`,
+			{ mode: 0o755 },
+		);
+	});
+	/** The host's layout: the session's clone no longer reaches GitHub, and the runner's push clone of o/r, under `push/`, does. */
+	const onHost = (h: Host) => {
+		git(h.clone, "config", "--unset", `url.${h.bare}.insteadOf`);
+		const push = join(h.root, "push", "o", "r");
+		mkdirSync(push, { recursive: true });
+		git(push, "init", "-q");
+		git(push, "remote", "add", "origin", "https://github.com/o/r.git");
+		git(push, "config", `url.${h.bare}.insteadOf`, "https://github.com/o/r.git");
+		return { push: realpathSync(push), env: { HARNESS_AS_AGENT: join(tools, "as-agent"), PASS_PUSH: join(h.root, "push") } };
+	};
+	const fix = (h: Host, script: string) => {
+		writeFileSync(join(h.home, "claude-act"), `echo b > b.txt && git add b.txt && git commit -qm b\n${script}`);
+		writeFileSync(join(h.home, "claude-out"), answer("fixed"));
+	};
+	/** The session's pre-PR run: a passing record of `HEAD` in its own user's ledger. */
+	const recorded =
+		'd="$HOME/.local/state/harness" && mkdir -p "$d" && ' +
+		'printf \'{"gate":"pre-pr","decision":"pass","commit":"%s","project":"%s"}\\n\' "$(git rev-parse HEAD)" "$(pwd -P)" >> "$d/gates.jsonl"\n';
+	const calls = (h: Host) =>
+		readFileSync(join(h.home, "git-calls"), "utf8")
+			.trim()
+			.split("\n")
+			.map((line) => line.split("|"));
+
+	// spec: orchestrator/the-ci-flows-fix-push
+	test("a fixed tip with a passing pre-PR record is pushed from the push clone, the App's fetch made there, every git in the session's clone run as its user", async () => {
+		const h = host();
+		const { push, env } = onHost(h);
+		fix(h, recorded);
+		const r = await deliver(h, payload(), { env, tools: `${free}:${tools}` });
+		expect([r.code, r.line]).toEqual([0, expect.stringMatching(/; pushed feat\/x at [0-9a-f]{40}$/)]);
+		expect(rev(h.bare, "refs/heads/feat/x^")).toBe(SHA);
+		expect(readFileSync(join(h.home, "claude-argv"), "utf8")).toContain("pre-PR");
+		const clone = [h.clone, realpathSync(h.clone)];
+		const ran = calls(h);
+		expect(ran.filter(([who, where, args]) => who === "runner" && clone.some((c) => where === c || args.includes(c)))).toEqual([]);
+		const github = ran.filter(([, , args]) => args.includes("https://github.com/o/r.git"));
+		expect(github.length).toBeGreaterThan(0);
+		expect(github.filter(([who, where]) => who !== "runner" || where !== push)).toEqual([]);
+		expect([rev(h.clone, "--abbrev-ref", "HEAD"), readdirSync(h.logs)]).toEqual(["main", []]);
+	});
+
+	// spec: orchestrator/a-ci-fix-with-no-pre-pr-record
+	test("a fixed tip with no passing pre-PR record pushes nothing and exits 1, naming it", async () => {
+		const h = host();
+		const { env } = onHost(h);
+		fix(h, "");
+		const r = await deliver(h, payload(), { env, tools: `${free}:${tools}` });
+		expect(r.code).toBe(1);
+		expect(r.line).toMatch(/no passing pre-PR run record for [0-9a-f]{7}/);
+		expect(rev(h.bare, "refs/heads/feat/x")).toBe(SHA);
 	});
 });

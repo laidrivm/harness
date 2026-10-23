@@ -15,8 +15,8 @@ import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { LIMIT as HOUR } from "./board-loop.ts";
-import { over, pushRef } from "./board-loop-push.ts";
 import { session } from "./board-loop-session.ts";
+import { fetched, git, pushed, under } from "./ci-run-clone.ts";
 import { type App, configured, credentials, identity, mint, repository, request, slug } from "./github-app.ts";
 import { lookup } from "./pr-sessions.ts";
 
@@ -51,12 +51,6 @@ const SCHEMA = JSON.stringify({
 /** The file `pass.sh` locks for the repository, keyed as it keys it, so a pass and a flow never share a clone. */
 export const lockOf = (owner: string, repo: string) =>
 	join(process.env.PASS_STATE || join(homedir(), "orchestrator"), "locks", `${owner}-${repo}`.toLowerCase() + ".lock");
-
-/** `git -C <clone> …`'s output, or undefined when it fails; as the App once its credentials are set. */
-function git(clone: string, ...args: string[]) {
-	const p = Bun.spawnSync(["git", "-C", clone, ...args], { env: process.env });
-	return p.exitCode === 0 ? p.stdout.toString().trim() : undefined;
-}
 
 /** The repository a clone's `origin` names, as `github-app.ts` reads it. */
 const originOf = (clone: string) => {
@@ -180,6 +174,7 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
 				`CI run ${shown} failed on this step's pull request #${pull.number}; this is fix attempt ${n}/${ATTEMPTS}.`,
 				`The failed jobs' logs are in ${log}: read them there, never with gh.`,
 				"Fix the failure in new commits on this branch, with no amend, no rebase and no push.",
+				"Before you answer fixed, run the pre-PR sequence on the last of them: a commit with no passing pre-PR record is not pushed.",
 				"If you cannot, put one question on the step's card under the question gate's mark and answer blocked.",
 				"If the failure is no defect of this branch, answer flaky and file the card core/testing.md asks for.",
 			].join("\n");
@@ -208,13 +203,14 @@ async function resume(clone: string, app: App, run: Run, id: string, ask: (log: 
 	const as = await identity(app);
 	const back = git(clone, "symbolic-ref", "--short", "-q", "HEAD") ?? git(clone, "rev-parse", "HEAD");
 	const log = logOf(run);
+	const bundle = log.replace(/\.log$/, ".bundle");
 	const done = (outcome: Outcome): Outcome => {
-		rmSync(log, { force: true });
+		for (const file of [log, bundle]) rmSync(file, { force: true });
 		if (back) git(clone, "checkout", "-q", back);
 		return outcome;
 	};
 	const ready =
-		git(clone, "fetch", "-q", over(app), `+refs/heads/${branch}:refs/remotes/origin/${branch}`) !== undefined &&
+		fetched(clone, app, branch, bundle) &&
 		git(clone, "switch", "-q", branch) !== undefined &&
 		git(clone, "merge", "-q", "--ff-only", `origin/${branch}`) !== undefined;
 	const head = git(clone, "rev-parse", "HEAD");
@@ -231,7 +227,8 @@ async function resume(clone: string, app: App, run: Run, id: string, ask: (log: 
 	if (fixed === run.head_sha) return done(["failed", `the session answered fixed with no commit after ${run.head_sha}; nothing pushed`]);
 	if (git(clone, "merge-base", "--is-ancestor", run.head_sha, "HEAD") === undefined)
 		return done(["failed", `${branch} no longer holds ${run.head_sha}; nothing pushed`]);
-	if (!pushRef(over(app), branch).ok) return done(["failed", `GitHub refused the push of ${branch}; neither forced nor retried`]);
+	const refused = pushed(clone, app, branch, fixed as string, run.head_sha);
+	if (refused !== undefined) return done(["failed", refused]);
 	return done(["handled", `pushed ${branch} at ${fixed}`]);
 }
 
@@ -273,10 +270,11 @@ function logged(app: App, run: Run, log: string) {
 /** Runs a session in the clone and reads its outcome, or undefined for no answer that matches the schema. */
 async function answered(clone: string, prompt: string, as: Record<string, string>, extra: string[]) {
 	// `session()` starts `claude` where the runner is. Moved only now, not spawned in the clone, so
-	// `bun` itself never read a `bunfig.toml` a session can write.
-	process.chdir(clone);
+	// `bun` itself never read a `bunfig.toml` a session can write; on the host the launcher enters it.
+	if (!under(clone).length) process.chdir(clone);
 	try {
-		const ended = await session(prompt, HOUR, process.kill, true, as, [...extra, "--json-schema", SCHEMA, "--output-format", "json"]);
+		const flags = [...extra, "--json-schema", SCHEMA, "--output-format", "json"];
+		const ended = await session(prompt, HOUR, process.kill, true, as, flags, under(clone));
 		const answer = JSON.parse(ended.out).structured_output as { outcome?: unknown; summary?: unknown } | undefined;
 		return !ended.late && typeof answer?.summary === "string" ? OUTCOMES.find((o) => o === answer?.outcome) : undefined;
 	} catch {
