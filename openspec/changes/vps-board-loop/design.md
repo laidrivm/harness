@@ -333,9 +333,10 @@ There is no chat page (user, 2026-10-22).
 Two clients reach the engine from the laptop by the user's decision of
 2026-10-22 (*Windmill 1.846.1* below): `wmill` with an Access service token
 in `HEADERS`, and MCP, on an engine token limited to running, reading and
-scheduling the pass's own paths, never `mcp:all`. Task 3.6 checks whether
-Windmill issues an MCP token that narrow; without one, chat control goes
-through `wmill` alone. The service token passes Access only through a
+scheduling the pass's own paths, never `mcp:all`. Task 3.6 measured it on
+2026-10-23: Windmill issues such a token for its REST API, but MCP refuses
+any token without `mcp:*`, so chat control goes through `wmill` and REST
+alone, and MCP is not used. The service token passes Access only through a
 Service Auth policy on `hooks.laidrivm.com`.
 
 ### The emergency session (user, 2026-10-22)
@@ -479,9 +480,9 @@ on a worker that reaches the runner; and the Access service token is
 allowed by a Service Auth policy on `hooks.laidrivm.com` alone. So the
 laptop's token is never the spike's `mcp:all` one, whose tools also create
 and update scripts and flows: it is limited to running, reading and
-scheduling the pass's own paths. Whether Windmill issues an MCP token that
-narrow is unchecked; group 3 checks it, and without one chat control goes
-through `wmill` on such a token instead. During the spike both tokens
+scheduling the pass's own paths. Task 3.6 found on 2026-10-23 that MCP
+issues no token that narrow (it requires `mcp:*`), so chat control goes
+through `wmill` and REST on such a token instead. During the spike both tokens
 stayed on the VPS.
 
 What binds group 3 whichever engine is chosen:
