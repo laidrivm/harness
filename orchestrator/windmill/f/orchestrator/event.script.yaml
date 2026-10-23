@@ -3,8 +3,9 @@ description: Hands a webhook's three headers and raw body to the runner's event 
 lock: ''
 kind: script
 has_preprocessor: true
-# The handler waits up to 7200 s for a pass's lock, then a fix runs up to an hour.
-timeout: 10800
+# The handler waits up to 7200 s for a pass's lock, then a fix runs up to an hour;
+# 900 s more covers the ssh and setup around them, so the job never ends before the handler's verdict.
+timeout: 11700
 schema:
   $schema: https://json-schema.org/draft/2020-12/schema
   type: object
