@@ -26,8 +26,10 @@ group 2 put back to the user (2026-10-20) and the user answered on
   user login on the VPS and gave Remote Control up; the user reversed that
   part on 2026-10-21, and on 2026-10-22 narrowed it to a session started by
   hand (*The emergency session* below).
-- **Until the GitHub App lands, the loop pushes as the user**, the way it does
-  from the laptop.
+- **The host pushes as the GitHub App alone, never as the user** (the user's
+  decision of 2026-10-23, reversing "until the App lands, the loop pushes as
+  the user"). It holds no PAT, so no pass runs there until `runner-isolation`
+  group 5 puts the App's key on the host.
 - **The engine's scripts and schedules, the Dockerfile and compose (and later
   the router) live as a directory in this public repository**, with no
   secret in it. Every sensitive value is substituted on the host.
