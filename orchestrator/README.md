@@ -156,8 +156,9 @@ temporary Windmill token that can write (one day's expiry), point `wmill` at
 the hostname and push the scripts, the hourly schedule and the webhook's
 route. `wmill.yaml` limits the push to `f/orchestrator/` and skips variables,
 resources and resource types, so it cannot delete the workspace's own; `wmill`
-reads it from the directory it runs in, hence the `cd`, chained so a failed
-`cd` pushes nothing from the wrong directory:
+reads it from the directory it runs in, hence the `cd`. The last line chains
+all three, so a failed `workspace add` pushes nothing to a workspace selected
+earlier, and a failed `cd` nothing from the wrong directory:
 
 ```sh
 bun add -g windmill-cli@<the engine's version>
@@ -165,8 +166,7 @@ read -rs CF_ID
 read -rs CF_SECRET
 read -rs WM_TOKEN
 export HEADERS="CF-Access-Client-Id: $CF_ID,CF-Access-Client-Secret: $CF_SECRET"
-wmill workspace add <name> <workspace id> https://<hostname> --token "$WM_TOKEN"
-cd <this repository's checkout>/orchestrator/windmill && wmill sync push --skip-secrets --include-schedules --include-triggers
+wmill workspace add <name> <workspace id> https://<hostname> --token "$WM_TOKEN" && cd <this repository's checkout>/orchestrator/windmill && wmill sync push --skip-secrets --include-schedules --include-triggers
 ```
 
 Each `read -rs` takes a value pasted at the terminal, so none lands in the
@@ -226,8 +226,10 @@ engine's code:
 - an Access service token, with a Service Auth policy added to the
   hostname's Access application, which `wmill` sends in `HEADERS`; delete any
   service token no policy names;
-- a Windmill token limited to running, reading and scheduling the pass's own
-  paths, never `mcp:all`, created in the UI with these scopes and no others:
+- a Windmill token limited to running and scheduling the pass and reading the
+  folder's runs, never `mcp:all`, created in the UI with these scopes and no
+  others (the read covers `event`'s runs too, whose arguments are a webhook's
+  headers and body, a GitHub run's metadata and its signature, no secret):
   `jobs:read:f/orchestrator/*`, `jobs:run:scripts:f/orchestrator/pass`,
   `schedules:read:f/orchestrator/pass`, `schedules:write:f/orchestrator/pass`.
   Before saving, check that every scope's chip ends in its path: a path the
