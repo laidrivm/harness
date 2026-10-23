@@ -70,7 +70,7 @@ services:
       additional_contexts:
         bun: ../bun
     restart: unless-stopped
-    secrets: [claude_oauth_token, gh_token, runner_ssh_pubkey, runner_host_key, runner_event_pubkey, github_webhook_secret]
+    secrets: [claude_oauth_token, runner_ssh_pubkey, runner_host_key, runner_event_pubkey, github_webhook_secret]
     volumes:
       - agent_home:/home/agent
       - runner_home:/home/runner
@@ -85,8 +85,6 @@ services:
 secrets:
   claude_oauth_token:
     file: ./secrets/claude_oauth_token
-  gh_token:
-    file: ./secrets/gh_token
   runner_ssh_pubkey:
     file: ./secrets/runner_ssh_pubkey
   runner_host_key:

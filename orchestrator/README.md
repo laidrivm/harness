@@ -21,10 +21,15 @@ email login. Add one more Access application, with a Bypass policy, on the
 path `/api/r/github` alone, which GitHub's webhook calls. Keep the tunnel's
 token for step 3.
 
-## 2. The tokens
+## 2. The token
 
-On the laptop, run `claude setup-token` and keep the token it prints. Create a
-fine-grained GitHub token scoped to the repositories the loop pushes to.
+On the laptop, run `claude setup-token` and keep the token it prints.
+
+The host holds no GitHub token of the user's. It pushes, opens and reads pull
+requests as the GitHub App alone, whose key and key-holder user arrive with
+`runner-isolation`'s group 5 (task 5.5). Until then a pass refuses at its
+secret check, naming the missing file, and pauses the clone; the schedule
+stays disabled until then anyway (step 6).
 
 ## 3. The secret files
 
@@ -37,7 +42,6 @@ umask 077
 mkdir secrets
 cd secrets
 cat > claude_oauth_token
-cat > gh_token
 cat > tunnel_token
 openssl rand -hex 32 > db_password
 printf 'postgres://postgres:%s@db:5432/windmill?sslmode=disable\n' "$(cat db_password)" > database_url
@@ -63,7 +67,7 @@ uid 65532, and `engine_key` and `event_key`, which stay root's until step 4
 deletes them:
 
 ```sh
-chown 1500:1500 claude_oauth_token gh_token runner_ssh_pubkey runner_host_key runner_known_hosts db_password database_url
+chown 1500:1500 claude_oauth_token runner_ssh_pubkey runner_host_key runner_known_hosts db_password database_url
 chown 1500:1500 github_webhook_secret runner_event_pubkey
 chown 65532:65532 tunnel_token
 chmod 0400 *
@@ -129,9 +133,9 @@ wmill sync push --skip-secrets --include-schedules --include-triggers
 ```
 
 The pass script sends the clone `harness` and its repository; another clone
-needs its own script. Leave the schedule disabled until `runner-isolation`
-adds the launcher that runs the sessions as `agent` (its group 5), then
-enable it in Windmill.
+needs its own script. The schedule is pushed disabled: leave it so until
+`runner-isolation` adds the launcher that runs the sessions as `agent` (its
+group 5), then enable it in Windmill.
 
 ## 7. A paused loop and a stopped pass
 

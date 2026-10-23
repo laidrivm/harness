@@ -41,8 +41,8 @@ nobody at a terminal. Webhooks and every later flow build on that host.
   the host through `claude setup-token` for the unattended passes and the
   user's claude.ai login for the emergency session alone, Notion as a configured MCP
   server,
-  `gh` through a token file, a persistent home volume, `core.hooksPath` per
-  clone.
+  `gh` through the GitHub App alone, a persistent home volume,
+  `core.hooksPath` per clone.
 
 ## Non-goals
 
@@ -52,8 +52,9 @@ nobody at a terminal. Webhooks and every later flow build on that host.
 - A dashboard, a status page or a chat page. For now Windmill's Runs is the
   view from the phone (user, 2026-10-22: no chat page).
 - The GitHub App. Its sibling proposal `github-app-identity` comes after this
-  one. Until the App lands, the loop pushes as the user, as it does from the
-  laptop.
+  one, and `runner-isolation`'s group 5 puts its key on the host. The host
+  never pushes as the user: it pushes and opens pull requests as the App
+  alone, and no pass runs there until then (user, 2026-10-23).
 - An n8n host. Task group 2 measured both engines on one pass and removed
   both; the user chose Windmill from that table (design.md).
 - Anything an agent would do on the VPS beyond that spike. The host's address
@@ -69,8 +70,9 @@ README lists them in order:
    only `/api/r/github`, then put the tunnel token in the host's secrets
    directory.
 2. Run `claude setup-token` on the laptop, and save the token in the host's
-   secrets directory. Save a fine-grained GitHub token there too, scoped to the
-   repositories the loop pushes to.
+   secrets directory. No GitHub token of the user's goes there: the host
+   pushes and opens pull requests as the GitHub App alone, whose key arrives
+   with `runner-isolation`'s group 5.
 3. Put the database password in the secrets directory, build and start the
    stack, set Windmill's admin login, and give Windmill the runner's SSH key
    as a secret variable.

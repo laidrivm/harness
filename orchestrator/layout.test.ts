@@ -42,11 +42,11 @@ describe("the engine's workspace", () => {
 		expect(windmillImages(windmill)).toEqual([]);
 	});
 
-	test("the pass script carries the tag pass, a timeout of at least 5400 and no concurrent_limit, and its schedule is hourly, on the script [29]", () => {
-		const s = [{ path: "x.schedule.yaml", doc: { script_path: "f/p", is_flow: false, schedule: "0 0 * * * *" } }];
+	test("the pass script carries the tag pass, a timeout of at least 5400 and no concurrent_limit, and its schedule is hourly, on the script and pushed disabled [29]", () => {
+		const s = [{ path: "x.schedule.yaml", doc: { script_path: "f/p", is_flow: false, schedule: "0 0 * * * *", enabled: false } }];
 		expect(passScript("f/p", { tag: "pass", timeout: 5400 }, s)).toEqual([]);
 		expect(passScript("f/p", { tag: "default", timeout: 3600, concurrent_limit: 1 }, s)).toHaveLength(3);
-		expect(passScript("f/p", { tag: "pass", timeout: 5400 }, [{ path: "y", doc: { script_path: "f/p", is_flow: true, schedule: "*/5 * * * *" } }])).toHaveLength(2);
+		expect(passScript("f/p", { tag: "pass", timeout: 5400 }, [{ path: "y", doc: { script_path: "f/p", is_flow: true, schedule: "*/5 * * * *", enabled: true } }])).toHaveLength(3);
 		const pass = scripts.find((p) => yaml(p).tag === "pass");
 		expect(pass).toBeDefined();
 		const path = (pass as string).slice(wm.length).replace(/\.script\.yaml$/, "");
@@ -169,6 +169,13 @@ describe("the runner image", () => {
 		expect(services.windmill_worker_pass.secrets).toContain("runner_known_hosts");
 		expect(services.runner.secrets).toContain("runner_host_key");
 		expect(read(dockerfile)).not.toContain("ssh-keygen -A");
+	});
+
+	test("the host is App-only: the runner mounts no gh_token, and the README writes none", () => {
+		const compose = composed() as { services: Record<string, { secrets?: string[] }>; secrets: Record<string, unknown> };
+		expect(compose.services.runner.secrets).not.toContain("gh_token");
+		expect(Object.keys(compose.secrets)).not.toContain("gh_token");
+		expect(read("orchestrator/README.md")).not.toContain("gh_token");
 	});
 
 	test("the image creates runner with a fixed uid and agent, and one sudoers rule naming /opt/orchestrator/as-agent [41]", () => {
