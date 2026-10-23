@@ -246,8 +246,9 @@ after `runner-isolation` group 5, which edits this group's image and README.
       scoped `jobs:read:f/orchestrator/*`,
       `jobs:run:scripts:f/orchestrator/pass`,
       `schedules:read:f/orchestrator/pass` and
-      `schedules:write:f/orchestrator/pass` reads the folder's jobs and the
-      pass's schedule, and is refused (403) running `f/orchestrator/event`, a
+      `schedules:write:f/orchestrator/pass` reads the folder's jobs (the
+      pass's and `event`'s, whose arguments hold no secret) and the pass's
+      schedule, and is refused (403) running `f/orchestrator/event`, a
       preview job, reading a secret variable's value or a script's code, and
       creating a script. MCP refuses it ("Required scope: mcp:*"): no MCP
       token that narrow exists, so chat control goes through REST and `wmill`
