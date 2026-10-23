@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createPrivateKey, generateKeyPairSync, verify } from "node:crypto";
+import { chmodSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { configured, credentials, identity, jwt, mint, repository } from "./github-app.ts";
 
 /**
@@ -44,6 +47,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+	cleanup();
 	server.stop(true);
 	if (api === undefined) delete process.env.GITHUB_API_URL;
 	else process.env.GITHUB_API_URL = api;
@@ -134,12 +138,62 @@ describe("the calls", () => {
 	});
 
 	test("the push's credentials carry the token as git's extra header and as GH_TOKEN", () => {
-		expect(credentials("ghs_t")).toEqual({
+		expect(credentials("ghs_t", 0)).toEqual({
 			GH_TOKEN: "ghs_t",
 			GIT_CONFIG_COUNT: "1",
 			GIT_CONFIG_KEY_0: "http.https://github.com/.extraheader",
 			GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${Buffer.from("x-access-token:ghs_t").toString("base64")}`,
 		});
+	});
+
+	test("the credentials append after the GIT_CONFIG_COUNT the runner was started with", () => {
+		const header = credentials("ghs_t", 2);
+		expect([header.GIT_CONFIG_COUNT, header.GIT_CONFIG_KEY_2]).toEqual(["3", "http.https://github.com/.extraheader"]);
+		expect(header.GIT_CONFIG_KEY_0).toBeUndefined();
+	});
+});
+
+describe("the key holder's mint command", () => {
+	/** A mint command that logs its arguments and prints `out`, exiting `code`. */
+	const command = (out: string, code = 0) => {
+		const dir = emptyDir("github-app-mint-");
+		const file = join(dir, "mint");
+		writeFileSync(file, `#!/bin/sh\nprintf '%s\\n' "$*" >> '${dir}/calls'\nprintf '%s' '${out}'\nexit ${code}\n`);
+		chmodSync(file, 0o755);
+		return { mint: `${file} --as keyholder`, calls: () => readFileSync(join(dir, "calls"), "utf8").trim().split("\n") };
+	};
+	const env = (mint: string) => ({ HARNESS_GITHUB_APP_ID: "7", HARNESS_GITHUB_APP_MINT: mint });
+
+	test("the App's id and the mint command configure the App, with no key read", () => {
+		const made = command("ghs_minted");
+		expect(configured(env(made.mint), "https://github.com/o/demo.git")).toEqual({ id: "7", mint: made.mint, owner: "o", repo: "demo" });
+	});
+
+	// spec: orchestrator/the-runner-asks-the-key-holder
+	test("mint() runs the command for the one repository and its permissions, the token on stdout alone", async () => {
+		const made = command("ghs_minted\n");
+		const app = configured(env(made.mint), "git@github.com:o/demo.git") as NonNullable<ReturnType<typeof configured>>;
+		seen = [];
+		expect(await mint(app, BOARD)).toBe("ghs_minted");
+		const { calls } = made;
+		expect(calls()).toEqual(["--as keyholder o/demo contents=write pull_requests=write"]);
+		expect(seen).toEqual([]);
+	});
+
+	// spec: orchestrator/the-runner-asks-the-key-holder
+	test("the App's slug is the command's --slug answer", async () => {
+		const made = command("demo-app");
+		const app = configured(env(made.mint), "https://github.com/o/demo") as NonNullable<ReturnType<typeof configured>>;
+		expect(await identity(app)).toMatchObject({ GIT_AUTHOR_NAME: "demo-app[bot]" });
+		expect(made.calls()).toEqual(["--as keyholder o/demo --slug"]);
+	});
+
+	test("a command that fails rejects naming its status, and one that prints nothing rejects too", async () => {
+		for (const [out, code] of [["", 0], ["denied", 3]] as const) {
+			const app = configured(env(command(out, code).mint), "https://github.com/o/demo") as NonNullable<ReturnType<typeof configured>>;
+			const failed = await mint(app, BOARD).then(() => "", (e: Error) => e.message);
+			expect(failed).toContain(`exited ${code}`);
+		}
 	});
 });
 

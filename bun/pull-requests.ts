@@ -4,7 +4,10 @@
  * loop's runner both make, and no GraphQL, which a cloud session's proxy
  * refuses. A read that has not answered within its time limit is killed and
  * fails, so neither caller waits on a `gh` that neither answers nor exits.
+ * Where `HARNESS_GITHUB_APP_MINT` names the key holder's mint, the read alone
+ * holds a token it minted, so a private repository's pull requests are read.
  */
+import { minted } from "./github-app-minted.ts";
 
 /** The limit in ms: `HARNESS_GH_TIMEOUT_MS` when it is a positive whole number, 30 s otherwise. */
 export function limit(): number {
@@ -47,9 +50,12 @@ export function readPullRequests(branch: string): Pull[] | undefined {
 		// shortcut: the head filter uses origin's owner, so an owner transfer origin has not caught up with finds nothing; upgrade by reading the owner from `gh api repos/<full>` if one happens.
 		// shortcut: one page of 100, the newest; page with --paginate if a branch ever holds more pull requests than that.
 		const query = `repos/${full}/pulls?head=${found.owner}:${encodeURIComponent(branch)}&state=all&per_page=100`;
+		// A mint that fails throws, failing the read: never an unauthenticated read that misses a private repository's.
+		const mint = process.env.HARNESS_GITHUB_APP_MINT;
+		const env = mint ? { ...process.env, GH_TOKEN: minted(mint, full, ["pull_requests=read"]) } : process.env;
 		// SIGKILL: a `gh` that ignores the default SIGTERM holds `spawnSync` past
 		// the limit. A killed read exits with no status, so it fails below.
-		const run = Bun.spawnSync(["gh", "api", query], { timeout: limit(), killSignal: "SIGKILL" });
+		const run = Bun.spawnSync(["gh", "api", query], { env, timeout: limit(), killSignal: "SIGKILL" });
 		const listed: unknown = run.exitCode === 0 && JSON.parse(run.stdout.toString());
 		if (!Array.isArray(listed)) return undefined;
 		// `head` filters by owner alone: a fork in the same owner passes it, and a gone head reads `null`.

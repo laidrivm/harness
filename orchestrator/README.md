@@ -28,7 +28,7 @@ On the laptop, run `claude setup-token` and keep the token it prints.
 The host holds no GitHub token of the user's. It pushes, opens and reads pull
 requests as the GitHub App alone, whose key and key-holder user arrive with
 `runner-isolation`'s group 5 (task 5.5). Until then a pass refuses at its
-secret check, naming the missing file, and pauses the clone; the schedule
+secret check, naming the unset App setting, and pauses the clone; the schedule
 stays disabled until then anyway (step 6).
 
 ## 3. The secret files

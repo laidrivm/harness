@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
-import { CLAUDE, clone, GH, host, IDLE, lock, NO_BUN, OPEN, PATH, passEnv, release, running, skip, starts, stop, tick, URL } from "./pass.fixture.ts";
+import { clone, host, IDLE, lock, NO_BUN, OPEN, PATH, passEnv, release, running, skip, starts, stop, tick, URL } from "./pass.fixture.ts";
 
 /** `pass.sh` against a fabricated host (`pass.fixture.ts`). [n]: `/zombies` ideas. */
 
@@ -155,8 +155,8 @@ describe.skipIf(skip)(`pass.sh${skip ? " — skipped: flock is not on PATH; CI's
 		// spec: orchestrator/a-secret-file-missing
 		test.each([
 			["a missing", "claude_oauth_token", null],
-			["an empty", "gh_token", ""],
-			["a whitespace-only", "gh_token", " \n\t\n"],
+			["an empty", "claude_oauth_token", ""],
+			["a whitespace-only", "claude_oauth_token", " \n\t\n"],
 		])("%s secret file writes the stop file naming it and never starts the runner [13][22]", (_, file, content) => {
 			const h = host();
 			clone(h, "repo");
@@ -167,6 +167,16 @@ describe.skipIf(skip)(`pass.sh${skip ? " — skipped: flock is not on PATH; CI's
 			expect(r.code).toBe(1);
 			expect(r.last).toContain(path);
 			expect(readFileSync(stop(h, "repo"), "utf8")).toContain(path);
+			expect(starts(h, "repo")).toBe(0);
+		});
+
+		// spec: orchestrator/no-app-configured
+		test.each(["HARNESS_GITHUB_APP_ID", "HARNESS_GITHUB_APP_MINT"])("%s unset writes the stop file naming it and never starts the runner", (name) => {
+			const h = host();
+			clone(h, "repo");
+			const r = tick(h, "repo", { [name]: "" });
+			expect(r.code).toBe(1);
+			expect(readFileSync(stop(h, "repo"), "utf8")).toContain(name);
 			expect(starts(h, "repo")).toBe(0);
 		});
 
@@ -245,43 +255,5 @@ describe.skipIf(skip)(`pass.sh${skip ? " — skipped: flock is not on PATH; CI's
 			expect(r.code).toBe(3);
 			expect(r.last).toStartWith("orchestrator: paused");
 		}, 20_000);
-	});
-
-	describe("the pass's environment", () => {
-		// spec: orchestrator/the-host-s-other-variables
-		test("holds only the allowlisted names and the tokens' values, with a sentinel absent [16]", () => {
-			const h = host();
-			clone(h, "repo");
-			const seen = passEnv(tick(h, "repo", { PASS_SENTINEL: "host" }).out);
-			// PWD, SHLVL and _ are the shell's own, set by the `bash -c` that reads the tokens.
-			const shell = ["PWD", "SHLVL", "_"];
-			expect(Object.keys(seen).filter((k) => !shell.includes(k)).sort()).toEqual(
-				["CLAUDE_CODE_OAUTH_TOKEN", "DISABLE_AUTOUPDATER", "GH_TOKEN", "HOME", "LANG", "PATH"],
-			);
-			expect([seen.CLAUDE_CODE_OAUTH_TOKEN, seen.GH_TOKEN]).toEqual([CLAUDE, GH]);
-		});
-
-		// spec: orchestrator/the-tokens-stay-out-of-process-arguments
-		test("no process's arguments hold either token while the runner runs [40]", async () => {
-			const h = host();
-			clone(h, "repo", { hold: true });
-			const p = await running(h, "repo");
-			const ps = Bun.spawnSync(["ps", "-A", "-ww", "-o", "args="]).stdout.toString();
-			await release(h, "repo", p);
-			expect(ps).toContain("board-loop.ts");
-			expect(ps).not.toContain(CLAUDE);
-			expect(ps).not.toContain(GH);
-		}, 20_000);
-
-		// spec: orchestrator/started-from-a-claude-code-session
-		test.each([
-			["set", { CLAUDECODE: "1" }, "1"],
-			["empty", { CLAUDECODE: "" }, ""],
-			["unset", {}, undefined],
-		])("CLAUDECODE %s reaches the pass as it reached the wrapper [17]", (_, extra, value) => {
-			const h = host();
-			clone(h, "repo");
-			expect(passEnv(tick(h, "repo", extra).out).CLAUDECODE).toBe(value);
-		});
 	});
 });

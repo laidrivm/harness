@@ -5,13 +5,17 @@
  * App's private key. Everything else is asked of the API at `GITHUB_API_URL`,
  * read as `bump.ts` reads it: the bot's identity before any session, and an
  * installation token for the clone's repository alone after the stage session,
- * so no session ever holds one.
+ * so no session ever holds one. On the host `HARNESS_GITHUB_APP_MINT` takes the
+ * key's place: the key holder's mint command, which alone reads the key and
+ * answers the slug and each token (`runner-isolation` *The key holder*).
  */
 import { createPrivateKey, type KeyObject, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { minted } from "./github-app-minted.ts";
 import { remoteRepository } from "./pull-requests.ts";
 
-export type App = { id: string; key: KeyObject; owner: string; repo: string };
+/** `key` where the runner reads the key itself, `mint` where the key holder does. */
+export type App = { id: string; key?: KeyObject; mint?: string; owner: string; repo: string };
 
 /** The owner and name a GitHub URL names, HTTPS, SSH or `ssh://`, or undefined for any other. */
 export function repository(url: string) {
@@ -26,20 +30,26 @@ export function repository(url: string) {
  * `origin`'s URL, which can hold a credential.
  */
 export function configured(env: NodeJS.ProcessEnv, origin: string): App | undefined {
-	const { HARNESS_GITHUB_APP_ID: id, HARNESS_GITHUB_APP_KEY: path } = env;
-	if (id === undefined && path === undefined) return undefined;
+	const { HARNESS_GITHUB_APP_ID: id, HARNESS_GITHUB_APP_KEY: path, HARNESS_GITHUB_APP_MINT: mint } = env;
+	if (id === undefined && path === undefined && mint === undefined) return undefined;
 	const blank = (name: string, value?: string) =>
 		new Error(`${name} is ${value === undefined ? "unset" : "blank"} — set both App settings, or neither`);
 	if (!id?.trim()) throw blank("HARNESS_GITHUB_APP_ID", id);
-	if (!path?.trim()) throw blank("HARNESS_GITHUB_APP_KEY", path);
+	if (mint === undefined && !path?.trim()) throw blank("HARNESS_GITHUB_APP_KEY", path);
+	if (mint !== undefined && !mint.trim()) throw blank("HARNESS_GITHUB_APP_MINT", mint);
 	if (!/^\d+$/.test(id)) throw new Error("HARNESS_GITHUB_APP_ID is no number");
+	const repo = repository(origin);
+	if (mint !== undefined) {
+		if (!repo) throw new Error("origin's URL names no GitHub repository");
+		// No key path is read, even one set beside the command: the key holder's key is no file of this user's.
+		return { id, mint, ...repo };
+	}
 	let key: KeyObject;
 	try {
-		key = createPrivateKey(readFileSync(path));
+		key = createPrivateKey(readFileSync(path as string));
 	} catch {
 		throw new Error(`HARNESS_GITHUB_APP_KEY names ${path}, which holds no private key this user can read`);
 	}
-	const repo = repository(origin);
 	if (!repo) throw new Error("origin's URL names no GitHub repository");
 	return { id, key, ...repo };
 }
@@ -77,7 +87,8 @@ async function call(path: string, field: string, type: "string" | "number", bear
 }
 
 /** The App's slug, from `GET /app`: its pull requests' author is `app/<slug>`, its commits' `<slug>[bot]`. */
-export const slug = (app: App) => call("/app", "slug", "string", jwt(app.id, app.key));
+export const slug = async (app: App) =>
+	app.mint ? minted(app.mint, `${app.owner}/${app.repo}`, ["--slug"]) : call("/app", "slug", "string", jwt(app.id, app.key as KeyObject));
 
 /** The `GIT_*` variables that author and commit a session's work as the App's bot user. */
 export async function identity(app: App): Promise<Record<string, string>> {
@@ -88,7 +99,9 @@ export async function identity(app: App): Promise<Record<string, string>> {
 
 /** An installation token for the App's one repository, holding the `permissions` its caller names and no more. */
 export async function mint(app: App, permissions: Record<string, "read" | "write">): Promise<string> {
-	const bearer = jwt(app.id, app.key);
+	if (app.mint)
+		return minted(app.mint, `${app.owner}/${app.repo}`, Object.entries(permissions).map(([name, level]) => `${name}=${level}`));
+	const bearer = jwt(app.id, app.key as KeyObject);
 	const installation = await call(`/repos/${app.owner}/${app.repo}/installation`, "id", "number", bearer);
 	return call(`/app/installations/${installation}/access_tokens`, "token", "string", bearer, {
 		repositories: [app.repo],
@@ -96,16 +109,19 @@ export async function mint(app: App, permissions: Record<string, "read" | "write
 	});
 }
 
+/** The `GIT_CONFIG_COUNT` this process was started with: read once, since `credentials` raises the live one. */
+const STARTED = /^\d+$/.test(process.env.GIT_CONFIG_COUNT ?? "") ? Number(process.env.GIT_CONFIG_COUNT) : 0;
+
 /**
  * The variables that push and open as the App: git's extra header and `gh`'s
  * `GH_TOKEN`. An environment is readable by its own user alone, where an
- * argument or a URL holding the token shows in `ps` to every user.
- * shortcut: entry 0 replaces any `GIT_CONFIG_*` the runner was started with;
- * append after its count if a runner ever needs its own.
+ * argument or a URL holding the token shows in `ps` to every user. The header
+ * goes after the `GIT_CONFIG_*` entries the runner was started with, and a
+ * second call replaces the first's rather than adding a second header.
  */
-export const credentials = (token: string) => ({
+export const credentials = (token: string, started = STARTED) => ({
 	GH_TOKEN: token,
-	GIT_CONFIG_COUNT: "1",
-	GIT_CONFIG_KEY_0: "http.https://github.com/.extraheader",
-	GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${Buffer.from(`x-access-token:${token}`).toString("base64")}`,
+	GIT_CONFIG_COUNT: String(started + 1),
+	[`GIT_CONFIG_KEY_${started}`]: "http.https://github.com/.extraheader",
+	[`GIT_CONFIG_VALUE_${started}`]: `AUTHORIZATION: basic ${Buffer.from(`x-access-token:${token}`).toString("base64")}`,
 });

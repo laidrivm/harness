@@ -24,7 +24,7 @@ function stand() {
 	const root = emptyDir("orchestrator-pin-");
 	const h = { root, home: join(root, "home"), clones: join(root, "clones"), secrets: join(root, "secrets"), gh: join(root, "gh"), bin: join(root, "bin"), hooks: join(root, "hooks") };
 	for (const dir of [h.home, h.clones, h.secrets, h.gh, h.bin, h.hooks]) mkdirSync(dir);
-	for (const file of ["claude_oauth_token", "gh_token"]) writeFileSync(join(h.secrets, file), "throwaway\n");
+	writeFileSync(join(h.secrets, "claude_oauth_token"), "throwaway\n");
 	// In the runner's own config, since `pass.sh` drops every `GIT_*` it inherits.
 	writeFileSync(join(h.home, ".gitconfig"), `[url "${h.gh}/"]\n\tinsteadOf = https://github.com/\n`);
 	// Locking is `pass.sh`'s own tests' subject; these stand it in, so they also run where no `flock` is.
@@ -72,6 +72,8 @@ const env = (h: Stand) => ({
 	PASS_SECRETS: h.secrets,
 	PASS_AS_AGENT: join(h.bin, "as-agent"),
 	PASS_HOOKS: h.hooks,
+	HARNESS_GITHUB_APP_ID: "7",
+	HARNESS_GITHUB_APP_MINT: "/opt/orchestrator/mint",
 });
 
 /** One tick for `clone`, which the engine's job says holds `named`; `null` names no repository. */

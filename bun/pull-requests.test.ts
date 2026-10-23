@@ -13,9 +13,17 @@ afterAll(cleanup);
 
 const module = join(import.meta.dir, "pull-requests.ts");
 
-type Case = { origin?: string | null; answer?: string; code?: number; branch?: string; config?: [string, string][] };
+type Case = {
+	origin?: string | null;
+	answer?: string;
+	code?: number;
+	branch?: string;
+	config?: [string, string][];
+	/** A mint command stub: what it prints and its exit status. */
+	mint?: [string, number];
+};
 
-/** The read's result, `"failed"` for undefined, and the stub's calls. */
+/** The read's result, `"failed"` for undefined, and the stub's calls; `tokens` is the `GH_TOKEN` each `gh` call saw. */
 function read(c: Case = {}) {
 	const dir = emptyDir("pull-requests-repo-");
 	git(dir, "init", "-q");
@@ -24,20 +32,28 @@ function read(c: Case = {}) {
 	const bin = emptyDir("pull-requests-bin-");
 	symlinkSync(Bun.which("git") ?? "git", join(bin, "git"));
 	const log = join(bin, "calls");
-	writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\nprintf '%s' '${c.answer ?? "[]"}'\nexit ${c.code ?? 0}\n`);
+	const tokens = join(bin, "tokens");
+	writeFileSync(
+		join(bin, "gh"),
+		`#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\nprintf '%s\\n' "\${GH_TOKEN-}" >> '${tokens}'\nprintf '%s' '${c.answer ?? "[]"}'\nexit ${c.code ?? 0}\n`,
+	);
 	chmodSync(join(bin, "gh"), 0o755);
+	const mint = c.mint && join(bin, "mint");
+	if (mint && c.mint) writeFileSync(mint, `#!/bin/sh\nprintf 'mint %s\\n' "$*" >> '${log}'\nprintf '%s' '${c.mint[0]}'\nexit ${c.mint[1]}\n`, { mode: 0o755 });
 	const entry = join(bin, "entry.ts");
 	writeFileSync(entry, `import { readPullRequests } from ${JSON.stringify(module)};\nconsole.log(JSON.stringify(readPullRequests(process.argv[2]) ?? "failed"));\n`);
 	// HOME and no system config: the user's own `insteadOf` rewrites stay out.
-	const env = { PATH: bin, HOME: emptyDir("pull-requests-home-"), GIT_CONFIG_NOSYSTEM: "1" };
+	const env = { PATH: bin, HOME: emptyDir("pull-requests-home-"), GIT_CONFIG_NOSYSTEM: "1", ...(mint ? { HARNESS_GITHUB_APP_MINT: `${mint} -n` } : {}) };
 	const p = Bun.spawnSync([process.execPath, entry, c.branch ?? "feat/x"], { cwd: dir, env });
-	let calls: string[] = [];
-	try {
-		calls = readFileSync(log, "utf8").split("\n").filter(Boolean);
-	} catch {
-		// The read never called `gh`.
-	}
-	return { result: JSON.parse(p.stdout.toString() || '"crashed"'), calls };
+	const lines = (file: string) => {
+		try {
+			return readFileSync(file, "utf8").split("\n").filter(Boolean);
+		} catch {
+			// The read never called `gh`.
+			return [];
+		}
+	};
+	return { result: JSON.parse(p.stdout.toString() || '"crashed"'), calls: lines(log), tokens: lines(tokens) };
 }
 
 /** A pull request as the REST endpoint lists it. */
@@ -53,7 +69,17 @@ const QUERY = "api repos/o/r/pulls?head=o:feat%2Fx&state=all&per_page=100";
 
 describe("the read and its translation", () => {
 	test("an empty list is a list, after one call [1]", () => {
-		expect(read()).toEqual({ result: [], calls: [QUERY] });
+		expect(read()).toEqual({ result: [], calls: [QUERY], tokens: [] });
+	});
+
+	// spec: orchestrator/a-private-repository-s-pull-requests
+	test("with the key holder's mint command, the read alone holds a pull_requests=read token", () => {
+		expect(read({ mint: ["ghs_read", 0] })).toEqual({ result: [], calls: ["mint -n o/r pull_requests=read", QUERY], tokens: ["ghs_read"] });
+	});
+
+	// spec: orchestrator/a-private-repository-s-pull-requests
+	test("a mint that fails fails the read, with no gh call", () => {
+		expect(read({ mint: ["", 1] })).toEqual({ result: "failed", calls: ["mint -n o/r pull_requests=read"], tokens: [] });
 	});
 
 	// spec: stage-goal/an-open-pull-request stage-goal/a-merged-pull-request stage-goal/a-pull-request-closed-unmerged
@@ -111,7 +137,7 @@ describe("the repository origin names", () => {
 		["a repository of dots alone", "https://github.com/o/...", "[17, review of #190]"],
 		["an owner of dots alone", "https://github.com/.../r", "[17, review of #190]"],
 	])("%s fails with no gh call %s", (_, origin) => {
-		expect(read({ origin })).toEqual({ result: "failed", calls: [] });
+		expect(read({ origin })).toEqual({ result: "failed", calls: [], tokens: [] });
 	});
 
 	// spec: stage-goal/origin-in-each-form
