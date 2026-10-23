@@ -50,7 +50,8 @@ export async function main(args: string[], files = FILES): Promise<Result> {
 	if (!slugOnly) {
 		for (const word of asked) {
 			const [name, level, extra] = word.split("=");
-			if (extra !== undefined || !ALLOWED[name]?.includes(level)) return refused(`${word} is outside the fixed set of permissions`);
+			// Own keys alone: `constructor` or `__proto__` would read the prototype's.
+			if (extra !== undefined || !Object.hasOwn(ALLOWED, name) || !ALLOWED[name].includes(level)) return refused(`${word} is outside the fixed set of permissions`);
 			permissions[name] = level as "read" | "write";
 		}
 		// None asked would mint every permission the App holds.
