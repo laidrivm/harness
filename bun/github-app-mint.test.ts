@@ -77,6 +77,8 @@ describe("what it refuses, before any call", () => {
 		["a permission outside the set", ["o/demo", "administration=write"], "administration=write"],
 		["a level the set does not hold", ["o/demo", "actions=write"], "actions=write"],
 		["a word that is no permission", ["o/demo", "contents"], "contents"],
+		["a name the table inherits", ["o/demo", "constructor=read"], "constructor=read"],
+		["the prototype's own name", ["o/demo", "__proto__=read"], "__proto__=read"],
 		["no permission at all", ["o/demo"], "no permission"],
 	])("%s exits non-zero, naming it", async (_, args, named) => {
 		seen = [];
