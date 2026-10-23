@@ -275,7 +275,7 @@ describe("the engine's webhook call", () => {
 		expect(route.script_path).toBe(ev.slice(wm.length));
 		const meta = yaml(`${ev}.script.yaml`);
 		expect(meta.tag).toBeUndefined();
-		expect(meta.timeout).toBeGreaterThanOrEqual(7200 + 3600);
+		expect(meta.timeout).toBeGreaterThan(7200 + 3600);
 		expect(yaml(`${wm}wmill.yaml`).includeTriggers).toBe(true);
 	});
 
