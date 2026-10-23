@@ -117,7 +117,8 @@ dialog and `/exit`, then add Notion's hosted MCP server at user scope:
 docker compose exec -u agent -w /home/agent/clones/<clone> -it runner claude mcp add --transport http --scope user notion https://mcp.notion.com/mcp
 ```
 
-Start the session again and authenticate the server in `/mcp`. Its OAuth
+Start the session again with the same token-prefixed `claude` command as
+above, and authenticate the server in `/mcp`. Its OAuth
 callback is `localhost` inside the container, which the laptop's browser
 cannot reach: open the URL the session prints, authorise, copy the address of
 the page that fails to load, and hand it to the waiting session from a second
@@ -165,8 +166,9 @@ Each `read -rs` takes a value pasted at the terminal, so none lands in the
 shell's history.
 
 Read the plan before answering: a `-` line deletes on the engine, so answer
-No to any. Afterwards delete the token in Windmill and run
-`wmill workspace remove <name>`, so no writing token stays on the laptop.
+No to any. Afterwards delete the token in Windmill, run
+`wmill workspace remove <name>` and `unset WM_TOKEN CF_ID CF_SECRET HEADERS`,
+so no writing token stays on the laptop or in the shell.
 
 The pass script sends the clone `harness` and its repository; another clone
 needs its own script. The schedule is pushed disabled: leave it so until
