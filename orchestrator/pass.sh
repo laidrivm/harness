@@ -99,7 +99,8 @@ host=${BASH_REMATCH[1]#*://}
 host=${host%[/:]}
 host=${host##*@}
 host=$(printf '%s' "${host%%:*}" | tr '[:upper:]' '[:lower:]')
-key=$owner-$repo
+# `+` is in neither name's character set, so no two pairs share a key.
+key=$owner+$repo
 # A session can point its clone's origin anywhere; a pass then would clone and run what it names.
 if [ -n "$named" ] && [ "$owner/$repo" != "$named" ]; then
 	mkdir -p "$state" || exit 1

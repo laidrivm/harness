@@ -685,8 +685,15 @@ open nothing, and the pass SHALL record `open` naming the table.
 
 #### Scenario: A step not ready
 
-- **WHEN** the runner pushes nothing
+- **WHEN** the step is not ready, so the runner reaches no push
 - **THEN** the table is unchanged
+
+#### Scenario: A push refused after the record
+
+- **WHEN** the record is appended and the push is then refused
+- **THEN** the record stays: a branch never pushed has no pull request whose
+  failure looks it up, and a later push of the branch appends a newer record,
+  which the lookup returns
 
 #### Scenario: The table cannot be written
 
