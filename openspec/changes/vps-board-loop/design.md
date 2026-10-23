@@ -197,19 +197,20 @@ below).
    or 1. Any other status means the pass did not run as designed (127, a
    signal), so the wrapper fails closed on every non-zero status.
 
-Steps 4 and 5 are the wrapper on `main` today. `runner-isolation` groups 1
-to 4 replace them before the App key reaches the host. With the App
-configured, step 4 neither requires nor opens `gh_token`. The host is
-App-only (the user's decision of 2026-10-23): it holds no `gh_token`, so until
-those groups land step 4 refuses every pass there, naming the missing file,
-and the schedule stays disabled meanwhile. In step 5 the board
-loop runs from `runner`'s own harness checkout with the push clone as its working
-directory, every command in the session's clone goes through
-`/opt/orchestrator/as-agent`, and the pass exports no `GH_TOKEN`; only the
-push, the `gh pr create`, the check that reads that pull request and
-`readPullRequests()` read the PAT file, and with the App configured nothing
-does. Its spec's *The wrapper starts the pass with the
-environment it names* states the result.
+Steps 4 and 5 are the wrapper as this design first wrote it. `runner-isolation`
+groups 1 to 4 replace them before the App key reaches the host. The host is
+App-only (the user's decision of 2026-10-23): it holds no `gh_token`, and
+since `runner-isolation` group 4 step 4 checks `claude_oauth_token` and the
+App's two settings, its id and the key holder's mint command, and opens no
+GitHub token file. Until group 5 provisions the key holder step 4 refuses
+every pass there, naming the missing setting, and the schedule stays disabled
+meanwhile. In step 5 the board loop runs from `runner`'s own harness checkout
+with the push clone as its working directory, every command in the session's
+clone goes through `/opt/orchestrator/as-agent`, and the pass exports no
+`GH_TOKEN`; the push, the `gh pr create`, the check that reads that pull
+request and `readPullRequests()` each use a token the mint issues for them.
+Its spec's *The wrapper starts the pass with the environment it names* states
+the result.
 
 The pass's own record in the gate ledger is unchanged. The wrapper writes no
 ledger line. A pass's durable result is on the runner's volume, whatever

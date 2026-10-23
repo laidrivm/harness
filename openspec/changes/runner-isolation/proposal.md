@@ -31,9 +31,10 @@ session can write while the App key or a token is in reach*, recon of
   runs no pre-push hook; CI is the hard check. **BREAKING** for the rule in
   `core/git-and-prs.md`: it gains one exception, for this push clone alone
   (user, 2026-10-21, decision 1a).
-- The user's PAT reaches only the push step and the pull-request reads, and
-  none of them when the App is configured (decision 2a, widened to the reads
-  on 2026-10-22 for a private repository).
+- No PAT of the user's reaches the host: it pushes and reads pull requests as
+  the App alone, through tokens the key holder mints for one call (the user's
+  decision of 2026-10-23, which replaces decision 2a and its widening of
+  2026-10-22).
 - A third user, the key holder, alone among the automated users reads the
   App's private key. The runner
   asks it for a token for one repository, valid for an hour, with
@@ -76,7 +77,7 @@ None.
 ### Modified Capabilities
 
 - `orchestrator`: the runner's own harness checkout and push clone, the
-  launcher for `agent`, the key holder, the PAT's reach, and the secret
+  launcher for `agent`, the key holder, the GitHub tokens' reach, and the secret
   files' reach. The capability is introduced by
   `vps-board-loop`, which this change follows.
 

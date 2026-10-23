@@ -104,33 +104,38 @@ clone, a commit whose tests passed*.
 
 ## 4. The tokens' reach
 
-Closes `orchestrator` §*The user's GitHub token reaches only the push and the
-pull-request reads*,
+Closes `orchestrator` §*The pass reaches GitHub as the App alone*,
 §*Only the key holder reads the App's private key* and the App scenario of
-§*The wrapper starts the pass with the environment it names*.
+§*The wrapper starts the pass with the environment it names*. The host is
+App-only (user, 2026-10-23), so the PAT path these tasks first planned,
+`HARNESS_GH_TOKEN_FILE`, is not built.
 
-- [ ] 4.1 List every `gh` and authenticated call a pass makes, with
+- [x] 4.1 List every `gh` and authenticated call a pass makes, with
       `git grep -n -e '"gh"' -e GH_TOKEN` over `bun/board-loop*.ts`,
       `bun/goal-check.ts` and every module they import (`bun/pull-requests.ts`
       runs the goal check's `gh api` reads), and record in `design.md` *The
       GitHub token's reach* which run unauthenticated; hand
-      `readPullRequests()` the mint's token when the App is configured, and
-      the PAT from `HARNESS_GH_TOKEN_FILE` for that call alone when it is not
-- [ ] 4.2 Write the failing cases: `pass.sh`'s pass environment holds no
-      `GH_TOKEN`, holds the App's id and mint command when they are set, and
-      no key path; it sets `GH_CONFIG_DIR` to an empty directory the pass
-      owns, so a `gh` login written into the test's home is not found; with the App's settings `pass.sh` starts the pass when
-      `gh_token` is absent and never opens it; `publish()` and `readPullRequests()` read
-      `HARNESS_GH_TOKEN_FILE` only for the push, the pull request, the check
-      after it and the pull-request read, and never with the App configured; `mint()` with `HARNESS_GITHUB_APP_MINT` runs that command and
-      returns its stdout, with the token in no argument; the mint helper
-      refuses an unlisted repository and a permission outside the fixed set,
-      naming each; `credentials()` appends after an inherited
-      `GIT_CONFIG_COUNT`
-- [ ] 4.3 Implement 4.2 in `orchestrator/pass.sh`, `bun/board-loop-push.ts`
-      and `bun/github-app.ts`, and add the mint helper
-      `bun/github-app-mint.ts`. Remove `credentials()`'s `shortcut:`. Verify
-      with 4.2, `orchestrator/pass.test.ts` and `bun test`
+      `readPullRequests()` the mint's token when the mint command is set
+- [x] 4.2 Write the failing cases: `pass.sh`'s pass environment holds no
+      `GH_TOKEN`, holds the App's id and mint command, and no key path, and
+      no value of a token file left on the host; with either App setting
+      unset it starts no pass, naming it; it sets `GH_CONFIG_DIR` to an empty
+      directory the pass owns, so a `gh` login written into the test's home
+      is not found; `readPullRequests()` with the mint command reads with a
+      `pull_requests` read token and fails when the mint fails; `mint()` and
+      `slug()` with `HARNESS_GITHUB_APP_MINT` run that command and return its
+      stdout, with the token in no argument; the mint helper refuses an
+      unlisted repository and a permission outside the fixed set, naming
+      each; `credentials()` appends after an inherited `GIT_CONFIG_COUNT`
+- [x] 4.3 Implement 4.2 in `orchestrator/pass.sh`, `bun/pull-requests.ts` and
+      `bun/github-app.ts`, and add the mint helper `bun/github-app-mint.ts`
+      and its caller `bun/github-app-minted.ts`. Remove `credentials()`'s
+      `shortcut:`. Verify with 4.2, `orchestrator/pass.test.ts` and `bun test`
+- [ ] 4.4 Authenticate the fetches 4.1 found running unauthenticated, the push
+      clone's in `pass.sh` and `carry()`'s, with a `contents` read token from
+      the mint, held by those processes alone, before a private repository
+      joins the loop; a case each that the fetch's environment holds the
+      token and the pass's does not. Verify with those cases and `bun test`
 
 ## 5. The host's users
 

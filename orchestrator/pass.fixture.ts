@@ -8,6 +8,8 @@ export const script = join(import.meta.dir, "pass.sh");
 export const bash = Bun.which("bash") ?? "bash";
 export const CLAUDE = "throwaway-claude-token-4f1d";
 export const GH = "throwaway-gh-token-9c2e";
+/** The App's two settings a host configures: its id and the key holder's mint command, never a key's path. */
+export const APP = { HARNESS_GITHUB_APP_ID: "7", HARNESS_GITHUB_APP_MINT: "sudo -n -u keyholder /opt/orchestrator/mint" };
 export const URL = "https://github.com/owner/repo.git";
 export const IDLE = "board-loop: idle — nothing takeable";
 export const OPEN = "board-loop: open — apply demo step 1";
@@ -45,7 +47,6 @@ export function host(): Host {
 	const h = { root, home: join(root, "home"), clones: join(root, "clones"), secrets: join(root, "secrets") };
 	for (const dir of [h.home, h.clones, h.secrets]) mkdirSync(dir);
 	writeFileSync(join(h.secrets, "claude_oauth_token"), `${CLAUDE}\n`);
-	writeFileSync(join(h.secrets, "gh_token"), `${GH}\n`);
 	return { ...h, state: join(h.home, "orchestrator") };
 }
 
@@ -67,6 +68,7 @@ export const env = (h: Host, extra: Record<string, string> = {}, path = PATH) =>
 	HOME: h.home,
 	PASS_CLONES: h.clones,
 	PASS_SECRETS: h.secrets,
+	...APP,
 	...extra,
 });
 

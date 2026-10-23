@@ -105,23 +105,29 @@ configuration from the pushed tree.
 - **WHEN** the pushed tree holds a `bunfig.toml` with a `preload`
 - **THEN** no bun process the runner starts loads it
 
-### Requirement: The user's GitHub token reaches only the push and the pull-request reads
+### Requirement: The pass reaches GitHub as the App alone
 
-The pass's environment SHALL hold no GitHub token. With no App configured, the
-runner SHALL read the user's token from its secret file for the push, the
-pull request it opens, the check that reads that pull request and
-`readPullRequests()`, handing it to that call's process alone, and for
-nothing else; with the App configured it SHALL not read that file. The
-pass's `gh` SHALL read its configuration from an empty directory the pass
-owns, never from a login stored in the runner's home. With the App configured,
-`readPullRequests()` SHALL read with a token from the key holder's mint.
+The host SHALL hold no GitHub token of the user's, and the wrapper SHALL read
+none (the user's decision of 2026-10-23). The wrapper SHALL start a pass only
+with the App's id and the key holder's mint command set. The pass's
+environment SHALL hold no GitHub token: the push, the pull request it opens
+and the check that reads that pull request SHALL use a token minted after the
+stage session, and `readPullRequests()` SHALL read with a token minted for
+that read alone. The pass's `gh` SHALL read its configuration from an empty
+directory the pass owns, never from a login stored in the runner's home.
 
-#### Scenario: A PAT-only host on a private repository
+#### Scenario: No App configured
 
-- **WHEN** a pass with no App configured selects a card in a private
-  repository
-- **THEN** `readPullRequests()` reads that repository's pull requests with the
-  user's token, and no other process of the pass holds it
+- **WHEN** the wrapper starts with the App's id or the mint command unset or
+  empty
+- **THEN** it starts no pass, writes the stop file naming the setting, and
+  exits non-zero
+
+#### Scenario: A private repository's pull requests
+
+- **WHEN** a pass reads a branch's pull requests with the mint command set
+- **THEN** the read's `gh` holds a `pull_requests` read token for that one
+  repository, and a mint that fails fails the read
 
 #### Scenario: A login stored in the runner's home
 
@@ -131,16 +137,10 @@ owns, never from a login stored in the runner's home. With the App configured,
 
 #### Scenario: The pass's environment
 
-- **WHEN** a pass is running, before its push
-- **THEN** the pass's environment holds neither `GH_TOKEN` nor the token
-  file's value, and only the subprocess of a pull-request read the token's
-  reach names receives that value
-
-#### Scenario: The App is configured
-
-- **WHEN** the pass runs with the App's settings
-- **THEN** the user's token file is never opened, and a host with no such
-  file starts the pass
+- **WHEN** a pass is running, before its push, on a host that also holds a
+  token file of the user's
+- **THEN** the pass's environment holds no `GH_TOKEN` and no value of that
+  file
 
 ### Requirement: Only the key holder reads the App's private key
 
@@ -158,6 +158,12 @@ from a fixed set, and it SHALL never appear in a process's arguments.
 - **WHEN** the runner or the session user opens the App's key file
 - **THEN** the open fails for lack of permission
 
+#### Scenario: The runner asks the key holder
+
+- **WHEN** the runner needs the App's slug or a token
+- **THEN** it runs the mint command for one repository, with `--slug` or the
+  permissions, and reads the answer from that command's stdout alone
+
 #### Scenario: A repository outside the installation
 
 - **WHEN** the runner asks for a token for a repository the key holder's list
@@ -174,7 +180,7 @@ from a fixed set, and it SHALL never appear in a process's arguments.
 ### Requirement: The session user reads no secret file
 
 The session user SHALL be unable to read any secret file on the host: the
-GitHub token, the Notion bot's token, the App's key, the claude.ai login in
+Notion bot's token, the App's key, the claude.ai login in
 root's home, and the SSH and tunnel keys.
 
 #### Scenario: Each secret file, as the session user
@@ -191,8 +197,7 @@ root's home, and the SSH and tunnel keys.
 The wrapper SHALL start the pass with an environment holding only the
 variables it names: the path, the home, the locale, the Claude Code token
 read from the host's secret file, the App's id and the key holder's mint
-command when the host configures the App, `HARNESS_GH_TOKEN_FILE` when it
-does not, `HARNESS_AS_AGENT`, `GH_CONFIG_DIR` naming the pass's empty `gh`
+command, `HARNESS_AS_AGENT`, `GH_CONFIG_DIR` naming the pass's empty `gh`
 configuration, the setting that keeps Claude Code from updating itself, and
 `CLAUDECODE` when its own environment holds it. It
 SHALL accept a clone only by a name that is a single path segment under the
@@ -231,6 +236,7 @@ clones directory.
 
 #### Scenario: The App's settings reach the pass
 
-- **WHEN** the host configures the App
+- **WHEN** the wrapper starts with the App's id and the mint command set, and
+  a path to the App's key in its own environment
 - **THEN** the pass's environment holds the App's id and the mint command, and
   no path to the App's key
