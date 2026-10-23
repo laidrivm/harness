@@ -236,13 +236,21 @@ after `runner-isolation` group 5, which edits this group's image and README.
       (tag `pass`, `timeout` 5400, `ssh` to `runner` with the clone name
       `harness` and the key from its variable's path, ending on that call)
       and its hourly schedule. Verify with 3.1
-- [ ] 3.6 **User act.** After the first bring-up, create in Windmill a token
+- [x] 3.6 **User act.** After the first bring-up, create in Windmill a token
       limited to running, reading and scheduling the pass's own path, and
       record in the pull request whether MCP accepts it and whether it is
       refused when it tries to deploy a script. The README then names the
       client chat control uses from the laptop: MCP on that token, or `wmill`
       with `HEADERS` when no such MCP token exists (`design.md` *Phone
-      access*)
+      access*). Measured 2026-10-23 on 1.846.1 through Access: a token
+      scoped `jobs:read:f/orchestrator/*`,
+      `jobs:run:scripts:f/orchestrator/pass`,
+      `schedules:read:f/orchestrator/pass` and
+      `schedules:write:f/orchestrator/pass` reads the folder's jobs and the
+      pass's schedule, and is refused (403) running `f/orchestrator/event`, a
+      preview job, reading a secret variable's value or a script's code, and
+      creating a script. MCP refuses it ("Required scope: mcp:*"): no MCP
+      token that narrow exists, so chat control goes through REST and `wmill`
 - [x] 3.7 Write `orchestrator/README.md`, opening with a level-1 heading. It
       holds the host requirements, the user acts in `proposal.md`'s order, the
       `wmill sync` commands, `db_password` made with `openssl rand -hex 32`

@@ -227,9 +227,18 @@ engine's code:
   hostname's Access application, which `wmill` sends in `HEADERS`; delete any
   service token no policy names;
 - a Windmill token limited to running, reading and scheduling the pass's own
-  paths, never `mcp:all`, for MCP. Whether Windmill issues an MCP token that
-  narrow is checked at the first bring-up; without one, chat control goes
-  through `wmill` alone.
+  paths, never `mcp:all`, created in the UI with these scopes and no others:
+  `jobs:read:f/orchestrator/*`, `jobs:run:scripts:f/orchestrator/pass`,
+  `schedules:read:f/orchestrator/pass`, `schedules:write:f/orchestrator/pass`.
+  Before saving, check that every scope's chip ends in its path: a path the
+  form did not take leaves `jobs:run:scripts` able to run any script.
+
+MCP refuses a token without `mcp:*`, so it is not used: chat control goes
+through `wmill` and Windmill's REST API on that token. Keep both values on
+the laptop in files only the user can read, written with `read -rs` and
+`umask 077`: the token in `~/.config/harness/windmill-chat.token`, and the
+service token as one `CF-Access-Client-Id: …,CF-Access-Client-Secret: …` line
+in `~/.config/harness/windmill-access.headers`.
 
 ## 10. The CI flow's webhook
 
