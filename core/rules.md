@@ -121,7 +121,8 @@ describes is rewritten, the rule is a candidate for deletion.
   is defined, whenever a missing match reads as nothing to do.
 - Never treat reading extra text as commands as a command scan's safe side —
   a quote that text leaves open hides what follows; probe a claim about how a
-  shell parses before a design rests on it.
+  shell parses, under dash as well as bash, before a design or an `sh -c`
+  string rests on it.
 - Pin a scan's frame-level state with a case whose newline falls inside the
   frame — a state the frame's close discards passes every case that closes it
   first.
