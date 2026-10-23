@@ -711,7 +711,10 @@ back from the card's comments and applied as data.
 
 - **WHEN** an agent or the runner posts a question on a card
 - **THEN** in the same turn the poster sets that card's `Assign` to the user,
-  and the card appears in its board's `Questions` view
+  and the card appears in its board's `Questions` view, unless the runner's
+  triage posts the answer with it (`board-loop`, *The runner has a stage
+  session's question triaged before it posts it*), when no question waits and
+  `Assign` stays unset
 
 #### Scenario: The user answers
 

@@ -177,10 +177,13 @@ read the board that `harness.board` names, and SHALL return one `PICK:` line.
 The runner SHALL accept only a change from its own takeable list or its answer
 candidates. It SHALL take no change on the user's word or by its own order.
 
-The pick session SHALL take an answer candidate only when its card's `Assign`
-holds the user and its page-level discussion, resolved or not, holds the
-user's answer after the last question there, as `task-board`'s *An open
-question waits on its card, assigned to the user* defines the answer. Such a
+The pick session SHALL take an answer candidate only when its card's
+page-level discussion, resolved or not, holds an answer after the last
+question there, as `task-board`'s *An open question waits on its card,
+assigned to the user* defines the answer: the user's, when the card's `Assign`
+holds the user, or a `harness-answer` by the integration's own id, whatever
+`Assign` holds (*The runner has a stage session's question triaged before it
+posts it*). Such a
 card stands in `applied` or `applying`, so the pick session SHALL read
 `applied` too.
 
@@ -461,7 +464,9 @@ text below it. It SHALL post that text from the integration on that card only
 when the question gate's checks on a comment's text pass, the card sits on
 the board `harness.board` names with a `Pointer` that is wholly the carried
 change's directory, and no question waits unanswered there. It SHALL then
-set `Assign` to the user alone, and print one line saying what it did. The pass's outcome SHALL stay the goal check's.
+set `Assign` to the user alone, unless the triage answered the question
+(*The runner has a stage session's question triaged before it posts it*), and
+print one line saying what it did. The pass's outcome SHALL stay the goal check's.
 
 #### Scenario: A question posted
 
