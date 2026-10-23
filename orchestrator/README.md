@@ -91,7 +91,11 @@ Windmill's admin login. In the workspace, create the secret variable
 `f/orchestrator/runner_ssh_key` and paste `engine_key` base64-encoded on one
 line, the output of `base64 -w 0 secrets/engine_key`. Then
 `rm secrets/engine_key`. Do the same for `f/orchestrator/runner_event_key`
-with `base64 -w 0 secrets/event_key`, then `rm secrets/event_key`.
+with `base64 -w 0 secrets/event_key`, then `rm secrets/event_key`. The UI
+offers a path under `u/<user>/`: switch it to the folder `orchestrator`, so
+each reads `f/orchestrator/<name>`, creating the folder there if asked. Step
+6's push then resets that folder's owners to the tree's; the admin keeps
+access.
 
 ## 5. The clones
 
@@ -102,15 +106,30 @@ As `agent`, the user the sessions run as, one clone per repository under
 docker compose exec -u agent runner git clone <repository URL> /home/agent/clones/<clone>
 docker compose exec -u agent -w /home/agent/clones/<clone> runner git config core.hooksPath <the repository's hooks directory>
 docker compose exec -u agent -w /home/agent/clones/<clone> runner bun install
-docker compose exec -u agent -w /home/agent/clones/<clone> -it runner claude
+CLAUDE_CODE_OAUTH_TOKEN=$(cat secrets/claude_oauth_token) docker compose exec -u agent -w /home/agent/clones/<clone> -e CLAUDE_CODE_OAUTH_TOKEN -it runner claude
 ```
 
-In that session accept the trust dialog, then add Notion's hosted MCP server
-at user scope and authenticate it:
+`agent` holds no Claude login, so the session takes the token for this one
+command and writes none to `agent`'s home. In that session accept the trust
+dialog and `/exit`, then add Notion's hosted MCP server at user scope:
 
 ```sh
-claude mcp add --transport http --scope user notion https://mcp.notion.com/mcp
+docker compose exec -u agent -w /home/agent/clones/<clone> -it runner claude mcp add --transport http --scope user notion https://mcp.notion.com/mcp
 ```
+
+Start the session again and authenticate the server in `/mcp`. Its OAuth
+callback is `localhost` inside the container, which the laptop's browser
+cannot reach: open the URL the session prints, authorise, copy the address of
+the page that fails to load, and hand it to the waiting session from a second
+shell on the host:
+
+```sh
+docker compose exec -u agent runner curl -s '<the failed address>'
+```
+
+Copying the URL out of a Claude session in Terminal.app needs View → Allow
+Mouse Reporting off (⌘R). The URL and the address belong to one attempt: a
+new attempt prints a new port.
 
 Run `/mcp` and confirm the server lists `notion-get-comments`,
 `notion-update-page` and `notion-create-comment`. A server that names its
@@ -122,15 +141,32 @@ authenticate the CodeRabbit CLI:
 docker compose exec -u agent -it runner coderabbit auth login
 ```
 
+A `localhost` callback it prints is handed over the same way.
+
 ## 6. The workspace
 
-From the laptop, with `wmill` pointed at the hostname and an Access service
-token in `HEADERS` (step 9), push the scripts, the hourly schedule and the
-webhook's route:
+From the laptop, with the Access service token of step 9 in `HEADERS` and a
+temporary Windmill token that can write (one day's expiry), point `wmill` at
+the hostname and push the scripts, the hourly schedule and the webhook's
+route. `wmill.yaml` limits the push to `f/orchestrator/` and skips variables,
+resources and resource types, so it cannot delete the workspace's own:
 
 ```sh
+bun add -g windmill-cli@<the engine's version>
+read -rs CF_ID
+read -rs CF_SECRET
+read -rs WM_TOKEN
+export HEADERS="CF-Access-Client-Id: $CF_ID,CF-Access-Client-Secret: $CF_SECRET"
+wmill workspace add <name> <workspace id> https://<hostname> --token "$WM_TOKEN"
 wmill sync push --skip-secrets --include-schedules --include-triggers
 ```
+
+Each `read -rs` takes a value pasted at the terminal, so none lands in the
+shell's history.
+
+Read the plan before answering: a `-` line deletes on the engine, so answer
+No to any. Afterwards delete the token in Windmill and run
+`wmill workspace remove <name>`, so no writing token stays on the laptop.
 
 The pass script sends the clone `harness` and its repository; another clone
 needs its own script. The schedule is pushed disabled: leave it so until
@@ -178,8 +214,9 @@ runs, the session reaches every secret on the host.
 Chat control from the laptop uses two tokens, neither of which can change the
 engine's code:
 
-- an Access service token, with a Service Auth policy on the hostname, which
-  `wmill` sends in `HEADERS`;
+- an Access service token, with a Service Auth policy added to the
+  hostname's Access application, which `wmill` sends in `HEADERS`; delete any
+  service token no policy names;
 - a Windmill token limited to running, reading and scheduling the pass's own
   paths, never `mcp:all`, for MCP. Whether Windmill issues an MCP token that
   narrow is checked at the first bring-up; without one, chat control goes
