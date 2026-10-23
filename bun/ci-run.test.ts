@@ -3,7 +3,7 @@ import { createHmac, generateKeyPairSync, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { lockOf } from "./ci-run.ts";
-import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
+import { cleanup, emptyDir, ended, git } from "./diff-budget.fixture.ts";
 import { append } from "./pr-sessions.ts";
 
 /**
@@ -736,7 +736,7 @@ describe("on the host, through the launcher", () => {
 		const r = await deliver(h, payload(), { env, tools: `${free}:${tools}` });
 		expect(r.code).toBe(0);
 		const left = Number(readFileSync(join(h.home, "left-pid"), "utf8"));
-		expect(() => process.kill(left, 0)).toThrow();
-		expect(readFileSync(join(h.home, "as-agent-calls"), "utf8")).toMatch(/ sh -c kill -\$0 "\$1" TERM -\d+\n/);
+		expect(ended(left)).toBe(true);
+		expect(readFileSync(join(h.home, "as-agent-calls"), "utf8")).toMatch(/^\/ sh -c kill -\$0 "\$1" 2>\/dev\/null \|\| exit 3 TERM -\d+$/m);
 	}, 40_000);
 });

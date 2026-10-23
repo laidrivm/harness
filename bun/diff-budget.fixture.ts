@@ -13,8 +13,10 @@
  * registers `cleanup` itself.
  */
 import {
+	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readFileSync,
 	rmSync,
 	unlinkSync,
 	writeFileSync,
@@ -113,3 +115,24 @@ export const lines = (n: number) =>
 
 export const tasks = (n: number, box: " " | "x") =>
 	`${Array.from({ length: n }, (_, i) => `- [${box}] task ${i}`).join("\n")}\n`;
+
+/**
+ * Whether the process `pid` has ended: on Linux an ended child nobody has
+ * reaped yet is a zombie, whose pid `kill(pid, 0)` still finds, so its state
+ * is read from `/proc` where there is one.
+ */
+export function ended(pid: number) {
+	if (existsSync("/proc/self/stat")) {
+		try {
+			return readFileSync(`/proc/${pid}/stat`, "utf8").split(") ").at(-1)?.[0] === "Z";
+		} catch {
+			return true;
+		}
+	}
+	try {
+		process.kill(pid, 0);
+		return false;
+	} catch {
+		return true;
+	}
+}

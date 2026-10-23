@@ -116,8 +116,12 @@ The kernel refuses `runner` a signal to `agent`'s processes, so with a launcher
 the same way, and a session left running past its limit cannot hold the
 repository's lock. The launcher's sudo rule runs with `!use_pty`, so the
 command stays in the process group the runner started; only the root-owned
-sudo is then outside `agent`'s reach, and it ends with its command. `pass.sh`
-checks that the named clone is one through the launcher too.
+sudo is then outside `agent`'s reach, and it ends with its command. The signal
+runs from `/`, not the clone, since a session may remove its clone while a
+child of it runs on; only a refused `kill` reads as a group gone, and a
+launcher that fails before `kill` runs reads as one still alive, so the pass
+names it as left rather than judging. `pass.sh` checks that the named clone is
+one through the launcher too.
 
 On the host the forced command hands `pass.sh` the launcher, the mint command
 and the App's id, read per call from `/etc/orchestrator/app/id`, so a pass

@@ -6,7 +6,8 @@
 #
 # As agent it reads every secret file the runner mounts and the App's key, and
 # as runner the key, each into /dev/null. Exits 0 when every read failed, and 1
-# naming each file one could read, or the key when it is absent.
+# naming each file one could read, the key when it is absent, or the user it
+# cannot switch to.
 #
 # REACH_SECRETS, REACH_KEY and the two REACH_AS_* prefixes exist for its test.
 secrets=${REACH_SECRETS:-/run/secrets}
@@ -18,6 +19,14 @@ if [ ! -e "$key" ]; then
 	echo "reach-check: $key is absent — place the App's key first (README step 11)"
 	exit 1
 fi
+# A switch that cannot run would read below as every read refused.
+for user in agent runner; do
+	if [ "$user" = agent ]; then as=$as_agent; else as=$as_runner; fi
+	if ! $as true >/dev/null 2>&1; then
+		echo "reach-check: cannot switch to $user"
+		exit 1
+	fi
+done
 status=0
 for f in "$secrets"/* "$key"; do
 	[ -e "$f" ] || continue
