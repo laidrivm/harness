@@ -98,14 +98,32 @@ variable holds the launcher's words, split on spaces (`sudo -n -u agent
 `<words> <clone> <command…>`: the launcher enters the clone and executes the
 rest, since the runner itself may not enter `agent`'s home. sudo resets
 the environment, so the sudoers entry keeps exactly the session allowlist's
-names (`env_keep`); a test reads both and fails on any difference, since the
-two lists are one name looked up in two systems (`rules.md` Code). The
+names (`env_keep`) and the variables the runner adds to them, the commit
+identity's four `GIT_AUTHOR_*` and `GIT_COMMITTER_*` names and the question
+gate's signal (group 5 found sudo would drop those); a test reads the allowlist
+and the gate's name where they are defined and fails on any difference, since
+the lists are one set of names looked up in two systems (`rules.md` Code). The
 user-bound names among them would still carry `runner`'s values, so the
 launcher sets `HOME`, `USER` and `LOGNAME` to `agent`'s and unsets
 `CLAUDE_CONFIG_DIR`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME` and `XDG_CACHE_HOME`
 before it executes: `claude` and the trust check below then read `agent`'s own
 configuration. `XDG_STATE_HOME` passes; the pass sets none (*The push*), so
 the session's ledger is `agent`'s default.
+
+The kernel refuses `runner` a signal to `agent`'s processes, so with a launcher
+`session()` signals the session's group as `agent`, through the launcher
+(`kill` in `sh`), whatever `kill` its caller hands it: the CI flow's call ends
+the same way, and a session left running past its limit cannot hold the
+repository's lock. The launcher's sudo rule runs with `!use_pty`, so the
+command stays in the process group the runner started; only the root-owned
+sudo is then outside `agent`'s reach, and it ends with its command. `pass.sh`
+checks that the named clone is one through the launcher too.
+
+On the host the forced command hands `pass.sh` the launcher, the mint command
+and the App's id, read per call from `/etc/orchestrator/app/id`, so a pass
+before the App's files are placed refuses, naming the setting. The image holds
+the empty root-owned `/opt/orchestrator/hooks` the reset needs and `jq`, which
+reads the pin.
 
 The board loop runs with the push clone as its working directory and names
 the session's clone in `HARNESS_CLONE`. Every bun process the runner starts
@@ -244,7 +262,12 @@ only the key signs. The helper is `bun/github-app-mint.ts`; the call both
 `github-app.ts` and `readPullRequests()` make is `bun/github-app-minted.ts`.
 The helper reads the App's id and the repository list from root's
 `/etc/orchestrator/app/`, and the key from `/var/lib/orchestrator-key/`, the
-key holder's; group 5 provisions all three.
+key holder's; group 5 provisions all three. Compose mounts both directories
+read-only from the host's `orchestrator/app/` and `orchestrator/app-key/`,
+which keep their host owners as the secret files do, and which git ignores.
+The mint is `/opt/orchestrator/mint`, a root-owned wrapper that runs the
+image's copy of `bun/github-app-mint.ts` from `/` with the runner's bun flags,
+and the key holder (uid 1502) has no login shell.
 
 The user first chose (a), a later card, then answered the Remote Control
 follow-up with "Это делаем сразу": with Remote Control as `runner`, the key

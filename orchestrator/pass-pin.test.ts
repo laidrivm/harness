@@ -99,7 +99,8 @@ describe("pass.sh with a launcher", () => {
 		});
 		const r = tick(h);
 		expect(r.code).toBe(0);
-		expect(readFileSync(join(h.root, "launched"), "utf8")).toContain(`${dir} git -C ${dir} config --get remote.origin.url`);
+		// Even the check that the name is a clone runs as the session user.
+		expect(readFileSync(join(h.root, "launched"), "utf8")).toStartWith(`${dir} test -d ${dir}/.git\n${dir} git -C ${dir} config --get remote.origin.url\n`);
 		expect(r.ran.version).toBe("one");
 		expect(realpathSync(r.ran.cwd)).toBe(realpathSync(join(h.home, "push/owner/repo")));
 		expect([r.ran.env.HARNESS_AS_AGENT, r.ran.env.HARNESS_CLONE]).toEqual([join(h.bin, "as-agent"), dir]);

@@ -1,0 +1,16 @@
+#!/bin/sh
+# The launcher `runner` starts as `agent` through sudo, root-owned in the image
+# (runner-isolation design, *Nothing runs as `runner` in a session's clone*):
+#
+#   as-agent <clone> <command…>
+#
+# enters the clone and runs the command there. sudo keeps the session
+# allowlist's names, and those naming a user still carry runner's values, so
+# claude and the trust check would read runner's configuration.
+set -eu
+[ $# -ge 2 ] || { echo "usage: as-agent <clone> <command…>" >&2; exit 2; }
+cd "$1"
+shift
+export HOME=/home/agent USER=agent LOGNAME=agent
+unset CLAUDE_CONFIG_DIR XDG_CONFIG_HOME XDG_DATA_HOME XDG_CACHE_HOME
+exec "$@"

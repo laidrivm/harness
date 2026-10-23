@@ -178,13 +178,11 @@ describe("the runner image", () => {
 		expect(read("orchestrator/README.md")).not.toContain("gh_token");
 	});
 
-	test("the image creates runner with a fixed uid and agent, and one sudoers rule naming /opt/orchestrator/as-agent [41]", () => {
+	// The key holder and both sudoers rules: `users.test.ts`.
+	test("the image creates runner with a fixed uid and agent [41]", () => {
 		const text = read(dockerfile);
 		expect(text).toMatch(/useradd[^\n]*--uid \d+[^\n]* runner\b/);
 		expect(text).toMatch(/useradd[^\n]* agent\b/);
-		const rules = text.split("\n").filter((l) => l.includes("NOPASSWD"));
-		expect(rules).toHaveLength(1);
-		expect(rules[0]).toContain("runner ALL=(agent) NOPASSWD: /opt/orchestrator/as-agent");
 	});
 
 	test("the image copies pass.sh, stop.sh and the name guard both source to /opt/orchestrator/", () => {
@@ -195,7 +193,7 @@ describe("the runner image", () => {
 	// spec: orchestrator/a-clone-name-that-leaves-the-clones-directory
 	test("the forced command hands pass.sh the engine's words split, with globbing off [38]", () => {
 		const line = read(entry).split("\n").find((l) => l.includes("authorized_keys") && l.includes(">")) ?? "";
-		const command = (/command="(.*?)" %s/.exec(line)?.[1] ?? "").replaceAll('\\"', '"');
+		const command = (/command="(.*?)" %s/.exec(line)?.[1] ?? "").replaceAll('\\\\"', '"');
 		expect(command).toStartWith("set -f; ");
 		const dir = emptyDir("orchestrator-forced-");
 		const stub = join(dir, "pass.sh");

@@ -26,10 +26,10 @@ token for step 3.
 On the laptop, run `claude setup-token` and keep the token it prints.
 
 The host holds no GitHub token of the user's. It pushes, opens and reads pull
-requests as the GitHub App alone, whose key and key-holder user arrive with
-`runner-isolation`'s group 5 (task 5.5). Until then a pass refuses at its
-secret check, naming the unset App setting, and pauses the clone; the schedule
-stays disabled until then anyway (step 6).
+requests as the GitHub App alone, whose key only the key-holder user reads
+(step 11). Until that step a pass refuses at its secret check, naming the
+unset App setting, and pauses the clone; the schedule stays disabled until
+then anyway (step 6).
 
 ## 3. The secret files
 
@@ -76,8 +76,8 @@ chown 1500:1500 secrets
 chmod 0500 secrets
 ```
 
-The App's key and its owner arrive with `runner-isolation`; it never sits in
-this directory's list above.
+The App's key never sits in this directory: it is the key holder's, in a
+directory of its own (step 11).
 
 ## 4. The stack and the engine
 
@@ -179,8 +179,7 @@ so no writing token stays on the laptop or in the shell.
 
 The pass script sends the clone `harness` and its repository; another clone
 needs its own script. The schedule is pushed disabled: leave it so until
-`runner-isolation` adds the launcher that runs the sessions as `agent` (its
-group 5), then enable it in Windmill.
+step 11's reach check passes, then enable it in Windmill.
 
 ## 7. A paused loop and a stopped pass
 
@@ -263,3 +262,42 @@ refused signature means the webhook's secret differs from the file. The route
 answers GitHub before the handler runs, so *Recent deliveries* reads every
 delivery as delivered; Runs is where a refusal shows. To stop the flow,
 disable the webhook on GitHub.
+
+## 11. The App's key and the reach check
+
+The runner reaches GitHub only through tokens it asks the mint for; the mint
+runs as the key holder (uid 1502), the one user that reads the App's key. The
+runner image mounts `app/` (root's: the App's id and the repositories it
+serves) and `app-key/` (the key holder's) from `orchestrator/`.
+
+1. In the App's settings generate a private key, and download it to the host
+   alone, never the laptop.
+2. As root, in `orchestrator/`, one command per line; `<key>` is the
+   downloaded file, `<id>` the App's id, and `repositories` takes one
+   `<owner>/<repo>` line per repository the loop serves:
+
+   ```sh
+   mkdir -p app app-key
+   printf '%s\n' '<id>' > app/id
+   printf '%s\n' '<owner>/<repo>' > app/repositories
+   chmod 0755 app
+   chmod 0444 app/id app/repositories
+   install -m 0400 -o 1502 -g 1502 <key> app-key/app.pem
+   rm <key>
+   chown 1502:1502 app-key
+   chmod 0700 app-key
+   ```
+
+3. Run the reach check, and record its output in the pull request of
+   `runner-isolation` task 5.5:
+
+   ```sh
+   docker compose exec runner /opt/orchestrator/reach-check.sh
+   ```
+
+   It reads, as `agent`, every secret file the runner mounts and the key, and
+   as `runner` the key. It exits 0 only when every read failed; otherwise it
+   names each file one of them could read. The claude.ai login in root's home
+   is outside the container, where neither user exists.
+
+4. Enable the pass schedule in Windmill (step 6).

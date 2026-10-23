@@ -1,0 +1,6 @@
+#!/bin/sh
+# The key holder's one command, root-owned in the image: the mint from the
+# image's own copy of bun/, never a checkout runner can write (runner-isolation
+# design, *The key holder*). From /, since the caller's directory is runner's.
+cd /
+exec bun --config=/dev/null --no-env-file /opt/orchestrator/bun/github-app-mint.ts "$@"

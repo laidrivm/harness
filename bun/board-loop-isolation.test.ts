@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
-import { advance, change, clone, out, run, type Stubs, trusting } from "./board-loop.fixture.ts";
+import { advance, change, clone, lowered, out, run, type Stubs, trusting } from "./board-loop.fixture.ts";
 
 /** A pass on the host: in a push clone of its own, every command in the session's clone through the launcher. */
 
@@ -64,6 +64,17 @@ describe("the session's clone", () => {
 		expect(r.last).toBe("board-loop: refused — HARNESS_AS_AGENT is set and HARNESS_CLONE names no clone");
 		expect(r.calls).not.toContain("as-agent");
 	});
+
+	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
+	test("a session past its limit is ended through the launcher, though every signal of the runner's own is refused", () => {
+		const { dir, push } = pair();
+		// As the kernel refuses `runner` for `agent`'s group: no signal of the runner's reaches it.
+		const across = `() => { throw Object.assign(new Error("EPERM"), { code: "EPERM" }); }`;
+		const r = run(push, [], { pickSleep: 30 }, { env: { HARNESS_AS_AGENT: "as-agent", HARNESS_CLONE: dir }, claudeJson: trusting(dir), entry: lowered(1000, across) });
+		expect(r.last).toStartWith("board-loop: timeout — the pick session ran past");
+		expect(r.last).not.toContain("outlived");
+		expect(r.calls).toMatch(/as-agent \S+ sh -c kill -\$0 -- "\$1" TERM -\d+/);
+	}, 40_000);
 });
 
 describe("the harness the runner runs", () => {

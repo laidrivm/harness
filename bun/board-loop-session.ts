@@ -17,7 +17,7 @@ export type Kill = (pid: number, signal: NodeJS.Signals | 0) => void;
  * session user closes. Claude's own credential is the session's by necessity. `XDG_STATE_HOME` must pass, so the pre-PR
  * record a session writes is the one the runner's check reads.
  */
-const PASSED = new Set([
+export const PASSED = new Set([
 	"PATH", "HOME", "USER", "LOGNAME", "SHELL", "TERM", "LANG", "TMPDIR", "TZ",
 	"XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME",
 	"CLAUDE_CONFIG_DIR", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN",
@@ -31,13 +31,28 @@ const allowed =(env: NodeJS.ProcessEnv) =>
 	) as Record<string, string>;
 
 /**
+ * A `kill` sent as the session's own user, through the launcher: the kernel
+ * refuses `runner` a signal to `agent`'s group. A failure reads as ESRCH, so a
+ * group whose only member left is the root-owned sudo, which ends with its
+ * command, reads as gone.
+ */
+const through =
+	(under: string[]): Kill =>
+	(pid, signal) => {
+		const name = signal === 0 ? "0" : signal.replace(/^SIG/, "");
+		const run = Bun.spawnSync([...under, "sh", "-c", 'kill -$0 -- "$1"', name, String(pid)], { stdio: ["ignore", "ignore", "ignore"] });
+		if (run.exitCode !== 0) throw Object.assign(new Error(`kill ${name} ${pid} failed`), { code: "ESRCH" });
+	};
+
+/**
  * One `claude -p` session, ended at `limit`, and everything it started ended
  * with it, however it exits. `capture` keeps its output rather than showing
  * it. `as` holds the variables the runner adds to the allowlist's, the commit
  * identity and the question gate's signal, and `extra` flags it adds to the
  * command line. `under` is the launcher's words and the session's clone on
- * the host, which `claude` then runs in as `agent`. `left` names its
- * process group when a member outlived the bounded wait.
+ * the host, which `claude` then runs in as `agent`, and which then signals its
+ * group in `kill`'s place. `left` names its process group when a member
+ * outlived the bounded wait.
  */
 export async function session(
 	text: string,
@@ -48,6 +63,7 @@ export async function session(
 	extra: string[] = [],
 	under: string[] = [],
 ) {
+	if (under.length) kill = through(under);
 	// Auto mode with nothing to answer prompts; never a bypass of permissions.
 	const flags = ["--permission-mode", "auto", "--permission-prompts", "none", ...extra];
 	// A file, not a pipe: a child the session leaves running could hold a pipe open and stall the pass.
