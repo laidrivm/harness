@@ -701,6 +701,6 @@ describe("on the host, through the launcher", () => {
 		expect(r.code).toBe(0);
 		const left = Number(readFileSync(join(h.home, "left-pid"), "utf8"));
 		expect(() => process.kill(left, 0)).toThrow();
-		expect(readFileSync(join(h.home, "as-agent-calls"), "utf8")).toMatch(/ sh -c kill -\$0 -- "\$1" TERM -\d+\n/);
+		expect(readFileSync(join(h.home, "as-agent-calls"), "utf8")).toMatch(/ sh -c kill -\$0 "\$1" TERM -\d+\n/);
 	}, 40_000);
 });

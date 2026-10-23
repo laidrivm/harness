@@ -40,7 +40,8 @@ const through =
 	(under: string[]): Kill =>
 	(pid, signal) => {
 		const name = signal === 0 ? "0" : signal.replace(/^SIG/, "");
-		const run = Bun.spawnSync([...under, "sh", "-c", 'kill -$0 -- "$1"', name, String(pid)], { stdio: ["ignore", "ignore", "ignore"] });
+		// No `--`: dash, the image's sh, reads it after a signal as a pid and fails, which reads as ESRCH.
+		const run = Bun.spawnSync([...under, "sh", "-c", 'kill -$0 "$1"', name, String(pid)], { stdio: ["ignore", "ignore", "ignore"] });
 		if (run.exitCode !== 0) throw Object.assign(new Error(`kill ${name} ${pid} failed`), { code: "ESRCH" });
 	};
 
