@@ -73,7 +73,21 @@ now the handler's job.
 
 The handler runs from the runner image's copy of `bun/`, built at the
 harness's pin. It never runs from a clone, because `agent` can write to every
-clone and the handler reads the webhook secret and the App's key.
+clone and the handler reads the webhook secret and the App's key. The image
+takes it from compose's named build context `bun`, the repository's `bun/`
+alone, so the runner's build context stays `orchestrator/` and never reaches
+`orchestrator/secrets`.
+
+On Windmill (group 6) the wiring is an HTTP route at `/api/r/github`, POST,
+`authentication_method: none`, `raw_string: true`, `request_type: async`:
+Windmill answers 200 at once and queues the job, so GitHub never waits on a
+fix. The script's preprocessor reads the three headers and the raw body; its
+`main` calls the runner over SSH with a second key, `runner_event_key` in the
+engine and `runner_event_pubkey` on the runner, whose forced command is the
+line above. The job runs on the default worker, never the `pass` tag, and its
+status is the handler's. Since the route answers before the handler runs, a
+wrong signature reads as delivered on GitHub and as a failed job in Runs; the
+secret stays out of the engine, which a 401 would need.
 
 ### The signature is checked before anything is parsed
 

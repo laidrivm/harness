@@ -130,14 +130,15 @@ run that passed on a later attempt is a flaky finding*.
 Needs both the engine that `vps-board-loop`'s spike confirmed and that change's
 group 3 merged on it.
 
-- [ ] 6.1 Copy `bun/` into the runner image at `/opt/orchestrator/bun/`,
+- [x] 6.1 Copy `bun/` into the runner image at `/opt/orchestrator/bun/`,
       root-owned, and add `github_webhook_secret` to the secret files the host
       README provisions. Add the engine's webhook workflow under
-      `orchestrator/workflows/`: it answers at once, then calls the handler
+      `orchestrator/windmill/f/orchestrator/` (the route `github` and the
+      script `event`): it answers at once, then calls the handler
       as the contract in `design.md` says, with whatever host change that
       call needs (for SSH, a second forced-command key). Extend
       `orchestrator/layout.test.ts` for both. Verify with
       `bun test orchestrator`
-- [ ] 6.2 Write the user acts of `proposal.md` into the host README in order,
+- [x] 6.2 Write the user acts of `proposal.md` into the host README in order,
       and record there that a `ping` from each repository's new webhook prints
       `ignored`. Verify by reading the README back

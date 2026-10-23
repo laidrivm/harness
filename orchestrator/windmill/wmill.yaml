@@ -8,4 +8,4 @@ skipResources: false
 skipResourceTypes: false
 skipSecrets: true
 includeSchedules: true
-includeTriggers: false
+includeTriggers: true

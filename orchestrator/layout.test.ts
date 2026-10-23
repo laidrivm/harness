@@ -141,7 +141,7 @@ describe("the runner image", () => {
 	const dockerfile = "orchestrator/runner/Dockerfile";
 
 	test("the entrypoint writes exactly one restricted authorized_keys line naming the clones and pass.sh [38]", () => {
-		const writes = read(entry).split("\n").filter((l) => l.includes("authorized_keys") && l.includes(">"));
+		const writes = read(entry).split("\n").filter((l) => l.includes("authorized_keys") && l.includes(">") && !l.includes(">>"));
 		expect(writes).toHaveLength(1);
 		for (const part of ["restrict,command=", "PASS_CLONES=/home/agent/clones", "/opt/orchestrator/pass.sh"]) expect(writes[0]).toContain(part);
 		expect(writes[0]).not.toContain(">>");
@@ -222,5 +222,72 @@ describe("the host README", () => {
 
 	test("gives stop.sh's one invocation", () => {
 		expect(read(readme)).toContain("docker compose exec -u runner runner /opt/orchestrator/stop.sh");
+	});
+});
+
+/** `ci-run-agent` task 6.1: the route GitHub calls, and the handler it reaches over a second forced-command key. */
+describe("the engine's webhook call", () => {
+	const entry = "orchestrator/runner/entrypoint.sh";
+	const ev = `${wm}f/orchestrator/event`;
+
+	test("the image holds a root-owned copy of bun/, from a named context compose points at the repository's bun/", () => {
+		expect(read("orchestrator/runner/Dockerfile")).toContain("COPY --from=bun . /opt/orchestrator/bun/");
+		const runner = (composed().services as Record<string, { build?: { additional_contexts?: Record<string, string> } }>).runner;
+		expect(runner.build?.additional_contexts?.bun).toBe("../bun");
+	});
+
+	test("the runner mounts the webhook secret and the event key, and the default worker the pinned host key", () => {
+		const services = composed().services as Record<string, { secrets?: string[] }>;
+		for (const s of ["github_webhook_secret", "runner_event_pubkey"]) expect(services.runner.secrets).toContain(s);
+		expect(services.windmill_worker.secrets).toContain("runner_known_hosts");
+		const files = composed().secrets as Record<string, { file: string }>;
+		for (const s of ["github_webhook_secret", "runner_event_pubkey"]) expect(files[s].file).toBe(`./secrets/${s}`);
+	});
+
+	test("the entrypoint appends a second restricted line that hands on-event.ts the engine's words as one argument", () => {
+		const lines = read(entry).split("\n").filter((l) => l.includes("on-event.ts"));
+		expect(lines).toHaveLength(1);
+		expect(lines[0]).toContain(">>/home/runner/.ssh/authorized_keys");
+		const command = (/command="(.*)" %s/.exec(lines[0])?.[1] ?? "").replaceAll('\\\\"', '"');
+		expect(command).toStartWith("exec bun /opt/orchestrator/bun/on-event.ts ");
+		const dir = emptyDir("orchestrator-event-");
+		const stub = join(dir, "on-event");
+		writeFileSync(stub, '#!/bin/sh\nprintf "%s|" "$#" "$@"\n', { mode: 0o755 });
+		const r = Bun.spawnSync(["bash", "-c", command.replace("bun /opt/orchestrator/bun/on-event.ts", stub)], {
+			cwd: dir,
+			env: { PATH: process.env.PATH ?? "", SSH_ORIGINAL_COMMAND: "ping a-b sha256=0 *" },
+		});
+		expect(r.stdout.toString()).toBe("1|ping a-b sha256=0 *|");
+	});
+
+	test("the entrypoint exits non-zero when the event key file is missing", () => {
+		const dir = emptyDir("orchestrator-key-");
+		for (const f of ["pub", "host"]) writeFileSync(join(dir, f), "x\n");
+		const env = { PATH: process.env.PATH ?? "", PUBKEY_FILE: join(dir, "pub"), HOSTKEY_FILE: join(dir, "host"), EVENT_PUBKEY_FILE: join(dir, "absent") };
+		const r = Bun.spawnSync(["sh", join(root, entry), "true"], { env });
+		expect(r.exitCode).not.toBe(0);
+		expect(r.stderr.toString()).toContain("absent");
+	});
+
+	test("an async, unauthenticated POST route at github hands the raw body to the event script, which no pass delays", () => {
+		const route = yaml(`${wm}f/orchestrator/github.http_trigger.yaml`);
+		expect(route).toMatchObject({ route_path: "github", http_method: "post", request_type: "async", authentication_method: "none", raw_string: true, is_flow: false });
+		expect(route.script_path).toBe(ev.slice(wm.length));
+		const meta = yaml(`${ev}.script.yaml`);
+		expect(meta.tag).toBeUndefined();
+		expect(meta.timeout).toBeGreaterThanOrEqual(7200 + 3600);
+		expect(yaml(`${wm}wmill.yaml`).includeTriggers).toBe(true);
+	});
+
+	test("the event script passes the three headers and the raw body over ssh to a pinned runner", () => {
+		const text = read(`${ev}.ts`);
+		for (const part of ["x-github-event", "x-github-delivery", "x-hub-signature-256", "raw_string", "f/orchestrator/runner_event_key", "StrictHostKeyChecking=yes", "UserKnownHostsFile=/run/secrets/runner_known_hosts"])
+			expect(text).toContain(part);
+	});
+
+	test("the README provisions the secret and the key, and names the webhook, its ping and the triggers' push", () => {
+		const text = read("orchestrator/README.md");
+		for (const part of ["github_webhook_secret", "runner_event_pubkey", "runner_event_key", "--include-triggers", "/api/r/github", "Workflow runs", "event: ignored — no flow takes ping"])
+			expect(text).toContain(part);
 	});
 });

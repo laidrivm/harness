@@ -1,0 +1,12 @@
+summary: GitHub's webhook
+description: /api/r/github, behind the one Access bypass. Async, so Windmill answers at once; the handler checks the signature.
+script_path: f/orchestrator/event
+is_flow: false
+route_path: github
+http_method: post
+request_type: async
+authentication_method: none
+is_static_website: false
+workspaced_route: false
+wrap_body: false
+raw_string: true

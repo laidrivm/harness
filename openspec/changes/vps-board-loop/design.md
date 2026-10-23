@@ -317,9 +317,11 @@ as a failed job. In front of it sits Cloudflare Access on the hostname (the
 user's email), and behind that Windmill's own login — the user's decision of
 2026-10-18 for any engine's UI. Access is a dashboard setting, a user act
 the host README names. The one Access bypass is `/api/r/github`, the HTTP
-route GitHub's webhook calls; it is live and checked (spike, 1.846.1), and
-the route's script, which verifies the signature and answers 202 or 401
-through `windmill_status_code`, belongs to `ci-run-agent`'s engine call.
+route GitHub's webhook calls; it is live and checked (spike, 1.846.1). The
+route and its script belong to `ci-run-agent`'s engine call, whose design
+fixes them: an async route that answers at once, with the signature checked
+by the handler on the runner rather than answered 401 by the engine, which
+would need the secret.
 There is no chat page (user, 2026-10-22).
 
 Two clients reach the engine from the laptop by the user's decision of
