@@ -62,6 +62,10 @@ COPY --chmod=0755 pass.sh /opt/orchestrator/pass.sh
 COPY --chmod=0755 stop.sh /opt/orchestrator/stop.sh
 COPY --chmod=0644 clone-name.sh /opt/orchestrator/clone-name.sh
 COPY --chmod=0755 runner/entrypoint.sh /opt/orchestrator/entrypoint.sh
+# The event handler's code, root-owned, from compose's named context `bun`
+# (ci-run-agent design, *The engine's contract*): it reads the webhook secret,
+# so it never runs from a clone agent can write.
+COPY --from=bun . /opt/orchestrator/bun/
 
 ENTRYPOINT ["/opt/orchestrator/entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D", "-e"]
