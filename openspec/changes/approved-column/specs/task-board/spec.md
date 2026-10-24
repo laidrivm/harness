@@ -133,8 +133,10 @@ pull request to its change.
 #### Scenario: A card only the user approves
 
 - **WHEN** an unattended session reads a card at `idea`
-- **THEN** it SHALL take no work from it and SHALL NOT move it to `approved`
-  or past it; a card reaches `approved` from the user's hand alone
+- **THEN** it SHALL take no work from it and SHALL NOT move it to `approved`;
+  a card reaches `approved` from the user's hand alone, while a status the
+  tree derives still corrects a card behind it, as reconciliation does for
+  any card
 
 #### Scenario: A board gains the tenth option
 
