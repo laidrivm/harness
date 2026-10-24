@@ -16,10 +16,13 @@ import { type App, credentials, mint, repository } from "./github-app.ts";
 import { append, table } from "./pr-sessions.ts";
 
 /** A command's result; one that cannot start reads as failed, never thrown. */
-export function sh(...args: string[]) {
+export const sh = (...args: string[]) => shWith({}, ...args);
+
+/** `sh` with `extra` added to the child's environment alone, so the token a fetch needs is in no other process's. */
+export function shWith(extra: Record<string, string>, ...args: string[]) {
 	try {
 		// Named, not left to the default, which misses a variable `publish` sets once the process runs.
-		const run = Bun.spawnSync(args, { env: process.env });
+		const run = Bun.spawnSync(args, { env: { ...process.env, ...extra } });
 		const text = (b: Buffer) => b.toString().trim();
 		return { ok: run.exitCode === 0, out: text(run.stdout), err: text(run.stderr) };
 	} catch {
@@ -64,10 +67,11 @@ export function named(said: string): { title: string; body: string } | string {
  * refs and never config or hooks, and checks it out there at the bundle's tip.
  * `under` is the launcher's words and the session's clone. The push clone
  * fetches `origin` first, so a `base` that moved during the session is there
- * for the bundle's prerequisite. Undefined once `HEAD` names `branch` at the
+ * for the bundle's prerequisite, with `read`, a `contents` read token's
+ * credentials, in the environment of those two fetches alone. Undefined once `HEAD` names `branch` at the
  * tip; otherwise why nothing was pushed.
  */
-export function carry(under: string[], branch: string, base: string): string | undefined {
+export function carry(under: string[], branch: string, base: string, read: Record<string, string> = {}): string | undefined {
 	const dir = mkdtempSync(join(tmpdir(), "board-loop-bundle-"));
 	try {
 		const file = join(dir, "step.bundle");
@@ -76,7 +80,7 @@ export function carry(under: string[], branch: string, base: string): string | u
 		if (made.exitCode !== 0) return `the session's clone could not bundle ${branch}; nothing was pushed`;
 		writeFileSync(file, made.stdout);
 		for (const [what, ...from] of [["origin", "origin"], ["the bundle", file, `refs/heads/${branch}`]]) {
-			const run = sh("git", "fetch", "-q", ...from);
+			const run = shWith(read, "git", "fetch", "-q", ...from);
 			if (run.ok) continue;
 			console.error(run.err);
 			return `the push clone could not fetch ${what}; nothing was pushed`;
@@ -109,7 +113,16 @@ export async function publish(
 	app?: App,
 	under: string[] = [],
 ) {
-	const carriedOver = under.length ? carry(under, branch, base) : undefined;
+	// A private repository refuses an unauthenticated fetch; the token goes to the two fetches alone.
+	let read: Record<string, string> = {};
+	if (app && under.length) {
+		try {
+			read = credentials(await mint(app, { contents: "read" }));
+		} catch (error) {
+			return `the App's read token could not be minted: ${(error as Error).message}; nothing was pushed`;
+		}
+	}
+	const carriedOver = under.length ? carry(under, branch, base, read) : undefined;
 	if (carriedOver !== undefined) return carriedOver;
 	const before = sh("bun", ...check, "--before-push");
 	const last = before.out.split("\n").at(-1) ?? "";
