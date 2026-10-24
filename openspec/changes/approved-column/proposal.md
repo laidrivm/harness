@@ -35,4 +35,5 @@ stage`, which depends on this change.
 - `openspec/specs/task-board/spec.md`: the status requirement, renamed
   *Three statuses are derived and seven are moved by hand*.
 - `core/feature-workflow.md`, `bun/board-state.ts` (header), its test.
-- The `Status` property of `Harness`, `D2ASS` and, when provisioned, `mellon`.
+- The `Status` property of `Harness`, `D2ASS` and `mellon`, the three boards
+  under `hpr`.

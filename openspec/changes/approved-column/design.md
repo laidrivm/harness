@@ -37,14 +37,32 @@ directory exists. `bun/board-state.ts` keeps deriving its three, and lists
 
 ### One list on every board
 
-`task-board` refuses a per-board vocabulary. `D2ASS` and `mellon` take the
-ten as `Harness` does, in the same apply step. Adding an option retires none,
-so the retired-option carry-over has nothing to move.
+`task-board` refuses a per-board vocabulary. `D2ASS` and `mellon`, the other
+two boards under `hpr`, take the ten as `Harness` does, in the same apply step.
+Adding an option retires none, so the retired-option carry-over has nothing to
+move.
+
+### Settled with the user (2026-10-24, on the card)
+
+Only the user moves a card to `approved`, for now. A session the user directs
+at an `idea` card may move it to `exploring`. The position between `idea` and
+`exploring` stands. The loop's pick from `approved` and its WIP limit of 10 stay
+with the card for the loop taking every status. The view's columns follow the
+option order, and no option retires. `mellon`'s board already exists beside
+the other two, so it takes the list in this change.
+
+## Open Questions
+
+- Who adds the `approved` option to the three boards' `Status` select: the
+  apply session through the connector's schema update with a read-back, or the
+  user by hand in each board's property settings (asked on the card, item 10).
+- Whether `approved` being a hand-moved status, which `bun/board-state.ts`
+  never reports, is fine (asked on the card, item 11).
 
 ## Risks / Trade-offs
 
-- [A board write outside this repository] → setting `D2ASS`'s `Status`
-  touches another project's board. The vocabulary is shared by requirement,
+- [A board write outside this repository] → setting `D2ASS`'s and `mellon`'s
+  `Status` touches other projects' boards. The vocabulary is shared by requirement,
   and the write only adds an option; the step re-reads each board after it.
 - [The DDL rewrites the whole option list] → a statement that drops an option
   by omission would retire it. The step sets all ten by name, compares the read
