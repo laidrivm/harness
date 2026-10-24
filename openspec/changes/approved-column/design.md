@@ -49,15 +49,10 @@ at an `idea` card may move it to `exploring`. The position between `idea` and
 `exploring` stands. The loop's pick from `approved` and its WIP limit of 10 stay
 with the card for the loop taking every status. The view's columns follow the
 option order, and no option retires. `mellon`'s board already exists beside
-the other two, so it takes the list in this change.
-
-## Open Questions
-
-- Who adds the `approved` option to the three boards' `Status` select: the
-  apply session through the connector's schema update with a read-back, or the
-  user by hand in each board's property settings (asked on the card, item 10).
-- Whether `approved` being a hand-moved status, which `bun/board-state.ts`
-  never reports, is fine (asked on the card, item 11).
+the other two, so it takes the list in this change. The apply session adds the
+option to the three boards' `Status` select through the connector's schema
+update and reads each board back (item 10). `approved` is hand-moved, so
+`bun/board-state.ts` never reports it (item 11).
 
 ## Risks / Trade-offs
 

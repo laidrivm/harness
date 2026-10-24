@@ -16,5 +16,5 @@
       (`collection://db99880a-f574-4e24-910e-b4dd40d6f47f`), the three boards
       under `hpr`, to the ten options in order through the connector's DDL,
       then re-read each board's schema and compare it with the list; record
-      the read-back in the pull request. Who makes this write is open (design,
-      *Open Questions*). Verify by the read-back
+      the read-back in the pull request; the apply session makes this write
+      (design, *Settled with the user*). Verify by the read-back
