@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createHmac, generateKeyPairSync, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { lockOf } from "./ci-run.ts";
 import { cleanup, emptyDir, ended, git } from "./diff-budget.fixture.ts";
 import { append } from "./pr-sessions.ts";
@@ -416,7 +416,8 @@ describe("the repository's lock", () => {
 
 	test.skipIf(skip)("a holder makes the flow wait, and it acts once the lock is free [34, 67]", async () => {
 		const h = host();
-		const lock = join(h.home, "orchestrator", "locks", "o-r.lock");
+		// The flow's own name for the file, so a change to the key reaches this case too.
+		const lock = join(h.home, "orchestrator", "locks", basename(lockOf("o", "r")));
 		mkdirSync(join(lock, ".."), { recursive: true });
 		const holder = Bun.spawn(["flock", lock, "cat"], { stdin: "pipe" });
 		// Held once a try without waiting fails, so the flow below cannot take it first.
