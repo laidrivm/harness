@@ -150,6 +150,20 @@ pass.
 - **THEN** the pass records `open`, prints what the check says is missing,
   and exits 1
 
+#### Scenario: The step waits on the user's answer
+
+- **WHEN** the check reads `goal open`, and the runner posted the
+  session's question on the carried card or found a question already waiting
+  there
+- **THEN** the pass records `waiting`, prints the change, the step and the
+  card, and exits 0
+
+#### Scenario: A question the runner could not post
+
+- **WHEN** the check reads `goal open` and the question line reads
+  `question: not posted` for any reason but a question already waiting
+- **THEN** the pass records `open` and exits 1
+
 #### Scenario: The session runs past the limit
 
 - **WHEN** the session is still running one hour after launch
@@ -187,6 +201,10 @@ posts it*). Such a
 card stands in `applied` or `applying`, so the pick session SHALL read
 `applied` too.
 
+The pick session SHALL pass over a takeable change whose card's page-level
+discussion holds a question no answer follows, as the same definition reads
+it, so a card waiting on the user costs no stage session.
+
 Before it returns, the pick session SHALL move the card it picks to the status
 of the stage the pass carries: `applying` for an apply step, from `proposed`
 or, for an answer candidate, from `applied`. It SHALL then read the card back,
@@ -220,9 +238,16 @@ then does, so the next pass takes it first.
 
 #### Scenario: A candidate with no answer
 
-- **WHEN** an answer candidate's card has no comment by the user after its last
-  question, or its `Assign` is empty
+- **WHEN** an answer candidate's card holds, after its last question, neither
+  the user's comment while its `Assign` holds the user nor a `harness-answer`
+  by the integration's own id
 - **THEN** the pick session passes over it
+
+#### Scenario: A takeable card waiting on the user
+
+- **WHEN** a takeable change's card holds a question with no answer after it
+- **THEN** the pick session passes over it, and takes it again once the user
+  has answered
 
 #### Scenario: A pick outside the list
 
