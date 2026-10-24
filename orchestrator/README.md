@@ -270,8 +270,10 @@ runs as the key holder (uid 1502), the one user that reads the App's key. The
 runner image mounts `app/` (root's: the App's id and the repositories it
 serves) and `app-key/` (the key holder's) from `orchestrator/`.
 
-1. In the App's settings generate a private key, and download it to the host
-   alone, never the laptop.
+1. In the App's settings generate a private key. GitHub hands it only to the
+   browser, so it lands on the laptop: copy it straight to the host with
+   `scp <file> root@<host>:/root/` and delete it from the laptop, Trash
+   included, before going on.
 2. As root, in `orchestrator/`, one command per line; `<key>` is the
    downloaded file, `<id>` the App's id, and `repositories` takes one
    `<owner>/<repo>` line per repository the loop serves, each repository a
