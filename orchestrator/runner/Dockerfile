@@ -47,13 +47,13 @@ RUN [ -e /usr/local/bin/node ] || ln -s bun /usr/local/bin/node; \
 RUN GH_TOKEN=unused gh auth setup-git && mv /root/.gitconfig /etc/gitconfig
 
 # The uids are fixed: the host README makes the secret files owned by runner's,
-# and the App's key by the key holder's. agent shares its home with runner
-# through agent's group. The App's id and repository list are root's; the key's
+# and the App's key by the key holder's. runner is not in agent's group
+# and never enters agent's home: every command in a clone goes through the
+# launcher. The App's id and repository list are root's; the key's
 # directory is the key holder's (runner-isolation design, *The key holder*).
 RUN useradd --create-home --uid 1500 --user-group --shell /bin/bash runner \
 	&& useradd --create-home --uid 1501 --user-group --shell /bin/bash agent \
 	&& useradd --system --no-create-home --home-dir /var/lib/orchestrator-key --uid 1502 --user-group --shell /usr/sbin/nologin keyholder \
-	&& usermod -aG agent runner \
 	&& chmod 0750 /home/agent /home/runner \
 	&& install -d -o agent -g agent -m 0750 /home/agent/clones \
 	&& install -d -o keyholder -g keyholder -m 0700 /var/lib/orchestrator-key \
