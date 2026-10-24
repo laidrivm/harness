@@ -424,7 +424,10 @@ credentials.
 Before any session, the runner SHALL read the integration's token and the
 user's Notion id from one settings file under its own user's config home. No
 file SHALL mean no integration, and the pass SHALL run as it would without
-this requirement. A file the runner cannot use SHALL refuse the pass before
+this requirement — except on the host, where the launcher is set: there no
+file SHALL refuse the pass before any session, naming the file, since a
+session would keep `notion-create-comment` and the host's Notion server is
+signed in as the user. A file the runner cannot use SHALL refuse the pass before
 any session, naming the file and never its contents. Neither value SHALL
 reach a session.
 
@@ -434,6 +437,12 @@ reach a session.
 - **THEN** the stage session's launch form asks it to comment on the card as
   before, no session carries the variable the question gate reads, and the
   pass makes no call to Notion
+
+#### Scenario: No settings file on the host
+
+- **WHEN** the launcher is set and the runner's config home holds no settings
+  file
+- **THEN** the pass refuses before any session, naming the file
 
 #### Scenario: A usable settings file
 
