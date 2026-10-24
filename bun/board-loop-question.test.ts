@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { change, clone, commit, lowered, ONE, run, runAsync, SAID, type Stubs, TICKED } from "./board-loop.fixture.ts";
-import { CARD, configured, TOKEN, USER } from "./notion-bot.fixture.ts";
+import { BOT, CARD, configured, standIn, TOKEN, USER } from "./notion-bot.fixture.ts";
 import { MARK, RUNNER_ASKS } from "./question-gate.ts";
 
 /**
@@ -52,34 +52,16 @@ const WITHHELD = "--disallowedTools mcp__*__notion-create-comment";
 const ASKED = `BLOCKED — a choice only the user can make\nQUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}`;
 const POSTED = `question: posted on ${CARD}, Assign set`;
 
-/** The integration's own id, as `GET /v1/users/me` answers it; `me`, that read's status. */
-const BOT = "ffffeeee-dddd-cccc-bbbb-aaaa99998888";
-let me = 200;
-const seen: string[] = [];
 /** The one call a pass with the settings makes before any question. */
 const READ = ["GET /v1/users/me"];
-const notion = Bun.serve({
-	port: 0,
-	fetch(req) {
-		const url = new URL(req.url);
-		seen.push(`${req.method} ${url.pathname}`);
-		if (url.pathname === "/v1/users/me") return Response.json({ object: "user", type: "bot", id: BOT }, { status: me });
-		if (url.pathname.startsWith("/v1/pages/"))
-			return Response.json({
-				parent: { type: "data_source_id", data_source_id: "ds1" },
-				properties: { Pointer: { rich_text: [{ plain_text: "openspec/changes/demo/" }] } },
-			});
-		if (url.pathname.startsWith("/v1/data_sources/")) return Response.json({ title: [{ plain_text: "Demo" }] });
-		if (req.method === "GET") return Response.json({ results: [], has_more: false, next_cursor: null });
-		return Response.json({});
-	},
-});
-afterAll(() => notion.stop(true));
+const notion = standIn();
+const seen = notion.state.seen;
+afterAll(() => notion.server.stop(true));
 
 /** One pass with the settings in `home`, or none, against the stand-in; its log cleared first. */
 const pass = (dir: string, s: Stubs, home?: string, entry?: string) => {
 	seen.length = 0;
-	return runAsync(dir, s, { home, entry, env: { HARNESS_NOTION_API_URL: notion.url.origin } });
+	return runAsync(dir, s, { home, entry, env: { HARNESS_NOTION_API_URL: notion.server.url.origin } });
 };
 
 describe("the runner posts the question", () => {
@@ -231,9 +213,9 @@ describe("the triage's answer in the pick", () => {
 
 	test("a failed id read refuses the pass before any session, naming the step, never the token [82]", async () => {
 		const { dir } = clone();
-		me = 401;
+		notion.state.me = 401;
 		const r = await pass(dir, {}, configured()).finally(() => {
-			me = 200;
+			notion.state.me = 200;
 		});
 		expect(r.last).toBe("board-loop: refused — the integration's id read answered 401");
 		expect(r.calls).not.toContain("claude ");
