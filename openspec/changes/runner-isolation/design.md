@@ -125,7 +125,10 @@ runs, or stalls past its 3 s bound, read as one still alive: EPERM through
 the launcher means only members `agent` cannot signal are left, the
 root-owned sudo for the moment it outlives its command, or a member that
 changed user, so the wait polls on and the pass names what remains as left
-rather than judging; the
+rather than judging. Each signal is spawned, not run synchronously, and
+abandoned unawaited at its bound: its direct child is the setuid sudo, which
+`runner` may be unable to signal at all, so a synchronous call's timeout could
+not end it and would stop the loop and every timer with it. The
 10 s wait for the group is kept by the clock, since each check may take that
 bound. `pass.sh` checks that the named clone is
 one through the launcher too.

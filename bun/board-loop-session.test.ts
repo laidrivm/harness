@@ -156,6 +156,18 @@ describe("a session's group, signalled through the launcher", () => {
 			process.kill(r.child, "SIGKILL");
 		}
 	}, 60_000);
+
+	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
+	test("a launcher that ignores SIGTERM is abandoned at its bound, never awaited, so the session still returns, naming the child as left", () => {
+		const start = Date.now();
+		// Ignored, SIGTERM stays ignored across exec: the stand-in outlives a SIGTERM, and ends itself after 40 s.
+		const r = abandoned(`[ "$2" = sh ] && exec sh -c 'trap "" TERM; sleep 40'\n`);
+		try {
+			expect([r.code, r.left === null, ended(r.child), Date.now() - start < 35_000]).toEqual([0, false, false, true]);
+		} finally {
+			process.kill(r.child, "SIGKILL");
+		}
+	}, 60_000);
 });
 
 describe("the stage session's id", () => {
