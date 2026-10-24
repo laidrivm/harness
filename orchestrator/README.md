@@ -161,6 +161,22 @@ docker compose exec -u agent -it runner coderabbit auth login
 
 A `localhost` callback it prints is handed over the same way.
 
+The hosted Notion server above is signed in as the user, so a session must
+never comment through it: the runner posts every question itself, from the
+second Notion integration, and a pass refuses before any session while its
+settings are missing. Write them as `runner`, from the host shell as root in
+`orchestrator/`, pasting
+`{"token": "<the integration's token>", "user": "<the user's Notion id>"}` and
+ending it with Ctrl-D:
+
+```sh
+docker compose exec -T -u runner runner sh -c 'umask 077; mkdir -p ~/.config/harness; cat > ~/.config/harness/notion-bot.json'
+```
+
+The file lands at `/home/runner/.config/harness/notion-bot.json` in the
+runner's persistent home with mode 0600, which the pass requires; `agent`
+cannot read it, and its token reaches no session.
+
 ## 6. The workspace
 
 From the laptop, with the Access service token of step 9 in `HEADERS` and a

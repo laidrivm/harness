@@ -226,6 +226,9 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	} catch (error) {
 		return refuse((error as Error).message);
 	}
+	// A host session left notion-create-comment posts as whoever the host's Notion MCP is signed in as: the user.
+	if (under.length && !bot)
+		return refuse(`on the host the runner posts each question from the Notion integration, and ${where("notion-bot.json")} is missing`);
 	// The gate refuses every comment where it sees the variable; the withheld tool, where it does not.
 	if (bot) as = { ...as, [RUNNER_ASKS.name]: RUNNER_ASKS.value };
 	const withheld = bot ? ["--disallowedTools", "mcp__*__notion-create-comment"] : [];
