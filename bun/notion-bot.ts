@@ -185,16 +185,23 @@ function pieces(s: string): string[] {
 export function runs(text: string): Out[] {
 	const out: Out[] = [];
 	// `*` italic opens on a non-space, so a `* ` bullet stays plain; `_` italic needs a non-word edge, so snake_case does.
-	const token = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*\*|(?<!\w)_[^_\s][^_\n]*_(?!\w)|\[[^\]\n]+\]\(https?:\/\/(?:[^()\s]|\([^()\s]*\))+\))/;
+	// Bold may hold a `*…*` and italic a `**…**`, parsed again below, so no inner delimiter is matched alone.
+	const token =
+		/(`[^`\n]+`|\*\*(?:[^*\n]|\*[^*\n]+\*)+?\*\*|(?<!\*)\*(?=[^*\s])(?:[^*\n]|\*\*[^*\n]+\*\*)+?\*(?!\*)|(?<!\w)_[^_\s][^_\n]*_(?!\w)|\[[^\]\n]+\]\(https?:\/\/(?:[^()\s]|\([^()\s]*\))+\))/;
 	// a heading line is parsed like any text and its runs made bold: wrapping it in `**` breaks on an inner `*`
 	text.split(/^#{1,6} +(.+)$/m).forEach((line, h) =>
 		line.split(token).forEach((part, i) => {
 			// split puts each captured part at an odd index
 			const kind = i % 2 === 0 ? undefined : part[0] === "`" ? "code" : part.startsWith("**") ? "bold" : part[0] === "[" ? "link" : "italic";
-			const link = kind === "link" ? /^\[(.+)\]\((.+)\)$/.exec(part) : null;
-			const cut = kind === "bold" ? 2 : kind ? 1 : 0;
+			// Notion takes no link URL past 2000 characters, so a longer one stays literal text
+			const link = kind === "link" ? /^\[(.+)\]\((.{1,2000})\)$/.exec(part) : null;
+			const cut = kind === "bold" ? 2 : kind === "link" && !link ? 0 : kind ? 1 : 0;
 			const content = link ? link[1] : part.slice(cut, part.length - cut);
 			const marks = { ...(kind && kind !== "link" ? { [kind]: true } : {}), ...(h % 2 ? { bold: true } : {}) };
+			if (kind === "bold" || kind === "italic") {
+				for (const run of runs(content)) out.push({ ...run, annotations: { ...run.annotations, ...marks } });
+				return;
+			}
 			for (const piece of pieces(content))
 				out.push({
 					type: "text",

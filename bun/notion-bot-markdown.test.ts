@@ -66,6 +66,24 @@ describe("the comment's markdown", () => {
 		]);
 	});
 
+	test("emphasis nested in emphasis keeps both marks, with no delimiter left (review of #248)", () => {
+		expect(runs("**bold *both* bold** and *it **both** it*")).toEqual([
+			{ type: "text", text: { content: "bold " }, annotations: { bold: true } },
+			{ type: "text", text: { content: "both" }, annotations: { italic: true, bold: true } },
+			{ type: "text", text: { content: " bold" }, annotations: { bold: true } },
+			{ type: "text", text: { content: " and " } },
+			{ type: "text", text: { content: "it " }, annotations: { italic: true } },
+			{ type: "text", text: { content: "both" }, annotations: { bold: true, italic: true } },
+			{ type: "text", text: { content: " it" }, annotations: { italic: true } },
+		]);
+	});
+
+	test("a link whose URL passes Notion's 2000 characters stays literal text (review of #248)", () => {
+		const text = `[long](https://x.io/${"a".repeat(2000)})`;
+		expect(runs(text).map((r) => r.text.content).join("")).toBe(text);
+		expect(runs(text).some((r) => r.text.link)).toBe(false);
+	});
+
 	test("a comment whose runs would pass Notion's 100 rich_text objects posts its text plain instead (review of #248)", async () => {
 		let body: { rich_text: { text: { content: string } }[] } | undefined;
 		const call = async (_step: string, _path: string, _method: string, sent: unknown) => {
