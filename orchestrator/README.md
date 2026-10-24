@@ -315,9 +315,16 @@ serves) and `app-key/` (the key holder's) from `orchestrator/`.
 4. Check that `package.json` on `main` pins the harness at or past
    `7e740f1`, `runner-isolation`'s last commit: the pass runs `board-loop.ts`
    from that pin, and an older one refuses with `not a trusted workspace —
-   run claude once in /home/runner/push/<owner>/<repo>`. In the host's
-   checkout, `git -C /root/harness merge-base --is-ancestor 7e740f1 <pin>`
-   exits 0 when `<pin>`, the commit after `#` in the pin's line, is far
-   enough. Otherwise move the pin as the root README says, then remove the
-   stop file that refusal wrote (step 7).
+   run claude once in /home/runner/push/<owner>/<repo>`. On the host, read
+   the pin from `origin/main` as the pass does; the last line prints
+   `far enough`, and an older or unreadable pin prints nothing:
+
+   ```sh
+   git -C /root/harness fetch -q origin
+   pin=$(git -C /root/harness show origin/main:package.json | sed -n 's/.*"harness": *"github:[^#]*#\([0-9a-f]*\)".*/\1/p')
+   git -C /root/harness merge-base --is-ancestor 7e740f1 "$pin" && echo far enough
+   ```
+
+   Otherwise move the pin as the root README says, then remove the stop file
+   that refusal wrote (step 7).
 5. Enable the pass schedule in Windmill (step 6).
