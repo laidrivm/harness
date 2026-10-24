@@ -77,7 +77,19 @@ chmod 0500 secrets
 ```
 
 The App's key never sits in this directory: it is the key holder's, in a
-directory of its own (step 11).
+directory of its own. Make that directory and the App's settings directory now,
+empty, since the runner's mounts refuse a missing source and step 4 starts the
+stack; step 11 fills them:
+
+```sh
+mkdir app app-key
+chmod 0755 app
+chown 1502:1502 app-key
+chmod 0700 app-key
+```
+
+With `app/` empty, a pass stops at its secret check naming
+`HARNESS_GITHUB_APP_ID` and pauses the clone.
 
 ## 4. The stack and the engine
 
@@ -277,18 +289,15 @@ serves) and `app-key/` (the key holder's) from `orchestrator/`.
 2. As root, in `orchestrator/`, one command per line; `<key>` is the
    downloaded file, `<id>` the App's id, and `repositories` takes one
    `<owner>/<repo>` line per repository the loop serves, each repository a
-   further argument of the one `printf`, which writes the whole list:
+   further argument of the one `printf`, which writes the whole list. The two
+   directories are step 3's:
 
    ```sh
-   mkdir -p app app-key
    printf '%s\n' '<id>' > app/id
    printf '%s\n' '<owner>/<repo>' '<owner>/<another repo>' > app/repositories
-   chmod 0755 app
    chmod 0444 app/id app/repositories
    install -m 0400 -o 1502 -g 1502 <key> app-key/app.pem
    rm <key>
-   chown 1502:1502 app-key
-   chmod 0700 app-key
    ```
 
 3. Run the reach check, and record its output in the pull request of
