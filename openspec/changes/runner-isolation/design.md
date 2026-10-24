@@ -279,6 +279,9 @@ The helper reads the App's id and the repository list from root's
 key holder's; group 5 provisions all three. Compose mounts both directories
 read-only from the host's `orchestrator/app/` and `orchestrator/app-key/`,
 which keep their host owners as the secret files do, and which git ignores.
+Both mounts are long-form binds with `create_host_path: false`: the short
+form makes Docker create a missing source as an empty root-owned directory,
+and the runner would then start with no App and no error.
 The mint is `/opt/orchestrator/mint`, a root-owned wrapper that runs the
 image's copy of `bun/github-app-mint.ts` from `/` with the runner's bun flags,
 and the key holder (uid 1502) has no login shell.

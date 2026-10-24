@@ -185,5 +185,15 @@ Closes `orchestrator` §*The session user reads no secret file*. Needs
       beside the launcher's others, and the CI flow's shows the leftover child
       ended through the launcher, since one user cannot be refused its own
       group
-- [ ] 5.5 **User act.** Run `reach-check.sh` on the host after the App key is
-      placed, and record its output in the pull request
+- [x] 5.5 **User act.** Run `reach-check.sh` on the host after the App key is
+      placed, and record its output in the pull request — done 2026-10-24 on
+      the host at 7e740f1: `app` 0755 root, `app/id` and `app/repositories`
+      0444 root, `app-key` 0700 and `app-key/app.pem` 0400, both the key
+      holder's (1502); the check printed `reach-check: no secret file is
+      readable as agent, and the App's key not as runner` and exited 0
+- [ ] 5.6 Settle `runner`'s membership of group `agent`: `vps-board-loop`
+      added it so `runner` could stat `agent`'s 0750 clones, but design.md
+      says `runner` never enters `agent`'s home, and group 5 now routes the
+      clone's stat and the session's kill through the launcher. Drop the
+      membership, or reword the design, before this change is archived;
+      verify with `orchestrator/users.test.ts` and a pass on the host
