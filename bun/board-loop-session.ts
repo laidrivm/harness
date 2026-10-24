@@ -7,7 +7,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-export type Kill = (pid: number, signal: NodeJS.Signals | 0) => void;
+export type Kill = (pid: number, signal: NodeJS.Signals | 0) => void | Promise<void>;
 
 /**
  * The variables a session gets of the runner's, and no others: an allowlist,
@@ -39,17 +39,27 @@ const allowed =(env: NodeJS.ProcessEnv) =>
  */
 const through =
 	(under: string[]): Kill =>
-	(pid, signal) => {
+	async (pid, signal) => {
 		const name = signal === 0 ? "0" : signal.replace(/^SIG/, "");
 		// From `/`, not the clone: a session may remove its clone while a child of it runs on.
 		const at = [...under.slice(0, -1), "/"];
 		// No `--`: dash, the image's sh, reads it after a signal as a pid and fails.
-		// Bounded: a stalled sudo would block the loop, and the session's own timers with it; cut off, it reads as ELAUNCH.
 		// Read by its message, C locale, as dash and bash both print strerror: exit 3 is ESRCH alone.
 		const script = 'export LC_ALL=C; e=$(kill -$0 "$1" 2>&1 >/dev/null) && exit 0; case $e in *"No such process"*) exit 3 ;; esac; exit 4';
-		const run = Bun.spawnSync([...at, "sh", "-c", script, name, String(pid)], { stdio: ["ignore", "ignore", "ignore"], timeout: 3_000 });
-		if (run.exitCode === 3) throw Object.assign(new Error(`kill ${name} ${pid} failed`), { code: "ESRCH" });
-		if (run.exitCode !== 0) throw Object.assign(new Error(`kill ${name} ${pid} through the launcher failed`), { code: "ELAUNCH" });
+		const run = Bun.spawn([...at, "sh", "-c", script, name, String(pid)], { stdio: ["ignore", "ignore", "ignore"] });
+		// Raced, never awaited past 3 s: the direct child is setuid sudo, which `runner` may not be able to
+		// signal at all, so a spawnSync timeout's kill could not end it and would block the loop and every timer.
+		let bound: Timer | undefined;
+		const code = await Promise.race([run.exited, new Promise<null>((done) => (bound = setTimeout(() => done(null), 3_000)))]);
+		clearTimeout(bound);
+		if (code === null) {
+			run.unref();
+			try {
+				run.kill("SIGKILL");
+			} catch {}
+		}
+		if (code === 3) throw Object.assign(new Error(`kill ${name} ${pid} failed`), { code: "ESRCH" });
+		if (code !== 0) throw Object.assign(new Error(`kill ${name} ${pid} through the launcher failed`), { code: "ELAUNCH" });
 	};
 
 /**
@@ -84,23 +94,23 @@ export async function session(
 			env: { ...allowed(process.env), ...as },
 			detached: true,
 		});
-		const group = (signal: NodeJS.Signals) => {
+		const group = async (signal: NodeJS.Signals) => {
 			try {
-				kill(-run.pid, signal);
+				await kill(-run.pid, signal);
 			} catch {}
 		};
 		/** Only ESRCH proves the group empty: EPERM is a member this user cannot signal. */
-		const alive = () => {
+		const alive = async () => {
 			try {
-				kill(-run.pid, 0);
+				await kill(-run.pid, 0);
 				return true;
 			} catch (error) {
 				return (error as NodeJS.ErrnoException).code !== "ESRCH";
 			}
 		};
 		// Ctrl-C reaches the terminal's foreground group, which a detached one is not.
-		interrupt = () => {
-			group("SIGKILL");
+		interrupt = async () => {
+			await group("SIGKILL");
 			// `process.exit` skips the `finally` below.
 			if (capture) rmSync(dir, { recursive: true, force: true });
 			process.exit(130);
@@ -109,23 +119,23 @@ export async function session(
 		let late = false;
 		const timer = setTimeout(() => {
 			late = true;
-			group("SIGTERM");
+			void group("SIGTERM");
 			// A member that ignores SIGTERM is killed outright.
-			setTimeout(() => group("SIGKILL"), 5_000).unref();
+			setTimeout(() => void group("SIGKILL"), 5_000).unref();
 		}, limit);
 		await run.exited;
 		clearTimeout(timer);
 		// Nothing the session started, a background job included, may go on working once the pass
 		// judges or records: SIGTERM, SIGKILL 5 s later, and a wait of 10 s at most.
 		let left: number | undefined;
-		if (alive()) {
-			group("SIGTERM");
-			const outright = setTimeout(() => group("SIGKILL"), 5_000);
+		if (await alive()) {
+			await group("SIGTERM");
+			const outright = setTimeout(() => void group("SIGKILL"), 5_000);
 			// By the clock, not a count: each check through the launcher may take up to its own bound.
 			const until = Date.now() + 10_000;
-			while (Date.now() < until && alive()) await Bun.sleep(100);
+			while (Date.now() < until && (await alive())) await Bun.sleep(100);
 			clearTimeout(outright);
-			if (alive()) left = run.pid;
+			if (await alive()) left = run.pid;
 		}
 		return { late, left, out: capture ? readFileSync(join(dir, "out"), "utf8") : "" };
 	} finally {
