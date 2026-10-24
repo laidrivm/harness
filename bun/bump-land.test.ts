@@ -81,6 +81,20 @@ describe("landing", () => {
 		);
 	});
 
+	test("an identity in the caller's environment does not change the bump's author", () => {
+		const { origin, dir } = consumer();
+		// A child process, since Bun hands a spawn the environment it started with, not a mutated process.env.
+		const script = join(temp(), "land.ts");
+		writeFileSync(
+			script,
+			`import { land } from ${JSON.stringify(join(import.meta.dir, "bump.ts"))};\nland(${JSON.stringify(dir)}, ${JSON.stringify(NEW)}, ${JSON.stringify(reported(dir))}, { run: () => 0 });\n`,
+		);
+		const other = "someone-else";
+		const env = { ...process.env, GIT_AUTHOR_NAME: other, GIT_AUTHOR_EMAIL: other, GIT_COMMITTER_NAME: other, GIT_COMMITTER_EMAIL: other };
+		expect(Bun.spawnSync(["bun", script], { env }).exitCode).toBe(0);
+		expect(git(origin, "log", "-1", "--format=%an|%cn", "main")).toBe("github-actions[bot]|github-actions[bot]");
+	});
+
 	// spec: harness-updates/a-tree-that-differs-from-the-checked-one-is-not-pushed
 	test("a reproduced tree that differs is refused and origin's main stays", () => {
 		const { origin, dir } = consumer();
