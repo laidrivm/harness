@@ -68,6 +68,17 @@ describe.skipIf(skip)(`pass.sh${skip ? " — skipped: flock is not on PATH; CI's
 			expect(existsSync(join(h.state, "passes"))).toBe(true);
 		});
 
+		// spec: orchestrator/a-pass-waiting-on-the-user-s-answer
+		test("a pass waiting on the user's answer exits 0 and writes no stop file", () => {
+			const h = host();
+			clone(h, "repo");
+			const waiting = "board-loop: waiting — apply demo step 1: question on aaaabbbbccccddddeeeeffff00001111";
+			writeFileSync(join(h.clones, "repo/.fake/line"), waiting);
+			const r = tick(h, "repo");
+			expect([r.code, r.last]).toEqual([0, waiting]);
+			expect(existsSync(stop(h, "repo"))).toBe(false);
+		});
+
 		// spec: orchestrator/the-pass-exits-1
 		test.each([1, 137])("a pass exiting %i writes the UTC time, the status and the last line, and returns the status [4][19]", (status) => {
 			const h = host();

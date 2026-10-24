@@ -55,6 +55,20 @@ user opening with neither mark nor a `harness-answer` by the integration's id
 The pick is a session, so this is a prompt rule, not a check the runner makes.
 The runner's `post()` refusal stays the backstop.
 
+### Settled with the user (2026-10-24, on the card)
+
+Every item went as recommended: a waiting pass exits 0 (1); a question posted
+with `Assign not set` still waits, with no pause (2); the `waiting` outcome,
+an unposted question staying `open`, a triaged question counting as waiting
+and the pick passing over a waiting card stand (3–6); `post()`'s refusal of a
+second question stays the backstop for a pick that takes a waiting card
+anyway, rather than a runner-side check before the sessions (7, 10); only the
+runner posts questions on the host, and the WIP limit and the resume timer
+belong to the card for the loop taking every status (8, 9).
+
+`waiting` needs the verdict to read `goal open`: a push origin refused, or any
+other failure after the question, stays `open` and pauses.
+
 ## Risks / Trade-offs
 
 - [A green job hides a waiting card from someone who reads only Windmill] →

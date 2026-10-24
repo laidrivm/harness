@@ -191,6 +191,10 @@ async function carded(call: Call, card: string, board: string, slug: string): Pr
 	if (plain(source?.title) !== board) return `${card} is not on the board ${board}`;
 }
 
+/** How `post()`'s line opens for a question it posted, and for one it found already waiting. */
+export const POSTED = "question: posted on";
+export const ALREADY = "question: not posted — a question already waits on";
+
 /**
  * Posts `asked` on its card from the integration and sets `Assign` to the
  * user, after checking the card is the carried change's on `board` and no
@@ -216,7 +220,7 @@ export async function post(
 		const why = await carded(call, card, board, slug);
 		if (why) return not(why);
 		const before = await discussion(call, card);
-		if (waits(before, user, self)) return not(`a question already waits on ${card}`);
+		if (waits(before, user, self)) return say(`${ALREADY} ${card}`);
 		if (triage) {
 			const ended = await triage(before);
 			said.push(ended.note);
@@ -236,7 +240,7 @@ export async function post(
 		const quoted = answer.quote.split("\n").map((line) => `> ${line}`).join("\n");
 		try {
 			await comment(call, card, `\`harness-answer\` ${answer.text}\n${quoted}\nSource: ${answer.source}`, "harness-answer");
-			return say(`question: posted on ${card} and answered from ${answer.source}`);
+			return say(`${POSTED} ${card} and answered from ${answer.source}`);
 		} catch (error) {
 			// The question stands with no answer: it waits for the user, as on `ESCALATE`.
 			said.push(`answer: not posted — ${(error as Error).message}`);
@@ -245,7 +249,7 @@ export async function post(
 	try {
 		await call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: [{ id: user }] } } });
 	} catch (error) {
-		return say(`question: posted on ${card}, Assign not set — ${(error as Error).message}`);
+		return say(`${POSTED} ${card}, Assign not set — ${(error as Error).message}`);
 	}
-	return say(`question: posted on ${card}, Assign set`);
+	return say(`${POSTED} ${card}, Assign set`);
 }

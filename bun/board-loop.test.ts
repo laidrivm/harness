@@ -105,6 +105,14 @@ describe("the pick", () => {
 		expect(lines.find((line) => line.startsWith("These changes are answer candidates:"))).toStartWith("These changes are answer candidates: spent.");
 	});
 
+	// spec: board-loop/a-takeable-card-waiting-on-the-user
+	test("the pick prompt passes over a takeable card whose question no answer follows", () => {
+		const { dir } = clone();
+		const takeable = pickOf(dir).split("\n").find((line) => line.startsWith("These changes are takeable:")) ?? "";
+		expect(takeable).toContain("Pass over a takeable change whose card's page-level discussion, read as below, holds a comment opening with `harness-question` and, after the last such comment, none by the user opening with neither `harness-question` nor `harness-answer`");
+		expect(takeable).toEndWith("its question waits on the user.");
+	});
+
 	// spec: board-loop/an-answered-card-goes-first board-loop/a-candidate-with-no-answer
 	test("the pick prompt reads Assign and the discussion, resolved or not, after the last question [15], puts answered cards first from applied [16] and claims them from applied [17]", () => {
 		const { dir } = clone();

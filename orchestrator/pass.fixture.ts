@@ -36,7 +36,7 @@ process.on("SIGTERM", () => {
 console.log(JSON.stringify(process.env));
 while (existsSync(".fake/hold")) await Bun.sleep(20);
 const status = Number(readFileSync(".fake/status", "utf8"));
-console.log(status === 0 ? ${JSON.stringify(IDLE)} : ${JSON.stringify(OPEN)});
+console.log(existsSync(".fake/line") ? readFileSync(".fake/line", "utf8") : status === 0 ? ${JSON.stringify(IDLE)} : ${JSON.stringify(OPEN)});
 process.exit(status);
 `;
 
