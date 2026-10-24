@@ -249,11 +249,14 @@ What a pass sends to GitHub (task 4.1, `git grep -n -e '"gh"' -e GH_TOKEN` over
 | `GET /users/<slug>[bot]` | `identity()` | none: a public read |
 | the branch's pull requests | `readPullRequests()`, the selection and the full check | a `pull_requests` read token minted for that read alone |
 | the push, `gh pr create`, the full check | `publish()` | a `contents` and `pull_requests` write token minted after the stage session |
-| `git fetch` of the push clone and of the harness pin | `pass.sh`, `carry()` | none |
+| `git fetch` of the push clone | `pass.sh`, `carry()` | a `contents` read token, minted for that fetch alone and held in its environment as git's extra header, never in an argument or the pass's environment |
+| `git fetch` of the harness pin | `pass.sh` | none: the harness repository is public, and the mint's list names the loop's repositories alone |
 
-The fetches run unauthenticated, which a private repository refuses: task 6.1
-mints a `contents` read token for them before the private repository moves
-to the loop.
+The push clone's fetches carry a `contents` read token (task 6.1), so a
+private repository answers them. `pass.sh` mints it before the fetch and
+halts the pass, naming the repository, when the mint fails; `publish()` mints
+one before `carry()` and returns its reason when the mint fails. The harness
+pin's fetch stays unauthenticated until the harness repository is private.
 
 ### The key holder
 
