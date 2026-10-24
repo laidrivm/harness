@@ -34,6 +34,10 @@ function stand() {
 	};
 	stub("flock", "exit 0");
 	stub("as-agent", `echo "$*" >> '${join(root, "launched")}'\ncd "$1" || exit 1\nshift\nexec "$@"`);
+	// The key holder's mint: its arguments logged, one token printed.
+	stub("mint", `echo "$*" >> '${join(root, "minted")}'\necho ghs_read`);
+	// Real git, with what each fetch's environment held logged first.
+	stub("git", `case " $* " in *" fetch "*) echo "$GIT_CONFIG_VALUE_0" >> '${join(root, "fetched")}';; esac\nexec '${Bun.which("git")}' "$@"`);
 	return h;
 }
 type Stand = ReturnType<typeof stand>;
@@ -73,7 +77,7 @@ const env = (h: Stand) => ({
 	PASS_AS_AGENT: join(h.bin, "as-agent"),
 	PASS_HOOKS: h.hooks,
 	HARNESS_GITHUB_APP_ID: "7",
-	HARNESS_GITHUB_APP_MINT: "/opt/orchestrator/mint",
+	HARNESS_GITHUB_APP_MINT: join(h.bin, "mint"),
 });
 
 /** One tick for `clone`, which the engine's job says holds `named`; `null` names no repository. */
@@ -142,6 +146,28 @@ describe("pass.sh with a launcher", () => {
 		expect(r.code).toBe(1);
 		expect(r.ran).toBeUndefined();
 		expect(stopped(h)).toContain(`'${pin}'`);
+	});
+
+	// spec: orchestrator/the-pass-reaches-github-as-the-app-alone
+	test("the push clone's fetch holds a contents read token the pass never does", () => {
+		const h = stand();
+		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		const r = tick(h);
+		expect(readFileSync(join(h.root, "minted"), "utf8")).toBe("owner/repo contents=read\n");
+		const header = `AUTHORIZATION: basic ${Buffer.from("x-access-token:ghs_read").toString("base64")}`;
+		expect(readFileSync(join(h.root, "fetched"), "utf8").split("\n")).toContain(header);
+		expect(JSON.stringify(r.ran.env)).not.toContain("ghs_read");
+		expect(JSON.stringify(r.ran.env)).not.toContain(header);
+	});
+
+	test("a mint that fails starts no pass, naming the repository", () => {
+		const h = stand();
+		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		writeFileSync(join(h.bin, "mint"), "#!/bin/sh\nexit 1\n");
+		const r = tick(h);
+		expect(r.code).toBe(1);
+		expect(r.ran).toBeUndefined();
+		expect(stopped(h)).toContain("contents read token for owner/repo");
 	});
 
 	test("two repositories whose <owner>-<repo> coincide get two push clones", () => {
