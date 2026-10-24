@@ -1,0 +1,100 @@
+## ADDED Requirements
+
+### Requirement: The host deploys main's green head and nothing else
+
+On each tick the host's deploy SHALL compare `origin/main`'s head with the
+commit it last deployed. When they differ and the head's `test` check has
+concluded `success`, it SHALL fast-forward the host's checkout to that head,
+rebuild the images, bring the stack up, push the Windmill scripts and route,
+and only then record the head as deployed. It SHALL deploy no other commit.
+
+#### Scenario: Main has not moved
+
+- **WHEN** the tick finds `origin/main`'s head equal to the commit last
+  deployed
+- **THEN** the checkout, the images and the engine are unchanged
+
+#### Scenario: The head's test check has not passed
+
+- **WHEN** the head's `test` check is pending, failed or absent
+- **THEN** the checkout is not moved, and the next tick reads the check again
+
+#### Scenario: A green head
+
+- **WHEN** the head differs from the commit last deployed and its `test`
+  check concluded `success`
+- **THEN** the checkout is at the head, the stack runs images built from it,
+  the engine holds its scripts and route, and the head is recorded as deployed
+
+#### Scenario: The checkout cannot fast-forward
+
+- **WHEN** the checkout has a tracked change or a commit `origin/main` does
+  not hold
+- **THEN** the checkout is not moved, nothing is rebuilt, and the deploy fails
+
+### Requirement: A deploy never ends a running pass
+
+The deploy SHALL recreate containers only while it holds every pass lock on
+the runner, waiting for a running pass to release its lock. A tick that
+starts during the hold SHALL find its repository busy.
+
+#### Scenario: A pass is running when main moves
+
+- **WHEN** a green head arrives while a pass holds its repository's lock
+- **THEN** the deploy brings the stack up only after that pass has ended, and
+  the pass's log ends as the pass ended it
+
+#### Scenario: A tick during the deploy
+
+- **WHEN** the pass schedule fires while the deploy holds the locks
+- **THEN** the wrapper prints `busy` and exits 0, and writes no stop file
+
+### Requirement: A failed deploy pauses the loop
+
+When a step after the fast-forward fails, the deploy SHALL write each clone's
+stop file, unless one exists, naming the deploy, the failed step and the
+commit, and SHALL not record the commit as deployed. A fetch or check read
+that fails SHALL write no stop file.
+
+#### Scenario: The build fails
+
+- **WHEN** the image build fails for a green head
+- **THEN** every clone's stop file names the deploy, the build and the head,
+  the head is not recorded, and the next tick retries the deploy
+
+#### Scenario: GitHub cannot be reached
+
+- **WHEN** the fetch or the check read fails
+- **THEN** no stop file is written and the next tick tries again
+
+#### Scenario: A stop file already exists
+
+- **WHEN** a clone's stop file exists as the deploy fails
+- **THEN** that file is left as it was
+
+### Requirement: The deploy leaves the pass schedule as the engine holds it
+
+The deploy's push SHALL write scripts and triggers and no schedule, so a
+schedule the user enabled in the engine stays enabled. The tree's
+`wmill.yaml` SHALL not include schedules; the hand push names them.
+
+#### Scenario: The schedule is enabled on the engine
+
+- **WHEN** the user has enabled the pass schedule and a deploy pushes
+- **THEN** the schedule is still enabled afterwards
+
+#### Scenario: The tree's push configuration
+
+- **WHEN** `wmill.yaml` is read
+- **THEN** it does not set `includeSchedules`
+
+### Requirement: The deploy token reaches no long-running container
+
+The Windmill token the deploy pushes with SHALL sit in a root-only file under
+`secrets/` that `compose.yaml` names nowhere, and SHALL reach only the one-off
+container that runs the push, read-only.
+
+#### Scenario: The compose file
+
+- **WHEN** `compose.yaml` is read
+- **THEN** no service and no secret names the deploy token's file
