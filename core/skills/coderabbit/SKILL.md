@@ -24,7 +24,7 @@ Every CodeRabbit finding on the PR gets an explicit disposition — **fixed**, *
 
 ### 1. Fetch
 
-Read the head commit first, with `gh pr view N --repo OWNER/REPO --json headRefOid`, then the second and third calls below, the walkthrough and the reviews. The head commit is reviewed when a review from a `coderabbitai` login has a `commit_id` equal to it. It counts as reviewed also when the walkthrough's `final_review_risk_coverage` names it as `coveredCommitId` with `"kind":"reviewed"` and the walkthrough says no actionable comments were generated — an incremental review with no findings submits no review object. If neither holds, stop there and end on `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.`, naming the head commit's short SHA. Findings on an earlier commit belong to a snapshot the branch has moved past. Otherwise run the other two calls.
+Read the head commit first, with `gh pr view N --repo OWNER/REPO --json headRefOid`, then the third call below, the reviews, and the head's `CodeRabbit` commit status, with `gh api repos/OWNER/REPO/commits/<head sha>/status --jq '.statuses[] | select(.context == "CodeRabbit") | [.state, .description]'`. The head commit is reviewed when a review from a `coderabbitai` login has a `commit_id` equal to it, or when that status reads `success` with the description `Review completed` — a review with no findings submits no review object, only the status. The same `success` with `Review skipped: draft pull request`, or any description but `Review completed`, is no review. If neither holds, stop there and end on `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.`, naming the head commit's short SHA. Findings on an earlier commit belong to a snapshot the branch has moved past. Otherwise run the other three calls.
 
 ```bash
 gh api "repos/OWNER/REPO/pulls/N/comments?per_page=100" --paginate
@@ -43,7 +43,7 @@ The fourth call returns each inline thread's `isResolved` and `isOutdated`, whic
 
 Reconcile the bot's total for each review — N plus any M — against your own count before reporting. When they differ, find the difference rather than trusting either: one inline comment may carry several findings.
 
-The bot re-reviews on every push, and a merged PR still accepts comments — so a finding posted after your last pass exists in the API and in no report. Before treating a PR as done, re-fetch once and reconcile against the bot's N + M again: a review submitted after your report is a review nobody has dispositioned. The re-fetch reads the head commit again too. If it moved since the first read and the bot has not reviewed the new head, by either of step 1's two readings, end on the no-review `OPEN` line naming it, never on `PASS`.
+The bot re-reviews on every push, and a merged PR still accepts comments — so a finding posted after your last pass exists in the API and in no report. Before treating a PR as done, re-fetch once and reconcile against the bot's N + M again: a review submitted after your report is a review nobody has dispositioned. The re-fetch reads the head commit again too. If it moved since the first read and the bot has not reviewed the new head, by either of step 1's two tests, end on the no-review `OPEN` line naming it, never on `PASS`.
 
 Keep only comments whose `user.login` starts with `coderabbitai`. Record for each: `id`, `path`, `line` (or `original_line`), `body`, `in_reply_to_id`.
 
@@ -148,7 +148,7 @@ Right before applying any fix, here or under the override below, read the head c
 Every output ends with a machine-readable last line, exactly one of:
 
 - `CODERABBIT gate: PASS — N findings, N dispositioned.` (every finding fixed, skipped or rejected — nothing left to do)
-- `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.` (step 1 found neither a review of the head commit nor a walkthrough naming it reviewed with no actionable comments, and read nothing more)
+- `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.` (step 1 found neither a review of the head commit nor its `CodeRabbit` status reading `Review completed`, and read nothing more)
 - `CODERABBIT gate: OPEN — N findings, M fixes awaiting approval.` (the plan in step 5, before the user answers)
 - `CODERABBIT gate: OPEN — N findings, M dismissals awaiting the user.` (fixes already applied under a project policy; what waits is a Major+ you propose to reject or skip)
 - `CODERABBIT gate: BLOCKED — N findings, M undispositioned.` (the arithmetic didn't close, or the user declined a fix that is still a real defect — name them)
