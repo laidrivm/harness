@@ -3,7 +3,7 @@
  * comment renders none of it. Pure, so no stub is needed.
  */
 import { describe, expect, test } from "bun:test";
-import { runs } from "./notion-bot.ts";
+import { comment, runs } from "./notion-bot.ts";
 
 describe("the comment's markdown", () => {
 	test("inline code and bold become annotated runs, a heading a bold line, the rest plain text", () => {
@@ -52,5 +52,30 @@ describe("the comment's markdown", () => {
 
 	test("a run past 2000 characters is split, as Notion takes no longer one", () => {
 		expect(runs("q".repeat(2001)).map((r) => r.text.content.length)).toEqual([2000, 1]);
+	});
+
+	test("the split never cuts a surrogate pair, so an emoji on the boundary survives (review of #248)", () => {
+		const parts = runs(`${"q".repeat(1999)}😀q`).map((r) => r.text.content);
+		expect(parts).toEqual(["q".repeat(1999), "😀q"]);
+	});
+
+	test("a link keeps balanced parentheses in its URL (review of #248)", () => {
+		expect(runs("[f](https://en.wikipedia.org/wiki/Function_(mathematics)) end")).toEqual([
+			{ type: "text", text: { content: "f", link: { url: "https://en.wikipedia.org/wiki/Function_(mathematics)" } } },
+			{ type: "text", text: { content: " end" } },
+		]);
+	});
+
+	test("a comment whose runs would pass Notion's 100 rich_text objects posts its text plain instead (review of #248)", async () => {
+		let body: { rich_text: { text: { content: string } }[] } | undefined;
+		const call = async (_step: string, _path: string, _method: string, sent: unknown) => {
+			body = sent as typeof body;
+			return {};
+		};
+		const text = `\`harness-question\` ${Array.from({ length: 60 }, (_, i) => `\`c${i}\``).join(" ")}`;
+		await comment(call as never, "card", text);
+		expect(body?.rich_text.length).toBeLessThanOrEqual(100);
+		expect(body?.rich_text[0]).toEqual({ type: "text", text: { content: "harness-question" }, annotations: { code: true } });
+		expect(body?.rich_text.slice(1).map((r) => r.text.content).join("")).toBe(text.slice("`harness-question`".length));
 	});
 });
