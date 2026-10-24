@@ -61,8 +61,8 @@ option SHALL be carried to its successor before that option goes: `suggested`
 to `idea`, `ready` to `proposed`, and `implementing` and `reviewing` to
 `applying`.
 
-The same setting applies to `mellon` when that board is provisioned, so that
-a board created later is not a board with a different vocabulary.
+The same setting applies to `mellon`'s board, and to any board created later,
+so that no board carries a different vocabulary.
 A board whose options differ is a board whose view cannot be read by the
 instruction that reads the others, and the routing rule would then have to
 carry a per-board vocabulary as well as a per-board address.
