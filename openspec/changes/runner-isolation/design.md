@@ -251,7 +251,7 @@ What a pass sends to GitHub (task 4.1, `git grep -n -e '"gh"' -e GH_TOKEN` over
 | the push, `gh pr create`, the full check | `publish()` | a `contents` and `pull_requests` write token minted after the stage session |
 | `git fetch` of the push clone and of the harness pin | `pass.sh`, `carry()` | none |
 
-The fetches run unauthenticated, which a private repository refuses: task 4.4
+The fetches run unauthenticated, which a private repository refuses: task 6.1
 mints a `contents` read token for them before the private repository moves
 to the loop.
 
@@ -335,8 +335,8 @@ that index, instead of setting the count to 1. This removes its `shortcut:`.
 
 ## Migration Plan
 
-Lands in five groups: the launcher, the push, the CI flow's push, the tokens'
-reach and the host's users. Groups 1 to 4 change the code and `pass.sh`, and
+Lands in six groups: the launcher, the push, the CI flow's push, the tokens'
+reach, the host's users and what the bring-up left open. Groups 1 to 4 change the code and `pass.sh`, and
 are inert on the laptop. Group 5 changes the image and README that
 `vps-board-loop` group 3 adds, and needs it merged. The App key goes on the
 host only after group 5. Rollback: unset `PASS_AS_AGENT` and
