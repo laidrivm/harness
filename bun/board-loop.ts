@@ -201,6 +201,16 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	if (noted && ![...steps.values()].some((s) => s.branch === noted))
 		return refuse(`unpushed work on ${noted}, which is no step's branch`);
 	if (noted) console.log(`leaving ${noted}, unpushed, for the pass that carries its step`);
+	// Before `idle`, so a host left without the integration's settings shows it on every tick.
+	let bot: Settings | undefined;
+	try {
+		bot = settings(where("notion-bot.json"));
+	} catch (error) {
+		return refuse((error as Error).message);
+	}
+	// A host session left notion-create-comment posts as whoever the host's Notion MCP is signed in as: the user.
+	if (under.length && !bot)
+		return refuse(`on the host the runner posts each question from the Notion integration, and ${where("notion-bot.json")} is missing`);
 	if (steps.size === 0) return end("idle", "no change is takeable");
 	const listed = (answer: boolean) => [...steps].filter(([, s]) => s.answer === answer).map(([name]) => name);
 
@@ -213,22 +223,17 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		if (left) return end("refused", `${outlived}; the clone is left as the session left it`);
 	};
 	// The App, when one is configured, and its bot's identity for both sessions' commits, before either.
-	// The Notion integration's settings too: its token stays in this process, a header to `fetch` alone.
+	// The integration's own id too: its token stays in this process, a header to `fetch` alone.
 	let app: ReturnType<typeof configured>;
 	let as: Record<string, string> = {};
-	let bot: Settings | undefined;
 	try {
 		app = configured(process.env, sh("git", "config", "--get", "remote.origin.url").out);
 		if (app) as = await identity(app);
-		bot = settings(where("notion-bot.json"));
 		// The author whose `harness-answer` counts, named to the pick and to REST step 3.
 		if (bot) bot.self = await own(bot.token);
 	} catch (error) {
 		return refuse((error as Error).message);
 	}
-	// A host session left notion-create-comment posts as whoever the host's Notion MCP is signed in as: the user.
-	if (under.length && !bot)
-		return refuse(`on the host the runner posts each question from the Notion integration, and ${where("notion-bot.json")} is missing`);
 	// The gate refuses every comment where it sees the variable; the withheld tool, where it does not.
 	if (bot) as = { ...as, [RUNNER_ASKS.name]: RUNNER_ASKS.value };
 	const withheld = bot ? ["--disallowedTools", "mcp__*__notion-create-comment"] : [];

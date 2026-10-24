@@ -83,6 +83,14 @@ describe("the session's clone", () => {
 		expect(r.calls).not.toContain("claude ");
 	});
 
+	// spec: board-loop/no-settings-file-on-the-host
+	test("a launcher with nothing to take still refuses without the Notion integration, rather than idling", () => {
+		const { dir, push } = pair({});
+		const r = run(push, [], {}, { env: host(dir), claudeJson: trusting(dir) });
+		expect(r.last).toEndWith("/.config/harness/notion-bot.json is missing");
+		expect(r.last).not.toContain("idle");
+	});
+
 	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
 	test("a session past its limit is ended through the launcher, though every signal of the runner's own is refused", async () => {
 		const { dir, push } = pair();
