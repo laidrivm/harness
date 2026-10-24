@@ -738,6 +738,6 @@ describe("on the host, through the launcher", () => {
 		expect(r.code).toBe(0);
 		const left = Number(readFileSync(join(h.home, "left-pid"), "utf8"));
 		expect(ended(left)).toBe(true);
-		expect(readFileSync(join(h.home, "as-agent-calls"), "utf8")).toMatch(/^\/ sh -c kill -\$0 "\$1" 2>\/dev\/null \|\| exit 3 TERM -\d+$/m);
+		expect(readFileSync(join(h.home, "as-agent-calls"), "utf8")).toMatch(/^\/ sh -c export LC_ALL=C; e=\$\(kill -\$0 "\$1" 2>&1 >\/dev\/null\) .* exit 4 TERM -\d+$/m);
 	}, 40_000);
 });
