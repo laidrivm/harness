@@ -1,7 +1,8 @@
 # runner-isolation — tasks
 
-Five groups, shipped as `feat/runner-isolation-1` to
-`feat/runner-isolation-5`, in order. Groups 1 to 4 are inert on the laptop:
+Six groups, shipped as `feat/runner-isolation-1` to
+`feat/runner-isolation-6`, in order. Group 6 holds what the host's bring-up
+left open. Groups 1 to 4 are inert on the laptop:
 with no launcher or mint command set, the runner runs as it does today.
 Group 5 edits the image and host README that `vps-board-loop` group 3 adds,
 and starts only once that group has merged. Group 3 needs `ci-run-agent`'s
@@ -131,11 +132,7 @@ App-only (user, 2026-10-23), so the PAT path these tasks first planned,
       `bun/github-app.ts`, and add the mint helper `bun/github-app-mint.ts`
       and its caller `bun/github-app-minted.ts`. Remove `credentials()`'s
       `shortcut:`. Verify with 4.2, `orchestrator/pass.test.ts` and `bun test`
-- [ ] 4.4 Authenticate the fetches 4.1 found running unauthenticated, the push
-      clone's in `pass.sh` and `carry()`'s, with a `contents` read token from
-      the mint, held by those processes alone, before a private repository
-      joins the loop; a case each that the fetch's environment holds the
-      token and the pass's does not. Verify with those cases and `bun test`
+Task 4.4 moved to 6.1, since `feat/runner-isolation-4` is #239's.
 
 ## 5. The host's users
 
@@ -191,9 +188,23 @@ Closes `orchestrator` §*The session user reads no secret file*. Needs
       0444 root, `app-key` 0700 and `app-key/app.pem` 0400, both the key
       holder's (1502); the check printed `reach-check: no secret file is
       readable as agent, and the App's key not as runner` and exited 0
-- [ ] 5.6 Settle `runner`'s membership of group `agent`: `vps-board-loop`
-      added it so `runner` could stat `agent`'s 0750 clones, but design.md
-      says `runner` never enters `agent`'s home, and group 5 now routes the
-      clone's stat and the session's kill through the launcher. Drop the
-      membership, or reword the design, before this change is archived;
-      verify with `orchestrator/users.test.ts` and a pass on the host
+Task 5.6 moved to 6.2, since `feat/runner-isolation-5` is #243's.
+
+## 6. What the live host left open
+
+The board loop names a step's branch by its group, and groups 4 and 5's
+branches are spent on merged pull requests, so the two tasks the bring-up
+left open carry here.
+
+- [ ] 6.1 Authenticate the fetches 4.1 found running unauthenticated, the push
+      clone's in `pass.sh` and `carry()`'s, with a `contents` read token from
+      the mint, held by those processes alone, before a private repository
+      joins the loop; a case each that the fetch's environment holds the
+      token and the pass's does not. Verify with those cases and `bun test`
+- [ ] 6.2 **User decision.** Settle `runner`'s membership of group `agent`:
+      `vps-board-loop` added it so `runner` could stat `agent`'s 0750 clones,
+      but design.md says `runner` never enters `agent`'s home, and group 5 now
+      routes the clone's stat and the session's kill through the launcher.
+      Ask the user on the card whether to drop the membership or reword the
+      design, then do that before this change is archived; verify with
+      `orchestrator/users.test.ts` and a pass on the host
