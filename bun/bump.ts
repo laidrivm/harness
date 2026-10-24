@@ -76,8 +76,8 @@ async function greenHead(deps: Deps): Promise<string | undefined> {
 	return green ? sha : undefined;
 }
 
-function git(cwd: string, args: string[]): string {
-	const run = Bun.spawnSync(["git", ...args], { cwd });
+function git(cwd: string, args: string[], env?: Record<string, string>): string {
+	const run = Bun.spawnSync(["git", ...args], { cwd, env: env && { ...process.env, ...env } });
 	// Named by its subcommand, past any `-c key=value` before it.
 	const name = args.find((arg) => !arg.startsWith("-") && !arg.includes("="));
 	if (run.exitCode !== 0)
@@ -158,15 +158,15 @@ export function land(
 		throw new Error(
 			`the bump to ${sha} reproduced tree ${reproduced}, not the checked ${tree}`,
 		);
-	git(root, [
-		"-c",
-		"user.name=github-actions[bot]",
-		"-c",
-		"user.email=41898282+github-actions[bot]@users.noreply.github.com",
-		"commit",
-		"-qm",
-		`Bump harness ${old.slice(0, 7)}..${sha.slice(0, 7)}`,
-	]);
+	// By environment, not `-c user.*`: an inherited GIT_AUTHOR_* or GIT_COMMITTER_* outranks config.
+	const name = "github-actions[bot]";
+	const email = "41898282+github-actions[bot]@users.noreply.github.com";
+	git(root, ["commit", "-qm", `Bump harness ${old.slice(0, 7)}..${sha.slice(0, 7)}`], {
+		GIT_AUTHOR_NAME: name,
+		GIT_AUTHOR_EMAIL: email,
+		GIT_COMMITTER_NAME: name,
+		GIT_COMMITTER_EMAIL: email,
+	});
 	git(root, ["push", "origin", "HEAD:main"]);
 }
 
