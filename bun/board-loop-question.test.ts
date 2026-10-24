@@ -90,7 +90,7 @@ describe("the runner posts the question", () => {
 		const r = await pass(dir, {}, configured(0o600, "notion-ask.json"));
 		const lines = stage(r.calls);
 		expect(lines).toHaveLength(5);
-		for (const part of ["`bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`", MARK, READ_BACK, ...FORM])
+		for (const part of ["`bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`", MARK, "only once it prints `question: posted`", READ_BACK, ...FORM])
 			expect(lines[3]).toContain(part);
 		expect(forms()).toContain(lines[3]);
 		for (const s of ["pick", "stage"]) expect(r.env(s)?.[RUNNER_ASKS.name]).toBeUndefined();
