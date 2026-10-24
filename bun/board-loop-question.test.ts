@@ -144,6 +144,33 @@ describe("the runner posts the question", () => {
 		expect(r.last).toStartWith("board-loop: open — apply demo step 1: origin refused the push");
 	});
 
+	// spec: board-loop/the-step-waits-on-the-user-s-answer
+	test("a posted question under goal open ends waiting, exit 0, naming the card", async () => {
+		const { dir } = clone();
+		const r = await pass(dir, { said: ASKED, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" }, configured());
+		expect(r.text).toContain(POSTED);
+		expect([r.code, r.last]).toEqual([0, `board-loop: waiting — apply demo step 1: question on ${CARD}`]);
+	});
+
+	test("a question already waiting on the card ends waiting too, and nothing is posted", async () => {
+		const { dir } = clone();
+		notion.state.pending = true;
+		const r = await pass(dir, { said: ASKED, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" }, configured()).finally(() => {
+			notion.state.pending = false;
+		});
+		expect(r.text).toContain(`question: not posted — a question already waits on ${CARD}`);
+		expect(seen).not.toContain("POST /v1/comments");
+		expect([r.code, r.last]).toEqual([0, `board-loop: waiting — apply demo step 1: question on ${CARD}`]);
+	});
+
+	// spec: board-loop/a-question-the-runner-could-not-post
+	test("a question not posted for another reason under goal open stays open, exit 1", async () => {
+		const { dir } = clone();
+		const r = await pass(dir, { said: `QUESTION: ${CARD}x\n${MARK} Ship?`, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" }, configured());
+		expect(r.code).toBe(1);
+		expect(r.last).toStartWith("board-loop: open — apply demo step 1: goal open");
+	});
+
 	// spec: board-loop/no-question
 	test("no QUESTION: line: no call past the id read and nothing printed about a question", async () => {
 		const { dir } = clone();
