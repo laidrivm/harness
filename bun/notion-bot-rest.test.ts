@@ -5,7 +5,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import type { Server } from "bun";
-import { own, post } from "./notion-bot.ts";
+import { own, post, runs } from "./notion-bot.ts";
 
 const servers: Server[] = [];
 afterAll(() => {
@@ -257,5 +257,29 @@ describe("a call that fails", () => {
 		const seen = notion({ patch: 500 });
 		expect(await line()).toBe(`question: posted on ${CARD}, Assign not set — the Assign write answered 500`);
 		expect(calls(seen).filter((c) => c === "POST /v1/comments")).toHaveLength(1);
+	});
+});
+
+describe("the comment's markdown", () => {
+	test("inline code and bold become annotated runs, a heading a bold line, the rest plain text", () => {
+		expect(runs("## Ask\n1. Keep **this** and `that`?")).toEqual([
+			{ type: "text", text: { content: "Ask" }, annotations: { bold: true } },
+			{ type: "text", text: { content: "\n1. Keep " } },
+			{ type: "text", text: { content: "this" }, annotations: { bold: true } },
+			{ type: "text", text: { content: " and " } },
+			{ type: "text", text: { content: "that" }, annotations: { code: true } },
+			{ type: "text", text: { content: "?" } },
+		]);
+	});
+
+	test("*italic* becomes an italic run, while a `* ` list bullet stays plain", () => {
+		expect(runs("* one *two*")).toEqual([
+			{ type: "text", text: { content: "* one " } },
+			{ type: "text", text: { content: "two" }, annotations: { italic: true } },
+		]);
+	});
+
+	test("a run past 2000 characters is split, as Notion takes no longer one", () => {
+		expect(runs("q".repeat(2001)).map((r) => r.text.content.length)).toEqual([2000, 1]);
 	});
 });

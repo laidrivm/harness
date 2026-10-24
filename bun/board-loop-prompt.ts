@@ -36,11 +36,12 @@ export function prompt(slug: string, { step, branch, answer }: Step, check: stri
 		"This session runs unattended.",
 		`The goal is met when the last line of \`bun ${check} apply ${slug} ${step} --before-push\`, run after the last commit, opens with \`goal met\` — or when the final message opens with \`BLOCKED —\` and names what only the user can settle.`,
 		// No apostrophe: the doc's form wraps the prompt in the shell's single quotes.
-		asks === "runner"
+		(asks === "runner"
 			? `A question only the user can settle goes in the final message, never on the card, since this session posts no comment: after reading that card and its comments, write a line \`QUESTION: <the id of the card of the change>\` before any \`PR-TITLE:\` line, with the question below it, opening with ${MARK}, its two backticks included — the runner posts it.`
 			: asks === "ask"
 				? `A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with ${MARK}, its two backticks included, run \`${ASK_COMMAND} <the id of the card of the change> <that file>\`, then set the \`Assign\` of the card to the user.`
-				: `A question only the user can settle goes on the card of the change as one page-level comment — \`page_id\` and \`markdown\` only, after reading that card and its comments — whose markdown opens with ${MARK}, its two backticks included.`,
+				: `A question only the user can settle goes on the card of the change as one page-level comment — \`page_id\` and \`markdown\` only, after reading that card and its comments — whose markdown opens with ${MARK}, its two backticks included.`) +
+			" Number its items in one sequence across its sections, never restarting at 1, so the user can answer by number.",
 		// `board-loop-push.ts` reads these two, as the pass reads `PICK:`.
 		"When the pull request is to open, end the final message with a line `PR-TITLE: <title>`, then a line `PR-BODY:` with the body below it to the end; when a gate line holds the pull request back, write neither.",
 	].join("\n");
