@@ -312,4 +312,9 @@ serves) and `app-key/` (the key holder's) from `orchestrator/`.
    names each file one of them could read. The claude.ai login in root's home
    is outside the container, where neither user exists.
 
-4. Enable the pass schedule in Windmill (step 6).
+4. Check that `package.json` on `main` pins the harness at or past the
+   `runner-isolation` commits: the pass runs `board-loop.ts` from that pin,
+   and an older one refuses with `not a trusted workspace — run claude once
+   in /home/runner/push/<owner>/<repo>`. Move the pin as the root README
+   says, then remove the stop file that refusal wrote (step 7).
+5. Enable the pass schedule in Windmill (step 6).
