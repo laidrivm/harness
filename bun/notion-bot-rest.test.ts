@@ -279,6 +279,21 @@ describe("the comment's markdown", () => {
 		]);
 	});
 
+	test("_italic_ becomes italic at word edges, while a snake_case_name stays plain", () => {
+		expect(runs("_two_ and harness_question_mark")).toEqual([
+			{ type: "text", text: { content: "two" }, annotations: { italic: true } },
+			{ type: "text", text: { content: " and harness_question_mark" } },
+		]);
+	});
+
+	test("an http(s) link becomes a linked run, any other target stays literal", () => {
+		expect(runs("see [PR](https://github.com/o/r/pull/1) or [x](javascript:alert)")).toEqual([
+			{ type: "text", text: { content: "see " } },
+			{ type: "text", text: { content: "PR", link: { url: "https://github.com/o/r/pull/1" } } },
+			{ type: "text", text: { content: " or [x](javascript:alert)" } },
+		]);
+	});
+
 	test("a run past 2000 characters is split, as Notion takes no longer one", () => {
 		expect(runs("q".repeat(2001)).map((r) => r.text.content.length)).toEqual([2000, 1]);
 	});
