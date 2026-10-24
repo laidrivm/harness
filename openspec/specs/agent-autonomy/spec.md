@@ -193,10 +193,11 @@ other means.
 
 ### Requirement: The bot's review is worked once it has landed on the head commit, never waited for
 
-`/coderabbit` SHALL first read the pull request's head commit, its walkthrough
-and its reviews. When no review from the bot is on the head commit, and the
-walkthrough does not name it reviewed with no actionable comments, since an
-incremental review with no findings submits no review, the run SHALL end with a
+`/coderabbit` SHALL first read the pull request's head commit, its reviews and
+the head's `CodeRabbit` commit status. When no review from the bot is on the
+head commit, and that status does not read `success` with the description
+`Review completed`, since a review with no findings submits no review object,
+the run SHALL end with a
 `CODERABBIT gate: OPEN` line naming that commit as not yet reviewed, after
 that one read, with no sleep and no second read. A run that finds such a
 review SHALL dispose of its findings on the terms `local-review-loop` sets for
@@ -207,8 +208,9 @@ the user SHALL carry an `(unattended: card` marker.
 #### Scenario: The head commit has no review yet
 
 - **WHEN** an unattended session runs `/coderabbit` on a pull request whose
-  newest bot review is on an earlier commit, and whose walkthrough does not
-  name the head commit reviewed with no actionable comments
+  newest bot review is on an earlier commit, and whose head's `CodeRabbit`
+  status reads anything but `Review completed`, `Review skipped: draft pull
+  request` included
 - **THEN** the run ends on `CODERABBIT gate: OPEN` naming the head commit's
   short SHA, after one read, with no sleep and no second read
 
