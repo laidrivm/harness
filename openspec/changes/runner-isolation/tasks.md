@@ -196,7 +196,7 @@ The board loop names a step's branch by its group, and groups 4 and 5's
 branches are spent on merged pull requests, so the two tasks the bring-up
 left open carry here.
 
-- [ ] 6.1 Authenticate the fetches 4.1 found running unauthenticated, the push
+- [x] 6.1 Authenticate the fetches 4.1 found running unauthenticated, the push
       clone's in `pass.sh` and `carry()`'s, with a `contents` read token from
       the mint, held by those processes alone, before a private repository
       joins the loop; a case each that the fetch's environment holds the

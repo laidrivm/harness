@@ -173,7 +173,15 @@ if [ -n "${PASS_AS_AGENT-}" ]; then
 	}
 	reset "$push" "$(printf '[remote "origin"]\n\turl = https://github.com/%s.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n' "$owner/$repo")"
 	reset "$harness"
-	{ git -C "$push" fetch -q origin && git -C "$push" checkout -qf --detach origin/main; } ||
+	# A `contents` read token for the fetch alone, so a private repository answers it: it reaches git as
+	# environment variables of that one command, never an argument, and the pass's environment never holds it.
+	# shellcheck disable=SC2086 # the mint command is words, split as `minted()` splits it
+	token=$($HARNESS_GITHUB_APP_MINT "$owner/$repo" contents=read) && [ -n "$token" ] ||
+		halt "the mint command could not mint a contents read token for $owner/$repo"
+	header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$token" | base64 -w0)"
+	unset token
+	{ GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader GIT_CONFIG_VALUE_0=$header git -C "$push" fetch -q origin &&
+		git -C "$push" checkout -qf --detach origin/main; } ||
 		halt "the push clone $push could not check out origin/main"
 	pin=$(git -C "$push" show origin/main:package.json | jq -r '.devDependencies.harness // empty')
 	# The whole value: github:<owner>/<repo>#<a full commit>.
