@@ -110,8 +110,9 @@ then does, so the next pass takes it first.
 
 #### Scenario: A candidate with no answer
 
-- **WHEN** an answer candidate's card has no comment by the user after its last
-  question, or its `Assign` is empty
+- **WHEN** an answer candidate's card holds, after its last question, neither
+  the user's comment while its `Assign` holds the user nor a `harness-answer`
+  by the integration's own id
 - **THEN** the pick session passes over it
 
 #### Scenario: A takeable card waiting on the user

@@ -22,8 +22,9 @@
  * step. It installs before any session, since
  * `bun install` is an `ask` nobody would answer. Each pass ends on one line
  * and one `loop` record: `met`, `open`, `waiting`, `timeout`, `idle` or
- * `refused`, with exit 0 for `met`, `idle` and `waiting` (a question on the
- * card) alone, so a shell loop stops where a person is needed.
+ * `refused`, with exit 0 for `met`, `idle` and `waiting` alone: a `waiting`
+ * pass leaves no stop file and a later pick passes over its card, while every
+ * other outcome stops a shell loop where a person is needed.
  */
 import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
