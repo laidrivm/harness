@@ -206,5 +206,7 @@ left open carry here.
       but design.md says `runner` never enters `agent`'s home, and group 5 now
       routes the clone's stat and the session's kill through the launcher.
       Ask the user on the card whether to drop the membership or reword the
-      design, then do that before this change is archived; verify with
-      `orchestrator/users.test.ts` and a pass on the host
+      design, then do that before this change is archived; verify with a
+      case in `orchestrator/users.test.ts` that asserts the chosen state —
+      the runner Dockerfile's `usermod -aG agent runner` present or absent —
+      and a pass on the host
