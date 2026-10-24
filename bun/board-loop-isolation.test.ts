@@ -73,7 +73,7 @@ describe("the session's clone", () => {
 		const r = run(push, [], { pickSleep: 30 }, { env: { HARNESS_AS_AGENT: "as-agent", HARNESS_CLONE: dir }, claudeJson: trusting(dir), entry: lowered(1000, across) });
 		expect(r.last).toStartWith("board-loop: timeout — the pick session ran past");
 		expect(r.last).not.toContain("outlived");
-		expect(r.calls).toMatch(/as-agent \/ sh -c kill -\$0 "\$1" 2>\/dev\/null \|\| exit 3 TERM -\d+/);
+		expect(r.calls).toMatch(/as-agent \/ sh -c export LC_ALL=C; e=\$\(kill -\$0 "\$1" 2>&1 >\/dev\/null\) .* exit 4 TERM -\d+/);
 	}, 40_000);
 });
 

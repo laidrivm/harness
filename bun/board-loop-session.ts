@@ -32,10 +32,10 @@ const allowed =(env: NodeJS.ProcessEnv) =>
 
 /**
  * A `kill` sent as the session's own user, through the launcher: the kernel
- * refuses `runner` a signal to `agent`'s group. A refused `kill` reads as
- * ESRCH, so a group whose only member left is the root-owned sudo, which ends
- * with its command, reads as gone; a launcher that fails before `kill` runs
- * reads as a group still alive.
+ * refuses `runner` a signal to `agent`'s group. Only a `kill` that finds no
+ * such process reads as ESRCH; any other failure, EPERM included, and a
+ * launcher that fails before `kill` runs read as a group still alive, so the
+ * bounded wait polls on and names a member it cannot end as left.
  */
 const through =
 	(under: string[]): Kill =>
@@ -45,9 +45,11 @@ const through =
 		const at = [...under.slice(0, -1), "/"];
 		// No `--`: dash, the image's sh, reads it after a signal as a pid and fails.
 		// Bounded: a stalled sudo would block the loop, and the session's own timers with it; cut off, it reads as ELAUNCH.
-		const run = Bun.spawnSync([...at, "sh", "-c", 'kill -$0 "$1" 2>/dev/null || exit 3', name, String(pid)], { stdio: ["ignore", "ignore", "ignore"], timeout: 3_000 });
+		// Read by its message, C locale, as dash and bash both print strerror: exit 3 is ESRCH alone.
+		const script = 'export LC_ALL=C; e=$(kill -$0 "$1" 2>&1 >/dev/null) && exit 0; case $e in *"No such process"*) exit 3 ;; esac; exit 4';
+		const run = Bun.spawnSync([...at, "sh", "-c", script, name, String(pid)], { stdio: ["ignore", "ignore", "ignore"], timeout: 3_000 });
 		if (run.exitCode === 3) throw Object.assign(new Error(`kill ${name} ${pid} failed`), { code: "ESRCH" });
-		if (run.exitCode !== 0) throw Object.assign(new Error(`the launcher failed before kill ${name} ${pid}`), { code: "ELAUNCH" });
+		if (run.exitCode !== 0) throw Object.assign(new Error(`kill ${name} ${pid} through the launcher failed`), { code: "ELAUNCH" });
 	};
 
 /**

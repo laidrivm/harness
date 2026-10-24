@@ -106,6 +106,9 @@ function abandoned(guard = "") {
 	return { code: run.exitCode, left: JSON.parse(run.stdout.toString()).left, child: left };
 }
 
+/** A launcher guard whose `sh` runs the signal script with a `kill` that fails, printing `text`. */
+const refusing = (text: string) => `[ "$2" = sh ] && exec /bin/sh -c "kill() { echo '${text}' >&2; return 1; }; $4" "$5" "$6"\n`;
+
 describe("a session's group, signalled through the launcher", () => {
 	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
 	test("a child is ended though the session removed its clone, since the signal runs from a directory that outlives it", () => {
@@ -118,6 +121,26 @@ describe("a session's group, signalled through the launcher", () => {
 		const r = abandoned('[ "$2" = sh ] && exit 1\n');
 		try {
 			expect([r.code, r.left === null, ended(r.child)]).toEqual([0, false, false]);
+		} finally {
+			process.kill(r.child, "SIGKILL");
+		}
+	}, 40_000);
+
+	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
+	test("a kill the kernel refuses reads as a group still alive, so the child is named as left", () => {
+		const r = abandoned(refusing("/bin/sh: 1: kill: Operation not permitted"));
+		try {
+			expect([r.code, r.left === null, ended(r.child)]).toEqual([0, false, false]);
+		} finally {
+			process.kill(r.child, "SIGKILL");
+		}
+	}, 40_000);
+
+	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
+	test("only a kill that finds no such process reads as the group gone", () => {
+		const r = abandoned(refusing("/bin/sh: 1: kill: No such process"));
+		try {
+			expect([r.code, r.left]).toEqual([0, null]);
 		} finally {
 			process.kill(r.child, "SIGKILL");
 		}
