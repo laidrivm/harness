@@ -29,10 +29,21 @@ function stand() {
 
 const header = (token: string) => `AUTHORIZATION: basic ${Buffer.from(`x-access-token:${token}`).toString("base64")}`;
 
+/**
+ * Sets aside the credentials this suite inherits — the runner's push hands its own App token to the
+ * pre-push suite — so only those `carry` hands are seen. Returns what puts them back.
+ */
+function setAside() {
+	const was = Object.entries(process.env).filter(([key]) => key === "GH_TOKEN" || key.startsWith("GIT_CONFIG_"));
+	for (const [key] of was) delete process.env[key];
+	return () => Object.assign(process.env, Object.fromEntries(was));
+}
+
 describe("carry's fetches", () => {
 	test("hold the read token in their environment, and the process that runs them does not", () => {
 		const { push, bin, log, under } = stand();
-		const was = [process.cwd(), process.env.PATH, process.env.GIT_CONFIG_VALUE_0];
+		const was = [process.cwd(), process.env.PATH];
+		const restore = setAside();
 		process.chdir(push);
 		process.env.PATH = `${bin}:${process.env.PATH}`;
 		try {
@@ -41,16 +52,18 @@ describe("carry's fetches", () => {
 			// Both fetches, the origin's and the bundle's, carried it.
 			expect(readFileSync(log, "utf8").split("\n").filter(Boolean)).toEqual([header("ghs_read"), header("ghs_read")]);
 			expect(process.env.GH_TOKEN).toBeUndefined();
-			expect(process.env.GIT_CONFIG_VALUE_0).toBe(was[2] as string | undefined);
+			expect(process.env.GIT_CONFIG_VALUE_0).toBeUndefined();
 		} finally {
 			process.chdir(was[0] as string);
 			process.env.PATH = was[1];
+			restore();
 		}
 	});
 
 	test("with no token handed hold none", () => {
 		const { push, bin, log, under } = stand();
 		const was = [process.cwd(), process.env.PATH];
+		const restore = setAside();
 		process.chdir(push);
 		process.env.PATH = `${bin}:${process.env.PATH}`;
 		try {
@@ -59,6 +72,7 @@ describe("carry's fetches", () => {
 		} finally {
 			process.chdir(was[0] as string);
 			process.env.PATH = was[1];
+			restore();
 		}
 	});
 });
