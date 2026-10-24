@@ -6,10 +6,37 @@
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { emptyDir } from "./diff-budget.fixture.ts";
+import { MARK } from "./question-gate.ts";
 
 export const TOKEN = "ntn_secret0value";
 export const USER = "0123456789abcdef0123456789abcdef";
 export const CARD = "aaaabbbbccccddddeeeeffff00001111";
+
+/** The integration's own id, as the stand-in's `GET /v1/users/me` answers it. */
+export const BOT = "ffffeeee-dddd-cccc-bbbb-aaaa99998888";
+
+/** A stand-in Notion API: `state.seen`, every call it took; `state.me`, the status of the id read; `state.pending`, whether the card already holds an unanswered question. */
+export function standIn() {
+	const state = { me: 200, pending: false, seen: [] as string[] };
+	const server = Bun.serve({
+		port: 0,
+		fetch(req) {
+			const url = new URL(req.url);
+			state.seen.push(`${req.method} ${url.pathname}`);
+			if (url.pathname === "/v1/users/me") return Response.json({ object: "user", type: "bot", id: BOT }, { status: state.me });
+			if (url.pathname.startsWith("/v1/pages/"))
+				return Response.json({
+					parent: { type: "data_source_id", data_source_id: "ds1" },
+					properties: { Pointer: { rich_text: [{ plain_text: "openspec/changes/demo/" }] } },
+				});
+			if (url.pathname.startsWith("/v1/data_sources/")) return Response.json({ title: [{ plain_text: "Demo" }] });
+			const asked = { id: "c1", created_by: { id: BOT }, created_time: "2026-10-24T00:00:00Z", rich_text: [{ plain_text: `${MARK} Ship?` }] };
+			if (req.method === "GET") return Response.json({ results: state.pending ? [asked] : [], has_more: false, next_cursor: null });
+			return Response.json({});
+		},
+	});
+	return { state, server };
+}
 
 /** A runner home holding each settings file named, at `mode`. */
 export function configured(mode = 0o600, ...names: string[]) {
