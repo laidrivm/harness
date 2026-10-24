@@ -239,7 +239,8 @@ then does, so the next pass takes it first.
 #### Scenario: A candidate with no answer
 
 - **WHEN** an answer candidate's card holds, after its last question, neither
-  the user's comment while its `Assign` holds the user nor a `harness-answer`
+  the user's comment opening with neither `harness-question` nor
+  `harness-answer` while its `Assign` holds the user, nor a `harness-answer`
   by the integration's own id
 - **THEN** the pick session passes over it
 
@@ -500,7 +501,10 @@ the board `harness.board` names with a `Pointer` that is wholly the carried
 change's directory, and no question waits unanswered there. It SHALL then
 set `Assign` to the user alone, unless the triage answered the question
 (*The runner has a stage session's question triaged before it posts it*), and
-print one line saying what it did. The pass's outcome SHALL stay the goal check's.
+print one line saying what it did. The pass's outcome SHALL stay the goal check's,
+except that a `goal open` behind a question posted or already waiting on the
+card SHALL end `waiting` (*A pass carries one step unattended and records the
+check's verdict*).
 
 #### Scenario: A question posted
 
@@ -510,7 +514,8 @@ print one line saying what it did. The pass's outcome SHALL stay the goal check'
   with the mark and is at most 1500 characters long
 - **THEN** the runner posts the text as a page-level comment from the
   integration, sets the card's `Assign` to the user alone, prints that it did
-  both, and the pass ends as the goal check says
+  both, and the pass ends `waiting` when the goal check reads `goal open`,
+  and as the goal check says otherwise
 
 #### Scenario: Where the question ends
 
@@ -604,7 +609,8 @@ the same checks, and post nothing when one fails, before posting the
 question on every other ending too. Any other source SHALL be one
 that does not hold. On any
 other ending the runner SHALL post the question as that requirement fixes.
-The pass's outcome SHALL stay the goal check's.
+The pass's outcome SHALL stay the goal check's, with the same `waiting`
+exception that requirement fixes, a question the triage answered included.
 
 #### Scenario: An answer already written
 
