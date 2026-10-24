@@ -24,6 +24,11 @@ describe("the image's users", () => {
 		expect(new Set(uids).size).toBe(3);
 	});
 
+	test("runner is in no group of agent's, since every command in agent's clones goes through the launcher", () => {
+		expect(dockerfile).not.toMatch(/usermod[^\n]*\bagent\b[^\n]*\brunner\b/);
+		expect(dockerfile).not.toMatch(/useradd[^\n]*(--groups|-G)[^\n]*\bagent\b/);
+	});
+
 	test("sudoers holds exactly the two rules Three users names, and the image installs it read-only for root", () => {
 		expect(rules).toEqual(["runner ALL=(agent) NOPASSWD: /opt/orchestrator/as-agent", "runner ALL=(keyholder) NOPASSWD: /opt/orchestrator/mint"]);
 		expect(dockerfile).toContain("COPY --chmod=0440 runner/sudoers /etc/sudoers.d/orchestrator");
