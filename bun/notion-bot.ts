@@ -175,19 +175,23 @@ export function runs(text: string): Out[] {
 	const out: Out[] = [];
 	// `*` italic opens on a non-space, so a `* ` bullet stays plain; `_` italic needs a non-word edge, so snake_case does.
 	const token = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*\*|(?<!\w)_[^_\s][^_\n]*_(?!\w)|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\))/;
-	text.replace(/^#{1,6} +(.+)$/gm, "**$1**").split(token).forEach((part, i) => {
-		// split puts each captured token at an odd index
-		const kind = i % 2 === 0 ? undefined : part[0] === "`" ? "code" : part.startsWith("**") ? "bold" : part[0] === "[" ? "link" : "italic";
-		const link = kind === "link" ? /^\[(.+)\]\((.+)\)$/.exec(part) : null;
-		const cut = kind === "bold" ? 2 : kind ? 1 : 0;
-		const content = link ? link[1] : part.slice(cut, part.length - cut);
-		for (const piece of content.match(/[\s\S]{1,2000}/g) ?? [])
-			out.push(
-				link
-					? { type: "text", text: { content: piece, link: { url: link[2] } } }
-					: { type: "text", text: { content: piece }, ...(kind ? { annotations: { [kind]: true } } : {}) },
-			);
-	});
+	// a heading line is parsed like any text and its runs made bold: wrapping it in `**` breaks on an inner `*`
+	text.split(/^#{1,6} +(.+)$/m).forEach((line, h) =>
+		line.split(token).forEach((part, i) => {
+			// split puts each captured part at an odd index
+			const kind = i % 2 === 0 ? undefined : part[0] === "`" ? "code" : part.startsWith("**") ? "bold" : part[0] === "[" ? "link" : "italic";
+			const link = kind === "link" ? /^\[(.+)\]\((.+)\)$/.exec(part) : null;
+			const cut = kind === "bold" ? 2 : kind ? 1 : 0;
+			const content = link ? link[1] : part.slice(cut, part.length - cut);
+			const marks = { ...(kind && kind !== "link" ? { [kind]: true } : {}), ...(h % 2 ? { bold: true } : {}) };
+			for (const piece of content.match(/[\s\S]{1,2000}/g) ?? [])
+				out.push({
+					type: "text",
+					text: link ? { content: piece, link: { url: link[2] } } : { content: piece },
+					...(Object.keys(marks).length ? { annotations: marks } : {}),
+				});
+		}),
+	);
 	return out;
 }
 
