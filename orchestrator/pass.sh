@@ -173,7 +173,7 @@ if [ -n "${PASS_AS_AGENT-}" ]; then
 	reset "$harness"
 	# A `contents` read token for the fetch alone, so a private repository answers it: it reaches git as
 	# environment variables of that one command, never an argument, and the pass's environment never holds it.
-	# shellcheck disable=SC2086 # the mint command is words, split as `minted()` splits it
+	# The mint command is unquoted on purpose: it is words, split as `minted()` splits them.
 	token=$($HARNESS_GITHUB_APP_MINT "$owner/$repo" contents=read) && [ -n "$token" ] ||
 		halt "the mint command could not mint a contents read token for $owner/$repo"
 	header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$token" | base64 -w0)"
