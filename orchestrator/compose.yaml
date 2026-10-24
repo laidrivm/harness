@@ -77,8 +77,17 @@ services:
       - agent_home:/home/agent
       - runner_home:/home/runner
       # The App's id and repository list, root's, and the key holder's own directory with the App's key (README step 11).
-      - ./app:/etc/orchestrator/app:ro
-      - ./app-key:/var/lib/orchestrator-key:ro
+      # Long form, so a missing directory fails `up` instead of being created empty and root's.
+      - type: bind
+        source: ./app
+        target: /etc/orchestrator/app
+        read_only: true
+        bind: { create_host_path: false }
+      - type: bind
+        source: ./app-key
+        target: /var/lib/orchestrator-key
+        read_only: true
+        bind: { create_host_path: false }
 
   cloudflared:
     # moved by hand — nothing updates this pin

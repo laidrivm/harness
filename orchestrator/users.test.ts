@@ -89,10 +89,15 @@ describe("the host's wiring", () => {
 		expect(command).toContain(`HARNESS_GITHUB_APP_ID=$(cat ${FILES.id} 2>/dev/null)`);
 	});
 
-	test("compose mounts the App's root-owned directory and the key holder's read-only, and git ignores both", () => {
-		const runner = (Bun.YAML.parse(read("compose.yaml")) as { services: Record<string, { volumes?: string[] }> }).services.runner;
-		expect(runner.volumes).toContain(`./app:${dirname(FILES.id)}:ro`);
-		expect(runner.volumes).toContain(`./app-key:${dirname(FILES.key)}:ro`);
+	test("compose mounts the App's root-owned directory and the key holder's read-only, never creating a missing one, and git ignores both", () => {
+		type Mount = string | { type?: string; source?: string; target?: string; read_only?: boolean; bind?: { create_host_path?: boolean } };
+		const services = (Bun.YAML.parse(read("compose.yaml")) as { services: Record<string, { volumes?: Mount[] }> }).services;
+		const binds = services.runner.volumes?.filter((m) => typeof m !== "string") ?? [];
+		for (const [source, target] of [["./app", dirname(FILES.id)], ["./app-key", dirname(FILES.key)]])
+			expect(binds).toContainEqual({ type: "bind", source, target, read_only: true, bind: { create_host_path: false } });
+		// A short-form host path makes Docker create a missing source as an empty root-owned directory.
+		for (const [name, service] of Object.entries(services))
+			for (const m of service.volumes ?? []) if (typeof m === "string") expect(`${name}: ${m}`).not.toMatch(/: [./]/);
 		const gitignore = readFileSync(join(import.meta.dir, "../.gitignore"), "utf8").split("\n");
 		for (const dir of ["orchestrator/app", "orchestrator/app-key"]) expect(gitignore).toContain(dir);
 	});
