@@ -163,19 +163,35 @@ async function discussion(call: Call, card: string): Promise<Comment[]> {
 	return comments;
 }
 
+type Out = { type: "text"; text: { content: string }; annotations?: { code?: true; bold?: true; italic?: true } };
+
+/**
+ * `text`'s markdown as rich_text runs, since a comment renders no markdown:
+ * inline code, bold and italic become annotations, a heading line a bold one,
+ * the rest stays plain, in runs of the 2000 characters Notion takes in one.
+ */
+export function runs(text: string): Out[] {
+	const out: Out[] = [];
+	// An italic opens on a non-space, so a `* ` list bullet stays plain text.
+	const parts = text.replace(/^#{1,6} +(.+)$/gm, "**$1**").split(/(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*\*)/);
+	parts.forEach((part, i) => {
+		// split puts each captured token at an odd index
+		const kind = i % 2 === 0 ? undefined : part.startsWith("`") ? "code" : part.startsWith("**") ? "bold" : "italic";
+		const cut = kind === "bold" ? 2 : kind ? 1 : 0;
+		for (const piece of part.slice(cut, part.length - cut).match(/[\s\S]{1,2000}/g) ?? [])
+			out.push({ type: "text", text: { content: piece }, ...(kind ? { annotations: { [kind]: true } } : {}) });
+	});
+	return out;
+}
+
 /**
  * REST step 4: the page-level comment, a code-annotated run of `mark`, which
- * `text` opens with backticked, then the rest of the text, in runs of the 2000
- * characters Notion takes in one.
+ * `text` opens with backticked, then the rest of the text as `runs`.
  */
 export function comment(call: Call, card: string, text: string, mark = "harness-question"): Promise<unknown> {
-	const rest = text.slice(mark.length + 2).match(/[\s\S]{1,2000}/g) ?? [];
 	return call(mark === "harness-answer" ? "the answer's post" : "the comment's post", "/v1/comments", "POST", {
 		parent: { page_id: card },
-		rich_text: [
-			{ type: "text", text: { content: mark }, annotations: { code: true } },
-			...rest.map((content) => ({ type: "text", text: { content } })),
-		],
+		rich_text: [{ type: "text", text: { content: mark }, annotations: { code: true } }, ...runs(text.slice(mark.length + 2))],
 	});
 }
 
