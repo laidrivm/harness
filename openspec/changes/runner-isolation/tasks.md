@@ -201,7 +201,7 @@ left open carry here.
       the mint, held by those processes alone, before a private repository
       joins the loop; a case each that the fetch's environment holds the
       token and the pass's does not. Verify with those cases and `bun test`
-- [ ] 6.2 **User decision.** Settle `runner`'s membership of group `agent`:
+- [x] 6.2 **User decision, settled 2026-10-24: drop the membership.** Settle `runner`'s membership of group `agent`:
       `vps-board-loop` added it so `runner` could stat `agent`'s 0750 clones,
       but design.md says `runner` never enters `agent`'s home, and group 5 now
       routes the clone's stat and the session's kill through the launcher.
