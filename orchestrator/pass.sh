@@ -23,7 +23,9 @@
 # an empty root-owned directory.
 #
 # Exits 2 for a name that is no clone, 3 while the stop file exists, 0 while
-# another pass holds the repository's lock, and otherwise the pass's status.
+# another pass holds the repository's lock, and otherwise the pass's status. A
+# pass waiting on the user's answer exits 0 (`board-loop: waiting`), so it
+# writes no stop file: the question on its card is what waits.
 #
 # CLAUDECODE is handed on, never checked here: the runner refuses it, and a
 # second copy of that check would drift from the runner's.

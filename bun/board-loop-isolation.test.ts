@@ -2,11 +2,16 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
-import { advance, change, clone, lowered, out, run, type Stubs, trusting } from "./board-loop.fixture.ts";
+import { advance, change, clone, lowered, out, run, runAsync, type Stubs, trusting } from "./board-loop.fixture.ts";
+import { configured, standIn } from "./notion-bot.fixture.ts";
 
 /** A pass on the host: in a push clone of its own, every command in the session's clone through the launcher. */
 
-afterAll(cleanup);
+const notion = standIn();
+afterAll(() => {
+	notion.server.stop(true);
+	cleanup();
+});
 
 /** A session's clone and a push clone of the same `origin`, its hooks pointed at an empty directory as `pass.sh` points them. */
 function pair(tree = change("demo")) {
@@ -17,9 +22,12 @@ function pair(tree = change("demo")) {
 	return { dir, push, origin };
 }
 
-/** One pass in `push`, with the stand-in launcher and `dir` as the session's clone. */
-const launched = (dir: string, push: string, s: Stubs = {}, claudeJson = trusting(dir)) =>
-	run(push, [], s, { env: { HARNESS_AS_AGENT: "as-agent", HARNESS_CLONE: dir }, claudeJson });
+/** The launcher and `dir` as the session's clone, as the host's forced command sets them. */
+const host = (dir: string) => ({ HARNESS_AS_AGENT: "as-agent", HARNESS_CLONE: dir });
+
+/** One pass in `push`, with the stand-in launcher, `dir` as the session's clone and the runner's Notion settings. */
+const launched = (dir: string, push: string, s: Stubs = {}, claudeJson = trusting(dir), entry?: string) =>
+	runAsync(push, s, { env: { ...host(dir), HARNESS_NOTION_API_URL: notion.server.url.origin }, claudeJson, home: configured(), entry });
 
 /** Each stub call: who ran it, where, and the call itself. */
 const calls = (where: string) =>
@@ -34,9 +42,9 @@ const calls = (where: string) =>
 describe("the session's clone", () => {
 	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
 	// spec: orchestrator/a-hook-or-a-config-command-in-the-session-s-clone
-	test("every command run in it, or naming it, was started through the launcher", () => {
+	test("every command run in it, or naming it, was started through the launcher", async () => {
 		const { dir, push } = pair();
-		const r = launched(dir, push);
+		const r = await launched(dir, push);
 		const paths = [dir, realpathSync(dir)];
 		const touching = calls(r.where).filter(
 			({ cwd, call }) => !call.startsWith("as-agent ") && paths.some((p) => cwd === p || call.includes(p)),
@@ -48,10 +56,10 @@ describe("the session's clone", () => {
 	});
 
 	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
-	test("the trust check reads the session's clone, so an untrusted push clone does not refuse", () => {
+	test("the trust check reads the session's clone, so an untrusted push clone does not refuse", async () => {
 		const { dir, push } = pair();
-		expect(launched(dir, push).text).not.toContain("not a trusted workspace");
-		const untrusted = launched(dir, push, {}, trusting(push));
+		expect((await launched(dir, push)).text).not.toContain("not a trusted workspace");
+		const untrusted = await launched(dir, push, {}, trusting(push));
 		expect(untrusted.last).toBe(
 			`board-loop: refused — not a trusted workspace — run claude once in ${realpathSync(dir)}, accept the trust dialog and /exit`,
 		);
@@ -65,12 +73,30 @@ describe("the session's clone", () => {
 		expect(r.calls).not.toContain("as-agent");
 	});
 
+	// spec: board-loop/no-settings-file-on-the-host
+	// A session there keeps notion-create-comment, and the host's Notion MCP is signed in as the user.
+	test("a launcher with no Notion integration configured refuses before any session, naming the file", () => {
+		const { dir, push } = pair();
+		const r = run(push, [], {}, { env: host(dir), claudeJson: trusting(dir) });
+		expect(r.last).toStartWith("board-loop: refused — on the host the runner posts each question from the Notion integration, and ");
+		expect(r.last).toEndWith("/.config/harness/notion-bot.json is missing");
+		expect(r.calls).not.toContain("claude ");
+	});
+
+	// spec: board-loop/no-settings-file-on-the-host
+	test("a launcher with nothing to take still refuses without the Notion integration, rather than idling", () => {
+		const { dir, push } = pair({});
+		const r = run(push, [], {}, { env: host(dir), claudeJson: trusting(dir) });
+		expect(r.last).toEndWith("/.config/harness/notion-bot.json is missing");
+		expect(r.last).not.toContain("idle");
+	});
+
 	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
-	test("a session past its limit is ended through the launcher, though every signal of the runner's own is refused", () => {
+	test("a session past its limit is ended through the launcher, though every signal of the runner's own is refused", async () => {
 		const { dir, push } = pair();
 		// As the kernel refuses `runner` for `agent`'s group: no signal of the runner's reaches it.
 		const across = `() => { throw Object.assign(new Error("EPERM"), { code: "EPERM" }); }`;
-		const r = run(push, [], { pickSleep: 30 }, { env: { HARNESS_AS_AGENT: "as-agent", HARNESS_CLONE: dir }, claudeJson: trusting(dir), entry: lowered(1000, across) });
+		const r = await launched(dir, push, { pickSleep: 30 }, trusting(dir), lowered(1000, across));
 		expect(r.last).toStartWith("board-loop: timeout — the pick session ran past");
 		expect(r.last).not.toContain("outlived");
 		expect(r.calls).toMatch(/as-agent \/ sh -c export LC_ALL=C; e=\$\(kill -\$0 "\$1" 2>&1 >\/dev\/null\) .* exit 4 TERM -\d+/);
@@ -79,10 +105,10 @@ describe("the session's clone", () => {
 
 describe("the harness the runner runs", () => {
 	// spec: orchestrator/a-session-edits-the-harness-copy-in-its-clone
-	test("an edited goal check in the session's clone is never run; the runner's own copy judges", () => {
+	test("an edited goal check in the session's clone is never run; the runner's own copy judges", async () => {
 		const { dir, push } = pair();
 		// A commit, so the step has a tip to carry into the push clone and judge there.
-		const r = launched(dir, push, { tamper: true, commits: true });
+		const r = await launched(dir, push, { tamper: true, commits: true });
 		expect(r.last).not.toContain("goal met");
 		const judged = calls(r.where).filter(({ call }) => call.startsWith("bun ") && !call.startsWith("bun install"));
 		expect(judged.length).toBeGreaterThan(0);
@@ -94,9 +120,9 @@ describe("the harness the runner runs", () => {
 
 	// spec: orchestrator/a-preload-in-the-pushed-tree
 	// The flags' effect on bun 1.4.2 is task 1.1's probe; `pass.sh` starts the board loop itself with them.
-	test("every bun the runner starts carries the flags that keep a tree's bunfig.toml and .env out", () => {
+	test("every bun the runner starts carries the flags that keep a tree's bunfig.toml and .env out", async () => {
 		const { dir, push } = pair();
-		const ran = calls(launched(dir, push, { commits: true }).where).filter(({ who, call }) => who === "runner" && call.startsWith("bun "));
+		const ran = calls((await launched(dir, push, { commits: true })).where).filter(({ who, call }) => who === "runner" && call.startsWith("bun "));
 		expect(ran.length).toBeGreaterThan(0);
 		for (const { call } of ran) expect(call).toStartWith("bun --config=/dev/null --no-env-file ");
 	});
@@ -107,9 +133,9 @@ describe("the harness the runner runs", () => {
 		const rev = (where: string, ref: string) => out(where, "rev-parse", ref);
 
 		// spec: orchestrator/a-commit-with-a-passing-pre-pr-record
-		test("pushes exactly the bundle's tip, from the push clone, checked out on the step branch first", () => {
+		test("pushes exactly the bundle's tip, from the push clone, checked out on the step branch first", async () => {
 			const { dir, push, origin } = pair();
-			const r = launched(dir, push, { commits: true });
+			const r = await launched(dir, push, { commits: true });
 			const tip = rev(dir, "feat/demo");
 			expect(rev(origin, "feat/demo")).toBe(tip);
 			expect(r.beforeHead).toBe(`feat/demo\n${tip}\n`);
@@ -121,31 +147,31 @@ describe("the harness the runner runs", () => {
 			expect(order.indexOf("agent git bundle create")).toBeLessThan(order.lastIndexOf("runner git fetch -q"));
 		});
 
-		test("a bundle whose base is newer than the push clone's origin/main imports after the push clone's fetch", () => {
+		test("a bundle whose base is newer than the push clone's origin/main imports after the push clone's fetch", async () => {
 			const { dir, push, origin } = pair();
 			advance(origin);
-			launched(dir, push, { commits: true });
+			await launched(dir, push, { commits: true });
 			expect(rev(origin, "feat/demo")).toBe(rev(dir, "feat/demo"));
 		});
 
 		// spec: orchestrator/a-commit-with-no-pre-pr-record
-		test("a tip the before-push check finds no record of pushes nothing", () => {
+		test("a tip the before-push check finds no record of pushes nothing", async () => {
 			const { dir, push, origin } = pair();
 			const missing = "goal open: apply demo step 1 at abc1234, before the push — no passing pre-PR run record for abc1234";
-			const r = launched(dir, push, { commits: true, beforePush: missing });
+			const r = await launched(dir, push, { commits: true, beforePush: missing });
 			expect(r.last).toBe(`board-loop: open — apply demo step 1: ${missing}`);
 			expect(r.calls).not.toContain("git push");
 			expect(Bun.spawnSync(["git", "rev-parse", "--verify", "-q", "feat/demo"], { cwd: origin }).exitCode).not.toBe(0);
 		});
 
-		test("a hook left in the push clone's .git/hooks never runs", () => {
+		test("a hook left in the push clone's .git/hooks never runs", async () => {
 			const { dir, push, origin } = pair();
 			const marker = join(emptyDir("board-loop-marker-"), "hooked");
 			for (const name of ["pre-push", "post-checkout", "reference-transaction"]) {
 				writeFileSync(join(push, ".git/hooks", name), `#!/bin/sh\ntouch '${marker}'\n`);
 				chmodSync(join(push, ".git/hooks", name), 0o755);
 			}
-			launched(dir, push, { commits: true });
+			await launched(dir, push, { commits: true });
 			expect(rev(origin, "feat/demo")).toBe(rev(dir, "feat/demo"));
 			expect(existsSync(marker)).toBe(false);
 		});

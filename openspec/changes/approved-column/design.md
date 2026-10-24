@@ -52,7 +52,10 @@ option order, and no option retires. `mellon`'s board already exists beside
 the other two, so it takes the list in this change. The apply session adds the
 option to the three boards' `Status` select through the connector's schema
 update and reads each board back (item 10). `approved` is hand-moved, so
-`bun/board-state.ts` never reports it (item 11).
+`bun/board-state.ts` never reports it (item 11). Every write the loop makes
+to Notion goes out under the bot integration's name, never the user's (item
+12): the schema write of task 1.3 waits for the change that routes card
+writes through the bot, so this change is applied only after that one lands.
 
 ## Risks / Trade-offs
 
