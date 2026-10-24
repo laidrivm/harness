@@ -82,17 +82,17 @@ describe.each([
 /**
  * A session through a stand-in launcher that enters the clone as `as-agent`
  * does, whose stub `claude` leaves `sleep` running and removes the clone;
- * the runner's own signals are refused, as across users. `refuse` makes the
- * launcher fail every `sh` it is asked to run.
+ * the runner's own signals are refused, as across users. `guard` is a line
+ * the launcher runs first, to fail or stall every `sh` it is asked to run.
  */
-function abandoned(refuse = false) {
+function abandoned(guard = "") {
 	const dir = emptyDir("board-loop-gone-");
 	const clone = join(dir, "clone");
 	mkdirSync(clone);
 	const pidfile = join(dir, "left-pid");
 	writeFileSync(join(dir, "claude"), `#!/bin/sh\nsleep 30 >/dev/null 2>&1 &\necho $! > '${pidfile}'\ncd /\nrm -rf '${clone}'\n`);
 	const launcher = join(dir, "as-agent");
-	writeFileSync(launcher, `#!/bin/sh\n${refuse ? '[ "$2" = sh ] && exit 1\n' : ""}cd "$1" || exit 2\nshift\nexec "$@"\n`);
+	writeFileSync(launcher, `#!/bin/sh\n${guard}cd "$1" || exit 2\nshift\nexec "$@"\n`);
 	for (const file of ["claude", "as-agent"]) chmodSync(join(dir, file), 0o755);
 	const entry = join(dir, "entry.ts");
 	const across = `() => { throw Object.assign(new Error("EPERM"), { code: "EPERM" }); }`;
@@ -100,7 +100,8 @@ function abandoned(refuse = false) {
 		entry,
 		`import { session } from ${JSON.stringify(module)};\nconst r = await session("PICK", 60_000, ${across}, false, {}, [], [${JSON.stringify(launcher)}, ${JSON.stringify(clone)}]);\nconsole.log(JSON.stringify({ left: r.left ?? null }));\n`,
 	);
-	const run = Bun.spawnSync([process.execPath, entry], { cwd: dir, env: { PATH: `${dir}:/usr/bin:/bin`, HOME: emptyDir("board-loop-home-") } });
+	// Bounded: bun cannot fire a test's timeout while this call blocks.
+	const run = Bun.spawnSync([process.execPath, entry], { cwd: dir, env: { PATH: `${dir}:/usr/bin:/bin`, HOME: emptyDir("board-loop-home-") }, timeout: 50_000 });
 	const left = Number(readFileSync(pidfile, "utf8"));
 	return { code: run.exitCode, left: JSON.parse(run.stdout.toString()).left, child: left };
 }
@@ -114,13 +115,24 @@ describe("a session's group, signalled through the launcher", () => {
 
 	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
 	test("a launcher that fails reads as a group still alive, never as one gone, so the child is named as left", () => {
-		const r = abandoned(true);
+		const r = abandoned('[ "$2" = sh ] && exit 1\n');
 		try {
 			expect([r.code, r.left === null, ended(r.child)]).toEqual([0, false, false]);
 		} finally {
 			process.kill(r.child, "SIGKILL");
 		}
 	}, 40_000);
+
+	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
+	test("a launcher that stalls is cut off and read as failed, so the session still returns, naming the child as left", () => {
+		const start = Date.now();
+		const r = abandoned('[ "$2" = sh ] && exec sleep 120\n');
+		try {
+			expect([r.code, r.left === null, ended(r.child), Date.now() - start < 35_000]).toEqual([0, false, false, true]);
+		} finally {
+			process.kill(r.child, "SIGKILL");
+		}
+	}, 60_000);
 });
 
 describe("the stage session's id", () => {

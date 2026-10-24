@@ -44,7 +44,8 @@ const through =
 		// From `/`, not the clone: a session may remove its clone while a child of it runs on.
 		const at = [...under.slice(0, -1), "/"];
 		// No `--`: dash, the image's sh, reads it after a signal as a pid and fails.
-		const run = Bun.spawnSync([...at, "sh", "-c", 'kill -$0 "$1" 2>/dev/null || exit 3', name, String(pid)], { stdio: ["ignore", "ignore", "ignore"] });
+		// Bounded: a stalled sudo would block the loop, and the session's own timers with it; cut off, it reads as ELAUNCH.
+		const run = Bun.spawnSync([...at, "sh", "-c", 'kill -$0 "$1" 2>/dev/null || exit 3', name, String(pid)], { stdio: ["ignore", "ignore", "ignore"], timeout: 3_000 });
 		if (run.exitCode === 3) throw Object.assign(new Error(`kill ${name} ${pid} failed`), { code: "ESRCH" });
 		if (run.exitCode !== 0) throw Object.assign(new Error(`the launcher failed before kill ${name} ${pid}`), { code: "ELAUNCH" });
 	};
@@ -118,7 +119,9 @@ export async function session(
 		if (alive()) {
 			group("SIGTERM");
 			const outright = setTimeout(() => group("SIGKILL"), 5_000);
-			for (let wait = 0; wait < 100 && alive(); wait++) await Bun.sleep(100);
+			// By the clock, not a count: each check through the launcher may take up to its own bound.
+			const until = Date.now() + 10_000;
+			while (Date.now() < until && alive()) await Bun.sleep(100);
 			clearTimeout(outright);
 			if (alive()) left = run.pid;
 		}

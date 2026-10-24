@@ -119,8 +119,10 @@ command stays in the process group the runner started; only the root-owned
 sudo is then outside `agent`'s reach, and it ends with its command. The signal
 runs from `/`, not the clone, since a session may remove its clone while a
 child of it runs on; only a refused `kill` reads as a group gone, and a
-launcher that fails before `kill` runs reads as one still alive, so the pass
-names it as left rather than judging. `pass.sh` checks that the named clone is
+launcher that fails before `kill` runs, or stalls past its 3 s bound, reads
+as one still alive, so the pass names it as left rather than judging; the
+10 s wait for the group is kept by the clock, since each check may take that
+bound. `pass.sh` checks that the named clone is
 one through the launcher too.
 
 On the host the forced command hands `pass.sh` the launcher, the mint command
