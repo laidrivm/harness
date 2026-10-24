@@ -4,10 +4,26 @@
  * on Ctrl-C, or after it exits on its own.
  */
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 export type Kill = (pid: number, signal: NodeJS.Signals | 0) => void | Promise<void>;
+
+/**
+ * Whether Claude Code's config trusts `dir`, keyed by its real path. The path
+ * itself only: crediting a trusted parent could pass where Claude Code does not.
+ * `read` is the config as the session's user read it, on the host.
+ */
+export function trusted(dir: string, read?: string): boolean {
+	try {
+		// Where Claude Code keeps it: `CLAUDE_CONFIG_DIR` when set, the home otherwise.
+		const home = process.env.CLAUDE_CONFIG_DIR || homedir();
+		const config = JSON.parse(read ?? readFileSync(join(home, ".claude.json"), "utf8"));
+		return config?.projects?.[dir]?.hasTrustDialogAccepted === true;
+	} catch {
+		return false;
+	}
+}
 
 /**
  * The variables a session gets of the runner's, and no others: an allowlist,

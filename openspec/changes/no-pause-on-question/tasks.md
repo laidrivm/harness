@@ -3,7 +3,7 @@
 - [x] 1.1 Export from `bun/notion-bot.ts` the two prefixes `post()` prints for
       a posted question and for one that already waits, and use them in
       `post()`; in `bun/board-loop.ts` add the `waiting` outcome: when the
-      goal check does not read `goal met` and the printed question line starts
+      goal check reads `goal open` and the printed question line starts
       with the posted prefix or names the waiting one, record `waiting`,
       print the card and exit 0. Cases in `bun/board-loop-question.test.ts`:
       posted → `waiting`, exit 0; already waits → `waiting`; not posted for

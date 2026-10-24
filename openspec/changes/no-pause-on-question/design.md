@@ -24,7 +24,7 @@ subscription; questions posted by anything but the runner.
 
 ### A `waiting` outcome, exit 0
 
-The pass records `waiting` when the goal check does not read `goal met` and
+The pass records `waiting` when the goal check reads `goal open` and
 the question line `post()` printed starts with `question: posted on`, or
 names `a question already waits on` the card. It prints
 `board-loop: waiting — <change> step <n>: question on <card>` and exits 0.

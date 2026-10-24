@@ -26,11 +26,11 @@
  * card) alone, so a shell loop stops where a person is needed.
  */
 import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { pickPrompt, prompt, type Step } from "./board-loop-prompt.ts";
 import { publish, sh } from "./board-loop-push.ts";
-import { type Kill, session } from "./board-loop-session.ts";
+import { type Kill, session, trusted } from "./board-loop-session.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
 import { ALREADY, asked, own, POSTED, post, type Settings, settings } from "./notion-bot.ts";
@@ -46,22 +46,6 @@ export const LIMIT = 60 * 60 * 1000;
 const DEFAULT = "main";
 
 type Outcome = "met" | "open" | "waiting" | "timeout" | "idle" | "refused";
-
-/**
- * Whether Claude Code's config trusts `dir`, keyed by its real path. The path
- * itself only: crediting a trusted parent could pass where Claude Code does not.
- * `read` is the config as the session's user read it, on the host.
- */
-function trusted(dir: string, read?: string): boolean {
-	try {
-		// Where Claude Code keeps it: `CLAUDE_CONFIG_DIR` when set, the home otherwise.
-		const home = process.env.CLAUDE_CONFIG_DIR || homedir();
-		const config = JSON.parse(read ?? readFileSync(join(home, ".claude.json"), "utf8"));
-		return config?.projects?.[dir]?.hasTrustDialogAccepted === true;
-	} catch {
-		return false;
-	}
-}
 
 /** Prints the pass's one line and records it. Recording never changes it. */
 function end(outcome: Outcome, detail: string): number {

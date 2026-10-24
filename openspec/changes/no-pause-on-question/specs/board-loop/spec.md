@@ -23,7 +23,7 @@ pass.
 
 #### Scenario: The step waits on the user's answer
 
-- **WHEN** the check does not read `goal met`, and the runner posted the
+- **WHEN** the check reads `goal open`, and the runner posted the
   session's question on the carried card or found a question already waiting
   there
 - **THEN** the pass records `waiting`, prints the change, the step and the
