@@ -163,23 +163,30 @@ async function discussion(call: Call, card: string): Promise<Comment[]> {
 	return comments;
 }
 
-type Out = { type: "text"; text: { content: string }; annotations?: { code?: true; bold?: true; italic?: true } };
+type Out = { type: "text"; text: { content: string; link?: { url: string } }; annotations?: { code?: true; bold?: true; italic?: true } };
 
 /**
  * `text`'s markdown as rich_text runs, since a comment renders no markdown:
- * inline code, bold and italic become annotations, a heading line a bold one,
- * the rest stays plain, in runs of the 2000 characters Notion takes in one.
+ * inline code, bold and italic become annotations, an http(s) link a linked
+ * run, a heading line a bold one, the rest stays plain, in runs of the 2000
+ * characters Notion takes in one.
  */
 export function runs(text: string): Out[] {
 	const out: Out[] = [];
-	// An italic opens on a non-space, so a `* ` list bullet stays plain text.
-	const parts = text.replace(/^#{1,6} +(.+)$/gm, "**$1**").split(/(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*\*)/);
-	parts.forEach((part, i) => {
+	// `*` italic opens on a non-space, so a `* ` bullet stays plain; `_` italic needs a non-word edge, so snake_case does.
+	const token = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*\*|(?<!\w)_[^_\s][^_\n]*_(?!\w)|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\))/;
+	text.replace(/^#{1,6} +(.+)$/gm, "**$1**").split(token).forEach((part, i) => {
 		// split puts each captured token at an odd index
-		const kind = i % 2 === 0 ? undefined : part.startsWith("`") ? "code" : part.startsWith("**") ? "bold" : "italic";
+		const kind = i % 2 === 0 ? undefined : part[0] === "`" ? "code" : part.startsWith("**") ? "bold" : part[0] === "[" ? "link" : "italic";
+		const link = kind === "link" ? /^\[(.+)\]\((.+)\)$/.exec(part) : null;
 		const cut = kind === "bold" ? 2 : kind ? 1 : 0;
-		for (const piece of part.slice(cut, part.length - cut).match(/[\s\S]{1,2000}/g) ?? [])
-			out.push({ type: "text", text: { content: piece }, ...(kind ? { annotations: { [kind]: true } } : {}) });
+		const content = link ? link[1] : part.slice(cut, part.length - cut);
+		for (const piece of content.match(/[\s\S]{1,2000}/g) ?? [])
+			out.push(
+				link
+					? { type: "text", text: { content: piece, link: { url: link[2] } } }
+					: { type: "text", text: { content: piece }, ...(kind ? { annotations: { [kind]: true } } : {}) },
+			);
 	});
 	return out;
 }
