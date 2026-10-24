@@ -163,19 +163,46 @@ async function discussion(call: Call, card: string): Promise<Comment[]> {
 	return comments;
 }
 
+type Out = { type: "text"; text: { content: string; link?: { url: string } }; annotations?: { code?: true; bold?: true; italic?: true } };
+
 /**
- * REST step 4: the page-level comment, a code-annotated run of `mark`, which
- * `text` opens with backticked, then the rest of the text, in runs of the 2000
+ * `text`'s markdown as rich_text runs, since a comment renders no markdown:
+ * inline code, bold and italic become annotations, an http(s) link a linked
+ * run, a heading line a bold one, the rest stays plain, in runs of the 2000
  * characters Notion takes in one.
  */
+export function runs(text: string): Out[] {
+	const out: Out[] = [];
+	// `*` italic opens on a non-space, so a `* ` bullet stays plain; `_` italic needs a non-word edge, so snake_case does.
+	const token = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*\*|(?<!\w)_[^_\s][^_\n]*_(?!\w)|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\))/;
+	// a heading line is parsed like any text and its runs made bold: wrapping it in `**` breaks on an inner `*`
+	text.split(/^#{1,6} +(.+)$/m).forEach((line, h) =>
+		line.split(token).forEach((part, i) => {
+			// split puts each captured part at an odd index
+			const kind = i % 2 === 0 ? undefined : part[0] === "`" ? "code" : part.startsWith("**") ? "bold" : part[0] === "[" ? "link" : "italic";
+			const link = kind === "link" ? /^\[(.+)\]\((.+)\)$/.exec(part) : null;
+			const cut = kind === "bold" ? 2 : kind ? 1 : 0;
+			const content = link ? link[1] : part.slice(cut, part.length - cut);
+			const marks = { ...(kind && kind !== "link" ? { [kind]: true } : {}), ...(h % 2 ? { bold: true } : {}) };
+			for (const piece of content.match(/[\s\S]{1,2000}/g) ?? [])
+				out.push({
+					type: "text",
+					text: link ? { content: piece, link: { url: link[2] } } : { content: piece },
+					...(Object.keys(marks).length ? { annotations: marks } : {}),
+				});
+		}),
+	);
+	return out;
+}
+
+/**
+ * REST step 4: the page-level comment, a code-annotated run of `mark`, which
+ * `text` opens with backticked, then the rest of the text as `runs`.
+ */
 export function comment(call: Call, card: string, text: string, mark = "harness-question"): Promise<unknown> {
-	const rest = text.slice(mark.length + 2).match(/[\s\S]{1,2000}/g) ?? [];
 	return call(mark === "harness-answer" ? "the answer's post" : "the comment's post", "/v1/comments", "POST", {
 		parent: { page_id: card },
-		rich_text: [
-			{ type: "text", text: { content: mark }, annotations: { code: true } },
-			...rest.map((content) => ({ type: "text", text: { content } })),
-		],
+		rich_text: [{ type: "text", text: { content: mark }, annotations: { code: true } }, ...runs(text.slice(mark.length + 2))],
 	});
 }
 
