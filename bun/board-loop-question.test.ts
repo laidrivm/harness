@@ -23,7 +23,7 @@ const stage = (calls: string) => {
 };
 
 /** What every form of the fourth line asks of a question, and the two that post one set `Assign` and check it. */
-const FORM = ["its options and a recommendation", "in Russian", "on a line of its own"];
+const FORM = ["its options and a recommendation", "in Russian", "on a line of its own", "in one sequence across its sections", "plain text with no markdown syntax"];
 const READ_BACK = "read the card back to confirm it holds the user";
 
 /** The workflow doc's lines that open as the fourth line does. */
@@ -147,6 +147,33 @@ describe("the runner posts the question", () => {
 		const r = await pass(dir, { said: ASKED }, configured());
 		expect(r.text).toContain(POSTED);
 		expect(r.last).toStartWith("board-loop: open — apply demo step 1: origin refused the push");
+	});
+
+	// spec: board-loop/the-step-waits-on-the-user-s-answer
+	test("a posted question under goal open ends waiting, exit 0, naming the card", async () => {
+		const { dir } = clone();
+		const r = await pass(dir, { said: ASKED, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" }, configured());
+		expect(r.text).toContain(POSTED);
+		expect([r.code, r.last]).toEqual([0, `board-loop: waiting — apply demo step 1: question on ${CARD}`]);
+	});
+
+	test("a question already waiting on the card ends waiting too, and nothing is posted", async () => {
+		const { dir } = clone();
+		notion.state.pending = true;
+		const r = await pass(dir, { said: ASKED, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" }, configured()).finally(() => {
+			notion.state.pending = false;
+		});
+		expect(r.text).toContain(`question: not posted — a question already waits on ${CARD}`);
+		expect(seen).not.toContain("POST /v1/comments");
+		expect([r.code, r.last]).toEqual([0, `board-loop: waiting — apply demo step 1: question on ${CARD}`]);
+	});
+
+	// spec: board-loop/a-question-the-runner-could-not-post
+	test("a question not posted for another reason under goal open stays open, exit 1", async () => {
+		const { dir } = clone();
+		const r = await pass(dir, { said: `QUESTION: ${CARD}x\n${MARK} Ship?`, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" }, configured());
+		expect(r.code).toBe(1);
+		expect(r.last).toStartWith("board-loop: open — apply demo step 1: goal open");
 	});
 
 	// spec: board-loop/no-question

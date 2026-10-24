@@ -146,7 +146,7 @@ change `demo` in a consumer:
 claude -p '/goal Carry step 2 of the OpenSpec change demo: /opsx:apply demo for its group 2, the pre-PR sequence, the push and the pull request.
 This session runs unattended.
 The goal is met when the last line of `bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push, opens with `goal met` — or when the final message opens with `BLOCKED —` and names what only the user can settle.
-A question only the user can settle goes on the card of the change as one page-level comment — `page_id` and `markdown` only, after reading that card and its comments — whose markdown opens with `harness-question`, its two backticks included; then set the `Assign` of the card to the user and read the card back to confirm it holds the user. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own.'
+A question only the user can settle goes on the card of the change as one page-level comment — `page_id` and `markdown` only, after reading that card and its comments — whose markdown opens with `harness-question`, its two backticks included; then set the `Assign` of the card to the user and read the card back to confirm it holds the user. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its items in one sequence across its sections, never restarting at 1, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.'
 ```
 
 The answer, proposal and archive variants below keep that fourth line as it
@@ -169,7 +169,7 @@ posts the stage session's question itself, and the fourth line of its form
 becomes:
 
 ```text
-A question only the user can settle goes in the final message, never on the card, since this session posts no comment: after reading that card and its comments, write a line `QUESTION: <the id of the card of the change>` before any `PR-TITLE:` line, with the question below it, opening with `harness-question`, its two backticks included — the runner posts it. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own.
+A question only the user can settle goes in the final message, never on the card, since this session posts no comment: after reading that card and its comments, write a line `QUESTION: <the id of the card of the change>` before any `PR-TITLE:` line, with the question below it, opening with `harness-question`, its two backticks included — the runner posts it. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its items in one sequence across its sections, never restarting at 1, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.
 ```
 
 Otherwise, where the launcher finds the ask settings, `notion-ask.json` under
@@ -177,7 +177,7 @@ the user's config home (see the README), the fourth line names the ask
 command instead, in the board loop's form and the hand-launched ones alike:
 
 ```text
-A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with `harness-question`, its two backticks included, run `bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`, and only once it prints `question: posted` set the `Assign` of the card to the user and read the card back to confirm it holds the user. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own.
+A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with `harness-question`, its two backticks included, run `bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`, and only once it prints `question: posted` set the `Assign` of the card to the user and read the card back to confirm it holds the user. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its items in one sequence across its sections, never restarting at 1, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.
 ```
 
 Without the ask settings, the hand-launched forms keep the fourth line
