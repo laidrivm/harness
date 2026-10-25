@@ -213,9 +213,10 @@ step 11's reach check passes, then enable it in Windmill.
 
 ## 7. A paused loop and a stopped pass
 
-A failed pass writes `/home/runner/orchestrator/<clone>.stop` with the time,
-the exit status and the pass's last line, and every later tick of that clone
-fails in Runs with the paused line. Before removing the stop file, read it and
+A failed pass, other than the first or second `retry` in a row (below), writes
+`/home/runner/orchestrator/<clone>.stop` with the time, the exit status and
+the pass's last line, and every later tick of that clone fails in Runs with
+the paused line. Before removing the stop file, read it and
 the pass's whole output, `/home/runner/orchestrator/passes/<time>-<clone>.log`:
 
 ```sh
