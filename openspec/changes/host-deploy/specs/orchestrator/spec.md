@@ -128,7 +128,8 @@ only while it tries its repository lock without blocking.
 - **WHEN** the deploy holds the gate for as long as the service's timeout
   allows
 - **THEN** a flow waiting on the gate still takes it and runs once the deploy
-  releases it, since its gate wait is longer than that timeout
+  releases it, since its gate budget, shared by all its attempts, is longer
+  than that timeout
 
 #### Scenario: The runner is recreated under the locks
 

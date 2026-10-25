@@ -211,25 +211,30 @@ pass opens it for writing as `runner` (decided at apply).
 (`ci-run-agent`): today with a blocking `flock -w 7200` on
 `locks/<repo>.lock`, which it creates when absent. That wait goes: it gains
 the gate, held only for an attempt, as a pass holds it. One `sh` loop opens
-and takes the gate with `flock -w 14400`, tries the repository lock with
-`flock -n`, and closes the gate's descriptor either way. A lock it took
-stays held as it execs the flow, which keeps holding the repository lock
-alone. The loop makes at most 1440 attempts and sleeps 5 s after each busy
-one but the last: 1439 sleeps, 7195 s, today's 7200 s to within one sleep,
-counted in the sleeps, so time spent waiting on a deploy's gate does not use
-it up. A last attempt that finds the lock busy ends the run at once with exit
-status 75, as today's bound does. A flow that arrives during the hold waits
+and takes the gate with `flock -w <remaining>`, tries the repository lock
+with `flock -n`, and closes the gate's descriptor either way. The gate's
+waits share one budget of 14400 s across all attempts: each wait gets what
+the earlier ones left, and a budget run out, or a wait that times out, ends
+the run with exit status 75. A lock it took stays held as it execs the
+flow, which keeps holding the repository lock alone. The loop makes at most
+1440 attempts and sleeps 5 s after each busy one but the last: 1439 sleeps,
+7195 s, today's 7200 s to within one sleep, counted in the sleeps, so time
+spent waiting on a deploy's gate does not use it up. A last attempt that
+finds the lock busy ends the run at once with exit status 75, as today's
+bound does. A flow that arrives during the hold waits
 for the deploy instead of creating a lock file the deploy did not
 enumerate; a flow that waits for a running pass holds the gate for a moment
 per attempt, so other repositories' ticks and the deploy are not kept out
 while it waits. The user chose this on the card (answer 15б: «15. ок, давай
-б»). The gate's wait is its own, 4 h, above the 3 h the service's timeout
+б»). The gate's budget is its own, 4 h, above the 3 h the service's timeout
 bounds the deploy's hold at, so a deploy that waits out a full pass never
-runs the flow's bound out and drops the delivery. The Windmill event job
-waits for the flow's verdict, so its `timeout` in `event.script.yaml` grows
-from 11700 to 26100 s: the 14400 s gate, the 7195 s of retries, the hour a
-fix runs and 900 s for the ssh and setup, rounded up. It covers one deploy's
-hold; a flow whose retries meet a second hold can outlast the job.
+runs the flow's bound out and drops the delivery; holds that together pass
+4 h end the flow with 75 rather than outliving its job. The Windmill event
+job waits for the flow's verdict, so its `timeout` in `event.script.yaml`
+grows from 11700 to 26100 s: the 14400 s of gate waits, the 7195 s of
+retries, the hour a fix runs and 900 s for the ssh and setup, rounded up.
+Both budgets are spent in full at most once, so the job outlasts the flow's
+longest run.
 
 The service's `TimeoutStartSec` is 3 h: the unlocked build, up to the pass's
 5400 s timeout waiting for the locks, then `up`, the prune and the push, with
@@ -397,4 +402,5 @@ step reruns from the first after a failure (7, 14); decisions 4–6 and 8–11
 stand as written. Answered at apply, on 2026-10-25: a failed run's flow
 holds the gate only while it tries its repository lock, without blocking,
 and retries within the same 7200 s, which time spent waiting on the gate
-does not use (15б: «15. ок, давай б»).
+does not use; the gate's waits have a 14400 s budget of their own across
+all attempts (15б: «15. ок, давай б»).
