@@ -15,7 +15,7 @@ afterAll(cleanup);
 const notion = standIn();
 afterAll(() => notion.server.stop(true));
 const pass = against(notion);
-const reset = () => Object.assign(notion.state, { pending: false, slug: "demo", post: 200 });
+const reset = () => Object.assign(notion.state, { pending: false, slug: "demo", post: 200, assign: [USER, OTHER] });
 
 const ASKED = `QUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}`;
 const CREATE = "gh pr create --base main --head feat/demo --title Carry demo --body-file -";
@@ -84,6 +84,7 @@ describe("an answer beside a draft pull request", () => {
 		["missing", "PICK: demo", {}, "the pick session returned not one CARD: line"],
 		["not one card id", "PICK: demo\nCARD: card", {}, "the CARD: line names no card id"],
 		["another change's card", PICKED, { slug: "other" }, `${CARD} is not the card of demo`],
+		["a card whose Assign a page read may truncate", PICKED, { assign: Array(25).fill(OTHER) }, `${CARD} lists 25 people on Assign, the most a page read returns`],
 	])("a CARD: line %s writes no Assign, prints why, and the step is carried", async (_, out, card, why) => {
 		Object.assign(notion.state, card);
 		const r = await pass(drafted(), { ...DRAFT, pick: out }, configured()).finally(reset);

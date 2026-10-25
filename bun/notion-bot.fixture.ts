@@ -22,10 +22,10 @@ export const OTHER = "99998888777766665555444433332222";
 /**
  * A stand-in Notion API: `state.seen`, every call it took; `state.me`, the status of the id read; `state.pending`,
  * whether the card already holds an unanswered question; `state.slug`, the change its `Pointer` names; `state.post`,
- * the status of a comment's post; `state.wrote`, the body of each `PATCH`.
+ * the status of a comment's post; `state.assign`, the ids on its `Assign`; `state.wrote`, the body of each `PATCH`.
  */
 export function standIn() {
-	const state = { me: 200, pending: false, slug: "demo", post: 200, seen: [] as string[], wrote: [] as unknown[] };
+	const state = { me: 200, pending: false, slug: "demo", post: 200, assign: [USER, OTHER], seen: [] as string[], wrote: [] as unknown[] };
 	const server = Bun.serve({
 		port: 0,
 		async fetch(req) {
@@ -36,7 +36,7 @@ export function standIn() {
 			if (url.pathname.startsWith("/v1/pages/"))
 				return Response.json({
 					parent: { type: "data_source_id", data_source_id: "ds1" },
-					properties: { Pointer: { rich_text: [{ plain_text: `openspec/changes/${state.slug}/` }] }, Assign: { people: [{ id: USER }, { id: OTHER }] } },
+					properties: { Pointer: { rich_text: [{ plain_text: `openspec/changes/${state.slug}/` }] }, Assign: { people: state.assign.map((id) => ({ id })) } },
 				});
 			if (url.pathname.startsWith("/v1/data_sources/")) return Response.json({ title: [{ plain_text: "Demo" }] });
 			const asked = { id: "c1", created_by: { id: BOT }, created_time: "2026-10-24T00:00:00Z", rich_text: [{ plain_text: `${MARK} Ship?` }] };
