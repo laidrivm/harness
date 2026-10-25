@@ -15,7 +15,7 @@ afterAll(cleanup);
 const notion = standIn();
 afterAll(() => notion.server.stop(true));
 const pass = against(notion);
-const reset = () => Object.assign(notion.state, { pending: false, slug: "demo", post: 200, assign: [USER, OTHER] });
+const reset = () => Object.assign(notion.state, { pending: false, slug: "demo", post: 200, patch: 200, assign: [USER, OTHER] });
 
 const ASKED = `QUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}`;
 const CREATE = "gh pr create --base main --head feat/demo --title Carry demo --body-file -";
@@ -84,7 +84,6 @@ describe("an answer beside a draft pull request", () => {
 		["missing", "PICK: demo", {}, "the pick session returned not one CARD: line"],
 		["not one card id", "PICK: demo\nCARD: card", {}, "the CARD: line names no card id"],
 		["another change's card", PICKED, { slug: "other" }, `${CARD} is not the card of demo`],
-		["a card whose Assign a page read may truncate", PICKED, { assign: Array(25).fill(OTHER) }, `${CARD} lists 25 people on Assign, the most a page read returns`],
 	])("a CARD: line %s writes no Assign, prints why, and the step is carried", async (_, out, card, why) => {
 		Object.assign(notion.state, card);
 		const r = await pass(drafted(), { ...DRAFT, pick: out }, configured()).finally(reset);
@@ -93,12 +92,14 @@ describe("an answer beside a draft pull request", () => {
 		expect(r.last).toBe("board-loop: met — apply demo step 1");
 	});
 
-	test("an Assign write that fails refuses the pass before the stage session, so the next pass reads the answer again", async () => {
-		notion.state.patch = 500;
-		const r = await pass(drafted(), { ...DRAFT, pick: PICKED }, configured()).finally(() => {
-			notion.state.patch = 200;
-		});
-		expect(r.last).toBe("board-loop: refused — assign: failed — the Assign write answered 500");
+	test.each([
+		["an Assign write that fails", { patch: 500 }, "the Assign write answered 500", 1],
+		["an Assign a page read may truncate", { assign: Array(25).fill(OTHER) }, `${CARD} lists 25 people on Assign, the most a page read returns`, 0],
+	])("%s refuses the pass before the stage session, so the next pass reads the answer again", async (_, card, why, writes) => {
+		Object.assign(notion.state, card);
+		const r = await pass(drafted(), { ...DRAFT, pick: PICKED }, configured()).finally(reset);
+		expect(notion.state.wrote).toHaveLength(writes);
+		expect(r.last).toBe(`board-loop: refused — assign: failed — ${why}`);
 		expect(r.calls).not.toContain("claude -p /goal");
 	});
 

@@ -209,7 +209,8 @@ export function pickedCard(said: string): { card: string } | string {
 /**
  * Removes the user alone from `card`'s `Assign` once steps 1 and 2 find it the
  * carried change's card on `board`: the pass has read the answer. Returns the
- * line the runner prints, opening with `UNASSIGN_FAILED` when a call failed;
+ * line the runner prints, opening with `UNASSIGN_FAILED` when a call failed
+ * or `Assign` is too long to read whole;
  * no call is retried.
  */
 export async function unassign({ token, user }: Settings, card: string, { board, slug }: { board: string; slug: string }, timeout = 30_000): Promise<string> {
@@ -219,7 +220,7 @@ export async function unassign({ token, user }: Settings, card: string, { board,
 		if (why) return `assign: not written — ${why}`;
 		const people = (await call("the page read", `/v1/pages/${card}`))?.properties?.Assign?.people;
 		// shortcut: a page read lists 25 references of a property at most, so a longer `Assign` is left whole rather than written back cut; page through `/v1/pages/<id>/properties/<property>` if a card ever needs it.
-		if (Array.isArray(people) && people.length >= 25) return `assign: not written — ${card} lists 25 people on Assign, the most a page read returns`;
+		if (Array.isArray(people) && people.length >= 25) return `${UNASSIGN_FAILED} ${card} lists 25 people on Assign, the most a page read returns`;
 		const kept = (Array.isArray(people) ? people : []).filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
 		await call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: kept } } });
 	} catch (error) {
@@ -228,7 +229,7 @@ export async function unassign({ token, user }: Settings, card: string, { board,
 	return `assign: removed the user from ${card}`;
 }
 
-/** How `unassign()`'s line opens when a call failed, unlike a card it refused: the user may still be on `Assign`. */
+/** How `unassign()`'s line opens when a call failed or `Assign` was too long to read whole, unlike a card it refused: the user may still be on `Assign`. */
 export const UNASSIGN_FAILED = "assign: failed —";
 
 /** How `post()`'s line opens for a question it posted, and for one it found already waiting. */

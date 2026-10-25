@@ -161,7 +161,7 @@ question under a `QUESTION:` line, and this change clears no `Assign` there.
 - **`unassign()`** reads the page again after `carded()` for `Assign`, and
   writes the list back without the user whether or not the user was on it.
   An `Assign` of 25 people or more, the most a page read lists, is left
-  whole and printed (review of #286).
+  whole and refuses the pass as a failed call does, below (review of #286).
 - **A failed Notion call refuses the pass** (review of #286). A `CARD:` line
   or card the runner refuses still carries the step, as *A card line the
   runner refuses* fixes. A page read or `Assign` write that fails, though,
