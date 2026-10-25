@@ -63,6 +63,8 @@ proposing it would open one bump per merged bump.
 #### Scenario: The self bump refuses two different pins
 
 - **WHEN** the harness's own bump runs on a manifest whose
-  `dependencies.harness` and `devDependencies.harness` hold different specs
+  `dependencies.harness` and `devDependencies.harness` hold different specs,
+  even when its head is not green, is the pinned commit or reads as a merged
+  bump
 - **THEN** it exits non-zero, the tree is unchanged, and it pushes nothing and
   opens nothing
