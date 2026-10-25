@@ -36,9 +36,10 @@ repository SHALL share the lock, whether their URLs use HTTPS or SSH.
 
 ### Requirement: A failed pass pauses the timer until the user removes the stop file
 
-When the pass exits non-zero, the wrapper SHALL write a stop file naming the
-time, the exit status and the pass's last line, and SHALL exit with the pass's
-status. While the stop file exists, the wrapper SHALL start no pass and SHALL
+When the pass exits non-zero, other than as the first or second in a row of
+the clone's passes to exit 75 (below), the wrapper SHALL write a stop file
+naming the time, the exit status and the pass's last line, and SHALL exit with
+the pass's status. While the stop file exists, the wrapper SHALL start no pass and SHALL
 exit non-zero, naming the file. Nothing but the user SHALL remove it.
 
 A pass that exits 75, the board loop's `retry`, SHALL write no stop file
