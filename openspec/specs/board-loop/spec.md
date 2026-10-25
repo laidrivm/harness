@@ -959,7 +959,7 @@ no HTTP status 4xx other than 429, and its stderr names a network failure: a
 host that did not resolve, a network unreachable, no route to the host, a
 connection refused, reset or timed out, an
 `RPC failed`, `early EOF`, `unexpected disconnect` or `Empty reply from
-server` error, or an HTTP status 5xx or 429; or when the Claude API ended a
+server` error, or `returned error:` naming an HTTP status 5xx or 429; or when the Claude API ended a
 pick or stage session: its result object reports an error ended by the API,
 with no answer, 5xx or 429, and its text does not name the subscription's
 usage limit (`You've hit your … limit`). Every other failure SHALL stay what
@@ -1051,8 +1051,8 @@ stays as the session left it, and the next pass continues it.
 
 - **WHEN** a read before the question's post, or the post itself, is answered
   500
-- **THEN** the printed question line says Notion did not answer, and the pass
-  records `retry` and exits 75
+- **THEN** the printed question line says Notion did not answer, naming the
+  `500`, and the pass records `retry` and exits 75
 
 #### Scenario: A question posted, Assign not written
 
