@@ -170,6 +170,50 @@ describe("a session's group, signalled through the launcher", () => {
 	}, 60_000);
 });
 
+describe("how a session ended", () => {
+	/** What `session()` returns of a stub `claude` that prints `printed`, and the arguments the stub saw. */
+	function ended(printed: string) {
+		const dir = emptyDir("board-loop-result-");
+		writeFileSync(join(dir, "printed"), printed);
+		writeFileSync(join(dir, "claude"), `#!/bin/sh\nprintf '%s\\n' "$@" > '${dir}/argv'\ncat '${dir}/printed'\nexit 1\n`);
+		chmodSync(join(dir, "claude"), 0o755);
+		const entry = join(dir, "entry.ts");
+		writeFileSync(
+			entry,
+			`import { session } from ${JSON.stringify(module)};\nconst r = await session("PICK", 60_000, process.kill, true);\nconsole.log(JSON.stringify({ out: r.out, printed: r.printed, transient: r.transient }));\n`,
+		);
+		const run = Bun.spawnSync([process.execPath, entry], { cwd: dir, env: { PATH: `${dir}:/usr/bin:/bin`, HOME: dir } });
+		expect(run.exitCode).toBe(0);
+		return { ...JSON.parse(run.stdout.toString()), argv: readFileSync(join(dir, "argv"), "utf8").split("\n") };
+	}
+	/** The result object the probe of 2026-10-25 saw for an API failure, `fields` over it. */
+	const result = (status: number | null, text: string, fields: Record<string, unknown> = {}) =>
+		JSON.stringify({ type: "result", is_error: true, terminal_reason: "api_error", api_error_status: status, result: text, ...fields });
+
+	test.each([
+		[null, "API Error: Connection refused"],
+		[529, "API Error: 529 Overloaded."],
+		[500, "API Error: 500 Internal server error."],
+		[429, "API Error: Request rejected (429)"],
+	])("an API error answered %p is transient, and out is its result", (status, text) => {
+		const r = ended(result(status, text));
+		expect([r.transient, r.out]).toEqual([true, text]);
+		expect(r.argv.join(" ")).toContain("--output-format json");
+	});
+
+	test.each([
+		["answered 401", result(401, "Invalid API key")],
+		["the usage limit at 429", result(429, "You've hit your session limit · resets 3:45pm")],
+		["no error", result(null, "PICK: demo", { is_error: false })],
+		["plain text", "PICK: demo\n"],
+	])("a session ended on %s is not transient", (_, printed) => {
+		const r = ended(printed);
+		expect(r.transient).toBe(false);
+		expect(r.printed).toBe(printed);
+		expect(r.out).toBe(printed.startsWith("{") ? JSON.parse(printed).result : printed);
+	});
+});
+
 describe("the stage session's id", () => {
 	// spec: board-loop/a-step-ready-to-push
 	test("is the one the PR → session table records, and the pick session gets none [25]", () => {

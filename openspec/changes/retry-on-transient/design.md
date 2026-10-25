@@ -113,7 +113,10 @@ limit is `loop-every-stage`'s: its task 1.1 measures the real form and its
 group 1 ends the pass `limited`; until then the limit ends a pass as today.
 The prefix is `LIMITED` in `bun/transient.ts`, for that change to take over.
 Output that is not one result object (a crash, a test's stub) is `out` as
-printed and never transient. Claude Code retries a transient error ten times
+printed and never transient. `session()` also returns `printed`, the output
+as `claude` printed it: `ci-run.ts` already asked for JSON output and reads
+`structured_output` from the whole object, so it reads `printed` and drops
+its own `--output-format json`, which `session()` now passes. Claude Code retries a transient error ten times
 with backoff before it ends the session, so the pass sees only one that
 outlasted those; `CLAUDE_CODE_RETRY_WATCHDOG` stays unset, since its three
 hours of retries would meet the session's hour as a `timeout`.
