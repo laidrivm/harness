@@ -9,20 +9,20 @@ before adding to it.
 
 ## 1. Draft while the question waits, ready once it is answered
 
-- [ ] 1.1 Add `draft` to `Pull` in `bun/pull-requests.ts` (`pr.draft ===
+- [x] 1.1 Add `draft` to `Pull` in `bun/pull-requests.ts` (`pr.draft ===
       true`), with a case in `bun/pull-requests.test.ts` for a draft and a
       ready pull request. Verify with that file
-- [ ] 1.2 Failing cases in `bun/board-loop-push.test.ts`: `publish()` with
+- [x] 1.2 Failing cases in `bun/board-loop-push.test.ts`: `publish()` with
       the draft flag runs `gh pr create … --draft`, and without it runs no
       `--draft`. Then add the flag. Verify with that file
-- [ ] 1.3 Failing cases in `bun/board-loop-question.test.ts` for *A pull
+- [x] 1.3 Failing cases in `bun/board-loop-question.test.ts` for *A pull
       request stays a draft while its question waits*: posted, answered by
       the triage and already waiting each open a draft; a malformed line, a
       gate failure, a card of another change and a failed post open ready;
       with no integration a well-formed line opens a draft and prints that
       the session posted it. Then decide the flag in `bun/board-loop.ts`.
       Verify with those cases
-- [ ] 1.4 Failing cases for *An answer beside a draft pull request is
+- [x] 1.4 Failing cases for *An answer beside a draft pull request is
       carried on its branch*: an open draft on the step's branch makes an
       answer candidate for that step and branch, resumed, while a ready one
       is passed over; the prompt's work line for it names applying the
@@ -39,7 +39,7 @@ before adding to it.
       `bun/board-loop-prompt.ts`, and a `CARD:` reader and an `unassign()`
       in `bun/notion-bot.ts`, both exported for `bot-notion-writes` to
       reuse. Verify with those cases and `bun test`
-- [ ] 1.5 Add the repeated `QUESTION:` sentence to the ask and connector
+- [x] 1.5 Add the repeated `QUESTION:` sentence to the ask and connector
       variants of the launch form in `bun/board-loop-prompt.ts` and
       `core/feature-workflow.md`, and name the draft rule in `README.md`'s
       board-loop paragraph. Verify with `bun test

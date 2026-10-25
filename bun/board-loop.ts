@@ -27,20 +27,20 @@
  * pass leaves no stop file and a later pick passes over its card, while every
  * other outcome stops a shell loop where a person is needed.
  */
-import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { leftover } from "./board-loop-leftover.ts";
 import { pickPrompt, prompt, type Step } from "./board-loop-prompt.ts";
 import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session, trusted } from "./board-loop-session.ts";
+import { consider, left } from "./board-loop-takeable.ts";
+import { ready } from "./ci-run-draft.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
-import { ALREADY, asked, own, POSTED, post, type Settings, settings } from "./notion-bot.ts";
+import { ALREADY, asked, own, POSTED, pickedCard, post, type Settings, settings, unassign } from "./notion-bot.ts";
 import { triage } from "./notion-triage.ts";
-import { readPullRequests } from "./pull-requests.ts";
 import { ASK_SETTINGS, RUNNER_ASKS, where } from "./question-gate.ts";
-import { groups } from "./turn-gate.ts";
 
 /** A stage session's limit, fixed by the spec: a longer step is split, never given more. */
 export const LIMIT = 60 * 60 * 1000;
@@ -58,37 +58,6 @@ function end(outcome: Outcome, detail: string): number {
 	record("loop", outcome, "apply", { cwd: process.cwd() });
 	return outcome === "met" || outcome === "idle" || outcome === "waiting" ? 0 : 1;
 }
-
-/**
- * The step a `proposed` change would carry next, or why it cannot be taken. A
- * change with every group ticked is an answer candidate for step N+1, which
- * only the pick session can tell from one with no answer on its card.
- */
-function consider(slug: string, status: string, blocking: string[]): Step | string {
-	if (status !== "proposed") return `it is ${status}, not proposed`;
-	if (blocking.length) return `after: ${blocking.join(", ")} is still open`;
-	const found = [...groups(readFileSync(`openspec/changes/${slug}/tasks.md`, "utf8"))];
-	const answer = found.every(([, boxes]) => boxes.open === 0);
-	const step = answer ? found.length + 1 : found.findIndex(([, boxes]) => boxes.open > 0) + 1;
-	// `git-and-prs.md`: a single group ships whole on `feat/<slug>`; an answer makes it two.
-	const branch = found.length === 1 && !answer ? `feat/${slug}` : `feat/${slug}-${step}`;
-	const prs = readPullRequests(branch);
-	// Never "no pull request": a missed open one would start a second
-	// session on a branch under review.
-	if (!prs) return "the pull request query failed";
-	const open = prs.find((pr) => pr.state === "OPEN");
-	if (open) return `pull request #${open.number} is open on ${branch}`;
-	// A squash-merged branch is never freed, and nor is a closed one.
-	if (prs.length) return `pull request #${prs[0].number} already used ${branch}`;
-	return { step, branch, answer };
-}
-
-/**
- * Whether the step's branch exists, in the clone or on `origin` as the pass's
- * fetch left it: a session that ended before its pull request left it.
- */
-const left = (at: typeof sh, branch: string) =>
-	[`refs/heads/${branch}`, `refs/remotes/origin/${branch}`].some((ref) => at("git", "rev-parse", "--verify", "-q", ref).ok);
 
 /** One pass. `limit` and `kill` are replaced only by a test, through an entry module. */
 export async function pass(args: string[], limit = LIMIT, kill: Kill = process.kill): Promise<number> {
@@ -204,6 +173,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		return refuse(`on the host the runner posts each question from the Notion integration, and ${where("notion-bot.json")} is missing`);
 	if (steps.size === 0) return end("idle", "no change is takeable");
 	const listed = (answer: boolean) => [...steps].filter(([, s]) => s.answer === answer).map(([name]) => name);
+	const drafts = [...steps].filter(([, s]) => s.draft !== undefined).map(([name]) => name);
 
 	const minutes = `${limit / 60_000} minutes`;
 	/** A session ends clean, or the pass names what outlived it and records no planned outcome. */
@@ -230,7 +200,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const withheld = bot ? ["--disallowedTools", "mcp__*__notion-create-comment"] : [];
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
-		picked = await session(pickPrompt(named, listed(false), listed(true), bot?.self, bot?.user), limit, kill, true, as, withheld, under);
+		picked = await session(pickPrompt(named, listed(false), listed(true), bot?.self, bot?.user, drafts), limit, kill, true, as, withheld, under);
 	} catch {
 		return refuse("claude could not be started");
 	}
@@ -245,6 +215,11 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const chosen = steps.get(slug);
 	if (!chosen)
 		return refuse(`the pick session named ${slug}: ${reasons.get(slug) ?? "no change of that name is takeable"}`);
+	// The pass has read the draft's answer: the user leaves `Assign` before the stage session acts on it.
+	if (bot && chosen.draft !== undefined) {
+		const card = pickedCard(picked.out);
+		console.log(typeof card === "string" ? `assign: not written — ${card}` : await unassign(bot, card.card, { board: named, slug }));
+	}
 
 	const target = `apply ${slug} step ${chosen.step}`;
 	// The runner names the branch, never deletes or resets it, and pushes it only once the step is ready.
@@ -270,21 +245,27 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		question === undefined
 			? ""
 			: !bot
-				? "question: not posted — no integration is configured"
+				? `question: ${typeof question === "string" ? "not posted" : "posted by the session"} — no integration is configured`
 				: typeof question === "string"
 					? `question: not posted — ${question}`
 					: await post(bot, question, { board: named, slug }, undefined, triage(question.text, { at, under, limit, kill, base: DEFAULT, user: bot.user }));
 	if (line) console.log(line);
 	// A goal open on the user's answer is no failure: the question is on the card, and a pause would wait on nothing.
 	const ending = line.split("\n").at(-1) ?? "";
+	const posted = ending.startsWith(POSTED) || ending.startsWith(ALREADY);
 	const open = (detail: string) =>
-		typeof question === "object" && detail.startsWith("goal open") && (ending.startsWith(POSTED) || ending.startsWith(ALREADY))
+		typeof question === "object" && detail.startsWith("goal open") && posted
 			? end("waiting", `${target}: question on ${question.card}`)
 			: end("open", `${target}: ${detail}`);
+	// A question that reached the card keeps the pull request a draft; with no integration the session posted it.
+	const draft = typeof question === "object" && (posted || !bot);
 
 	const judged = [...bun, join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
-	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app, under);
+	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app, under, draft);
 	if (unready !== undefined) return open(unready);
+	// The answer carried and nothing left to ask: the draft goes ready right after its push, writing no `Assign`.
+	if (chosen.draft !== undefined && !draft)
+		console.log(`pull request #${chosen.draft}: ${ready("", chosen.draft) ? "marked ready for review" : "not marked ready — gh pr ready failed; mark it ready by hand"}`);
 	// The check's own verdict at the commit the session left, never the exit status.
 	const verdict = sh("bun", ...judged);
 	const last = verdict.out.split("\n").at(-1) ?? "";

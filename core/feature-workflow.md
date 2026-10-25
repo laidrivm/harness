@@ -146,7 +146,7 @@ change `demo` in a consumer:
 claude -p '/goal Carry step 2 of the OpenSpec change demo: /opsx:apply demo for its group 2, the pre-PR sequence, the push and the pull request.
 This session runs unattended.
 The goal is met when the last line of `bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push, opens with `goal met` — or when the final message opens with `BLOCKED —` and names what only the user can settle.
-A question only the user can settle goes on the card of the change as one page-level comment — `page_id` and `markdown` only, after reading that card and its comments — whose markdown opens with `harness-question`, a single backtick on each side of the word and no character before it; then set the `Assign` of the card to the user and read the card back to confirm it holds the user. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.'
+A question only the user can settle goes on the card of the change as one page-level comment — `page_id` and `markdown` only, after reading that card and its comments — whose markdown opens with `harness-question`, a single backtick on each side of the word and no character before it; then set the `Assign` of the card to the user and read the card back to confirm it holds the user. Then repeat the question in the final message under a line `QUESTION: <the id of the card of the change>`, before any `PR-TITLE:` line. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.'
 ```
 
 The answer, proposal and archive variants below keep that fourth line as it
@@ -178,11 +178,14 @@ the user's config home (see the README), the fourth line names the ask
 command instead, in the board loop's form and the hand-launched ones alike:
 
 ```text
-A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with `harness-question`, a single backtick on each side of the word and no character before it, run `bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`, and only once it prints `question: posted` set the `Assign` of the card to the user and read the card back to confirm it holds the user. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.
+A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with `harness-question`, a single backtick on each side of the word and no character before it, run `bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`, and only once it prints `question: posted` set the `Assign` of the card to the user and read the card back to confirm it holds the user. Then repeat the question in the final message under a line `QUESTION: <the id of the card of the change>`, before any `PR-TITLE:` line. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.
 ```
 
 Without the ask settings, the hand-launched forms keep the fourth line
-above.
+above. Both forms where the session posts its own question have it repeat
+that question under a `QUESTION:` line of its final message, so a board-loop
+runner, which then posts nothing, still opens the step's pull request as a
+draft.
 
 An answer step, which the board loop launches once every group is ticked and
 the card holds the user's answer, changes only the first line of the board
@@ -194,6 +197,14 @@ filing an `idea` card, clearing `Assign`, adding no group and ending on
 reads `goal open`. Where the runner has a Notion integration, the line also
 names which comment the answer is, by the user's id and the integration's,
 since a card the triage answered has no `Assign`.
+
+A step whose branch holds an open draft pull request, the draft the runner
+opened while its question waited on the card, carries the answer on that same
+step and branch. Its first line names applying the answer to that step's
+artefacts, code and tasks, or, for an answer that asks for a change of its
+own, filing an `idea` card, adding nothing to the branch and still naming the
+pull request's title and body; once the push goes through with no new
+question, the runner marks the pull request ready.
 
 A step whose branch already exists, in the clone or on `origin`, because a
 session ended before its pull request, changes only the first line too: the

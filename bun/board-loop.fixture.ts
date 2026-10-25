@@ -23,6 +23,10 @@ export const TICKED = "## 1. Only\n\n- [x] 1.1 a\n";
 /** The stage session's final message unless a case gives one. */
 export const SAID = "Done.\nPR-TITLE: Carry demo\nPR-BODY:\nThe body.";
 
+/** One pull request of the fixture's `o/demo`, as the REST endpoint lists it, for the stub `gh` to print. */
+export const listed = (number: number, state: string, merged = false, draft = false) =>
+	JSON.stringify([{ number, state, draft, merged_at: merged ? "2026-10-20T00:00:00Z" : null, head: { sha: "abc", repo: { id: 1, full_name: "o/demo" } }, base: { repo: { id: 1 } } }]);
+
 type Tree = Record<string, string>;
 
 /** A complete change directory: `proposed`, as `board-state.ts` reads one. */
@@ -90,8 +94,9 @@ export type Stubs = {
 	verdict?: string;
 	/** Its last line under `--before-push`: met unless given. */
 	beforePush?: string;
-	/** The exit status of `gh pr create`, which saves its stdin as the body. */
+	/** The exit status of `gh pr create`, which saves its stdin as the body, and of `gh pr ready`. */
 	createCode?: number;
+	readyCode?: number;
 	/**
 	 * The branch the stage session switches to, creating it when it is missing:
 	 * the step's unless given, for the fixture's trees.
@@ -150,7 +155,7 @@ function bin(log: string, s: Stubs): string {
 	// The push also saves the PR → session table as it stands at that moment.
 	const table = `/bin/cat "$HOME/orchestrator/pr-sessions.jsonl" > '${log}.push-table' 2>/dev/null`;
 	stub("git", `[ "$1" = push ] && { ${saw("push")}; ${table}; }\nexec '${REAL_GIT}' "$@"`);
-	const create = `if [ "$1 $2" = "pr create" ]; then ${saw("create")}; /bin/cat > '${log}.body'; exit ${s.createCode ?? 0}; fi\n`;
+	const create = `if [ "$1 $2" = "pr create" ]; then ${saw("create")}; /bin/cat > '${log}.body'; exit ${s.createCode ?? 0}; fi\n[ "$1 $2" = "pr ready" ] && exit ${s.readyCode ?? 0}\n`;
 	if (s.gh !== null)
 		stub("gh", `${s.ghSleep ? `exec /bin/sleep ${s.ghSleep}\n` : ""}${create}printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
 	const verdict = s.verdict ?? "goal met: apply demo step 1 at abc1234";

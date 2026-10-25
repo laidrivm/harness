@@ -124,6 +124,42 @@ the user's rule. 9: on a machine with no integration the session repeats its
 question under a `QUESTION:` line, and this change clears no `Assign` there.
 10: implementation after #255, which has merged.
 
+### Taken while applying (2026-10-25)
+
+- **The draft-while-working rule already covers the continuation.** Since
+  the proposal, `rules.md` and `git-and-prs.md` (#271, #273) have an agent
+  mark a pull request draft as it starts work on it and ready right after
+  its final push. The runner's continuation needs no `gh pr ready --undo`:
+  `consider()` takes the branch only while its pull request is a draft. It
+  pushes while the draft stands and runs `gh pr ready` after the push, which
+  is the rule's order, so no task was added for it.
+- **`ready()` reused, `draftWhile()` not.** The runner calls `ready()` from
+  `bun/ci-run-draft.ts` (#276), now exported. With an empty repository it
+  passes no `-R`, so `gh` marks the pull request in the working directory's
+  repository, the one whose `origin` `readPullRequests()` found the draft in.
+  `draftWhile()` itself does not fit: it marks ready when its work throws,
+  which here would start a review on an answer not yet carried, and it turns
+  a refused ready into a failed outcome, where *Marking ready fails* keeps
+  the check's.
+- **Files split at the cap.** `consider()` and `left()` move unchanged from
+  `bun/board-loop.ts` (295 lines on `main`) to `bun/board-loop-takeable.ts`,
+  the name `reopened-group-branch`'s design gives that move. The cases of
+  1.3 and 1.4 go in a new `bun/board-loop-draft.test.ts`, since
+  `bun/board-loop-question.test.ts` stands at 262 lines; the triage-answered
+  case is one assertion in `bun/notion-triage-pass.test.ts`, whose stand-in
+  already answers it. The stand-in pass helper moves to
+  `bun/notion-bot.fixture.ts` (`against()`), and the REST listing helper to
+  `bun/board-loop.fixture.ts` (`listed()`), so both test files share one copy.
+- **The no-integration line** reads `question: posted by the session — no
+  integration is configured`: it keeps the words the scenario *A question
+  with no integration* names, and a malformed line there still reads `not
+  posted`.
+- **The repeated `QUESTION:` sentence** sits in the two shared fourth lines,
+  so a hand-launched session repeats its question too; nothing reads it there,
+  and one line per form is kept rather than four.
+- **`unassign()`** reads the page again after `carded()` for `Assign`, and
+  writes the list back without the user whether or not the user was on it.
+
 ## Overlaps
 
 - **#255** edits `core/git-and-prs.md` and `core/feature-workflow.md` for

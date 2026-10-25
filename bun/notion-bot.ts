@@ -2,8 +2,9 @@
  * The board loop's Notion integration: the settings file the runner reads, the
  * `QUESTION:` line it reads from a stage session's final message, and the five
  * REST calls that post the question from the integration and set `Assign`
- * (`openspec/changes/archive/2026-10-22-notion-bot-questions/design.md`). The ask command makes
- * two of those calls with its own settings. The token reaches `fetch` only as a
+ * (`openspec/changes/archive/2026-10-22-notion-bot-questions/design.md`), and the pick's
+ * `CARD:` line and the `Assign` write that removes the user once a pass reads the answer
+ * (`draft-until-answered`). The ask command makes two of those calls with its own settings. The token reaches `fetch` only as a
  * header, and no line this module prints or throws holds it.
  */
 import { readFileSync, statSync } from "node:fs";
@@ -189,6 +190,33 @@ async function carded(call: Call, card: string, board: string, slug: string): Pr
 	if (plain(page.properties?.Pointer?.rich_text) !== `openspec/changes/${slug}/`) return `${card} is not the card of ${slug}`;
 	const source = await call("the board read", `/v1/data_sources/${page.parent.data_source_id}`);
 	if (plain(source?.title) !== board) return `${card} is not on the board ${board}`;
+}
+
+/** The card a pick session's final message names in its one `CARD:` line, or why it names none. Untrusted, as `PICK:` is. */
+export function pickedCard(said: string): { card: string } | string {
+	const lines = said.split("\n").filter((line) => line.startsWith("CARD:"));
+	if (lines.length !== 1) return "the pick session returned not one CARD: line";
+	const card = lines[0].slice("CARD:".length).trim();
+	return ID.test(card) ? { card } : "the CARD: line names no card id";
+}
+
+/**
+ * Removes the user alone from `card`'s `Assign` once steps 1 and 2 find it the
+ * carried change's card on `board`: the pass has read the answer. Returns the
+ * line the runner prints; no call is retried.
+ */
+export async function unassign({ token, user }: Settings, card: string, { board, slug }: { board: string; slug: string }, timeout = 30_000): Promise<string> {
+	const call = client(token, timeout);
+	try {
+		const why = await carded(call, card, board, slug);
+		if (why) return `assign: not written — ${why}`;
+		const people = (await call("the page read", `/v1/pages/${card}`))?.properties?.Assign?.people;
+		const kept = (Array.isArray(people) ? people : []).filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
+		await call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: kept } } });
+	} catch (error) {
+		return `assign: not written — ${(error as Error).message}`;
+	}
+	return `assign: removed the user from ${card}`;
 }
 
 /** How `post()`'s line opens for a question it posted, and for one it found already waiting. */

@@ -7,9 +7,12 @@
  */
 import type { Outcome } from "./ci-run.ts";
 
-/** `gh pr ready` on #`n` as the runner, with the App's token in `GH_TOKEN`; `--undo` marks it draft. */
-const ready = (repo: string, n: number, ...undo: string[]) =>
-	Bun.spawnSync(["gh", "pr", "ready", String(n), "-R", repo, ...undo], { env: process.env }).exitCode === 0;
+/**
+ * `gh pr ready` on #`n` in `repo` as the runner, with the App's token in `GH_TOKEN` when one is minted;
+ * `--undo` marks it draft. An empty `repo` is the working directory's, as the board loop's runner reads it.
+ */
+export const ready = (repo: string, n: number, ...undo: string[]) =>
+	Bun.spawnSync(["gh", "pr", "ready", String(n), ...(repo ? ["-R", repo] : []), ...undo], { env: process.env }).exitCode === 0;
 
 /**
  * Runs `work` with #`n` a draft. `work` answers its outcome and whether a

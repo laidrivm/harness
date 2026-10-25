@@ -30,10 +30,10 @@ export function remoteRepository(url: string) {
 	return parts.length >= 2 && name(owner) && name(repo) ? { owner, repo } : undefined;
 }
 
-export type Pull = { number: unknown; state: "OPEN" | "MERGED" | "CLOSED"; headRefOid: unknown };
+export type Pull = { number: unknown; state: "OPEN" | "MERGED" | "CLOSED"; headRefOid: unknown; draft: boolean };
 
 type Repo = { id?: unknown } | null;
-type Listed = { number?: unknown; state?: unknown; merged_at?: unknown; head?: { sha?: unknown; repo?: Repo }; base?: { repo?: Repo } } | null;
+type Listed = { number?: unknown; state?: unknown; merged_at?: unknown; draft?: unknown; head?: { sha?: unknown; repo?: Repo }; base?: { repo?: Repo } } | null;
 
 /**
  * The branch's pull requests in every state, newest first, or undefined for a
@@ -68,6 +68,7 @@ export function readPullRequests(branch: string): Pull[] | undefined {
 			number: pr?.number,
 			state: pr?.state === "open" ? "OPEN" : pr?.state === "closed" && pr.merged_at ? "MERGED" : "CLOSED",
 			headRefOid: pr?.head?.sha,
+			draft: pr?.draft === true,
 		}));
 	} catch {
 		// A spawn that throws or output that is not JSON fails the read.
