@@ -5,11 +5,11 @@
 A failure SHALL be transient when a request to GitHub's API or to Notion's
 REST API got no answer, ran past its time limit, or was answered 5xx or 429;
 when the key holder's mint failed for one of those reasons or was killed at
-its time limit; or when a `git fetch` or `git push` failed and its stderr names
-a network failure: a host that did not resolve, a connection refused, reset
-or timed out, an `RPC failed`, `early EOF`, `unexpected disconnect` or
-`Empty reply from server` error, or an HTTP status 5xx or 429, and names no
-HTTP status 4xx other than 429; or when the Claude API ended a
+its time limit; or when a `git fetch` or `git push` failed, its stderr names
+no HTTP status 4xx other than 429, and its stderr names a network failure: a
+host that did not resolve, a connection refused, reset or timed out, an
+`RPC failed`, `early EOF`, `unexpected disconnect` or `Empty reply from
+server` error, or an HTTP status 5xx or 429; or when the Claude API ended a
 pick or stage session: its result object reports an error ended by the API,
 with no answer, 5xx or 429, and its text does not name the subscription's
 usage limit (`You've hit your … limit`). Every other failure SHALL stay what
@@ -48,6 +48,12 @@ stays as the session left it, and the next pass continues it.
 - **WHEN** `git fetch` fails naming a host it could not resolve
 - **THEN** the pass switches back to a noted step branch as a refusal does,
   records `retry`, and exits 75
+
+#### Scenario: A dropped fetch that also names a refusal
+
+- **WHEN** `git fetch` fails with stderr naming both `early EOF` and HTTP
+  status 401
+- **THEN** the pass never records `retry`
 
 #### Scenario: The Claude API is overloaded during the pick
 

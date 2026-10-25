@@ -12,8 +12,9 @@ while it is the first or second in a row of the clone's passes to exit 75;
 the wrapper SHALL keep that count beside the stop file, and the third SHALL
 write the stop file as a failed pass does, naming the count. A pass that exits
 with any other status SHALL clear the count; a tick that starts no pass SHALL
-leave it. A fetch the wrapper itself makes before the pass, of the push clone
-or of the harness pin, SHALL count as a pass that exited 75 when it fails.
+leave it, except one whose own fetch failed. A fetch the wrapper itself makes
+before the pass, of the push clone or of the harness pin, SHALL count as a
+pass that exited 75 when it fails.
 The wrapper SHALL exit 75 for each of them.
 
 #### Scenario: The pass exits 1
