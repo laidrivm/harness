@@ -76,10 +76,11 @@ entry, a hook or a CI check leaves this file the way it would leave
   review fires on work an answer may still change. Otherwise leave a PR ready
   for review, never a draft, which is a PR nobody reviews. The other draft is
   a PR an agent still pushes to, as `rules.md` says, and it is marked ready
-  right after that push succeeds, without waiting for CI (user, 2026-10-25).
-  A check that then fails is fixed on the same PR, in the same follow-up push
-  as the fixes for CodeRabbit's findings; the PR is mergeable only once CI is
-  green and CodeRabbit has reviewed its head with every finding dispositioned.
+  right after that push succeeds, without waiting for CI. A check that then
+  fails is fixed on the same PR in the next push, which also carries the fixes
+  for any CodeRabbit findings already posted — the CI flow does not wait for
+  the review; the PR is mergeable only once CI is green and CodeRabbit has
+  reviewed its head with every finding dispositioned.
 - Keep the PR description to what the diff can't say: a link to the
   proposal, the criteria the step closes named by their `### Requirement:`
   headings — or a line saying it closes none — decisions taken, anything the
