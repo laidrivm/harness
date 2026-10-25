@@ -88,7 +88,8 @@ container recreation ends, the pass gate and every pass lock, waiting for a
 running pass to release its lock. A pass, and a failed run's flow in
 `ci-run.ts`, SHALL take its repository lock only while it holds the gate, so
 no lock file appears during the hold. A tick that starts during the hold SHALL
-find its repository busy; a flow SHALL wait for the gate.
+find its repository busy; a flow SHALL wait for the gate, and SHALL hold it
+only while it tries its repository lock without blocking.
 
 #### Scenario: A pass is running when main moves
 
@@ -113,6 +114,13 @@ find its repository busy; a flow SHALL wait for the gate.
   the gate
 - **THEN** it creates and takes no repository lock until the deploy releases
   the gate
+
+#### Scenario: A flow waits for a running pass outside the gate
+
+- **WHEN** `ci-run.ts` starts a flow for a repository whose lock a pass holds
+- **THEN** it leaves the gate free between its attempts, so a pass for
+  another repository started meanwhile takes its own lock, and the flow runs
+  once the pass releases the lock, within its 7200 s
 
 #### Scenario: A flow waits out the longest deploy
 

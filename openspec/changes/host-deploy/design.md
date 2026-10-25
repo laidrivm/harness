@@ -209,14 +209,21 @@ pass opens it for writing as `runner` (decided at apply).
 
 `bun/ci-run.ts` takes a repository lock too, for a failed run's flow
 (`ci-run-agent`), with `flock -w 7200` on `locks/<repo>.lock`, and creates it
-when absent. It gains the gate the same way: one `sh` opens and takes the
-gate with `flock -w 14400`, then the repository lock with its 7200 s wait as
-today, closes the gate's descriptor and execs the flow, which keeps holding
-the repository lock alone. A flow that arrives during the hold waits for the
-deploy instead of creating a lock file the deploy did not enumerate. The
-gate's wait is its own, 4 h, above the 3 h the service's timeout bounds the
-deploy's hold at, so a deploy that waits out a full pass never runs the
-flow's bound out and drops the delivery.
+when absent. It gains the gate, held only for an attempt, as a pass holds
+it: one `sh` loop opens and takes the gate with `flock -w 14400`, tries the
+repository lock with `flock -n`, and closes the gate's descriptor either way.
+A lock it took stays held as it execs the flow, which keeps holding the
+repository lock alone. A busy lock sends the loop to sleep 5 s and try again,
+for at most 1440 attempts: today's 7200 s, counted in the sleeps, so time
+spent waiting on a deploy's gate does not use it up. Past the last attempt
+the run ends 75, as today's bound does. A flow that arrives during the hold
+waits for the deploy instead of creating a lock file the deploy did not
+enumerate; a flow that waits for a running pass holds the gate for a moment
+per attempt, so other repositories' ticks and the deploy are not kept out
+while it waits. The user chose this on the card (answer 15б: «15. ок, давай
+б»). The gate's wait is its own, 4 h, above the 3 h the service's timeout
+bounds the deploy's hold at, so a deploy that waits out a full pass never
+runs the flow's bound out and drops the delivery.
 
 The service's `TimeoutStartSec` is 3 h: the unlocked build, up to the pass's
 5400 s timeout waiting for the locks, then `up`, the prune and the push, with
@@ -233,6 +240,9 @@ Alternatives, rejected:
 - One lock that each pass holds shared for its whole run: Linux `flock`
   grants a new shared lock while an exclusive one waits, so overlapping
   passes could keep the deploy out for good.
+- The flow holding the gate through a blocking `flock -w 7200` on its
+  repository lock (answer 15а, not taken): while a pass holds that lock, up
+  to 1.5 h, every other repository's tick reads `busy` and the deploy waits.
 
 A recreated Windmill worker drops the pass job's SSH connection; the pass
 already survives that (`pass.sh:193`), but no pass runs then anyway.
@@ -378,4 +388,6 @@ All answered on 2026-10-25: the trigger is the webhook kick with the timer as
 the backstop (12а); a failed deploy writes each clone's stop file (2а, 13);
 the deploy pushes the Windmill scripts with a host-held token (3а); every
 step reruns from the first after a failure (7, 14); decisions 4–6 and 8–11
-stand as written.
+stand as written. Answered at apply, on 2026-10-25: a failed run's flow
+holds the gate only while it tries its repository lock, without blocking,
+and retries within the same 7200 s (15б: «15. ок, давай б»).
