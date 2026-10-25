@@ -77,7 +77,10 @@ export function carry(under: string[], branch: string, base: string, read: Recor
 		const file = join(dir, "step.bundle");
 		// On stdout, into the runner's own file: the session user needs no directory the runner reads.
 		const made = Bun.spawnSync([...under, "git", "bundle", "create", "-", `refs/heads/${branch}`, `^refs/remotes/origin/${base}`]);
-		if (made.exitCode !== 0) return `the session's clone could not bundle ${branch}; nothing was pushed`;
+		if (made.exitCode !== 0) {
+			console.error(made.stderr.toString().trim());
+			return `the session's clone could not bundle ${branch}; nothing was pushed`;
+		}
 		writeFileSync(file, made.stdout);
 		for (const [what, ...from] of [["origin", "origin"], ["the bundle", file, `refs/heads/${branch}`]]) {
 			const run = shWith(read, "git", "fetch", "-q", ...from);
