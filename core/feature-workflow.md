@@ -305,7 +305,9 @@ for them is already here.
   them — which is why it is stated as an obligation rather than as a
   convention. Which ten, and so which seven, is fixed in the harness's
   `openspec/specs/task-board/` and named nowhere else; a second copy here is
-  the drift this change was written after.
+  the drift this change was written after. Until `approved-column` archives,
+  that spec still lists nine, and the ten are in the change's delta under
+  `openspec/changes/approved-column/specs/task-board/`.
 
   Only the user moves a card to `approved`; an unattended session takes no
   work from `idea` and never sets `approved`. A session the user directs at an
