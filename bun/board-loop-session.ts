@@ -6,6 +6,7 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
+import { answered, LIMITED } from "./transient.ts";
 
 export type Kill = (pid: number, signal: NodeJS.Signals | 0) => void | Promise<void>;
 
@@ -79,9 +80,30 @@ const through =
 	};
 
 /**
+ * `--output-format json`'s one result object read: its `result` as `out`, and
+ * whether the Claude API ended the session with no answer, a 5xx or a 429,
+ * short of the usage limit (`retry-on-transient` *A session ended by a
+ * transient Claude API error*). Output that is no result object is `out` as
+ * printed, never transient.
+ */
+function ending(printed: string) {
+	try {
+		const ended = JSON.parse(printed);
+		if (ended?.type === "result" && typeof ended.result === "string") {
+			const status = ended.api_error_status;
+			const api = ended.is_error === true && ended.terminal_reason === "api_error";
+			const unanswered = status === null || (typeof status === "number" && answered(status));
+			return { out: ended.result as string, transient: api && unanswered && !ended.result.startsWith(LIMITED) };
+		}
+	} catch {}
+	return { out: printed, transient: false };
+}
+
+/**
  * One `claude -p` session, ended at `limit`, and everything it started ended
  * with it, however it exits. `capture` keeps its output rather than showing
- * it. `as` holds the variables the runner adds to the allowlist's, the commit
+ * it: `printed` as `claude` printed it, `out` and `transient` as `ending()`
+ * reads it. `as` holds the variables the runner adds to the allowlist's, the commit
  * identity and the question gate's signal, and `extra` flags it adds to the
  * command line. `under` is the launcher's words and the session's clone on
  * the host, which `claude` then runs in as `agent`, and which then signals its
@@ -99,7 +121,8 @@ export async function session(
 ) {
 	if (under.length) kill = through(under);
 	// Auto mode with nothing to answer prompts; never a bypass of permissions.
-	const flags = ["--permission-mode", "auto", "--permission-prompts", "none", ...extra];
+	// JSON, so the result object says why the session ended.
+	const flags = ["--permission-mode", "auto", "--permission-prompts", "none", "--output-format", "json", ...extra];
 	// A file, not a pipe: a child the session leaves running could hold a pipe open and stall the pass.
 	const dir = capture ? mkdtempSync(join(tmpdir(), "board-loop-")) : "";
 	let interrupt: (() => void) | undefined;
@@ -153,7 +176,8 @@ export async function session(
 			clearTimeout(outright);
 			if (await alive()) left = run.pid;
 		}
-		return { late, left, out: capture ? readFileSync(join(dir, "out"), "utf8") : "" };
+		const printed = capture ? readFileSync(join(dir, "out"), "utf8") : "";
+		return { late, left, printed, ...ending(printed) };
 	} finally {
 		if (interrupt) process.off("SIGINT", interrupt);
 		if (capture) rmSync(dir, { recursive: true, force: true });
