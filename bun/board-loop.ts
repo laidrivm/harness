@@ -38,7 +38,7 @@ import { consider } from "./board-loop-takeable.ts";
 import { ready } from "./ci-run-draft.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
-import { ALREADY, asked, own, POSTED, pickedCard, post, type Settings, settings, unassign } from "./notion-bot.ts";
+import { ALREADY, asked, own, POSTED, pickedCard, post, type Settings, settings, UNASSIGN_FAILED, unassign } from "./notion-bot.ts";
 import { triage } from "./notion-triage.ts";
 import { ASK_SETTINGS, RUNNER_ASKS, where } from "./question-gate.ts";
 
@@ -228,7 +228,10 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	// The pass has read the draft's answer: the user leaves `Assign` before the stage session acts on it.
 	if (bot && chosen.draft !== undefined) {
 		const card = pickedCard(picked.out);
-		console.log(typeof card === "string" ? `assign: not written — ${card}` : await unassign(bot, card.card, { board: named, slug }));
+		const wrote = typeof card === "string" ? `assign: not written — ${card}` : await unassign(bot, card.card, { board: named, slug });
+		// Carried, the draft would go ready with the user still on `Assign`; refused, the next pass reads the answer again.
+		if (wrote.startsWith(UNASSIGN_FAILED)) return refuse(wrote);
+		console.log(wrote);
 	}
 
 	const target = `apply ${slug} step ${chosen.step}`;

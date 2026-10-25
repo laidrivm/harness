@@ -160,6 +160,18 @@ question under a `QUESTION:` line, and this change clears no `Assign` there.
   and one line per form is kept rather than four.
 - **`unassign()`** reads the page again after `carded()` for `Assign`, and
   writes the list back without the user whether or not the user was on it.
+  An `Assign` of 25 people or more, the most a page read lists, is left
+  whole and printed (review of #286).
+- **A failed Notion call refuses the pass** (review of #286). A `CARD:` line
+  or card the runner refuses still carries the step, as *A card line the
+  runner refuses* fixes. A page read or `Assign` write that fails, though,
+  would let the draft go ready with the user still on `Assign`, and no later
+  pass would take it again; `unassign()`'s line then opens with
+  `assign: failed —`, and the runner refuses before the stage session, so
+  the next pass reads the answer again.
+- **`ready()` is killed at `pull-requests.ts`'s `limit()`** with SIGKILL, as
+  the pull request read is, so a `gh` that never answers cannot hold the
+  pass (review of #286).
 
 ## Overlaps
 

@@ -93,6 +93,15 @@ describe("an answer beside a draft pull request", () => {
 		expect(r.last).toBe("board-loop: met — apply demo step 1");
 	});
 
+	test("an Assign write that fails refuses the pass before the stage session, so the next pass reads the answer again", async () => {
+		notion.state.patch = 500;
+		const r = await pass(drafted(), { ...DRAFT, pick: PICKED }, configured()).finally(() => {
+			notion.state.patch = 200;
+		});
+		expect(r.last).toBe("board-loop: refused — assign: failed — the Assign write answered 500");
+		expect(r.calls).not.toContain("claude -p /goal");
+	});
+
 	// spec: board-loop/the-answer-raises-another-question
 	test("a new question keeps the draft, and sets Assign to the user again", async () => {
 		const r = await pass(drafted(), { ...DRAFT, pick: PICKED, said: ASKED }, configured());

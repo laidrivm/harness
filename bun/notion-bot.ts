@@ -209,7 +209,8 @@ export function pickedCard(said: string): { card: string } | string {
 /**
  * Removes the user alone from `card`'s `Assign` once steps 1 and 2 find it the
  * carried change's card on `board`: the pass has read the answer. Returns the
- * line the runner prints; no call is retried.
+ * line the runner prints, opening with `UNASSIGN_FAILED` when a call failed;
+ * no call is retried.
  */
 export async function unassign({ token, user }: Settings, card: string, { board, slug }: { board: string; slug: string }, timeout = 30_000): Promise<string> {
 	const call = client(token, timeout);
@@ -222,10 +223,13 @@ export async function unassign({ token, user }: Settings, card: string, { board,
 		const kept = (Array.isArray(people) ? people : []).filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
 		await call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: kept } } });
 	} catch (error) {
-		return `assign: not written — ${(error as Error).message}`;
+		return `${UNASSIGN_FAILED} ${(error as Error).message}`;
 	}
 	return `assign: removed the user from ${card}`;
 }
+
+/** How `unassign()`'s line opens when a call failed, unlike a card it refused: the user may still be on `Assign`. */
+export const UNASSIGN_FAILED = "assign: failed —";
 
 /** How `post()`'s line opens for a question it posted, and for one it found already waiting. */
 export const POSTED = "question: posted on";

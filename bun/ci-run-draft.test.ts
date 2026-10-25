@@ -35,3 +35,13 @@ test("a work that throws keeps its error when the ready goes through", async () 
 test("a work that throws names the pull request beside its error when the ready is refused", async () => {
 	expect(await thrown(refusing)).toBe("the work broke; #7 could not be marked ready");
 });
+
+// A synchronous spawn blocks bun's own timer, hence the explicit limit and a hang shorter than it.
+test("a gh that never answers is killed at the read limit and reads as refused", async () => {
+	const hanging = emptyDir("ci-run-draft-hanging-");
+	writeFileSync(join(hanging, "gh"), "#!/bin/sh\nexec sleep 10\n", { mode: 0o755 });
+	process.env.HARNESS_GH_TIMEOUT_MS = "300";
+	const started = Date.now();
+	const message = await thrown(hanging).finally(() => delete process.env.HARNESS_GH_TIMEOUT_MS);
+	expect([message, Date.now() - started < 5000]).toEqual(["the work broke; #7 could not be marked ready", true]);
+}, 30_000);
