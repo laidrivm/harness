@@ -92,19 +92,20 @@ Split a file at the 300-line cap before adding to it.
 ## 5. Propose an explored card, approved on the card before its pull request
 
 - [ ] 5.1 Failing cases: `explored` cards and `proposing` ones with an empty
-      `Pointer` are propose candidates; a `proposing` card whose `Pointer`
-      names a change on `spec/<slug>` with no pull request is an answer
-      candidate once answered; the prompt names `/opsx:propose`, the
-      `CHANGE:` line and the approval comment's three sections in one
-      numbering; with a met before-push check the runner writes the
-      `Pointer`, pushes with no pull request, posts the comment and ends
-      `waiting`; no `QUESTION:` pushes and posts nothing; the answer pass
-      opens the pull request and records `met` for `propose`. Verify they
-      fail
+      `Pointer` are propose candidates; the prompt names `/opsx:propose`, the
+      `CHANGE:` line, a `PR-TITLE:` line and the approval comment's three
+      sections in one numbering; with a met before-push check the runner
+      writes the `Pointer`, posts the comment, and opens the proposal's pull
+      request on `spec/<slug>` as a draft through `draft-until-answered`'s
+      path, ending `waiting`; with no `QUESTION:` it opens the pull request
+      ready; the answer pass is `draft-until-answered`'s draft-branch
+      candidate on `spec/<slug>`, marks the pull request ready and records
+      `met` for `propose` (design, *The approval comment rides `QUESTION:`*).
+      Verify they fail
 - [ ] 5.2 Implement 5.1 in `bun/board-loop-candidates.ts`,
-      `bun/board-loop-prompt.ts`, `bun/board-loop.ts` and the push-only mode
-      of `publish()` in `bun/board-loop-push.ts`. Verify with 5.1 and
-      `bun test`
+      `bun/board-loop-prompt.ts` and `bun/board-loop.ts`, on
+      `draft-until-answered`'s draft flag and candidate, with no push-only
+      mode in `publish()`. Verify with 5.1 and `bun test`
 - [ ] 5.3 Describe the propose stage and the approval comment in `README.md`
       and `core/feature-workflow.md`. Verify with the tests that read
       `core/feature-workflow.md`

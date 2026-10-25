@@ -79,10 +79,16 @@ the integration, so it waits on bot-route's REST write.
 The propose session names it like any question, so the triage, the
 already-waiting check and `Assign` stay as they are. `carded()` requires the
 `Pointer` to name the change, so the runner writes the `Pointer` first. The
-branch is pushed with no pull request so the user can read the proposal;
-`publish()` gains that mode, keyed on a `CHANGE:` line with a question and no
-`PR-TITLE:`. The answer pass continues the branch, as an apply answer does,
-and its pull request opens through the existing path.
+proposal's pull request opens with the work, as a draft, through
+`draft-until-answered`'s mechanism (settled by the user on that card on
+2026-10-25, question 3, (а)): the session names a `PR-TITLE:` line as every
+step does, its `QUESTION:` makes the runner open the pull request a draft,
+and the answer pass is that change's draft-branch candidate, which continues
+`spec/<slug>` and marks the pull request ready once nothing is left to ask.
+`publish()` gains no push-only mode, and a `proposing` card is no answer
+candidate of this change's own. This change lands after
+`draft-until-answered`, and its delta of *A pass takes only a takeable
+change* is re-copied once that change is archived.
 
 ### Archive is a tree candidate
 
