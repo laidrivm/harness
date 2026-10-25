@@ -49,19 +49,21 @@ at an `idea` card may move it to `exploring`. The position between `idea` and
 `exploring` stands. The loop's pick from `approved` and its WIP limit of 10 stay
 with the card for the loop taking every status. The view's columns follow the
 option order, and no option retires. `mellon`'s board already exists beside
-the other two, so it takes the list in this change. The apply session adds the
-option to the three boards' `Status` select through the connector's schema
-update and reads each board back (item 10). `approved` is hand-moved, so
-`bun/board-state.ts` never reports it (item 11). Every write the loop makes
+the other two, so it takes the list in this change. `approved` is hand-moved,
+so `bun/board-state.ts` never reports it (item 11). Every write the loop makes
 to Notion goes out under the bot integration's name, never the user's (item
-12): the schema write of task 1.3 waits for the change that routes card
-writes through the bot, so this change is applied only after that one lands.
+12). The schema write of task 1.3 is the user's own, by hand in Notion
+(settled on the `bot-notion-writes` card on 2026-10-25, answer 1, replacing
+item 10's write by the apply session under any name): a schema write is no
+card write the bot makes, and adding one option by hand is a one-off. The
+apply session only re-reads each board's schema and compares it with the
+list. `.openspec.yaml` still names `bot-notion-writes` in `after:`.
 
 ## Risks / Trade-offs
 
 - [A board write outside this repository] → setting `D2ASS`'s and `mellon`'s
   `Status` touches other projects' boards. The vocabulary is shared by requirement,
   and the write only adds an option; the step re-reads each board after it.
-- [The DDL rewrites the whole option list] → a statement that drops an option
-  by omission would retire it. The step sets all ten by name, compares the read
-  back against the list, and stops on a difference.
+- [A hand edit off the list] → a slip in Notion could rename, drop or misplace
+  an option. The apply session compares all ten, by name and order, with the
+  list in task 1.3 and stops on a difference.

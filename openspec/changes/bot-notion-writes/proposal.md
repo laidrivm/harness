@@ -25,15 +25,19 @@ cleared by hand.
   the picked change's on the board `harness.board` names, moves its
   `Status` to `applying` over REST from the integration, from `proposed`, or
   from `applied` for an answer candidate.
-- Once `gh pr create` succeeds, the runner removes the user from that card's
-  `Assign` over REST, so an answer counts as applied in the turn its pull
-  request opens. A pass that ends `open` or `waiting` leaves `Assign` alone.
+- Right after the claim, before the stage session starts, the runner removes
+  the user from that card's `Assign` over REST: the user decided on
+  2026-10-25 that `Assign` goes as soon as the answer is read, and comes back
+  only with a new question. A pass that then ends `open` or `waiting` leaves
+  it empty. This relies on `answer-match` (PR #263), under which the pick no
+  longer reads `Assign`, so it is applied after that change.
 - A stage session carrying an answer that asks for a change of its own names
   the new card in an `IDEA:` line of its final message instead of filing it;
-  the runner files it at `idea` on the same board and removes the user from
-  the carried card's `Assign`.
+  the runner files it at `idea` on the same board.
 - Without the integration nothing changes: the laptop keeps the MCP form for
-  both sessions (the user's answer 13в).
+  both sessions (the user's answer 13в on the `loop-reads-feedback` card:
+  with neither the integration nor the ask command, the loop writes through
+  the connector under the user's name).
 
 Not in this change: `Status` and `Pointer` lines for the stages the loop does
 not carry yet (they come with *Let the board loop carry every status's next
@@ -50,7 +54,7 @@ None.
 ### Modified Capabilities
 
 - `board-loop`: the pick's claim and the stage session's `idea` card move to
-  the runner, the runner clears `Assign` when it opens the pull request, and
+  the runner, the runner clears `Assign` when the pass reads the answer, and
   the sessions lose the Notion write tools where the integration is
   configured.
 - `task-board`: who clears `Assign` and files the `idea` card for an answer
@@ -58,7 +62,7 @@ None.
 
 ## Impact
 
-- `bun/board-loop.ts`, `bun/board-loop-push.ts`, `bun/board-loop-prompt.ts`,
+- `bun/board-loop.ts`, `bun/board-loop-prompt.ts`,
   and a new `bun/notion-card.ts` holding the runner's card writes; their
   tests and `bun/notion-bot.fixture.ts`'s stand-in API.
 - `core/feature-workflow.md` (the board loop's launch-form variants),

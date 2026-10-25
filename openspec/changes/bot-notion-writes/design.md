@@ -27,21 +27,24 @@ claimed the card, and `applied` waits on the last merge, which no pass sees.
 ## Goals / Non-Goals
 
 **Goals:** no write of a loop pass reaches Notion under the user's name where
-the integration is configured; `Assign` is cleared when the answer's pull
-request opens.
+the integration is configured; `Assign` is cleared in the pass that reads the
+user's answer, before that pass acts on it.
 
 **Non-Goals:** a general write language for sessions; `Status` or `Pointer`
 writes for stages the loop does not carry yet; the laptop without the
-integration, which keeps the MCP form (answer 13в); the pull request's link
-on the card.
+integration, which keeps the MCP form (answer 13в on the
+`loop-reads-feedback` card, 2026-10-24: with neither the integration nor the
+ask command, the loop keeps writing through the connector under the user's
+name, since another account or another person may run the harness
+unconfigured); the pull request's link on the card.
 
 ## Decisions
 
 ### The runner makes the writes it can derive, and the sessions name only what it cannot
 
 The claim and the clear need no instruction from a session: the runner knows
-the picked change, whether it is an answer candidate, and when `gh pr create`
-succeeded. Only the card's id is missing, so the pick names it in one
+the picked change, whether it is an answer candidate, and the card's `Assign`
+from the same page read. Only the card's id is missing, so the pick names it in one
 `CARD: <id>` line. The `idea` card's title and text are the session's, so
 the stage session names them in an `IDEA:` line. A general
 `NOTION-SET: <property> <value>` form was considered and left out: no stage
@@ -59,15 +62,29 @@ not today (*A write that fails changes nothing about your answer*). The
 runner reads `Status` from the same page read, and writes `applying` only
 from `proposed`, or from `applied` for an answer candidate.
 
-### `Assign` loses the user only
+### `Assign` loses the user when the pass reads the answer
 
-After `gh pr create` exits 0, the runner reads the card's `Assign` and, when
-it holds the user `notion-bot.json` names, writes it back without that user.
-Anyone else on it stays. A pass that ends `open` or `waiting`, a push
-refused, or a `gh pr create` that fails — a pull request already open on the
-branch included, whose own pass cleared it — leaves `Assign` as it is.
-`publish()` takes the clear as a callback run after the create, so the push
-module learns no Notion call.
+Settled by the user on 2026-10-25 (item 5 on the card), replacing the clear
+once `gh pr create` succeeds: `Assign` is removed as soon as the user's
+answer is read, and set back only when a new question is posted. Right after
+the claim, from the same page read and before the stage session starts, the
+runner removes the user `notion-bot.json` names from the card's `Assign`,
+where it holds them; anyone else on it stays. A card the pick took has no
+question waiting without an answer — the pick passes those over — so the user
+on it is waited on for nothing. A pass that then ends `open` or `waiting`, a
+push refused, or a `gh pr create` that fails leaves `Assign` empty; only a
+new question sets it again, through `post()` or the ask command, as today.
+`publish()` is not touched.
+
+The clear before the stage session relies on the pick no longer reading
+`Assign`: today it takes the user's answer only while `Assign` holds the
+user, so a session that died after the clear would strand the answer (the
+risk answer 12б on the `loop-reads-feedback` card accepted). `answer-match`
+(PR #263) has the pick take an answer by its question's tag instead, so this
+change is applied after it; neither is on the default branch yet, so the
+order stands here and on the card rather than in `after:`. The same rule
+settles `answer-match`'s question 3 and `draft-until-answered`'s question 1
+and decision 5, whose designs record it.
 
 ### The `IDEA:` line
 
@@ -75,8 +92,8 @@ One `IDEA: <title>` line, the text below it to a `PR-TITLE:` line or the end
 as the card's body, read as `asked()` reads `QUESTION:` (untrusted, one line,
 before any `PR-TITLE:`). The runner creates the page in the carried card's
 data source, the one `carded()` read, with `Name` the title and `Status`
-`idea`, the body as paragraphs, then removes the user from the carried card's
-`Assign`. A message with both `QUESTION:` and `IDEA:` posts the question and
+`idea`, the body as paragraphs; the carried card's `Assign` was already
+cleared after the claim. A message with both `QUESTION:` and `IDEA:` posts the question and
 files no card, since the answer route and a new question exclude each other.
 
 ### Every Notion write tool is withheld, by name
@@ -102,9 +119,11 @@ select. A schema write is not a card write: no loop pass needs one, the
 boards include `D2ASS` and `mellon`, which this host's runner never writes,
 and a REST `PATCH /v1/data_sources/<id>` rewriting a select's options would
 need its own read-back and refusal cases. This change builds no schema
-write. `approved-column` is applied after this one (`after:` in its
-`.openspec.yaml`); how its task 1.3 goes out under the bot's name is
-question 1 on the card.
+write. Settled by the user on 2026-10-25 (item 1): the user adds the option
+by hand, and `approved-column`'s task 1.3 is a user act carrying the
+step-by-step instruction, its apply session only reading each board back.
+`approved-column` is still applied after this one (`after:` in its
+`.openspec.yaml`, item 8).
 
 ### File placement
 
@@ -122,6 +141,14 @@ first takeable card in the board's order*. This change's delta is written on
 top of its version and names it in `after:`, so the two archive in order and
 the later delta keeps the earlier one's paragraph.
 
+### Collision with `answer-match`
+
+`answer-match` modifies the same `board-loop` requirement and renames
+`task-board`'s *An answer the board loop carries is applied when its pull
+request opens*, whose text this change also modifies. It lands first (see
+*`Assign` loses the user when the pass reads the answer*), and this change's
+two deltas are re-copied over its versions before this change is applied.
+
 ## Risks / Trade-offs
 
 - [The integration cannot write a board] → a consumer's board not shared
@@ -134,6 +161,9 @@ the later delta keeps the earlier one's paragraph.
   is not the picked change's, so no other card is written.
 - [`Assign` read and write are two calls] → the user could change `Assign`
   between them; the window is one REST call, as `post()`'s is.
+- [A `CARD:` line the runner refuses] → neither the claim nor the clear is
+  written, and the sessions hold no write tool, so `Assign` stays on the user
+  though the answer was read; the runner prints why, for the user to clear it.
 
 ## Migration Plan
 

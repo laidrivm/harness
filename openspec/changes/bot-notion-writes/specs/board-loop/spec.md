@@ -97,12 +97,13 @@ directory:
 
 - the claim *A pass takes the first takeable card in the board's order*
   names, on the card the pick's `CARD:` line names;
-- once `gh pr create` for the step succeeds, the removal of the user from
-  that card's `Assign`, where it holds the user;
+- right after the claim and before the stage session starts, the removal of
+  the user from that card's `Assign`, where it holds the user (`task-board`,
+  *An answer the board loop carries is applied when its pull request opens*);
 - for a stage session whose final message holds one `IDEA: <title>` line
   before any `PR-TITLE:` line, a card at `idea` on the same board with that
   title and the text below the line, to a `PR-TITLE:` line or the end, as its
-  body, then the removal of the user from the carried card's `Assign`.
+  body.
 
 The runner SHALL print one line for each write it made or did not make, and
 why. No write, made or failed, SHALL change the pass's outcome. Without the
@@ -121,28 +122,29 @@ writes as before.
 
 - **WHEN** the `CARD:` line is missing, is not one card id, or names a card
   whose `Pointer` is not the picked change's directory
-- **THEN** the runner writes no `Status`, prints why, and carries the step
+- **THEN** the runner writes neither `Status` nor `Assign`, prints why, and
+  carries the step
 
-#### Scenario: The pull request opens on an answer
+#### Scenario: The pass reads the answer
 
-- **WHEN** the runner's `gh pr create` succeeds for a step whose card's
-  `Assign` holds the user
-- **THEN** the runner removes the user from that `Assign`, leaves anyone
-  else on it, and prints that it did
+- **WHEN** the integration is configured and the card the `CARD:` line names
+  holds the user in `Assign`
+- **THEN** the runner removes the user from that `Assign` before the stage
+  session starts, leaves anyone else on it, and prints that it did
 
-#### Scenario: No pull request opened
+#### Scenario: The pass ends before its pull request
 
-- **WHEN** the pass ends `open` or `waiting`, the push is refused, or
-  `gh pr create` fails
-- **THEN** the runner leaves the card's `Assign` as it is
+- **WHEN** the runner has cleared the card's `Assign`, and the pass ends
+  `open` or `waiting`, the push is refused, or `gh pr create` fails
+- **THEN** the runner writes no `Assign` again, and the card's `Assign` stays
+  empty until a question is posted on it
 
 #### Scenario: An answer that asks for a change of its own
 
 - **WHEN** the stage session's final message opens with `BLOCKED —` and holds
   one `IDEA:` line with a title
 - **THEN** the runner creates a card at `idea` on the carried card's board
-  with that title and body, removes the user from the carried card's
-  `Assign`, and prints the new card's id
+  with that title and body, and prints the new card's id
 
 #### Scenario: A malformed idea line
 

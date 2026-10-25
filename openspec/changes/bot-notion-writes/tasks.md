@@ -33,17 +33,22 @@
       claim against the stand-in (scenarios *A claim from the runner*, *A
       card line that names no card of the pick*, *No integration*). Verify
       with those files
-- [ ] 1.5 Give `publish()` in `bun/board-loop-push.ts` an `opened` callback
-      run only when `gh pr create` exits 0, and pass `unassign()` from
-      `pass()`. Cases in `bun/board-loop-push.test.ts`: the callback runs
-      once on a created pull request, and not on a refused push, a failed
-      create or an unready step (scenarios *The pull request opens on an
-      answer*, *No pull request opened*). Verify with that file
+- [ ] 1.5 Before starting, confirm `answer-match` is on the default branch
+      (design, *`Assign` loses the user when the pass reads the answer*), and
+      re-copy this change's two deltas over its versions. Then, with the
+      integration, have `pass()` print `unassign()`'s line right after the
+      claim of 1.4, on the same card and before the stage session starts.
+      Cases in `bun/board-loop-question.test.ts` against the stand-in: the
+      user leaves `Assign` before the stage session's stub runs, anyone else
+      stays, nothing is written when the user is not on it or the `CARD:`
+      line was refused, and a pass that then ends `open`, `waiting` or with a
+      refused push writes no `Assign` again (scenarios *The pass reads the
+      answer*, *The pass ends before its pull request*). Verify with that
+      file
 - [ ] 1.6 File the `idea` card: with the integration, the stage prompt's
       answer variant (`prompt()`, `instead`) asks for the `IDEA:` line after
       `BLOCKED —` instead of a card and an `Assign` write, and `pass()`
-      calls `file()` then `unassign()` after a clean session whose message
-      names one. Cases for the prompt and the pass (scenarios *An answer
+      calls `file()` after a clean session whose message names one. Cases for the prompt and the pass (scenarios *An answer
       that asks for a change of its own*, *A malformed idea line*). Verify
       with `bun test bun/board-loop*.test.ts bun/notion-card.test.ts`
 - [ ] 1.7 Reconcile the restating sites and read each back: the answer
