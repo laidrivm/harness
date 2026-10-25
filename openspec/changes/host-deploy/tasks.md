@@ -44,28 +44,8 @@
       `orchestrator/the-runner-is-recreated-under-the-locks` (the stub `up`
       checks, from another process, that the gate and the lock are still
       held)
-- [ ] 1.5 In a new `bun/ci-run-gate.test.ts` (Linux CI only, real `flock`),
-      write first and record that it fails: with the gate held by the test,
-      the flow creates no repository lock until the test releases the gate
-      (`orchestrator/a-failed-run-s-flow-during-the-deploy`); with the
-      repository lock held by the test, the gate is free between the flow's
-      attempts (another process takes it with `flock -n`) and the flow runs
-      once the test releases the lock
-      (`orchestrator/a-flow-waits-for-a-running-pass-outside-the-gate`); a
-      case reads the gate's budget from `ci-run.ts` and the service's
-      `TimeoutStartSec` and asserts the budget is the longer
-      (`orchestrator/a-flow-waits-out-the-longest-deploy`). Then take the
-      gate in `bun/ci-run.ts` per design.md, *Build first* (answer 15б): one
-      `sh` loop takes the gate with `flock -w` on what is left of a 14400 s
-      budget shared by every attempt's gate wait (run out or timed out:
-      exit status 75), tries the repository lock with `flock -n`, closes
-      the gate either way, and makes at most 1440 attempts, sleeping 5 s
-      after each busy one but the last (1439 sleeps, 7195 s); a busy last
-      attempt exits at once with status 75; never a blocking
-      `flock -w 7200` under the gate. `wc -l` it first (296 lines) and split
-      by the cap before adding. Raise `timeout` in
-      `orchestrator/windmill/f/orchestrator/event.script.yaml` from 11700 to
-      26100 and rewrite its comment to the sum design.md gives
+Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25 (design.md,
+*A failed run's flow stays outside the gate*).
 
 ## 2. The units, the push configuration and the layout
 
