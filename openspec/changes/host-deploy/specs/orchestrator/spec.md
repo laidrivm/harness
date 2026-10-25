@@ -2,7 +2,8 @@
 
 ### Requirement: The host deploys main's green head and nothing else
 
-On each tick the host's deploy SHALL compare `origin/main`'s head with the
+On each run, whether the kick or the timer started it, the host's deploy
+SHALL compare `origin/main`'s head with the
 commit it last deployed. When they differ and the head's `test` check has
 concluded `success`, it SHALL fast-forward the host's checkout to that head,
 rebuild the images, bring the stack up, push the Windmill scripts and route,
@@ -10,7 +11,7 @@ and only then record the head as deployed. It SHALL deploy no other commit.
 
 #### Scenario: Main has not moved
 
-- **WHEN** the tick finds `origin/main`'s head equal to the commit last
+- **WHEN** a run finds `origin/main`'s head equal to the commit last
   deployed
 - **THEN** the checkout, the images and the engine are unchanged
 
@@ -31,6 +32,45 @@ and only then record the head as deployed. It SHALL deploy no other commit.
 - **WHEN** the checkout has a tracked change or a commit `origin/main` does
   not hold
 - **THEN** the checkout is not moved, nothing is rebuilt, and the deploy fails
+
+### Requirement: A green run on main starts the deploy at once
+
+After the runner's handler exits 0 for a `workflow_run` delivery whose run
+completed with `success`, from a push, on the repository's default branch, the
+event job SHALL start the host's deploy service over `ssh` with a key whose
+forced command starts that service alone, and SHALL end without waiting for
+the deploy. It SHALL start nothing for any other delivery, or when the
+handler exits non-zero. The timer SHALL start the same service, and the two
+SHALL never run two deploys at once.
+
+#### Scenario: Main's test passes
+
+- **WHEN** the handler exits 0 for a `workflow_run` delivery completed with
+  `success` from a push to the default branch
+- **THEN** the job runs `ssh` to `root@host.docker.internal` with the kick key
+  and the pinned host key, and ends once that returns
+
+#### Scenario: A delivery that is no green main run
+
+- **WHEN** the handler exits 0 for another event, a run that did not succeed,
+  a run on another branch, or a run started by a pull request
+- **THEN** the job runs no `ssh` to the host
+
+#### Scenario: A refused delivery
+
+- **WHEN** the handler exits non-zero
+- **THEN** the job fails and runs no `ssh` to the host
+
+#### Scenario: The worker reaches the host
+
+- **WHEN** `compose.yaml` is read
+- **THEN** the default worker maps `host.docker.internal` to the host gateway
+
+#### Scenario: A kick during a deploy
+
+- **WHEN** the kick starts the service while a run is active
+- **THEN** that run is the only deploy, and a head that turned green during it
+  is deployed by the timer's next run
 
 ### Requirement: A deploy never ends a running pass
 

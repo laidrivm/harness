@@ -14,11 +14,17 @@ main*, 2026-10-22).
 
 ## What Changes
 
-- A root systemd timer on the host runs `orchestrator/deploy.sh` every five
-  minutes. When `origin/main`'s head differs from the commit last deployed and
-  its `test` check has passed, the script fast-forwards `/root/harness` to it,
-  rebuilds the images, recreates what changed with `docker compose up -d`, and
-  pushes the Windmill scripts and the route, then records the commit.
+- One root service on the host, `harness-deploy.service`, runs
+  `orchestrator/deploy.sh`. Two triggers start it. At once: GitHub's
+  `workflow_run` delivery for a successful run on `main` reaches the existing
+  route `/api/r/github`, the runner's handler checks its signature as it does
+  today, and then Windmill's event script runs `ssh` to the host with a key
+  whose forced command only starts the service. As the backstop: a root timer
+  every five minutes. When `origin/main`'s head differs from the commit last
+  deployed and its `test` check has passed, the script fast-forwards
+  `/root/harness` to it, rebuilds the images, recreates what changed with
+  `docker compose up -d`, and pushes the Windmill scripts and the route, then
+  records the commit.
 - The stack is recreated only while the deploy holds every pass lock, so a
   running pass is never ended: the deploy waits for it, and a tick during the
   deploy reads `busy` and exits 0.
@@ -34,20 +40,30 @@ main*, 2026-10-22).
 
 ### Modified Capabilities
 
-- `orchestrator`: the host deploys main's green head unattended, without
-  ending a pass, pausing the loop when the deploy fails, and leaving the
-  pass schedule as the engine holds it.
+- `orchestrator`: the host deploys main's green head unattended, as soon as
+  its `test` passes, without ending a pass, pausing the loop when the deploy
+  fails, and leaving the pass schedule as the engine holds it.
 
 ## Impact
 
 - New: `orchestrator/deploy.sh`, `orchestrator/deploy.test.ts`,
   `orchestrator/host/harness-deploy.service`,
   `orchestrator/host/harness-deploy.timer`.
+- `orchestrator/windmill/f/orchestrator/event.ts`: after the handler exits 0
+  on a successful `main` run, the kick over `ssh`; a new
+  `orchestrator/event-kick.test.ts`.
+- `orchestrator/compose.yaml`: `host.docker.internal` on the default worker.
 - `orchestrator/windmill/wmill.yaml`: `includeSchedules` dropped.
-- `orchestrator/layout.test.ts`: the units and the deploy token's absence
-  from `compose.yaml`.
-- `orchestrator/README.md`: a step installing the timer and the deploy token.
-- Host, by the user: the deploy token file and the timer's install.
+- `orchestrator/layout.test.ts`: the units, the worker's host entry and the
+  deploy token's absence from `compose.yaml`.
+- `orchestrator/README.md`: a step installing the service, the timer, the
+  deploy token and the kick key; step 10's webhook on this repository too.
+- Host and GitHub, by the user: the deploy token file, the kick key's
+  `authorized_keys` line and its Windmill variable, the host's line in
+  `runner_known_hosts`, the units' install, and the webhook on this
+  repository. Cloudflare Access is unchanged: the route already has its
+  bypass.
 - Out of scope: the self-pin's bump (card *Bump the harness's self-pin
-  automatically*), a push-driven trigger, rollback beyond a revert merged to
-  `main`, and other repositories' hosts.
+  automatically*, applied after this one; design.md, *How it meets
+  self-pin-bump*), rollback beyond a revert merged to `main`, an agent that
+  repairs a failed deploy (its own card), and other repositories' hosts.

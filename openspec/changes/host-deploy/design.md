@@ -15,44 +15,113 @@ laptop with a writing token deleted afterwards (README step 6).
 the user gives (`cloud-sessions` design, decision 2). That approval is the
 trust a deploy can rest on.
 
-Overlap: card *Bump the harness's self-pin automatically* moves the pin; this
-change moves the checkout. They touch no common file. A merged pin bump is a
-commit on `main` like any other: the deploy fast-forwards to it and the build
-reuses every cached layer, since `package.json` is in no build context.
+The webhook path exists already (`ci-run-agent`, README steps 1 and 10).
+`https://<hostname>/api/r/github` is the one path a Cloudflare Access
+application with a Bypass policy leaves open, so GitHub reaches it without the
+service-token headers the rest of the hostname needs. The route
+(`github.http_trigger.yaml`) is async and unauthenticated in Windmill; its
+script `f/orchestrator/event` hands the three headers and the raw body over
+`ssh` to the runner, whose `bun/on-event.ts` checks `X-Hub-Signature-256`
+against `secrets/github_webhook_secret` before anything else and exits 2 on a
+mismatch, 1 on a failure and 0 otherwise. On 2026-10-25 this repository has no
+webhook (`gh api repos/laidrivm/harness/hooks` lists none).
 
 ## Goals / Non-Goals
 
 **Goals:** a merged pull request reaches the host's images, stack and engine
-scripts with no act of the user's; a running pass is never cut; a failed
-deploy is visible where the user already looks.
+scripts with no act of the user's, as soon as its `test` passes; a running
+pass is never cut; a failed deploy is visible where the user already looks.
 
-**Non-Goals:** a push-driven trigger; rollback other than a revert merged to
-`main`; deploying another repository's host; moving the Windmill schedule;
-the self-pin's bump.
+**Non-Goals:** rollback other than a revert merged to `main`; deploying
+another repository's host; moving the Windmill schedule; the self-pin's bump;
+repairing a failed deploy without the user (card *Start an agent on the host
+to fix a failed deploy*).
 
 ## Decisions
 
-### A root timer on the host pulls; nothing pushes to the host
+### One root service, started by the webhook at once and by a timer as the backstop
 
-`orchestrator/host/harness-deploy.timer` starts
-`harness-deploy.service` five minutes after boot and five minutes after each
-run ends; the service is `Type=oneshot` and runs
-`/root/harness/orchestrator/deploy.sh` as root, so ticks never overlap.
+`orchestrator/host/harness-deploy.service` is `Type=oneshot` and runs
+`/root/harness/orchestrator/deploy.sh` as root. Two things start it:
+
+- the kick (next decision), within seconds of `main`'s `test` passing;
+- `orchestrator/host/harness-deploy.timer`, five minutes after boot and five
+  minutes after each run ends, for a delivery GitHub dropped, a kick that
+  failed, or a head that turned green while a deploy ran.
+
+The user chose this on the card (answer 12а): the deploy follows a merge at
+once, and the key that reaches the host never leaves it.
 
 Alternatives, rejected:
-- GitHub Actions on a push to `main`, over SSH: a root key in GitHub's secrets
-  and an SSH route through the tunnel, so a leaked CI secret is root on the
-  host.
-- A Windmill job, or the pass itself: both run in containers without the
-  Docker socket, and handing them the socket hands root on the host to the
-  engine or to the runner the agent shares.
-- GitHub's push webhook through the existing route: faster, but the handler
-  runs in the runner and still needs a root actor on the host to rebuild, so
-  it adds a hand-off to the timer it cannot replace.
+- GitHub Actions on a push to `main`, over SSH, even with a forced command:
+  the key sits in GitHub's secrets and the host needs an SSH route through
+  the tunnel (answer 12б, not taken).
+- The timer alone (answer 1а): up to five minutes late; the user wants the
+  deploy right after the merge (answer 1б).
+- A Windmill job, or the pass itself, running the deploy: both run in
+  containers without the Docker socket, and handing them the socket hands
+  root on the host to the engine or to the runner the agent shares.
 
-A poll is one `git fetch` and one unauthenticated read of a public
-repository's check runs: twelve an hour, under the 60 an hour GitHub allows an
+A poll is one `git fetch` and, only while the head differs from the commit
+last deployed, one unauthenticated read of a public repository's check runs:
+at most twelve an hour from the timer, under the 60 an hour GitHub allows an
 address.
+
+### The kick: the existing route, the existing signature check, then one `ssh`
+
+The kick rides on GitHub's `workflow_run` delivery, not on `push`: at the push
+the head's `test` is still pending, so a deploy started then deploys nothing
+(*Only the head of `main`*, below) and the merge waits for the timer. A `workflow_run`
+completing with `success` on `main` is the moment the head becomes
+deployable. The webhook is README step 10's, added to this repository: payload
+URL `/api/r/github`, the same secret file, the *Workflow runs* event.
+
+`event.ts` keeps its order: hand the delivery to the runner's handler, and
+throw on a non-zero exit, so a refused signature kicks nothing. After an exit
+0, which only a body whose HMAC matched can reach, it parses that same body,
+and when the delivery is `workflow_run`, `action` is `completed`,
+`workflow_run.conclusion` is `success`, `workflow_run.event` is `push` and
+`workflow_run.head_branch` is `repository.default_branch`, it runs
+
+    ssh -i <key> -o BatchMode=yes -o StrictHostKeyChecking=yes
+        -o UserKnownHostsFile=/run/secrets/runner_known_hosts
+        root@host.docker.internal
+
+The key is a new secret variable, `f/orchestrator/host_deploy_key`, read by
+its path as the event key is. Its public half sits in root's
+`authorized_keys` as
+
+    restrict,from="<the compose network's subnet>",command="systemctl start --no-block harness-deploy.service" ssh-ed25519 …
+
+so the key starts the service and nothing else: no shell, no pty, no
+forwarding, no argument reaches the host (the forced command ignores
+`SSH_ORIGINAL_COMMAND`), and only from the compose network.
+`--no-block` returns at once, so the job does not wait for the deploy and a
+deploy that recreates the worker does not cut it. The host's ed25519 key is
+one more line of `runner_known_hosts`, under the name `host.docker.internal`,
+which the default worker gets from `extra_hosts: host-gateway`.
+
+The handler's signature check is the one copy: the secret stays in its one
+file and the HMAC in `on-event.ts`, so no second copy can drift. The kick
+carries no data, so a delivery for another repository the loop serves, a
+duplicate, or a green run of a workflow other than `Test` costs at most one
+`git fetch` and one check read: `deploy.sh` reads everything it acts on from `origin` and the
+check runs, never from the delivery.
+
+- *Alternative: a second route with its own Access bypass, verifying the HMAC
+  in the Windmill script under a secret variable.* A second opening in
+  Access, a second copy of the secret and of the check.
+- *Alternative: the runner's handler sends the kick.* The runner is the
+  agent's container; a host key there is one sudo rule away from the agent.
+
+### Two triggers never run two deploys
+
+Both triggers start the same `Type=oneshot` unit, and systemd runs one
+instance of a unit: a start while a run is active joins that run. So the
+webhook and the timer never deploy at once, and a kick during a deploy adds
+nothing. Each run compares `origin/main`'s head with the recorded commit, so
+a second run on a deployed head ends after its fetch. A head that turned
+green during a run is the timer's, at most five minutes after that run ends.
 
 ### Only the head of `main`, and only once its `test` check passed
 
@@ -67,10 +136,12 @@ supersedes it.
 ### The deployed commit is recorded outside the tree, after the last step
 
 `StateDirectory=harness-deploy` gives `/var/lib/harness-deploy/`; the script
-writes the head there only once the push has succeeded. The tick compares
+writes the head there only once the push has succeeded. Each run compares
 `origin/main`'s head with that file, never with `HEAD`, so a deploy that
 failed after the fast-forward is retried in full on the next tick: every step
-is idempotent, and a build with nothing new reuses its cache.
+is idempotent, and a build with nothing new reuses its cache. The user
+confirmed this on the card (answers 7 and 14): a failed step is not resumed;
+the next run, a kick or a tick, starts again from the first step.
 
 ### A fast-forward only
 
@@ -119,6 +190,9 @@ CLI and the engine move together and no second pin exists. The token is read
 inside the container from the mounted file, so no host process's arguments
 carry it.
 
+The user chose the push in the deploy, with a token that stays on the host
+(answer 3а), over keeping it the laptop's hand push.
+
 The token sits in `orchestrator/secrets/windmill_deploy_token`, root's, 0400,
 and no `secrets:` entry in `compose.yaml` names it, so no long-running
 container receives it. A writing token on the host is no new power: root
@@ -147,6 +221,13 @@ failed fetch or check read pauses nothing: the host is still on a working
 commit. If the runner itself is down, the exec fails too; the ticks then fail
 on SSH, which Runs shows as well.
 
+The user chose this signal (answer 2а) once answer 13 named when it fires:
+the tree is on the new commit, but the build, `up` or the push failed, so the
+containers are old or gone. The stop file holds the loop until the user looks.
+An agent on the host that takes such a failure and repairs it is its own card,
+*Start an agent on the host to fix a failed deploy* (roadmap D); this change
+only leaves it the stop file's line and the journal to start from.
+
 ## Risks / Trade-offs
 
 - [A merged pull request runs as root on the host within minutes, with no
@@ -158,18 +239,56 @@ on SSH, which Runs shows as well.
 - [A docs-only commit still waits for a running pass before `up`] → a deploy
   is not urgent, and `up` with nothing changed recreates nothing.
 - [Whether a push without schedules leaves the live schedule untouched is
-  read from the CLI's help, not run] → task 3.2 probes it on the host before
+  read from the CLI's help, not run] → task 4.2 probes it on the host before
   the timer is enabled.
+- [Anyone can POST to the bypassed path] → as today, the handler refuses an
+  unsigned body before any kick; a kick itself carries nothing, so the worst
+  a valid but unwanted delivery does is one fetch and one check read.
+- [The webhook on this repository also starts `ci-run-agent`'s flow for the
+  loop's failing pull requests here] → step 10 already means it for every
+  repository the loop serves, and this one is served (an assumption of this
+  change; disabling the webhook stops both, and the timer still deploys).
+- [The worker reaches the host's `sshd` on the bridge] → `from=` holds the key
+  to the compose network; the host's `sshd` must listen there, which the
+  user's first kick (task 4.4) shows.
+
+## How it meets self-pin-bump
+
+Card *Bump the harness's self-pin automatically* (`self-pin-bump`, PR #264)
+and this change are complementary, kept as two changes:
+
+- **Triggers.** Both start on a successful `Test` run on `main`: its workflow
+  in GitHub Actions, this kick on the host. Neither waits for the other.
+- **What each moves.** That change moves the pin, which the pass reads from
+  `main` on every pass (`pass.sh:176-186`), so a merged bump reaches the board
+  loop with no deploy. This change moves the checkout: the images, the stack
+  and the engine scripts. A merged bump is a `main` commit like any other;
+  this deploy fast-forwards to it and the build reuses every cached layer,
+  since `package.json` is in no build context.
+- **Files.** None in common. That change edits `pass.sh`; this one bakes
+  `pass.sh` into the image, so that change's lag line reaches the host by
+  this deploy rather than by a hand rebuild.
+- **User acts.** Unrelated: a GitHub environment with a second App key there;
+  a host token, a host key, units and a webhook here.
+- **Order.** Apply this one first: then `self-pin-bump`'s `pass.sh` edit, and
+  every later fix, reach the host on their merge.
+
+Glued, the two proposals pass 800 lines and mix two sets of user acts in one
+review, so they stay apart.
 
 ## Migration Plan
 
-Merge, then the user's acts in README's new step: write the deploy token,
-`systemctl link` both units, `systemctl enable --now harness-deploy.timer`.
-The first tick deploys the head, since nothing is recorded yet. To stop
-deploys: `systemctl disable --now harness-deploy.timer`.
+Merge, then the user's acts in tasks.md group 4: write the deploy token,
+`systemctl link` both units, `systemctl enable --now harness-deploy.timer`;
+add the kick key and its variable, the host's line in `runner_known_hosts`,
+and the webhook. The first run deploys the head, since nothing is recorded
+yet. To stop deploys: `systemctl disable --now harness-deploy.timer` and
+remove the kick key's line from `authorized_keys`.
 
-## Open Questions
+## Settled on the card
 
-On the card: the trigger (timer, CI over SSH, or webhook), the failure signal
-(pause, journal only, or a line in each pass log), and whether the Windmill
-push is in the deploy or stays the laptop's.
+All answered on 2026-10-25: the trigger is the webhook kick with the timer as
+the backstop (12а); a failed deploy writes each clone's stop file (2а, 13);
+the deploy pushes the Windmill scripts with a host-held token (3а); every
+step reruns from the first after a failure (7, 14); decisions 4–6 and 8–11
+stand as written.
