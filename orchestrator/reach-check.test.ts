@@ -28,7 +28,7 @@ function check(files: Record<string, number>, key: number | null, as: Record<str
 
 // Root reads a file whatever its mode, so these say nothing run as root.
 describe.skipIf(process.getuid?.() === 0)("reach-check.sh", () => {
-	// spec: orchestrator/each-secret-file-as-the-session-user
+	// spec: orchestrator/each-secret-file-as-the-session-user orchestrator/the-runner-reads-the-key
 	test("every read refused exits 0", () => {
 		const r = check({ claude_oauth_token: 0o000, github_webhook_secret: 0o000 }, 0o000);
 		expect([r.code, r.out.trim()]).toEqual([0, "reach-check: no secret file is readable as agent, and the App's key not as runner"]);
@@ -40,7 +40,6 @@ describe.skipIf(process.getuid?.() === 0)("reach-check.sh", () => {
 		expect(r.out.trim().split("\n")).toEqual([`reach-check: agent reads ${join(r.secrets, "github_webhook_secret")}`]);
 	});
 
-	// spec: orchestrator/the-runner-reads-the-key
 	test("a key runner can read is named for both users", () => {
 		const r = check({ claude_oauth_token: 0o000 }, 0o444);
 		expect(r.code).toBe(1);
