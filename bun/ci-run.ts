@@ -275,9 +275,10 @@ async function answered(clone: string, prompt: string, as: Record<string, string
 	// `bun` itself never read a `bunfig.toml` a session can write; on the host the launcher enters it.
 	if (!under(clone).length) process.chdir(clone);
 	try {
-		const flags = [...extra, "--json-schema", SCHEMA, "--output-format", "json"];
+		// `session()` asks for JSON output itself; the structured answer is in the whole object it printed.
+		const flags = [...extra, "--json-schema", SCHEMA];
 		const ended = await session(prompt, HOUR, process.kill, true, as, flags, under(clone));
-		const answer = JSON.parse(ended.out).structured_output as { outcome?: unknown; summary?: unknown } | undefined;
+		const answer = JSON.parse(ended.printed).structured_output as { outcome?: unknown; summary?: unknown } | undefined;
 		return !ended.late && typeof answer?.summary === "string" ? OUTCOMES.find((o) => o === answer?.outcome) : undefined;
 	} catch {
 		// A session that cannot start reads as no answer, so the clone is still put back.

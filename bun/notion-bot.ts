@@ -9,6 +9,7 @@
  */
 import { readFileSync, statSync } from "node:fs";
 import { fault, REMEDY } from "./question-gate.ts";
+import { answered as transientStatus, Transient } from "./transient.ts";
 
 const VERSION = "2025-09-03";
 /** A Notion id, as a whole value: 32 hex digits, alone or in a UUID's form. */
@@ -112,13 +113,18 @@ function waits(comments: Comment[], user: string, self?: string): boolean {
 	);
 }
 
-/** A REST call with `token`, which throws naming the step and Notion's status or the error's name. */
+/**
+ * A REST call with `token`, which throws naming the step and Notion's status
+ * or the error's name: a `Transient` for no answer, the timeout, a 5xx or a 429.
+ */
 export function client(token: string, timeout = 30_000) {
 	const base = process.env.HARNESS_NOTION_API_URL || "https://api.notion.com";
 	return async (step: string, path: string, method = "GET", body?: unknown) => {
+		// Parsed outside the catch: a malformed HARNESS_NOTION_API_URL is a plain Error, so a rejected fetch is only the network.
+		const url = new URL(`${base}${path}`);
 		let response: Response;
 		try {
-			response = await fetch(`${base}${path}`, {
+			response = await fetch(url, {
 				method,
 				headers: { Authorization: `Bearer ${token}`, "Notion-Version": VERSION, "Content-Type": "application/json" },
 				body: body === undefined ? undefined : JSON.stringify(body),
@@ -126,9 +132,9 @@ export function client(token: string, timeout = 30_000) {
 			});
 		} catch (error) {
 			// The name alone: a message may quote the request.
-			throw new Error(`${step} failed: ${(error as Error).name}`);
+			throw new Transient(`${step} failed: ${(error as Error).name}`);
 		}
-		if (!response.ok) throw new Error(`${step} answered ${response.status}`);
+		if (!response.ok) throw new (transientStatus(response.status) ? Transient : Error)(`${step} answered ${response.status}`);
 		return response.json();
 	};
 }

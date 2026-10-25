@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { generateKeyPairSync } from "node:crypto";
-import { writeFileSync } from "node:fs";
+import { chmodSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { main } from "./github-app-mint.ts";
+import { minted } from "./github-app-minted.ts";
+import { TEMPFAIL, Transient } from "./transient.ts";
 
 /**
  * The key holder's mint against a stand-in API reached through
@@ -26,6 +28,8 @@ beforeAll(() => {
 				"/repos/o/demo/installation": { id: 99 },
 				"/app/installations/99/access_tokens": { token: "ghs_minted" },
 			};
+			const refused: Record<string, number> = { "/repos/o/busy/installation": 503, "/repos/o/denied/installation": 401 };
+			if (path in refused) return new Response("no", { status: refused[path] });
 			return path in answers ? Response.json(answers[path]) : new Response("no", { status: 404 });
 		},
 	});
@@ -95,5 +99,44 @@ describe("what it refuses, before any call", () => {
 		expect([failed.code, failed.out]).toEqual([1, ""]);
 		expect(failed.err).toContain("/repos/o/gone/installation");
 		expect(failed.err).not.toContain("PRIVATE KEY");
+	});
+
+	test.each([
+		["answered 503", "o/busy", TEMPFAIL],
+		["answered 401", "o/denied", 1],
+	])("a call %s, for %s, exits %p", async (_, repository, code) => {
+		const r = await main([repository, "contents=write"], files(`${repository}\n`));
+		expect([r.code, r.out]).toEqual([code, ""]);
+		expect(r.err).toContain(`/repos/${repository}/installation`);
+	});
+});
+
+describe("the runner's side, minted()", () => {
+	/** What `minted()` throws for a mint command running `script`, with a short limit. */
+	const thrown = (script: string) => {
+		const file = join(emptyDir("github-app-minted-"), "mint");
+		writeFileSync(file, `#!/bin/sh\n${script}\n`);
+		chmodSync(file, 0o755);
+		try {
+			minted(file, "o/demo", ["--slug"], 500);
+		} catch (error) {
+			return error as Error;
+		}
+	};
+
+	test.each([
+		["exits 75", "exit 75"],
+		["is killed at its limit", "exec sleep 5"],
+	])("a mint that %s throws a Transient", (_, script) => {
+		expect(thrown(script)).toBeInstanceOf(Transient);
+	});
+
+	test.each([
+		["exits 1", "echo denied >&2; exit 1"],
+		["is killed by another signal", "kill -KILL $$"],
+	])("a mint that %s throws a plain Error", (_, script) => {
+		const error = thrown(script);
+		expect(error).toBeInstanceOf(Error);
+		expect(error).not.toBeInstanceOf(Transient);
 	});
 });

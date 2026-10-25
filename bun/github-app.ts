@@ -13,6 +13,7 @@ import { createPrivateKey, type KeyObject, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { minted } from "./github-app-minted.ts";
 import { remoteRepository } from "./pull-requests.ts";
+import { answered, Transient } from "./transient.ts";
 
 /** `key` where the runner reads the key itself, `mint` where the key holder does. */
 export type App = { id: string; key?: KeyObject; mint?: string; owner: string; repo: string };
@@ -64,18 +65,23 @@ export function jwt(id: string, key: KeyObject, now = Math.floor(Date.now() / 10
 	return `${data}.${base64url(sign("sha256", Buffer.from(data), key))}`;
 }
 
-/** One API call's parsed answer, a POST of `body` when there is one; an unreachable API or a failed call throws naming the path. */
-export async function request(path: string, bearer?: string, body?: unknown): Promise<unknown> {
+/**
+ * One API call's parsed answer, a POST of `body` when there is one; an
+ * unreachable API or a failed call throws naming the path, a `Transient` for
+ * no answer, the timeout, a 5xx or a 429.
+ */
+export async function request(path: string, bearer?: string, body?: unknown, timeout = 30_000): Promise<unknown> {
 	const headers: Record<string, string> = { accept: "application/vnd.github+json" };
 	if (bearer) headers.authorization = `Bearer ${bearer}`;
-	const url = `${process.env.GITHUB_API_URL ?? "https://api.github.com"}${path}`;
+	// Parsed here, outside the catch: a malformed GITHUB_API_URL is a plain Error, so a rejected fetch is only the network.
+	const url = new URL(`${process.env.GITHUB_API_URL ?? "https://api.github.com"}${path}`);
 	// Bounded, so a stalled API ends the pass rather than holding it.
-	const signal = AbortSignal.timeout(30_000);
+	const signal = AbortSignal.timeout(timeout);
 	const init = { method: body ? "POST" : "GET", headers, body: body ? JSON.stringify(body) : undefined, signal };
 	const answer = await fetch(url, init).catch((error: Error) => {
-		throw new Error(`GitHub's API could not be reached for ${path}: ${error.message}`);
+		throw new Transient(`GitHub's API could not be reached for ${path}: ${error.message}`);
 	});
-	if (!answer.ok) throw new Error(`GitHub's API answered ${path} with ${answer.status}`);
+	if (!answer.ok) throw new (answered(answer.status) ? Transient : Error)(`GitHub's API answered ${path} with ${answer.status}`);
 	return answer.json().catch(() => ({}));
 }
 

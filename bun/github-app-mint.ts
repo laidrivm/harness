@@ -9,12 +9,14 @@
  *
  * It refuses, before any call, a repository its root-owned list does not name
  * and a permission or level outside the fixed set, naming each, and exits 2;
- * a call that fails exits 1. Only the answer goes to stdout, where the
+ * a call that fails exits 1, or 75 (`TEMPFAIL`) when it got no answer, timed
+ * out or was answered 5xx or 429. Only the answer goes to stdout, where the
  * runner's `minted()` reads it, so the token is in no process's arguments.
  */
 import { createPrivateKey } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { type App, mint, slug } from "./github-app.ts";
+import { TEMPFAIL, Transient } from "./transient.ts";
 
 /** The levels each permission may be asked at, and no others: `design.md` *The key holder*. */
 const ALLOWED: Record<string, string[]> = {
@@ -62,7 +64,7 @@ export async function main(args: string[], files = FILES): Promise<Result> {
 		const app: App = { id: readFileSync(files.id, "utf8").trim(), key: createPrivateKey(readFileSync(files.key)), owner, repo };
 		return { code: 0, out: `${slugOnly ? await slug(app) : await mint(app, permissions)}\n`, err: "" };
 	} catch (error) {
-		return { code: 1, out: "", err: `github-app-mint: ${(error as Error).message}\n` };
+		return { code: error instanceof Transient ? TEMPFAIL : 1, out: "", err: `github-app-mint: ${(error as Error).message}\n` };
 	}
 }
 

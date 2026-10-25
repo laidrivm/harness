@@ -111,3 +111,15 @@ export const passEnv = (out: string): Record<string, string> => JSON.parse(out.s
 
 // No `flock` on macOS: these run on Linux. In CI they never skip, so a missing `flock` fails them there.
 export const skip = !Bun.which("flock") && !process.env.CI;
+
+/**
+ * Holds `file`'s lock from another process, as the deploy does, until the returned holder is killed.
+ * One process owns the descriptor: `flock <file> <command>` forks, and the child would keep the lock past the kill.
+ */
+export async function held(file: string) {
+	const holder = Bun.spawn(["sh", "-c", 'exec 9>>"$1" && flock 9 && echo held && exec sleep 60', "hold", file], { stdout: "pipe" });
+	const reader = holder.stdout.getReader();
+	await reader.read();
+	reader.releaseLock();
+	return holder;
+}
