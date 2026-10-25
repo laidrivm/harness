@@ -82,7 +82,7 @@ entry, a hook or a CI check leaves this file the way it would leave
   the switch to ready, so ready before the push would review the old head and
   then the new one; ending without one, it marks it ready as soon as it knows
   no push will come. A question to the user on the card keeps it draft
-  regardless. The runner does not follow this yet: the CI flow
+  regardless. The runner does not follow this: the CI flow
   (`bun/ci-run.ts`) pushes its fix with no draft toggle. Batch every fix
   into that one final push, and push without waiting for CI. A check that
   then fails is fixed on the same PR in the next push, which also carries the
