@@ -37,8 +37,9 @@ SHALL deploy no other commit.
 
 #### Scenario: The checkout cannot fast-forward
 
-- **WHEN** the checkout has a tracked change or a commit `origin/main` does
-  not hold, whether or not the fast-forward itself succeeds
+- **WHEN** the checkout has a tracked change, an untracked file that is not
+  ignored, or a commit `origin/main` does not hold, whether or not the
+  fast-forward itself succeeds
 - **THEN** nothing is rebuilt, the head is not recorded, and the deploy fails
 
 ### Requirement: A green run on main starts the deploy at once

@@ -15,7 +15,8 @@
       `STATE_DIRECTORY` unset the state directory created),
       `orchestrator/the-checkout-cannot-fast-forward` (the merge fails; and
       the merge exits 0 while `HEAD` is a local commit over the head, or
-      `git status` shows a tracked edit: no build, no record),
+      `git status` shows a tracked edit or an untracked file under `bun/`:
+      no build, no record),
       `orchestrator/the-build-fails`, `orchestrator/github-cannot-be-reached`,
       `orchestrator/a-stop-file-already-exists`. Record that they fail
 - [ ] 1.2 Write `orchestrator/deploy.sh` per design.md: the body in one
