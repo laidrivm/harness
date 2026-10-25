@@ -18,7 +18,8 @@ in a clone, so it loads the same `CLAUDE.md` and rulebook, and no user memory.
 
 ## Decisions
 
-Numbered as on the card's question of 2026-10-25 and the user's answers.
+Numbered as on the card's two questions — items 1–8 of 2026-10-24, 9–12 of
+2026-10-25 — and the user's answers.
 
 1. **The stage prompt stays as it is.** User: а. The board loop's stage
    session loads the rulebook, so the line reaches it; `bun/board-loop-prompt.ts`
@@ -62,6 +63,13 @@ Numbered as on the card's question of 2026-10-25 and the user's answers.
    down (the 300-line cap, the `flock` cases that skip on macOS) is not in the
    harness, so it reaches a brief as the task's context until a change writes
    it into the tree; this change writes none.
+9. **The form of 10–12 stands.** User: а — yes, "let's try it this way",
+   and ok on 10–12.
+10. **No `core/delegation.md`; one line and its test.** User: ok. The line
+    of decision 4, pinned by `bun/delegation.test.ts` (decision 3).
+11. **No test that a brief copies no rule.** User: ok. There is no tracked
+    brief to read; the line itself carries the prohibition (decision 2).
+12. **The stage prompt is not touched.** User: ok (decision 1).
 
 ## Risks
 
