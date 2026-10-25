@@ -78,14 +78,12 @@ entry, a hook or a CI check leaves this file the way it would leave
   answers change nothing, no push follows and its head gets no review on its
   own — report it for the user to comment `@coderabbitai review`. Otherwise
   leave a PR ready for review, never a draft, which is a PR nobody reviews.
-  Never mark a ready PR draft for a push, as `rules.md` says: a push is
-  atomic, so the merge button cannot merge half of it, while CodeRabbit skips
-  a head pushed to a draft and marking the PR ready again does not review that
-  head. Push to the ready PR without waiting for CI. A check that then fails
-  is fixed on the same PR in the next push, which also carries the fixes for
-  any CodeRabbit findings already posted — the CI flow does not wait for the
-  review; the PR is mergeable only once CI is green and CodeRabbit has
-  reviewed its head with every finding dispositioned.
+  Push to the ready PR, never toggling it draft (`rules.md` says why), and
+  without waiting for CI. A check that then fails is fixed on the same PR in
+  the next push, which also carries the fixes for any CodeRabbit findings
+  already posted — the CI flow does not wait for the review; the PR is
+  mergeable only once CI is green and CodeRabbit has reviewed its head with
+  every finding dispositioned.
 - Keep the PR description to what the diff can't say: a link to the
   proposal, the criteria the step closes named by their `### Requirement:`
   headings — or a line saying it closes none — decisions taken, anything the
