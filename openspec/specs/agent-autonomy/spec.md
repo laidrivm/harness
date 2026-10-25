@@ -209,8 +209,8 @@ the user SHALL carry an `(unattended: card` marker.
 
 - **WHEN** an unattended session runs `/coderabbit` on a pull request whose
   newest bot review is on an earlier commit, and whose head's `CodeRabbit`
-  status reads anything but `Review completed`, `Review skipped: draft pull
-  request` included
+  status is anything but `success` with the description `Review completed`,
+  a `success` reading `Review skipped: draft pull request` included
 - **THEN** the run ends on `CODERABBIT gate: OPEN` naming the head commit's
   short SHA, after one read, with no sleep and no second read
 
