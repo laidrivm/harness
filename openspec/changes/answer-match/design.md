@@ -26,7 +26,7 @@ after the merge.
 
 **Goals:** a card's answer is the answer to the loop's own question, whoever
 else asks on the card; the pick stops depending on `Assign`, so `Assign` is
-cleared as soon as a session takes the answer.
+cleared as soon as the pass reads the answer.
 
 **Non-Goals:** questions of the explore, propose and archive stages (card
 *Let the board loop carry every status's next stage*, which will tag them the
@@ -91,15 +91,25 @@ passed over while the card's last question, anyone's, has no answer — a
 chat agent's question waiting on the card holds the loop too, which is the
 one-open-question-per-card rule doing its work, not a new cost.
 
-### A session clears `Assign` when it takes the answer
+### The pass clears `Assign` when it reads the answer
 
-`Assign` stops being state the loop reads, so it means only "the user is
-waited on": the stage session clears it in the turn it writes the answer into
-`tasks.md`, or files the `idea` card for it. A session that dies after that
-leaves the card unassigned and the answer still matched by its tag, so the
-next pass carries it again on the branch the session left. This reverses
-`task-board`'s "never earlier" and the scenario *The session ends before its
-pull request*, both rewritten in the delta.
+Settled by the user on `bot-notion-writes` 2026-10-25: `Assign` is removed as
+soon as the user's answer is read — the pass that picks up the answer clears
+it before acting on it — and set back only when a new question comment is
+posted. This settles question 3 on this card (who clears `Assign`): neither
+option as worded, since (а) clears it only at the `tasks.md` write. Under
+this change alone the stage session clears it first, in the turn it reads
+the answer, before any edit; where the runner holds the integration's
+settings, `bot-notion-writes`, which lands after this change, moves the write
+to the runner right after its claim, through `draft-until-answered`'s
+`unassign()`. `Assign` stops being state the loop reads, so it means only
+"the user is waited on". A session that dies after the clear leaves the card
+unassigned and the answer still matched by its tag, so the next pass carries
+it again on the branch the session left. This reverses `task-board`'s "never
+earlier" and the scenario *The session ends before its pull request*, both
+rewritten in the delta; the delta's *An answer the board loop carries is
+applied when its session takes it* still clears `Assign` at the `tasks.md`
+write, and moves to the read in the pass that applies this card's answers.
 
 ## Risks / Trade-offs
 
@@ -118,7 +128,7 @@ pull request*, both rewritten in the delta.
   rewrites the same ask and comment sentences in `prompt()` and
   `core/feature-workflow.md`. No requirement collides; whichever lands second
   merges the other's sentence in.
-- [Overlap with the bot-route card] → it plans that the runner clears
-  `Assign` when the pull request opens. Under this change the session clears
-  it earlier; the bot-route change then moves that write to the runner
-  rather than adding a second one.
+- [Overlap with `bot-notion-writes`] → its runner clears `Assign` right after
+  the claim, before the stage session (settled 2026-10-25), which is safe only
+  once the pick matches by tag; so it lands after this change and moves this
+  change's session write to the runner rather than adding a second one.
