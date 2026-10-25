@@ -73,15 +73,18 @@ entry, a hook or a CI check leaves this file the way it would leave
   alike, as a draft (`gh pr create --draft`) while a question to the user on
   its card is unanswered, and mark it ready (`gh pr ready`) only once the
   answers settle every item — CodeRabbit's auto-review skips drafts, so no
-  review fires on work an answer may still change. Otherwise leave a PR ready
-  for review, never a draft, which is a PR nobody reviews. Never mark a ready
-  PR draft for a push, as `rules.md` says: a push is atomic, so the merge
-  button cannot merge half of it, while CodeRabbit skips a head pushed to a
-  draft and marking the PR ready again does not review that head. Push to the
-  ready PR without waiting for CI. A check that then fails is fixed on the
-  same PR in the next push, which also carries the fixes for any CodeRabbit
-  findings already posted — the CI flow does not wait for
-  the review; the PR is mergeable only once CI is green and CodeRabbit has
+  review fires on work an answer may still change. Mark it ready before the
+  push that carries the answers, so the bot reviews that push; where the
+  answers change nothing, no push follows and its head gets no review on its
+  own — report it for the user to comment `@coderabbitai review`. Otherwise
+  leave a PR ready for review, never a draft, which is a PR nobody reviews.
+  Never mark a ready PR draft for a push, as `rules.md` says: a push is
+  atomic, so the merge button cannot merge half of it, while CodeRabbit skips
+  a head pushed to a draft and marking the PR ready again does not review that
+  head. Push to the ready PR without waiting for CI. A check that then fails
+  is fixed on the same PR in the next push, which also carries the fixes for
+  any CodeRabbit findings already posted — the CI flow does not wait for the
+  review; the PR is mergeable only once CI is green and CodeRabbit has
   reviewed its head with every finding dispositioned.
 - Keep the PR description to what the diff can't say: a link to the
   proposal, the criteria the step closes named by their `### Requirement:`
