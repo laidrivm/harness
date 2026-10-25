@@ -79,14 +79,12 @@ describe("a development-dependency pin", () => {
 			"\t",
 		)}\n`;
 
-	// spec: harness-updates/the-bump-reads-a-development-dependency-pin
 	test("under devDependencies alone is read and moved there", () => {
 		const text = both({ devDependencies: spec(OLD) });
 		expect(pinOf(text)).toBe(OLD);
 		expect(JSON.parse(movePin(text, NEW)).devDependencies.harness).toBe(spec(NEW));
 	});
 
-	// spec: harness-updates/the-bump-reads-a-development-dependency-pin
 	test("the same pin under both fields moves both", () => {
 		const after = JSON.parse(
 			movePin(both({ dependencies: spec(OLD), devDependencies: spec(OLD) }), NEW),
@@ -95,7 +93,6 @@ describe("a development-dependency pin", () => {
 		expect(after.devDependencies.harness).toBe(spec(NEW));
 	});
 
-	// spec: harness-updates/the-bump-reads-a-development-dependency-pin
 	test("two different pins read and move the runtime one alone", () => {
 		const text = both({ dependencies: spec(OLD), devDependencies: spec(NEW) });
 		expect(pinOf(text)).toBe(OLD);

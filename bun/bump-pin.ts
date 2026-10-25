@@ -18,7 +18,7 @@ const FIELDS = ["dependencies", "devDependencies"] as const;
 type Manifest = Partial<Record<(typeof FIELDS)[number], Record<string, unknown>>>;
 
 /** The harness spec under each of the two fields, `undefined` where none. */
-export function harnessFields(text: string): unknown[] {
+function harnessFields(text: string): unknown[] {
 	const manifest = JSON.parse(text) as Manifest;
 	return FIELDS.map((field) => manifest[field]?.harness);
 }

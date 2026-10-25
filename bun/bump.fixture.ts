@@ -2,10 +2,10 @@
  * What the bump's test files share: a local stand-in for the two GitHub API
  * paths `greenHead` reads, and git run with a throwaway identity.
  *
- * Its own module because `bump-verify.test.ts` and `bump-self.test.ts` both
- * drive `greenHead` through it — a second copy would drift in what it serves
- * while both files still passed. Each test file starts and stops its own
- * server, since a lifecycle hook belongs to the file it runs for.
+ * Its own module because `bump-verify.test.ts` and `bump-land.test.ts` both
+ * use its `git` — a second copy would drift while both files still passed. A
+ * test file that serves starts and stops its own server, since a lifecycle
+ * hook belongs to the file it runs for.
  */
 
 export type CheckRun = { conclusion: string | null; app?: { slug: string } };
