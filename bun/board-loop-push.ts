@@ -137,8 +137,9 @@ export async function publish(
 	if (app) {
 		try {
 			// Minted now, so no session can reach it. Into the runner's own environment, for the push,
-			// `gh` and the full check after it, which reads the pull request with `gh`.
-			Object.assign(process.env, credentials(await mint(app, { contents: "write", pull_requests: "write" })));
+			// `gh` and the full check after it, which reads the pull request with `gh`. `workflows`: GitHub
+			// refuses a push that adds or changes `.github/workflows/` without it, and a step may (user, 2026-10-25).
+			Object.assign(process.env, credentials(await mint(app, { contents: "write", pull_requests: "write", workflows: "write" })));
 		} catch (error) {
 			return `the App's token could not be minted: ${(error as Error).message}; nothing was pushed`;
 		}

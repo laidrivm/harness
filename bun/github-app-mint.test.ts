@@ -62,6 +62,12 @@ describe("the mint", () => {
 		expect(JSON.parse(seen[1].body)).toEqual({ repositories: ["demo"], permissions: { contents: "write", pull_requests: "read" } });
 	});
 
+	test("workflows at write, the board loop's push of a workflow file, is in the set", async () => {
+		seen = [];
+		expect((await main(["o/demo", "workflows=write"], files())).code).toBe(0);
+		expect(JSON.parse(seen[1].body).permissions).toEqual({ workflows: "write" });
+	});
+
 	test("--slug prints the App's slug", async () => {
 		expect((await main(["o/demo", "--slug"], files())).out).toBe("demo-app\n");
 	});
@@ -80,6 +86,7 @@ describe("what it refuses, before any call", () => {
 		["a repository that is no owner and name", ["../o", "contents=write"], "../o"],
 		["a permission outside the set", ["o/demo", "administration=write"], "administration=write"],
 		["a level the set does not hold", ["o/demo", "actions=write"], "actions=write"],
+		["workflows at a level GitHub does not have", ["o/demo", "workflows=read"], "workflows=read"],
 		["a word that is no permission", ["o/demo", "contents"], "contents"],
 		["a name the table inherits", ["o/demo", "constructor=read"], "constructor=read"],
 		["the prototype's own name", ["o/demo", "__proto__=read"], "__proto__=read"],
