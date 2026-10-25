@@ -108,9 +108,9 @@ describe("the question's post", () => {
 	const reads = { fail: { "GET /v1/comments": 500 } };
 
 	// spec: board-loop/the-question-post-meets-notion-s-5xx
-	test("a comments read answered 500 prints that Notion did not answer and records retry", async () => {
+	test("a comments read answered 500 prints that Notion did not answer, naming the 500, and records retry", async () => {
 		const r = await pass(reads);
-		expect(r.text).toContain("question: not posted — Notion did not answer:");
+		expect(r.text).toMatch(/question: not posted — Notion did not answer: .*\b500\b/);
 		expect([r.code, r.last.startsWith("board-loop: retry — apply demo step 1")]).toEqual([75, true]);
 	}, 40_000);
 
