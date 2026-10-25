@@ -15,7 +15,10 @@ SHALL refuse a clone that `~/.claude.json` does not record as a trusted
 workspace under its real path, because a session there ignores the tracked
 `permissions.allow`. It SHALL refuse a tracked edit, or a branch tip no
 remote-tracking branch contains, except as *An unpushed step branch does not
-stop the pass* allows, or when, after its fetch, the default branch's remote
+stop the pass* allows, or when, after its fetch, a remote-tracking branch
+contains the tip, as when another clone pushed the branch, which the runner
+switches off like any pushed branch, keeping it, and says so in one line, or
+when, after its fetch, the default branch's remote
 tip holds every commit the branch holds, itself or by patch (`git cherry`
 marks none `+`), and none of those it lacks is a merge, whose resolution no patch
 holds: such a branch is a merged branch's leftover, which the
@@ -65,6 +68,16 @@ so that no session it launches has to install.
   its tip, and a later refusal leaves the clone on the default branch, unless
   a session's process group outlived the session, which leaves the clone as
   the session left it
+
+#### Scenario: A step branch pushed from another clone
+
+- **WHEN** the tree is clean and the current branch's tip is on no
+  remote-tracking branch before the fetch, but after it a remote-tracking
+  branch contains the tip, at it or ahead of it, as when the host's runner
+  pushed the step's branch from a clone of its own
+- **THEN** the runner prints one line naming the branch, switches to the
+  default branch at its remote's tip and the pass goes on, even when no step
+  the pass computes is on that branch; the branch keeps its tip
 
 #### Scenario: Unpushed work on a detached HEAD
 

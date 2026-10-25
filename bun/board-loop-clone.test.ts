@@ -216,6 +216,28 @@ describe("the clone", () => {
 			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")]).toEqual(["feat/other", tip]);
 		});
 
+		// spec: board-loop/a-step-branch-pushed-from-another-clone
+		// The host's runner pushes from a clone of its own, so the session's clone learns of the branch at its fetch.
+		test.each([
+			["at its tip", false],
+			["ahead of its tip", true],
+		])("on a branch another clone pushed, origin %s, with its pull request open, the pass switches off it to main", (_, ahead) => {
+			const { dir, origin } = clone();
+			const tip = unpushed(dir, "feat/demo");
+			git(origin, "fetch", "-q", dir, "feat/demo:feat/demo");
+			if (ahead) {
+				const other = emptyDir("board-loop-other-");
+				git(other, "clone", "-q", "-b", "feat/demo", origin, ".");
+				commit(other);
+				git(other, "push", "-q", "origin", "feat/demo");
+			}
+			const open = '[{"number":7,"state":"open","merged_at":null,"head":{"sha":"abc","repo":{"id":1,"full_name":"o/demo"}},"base":{"repo":{"id":1}}}]';
+			const r = run(dir, [], { gh: open });
+			expect(r.last).toBe("board-loop: idle — no change is takeable");
+			expect(r.text).toContain("switching off feat/demo: origin holds its tip");
+			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "feat/demo")]).toEqual(["main", tip]);
+		});
+
 		// spec: board-loop/a-session-s-process-group-outlived-it
 		// The run blocks bun's own timer, so the case names a limit of its own.
 		test("on the step's branch, a session whose group outlived it is refused with the clone left where it is", () => {
