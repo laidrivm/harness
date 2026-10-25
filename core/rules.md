@@ -172,9 +172,11 @@ Rules about how work is carried out here. They do not age with the code.
 - Pass `--full-tree` to a `git ls-tree` whose pathspec names a path from the
   repository root — a working directory below the root resolves it against
   itself and lists nothing.
-- Never mark a ready pull request draft for a push — CodeRabbit skips a head
-  pushed while the PR is draft, and marking it ready again does not review it;
-  a PR is draft only while a question to the user is open.
+- Mark a pull request draft (`gh pr ready --undo`) when you start work on it,
+  and ready (`gh pr ready`) only when that work ends and no question to the
+  user on its card is open: immediately before its final push, or once you
+  know no push will come — CodeRabbit skips a head pushed while the PR is
+  draft, and marking it ready afterwards does not review it.
 - Before a commit, run the build's own scan over every file the commit writes
   that the scan covers, since a fixture in a test can be valid input to the
   scan it tests.
