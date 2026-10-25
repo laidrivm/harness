@@ -311,9 +311,8 @@ for them is already here.
   other seven are moved by hand, and this bullet is the whole of what holds
   them — which is why it is stated as an obligation rather than as a
   convention. Which ten, and so which seven, is fixed in the harness's
-  `openspec/changes/approved-column/specs/task-board/`, the delta the live
-  `task-board` spec takes at that change's archive, and named nowhere else; a
-  second copy here is the drift this change was written after.
+  `openspec/specs/task-board/` and named nowhere else; a second copy here is
+  the drift that spec was written after.
 
   Only the user moves a card to `approved`; an unattended session takes no
   work from `idea` and never sets `approved`. A session the user directs at an
