@@ -159,11 +159,12 @@ the next run, a kick or a tick, starts again from the first step.
 ### A fast-forward only
 
 `git merge --ff-only origin/main` in `/root/harness`, then two checks before
-the build: `git status --porcelain --untracked-files=no` prints nothing, and
+the build: `git status --porcelain` prints nothing, and
 `git rev-parse HEAD` equals the fetched head. The merge alone is not enough:
 on a checkout with a local commit over `origin/main` it reports "Already up
-to date" and exits 0, and a tracked edit the merge does not touch survives
-it, so the build would run a tree that is not the green head. Either check
+to date" and exits 0, and a tracked edit or an untracked file it does not
+touch survives it, so the build (its contexts `.` and `../bun` take whole
+directories) would run a tree that is not the green head. Either check
 failing fails the step, which pauses the loop (below); the user resolves it
 on the host. `secrets/`, `app/`, `app-key/` and `wmill-lock.yaml` are
 already ignored, so the files the stack needs never block it.
