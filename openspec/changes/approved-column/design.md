@@ -50,20 +50,18 @@ at an `idea` card may move it to `exploring`. The position between `idea` and
 with the card for the loop taking every status. The view's columns follow the
 option order, and no option retires. `mellon`'s board already exists beside
 the other two, so it takes the list in this change. `approved` is hand-moved,
-so `bun/board-state.ts` never reports it (item 11). Every write the loop makes
-to Notion goes out under the bot integration's name, never the user's (item
-12). The schema write of task 1.3 is the user's own, by hand in Notion
-(settled on the `bot-notion-writes` card on 2026-10-25, answer 1, replacing
-item 10's write by the apply session under any name): a schema write is no
-card write the bot makes, and adding one option by hand is a one-off. The
-apply session only re-reads each board's schema and compares it with the
-list. `.openspec.yaml` still names `bot-notion-writes` in `after:`.
+so `bun/board-state.ts` never reports it (item 11). Every write the loop
+makes to Notion goes out under the bot integration's name, never the user's
+(item 12). The user then added the option to the three boards' `Status`
+select by hand (2026-10-25, answer 13), replacing the apply session's schema
+write of item 10: the apply session only reads each board back, so no write
+waits for the change that routes card writes through the bot.
 
 ## Risks / Trade-offs
 
 - [A board write outside this repository] → setting `D2ASS`'s and `mellon`'s
   `Status` touches other projects' boards. The vocabulary is shared by requirement,
   and the write only adds an option; the step re-reads each board after it.
-- [A hand edit off the list] → a slip in Notion could rename, drop or misplace
-  an option. The apply session compares all ten, by name and order, with the
-  list in task 1.3 and stops on a difference.
+- [A hand edit of the option list] → the user's edit can drop or reorder an
+  option unnoticed. The step reads each board back, compares it against the
+  ten in order, and stops on a difference.

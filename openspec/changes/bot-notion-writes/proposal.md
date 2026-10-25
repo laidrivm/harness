@@ -68,8 +68,6 @@ None.
   tests and `bun/notion-bot.fixture.ts`'s stand-in API.
 - `core/feature-workflow.md` (the board loop's launch-form variants),
   `README.md` (the board loop's paragraph).
-- `openspec/changes/approved-column/.openspec.yaml` gains `after:
-  bot-notion-writes`.
 - The integration needs edit access to every board a runner with its settings
   writes: `Harness` on this host, and a consumer's own board where a
   consumer's runner holds the settings.

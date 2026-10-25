@@ -131,11 +131,12 @@ boards include `D2ASS` and `mellon`, which this host's runner never writes,
 and a REST `PATCH /v1/data_sources/<id>` rewriting a select's options would
 need its own read-back and refusal cases. This change builds no schema
 write. Settled by the user on 2026-10-25 (item 1): the user adds the option
-by hand, and `approved-column`'s task 1.3 is a user act carrying the
-step-by-step instruction, its apply session only reading each board back.
-The user reported the option added on 2026-10-25 (item 10).
-`approved-column` is still applied after this one (`after:` in its
-`.openspec.yaml`, item 8).
+by hand, and `approved-column`'s apply session only reads each board back.
+The user reported the option added on 2026-10-25 (item 10). With the schema
+write gone from it, `approved-column` no longer waits on this change: it was
+applied first (PR #275), which item 8's order, `approved-column` after this
+one, only needed while its task 1.3 wrote the schema. This change edits
+nothing of `approved-column`.
 
 ### File placement
 

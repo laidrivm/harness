@@ -1,6 +1,6 @@
 ## 1. `bump.ts self` moves the development pin
 
-- [ ] 1.1 Write the failing cases: in `bun/bump-pin.test.ts`, a manifest with
+- [x] 1.1 Write the failing cases: in `bun/bump-pin.test.ts`, a manifest with
       the harness under `devDependencies` alone reads and moves there; one
       with the same pin under both moves both; one whose two fields differ
       reads and moves `dependencies` alone; the old spec once more outside
@@ -19,7 +19,7 @@
       pin at the head, and `sha`, `old`, `behind` written to `GITHUB_OUTPUT`
       with `behind` the commit count. Cite each `harness-updates` scenario in a
       `// spec:` comment. Record that they fail
-- [ ] 1.2 Implement D1, D2 and D3 in `bun/bump.ts` and `bun/bump-pin.ts`: the
+- [x] 1.2 Implement D1, D2 and D3 in `bun/bump.ts` and `bun/bump-pin.ts`: the
       fallback in `pinOf`, `movePin`'s count per field holding the old spec,
       the `self` command (refusing two different pins) reusing `greenHead`,
       `movePin`,

@@ -183,7 +183,7 @@ describe("what the derivation reports nothing for", () => {
 		expect(Object.values(state.status)).not.toContain("idea");
 	});
 
-	test("no key carries any of the six statuses moved by hand", () => {
+	test("no key carries any of the seven statuses moved by hand", () => {
 		const state = boardState(
 			fabricate({
 				...complete("candidacy-gate"),
@@ -192,6 +192,7 @@ describe("what the derivation reports nothing for", () => {
 		);
 		for (const hand of [
 			"idea",
+			"approved",
 			"exploring",
 			"explored",
 			"applying",

@@ -8,11 +8,11 @@
  * command it prints the board that repository names under `harness.board`
  * beside what it derives — the one board whose cards this tree decides.
  *
- * It never reports the six statuses nobody can read from here — `idea`,
- * `exploring`, `explored`, `applying`, `applied`, `archiving` — nor anything
- * about a card on a board whose tree is not this repository. A derivation that
- * ran anyway would answer for them with the same confidence as the thirty it
- * is right about.
+ * It never reports the seven statuses nobody can read from here — `idea`,
+ * `approved`, `exploring`, `explored`, `applying`, `applied`, `archiving` —
+ * nor anything about a card on a board whose tree is not this repository. A
+ * derivation that ran anyway would answer for them with the same confidence as
+ * the thirty it is right about.
  */
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";

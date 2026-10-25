@@ -1,4 +1,2 @@
 schema: spec-driven
 created: 2026-10-24
-after:
-  - bot-notion-writes
