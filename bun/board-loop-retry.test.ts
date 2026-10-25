@@ -12,7 +12,7 @@ const calls = (log: string, call: string) => log.split("\n").filter((line) => li
 
 /** What `claude -p --output-format json` prints for a session the Claude API ended with `status`. */
 const api = (status: number | null, result = `API Error: ${status}`) =>
-	JSON.stringify({ type: "result", subtype: "success", is_error: true, terminal_reason: "api_error", api_error_status: status, result });
+	JSON.stringify({ type: "result", subtype: "success", is_error: true, terminal_reason: "api_error", api_error_status: status, result }).replaceAll("'", "\\u0027");
 
 describe("the start", () => {
 	// spec: board-loop/a-transient-failure-ends-the-pass-retry
@@ -76,6 +76,8 @@ describe("the stage session", () => {
 		const { r } = ended({ said });
 		expect(r.code).not.toBe(75);
 		expect(r.last).not.toStartWith("board-loop: retry");
+		// The runner printed the session's result, so the stub delivered the JSON intact.
+		expect(r.text).toContain(JSON.parse(said).result);
 	});
 
 	// spec: board-loop/the-push-meets-a-network-failure
