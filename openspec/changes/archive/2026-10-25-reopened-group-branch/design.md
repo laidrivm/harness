@@ -49,7 +49,10 @@ The runner walks the groups holding an unticked box, in order, reading each
 one's branch as `git-and-prs.md` names it. While only merged pull requests
 used that branch, the group is carried and the walk goes on. The first group
 that is not ends it: an open pull request on its branch makes the change
-wait, a closed, unmerged one withdraws it, as today, and no carry is tried. A
+wait, a closed, unmerged one withdraws it, as today, and no carry is tried.
+A branch both a merged and a closed, unmerged pull request used withdraws the
+change too, the reason naming the closed one: the closed one is still the
+user's "not this" (decided on the apply, harness#282). A
 branch no pull request used ends it too; with no group carried, that group is
 the step, as today, and with some carried, the carry goes first and that
 group is the step after it. With every group holding an unticked box carried,
