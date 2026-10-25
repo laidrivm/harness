@@ -15,7 +15,11 @@ write `BLOCKED` and name what only the user can settle. `OPEN` over a proposed
 Major or Critical dismissal is one exception: that one ends the turn by
 design, because settling it is the user's. `/coderabbit`'s `OPEN` over a head
 commit the bot has not reviewed yet is the other: there is nothing to act on
-until the review lands, and the next run picks it up.
+until the review lands, and the next run picks it up. A head with no findings
+counts as reviewed once its `CodeRabbit` status is `success` with the
+description `Review completed`; a draft's `success` reads `Review skipped:
+draft pull request`, so its head stays
+unreviewed until the pull request is marked ready.
 
 ## The skills
 

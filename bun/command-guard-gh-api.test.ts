@@ -113,4 +113,12 @@ describe("gh api graphql", () => {
 		expect(line).toContain("query=");
 		expect(run(event(line), anywhere()).code).toBe(0);
 	});
+
+	// spec: agent-permissions/reading-through-the-endpoint-still-works
+	test("the coderabbit skill's commit-status read passes, its head filled in", () => {
+		const skill = readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8");
+		const line = skill.match(/`(gh api repos\/OWNER\/REPO\/commits\/[^`]+)`/)?.[1] ?? "";
+		expect(line).toContain("<head sha>/status");
+		expect(run(event(line.replace("<head sha>", "198dbdc")), anywhere()).code).toBe(0);
+	});
 });
