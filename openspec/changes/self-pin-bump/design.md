@@ -46,8 +46,7 @@ log's line and the count in the pull request are enough); pinning skills
 
 `bun bun/bump.ts self`, from the harness's root: read the pin, take
 `greenHead`, and stop quietly (exit 0, empty `sha`) when the head is not
-green, equals the pin, or `git diff --quiet <pin> <head> --
-':(exclude)package.json' ':(exclude)bun.lock'` holds. Otherwise move the pin
+green, equals the pin, or is a merged bump (D2). Otherwise move the pin
 with `movePin`, run `bun install --ignore-scripts`, stage `package.json` and
 `bun.lock` alone, commit as `github-actions[bot]` with the identity `land`
 uses (lifted into one helper both call), and write `sha`, `old` and `behind`
@@ -68,10 +67,16 @@ on the merge.
 
 Each merged bump makes a new `main` commit, its `Test` run succeeds, and
 without a stop the workflow would propose pinning that merge — forever, one
-pull request per merge. A head whose tree differs from the pin's only in
-`package.json` and `bun.lock` is exactly a merged bump (or a no-op), so it
-proposes nothing. A bump merged together with other commits still differs
-elsewhere, so the pin follows them.
+pull request per merge. A head is a merged bump when both hold:
+`git diff --quiet <pin> <head> -- ':(exclude)package.json'
+':(exclude)bun.lock'`, and `package.json` at the pin and at the head, parsed,
+are equal once `devDependencies.harness` is dropped from both. Then it
+proposes nothing. The second test keeps a change to another field of
+`package.json` (a script, `exports`, another dependency) from passing for a
+bump: such a head is proposed, so the pin does not stay behind it. `bun.lock`
+is derived from the manifest, so a head differing from the pin in it alone
+runs the same pinned code and proposes nothing. A bump merged together with
+other commits still differs elsewhere, so the pin follows them.
 
 ### D3 — `pinOf` falls back to `devDependencies`
 

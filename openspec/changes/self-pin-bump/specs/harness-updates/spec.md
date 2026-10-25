@@ -40,6 +40,12 @@ open one bump per merged bump.
   is a merged bump's `package.json` and `bun.lock`
 - **THEN** it exits 0, pushes nothing and opens nothing
 
+#### Scenario: A manifest change that is no bump is proposed
+
+- **WHEN** `main`'s green head differs from the pinned commit only in
+  `package.json`, in a field other than the harness pin
+- **THEN** the bump moves the pin to that head, as for any other change
+
 #### Scenario: A head not yet green proposes nothing
 
 - **WHEN** a bump runs while `main`'s head has no successful `test` run, or
