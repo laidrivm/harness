@@ -34,9 +34,12 @@ self-pin automatically and report how far it lags `main`*).
 - README's "The pin moves by hand" sentence describes the workflow instead.
 
 Left out: merging the bump without the user (the `main` ruleset needs an
-approval, and an auto-merge path is its own card); a session-start lag line
-in the harness's own sessions (question 3 of the card's comment); any change
-to the consumers' `verify`/`land`.
+approval; card *Auto-approve low-blast-radius PRs through deterministic gates
+that fail closed* now names this pull request in its scope); a session-start
+lag line in the harness's own sessions (the user's answer 3a); any change to
+the consumers' `verify`/`land`. The host's checkout follows a merged bump by
+`host-deploy` (PR #265), applied first; design.md, *How it meets
+host-deploy*.
 
 ## Capabilities
 
