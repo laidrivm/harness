@@ -195,6 +195,13 @@ reads `goal open`. Where the runner has a Notion integration, the line also
 names which comment the answer is, by the user's id and the integration's,
 since a card the triage answered has no `Assign`.
 
+A carry step, which the board loop launches when only merged pull requests
+used the branches of groups that still hold unticked boxes, changes only the
+first line too: it names moving every unticked task of those groups into a
+new last group N+1, each moved task opening with `(was <g>.<k>)` and each old
+place keeping `Task <g>.<k> moved to <N+1>.<j>.` with no box, and carrying
+that group.
+
 A step whose branch already exists, in the clone or on `origin`, because a
 session ended before its pull request, changes only the first line too: the
 board loop adds that a session left that branch, to `git switch` to it rather

@@ -78,6 +78,8 @@ export type Stubs = {
 	/** What `gh api` prints for the branch's pull requests, or `null` for no `gh` on `PATH`. */
 	gh?: string | null;
 	ghCode?: number;
+	/** What `gh api` prints, exiting 0, for each branch named here; `gh` answers every other branch. */
+	ghBy?: Record<string, string>;
 	/**
 	 * Seconds `gh` hangs, never answering: the stub `exec`s `sleep`, so the
 	 * runner's kill ends the process holding the pipe. A delayed answer is the
@@ -151,8 +153,11 @@ function bin(log: string, s: Stubs): string {
 	const table = `/bin/cat "$HOME/orchestrator/pr-sessions.jsonl" > '${log}.push-table' 2>/dev/null`;
 	stub("git", `[ "$1" = push ] && { ${saw("push")}; ${table}; }\nexec '${REAL_GIT}' "$@"`);
 	const create = `if [ "$1 $2" = "pr create" ]; then ${saw("create")}; /bin/cat > '${log}.body'; exit ${s.createCode ?? 0}; fi\n`;
+	// Matched on the query's head filter, `&` closing it so `feat/demo` never matches `feat/demo-2`'s.
+	const by = Object.entries(s.ghBy ?? {}).map(([b, json]) => `*"head=o:${encodeURIComponent(b)}&"*) printf '%s' '${json}'; exit 0 ;;\n`);
+	const per = by.length ? `case "$2" in\n${by.join("")}esac\n` : "";
 	if (s.gh !== null)
-		stub("gh", `${s.ghSleep ? `exec /bin/sleep ${s.ghSleep}\n` : ""}${create}printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
+		stub("gh", `${s.ghSleep ? `exec /bin/sleep ${s.ghSleep}\n` : ""}${create}${per}printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
 	const verdict = s.verdict ?? "goal met: apply demo step 1 at abc1234";
 	const before = s.beforePush ?? "goal met: apply demo step 1 at abc1234, before the push";
 	const pin = "node_modules/harness/bun";

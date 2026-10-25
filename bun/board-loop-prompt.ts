@@ -6,8 +6,11 @@ import { ASK_COMMAND, MARK } from "./question-gate.ts";
 
 const READ_BACK = "read the card back to confirm it holds the user";
 
-/** `answer`: every group is ticked, so the step is N+1 and carries the answer on the card. */
-export type Step = { step: number; branch: string; answer: boolean };
+/**
+ * `answer`: every group is ticked, so the step is N+1 and carries the answer on the card.
+ * `carried`: the merged groups whose unticked tasks step N+1 moves into a group of its own.
+ */
+export type Step = { step: number; branch: string; answer: boolean; carried?: number[] };
 
 /**
  * The launch form `core/feature-workflow.md` fixes for an apply step, or its
@@ -17,14 +20,17 @@ export type Step = { step: number; branch: string; answer: boolean };
  * `self`, `user`: as `pickPrompt` takes them, so the stage session picks the
  * answer the pick did on a card whose `Assign` names nobody.
  */
-export function prompt(slug: string, { step, branch, answer }: Step, check: string, resumed: boolean, asks?: "runner" | "ask", self?: string, user?: string): string {
+export function prompt(slug: string, { step, branch, answer, carried }: Step, check: string, resumed: boolean, asks?: "runner" | "ask", self?: string, user?: string): string {
 	// No apostrophe, as below.
 	const which = self
 		? ` (after the last \`harness-question\`, the first comment by the user, whose id is ${user}, opening with neither \`harness-question\` nor \`harness-answer\`, or else the \`harness-answer\` by ${self}, the Notion integration of the runner)`
 		: "";
+	const from = carried?.join(", ");
 	const work = answer
 		? `write the answer on its card${which} into its tasks.md as group ${step}, then /opsx:apply ${slug} for that group`
-		: `/opsx:apply ${slug} for its group ${step}`;
+		: carried
+			? `move every unticked task of its group ${from}, its text unchanged, into a new last group \`## ${step}. Carried over from group ${from}\` of its tasks.md, numbered from ${step}.1, each moved task opening with \`(was <g>.<k>)\` and each old place keeping a line \`Task <g>.<k> moved to ${step}.<j>.\` with no box, then /opsx:apply ${slug} for that group`
+			: `/opsx:apply ${slug} for its group ${step}`;
 	// task-board, *The answer asks for a change of its own*: the check then reads `open`, by design.
 	const instead = answer
 		? " — or, when the answer asks for a change of its own or its work would not fit one step, file an `idea` card for it, clear the card's `Assign`, add no group and end with `BLOCKED — <that card>`"
