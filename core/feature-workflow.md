@@ -315,18 +315,21 @@ for them is already here.
   anchors on that section's last line, never on the first item under the next
   heading — a replacement there that restates the heading leaves it twice.
 
-  Three of the ten statuses a reconciliation can repair, because the
+  Three of the eleven statuses a reconciliation can repair, because the
   harness's `board-state.ts` derives them from the tree: `proposing`,
   `proposed`, `done`, on the board the repository names under `harness.board`
   in its `package.json`. Each board is derived from its own repository. The
-  other seven are moved by hand, and this bullet is the whole of what holds
+  other eight are moved by hand, and this bullet is the whole of what holds
   them — which is why it is stated as an obligation rather than as a
-  convention. Which ten, and so which seven, is fixed in the harness's
+  convention. Which eleven, and so which eight, is fixed in the harness's
   `openspec/specs/task-board/` and named nowhere else; a second copy here is
   the drift that spec was written after.
 
   Only the user moves a card to `approved`; an unattended session takes no
-  work from `idea` and never sets `approved`. A session the user directs at an
+  work from `idea` and never sets `approved`. Only the user moves a card to
+  `discarded`, and no session moves one out of it: a reconciliation leaves a
+  `discarded` card as it is, even when the tree still holds the change its
+  `Pointer` names. A session the user directs at an
   `idea` card may move it to `exploring` directly — the instruction is the
   approval.
 

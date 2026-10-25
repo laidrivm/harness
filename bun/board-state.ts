@@ -1,6 +1,6 @@
 /**
- * The three statuses the file tree decides, and what each unapplied change is
- * waiting on. Filesystem in, JSON out: no network, no token and no connector,
+ * The three statuses the file tree decides, what each unapplied change is
+ * waiting on, and which card a reconciliation moves to its floor. Filesystem in, JSON out: no network, no token and no connector,
  * so the whole of its behaviour is exercisable from a fabricated directory and
  * an agent is what carries its output to the board.
  *
@@ -8,9 +8,9 @@
  * command it prints the board that repository names under `harness.board`
  * beside what it derives — the one board whose cards this tree decides.
  *
- * It never reports the seven statuses nobody can read from here — `idea`,
- * `approved`, `exploring`, `explored`, `applying`, `applied`, `archiving` —
- * nor anything about a card on a board whose tree is not this repository. A
+ * It never reports the eight statuses nobody can read from here — `idea`,
+ * `approved`, `exploring`, `explored`, `applying`, `applied`, `archiving`,
+ * `discarded` — nor anything about a card on a board whose tree is not this repository. A
  * derivation that ran anyway would answer for them with the same confidence as
  * the thirty it is right about.
  */
@@ -219,6 +219,35 @@ export function boardState(tree: string): State {
 			["the tree does not derive a board state:", ...problems].join("\n"),
 		);
 	return { status, edges };
+}
+
+/**
+ * The ten statuses a card moves through, in the order `task-board` lists them.
+ * `discarded`, the eleventh, is outside the order: only the user sets it.
+ */
+const ORDER: readonly string[] = [
+	"idea",
+	"approved",
+	"exploring",
+	"explored",
+	"proposing",
+	"proposed",
+	"applying",
+	"applied",
+	"archiving",
+	"done",
+];
+
+/**
+ * The status a reconciliation moves a card at `card` to, given the floor the
+ * tree derives for its slug, or `undefined` to leave it. A card at or past its
+ * floor agrees with it. A `discarded` card is left whatever the tree holds — a
+ * change directory it still points at would otherwise move it back to
+ * `proposed` — as is a card at a status the order does not name.
+ */
+export function corrected(card: string, floor: Status): Status | undefined {
+	const at = ORDER.indexOf(card);
+	return at !== -1 && at < ORDER.indexOf(floor) ? floor : undefined;
 }
 
 /**
