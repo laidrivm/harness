@@ -128,6 +128,18 @@ creation or the post failed). It exits 0 whatever happens, and `pass.sh`
 ignores its status too, so the pause, the stop file and the job's status are
 those of today. No call is retried: a retry could post or file twice.
 
+### Settled while applying group 1
+
+- The query's results are read again for a `Pointer` whose plain text is
+  exactly `openspec/changes/<slug>/`, as the pick reads it: the `equals`
+  filter's match is Notion's, and the check is the command's.
+- `Status` is written as a `select`, the type the Harness board's `Status`
+  has; the new card's body is one paragraph per line of the notice, then
+  `No step's card took this notice: <why>.`
+- When the comment's post fails after the new card was filed, the line names
+  the card: `pause: no notice — <why> (new card <card> filed)`, so the user
+  can find it.
+
 ### Overlaps
 
 - `no-pause-on-question` (merged): a `waiting` pass exits 0, so it writes no
