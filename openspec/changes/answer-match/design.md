@@ -86,7 +86,12 @@ need no change, and the ask command still posts one open question per card.
 
 An answer candidate for step `S` is taken when its card holds a question
 tagged `<slug> step <S>:` with an answer. `pickPrompt()` is given each
-candidate's step beside its slug. A takeable change keeps today's rule:
+candidate's step beside its slug. Carried from #256 CodeRabbit finding 2 (Major, `openspec/specs/board-loop/spec.md`,
+scenario *A candidate with no answer*): the delta's requirement text and that
+scenario use `task-board`'s answer — the user's first comment in the span
+opening with neither mark — with no `Assign` condition, and *An answered
+candidate with no `Assign`* pins it, so a card whose user answered and
+cleared `Assign` by hand is no longer stuck. A takeable change keeps today's rule:
 passed over while the card's last question, anyone's, has no answer — a
 chat agent's question waiting on the card holds the loop too, which is the
 one-open-question-per-card rule doing its work, not a new cost.

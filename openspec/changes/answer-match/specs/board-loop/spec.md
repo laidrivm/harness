@@ -59,9 +59,10 @@ step it would carry. The pick session SHALL take an answer candidate for step
 question tagged `<slug> step <S>:` (*The loop's question names the step that
 carries its answer*) that has an answer, as `task-board`'s *An open question
 waits on its card, assigned to the user* defines a question's answer: the
-user's, or a `harness-answer` by the integration's own id (*The runner has a
-stage session's question triaged before it posts it*). It SHALL NOT read the
-card's `Assign` to decide. Such a card stands in `applied` or `applying`, so
+user's first comment in its span opening with neither `harness-question` nor
+`harness-answer`, or, with none, a `harness-answer` by the integration's own
+id (*The runner has a stage session's question triaged before it posts it*).
+It SHALL NOT read the card's `Assign` to decide. Such a card stands in `applied` or `applying`, so
 the pick session SHALL read `applied` too.
 
 The pick session SHALL pass over a takeable change whose card's page-level
@@ -103,8 +104,9 @@ then does, so the next pass takes it first.
 #### Scenario: A candidate with no answer
 
 - **WHEN** an answer candidate's card holds no question tagged with its step,
-  or one with neither the user's comment nor a `harness-answer` by the
-  integration's own id in its span
+  or one whose span holds neither the user's comment opening with neither
+  `harness-question` nor `harness-answer` nor a `harness-answer` by the
+  integration's own id, whatever its `Assign` holds
 - **THEN** the pick session passes over it
 
 #### Scenario: An answered candidate with no `Assign`
