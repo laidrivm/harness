@@ -193,6 +193,16 @@ describe("the clone", () => {
 		test.each([
 			["a commit main lacks", (dir: string) => commit(dir)],
 			["a tracked edit", (dir: string) => writeFileSync(join(dir, "package.json"), '{"edited": true}\n')],
+			// `git cherry` lists no merge: one of main from before the squash leaves the branch's commit
+			// matched by patch, and only the merge carries this work.
+			[
+				"a merge whose resolution main lacks",
+				(dir: string) => {
+					git(dir, "fetch", "-q", "origin");
+					git(dir, "merge", "-q", "--no-ff", "--no-commit", "origin/main~1");
+					commit(dir, { "resolution.txt": "x\n" });
+				},
+			],
 		])("on a merged branch with %s is refused, on that branch at its tip", (_, add) => {
 			const { dir, origin } = clone();
 			unpushed(dir, "feat/other");

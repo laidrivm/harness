@@ -17,7 +17,8 @@ workspace under its real path, because a session there ignores the tracked
 remote-tracking branch contains, except as *An unpushed step branch does not
 stop the pass* allows, or when, after its fetch, every commit the branch holds
 over the default branch's remote tip is there already by patch (`git cherry`
-marks none `+`): such a branch is a merged branch's leftover, which the
+marks none `+`) and none of them is a merge, whose resolution no patch
+holds: such a branch is a merged branch's leftover, which the
 runner switches off, keeping it, and says so in one line. Otherwise it SHALL fetch and fast-forward the default
 branch, refusing where it cannot. It SHALL never create a merge commit or
 reset.
@@ -58,7 +59,7 @@ so that no session it launches has to install.
 - **WHEN** the tree is clean and the current branch holds commits that no
   remote-tracking branch contains, but after the fetch the default branch's
   remote tip holds each of them, itself or by patch as a squash merge leaves
-  it
+  it, and none of them is a merge
 - **THEN** the runner prints one line naming the branch, switches to the
   default branch at its remote's tip and the pass goes on; the branch keeps
   its tip, and a later refusal leaves the clone on the default branch
