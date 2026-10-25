@@ -209,4 +209,10 @@ left open carry here.
       design, then do that before this change is archived; verify with a
       case in `orchestrator/users.test.ts` that asserts the chosen state —
       the runner Dockerfile's `usermod -aG agent runner` present or absent —
-      and a pass on the host
+      and a pass on the host. Done: the case asserts it absent, and the pass
+      on the host ran 2026-10-25 at 03:10Z (Windmill job
+      `01a17109-9b47-de36-e7fe-356a89b69f40`) with `id runner` showing
+      `groups=1500(runner)`; it ran the session as `agent` through
+      `sudo -n -u agent /opt/orchestrator/as-agent`, and the push path through
+      the launcher bundled and pushed `feat/approved-column` (`b4c5bf2`) and
+      opened #275 as the App

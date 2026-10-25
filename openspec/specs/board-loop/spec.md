@@ -15,7 +15,14 @@ SHALL refuse a clone that `~/.claude.json` does not record as a trusted
 workspace under its real path, because a session there ignores the tracked
 `permissions.allow`. It SHALL refuse a tracked edit, or a branch tip no
 remote-tracking branch contains, except as *An unpushed step branch does not
-stop the pass* allows. Otherwise it SHALL fetch and fast-forward the default
+stop the pass* allows, or when, after its fetch, a remote-tracking branch
+contains the tip, as when another clone pushed the branch, which the runner
+switches off like any pushed branch, keeping it, and says so in one line, or
+when, after its fetch, the default branch's remote
+tip holds every commit the branch holds, itself or by patch (`git cherry`
+marks none `+`), and none of those it lacks is a merge, whose resolution no patch
+holds: such a branch is a merged branch's leftover, which the
+runner switches off, keeping it, and says so in one line. Otherwise it SHALL fetch and fast-forward the default
 branch, refusing where it cannot. It SHALL never create a merge commit or
 reset.
 It SHALL then run `bun install --frozen-lockfile` and refuse when that fails,
@@ -46,9 +53,31 @@ so that no session it launches has to install.
 
 - **WHEN** the current branch holds a commit that no remote-tracking branch
   contains, and it is not the step branch of a change the pass computes as
-  takeable or as an answer candidate
+  takeable or as an answer candidate, nor a merged branch's leftover
 - **THEN** the runner refuses, naming the branch, launches no session, and
   leaves that branch checked out at the tip it had
+
+#### Scenario: A merged branch's leftover
+
+- **WHEN** the tree is clean and the current branch holds commits that no
+  remote-tracking branch contains, but after the fetch the default branch's
+  remote tip holds each of them, itself or by patch as a squash merge leaves
+  it, and none of them is a merge
+- **THEN** the runner prints one line naming the branch, switches to the
+  default branch at its remote's tip and the pass goes on; the branch keeps
+  its tip, and a later refusal leaves the clone on the default branch, unless
+  a session's process group outlived the session, which leaves the clone as
+  the session left it
+
+#### Scenario: A step branch pushed from another clone
+
+- **WHEN** the tree is clean and the current branch's tip is on no
+  remote-tracking branch before the fetch, but after it a remote-tracking
+  branch contains the tip, at it or ahead of it, as when the host's runner
+  pushed the step's branch from a clone of its own
+- **THEN** the runner prints one line naming the branch, switches to the
+  default branch at its remote's tip and the pass goes on, even when no step
+  the pass computes is on that branch; the branch keeps its tip
 
 #### Scenario: Unpushed work on a detached HEAD
 
@@ -150,6 +179,20 @@ pass.
 - **THEN** the pass records `open`, prints what the check says is missing,
   and exits 1
 
+#### Scenario: The step waits on the user's answer
+
+- **WHEN** the check reads `goal open`, and the runner posted the
+  session's question on the carried card or found a question already waiting
+  there
+- **THEN** the pass records `waiting`, prints the change, the step and the
+  card, and exits 0
+
+#### Scenario: A question the runner could not post
+
+- **WHEN** the check reads `goal open` and the question line reads
+  `question: not posted` for any reason but a question already waiting
+- **THEN** the pass records `open` and exits 1
+
 #### Scenario: The session runs past the limit
 
 - **WHEN** the session is still running one hour after launch
@@ -187,6 +230,10 @@ posts it*). Such a
 card stands in `applied` or `applying`, so the pick session SHALL read
 `applied` too.
 
+The pick session SHALL pass over a takeable change whose card's page-level
+discussion holds a question no answer follows, as the same definition reads
+it, so a card waiting on the user costs no stage session.
+
 Before it returns, the pick session SHALL move the card it picks to the status
 of the stage the pass carries: `applying` for an apply step, from `proposed`
 or, for an answer candidate, from `applied`. It SHALL then read the card back,
@@ -220,9 +267,17 @@ then does, so the next pass takes it first.
 
 #### Scenario: A candidate with no answer
 
-- **WHEN** an answer candidate's card has no comment by the user after its last
-  question, or its `Assign` is empty
+- **WHEN** an answer candidate's card holds, after its last question, neither
+  the user's comment opening with neither `harness-question` nor
+  `harness-answer` while its `Assign` holds the user, nor a `harness-answer`
+  by the integration's own id
 - **THEN** the pick session passes over it
+
+#### Scenario: A takeable card waiting on the user
+
+- **WHEN** a takeable change's card holds a question with no answer after it
+- **THEN** the pick session passes over it, and takes it again once the user
+  has answered
 
 #### Scenario: A pick outside the list
 
@@ -475,7 +530,10 @@ the board `harness.board` names with a `Pointer` that is wholly the carried
 change's directory, and no question waits unanswered there. It SHALL then
 set `Assign` to the user alone, unless the triage answered the question
 (*The runner has a stage session's question triaged before it posts it*), and
-print one line saying what it did. The pass's outcome SHALL stay the goal check's.
+print one line saying what it did. The pass's outcome SHALL stay the goal check's,
+except that a `goal open` behind a question posted or already waiting on the
+card SHALL end `waiting` (*A pass carries one step unattended and records the
+check's verdict*).
 
 #### Scenario: A question posted
 
@@ -485,7 +543,8 @@ print one line saying what it did. The pass's outcome SHALL stay the goal check'
   with the mark and is at most 1500 characters long
 - **THEN** the runner posts the text as a page-level comment from the
   integration, sets the card's `Assign` to the user alone, prints that it did
-  both, and the pass ends as the goal check says
+  both, and the pass ends `waiting` when the goal check reads `goal open`,
+  and as the goal check says otherwise
 
 #### Scenario: Where the question ends
 
@@ -579,7 +638,8 @@ the same checks, and post nothing when one fails, before posting the
 question on every other ending too. Any other source SHALL be one
 that does not hold. On any
 other ending the runner SHALL post the question as that requirement fixes.
-The pass's outcome SHALL stay the goal check's.
+The pass's outcome SHALL stay the goal check's, with the same `waiting`
+exception that requirement fixes, a question the triage answered included.
 
 #### Scenario: An answer already written
 

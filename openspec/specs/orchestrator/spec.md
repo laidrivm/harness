@@ -62,6 +62,12 @@ exit non-zero, naming the file. Nothing but the user SHALL remove it.
 - **WHEN** the pass exits 0
 - **THEN** no stop file is written
 
+#### Scenario: A pass waiting on the user's answer
+
+- **WHEN** the pass ends `waiting`, since a question on its card waits on the
+  user, and exits 0
+- **THEN** no stop file is written, and the next tick starts a pass
+
 #### Scenario: The runner cannot start
 
 - **WHEN** `bun` or the runner's file is missing, so the command exits
@@ -115,6 +121,13 @@ clones directory.
   whitespace
 - **THEN** the wrapper starts no pass and exits non-zero, naming the file, and
   writes the stop file
+
+#### Scenario: The App's settings reach the pass
+
+- **WHEN** the wrapper starts with the App's id and the mint command set, and
+  a path to the App's key in its own environment
+- **THEN** the pass's environment holds the App's id and the mint command, and
+  no path to the App's key
 
 ### Requirement: The orchestrator directory holds no secret
 
@@ -448,6 +461,31 @@ Neither the runner nor the session SHALL re-run, cancel or delete a CI run.
 - **THEN** its environment holds no GitHub token, App setting or webhook
   secret, and it reads the logs from the file the runner wrote
 
+### Requirement: The CI flow holds the pull request draft while it works on it
+
+On the pull request route, the runner SHALL mark the pull request draft
+before it brings the clone to the branch and resumes the session. Once that
+work ends it SHALL mark the pull request ready, right after the push when it
+pushes and otherwise as soon as it knows no push will come, unless the
+session answered `blocked`, whose question on the card keeps the pull request
+draft. A ready that GitHub refuses SHALL make the runner exit non-zero naming
+the pull request. The flaky and scheduled routes SHALL leave the draft state
+as they found it.
+
+#### Scenario: The CI flow works on a draft
+
+- **WHEN** the CI flow resumes the session on a pull request
+- **THEN** the pull request is draft while the session runs; it is marked
+  ready right after the push of a fix, and with no push for any outcome but
+  `blocked`, which leaves it draft
+
+#### Scenario: A ready GitHub refuses
+
+- **WHEN** the runner pushed a fix and GitHub refuses to mark the pull
+  request ready
+- **THEN** the push stays, and the runner exits non-zero naming the pull
+  request
+
 ### Requirement: A failed scheduled run files an idea card
 
 When a run the `schedule` event started fails on the repository's default
@@ -487,3 +525,193 @@ tests that failed in it.
 
 - **WHEN** a run failed on attempt 2 after failing on attempt 1
 - **THEN** it is handled as any failed run
+
+### Requirement: The runner runs harness code only from its own checkout
+
+The runner SHALL run the board loop, the goal check and every other harness
+script from a checkout it alone writes, at the harness commit the
+repository's `main` pins. It SHALL never run a harness file from a session's
+clone, its `node_modules` included.
+
+#### Scenario: A session edits the harness copy in its clone
+
+- **WHEN** a session's clone holds an edited
+  `node_modules/harness/bun/board-loop.ts` or `goal-check.ts`
+- **THEN** the pass runs the runner's own copy, and the edited file is never
+  executed
+
+#### Scenario: The pin moves on main
+
+- **WHEN** the repository's `main` pins a harness commit other than the one
+  the runner's checkout holds
+- **THEN** the runner fetches that commit into its checkout and the pass runs
+  it, read from `main`, never from the session's branch
+
+#### Scenario: The pin names no full commit
+
+- **WHEN** the part of `main`'s harness pin after `#` is not a full commit, or
+  the fetch from the harness's remote does not bring it
+- **THEN** no pass starts, and the stop file names the value
+
+#### Scenario: The session's clone names another repository
+
+- **WHEN** the engine's job names no repository, or the session's clone's
+  `origin` names one other than the repository the job names, or a host
+  other than `github.com`
+- **THEN** no pass starts, and no push clone or harness checkout is made or
+  read
+
+#### Scenario: Config left in a runner clone
+
+- **WHEN** the push clone's or the harness checkout's `.git/config` sets a
+  command, or its `.git/hooks` holds a hook
+- **THEN** the pass rewrites that config and empties those hooks before its
+  first git command there, and a clone it cannot reset stops the pass,
+  named
+
+### Requirement: The runner runs nothing in a session's clone as itself
+
+Every git, bun or `claude` command the runner runs in a session's clone SHALL
+run as the session user through one launcher, with the environment the
+session allowlist names and no secret but the Claude Code token `claude`
+needs. The runner SHALL read nothing from that
+clone that a command of its own then executes.
+
+#### Scenario: A hook or a config command in the session's clone
+
+- **WHEN** the session's clone sets `core.fsmonitor`, `core.hooksPath` or a
+  filter driver to a command
+- **THEN** any run of that command during the pass is as the session user,
+  never as the runner
+
+#### Scenario: Every command in the clone goes through the launcher
+
+- **WHEN** a pass runs against a clone
+- **THEN** each command whose working directory is that clone was started
+  through the launcher
+
+### Requirement: The runner pushes from its own push clone, a commit whose tests passed
+
+The runner SHALL make every push, the board loop's and the CI flow's fix push
+alike, from a push clone it alone writes, into which it takes
+the session's commits from a bundle the session user writes. It SHALL push a
+commit only when a passing pre-PR record the session's clone made of that
+commit's SHA is found with that commit checked out there: by the goal check
+on its step branch for the board loop's push, and by the same record read for
+the CI flow's. That push SHALL run no hook, and the runner's bun SHALL load no
+configuration from the pushed tree.
+
+#### Scenario: A commit with a passing pre-PR record
+
+- **WHEN** the bundle's step branch tip has a passing pre-PR record
+- **THEN** the runner pushes exactly that SHA, and no hook runs
+
+#### Scenario: A commit with no pre-PR record
+
+- **WHEN** the bundle's tip has no passing pre-PR record
+- **THEN** the runner pushes nothing and the pass ends `open`, naming the
+  missing record
+
+#### Scenario: The CI flow's fix push
+
+- **WHEN** a CI fix session answers `fixed` and its bundle's tip is a new
+  commit on top of the run's `head_sha` with a passing pre-PR record
+- **THEN** the runner pushes that tip from its push clone, with no hook and
+  no force, and the App's token never enters the session's clone
+
+#### Scenario: A CI fix with no pre-PR record
+
+- **WHEN** a CI fix session answers `fixed` and its tip has no passing pre-PR
+  record
+- **THEN** the runner pushes nothing and the flow exits 1, naming the missing
+  record
+
+#### Scenario: A preload in the pushed tree
+
+- **WHEN** the pushed tree holds a `bunfig.toml` with a `preload`
+- **THEN** no bun process the runner starts loads it
+
+### Requirement: The pass reaches GitHub as the App alone
+
+The host SHALL hold no GitHub token of the user's, and the wrapper SHALL read
+none (the user's decision of 2026-10-23). The wrapper SHALL start a pass only
+with the App's id and the key holder's mint command set. The pass's
+environment SHALL hold no GitHub token: the push, the pull request it opens
+and the check that reads that pull request SHALL use a token minted after the
+stage session, and `readPullRequests()` SHALL read with a token minted for
+that read alone. The pass's `gh` SHALL read its configuration from an empty
+directory the pass owns, never from a login stored in the runner's home.
+
+#### Scenario: No App configured
+
+- **WHEN** the wrapper starts with the App's id or the mint command unset or
+  empty
+- **THEN** it starts no pass, writes the stop file naming the setting, and
+  exits non-zero
+
+#### Scenario: A private repository's pull requests
+
+- **WHEN** a pass reads a branch's pull requests with the mint command set
+- **THEN** the read's `gh` holds a `pull_requests` read token for that one
+  repository, and a mint that fails fails the read
+
+#### Scenario: A login stored in the runner's home
+
+- **WHEN** `runner`'s home holds a `gh` login and a pass runs a `gh` call
+  other than the push, the pull request and its check
+- **THEN** that call finds no stored login and runs unauthenticated
+
+#### Scenario: The pass's environment
+
+- **WHEN** a pass is running, before its push, on a host that also holds a
+  token file of the user's
+- **THEN** the pass's environment holds no `GH_TOKEN` and no value of that
+  file
+
+### Requirement: Only the key holder reads the App's private key
+
+The App's private key SHALL be readable by the key-holder user alone among
+the host's unprivileged users; no automated `runner` or session user SHALL
+read it. Root reads every file, and the user's emergency root session MAY
+read the key while it runs (`design.md` *Remote Control is the user's root
+session*). The
+runner SHALL obtain an installation token only by asking the key holder for
+one repository; the token SHALL last at most an hour and carry permissions
+from a fixed set, and it SHALL never appear in a process's arguments.
+
+#### Scenario: The runner reads the key
+
+- **WHEN** the runner or the session user opens the App's key file
+- **THEN** the open fails for lack of permission
+
+#### Scenario: The runner asks the key holder
+
+- **WHEN** the runner needs the App's slug or a token
+- **THEN** it runs the mint command for one repository, with `--slug` or the
+  permissions, and reads the answer from that command's stdout alone
+
+#### Scenario: A repository outside the installation
+
+- **WHEN** the runner asks for a token for a repository the key holder's list
+  does not name
+- **THEN** the key holder mints nothing and exits non-zero, naming the
+  repository
+
+#### Scenario: A permission outside the fixed set
+
+- **WHEN** the runner asks for a permission, or a level, the fixed set does
+  not hold
+- **THEN** the key holder mints nothing and exits non-zero, naming it
+
+### Requirement: The session user reads no secret file
+
+The session user SHALL be unable to read any secret file on the host: the
+Notion bot's token, the App's key, the claude.ai login in
+root's home, and the SSH and tunnel keys.
+
+#### Scenario: Each secret file, as the session user
+
+- **WHEN** the session user tries to read each secret file the host README
+  provisions
+- **THEN** every read fails for lack of permission, and the test names any
+  file that it could read

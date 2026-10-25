@@ -17,6 +17,7 @@ import { dirname, join } from "node:path";
 import { LIMIT as HOUR } from "./board-loop.ts";
 import { session } from "./board-loop-session.ts";
 import { fetched, git, pushed, under } from "./ci-run-clone.ts";
+import { draftWhile } from "./ci-run-draft.ts";
 import { type App, configured, credentials, identity, mint, repository, request, slug } from "./github-app.ts";
 import { lookup } from "./pr-sessions.ts";
 
@@ -187,7 +188,7 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
 				`Change nothing. Put one question on the step's card naming #${pull.number} and its three ${ATTEMPT} comments, and answer blocked.`,
 			].join("\n");
 	}
-	const [verdict, why] = await resume(clone, app, run, resumed, ask, fixing);
+	const [verdict, why] = await draftWhile(`${app.owner}/${app.repo}`, pull.number, () => resume(clone, app, run, resumed, ask, fixing));
 	return [verdict, `${said}; ${why}`];
 }
 
@@ -195,19 +196,20 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
  * The session after the comment, in the clone on the pull request's branch,
  * and the push of what it fixed: `ci-run-agent`'s design, *The session*. The
  * clone goes back to the branch it was on and the log file goes, unless the
- * session left the tree unclean, which stays as it is for the user.
+ * session left the tree unclean, which stays as it is for the user. Beside the
+ * outcome, whether the session answered `blocked`, its question on the card.
  */
-async function resume(clone: string, app: App, run: Run, id: string, ask: (log: string) => string, fixing: boolean): Promise<Outcome> {
+async function resume(clone: string, app: App, run: Run, id: string, ask: (log: string) => string, fixing: boolean): Promise<[Outcome, boolean]> {
 	const branch = run.head_branch;
 	// Its commits are the App's bot's, as a board-loop stage's are; read before the clone changes, so a failure leaves it as found.
 	const as = await identity(app);
 	const back = git(clone, "symbolic-ref", "--short", "-q", "HEAD") ?? git(clone, "rev-parse", "HEAD");
 	const log = logOf(run);
 	const bundle = log.replace(/\.log$/, ".bundle");
-	const done = (outcome: Outcome): Outcome => {
+	const done = (outcome: Outcome, asked = false): [Outcome, boolean] => {
 		for (const file of [log, bundle]) rmSync(file, { force: true });
 		if (back) git(clone, "checkout", "-q", back);
-		return outcome;
+		return [outcome, asked];
 	};
 	const ready =
 		fetched(clone, app, branch, bundle) &&
@@ -218,9 +220,9 @@ async function resume(clone: string, app: App, run: Run, id: string, ask: (log: 
 	if (!logged(app, run, log)) return done(["failed", `the failed logs of run ${run.id} could not be read`]);
 	const outcome = await answered(clone, ask(log), as, ["-r", id]);
 	if (git(clone, "status", "--porcelain") !== "")
-		return ["failed", `the session left ${clone} with uncommitted changes; nothing pushed, the clone left as it is`];
+		return [["failed", `the session left ${clone} with uncommitted changes; nothing pushed, the clone left as it is`], outcome === "blocked"];
 	if (!outcome) return done(["failed", "the session gave no answer that matches the schema; nothing pushed"]);
-	if (outcome !== "fixed" || !fixing) return done(["handled", `the session answered ${outcome}, nothing pushed`]);
+	if (outcome !== "fixed" || !fixing) return done(["handled", `the session answered ${outcome}, nothing pushed`], outcome === "blocked");
 	const on = git(clone, "symbolic-ref", "--short", "-q", "HEAD");
 	if (on !== branch) return done(["failed", `the session answered fixed on ${on ?? "no branch"}, not ${branch}; nothing pushed`]);
 	const fixed = git(clone, "rev-parse", "HEAD");

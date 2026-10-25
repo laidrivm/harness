@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { closeSync, openSync, realpathSync, writeFileSync } from "node:fs";
+import { closeSync, openSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { advance, change, clone, commit, EPERM, lowered, out, records, run, TICKED, trusting } from "./board-loop.fixture.ts";
@@ -151,6 +151,91 @@ describe("the clone", () => {
 			expect(r.last).toContain(why);
 			expect(r.calls).not.toContain("claude");
 			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")]).toEqual([branch, tip]);
+		});
+
+		/**
+		 * Lands the patch of `dir`'s one-commit branch on `origin`'s main from another checkout, as a squash merge
+		 * does, after main moved: a parent of its own keeps the commit's id off the branch's.
+		 */
+		const squashed = (dir: string, origin: string) => {
+			advance(origin, { "moved.txt": "x\n" });
+			advance(origin, { "note.txt": readFileSync(join(dir, "note.txt"), "utf8") });
+		};
+		/** Moves `origin`'s main to the branch's own tip, with no remote-tracking branch in `dir` told. */
+		const forwarded = (dir: string, origin: string) => git(origin, "fetch", "-q", dir, "feat/other:main");
+
+		// spec: board-loop/a-merged-branch-s-leftover
+		test.each([
+			["squash-merged after main moved", squashed],
+			["fast-forwarded into main", forwarded],
+		])("on no step's branch %s, the pass goes on from main and keeps the branch", (_, merge) => {
+			const { dir, origin } = clone();
+			const tip = unpushed(dir, "feat/other");
+			merge(dir, origin);
+			const r = run(dir);
+			expect(r.last).toBe("board-loop: met — apply demo step 1");
+			expect(r.text).toContain("switching off feat/other: origin/main holds its every commit by patch");
+			expect(fromMain(dir, r.calls)).toBe(true);
+			expect(out(dir, "rev-parse", "feat/other")).toBe(tip);
+		});
+
+		// spec: board-loop/a-merged-branch-s-leftover
+		test("on a merged branch, a refusal after the switch leaves the clone on main", () => {
+			const { dir, origin } = clone();
+			unpushed(dir, "feat/other");
+			squashed(dir, origin);
+			const r = run(dir, [], { install: 1 });
+			expect(r.last).toStartWith("board-loop: refused — bun install --frozen-lockfile failed");
+			expect(out(dir, "branch", "--show-current")).toBe("main");
+		});
+
+		// spec: board-loop/a-merged-branch-s-leftover board-loop/unpushed-work board-loop/an-edited-tracked-file
+		test.each([
+			["a commit main lacks", (dir: string) => commit(dir)],
+			["a tracked edit", (dir: string) => writeFileSync(join(dir, "package.json"), '{"edited": true}\n')],
+			// `git cherry` lists no merge: one of main from before the squash leaves the branch's commit
+			// matched by patch, and only the merge carries this work.
+			[
+				"a merge whose resolution main lacks",
+				(dir: string) => {
+					git(dir, "fetch", "-q", "origin");
+					// A merge wants an identity even with `--no-commit`, and CI's runner has none.
+					git(dir, "-c", "user.email=test@example.com", "-c", "user.name=Test", "merge", "-q", "--no-ff", "--no-commit", "origin/main~1");
+					commit(dir, { "resolution.txt": "x\n" });
+				},
+			],
+		])("on a merged branch with %s is refused, on that branch at its tip", (_, add) => {
+			const { dir, origin } = clone();
+			unpushed(dir, "feat/other");
+			squashed(dir, origin);
+			add(dir);
+			const tip = out(dir, "rev-parse", "HEAD");
+			const r = run(dir);
+			expect(r.last).toStartWith("board-loop: refused");
+			expect(r.calls).not.toContain("claude");
+			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "HEAD")]).toEqual(["feat/other", tip]);
+		});
+
+		// spec: board-loop/a-step-branch-pushed-from-another-clone
+		// The host's runner pushes from a clone of its own, so the session's clone learns of the branch at its fetch.
+		test.each([
+			["at its tip", false],
+			["ahead of its tip", true],
+		])("on a branch another clone pushed, origin %s, with its pull request open, the pass switches off it to main", (_, ahead) => {
+			const { dir, origin } = clone();
+			const tip = unpushed(dir, "feat/demo");
+			git(origin, "fetch", "-q", dir, "feat/demo:feat/demo");
+			if (ahead) {
+				const other = emptyDir("board-loop-other-");
+				git(other, "clone", "-q", "-b", "feat/demo", origin, ".");
+				commit(other);
+				git(other, "push", "-q", "origin", "feat/demo");
+			}
+			const open = '[{"number":7,"state":"open","merged_at":null,"head":{"sha":"abc","repo":{"id":1,"full_name":"o/demo"}},"base":{"repo":{"id":1}}}]';
+			const r = run(dir, [], { gh: open });
+			expect(r.last).toBe("board-loop: idle — no change is takeable");
+			expect(r.text).toContain("switching off feat/demo: origin holds its tip");
+			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "feat/demo")]).toEqual(["main", tip]);
 		});
 
 		// spec: board-loop/a-session-s-process-group-outlived-it
