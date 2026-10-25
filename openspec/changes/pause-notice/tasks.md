@@ -1,6 +1,6 @@
 ## 1. The notice command
 
-- [ ] 1.1 In `bun/notion-bot.ts`: `settings()` reads an optional `board`,
+- [x] 1.1 In `bun/notion-bot.ts`: `settings()` reads an optional `board`,
       checked with `ID` as `user` is, into `Settings`; lift the `Assign` write
       out of `post()` into an exported `assign(call, card, user)` and switch
       `post()` to it; `comment()` takes an optional user id, mentioned in a
@@ -8,7 +8,7 @@
       throws naming the key, never the value) and `bun/notion-bot-rest.test.ts`
       (the mention run's shape; `post()`'s existing `Assign` cases still pass).
       Keep both files under 300 lines. Verify with those two files
-- [ ] 1.2 Add `bun/notion-pause.ts <stop file> [<log>]` (design, *The step's
+- [x] 1.2 Add `bun/notion-pause.ts <stop file> [<log>]` (design, *The step's
       card, or a card of its own*, *The comment* and *Failures print, never
       pause twice*): reads `notion-bot.json` with `settings()`; takes the slug
       from the stop line only as the design reads it; queries `board` for the

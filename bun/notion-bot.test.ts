@@ -77,6 +77,16 @@ describe("the settings file", () => {
 		refused(file({ token: TOKEN, user }), "`user`");
 	});
 
+	test.each([USER, UUID])("the board id %p is read", (board) => {
+		expect(settings(file({ token: TOKEN, user: USER, board }))).toEqual({ token: TOKEN, user: USER, board });
+	});
+
+	test.each([`${USER}x`, "Harness", 42, null])("the board id %p is refused, naming the key and never the value", (board) => {
+		const path = file({ token: TOKEN, user: USER, board });
+		refused(path, "`board`");
+		expect(() => settings(path)).toThrow(`notion-bot: ${path}: \`board\` is not 32 hex digits, alone or as a UUID`);
+	});
+
 	test("the file is found under XDG_CONFIG_HOME, then under ~/.config [5]", () => {
 		expect(where("notion-bot.json", { XDG_CONFIG_HOME: "/x", HOME: "/h" })).toBe("/x/harness/notion-bot.json");
 		expect(where("notion-bot.json", { HOME: "/h" })).toBe("/h/.config/harness/notion-bot.json");
