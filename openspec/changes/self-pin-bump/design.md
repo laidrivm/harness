@@ -44,7 +44,8 @@ log's line and the count in the pull request are enough); pinning skills
 
 ### D1 — a `self` command in `bump.ts`, reusing `greenHead`
 
-`bun bun/bump.ts self`, from the harness's root: read the pin, take
+`bun bun/bump.ts self`, from the harness's root: read the pin, refusing
+first a manifest whose two harness fields differ (D3), take
 `greenHead`, and stop quietly (exit 0, empty `sha`) when the head is not
 green, equals the pin, or is a merged bump (D2). Otherwise move the pin
 with `movePin`, run `bun install --ignore-scripts`, stage `package.json` and
@@ -96,7 +97,9 @@ the expected count still throws, so nothing outside the two fields moves.
 Moving both rather than the runtime one alone leaves no stale second pin.
 
 `self` refuses a manifest whose two fields hold different specs: it exits
-non-zero and moves nothing. The consumers' rule would move
+non-zero and moves nothing. The refusal comes before D1's quiet stops, since
+D2 drops both fields and would otherwise pass a head that changed only them
+as a merged bump. The consumers' rule would move
 `dependencies.harness` there, while `pass.sh` runs
 `devDependencies.harness`, so the host would keep the old pin behind a bump
 that reads as merged. The harness's own manifest names the harness under

@@ -13,7 +13,8 @@
       from the pin only in `package.json`, in a field
       other than the pin (a script) → one new bump commit, as below; a
       manifest whose two harness fields differ → non-zero exit, tree
-      unchanged (D3); head differs elsewhere → one
+      unchanged, also where the head differs from the pin only in those
+      fields (D3, checked before D2); head differs elsewhere → one
       new commit by `github-actions[bot]` changing only those two files, the
       pin at the head, and `sha`, `old`, `behind` written to `GITHUB_OUTPUT`
       with `behind` the commit count. Cite each `harness-updates` scenario in a
