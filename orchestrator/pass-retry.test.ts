@@ -69,12 +69,23 @@ describe.skipIf(skip)(`pass.sh's transient count${skip ? " — skipped: flock is
 		expect(readFileSync(retries(h.state), "utf8")).toBe("1\n");
 	});
 
+	test("a count with a leading 0 reads in base 10, not as octal", () => {
+		const h = host();
+		clone(h, "repo", { status: TEMPFAIL });
+		tick(h, "repo");
+		writeFileSync(retries(h.state), "08\n");
+		expect(tick(h, "repo").code).toBe(TEMPFAIL);
+		expect(readFileSync(stop(h, "repo"), "utf8")).toContain("(9 transient failures in a row)");
+	});
+
 	test("a tick that finds the lock held leaves the count", async () => {
 		const h = host();
 		clone(h, "repo", { status: TEMPFAIL });
 		tick(h, "repo");
 		tick(h, "repo");
 		writeFileSync(join(h.clones, "repo/.fake/hold"), "");
+		// `running()` waits for this marker, which the two ticks above already left.
+		rmSync(join(h.clones, "repo/.fake/started"));
 		const p = await running(h, "repo");
 		expect(tick(h, "repo").code).toBe(0);
 		await release(h, "repo", p);

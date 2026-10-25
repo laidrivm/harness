@@ -63,7 +63,8 @@ transient() {
 	local n
 	n=$(cat "$retries" 2>/dev/null)
 	[[ $n =~ ^[0-9]+$ ]] || n=0
-	n=$((n + 1))
+	# Base 10, since bash reads a leading 0 as octal and refuses `08`.
+	n=$((10#$n + 1))
 	if [ "$n" -ge 3 ]; then
 		pause 75 "$1 ($n transient failures in a row)"
 		rm -f "$retries"
