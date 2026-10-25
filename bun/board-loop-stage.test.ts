@@ -158,7 +158,7 @@ describe("the session", () => {
 		const { dir } = clone();
 		const { calls } = run(dir);
 		expect(calls).toContain(
-			"/goal Carry step 1 of the OpenSpec change demo: /opsx:apply demo for its group 1 and the pre-PR sequence, up to a committed HEAD on the branch of the step — the runner, not this session, pushes that branch and opens the pull request.\n",
+			"/goal Carry step 1 of the OpenSpec change demo: /opsx:apply demo for its group 1 and the pre-PR sequence, up to a committed HEAD on feat/demo, the branch of the step — the runner, not this session, pushes that branch and opens the pull request.\n",
 		);
 		expect(calls).toContain("\nThis session runs unattended.\n");
 		expect(calls).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 1 --before-push`, run after the last commit");
