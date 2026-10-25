@@ -167,7 +167,7 @@ non-zero status does.
 
 ### Overlaps
 
-- `no-pause-on-question` (merged, not archived): its orchestrator delta
+- `no-pause-on-question` (archived 2026-10-25): its orchestrator delta
   modifies the same stop-file requirement, so this change names it in
   `after:` and carries its `waiting` scenario in the full text.
 - `runner-isolation` 6.1 authenticates the same two fetches (`pass.sh`'s push
