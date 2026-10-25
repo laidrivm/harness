@@ -87,7 +87,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	if (at("git", "status", "--porcelain", "--untracked-files=no").out)
 		return end("refused", "tracked files differ from HEAD — work the last session left");
 	// An unpushed tip may be a dead session's step branch: noted, and judged once the steps are known.
-	const unpushed = !at("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out;
+	const held = () => !!at("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out;
+	const unpushed = !held();
 	let noted = unpushed ? at("git", "branch", "--show-current").out : "";
 	// No branch name keeps a detached HEAD's commits once the pass switches off it.
 	if (unpushed && !noted) return end("refused", "HEAD names no branch and is on no remote-tracking branch — unpushed work");
@@ -100,8 +101,10 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		["merge", "--ff-only", "-q", `origin/${DEFAULT}`],
 	]) {
 		const run = at("git", ...step);
-		if (run.ok && noted && step[0] === "fetch" && leftover(at, DEFAULT)) {
-			console.log(`switching off ${noted}: origin/${DEFAULT} holds its every commit by patch`);
+		// The fetch may bring the tip itself: the host's runner pushes a step's branch from a clone of its own.
+		const off = run.ok && noted && step[0] === "fetch" && (leftover(at, DEFAULT) ? `origin/${DEFAULT} holds its every commit by patch` : held() && "origin holds its tip");
+		if (off) {
+			console.log(`switching off ${noted}: ${off}`);
 			noted = "";
 		}
 		if (run.ok) continue;
