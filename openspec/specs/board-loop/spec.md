@@ -15,7 +15,10 @@ SHALL refuse a clone that `~/.claude.json` does not record as a trusted
 workspace under its real path, because a session there ignores the tracked
 `permissions.allow`. It SHALL refuse a tracked edit, or a branch tip no
 remote-tracking branch contains, except as *An unpushed step branch does not
-stop the pass* allows. Otherwise it SHALL fetch and fast-forward the default
+stop the pass* allows, or when, after its fetch, every commit the branch holds
+over the default branch's remote tip is there already by patch (`git cherry`
+marks none `+`): such a branch is a merged branch's leftover, which the
+runner switches off, keeping it, and says so in one line. Otherwise it SHALL fetch and fast-forward the default
 branch, refusing where it cannot. It SHALL never create a merge commit or
 reset.
 It SHALL then run `bun install --frozen-lockfile` and refuse when that fails,
@@ -49,6 +52,16 @@ so that no session it launches has to install.
   takeable or as an answer candidate
 - **THEN** the runner refuses, naming the branch, launches no session, and
   leaves that branch checked out at the tip it had
+
+#### Scenario: A merged branch's leftover
+
+- **WHEN** the tree is clean and the current branch holds commits that no
+  remote-tracking branch contains, but after the fetch the default branch's
+  remote tip holds each of them, itself or by patch as a squash merge leaves
+  it
+- **THEN** the runner prints one line naming the branch, switches to the
+  default branch at its remote's tip and the pass goes on; the branch keeps
+  its tip, and a later refusal leaves the clone on the default branch
 
 #### Scenario: Unpushed work on a detached HEAD
 
