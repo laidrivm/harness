@@ -59,8 +59,9 @@
       `StateDirectory=harness-deploy`, `TimeoutStartSec=3h`,
       `WorkingDirectory=/root/harness/orchestrator`) and
       `orchestrator/host/harness-deploy.timer` (`OnBootSec=5min`,
-      `OnUnitInactiveSec=5min`). Cases in `orchestrator/layout.test.ts` read
-      both and pin those fields
+      `OnUnitInactiveSec=5min`, `[Install] WantedBy=timers.target`, without
+      which `systemctl enable` has nothing to enable). Cases in
+      `orchestrator/layout.test.ts` read both and pin those fields
 - [ ] 2.2 Drop `includeSchedules: true` from
       `orchestrator/windmill/wmill.yaml`; a case citing
       `orchestrator/the-tree-s-push-configuration` asserts it is unset
@@ -110,8 +111,11 @@
       `authorized_keys` line (3.4)
 - [ ] 4.2 **User act.** On the host, as root, in `orchestrator/`: create a
       Windmill token for the deploy and write it to
-      `secrets/windmill_deploy_token` with `umask 077`; run
-      `./deploy.sh` once by hand and confirm in Windmill that the pass
+      `secrets/windmill_deploy_token` with `umask 077`; check that
+      `/home/runner/orchestrator/locks/` holds `<owner>+<repo>.lock` (lower
+      case) for every repository the loop serves, creating any missing with
+      `docker compose exec -u runner runner touch` (design.md, *Migration
+      Plan*); run `./deploy.sh` once by hand and confirm in Windmill that the pass
       schedule is still enabled and the scripts carry the head
       (`orchestrator/the-schedule-is-enabled-on-the-engine`)
 - [ ] 4.3 **User act.** The kick key, on the host as root in `orchestrator/`

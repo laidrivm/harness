@@ -346,7 +346,11 @@ Merge, then the user's acts in tasks.md group 4: write the deploy token,
 `systemctl link` both units, `systemctl enable --now harness-deploy.timer`;
 add the kick key and its variable, the host's line in `runner_known_hosts`,
 and the webhook. The first run deploys the head, since nothing is recorded
-yet. To stop deploys: `systemctl disable --now harness-deploy.timer` and
+yet. That run still meets the old runner, whose `pass.sh` and `ci-run.ts`
+take no gate: a repository with no lock file could start its first pass or
+flow after the deploy lists `locks/`, and `up` would cut it. So task 4.2
+first makes sure every served repository has its lock file; the deploy then
+holds them all, and from its `up` on the gate closes the set. To stop deploys: `systemctl disable --now harness-deploy.timer` and
 remove the kick key's line from `authorized_keys`.
 
 ## Settled on the card
