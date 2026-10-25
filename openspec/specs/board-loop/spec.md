@@ -121,14 +121,16 @@ used, up to the first that is not. An open or closed, unmerged pull request
 on that first branch SHALL pass the change over as above, with no carry. The
 step SHALL otherwise be a carry step N+1 on `feat/<slug>-<N+1>`, N the
 groups the change holds, whose goal names moving every unticked task of the
-carried groups into a new group N+1 and carrying that group. The pull
-request rule above SHALL apply to that branch.
+carried groups into a new group N+1 and carrying that group. No pull
+request, a merged one included, SHALL have used that branch; a change whose
+carry branch one used SHALL be passed over, its reason naming that pull
+request.
 
 A change that fails only because every box of its N groups is ticked SHALL be
-an answer candidate instead. Its step is N+1 on `feat/<slug>-<N+1>`, and the
-pull request rule above applies to that branch. A pass SHALL be idle without
-a pick session only when it has neither a takeable change nor an answer
-candidate.
+an answer candidate instead. Its step is N+1 on `feat/<slug>-<N+1>`, and no
+pull request, a merged one included, SHALL have used that branch. A pass
+SHALL be idle without a pick session only when it has neither a takeable
+change nor an answer candidate.
 
 #### Scenario: A step waiting for the user's merge
 
