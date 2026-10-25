@@ -3,7 +3,8 @@
  * `QUESTION:` line it reads from a stage session's final message, and the five
  * REST calls that post the question from the integration and set `Assign`
  * (`openspec/changes/archive/2026-10-22-notion-bot-questions/design.md`). The ask command makes
- * two of those calls with its own settings. The token reaches `fetch` only as a
+ * two of those calls with its own settings; the pause notice, the comment and
+ * the `Assign` write with the runner's. The token reaches `fetch` only as a
  * header, and no line this module prints or throws holds it.
  */
 import { readFileSync, statSync } from "node:fs";
@@ -14,8 +15,11 @@ const VERSION = "2025-09-03";
 /** A Notion id, as a whole value: 32 hex digits, alone or in a UUID's form. */
 export const ID = /^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
-/** `self`: the integration's own id, read with `own()`; none reads no `harness-answer` as an answer. */
-export type Settings = { token: string; user: string; self?: string };
+/**
+ * `self`: the integration's own id, read with `own()`; none reads no `harness-answer` as an answer.
+ * `board`: the data source a pause's notice searches and files on; none posts no notice.
+ */
+export type Settings = { token: string; user: string; self?: string; board?: string };
 export type Asked = { card: string; text: string };
 
 /**
@@ -35,7 +39,7 @@ export function settings(path: string): Settings | undefined {
 	// On the VPS the session user shares the runner's group, so group access is the session's.
 	if (mode & 0o077)
 		throw new Error(`notion-bot: ${path} has mode 0${mode.toString(8)}, which its group or others may read — chmod 600 it`);
-	let value: { token?: unknown; user?: unknown } | null;
+	let value: { token?: unknown; user?: unknown; board?: unknown } | null;
 	try {
 		value = JSON.parse(readFileSync(path, "utf8"));
 	} catch {
@@ -43,12 +47,15 @@ export function settings(path: string): Settings | undefined {
 	}
 	if (typeof value !== "object" || value === null || Array.isArray(value))
 		throw new Error(`notion-bot: ${path} holds no JSON object`);
-	const { token, user } = value;
+	const { token, user, board } = value;
 	if (typeof token !== "string" || !/^\S+$/.test(token))
 		throw new Error(`notion-bot: ${path}: \`token\` is not a non-empty string without whitespace`);
 	if (typeof user !== "string" || !ID.test(user))
 		throw new Error(`notion-bot: ${path}: \`user\` is not 32 hex digits, alone or as a UUID`);
-	return { token, user };
+	if (board === undefined) return { token, user };
+	if (typeof board !== "string" || !ID.test(board))
+		throw new Error(`notion-bot: ${path}: \`board\` is not 32 hex digits, alone or as a UUID`);
+	return { token, user, board };
 }
 
 /**
@@ -137,7 +144,11 @@ export function client(token: string, timeout = 30_000) {
 		return response.json();
 	};
 }
-type Call = ReturnType<typeof client>;
+export type Call = ReturnType<typeof client>;
+
+/** Sets the card's `Assign` to `user` alone. */
+export const assign = (call: Call, card: string, user: string) =>
+	call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: [{ id: user }] } } });
 
 /** The integration's own id, read with `token`; throws naming the step, as `client` does. */
 export async function own(token: string, timeout = 30_000): Promise<string> {
@@ -171,15 +182,16 @@ async function discussion(call: Call, card: string): Promise<Comment[]> {
 
 /**
  * REST step 4: the page-level comment, a code-annotated run of `mark`, which
- * `text` opens with backticked, then the rest of the text, in runs of the 2000
- * characters Notion takes in one.
+ * `text` opens with backticked, a mention of `mention` when one is named, then
+ * the rest of the text, in runs of the 2000 characters Notion takes in one.
  */
-export function comment(call: Call, card: string, text: string, mark = "harness-question"): Promise<unknown> {
+export function comment(call: Call, card: string, text: string, mark = "harness-question", mention?: string): Promise<unknown> {
 	const rest = text.slice(mark.length + 2).match(/[\s\S]{1,2000}/g) ?? [];
 	return call(mark === "harness-answer" ? "the answer's post" : "the comment's post", "/v1/comments", "POST", {
 		parent: { page_id: card },
 		rich_text: [
 			{ type: "text", text: { content: mark }, annotations: { code: true } },
+			...(mention ? [{ type: "mention", mention: { type: "user", user: { id: mention } } }] : []),
 			...rest.map((content) => ({ type: "text", text: { content } })),
 		],
 	});
@@ -255,7 +267,7 @@ export async function post(
 		}
 	}
 	try {
-		await call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: [{ id: user }] } } });
+		await assign(call, card, user);
 	} catch (error) {
 		return say(`${POSTED} ${card}, Assign not set — ${(error as Error).message}`);
 	}

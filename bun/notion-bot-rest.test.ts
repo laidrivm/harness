@@ -5,7 +5,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import type { Server } from "bun";
-import { own, post } from "./notion-bot.ts";
+import { client, comment, own, post } from "./notion-bot.ts";
 import { Transient } from "./transient.ts";
 
 const servers: Server[] = [];
@@ -126,6 +126,14 @@ describe("a question posted", () => {
 		});
 		expect(seen[4].body).toEqual({ properties: { Assign: { people: [{ id: USER }] } } });
 	});
+
+	test("a user to mention follows the mark run as a mention run, and the text after it", async () => {
+		const seen = notion();
+		await comment(client(TOKEN), CARD, "`harness-pause` Paused.", "harness-pause", USER);
+		const [mark, ...rest] = (seen[0].body as { rich_text: unknown[] }).rich_text;
+		expect(mark).toEqual({ type: "text", text: { content: "harness-pause" }, annotations: { code: true } });
+		expect(rest).toEqual([{ type: "mention", mention: { type: "user", user: { id: USER } } }, { type: "text", text: { content: " Paused." } }]);
+	});
 });
 
 describe("a question already waits", () => {
@@ -235,10 +243,8 @@ describe("the integration's own id", () => {
 	});
 
 	test("a malformed base URL throws a plain Error", async () => {
-		const error = await (async () => {
-			process.env.HARNESS_NOTION_API_URL = "not a url";
-			return own(TOKEN, 200).then(() => undefined, (e: Error) => e);
-		})();
+		process.env.HARNESS_NOTION_API_URL = "not a url";
+		const error = await own(TOKEN, 200).then(() => undefined, (e: Error) => e);
 		expect(error).toBeInstanceOf(Error);
 		expect(error).not.toBeInstanceOf(Transient);
 	});

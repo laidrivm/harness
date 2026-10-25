@@ -108,7 +108,7 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
 	const run = (JSON.parse(body) as Payload).workflow_run as Run;
 	const app = configured(process.env, originOf(clone)?.url ?? "");
 	if (!app) return ["failed", "the App's settings are not set"];
-	const token = await mint(app, { actions: "read", contents: "write", pull_requests: "write" });
+	const token = await mint(app, { actions: "read", contents: "write", pull_requests: "write", workflows: "write" });
 	const base = `/repos/${app.owner}/${app.repo}`;
 	const shown = `${run.html_url} (${run.name ?? "a workflow"}) at ${run.head_sha}`;
 	if (run.event === "schedule") {
