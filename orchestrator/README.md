@@ -223,6 +223,14 @@ docker compose exec -u runner runner cat /home/runner/orchestrator/passes/<time>
 docker compose exec -u runner runner rm /home/runner/orchestrator/<clone>.stop
 ```
 
+A pass the board loop ended `retry` — a network error, a timeout, a 5xx or a
+429 — and any failed fetch of the wrapper's own, of the push clone or the pin,
+skip the tick: it exits 75, red in Runs, and writes no stop file.
+`<clone>.retries` beside the stop file counts them; the third in a row writes
+the stop file, its line ending `(3 transient failures in a row)`, and clears
+the count, so removing the stop file is the whole resume, with no count to
+reset. Any other pass status clears the count too.
+
 Cancelling a job in Windmill does not stop a pass. To stop one, run this,
 from a host shell or the emergency session, and never a `kill` on the host:
 
