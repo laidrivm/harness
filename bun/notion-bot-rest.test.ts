@@ -6,6 +6,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { Server } from "bun";
 import { own, post } from "./notion-bot.ts";
+import { Transient } from "./transient.ts";
 
 const servers: Server[] = [];
 afterAll(() => {
@@ -209,6 +210,37 @@ describe("the integration's own id", () => {
 			(error: Error) => error.message,
 		);
 		expect(thrown).toBe(why);
+	});
+
+	/** What `own()` throws against `stub`, with a short limit. */
+	const failed = (stub: Stub) => {
+		notion(stub);
+		return own(TOKEN, 200).then(() => undefined, (error: Error) => error);
+	};
+
+	test.each([
+		["a 502", { me: 502 }, "the integration's id read answered 502"],
+		["a 429", { me: 429 }, "the integration's id read answered 429"],
+		["no answer", { hang: true }, "the integration's id read failed: TimeoutError"],
+	])("%s throws a Transient, its message as before", async (_, stub, why) => {
+		const error = await failed(stub);
+		expect(error).toBeInstanceOf(Transient);
+		expect(error?.message).toBe(why);
+	});
+
+	test("a 401 throws a plain Error", async () => {
+		const error = await failed({ me: 401 });
+		expect(error).toBeInstanceOf(Error);
+		expect(error).not.toBeInstanceOf(Transient);
+	});
+
+	test("a malformed base URL throws a plain Error", async () => {
+		const error = await (async () => {
+			process.env.HARNESS_NOTION_API_URL = "not a url";
+			return own(TOKEN, 200).then(() => undefined, (e: Error) => e);
+		})();
+		expect(error).toBeInstanceOf(Error);
+		expect(error).not.toBeInstanceOf(Transient);
 	});
 });
 

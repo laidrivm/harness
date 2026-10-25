@@ -3,7 +3,8 @@ import { createPrivateKey, generateKeyPairSync, verify } from "node:crypto";
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
-import { configured, credentials, identity, jwt, mint, repository } from "./github-app.ts";
+import { configured, credentials, identity, jwt, mint, repository, request } from "./github-app.ts";
+import { Transient } from "./transient.ts";
 
 /**
  * The GitHub App's calls, against a stand-in API reached through
@@ -40,6 +41,9 @@ beforeAll(() => {
 				"/app/installations/99/access_tokens": { token: "ghs_minted" },
 			};
 			if (path === empty) return Response.json({});
+			const status = /^\/status\/(\d+)$/.exec(path)?.[1];
+			if (status) return new Response("no", { status: Number(status) });
+			if (path === "/hang") return new Promise<Response>(() => {});
 			return path in answers ? Response.json(answers[path]) : new Response("no", { status: 404 });
 		},
 	});
@@ -135,6 +139,33 @@ describe("the calls", () => {
 		);
 		process.env.GITHUB_API_URL = server.url.origin;
 		expect(failed).toStartWith("GitHub's API could not be reached for /repos/o/demo/installation: ");
+	});
+
+	/** What `request()` throws for `path`, with a short limit. */
+	const thrown = (path: string) => request(path, undefined, undefined, 200).then(() => undefined, (e: Error) => e);
+
+	test.each(["/status/502", "/status/503", "/status/429", "/hang"])("%p throws a Transient, its message as before", async (path) => {
+		const error = await thrown(path);
+		expect(error).toBeInstanceOf(Transient);
+		expect(error?.message).toStartWith(path === "/hang" ? "GitHub's API could not be reached for /hang: " : `GitHub's API answered ${path} with `);
+	});
+
+	test("an unreachable API throws a Transient", async () => {
+		process.env.GITHUB_API_URL = "http://127.0.0.1:1";
+		const error = await thrown("/app");
+		process.env.GITHUB_API_URL = server.url.origin;
+		expect(error).toBeInstanceOf(Transient);
+	});
+
+	test.each([
+		["a 401", undefined, "/status/401"],
+		["a malformed base URL", "not a url", "/app"],
+	])("%s throws a plain Error", async (_, base, path) => {
+		process.env.GITHUB_API_URL = base ?? server.url.origin;
+		const error = await thrown(path);
+		process.env.GITHUB_API_URL = server.url.origin;
+		expect(error).toBeInstanceOf(Error);
+		expect(error).not.toBeInstanceOf(Transient);
 	});
 
 	test("the push's credentials carry the token as git's extra header and as GH_TOKEN", () => {

@@ -1,6 +1,6 @@
 ## 1. Classify a transient failure where it surfaces
 
-- [ ] 1.1 Add `bun/transient.ts`: `class Transient extends Error`,
+- [x] 1.1 Add `bun/transient.ts`: `class Transient extends Error`,
       `TEMPFAIL = 75`, `answered(status)` (5xx or 429) and `network(stderr)`
       with the patterns design.md lists. Cases in `bun/transient.test.ts`:
       500, 503, 429 transient, 401, 403, 404, 422 not; each pattern matched
@@ -8,14 +8,14 @@
       `Authentication failed`, `returned error: 403` and `error: RPC failed;
       HTTP 413 curl 22 The requested URL returned error: 413` not. Verify
       with that file
-- [ ] 1.2 `request()` in `bun/github-app.ts` and `client()` in
+- [x] 1.2 `request()` in `bun/github-app.ts` and `client()` in
       `bun/notion-bot.ts` throw `Transient` for a rejected `fetch` and for an
       `answered()` status, with today's messages, building the URL with
       `new URL()` before the `fetch` as design.md says. Cases in
       `bun/github-app.test.ts` and `bun/notion-bot-rest.test.ts`: a stub
       answering 502 and one that never answers throw `Transient`; 401 and a
       malformed base URL throw a plain `Error`. Verify with those files
-- [ ] 1.3 `bun/github-app-mint.ts` exits `TEMPFAIL` for a `Transient`;
+- [x] 1.3 `bun/github-app-mint.ts` exits `TEMPFAIL` for a `Transient`;
       `minted()` in `bun/github-app-minted.ts` throws `Transient` for exit 75
       or when its own limit killed the mint (`exitedDueToTimeout`). Cases in
       `bun/github-app-mint.test.ts`: a mint whose API answers 503 exits 75,
@@ -23,7 +23,7 @@
       sleeping past a short limit, make `minted()` throw `Transient`, and one
       exiting 1 or killing itself with `SIGKILL` a plain `Error`. Verify with
       that file and `bun test`
-- [ ] 1.4 `session()` in `bun/board-loop-session.ts` adds
+- [x] 1.4 `session()` in `bun/board-loop-session.ts` adds
       `--output-format json` and returns `out` as the result object's
       `result` and `transient` as design.md *A session ended by a transient
       Claude API error* defines it, with `LIMITED` exported from
