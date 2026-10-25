@@ -120,17 +120,28 @@ fi
 
 mkdir -p "$state/locks" "$state/passes" || exit 1
 lock=$state/locks/$key.lock
-# Fd 9 holds the lock; the pass inherits it, so it is held until the pass and
-# everything it started have exited.
-exec 9>"$lock"
-flock -n -E 75 9
+# Fd 8 holds the gate only while this pass takes its own lock: the deploy,
+# holding the gate, holds every lock file a pass can create (host-deploy
+# design, *Build first*). 10 s covers two passes starting at once.
+on=$state/locks/gate.lock
+exec 8>>"$on"
+flock -w 10 -E 75 8
 held=$?
+if [ "$held" = 0 ]; then
+	# Fd 9 holds the lock; the pass inherits it, so it is held until the pass and
+	# everything it started have exited.
+	on=$lock
+	exec 9>"$lock"
+	flock -n -E 75 9
+	held=$?
+fi
+exec 8>&-
 if [ "$held" = 75 ]; then
-	echo "orchestrator: busy — $lock is held"
+	echo "orchestrator: busy — $on is held"
 	exit 0
 elif [ "$held" != 0 ]; then
-	pause "$held" "orchestrator: flock failed on $lock"
-	echo "orchestrator: flock failed on $lock"
+	pause "$held" "orchestrator: flock failed on $on"
+	echo "orchestrator: flock failed on $on"
 	exit "$held"
 fi
 # Again under the lock: a pass that failed after the first check wrote its

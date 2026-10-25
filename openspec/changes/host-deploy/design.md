@@ -200,6 +200,13 @@ for it; a pass tick during the hold reads `busy` and exits 0. The pass never
 takes the gate while it holds its repository lock, so the two never
 deadlock, and the gate's 10 s wait covers two passes starting at once.
 
+The script holds each lock on fd 9 of a nested redirection, one level per
+file: bash keeps the enclosing level's descriptor open on another number while
+the inner one runs, so every lock is held until the levels return, with no
+`{fd}` form that bash 3.2, the macOS one the tests also run under, lacks. It
+creates `locks/gate.lock` when absent, owned as the runner's home is, since a
+pass opens it for writing as `runner` (decided at apply).
+
 `bun/ci-run.ts` takes a repository lock too, for a failed run's flow
 (`ci-run-agent`), with `flock -w 7200` on `locks/<repo>.lock`, and creates it
 when absent. It gains the gate the same way: one `sh` opens and takes the
@@ -231,16 +238,23 @@ A recreated Windmill worker drops the pass job's SSH connection; the pass
 already survives that (`pass.sh:193`), but no pass runs then anyway.
 
 `docker image prune -f` follows `up`: a rebuild below the last layer leaves
-the old 6 GB image dangling, and the host's disk is 20 GB.
+the old 6 GB image dangling, and the host's disk is 20 GB. A prune that fails
+is logged and fails nothing: the stack already runs the head (decided at
+apply).
 
 ### The Windmill push runs in a one-off container, with a token only root reads
 
 After `up`, the script runs the push in a throwaway container of the runner
 image just built, on the compose network, never through the tunnel:
-`docker run --rm --network orchestrator_default --entrypoint bun` with
-`orchestrator/windmill/` mounted and the token file mounted read-only, running
-`x windmill-cli@<v> sync push --yes --skip-secrets --include-triggers`
-against `http://engine:8080`, workspace `harness-admin`. The entrypoint is
+`docker run --rm --network orchestrator_default --entrypoint sh` with
+`orchestrator/windmill/` mounted and the token file mounted read-only, both
+with `--mount`, which fails on a missing file where `-v` would create a
+directory in its place. The `sh` reads the token into `WM_TOKEN` and execs
+`bun x windmill-cli@<v> sync push --yes --skip-secrets --include-triggers`,
+which, with no workspace profile in the container, takes the engine and the
+workspace from `BASE_INTERNAL_URL=http://engine:8080` and
+`WM_WORKSPACE=harness-admin` (windmill-cli 1.846.1, `resolveWorkspace`;
+decided at apply). The entrypoint is
 replaced because the image's `entrypoint.sh` exits 1 unless the runner's
 three secret files are mounted, and the push needs none of them. `up -d`
 does not wait for the engine, which has no health check, so before the push a
@@ -250,7 +264,9 @@ two minutes; an engine that never answers fails the push step. `<v>` is read fro
 the `windmill_server` image in `docker compose config --format json`, so the
 CLI and the engine move together and no second pin exists. The token is read
 inside the container from the mounted file, so no host process's arguments
-carry it.
+carry it. That JSON and the check runs are parsed by the runner image's `jq`,
+in a one-off container, so the host needs no `jq` of its own (decided at
+apply).
 
 The user chose the push in the deploy, with a token that stays on the host
 (answer 3а), over keeping it the laptop's hand push.
@@ -274,14 +290,16 @@ schedule stays a hand push.
 
 ### A failed deploy pauses each clone
 
-When a step after the fast-forward fails, the script writes, as `runner`,
+When a step after the fast-forward fails, the script writes
 `/home/runner/orchestrator/<clone>.stop` for each directory under
 `/home/agent/clones/` that has no stop file, holding
 `<time> deploy: <step> failed at <sha>`. Every later tick fails in Runs with
 the paused line, which is where the user already looks (README step 7). A
 failed fetch or check read pauses nothing: the host is still on a working
-commit. If the runner itself is down, the exec fails too; the ticks then fail
-on SSH, which Runs shows as well.
+commit. It writes them from the host, on the two volumes' mount points, and
+gives each the owner of the runner's home, so a stop file lands even when the
+runner is down, and `runner` can still replace or remove it (decided at apply,
+in place of an exec in the runner, which a runner `up` left down would fail).
 
 The user chose this signal (answer 2а) once answer 13 named when it fires:
 the tree is on the new commit, but the build, `up` or the push failed, so the
