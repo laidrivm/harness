@@ -30,6 +30,7 @@
 import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
+import { leftover } from "./board-loop-leftover.ts";
 import { pickPrompt, prompt, type Step } from "./board-loop-prompt.ts";
 import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session, trusted } from "./board-loop-session.ts";
@@ -130,11 +131,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		["merge", "--ff-only", "-q", `origin/${DEFAULT}`],
 	]) {
 		const run = at("git", ...step);
-		// A merged branch's leftover: every commit's patch is on main, so leaving it loses nothing.
-		// shortcut: a squash of several commits matches none of them by patch, so that branch still refuses; compare trees if one does.
-		const cherry = run.ok && noted && step[0] === "fetch" ? at("git", "cherry", `origin/${DEFAULT}`, "HEAD") : undefined;
-		// No line at all: origin's main holds HEAD itself.
-		if (cherry?.ok && !/^\+/m.test(cherry.out)) {
+		if (run.ok && noted && step[0] === "fetch" && leftover(at, DEFAULT)) {
 			console.log(`switching off ${noted}: origin/${DEFAULT} holds its every commit by patch`);
 			noted = "";
 		}
