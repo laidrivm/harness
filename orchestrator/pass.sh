@@ -8,7 +8,7 @@
 # <clone> is one directory name under the clones directory, PASS_CLONES
 # (~/clones by default). <owner>/<repo> is the repository the engine's job
 # names, and the clone's origin must name the same one. The state directory, PASS_STATE (~/orchestrator),
-# holds <clone>.stop, locks/ and passes/, where each pass's whole output is
+# holds <clone>.stop, <clone>.retries, locks/ and passes/, where each pass's whole output is
 # kept. The secret files are read from PASS_SECRETS (/run/secrets). GitHub is
 # reached as the App alone: HARNESS_GITHUB_APP_ID and HARNESS_GITHUB_APP_MINT,
 # the key holder's mint command, must be set, and reach the pass with no key path.
@@ -23,14 +23,18 @@
 # an empty root-owned directory.
 #
 # Exits 2 for a name that is no clone, 3 while the stop file exists, 0 while
-# another pass holds the repository's lock, and otherwise the pass's status. A
-# pass waiting on the user's answer exits 0 (`board-loop: waiting`), so it
-# writes no stop file: the question on its card is what waits.
+# another pass holds the repository's lock, 75 when its own fetch of the push
+# clone or the pin fails, and otherwise the pass's status. A pass waiting on
+# the user's answer exits 0 (`board-loop: waiting`), so it writes no stop file:
+# the question on its card is what waits. A pass ended `retry` exits 75 and,
+# like a failed fetch of the wrapper's, writes the stop file only as the third
+# in a row (<clone>.retries counts them).
 #
 # Each pause, where the stop file is written, runs the notice command
 # PASS_NOTIFY names, if any, with the stop file and, once the pass started, its
-# log (pause-notice design); the ticks refused by the stop file and a pass
-# `stop.sh` ends run it not at all, and its status changes nothing.
+# log (pause-notice design); a transient tick short of the third, the ticks
+# refused by the stop file and a pass `stop.sh` ends run it not at all, and its
+# status changes nothing.
 #
 # CLAUDECODE is handed on, never checked here: the runner refuses it, and a
 # second copy of that check would drift from the runner's.
@@ -65,9 +69,34 @@ pause() {
 
 # Pauses, says why and exits 1: a host that cannot start the pass as designed.
 halt() {
+	rm -f "$retries"
 	pause 1 "orchestrator: $1"
 	echo "orchestrator: $1"
 	exit 1
+}
+
+# Counts one transient failure, $1 its line: the third in a row pauses, naming
+# the count, and clears it, so removing the stop file is the whole resume.
+retries=$state/$name.retries
+transient() {
+	local n
+	n=$(cat "$retries" 2>/dev/null)
+	[[ $n =~ ^[0-9]+$ ]] || n=0
+	# Base 10, since bash reads a leading 0 as octal and refuses `08`.
+	n=$((10#$n + 1))
+	if [ "$n" -ge 3 ]; then
+		pause 75 "$1 ($n transient failures in a row)"
+		rm -f "$retries"
+	else
+		echo "$n" >"$retries"
+	fi
+}
+
+# Counts a fetch of the wrapper's own as a pass that exited 75, says why and exits 75.
+skip() {
+	transient "orchestrator: $1"
+	echo "orchestrator: $1"
+	exit 75
 }
 
 # Without the shared guard an empty pattern would match every name.
@@ -157,6 +186,7 @@ if [ "$held" = 75 ]; then
 	echo "orchestrator: busy — $on is held"
 	exit 0
 elif [ "$held" != 0 ]; then
+	rm -f "$retries"
 	pause "$held" "orchestrator: flock failed on $on"
 	echo "orchestrator: flock failed on $on"
 	exit "$held"
@@ -208,17 +238,19 @@ if [ -n "${PASS_AS_AGENT-}" ]; then
 		halt "the mint command could not mint a contents read token for $owner/$repo"
 	header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$token" | base64 -w0)"
 	unset token
-	{ GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader GIT_CONFIG_VALUE_0=$header git -C "$push" fetch -q origin &&
-		git -C "$push" checkout -qf --detach origin/main; } ||
-		halt "the push clone $push could not check out origin/main"
+	# Both fetches count as transient unread: the classifier is the harness checkout the second one fetches.
+	GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader GIT_CONFIG_VALUE_0=$header git -C "$push" fetch -q origin ||
+		skip "the push clone $push could not fetch origin"
+	git -C "$push" checkout -qf --detach origin/main || halt "the push clone $push could not check out origin/main"
 	pin=$(git -C "$push" show origin/main:package.json | jq -r '.devDependencies.harness // empty')
 	# The whole value: github:<owner>/<repo>#<a full commit>.
 	[[ $pin =~ ^github:($part)/($part)#([0-9a-f]{40})$ ]] || halt "the harness pin '$pin' on main names no full commit"
 	sha=${BASH_REMATCH[3]}
 	# Fetched from the remote the pin names each pass, so a pin that moved is there before the checkout.
-	git -C "$harness" fetch -q "https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}.git" "$sha" &&
-		git -C "$harness" checkout -qf --detach "$sha" && git -C "$harness" clean -qfdx ||
-		halt "the harness pin '$pin': its commit could not be fetched and checked out"
+	git -C "$harness" fetch -q "https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}.git" "$sha" ||
+		skip "the harness pin '$pin': its commit could not be fetched"
+	{ git -C "$harness" checkout -qf --detach "$sha" && git -C "$harness" clean -qfdx; } ||
+		halt "the harness pin '$pin': its commit could not be checked out"
 	loop=$harness/bun/board-loop.ts
 	here=$push
 	flags=(--config=/dev/null --no-env-file)
@@ -245,10 +277,16 @@ status=$?
 rm -f "$lock.pid"
 rm -rf "$gh"
 
-# Any non-zero status pauses: the runner exits 0 or 1, so another (127, a
-# signal) means the pass did not run as designed.
-if [ "$status" != 0 ]; then
-	pause "$status" "$(tail -n 1 "$log")"
+# 75, the runner's `retry`, pauses only as the third in a row; any other status
+# clears that count, and any other non-zero one pauses: the runner exits 0, 1
+# or 75, so another (127, a signal) means the pass did not run as designed.
+if [ "$status" = 75 ]; then
+	transient "$(tail -n 1 "$log")"
+else
+	rm -f "$retries"
+	if [ "$status" != 0 ]; then
+		pause "$status" "$(tail -n 1 "$log")"
+	fi
 fi
 cat "$log"
 exit "$status"

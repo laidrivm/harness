@@ -495,7 +495,9 @@ says it was posted, answered by the triage, or already waiting there; or,
 where no integration is configured, when that line is well formed, since the
 session posted the question itself. In those launch forms the session SHALL
 repeat its posted question under a `QUESTION:` line. A malformed line, or a
-post that failed, SHALL count as no question.
+post that failed other than transiently, SHALL count as no question; a post
+that failed transiently — a 5xx, a 429 or no answer — SHALL end the pass
+`retry` before the push instead.
 
 #### Scenario: A question posted from the integration
 
@@ -519,6 +521,7 @@ post that failed, SHALL count as no question.
 
 - **WHEN** the `QUESTION:` line is malformed, the question fails the question
   gate's checks, the card is not the carried change's, or the post fails
+  other than transiently, as on a 400
 - **THEN** the step's pull request opens ready for review, as with no
   question
 
@@ -704,8 +707,9 @@ change's directory, and no question waits unanswered there. It SHALL then
 set `Assign` to the user alone, unless the triage answered the question
 (*The runner has a stage session's question triaged before it posts it*), and
 print one line saying what it did. The pass's outcome SHALL stay the goal check's,
-except that a `goal open` behind a question posted or already waiting on the
-card SHALL end `waiting` (*A pass carries one step unattended and records the
+except that a post that fails transiently SHALL end it `retry` before the push
+(*A pull request stays a draft while its question waits*), and a `goal open`
+behind a question posted or already waiting on the card SHALL end `waiting` (*A pass carries one step unattended and records the
 check's verdict*).
 
 #### Scenario: A question posted
@@ -811,8 +815,9 @@ the same checks, and post nothing when one fails, before posting the
 question on every other ending too. Any other source SHALL be one
 that does not hold. On any
 other ending the runner SHALL post the question as that requirement fixes.
-The pass's outcome SHALL stay the goal check's, with the same `waiting`
-exception that requirement fixes, a question the triage answered included.
+The pass's outcome SHALL stay the goal check's, with the same `retry` and
+`waiting` exceptions that requirement fixes, a question the triage answered
+included.
 
 #### Scenario: An answer already written
 

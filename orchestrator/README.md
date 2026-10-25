@@ -225,6 +225,17 @@ docker compose exec -u runner runner cat /home/runner/orchestrator/passes/<time>
 docker compose exec -u runner runner rm /home/runner/orchestrator/<clone>.stop
 ```
 
+A pass the board loop ended `retry` — a network error, a timeout, a 5xx or a
+429 — and any failed fetch of the wrapper's own, of the push clone or the pin,
+skip the tick: it exits 75, red in Runs, and writes no stop file.
+`<clone>.retries` beside the stop file counts them; the third in a row writes
+the stop file, its line ending `(3 transient failures in a row)`, and clears
+the count, so removing the stop file is the whole resume, with no count to
+reset. Any other pass status, and a stop file written before any pass,
+clear the count too. A failed fetch of the
+wrapper's starts no pass and leaves no log under `passes/`: the stop file's
+line and the run's output in Windmill name the fetch.
+
 Each pause also posts one notice from the runner's integration, mentioning
 you, with the clone, the stop line, the log's path and the command that
 removes the stop file: on the card of the step that stopped, whose `Assign` it
@@ -233,7 +244,8 @@ sets to you, or, when the stop line names no step or no single card's
 `Assign` when you remove the stop file; the runner never does. If a question is
 open on that card, answer the question, never the notice. The job's output
 says why when no notice was posted, as with no `board` in `notion-bot.json`;
-a tick refused by the stop file and a pass stopped by hand post none.
+a skipped transient tick, a tick refused by the stop file and a pass stopped
+by hand post none.
 
 Cancelling a job in Windmill does not stop a pass. To stop one, run this,
 from a host shell or the emergency session, and never a `kill` on the host:

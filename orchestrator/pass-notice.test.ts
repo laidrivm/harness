@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
+import { TEMPFAIL } from "../bun/transient.ts";
 import { bash, clone, env, host as fabricated, OPEN, running, skip, stop, tick } from "./pass.fixture.ts";
 
 /** `pass.sh`'s pause notice (`pause-notice` task 2.1): the command `PASS_NOTIFY` names, run where the stop file is written. */
@@ -33,6 +34,16 @@ describe.skipIf(skip)(`pass.sh's notice${skip ? " — skipped: flock is not on P
 		expect([r.code, r.last]).toEqual([1, OPEN]);
 		expect(n.calls()).toEqual([["--word", stop(h, "repo"), join(h.state, "passes", log), readFileSync(stop(h, "repo"), "utf8").trim()]]);
 		expect(r.out).toContain("pause: a fake notice\n");
+	});
+
+	test("passes exiting 75 run the command only from the third in a row, which writes the stop file, with it and that pass's log", () => {
+		const h = host("repo", TEMPFAIL);
+		const n = notifier();
+		for (const _ of [1, 2]) tick(h, "repo", n.extra);
+		expect(n.calls()).toEqual([]);
+		expect(tick(h, "repo", n.extra).code).toBe(TEMPFAIL);
+		const logs = readdirSync(join(h.state, "passes")).sort();
+		expect(n.calls()).toEqual([["--word", stop(h, "repo"), join(h.state, "passes", logs.at(-1) ?? ""), readFileSync(stop(h, "repo"), "utf8").trim()]]);
 	});
 
 	// spec: orchestrator/the-ticks-that-follow
