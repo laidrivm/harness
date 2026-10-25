@@ -66,6 +66,15 @@ describe("the session's clone", () => {
 		expect(untrusted.calls).not.toContain("claude -p");
 	});
 
+	// The 2026-10-25 pass: the session committed on feat/approved-column-1, the runner bundled feat/approved-column.
+	test("a step left on a branch the runner did not name pushes nothing, and the log carries the bundle's error", async () => {
+		const { dir, push } = pair();
+		const r = await launched(dir, push, { branch: "feat/demo-1", commits: true });
+		expect(r.last).toBe("board-loop: open — apply demo step 1: the session's clone could not bundle feat/demo; nothing was pushed");
+		expect(r.text).toContain("'refs/heads/feat/demo': unknown revision");
+		expect(r.calls).not.toContain("git push");
+	});
+
 	test("a launcher with no session's clone named refuses before any command", () => {
 		const { push } = pair();
 		const r = run(push, [], {}, { env: { HARNESS_AS_AGENT: "as-agent" } });
