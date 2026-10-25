@@ -62,6 +62,12 @@ exit non-zero, naming the file. Nothing but the user SHALL remove it.
 - **WHEN** the pass exits 0
 - **THEN** no stop file is written
 
+#### Scenario: A pass waiting on the user's answer
+
+- **WHEN** the pass ends `waiting`, since a question on its card waits on the
+  user, and exits 0
+- **THEN** no stop file is written, and the next tick starts a pass
+
 #### Scenario: The runner cannot start
 
 - **WHEN** `bun` or the runner's file is missing, so the command exits
