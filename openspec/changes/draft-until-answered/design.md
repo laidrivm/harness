@@ -135,9 +135,11 @@ question under a `QUESTION:` line, and this change clears no `Assign` there.
   pushes while the draft stands and runs `gh pr ready` after the push, which
   is the rule's order, so no task was added for it.
 - **`ready()` reused, `draftWhile()` not.** The runner calls `ready()` from
-  `bun/ci-run-draft.ts` (#276), now exported. With an empty repository it
-  passes no `-R`, so `gh` marks the pull request in the working directory's
-  repository, the one whose `origin` `readPullRequests()` found the draft in.
+  `bun/ci-run-draft.ts` (#276), now exported, with `-R` naming the repository
+  `originRepository()` in `bun/pull-requests.ts` gives, the one
+  `readPullRequests()` found the draft in, never `gh`'s default, which
+  `GH_REPO` or a set default can move (review of #286). Where `origin` names
+  no repository, the draft is not marked ready, and the pass says so.
   `draftWhile()` itself does not fit: it marks ready when its work throws,
   which here would start a review on an answer not yet carried, and it turns
   a refused ready into a failed outcome, where *Marking ready fails* keeps

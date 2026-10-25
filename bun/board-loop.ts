@@ -41,6 +41,7 @@ import { configured, identity } from "./github-app.ts";
 import { ALREADY, asked, own, POSTED, post, type Settings, settings } from "./notion-bot.ts";
 import { triage } from "./notion-triage.ts";
 import { pickedCard, UNASSIGN_FAILED, unassign } from "./notion-unassign.ts";
+import { originRepository } from "./pull-requests.ts";
 import { ASK_SETTINGS, RUNNER_ASKS, where } from "./question-gate.ts";
 
 /** A stage session's limit, fixed by the spec: a longer step is split, never given more. */
@@ -278,8 +279,12 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app, under, draft);
 	if (unready !== undefined) return open(unready);
 	// The answer carried and nothing left to ask: the draft goes ready right after its push, writing no `Assign`.
-	if (chosen.draft !== undefined && !draft)
-		console.log(`pull request #${chosen.draft}: ${ready("", chosen.draft) ? "marked ready for review" : "not marked ready — gh pr ready failed; mark it ready by hand"}`);
+	if (chosen.draft !== undefined && !draft) {
+		// In the repository the draft was read from, never `gh`'s default, which `GH_REPO` can move.
+		const of = originRepository();
+		const marked = of !== undefined && ready(`${of.owner}/${of.repo}`, chosen.draft);
+		console.log(`pull request #${chosen.draft}: ${marked ? "marked ready for review" : `not marked ready — ${of ? "gh pr ready failed" : "origin names no repository"}; mark it ready by hand`}`);
+	}
 	// The check's own verdict at the commit the session left, never the exit status.
 	const verdict = sh("bun", ...judged);
 	const last = verdict.out.split("\n").at(-1) ?? "";

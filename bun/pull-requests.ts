@@ -35,6 +35,13 @@ export type Pull = { number: unknown; state: "OPEN" | "MERGED" | "CLOSED"; headR
 type Repo = { id?: unknown } | null;
 type Listed = { number?: unknown; state?: unknown; merged_at?: unknown; draft?: unknown; head?: { sha?: unknown; repo?: Repo }; base?: { repo?: Repo } } | null;
 
+/** The owner and name `origin` names, the repository every read here is of, or undefined. Throws where git cannot start. */
+export function originRepository() {
+	// `get-url` applies `insteadOf`, so the URL is the one git itself uses.
+	const url = Bun.spawnSync(["git", "remote", "get-url", "origin"], { timeout: limit() });
+	return url.exitCode === 0 ? remoteRepository(url.stdout.toString().trim()) : undefined;
+}
+
 /**
  * The branch's pull requests in every state, newest first, or undefined for a
  * read that failed: no `origin` naming an owner and name, a non-zero or
@@ -42,9 +49,7 @@ type Listed = { number?: unknown; state?: unknown; merged_at?: unknown; draft?: 
  */
 export function readPullRequests(branch: string): Pull[] | undefined {
 	try {
-		// `get-url` applies `insteadOf`, so the URL is the one git itself uses.
-		const url = Bun.spawnSync(["git", "remote", "get-url", "origin"], { timeout: limit() });
-		const found = url.exitCode === 0 ? remoteRepository(url.stdout.toString().trim()) : undefined;
+		const found = originRepository();
 		if (!found) return undefined;
 		const full = `${found.owner}/${found.repo}`;
 		// shortcut: the head filter uses origin's owner, so an owner transfer origin has not caught up with finds nothing; upgrade by reading the owner from `gh api repos/<full>` if one happens.

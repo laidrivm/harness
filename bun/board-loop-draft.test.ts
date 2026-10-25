@@ -54,7 +54,8 @@ function drafted() {
 }
 const DRAFT = { gh: listed(7, "open", false, true) };
 const PICKED = `PICK: demo\nCARD: ${CARD}`;
-const READY = "gh pr ready 7\n";
+/** Named by the repository `origin` gives, the one the draft was read from, never `gh`'s default. */
+const READY = "gh pr ready 7 -R o/demo\n";
 
 describe("an answer beside a draft pull request", () => {
 	// spec: board-loop/a-draft-waiting-on-its-answer board-loop/the-answer-asks-for-a-change-of-its-own board-loop/the-answer-carried-with-no-new-question

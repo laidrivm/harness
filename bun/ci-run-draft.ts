@@ -10,11 +10,11 @@ import { limit } from "./pull-requests.ts";
 
 /**
  * `gh pr ready` on #`n` in `repo` as the runner, with the App's token in `GH_TOKEN` when one is minted;
- * `--undo` marks it draft. An empty `repo` is the working directory's, as the board loop's runner reads it.
- * Killed at `pull-requests.ts`'s limit, as its read is, so a `gh` that never answers cannot hold the pass.
+ * `--undo` marks it draft. Killed at `pull-requests.ts`'s limit, as its read is, so a `gh` that never
+ * answers cannot hold the pass.
  */
 export const ready = (repo: string, n: number, ...undo: string[]) =>
-	Bun.spawnSync(["gh", "pr", "ready", String(n), ...(repo ? ["-R", repo] : []), ...undo], { env: process.env, timeout: limit(), killSignal: "SIGKILL" }).exitCode === 0;
+	Bun.spawnSync(["gh", "pr", "ready", String(n), "-R", repo, ...undo], { env: process.env, timeout: limit(), killSignal: "SIGKILL" }).exitCode === 0;
 
 /**
  * Runs `work` with #`n` a draft. `work` answers its outcome and whether a
