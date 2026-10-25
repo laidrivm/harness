@@ -58,6 +58,17 @@ describe.skipIf(skip)(`pass.sh's transient count${skip ? " — skipped: flock is
 		expect(existsSync(stop(h, "repo"))).toBe(false);
 	});
 
+	test("a count that is no number reads as none", () => {
+		const h = host();
+		clone(h, "repo", { status: TEMPFAIL });
+		tick(h, "repo");
+		// Bash arithmetic would refuse `2x`, or evaluate an expression, rather than count it.
+		writeFileSync(retries(h.state), "2x\n");
+		expect(tick(h, "repo").code).toBe(TEMPFAIL);
+		expect(existsSync(stop(h, "repo"))).toBe(false);
+		expect(readFileSync(retries(h.state), "utf8")).toBe("1\n");
+	});
+
 	test("a tick that finds the lock held leaves the count", async () => {
 		const h = host();
 		clone(h, "repo", { status: TEMPFAIL });
