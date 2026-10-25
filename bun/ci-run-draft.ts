@@ -23,8 +23,8 @@ export async function draftWhile(repo: string, n: number, work: () => Promise<[O
 		done = await work();
 	} catch (e) {
 		// No push will come from a flow that threw.
-		ready(repo, n);
-		throw e;
+		if (ready(repo, n)) throw e;
+		throw new Error(`${e instanceof Error ? e.message : String(e)}; #${n} could not be marked ready`);
 	}
 	const [outcome, asked] = done;
 	if (asked || ready(repo, n)) return outcome;
