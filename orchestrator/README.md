@@ -213,11 +213,11 @@ step 11's reach check passes, then enable it in Windmill.
 
 ## 7. A paused loop and a stopped pass
 
-A failed pass, other than the first or second `retry` in a row (below), writes
-`/home/runner/orchestrator/<clone>.stop` with the time, the exit status and
-the pass's last line, and every later tick of that clone fails in Runs with
-the paused line. Before removing the stop file, read it and
-the pass's whole output, `/home/runner/orchestrator/passes/<time>-<clone>.log`:
+A failed pass, other than the first or second skipped tick in a row (below),
+writes `/home/runner/orchestrator/<clone>.stop` with the time, the exit status
+and the pass's last line, and every later tick of that clone fails in Runs
+with the paused line. Before removing the stop file, read it and the pass's
+whole output, `/home/runner/orchestrator/passes/<time>-<clone>.log`:
 
 ```sh
 docker compose exec -u runner runner cat /home/runner/orchestrator/<clone>.stop
@@ -228,9 +228,9 @@ docker compose exec -u runner runner rm /home/runner/orchestrator/<clone>.stop
 
 A pass the board loop ended `retry` — a network error, a timeout, a 5xx or a
 429 — and any failed fetch of the wrapper's own, of the push clone or the pin,
-skip the tick: it exits 75, red in Runs, and writes no stop file.
-`<clone>.retries` beside the stop file counts them; the third in a row writes
-the stop file, its line ending `(3 transient failures in a row)`, and clears
+skip the tick: it exits 75, red in Runs, and writes no stop file unless it is
+the third in a row. `<clone>.retries` beside the stop file counts them; the
+third writes the stop file, its line ending `(3 transient failures in a row)`, and clears
 the count, so removing the stop file is the whole resume, with no count to
 reset. Any other pass status, and a stop file written before any pass,
 clear the count too. A failed fetch of the
