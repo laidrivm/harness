@@ -207,6 +207,11 @@ the inner one runs, so every lock is held until the levels return, with no
 creates `locks/gate.lock` when absent, owned as the runner's home is, since a
 pass opens it for writing as `runner` (decided at apply).
 
+**Superseded on 2026-10-25** by *A failed run's flow stays outside the gate*
+(below). The next paragraph, answer 15б, is kept as history only:
+`bun/ci-run.ts` takes no gate, and the event job's `timeout` stays 11700 s,
+so the 26100 s it gives for `event.script.yaml` no longer applies.
+
 `bun/ci-run.ts` takes a repository lock too, for a failed run's flow
 (`ci-run-agent`): today with a blocking `flock -w 7200` on
 `locks/<repo>.lock`, which it creates when absent. That wait goes: it gains
@@ -254,6 +259,7 @@ Alternatives, rejected:
 - The flow holding the gate through a blocking `flock -w 7200` on its
   repository lock (answer 15а, not taken): while a pass holds that lock, up
   to 1.5 h, every other repository's tick reads `busy` and the deploy waits.
+  History, like answer 15б: since 2026-10-25 the flow takes no gate.
 
 A recreated Windmill worker drops the pass job's SSH connection; the pass
 already survives that (`pass.sh:193`), but no pass runs then anyway.
@@ -262,6 +268,21 @@ already survives that (`pass.sh:193`), but no pass runs then anyway.
 the old 6 GB image dangling, and the host's disk is 20 GB. A prune that fails
 is logged and fails nothing: the stack already runs the head (decided at
 apply).
+
+### A failed run's flow stays outside the gate
+
+The user dropped task 1.5, the gate in `bun/ci-run.ts` (answer 15б), on
+2026-10-25: in the pivot (v2, the Notion roadmap) `ci-run.ts` stops being a
+flow of its own, so a gate for it would retire with it. `ci-run.ts` keeps
+today's blocking `flock -w 7200` on `locks/<repo>.lock`, taken without the
+gate, and the event job's `timeout` in `event.script.yaml` stays 11700 s.
+
+What that leaves until v2: the deploy waits for a flow that holds its
+repository's lock, as it waits for a pass. A flow that starts during the hold
+runs in the runner, blocked in `flock` on a lock the deploy holds, or running
+on a lock file it created after the deploy listed `locks/`; either way the
+`up` that recreates the runner ends it, and the delivery gets no fix from it
+(Risks).
 
 ### The Windmill push runs in a one-off container, with a token only root reads
 
@@ -352,6 +373,11 @@ only leaves it the stop file's line and the journal to start from.
 - [The worker reaches the host's `sshd` on the bridge] → `from=` holds the key
   to the compose network; the host's `sshd` must listen there, which the
   user's first kick (task 4.4) shows.
+- [A failed run's flow takes no gate until v2 retires it] → a flow that
+  starts during a deploy's hold, whether blocked in `flock` or running on a
+  lock file it created, ends when `up` recreates the runner, and that delivery
+  gets no fix; accepted because v2 retires the flow (user decision,
+  2026-10-25).
 
 ## How it meets self-pin-bump
 
@@ -386,11 +412,12 @@ Merge, then the user's acts in tasks.md group 4: write the deploy token,
 `systemctl link` both units, `systemctl enable --now harness-deploy.timer`;
 add the kick key and its variable, the host's line in `runner_known_hosts`,
 and the webhook. The first run deploys the head, since nothing is recorded
-yet. That run still meets the old runner, whose `pass.sh` and `ci-run.ts`
-take no gate: a repository with no lock file could start its first pass or
-flow after the deploy lists `locks/`, and `up` would cut it. So task 4.2
-first makes sure every served repository has its lock file; the deploy then
-holds them all, and from its `up` on the gate closes the set. To stop deploys: `systemctl disable --now harness-deploy.timer` and
+yet. That run still meets the old runner, whose `pass.sh` takes no gate, and
+`ci-run.ts` takes none at all (*A failed run's flow stays outside the gate*):
+a repository with no lock file could start its first pass or flow after the
+deploy lists `locks/`, and `up` would cut it. So task 4.2 first makes sure
+every served repository has its lock file; the deploy then holds them all,
+and from its `up` on the gate closes the set to passes. To stop deploys: `systemctl disable --now harness-deploy.timer` and
 remove the kick key's line from `authorized_keys`.
 
 ## Settled on the card
@@ -403,4 +430,6 @@ stand as written. Answered at apply, on 2026-10-25: a failed run's flow
 holds the gate only while it tries its repository lock, without blocking,
 and retries within the same 7200 s, which time spent waiting on the gate
 does not use; the gate's waits have a 14400 s budget of their own across
-all attempts (15б: «15. ок, давай б»).
+all attempts (15б: «15. ок, давай б»). Superseded on 2026-10-25: the user
+dropped that gate, task 1.5, since `ci-run.ts` stops being a flow of its own
+in v2 (*A failed run's flow stays outside the gate*).
