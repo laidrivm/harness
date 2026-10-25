@@ -67,7 +67,7 @@ the loop pauses a clone*).
 `answered(status)` (5xx or 429) and `network(stderr)`, over git's stderr:
 first false for an HTTP 4xx other than 429 anywhere in it (`HTTP 413`,
 `returned error: 403`), since git prints `RPC failed` beside a permanent
-rejection too; then one regex: `Could not resolve host`, `Failed to connect`,
+rejection too; then one regex: `Could not resolve host` or `proxy`, `Failed to connect`,
 `timed out`, `Connection (refused|reset)`, `returned error: (5\d\d|429)`,
 `RPC failed`, `early EOF`, `unexpected disconnect`, `Empty reply from
 server`. `request()`
