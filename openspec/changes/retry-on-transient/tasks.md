@@ -36,12 +36,12 @@
 
 ## 2. The pass ends `retry` on a transient failure
 
-- [ ] 2.1 Split `bun/board-loop.ts` (289 lines) before adding to it: move
+- [x] 2.1 Split `bun/board-loop.ts` (289 lines) before adding to it: move
       `consider()` and `left()` into `bun/board-loop-candidates.ts` with no
       change in behaviour (skip the move if `loop-every-stage` made it
       first), and keep every file under 300 lines after group 2's
       additions. Verify with `wc -l` and the `bun/board-loop*.test.ts` files
-- [ ] 2.2 Add the `retry` outcome exiting `TEMPFAIL` to `end()`, and end
+- [x] 2.2 Add the `retry` outcome exiting `TEMPFAIL` to `end()`, and end
       `retry` at the start's `git fetch` when `network()` matches its stderr
       (through `refuse()`, so a noted branch is switched back) and at the
       identity/`own()` `try` for a `Transient`. Cases, one per scenario of
@@ -50,20 +50,20 @@
       exit 1; Notion's id read 503 → `retry`; a fetch failing with `Could not
       resolve host` → `retry`, back on the noted branch. Verify with those
       cases
-- [ ] 2.3 `publish()` in `bun/board-loop-push.ts` returns a `Transient` for
+- [x] 2.3 `publish()` in `bun/board-loop-push.ts` returns a `Transient` for
       `carry()`'s `origin` fetch, the mint and a push whose stderr
       `network()` matches; the pass ends `retry` for it. Cases in
       `bun/board-loop-push.test.ts` and the pass's tests: a push failing with
       `Connection reset by peer` → `retry`, branch kept, no pull request; a
       push rejected as non-fast-forward → `open`; a mint killed at its limit
       → `retry`. Verify with those cases
-- [ ] 2.4 `post()` prints `UNREACHED`, exported beside `POSTED` and
+- [x] 2.4 `post()` prints `UNREACHED`, exported beside `POSTED` and
       `ALREADY`, for a `Transient` from its reads or the question's comment,
       and the pass ends `retry` when the question line starts with it. Cases
       in `bun/board-loop-question.test.ts`: the comments read answered 500 →
       `retry`; the `Assign` write answered 503 → `waiting`, as today. Verify
       with those cases
-- [ ] 2.5 The pass ends `retry` for a `transient` pick session through
+- [x] 2.5 The pass ends `retry` for a `transient` pick session through
       `refuse()`, and for a `transient` stage session before the post and the
       push when `git status --porcelain --untracked-files=no` in the
       session's clone is empty; with a tracked edit it ends `open` naming the

@@ -34,7 +34,8 @@ describe("a pull request stays a draft while its question waits", () => {
 		["on a malformed line", false, ASKED.replace(CARD, `${CARD}x`), {}],
 		["that fails the question gate", false, ASKED.replace(`${MARK} `, ""), {}],
 		["on the card of another change", false, ASKED, { slug: "other" }],
-		["whose post fails", false, ASKED, { fail: { "POST /v1/comments": 500 } }],
+		// A 4xx: a 5xx is transient and ends the pass `retry` before any push (`retry-on-transient`).
+		["whose post fails", false, ASKED, { fail: { "POST /v1/comments": 400 } }],
 	])("a question %s: a draft %p", async (_, draft, said, card) => {
 		Object.assign(notion.state, card);
 		const r = await pass(clone().dir, { said }, configured()).finally(reset);

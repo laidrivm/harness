@@ -7,7 +7,8 @@ REST API got no answer, ran past its time limit, or was answered 5xx or 429;
 when the key holder's mint failed for one of those reasons or was killed at
 its time limit; or when a `git fetch` or `git push` failed, its stderr names
 no HTTP status 4xx other than 429, and its stderr names a network failure: a
-host that did not resolve, a connection refused, reset or timed out, an
+host that did not resolve, a network unreachable, no route to the host, a
+connection refused, reset or timed out, an
 `RPC failed`, `early EOF`, `unexpected disconnect` or `Empty reply from
 server` error, or an HTTP status 5xx or 429; or when the Claude API ended a
 pick or stage session: its result object reports an error ended by the API,
@@ -22,7 +23,8 @@ session; the pick session; the stage session, when it left no tracked file
 differing from `HEAD`, before the question's post and the push; the push
 clone's fetch of `origin`, the token's mint or the push, after the stage
 session; or the reads and the comment that post the session's question, short
-of the question's `Assign` write and its answer. Where another requirement
+of the question's `Assign` write and its answer, when the stage session left
+no tracked file differing from `HEAD`, before the push. Where another requirement
 has the pass refuse or record `open` at one of those points, a transient
 failure SHALL end `retry` instead. The pass SHALL discard nothing a session left: a step branch
 stays as the session left it, and the next pass continues it.

@@ -281,12 +281,12 @@ describe("a card the runner refuses", () => {
 describe("a call that fails", () => {
 	test("a stub that never answers ends at the timeout, naming the error [27]", async () => {
 		notion({ hang: true });
-		expect(await line(CARRIED, 200)).toBe("question: not posted — the page read failed: TimeoutError");
+		expect(await line(CARRIED, 200)).toBe("question: not posted — Notion did not answer: the page read failed: TimeoutError");
 	});
 
 	test("a failed POST sends no PATCH [28]", async () => {
 		const seen = notion({ post: 500 });
-		expect(await line()).toBe("question: not posted — the comment's post answered 500");
+		expect(await line()).toBe("question: not posted — Notion did not answer: the comment's post answered 500");
 		expect(calls(seen)).not.toContain(`PATCH /v1/pages/${CARD}`);
 	});
 
