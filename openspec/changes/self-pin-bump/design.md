@@ -121,8 +121,11 @@ failed run says so where a quiet one would not.
   with that token and `fetch-depth: 0` (the count and the diff read history),
   `setup-bun` at 1.4.2, `bun bun/bump.ts self`, then, when `sha` is set:
   `git push --force origin HEAD:refs/heads/bump/self-pin`, and
-  `gh pr create` from it unless `gh pr view bump/self-pin` finds one open, in
-  which case `gh pr edit` sets the new title and body. The `gh` steps set
+  `gh pr create` from it unless
+  `gh pr list --head bump/self-pin --state open` finds one, in which case
+  `gh pr edit` sets the new title and body. Not `gh pr view bump/self-pin`:
+  it also finds the branch's closed or merged pull request, so after the
+  first merged bump it would edit that one and open none. The `gh` steps set
   `GH_TOKEN` from the token step's output, so they act as the App; the
   checkout's credential does not reach `gh`.
 - The job runs `bump.ts` from `main` and bun, with no lifecycle script; the

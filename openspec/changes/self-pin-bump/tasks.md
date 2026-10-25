@@ -67,7 +67,9 @@
       laidrivm/harness` once. When its `self` step writes a `sha` (the pin
       lags a green head that is no merged bump), confirm a `bump/self-pin`
       pull request opens with `Test` and CodeRabbit on it, and merge it, then
-      confirm the next `Test` run on `main` ends the workflow quietly (D2).
+      confirm the next `Test` run on `main` ends the workflow quietly (D2),
+      and that the first later run that writes a `sha` opens a new
+      `bump/self-pin` pull request rather than editing the merged one (D4).
       When it writes none (the head is not green, is the pin, or is a merged
       bump), confirm the run ends green with no branch pushed and no pull
       request
