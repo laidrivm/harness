@@ -27,20 +27,19 @@
  * pass leaves no stop file and a later pick passes over its card, while every
  * other outcome stops a shell loop where a person is needed.
  */
-import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { leftover } from "./board-loop-leftover.ts";
 import { pickPrompt, prompt, type Step } from "./board-loop-prompt.ts";
 import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session, trusted } from "./board-loop-session.ts";
+import { consider } from "./board-loop-takeable.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
 import { ALREADY, asked, own, POSTED, post, type Settings, settings } from "./notion-bot.ts";
 import { triage } from "./notion-triage.ts";
-import { readPullRequests } from "./pull-requests.ts";
 import { ASK_SETTINGS, RUNNER_ASKS, where } from "./question-gate.ts";
-import { groups } from "./turn-gate.ts";
 
 /** A stage session's limit, fixed by the spec: a longer step is split, never given more. */
 export const LIMIT = 60 * 60 * 1000;
@@ -57,30 +56,6 @@ function end(outcome: Outcome, detail: string): number {
 	delete process.env.CLAUDE_PROJECT_DIR;
 	record("loop", outcome, "apply", { cwd: process.cwd() });
 	return outcome === "met" || outcome === "idle" || outcome === "waiting" ? 0 : 1;
-}
-
-/**
- * The step a `proposed` change would carry next, or why it cannot be taken. A
- * change with every group ticked is an answer candidate for step N+1, which
- * only the pick session can tell from one with no answer on its card.
- */
-function consider(slug: string, status: string, blocking: string[]): Step | string {
-	if (status !== "proposed") return `it is ${status}, not proposed`;
-	if (blocking.length) return `after: ${blocking.join(", ")} is still open`;
-	const found = [...groups(readFileSync(`openspec/changes/${slug}/tasks.md`, "utf8"))];
-	const answer = found.every(([, boxes]) => boxes.open === 0);
-	const step = answer ? found.length + 1 : found.findIndex(([, boxes]) => boxes.open > 0) + 1;
-	// `git-and-prs.md`: a single group ships whole on `feat/<slug>`; an answer makes it two.
-	const branch = found.length === 1 && !answer ? `feat/${slug}` : `feat/${slug}-${step}`;
-	const prs = readPullRequests(branch);
-	// Never "no pull request": a missed open one would start a second
-	// session on a branch under review.
-	if (!prs) return "the pull request query failed";
-	const open = prs.find((pr) => pr.state === "OPEN");
-	if (open) return `pull request #${open.number} is open on ${branch}`;
-	// A squash-merged branch is never freed, and nor is a closed one.
-	if (prs.length) return `pull request #${prs[0].number} already used ${branch}`;
-	return { step, branch, answer };
 }
 
 /**
