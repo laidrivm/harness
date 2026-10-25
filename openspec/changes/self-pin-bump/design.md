@@ -34,9 +34,11 @@ Read on 2026-10-25 from `origin/main` (`0a71cf5`):
 **Goals:** after each green `main`, a bump pull request exists without anyone
 writing it; the host's pass log says how far its pin lags.
 
-**Non-Goals:** merging without the user; changing the consumers' bump; a
-session-start lag line in the harness's own sessions (question 3 on the
-card); pinning skills (`self-pinned-gates` kept them on the tree).
+**Non-Goals:** merging without the user (D6); changing the consumers' bump; a
+session-start lag line in the harness's own sessions (answer 3a: the pass
+log's line and the count in the pull request are enough); pinning skills
+(`self-pinned-gates` kept them on the tree); deploying the host's checkout
+(`host-deploy`).
 
 ## Decisions
 
@@ -103,7 +105,8 @@ has. A consumer's result is unchanged: both pin under `dependencies`.
 A pull request opened with an App token starts the `Test` workflow, which one
 opened with `GITHUB_TOKEN` would not, and CodeRabbit reviews it. Because the
 App authors it, the user can approve it like any other pull request and merge
-it under the ruleset, without the admin bypass.
+it under the ruleset, without the admin bypass. The user chose this token, a
+second App key in the `self-bump` environment, on the card (answer 1a).
 
 The branch is force-pushed because it is the workflow's alone: rebuilt from
 `main` on each run, one commit over it, so it never conflicts with a `main`
@@ -136,6 +139,40 @@ after the line is written). Either command failing writes nothing and is not
 a `halt`. The count is what the user needs to judge whether a fix has reached
 the host; the bump pull request's body carries the same count.
 
+### D6 — the user merges the bump, until the auto-merge card covers it
+
+The user approves and merges `bump/self-pin` like any pull request (answer
+2a). Merging it unattended is card *Auto-approve low-blast-radius PRs through
+deterministic gates that fail closed*, whose body names this pull request in
+its scope since 2026-10-25: the App as author, the branch `bump/self-pin`, a
+diff in `package.json` and `bun.lock` alone, CI green and no open CodeRabbit
+finding. This change adds nothing that the gate would have to undo.
+
+### How it meets host-deploy
+
+`host-deploy` (PR #265) moves the host's checkout, images and engine
+scripts; this change moves the pin. The two are complementary and stay two
+changes:
+
+- **Triggers.** Both start on a successful `Test` run on `main`: this one as
+  a GitHub Actions workflow, that one as the host's webhook kick. Neither
+  waits for the other.
+- **What reaches the host.** The pin needs no deploy: `pass.sh` reads it
+  from `main` on each pass, so a merged bump reaches the board loop on the
+  next pass. A merged bump is also a `main` commit, so `host-deploy` deploys
+  it, with every build layer cached (`package.json` is in no build context),
+  and D2 keeps that merge from opening another bump.
+- **Files.** None in common. `host-deploy` bakes `pass.sh` into the runner
+  image, so D5's lag line reaches the host by that deploy, not by a hand
+  rebuild.
+- **User acts.** Unrelated: here a GitHub environment and a second App key;
+  there a host token, a host key, systemd units and a webhook.
+- **Order.** Apply `host-deploy` first, then this change, whose `pass.sh`
+  edit then reaches the host on its merge.
+
+Glued into one, the two proposals pass the 800-line diff budget and mix both
+sets of user acts in one review, so they stay apart.
+
 ## Risks / Trade-offs
 
 - **The host still waits for the user's merge.** Lag drops from "until
@@ -156,3 +193,11 @@ the host; the bump pull request's body carries the same count.
 Merge, then the user act in tasks.md group 4: create the environment and
 secrets, start the workflow once by hand, and merge the first bump. Rollback:
 delete the workflow file; the pin then moves by hand again.
+
+## Settled on the card
+
+All answered on 2026-10-25: the App's second key in the environment
+`self-bump` (1a, D4); the user merges by approve, and the auto-merge card
+takes the case into its scope (2a, D6); no session-start lag line (3a);
+decisions 4–7 and assumptions 8–9 stand as written; the fit with
+`host-deploy` is *How it meets host-deploy*.
