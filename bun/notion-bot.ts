@@ -200,6 +200,8 @@ async function carded(call: Call, card: string, board: string, slug: string): Pr
 /** How `post()`'s line opens for a question it posted, and for one it found already waiting. */
 export const POSTED = "question: posted on";
 export const ALREADY = "question: not posted — a question already waits on";
+/** How it opens when Notion did not answer a read or the question's comment: the pass ends `retry`. */
+export const UNREACHED = "question: not posted — Notion did not answer:";
 
 /**
  * Posts `asked` on its card from the integration and sets `Assign` to the
@@ -240,7 +242,7 @@ export async function post(
 		}
 		await comment(call, card, text);
 	} catch (error) {
-		return not((error as Error).message);
+		return error instanceof Transient ? say(`${UNREACHED} ${error.message}`) : not((error as Error).message);
 	}
 	if (answer) {
 		const quoted = answer.quote.split("\n").map((line) => `> ${line}`).join("\n");

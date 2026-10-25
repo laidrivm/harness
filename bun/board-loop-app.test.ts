@@ -35,6 +35,7 @@ describe("the GitHub App", () => {
 	/** Each call the stand-in API saw, and the one path it answers with a 500. */
 	let requests: string[] = [];
 	let failing = "";
+	let code = 500;
 	let server: ReturnType<typeof Bun.serve>;
 	let key = "";
 	beforeAll(() => {
@@ -43,7 +44,7 @@ describe("the GitHub App", () => {
 			fetch(req) {
 				const path = decodeURIComponent(new URL(req.url).pathname);
 				requests.push(`${req.method} ${path}`);
-				return path === failing ? new Response("down", { status: 500 }) : Response.json(ANSWERS[path] ?? {});
+				return path === failing ? new Response("down", { status: code }) : Response.json(ANSWERS[path] ?? {});
 			},
 		});
 		// A key made for the run, in a temporary directory of its own: never a real App's.
@@ -62,7 +63,8 @@ describe("the GitHub App", () => {
 		return made;
 	};
 	/** One pass with `env` beside the stand-in's URL, the API's log cleared first. */
-	const pass = (dir: string, env: Record<string, string>, failed = "", stubs: Stubs = {}) => {
+	const pass = (dir: string, env: Record<string, string>, failed = "", stubs: Stubs = {}, status = 500) => {
+		code = status;
 		[requests, failing] = [[], failed];
 		return runAsync(dir, { commits: true, ...stubs }, { env: { GITHUB_API_URL: server.url.origin, ...env } });
 	};
@@ -98,19 +100,41 @@ describe("the GitHub App", () => {
 	}, LONG);
 
 	// spec: board-loop/github-does-not-answer
-	test("a failing GET /app refuses before the pick session [46]", async () => {
-		const r = await pass(github().dir, both(), "/app");
+	test("a GET /app answered 401 refuses before the pick session, exit 1 [46]", async () => {
+		const r = await pass(github().dir, both(), "/app", {}, 401);
 		expect([r.calls.includes("claude "), requests]).toEqual([false, ["GET /app"]]);
-		expect(r.last).toStartWith("board-loop: refused — ");
-		expect(r.last).toContain("/app");
+		expect([r.code, r.last.startsWith("board-loop: refused — "), r.last.includes("/app")]).toEqual([1, true, true]);
+	}, LONG);
+
+	// spec: board-loop/a-transient-failure-ends-the-pass-retry
+	test("a GET /app answered 502 records retry, exit 75, before the pick session", async () => {
+		const r = await pass(github().dir, both(), "/app", {}, 502);
+		expect([r.calls.includes("claude "), requests]).toEqual([false, ["GET /app"]]);
+		expect([r.code, r.last.startsWith("board-loop: retry — "), r.last.includes("/app")]).toEqual([75, true, true]);
+		expect(records(r.state).map((x) => x.decision)).toEqual(["retry"]);
+	}, LONG);
+
+	// spec: board-loop/a-transient-failure-ends-the-pass-retry
+	test("a GitHub API nothing listens at records retry, exit 75, before the pick session", async () => {
+		const r = await runAsync(github().dir, {}, { env: { GITHUB_API_URL: "http://127.0.0.1:1", ...both() } });
+		expect([r.code, r.calls.includes("claude "), r.last.startsWith("board-loop: retry — ")]).toEqual([75, false, true]);
 	}, LONG);
 
 	// spec: board-loop/github-does-not-answer
-	test("a failed mint after the session pushes nothing and records open [47]", async () => {
-		const r = await pass(github().dir, both(), "/app/installations/99/access_tokens");
+	test("a mint answered 401 after the session pushes nothing and records open [47]", async () => {
+		const r = await pass(github().dir, both(), "/app/installations/99/access_tokens", {}, 401);
 		expect([calls(r.calls, "git push"), calls(r.calls, "gh pr create")]).toEqual([[], []]);
 		expect(r.last).toStartWith("board-loop: open — apply demo step 1: the App's token could not be minted");
 		expect(records(r.state).map((x) => x.decision)).toEqual(["open"]);
+	}, LONG);
+
+	// spec: board-loop/the-push-meets-a-network-failure
+	test("a mint answered 503 after the session pushes nothing, keeps the branch and records retry", async () => {
+		const { dir } = github();
+		const r = await pass(dir, both(), "/app/installations/99/access_tokens", {}, 503);
+		expect([calls(r.calls, "git push"), calls(r.calls, "gh pr create")]).toEqual([[], []]);
+		expect([r.code, r.last.startsWith("board-loop: retry — apply demo step 1: the App's token could not be minted")]).toEqual([75, true]);
+		expect(out(dir, "rev-parse", "--verify", "feat/demo")).not.toBe("");
 	}, LONG);
 
 	// spec: board-loop/a-step-not-ready

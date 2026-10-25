@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type App, credentials, mint, repository } from "./github-app.ts";
 import { append, table } from "./pr-sessions.ts";
+import { network, Transient } from "./transient.ts";
 
 /** A command's result; one that cannot start reads as failed, never thrown. */
 export const sh = (...args: string[]) => shWith({}, ...args);
@@ -69,9 +70,10 @@ export function named(said: string): { title: string; body: string } | string {
  * fetches `origin` first, so a `base` that moved during the session is there
  * for the bundle's prerequisite, with `read`, a `contents` read token's
  * credentials, in the environment of those two fetches alone. Undefined once `HEAD` names `branch` at the
- * tip; otherwise why nothing was pushed.
+ * tip; otherwise why nothing was pushed, as a `Transient` where `origin`'s
+ * fetch met the network.
  */
-export function carry(under: string[], branch: string, base: string, read: Record<string, string> = {}): string | undefined {
+export function carry(under: string[], branch: string, base: string, read: Record<string, string> = {}): string | Transient | undefined {
 	const dir = mkdtempSync(join(tmpdir(), "board-loop-bundle-"));
 	try {
 		const file = join(dir, "step.bundle");
@@ -86,7 +88,8 @@ export function carry(under: string[], branch: string, base: string, read: Recor
 			const run = shWith(read, "git", "fetch", "-q", ...from);
 			if (run.ok) continue;
 			console.error(run.err);
-			return `the push clone could not fetch ${what}; nothing was pushed`;
+			const why = `the push clone could not fetch ${what}; nothing was pushed`;
+			return what === "origin" && network(run.err) ? new Transient(why) : why;
 		}
 		const tip = sh("git", "rev-parse", "--verify", "-q", "FETCH_HEAD^{commit}").out;
 		if (!tip || !sh("git", "checkout", "-qf", "-B", branch, tip).ok)
@@ -101,7 +104,8 @@ export function carry(under: string[], branch: string, base: string, read: Recor
  * `check` is the goal check's call, which runs here with `--before-push`.
  * `carried` names the stage session and the clone it ran in, for the table.
  * Undefined once the push went through, so the full check decides, a pull
- * request already at `HEAD` included; otherwise the reason the pass is `open`.
+ * request already at `HEAD` included; otherwise the reason the pass is `open`,
+ * or a `Transient` where a fetch, a mint or the push met the network.
  * `under`, on the host, makes it `carry` the branch into the push clone first.
  * There the push runs no hook, the one exception `git-and-prs.md`'s hook rule
  * makes: the push clone's hooks are an empty directory, and the before-push
@@ -122,7 +126,8 @@ export async function publish(
 		try {
 			read = credentials(await mint(app, { contents: "read" }));
 		} catch (error) {
-			return `the App's read token could not be minted: ${(error as Error).message}; nothing was pushed`;
+			const why = `the App's read token could not be minted: ${(error as Error).message}; nothing was pushed`;
+			return error instanceof Transient ? new Transient(why) : why;
 		}
 	}
 	const carriedOver = under.length ? carry(under, branch, base, read) : undefined;
@@ -140,7 +145,8 @@ export async function publish(
 			// `gh` and the full check after it, which reads the pull request with `gh`.
 			Object.assign(process.env, credentials(await mint(app, { contents: "write", pull_requests: "write" })));
 		} catch (error) {
-			return `the App's token could not be minted: ${(error as Error).message}; nothing was pushed`;
+			const why = `the App's token could not be minted: ${(error as Error).message}; nothing was pushed`;
+			return error instanceof Transient ? new Transient(why) : why;
 		}
 	}
 	// Recorded before the push, so no pull request of the loop's exists that the table does not name.
@@ -154,7 +160,8 @@ export async function publish(
 	const push = pushRef(app ? over(app) : "origin", branch);
 	if (!push.ok) {
 		console.error([push.out, push.err].filter(Boolean).join("\n"));
-		return `origin refused the push of ${branch}, as printed above`;
+		const why = `origin refused the push of ${branch}, as printed above`;
+		return network(push.err) ? new Transient(why) : why;
 	}
 	const create = ["gh", "pr", "create", "--base", base, "--head", branch, "--title", pr.title, "--body-file", "-"];
 	try {
