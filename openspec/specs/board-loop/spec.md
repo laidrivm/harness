@@ -123,8 +123,8 @@ step SHALL otherwise be a carry step N+1 on `feat/<slug>-<N+1>`, N the
 groups the change holds, whose goal names moving every unticked task of the
 carried groups into a new group N+1 and carrying that group. No pull
 request, a merged one included, SHALL have used that branch; a change whose
-carry branch one used SHALL be passed over, its reason naming that pull
-request.
+carry branch a pull request used SHALL be passed over, its reason naming
+that pull request.
 
 A change that fails only because every box of its N groups is ticked SHALL be
 an answer candidate instead. Its step is N+1 on `feat/<slug>-<N+1>`, and no
