@@ -10,6 +10,8 @@ entry, a hook or a CI check leaves this file the way it would leave
   group, in the order the groups appear, on `feat/<proposal-slug>-<step>`. A
   change whose `tasks.md` holds exactly one group is the exception and ships
   whole on `feat/<proposal-slug>` (`fix/`, `chore/` for non-feature work).
+  The unticked tasks of groups whose pull requests merged move into a new
+  last group, which ships as a step of its own, never on a merged branch.
 - A step's prose describes what that step ships — a README line, a script
   comment or a task bullet naming what later steps will add reads exactly like
   one naming what this step does, and a line saying which criteria the step

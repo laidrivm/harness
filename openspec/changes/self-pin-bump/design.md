@@ -64,6 +64,15 @@ on the merge.
 - *Alternative: a separate script.* `bump.ts` is 202 lines; `self` adds about
   40. Split only if the apply measures past 300.
 
+Settled in the apply (step 1): the function is `bumpSelf`, not `self`,
+which names a global in bun. A quiet run writes `sha`, `old` and `behind`
+all empty, and the script writes whichever keys its command returns, so
+`verify`'s `sha`/`tree` lines are unchanged. The commit subject is `land`'s,
+`Bump harness <old7>..<new7>`. The stand-in for GitHub's API and the test
+`git` helper moved from `bump-verify.test.ts` into `bun/bump.fixture.ts`,
+which `bump-self.test.ts` and `bump-land.test.ts` import too, rather than
+a second copy.
+
 ### D2 — the merged-bump stop
 
 Each merged bump makes a new `main` commit, its `Test` run succeeds, and

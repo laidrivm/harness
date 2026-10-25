@@ -63,3 +63,52 @@ describe("moving the pin", () => {
 		expect(() => pinOf('{"dependencies": {}}')).toThrow("dependencies.harness");
 	});
 });
+
+describe("a development-dependency pin", () => {
+	/** A manifest naming the harness under the fields given, as the harness's own does. */
+	const both = (fields: { dependencies?: string; devDependencies?: string }) =>
+		`${JSON.stringify(
+			{
+				name: "harness",
+				...(fields.dependencies && { dependencies: { harness: fields.dependencies } }),
+				...(fields.devDependencies && {
+					devDependencies: { harness: fields.devDependencies },
+				}),
+			},
+			null,
+			"\t",
+		)}\n`;
+
+	// spec: harness-updates/the-bump-reads-a-development-dependency-pin
+	test("under devDependencies alone is read and moved there", () => {
+		const text = both({ devDependencies: spec(OLD) });
+		expect(pinOf(text)).toBe(OLD);
+		expect(JSON.parse(movePin(text, NEW)).devDependencies.harness).toBe(spec(NEW));
+	});
+
+	// spec: harness-updates/the-bump-reads-a-development-dependency-pin
+	test("the same pin under both fields moves both", () => {
+		const after = JSON.parse(
+			movePin(both({ dependencies: spec(OLD), devDependencies: spec(OLD) }), NEW),
+		);
+		expect(after.dependencies.harness).toBe(spec(NEW));
+		expect(after.devDependencies.harness).toBe(spec(NEW));
+	});
+
+	// spec: harness-updates/the-bump-reads-a-development-dependency-pin
+	test("two different pins read and move the runtime one alone", () => {
+		const text = both({ dependencies: spec(OLD), devDependencies: spec(NEW) });
+		expect(pinOf(text)).toBe(OLD);
+		const after = JSON.parse(movePin(text, "a".repeat(40)));
+		expect(after.dependencies.harness).toBe(spec("a".repeat(40)));
+		expect(after.devDependencies.harness).toBe(spec(NEW));
+	});
+
+	test("the old spec once more outside the two fields still fails naming it", () => {
+		const thrice = both({ dependencies: spec(OLD), devDependencies: spec(OLD) }).replace(
+			'"name": "harness"',
+			`"name": "harness",\n\t"note": "${spec(OLD)}"`,
+		);
+		expect(() => movePin(thrice, NEW)).toThrow(spec(OLD));
+	});
+});
