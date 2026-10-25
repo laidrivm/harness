@@ -93,7 +93,15 @@ describe("the read and its translation", () => {
 		["an unknown state", el(7, "reopened"), "CLOSED", "[9]"],
 	])("%s reads %s %s", (_, pr, state) => {
 		const { number, head } = pr as ReturnType<typeof el>;
-		expect(read({ answer: answer(pr) }).result).toEqual([{ number, state, headRefOid: head.sha }]);
+		expect(read({ answer: answer(pr) }).result).toEqual([{ number, state, headRefOid: head.sha, draft: false }]);
+	});
+
+	test.each([
+		["a draft", true, true],
+		["a ready pull request", false, false],
+		["a draft field that is no boolean", "true", false],
+	])("%s reads draft %p as %p", (_, draft, expected) => {
+		expect(read({ answer: answer({ ...el(3, "open"), draft }) }).result).toEqual([{ number: 3, state: "OPEN", headRefOid: "s3", draft: expected }]);
 	});
 
 	// spec: stage-goal/an-open-pull-request
@@ -151,13 +159,13 @@ describe("the repository origin names", () => {
 		const gone = { ...el(2, "open"), head: { sha: "s2", repo: null } };
 		const noBase = { ...el(6, "open"), base: { repo: null } };
 		const list = [5, null, gone, noBase, el(3, "open", null, "o/r", 2), el(4, "open", null, "O/R")];
-		expect(read({ answer: answer(...list) }).result).toEqual([{ number: 4, state: "OPEN", headRefOid: "s4" }]);
+		expect(read({ answer: answer(...list) }).result).toEqual([{ number: 4, state: "OPEN", headRefOid: "s4", draft: false }]);
 	});
 
 	// spec: stage-goal/a-renamed-repository
 	test("a repository renamed since origin was set keeps its own pull requests (review of #190)", () => {
 		const renamed = { ...el(7, "open", null, "o/renamed"), base: { repo: { id: 1, full_name: "o/renamed" } } };
-		expect(read({ answer: answer(renamed) }).result).toEqual([{ number: 7, state: "OPEN", headRefOid: "s7" }]);
+		expect(read({ answer: answer(renamed) }).result).toEqual([{ number: 7, state: "OPEN", headRefOid: "s7", draft: false }]);
 	});
 
 	// spec: stage-goal/a-fork-s-branch-of-the-same-name

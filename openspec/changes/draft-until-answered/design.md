@@ -80,8 +80,9 @@ first and owns the small `unassign()`, and `bot-notion-writes` reuses it.
 With the integration, the pick session names the card of a draft-branch
 candidate it takes in one `CARD: <id>` line beside its `PICK:` line, read as
 `asked()` reads `QUESTION:`; the runner checks it with `carded()` and, before
-the stage session starts, calls `unassign()` in `bun/notion-bot.ts`, beside
-`post()`'s own `Assign` write: it reads the card's `Assign` and writes it
+the stage session starts, calls `unassign()` in `bun/notion-unassign.ts`
+(split from `bun/notion-bot.ts` at its line cap), beside `post()`'s own
+`Assign` write: it reads the card's `Assign` and writes it
 back without the user, leaving anyone else. A missing or refused `CARD:` line
 writes nothing and is printed; the pass goes on. `bot-notion-writes` extends
 the same line to every pick and adds the claim. Without the integration this
@@ -123,6 +124,62 @@ runner marks it ready with no new question; its `Assign` half is replaced by
 the user's rule. 9: on a machine with no integration the session repeats its
 question under a `QUESTION:` line, and this change clears no `Assign` there.
 10: implementation after #255, which has merged.
+
+### Taken while applying (2026-10-25)
+
+- **The draft-while-working rule already covers the continuation.** Since
+  the proposal, `rules.md` and `git-and-prs.md` (#271, #273) have an agent
+  mark a pull request draft as it starts work on it and ready right after
+  its final push. The runner's continuation needs no `gh pr ready --undo`:
+  `consider()` takes the branch only while its pull request is a draft. It
+  pushes while the draft stands and runs `gh pr ready` after the push, which
+  is the rule's order, so no task was added for it.
+- **`ready()` reused, `draftWhile()` not.** The runner calls `ready()` from
+  `bun/ci-run-draft.ts` (#276), now exported, with `-R` naming the repository
+  `originRepository()` in `bun/pull-requests.ts` gives, the one
+  `readPullRequests()` found the draft in, never `gh`'s default, which
+  `GH_REPO` or a set default can move (review of #286). Where `origin` names
+  no repository, the draft is not marked ready, and the pass says so.
+  `draftWhile()` itself does not fit: it marks ready when its work throws,
+  which here would start a review on an answer not yet carried, and it turns
+  a refused ready into a failed outcome, where *Marking ready fails* keeps
+  the check's.
+- **Files split at the cap.** `consider()` sits in
+  `bun/board-loop-takeable.ts`, where `reopened-group-branch` (#282) moved
+  it; its `read()` answers a draft's number, and either branch it reads turns
+  that into the draft's step. The cases of
+  1.3 and 1.4 go in a new `bun/board-loop-draft.test.ts`, since
+  `bun/board-loop-question.test.ts` stands at 262 lines; the triage-answered
+  case is one assertion in `bun/notion-triage-pass.test.ts`, whose stand-in
+  already answers it. The stand-in pass helper moves to
+  `bun/notion-bot.fixture.ts` (`against()`), and the REST listing helper to
+  `bun/board-loop.fixture.ts` (`listed()`), so both test files share one copy.
+- **The no-integration line** reads `question: posted by the session — no
+  integration is configured`: it keeps the words the scenario *A question
+  with no integration* names, and a malformed line there still reads `not
+  posted`.
+- **The repeated `QUESTION:` sentence** sits in the two shared fourth lines,
+  so a hand-launched session repeats its question too; nothing reads it there,
+  and one line per form is kept rather than four.
+- **`pickedCard()` and `unassign()` sit in `bun/notion-unassign.ts`**, since
+  `pause-notice` (#293) brought `bun/notion-bot.ts` past 300 lines with
+  them; `carded()` is exported for it. `unassign()` does not reuse #293's
+  `assign()`, which sets the user alone, where this write keeps everyone
+  else.
+- **`unassign()`** reads the page again after `carded()` for `Assign`, and
+  writes the list back without the user whether or not the user was on it.
+  An `Assign` of 25 people or more, the most a page read lists, is left
+  whole and refuses the pass as a failed call does, below (review of #286).
+- **A failed Notion call refuses the pass** (review of #286). A `CARD:` line
+  or card the runner refuses still carries the step, as *A card line the
+  runner refuses* fixes. A page read or `Assign` write that fails, though,
+  would let the draft go ready with the user still on `Assign`, and no later
+  pass would take it again; `unassign()`'s line then opens with
+  `assign: failed —`, and the runner refuses before the stage session, so
+  the next pass reads the answer again.
+- **`ready()` is killed at `pull-requests.ts`'s `limit()`** with SIGKILL, as
+  the pull request read is, so a `gh` that never answers cannot hold the
+  pass (review of #286).
 
 ## Overlaps
 

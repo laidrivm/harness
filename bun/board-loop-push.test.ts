@@ -2,8 +2,10 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
-import { change, clone, commit, lowered, out, records, run, TICKED } from "./board-loop.fixture.ts";
+import { change, clone, commit, lowered, out, records, run, SAID, TICKED } from "./board-loop.fixture.ts";
+import { CARD } from "./notion-bot.fixture.ts";
 import { lookup } from "./pr-sessions.ts";
+import { MARK } from "./question-gate.ts";
 
 /**
  * The runner's push and pull request after the stage session, and what keeps
@@ -61,6 +63,14 @@ describe("a step ready to push", () => {
 		const r = run(dir);
 		expect(calls(r.calls, "git push")).toEqual(["git push origin refs/heads/feat/demo-2:refs/heads/feat/demo-2"]);
 		expect(calls(r.calls, "gh pr create")).toEqual([CREATE.replace("feat/demo", "feat/demo-2")]);
+	});
+
+	// spec: board-loop/a-step-ready-to-push-beside-a-question board-loop/a-question-the-session-posted-itself
+	test("with no integration, a question the session posted opens the same pull request as a draft, and the full check decides", () => {
+		const { dir } = clone();
+		const r = run(dir, [], { said: `QUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}` });
+		expect(calls(r.calls, "gh pr create")).toEqual([`${CREATE} --draft`]);
+		expect([r.body, r.last]).toEqual(["The body.", "board-loop: met — apply demo step 1"]);
 	});
 
 	// spec: board-loop/a-step-ready-to-push

@@ -2,8 +2,8 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
-import { change, clone, commit, lowered, ONE, run, runAsync, SAID, type Stubs, TICKED } from "./board-loop.fixture.ts";
-import { BOT, CARD, configured, standIn, TOKEN, USER } from "./notion-bot.fixture.ts";
+import { change, clone, commit, lowered, ONE, run, SAID, TICKED } from "./board-loop.fixture.ts";
+import { against, BOT, CARD, configured, standIn, TOKEN, USER } from "./notion-bot.fixture.ts";
 import { MARK, RUNNER_ASKS } from "./question-gate.ts";
 
 /**
@@ -68,12 +68,7 @@ const READ = ["GET /v1/users/me"];
 const notion = standIn();
 const seen = notion.state.seen;
 afterAll(() => notion.server.stop(true));
-
-/** One pass with the settings in `home`, or none, against the stand-in; its log cleared first. */
-const pass = (dir: string, s: Stubs, home?: string, entry?: string) => {
-	seen.length = 0;
-	return runAsync(dir, s, { home, entry, env: { HARNESS_NOTION_API_URL: notion.server.url.origin } });
-};
+const pass = against(notion);
 
 describe("the runner posts the question", () => {
 	// spec: board-loop/no-settings-file
@@ -196,10 +191,10 @@ describe("the runner posts the question", () => {
 	});
 
 	// spec: board-loop/a-question-with-no-integration
-	test("a QUESTION: line with no settings file prints that no integration is configured [34]", async () => {
+	test("a QUESTION: line with no settings file prints that no integration is configured, and that the session posted it [34]", async () => {
 		const { dir } = clone();
 		const r = await pass(dir, { said: ASKED });
-		expect(r.text).toContain("question: not posted — no integration is configured");
+		expect(r.text).toContain("question: posted by the session — no integration is configured");
 		expect(seen).toEqual([]);
 	});
 

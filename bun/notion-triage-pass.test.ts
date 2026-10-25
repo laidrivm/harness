@@ -58,12 +58,13 @@ describe("the triage's endings", () => {
 		expect(posts()).toEqual([]);
 	});
 
-	// spec: board-loop/an-answer-already-written
-	test("a source that holds: the question, then the answer with its quote and source, and no Assign [64]", async () => {
+	// spec: board-loop/an-answer-already-written board-loop/a-question-posted-from-the-integration
+	test("a source that holds: the question, then the answer with its quote and source, no Assign, and a draft until a pass carries it [64]", async () => {
 		const r = await pass({ triage: ANSWERED });
 		expect(posts()).toEqual(["harness-question One group or two?", `harness-answer One group.\n> ${QUOTE}\nSource: docs/rule.md`]);
 		expect(patched()).toBe(false);
 		expect(r.text).toContain(`question: posted on ${CARD} and answered from docs/rule.md`);
+		expect(r.calls).toContain("--body-file - --draft\n");
 	});
 
 	// spec: board-loop/the-answers-post-fails
