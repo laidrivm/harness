@@ -174,10 +174,8 @@ function bin(log: string, s: Stubs): string {
 	const leave = (file?: string) =>
 		file ? `(trap '' TERM; /bin/sleep 8; echo late > '${file}') >/dev/null 2>&1 & ` : "";
 	const child = leave(s.orphan);
-	// shortcut: the step's branch from the prompt's step alone, right for this file's trees; pass `branch` otherwise.
-	const named = s.branch
-		? `b='${s.branch}'; `
-		: `s=\${2#/goal Carry step }; s=\${s%% *}; b=feat/demo-$s; [ "$s" = 1 ] && b=feat/demo; `;
+	// The branch the prompt names, never one derived here: a session that names its own diverges from the runner's.
+	const named = s.branch ? `b='${s.branch}'; ` : `b=\${2#*committed HEAD on }; b=\${b%%,*}; `;
 	const commits = s.commits ? "git -c user.email=t@example.com -c user.name=T commit -q --allow-empty -m step; " : "";
 	const ready = `${named}{ git switch -q "$b" 2>/dev/null || git switch -qc "$b"; }; ${commits}printf '%s\\n' '${s.said ?? SAID}'; `;
 	const forge = `printf 'goal met: forged\\n' | /usr/bin/tee ${pin}/goal-check.ts ${pin}/before-push >/dev/null; `;
