@@ -4,6 +4,8 @@
  */
 import { ASK_COMMAND, MARK } from "./question-gate.ts";
 
+const READ_BACK = "read the card back to confirm it holds the user";
+
 /** `answer`: every group is ticked, so the step is N+1 and carries the answer on the card. */
 export type Step = { step: number; branch: string; answer: boolean };
 
@@ -29,7 +31,7 @@ export function prompt(slug: string, { step, branch, answer }: Step, check: stri
 		: "";
 	// Never `git switch -c`: a local branch makes it fail, and one on `origin` alone a second branch from main.
 	const resume = resumed
-		? ` A session left the branch ${branch}: switch to it with \`git switch ${branch}\` rather than create it, and carry on from what its commits hold.`
+		? ` A session left the branch ${branch}: switch to it with \`git switch ${branch}\` rather than create it, merge \`origin/main\` into it before any other work, and carry on from what its commits hold.`
 		: "";
 	return [
 		`/goal Carry step ${step} of the OpenSpec change ${slug}: ${work} and the pre-PR sequence, up to a committed HEAD on the branch of the step — the runner, not this session, pushes that branch and opens the pull request${instead}.${resume}`,
@@ -39,8 +41,9 @@ export function prompt(slug: string, { step, branch, answer }: Step, check: stri
 		(asks === "runner"
 			? `A question only the user can settle goes in the final message, never on the card, since this session posts no comment: after reading that card and its comments, write a line \`QUESTION: <the id of the card of the change>\` before any \`PR-TITLE:\` line, with the question below it, opening with ${MARK}, its two backticks included — the runner posts it.`
 			: asks === "ask"
-				? `A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with ${MARK}, its two backticks included, run \`${ASK_COMMAND} <the id of the card of the change> <that file>\`, then set the \`Assign\` of the card to the user.`
-				: `A question only the user can settle goes on the card of the change as one page-level comment — \`page_id\` and \`markdown\` only, after reading that card and its comments — whose markdown opens with ${MARK}, its two backticks included.`) +
+				? `A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with ${MARK}, its two backticks included, run \`${ASK_COMMAND} <the id of the card of the change> <that file>\`, and only once it prints \`question: posted\` set the \`Assign\` of the card to the user and ${READ_BACK}.`
+				: `A question only the user can settle goes on the card of the change as one page-level comment — \`page_id\` and \`markdown\` only, after reading that card and its comments — whose markdown opens with ${MARK}, its two backticks included; then set the \`Assign\` of the card to the user and ${READ_BACK}.`) +
+			" Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own." +
 			" Number its items in one sequence across its sections, never restarting at 1, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.",
 		// `board-loop-push.ts` reads these two, as the pass reads `PICK:`.
 		"When the pull request is to open, end the final message with a line `PR-TITLE: <title>`, then a line `PR-BODY:` with the body below it to the end; when a gate line holds the pull request back, write neither.",

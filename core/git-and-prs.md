@@ -69,10 +69,14 @@ entry, a hook or a CI check leaves this file the way it would leave
   to `matching`, `upstream` or `tracking`, `remote.<name>.mirror` — the guard
   reads the command's own words and cannot see a destination that comes from
   configuration.
-- Leave a PR ready for review once its pushes are done, never as a draft —
-  CodeRabbit's auto-review skips drafts, so a draft is a PR nobody reviews.
-  The one draft is a PR an agent still pushes to, as `rules.md` says, and it
-  is marked ready as that agent's last step.
+- Always open a PR with the work, in a local session and the board loop
+  alike, as a draft (`gh pr create --draft`) while a question to the user on
+  its card is unanswered, and mark it ready (`gh pr ready`) only once the
+  answers settle every item — CodeRabbit's auto-review skips drafts, so no
+  review fires on work an answer may still change. Otherwise leave a PR ready
+  for review, never a draft, which is a PR nobody reviews. The other draft is
+  a PR an agent still pushes to, as `rules.md` says, and it is marked ready
+  as that agent's last step.
 - Keep the PR description to what the diff can't say: a link to the
   proposal, the criteria the step closes named by their `### Requirement:`
   headings — or a line saying it closes none — decisions taken, anything the
