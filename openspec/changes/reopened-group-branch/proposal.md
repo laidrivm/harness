@@ -9,23 +9,27 @@ the change untakeable for good: on 2026-10-24 the second host pass printed
 "passed over runner-isolation: pull request #239 already used
 feat/runner-isolation-4" and ended `idle`, and the open tasks 4.4 and 5.6
 were carried only after the user moved them into a new group 6 by hand
-(harness#247). Card *Let the loop carry tasks added to a group whose pull
+(harness#247), which took a pull request of its own before the one that
+carried them. Card *Let the loop carry tasks added to a group whose pull
 request already merged*.
 
 ## What Changes
 
-- A group whose branch only merged pull requests have used, and which holds
-  an unticked box again, is a step once more, on a retry branch:
-  `<the step's branch>-<k>`, `k` from 2, the first such name no pull request
-  has used. A single-group change's retry branch is `feat/<slug>-1-<k>`, so
-  it never meets the answer step's `feat/<slug>-2`.
-- The retry branch's stage session is told the branch by name, since
-  `git-and-prs.md`'s naming alone no longer gives it.
-- Unchanged: an open pull request on any of those names still makes the
-  change wait; a closed, unmerged one still withdraws the step; an answer
-  candidate's branch gets no retry, since its card's answer would be carried
-  twice.
-- `core/git-and-prs.md` names the retry branch beside the step branch.
+- When the step's group holds an unticked box and only merged pull requests
+  used its branch, the loop does what #247 did by hand, in one pull request:
+  a carry step N+1, on `feat/<slug>-<N+1>`, whose session moves the unticked
+  tasks of every such group into a new group N+1 and carries that group.
+- The groups carried are the step's and each later group with an unticked
+  box whose branch, too, only merged pull requests used, up to the first one
+  that is not. A moved task opens with `(was 4.4)`, and its old place keeps a
+  line `Task 4.4 moved to 6.1.` with no box.
+- A task added to a merged group later, a carried group included, is carried
+  the same way into the next new group, since each carry adds a group.
+- Unchanged: an open pull request on a branch the loop would read makes the
+  change wait; a closed, unmerged one withdraws it; an answer candidate's
+  branch, merged, still passes the change over.
+- `core/git-and-prs.md` and `core/feature-workflow.md` name the carry step
+  beside the step branch and the answer step.
 
 ## Capabilities
 
@@ -35,18 +39,16 @@ None.
 
 ### Modified Capabilities
 
-- `board-loop`: *A pass takes only a takeable change* gains the retry
-  branch; *A step branch a session left is continued* names it in the
-  launch form.
+- `board-loop`: *A pass takes only a takeable change* gains the carry step.
 - `change-slicing`: *The reviewable unit is the step, not the proposal*
-  allows a second pull request for a group reopened after its merge.
+  ships a merged group's unticked tasks in a new group's pull request.
 
 ## Impact
 
 - `bun/board-loop.ts`: `consider()` moves to a module of its own (the file
-  is at 289 of 300 lines) and gains the retry probe.
-- `bun/board-loop-prompt.ts`: one sentence naming a retry branch.
+  is at 289 of 300 lines) and gains the walk over merged groups.
+- `bun/board-loop-prompt.ts`: `Step` gains `carried`, and `prompt()`'s first
+  line a carry variant.
 - `bun/board-loop.fixture.ts`: the stub `gh` answers per branch.
-- `core/git-and-prs.md`: one sentence.
-- Tests in `bun/board-loop-takeable.test.ts` and
-  `bun/board-loop-stage.test.ts`.
+- `core/git-and-prs.md`, `core/feature-workflow.md`: one sentence each.
+- Tests in `bun/board-loop-takeable.test.ts`.

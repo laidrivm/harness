@@ -5,9 +5,9 @@
 WHEN a change's `tasks.md` holds more than one task group, the project SHALL
 ship it as a sequence of pull requests, one per group, on `feat/<slug>-<step>`
 branches. A change whose `tasks.md` holds exactly one group SHALL ship as a
-single `feat/<slug>` pull request. A group that holds an unticked box after
-its pull request merged SHALL ship that box in one more pull request, on the
-retry branch `git-and-prs.md` names, never on the merged branch.
+single `feat/<slug>` pull request. The unticked tasks of groups whose pull
+requests merged SHALL move into a new last group, which ships as one more
+step, never on a merged branch.
 
 #### Scenario: A proposal with four task groups
 
@@ -23,6 +23,7 @@ retry branch `git-and-prs.md` names, never on the merged branch.
 
 #### Scenario: A task added to a merged group
 
-- **WHEN** a task is added to group 4 after the pull request on
-  `feat/<slug>-4` merged
-- **THEN** that task ships in a pull request on `feat/<slug>-4-2`
+- **WHEN** a task is added to group 4 of a change of five after the pull
+  request on `feat/<slug>-4` merged
+- **THEN** that task moves into a new group 6 and ships in a pull request on
+  `feat/<slug>-6`
