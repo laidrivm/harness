@@ -19,7 +19,8 @@
  * `claude -p` for the classifier to refuse. It never discards work to
  * reach the default branch's tip: it refuses a tracked edit, and an unpushed
  * tip unless that is a step's branch, left for the session that carries the
- * step. It installs before any session, since
+ * step, or one whose every commit `origin`'s main holds by patch, a merged
+ * branch's leftover it switches off. It installs before any session, since
  * `bun install` is an `ask` nobody would answer. Each pass ends on one line
  * and one `loop` record: `met`, `open`, `waiting`, `timeout`, `idle` or
  * `refused`, with exit 0 for `met`, `idle` and `waiting` alone: a `waiting`
@@ -117,7 +118,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		return end("refused", "tracked files differ from HEAD — work the last session left");
 	// An unpushed tip may be a dead session's step branch: noted, and judged once the steps are known.
 	const unpushed = !at("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out;
-	const noted = unpushed ? at("git", "branch", "--show-current").out : "";
+	let noted = unpushed ? at("git", "branch", "--show-current").out : "";
 	// No branch name keeps a detached HEAD's commits once the pass switches off it.
 	if (unpushed && !noted) return end("refused", "HEAD names no branch and is on no remote-tracking branch — unpushed work");
 	/** A refusal goes back to the noted branch first, so the next pass sees its tip again. */
@@ -129,6 +130,14 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		["merge", "--ff-only", "-q", `origin/${DEFAULT}`],
 	]) {
 		const run = at("git", ...step);
+		// A merged branch's leftover: every commit's patch is on main, so leaving it loses nothing.
+		// shortcut: a squash of several commits matches none of them by patch, so that branch still refuses; compare trees if one does.
+		const cherry = run.ok && noted && step[0] === "fetch" ? at("git", "cherry", `origin/${DEFAULT}`, "HEAD") : undefined;
+		// No line at all: origin's main holds HEAD itself.
+		if (cherry?.ok && !/^\+/m.test(cherry.out)) {
+			console.log(`switching off ${noted}: origin/${DEFAULT} holds its every commit by patch`);
+			noted = "";
+		}
 		if (run.ok) continue;
 		console.error(run.err);
 		const why = step[0] === "merge" ? `${DEFAULT} cannot fast-forward to origin/${DEFAULT}` : `git ${step[0]} failed`;
