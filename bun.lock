@@ -5,11 +5,11 @@
     "": {
       "name": "harness",
       "devDependencies": {
-        "harness": "github:laidrivm/harness#7e740f1e03d4b21945e175b2716d987f22fe5c85",
+        "harness": "github:laidrivm/harness#fa63ee5796a5755bd61c89ad08bbd689a002d5e4",
       },
     },
   },
   "packages": {
-    "harness": ["harness@github:laidrivm/harness#7e740f1", {}, "laidrivm-harness-7e740f1", "sha512-rEw7jZ4qUMlToZTLmXYkj0KP7ATqzDI1RAkyGQ2KpTSupiW/Rp69Rf1cieP3yeYp90aTbGiX5y1aIgROwKJmow=="],
+    "harness": ["harness@github:laidrivm/harness#fa63ee5", {}, "laidrivm-harness-fa63ee5", "sha512-If6p63DWJCZtEUoo0VwX1G+FU1XmNBCxxjrzv1yRfvKUvdmXEU0XrPzyLjT8G16f6h80BJUqTzdlTryT5/Y2Sg=="],
   }
 }
