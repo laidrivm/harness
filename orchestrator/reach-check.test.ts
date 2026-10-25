@@ -40,6 +40,7 @@ describe.skipIf(process.getuid?.() === 0)("reach-check.sh", () => {
 		expect(r.out.trim().split("\n")).toEqual([`reach-check: agent reads ${join(r.secrets, "github_webhook_secret")}`]);
 	});
 
+	// spec: orchestrator/the-runner-reads-the-key
 	test("a key runner can read is named for both users", () => {
 		const r = check({ claude_oauth_token: 0o000 }, 0o444);
 		expect(r.code).toBe(1);
