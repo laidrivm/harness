@@ -40,7 +40,7 @@
       nothing; a pass stopped with `stop.sh` runs it not at all. Probe the
       split under dash too. Verify with that file on Linux CI
 - [x] 2.2 In `orchestrator/runner/entrypoint.sh`, the forced command sets
-      `PASS_NOTIFY` to `bun --config=/dev/null --no-env-file
+      `PASS_NOTIFY` to `timeout 300 bun --config=/dev/null --no-env-file
       /opt/orchestrator/bun/notion-pause.ts`; extend the forced-command case in
       `orchestrator/users.test.ts` to print it. Verify with that file and
       `orchestrator/layout.test.ts`

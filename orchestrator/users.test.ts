@@ -92,7 +92,8 @@ describe("the host's wiring", () => {
 		const [launcher, mint, notify] = r.stdout.toString().split("\n");
 		expect([launcher, mint]).toEqual(["sudo -n -u agent /opt/orchestrator/as-agent", "sudo -n -u keyholder /opt/orchestrator/mint"]);
 		// The image's copy, with the flags the runner's own bun takes: a pause can run in the push clone, whose bunfig.toml and .env are a branch's.
-		expect(notify).toBe("bun --config=/dev/null --no-env-file /opt/orchestrator/bun/notion-pause.ts");
+		// Under a deadline, since the lock the pass holds while it runs also gates the deploy.
+		expect(notify).toBe("timeout 300 bun --config=/dev/null --no-env-file /opt/orchestrator/bun/notion-pause.ts");
 		expect(command).toContain(`HARNESS_GITHUB_APP_ID=$(cat ${FILES.id} 2>/dev/null)`);
 	});
 

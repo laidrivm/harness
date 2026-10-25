@@ -64,7 +64,7 @@ stop file and, when it exists, the log, and ignores its status. Unset, nothing
 runs: a laptop's `pass.sh` and the existing tests stay as they are.
 
 The forced command in `orchestrator/runner/entrypoint.sh` sets
-`PASS_NOTIFY="bun --config=/dev/null --no-env-file /opt/orchestrator/bun/notion-pause.ts"`:
+`PASS_NOTIFY="timeout 300 bun --config=/dev/null --no-env-file /opt/orchestrator/bun/notion-pause.ts"`:
 the image's copy, so a halt before the pin's checkout still notifies, and with
 the flags the runner's own bun takes, since `pause()` may run in the push
 clone, whose `bunfig.toml` and `.env` are a branch's.
@@ -148,8 +148,11 @@ those of today. No call is retried: a retry could post or file twice.
 - The command's line reaches the job's output when `pause()` runs: before the
   pass's output, which `pass.sh` prints afterwards, and before a halt's own
   line, so the job's last line is the one it is today.
-- The command runs while the pass's lock is held, as `pause()` does; each of
-  its calls is bounded by the client's 30 s timeout.
+- The command runs while the pass's lock is held, as `pause()` does, and that
+  lock also gates the deploy, so the forced command bounds it with coreutils'
+  `timeout 300` (in the Debian base image): its at most four Notion calls are
+  bounded at 30 s each, and 300 s leaves margin for bun's start. A deadline
+  that ends it exits 124, which `pause()` ignores as any other status.
 
 ### Overlaps
 
