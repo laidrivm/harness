@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { movePin } from "./bump-pin.ts";
 import { land } from "./bump.ts";
+import { git } from "./bump.fixture.ts";
 
 const OLD = "eddf1fdd56642c48a3b222034ec6268c9b55971f";
 const NEW = "9d321b61a74c70d4d3324d11e64fef488f2202a0";
@@ -16,13 +17,6 @@ const made: string[] = [];
 afterAll(() => {
 	for (const dir of made) rmSync(dir, { recursive: true, force: true });
 });
-
-const git = (dir: string, ...args: string[]) =>
-	Bun.spawnSync(["git", "-c", "user.name=t", "-c", "user.email=t@t", ...args], {
-		cwd: dir,
-	})
-		.stdout.toString()
-		.trim();
 
 const temp = () => {
 	const dir = mkdtempSync(join(tmpdir(), "harness-bump-land-"));

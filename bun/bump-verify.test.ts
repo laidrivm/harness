@@ -21,53 +21,28 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { CHECK, verify } from "./bump.ts";
+import { GREEN, git, type Served, serve } from "./bump.fixture.ts";
 
 const OLD = "eddf1fdd56642c48a3b222034ec6268c9b55971f";
 const NEW = "9d321b61a74c70d4d3324d11e64fef488f2202a0";
 
-/** What the stand-in serves: `main`'s head, and that commit's `test` runs. */
-let head = NEW;
-type CheckRun = { conclusion: string | null; app?: { slug: string } };
-let runs: CheckRun[] = [];
-/** A passed run as the harness's own CI posts it. */
-const GREEN: CheckRun = { conclusion: "success", app: { slug: "github-actions" } };
-let broken = false;
-const seen: (string | null)[] = [];
-let server: ReturnType<typeof Bun.serve>;
+const api: Served = { head: NEW, runs: [], broken: false, seen: [] };
+let server: ReturnType<typeof serve>;
 const made: string[] = [];
 
 beforeAll(() => {
-	server = Bun.serve({
-		port: 0,
-		fetch(request) {
-			const path = new URL(request.url).pathname;
-			seen.push(request.headers.get("authorization"));
-			if (broken) return new Response("down", { status: 500 });
-			if (path === "/repos/laidrivm/harness/commits/main")
-				return Response.json({ sha: head });
-			if (path === `/repos/laidrivm/harness/commits/${head}/check-runs`)
-				return Response.json({ check_runs: runs });
-			return new Response("not found", { status: 404 });
-		},
-	});
+	server = serve(api);
 });
 
 beforeEach(() => {
-	broken = false;
-	seen.length = 0;
+	api.broken = false;
+	api.seen.length = 0;
 });
 
 afterAll(() => {
 	server.stop(true);
 	for (const dir of made) rmSync(dir, { recursive: true, force: true });
 });
-
-const git = (dir: string, ...args: string[]) =>
-	Bun.spawnSync(["git", "-c", "user.name=t", "-c", "user.email=t@t", ...args], {
-		cwd: dir,
-	})
-		.stdout.toString()
-		.trim();
 
 /** A consumer pinned to `OLD`, every file a bump writes committed. */
 function consumer(harness: Record<string, unknown> = { bumpTest: "bun test" }) {
@@ -127,8 +102,8 @@ describe("choosing a target", () => {
 			[{ conclusion: "success", app: { slug: "other" } }],
 		],
 	])("a head whose test run is %s reports no target and changes nothing", async (_, sha, served) => {
-		head = sha;
-		runs = served;
+		api.head = sha;
+		api.runs = served;
 		const dir = consumer();
 		const before = readFileSync(join(dir, "package.json"), "utf8");
 		const { run, calls } = runner();
@@ -140,8 +115,8 @@ describe("choosing a target", () => {
 
 describe("the gate", () => {
 	const green = () => {
-		head = NEW;
-		runs = [GREEN];
+		api.head = NEW;
+		api.runs = [GREEN];
 	};
 
 	// spec: harness-updates/a-bump-that-passes-reports-what-it-checked
@@ -189,8 +164,8 @@ describe("what verify stages and asks", () => {
 	test.each(["coverage.txt", "harness/leftover.md"])(
 		"%s, left behind by the test run, stays out of the tree",
 		async (leftover) => {
-			head = NEW;
-			runs = [GREEN];
+			api.head = NEW;
+			api.runs = [GREEN];
 			const dir = consumer();
 			const { run: base } = runner();
 			const run = (argv: string[], cwd: string) => {
@@ -205,14 +180,14 @@ describe("what verify stages and asks", () => {
 	);
 
 	test("a token given is sent as a Bearer header on every request", async () => {
-		head = OLD;
-		runs = [GREEN];
+		api.head = OLD;
+		api.runs = [GREEN];
 		await verify(consumer(), { ...deps(runner().run), token: "t0k" });
-		expect(seen).toEqual(["Bearer t0k", "Bearer t0k"]);
+		expect(api.seen).toEqual(["Bearer t0k", "Bearer t0k"]);
 	});
 
 	test("an API answer that is not OK rejects naming the path", async () => {
-		broken = true;
+		api.broken = true;
 		const { run, calls } = runner();
 		await expect(verify(consumer(), deps(run))).rejects.toThrow(
 			"commits/main: 500",
@@ -233,8 +208,8 @@ describe("bump.ts run as a script", () => {
 	}
 
 	test("appends its outputs to GITHUB_OUTPUT when set", async () => {
-		head = OLD;
-		runs = [GREEN];
+		api.head = OLD;
+		api.runs = [GREEN];
 		const dir = consumer();
 		const output = join(dir, "output");
 		expect((await script(dir, { GITHUB_OUTPUT: output })).code).toBe(0);
@@ -242,7 +217,7 @@ describe("bump.ts run as a script", () => {
 	}, 20_000);
 
 	test("exits 1 and prints why when verify fails", async () => {
-		broken = true;
+		api.broken = true;
 		const { code, stderr } = await script(consumer());
 		expect(code).toBe(1);
 		expect(stderr).toContain("commits/main: 500");
