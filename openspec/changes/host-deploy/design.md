@@ -208,17 +208,18 @@ creates `locks/gate.lock` when absent, owned as the runner's home is, since a
 pass opens it for writing as `runner` (decided at apply).
 
 `bun/ci-run.ts` takes a repository lock too, for a failed run's flow
-(`ci-run-agent`), with `flock -w 7200` on `locks/<repo>.lock`, and creates it
-when absent. It gains the gate, held only for an attempt, as a pass holds
-it: one `sh` loop opens and takes the gate with `flock -w 14400`, tries the
-repository lock with `flock -n`, and closes the gate's descriptor either way.
-A lock it took stays held as it execs the flow, which keeps holding the
-repository lock alone. The loop makes at most 1440 attempts and sleeps 5 s
-after each busy one but the last: 1439 sleeps, 7195 s, today's 7200 s to
-within one sleep, counted in the sleeps, so time spent waiting on a deploy's
-gate does not use it up. A last attempt that finds the lock busy ends the run
-at once with exit status 75, as today's bound does. A flow that arrives during the hold
-waits for the deploy instead of creating a lock file the deploy did not
+(`ci-run-agent`): today with a blocking `flock -w 7200` on
+`locks/<repo>.lock`, which it creates when absent. That wait goes: it gains
+the gate, held only for an attempt, as a pass holds it. One `sh` loop opens
+and takes the gate with `flock -w 14400`, tries the repository lock with
+`flock -n`, and closes the gate's descriptor either way. A lock it took
+stays held as it execs the flow, which keeps holding the repository lock
+alone. The loop makes at most 1440 attempts and sleeps 5 s after each busy
+one but the last: 1439 sleeps, 7195 s, today's 7200 s to within one sleep,
+counted in the sleeps, so time spent waiting on a deploy's gate does not use
+it up. A last attempt that finds the lock busy ends the run at once with exit
+status 75, as today's bound does. A flow that arrives during the hold waits
+for the deploy instead of creating a lock file the deploy did not
 enumerate; a flow that waits for a running pass holds the gate for a moment
 per attempt, so other repositories' ticks and the deploy are not kept out
 while it waits. The user chose this on the card (answer 15б: «15. ок, давай
