@@ -50,7 +50,7 @@ so that no session it launches has to install.
 
 - **WHEN** the current branch holds a commit that no remote-tracking branch
   contains, and it is not the step branch of a change the pass computes as
-  takeable or as an answer candidate
+  takeable or as an answer candidate, nor a merged branch's leftover
 - **THEN** the runner refuses, naming the branch, launches no session, and
   leaves that branch checked out at the tip it had
 
