@@ -45,8 +45,11 @@
       stays, nothing is written when the user is not on it or the `CARD:`
       line was refused, and a pass that then ends `open`, `waiting` or with a
       refused push writes no `Assign` again (scenarios *The pass reads the
-      answer*, *The pass ends before its pull request*). Verify with that
-      file
+      answer*, *The pass ends before its pull request*). With the
+      integration, drop the `Assign` clear from `answer-match`'s answer
+      variant of `prompt()`; without it, keep it (design, item 12), with a
+      case for each prompt in `bun/board-loop-question.test.ts`. Verify with
+      that file
 - [ ] 1.6 File the `idea` card: with the integration, the stage prompt's
       answer variant (`prompt()`, `instead`) asks for the `IDEA:` line after
       `BLOCKED —` instead of a card and an `Assign` write, and `pass()`

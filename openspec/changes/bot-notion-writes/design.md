@@ -76,6 +76,13 @@ push refused, or a `gh pr create` that fails leaves `Assign` empty; only a
 new question sets it again, through `post()` or the ask command, as today.
 `publish()` is not touched.
 
+Without the integration (item 12 on the card, (а), 2026-10-25), the session
+clears `Assign` through the connector when it reads the answer, as
+`answer-match`'s answer variant of `prompt()` has it, by answer 13в; the
+runner holds no token there and writes nothing. With the integration, the
+session holds no write tool, so that clause of the answer variant is left
+out and the runner's clear stands in for it.
+
 The clear before the stage session relies on the pick no longer reading
 `Assign`: today it takes the user's answer only while `Assign` holds the
 user, so a session that died after the clear would strand the answer (the
@@ -83,7 +90,7 @@ risk answer 12б on the `loop-reads-feedback` card accepted). `answer-match`
 (PR #263) has the pick take an answer by its question's tag instead, so this
 change is applied after it; neither is on the default branch yet, so the
 order stands here and on the card rather than in `after:`. The same rule
-settles `answer-match`'s question 3 and `draft-until-answered`'s question 1
+(item 13 on the card, confirmed 2026-10-25) settles `answer-match`'s question 3 and `draft-until-answered`'s question 1
 and decision 5, whose designs record it. `draft-until-answered` (PR #262)
 lands before this change too (its question 1, (а)): it adds the `CARD:`
 reader and `unassign()` in `bun/notion-bot.ts` for its draft candidates, and
@@ -111,9 +118,10 @@ list is an enumeration, and a write tool the connector adds later stays
 reachable until it is listed; Claude Code offers no allow list for one
 server's tools beside a server-wide deny, which would take the reads too. A
 `PreToolUse` hook refusing every `notion-*` call not on a read list would
-close that, at the cost of a hook every consumer installs; this change leaves
-it out (question 2 on the card). The probe of task 3.1 lists a session's
-tools under the flags, as the 2026-10-21 probe did, and makes no call.
+close that, at the cost of a hook every consumer installs. Settled by the
+user on 2026-10-25 (item 11 on the card, (а)): the list and a one-off probe,
+no hook. The probe of task 3.1 lists a session's tools under the flags, as
+the 2026-10-21 probe did, and makes no call.
 
 ### The schema write of `approved-column`
 
@@ -125,6 +133,7 @@ need its own read-back and refusal cases. This change builds no schema
 write. Settled by the user on 2026-10-25 (item 1): the user adds the option
 by hand, and `approved-column`'s task 1.3 is a user act carrying the
 step-by-step instruction, its apply session only reading each board back.
+The user reported the option added on 2026-10-25 (item 10).
 `approved-column` is still applied after this one (`after:` in its
 `.openspec.yaml`, item 8).
 
@@ -160,7 +169,8 @@ two deltas are re-copied over its versions before this change is applied.
   claim or the clear as not written, and the pass's outcome is unchanged. The
   user shares each board's page with the integration once.
 - [A new connector write tool] → reachable under the user's name until the
-  list names it; the list's comment says so, and question 2 offers the hook.
+  list names it; the list's comment says so, and the probe of task 3.1 adds
+  one it finds (item 11: no hook).
 - [The pick names a wrong card] → `carded()` refuses a card whose `Pointer`
   is not the picked change's, so no other card is written.
 - [`Assign` read and write are two calls] → the user could change `Assign`

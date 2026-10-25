@@ -163,5 +163,5 @@ writes as before.
 
 - **WHEN** no settings file is configured
 - **THEN** no Notion tool is withheld, the pick session makes the claim, the
-  stage session files its own `idea` card, and the runner makes no call to
-  Notion
+  stage session clears the card's `Assign` when it reads the answer and files
+  its own `idea` card, and the runner makes no call to Notion

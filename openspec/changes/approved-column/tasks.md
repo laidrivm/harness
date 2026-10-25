@@ -35,4 +35,6 @@
       Then tell the apply session, which re-reads each board's schema and
       compares its `Status` options, names and order, with the list above,
       stops on a difference, and records the read-back in the pull request
-      (design, *Settled with the user*). Verify by the read-back
+      (design, *Settled with the user*). Verify by the read-back. The user
+      reported the option added on all three boards on 2026-10-25 (item 10
+      on the `bot-notion-writes` card); the read-back stays
