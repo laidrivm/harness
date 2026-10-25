@@ -97,38 +97,39 @@ describe("the question's post", () => {
 	const asked = `BLOCKED — a choice only the user can make\nQUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}`;
 	const stuck = "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete";
 	const pass = async (state: Partial<typeof notion.state>, stubs: Stubs = {}) => {
-		Object.assign(notion.state, { reads: 200, assign: 200 }, state);
+		Object.assign(notion.state, state);
 		const { dir } = clone();
 		try {
 			return await runAsync(dir, { said: asked, beforePush: stuck, ...stubs }, { home: configured(), env: { HARNESS_NOTION_API_URL: notion.server.url.origin } });
 		} finally {
-			Object.assign(notion.state, { reads: 200, assign: 200, me: 200 });
+			Object.assign(notion.state, { fail: {}, me: 200 });
 		}
 	};
+	const reads = { fail: { "GET /v1/comments": 500 } };
 
 	// spec: board-loop/the-question-post-meets-notion-s-5xx
 	test("a comments read answered 500 prints that Notion did not answer and records retry", async () => {
-		const r = await pass({ reads: 500 });
+		const r = await pass(reads);
 		expect(r.text).toContain("question: not posted — Notion did not answer:");
 		expect([r.code, r.last.startsWith("board-loop: retry — apply demo step 1")]).toEqual([75, true]);
 	}, 40_000);
 
 	// spec: board-loop/the-question-post-meets-notion-s-5xx
 	test("the same under a goal met pushes nothing and records retry, not met", async () => {
-		const r = await pass({ reads: 500 }, { beforePush: undefined, commits: true });
+		const r = await pass(reads, { beforePush: undefined, commits: true });
 		expect([r.code, r.last.startsWith("board-loop: retry — apply demo step 1")]).toEqual([75, true]);
 		expect([calls(r.calls, "git push"), calls(r.calls, "gh pr create")]).toEqual([[], []]);
 	}, 40_000);
 
 	test("the same with a tracked edit left records open, since the next pass would refuse that tree", async () => {
-		const r = await pass({ reads: 500 }, { edits: true });
+		const r = await pass(reads, { edits: true });
 		expect([r.code, r.last.startsWith("board-loop: open — apply demo step 1: question: not posted — Notion did not answer:")]).toEqual([1, true]);
 		expect(r.last).toEndWith(", leaving a tracked edit");
 	}, 40_000);
 
 	// spec: board-loop/a-question-posted-assign-not-written
 	test("an Assign write answered 503 stays waiting, as today", async () => {
-		const r = await pass({ assign: 503 });
+		const r = await pass({ fail: { [`PATCH /v1/pages/${CARD}`]: 503 } });
 		expect(r.text).toContain(`question: posted on ${CARD}, Assign not set`);
 		expect([r.code, r.last]).toEqual([0, `board-loop: waiting — apply demo step 1: question on ${CARD}`]);
 	}, 40_000);

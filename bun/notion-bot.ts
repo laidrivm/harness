@@ -4,7 +4,8 @@
  * REST calls that post the question from the integration and set `Assign`
  * (`openspec/changes/archive/2026-10-22-notion-bot-questions/design.md`). The ask command makes
  * two of those calls with its own settings; the pause notice, the comment and
- * the `Assign` write with the runner's. The token reaches `fetch` only as a
+ * the `Assign` write with the runner's, and `notion-unassign.ts` steps 1 and 2
+ * and its own `Assign` write. The token reaches `fetch` only as a
  * header, and no line this module prints or throws holds it.
  */
 import { readFileSync, statSync } from "node:fs";
@@ -201,7 +202,7 @@ export function comment(call: Call, card: string, text: string, mark = "harness-
 export type Triaged = { answer?: { source: string; quote: string; text: string }; note: string };
 
 /** REST steps 1 and 2: why `card` is not the carried change's card on `board`, or `undefined`. */
-async function carded(call: Call, card: string, board: string, slug: string): Promise<string | undefined> {
+export async function carded(call: Call, card: string, board: string, slug: string): Promise<string | undefined> {
 	const page = await call("the page read", `/v1/pages/${card}`);
 	if (page?.parent?.type !== "data_source_id") return `${card} is not a card on a board`;
 	if (plain(page.properties?.Pointer?.rich_text) !== `openspec/changes/${slug}/`) return `${card} is not the card of ${slug}`;

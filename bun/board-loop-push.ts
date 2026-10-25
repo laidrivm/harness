@@ -109,7 +109,8 @@ export function carry(under: string[], branch: string, base: string, read: Recor
  * `under`, on the host, makes it `carry` the branch into the push clone first.
  * There the push runs no hook, the one exception `git-and-prs.md`'s hook rule
  * makes: the push clone's hooks are an empty directory, and the before-push
- * check found the session's passing pre-PR record of this SHA.
+ * check found the session's passing pre-PR record of this SHA. `draft` opens
+ * it as a draft: the session's question reached the card.
  */
 export async function publish(
 	said: string,
@@ -119,6 +120,7 @@ export async function publish(
 	carried: { session: string; clone: string },
 	app?: App,
 	under: string[] = [],
+	draft = false,
 ) {
 	// A private repository refuses an unauthenticated fetch; the token goes to the two fetches alone.
 	let read: Record<string, string> = {};
@@ -164,7 +166,7 @@ export async function publish(
 		const why = `origin refused the push of ${branch}, as printed above`;
 		return network(push.err) ? new Transient(why) : why;
 	}
-	const create = ["gh", "pr", "create", "--base", base, "--head", branch, "--title", pr.title, "--body-file", "-"];
+	const create = ["gh", "pr", "create", "--base", base, "--head", branch, "--title", pr.title, "--body-file", "-", ...(draft ? ["--draft"] : [])];
 	try {
 		// The body on stdin, where none of its lines can read as a flag.
 		const run = Bun.spawnSync(create, { stdin: Buffer.from(pr.body), env: process.env });

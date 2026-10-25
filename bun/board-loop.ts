@@ -36,10 +36,13 @@ import { pickPrompt, prompt, type Step } from "./board-loop-prompt.ts";
 import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session, trusted } from "./board-loop-session.ts";
 import { consider, left } from "./board-loop-takeable.ts";
+import { ready } from "./ci-run-draft.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
 import { ALREADY, asked, own, POSTED, post, type Settings, settings, UNREACHED } from "./notion-bot.ts";
 import { triage } from "./notion-triage.ts";
+import { pickedCard, UNASSIGN_FAILED, unassign } from "./notion-unassign.ts";
+import { originRepository } from "./pull-requests.ts";
 import { ASK_SETTINGS, RUNNER_ASKS, where } from "./question-gate.ts";
 import { network, TEMPFAIL, Transient } from "./transient.ts";
 
@@ -177,6 +180,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		return refuse(`on the host the runner posts each question from the Notion integration, and ${where("notion-bot.json")} is missing`);
 	if (steps.size === 0) return end("idle", "no change is takeable");
 	const listed = (answer: boolean) => [...steps].filter(([, s]) => s.answer === answer).map(([name]) => name);
+	const drafts = [...steps].filter(([, s]) => s.draft !== undefined).map(([name]) => name);
 
 	const minutes = `${limit / 60_000} minutes`;
 	/** A session ends clean, or the pass names what outlived it and records no planned outcome. */
@@ -203,7 +207,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const withheld = bot ? ["--disallowedTools", "mcp__*__notion-create-comment"] : [];
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
-		picked = await session(pickPrompt(named, listed(false), listed(true), bot?.self, bot?.user), limit, kill, true, as, withheld, under);
+		picked = await session(pickPrompt(named, listed(false), listed(true), bot?.self, bot?.user, drafts), limit, kill, true, as, withheld, under);
 	} catch {
 		return refuse("claude could not be started");
 	}
@@ -219,6 +223,14 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const chosen = steps.get(slug);
 	if (!chosen)
 		return refuse(`the pick session named ${slug}: ${reasons.get(slug) ?? "no change of that name is takeable"}`);
+	// The pass has read the draft's answer: the user leaves `Assign` before the stage session acts on it.
+	if (bot && chosen.draft !== undefined) {
+		const card = pickedCard(picked.out);
+		const wrote = typeof card === "string" ? `assign: not written — ${card}` : await unassign(bot, card.card, { board: named, slug });
+		// Carried, the draft would go ready with the user still on `Assign`; refused, the next pass reads the answer again.
+		if (wrote.startsWith(UNASSIGN_FAILED)) return refuse(wrote);
+		console.log(wrote);
+	}
 
 	const target = `apply ${slug} step ${chosen.step}`;
 	// The runner names the branch, never deletes or resets it, and pushes it only once the step is ready.
@@ -239,36 +251,42 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	if (stageEnd !== undefined) return stageEnd;
 	if (staged.out.trim()) console.log(staged.out.trim());
 	// A tracked edit left is a pause: the next pass would refuse that tree, and the runner commits nothing of a session's.
-	if (staged.transient)
-		return edited()
-			? end("open", `${target}: the stage session ended on a Claude API error, leaving a tracked edit`)
-			: end("retry", `${target}: the stage session ended on a Claude API error`);
+	const retry = (why: string) => (edited() ? end("open", `${target}: ${why}, leaving a tracked edit`) : end("retry", `${target}: ${why}`));
+	if (staged.transient) return retry("the stage session ended on a Claude API error");
 	// Before the push, so the post never waits on it; only a Notion that did not answer changes the outcome.
 	const question = asked(staged.out);
 	const line =
 		question === undefined
 			? ""
 			: !bot
-				? "question: not posted — no integration is configured"
+				? `question: ${typeof question === "string" ? "not posted" : "posted by the session"} — no integration is configured`
 				: typeof question === "string"
 					? `question: not posted — ${question}`
 					: await post(bot, question, { board: named, slug }, undefined, triage(question.text, { at, under, limit, kill, base: DEFAULT, user: bot.user }));
 	if (line) console.log(line);
 	const ending = line.split("\n").at(-1) ?? "";
-	// Before the push, so a goal met never pushes past a question Notion did not take; a tracked edit
-	// left is a pause, as for the stage's API error.
-	if (ending.startsWith(UNREACHED))
-		return edited() ? end("open", `${target}: ${ending}, leaving a tracked edit`) : end("retry", `${target}: ${ending}`);
+	// Before the push, so a goal met never pushes past a question Notion did not take.
+	if (ending.startsWith(UNREACHED)) return retry(ending);
 	// A goal open on the user's answer is no failure: the question is on the card, and a pause would wait on nothing.
+	const posted = ending.startsWith(POSTED) || ending.startsWith(ALREADY);
 	const open = (detail: string) =>
-		typeof question === "object" && detail.startsWith("goal open") && (ending.startsWith(POSTED) || ending.startsWith(ALREADY))
+		typeof question === "object" && detail.startsWith("goal open") && posted
 			? end("waiting", `${target}: question on ${question.card}`)
 			: end("open", `${target}: ${detail}`);
+	// A question that reached the card keeps the pull request a draft; with no integration the session posted it.
+	const draft = typeof question === "object" && (posted || !bot);
 
 	const judged = [...bun, join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
-	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app, under);
+	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app, under, draft);
 	if (unready instanceof Transient) return end("retry", `${target}: ${unready.message}`);
 	if (unready !== undefined) return open(unready);
+	// The answer carried and nothing left to ask: the draft goes ready right after its push, writing no `Assign`.
+	if (chosen.draft !== undefined && !draft) {
+		// In the repository the draft was read from, never `gh`'s default, which `GH_REPO` can move.
+		const of = originRepository();
+		const marked = of !== undefined && ready(`${of.owner}/${of.repo}`, chosen.draft);
+		console.log(`pull request #${chosen.draft}: ${marked ? "marked ready for review" : `not marked ready — ${of ? "gh pr ready failed" : "origin names no repository"}; mark it ready by hand`}`);
+	}
 	// The check's own verdict at the commit the session left, never the exit status.
 	const verdict = sh("bun", ...judged);
 	const last = verdict.out.split("\n").at(-1) ?? "";

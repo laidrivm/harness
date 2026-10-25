@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup } from "./diff-budget.fixture.ts";
-import { change, clone, ONE, run, THREE, TICKED } from "./board-loop.fixture.ts";
+import { change, clone, listed, ONE, run, THREE, TICKED } from "./board-loop.fixture.ts";
 import { prompt } from "./board-loop-prompt.ts";
 
 /** Which changes a pass may take, and which step of one. [n]: `/zombies` ideas. */
@@ -9,10 +9,6 @@ afterAll(cleanup);
 
 /** The REST read of a branch's pull requests, as the stub `gh` logs it. */
 const query = (branch: string) => `gh api repos/o/demo/pulls?head=o:${encodeURIComponent(branch)}&state=all`;
-
-/** One pull request of the fixture's `o/demo`, as the REST endpoint lists it. */
-const listed = (number: number, state: string, merged = false) =>
-	JSON.stringify([{ number, state, merged_at: merged ? "2026-10-20T00:00:00Z" : null, head: { sha: "abc", repo: { id: 1, full_name: "o/demo" } }, base: { repo: { id: 1 } } }]);
 
 describe("nothing to take", () => {
 	// spec: board-loop/no-takeable-change
@@ -51,6 +47,7 @@ describe("an answer candidate", () => {
 		expect(calls).toContain("/opsx:apply demo for its group 1 and");
 	});
 
+	// spec: board-loop/a-ready-pull-request
 	test.each([
 		["an open pull request on feat/demo-2 [18]", { gh: listed(7, "open") }, "pull request #7 is open on feat/demo-2"],
 		["a closed pull request on feat/demo-2 [19]", { gh: listed(5, "closed") }, "pull request #5 already used feat/demo-2"],
