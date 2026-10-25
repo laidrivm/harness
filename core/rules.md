@@ -70,6 +70,11 @@ What counts as evidence for a claim — environments, external contracts,
 observability, causal claims — see [verification.md](verification.md).
 What a session does at a step that names the user when it runs unattended —
 see [autonomy.md](autonomy.md).
+How a session hands a task to a subagent: start a fresh one, forking only
+when the task needs this session's history, and write its brief into the
+launch prompt, never into git — the task, the clone and branch, the acts
+allowed, the user's words that apply and the report's form, and nothing the
+harness already loads.
 
 #### Code
 
