@@ -57,8 +57,9 @@
       (`orchestrator/a-flow-waits-out-the-longest-deploy`). Then take the
       gate in `bun/ci-run.ts` per design.md, *Build first* (answer 15б): one
       `sh` loop takes the gate, tries the repository lock with `flock -n`,
-      closes the gate either way, and on a busy lock sleeps 5 s and retries,
-      at most 1440 times, ending 75 past the last; never a blocking
+      closes the gate either way, and makes at most 1440 attempts, sleeping
+      5 s after each busy one but the last (1439 sleeps, 7195 s); a busy
+      last attempt exits at once with status 75; never a blocking
       `flock -w 7200` under the gate. `wc -l` it first (296 lines) and split
       by the cap before adding
 
