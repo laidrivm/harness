@@ -55,6 +55,6 @@ question case out of the pause; this takes out the transient one.
 - `orchestrator/pass.sh`, `orchestrator/README.md` §7: the count and the
   wrapper's exit 75.
 - `after: no-pause-on-question`: both deltas modify requirements that change's
-  deltas modify, so it is archived first.
+  deltas modify, so it was archived first (2026-10-25).
 - Tests beside each; `orchestrator/pass*.test.ts` run only where `flock`
   exists (Linux CI).
