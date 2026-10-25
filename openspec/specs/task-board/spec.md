@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Where a task's status is recorded and read, which of the ten statuses the
+Where a task's status is recorded and read, which of the eleven statuses the
 file tree derives and which are moved by hand, how a session reads a board,
 and what a card may not hold. It exists because a status is a fact somebody
 has to remember and type, and a file is the wrong instrument for one: the
@@ -116,7 +116,8 @@ for it would hold every such card permanently in breach.
 - **WHEN** a card sits behind the status the file tree derives for it
 - **THEN** the tree SHALL be taken as right and the card corrected, the board
   being authoritative only for what the tree cannot express — a card past the
-  derived status agrees with it and is left alone
+  derived status agrees with it and is left alone, and a card at `discarded`
+  sits behind no derived status
 
 ### Requirement: There are three boards and a card goes to one of them
 
@@ -171,10 +172,10 @@ SHALL be split into the cards each board owns rather than mirrored.
   board a repository names, and its absence from `D2ASS`'s tree SHALL NOT
   exempt it
 
-### Requirement: Three statuses are derived and seven are moved by hand
+### Requirement: Three statuses are derived and eight are moved by hand
 
-A card SHALL hold exactly one of ten statuses, one per handover between
-OpenSpec stages:
+A card SHALL hold exactly one of eleven statuses: ten, one per handover
+between OpenSpec stages, and `discarded`, which leaves the stages:
 
 - `idea` — entered for a later explore;
 - `approved` — the user has chosen it for work, by an agent or by hand; only
@@ -192,9 +193,13 @@ OpenSpec stages:
   pull request merges;
 - `applied` — the change is merged and waits to be archived;
 - `archiving` — a session is running the archive;
-- `done` — archived; the change has been through the whole cycle.
+- `done` — archived; the change has been through the whole cycle;
+- `discarded` — the user has dropped the work, at whatever stage it had
+  reached; only the user moves a card here, and no session moves a card out
+  of it, whatever the tree holds for its slug — a change directory it still
+  points at included.
 
-The ten SHALL be the **options** of each board's `Status` property, named
+The eleven SHALL be the **options** of each board's `Status` property, named
 exactly as listed above, and that property SHALL be of Notion's `select`
 type rather than its `status` type. What a card carries and what anything in
 this repository names is an option's **name**, which is what a read returns
@@ -216,9 +221,9 @@ What `status` would have bought is Notion's fixed group keys, and nothing in
 this contract reads them. What it costs is that the board's columns are its
 options directly, with no second grouping level to choose wrongly.
 
-The ten SHALL be the **complete** option list of that property, not an
+The eleven SHALL be the **complete** option list of that property, not an
 addition to it: on every board the property SHALL be set to exactly these
-ten, in the order listed above, and any option a board carried before SHALL
+eleven, in the order listed above, and any option a board carried before SHALL
 cease to exist. An option kept beside them would be a status no requirement here names and a
 reconciliation would never correct.
 
@@ -243,7 +248,7 @@ Derivation SHALL apply to the board the running repository's `harness.board`
 names, and to no other. That is the one board whose tree is the repository
 `bun/board-state.ts` runs in, so it SHALL report nothing for a card on either
 of the other two, and a reconciliation run from that repository SHALL leave
-those cards untouched — on the same terms it leaves the seven hand-moved
+those cards untouched — on the same terms it leaves the eight hand-moved
 statuses, and for the same reason: what would decide them is not readable
 from here. Each board is derived from its own repository: `D2ASS` from
 d2ass, `Harness` from the harness, `mellon` from mellon.
@@ -268,11 +273,13 @@ proposing   openspec/changes/<slug>/ exists and is missing one of them
 A derived status is a floor, not a value. `proposed` holds for a change from
 the merge of its proposal until its archive, so a card at `applying`,
 `applied` or `archiving` agrees with it, and only a card behind its derived
-status disagrees.
+status disagrees. `discarded` is outside that order and behind no floor:
+`corrected()` in `bun/board-state.ts` is the comparison, and it leaves a
+`discarded` card where it is.
 
-The remaining seven SHALL be moved by hand and `bun/board-state.ts` SHALL
-NOT report them: `approved` by the user alone, the other six by whoever does
-the work, in the turn the work moves. Deriving them
+The remaining eight SHALL be moved by hand and `bun/board-state.ts` SHALL
+NOT report them: `approved` and `discarded` by the user alone, the other six
+by whoever does the work, in the turn the work moves. Deriving them
 was measured and refused: applied to the thirty archived changes, a
 branch-name derivation gets fourteen wrong. Nine of those changes have no
 `feat/<slug>` pull request at all, their work having shipped on `chore/` and
@@ -291,7 +298,7 @@ pull request to its change.
 
 #### Scenario: A status holding no cards
 
-- **WHEN** a board's view shows fewer than ten columns because some
+- **WHEN** a board's view shows fewer than eleven columns because some
   statuses hold no card
 - **THEN** the missing statuses SHALL still be writable by name, and the
   view SHALL NOT be treated as the list of statuses that exist
@@ -310,6 +317,14 @@ pull request to its change.
 - **THEN** the reconciliation that sets it to the ten SHALL leave every card
   at the status it held, since no option is retired, and SHALL place
   `approved` between `idea` and `exploring`
+
+#### Scenario: A discarded card whose change directory exists
+
+- **WHEN** a card reads `discarded` and its `Pointer` names a directory the
+  tree derives `proposing`, `proposed` or `done` for
+- **THEN** a reconciliation SHALL leave the card at `discarded` and SHALL NOT
+  report it as a correction, and no session SHALL move a card to `discarded`
+  or out of it — that is the user's move alone
 
 #### Scenario: A complete change directory, no step applied
 
@@ -361,7 +376,7 @@ pull request to its change.
   connector attached
 - **THEN** it SHALL produce its full output — the name of its repository's
   board, the three derived statuses and the blocking edges, and none of the
-  seven it never reports — every value in it coming from the repository's
+  eight it never reports — every value in it coming from the repository's
   files
 
 #### Scenario: A card on a board whose tree is elsewhere
@@ -915,7 +930,8 @@ A session SHALL reconcile its repository's board at two moments: at the
 cards the session's own changes point at. Each moment runs
 `bun/board-state.ts`. It then compares every card whose `Pointer` is wholly a
 directory of this tree with the floor printed for that slug, corrects a card
-behind it, and reports each correction.
+behind it, and reports each correction. A card at `discarded` is behind no
+floor and is left as it is.
 
 #### Scenario: A card behind its floor at the board read
 

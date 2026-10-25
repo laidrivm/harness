@@ -1,6 +1,6 @@
 /**
- * The three statuses `board-state.ts` derives, and the five it never
- * reports. Every case but the last builds its own tree: this repository's
+ * The three statuses `board-state.ts` derives, the eight it never reports, and
+ * which card a reconciliation moves to its floor. Every case but the last builds its own tree: this repository's
  * changes directory is the subject of one case and the fixture of none.
  */
 import { afterAll, describe, expect, test } from "bun:test";
@@ -10,7 +10,7 @@ import {
 	complete,
 	fabricate,
 } from "./board-state.fixture.ts";
-import { boardState } from "./board-state.ts";
+import { boardState, corrected } from "./board-state.ts";
 
 afterAll(cleanup);
 
@@ -183,7 +183,7 @@ describe("what the derivation reports nothing for", () => {
 		expect(Object.values(state.status)).not.toContain("idea");
 	});
 
-	test("no key carries any of the seven statuses moved by hand", () => {
+	test("no key carries any of the eight statuses moved by hand", () => {
 		const state = boardState(
 			fabricate({
 				...complete("candidacy-gate"),
@@ -198,8 +198,35 @@ describe("what the derivation reports nothing for", () => {
 			"applying",
 			"applied",
 			"archiving",
+			"discarded",
 		])
 			expect(Object.values(state.status)).not.toContain(hand);
+	});
+});
+
+describe("a card reconciled against its floor", () => {
+	// spec: task-board/a-discarded-card-whose-change-directory-exists
+	test("a discarded card is left, its change directory existing", () => {
+		const floor = boardState(fabricate(complete("bot-notion-writes"))).status[
+			"bot-notion-writes"
+		];
+		expect(floor).toBe("proposed");
+		expect(corrected("discarded", floor)).toBeUndefined();
+		expect(corrected("discarded", "done")).toBeUndefined();
+	});
+
+	// spec: task-board/a-card-and-the-tree-disagreeing
+	test("a card behind its floor is moved to it", () => {
+		expect(corrected("idea", "proposing")).toBe("proposing");
+		expect(corrected("approved", "proposed")).toBe("proposed");
+		expect(corrected("archiving", "done")).toBe("done");
+	});
+
+	// spec: task-board/a-status-the-tree-cannot-see
+	test("a card at or past its floor, or at no status listed, is left", () => {
+		expect(corrected("proposed", "proposed")).toBeUndefined();
+		expect(corrected("applying", "proposed")).toBeUndefined();
+		expect(corrected("ready", "proposed")).toBeUndefined();
 	});
 });
 
