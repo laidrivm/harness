@@ -379,32 +379,12 @@ only leaves it the stop file's line and the journal to start from.
   gets no fix; accepted because v2 retires the flow (user decision,
   2026-10-25).
 
-## How it meets self-pin-bump
+## The self-pin's bump
 
-Card *Bump the harness's self-pin automatically* (`self-pin-bump`, PR #264)
-and this change are complementary, kept as two changes:
-
-- **Triggers.** Both start on a successful `Test` run on `main`: its workflow
-  in GitHub Actions, this kick on the host. Neither waits for the other.
-- **What each moves.** That change moves the pin, which the pass reads from
-  `main` on every pass (`pass.sh:176-186`), so a merged bump reaches the board
-  loop with no deploy. This change moves the checkout: the images, the stack
-  and the engine scripts. A merged bump is a `main` commit like any other;
-  this deploy fast-forwards to it and the build reuses every cached layer,
-  since `package.json` is in no build context.
-- **Files.** One: both edit `orchestrator/pass.sh`, in different places —
-  this one the gate before the repository lock (`pass.sh:121-126`), that one
-  the lag line after the pin checkout (`pass.sh:177-186`). Whichever merges
-  second merges `main` first. This change also bakes `pass.sh` into the image
-  by each deploy, so that change's lag line reaches the host with no hand
-  rebuild.
-- **User acts.** Unrelated: a GitHub environment with a second App key there;
-  a host token, a host key, units and a webhook here.
-- **Order.** Apply this one first: then `self-pin-bump`'s `pass.sh` edit, and
-  every later fix, reach the host on their merge.
-
-Glued, the two proposals pass 800 lines and mix two sets of user acts in one
-review, so they stay apart.
+Card *Bump the harness's self-pin automatically* (`self-pin-bump`) was
+discarded on 2026-10-25, with its change and its `bump.ts self` command
+removed: the host is to run `main` itself, so no automation moves the
+self-pin and nothing here depends on one.
 
 ## Migration Plan
 
