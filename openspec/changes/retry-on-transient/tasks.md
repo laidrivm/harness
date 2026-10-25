@@ -77,7 +77,7 @@
 
 ## 3. The wrapper skips a transient tick until the third
 
-- [ ] 3.1 `orchestrator/pass.sh`: keep `$state/<clone>.retries`; on exit 75
+- [x] 3.1 `orchestrator/pass.sh`: keep `$state/<clone>.retries`; on exit 75
       add one and write no stop file below 3, write it at 3 naming the count
       and remove the count; remove the count on every other pass status; leave
       it on a busy lock and a paused tick. Route the push clone's fetch and
@@ -88,7 +88,7 @@
       one per scenario of the stop-file requirement's 75 cases (first,
       third in a row, a pass between, the push clone's fetch failing). Verify
       with those cases where `flock` exists (Linux CI) and `bun test`
-- [ ] 3.2 `orchestrator/README.md` §7: a skipped tick exits 75 with no stop
+- [x] 3.2 `orchestrator/README.md` §7: a skipped tick exits 75 with no stop
       file, three in a row write one naming the count, and removing the stop
       file also needs no count reset. Verify by reading the section against
       `pass.sh`
