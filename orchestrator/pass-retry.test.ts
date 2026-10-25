@@ -58,6 +58,21 @@ describe.skipIf(skip)(`pass.sh's transient count${skip ? " — skipped: flock is
 		expect(existsSync(stop(h, "repo"))).toBe(false);
 	});
 
+	test("a stop file written before any pass clears the count, so its removal starts from none", () => {
+		const h = host();
+		clone(h, "repo", { status: TEMPFAIL });
+		tick(h, "repo");
+		tick(h, "repo");
+		const token = join(h.secrets, "claude_oauth_token");
+		renameSync(token, `${token}.away`);
+		expect(tick(h, "repo").code).toBe(1);
+		expect(existsSync(retries(h.state))).toBe(false);
+		renameSync(`${token}.away`, token);
+		rmSync(stop(h, "repo"));
+		expect(tick(h, "repo").code).toBe(TEMPFAIL);
+		expect(existsSync(stop(h, "repo"))).toBe(false);
+	});
+
 	test("a count that is no number reads as none", () => {
 		const h = host();
 		clone(h, "repo", { status: TEMPFAIL });

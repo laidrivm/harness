@@ -163,8 +163,10 @@ the cost of a stage session that finds the work done.
 
 `pass.sh` keeps `$state/<clone>.retries`, one number. On 75: add one; at 3,
 `pause 75 "<last line> (3 transient failures in a row)"` and remove the count;
-otherwise no stop file. On any other status the count is removed. A busy
-lock (exit 0 before any pass) and a paused tick (3) leave it. The wrapper's
+otherwise no stop file. On any other status the count is removed, and so is
+it by `halt()` and a failed `flock`, which pause before any pass, so removing
+their stop file starts from no count. A busy lock (exit 0 before any pass)
+and a paused tick (3) leave it. The wrapper's
 own two fetches go through a `skip()` beside `halt()` that does the same with
 its message, since the pin's checkout cannot have run yet; the pin's
 `checkout` and `clean` keep `halt()`.

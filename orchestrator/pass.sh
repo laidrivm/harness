@@ -51,6 +51,7 @@ pause() {
 
 # Pauses, says why and exits 1: a host that cannot start the pass as designed.
 halt() {
+	rm -f "$retries"
 	pause 1 "orchestrator: $1"
 	echo "orchestrator: $1"
 	exit 1
@@ -167,6 +168,7 @@ if [ "$held" = 75 ]; then
 	echo "orchestrator: busy — $on is held"
 	exit 0
 elif [ "$held" != 0 ]; then
+	rm -f "$retries"
 	pause "$held" "orchestrator: flock failed on $on"
 	echo "orchestrator: flock failed on $on"
 	exit "$held"
