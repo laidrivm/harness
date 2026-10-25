@@ -95,7 +95,9 @@
 
 ## 4. Live
 
-- [ ] 4.1 **User act.** Once group 3 is on `main` and the pin has moved,
+- [x] 4.1 **User act.** Once group 3 is on `main` and the pin has moved,
       rebuild the runner image on the host so its `pass.sh` and mint are this
       change's; verify that `grep -c retries /opt/orchestrator/pass.sh` in the
-      runner container prints a non-zero count
+      runner container prints a non-zero count — done 2026-10-25: the user
+      rebuilt the runner image on the host, and `grep -c retries
+      /opt/orchestrator/pass.sh` in the runner container printed `9`
