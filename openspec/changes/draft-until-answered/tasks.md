@@ -27,13 +27,18 @@ before adding to it.
       answer candidate for that step and branch, resumed, while a ready one
       is passed over; the prompt's work line for it names applying the
       answer to the branch's step and the `idea`-card way out with the
-      title and body still named; with no question the runner runs
-      `gh pr ready <number>`, then removes only the user from `Assign` and
-      prints both; a new question leaves the draft and `Assign`; a failed
-      `gh pr ready` leaves `Assign` and keeps the check's outcome. Then
-      implement them in `bun/board-loop.ts` (or a module split from it),
-      `bun/board-loop-prompt.ts` and an `unassign()` in `bun/notion-bot.ts`.
-      Verify with those cases and `bun test`
+      title and body still named; with the integration the pick prompt asks
+      for a `CARD:` line beside `PICK:` for such a candidate, and the runner,
+      after `carded()` accepts it and before the stage session's stub runs,
+      removes only the user from `Assign` and prints it, while a missing,
+      malformed or foreign `CARD:` line writes nothing and is printed; with
+      no question the runner runs `gh pr ready <number>`, prints it, and
+      writes no `Assign`; a new question leaves the draft; a failed
+      `gh pr ready` keeps the check's outcome. Then implement them in
+      `bun/board-loop.ts` (or a module split from it),
+      `bun/board-loop-prompt.ts`, and a `CARD:` reader and an `unassign()`
+      in `bun/notion-bot.ts`, both exported for `bot-notion-writes` to
+      reuse. Verify with those cases and `bun test`
 - [ ] 1.5 Add the repeated `QUESTION:` sentence to the ask and connector
       variants of the launch form in `bun/board-loop-prompt.ts` and
       `core/feature-workflow.md`, and name the draft rule in `README.md`'s

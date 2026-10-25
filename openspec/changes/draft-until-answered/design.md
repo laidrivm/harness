@@ -25,7 +25,7 @@ waits on the card, the answer is carried on that pull request's branch, and
 the pull request goes ready once nothing is left to ask.
 
 **Non-Goals:** local sessions' docs (#255); the propose stage that
-`loop-every-stage` adds; `Assign` on a machine with no integration; marking
+`loop-every-stage` adds, whose own group 5 takes this mechanism; marking
 ready a draft the runner did not carry.
 
 ## Decisions
@@ -68,17 +68,39 @@ Rejected: carrying the answer as step N+1 on a new branch, which needs the
 draft merged first, the deadlock above; leaving the ready mark to the user,
 which the user's process puts on the agent.
 
-### Ready, then `Assign`
+### `Assign` goes when the pass reads the answer, ready goes after the push
+
+Settled by the user on `bot-notion-writes` on 2026-10-25 (its item 5), which
+replaces this card's decision 5 for `Assign`: `Assign` is removed as soon as
+the user's answer is read — the pass that picks up the answer clears it
+before acting on it — and set back only when a new question comment is
+posted. With question 1 here answered (а) on 2026-10-25, this change lands
+first and owns the small `unassign()`, and `bot-notion-writes` reuses it.
+
+With the integration, the pick session names the card of a draft-branch
+candidate it takes in one `CARD: <id>` line beside its `PICK:` line, read as
+`asked()` reads `QUESTION:`; the runner checks it with `carded()` and, before
+the stage session starts, calls `unassign()` in `bun/notion-bot.ts`, beside
+`post()`'s own `Assign` write: it reads the card's `Assign` and writes it
+back without the user, leaving anyone else. A missing or refused `CARD:` line
+writes nothing and is printed; the pass goes on. `bot-notion-writes` extends
+the same line to every pick and adds the claim. Without the integration this
+change writes no `Assign` (assumption 9); who clears it there is question 3
+on the `bot-notion-writes` card, open on 2026-10-25.
 
 After `publish()` returns no reason — the push went through, and
 `gh pr create` failed because the pull request exists, which *The pull
 request already exists* already allows — the runner runs
-`gh pr ready <number>` with the same credentials. Only when it succeeds does
-it remove the user from `Assign`: it reads the card's `Assign` and writes it
-back without the user, from the integration, in a small `unassign()` beside
-`post()`'s own `Assign` write. Without it, a draft that merges with every
-group ticked becomes an answer candidate for step N+1 whose answered
-question and `Assign` would have the loop carry the same answer twice.
+`gh pr ready <number>` with the same credentials, and writes no `Assign`. A
+new question sets `Assign` again through `post()`, and the pull request
+stays a draft. Clearing at the read rather than at ready is also what keeps
+a draft that merges with every group ticked from being carried twice as an
+answer candidate for step N+1: its card no longer holds the user.
+
+Rejected: clearing at `gh pr ready` (this card's decision 5 as first
+written), which the user's rule replaces; having the runner look the card up
+by its `Pointer`, which needs the board's data source id the runner does not
+hold (`harness.board` is a title).
 
 ### Spec shape: one requirement modified, two added
 
@@ -86,6 +108,21 @@ Only *The runner pushes the step and opens its pull request* is modified,
 by one sentence and one scenario. The candidate rule is an added
 requirement rather than an edit of *A pass takes only a takeable change*,
 which `loop-every-stage` and `reopened-group-branch` both modify.
+
+### Settled with the user (2026-10-25, on the card)
+
+1 (а): this change lands before `bot-notion-writes`, with its own small
+`unassign()` that the other reuses; by the user's rule from that card,
+`Assign` is cleared when the pass reads the answer, not at ready (*`Assign`
+goes when the pass reads the answer, ready goes after the push*). 2 (а): a
+triage-answered question keeps the pull request a draft until the pass that
+carries the answer. 3 (а): `loop-every-stage`'s group 5 is changed now so its
+propose stage opens a draft pull request through this mechanism. 4, 6, 7, 8:
+as decided above. 5: the answer is carried on the draft's own branch, and the
+runner marks it ready with no new question; its `Assign` half is replaced by
+the user's rule. 9: on a machine with no integration the session repeats its
+question under a `QUESTION:` line, and this change clears no `Assign` there.
+10: implementation after #255, which has merged.
 
 ## Overlaps
 
@@ -99,17 +136,19 @@ which `loop-every-stage` and `reopened-group-branch` both modify.
   candidate is this change's draft-branch candidate. Its group 5 should drop
   `publish()`'s push-only mode, and its delta of *A pass takes only a
   takeable change* should be re-copied once this change is archived.
-- **`bot-notion-writes`** (unmerged): it removes the user from `Assign` once
-  `gh pr create` succeeds. With a question just posted that clears the
-  `Assign` the pick needs for the answer. It should key the removal on the
-  pull request being ready (opened ready, or marked ready here) and call
-  this change's `unassign()`, or this change calls its REST card write if it
-  lands first.
+- **`bot-notion-writes`** (unmerged): settled on both cards on 2026-10-25
+  (question 1 here, (а); item 5 there) — this change lands first, and
+  `bot-notion-writes` clears `Assign` neither at `gh pr create` nor at ready
+  but when the pass reads the answer, right after its claim, reusing this
+  change's `CARD:` line and `unassign()`.
 - **`answer-match`** (unmerged): its tag names "the next step" when a pull
   request is to open. With this change the answer is carried on the same
-  step, so the tag is the carried step either way. It also clears `Assign`
-  when the session takes the answer; the runner's removal then finds no user
-  and writes nothing.
+  step, so the tag is the carried step either way (decision 8). It clears
+  `Assign` when the pass reads the answer too; whichever lands second keeps
+  one clear per pass.
+- **`loop-every-stage`** (unmerged): settled by question 3 here, (а) — its
+  group 5 is changed now, on its own branch, so its propose stage opens a
+  draft pull request through this mechanism.
 - None of the three is on the default branch, so `.openspec.yaml` names no
   `after:`; the order is in the approval comment.
 
@@ -119,8 +158,12 @@ which `loop-every-stage` and `reopened-group-branch` both modify.
   pull request draft while it pushes. The loop lists that change as an answer
   candidate, and the pick takes it only with an answered question on the
   card, so a draft with no question waits as before.
-- [Ready fails] → the pull request stays a draft, `Assign` stays, and the
-  next pass carries the answer again on the same branch; the session finds
-  the answer already in and changes nothing.
-- [Laptop with no integration] → `Assign` is not cleared there, as today;
-  `bot-notion-writes` owns that write.
+- [Ready fails] → the pull request stays a draft with `Assign` already
+  empty; the runner prints the failure for the user to mark it ready.
+- [The pass dies after the clear] → until `answer-match` lands, the pick
+  takes a user's answer only while `Assign` holds the user, so the draft
+  waits with its answer read and `Assign` empty; it shows as an open draft
+  pull request, and `answer-match`'s tag pick removes the stall.
+- [Laptop with no integration] → this change writes no `Assign` there, as
+  today (assumption 9); question 3 on the `bot-notion-writes` card settles
+  who does.
