@@ -76,17 +76,14 @@ entry, a hook or a CI check leaves this file the way it would leave
   review fires on work an answer may still change. Otherwise open it ready,
   since the work is done once it is pushed. An agent that then works on an
   existing PR marks it draft (`gh pr ready --undo`) as it starts, and ready
-  only when that work ends, as `rules.md` says: ending with a push, it runs
-  `gh pr ready` immediately before that push — ready first, then the push at
-  once, because a head pushed while the PR is draft gets `Review skipped:
-  draft pull request` and marking it ready afterwards does not review it;
-  ending without one, it marks it ready as soon as it knows no push will
-  come. A question to the user on the card keeps it draft regardless. The
-  runner does not follow this yet: the CI flow (`bun/ci-run.ts`) pushes its
-  fix with no draft toggle, and `draft-until-answered`'s design marks the
-  pull request ready after the push that carries an answer. A head
-  pushed while draft that no later push replaces gets no review on its own —
-  report it for the user to comment `@coderabbitai review`. Batch every fix
+  only when that work ends, as `rules.md` says: ending with a push, it pushes
+  while the PR is still draft and runs `gh pr ready` immediately after the
+  push succeeds — CodeRabbit skips a head pushed to a draft and reviews on
+  the switch to ready, so ready before the push would review the old head and
+  then the new one; ending without one, it marks it ready as soon as it knows
+  no push will come. A question to the user on the card keeps it draft
+  regardless. The runner does not follow this yet: the CI flow
+  (`bun/ci-run.ts`) pushes its fix with no draft toggle. Batch every fix
   into that one final push, and push without waiting for CI. A check that
   then fails is fixed on the same PR in the next push, which also carries the
   fixes for any CodeRabbit findings already posted — the CI flow does not
