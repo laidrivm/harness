@@ -85,8 +85,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const config = launcher.length ? at("sh", "-c", 'cat "${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"').out : undefined;
 	if (!trusted(real, config))
 		return end("refused", `not a trusted workspace — run claude once in ${real}, accept the trust dialog and /exit`);
-	if (at("git", "status", "--porcelain", "--untracked-files=no").out)
-		return end("refused", "tracked files differ from HEAD — work the last session left");
+	const edited = () => !!at("git", "status", "--porcelain", "--untracked-files=no").out;
+	if (edited()) return end("refused", "tracked files differ from HEAD — work the last session left");
 	// An unpushed tip may be a dead session's step branch: noted, and judged once the steps are known.
 	const held = () => !!at("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out;
 	const unpushed = !held();
@@ -240,7 +240,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	if (staged.out.trim()) console.log(staged.out.trim());
 	// A tracked edit left is a pause: the next pass would refuse that tree, and the runner commits nothing of a session's.
 	if (staged.transient)
-		return at("git", "status", "--porcelain", "--untracked-files=no").out
+		return edited()
 			? end("open", `${target}: the stage session ended on a Claude API error, leaving a tracked edit`)
 			: end("retry", `${target}: the stage session ended on a Claude API error`);
 	// Before the push, so the post never waits on it; only a Notion that did not answer changes the outcome.
@@ -255,8 +255,10 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 					: await post(bot, question, { board: named, slug }, undefined, triage(question.text, { at, under, limit, kill, base: DEFAULT, user: bot.user }));
 	if (line) console.log(line);
 	const ending = line.split("\n").at(-1) ?? "";
-	// Before the push, so a goal met never pushes past a question Notion did not take.
-	if (ending.startsWith(UNREACHED)) return end("retry", `${target}: ${ending}`);
+	// Before the push, so a goal met never pushes past a question Notion did not take; a tracked edit
+	// left is a pause, as for the stage's API error.
+	if (ending.startsWith(UNREACHED))
+		return edited() ? end("open", `${target}: ${ending}, leaving a tracked edit`) : end("retry", `${target}: ${ending}`);
 	// A goal open on the user's answer is no failure: the question is on the card, and a pause would wait on nothing.
 	const open = (detail: string) =>
 		typeof question === "object" && detail.startsWith("goal open") && (ending.startsWith(POSTED) || ending.startsWith(ALREADY))

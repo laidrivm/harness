@@ -22,7 +22,8 @@ session; the pick session; the stage session, when it left no tracked file
 differing from `HEAD`, before the question's post and the push; the push
 clone's fetch of `origin`, the token's mint or the push, after the stage
 session; or the reads and the comment that post the session's question, short
-of the question's `Assign` write and its answer. Where another requirement
+of the question's `Assign` write and its answer, when the stage session left
+no tracked file differing from `HEAD`, before the push. Where another requirement
 has the pass refuse or record `open` at one of those points, a transient
 failure SHALL end `retry` instead. The pass SHALL discard nothing a session left: a step branch
 stays as the session left it, and the next pass continues it.

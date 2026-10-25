@@ -120,6 +120,12 @@ describe("the question's post", () => {
 		expect([calls(r.calls, "git push"), calls(r.calls, "gh pr create")]).toEqual([[], []]);
 	}, 40_000);
 
+	test("the same with a tracked edit left records open, since the next pass would refuse that tree", async () => {
+		const r = await pass({ reads: 500 }, { edits: true });
+		expect([r.code, r.last.startsWith("board-loop: open — apply demo step 1: question: not posted — Notion did not answer:")]).toEqual([1, true]);
+		expect(r.last).toEndWith(", leaving a tracked edit");
+	}, 40_000);
+
 	// spec: board-loop/a-question-posted-assign-not-written
 	test("an Assign write answered 503 stays waiting, as today", async () => {
 		const r = await pass({ assign: 503 });
