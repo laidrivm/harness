@@ -25,7 +25,7 @@ new last group, which ships as one more step, never on a merged branch.
 #### Scenario: A task added to a merged group
 
 - **WHEN** a task is added to group 4 of a change of five after the pull
-  request on `feat/<slug>-4` merged, while group 5 holds no unticked box
-  and no pull request has used `feat/<slug>-6`
+  request on `feat/<slug>-4` merged, and the board loop's carry step takes
+  group 4 as step 6
 - **THEN** that task moves into a new group 6 and ships in a pull request on
   `feat/<slug>-6`
