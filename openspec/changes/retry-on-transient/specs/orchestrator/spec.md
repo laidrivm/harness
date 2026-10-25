@@ -11,8 +11,9 @@ A pass that exits 75, the board loop's `retry`, SHALL write no stop file
 while it is the first or second in a row of the clone's passes to exit 75;
 the wrapper SHALL keep that count beside the stop file, and the third SHALL
 write the stop file as a failed pass does, naming the count. A pass that exits
-with any other status SHALL clear the count; a tick that starts no pass SHALL
-leave it, except one whose own fetch failed. A fetch the wrapper itself makes
+with any other status, and a tick that writes the stop file without starting
+a pass, SHALL clear the count; a tick that finds the lock held or the stop
+file present SHALL leave it. A fetch the wrapper itself makes
 before the pass, of the push clone or of the harness pin, SHALL count as a
 pass that exited 75 when it fails.
 The wrapper SHALL exit 75 for each of them.
