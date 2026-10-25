@@ -195,6 +195,13 @@ reads `goal open`. Where the runner has a Notion integration, the line also
 names which comment the answer is, by the user's id and the integration's,
 since a card the triage answered has no `Assign`.
 
+A carry step, which the board loop launches when only merged pull requests
+used the branches of groups that still hold unticked boxes, changes only the
+first line too: it names moving every unticked task of those groups into a
+new last group N+1, each moved task opening with `(was <g>.<k>)` and each old
+place keeping `Task <g>.<k> moved to <N+1>.<j>.` with no box, and carrying
+that group.
+
 A step whose branch already exists, in the clone or on `origin`, because a
 session ended before its pull request, changes only the first line too: the
 board loop adds that a session left that branch, to `git switch` to it rather
@@ -297,15 +304,21 @@ for them is already here.
   anchors on that section's last line, never on the first item under the next
   heading — a replacement there that restates the heading leaves it twice.
 
-  Three of the nine statuses a reconciliation can repair, because the
+  Three of the ten statuses a reconciliation can repair, because the
   harness's `board-state.ts` derives them from the tree: `proposing`,
   `proposed`, `done`, on the board the repository names under `harness.board`
   in its `package.json`. Each board is derived from its own repository. The
-  other six are moved by hand, and this bullet is the whole of what holds
+  other seven are moved by hand, and this bullet is the whole of what holds
   them — which is why it is stated as an obligation rather than as a
-  convention. Which nine, and so which six, is fixed in the harness's
-  `openspec/specs/task-board/` and named nowhere else; a second copy here is
-  the drift this change was written after.
+  convention. Which ten, and so which seven, is fixed in the harness's
+  `openspec/changes/approved-column/specs/task-board/`, the delta the live
+  `task-board` spec takes at that change's archive, and named nowhere else; a
+  second copy here is the drift this change was written after.
+
+  Only the user moves a card to `approved`; an unattended session takes no
+  work from `idea` and never sets `approved`. A session the user directs at an
+  `idea` card may move it to `exploring` directly — the instruction is the
+  approval.
 
   The session reconciles its board at the `Board view` read it makes to choose
   work, and again at `session-wrapup` for the cards its own changes point at.
