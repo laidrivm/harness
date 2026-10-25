@@ -82,15 +82,18 @@ describe("as-agent", () => {
 });
 
 describe("the host's wiring", () => {
-	test("the forced command starts pass.sh with the launcher, the mint and the App's id from its root-owned file", () => {
+	test("the forced command starts pass.sh with the launcher, the mint, the image's notice command and the App's id from its root-owned file", () => {
 		const line = read("runner/entrypoint.sh").split("\n").find((l) => l.includes("authorized_keys") && l.includes(">") && !l.includes(">>")) ?? "";
 		const command = (/command="(.*?)" %s/.exec(line)?.[1] ?? "").replaceAll('\\\\"', '"');
 		const dir = emptyDir("orchestrator-forced-");
 		const stub = join(dir, "pass.sh");
-		writeFileSync(stub, '#!/bin/sh\nprintf "%s\\n" "$PASS_AS_AGENT" "$HARNESS_GITHUB_APP_MINT" "$HARNESS_GITHUB_APP_ID"\n', { mode: 0o755 });
+		writeFileSync(stub, '#!/bin/sh\nprintf "%s\\n" "$PASS_AS_AGENT" "$HARNESS_GITHUB_APP_MINT" "$PASS_NOTIFY" "$HARNESS_GITHUB_APP_ID"\n', { mode: 0o755 });
 		const r = Bun.spawnSync(["bash", "-c", command.replace("/opt/orchestrator/pass.sh", stub)], { cwd: dir, env: { PATH: process.env.PATH ?? "", SSH_ORIGINAL_COMMAND: "harness owner/repo" } });
-		const [launcher, mint] = r.stdout.toString().split("\n");
+		const [launcher, mint, notify] = r.stdout.toString().split("\n");
 		expect([launcher, mint]).toEqual(["sudo -n -u agent /opt/orchestrator/as-agent", "sudo -n -u keyholder /opt/orchestrator/mint"]);
+		// The image's copy, with the flags the runner's own bun takes: a pause can run in the push clone, whose bunfig.toml and .env are a branch's.
+		// Under a deadline, since the lock the pass holds while it runs also gates the deploy.
+		expect(notify).toBe("timeout 300 bun --config=/dev/null --no-env-file /opt/orchestrator/bun/notion-pause.ts");
 		expect(command).toContain(`HARNESS_GITHUB_APP_ID=$(cat ${FILES.id} 2>/dev/null)`);
 	});
 
