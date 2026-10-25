@@ -302,7 +302,7 @@ describe("the attempts", () => {
 		const r = await deliver(h, payload());
 		expect([r.code, r.line]).toEqual([0, `event: handled — attempt 1/3 posted on #7; ${BLOCKED}`]);
 		expect(api.posted).toEqual([`${ATTEMPT} 1/3 — https://github.com/o/r/actions/runs/5 at ${SHA}`]);
-		expect(api.permissions).toEqual({ actions: "read", contents: "write", pull_requests: "write" });
+		expect(api.permissions).toEqual({ actions: "read", contents: "write", pull_requests: "write", workflows: "write" });
 	});
 
 	test("two earlier attempts on other heads make this one 3/3", async () => {

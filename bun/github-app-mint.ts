@@ -18,11 +18,16 @@ import { readFileSync } from "node:fs";
 import { type App, mint, slug } from "./github-app.ts";
 import { TEMPFAIL, Transient } from "./transient.ts";
 
-/** The levels each permission may be asked at, and no others: `design.md` *The key holder*. */
+/**
+ * The levels each permission may be asked at, and no others: `runner-isolation`'s `design.md` *The key
+ * holder*, plus `workflows` (write alone, the one level GitHub has), which a push touching
+ * `.github/workflows/` needs (user, 2026-10-25).
+ */
 const ALLOWED: Record<string, string[]> = {
 	contents: ["read", "write"],
 	pull_requests: ["read", "write"],
 	statuses: ["read", "write"],
+	workflows: ["write"],
 	actions: ["read"],
 	checks: ["read"],
 };
