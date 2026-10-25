@@ -141,9 +141,10 @@ question under a `QUESTION:` line, and this change clears no `Assign` there.
   which here would start a review on an answer not yet carried, and it turns
   a refused ready into a failed outcome, where *Marking ready fails* keeps
   the check's.
-- **Files split at the cap.** `consider()` and `left()` move unchanged from
-  `bun/board-loop.ts` (295 lines on `main`) to `bun/board-loop-takeable.ts`,
-  the name `reopened-group-branch`'s design gives that move. The cases of
+- **Files split at the cap.** `consider()` sits in
+  `bun/board-loop-takeable.ts`, where `reopened-group-branch` (#282) moved
+  it; its `read()` answers a draft's number, and either branch it reads turns
+  that into the draft's step. The cases of
   1.3 and 1.4 go in a new `bun/board-loop-draft.test.ts`, since
   `bun/board-loop-question.test.ts` stands at 262 lines; the triage-answered
   case is one assertion in `bun/notion-triage-pass.test.ts`, whose stand-in

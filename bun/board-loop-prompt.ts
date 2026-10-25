@@ -11,8 +11,9 @@ const REPEAT = " Then repeat the question in the final message under a line `QUE
 /**
  * `answer`: the step carries the answer on the card, as step N+1 once every group is ticked, or, with `draft`
  * the number of the draft pull request open on the step's branch, on that same step and branch.
+ * `carried`: the merged groups whose unticked tasks step N+1 moves into a group of its own.
  */
-export type Step = { step: number; branch: string; answer: boolean; draft?: number };
+export type Step = { step: number; branch: string; answer: boolean; carried?: number[]; draft?: number };
 
 /**
  * The launch form `core/feature-workflow.md` fixes for an apply step, or its
@@ -22,17 +23,20 @@ export type Step = { step: number; branch: string; answer: boolean; draft?: numb
  * `self`, `user`: as `pickPrompt` takes them, so the stage session picks the
  * answer the pick did on a card whose `Assign` names nobody.
  */
-export function prompt(slug: string, { step, branch, answer, draft }: Step, check: string, resumed: boolean, asks?: "runner" | "ask", self?: string, user?: string): string {
+export function prompt(slug: string, { step, branch, answer, carried, draft }: Step, check: string, resumed: boolean, asks?: "runner" | "ask", self?: string, user?: string): string {
 	// No apostrophe, as below.
 	const which = self
 		? ` (after the last \`harness-question\`, the first comment by the user, whose id is ${user}, opening with neither \`harness-question\` nor \`harness-answer\`, or else the \`harness-answer\` by ${self}, the Notion integration of the runner)`
 		: "";
+	const from = carried?.join(", ");
 	const work =
 		draft !== undefined
 			? `apply the answer on its card${which} to the artefacts, code and tasks of step ${step} on its branch`
 			: answer
 				? `write the answer on its card${which} into its tasks.md as group ${step}, then /opsx:apply ${slug} for that group`
-				: `/opsx:apply ${slug} for its group ${step}`;
+				: carried
+					? `move every unticked task of its group ${from}, its text unchanged, into a new last group \`## ${step}. Carried over from group ${from}\` of its tasks.md, numbered from ${step}.1, each moved task opening with \`(was <g>.<k>)\` and each old place keeping a line \`Task <g>.<k> moved to ${step}.<j>.\` with no box, then /opsx:apply ${slug} for that group`
+					: `/opsx:apply ${slug} for its group ${step}`;
 	// task-board, *The answer asks for a change of its own*: the check then reads `open`, by design.
 	// On a draft the title and body still come, so the runner marks it ready.
 	const instead =

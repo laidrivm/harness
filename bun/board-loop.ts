@@ -34,7 +34,7 @@ import { leftover } from "./board-loop-leftover.ts";
 import { pickPrompt, prompt, type Step } from "./board-loop-prompt.ts";
 import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session, trusted } from "./board-loop-session.ts";
-import { consider, left } from "./board-loop-takeable.ts";
+import { consider } from "./board-loop-takeable.ts";
 import { ready } from "./ci-run-draft.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
@@ -58,6 +58,13 @@ function end(outcome: Outcome, detail: string): number {
 	record("loop", outcome, "apply", { cwd: process.cwd() });
 	return outcome === "met" || outcome === "idle" || outcome === "waiting" ? 0 : 1;
 }
+
+/**
+ * Whether the step's branch exists, in the clone or on `origin` as the pass's
+ * fetch left it: a session that ended before its pull request left it.
+ */
+const left = (at: typeof sh, branch: string) =>
+	[`refs/heads/${branch}`, `refs/remotes/origin/${branch}`].some((ref) => at("git", "rev-parse", "--verify", "-q", ref).ok);
 
 /** One pass. `limit` and `kill` are replaced only by a test, through an entry module. */
 export async function pass(args: string[], limit = LIMIT, kill: Kill = process.kill): Promise<number> {
