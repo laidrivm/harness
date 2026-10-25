@@ -190,6 +190,12 @@ Rules about how work is carried out here. They do not age with the code.
   same commit.
 - Before citing a script's exit code as a check, confirm the script runs that
   check when invoked — a module with no entry point exits 0 and proves nothing.
+- When a third consecutive fix toward one roadmap goal exposes a failure at a
+  different seam, or the goal's section keeps closing cards while its outcome
+  stays where it was, stop fixing and bring the user an architecture review
+  with an alternative (unattended: user — report `BLOCKED`, naming the goal
+  and the seams) — patching each seam in turn is how a dead-end design
+  survives.
 
 #### Safety
 
