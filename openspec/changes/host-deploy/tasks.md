@@ -1,6 +1,6 @@
 ## 1. The deploy script
 
-- [ ] 1.1 Write `orchestrator/deploy.test.ts` first: it runs
+- [x] 1.1 Write `orchestrator/deploy.test.ts` first: it runs
       `orchestrator/deploy.sh` with stub `git`, `docker` and `curl` on `PATH`
       that log their arguments and answer from fixture files, and a state
       directory in a temp dir. Cases, each citing its scenario:
@@ -19,7 +19,7 @@
       no build, no record),
       `orchestrator/the-build-fails`, `orchestrator/github-cannot-be-reached`,
       `orchestrator/a-stop-file-already-exists`. Record that they fail
-- [ ] 1.2 Write `orchestrator/deploy.sh` per design.md: the body in one
+- [x] 1.2 Write `orchestrator/deploy.sh` per design.md: the body in one
       function called on the last line; fetch; compare with the recorded
       commit; the check-run read; `merge --ff-only`, then the clean-tree and
       `HEAD`-equals-head checks; `docker compose build`; the locks, taken on
@@ -30,7 +30,7 @@
       read from `docker compose config --format json`; the record, in
       `STATE_DIRECTORY` or `mkdir -p /var/lib/harness-deploy`; the stop files
       on a failed step. Make 1.1 pass
-- [ ] 1.3 In `orchestrator/pass.test.ts` (Linux CI only, it needs `flock`),
+- [x] 1.3 In `orchestrator/pass.test.ts` (Linux CI only, it needs `flock`),
       write first, record that they fail, then add the gate to `pass.sh`
       before its repository lock per design.md, *Build first*: with the gate
       held by the test, a pass prints `busy`, exits 0 and creates no lock
@@ -38,7 +38,7 @@
       existing busy case cites `orchestrator/a-tick-during-the-deploy`; two
       passes of two repositories started together both run. `wc -l` both
       files first; split by the cap if either would pass it
-- [ ] 1.4 Linux-only cases in `deploy.test.ts` with real `flock` over a temp
+- [x] 1.4 Linux-only cases in `deploy.test.ts` with real `flock` over a temp
       `locks/`: `orchestrator/a-pass-is-running-when-main-moves` (a held
       repository lock: `up` is logged only after it is released) and
       `orchestrator/the-runner-is-recreated-under-the-locks` (the stub `up`
