@@ -140,6 +140,17 @@ those of today. No call is retried: a retry could post or file twice.
   the card: `pause: no notice — <why> (new card <card> filed)`, so the user
   can find it.
 
+### Settled while applying group 2
+
+- `pass.sh` sets `log` empty before `pause()` can run, so a halt names no log
+  even when the environment holds a `log`, and a halt after `log` is named but
+  before the pass created it names none either.
+- The command's line reaches the job's output when `pause()` runs: before the
+  pass's output, which `pass.sh` prints afterwards, and before a halt's own
+  line, so the job's last line is the one it is today.
+- The command runs while the pass's lock is held, as `pause()` does; each of
+  its calls is bounded by the client's 30 s timeout.
+
 ### Overlaps
 
 - `no-pause-on-question` (merged): a `waiting` pass exits 0, so it writes no

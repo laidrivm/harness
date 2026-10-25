@@ -28,7 +28,7 @@
 
 ## 2. The wrapper runs it
 
-- [ ] 2.1 In `orchestrator/pass.sh`, `pause()` runs the command `PASS_NOTIFY`
+- [x] 2.1 In `orchestrator/pass.sh`, `pause()` runs the command `PASS_NOTIFY`
       names (split as `PASS_AS_AGENT` is) with the stop file and the log when
       it exists, ignoring its status; name it in the header. Cases in a new
       `orchestrator/pass-notice.test.ts` (skipped without `flock`, as
@@ -39,12 +39,12 @@
       wrapper's status and the stop file unchanged; `PASS_NOTIFY` unset runs
       nothing; a pass stopped with `stop.sh` runs it not at all. Probe the
       split under dash too. Verify with that file on Linux CI
-- [ ] 2.2 In `orchestrator/runner/entrypoint.sh`, the forced command sets
+- [x] 2.2 In `orchestrator/runner/entrypoint.sh`, the forced command sets
       `PASS_NOTIFY` to `bun --config=/dev/null --no-env-file
       /opt/orchestrator/bun/notion-pause.ts`; extend the forced-command case in
       `orchestrator/users.test.ts` to print it. Verify with that file and
       `orchestrator/layout.test.ts`
-- [ ] 2.3 In `orchestrator/README.md`: the optional `board` key where
+- [x] 2.3 In `orchestrator/README.md`: the optional `board` key where
       `notion-bot.json` is written (section 5), and in section 7 that each
       pause posts one notice on the step's card or on a new `approved` card,
       mentioning the user, that the user clears its `Assign` when removing the

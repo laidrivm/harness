@@ -27,6 +27,11 @@
 # pass waiting on the user's answer exits 0 (`board-loop: waiting`), so it
 # writes no stop file: the question on its card is what waits.
 #
+# Each pause, where the stop file is written, runs the notice command
+# PASS_NOTIFY names, if any, with the stop file and, once the pass started, its
+# log (pause-notice design); the ticks refused by the stop file and a pass
+# `stop.sh` ends run it not at all, and its status changes nothing.
+#
 # CLAUDECODE is handed on, never checked here: the runner refuses it, and a
 # second copy of that check would drift from the runner's.
 
@@ -41,9 +46,20 @@ stop=$state/$name.stop
 # reset below holds only when none is inherited; the runner's ~/.gitconfig still applies.
 unset "${!GIT_@}"
 
-# Writes the stop file: the UTC time, the status and the last line.
+# Set once the pass starts; never inherited, so a halt names no log.
+log=
+# Writes the stop file: the UTC time, the status and the last line. Then it runs
+# the notice command PASS_NOTIFY names (its words, split on spaces), with the
+# stop file and the pass's log once there is one, and ignores its status.
 pause() {
 	printf '%s exit %s: %s\n' "$(date -u +%Y%m%dT%H%M%SZ)" "$1" "$2" >"$stop"
+	[ -n "${PASS_NOTIFY-}" ] || return 0
+	local notify
+	read -ra notify <<<"$PASS_NOTIFY"
+	notify+=("$stop")
+	[ -n "$log" ] && [ -e "$log" ] && notify+=("$log")
+	"${notify[@]}"
+	return 0
 }
 
 # Pauses, says why and exits 1: a host that cannot start the pass as designed.

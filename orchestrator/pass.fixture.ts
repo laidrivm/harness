@@ -84,8 +84,8 @@ export function tick(h: Host, name: string, extra?: Record<string, string>, path
  * `lead` starts it through `setsid`, as the forced command makes it a session
  * leader on the host, so its pid names its process group.
  */
-export async function running(h: Host, name: string, lead = false) {
-	const p = Bun.spawn([...(lead ? [Bun.which("setsid") ?? "setsid"] : []), bash, script, name], { cwd: h.root, env: env(h), stdout: "pipe" });
+export async function running(h: Host, name: string, lead = false, extra?: Record<string, string>) {
+	const p = Bun.spawn([...(lead ? [Bun.which("setsid") ?? "setsid"] : []), bash, script, name], { cwd: h.root, env: env(h, extra), stdout: "pipe" });
 	const started = join(h.clones, name, ".fake/started");
 	while (!existsSync(started)) {
 		if (p.exitCode !== null) throw new Error(`the tick ended with ${p.exitCode} before its runner started`);

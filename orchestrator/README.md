@@ -166,8 +166,8 @@ never comment through it: the runner posts every question itself, from the
 second Notion integration, and a pass refuses before any session while its
 settings are missing. Write them as `runner`, from the host shell as root in
 `orchestrator/`, pasting
-`{"token": "<the integration's token>", "user": "<the user's Notion id>"}` and
-ending it with Ctrl-D:
+`{"token": "<the integration's token>", "user": "<the user's Notion id>", "board": "<the board's data source id>"}`
+and ending it with Ctrl-D:
 
 ```sh
 docker compose exec -T -u runner runner sh -c 'umask 077; mkdir -p ~/.config/harness; cat > ~/.config/harness/notion-bot.json'
@@ -175,7 +175,9 @@ docker compose exec -T -u runner runner sh -c 'umask 077; mkdir -p ~/.config/har
 
 The file lands at `/home/runner/.config/harness/notion-bot.json` in the
 runner's persistent home with mode 0600, which the pass requires; `agent`
-cannot read it, and its token reaches no session.
+cannot read it, and its token reaches no session. `board` is optional: the
+Harness board's data source id, the one board a pause's notice is posted on
+(step 7); without it a pause posts nothing.
 
 ## 6. The workspace
 
@@ -222,6 +224,16 @@ docker compose exec -u runner runner ls /home/runner/orchestrator/passes
 docker compose exec -u runner runner cat /home/runner/orchestrator/passes/<time>-<clone>.log
 docker compose exec -u runner runner rm /home/runner/orchestrator/<clone>.stop
 ```
+
+Each pause also posts one notice from the runner's integration, mentioning
+you, with the clone, the stop line, the log's path and the command that
+removes the stop file: on the card of the step that stopped, whose `Assign` it
+sets to you, or, when the stop line names no step or no single card's
+`Pointer` names it, on a new card at `approved`, assigned to you. Clear that
+`Assign` when you remove the stop file; the runner never does. If a question is
+open on that card, answer the question, never the notice. The job's output
+says why when no notice was posted, as with no `board` in `notion-bot.json`;
+a tick refused by the stop file and a pass stopped by hand post none.
 
 Cancelling a job in Windmill does not stop a pass. To stop one, run this,
 from a host shell or the emergency session, and never a `kill` on the host:
