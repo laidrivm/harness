@@ -148,7 +148,7 @@ Right before applying any fix, here or under the override below, read the head c
 Every output ends with a machine-readable last line, exactly one of:
 
 - `CODERABBIT gate: PASS — N findings, N dispositioned.` (every finding fixed, skipped or rejected — nothing left to do)
-- `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.` (step 1 found neither a review of the head commit nor its `CodeRabbit` status reading `Review completed`, and read nothing more)
+- `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.` (step 1 found neither a review of the head commit nor its `CodeRabbit` status at `success` with the description `Review completed`, and read nothing more)
 - `CODERABBIT gate: OPEN — N findings, M fixes awaiting approval.` (the plan in step 5, before the user answers)
 - `CODERABBIT gate: OPEN — N findings, M dismissals awaiting the user.` (fixes already applied under a project policy; what waits is a Major+ you propose to reject or skip)
 - `CODERABBIT gate: BLOCKED — N findings, M undispositioned.` (the arithmetic didn't close, or the user declined a fix that is still a real defect — name them)
