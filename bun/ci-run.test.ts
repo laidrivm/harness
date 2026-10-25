@@ -92,7 +92,8 @@ beforeAll(() => {
 	);
 	writeFileSync(
 		join(stubs, "gh"),
-		'#!/bin/sh\necho "$*" >> "$HOME/gh-calls"\n[ "$1 $2" = "run view" ] && echo "the failed job\'s log"\nexit 0\n',
+		'#!/bin/sh\necho "$*" >> "$HOME/gh-calls"\n[ "$1 $2" = "pr ready" ] && [ -f "$HOME/gh-refuse" ] && exit 1\n' +
+			'[ "$1 $2" = "run view" ] && echo "the failed job\'s log"\nexit 0\n',
 		{ mode: 0o755 },
 	);
 });
@@ -558,7 +559,35 @@ describe("the session after the comment", () => {
 		const h = host();
 		act(h, commit, "fixed");
 		await deliver(h, payload());
-		expect(seen(h, "gh-calls")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
+		// Beside the draft toggle, which the next cases pin.
+		expect(seen(h, "gh-calls").replace(/^pr ready .*\n/gm, "")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
+	});
+
+	const [UNDO, RUN, READY] = ["pr ready 7 -R o/r --undo", "run view 5 -R o/r --attempt 1 --log-failed", "pr ready 7 -R o/r"];
+	// spec: orchestrator/the-ci-flow-works-on-a-draft
+	test.each([
+		["fixed and pushed: ready right after the push", commit, "fixed", [UNDO, RUN, "pushed", READY]],
+		["fixed with no new commit: ready, as no push will come", "", "fixed", [UNDO, RUN, READY]],
+		["flaky: ready, as no push will come", "", "flaky", [UNDO, RUN, READY]],
+		["blocked, a question on the card: left draft", "", "blocked", [UNDO, RUN]],
+	])("%s; draft before the session", async (_, script, outcome, calls) => {
+		const h = host();
+		writeFileSync(join(h.bare, "hooks", "post-receive"), `#!/bin/sh\necho pushed >> "${h.home}/gh-calls"\n`, { mode: 0o755 });
+		act(h, `cp "$HOME/gh-calls" "$HOME/gh-at-session"\n${script}`, outcome);
+		await deliver(h, payload());
+		expect(seen(h, "gh-at-session")).toBe(`${UNDO}\n${RUN}\n`);
+		expect(seen(h, "gh-calls").trim().split("\n")).toEqual(calls);
+	});
+
+	// spec: orchestrator/a-ready-github-refuses
+	test("a pull request gh cannot mark ready after the push: exit 1 naming it, the push kept", async () => {
+		const h = host();
+		writeFileSync(join(h.home, "gh-refuse"), "");
+		act(h, commit, "fixed");
+		const r = await deliver(h, payload());
+		expect(r.code).toBe(1);
+		expect(r.line).toMatch(/; pushed feat\/x at [0-9a-f]{40}; #7 could not be marked ready$/);
+		expect(rev(h.bare, "refs/heads/feat/x^")).toBe(SHA);
 	});
 });
 
@@ -660,7 +689,7 @@ describe("the scheduled and flaky routes", () => {
 		expect([r.code, r.line]).toEqual([0, `event: handled — attempt 1/3 posted on #7; ${BLOCKED}`]);
 		expect(api.posted).toEqual([`${ATTEMPT} 1/3 — https://github.com/o/r/actions/runs/5 at ${SHA}`]);
 		expect(seen(h, "claude-argv")).toContain(join(h.logs, "5-2.log"));
-		expect(seen(h, "gh-calls")).toBe("run view 5 -R o/r --attempt 2 --log-failed\n");
+		expect(seen(h, "gh-calls")).toBe("pr ready 7 -R o/r --undo\nrun view 5 -R o/r --attempt 2 --log-failed\n");
 	});
 });
 
