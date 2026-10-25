@@ -199,7 +199,8 @@ describe("the clone", () => {
 				"a merge whose resolution main lacks",
 				(dir: string) => {
 					git(dir, "fetch", "-q", "origin");
-					git(dir, "merge", "-q", "--no-ff", "--no-commit", "origin/main~1");
+					// A merge wants an identity even with `--no-commit`, and CI's runner has none.
+					git(dir, "-c", "user.email=test@example.com", "-c", "user.name=Test", "merge", "-q", "--no-ff", "--no-commit", "origin/main~1");
 					commit(dir, { "resolution.txt": "x\n" });
 				},
 			],
