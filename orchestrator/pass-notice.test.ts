@@ -45,14 +45,15 @@ describe.skipIf(skip)(`pass.sh's notice${skip ? " — skipped: flock is not on P
 	});
 
 	// spec: orchestrator/a-host-that-cannot-start-the-pass
-	test("a halt before the pass, a missing token, runs the command with the stop file alone", () => {
+	test("a halt before the pass, a missing token, runs the command with the stop file alone, a `log` in the environment never read, and ends on the halt's line", () => {
 		const h = host("repo", 0);
-		rmSync(join(h.secrets, "claude_oauth_token"));
+		const token = join(h.secrets, "claude_oauth_token");
+		rmSync(token);
 		const n = notifier();
-		const r = tick(h, "repo", n.extra);
+		const r = tick(h, "repo", { ...n.extra, log: join(h.clones, "repo/.fake/status") });
 		const line = readFileSync(stop(h, "repo"), "utf8").trim();
 		expect(r.code).toBe(1);
-		expect(line).toContain("claude_oauth_token");
+		expect(r.last).toBe(`orchestrator: ${token} is missing or holds no token`);
 		expect(n.calls()).toEqual([["--word", stop(h, "repo"), line]]);
 	});
 
@@ -71,6 +72,13 @@ describe.skipIf(skip)(`pass.sh's notice${skip ? " — skipped: flock is not on P
 		const n = notifier();
 		expect(tick(h, "repo").code).toBe(1);
 		expect(n.calls()).toEqual([]);
+	});
+
+	test("a PASS_NOTIFY of whitespace alone runs nothing, never the stop file itself", () => {
+		const h = host("repo", 1);
+		const r = tick(h, "repo", { PASS_NOTIFY: " \t " });
+		expect(r.code).toBe(1);
+		expect(r.err).not.toContain(stop(h, "repo"));
 	});
 
 	// spec: orchestrator/a-pass-stopped-by-hand

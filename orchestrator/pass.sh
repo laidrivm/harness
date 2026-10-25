@@ -53,9 +53,10 @@ log=
 # stop file and the pass's log once there is one, and ignores its status.
 pause() {
 	printf '%s exit %s: %s\n' "$(date -u +%Y%m%dT%H%M%SZ)" "$1" "$2" >"$stop"
-	[ -n "${PASS_NOTIFY-}" ] || return 0
 	local notify
-	read -ra notify <<<"$PASS_NOTIFY"
+	read -ra notify <<<"${PASS_NOTIFY-}"
+	# No words, as for whitespace alone, would run the stop file itself.
+	[ "${#notify[@]}" != 0 ] || return 0
 	notify+=("$stop")
 	[ -n "$log" ] && [ -e "$log" ] && notify+=("$log")
 	"${notify[@]}"
