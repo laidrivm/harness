@@ -8,8 +8,10 @@
       `orchestrator/the-head-s-test-check-has-not-passed` (pending, failure,
       no run, a `test` run from another app: no ff; the read carries
       `filter=latest`), `orchestrator/a-rerun-after-a-green-run` (the latest
-      run pending or failed: no ff), `orchestrator/a-green-head` (ff, build,
-      hold, `up`, prune, the engine wait, push, record, in that order, with
+      run pending or failed at the first read: no ff; green at the first
+      read and pending at the second, under the locks: no `up`, no record,
+      no stop file), `orchestrator/a-green-head` (read, ff, build, hold, the
+      second read, `up`, prune, the engine wait, push, record, in that order, with
       `STATE_DIRECTORY` unset the state directory created),
       `orchestrator/the-checkout-cannot-fast-forward` (the merge fails; and
       the merge exits 0 while `HEAD` is a local commit over the head, or
@@ -22,7 +24,7 @@
       `HEAD`-equals-head checks; `docker compose build`; the locks, taken on
       the host on the runner volume's `locks/` (mount point from
       `docker volume inspect`): the gate, then every other `*.lock`, all
-      blocking; `up -d`; release; `docker image prune -f`; the engine wait
+      blocking; the second check read; `up -d`; release; `docker image prune -f`; the engine wait
       and the push in one-off containers with `--entrypoint`, the CLI version
       read from `docker compose config --format json`; the record, in
       `STATE_DIRECTORY` or `mkdir -p /var/lib/harness-deploy`; the stop files
@@ -44,7 +46,10 @@
 - [ ] 1.5 In a new `bun/ci-run-gate.test.ts` (Linux CI only, real `flock`),
       write first and record that it fails: with the gate held by the test,
       the flow creates no repository lock until the test releases the gate
-      (`orchestrator/a-failed-run-s-flow-during-the-deploy`). Then take the
+      (`orchestrator/a-failed-run-s-flow-during-the-deploy`); a case reads
+      the gate's `flock -w` from `ci-run.ts` and the service's
+      `TimeoutStartSec` and asserts the wait is the longer
+      (`orchestrator/a-flow-waits-out-the-longest-deploy`). Then take the
       gate in `bun/ci-run.ts` per design.md, *Build first*; `wc -l` it first
       (296 lines) and split by the cap before adding
 

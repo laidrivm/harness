@@ -24,8 +24,9 @@ SHALL deploy no other commit.
 #### Scenario: A rerun after a green run
 
 - **WHEN** the head's `test` run succeeded and a later rerun of it is pending
-  or failed
-- **THEN** the checkout is not moved
+  or failed, read before the fast-forward or, under the locks, before `up`
+- **THEN** the stack is not brought up, the head is not recorded and no stop
+  file is written
 
 #### Scenario: A green head
 
@@ -111,6 +112,13 @@ find its repository busy; a flow SHALL wait for the gate.
   the gate
 - **THEN** it creates and takes no repository lock until the deploy releases
   the gate
+
+#### Scenario: A flow waits out the longest deploy
+
+- **WHEN** the deploy holds the gate for as long as the service's timeout
+  allows
+- **THEN** a flow waiting on the gate still takes it and runs once the deploy
+  releases it, since its gate wait is longer than that timeout
 
 #### Scenario: The runner is recreated under the locks
 
