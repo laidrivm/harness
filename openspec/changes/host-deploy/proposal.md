@@ -25,9 +25,11 @@ main*, 2026-10-22).
   `/root/harness` to it, rebuilds the images, recreates what changed with
   `docker compose up -d`, and pushes the Windmill scripts and the route, then
   records the commit.
-- The stack is recreated only while the deploy holds every pass lock, so a
-  running pass is never ended: the deploy waits for it, and a tick during the
-  deploy reads `busy` and exits 0.
+- The stack is recreated only while the deploy holds every pass lock, taken
+  from the host on the runner volume's files behind a gate lock no pass can
+  pass meanwhile, so a running pass is never ended: the deploy waits for it,
+  and a tick during the deploy reads `busy` and exits 0. Before the build the
+  checkout must be clean and at the fetched head, not merely fast-forwarded.
 - A deploy that fails after the fast-forward writes each clone's stop file,
   naming the step and the commit, so the failure shows in Windmill's Runs as a
   paused loop. A fetch or a check read that fails writes none and is retried
@@ -53,6 +55,9 @@ main*, 2026-10-22).
   on a successful `main` run, the kick over `ssh`; a new
   `orchestrator/event-kick.test.ts`.
 - `orchestrator/compose.yaml`: `host.docker.internal` on the default worker.
+- `orchestrator/pass.sh`: a gate lock taken for the moment it takes its
+  repository lock, so the deploy, holding the gate, holds every lock a pass
+  can take; cases in `orchestrator/pass.test.ts`.
 - `orchestrator/windmill/wmill.yaml`: `includeSchedules` dropped.
 - `orchestrator/layout.test.ts`: the units, the worker's host entry and the
   deploy token's absence from `compose.yaml`.

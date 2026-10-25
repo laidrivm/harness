@@ -30,8 +30,8 @@ and only then record the head as deployed. It SHALL deploy no other commit.
 #### Scenario: The checkout cannot fast-forward
 
 - **WHEN** the checkout has a tracked change or a commit `origin/main` does
-  not hold
-- **THEN** the checkout is not moved, nothing is rebuilt, and the deploy fails
+  not hold, whether or not the fast-forward itself succeeds
+- **THEN** nothing is rebuilt, the head is not recorded, and the deploy fails
 
 ### Requirement: A green run on main starts the deploy at once
 
@@ -74,8 +74,10 @@ SHALL never run two deploys at once.
 
 ### Requirement: A deploy never ends a running pass
 
-The deploy SHALL recreate containers only while it holds every pass lock on
-the runner, waiting for a running pass to release its lock. A tick that
+The deploy SHALL recreate containers only while it holds, from a process no
+container recreation ends, the pass gate and every pass lock, waiting for a
+running pass to release its lock. A pass SHALL take its repository lock only
+while it holds the gate, so no lock file appears during the hold. A tick that
 starts during the hold SHALL find its repository busy.
 
 #### Scenario: A pass is running when main moves
@@ -88,6 +90,17 @@ starts during the hold SHALL find its repository busy.
 
 - **WHEN** the pass schedule fires while the deploy holds the locks
 - **THEN** the wrapper prints `busy` and exits 0, and writes no stop file
+
+#### Scenario: A repository's first pass during the deploy
+
+- **WHEN** a pass for a repository with no lock file yet starts while the
+  deploy holds the gate
+- **THEN** it creates no lock file, prints `busy` and exits 0
+
+#### Scenario: The runner is recreated under the locks
+
+- **WHEN** `docker compose up -d` recreates the runner during the hold
+- **THEN** the locks stay held until `up` has finished
 
 ### Requirement: A failed deploy pauses the loop
 
