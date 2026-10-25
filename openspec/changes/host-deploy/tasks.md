@@ -52,14 +52,16 @@
       attempts (another process takes it with `flock -n`) and the flow runs
       once the test releases the lock
       (`orchestrator/a-flow-waits-for-a-running-pass-outside-the-gate`); a
-      case reads the gate's `flock -w` from `ci-run.ts` and the service's
-      `TimeoutStartSec` and asserts the wait is the longer
+      case reads the gate's budget from `ci-run.ts` and the service's
+      `TimeoutStartSec` and asserts the budget is the longer
       (`orchestrator/a-flow-waits-out-the-longest-deploy`). Then take the
       gate in `bun/ci-run.ts` per design.md, *Build first* (answer 15б): one
-      `sh` loop takes the gate, tries the repository lock with `flock -n`,
-      closes the gate either way, and makes at most 1440 attempts, sleeping
-      5 s after each busy one but the last (1439 sleeps, 7195 s); a busy
-      last attempt exits at once with status 75; never a blocking
+      `sh` loop takes the gate with `flock -w` on what is left of a 14400 s
+      budget shared by every attempt's gate wait (run out or timed out:
+      exit status 75), tries the repository lock with `flock -n`, closes
+      the gate either way, and makes at most 1440 attempts, sleeping 5 s
+      after each busy one but the last (1439 sleeps, 7195 s); a busy last
+      attempt exits at once with status 75; never a blocking
       `flock -w 7200` under the gate. `wc -l` it first (296 lines) and split
       by the cap before adding. Raise `timeout` in
       `orchestrator/windmill/f/orchestrator/event.script.yaml` from 11700 to
