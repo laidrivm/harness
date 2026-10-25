@@ -97,9 +97,14 @@ post that failed, SHALL count as no question.
 A change whose step's branch has an open draft pull request SHALL be an answer
 candidate for that step on that branch, not passed over. Its session SHALL
 continue the branch, write the card's answer into the step's work, and end
-as a step does. When that pass's question did not reach the card, the runner
-SHALL mark the pull request ready for review once its push went through and,
-with the integration, then remove the user alone from the card's `Assign`.
+as a step does. With the integration, the pick session SHALL name the card of
+such a candidate it takes in one `CARD: <id>` line, and the runner SHALL,
+before the stage session starts and only on a card that sits on the board
+`harness.board` names with a `Pointer` that is wholly the change's
+directory, remove the user alone from the card's `Assign`, printing what it
+wrote or why it wrote nothing. When that pass's question did not reach the
+card, the runner SHALL mark the pull request ready for review once its push
+went through, and SHALL write no `Assign` then.
 
 #### Scenario: A draft waiting on its answer
 
@@ -108,19 +113,32 @@ with the integration, then remove the user alone from the card's `Assign`.
 - **THEN** the change is an answer candidate for step 2 on `feat/<slug>-2`,
   and the pick takes it only once the card's question has its answer
 
+#### Scenario: The answer is read
+
+- **WHEN** the integration is configured and the pick takes that candidate
+  with a `CARD:` line naming its card, whose `Assign` holds the user
+- **THEN** the runner removes the user from that `Assign` before the stage
+  session starts, leaves anyone else on it, and prints that it did
+
+#### Scenario: A card line the runner refuses
+
+- **WHEN** the `CARD:` line is missing, is not one card id, or names a card
+  that is not the change's on the board
+- **THEN** the runner writes no `Assign`, prints why, and carries the step
+
 #### Scenario: The answer carried with no new question
 
 - **WHEN** the pass carrying that answer pushes the branch and its final
   message holds no question that reached the card
-- **THEN** the runner marks the pull request ready for review, removes the
-  user from the card's `Assign` and leaves anyone else on it, prints both,
-  and records the full check's verdict
+- **THEN** the runner marks the pull request ready for review, writes no
+  `Assign`, prints that it marked it, and records the full check's verdict
 
 #### Scenario: The answer raises another question
 
 - **WHEN** the pass carrying that answer ends with a question that reached
   the card
-- **THEN** the pull request stays a draft and `Assign` stays on the user
+- **THEN** the pull request stays a draft and the new question sets `Assign`
+  to the user again
 
 #### Scenario: The answer asks for a change of its own
 
@@ -132,8 +150,8 @@ with the integration, then remove the user alone from the card's `Assign`.
 #### Scenario: Marking ready fails
 
 - **WHEN** `gh pr ready` fails
-- **THEN** the runner prints the failure, leaves `Assign` as it is, and the
-  pass's outcome stays the full check's
+- **THEN** the runner prints the failure, writes no `Assign`, and the pass's
+  outcome stays the full check's
 
 #### Scenario: A ready pull request
 

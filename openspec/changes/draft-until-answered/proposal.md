@@ -27,14 +27,19 @@ for local sessions, and this change makes the runner keep the same rule.
   candidate for that same step on that same branch, where today it is passed
   over as "pull request is open". The answer pass continues the branch,
   writes the answer into the step's work, and the runner pushes it.
+- With the integration, the pick names the card of a draft candidate it takes
+  in a `CARD:` line, and the runner removes the user from that card's
+  `Assign` before the stage session starts: the user decided on 2026-10-25
+  that `Assign` goes as soon as the answer is read, and comes back only with
+  a new question.
 - When that pass ends with no new question on the card, the runner marks the
-  pull request ready (`gh pr ready`) and, with the integration, removes the
-  user from the card's `Assign`. A pass that asks again leaves it a draft.
+  pull request ready (`gh pr ready`). A pass that asks again leaves it a
+  draft, and the new question sets `Assign` again.
 
 Not in this change: the docs for local sessions (#255 carries them, and this
 change lands after it); the loop's propose stage, which `loop-every-stage`
-adds and which should open its draft pull request through this rule instead
-of pushing with none (design, *Overlaps*); a draft the user or another agent
+adds and whose own group 5 opens its draft pull request through this rule
+instead of pushing with none (design, *Overlaps*); a draft the user or another agent
 made, which the runner never marks ready unless it carried that branch's
 answer; clearing `Assign` on a machine with no integration.
 
