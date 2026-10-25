@@ -53,8 +53,12 @@
 
 ## 3. On the host
 
-- [ ] 3.1 **User act.** Once this merges: add the Harness board's data source
+- [x] 3.1 **User act.** Once this merges: add the Harness board's data source
       id as `board` to `/home/runner/.config/harness/notion-bot.json` in your
       own ssh session, and rebuild the runner with `docker compose up -d
       --build`. The next pause posts the notice; until one comes, nothing
-      shows
+      shows — done 2026-10-25 on the host: `grep -o '"board"'` over that
+      file in the runner prints `"board"`, and `grep -c PASS_NOTIFY
+      /opt/orchestrator/entrypoint.sh` prints `1` after the rebuild. No
+      pause has happened since, so the live notice is still unobserved: the
+      first pause is its first run against the real board
