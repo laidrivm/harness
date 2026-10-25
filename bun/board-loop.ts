@@ -22,8 +22,9 @@
  * step, or one whose every commit `origin`'s main holds by patch, a merged
  * branch's leftover it switches off. It installs before any session, since
  * `bun install` is an `ask` nobody would answer. Each pass ends on one line
- * and one `loop` record: `met`, `open`, `waiting`, `timeout`, `idle` or
- * `refused`, with exit 0 for `met`, `idle` and `waiting` alone: a `waiting`
+ * and one `loop` record: `met`, `open`, `waiting`, `timeout`, `idle`, `retry` or
+ * `refused`, with exit 0 for `met`, `idle` and `waiting`, and 75 (`EX_TEMPFAIL`)
+ * for `retry`, a transient failure the next tick may not meet: a `waiting`
  * pass leaves no stop file and a later pick passes over its card, while every
  * other outcome stops a shell loop where a person is needed.
  */
@@ -34,15 +35,16 @@ import { leftover } from "./board-loop-leftover.ts";
 import { pickPrompt, prompt, type Step } from "./board-loop-prompt.ts";
 import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session, trusted } from "./board-loop-session.ts";
-import { consider } from "./board-loop-takeable.ts";
+import { consider, left } from "./board-loop-takeable.ts";
 import { ready } from "./ci-run-draft.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
-import { ALREADY, asked, own, POSTED, post, type Settings, settings } from "./notion-bot.ts";
+import { ALREADY, asked, own, POSTED, post, type Settings, settings, UNREACHED } from "./notion-bot.ts";
 import { triage } from "./notion-triage.ts";
 import { pickedCard, UNASSIGN_FAILED, unassign } from "./notion-unassign.ts";
 import { originRepository } from "./pull-requests.ts";
 import { ASK_SETTINGS, RUNNER_ASKS, where } from "./question-gate.ts";
+import { network, TEMPFAIL, Transient } from "./transient.ts";
 
 /** A stage session's limit, fixed by the spec: a longer step is split, never given more. */
 export const LIMIT = 60 * 60 * 1000;
@@ -50,7 +52,7 @@ export const LIMIT = 60 * 60 * 1000;
 /** The default branch, as `branch-state.ts`'s `BASE` names it. */
 const DEFAULT = "main";
 
-type Outcome = "met" | "open" | "waiting" | "timeout" | "idle" | "refused";
+type Outcome = "met" | "open" | "waiting" | "timeout" | "idle" | "refused" | "retry";
 
 /** Prints the pass's one line and records it. Recording never changes it. */
 function end(outcome: Outcome, detail: string): number {
@@ -58,15 +60,8 @@ function end(outcome: Outcome, detail: string): number {
 	// The writer prefers CLAUDE_PROJECT_DIR, which can name another checkout.
 	delete process.env.CLAUDE_PROJECT_DIR;
 	record("loop", outcome, "apply", { cwd: process.cwd() });
-	return outcome === "met" || outcome === "idle" || outcome === "waiting" ? 0 : 1;
+	return outcome === "retry" ? TEMPFAIL : outcome === "met" || outcome === "idle" || outcome === "waiting" ? 0 : 1;
 }
-
-/**
- * Whether the step's branch exists, in the clone or on `origin` as the pass's
- * fetch left it: a session that ended before its pull request left it.
- */
-const left = (at: typeof sh, branch: string) =>
-	[`refs/heads/${branch}`, `refs/remotes/origin/${branch}`].some((ref) => at("git", "rev-parse", "--verify", "-q", ref).ok);
 
 /** One pass. `limit` and `kill` are replaced only by a test, through an entry module. */
 export async function pass(args: string[], limit = LIMIT, kill: Kill = process.kill): Promise<number> {
@@ -93,8 +88,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const config = launcher.length ? at("sh", "-c", 'cat "${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"').out : undefined;
 	if (!trusted(real, config))
 		return end("refused", `not a trusted workspace — run claude once in ${real}, accept the trust dialog and /exit`);
-	if (at("git", "status", "--porcelain", "--untracked-files=no").out)
-		return end("refused", "tracked files differ from HEAD — work the last session left");
+	const edited = () => !!at("git", "status", "--porcelain", "--untracked-files=no").out;
+	if (edited()) return end("refused", "tracked files differ from HEAD — work the last session left");
 	// An unpushed tip may be a dead session's step branch: noted, and judged once the steps are known.
 	const held = () => !!at("git", "for-each-ref", "--contains", "HEAD", "refs/remotes").out;
 	const unpushed = !held();
@@ -102,8 +97,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	// No branch name keeps a detached HEAD's commits once the pass switches off it.
 	if (unpushed && !noted) return end("refused", "HEAD names no branch and is on no remote-tracking branch — unpushed work");
 	/** A refusal goes back to the noted branch first, so the next pass sees its tip again. */
-	const refuse = (detail: string) =>
-		end("refused", !noted || at("git", "switch", "-q", noted).ok ? detail : `${detail}; switching back to ${noted} failed`);
+	const refuse = (detail: string, outcome: "refused" | "retry" = "refused") =>
+		end(outcome, !noted || at("git", "switch", "-q", noted).ok ? detail : `${detail}; switching back to ${noted} failed`);
 	for (const step of [
 		["fetch", "-q", "origin"],
 		["switch", "-q", DEFAULT],
@@ -119,7 +114,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		if (run.ok) continue;
 		console.error(run.err);
 		const why = step[0] === "merge" ? `${DEFAULT} cannot fast-forward to origin/${DEFAULT}` : `git ${step[0]} failed`;
-		return refuse(`${why}; nothing was merged or reset`);
+		return refuse(`${why}; nothing was merged or reset`, step[0] === "fetch" && network(run.err) ? "retry" : "refused");
 	}
 	// A local main ahead of origin fast-forwards as "up to date", unpushed work and all.
 	if (at("git", "rev-parse", "HEAD").out !== at("git", "rev-parse", `origin/${DEFAULT}`).out)
@@ -205,7 +200,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		// The author whose `harness-answer` counts, named to the pick and to REST step 3.
 		if (bot) bot.self = await own(bot.token);
 	} catch (error) {
-		return refuse((error as Error).message);
+		return refuse((error as Error).message, error instanceof Transient ? "retry" : "refused");
 	}
 	// The gate refuses every comment where it sees the variable; the withheld tool, where it does not.
 	if (bot) as = { ...as, [RUNNER_ASKS.name]: RUNNER_ASKS.value };
@@ -218,6 +213,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	}
 	const pickEnd = unclean("the pick session", picked);
 	if (pickEnd !== undefined) return pickEnd;
+	if (picked.transient) return refuse(`the pick session ended on a Claude API error: ${picked.out.trim()}`, "retry");
 	if (picked.out.trim()) console.log(picked.out.trim());
 	// Untrusted text: one exact line, naming a change this pass computed as takeable or a candidate.
 	const lines = picked.out.split("\n").filter((line) => line.startsWith("PICK:"));
@@ -254,7 +250,10 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const stageEnd = unclean(target, staged);
 	if (stageEnd !== undefined) return stageEnd;
 	if (staged.out.trim()) console.log(staged.out.trim());
-	// Before the push, so the post never waits on it; neither changes the outcome.
+	// A tracked edit left is a pause: the next pass would refuse that tree, and the runner commits nothing of a session's.
+	const retry = (why: string) => (edited() ? end("open", `${target}: ${why}, leaving a tracked edit`) : end("retry", `${target}: ${why}`));
+	if (staged.transient) return retry("the stage session ended on a Claude API error");
+	// Before the push, so the post never waits on it; only a Notion that did not answer changes the outcome.
 	const question = asked(staged.out);
 	const line =
 		question === undefined
@@ -265,8 +264,10 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 					? `question: not posted — ${question}`
 					: await post(bot, question, { board: named, slug }, undefined, triage(question.text, { at, under, limit, kill, base: DEFAULT, user: bot.user }));
 	if (line) console.log(line);
-	// A goal open on the user's answer is no failure: the question is on the card, and a pause would wait on nothing.
 	const ending = line.split("\n").at(-1) ?? "";
+	// Before the push, so a goal met never pushes past a question Notion did not take.
+	if (ending.startsWith(UNREACHED)) return retry(ending);
+	// A goal open on the user's answer is no failure: the question is on the card, and a pause would wait on nothing.
 	const posted = ending.startsWith(POSTED) || ending.startsWith(ALREADY);
 	const open = (detail: string) =>
 		typeof question === "object" && detail.startsWith("goal open") && posted
@@ -277,6 +278,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 
 	const judged = [...bun, join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
 	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app, under, draft);
+	if (unready instanceof Transient) return end("retry", `${target}: ${unready.message}`);
 	if (unready !== undefined) return open(unready);
 	// The answer carried and nothing left to ask: the draft goes ready right after its push, writing no `Assign`.
 	if (chosen.draft !== undefined && !draft) {

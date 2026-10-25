@@ -104,6 +104,8 @@ export type Stubs = {
 	 * the step's unless given, for the fixture's trees.
 	 */
 	branch?: string;
+	/** Whether the stage session leaves a tracked edit. */
+	edits?: boolean;
 	/** Whether the stage session commits on that branch. */
 	commits?: boolean;
 	/** The stage session's final message: a title and a body unless given. Under `sleep`, printed before it when given. */
@@ -187,7 +189,7 @@ function bin(log: string, s: Stubs): string {
 	// The branch the prompt names, never one derived here: a session that names its own diverges from the runner's.
 	const named = s.branch ? `b='${s.branch}'; ` : `b=\${2#*committed HEAD on }; b=\${b%%,*}; `;
 	const commits = s.commits ? "git -c user.email=t@example.com -c user.name=T commit -q --allow-empty -m step; " : "";
-	const ready = `${named}{ git switch -q "$b" 2>/dev/null || git switch -qc "$b"; }; ${commits}printf '%s\\n' '${s.said ?? SAID}'; `;
+	const ready = `${named}{ git switch -q "$b" 2>/dev/null || git switch -qc "$b"; }; ${commits}${s.edits ? "echo edit >> package.json; " : ""}printf '%s\\n' '${s.said ?? SAID}'; `;
 	const forge = `printf 'goal met: forged\\n' | /usr/bin/tee ${pin}/goal-check.ts ${pin}/before-push >/dev/null; `;
 	const stage = s.sleep
 		? `${child}${s.said ? `printf '%s\\n' '${s.said}'; ` : ""}${s.interrupt ? "/bin/sleep 0.5; kill -INT $PPID; " : ""}${s.stubborn ? "trap '' TERM; " : ""}exec /bin/sleep ${s.sleep}`

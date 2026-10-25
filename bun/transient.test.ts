@@ -27,6 +27,8 @@ describe("git's stderr", () => {
 		"error: RPC failed; curl 56 Recv failure: Connection reset by peer\nfatal: early EOF",
 		"fetch-pack: unexpected disconnect while reading sideband packet\nfatal: early EOF",
 		`${at}Empty reply from server`,
+		"ssh: connect to host github.com port 22: Network is unreachable\nfatal: Could not read from remote repository.",
+		"ssh: connect to host github.com port 22: No route to host\nfatal: Could not read from remote repository.",
 	])("%p is a network failure", (stderr) => {
 		expect(network(stderr)).toBe(true);
 	});

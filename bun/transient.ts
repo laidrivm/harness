@@ -25,7 +25,8 @@ export const answered = (status: number) => (status >= 500 && status <= 599) || 
  */
 export function network(stderr: string) {
 	if (/\b(?:HTTP(?: status)?|returned error:) 4(?!29)\d\d\b/.test(stderr)) return false;
-	return /Could not resolve (?:host|proxy)|Failed to connect|timed out|Connection (?:refused|reset)|returned error: (?:5\d\d|429)\b|RPC failed|early EOF|unexpected disconnect|Empty reply from server/.test(
+	// ssh's own wording too, for an `origin` the App does not push over: `ssh: connect to host … : No route to host`.
+	return /Could not resolve (?:host|proxy)|Failed to connect|Network is unreachable|No route to host|timed out|Connection (?:refused|reset)|returned error: (?:5\d\d|429)\b|RPC failed|early EOF|unexpected disconnect|Empty reply from server/.test(
 		stderr,
 	);
 }

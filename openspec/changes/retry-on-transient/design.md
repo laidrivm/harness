@@ -68,8 +68,9 @@ the loop pauses a clone*).
 first false for an HTTP 4xx other than 429 anywhere in it (`HTTP 413`,
 `returned error: 403`), since git prints `RPC failed` beside a permanent
 rejection too; then one regex: `Could not resolve host`, `Could not resolve proxy`, `Failed to connect`,
-`timed out`, `Connection (refused|reset)`, `returned error: (5\d\d|429)`,
-`RPC failed`, `early EOF`, `unexpected disconnect`, `Empty reply from
+`Network is unreachable`, `No route to host` (ssh's wording, for an `origin`
+the App does not push over), `timed out`, `Connection (refused|reset)`,
+`returned error: (5\d\d|429)`, `RPC failed`, `early EOF`, `unexpected disconnect`, `Empty reply from
 server`. `request()`
 and `client()` throw `Transient` where they throw today for a rejected
 `fetch` or such a status; the message is unchanged. A rejected `fetch` is
@@ -143,9 +144,12 @@ session's (above) and:
   `carry()`'s `origin` fetch, the mint and a push whose stderr is `network()`;
 - `post()` prints `question: not posted — Notion did not answer: <why>`, a
   prefix exported as `UNREACHED` beside `POSTED` and `ALREADY`, for a
-  `Transient` from its reads or the question's comment; `open()` ends `retry`
-  for it. A failed `Assign` write or answer comment keeps today's line, since
-  the question is posted.
+  `Transient` from its reads or the question's comment; the pass ends `retry`
+  for it as soon as `post()` returns, before `publish()`, so a goal met never
+  pushes past a question Notion did not take; with a tracked edit left it
+  ends `open` instead, as for the stage session's API error, since the next
+  pass would refuse that tree. A failed `Assign` write or answer comment keeps
+  today's line, since the question is posted.
 
 75 is `EX_TEMPFAIL` from `sysexits.h`; nothing else the runner exits uses it.
 `pass.sh`'s `flock -E 75` is its own status for a held lock, read before the

@@ -1,6 +1,7 @@
 /** Which `proposed` change a board-loop pass may take, and which step of it. */
 import { readFileSync } from "node:fs";
 import type { Step } from "./board-loop-prompt.ts";
+import type { sh } from "./board-loop-push.ts";
 import { type Pull, readPullRequests } from "./pull-requests.ts";
 import { groups } from "./turn-gate.ts";
 
@@ -56,3 +57,10 @@ export function consider(slug: string, status: string, blocking: string[]): Step
 	if (prs.length) return `pull request #${prs[0].number} already used ${branch}`;
 	return answer ? { step, branch, answer } : { step, branch, answer, carried };
 }
+
+/**
+ * Whether the step's branch exists, in the clone or on `origin` as the pass's
+ * fetch left it: a session that ended before its pull request left it.
+ */
+export const left = (at: typeof sh, branch: string) =>
+	[`refs/heads/${branch}`, `refs/remotes/origin/${branch}`].some((ref) => at("git", "rev-parse", "--verify", "-q", ref).ok);

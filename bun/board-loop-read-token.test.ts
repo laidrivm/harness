@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { carry, publish } from "./board-loop-push.ts";
 import { clone, change } from "./board-loop.fixture.ts";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
+import { Transient } from "./transient.ts";
 
 /** The push clone's fetches on the host: a `contents` read token in theirs alone (`runner-isolation` task 6.1). */
 
@@ -117,5 +118,44 @@ describe("publish with the key holder's mint", () => {
 		} finally {
 			process.chdir(was);
 		}
+	});
+});
+
+describe("a transient failure of the push clone's own fetch or mint", () => {
+	/** `carry` and `publish` run in the push clone, with `origin` set to `url`. */
+	const inPush = async <T>(url: string | undefined, fn: (s: ReturnType<typeof stand>) => T | Promise<T>) => {
+		const s = stand();
+		if (url) git(s.push, "remote", "set-url", "origin", url);
+		const was = [process.cwd(), process.env.PATH];
+		process.chdir(s.push);
+		process.env.PATH = `${s.bin}:${process.env.PATH}`;
+		try {
+			return await fn(s);
+		} finally {
+			process.chdir(was[0] as string);
+			process.env.PATH = was[1];
+		}
+	};
+
+	test("an origin whose host does not resolve makes carry return a Transient", async () => {
+		const got = await inPush("http://no-such-host.invalid/o/r.git", ({ under }) => carry(under, "feat/demo", "main"));
+		expect(got).toBeInstanceOf(Transient);
+		expect((got as Transient).message).toBe("the push clone could not fetch origin; nothing was pushed");
+	});
+
+	test("an origin that is no repository makes carry return a plain string", async () => {
+		const got = await inPush(join(emptyDir("read-token-none-"), "gone"), ({ under }) => carry(under, "feat/demo", "main"));
+		expect(typeof got).toBe("string");
+	});
+
+	test("a read token whose mint exits 75 makes publish return a Transient", async () => {
+		const got = await inPush(undefined, async ({ bin, under }) => {
+			const mint = join(bin, "mint");
+			writeFileSync(mint, "#!/bin/sh\nexit 75\n");
+			chmodSync(mint, 0o755);
+			return publish("", [], "feat/demo", "main", { session: "s", clone: "c" }, { id: "7", mint, owner: "o", repo: "r" }, under);
+		});
+		expect(got).toBeInstanceOf(Transient);
+		expect((got as Transient).message).toStartWith("the App's read token could not be minted: ");
 	});
 });
