@@ -21,8 +21,11 @@ The project SHALL keep its tasks on boards in the Notion workspace, on which
 every task not yet finished, and every change already archived, has exactly
 one card. A card SHALL carry its status, a title, a pointer to where its content
 lives, and a summary, and SHALL NOT carry a copy of anything else the
-repository holds. The summary is the one exception and is bounded: at most 500
-characters, enough to rank a card by and too few to restate a proposal.
+repository holds. The summary is the one exception and is bounded: about 500
+characters, enough to rank a card by and too few to restate a proposal. It MAY
+run longer where the extra text is context the ranking needs — a decision the
+user took, what the card waits on — and SHALL NOT restate a proposal at any
+length.
 *A card can be ranked without opening the repository* fixes what it says.
 
 The pointer SHALL be a **property** of the card rather than a line of its
@@ -584,8 +587,9 @@ repair, and these six are not.
 ### Requirement: A card can be ranked without opening the repository
 
 Every card short of `done` SHALL carry an English title saying what the change
-does, never its slug, and a body opening with a summary in Russian of at most
-500 characters: what changes, why, and how large it is. The body SHALL end
+does, never its slug, and a body opening with a summary in Russian of about
+500 characters: what changes, why, and how large it is, longer only for context
+the ranking needs, never a restated proposal. The body SHALL end
 with links on GitHub to the change's `proposal.md` once merged and to every
 pull request it opens, each added in the turn that pull request opens. At
 archive, the `proposal.md` link SHALL follow the file to its archived path.
@@ -594,8 +598,15 @@ archive, the `proposal.md` link SHALL follow the file to its archived path.
 
 - **WHEN** the user reads a card at any status before `done`
 - **THEN** its title says what the change does, its body opens with a Russian
-  summary of at most 500 characters, and every pull request the change has
+  summary of about 500 characters, and every pull request the change has
   opened is linked under it
+
+#### Scenario: A summary that carries context
+
+- **WHEN** a card's summary needs a decision the user took, or what the card
+  waits on, to be ranked
+- **THEN** the summary MAY pass 500 characters to hold it, and still restates
+  no proposal
 
 ### Requirement: A column is a queue the user orders
 

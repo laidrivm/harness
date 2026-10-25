@@ -158,7 +158,7 @@ describe("the session", () => {
 		const { dir } = clone();
 		const { calls } = run(dir);
 		expect(calls).toContain(
-			"/goal Carry step 1 of the OpenSpec change demo: /opsx:apply demo for its group 1 and the pre-PR sequence, up to a committed HEAD on the branch of the step — the runner, not this session, pushes that branch and opens the pull request.\n",
+			"/goal Carry step 1 of the OpenSpec change demo: /opsx:apply demo for its group 1 and the pre-PR sequence, up to a committed HEAD on feat/demo, the branch of the step — the runner, not this session, pushes that branch and opens the pull request.\n",
 		);
 		expect(calls).toContain("\nThis session runs unattended.\n");
 		expect(calls).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 1 --before-push`, run after the last commit");
@@ -210,7 +210,7 @@ describe("a step branch a session left", () => {
 		return calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
 	};
 	const clause = (b: string) =>
-		` A session left the branch ${b}: switch to it with \`git switch ${b}\` rather than create it, and carry on from what its commits hold.`;
+		` A session left the branch ${b}: switch to it with \`git switch ${b}\` rather than create it, merge \`origin/main\` into it before any other work, and carry on from what its commits hold.`;
 	const local = (...names: string[]) => (dir: string) => names.forEach((name) => git(dir, "branch", name));
 	const pushed = (name: string) => (dir: string) => git(dir, "push", "-q", "origin", `main:refs/heads/${name}`);
 

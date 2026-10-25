@@ -22,6 +22,21 @@ const stage = (calls: string) => {
 	return calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
 };
 
+/**
+ * What every form of the fourth line asks of a question, and the two that post one set `Assign` and check it.
+ * The mark's wording: "its two backticks included" read as two on each side (approved-column, 2026-10-25).
+ */
+const FORM = [
+	`${MARK}, a single backtick on each side`,
+	"its options and a recommendation",
+	"in Russian",
+	"on a line of its own",
+	"Number its questions, decisions and assumptions in one sequence across its sections",
+	"letter the options of each question",
+	"plain text with no markdown syntax",
+];
+const READ_BACK = "read the card back to confirm it holds the user";
+
 /** The workflow doc's lines that open as the fourth line does. */
 const forms = () =>
 	readFileSync(join(import.meta.dir, "../core/feature-workflow.md"), "utf8")
@@ -37,7 +52,7 @@ describe("the launch form's question line", () => {
 		const { dir } = clone(change("demo", tasks));
 		const lines = stage(run(dir).calls);
 		expect(lines).toHaveLength(5);
-		for (const part of [MARK, "`page_id`", "`markdown`", "page-level"]) expect(lines[3]).toContain(part);
+		for (const part of [MARK, "`page_id`", "`markdown`", "page-level", READ_BACK, ...FORM]) expect(lines[3]).toContain(part);
 		// The doc's form closes the shell's single quote on this line.
 		expect(forms()).toContain(`${lines[3]}'`);
 	});
@@ -76,7 +91,7 @@ describe("the runner posts the question", () => {
 		const { dir } = clone();
 		const lines = stage((await pass(dir, {}, configured())).calls);
 		expect(lines).toHaveLength(5);
-		for (const part of ["`QUESTION: ", MARK, "posts no comment"]) expect(lines[3]).toContain(part);
+		for (const part of ["`QUESTION: ", MARK, "posts no comment", ...FORM]) expect(lines[3]).toContain(part);
 		expect(forms()).toContain(lines[3]);
 	});
 
@@ -86,7 +101,8 @@ describe("the runner posts the question", () => {
 		const r = await pass(dir, {}, configured(0o600, "notion-ask.json"));
 		const lines = stage(r.calls);
 		expect(lines).toHaveLength(5);
-		for (const part of ["`bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`", MARK]) expect(lines[3]).toContain(part);
+		for (const part of ["`bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`", MARK, "only once it prints `question: posted`", READ_BACK, ...FORM])
+			expect(lines[3]).toContain(part);
 		expect(forms()).toContain(lines[3]);
 		for (const s of ["pick", "stage"]) expect(r.env(s)?.[RUNNER_ASKS.name]).toBeUndefined();
 		expect(r.calls).not.toContain("--disallowedTools");

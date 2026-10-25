@@ -69,10 +69,26 @@ entry, a hook or a CI check leaves this file the way it would leave
   to `matching`, `upstream` or `tracking`, `remote.<name>.mirror` — the guard
   reads the command's own words and cannot see a destination that comes from
   configuration.
-- Leave a PR ready for review once its pushes are done, never as a draft —
-  CodeRabbit's auto-review skips drafts, so a draft is a PR nobody reviews.
-  The one draft is a PR an agent still pushes to, as `rules.md` says, and it
-  is marked ready as that agent's last step.
+- Always open a PR with the work, in a local session and the board loop
+  alike, as a draft (`gh pr create --draft`) while a question to the user on
+  its card is unanswered, and mark it ready (`gh pr ready`) only once the
+  answers settle every item — CodeRabbit's auto-review skips drafts, so no
+  review fires on work an answer may still change. Otherwise open it ready,
+  since the work is done once it is pushed. An agent that then works on an
+  existing PR marks it draft (`gh pr ready --undo`) as it starts, and ready
+  only when that work ends, as `rules.md` says: ending with a push, it pushes
+  while the PR is still draft and runs `gh pr ready` immediately after the
+  push succeeds — CodeRabbit skips a head pushed to a draft and reviews on
+  the switch to ready, so ready before the push would review the old head and
+  then the new one; ending without one, it marks it ready as soon as it knows
+  no push will come. A question to the user on the card keeps it draft
+  regardless, and the CI flow (`bun/ci-run.ts`) holds its pull request the
+  same way, keeping it draft when its session answers `blocked`. Batch every fix
+  into that one final push, and push without waiting for CI. A check that
+  then fails is fixed on the same PR in the next push, which also carries the
+  fixes for any CodeRabbit findings already posted — the CI flow does not
+  wait for the review; the PR is mergeable only once CI is green and
+  CodeRabbit has reviewed its head with every finding dispositioned.
 - Keep the PR description to what the diff can't say: a link to the
   proposal, the criteria the step closes named by their `### Requirement:`
   headings — or a line saying it closes none — decisions taken, anything the
