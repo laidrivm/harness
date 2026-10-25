@@ -173,8 +173,9 @@ Rules about how work is carried out here. They do not age with the code.
   repository root — a working directory below the root resolves it against
   itself and lists nothing.
 - Mark a pull request draft (`gh pr ready --undo`) while an agent still pushes
-  to it, and mark it ready only once its report is in — a merge button that
-  works merges the half-done branch.
+  to it, and ready right after the push succeeds, never waiting for CI, unless
+  a question to the user is open — a merge button that works mid-push merges
+  the half-done branch.
 - Before a commit, run the build's own scan over every file the commit writes
   that the scan covers, since a fixture in a test can be valid input to the
   scan it tests.
