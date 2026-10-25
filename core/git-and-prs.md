@@ -81,7 +81,10 @@ entry, a hook or a CI check leaves this file the way it would leave
   once, because a head pushed while the PR is draft gets `Review skipped:
   draft pull request` and marking it ready afterwards does not review it;
   ending without one, it marks it ready as soon as it knows no push will
-  come. A question to the user on the card keeps it draft regardless. A head
+  come. A question to the user on the card keeps it draft regardless. The
+  runner does not follow this yet: the CI flow (`bun/ci-run.ts`) pushes its
+  fix with no draft toggle, and `draft-until-answered`'s design marks the
+  pull request ready after the push that carries an answer. A head
   pushed while draft that no later push replaces gets no review on its own —
   report it for the user to comment `@coderabbitai review`. Batch every fix
   into that one final push, and push without waiting for CI. A check that
