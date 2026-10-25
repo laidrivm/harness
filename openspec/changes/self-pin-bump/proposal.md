@@ -21,6 +21,8 @@ self-pin automatically and report how far it lags `main`*).
   the pin, or differs from the pin only in `package.json` and `bun.lock` —
   the last is what a merged bump looks like, and without it every merged bump
   would open the next one.
+- `movePin` moves the pin in each of the two fields that holds it, so a
+  manifest with the same pin under both no longer throws.
 - `pinOf` reads `devDependencies.harness` when `dependencies` names none, as
   the session-start notice already does.
 - A new workflow, `.github/workflows/self-bump.yml`, runs `self` after each

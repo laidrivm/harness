@@ -49,5 +49,6 @@ open one bump per merged bump.
 #### Scenario: The bump reads a development-dependency pin
 
 - **WHEN** a manifest names the harness only under `devDependencies`
-- **THEN** the pin is read and moved there, and a manifest naming it under
-  both reads and moves the runtime one
+- **THEN** the pin is read and moved there; a manifest naming the same pin
+  under both moves both, and one whose two fields differ reads and moves the
+  runtime one

@@ -79,6 +79,15 @@ elsewhere, so the pin follows them.
 `bun/bootstrap.ts` already uses, so one rule decides which pin a manifest
 has. A consumer's result is unchanged: both pin under `dependencies`.
 
+`movePin` today requires the old spec to occur exactly once in the file, so a
+manifest whose two fields hold the same pin would throw. It instead expects as
+many occurrences as there are fields among `dependencies.harness` and
+`devDependencies.harness` that hold the old spec (one or two), moves those,
+and parses the result back to confirm each of those fields is at the new
+commit. A field holding another spec is left as it is; an occurrence beyond
+the expected count still throws, so nothing outside the two fields moves.
+Moving both rather than the runtime one alone leaves no stale second pin.
+
 ### D4 — the workflow: `workflow_run` after `Test`, one branch, the App's token
 
 `.github/workflows/self-bump.yml`:
@@ -98,7 +107,9 @@ has. A consumer's result is unchanged: both pin under `dependencies`.
   `setup-bun` at 1.4.2, `bun bun/bump.ts self`, then, when `sha` is set:
   `git push --force origin HEAD:refs/heads/bump/self-pin`, and
   `gh pr create` from it unless `gh pr view bump/self-pin` finds one open, in
-  which case `gh pr edit` sets the new title and body.
+  which case `gh pr edit` sets the new title and body. The `gh` steps set
+  `GH_TOKEN` from the token step's output, so they act as the App; the
+  checkout's credential does not reach `gh`.
 - The job runs `bump.ts` from `main` and bun, with no lifecycle script; the
   harness has no other dependency.
 

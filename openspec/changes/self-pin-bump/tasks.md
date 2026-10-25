@@ -1,8 +1,10 @@
 ## 1. `bump.ts self` moves the development pin
 
 - [ ] 1.1 Write the failing cases: in `bun/bump-pin.test.ts`, a manifest with
-      the harness under `devDependencies` alone reads and moves there, and one
-      with both reads and moves `dependencies` (design D3); in a new
+      the harness under `devDependencies` alone reads and moves there; one
+      with the same pin under both moves both; one whose two fields differ
+      reads and moves `dependencies` alone; the old spec once more outside
+      the two fields still throws (design D3); in a new
       `bun/bump-self.test.ts`, over a scratch git repository and the fake API
       `bun/bump-verify.test.ts` uses: head not green → `sha` empty, tree
       unchanged; head is the pin → same; head differs from the pin only in
@@ -12,7 +14,8 @@
       with `behind` the commit count. Cite each `harness-updates` scenario in a
       `// spec:` comment. Record that they fail
 - [ ] 1.2 Implement D1 and D3 in `bun/bump.ts` and `bun/bump-pin.ts`: the
-      fallback in `pinOf`, the `self` command reusing `greenHead`, `movePin`,
+      fallback in `pinOf`, `movePin`'s count per field holding the old spec,
+      the `self` command reusing `greenHead`, `movePin`,
       `INSTALL` and the commit identity lifted from `land` into one helper
       both call; usage line and header comment name `self`. `wc -l` both
       files; split by the 300-line cap first if `bump.ts` would pass it.
