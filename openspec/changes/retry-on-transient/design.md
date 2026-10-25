@@ -64,10 +64,13 @@ the loop pauses a clone*).
 ### A `Transient` error, classified where the status is known
 
 `bun/transient.ts` holds `class Transient extends Error`, `TEMPFAIL = 75`,
-`answered(status)` (5xx or 429) and `network(stderr)`, one regex over git's
-stderr: `Could not resolve host`, `Failed to connect`, `timed out`,
-`Connection (refused|reset)`, `returned error: (5\d\d|429)`, `RPC failed`,
-`early EOF`, `unexpected disconnect`, `Empty reply from server`. `request()`
+`answered(status)` (5xx or 429) and `network(stderr)`, over git's stderr:
+first false for an HTTP 4xx other than 429 anywhere in it (`HTTP 413`,
+`returned error: 403`), since git prints `RPC failed` beside a permanent
+rejection too; then one regex: `Could not resolve host`, `Failed to connect`,
+`timed out`, `Connection (refused|reset)`, `returned error: (5\d\d|429)`,
+`RPC failed`, `early EOF`, `unexpected disconnect`, `Empty reply from
+server`. `request()`
 and `client()` throw `Transient` where they throw today for a rejected
 `fetch` or such a status; the message is unchanged. The mint exits 75 for a
 `Transient`, and `minted()` throws `Transient` for exit 75 or for no exit

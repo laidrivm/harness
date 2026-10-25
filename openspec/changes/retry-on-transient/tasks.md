@@ -5,8 +5,9 @@
       with the patterns design.md lists. Cases in `bun/transient.test.ts`:
       500, 503, 429 transient, 401, 403, 404, 422 not; each pattern matched
       from a real git message, and `! [rejected] … (fetch first)`,
-      `Authentication failed`, `returned error: 403` not. Verify with that
-      file
+      `Authentication failed`, `returned error: 403` and `error: RPC failed;
+      HTTP 413 curl 22 The requested URL returned error: 413` not. Verify
+      with that file
 - [ ] 1.2 `request()` in `bun/github-app.ts` and `client()` in
       `bun/notion-bot.ts` throw `Transient` for a rejected `fetch` and for an
       `answered()` status, with today's messages. Cases in
