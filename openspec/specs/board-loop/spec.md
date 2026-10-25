@@ -15,9 +15,9 @@ SHALL refuse a clone that `~/.claude.json` does not record as a trusted
 workspace under its real path, because a session there ignores the tracked
 `permissions.allow`. It SHALL refuse a tracked edit, or a branch tip no
 remote-tracking branch contains, except as *An unpushed step branch does not
-stop the pass* allows, or when, after its fetch, every commit the branch holds
-over the default branch's remote tip is there already by patch (`git cherry`
-marks none `+`) and none of them is a merge, whose resolution no patch
+stop the pass* allows, or when, after its fetch, the default branch's remote
+tip holds every commit the branch holds, itself or by patch (`git cherry`
+marks none `+`), and none of those it lacks is a merge, whose resolution no patch
 holds: such a branch is a merged branch's leftover, which the
 runner switches off, keeping it, and says so in one line. Otherwise it SHALL fetch and fast-forward the default
 branch, refusing where it cannot. It SHALL never create a merge commit or

@@ -1,6 +1,6 @@
 /**
  * Whether the clone's unpushed tip is a merged branch's leftover, which a board-loop pass switches off
- * and keeps: every commit it holds over `origin`'s `base` is there already by patch, so leaving it loses
+ * and keeps: `origin`'s `base` holds its every unpushed commit already, itself or by patch, so leaving it loses
  * nothing. `at` runs a command where the pass runs its git, in the session's clone on the host.
  */
 export function leftover(at: (...cmd: string[]) => { ok: boolean; out: string }, base: string): boolean {
