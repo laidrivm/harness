@@ -4,10 +4,11 @@
 
 On each run, whether the kick or the timer started it, the host's deploy
 SHALL compare `origin/main`'s head with the
-commit it last deployed. When they differ and the head's `test` check has
-concluded `success`, it SHALL fast-forward the host's checkout to that head,
-rebuild the images, bring the stack up, push the Windmill scripts and route,
-and only then record the head as deployed. It SHALL deploy no other commit.
+commit it last deployed. When they differ and the head's latest `test` check
+run from `github-actions` has concluded `success`, it SHALL fast-forward the
+host's checkout to that head, rebuild the images, bring the stack up, push the
+Windmill scripts and route, and only then record the head as deployed. It
+SHALL deploy no other commit.
 
 #### Scenario: Main has not moved
 
@@ -19,6 +20,12 @@ and only then record the head as deployed. It SHALL deploy no other commit.
 
 - **WHEN** the head's `test` check is pending, failed or absent
 - **THEN** the checkout is not moved, and the next tick reads the check again
+
+#### Scenario: A rerun after a green run
+
+- **WHEN** the head's `test` run succeeded and a later rerun of it is pending
+  or failed
+- **THEN** the checkout is not moved
 
 #### Scenario: A green head
 
@@ -76,9 +83,10 @@ SHALL never run two deploys at once.
 
 The deploy SHALL recreate containers only while it holds, from a process no
 container recreation ends, the pass gate and every pass lock, waiting for a
-running pass to release its lock. A pass SHALL take its repository lock only
-while it holds the gate, so no lock file appears during the hold. A tick that
-starts during the hold SHALL find its repository busy.
+running pass to release its lock. A pass, and a failed run's flow in
+`ci-run.ts`, SHALL take its repository lock only while it holds the gate, so
+no lock file appears during the hold. A tick that starts during the hold SHALL
+find its repository busy; a flow SHALL wait for the gate.
 
 #### Scenario: A pass is running when main moves
 
@@ -96,6 +104,13 @@ starts during the hold SHALL find its repository busy.
 - **WHEN** a pass for a repository with no lock file yet starts while the
   deploy holds the gate
 - **THEN** it creates no lock file, prints `busy` and exits 0
+
+#### Scenario: A failed run's flow during the deploy
+
+- **WHEN** `ci-run.ts` starts a flow for a repository while the deploy holds
+  the gate
+- **THEN** it creates and takes no repository lock until the deploy releases
+  the gate
 
 #### Scenario: The runner is recreated under the locks
 

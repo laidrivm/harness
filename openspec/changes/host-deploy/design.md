@@ -126,17 +126,23 @@ green during a run is the timer's, at most five minutes after that run ends.
 ### Only the head of `main`, and only once its `test` check passed
 
 The script reads
-`https://api.github.com/repos/<owner>/<repo>/commits/<sha>/check-runs?check_name=test`
+`https://api.github.com/repos/<owner>/<repo>/commits/<sha>/check-runs?check_name=test&filter=latest`
 for the fetched head, the owner and repository parsed from the checkout's
-origin, and deploys only when a run concluded `success`. A pending, failed or
+origin, and deploys only when a run there from the `github-actions` app
+concluded `success`, as `bun/bump.ts` reads the same check. `filter=latest`
+keeps only each suite's latest run, so a green run that a rerun superseded
+counts for nothing while the rerun is pending or failed. A pending, failed or
 missing check leaves everything as it is; the next tick reads it again. An
 older green commit is never deployed in its place: the next green head
 supersedes it.
 
 ### The deployed commit is recorded outside the tree, after the last step
 
-`StateDirectory=harness-deploy` gives `/var/lib/harness-deploy/`; the script
-writes the head there only once the push has succeeded. Each run compares
+`StateDirectory=harness-deploy` gives `/var/lib/harness-deploy/`, which the
+script reads from `STATE_DIRECTORY` and creates itself with `mkdir -p` when
+the variable is unset, since the first run by hand (task 4.2) is not the
+service's and systemd creates nothing for it. The script writes the head
+there only once the push has succeeded. Each run compares
 `origin/main`'s head with that file, never with `HEAD`, so a deploy that
 failed after the fast-forward is retried in full on the next tick: every step
 is idempotent, and a build with nothing new reuses its cache. The user
@@ -184,8 +190,21 @@ enumerates are every lock a pass can hold, including a repository's first
 pass. A pass that was running ends first, since the blocking `flock` waits
 for it; a pass tick during the hold reads `busy` and exits 0. The pass never
 takes the gate while it holds its repository lock, so the two never
-deadlock, and the gate's 10 s wait covers two passes starting at once. The
-service's `TimeoutStartSec` is 2 h, above the pass's 5400 s timeout.
+deadlock, and the gate's 10 s wait covers two passes starting at once.
+
+`bun/ci-run.ts` takes a repository lock too, for a failed run's flow
+(`ci-run-agent`), with `flock -w 7200` on `locks/<repo>.lock`, and creates it
+when absent. It gains the gate the same way: one `sh` opens and takes the
+gate, then the repository lock, both within that wait, closes the gate's
+descriptor and execs the flow, which keeps holding the repository lock alone.
+A flow that arrives during the hold waits for the deploy instead of creating
+a lock file the deploy did not enumerate.
+
+The service's `TimeoutStartSec` is 3 h: the unlocked build, up to the pass's
+5400 s timeout waiting for the locks, then `up`, the prune and the push, with
+an hour left for the steps around the wait. A run the timeout kills writes no
+stop file and records nothing, so the next tick starts again from the first
+step.
 
 Alternatives, rejected:
 - Waiting for idle, then recreating: a pass started by hand between the
@@ -207,10 +226,16 @@ the old 6 GB image dangling, and the host's disk is 20 GB.
 
 After `up`, the script runs the push in a throwaway container of the runner
 image just built, on the compose network, never through the tunnel:
-`docker run --rm --network orchestrator_default` with
+`docker run --rm --network orchestrator_default --entrypoint bun` with
 `orchestrator/windmill/` mounted and the token file mounted read-only, running
-`bun x windmill-cli@<v> sync push --yes --skip-secrets --include-triggers`
-against `http://engine:8080`, workspace `harness-admin`. `<v>` is read from
+`x windmill-cli@<v> sync push --yes --skip-secrets --include-triggers`
+against `http://engine:8080`, workspace `harness-admin`. The entrypoint is
+replaced because the image's `entrypoint.sh` exits 1 unless the runner's
+three secret files are mounted, and the push needs none of them. `up -d`
+does not wait for the engine, which has no health check, so before the push a
+container of the same image, the same way, polls
+`http://engine:8080/api/version` with `curl` until it answers, for at most
+two minutes; an engine that never answers fails the push step. `<v>` is read from
 the `windmill_server` image in `docker compose config --format json`, so the
 CLI and the engine move together and no second pin exists. The token is read
 inside the container from the mounted file, so no host process's arguments
