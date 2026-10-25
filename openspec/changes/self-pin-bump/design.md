@@ -173,9 +173,12 @@ changes:
   next pass. A merged bump is also a `main` commit, so `host-deploy` deploys
   it, with every build layer cached (`package.json` is in no build context),
   and D2 keeps that merge from opening another bump.
-- **Files.** None in common. `host-deploy` bakes `pass.sh` into the runner
-  image, so D5's lag line reaches the host by that deploy, not by a hand
-  rebuild.
+- **Files.** One: both edit `orchestrator/pass.sh`, in different places —
+  this one the lag line after the pin checkout (`pass.sh:177-186`),
+  `host-deploy` a gate lock before the repository lock (`pass.sh:121-126`).
+  Whichever merges second merges `main` first. `host-deploy` also bakes
+  `pass.sh` into the runner image by each deploy, so D5's lag line reaches
+  the host with no hand rebuild.
 - **User acts.** Unrelated: here a GitHub environment and a second App key;
   there a host token, a host key, systemd units and a webhook.
 - **Order.** Apply `host-deploy` first, then this change, whose `pass.sh`
