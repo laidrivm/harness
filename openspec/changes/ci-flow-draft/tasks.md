@@ -20,3 +20,7 @@ toggle goes in a module of its own.
       Verify with `bun/ci-run.test.ts` and `bun/on-event.test.ts`
 - [x] 1.3 Drop "The runner does not follow this" from
       `core/git-and-prs.md`'s PR bullet
+- [x] 1.4 Failing case in `bun/ci-run-draft.test.ts` (CodeRabbit on #276):
+      a work that throws keeps its error when the ready goes through, and
+      names #7 beside it when `gh` refuses. Recorded failing: 1 of 2. Then
+      check the ready on the throw path

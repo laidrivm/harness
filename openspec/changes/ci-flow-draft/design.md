@@ -44,7 +44,9 @@ A draft that `gh` refuses does not stop the session: the attempt comment is
 already posted, and the cost is one extra review. A ready that `gh` refuses
 after the work is exit 1, its reason naming the pull request after what the
 work said, since a draft left by mistake is skipped by CodeRabbit and the
-`pr-sweep` alike and would wait unseen.
+`pr-sweep` alike and would wait unseen. A `work` that throws is marked ready
+too, and a refusal there names the pull request beside the thrown error
+(CodeRabbit on #276).
 
 ### After a question
 
