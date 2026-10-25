@@ -66,8 +66,18 @@ anyway, rather than a runner-side check before the sessions (7, 10); only the
 runner posts questions on the host, and the WIP limit and the resume timer
 belong to the card for the loop taking every status (8, 9).
 
-`waiting` needs the verdict to read `goal open`: a push origin refused, or any
-other failure after the question, stays `open` and pauses.
+`waiting` needs the verdict to read `goal open`: a failure that is no `goal
+open`, such as a push origin refused, stays `open` and pauses, even after a
+posted question.
+
+Any `goal open` counts, not only the one naming the step's open group (11,
+2026-10-24, after a CodeRabbit Major on the pull request): a tree that
+differs or a missing pre-PR record behind a posted question also ends
+`waiting`. The card is on the user anyway, and a failure that remains
+surfaces on the pass that carries the answer, which holds no question and so
+pauses. Narrowing to the open-group reason was kept open for later; narrowing
+to that reason alone would pause nearly every waiting pass, since a session
+stopped on a question seldom runs pre-PR.
 
 ## Risks / Trade-offs
 
