@@ -18,13 +18,39 @@ already runs from, independent of the pin `pass.sh` checks out.
 
 ## Goals / Non-Goals
 
-**Goals:** every pause reaches the user once, from the integration, with what
-they need to act: the clone, the stop line, the log's path, the resume command.
+**Goals:** every pause reaches the user once, from the integration, on the card
+of the step that stopped, or on a card of its own when no step's card is
+known, with what they need to act: the clone, the stop line, the log's path,
+the resume command.
 
-**Non-Goals:** a notice on the step's own card (see *One status card*); a
-channel outside Notion (mail, push); telling transient failures apart (card
-*Skip a tick on a transient failure*); clearing `Assign` on resume; a notice
-for a stop by hand.
+**Non-Goals:** a channel outside Notion (mail, push); telling transient
+failures apart (card *Skip a tick on a transient failure*); clearing `Assign`
+on resume, which the user does (answer 3); a notice for a stop by hand.
+
+## Answers on the card (2026-10-25)
+
+The card's question numbered its items 1 to 11; the user answered:
+
+1. The notice goes on the card whose step stopped the loop, with its `Assign`
+   set to the user. A pause tied to no existing card files a new card that
+   describes why the loop stopped, at `approved`, assigned to the user. See
+   *The step's card, or a card of its own*, which replaces the earlier *One
+   status card*.
+2. (a): a comment mentioning the user, and `Assign`. See *The comment*.
+3. (a): the user clears `Assign` when they remove the stop file; the runner
+   never does.
+4. to 8. Kept as written: the hook in `pause()` (*Notified where the stop file
+   is written*); no settings, no notice (*Failures print, never pause twice*,
+   with the key now `board`, not `pauses`); the stop file and the exit status
+   unchanged, no retry; the image's copy run through `PASS_NOTIFY`; the
+   overlaps below.
+9. Changed by answer 1: no status card. The board the notice searches and
+   files on is the one data source `board` names in `notion-bot.json`, one per
+   host.
+10. Kept: the stop line is cut at 1000 characters.
+11. Changed by answer 1: after the merge the user adds the board's data source
+    id as `board` to `notion-bot.json` and rebuilds the runner; no card is
+    created by hand.
 
 ## Decisions
 
@@ -43,18 +69,32 @@ the image's copy, so a halt before the pin's checkout still notifies, and with
 the flags the runner's own bun takes, since `pause()` may run in the push
 clone, whose `bunfig.toml` and `.env` are a branch's.
 
-### One status card
+### The step's card, or a card of its own
 
-The notice goes to one fixed card, the *loop status* card, which the runner's
-`notion-bot.json` names as `pauses` (a Notion id, checked as `user` is). It
-covers every pause, a halt before any pick included, with one code path. The
-step's card is not known to `pass.sh`, and the runner knows only the slug: a
-notice there would need a data-source query by `Pointer` and a second path for
-pauses with no step. The stop line already names the step (`apply <slug> step
-<n>`).
+The step is read from the stop file's line, never from the log, which holds
+the sessions' untrusted output: only when the line records exit 1 and its text
+opens with the runner's `board-loop: ` does the command take the slug from the
+first `apply <slug> step <n>` after it, the target `end()` puts before any
+session's words (`open`, `timeout`, and a `refused` naming a process group
+that outlived the step). Any other line, a halt's, a crash's or a refusal
+before the pick, names no step.
 
-One card per host, not per repository: the notice names the clone and its
-repository. The card has no `Pointer`, so the pick never takes it.
+With a slug, the command queries the data source `board` names for the cards
+whose `Pointer` reads `openspec/changes/<slug>/`, as the pick reads it. One
+card: the notice goes there. None or several: no card is guessed, and the
+pause is treated as tied to no card.
+
+A pause tied to no card files a new card on that data source: its `Name`
+`The loop paused <clone>`, `Status` `approved`, `Assign` the user, no
+`Pointer`, so the pick never takes it, and as its body the notice's text and
+why no step's card took it (the line names no step; no card's, or several
+cards', `Pointer` names the slug). The comment then follows on that card as on
+a step's, so the mention notifies on both paths.
+
+`board` is the data source's id, not the board's name the repository's
+`package.json` holds: a halt can come before any clone is checked out, and a
+new card needs a data source to be filed on. It is checked with `ID`, as
+`user` is.
 
 ### The comment
 
@@ -64,14 +104,17 @@ mention of the user (`settings().user`), then plain text:
 ```
 The board loop paused the clone <clone>: <stop line>
 Log: <log path> (or: no log, the pass did not start)
-Resume: docker compose exec -u runner runner rm <stop file>
+Resume: docker compose exec -u runner runner rm <stop file>, then clear this card's Assign
 ```
 
 The mention is what notifies: a second `Assign` write to a card whose `Assign`
-already holds the user notifies nobody. `Assign` is still set, so the card
-shows in the board's `Questions` view. `comment()` gains an optional user to
-mention after the mark; its chunking stays. The stop line is cut at 1000
-characters, since a crashed runner's last line is arbitrary.
+already holds the user notifies nobody. `Assign` is still set on a step's
+card, so it shows in the board's `Questions` view; a new card has it from its
+creation. `comment()` gains an optional user to mention after the mark; its
+chunking stays. The stop line is cut at 1000 characters, since a crashed
+runner's last line is arbitrary. `harness-pause` is neither mark the pick or
+the question gate reads, so the notice is never taken for a question or an
+answer.
 
 The `Assign` write `post()` makes is lifted into `assign(call, card, user)` in
 `notion-bot.ts`, and `post()` switches to it in the same change.
@@ -79,10 +122,11 @@ The `Assign` write `post()` makes is lifted into `assign(call, card, user)` in
 ### Failures print, never pause twice
 
 `bun/notion-pause.ts` prints one line: `pause: notice posted on <card>, Assign
-set`, `… Assign not set — <why>`, or `pause: no notice — <why>` (no settings,
-no `pauses`, the post failed). It exits 0 whatever happens, and `pass.sh`
+set`, `pause: notice posted on new card <card>`, `… Assign not set — <why>`,
+or `pause: no notice — <why>` (no settings, no `board`, the query, the card's
+creation or the post failed). It exits 0 whatever happens, and `pass.sh`
 ignores its status too, so the pause, the stop file and the job's status are
-those of today. No call is retried: a retry could post twice.
+those of today. No call is retried: a retry could post or file twice.
 
 ### Overlaps
 
@@ -108,3 +152,10 @@ those of today. No call is retried: a retry could post twice.
   so in the job's output; the pause stands, as today.
 - [The user ignores mentions] → `Assign` and the `Questions` view still show
   the card.
+- [A step's card has a question open when its pass pauses, as when a gate line
+  holds back the pull request after the question was posted] → a reply of the
+  user's to the notice would read as that question's answer; the notice asks
+  for none, and README section 7 says to answer the question, not the notice.
+- [A repository whose board is not the one `board` names] → its step's card is
+  not found there, so the pause files a new card on that board. One board per
+  host, as the host serves today.
