@@ -210,7 +210,7 @@ describe("a step branch a session left", () => {
 		return calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
 	};
 	const clause = (b: string) =>
-		` A session left the branch ${b}: switch to it with \`git switch ${b}\` rather than create it, and carry on from what its commits hold.`;
+		` A session left the branch ${b}: switch to it with \`git switch ${b}\` rather than create it, merge \`origin/main\` into it before any other work, and carry on from what its commits hold.`;
 	const local = (...names: string[]) => (dir: string) => names.forEach((name) => git(dir, "branch", name));
 	const pushed = (name: string) => (dir: string) => git(dir, "push", "-q", "origin", `main:refs/heads/${name}`);
 
