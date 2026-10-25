@@ -8,12 +8,15 @@
       `bun/bump-self.test.ts`, over a scratch git repository and the fake API
       `bun/bump-verify.test.ts` uses: head not green → `sha` empty, tree
       unchanged; head is the pin → same; head differs from the pin only in
-      `package.json` and `bun.lock` → same (D2); head differs elsewhere → one
+      `bun.lock` and in `package.json`'s `devDependencies.harness` → same
+      (D2); head differs from the pin only in `package.json`, in a field
+      other than the pin (a script) → one new bump commit, as below; head
+      differs elsewhere → one
       new commit by `github-actions[bot]` changing only those two files, the
       pin at the head, and `sha`, `old`, `behind` written to `GITHUB_OUTPUT`
       with `behind` the commit count. Cite each `harness-updates` scenario in a
       `// spec:` comment. Record that they fail
-- [ ] 1.2 Implement D1 and D3 in `bun/bump.ts` and `bun/bump-pin.ts`: the
+- [ ] 1.2 Implement D1, D2 and D3 in `bun/bump.ts` and `bun/bump-pin.ts`: the
       fallback in `pinOf`, `movePin`'s count per field holding the old spec,
       the `self` command reusing `greenHead`, `movePin`,
       `INSTALL` and the commit identity lifted from `land` into one helper
@@ -58,6 +61,10 @@
       as the secret `HARNESS_APP_KEY`, and the App's id as the variable
       `HARNESS_APP_ID` (the names 2.1 reads)
 - [ ] 4.2 **User act.** Run `gh workflow run self-bump.yml --repo
-      laidrivm/harness` once, confirm a `bump/self-pin` pull request opens
-      with `Test` and CodeRabbit on it, and merge it; confirm the next
-      `Test` run on `main` ends the workflow quietly (D2)
+      laidrivm/harness` once. When its `self` step writes a `sha` (the pin
+      lags a green head that is no merged bump), confirm a `bump/self-pin`
+      pull request opens with `Test` and CodeRabbit on it, and merge it, then
+      confirm the next `Test` run on `main` ends the workflow quietly (D2).
+      When it writes none (the head is not green, is the pin, or is a merged
+      bump), confirm the run ends green with no branch pushed and no pull
+      request

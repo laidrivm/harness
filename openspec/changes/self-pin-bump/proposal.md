@@ -18,9 +18,9 @@ self-pin automatically and report how far it lags `main`*).
   targets `main`'s newest green commit as `verify` does, moves the
   development-dependency pin and `bun.lock` with no sync, check or
   `bumpTest`, and commits. It changes nothing when the head is not green, is
-  the pin, or differs from the pin only in `package.json` and `bun.lock` —
-  the last is what a merged bump looks like, and without it every merged bump
-  would open the next one.
+  the pin, or differs from the pin only in `bun.lock` and the pin field of
+  `package.json` — the last is what a merged bump looks like, and without it
+  every merged bump would open the next one.
 - `movePin` moves the pin in each of the two fields that holds it, so a
   manifest with the same pin under both no longer throws.
 - `pinOf` reads `devDependencies.harness` when `dependencies` names none, as
