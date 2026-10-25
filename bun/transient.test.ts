@@ -17,6 +17,7 @@ describe("git's stderr", () => {
 	const at = "fatal: unable to access 'https://github.com/o/r.git/': ";
 	test.each([
 		`${at}Could not resolve host: github.com`,
+		`${at}Could not resolve proxy: proxy.example.com`,
 		`${at}Failed to connect to github.com port 443 after 75004 ms: Couldn't connect to server`,
 		`${at}Operation timed out after 300000 milliseconds with 0 out of 0 bytes received`,
 		`${at}Failed to connect to github.com port 443: Connection refused`,
