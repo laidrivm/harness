@@ -10,10 +10,9 @@
  *
  * It never reports the seven statuses nobody can read from here — `idea`,
  * `approved`, `exploring`, `explored`, `applying`, `applied`, `archiving` —
- * nor anything
- * about a card on a board whose tree is not this repository. A derivation that
- * ran anyway would answer for them with the same confidence as the thirty it
- * is right about.
+ * nor anything about a card on a board whose tree is not this repository. A
+ * derivation that ran anyway would answer for them with the same confidence as
+ * the thirty it is right about.
  */
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
