@@ -70,9 +70,11 @@ without a stop the workflow would propose pinning that merge — forever, one
 pull request per merge. A head is a merged bump when both hold:
 `git diff --quiet <pin> <head> -- ':(exclude)package.json'
 ':(exclude)bun.lock'`, and `package.json` at the pin and at the head, parsed,
-are equal once `devDependencies.harness` is dropped from both. Then it
-proposes nothing. The second test keeps a change to another field of
-`package.json` (a script, `exports`, another dependency) from passing for a
+are equal once `dependencies.harness` and `devDependencies.harness` are
+dropped from both — the two fields `movePin` can move (D3), so a merged bump
+that moved both passes too. Then it proposes nothing. The second test keeps
+a change to another field of `package.json` (a script, `exports`, another
+dependency) from passing for a
 bump: such a head is proposed, so the pin does not stay behind it. `bun.lock`
 is derived from the manifest, so a head differing from the pin in it alone
 runs the same pinned code and proposes nothing. A bump merged together with
@@ -92,6 +94,14 @@ and parses the result back to confirm each of those fields is at the new
 commit. A field holding another spec is left as it is; an occurrence beyond
 the expected count still throws, so nothing outside the two fields moves.
 Moving both rather than the runtime one alone leaves no stale second pin.
+
+`self` refuses a manifest whose two fields hold different specs: it exits
+non-zero and moves nothing. The consumers' rule would move
+`dependencies.harness` there, while `pass.sh` runs
+`devDependencies.harness`, so the host would keep the old pin behind a bump
+that reads as merged. The harness's own manifest names the harness under
+`devDependencies` alone, so the refusal fires only on a hand edit, and a
+failed run says so where a quiet one would not.
 
 ### D4 — the workflow: `workflow_run` after `Test`, one branch, the App's token
 

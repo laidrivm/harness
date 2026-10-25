@@ -14,9 +14,9 @@ second. The pull request's body SHALL name the old and new commits and how
 many commits the pin moves past. The proposal SHALL push nothing to `main`.
 
 It SHALL change nothing when the target is not green, is the commit already
-pinned, or differs from the pinned commit only in `package.json` and
-`bun.lock`, since that is the tree a merged bump leaves and proposing it would
-open one bump per merged bump.
+pinned, or differs from the pinned commit only in `bun.lock` and the harness
+pin fields of `package.json`, since that is the tree a merged bump leaves and
+proposing it would open one bump per merged bump.
 
 #### Scenario: A green main the pin lags gets a bump pull request
 
@@ -37,7 +37,8 @@ open one bump per merged bump.
 #### Scenario: A merged bump proposes nothing
 
 - **WHEN** a bump runs on a `main` whose only change since the pinned commit
-  is a merged bump's `package.json` and `bun.lock`
+  is a merged bump's `package.json` and `bun.lock`, whether that bump moved
+  `devDependencies.harness` alone or both harness fields
 - **THEN** it exits 0, pushes nothing and opens nothing
 
 #### Scenario: A manifest change that is no bump is proposed
@@ -58,3 +59,10 @@ open one bump per merged bump.
 - **THEN** the pin is read and moved there; a manifest naming the same pin
   under both moves both, and one whose two fields differ reads and moves the
   runtime one
+
+#### Scenario: The self bump refuses two different pins
+
+- **WHEN** the harness's own bump runs on a manifest whose
+  `dependencies.harness` and `devDependencies.harness` hold different specs
+- **THEN** it exits non-zero, the tree is unchanged, and it pushes nothing and
+  opens nothing

@@ -9,16 +9,19 @@
       `bun/bump-verify.test.ts` uses: head not green → `sha` empty, tree
       unchanged; head is the pin → same; head differs from the pin only in
       `bun.lock` and in `package.json`'s `devDependencies.harness` → same
-      (D2); head differs from the pin only in `package.json`, in a field
-      other than the pin (a script) → one new bump commit, as below; head
-      differs elsewhere → one
+      (D2); the same with both harness fields moved → same; head differs
+      from the pin only in `package.json`, in a field
+      other than the pin (a script) → one new bump commit, as below; a
+      manifest whose two harness fields differ → non-zero exit, tree
+      unchanged (D3); head differs elsewhere → one
       new commit by `github-actions[bot]` changing only those two files, the
       pin at the head, and `sha`, `old`, `behind` written to `GITHUB_OUTPUT`
       with `behind` the commit count. Cite each `harness-updates` scenario in a
       `// spec:` comment. Record that they fail
 - [ ] 1.2 Implement D1, D2 and D3 in `bun/bump.ts` and `bun/bump-pin.ts`: the
       fallback in `pinOf`, `movePin`'s count per field holding the old spec,
-      the `self` command reusing `greenHead`, `movePin`,
+      the `self` command (refusing two different pins) reusing `greenHead`,
+      `movePin`,
       `INSTALL` and the commit identity lifted from `land` into one helper
       both call; usage line and header comment name `self`. `wc -l` both
       files; split by the 300-line cap first if `bump.ts` would pass it.
