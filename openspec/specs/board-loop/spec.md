@@ -62,7 +62,9 @@ so that no session it launches has to install.
   it, and none of them is a merge
 - **THEN** the runner prints one line naming the branch, switches to the
   default branch at its remote's tip and the pass goes on; the branch keeps
-  its tip, and a later refusal leaves the clone on the default branch
+  its tip, and a later refusal leaves the clone on the default branch, unless
+  a session's process group outlived the session, which leaves the clone as
+  the session left it
 
 #### Scenario: Unpushed work on a detached HEAD
 
