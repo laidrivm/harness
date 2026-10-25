@@ -145,9 +145,14 @@ the next run, a kick or a tick, starts again from the first step.
 
 ### A fast-forward only
 
-`git merge --ff-only origin/main` in `/root/harness`. A tracked change or a
-local commit makes it fail, which pauses the loop (below); the user resolves
-it on the host. `secrets/`, `app/`, `app-key/` and `wmill-lock.yaml` are
+`git merge --ff-only origin/main` in `/root/harness`, then two checks before
+the build: `git status --porcelain --untracked-files=no` prints nothing, and
+`git rev-parse HEAD` equals the fetched head. The merge alone is not enough:
+on a checkout with a local commit over `origin/main` it reports "Already up
+to date" and exits 0, and a tracked edit the merge does not touch survives
+it, so the build would run a tree that is not the green head. Either check
+failing fails the step, which pauses the loop (below); the user resolves it
+on the host. `secrets/`, `app/`, `app-key/` and `wmill-lock.yaml` are
 already ignored, so the files the stack needs never block it.
 
 ### The script runs from a function, so its own update cannot change the run
@@ -159,17 +164,38 @@ old version end to end, and the next tick runs the new one.
 ### Build first, then recreate under every pass lock
 
 `docker compose build` runs with no lock: it is the long step and touches no
-running container. Then one background
-`docker compose exec -T -u runner runner` takes, blocking, every
-`/home/runner/orchestrator/locks/*.lock` with `flock` and prints one line once
-it holds them all; the script waits for that line, runs `docker compose up -d`,
-then ends the holder if the runner was not recreated. A pass that was running
-ends first, since the blocking `flock` waits for it; a tick during the hold
-reads `busy` and exits 0 (`pass.sh:126-130`). The service's
-`TimeoutStartSec` is 2 h, above the pass's 5400 s timeout.
+running container. Then the script takes the locks itself, from the host,
+on the runner volume's files: `docker volume inspect` gives
+`orchestrator_runner_home`'s mount point, and `locks/` under its
+`orchestrator/` is the directory `pass.sh` locks in. `flock` is the kernel's,
+so a lock root takes on the host excludes the one `runner` takes in the
+container, and no recreated container can release it: the holder is the
+deploy's own process, which `up` never touches.
 
-Waiting for idle and then recreating was the smaller alternative, rejected:
-a pass started by hand between the check and `up` would be killed mid-step.
+The set of lock files is closed by a gate. `pass.sh` gains one lock before
+its repository's: it opens `locks/gate.lock`, takes it exclusively with
+`flock -w 10`, takes its repository lock as today, then closes the gate, so
+it holds the gate only while it takes its own lock. A gate it cannot take in
+10 s is `busy`, exit 0, as a held repository lock is. The deploy takes the
+gate, blocking, then every `locks/*.lock` but the gate, blocking, runs
+`docker compose up -d`, and releases them all when the step ends. While the
+deploy holds the gate no pass can create a lock file, so the files it
+enumerates are every lock a pass can hold, including a repository's first
+pass. A pass that was running ends first, since the blocking `flock` waits
+for it; a pass tick during the hold reads `busy` and exits 0. The pass never
+takes the gate while it holds its repository lock, so the two never
+deadlock, and the gate's 10 s wait covers two passes starting at once. The
+service's `TimeoutStartSec` is 2 h, above the pass's 5400 s timeout.
+
+Alternatives, rejected:
+- Waiting for idle, then recreating: a pass started by hand between the
+  check and `up` would be killed mid-step.
+- Holding the locks through `docker compose exec` in the runner: `up`
+  recreates the runner and ends the holder with it, so the locks drop while
+  `up` still recreates other services.
+- One lock that each pass holds shared for its whole run: Linux `flock`
+  grants a new shared lock while an exclusive one waits, so overlapping
+  passes could keep the deploy out for good.
 
 A recreated Windmill worker drops the pass job's SSH connection; the pass
 already survives that (`pass.sh:193`), but no pass runs then anyway.
@@ -265,9 +291,12 @@ and this change are complementary, kept as two changes:
   and the engine scripts. A merged bump is a `main` commit like any other;
   this deploy fast-forwards to it and the build reuses every cached layer,
   since `package.json` is in no build context.
-- **Files.** None in common. That change edits `pass.sh`; this one bakes
-  `pass.sh` into the image, so that change's lag line reaches the host by
-  this deploy rather than by a hand rebuild.
+- **Files.** One: both edit `orchestrator/pass.sh`, in different places —
+  this one the gate before the repository lock (`pass.sh:121-126`), that one
+  the lag line after the pin checkout (`pass.sh:177-186`). Whichever merges
+  second merges `main` first. This change also bakes `pass.sh` into the image
+  by each deploy, so that change's lag line reaches the host with no hand
+  rebuild.
 - **User acts.** Unrelated: a GitHub environment with a second App key there;
   a host token, a host key, units and a webhook here.
 - **Order.** Apply this one first: then `self-pin-bump`'s `pass.sh` edit, and

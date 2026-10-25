@@ -8,21 +8,35 @@
       `orchestrator/the-head-s-test-check-has-not-passed` (pending, failure,
       no run: no ff), `orchestrator/a-green-head` (ff, build, hold, `up`,
       prune, push, record, in that order),
-      `orchestrator/the-checkout-cannot-fast-forward`,
+      `orchestrator/the-checkout-cannot-fast-forward` (the merge fails; and
+      the merge exits 0 while `HEAD` is a local commit over the head, or
+      `git status` shows a tracked edit: no build, no record),
       `orchestrator/the-build-fails`, `orchestrator/github-cannot-be-reached`,
       `orchestrator/a-stop-file-already-exists`. Record that they fail
 - [ ] 1.2 Write `orchestrator/deploy.sh` per design.md: the body in one
       function called on the last line; fetch; compare with the recorded
-      commit; the check-run read; `merge --ff-only`; `docker compose build`;
-      the lock holder (bash 3.2-safe: no `coproc`); `up -d`;
-      `docker image prune -f`; the push in a one-off container with the
-      CLI version read from `docker compose config --format json`; the
-      record; the stop files on a failed step. Make 1.1 pass
-- [ ] 1.3 Case `orchestrator/a-pass-is-running-when-main-moves`: the stub
-      holder prints its line only after a delay, and `up` is logged after it.
-      `orchestrator/a-tick-during-the-deploy` is `pass.sh`'s existing busy
-      path: cite it on the busy case in `orchestrator/pass.test.ts` (Linux
-      CI only, it needs `flock`)
+      commit; the check-run read; `merge --ff-only`, then the clean-tree and
+      `HEAD`-equals-head checks; `docker compose build`; the locks, taken on
+      the host on the runner volume's `locks/` (mount point from
+      `docker volume inspect`): the gate, then every other `*.lock`, all
+      blocking; `up -d`; release; `docker image prune -f`; the push in a
+      one-off container with the CLI version read from
+      `docker compose config --format json`; the record; the stop files on a
+      failed step. Make 1.1 pass
+- [ ] 1.3 In `orchestrator/pass.test.ts` (Linux CI only, it needs `flock`),
+      write first, record that they fail, then add the gate to `pass.sh`
+      before its repository lock per design.md, *Build first*: with the gate
+      held by the test, a pass prints `busy`, exits 0 and creates no lock
+      file (`orchestrator/a-repository-s-first-pass-during-the-deploy`); the
+      existing busy case cites `orchestrator/a-tick-during-the-deploy`; two
+      passes of two repositories started together both run. `wc -l` both
+      files first; split by the cap if either would pass it
+- [ ] 1.4 Linux-only cases in `deploy.test.ts` with real `flock` over a temp
+      `locks/`: `orchestrator/a-pass-is-running-when-main-moves` (a held
+      repository lock: `up` is logged only after it is released) and
+      `orchestrator/the-runner-is-recreated-under-the-locks` (the stub `up`
+      checks, from another process, that the gate and the lock are still
+      held)
 
 ## 2. The units, the push configuration and the layout
 
