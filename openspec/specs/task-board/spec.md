@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Where a task's status is recorded and read, which of the nine statuses the
+Where a task's status is recorded and read, which of the ten statuses the
 file tree derives and which are moved by hand, how a session reads a board,
 and what a card may not hold. It exists because a status is a fact somebody
 has to remember and type, and a file is the wrong instrument for one: the
@@ -171,12 +171,15 @@ SHALL be split into the cards each board owns rather than mirrored.
   board a repository names, and its absence from `D2ASS`'s tree SHALL NOT
   exempt it
 
-### Requirement: Three statuses are derived and six are moved by hand
+### Requirement: Three statuses are derived and seven are moved by hand
 
-A card SHALL hold exactly one of nine statuses, one per handover between
+A card SHALL hold exactly one of ten statuses, one per handover between
 OpenSpec stages:
 
 - `idea` — entered for a later explore;
+- `approved` — the user has chosen it for work, by an agent or by hand; only
+  the user moves a card here, and an unattended session takes work from no
+  earlier status;
 - `exploring` — a session has started exploring and has not gathered the
   context yet;
 - `explored` — the context is gathered, and saved where a proposal will need
@@ -191,7 +194,7 @@ OpenSpec stages:
 - `archiving` — a session is running the archive;
 - `done` — archived; the change has been through the whole cycle.
 
-The nine SHALL be the **options** of each board's `Status` property, named
+The ten SHALL be the **options** of each board's `Status` property, named
 exactly as listed above, and that property SHALL be of Notion's `select`
 type rather than its `status` type. What a card carries and what anything in
 this repository names is an option's **name**, which is what a read returns
@@ -213,10 +216,10 @@ What `status` would have bought is Notion's fixed group keys, and nothing in
 this contract reads them. What it costs is that the board's columns are its
 options directly, with no second grouping level to choose wrongly.
 
-The nine SHALL be the **complete** option list of that property, not an
+The ten SHALL be the **complete** option list of that property, not an
 addition to it: on every board the property SHALL be set to exactly these
-nine, and any option a board carried before SHALL cease to exist. An option
-kept beside them would be a status no requirement here names and a
+ten, in the order listed above, and any option a board carried before SHALL
+cease to exist. An option kept beside them would be a status no requirement here names and a
 reconciliation would never correct.
 
 No card SHALL lose its status when the list changes. A card at a retired
@@ -224,8 +227,8 @@ option SHALL be carried to its successor before that option goes: `suggested`
 to `idea`, `ready` to `proposed`, and `implementing` and `reviewing` to
 `applying`.
 
-The same setting applies to `mellon` when that board is provisioned, so that
-a board created later is not a board with a different vocabulary.
+The same setting applies to `mellon`'s board, and to any board created later,
+so that no board carries a different vocabulary.
 A board whose options differ is a board whose view cannot be read by the
 instruction that reads the others, and the routing rule would then have to
 carry a per-board vocabulary as well as a per-board address.
@@ -240,7 +243,7 @@ Derivation SHALL apply to the board the running repository's `harness.board`
 names, and to no other. That is the one board whose tree is the repository
 `bun/board-state.ts` runs in, so it SHALL report nothing for a card on either
 of the other two, and a reconciliation run from that repository SHALL leave
-those cards untouched — on the same terms it leaves the six hand-moved
+those cards untouched — on the same terms it leaves the seven hand-moved
 statuses, and for the same reason: what would decide them is not readable
 from here. Each board is derived from its own repository: `D2ASS` from
 d2ass, `Harness` from the harness, `mellon` from mellon.
@@ -267,8 +270,9 @@ the merge of its proposal until its archive, so a card at `applying`,
 `applied` or `archiving` agrees with it, and only a card behind its derived
 status disagrees.
 
-The remaining six SHALL be moved by whoever does the work, in the turn the
-work moves, and `bun/board-state.ts` SHALL NOT report them. Deriving them
+The remaining seven SHALL be moved by hand and `bun/board-state.ts` SHALL
+NOT report them: `approved` by the user alone, the other six by whoever does
+the work, in the turn the work moves. Deriving them
 was measured and refused: applied to the thirty archived changes, a
 branch-name derivation gets fourteen wrong. Nine of those changes have no
 `feat/<slug>` pull request at all, their work having shipped on `chore/` and
@@ -287,10 +291,25 @@ pull request to its change.
 
 #### Scenario: A status holding no cards
 
-- **WHEN** a board's view shows fewer than nine columns because some
+- **WHEN** a board's view shows fewer than ten columns because some
   statuses hold no card
 - **THEN** the missing statuses SHALL still be writable by name, and the
   view SHALL NOT be treated as the list of statuses that exist
+
+#### Scenario: A card only the user approves
+
+- **WHEN** an unattended session reads a card at `idea`
+- **THEN** it SHALL take no work from it and SHALL NOT move it to `approved`;
+  a card reaches `approved` from the user's hand alone, while a status the
+  tree derives still corrects a card behind it, as reconciliation does for
+  any card
+
+#### Scenario: A board gains the tenth option
+
+- **WHEN** a board's `Status` holds the nine options of the earlier list
+- **THEN** the reconciliation that sets it to the ten SHALL leave every card
+  at the status it held, since no option is retired, and SHALL place
+  `approved` between `idea` and `exploring`
 
 #### Scenario: A complete change directory, no step applied
 
@@ -342,7 +361,7 @@ pull request to its change.
   connector attached
 - **THEN** it SHALL produce its full output — the name of its repository's
   board, the three derived statuses and the blocking edges, and none of the
-  six it never reports — every value in it coming from the repository's
+  seven it never reports — every value in it coming from the repository's
   files
 
 #### Scenario: A card on a board whose tree is elsewhere
