@@ -18,8 +18,8 @@ commit the bot has not reviewed yet is the other: there is nothing to act on
 until the review lands, and the next run picks it up. A head with no findings
 counts as reviewed once its `CodeRabbit` status is `success` with the
 description `Review completed`; a draft's `success` reads `Review skipped:
-draft pull request`, and marking the pull request ready does not review that
-head. A head whose status reads `Review skipped…`, or names a rate or usage
+draft pull request`, and marking the pull request ready starts the review of
+its head. A head whose status reads `Review skipped…`, or names a rate or usage
 limit, gets no review on its own — stop waiting on it and report it.
 
 ## The skills
