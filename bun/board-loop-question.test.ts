@@ -22,8 +22,19 @@ const stage = (calls: string) => {
 	return calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
 };
 
-/** What every form of the fourth line asks of a question, and the two that post one set `Assign` and check it. */
-const FORM = ["its options and a recommendation", "in Russian", "on a line of its own", "in one sequence across its sections", "plain text with no markdown syntax"];
+/**
+ * What every form of the fourth line asks of a question, and the two that post one set `Assign` and check it.
+ * The mark's wording: "its two backticks included" read as two on each side (approved-column, 2026-10-25).
+ */
+const FORM = [
+	`${MARK}, a single backtick on each side`,
+	"its options and a recommendation",
+	"in Russian",
+	"on a line of its own",
+	"Number its questions, decisions and assumptions in one sequence across its sections",
+	"letter the options of each question",
+	"plain text with no markdown syntax",
+];
 const READ_BACK = "read the card back to confirm it holds the user";
 
 /** The workflow doc's lines that open as the fourth line does. */
