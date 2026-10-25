@@ -71,5 +71,6 @@ main*, 2026-10-22).
   repository. Cloudflare Access is unchanged: the route already has its
   bypass.
 - Out of scope: the self-pin's bump (card *Bump the harness's self-pin
-  automatically*, discarded; design.md, *The self-pin's bump*), rollback beyond a revert merged to `main`, an agent that
-  repairs a failed deploy (its own card), and other repositories' hosts.
+  automatically*, discarded; design.md, *The self-pin's bump*), rollback
+  beyond a revert merged to `main`, an agent that repairs a failed deploy
+  (its own card), and other repositories' hosts.
