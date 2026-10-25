@@ -7,7 +7,8 @@ REST API got no answer, ran past its time limit, or was answered 5xx or 429;
 when the key holder's mint failed for one of those reasons or was killed at
 its time limit; or when a `git fetch` or `git push` failed, its stderr names
 no HTTP status 4xx other than 429, and its stderr names a network failure: a
-host that did not resolve, a connection refused, reset or timed out, an
+host that did not resolve, a network unreachable, no route to the host, a
+connection refused, reset or timed out, an
 `RPC failed`, `early EOF`, `unexpected disconnect` or `Empty reply from
 server` error, or an HTTP status 5xx or 429; or when the Claude API ended a
 pick or stage session: its result object reports an error ended by the API,

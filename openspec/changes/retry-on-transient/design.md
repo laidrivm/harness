@@ -68,8 +68,9 @@ the loop pauses a clone*).
 first false for an HTTP 4xx other than 429 anywhere in it (`HTTP 413`,
 `returned error: 403`), since git prints `RPC failed` beside a permanent
 rejection too; then one regex: `Could not resolve host`, `Could not resolve proxy`, `Failed to connect`,
-`timed out`, `Connection (refused|reset)`, `returned error: (5\d\d|429)`,
-`RPC failed`, `early EOF`, `unexpected disconnect`, `Empty reply from
+`Network is unreachable`, `No route to host` (ssh's wording, for an `origin`
+the App does not push over), `timed out`, `Connection (refused|reset)`,
+`returned error: (5\d\d|429)`, `RPC failed`, `early EOF`, `unexpected disconnect`, `Empty reply from
 server`. `request()`
 and `client()` throw `Transient` where they throw today for a rejected
 `fetch` or such a status; the message is unchanged. A rejected `fetch` is
