@@ -1,7 +1,7 @@
 /**
  * The pause notice against the stand-in Notion API of `notion-bot.fixture.ts`:
  * which card it goes on, what it sends, and where a failed call stops it
- * (`openspec/changes/pause-notice/design.md`).
+ * (`openspec/changes/archive/2026-10-25-pause-notice/design.md`).
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

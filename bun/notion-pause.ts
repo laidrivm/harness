@@ -2,7 +2,7 @@
 /**
  * The pause notice, `bun bun/notion-pause.ts <stop file> [<log>]`, which
  * `orchestrator/pass.sh`'s `pause()` runs where it writes a stop file
- * (`openspec/changes/pause-notice/design.md`). It posts one comment from the
+ * (`openspec/changes/archive/2026-10-25-pause-notice/design.md`). It posts one comment from the
  * runner's Notion integration, opening with `harness-pause` and mentioning the
  * user, on the card of the step the stop file's line names, then sets that
  * card's `Assign`; a line that names no step, or a step not exactly one card's
