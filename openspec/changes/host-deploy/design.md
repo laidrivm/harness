@@ -136,6 +136,13 @@ missing check leaves everything as it is; the next tick reads it again. An
 older green commit is never deployed in its place: the next green head
 supersedes it.
 
+The read is the step right before the fast-forward, and the script reads the
+check again once it holds the locks, right before `up`: a rerun started
+during the build or the wait for a pass would otherwise be deployed under.
+A check no longer green there releases the locks and ends the run with no
+`up`, no record and no stop file; the tree is on the head, the containers on
+the old images, and the next green read deploys it.
+
 ### The deployed commit is recorded outside the tree, after the last step
 
 `StateDirectory=harness-deploy` gives `/var/lib/harness-deploy/`, which the
@@ -195,10 +202,13 @@ deadlock, and the gate's 10 s wait covers two passes starting at once.
 `bun/ci-run.ts` takes a repository lock too, for a failed run's flow
 (`ci-run-agent`), with `flock -w 7200` on `locks/<repo>.lock`, and creates it
 when absent. It gains the gate the same way: one `sh` opens and takes the
-gate, then the repository lock, both within that wait, closes the gate's
-descriptor and execs the flow, which keeps holding the repository lock alone.
-A flow that arrives during the hold waits for the deploy instead of creating
-a lock file the deploy did not enumerate.
+gate with `flock -w 14400`, then the repository lock with its 7200 s wait as
+today, closes the gate's descriptor and execs the flow, which keeps holding
+the repository lock alone. A flow that arrives during the hold waits for the
+deploy instead of creating a lock file the deploy did not enumerate. The
+gate's wait is its own, 4 h, above the 3 h the service's timeout bounds the
+deploy's hold at, so a deploy that waits out a full pass never runs the
+flow's bound out and drops the delivery.
 
 The service's `TimeoutStartSec` is 3 h: the unlocked build, up to the pass's
 5400 s timeout waiting for the locks, then `up`, the prune and the push, with
