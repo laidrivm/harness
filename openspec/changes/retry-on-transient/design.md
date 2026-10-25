@@ -16,6 +16,10 @@ failure surfaces today:
   returns `question: not posted — <why>` → `open()`.
 - `orchestrator/pass.sh`: the push clone's `fetch origin` and the pin's
   fetch → `halt()`, which writes the stop file.
+- `session()` in `bun/board-loop-session.ts` keeps a session's text output
+  and nothing of why it ended. A session the Claude API ended prints
+  `API Error: …` as its final message: the pick then refuses for want of a
+  `PICK:` line, and the stage ends `open` on the goal check.
 
 `request()` and `client()` already tell an unanswered call (the `fetch` threw,
 a timeout included) from an answered one, and know the status. The mint is a
@@ -28,13 +32,32 @@ but writes no stop file, so neither needs a change.
 ## Goals / Non-Goals
 
 **Goals:** a pass ended by a network failure, a timeout, a 5xx or a 429 from
-GitHub, Notion or the mint skips the tick with no stop file; three in a row
-pause as today; a real failure still pauses at once.
+GitHub, Notion or the mint, or by a pick or stage session that the Claude API
+ended the same way, skips the tick with no stop file; three in a row pause as
+today; a real failure still pauses at once.
 
 **Non-Goals:** retrying inside the pass (the next tick is the retry); the
-Claude API's own errors in the pick or stage session; `bun install` failing on
-the network; the goal check's reads; telling the user about a pause (card
-*Tell the user when the loop pauses a clone*).
+subscription's usage limit, which `loop-every-stage` group 1 makes an outcome
+of its own, `limited`; the triage session's API error, whose failure is
+already a note that changes nothing; `bun install` failing on the network; the
+goal check's reads; telling the user about a pause (card *Tell the user when
+the loop pauses a clone*).
+
+## The answers on the card (2026-10-25)
+
+1. Three transient failures in a row pause the clone.
+2. A skipped tick exits 75: the Windmill job shows red, and no stop file is
+   written.
+3. `pass.sh`'s own two fetches always count as transient; the third pauses.
+4. The Claude API's transient errors in the pick and stage sessions are in
+   this change (*A session ended by a transient Claude API error*). The user
+   asked whether the runner can do anything with them: it cannot fix them,
+   and Claude Code already retries each one itself before the session ends
+   on it; what the runner can do is recognise that ending and end the pass
+   `retry` instead of a pause, so the next tick tries again.
+5. to 11. Accepted as posted: classification where the status is known, the
+   `retry` call sites, no retry inside a pass, the non-goals, the overlaps,
+   the step branch kept, and the runner image rebuilt after merge (4.1).
 
 ## Decisions
 
@@ -51,13 +74,54 @@ and `client()` throw `Transient` where they throw today for a rejected
 status (killed at its limit). A 4xx other than 429, an unreadable key, a bad
 answer shape: plain `Error`, as today.
 
-Classification by the thrown class, never by matching a message the runner
-prints. The one place a message is matched is git's stderr, which is the only
-structure git gives.
+Classification by the thrown class or a field, never by matching a message
+the runner prints. Two messages are matched: git's stderr, the only structure
+git gives, and the usage limit's result text below, which no field this
+change could observe tells apart.
+
+### A session ended by a transient Claude API error
+
+`session()` adds `--output-format json`, so `claude -p` prints one result
+object, and returns its `result` as `out`, the text the runner reads today,
+and `transient`. A probe on 2026-10-25 with Claude Code 2.1.308, against a
+local stub API with `CLAUDE_CODE_MAX_RETRIES=0`, showed every API failure
+exiting 1 with `is_error: true`, `terminal_reason: "api_error"` and:
+
+| Stub answer | `api_error_status` | `result` opens |
+| - | - | - |
+| connection refused | `null` | `API Error: Connection refused` |
+| 529 | 529 | `API Error: 529 Overloaded.` |
+| 500 | 500 | `API Error: 500 Internal server error.` |
+| 429 | 429 | `API Error: Request rejected (429)` |
+| 401 | 401 | `Invalid API key` |
+
+So `transient` is `is_error`, `terminal_reason` `api_error`, and a status of
+`null` (no answer, a timeout), 5xx or 429, with a `result` that does not open
+`You've hit your`: the errors reference's form of the subscription's usage
+limit (`You've hit your session limit · resets 3:45pm`), which an API key
+cannot produce, so the probe could not show whether it carries 429. That
+limit is `loop-every-stage`'s: its task 1.1 measures the real form and its
+group 1 ends the pass `limited`; until then the limit ends a pass as today.
+The prefix is `LIMITED` in `bun/transient.ts`, for that change to take over.
+Output that is not one result object (a crash, a test's stub) is `out` as
+printed and never transient. Claude Code retries a transient error ten times
+with backoff before it ends the session, so the pass sees only one that
+outlasted those; `CLAUDE_CODE_RETRY_WATCHDOG` stays unset, since its three
+hours of retries would meet the session's hour as a `timeout`.
+
+A pick session ended so ends the pass `retry` through `refuse()`; a card it
+claimed stays claimed and is taken first next time (*A card the pick moved
+SHALL stay where the move left it*). A stage session ended so ends it `retry`
+before the post and the push, when the session's clone has no tracked edit:
+its commits stay on the step branch for the next pass to continue. With a
+tracked edit left the pass ends `open` naming the API error, since the next
+pass would refuse that tree anyway (*The runner is the user's script and
+starts from a clean clone*) and the runner commits nothing of a session's.
 
 ### One `retry` outcome, exit 75
 
-`end("retry", …)` exits `TEMPFAIL`. Four call sites:
+`end("retry", …)` exits `TEMPFAIL`. Six call sites, the pick and the stage
+session's (above) and:
 
 - the start's fetch: `refuse()` takes the outcome, so the switch back to a
   noted branch still happens;
@@ -109,6 +173,11 @@ non-zero status does.
   `pass.sh`'s fetch would want the stderr check: noted for 6.1.
 - *Tell the user when the loop pauses a clone*: the third retry's stop file is
   a pause it reports; a skipped tick is not.
+- `loop-every-stage` (#257) group 1 moves `consider()` and `left()` out of
+  `bun/board-loop.ts` as task 2.1 here does, to the same
+  `bun/board-loop-candidates.ts`; whichever lands second drops its move. Its
+  `limited` outcome takes the usage limit this change leaves out, from the
+  same result object `session()` now reads.
 
 ## Risks / Trade-offs
 
@@ -120,3 +189,12 @@ non-zero status does.
   and Runs keeps showing it; only the stop file is withheld.
 - [The mint image is rebuilt later than the pin moves] → the old mint exits 1,
   read as real: a pause, as today, until the image is rebuilt.
+- [A stage session dies mid-edit] → a tracked edit left ends `open`, a pause,
+  as a session past its hour does today; only a session that committed what
+  it had retries.
+- [The usage limit's text changes before `loop-every-stage` lands] → a limit
+  read as transient retries three times and pauses: today's pause, three
+  hours late.
+- [JSON output prints the last turn's result alone] → text output printed
+  every turn's; the runner reads only the final message's lines, so nothing
+  it parses moves.

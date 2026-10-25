@@ -20,12 +20,23 @@
       command exiting 75, and one sleeping past a short limit, make `minted()`
       throw `Transient`, and one exiting 1 a plain `Error`. Verify with that
       file and `bun test`
+- [ ] 1.4 `session()` in `bun/board-loop-session.ts` adds
+      `--output-format json` and returns `out` as the result object's
+      `result` and `transient` as design.md *A session ended by a transient
+      Claude API error* defines it, with `LIMITED` exported from
+      `bun/transient.ts`; output that is not one result object is `out` as
+      printed and not transient. Cases in `bun/board-loop-session.test.ts`
+      with a stub `claude` printing the probe's objects: `null`, 529, 500 and
+      429 transient; 401, a `You've hit your session limit · resets 3:45pm`
+      result at 429, `is_error: false`, and plain text not; `out` is the
+      `result`. Verify with that file and the `bun/board-loop*.test.ts` files
 
 ## 2. The pass ends `retry` on a transient failure
 
 - [ ] 2.1 Split `bun/board-loop.ts` (289 lines) before adding to it: move
-      `consider()` and `left()` into a module of their own with no change in
-      behaviour, and keep every file under 300 lines after group 2's
+      `consider()` and `left()` into `bun/board-loop-candidates.ts` with no
+      change in behaviour (skip the move if `loop-every-stage` made it
+      first), and keep every file under 300 lines after group 2's
       additions. Verify with `wc -l` and the `bun/board-loop*.test.ts` files
 - [ ] 2.2 Add the `retry` outcome exiting `TEMPFAIL` to `end()`, and end
       `retry` at the start's `git fetch` when `network()` matches its stderr
@@ -47,7 +58,17 @@
       `ALREADY`, for a `Transient` from its reads or the question's comment,
       and the pass ends `retry` when the question line starts with it. Cases
       in `bun/board-loop-question.test.ts`: the comments read answered 500 →
-      `retry`; the `Assign` write answered 503 → `waiting`, as today. Update
+      `retry`; the `Assign` write answered 503 → `waiting`, as today. Verify
+      with those cases
+- [ ] 2.5 The pass ends `retry` for a `transient` pick session through
+      `refuse()`, and for a `transient` stage session before the post and the
+      push when `git status --porcelain --untracked-files=no` in the
+      session's clone is empty; with a tracked edit it ends `open` naming the
+      API error. Cases in `bun/board-loop-stage.test.ts` through the
+      fixture's stub: a pick ending on 529 → `retry`, exit 75, no stage
+      session; a stage ending on 500 after a commit → `retry`, branch kept,
+      nothing pushed or posted; the same with a tracked edit left → `open`;
+      a stage ending on a 401 or on the usage limit → as today. Update
       `board-loop.ts`'s header to name `retry` and its exit status. Verify
       with those cases and `bun test`
 
