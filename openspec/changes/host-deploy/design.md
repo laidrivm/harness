@@ -225,7 +225,11 @@ per attempt, so other repositories' ticks and the deploy are not kept out
 while it waits. The user chose this on the card (answer 15б: «15. ок, давай
 б»). The gate's wait is its own, 4 h, above the 3 h the service's timeout
 bounds the deploy's hold at, so a deploy that waits out a full pass never
-runs the flow's bound out and drops the delivery.
+runs the flow's bound out and drops the delivery. The Windmill event job
+waits for the flow's verdict, so its `timeout` in `event.script.yaml` grows
+from 11700 to 26100 s: the 14400 s gate, the 7195 s of retries, the hour a
+fix runs and 900 s for the ssh and setup, rounded up. It covers one deploy's
+hold; a flow whose retries meet a second hold can outlast the job.
 
 The service's `TimeoutStartSec` is 3 h: the unlocked build, up to the pass's
 5400 s timeout waiting for the locks, then `up`, the prune and the push, with
@@ -392,4 +396,5 @@ the deploy pushes the Windmill scripts with a host-held token (3а); every
 step reruns from the first after a failure (7, 14); decisions 4–6 and 8–11
 stand as written. Answered at apply, on 2026-10-25: a failed run's flow
 holds the gate only while it tries its repository lock, without blocking,
-and retries within the same 7200 s (15б: «15. ок, давай б»).
+and retries within the same 7200 s, which time spent waiting on the gate
+does not use (15б: «15. ок, давай б»).

@@ -120,7 +120,8 @@ only while it tries its repository lock without blocking.
 - **WHEN** `ci-run.ts` starts a flow for a repository whose lock a pass holds
 - **THEN** it leaves the gate free between its attempts, so a pass for
   another repository started meanwhile takes its own lock, and the flow runs
-  once the pass releases the lock, within its 7200 s
+  once the pass releases the lock, within its 7200 s of retries, which time
+  spent waiting on the gate does not use
 
 #### Scenario: A flow waits out the longest deploy
 

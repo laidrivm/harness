@@ -61,7 +61,9 @@
       5 s after each busy one but the last (1439 sleeps, 7195 s); a busy
       last attempt exits at once with status 75; never a blocking
       `flock -w 7200` under the gate. `wc -l` it first (296 lines) and split
-      by the cap before adding
+      by the cap before adding. Raise `timeout` in
+      `orchestrator/windmill/f/orchestrator/event.script.yaml` from 11700 to
+      26100 and rewrite its comment to the sum design.md gives
 
 ## 2. The units, the push configuration and the layout
 
