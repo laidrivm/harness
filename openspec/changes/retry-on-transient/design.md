@@ -143,9 +143,10 @@ session's (above) and:
   `carry()`'s `origin` fetch, the mint and a push whose stderr is `network()`;
 - `post()` prints `question: not posted — Notion did not answer: <why>`, a
   prefix exported as `UNREACHED` beside `POSTED` and `ALREADY`, for a
-  `Transient` from its reads or the question's comment; `open()` ends `retry`
-  for it. A failed `Assign` write or answer comment keeps today's line, since
-  the question is posted.
+  `Transient` from its reads or the question's comment; the pass ends `retry`
+  for it as soon as `post()` returns, before `publish()`, so a goal met never
+  pushes past a question Notion did not take. A failed `Assign` write or
+  answer comment keeps today's line, since the question is posted.
 
 75 is `EX_TEMPFAIL` from `sysexits.h`; nothing else the runner exits uses it.
 `pass.sh`'s `flock -E 75` is its own status for a held lock, read before the

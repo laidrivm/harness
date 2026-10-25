@@ -243,7 +243,7 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		return at("git", "status", "--porcelain", "--untracked-files=no").out
 			? end("open", `${target}: the stage session ended on a Claude API error, leaving a tracked edit`)
 			: end("retry", `${target}: the stage session ended on a Claude API error`);
-	// Before the push, so the post never waits on it; neither changes the outcome.
+	// Before the push, so the post never waits on it; only a Notion that did not answer changes the outcome.
 	const question = asked(staged.out);
 	const line =
 		question === undefined
@@ -254,12 +254,12 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 					? `question: not posted — ${question}`
 					: await post(bot, question, { board: named, slug }, undefined, triage(question.text, { at, under, limit, kill, base: DEFAULT, user: bot.user }));
 	if (line) console.log(line);
-	// A goal open on the user's answer is no failure: the question is on the card, and a pause would wait on nothing.
 	const ending = line.split("\n").at(-1) ?? "";
+	// Before the push, so a goal met never pushes past a question Notion did not take.
+	if (ending.startsWith(UNREACHED)) return end("retry", `${target}: ${ending}`);
+	// A goal open on the user's answer is no failure: the question is on the card, and a pause would wait on nothing.
 	const open = (detail: string) =>
-		ending.startsWith(UNREACHED)
-			? end("retry", `${target}: ${ending}`)
-			: typeof question === "object" && detail.startsWith("goal open") && (ending.startsWith(POSTED) || ending.startsWith(ALREADY))
+		typeof question === "object" && detail.startsWith("goal open") && (ending.startsWith(POSTED) || ending.startsWith(ALREADY))
 			? end("waiting", `${target}: question on ${question.card}`)
 			: end("open", `${target}: ${detail}`);
 

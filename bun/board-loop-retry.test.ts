@@ -96,11 +96,11 @@ describe("the question's post", () => {
 	afterAll(() => notion.server.stop(true));
 	const asked = `BLOCKED — a choice only the user can make\nQUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}`;
 	const stuck = "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete";
-	const pass = async (state: Partial<typeof notion.state>) => {
+	const pass = async (state: Partial<typeof notion.state>, stubs: Stubs = {}) => {
 		Object.assign(notion.state, { reads: 200, assign: 200 }, state);
 		const { dir } = clone();
 		try {
-			return await runAsync(dir, { said: asked, beforePush: stuck }, { home: configured(), env: { HARNESS_NOTION_API_URL: notion.server.url.origin } });
+			return await runAsync(dir, { said: asked, beforePush: stuck, ...stubs }, { home: configured(), env: { HARNESS_NOTION_API_URL: notion.server.url.origin } });
 		} finally {
 			Object.assign(notion.state, { reads: 200, assign: 200, me: 200 });
 		}
@@ -111,6 +111,13 @@ describe("the question's post", () => {
 		const r = await pass({ reads: 500 });
 		expect(r.text).toContain("question: not posted — Notion did not answer:");
 		expect([r.code, r.last.startsWith("board-loop: retry — apply demo step 1")]).toEqual([75, true]);
+	}, 40_000);
+
+	// spec: board-loop/the-question-post-meets-notion-s-5xx
+	test("the same under a goal met pushes nothing and records retry, not met", async () => {
+		const r = await pass({ reads: 500 }, { beforePush: undefined, commits: true });
+		expect([r.code, r.last.startsWith("board-loop: retry — apply demo step 1")]).toEqual([75, true]);
+		expect([calls(r.calls, "git push"), calls(r.calls, "gh pr create")]).toEqual([[], []]);
 	}, 40_000);
 
 	// spec: board-loop/a-question-posted-assign-not-written
