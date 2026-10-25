@@ -84,7 +84,10 @@ risk answer 12б on the `loop-reads-feedback` card accepted). `answer-match`
 change is applied after it; neither is on the default branch yet, so the
 order stands here and on the card rather than in `after:`. The same rule
 settles `answer-match`'s question 3 and `draft-until-answered`'s question 1
-and decision 5, whose designs record it.
+and decision 5, whose designs record it. `draft-until-answered` (PR #262)
+lands before this change too (its question 1, (а)): it adds the `CARD:`
+reader and `unassign()` in `bun/notion-bot.ts` for its draft candidates, and
+this change reuses both for every pick rather than writing its own.
 
 ### The `IDEA:` line
 
@@ -127,9 +130,10 @@ step-by-step instruction, its apply session only reading each board back.
 
 ### File placement
 
-The REST writes go to a new `bun/notion-card.ts` (claim, clear, file, the
-`CARD:` and `IDEA:` readers, the withheld list), which imports `client()`
-and `carded()` from `bun/notion-bot.ts`; `carded()` is exported for it.
+The REST writes go to a new `bun/notion-card.ts` (claim, file, the `IDEA:`
+reader, the withheld list), which imports `client()`, `carded()`, and
+`draft-until-answered`'s `CARD:` reader and `unassign()` from
+`bun/notion-bot.ts`; `carded()` is exported for it.
 `bun/board-loop.ts` gains only the calls. If that still passes the cap,
 `consider()` and `left()` move to `bun/board-loop-steps.ts` in the same
 commit, before the calls are added.

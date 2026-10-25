@@ -14,14 +14,15 @@
       `carded()` from `bun/notion-bot.ts`. Verify with
       `bun test bun/notion-bot*.test.ts`
 - [ ] 1.3 Write failing cases in a new `bun/notion-card.test.ts`, then
-      `bun/notion-card.ts` until they pass: `card()` reads one `CARD:` line
-      as `asked()` reads `QUESTION:`; `idea()` reads one `IDEA:` line, its
+      `bun/notion-card.ts` until they pass, importing the `CARD:` reader and
+      `unassign()` that `draft-until-answered` adds to `bun/notion-bot.ts`
+      rather than writing them again (design, *`Assign` loses the user when
+      the pass reads the answer*), with cases only for what this change adds
+      to them; `idea()` reads one `IDEA:` line, its
       title and its body to `PR-TITLE:` or the end, and refuses two lines,
       one after `PR-TITLE:`, an empty title, or a `QUESTION:` line beside
       it; `claim()` writes `applying` only from `proposed`, or `applied` for
-      an answer candidate, after `carded()` accepts the card; `unassign()`
-      removes the integration's `user` alone from `Assign` and writes
-      nothing when it is not there; `file()` creates the `idea` card in the
+      an answer candidate, after `carded()` accepts the card; `file()` creates the `idea` card in the
       carried card's data source. Each returns the line the runner prints
       and never throws. Cite the ADDED requirement's scenarios. Record the
       red run before the code
@@ -33,7 +34,8 @@
       claim against the stand-in (scenarios *A claim from the runner*, *A
       card line that names no card of the pick*, *No integration*). Verify
       with those files
-- [ ] 1.5 Before starting, confirm `answer-match` is on the default branch
+- [ ] 1.5 Before starting, confirm `answer-match` and `draft-until-answered`
+      are on the default branch
       (design, *`Assign` loses the user when the pass reads the answer*), and
       re-copy this change's two deltas over its versions. Then, with the
       integration, have `pass()` print `unassign()`'s line right after the

@@ -30,7 +30,8 @@ cleared by hand.
   2026-10-25 that `Assign` goes as soon as the answer is read, and comes back
   only with a new question. A pass that then ends `open` or `waiting` leaves
   it empty. This relies on `answer-match` (PR #263), under which the pick no
-  longer reads `Assign`, so it is applied after that change.
+  longer reads `Assign`, and reuses the `CARD:` reader and `unassign()` of
+  `draft-until-answered` (PR #262), so it is applied after both.
 - A stage session carrying an answer that asks for a change of its own names
   the new card in an `IDEA:` line of its final message instead of filing it;
   the runner files it at `idea` on the same board.
