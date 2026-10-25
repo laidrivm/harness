@@ -38,8 +38,9 @@ import { consider } from "./board-loop-takeable.ts";
 import { ready } from "./ci-run-draft.ts";
 import { record } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
-import { ALREADY, asked, own, POSTED, pickedCard, post, type Settings, settings, UNASSIGN_FAILED, unassign } from "./notion-bot.ts";
+import { ALREADY, asked, own, POSTED, post, type Settings, settings } from "./notion-bot.ts";
 import { triage } from "./notion-triage.ts";
+import { pickedCard, UNASSIGN_FAILED, unassign } from "./notion-unassign.ts";
 import { ASK_SETTINGS, RUNNER_ASKS, where } from "./question-gate.ts";
 
 /** A stage session's limit, fixed by the spec: a longer step is split, never given more. */

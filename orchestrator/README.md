@@ -298,6 +298,11 @@ runs as the key holder (uid 1502), the one user that reads the App's key. The
 runner image mounts `app/` (root's: the App's id and the repositories it
 serves) and `app-key/` (the key holder's) from `orchestrator/`.
 
+Give the App the repository permission *Workflows: read and write*, and
+accept it on each installation: GitHub refuses a push that adds or changes a
+file under `.github/workflows/` to a token without it, and a step or a CI fix
+may do that.
+
 1. In the App's settings generate a private key. GitHub hands it only to the
    browser, so it lands on the laptop: copy it straight to the host with
    `scp <file> root@<host>:/root/` and delete it from the laptop, Trash

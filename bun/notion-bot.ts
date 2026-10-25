@@ -2,9 +2,10 @@
  * The board loop's Notion integration: the settings file the runner reads, the
  * `QUESTION:` line it reads from a stage session's final message, and the five
  * REST calls that post the question from the integration and set `Assign`
- * (`openspec/changes/archive/2026-10-22-notion-bot-questions/design.md`), and the pick's
- * `CARD:` line and the `Assign` write that removes the user once a pass reads the answer
- * (`draft-until-answered`). The ask command makes two of those calls with its own settings. The token reaches `fetch` only as a
+ * (`openspec/changes/archive/2026-10-22-notion-bot-questions/design.md`). The ask command makes
+ * two of those calls with its own settings; the pause notice, the comment and
+ * the `Assign` write with the runner's, and `notion-unassign.ts` steps 1 and 2
+ * and its own `Assign` write. The token reaches `fetch` only as a
  * header, and no line this module prints or throws holds it.
  */
 import { readFileSync, statSync } from "node:fs";
@@ -15,8 +16,11 @@ const VERSION = "2025-09-03";
 /** A Notion id, as a whole value: 32 hex digits, alone or in a UUID's form. */
 export const ID = /^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
-/** `self`: the integration's own id, read with `own()`; none reads no `harness-answer` as an answer. */
-export type Settings = { token: string; user: string; self?: string };
+/**
+ * `self`: the integration's own id, read with `own()`; none reads no `harness-answer` as an answer.
+ * `board`: the data source a pause's notice searches and files on; none posts no notice.
+ */
+export type Settings = { token: string; user: string; self?: string; board?: string };
 export type Asked = { card: string; text: string };
 
 /**
@@ -36,7 +40,7 @@ export function settings(path: string): Settings | undefined {
 	// On the VPS the session user shares the runner's group, so group access is the session's.
 	if (mode & 0o077)
 		throw new Error(`notion-bot: ${path} has mode 0${mode.toString(8)}, which its group or others may read — chmod 600 it`);
-	let value: { token?: unknown; user?: unknown } | null;
+	let value: { token?: unknown; user?: unknown; board?: unknown } | null;
 	try {
 		value = JSON.parse(readFileSync(path, "utf8"));
 	} catch {
@@ -44,12 +48,15 @@ export function settings(path: string): Settings | undefined {
 	}
 	if (typeof value !== "object" || value === null || Array.isArray(value))
 		throw new Error(`notion-bot: ${path} holds no JSON object`);
-	const { token, user } = value;
+	const { token, user, board } = value;
 	if (typeof token !== "string" || !/^\S+$/.test(token))
 		throw new Error(`notion-bot: ${path}: \`token\` is not a non-empty string without whitespace`);
 	if (typeof user !== "string" || !ID.test(user))
 		throw new Error(`notion-bot: ${path}: \`user\` is not 32 hex digits, alone or as a UUID`);
-	return { token, user };
+	if (board === undefined) return { token, user };
+	if (typeof board !== "string" || !ID.test(board))
+		throw new Error(`notion-bot: ${path}: \`board\` is not 32 hex digits, alone or as a UUID`);
+	return { token, user, board };
 }
 
 /**
@@ -138,7 +145,11 @@ export function client(token: string, timeout = 30_000) {
 		return response.json();
 	};
 }
-type Call = ReturnType<typeof client>;
+export type Call = ReturnType<typeof client>;
+
+/** Sets the card's `Assign` to `user` alone. */
+export const assign = (call: Call, card: string, user: string) =>
+	call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: [{ id: user }] } } });
 
 /** The integration's own id, read with `token`; throws naming the step, as `client` does. */
 export async function own(token: string, timeout = 30_000): Promise<string> {
@@ -172,15 +183,16 @@ async function discussion(call: Call, card: string): Promise<Comment[]> {
 
 /**
  * REST step 4: the page-level comment, a code-annotated run of `mark`, which
- * `text` opens with backticked, then the rest of the text, in runs of the 2000
- * characters Notion takes in one.
+ * `text` opens with backticked, a mention of `mention` when one is named, then
+ * the rest of the text, in runs of the 2000 characters Notion takes in one.
  */
-export function comment(call: Call, card: string, text: string, mark = "harness-question"): Promise<unknown> {
+export function comment(call: Call, card: string, text: string, mark = "harness-question", mention?: string): Promise<unknown> {
 	const rest = text.slice(mark.length + 2).match(/[\s\S]{1,2000}/g) ?? [];
 	return call(mark === "harness-answer" ? "the answer's post" : "the comment's post", "/v1/comments", "POST", {
 		parent: { page_id: card },
 		rich_text: [
 			{ type: "text", text: { content: mark }, annotations: { code: true } },
+			...(mention ? [{ type: "mention", mention: { type: "user", user: { id: mention } } }] : []),
 			...rest.map((content) => ({ type: "text", text: { content } })),
 		],
 	});
@@ -190,47 +202,13 @@ export function comment(call: Call, card: string, text: string, mark = "harness-
 export type Triaged = { answer?: { source: string; quote: string; text: string }; note: string };
 
 /** REST steps 1 and 2: why `card` is not the carried change's card on `board`, or `undefined`. */
-async function carded(call: Call, card: string, board: string, slug: string): Promise<string | undefined> {
+export async function carded(call: Call, card: string, board: string, slug: string): Promise<string | undefined> {
 	const page = await call("the page read", `/v1/pages/${card}`);
 	if (page?.parent?.type !== "data_source_id") return `${card} is not a card on a board`;
 	if (plain(page.properties?.Pointer?.rich_text) !== `openspec/changes/${slug}/`) return `${card} is not the card of ${slug}`;
 	const source = await call("the board read", `/v1/data_sources/${page.parent.data_source_id}`);
 	if (plain(source?.title) !== board) return `${card} is not on the board ${board}`;
 }
-
-/** The card a pick session's final message names in its one `CARD:` line, or why it names none. Untrusted, as `PICK:` is. */
-export function pickedCard(said: string): { card: string } | string {
-	const lines = said.split("\n").filter((line) => line.startsWith("CARD:"));
-	if (lines.length !== 1) return "the pick session returned not one CARD: line";
-	const card = lines[0].slice("CARD:".length).trim();
-	return ID.test(card) ? { card } : "the CARD: line names no card id";
-}
-
-/**
- * Removes the user alone from `card`'s `Assign` once steps 1 and 2 find it the
- * carried change's card on `board`: the pass has read the answer. Returns the
- * line the runner prints, opening with `UNASSIGN_FAILED` when a call failed
- * or `Assign` is too long to read whole;
- * no call is retried.
- */
-export async function unassign({ token, user }: Settings, card: string, { board, slug }: { board: string; slug: string }, timeout = 30_000): Promise<string> {
-	const call = client(token, timeout);
-	try {
-		const why = await carded(call, card, board, slug);
-		if (why) return `assign: not written — ${why}`;
-		const people = (await call("the page read", `/v1/pages/${card}`))?.properties?.Assign?.people;
-		// shortcut: a page read lists 25 references of a property at most, so a longer `Assign` is left whole rather than written back cut; page through `/v1/pages/<id>/properties/<property>` if a card ever needs it.
-		if (Array.isArray(people) && people.length >= 25) return `${UNASSIGN_FAILED} ${card} lists 25 people on Assign, the most a page read returns`;
-		const kept = (Array.isArray(people) ? people : []).filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
-		await call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: kept } } });
-	} catch (error) {
-		return `${UNASSIGN_FAILED} ${(error as Error).message}`;
-	}
-	return `assign: removed the user from ${card}`;
-}
-
-/** How `unassign()`'s line opens when a call failed or `Assign` was too long to read whole, unlike a card it refused: the user may still be on `Assign`. */
-export const UNASSIGN_FAILED = "assign: failed —";
 
 /** How `post()`'s line opens for a question it posted, and for one it found already waiting. */
 export const POSTED = "question: posted on";
@@ -288,7 +266,7 @@ export async function post(
 		}
 	}
 	try {
-		await call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: [{ id: user }] } } });
+		await assign(call, card, user);
 	} catch (error) {
 		return say(`${POSTED} ${card}, Assign not set — ${(error as Error).message}`);
 	}

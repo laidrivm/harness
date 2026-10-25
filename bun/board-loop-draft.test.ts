@@ -15,7 +15,9 @@ afterAll(cleanup);
 const notion = standIn();
 afterAll(() => notion.server.stop(true));
 const pass = against(notion);
-const reset = () => Object.assign(notion.state, { pending: false, slug: "demo", post: 200, patch: 200, assign: [USER, OTHER] });
+const reset = () => Object.assign(notion.state, { pending: false, slug: "demo", fail: {}, assign: [USER, OTHER] });
+/** The body of each `PATCH` the stand-in took, in order. */
+const wrote = () => notion.state.bodies.filter((_, i) => notion.state.seen[i].startsWith("PATCH"));
 
 const ASKED = `QUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}`;
 const CREATE = "gh pr create --base main --head feat/demo --title Carry demo --body-file -";
@@ -32,7 +34,7 @@ describe("a pull request stays a draft while its question waits", () => {
 		["on a malformed line", false, ASKED.replace(CARD, `${CARD}x`), {}],
 		["that fails the question gate", false, ASKED.replace(`${MARK} `, ""), {}],
 		["on the card of another change", false, ASKED, { slug: "other" }],
-		["whose post fails", false, ASKED, { post: 500 }],
+		["whose post fails", false, ASKED, { fail: { "POST /v1/comments": 500 } }],
 	])("a question %s: a draft %p", async (_, draft, said, card) => {
 		Object.assign(notion.state, card);
 		const r = await pass(clone().dir, { said }, configured()).finally(reset);
@@ -74,7 +76,7 @@ describe("an answer beside a draft pull request", () => {
 	test("the pick names the card, and the runner removes the user alone from Assign before the stage session, and writes none at ready", async () => {
 		const r = await pass(drafted(), { ...DRAFT, pick: PICKED }, configured());
 		expect(pick(r.calls)).toContain("also write one line `CARD: <the id of its card>`");
-		expect(notion.state.wrote).toEqual([{ properties: { Assign: { people: [{ id: OTHER }] } } }]);
+		expect(wrote()).toEqual([{ properties: { Assign: { people: [{ id: OTHER }] } } }]);
 		expect(r.text).toContain(`assign: removed the user from ${CARD}\ncontinuing feat/demo`);
 		expect(r.calls).toContain(READY);
 	});
@@ -87,18 +89,18 @@ describe("an answer beside a draft pull request", () => {
 	])("a CARD: line %s writes no Assign, prints why, and the step is carried", async (_, out, card, why) => {
 		Object.assign(notion.state, card);
 		const r = await pass(drafted(), { ...DRAFT, pick: out }, configured()).finally(reset);
-		expect(notion.state.wrote).toEqual([]);
+		expect(wrote()).toEqual([]);
 		expect(r.text).toContain(`assign: not written — ${why}`);
 		expect(r.last).toBe("board-loop: met — apply demo step 1");
 	});
 
 	test.each([
-		["an Assign write that fails", { patch: 500 }, "the Assign write answered 500", 1],
+		["an Assign write that fails", { fail: { [`PATCH /v1/pages/${CARD}`]: 500 } }, "the Assign write answered 500", 1],
 		["an Assign a page read may truncate", { assign: Array(25).fill(OTHER) }, `${CARD} lists 25 people on Assign, the most a page read returns`, 0],
 	])("%s refuses the pass before the stage session, so the next pass reads the answer again", async (_, card, why, writes) => {
 		Object.assign(notion.state, card);
 		const r = await pass(drafted(), { ...DRAFT, pick: PICKED }, configured()).finally(reset);
-		expect(notion.state.wrote).toHaveLength(writes);
+		expect(wrote()).toHaveLength(writes);
 		expect(r.last).toBe(`board-loop: refused — assign: failed — ${why}`);
 		expect(r.calls).not.toContain("claude -p /goal");
 	});
@@ -108,7 +110,7 @@ describe("an answer beside a draft pull request", () => {
 		const r = await pass(drafted(), { ...DRAFT, pick: PICKED, said: ASKED }, configured());
 		expect(created(r.calls)).toEqual([`${CREATE} --draft`]);
 		expect(r.calls).not.toContain(READY);
-		expect(notion.state.wrote.at(-1)).toEqual({ properties: { Assign: { people: [{ id: USER }] } } });
+		expect(wrote().at(-1)).toEqual({ properties: { Assign: { people: [{ id: USER }] } } });
 	});
 
 	// spec: board-loop/marking-ready-fails

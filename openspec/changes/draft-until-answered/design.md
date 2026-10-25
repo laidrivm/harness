@@ -80,8 +80,9 @@ first and owns the small `unassign()`, and `bot-notion-writes` reuses it.
 With the integration, the pick session names the card of a draft-branch
 candidate it takes in one `CARD: <id>` line beside its `PICK:` line, read as
 `asked()` reads `QUESTION:`; the runner checks it with `carded()` and, before
-the stage session starts, calls `unassign()` in `bun/notion-bot.ts`, beside
-`post()`'s own `Assign` write: it reads the card's `Assign` and writes it
+the stage session starts, calls `unassign()` in `bun/notion-unassign.ts`
+(split from `bun/notion-bot.ts` at its line cap), beside `post()`'s own
+`Assign` write: it reads the card's `Assign` and writes it
 back without the user, leaving anyone else. A missing or refused `CARD:` line
 writes nothing and is printed; the pass goes on. `bot-notion-writes` extends
 the same line to every pick and adds the claim. Without the integration this
@@ -158,6 +159,11 @@ question under a `QUESTION:` line, and this change clears no `Assign` there.
 - **The repeated `QUESTION:` sentence** sits in the two shared fourth lines,
   so a hand-launched session repeats its question too; nothing reads it there,
   and one line per form is kept rather than four.
+- **`pickedCard()` and `unassign()` sit in `bun/notion-unassign.ts`**, since
+  `pause-notice` (#293) brought `bun/notion-bot.ts` past 300 lines with
+  them; `carded()` is exported for it. `unassign()` does not reuse #293's
+  `assign()`, which sets the user alone, where this write keeps everyone
+  else.
 - **`unassign()`** reads the page again after `carded()` for `Assign`, and
   writes the list back without the user whether or not the user was on it.
   An `Assign` of 25 people or more, the most a page read lists, is left

@@ -18,8 +18,8 @@ const pair = generateKeyPairSync("rsa", {
 	publicKeyEncoding: { type: "spki", format: "pem" },
 });
 const app = { id: "7", key: createPrivateKey(pair.privateKey), owner: "o", repo: "demo" };
-/** The board loop's two, which `board-loop-push.ts` passes. */
-const BOARD = { contents: "write", pull_requests: "write" } as const;
+/** The board loop's three, which `board-loop-push.ts` passes. */
+const BOARD = { contents: "write", pull_requests: "write", workflows: "write" } as const;
 
 /** Each request the stand-in saw: its method, path, `Authorization` and body. */
 let seen: { method: string; path: string; auth: string | null; body: string }[] = [];
@@ -99,12 +99,12 @@ describe("the calls", () => {
 	});
 
 	// spec: board-loop/an-app-configured
-	test("the token names one repository and exactly contents and pull_requests at write [41]", async () => {
+	test("the token names one repository and exactly contents, pull_requests and workflows at write [41]", async () => {
 		seen = [];
 		expect(await mint(app, BOARD)).toBe("ghs_minted");
 		expect(JSON.parse(seen[1].body)).toEqual({
 			repositories: ["demo"],
-			permissions: { contents: "write", pull_requests: "write" },
+			permissions: { contents: "write", pull_requests: "write", workflows: "write" },
 		});
 	});
 
@@ -207,7 +207,7 @@ describe("the key holder's mint command", () => {
 		seen = [];
 		expect(await mint(app, BOARD)).toBe("ghs_minted");
 		const { calls } = made;
-		expect(calls()).toEqual(["--as keyholder o/demo contents=write pull_requests=write"]);
+		expect(calls()).toEqual(["--as keyholder o/demo contents=write pull_requests=write workflows=write"]);
 		expect(seen).toEqual([]);
 	});
 

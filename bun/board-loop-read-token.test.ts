@@ -24,7 +24,7 @@ function stand() {
 	chmodSync(join(bin, "git"), 0o755);
 	// The launcher's shape: the words, then the session's clone, which `carry` hands the command.
 	const under = ["sh", "-c", 'cd "$0" && exec "$@"', dir];
-	return { push, bin, log, under };
+	return { dir, push, bin, log, under };
 }
 
 const header = (token: string) => `AUTHORIZATION: basic ${Buffer.from(`x-access-token:${token}`).toString("base64")}`;
@@ -95,6 +95,27 @@ describe("publish with the key holder's mint", () => {
 		} finally {
 			process.chdir(was[0] as string);
 			process.env.PATH = was[1];
+		}
+	});
+
+	// A step may add or change a file under `.github/workflows/`, which GitHub refuses to a token without `workflows`.
+	test("the push token asks contents, pull_requests and workflows at write", async () => {
+		const { dir, bin } = stand();
+		const asked = join(bin, "asked");
+		const mint = join(bin, "mint");
+		writeFileSync(mint, `#!/bin/sh\necho "$*" > '${asked}'\nexit 1\n`);
+		chmodSync(mint, 0o755);
+		const goal = join(bin, "goal.ts");
+		writeFileSync(goal, 'console.log("goal met");\n');
+		const was = process.cwd();
+		process.chdir(dir);
+		try {
+			const app = { id: "7", mint, owner: "o", repo: "r" };
+			const said = await publish("PR-TITLE: t\nPR-BODY: b", [goal], "feat/demo", "main", { session: "s", clone: "c" }, app);
+			expect(said).toStartWith("the App's token could not be minted: ");
+			expect(readFileSync(asked, "utf8").trim()).toBe("o/r contents=write pull_requests=write workflows=write");
+		} finally {
+			process.chdir(was);
 		}
 	});
 });
