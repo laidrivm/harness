@@ -10,17 +10,19 @@
       with that file
 - [ ] 1.2 `request()` in `bun/github-app.ts` and `client()` in
       `bun/notion-bot.ts` throw `Transient` for a rejected `fetch` and for an
-      `answered()` status, with today's messages. Cases in
+      `answered()` status, with today's messages, building the URL with
+      `new URL()` before the `fetch` as design.md says. Cases in
       `bun/github-app.test.ts` and `bun/notion-bot-rest.test.ts`: a stub
-      answering 502 and one that never answers throw `Transient`; 401 throws a
-      plain `Error`. Verify with those files
+      answering 502 and one that never answers throw `Transient`; 401 and a
+      malformed base URL throw a plain `Error`. Verify with those files
 - [ ] 1.3 `bun/github-app-mint.ts` exits `TEMPFAIL` for a `Transient`;
       `minted()` in `bun/github-app-minted.ts` throws `Transient` for exit 75
-      or for no exit status. Cases in `bun/github-app-mint.test.ts`: a mint
-      whose API answers 503 exits 75, one answered 401 exits 1; a fake mint
-      command exiting 75, and one sleeping past a short limit, make `minted()`
-      throw `Transient`, and one exiting 1 a plain `Error`. Verify with that
-      file and `bun test`
+      or when its own limit killed the mint (`exitedDueToTimeout`). Cases in
+      `bun/github-app-mint.test.ts`: a mint whose API answers 503 exits 75,
+      one answered 401 exits 1; a fake mint command exiting 75, and one
+      sleeping past a short limit, make `minted()` throw `Transient`, and one
+      exiting 1 or killing itself with `SIGKILL` a plain `Error`. Verify with
+      that file and `bun test`
 - [ ] 1.4 `session()` in `bun/board-loop-session.ts` adds
       `--output-format json` and returns `out` as the result object's
       `result` and `transient` as design.md *A session ended by a transient

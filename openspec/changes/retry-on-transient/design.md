@@ -72,10 +72,16 @@ rejection too; then one regex: `Could not resolve host`, `Failed to connect`,
 `RPC failed`, `early EOF`, `unexpected disconnect`, `Empty reply from
 server`. `request()`
 and `client()` throw `Transient` where they throw today for a rejected
-`fetch` or such a status; the message is unchanged. The mint exits 75 for a
-`Transient`, and `minted()` throws `Transient` for exit 75 or for no exit
-status (killed at its limit). A 4xx other than 429, an unreadable key, a bad
-answer shape: plain `Error`, as today.
+`fetch` or such a status; the message is unchanged. A rejected `fetch` is
+then only a transport failure or the call's own timeout: each builds its URL
+with `new URL()` before the `fetch` and outside its catch, so a malformed
+configured base (`GITHUB_API_URL`, `HARNESS_NOTION_API_URL`) throws a plain
+`Error`, and the timeout is the only signal either passes, so no other abort
+exists. The mint exits 75 for a `Transient`, and `minted()` throws
+`Transient` for exit 75 or when its own limit killed the mint
+(`exitedDueToTimeout`, probed in `gh-timeout`); a mint ended by any other
+signal (the OOM killer, an external stop) is a plain `Error`. A 4xx other
+than 429, an unreadable key, a bad answer shape: plain `Error`, as today.
 
 Classification by the thrown class or a field, never by matching a message
 the runner prints. Two messages are matched: git's stderr, the only structure
