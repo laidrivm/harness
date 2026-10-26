@@ -26,10 +26,10 @@ request's state, and a fact is code's to read.
     path.
 - The paths come from one call, `git diff --name-only -z --no-renames
   --no-relative <base>...HEAD`, so a moved file counts on both sides and no
-  git setting hides or quotes a path. The base is resolved
-  once, by a script `bun/diff-budget.sh` now also calls for its default, and
-  the runner passes the base it resolved both to the diff budget and to the
-  path read.
+  git setting hides or quotes a path. The base is resolved once, by a new
+  script `bun/diff-base.sh`, which `bun/diff-budget.sh` now also calls for
+  its default, and the runner passes the base it resolved both to the diff
+  budget and to the path read.
 - `bun/pre-pr.ts` prints the required steps as its last line, reading the
   pull request's state through `readPullRequests()`. A read that fails counts
   as no pull request open, which requires more steps, never fewer.

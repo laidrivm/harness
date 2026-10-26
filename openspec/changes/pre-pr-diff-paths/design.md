@@ -75,7 +75,8 @@ closed is not open: a branch reused after a merge is reviewed again.
 ### An unreadable diff requires every step
 
 When the path read fails (the base cannot be resolved, git cannot start),
-`required` receives no list and names every step, `warm` included — unless
+the path read returns `undefined`, never `[]`, which is a branch that changes
+nothing, and `required` names every step for it, `warm` included — unless
 the pull request is open, which requires the project checks alone whatever
 the diff holds, so the open state is read first. The diff
 budget reports the same failure as its `ERROR` line, so the runner already
