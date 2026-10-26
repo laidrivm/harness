@@ -275,8 +275,9 @@ guidelines the PR bot reads. A pattern SHALL match as the bot matches it: a
 
 ### Requirement: Claude's review is measured beside the CLI before it may replace it
 
-Each branch that invokes `/coderabbit-local` SHALL also run `/code-review
-high` in a fresh subagent at the commit of the first CLI pass, and its pull
+While fewer than ten pull requests are measured, each branch that invokes
+`/coderabbit-local` SHALL also run `/code-review high` in a fresh subagent at
+the commit of the first CLI pass, and its pull
 request's body SHALL list each defect either flagged, naming which. That run
 SHALL be no gate; one returning no review leaves the pull request unmeasured.
 Once CodeRabbit has reviewed the fifth measured pull request, a card with the
