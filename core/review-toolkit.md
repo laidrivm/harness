@@ -114,12 +114,13 @@ limit, gets no review on its own — stop waiting on it and report it.
   subagent at the commit of the CLI's first pass: the same commit makes the
   two lists comparable, a fresh subagent reviews code its context did not
   write, and the level is named because `/code-review` with none reuses the
-  last one typed. The subagent is given its target explicitly — the branch,
-  or the clone's path when the session works in a clone outside the
-  project — since its working directory is the project's main checkout
-  whatever clone the session works in; a review that names files the branch
-  did not change read another tree, and counts as a run that does not
-  return. A branch whose CLI is unavailable has no first pass and goes
+  last one typed. The subagent is given its target explicitly — the first
+  pass's commit SHA, with the clone's path when the session works in a clone
+  outside the project — since its working directory is the project's main
+  checkout whatever clone the session works in, and a branch moves on. It
+  reports the SHA it reviewed; a review of another SHA, or one that names
+  files the branch did not change, read another tree and counts as a run
+  that does not return. A branch whose CLI is unavailable has no first pass and goes
   unmeasured. The verified findings of both are applied on the
   `/coderabbit-local` terms above, since the branch ships either way. It is
   no gate and carries no severity while measured: a finding of it judged
