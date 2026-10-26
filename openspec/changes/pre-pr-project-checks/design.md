@@ -119,6 +119,15 @@ collapses one, and adds no formatting of its own. The line still opens
 `PRE-PR:` and is still not shaped like a gate line. Both steps still run, so
 an agent sees the result before it commits.
 
+The runner reads `HEAD` and the status a second time, after both steps and
+before writing, and writes no record when either reading changed. A check
+that writes into the tree, or a commit made during the roughly 7-minute run,
+leaves no single commit the run vouches for. When the status changed, the
+no-record line names what the second reading lists. That costs one more `git`
+call, and the local review of this proposal asked for it. `git status` leaves
+out what `.gitignore` covers, so a check whose output is ignored still
+records.
+
 ### The sequence runs the runner once, after the last commit
 
 `core/review-toolkit.md` step 1 becomes: look at the budget first with `bash
@@ -194,6 +203,9 @@ only. `stage-goal` is shared with none.
   the key, and the harness gains it in this change.
 - [An untracked file left by a tool] → the runner names it, and the agent
   commits it or ignores it. That is the intended behaviour (answer 2 a).
+- [A test suite that leaves files in the tree never records] → the second
+  reading names them, and the project ignores them. Task 1.7's live run on
+  this checkout shows whether the harness's own suite leaves any.
 
 ## Migration Plan
 

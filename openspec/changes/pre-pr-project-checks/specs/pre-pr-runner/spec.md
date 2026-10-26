@@ -100,7 +100,11 @@ or a file is untracked and not ignored, the runner SHALL still run both steps
 and print their lines. It SHALL write no record, and SHALL print one line
 saying no record was written, naming each such file. A record names a commit,
 and the steps read the working tree, so a file the commit does not hold could
-make them pass where the commit would not. Ignored files SHALL NOT count.
+make them pass where the commit would not. Ignored files SHALL NOT count. The
+runner SHALL read `HEAD` and that status again once both steps have ended, and
+SHALL write no record when either differs from its reading before the steps,
+since a step that wrote into the tree or a commit made meanwhile leaves no
+single commit the run vouches for.
 
 #### Scenario: An uncommitted edit
 
@@ -118,3 +122,14 @@ make them pass where the commit would not. Ignored files SHALL NOT count.
 
 - **WHEN** the only difference from `HEAD` is a file an ignore rule covers
 - **THEN** the runner records the run
+
+#### Scenario: A check that writes into the tree
+
+- **WHEN** the tree is clean before the steps, and the project checks leave
+  an untracked, non-ignored file or an edit to a tracked file
+- **THEN** the runner writes no record and names the file
+
+#### Scenario: A commit made during the run
+
+- **WHEN** `HEAD` moves while the steps run
+- **THEN** the runner writes no record

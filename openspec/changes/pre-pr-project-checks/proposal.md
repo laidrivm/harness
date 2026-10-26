@@ -41,10 +41,13 @@ have the same problem.
   the working tree, and a file no commit holds can make a pass the commit would
   not get. The runner still runs both steps and prints their lines, but it
   writes no record and names the files that stopped it. Ignored files still do
-  not count.
+  not count. It reads `HEAD` and the status again after the steps, so a check
+  that writes into the tree, or a commit made during the run, leaves no
+  record.
 - The harness's own `package.json` gains `"bumpTest": "bun test"`.
 - `core/review-toolkit.md`: the sequence's first look at the budget becomes
-  `bash bun/diff-budget.sh` run directly. The runner, with its tests, runs once,
+  `bash bun/diff-budget.sh` run directly (`bash
+  node_modules/harness/bun/diff-budget.sh` where the harness is installed). The runner, with its tests, runs once,
   after the sequence's last commit. The full `bun test` takes about 7 minutes
   here, so the step says to give the call a 600000 ms timeout or run it in the
   background. On the docs path, "plus `bun test` when it adds or removes a
