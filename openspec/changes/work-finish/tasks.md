@@ -78,7 +78,7 @@ failing case first, its failure recorded, cited as `// spec:
       `gh pr ready 7 --undo=false`, `gh -R o/r pr ready 7`, `cd x && gh pr
       ready 7` and `gh pr create --draft` are refused, naming `bun
       bun/work.ts finish`; `gh pr ready 7 --undo` passes; `sh -c 'gh pr
-      ready 7'` passes, the stated exception; a non-Bash event passes; each refusal writes one `ready-guard` record under
+      ready 7'` and `eval 'gh pr ready 7'` pass, the stated exception; a non-Bash event passes; each refusal writes one `ready-guard` record under
       `hand-ready` or `hand-create`. Then export `ghFinishes()` from
       `bun/command-guard-gh.ts` and write `bun/ready-guard.ts`
 - [ ] 2.7 Failing cases in `bun/self-pin.test.ts`: the harness's own
