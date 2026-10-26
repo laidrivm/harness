@@ -16,7 +16,8 @@ Two facts are not yet verified and become tasks (*Migration Plan*):
 
 - Notion serves a page's body as rendered markdown at `GET
   /v1/pages/{id}/markdown`, under API version `2026-03-11`, answering an
-  object with `markdown` and `truncated` (the card's exploration, from
+  object with `markdown`, `truncated` and `unknown_block_ids`, the blocks it
+  could not render (the card's exploration, from
   Notion's documentation).
 - The ask integration reads pages now that the user granted it *Read content*
   (card comment, 2026-10-26).
@@ -67,7 +68,9 @@ question 20).
    each read by its type — title and rich text through `plain()`, select and
    status by name, multi-select as names, people as ids.
 3. `GET /v1/pages/{id}/markdown`: `markdown` printed as it comes;
-   `truncated` true adds a line. A `markdown` that is not a string fails the
+   `truncated` true adds a line, and a non-empty `unknown_block_ids` a line
+   with their count — the fields, never a search of the markdown for
+   Notion's `<unknown>` tag. A `markdown` that is not a string fails the
    read, as a status would.
 4. `discussion()` and `waits()`, both exported from `bun/notion-bot.ts`: each
    comment as `<created_time> <author>: <plain text>`, the author `user` when
@@ -143,7 +146,8 @@ code seams above share files, not capabilities.
 
 - [The markdown endpoint's shape or version differs from the exploration's
   reading] → the live probe runs before the cases are trusted; `take` reads
-  only `markdown` and `truncated`, so a renamed field fails one case.
+  only `markdown`, `truncated` and `unknown_block_ids`, so a renamed field
+  fails one case.
 - [The grant reaches only the pages the integration is connected to] → a
   card outside the boards answers 403 or 404, which `take` reports and exits
   1 on.
