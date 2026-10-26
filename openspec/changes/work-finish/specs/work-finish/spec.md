@@ -21,11 +21,6 @@ print the usage and exit 2 before any git, `gh` or Notion call.
 - **WHEN** `finish` runs without `--card`
 - **THEN** it prints the usage, exits 2, and nothing is pushed or opened
 
-#### Scenario: A title without a body
-
-- **WHEN** `finish` runs with `--title` and no `--body-file`
-- **THEN** it prints the usage and exits 2
-
 #### Scenario: An option it does not know
 
 - **WHEN** `finish` runs with `--force`
@@ -52,11 +47,6 @@ as the goal check reads it.
 - **WHEN** a tracked file differs from `HEAD`
 - **THEN** `finish` refuses before the push and exits 1
 
-#### Scenario: On main
-
-- **WHEN** `HEAD` is on `main`
-- **THEN** `finish` refuses and pushes nothing
-
 ### Requirement: Finish pushes only while the pull request is a draft
 
 `finish` SHALL push `HEAD` to the branch of the same name on `origin`, never
@@ -81,11 +71,6 @@ the pull request left as it was.
 
 - **WHEN** the branch's pull request #7 is open and not a draft
 - **THEN** `finish` names `gh pr ready 7 --undo`, exits 1, and pushes nothing
-
-#### Scenario: A pull request state it cannot read
-
-- **WHEN** the branch's pull requests cannot be read
-- **THEN** `finish` exits 1 and pushes nothing
 
 ### Requirement: Finish opens a missing pull request as a draft
 

@@ -77,12 +77,6 @@ gate ledger* requires, so that the wrap-up counts flakes beside refusals.
 - **THEN** the ledger gains one record naming that check, a block, its
   prohibition's id and the commit pushed
 
-#### Scenario: A hand-run ready
-
-- **WHEN** the ready guard refuses `gh pr ready 7`
-- **THEN** the ledger gains one record naming the ready guard, a block, and
-  its prohibition's id
-
 #### Scenario: A finish refused
 
 - **WHEN** `work.ts finish` refuses for a missing run record

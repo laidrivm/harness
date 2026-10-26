@@ -86,7 +86,5 @@ from, not what it does.
   (`ran()`), `.claude/settings.json` (the harness-only registration and
   `Bash(bun bun/work.ts *)`), `bun/self-pin.test.ts`, `bun/settings.test.ts`,
   `core/rules.md`, `core/git-and-prs.md`.
-- The ready guard runs from the pin, so it holds sessions only after the pin
-  moves past the merge; `finish` and the pre-push check run from the tree.
 - Every push into a ready pull request is refused, the user's own included:
   `gh pr ready <n> --undo` first.
