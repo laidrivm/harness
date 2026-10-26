@@ -24,8 +24,9 @@ request's state, and a fact is code's to read.
     also requires `/zombies`, and `/warm` where a `package.json` or `bun.lock`
     changed anywhere in the tree. A branch changing only config takes the code
     path.
-- The paths come from one call, `git diff --name-only --no-renames
-  <base>...HEAD`, so a moved file counts on both sides. The base is resolved
+- The paths come from one call, `git diff --name-only -z --no-renames
+  --no-relative <base>...HEAD`, so a moved file counts on both sides and no
+  git setting hides or quotes a path. The base is resolved
   once, by a script `bun/diff-budget.sh` now also calls for its default, and
   the runner passes the base it resolved both to the diff budget and to the
   path read.
