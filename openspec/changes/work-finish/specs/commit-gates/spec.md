@@ -101,11 +101,6 @@ everybody's pushes, and that is where the verdict is binding.
 - **THEN** the hook names `gh pr ready 7 --undo`, exits non-zero before
   `bun test`, and the push does not happen
 
-#### Scenario: A push into a draft
-
-- **WHEN** a push updates `feat/x` and its open pull request is a draft
-- **THEN** the draft check passes and the hook goes on to `bun test`
-
 #### Scenario: A pull request state the hook cannot read
 
 - **WHEN** a push updates a branch on `github.com` and its pull requests

@@ -2,30 +2,19 @@
 
 ## Context
 
-See proposal.md, *Why*. What the code holds today:
+See proposal.md, *Why*. The parts exist: `ready()` (`bun/ci-run-draft.ts`),
+`readPullRequests()` over REST (`bun/pull-requests.ts`), `waiting()`
+(`bun/notion-bot.ts`) behind the ask settings (`bun/notion-ask.ts`), and
+`ran()` (`bun/gate-ledger.ts`), which matches a `pre-pr` record by commit,
+checkout and outcome but not by step. Three facts shape the rest:
 
-- `ready()` in `bun/ci-run-draft.ts` runs `gh pr ready <n> -R <repo>
-  [--undo]` under `pull-requests.ts`'s time limit; `bun/board-loop.ts`
-  imports it too.
-- `readPullRequests(branch)` in `bun/pull-requests.ts` reads a branch's pull
-  requests, `draft` included, over REST, for the repository `origin` names.
-- `waiting(call, card, user)` in `bun/notion-bot.ts` decides from the card's
-  comments whether a question waits on the user; `bun/notion-ask.ts` reaches
-  it through the ask settings (`settings(where(ASK_SETTINGS))`, `client()`).
-- `ran(commit, top, decision?, ledger?)` in `bun/gate-ledger.ts` finds a
-  `pre-pr` record by commit, checkout and outcome, not by step; the runner
-  writes one record, `diff-budget`.
-- `.githooks/pre-push` runs `bun test` and the diff budget. Git runs it even
-  when the push updates nothing: probed 2026-10-26, a second `git push -u
-  origin HEAD` ran the hook with an empty standard input and then printed
-  `Everything up-to-date`. `bun/pre-pr.test.ts` pins that the hook's text
-  holds `diff-budget.sh` and not the substring `pre-pr`.
+- Git runs `.githooks/pre-push` even when the push updates nothing: probed
+  2026-10-26, a second `git push -u origin HEAD` ran the hook with an empty
+  standard input, then printed `Everything up-to-date`.
+- `bun/pre-pr.test.ts` pins that the hook's text holds no `pre-pr`.
 - `bun/settings.ts` lets the `Bash` matcher hold the bootstrap alone
-  (`sole`); a hook with no matcher need only be present. `bun/sync-settings.ts`
-  replaces only hooks whose command ends with `# harness-managed` or equals a
-  `HOOKS` text, and keeps every other. `harness-updates`' *The harness's own
-  sessions run its gates from its pin* forbids a hook that runs a script from
-  the working tree.
+  (`sole`), and `bun/sync-settings.ts` keeps every hook that neither ends with
+  `# harness-managed` nor equals a `HOOKS` text.
 
 ## Goals / Non-Goals
 
@@ -34,11 +23,10 @@ on 2026-10-25 (push while draft, ready right after); the two acts that take a
 pull request out of draft — a hand-run ready, and a push into one already
 out — are refused; every refusal is one ledger record.
 
-**Non-Goals:** deriving which steps a diff owes (the required-steps change);
-`work.ts take`; a Stop hook; the host's key-holder command and the board
-loop's own push, which roadmap stage 7 removes; cloud sessions; checking that
-`--card` names the branch's card — the gate holds a mistake of order, not a
-wrong argument (stage 2, question 23 в).
+**Non-Goals:** beyond the proposal's list, the board loop's own push, which
+roadmap stage 7 removes, and checking that `--card` names the branch's card —
+the gate holds a mistake of order, not a wrong argument (stage 2, question
+23 в).
 
 ## Decisions
 
@@ -95,12 +83,10 @@ alone (stage 2, question 24). The records from the `Skill` hook (slice item
 
 ### `ran()` filters by step
 
-`ran()` gains a `rule` parameter, and the goal check, `ranUnder()` and
-`unproven()` pass `diff-budget`. The turn gate passes none: it asks whether
-the runner ran, which any of its records answers. This ships here only if
-this change merges before the slice's items 1 and 2 (user, 2026-10-26); a
-sibling that merges first carries it, and this change's task is then
-dropped with a line saying which pull request carried it.
+`ran()` gains a `rule` parameter; the goal check, `ranUnder()` and
+`unproven()` pass `diff-budget`, and the turn gate, asking only whether the
+runner ran, passes none. It ships here only if this change merges before the
+slice's items 1 and 2 (user, 2026-10-26).
 
 ### The pre-push draft check
 
@@ -153,12 +139,10 @@ opening.
 
 ### Records
 
-Each refusal is `record(gate, "block", id, event, commit)`: gate `finish`,
-`push-draft` or `ready-guard`; ids `dirty`, `no-branch`, `on-main`,
-`unproven`, `ready-pull`, `unread-pulls`, `no-title` for `finish`,
-`ready-pull` and `unread-pulls` for the hook, `hand-ready` and `hand-create`
-for the guard. A failure after the push — the push itself, the create, the
-Notion read, the ready — is no refusal and records nothing.
+Each refusal is `record(gate, "block", id, event, commit)` under gate
+`finish`, `push-draft` or `ready-guard`, one id per reason. A failure after
+the push — the push, the create, the Notion read, the ready — is no refusal
+and records nothing.
 
 ### Two steps
 
@@ -181,11 +165,11 @@ way to mark a pull request ready.
 - [A wrong `--card` marks ready while the right card's question waits] → as
   the card names it: the gate holds a mistake of order, not of argument.
 - [A host clone with `core.hooksPath` set pushes through the draft check]
-  → the CI flow marks its pull request draft before it pushes and the board
-  loop takes no ready one; the live probe runs on one card on the laptop.
+  → the CI flow drafts its pull request before it pushes, and the board loop
+  takes no ready one.
 - [Sub-agents move to worktrees (card `40539875c31b8147818fcdcc791611f2`)]
-  → `finish` reads everything from its working directory; the push from a
-  worktree waits on that card, as `core/rules.md` says today.
+  → `finish` reads everything from its working directory; a push from a
+  worktree waits on that card.
 
 ## Migration Plan
 

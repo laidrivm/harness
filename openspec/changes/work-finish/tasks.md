@@ -1,11 +1,8 @@
 # work-finish — tasks
 
-Two groups, one pull request each, in order: `feat/work-finish-1`, then
-`feat/work-finish-2`. Write each failing case first and record that it
-fails; cite each scenario as `// spec: <capability>/<slug>`. `wc -l` every
-`.ts` file touched: `bun/command-guard-gh.ts` stands at 225 lines and
-`bun/gate-ledger.test.ts` at 298, so `ran()`'s cases go in a file of their
-own.
+Two groups, one pull request each: `feat/work-finish-1`, then `-2`. Each
+failing case first, its failure recorded, cited as `// spec:
+<capability>/<slug>`. `bun/gate-ledger.test.ts` stands at 298 lines.
 
 ## 1. Refuse a push into a ready pull request
 
@@ -15,8 +12,8 @@ own.
       Then give `ran()` its `rule` parameter and pass `diff-budget` from
       `bun/goal-check.ts` and `ranUnder()`; the turn gate passes none.
       Verify with `bun/gate-ledger-rule.test.ts`, `bun/goal-check.test.ts`
-      and the `turn-gate*` tests. If a sibling change already merged the
-      filter, drop this task with a line naming its pull request
+      and the `turn-gate*` tests. If a sibling merged the filter first, drop
+      this task naming its pull request
 - [ ] 1.2 Failing cases in `bun/pull-requests.test.ts`: `readPullRequests()`
       given a repository reads that one and spawns no git; `readyOne()`
       answers the open non-draft pull request, none for a draft, a merged
