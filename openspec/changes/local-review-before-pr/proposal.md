@@ -25,9 +25,9 @@ billing setting.
 - Step 2, measurement only: until the user settles step 2, a branch that
   runs `/coderabbit-local` before its pull request opens also runs
   `/code-review high` in a fresh subagent at the same commit, and the pull
-  request's body records which defects each local reviewer flagged. At the
-  fifth measured pull request a session files a card with the tally for the
-  user, and at the tenth the measurement stops. `/code-review` is no gate
+  request's body records which defects each local reviewer flagged. Once
+  CodeRabbit has reviewed the fifth measured pull request, a session files a
+  card with the tally for the user, and at the tenth the measurement stops. `/code-review` is no gate
   while it is measured.
 - `core/review-toolkit.md` carries both: the sequence's step 5 and its
   documentation-branch path, and a `/code-review` bullet that holds the

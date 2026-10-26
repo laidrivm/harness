@@ -21,7 +21,8 @@
       pass, a `Review measurement` section in the pull request's body with
       one line per verified defect naming which reviewer flagged it, the
       `gh pr list … --search '"Review measurement" in:body'` count, an
-      `idea` card at the fifth, the end at the tenth, that it is no gate,
+      `idea` card filed once CodeRabbit has reviewed the fifth, by the
+      session disposing of that review, the end at the tenth, that it is no gate,
       that a run that does not return leaves no section and is not counted,
       and that `/ponytail-review`'s record is no evidence about it. Cite the
       five scenarios of *Claude's review is measured beside the CLI before
