@@ -71,8 +71,9 @@ tally SHALL go to the user; the tenth SHALL end the measurement.
   due its `/coderabbit-local` and fewer than ten measured pull requests exist
 - **THEN** the agent runs `/coderabbit-local` as before and `/code-review
   high` in a fresh subagent at the commit of the CLI's first pass, giving
-  the subagent that target explicitly rather than relying on its working
-  directory
+  the subagent that commit's SHA explicitly rather than relying on its
+  working directory or a branch, and the subagent reports the SHA it
+  reviewed
 - **AND** applies the verified findings of both under this capability's
   policy
 - **AND** the pull request opens with a `Review measurement` section — a
@@ -98,8 +99,8 @@ tally SHALL go to the user; the tenth SHALL end the measurement.
 #### Scenario: Claude's review does not return
 
 - **WHEN** the `/code-review` run fails or returns no review — a usage
-  limit, an error, a subagent that ends without one, a review naming files
-  the branch did not change
+  limit, an error, a subagent that ends without one, a review of another
+  SHA than the first pass's, a review naming files the branch did not change
 - **THEN** the branch goes on with `/coderabbit-local` alone, its pull
   request carries no `Review measurement` section, and the report names why
 - **AND** that pull request is not counted as measured

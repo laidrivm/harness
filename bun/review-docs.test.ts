@@ -191,9 +191,11 @@ describe("the /code-review bullet measures Claude's review beside the CLI", () =
 	test("gives the subagent its target, never its working directory", () => {
 		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
 		expect(text).toContain("The subagent is given its target explicitly");
+		expect(text).toContain("the first pass's commit SHA");
 		expect(text).toContain("its working directory is the project's main checkout");
+		expect(text).toContain("It reports the SHA it reviewed");
 		expect(text).toContain(
-			"a review that names files the branch did not change read another tree, and counts as a run that does not return",
+			"a review of another SHA, or one that names files the branch did not change, read another tree and counts as a run that does not return",
 		);
 	});
 
