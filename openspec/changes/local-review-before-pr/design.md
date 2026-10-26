@@ -102,11 +102,15 @@ review on the exact `HEAD`; a pull request open → CodeRabbit reviews the head.
   item 2): it records `/coderabbit-local` as invoked. After this change a push
   into an open pull request has no such record, by design; a `/code-review`
   run during the measurement may be recorded too, harmlessly.
-- *Required steps from the diff* and *the draft rule inside `work.ts finish`*
-  (slice item 3): `finish` must not require the local review once a pull
-  request is open — the same answer 24 а′ this change writes into the doc.
-  Whichever merges second reads the other; neither is named in `after:`,
-  since the branch holds neither directory.
+- *Required steps from the diff* (slice item 3, change `pre-pr-diff-paths`,
+  #309): its `bun/pre-pr-steps.ts` already requires the project checks alone
+  once a pull request is open, and counts a failed read as none open — the
+  same rule this change writes into the doc and the spec. It also moves the
+  two paths of *The pre-PR sequence* out of `core/review-toolkit.md` into the
+  runner's output. See the conflict check below for the order.
+- *The draft rule inside `work.ts finish`* (slice item 3, change
+  `work-finish`, #308): no overlap — its deltas name no review step, and
+  `finish` takes its list of required steps from `pre-pr-diff-paths`.
 - *Project checks in `pre-pr.ts`* (slice item 1): no overlap — the runner
   runs no reviewer. Stage 2's *Потом* item 4, the runner launching the
   reviewer itself, waits on step 2's decision.
@@ -114,8 +118,19 @@ review on the exact `HEAD`; a pull request open → CodeRabbit reviews the head.
 
 Conflict check (stage-2 question 14 б, by hand): `openspec show
 <change> --json --deltas-only` for every open change. On `origin/main`,
-`host-deploy` touches `orchestrator` only; no open pull request held a change
-directory when this was written. No shared capability, so no contradiction.
+`host-deploy` touches `orchestrator` only. Among the open pull requests,
+`work-finish` (#308) touches `commit-gates`, `gate-ledger`, `pre-pr-runner`
+and `work-finish`, none of them this change's. `pre-pr-diff-paths` (#309)
+shares `local-review-loop`: both MODIFY *The gate runs after triage and
+before the push*. No contradiction — #309 rewords which branch is a
+documentation branch, this change adds when the gate runs, and its code
+already applies this change's rule. Order via prose: this change goes first,
+being step 1 of a card the user wants in force now and prose alone; the
+second of the two to archive re-copies the requirement whole from the live
+spec and keeps both edits, as `core/feature-workflow.md` (*Across the
+stages*) requires. If #309 applies first, task 1.3 edits whatever text
+`core/review-toolkit.md` then holds about when `/coderabbit-local` runs, and
+the cases of 1.1 read that text.
 
 ## Risks / Trade-offs
 

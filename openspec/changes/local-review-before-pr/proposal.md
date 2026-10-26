@@ -58,5 +58,8 @@ None.
   documentation-branch paragraph.
 - `bun/review-docs.test.ts`: cases pinning the open-pull-request condition
   and the measurement's procedure in that doc.
+- Order: before `pre-pr-diff-paths` (#309), which modifies the same
+  requirement and the same section of the doc; the later of the two to
+  archive re-copies the requirement whole (design.md, conflict check).
 - No code path changes: no harness script runs `/coderabbit-local` or reads
   its gate line to decide a push.
