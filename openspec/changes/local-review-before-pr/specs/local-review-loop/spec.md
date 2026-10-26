@@ -70,9 +70,17 @@ tally SHALL go to the user; the tenth SHALL end the measurement.
   high` in a fresh subagent at the commit of the CLI's first pass
 - **AND** applies the verified findings of both under this capability's
   policy
-- **AND** the pull request opens with a `Review measurement` section listing
-  each verified defect and which local reviewer flagged it, `none` when
+- **AND** the pull request opens with a `Review measurement` section — a
+  body line reading exactly `## Review measurement` — listing each verified
+  defect and which local reviewer flagged it, or the single line `none` when
   neither flagged one
+
+#### Scenario: A pull request that only names the section
+
+- **WHEN** a pull request's body mentions `Review measurement` but holds no
+  line reading exactly `## Review measurement`
+- **THEN** it is not counted as measured, though a body search for the
+  phrase lists it, and closed and merged pull requests are searched alike
 
 #### Scenario: A finding of Claude's review the agent would skip
 
