@@ -21,7 +21,7 @@ not that it was followed, and the review catches the rest.
 
 - A new hook script, `bun/skill-record.ts`, registered for `PostToolUse` on
   the `Skill` tool (a call Claude makes) and for `UserPromptExpansion` (a
-  `/skill` the user types). It appends one ledger record: gate `skill`,
+  `/skill` the user types; an MCP server's prompt is not recorded). It appends one ledger record: gate `skill`,
   decision `called`, rule the skill's name, the commit `HEAD` names in the
   hook's `cwd`, and that checkout's top level as the project. It writes no
   record when that directory has no `HEAD`, or when a tracked file differs
