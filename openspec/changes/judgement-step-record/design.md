@@ -78,7 +78,10 @@ Process: grep a design for a decision a fix reverses).
 
 `bun/skill-record.ts` reads the event from stdin. The rule is
 `tool_input.skill` for `PostToolUse` and `command_name` for
-`UserPromptExpansion`; an event carrying neither is not recorded. Arguments,
+`UserPromptExpansion` whose `expansion_type` is `slash_command`; an event
+carrying neither is not recorded. An expansion of type `mcp_prompt` is an MCP
+server's prompt, not a skill, and a prompt that shares a skill's name would
+otherwise read as that step. Arguments,
 `tool_response` and the prompt are never read into the record
 (`gate-ledger`, *A record holds no command text*): a skill's arguments are
 free text and can carry a path or a token.
@@ -97,8 +100,9 @@ The hook runs `git rev-parse --verify -q HEAD` and `--show-toplevel` in the
 event's `cwd`, then calls `record("skill", "called", <name>, {session_id,
 cwd: <top>}, <HEAD>)` with `CLAUDE_PROJECT_DIR` removed from its own
 environment first, as `bun/pre-pr.ts` does: that variable names the session's
-project, which in a subagent's worktree is another checkout, and `ran()`
-matches the top level of the checkout the call ran in.
+project, which can be another checkout than the one the call ran in (the main
+one, for a subagent in a worktree, where the probe saw only `cwd`), and
+`ran()` matches the top level of the checkout the call ran in.
 
 No record is written when there is no `HEAD`, or when `git status --porcelain
 --untracked-files=no` prints anything — the pre-PR runner's rule. The record

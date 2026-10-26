@@ -26,6 +26,11 @@ not that the skill was followed.
 - **THEN** the ledger gains one record with the rule `triage` and the commit
   `C`
 
+#### Scenario: An MCP prompt the user types
+
+- **WHEN** the user types an MCP server's prompt whose name is `triage`
+- **THEN** the ledger is unchanged
+
 #### Scenario: A skill called with arguments
 
 - **WHEN** Claude calls a skill with arguments that name a file and a token

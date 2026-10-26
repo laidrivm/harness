@@ -24,8 +24,10 @@ in the self-pin bump pull request that moves the pin past group 1's merge
         decision `called`, rule `zombies`, `commit` the worktree's full
         `HEAD`, `project` the worktree's real top level, `session` the
         event's `session_id` [3, 19, 20];
-      - a `UserPromptExpansion` event, `command_name` `triage`, `cwd` the main
-        checkout, records rule `triage` at the main checkout's `HEAD` [4];
+      - a `UserPromptExpansion` event, `expansion_type` `slash_command`,
+        `command_name` `triage`, `cwd` the main checkout, records rule
+        `triage` at the main checkout's `HEAD` [4]; the same event with
+        `expansion_type` `mcp_prompt` records nothing (local review);
       - after that record, `ran(HEAD, top, "zombies", "called")` is true and
         `ran(HEAD, top, "diff-budget")` is false [24];
       - two calls append two records, in order [5];
@@ -71,7 +73,8 @@ in the self-pin bump pull request that moves the pin past group 1's merge
       differs. Make 1.2 pass; run `bun test bun/gate-ledger bun/turn-gate
       bun/goal-check bun/ci-run bun/pre-pr`.
 - [ ] 1.4 Write `bun/skill-record.ts` per design.md D2–D4: read stdin, take
-      the name from `tool_input.skill` or `command_name`, delete
+      the name from `tool_input.skill`, or from `command_name` when
+      `expansion_type` is `slash_command`, delete
       `CLAUDE_PROJECT_DIR`, read `HEAD`, the top level and
       `git status --porcelain --untracked-files=no` in the event's `cwd`,
       and call `record("skill", "called", name, {session_id, cwd: top},
