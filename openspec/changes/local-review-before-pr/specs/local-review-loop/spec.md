@@ -7,7 +7,8 @@
 The agent SHALL invoke `/coderabbit-local` against the branch after `/triage`
 and before pushing, only while no pull request is open on the branch. A push
 into an open pull request, draft or ready, SHALL get no local review, since
-CodeRabbit reviews that head on the pull request. The agent SHALL read the
+CodeRabbit reviews that head on the pull request, a draft's once it is marked
+ready. The agent SHALL read the
 pull request's state before the sequence starts, never infer it from what the
 push carries, and SHALL treat a state it could not read as none open. A branch of documentation, rules or config SHALL get one review
 pass rather than the full loop.
@@ -45,6 +46,8 @@ pass rather than the full loop.
 - **WHEN** `coderabbit doctor` exits non-zero, or `coderabbit` is not on PATH
 - **THEN** the agent reports which check failed and what fixes it
 - **AND** pushes without the gate rather than blocking the branch
+- **AND** its pull request carries no `Review measurement` section, since
+  there was no first pass to measure beside
 
 #### Scenario: A documentation branch
 
@@ -67,7 +70,10 @@ tally SHALL go to the user; the tenth SHALL end the measurement.
 - **WHEN** a branch with no open pull request, code or documentation, is
   due its `/coderabbit-local` and fewer than ten measured pull requests exist
 - **THEN** the agent runs `/coderabbit-local` as before and `/code-review
-  high` in a fresh subagent at the commit of the CLI's first pass
+  high` in a fresh subagent at the commit of the CLI's first pass, giving
+  the subagent that commit's SHA explicitly rather than relying on its
+  working directory or a branch, and the subagent reports the SHA it
+  reviewed
 - **AND** applies the verified findings of both under this capability's
   policy
 - **AND** the pull request opens with a `Review measurement` section — a
@@ -93,7 +99,8 @@ tally SHALL go to the user; the tenth SHALL end the measurement.
 #### Scenario: Claude's review does not return
 
 - **WHEN** the `/code-review` run fails or returns no review — a usage
-  limit, an error, a subagent that ends without one
+  limit, an error, a subagent that ends without one, a review of another
+  SHA than the first pass's, a review naming files the branch did not change
 - **THEN** the branch goes on with `/coderabbit-local` alone, its pull
   request carries no `Review measurement` section, and the report names why
 - **AND** that pull request is not counted as measured
