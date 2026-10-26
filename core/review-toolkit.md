@@ -45,12 +45,14 @@ limit, gets no review on its own — stop waiting on it and report it.
   before there is a PR. Invoke it yourself. It runs only while no pull
   request is open on the branch, a draft counting as open: a push into an
   open one skips it while the earlier steps run, because CodeRabbit reviews
-  that head on the pull request and `/coderabbit` disposes of its findings.
-  Read the pull request's state before the sequence starts, as
-  `git-and-prs.md` has it read before a review pass, and never infer it from
-  what the push carries. A branch whose only pull request was closed unmerged
-  has none open and runs it again, and a state the read could not get runs
-  it, since a skipped review is the costlier mistake. A finding that survives
+  that head on the pull request — a draft's once it is marked ready — and
+  `/coderabbit` disposes of its findings. Read the pull request's state
+  before the sequence starts, as `git-and-prs.md` has it read before a review
+  pass, and never infer it from what the push carries. A branch whose only
+  pull request was closed unmerged has none open and runs it again; a state
+  the read could not get runs it too, and the report says the state was
+  unread, since a skipped review is the costlier mistake. A finding that
+  survives
   verification is applied without asking, whatever its severity, overriding the
   skill's own "No fixes before approval" — the branch is unpushed, so being
   wrong costs a `git checkout`. Dismissing a 🟠 Major or 🔴 Critical goes the
@@ -112,7 +114,13 @@ limit, gets no review on its own — stop waiting on it and report it.
   subagent at the commit of the CLI's first pass: the same commit makes the
   two lists comparable, a fresh subagent reviews code its context did not
   write, and the level is named because `/code-review` with none reuses the
-  last one typed. The verified findings of both are applied on the
+  last one typed. The subagent is given its target explicitly — the branch,
+  or the clone's path when the session works in a clone outside the
+  project — since its working directory is the project's main checkout
+  whatever clone the session works in; a review that names files the branch
+  did not change read another tree, and counts as a run that does not
+  return. A branch whose CLI is unavailable has no first pass and goes
+  unmeasured. The verified findings of both are applied on the
   `/coderabbit-local` terms above, since the branch ships either way. It is
   no gate and carries no severity while measured: a finding of it judged
   wrong or not worth fixing is skipped with its reason in the report, and the
@@ -175,8 +183,9 @@ lines report them, and nothing proves they ran.
 5. `/coderabbit-local` last, then push — only while no pull request is open
    on the branch, a draft counting as open: a push into an open one skips it
    while the earlier steps run, and its report says CodeRabbit reviews the
-   head on the pull request, where `/coderabbit` disposes of the findings;
-   a state the read could not get runs it. Beside it runs the measurement
+   head on the pull request, a draft's once it is marked ready, where
+   `/coderabbit` disposes of the findings; a state the read could not get
+   runs it, and the report says the state was unread. Beside it runs the measurement
    the `/code-review` bullet sets out.
 
 CI measures the budget on every pull request and the pre-push hook measures it
@@ -191,8 +200,9 @@ adds or removes a directory under `openspec/changes/` — a test pins the tree's
 change set — then one pass of `/coderabbit-local` — one, not three — with
 the measurement the `/code-review` bullet sets out. That pass, too, runs only
 while no pull request is open on the branch, a draft counting as open: a push
-into an open one skips it while the earlier steps run, and a state the read
-could not get runs it.
+into an open one skips it while the earlier steps run, and its report says
+CodeRabbit reviews the head on the pull request; a state the read could not
+get runs it, and the report says the state was unread.
 
 Your sequence ends there — the PR link is the deliverable. `/coderabbit`
 closes the loop on either, once the bot has reviewed the head commit.
