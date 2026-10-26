@@ -109,9 +109,10 @@ on its own (`change-slicing`), and its record keeps the `rule` it has.
 
 ### The list is the runner's last line, not a gate line
 
-The runner prints `PRE-PR steps: <id>, <id>, …` after every step has run, the
-same `PRE-PR:` family as its no-record line, so the turn gate's `GATE_LINE`
-never reads it as a report. The runner's exit status is unchanged by it.
+The runner prints `PRE-PR steps: <id>, <id>, …` on every run, an open pull
+request's included, after every step has run. It is the same `PRE-PR:` family
+as its no-record line, so the turn gate's `GATE_LINE` never reads it as a
+report. The runner's exit status is unchanged by it.
 
 ## Seams with the sibling changes
 
