@@ -88,7 +88,7 @@ the `work-finish` and `pre-pr-diff-paths` changes (design.md, *Seams*).
       the same command. Verify: grep `core/`, `README.md` and `.claude/` for
       `pre-pr.ts`, `first, and again` and `when it adds or removes`, and read
       every hit back.
-- [ ] 1.7 Run the whole pre-PR sequence for a code branch, ending with the
+- [x] 1.7 Run the whole pre-PR sequence for a code branch, ending with the
       runner on the final commit. Verify: its two `pass` records of `HEAD` are
       in the ledger, and a live probe on this checkout with an untracked file
       prints the no-record line naming it.
