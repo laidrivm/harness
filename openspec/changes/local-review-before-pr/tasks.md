@@ -19,10 +19,11 @@
       found by its opening as the `/coderabbit` bullet is: it names
       `/code-review high`, a fresh subagent, the commit of the CLI's first
       pass, a `## Review measurement` heading line in the pull request's
-      body with one line per verified defect naming which reviewer flagged
-      it, or the single line `none` when neither flagged one, the full
-      candidate command `gh pr list --repo <repo> --state all --search
-      '"Review measurement" in:body' --json number,body`, and that only a
+      body with one line per verified defect giving its file and line, what
+      it was and which reviewer flagged it, or the single line `none` when
+      neither flagged one, the full candidate command `gh pr list --repo
+      <repo> --state all --search '"Review measurement" in:body' --json
+      number,body --limit 1000`, and that only a
       body with a line exactly `## Review measurement` counts as measured, an
       `idea` card filed once CodeRabbit has reviewed the fifth, by the
       session disposing of that review, the end at the tenth, that it is no gate,
