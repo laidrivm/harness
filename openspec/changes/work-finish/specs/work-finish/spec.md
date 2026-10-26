@@ -76,7 +76,8 @@ the pull request left as it was.
 
 When the branch has no open pull request, `finish` SHALL require `--title`
 and `--body-file`, refusing before the push without them, and after the push
-SHALL open the pull request against the default branch as a draft, whatever
+SHALL open the pull request against `main`, named rather than left to `gh`,
+as a draft, whatever
 the card holds. The switch to ready is then the one CodeRabbit reviews.
 
 #### Scenario: A first finish
