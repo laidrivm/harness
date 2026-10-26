@@ -5,10 +5,10 @@
 ### Requirement: The runner names the steps the branch requires from its diff
 
 The runner SHALL print, as its last line, the ids of the steps the branch
-requires while no pull request of it is open. A branch whose every changed path is a
-`*.md` file or lies under `openspec/` is a documentation branch and requires
-the project checks, `triage` and `coderabbit-local`. Any other branch is a code
-branch and requires `zombies` as well, and `warm` where a path named
+requires. While no pull request of it is open, a branch whose every changed
+path is a `*.md` file or lies under `openspec/` is a documentation branch and
+requires the project checks, `triage` and `coderabbit-local`. Any other branch
+is a code branch and requires `zombies` as well, and `warm` where a path named
 `package.json` or `bun.lock` changed. A judgement step's id is its skill's name.
 
 #### Scenario: Markdown alone
