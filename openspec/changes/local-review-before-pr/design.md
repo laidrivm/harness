@@ -79,8 +79,10 @@ review on the exact `HEAD`; a pull request open → CodeRabbit reviews the head.
    alone appends to per session, so a pull request's two halves would land
    in different entries; and a new ledger file, which is new state for five
    rows.
-7. **The fifth files a card; the tenth stops.** The session that opens the
-   fifth measured pull request files an `idea` card on the Harness board
+7. **The fifth files a card; the tenth stops.** The session that disposes of
+   CodeRabbit's first review on the fifth measured pull request — not the one
+   that opens it, before which that review has not landed — files an `idea`
+   card on the Harness board
    with the tally per pull request — only the CLI, only `/code-review`, both,
    and what CodeRabbit raised on the pull request and the agent applied —
    for the user to decide step 2 on. The user's criterion (card, question 1):

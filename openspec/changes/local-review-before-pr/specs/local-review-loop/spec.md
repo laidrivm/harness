@@ -55,12 +55,12 @@ pass rather than the full loop.
 
 ### Requirement: Claude's review is measured beside the CLI before it may replace it
 
-Until the user settles whether `/code-review` replaces `/coderabbit-local`,
-each branch that invokes `/coderabbit-local` SHALL also run `/code-review
-high` in a fresh subagent at the commit of the first CLI pass. The pull
+Each branch that invokes `/coderabbit-local` SHALL also run `/code-review
+high` in a fresh subagent at the commit of the first CLI pass, and its pull
 request's body SHALL list each defect either flagged, naming which. That run
-SHALL be no gate, and one that returns no review SHALL count as unmeasured. The fifth measured pull request SHALL file a card with the
-tally for the user; the tenth SHALL end the measurement.
+SHALL be no gate; one returning no review leaves the pull request unmeasured.
+Once CodeRabbit has reviewed the fifth measured pull request, a card with the
+tally SHALL go to the user; the tenth SHALL end the measurement.
 
 #### Scenario: A branch measured beside the CLI
 
@@ -91,8 +91,8 @@ tally for the user; the tenth SHALL end the measurement.
 
 #### Scenario: The fifth measured pull request
 
-- **WHEN** a session opens the fifth pull request that carries a
-  `Review measurement` section
+- **WHEN** a session has disposed of CodeRabbit's first review on the fifth
+  pull request that carries a `Review measurement` section
 - **THEN** it files an `idea` card on the Harness board naming the measured
   pull requests and, for each, the defects only the CLI flagged, only
   `/code-review` flagged, both flagged, and the CodeRabbit review on the pull
