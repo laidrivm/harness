@@ -60,32 +60,38 @@ not that the skill was followed.
 - **THEN** the hook exits 0 and prints nothing, so the call and the typed
   command go on as they would have (*Recording never changes a decision*)
 
-### Requirement: A record proves only its own step
+### Requirement: A reader counts a record only for its own gate and step
 
-A reader asking whether a step ran at a commit SHALL match a record by that
-step's rule, the commit, and the checkout's top level as its project, and by
-the decision when the reader names one, whatever gate wrote the record. A
-record of one step SHALL NOT count as evidence of another, and a guard's
-refusal SHALL NOT count wherever the reader names the decision it needs.
+A reader asking whether a step ran at a commit SHALL match a record by the
+gate that writes that step's evidence, the commit, and the checkout's top
+level as its project, and by the step's rule and the decision when the reader
+names them. A skill-call record SHALL NOT count as the pre-PR runner's, a
+runner record SHALL NOT count as a skill call, and a record of one skill
+SHALL NOT count as another's.
 
 #### Scenario: A skill record at the tip
 
-- **WHEN** the ledger holds a `zombies` record for the turn's tip and no
-  `diff-budget` record
+- **WHEN** the ledger holds a `zombies` skill record for the turn's tip and no
+  runner record
 - **THEN** the turn gate and the goal check find no run record for the tip
 
-#### Scenario: A diff-budget record among others
+#### Scenario: A diff-budget record among skill records
 
-- **WHEN** the ledger holds `zombies` and `triage` records and a passing
-  `diff-budget` record, all for commit `C` in this checkout
+- **WHEN** the ledger holds `zombies` and `triage` skill records and a passing
+  `diff-budget` runner record, all for commit `C` in this checkout
 - **THEN** the goal check finds the passing run record for `C`
 
-#### Scenario: A refusal under the asked rule
+#### Scenario: Another skill's record
 
-- **WHEN** the ledger holds a `block` record whose rule is the one a reader
-  asks for, at the commit it asks about, and the reader asks for the decision
-  `called`
-- **THEN** the reader finds no record
+- **WHEN** the ledger holds a `triage` skill record for commit `C` and no
+  `zombies` one
+- **THEN** a reader asking for the `zombies` skill call at `C` finds none
+
+#### Scenario: A refusal at the commit
+
+- **WHEN** the ledger holds a refusal that names commit `C` in this checkout
+- **THEN** a reader asking for a skill call or a runner record at `C` finds
+  none
 
 ## MODIFIED Requirements
 

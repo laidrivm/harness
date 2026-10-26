@@ -29,7 +29,7 @@ the worktree's root, and `session_id` is the main session's.
 
 **Goals:** a record per skill call that the model takes no part in, keyed to
 the commit and checkout the call ran in; `ran()` able to ask for one step by
-its rule.
+its gate and rule.
 
 **Non-Goals:**
 
@@ -44,35 +44,38 @@ its rule.
 
 ## Decisions
 
-### D1. `ran()` matches by `rule` whatever gate wrote the record
+### D1. `ran()` matches the gate, and the rule when one is asked for
 
-`ran(commit, top, rule, decision?, ledger?)` keeps a record whose `rule`,
-`commit` and `project` match, and whose `decision` matches when one is asked
-for. It no longer reads `gate`. The turn gate asks `ran(end, top,
-"diff-budget")`, the goal check `ran(commit, top, "diff-budget", "pass")`, and
-`ranUnder` keeps its signature and asks for the passing `diff-budget` record
-inside. The hook writes the gate `skill` and the decision `called`, so
-`work.ts finish` will ask `ran(head, top, "zombies", "called")`.
+`ran(commit, top, {gate = "pre-pr", rule, decision} = {}, ledger?)` keeps a
+record whose `gate`, `commit` and `project` match, and whose `rule` and
+`decision` match when the reader names them. The hook writes the gate
+`skill` and the decision `called`, so `work.ts finish` will ask `ran(head,
+top, {gate: "skill", rule: "zombies"})`. The goal check asks `{rule:
+"diff-budget", decision: "pass"}`, `ranUnder` keeps its signature and asks the
+same inside, and the turn gate asks nothing more than today: any record the
+runner wrote for the tip, since a failing run still proves it ran.
 
-- *Alternative: the hook writes `gate: "pre-pr"` and `ran()` keeps its gate
-  filter.* Rejected: the wrap-up counts records per gate, and a hook that sees
-  a skill called is not the pre-PR runner; stage skills (`opsx:apply` and the
-  rest) would be counted as pre-PR steps too.
-- *Alternative: `ran()` takes the gate as one more parameter.* Rejected as
-  surplus: the rule already names the step, and the decision a reader asks for
-  already excludes a guard's `block` under the same id. No guard id today is
-  a skill's name or `diff-budget` (grep of `bun/`), and
-  *Each prohibition has a stable id* keeps guard ids apart from each other.
-- The turn gate asks for no decision, as now: a failing diff budget still
-  proves the step ran. A guard id equal to `diff-budget` would count there;
-  none exists.
+- *Alternative: `ran()` matches by `rule` whatever gate wrote the record* (the
+  card's first option). Rejected after the conflict check against
+  `work-finish` (#308), whose `pre-pr-runner` delta keeps the gate (*A run
+  record counts only for its own step*: "beside its gate") and has the turn
+  gate ask only whether the runner ran. Without the gate, a turn gate naming
+  no rule would be discharged by any record holding the tip's commit — a
+  skill call, or a `finish` refusal, which records `HEAD`.
+- *Alternative: the hook writes `gate: "pre-pr"`* (the card's second option).
+  Rejected: the turn gate's "any runner record" would then be discharged by a
+  skill call, and the wrap-up, which counts per gate, would count every skill
+  call, stage skills included, as a pre-PR runner run.
+- With the gate matched, a guard's refusal never counts for a skill or a
+  runner step, whatever its id.
 
 This is the fix the card's item 4 and the 2026-10-26 decision in its "Швы"
-assign to whichever slice card merges first. If slice item 1's pull request
-merges first with the same fix, this change's task 1.2 reuses it and keeps
-only the fixture and caller edits it still lacks; if item 1 chose another
-signature, this design is updated in the same commit (`core/rules.md`,
-Process: grep a design for a decision a fix reverses).
+assign to whichever slice card merges first; `work-finish` (#308) and slice
+item 1 carry the `rule` half too. Whichever merges first fixes the signature,
+and the later ones reuse it, adding only what they lack — for this change,
+the `gate` it asks for. A change in what this decision says is made in this
+file in the same commit (`core/rules.md`, Process: grep a design for a
+decision a fix reverses).
 
 ### D2. One script for both events, recording the name and nothing else
 
@@ -149,8 +152,10 @@ this change's merge; the live probe (task group 2) waits for that bump.
   recorded at the main checkout's `HEAD`.
 - **Slice item 1** (project checks in `pre-pr.ts`): shares D1.
 - **Slice item 3** (`work.ts finish`, required steps from the diff): the
-  reader. It asks `ran()` per required step with the decision `called` for a
-  skill and `pass` for a runner step.
+  reader. It asks `ran()` per required step, with the gate `skill` for a
+  skill and the decision `pass` for a runner step. `work-finish` (#308)
+  routes the skill records to `finish` through the function a later change
+  fills in; this change only makes them readable.
 - **Card d / "Потом" 7** (`turn-gate.ts` reads evidence instead of gate
   lines): may read these records later; nothing here changes the turn gate's
   decision.
@@ -160,10 +165,24 @@ this change's merge; the live probe (task group 2) waits for that bump.
 ## Conflict check (stage 2 roadmap question 14 b)
 
 `openspec show judgement-step-record --json --deltas-only` touches
-`gate-ledger` and `harness-updates`. The only other open change on
-`origin/main`, `host-deploy`, touches `orchestrator` alone: no shared
-capability. No sibling pull request was open when this was written; the check
-is repeated before the push and its outcome stated in the pull request.
+`gate-ledger` and `harness-updates`.
+
+- `host-deploy`, open on `origin/main`, touches `orchestrator` alone: no
+  shared capability.
+- `work-finish` (#308, open) touches `commit-gates`, `gate-ledger`,
+  `pre-pr-runner` and a new `work-finish`. Shared: `gate-ledger`. Its delta
+  modifies *Every gate refusal is recorded* (adding the ready guard, the
+  pre-push draft check and `finish`); this one adds two requirements and
+  modifies *A record holds no command text*: different requirements, and
+  neither contradicts the other. Its `pre-pr-runner` delta, *A run record
+  counts only for its own step*, describes the same `ran()` as this change's
+  *A reader counts a record only for its own gate and step*: both match the
+  gate and the rule, and both leave the turn gate asking for any runner
+  record (D1, after first drafting the gate away and then reading #308). No
+  contradiction: the rule is stated once from the runner's side there and
+  once from the ledger's here, and only this one adds the gate a skill record
+  is read under. Order through prose: no `after:`, since neither change
+  directory is on this branch.
 
 ## Risks / Trade-offs
 

@@ -27,10 +27,11 @@ not that it was followed, and the review catches the rest.
   record when that directory has no `HEAD`, or when a tracked file differs
   from `HEAD`, the rule the pre-PR runner already follows. It never prints,
   never blocks, and records no argument the skill was given.
-- `ran()` in `bun/gate-ledger.ts` matches a record by its `rule`, whatever
-  gate wrote it, so a step's record never counts as another step's evidence.
-  The turn gate, the goal check and the CI flow's push ask for `diff-budget`
-  by name; nothing they decide changes.
+- `ran()` in `bun/gate-ledger.ts` matches a record by its gate (the runner's
+  by default) and, when the reader names it, its `rule`, so a step's record
+  never counts as another step's evidence. The goal check and the CI flow's
+  push ask for `diff-budget` by name, the turn gate for any runner record as
+  today; nothing they decide changes.
 - The hook is registered only in the harness's own `.claude/settings.json`,
   without the `# harness-managed` mark and outside `bootstrap.ts`'s `HOOKS`,
   so `sync.ts` keeps it there and hands it to no consumer (stage 2, question
@@ -54,11 +55,12 @@ decision and rule, as it counts every record.
   that checkout's `HEAD`. This change can merge first: its records are
   correct for the directory they name, and item 0 makes that directory the
   branch's.
-- **Slice item 1** (project checks in `pre-pr.ts`): it adds more `pre-pr`
-  records, so it needs the same `ran()` fix. Whichever of the two merges first
-  carries it, and the other reuses it.
-- **Slice item 3** (`work.ts finish`): reads these records. It applies after
-  this change merges.
+- **Slice item 1** (project checks in `pre-pr.ts`) and **`work-finish`**
+  (#308, the draft rule in `work.ts finish`): both add `ran()`'s `rule`
+  filter too. Whichever merges first carries it, and the others reuse it;
+  this change adds the gate a skill record is read under (design.md D1).
+- **Slice item 3** (`work.ts finish`, required steps from the diff): reads
+  these records. It applies after this change merges.
 
 ## Capabilities
 
@@ -69,7 +71,8 @@ None.
 ### Modified Capabilities
 
 - `gate-ledger`: a new requirement for the skill-call record, a new one
-  saying a record proves only its own step (`ran()` by `rule`), and *A record
+  saying a reader counts a record only for its own gate and step (`ran()`),
+  and *A record
   holds no command text* naming the skill's name among the rules a record may
   carry.
 - `harness-updates`: a new requirement that a gate hook the harness keeps to
@@ -78,9 +81,9 @@ None.
 ## Impact
 
 - New `bun/skill-record.ts` and its tests; `bun/gate-ledger.ts` (`ran`,
-  `ranUnder`, header comment); the `ran` calls in `bun/turn-gate.ts` and
-  `bun/goal-check.ts`; two test fixtures that write a `pre-pr` record with no
-  `rule` (`bun/turn-gate-cli.test.ts`, `bun/ci-run.test.ts`).
+  `ranUnder`, header comment); the `ran` call in `bun/goal-check.ts`; the
+  test fixture in `bun/ci-run.test.ts` that writes a passing `pre-pr` record
+  with no `rule`.
 - `.claude/settings.json` (two registrations), `bun/self-pin.test.ts`,
   `README.md`, `core/review-toolkit.md`.
 - Consumers (`d2ass`, `mellon`): nothing new is registered for them; on
