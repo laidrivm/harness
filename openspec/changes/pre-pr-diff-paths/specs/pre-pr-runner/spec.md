@@ -5,7 +5,7 @@
 ### Requirement: The runner names the steps the branch requires from its diff
 
 The runner SHALL print, as its last line, the ids of the steps the branch
-requires before its pull request opens. A branch whose every changed path is a
+requires while no pull request of it is open. A branch whose every changed path is a
 `*.md` file or lies under `openspec/` is a documentation branch and requires
 the project checks, `triage` and `coderabbit-local`. Any other branch is a code
 branch and requires `zombies` as well, and `warm` where a path named
