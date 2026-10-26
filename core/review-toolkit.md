@@ -42,7 +42,17 @@ limit, gets no review on its own — stop waiting on it and report it.
   ranks High and Medium, reporting the defects they hold, and grepping every
   decision or value the diff changes for the sites that restate it.
 - `/coderabbit-local [base]` — the same review against the working branch,
-  before there is a PR. Invoke it yourself. A finding that survives
+  before there is a PR. Invoke it yourself. It runs only while no pull
+  request is open on the branch, a draft counting as open: a push into an
+  open one skips it while the earlier steps run, because CodeRabbit reviews
+  that head on the pull request — a draft's once it is marked ready — and
+  `/coderabbit` disposes of its findings. Read the pull request's state
+  before the sequence starts, as `git-and-prs.md` has it read before a review
+  pass, and never infer it from what the push carries. A branch whose only
+  pull request was closed unmerged has none open and runs it again; a state
+  the read could not get runs it too, and the report says the state was
+  unread, since a skipped review is the costlier mistake. A finding that
+  survives
   verification is applied without asking, whatever its severity, overriding the
   skill's own "No fixes before approval" — the branch is unpushed, so being
   wrong costs a `git checkout`. Dismissing a 🟠 Major or 🔴 Critical goes the
@@ -97,6 +107,46 @@ limit, gets no review on its own — stop waiting on it and report it.
   one question on the card, which waits behind one already open there as
   `task-board` sets out; the run posts nothing in the pull request). A
   fourth round with only findings skipped with a reason is not capped.
+- `/code-review` — Claude's own review, measured beside `/coderabbit-local`
+  until the user decides whether it replaces the CLI (the reviewer-rotation
+  card's step 2). While fewer than ten pull requests are measured, a branch
+  that runs `/coderabbit-local` also runs `/code-review high` in a fresh
+  subagent at the commit of the CLI's first pass: the same commit makes the
+  two lists comparable, a fresh subagent reviews code its context did not
+  write, and the level is named because `/code-review` with none reuses the
+  last one typed. The subagent is given its target explicitly — the first
+  pass's commit SHA, with the clone's path when the session works in a clone
+  outside the project — since its working directory is the project's main
+  checkout whatever clone the session works in, and a branch moves on. It
+  reports the SHA it reviewed; a review of another SHA, or one that names
+  files the branch did not change, read another tree and counts as a run
+  that does not return. A branch whose CLI is unavailable has no first pass and goes
+  unmeasured. The verified findings of both are applied on the
+  `/coderabbit-local` terms above, since the branch ships either way. It is
+  no gate and carries no severity while measured: a finding of it judged
+  wrong or not worth fixing is skipped with its reason in the report, and the
+  gate line stays as `/coderabbit-local` set it. The pull request opens with
+  a section under a line reading `## Review measurement`: one line per
+  verified defect, giving its file and line, what it was and which reviewer
+  flagged it (CLI, `/code-review`, both), or the single line `none` when
+  neither flagged one. A run that does not return — a usage limit, an error,
+  a subagent that ends without a review — leaves no section and is not
+  counted, and the report names why.
+  `gh pr list --repo <repo> --state all --search '"Review measurement"
+  in:body' --json number,body --limit 1000` lists the candidates, closed and
+  merged ones included; only a body with a line exactly `## Review
+  measurement` counts as measured, since the search also matches a body that
+  merely names the phrase. The tally goes to the user once CodeRabbit has
+  reviewed the fifth measured pull request: the session that disposes of that
+  review files an `idea` card on the Harness board with, for each measured
+  pull request, the defects only the CLI flagged, only `/code-review`
+  flagged, both flagged, and what CodeRabbit then raised and the agent
+  applied (a subagent without Notion access names the card in its report,
+  and its caller files it). The measurement ends at the tenth: after it,
+  `/coderabbit-local` runs alone and the body carries no section.
+  `/ponytail-review`'s record is no evidence about it: that plugin was tuned
+  to shape, not defects, and the code it read was written under the same
+  plugin.
 
 ## The pre-PR sequence
 
@@ -131,7 +181,13 @@ lines report them, and nothing proves they ran.
    ponytail ladder before ever reaching for a dependency.
 4. `/triage`, over the final diff, so it maps the diff the reviewer
    will actually see.
-5. `/coderabbit-local` last, then push.
+5. `/coderabbit-local` last, then push — only while no pull request is open
+   on the branch, a draft counting as open: a push into an open one skips it
+   while the earlier steps run, and its report says CodeRabbit reviews the
+   head on the pull request, a draft's once it is marked ready, where
+   `/coderabbit` disposes of the findings; a state the read could not get
+   runs it, and the report says the state was unread. Beside it runs the measurement
+   the `/code-review` bullet sets out.
 
 CI measures the budget on every pull request and the pre-push hook measures it
 last of all, once every gate that can refuse the push has passed. Neither is
@@ -142,7 +198,12 @@ measured.
 A branch of documentation, rules or config runs step 1, then `/triage` alone,
 plus a grep for every site restating what it changes, plus `bun test` when it
 adds or removes a directory under `openspec/changes/` — a test pins the tree's
-change set — then one pass of `/coderabbit-local` — one, not three.
+change set — then one pass of `/coderabbit-local` — one, not three — with
+the measurement the `/code-review` bullet sets out. That pass, too, runs only
+while no pull request is open on the branch, a draft counting as open: a push
+into an open one skips it while the earlier steps run, and its report says
+CodeRabbit reviews the head on the pull request; a state the read could not
+get runs it, and the report says the state was unread.
 
 Your sequence ends there — the PR link is the deliverable. `/coderabbit`
 closes the loop on either, once the bot has reviewed the head commit.
