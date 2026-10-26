@@ -157,6 +157,8 @@ stays correct.
   `PRE-PR: project checks not run: <the reader's message>` on stderr.
 - When the tree differs before and after the steps, the no-record line names
   the second reading's lines, and the first's when the second is clean.
+- A `git status` that fails counts as a dirty tree, named `git status
+  failed`, in the runner and in the goal check alike (CodeRabbit on #316).
 
 ## Seams with the slice's siblings
 

@@ -59,7 +59,8 @@ const dir = `openspec/changes/${change}`;
 const short = commit.slice(0, 7);
 const missing: string[] = [];
 
-if (git("status", "--porcelain", "--untracked-files=no"))
+// `!== ""`: a status git cannot read (undefined) is no clean tree.
+if (git("status", "--porcelain", "--untracked-files=no") !== "")
 	missing.push("tracked files differ from HEAD");
 
 if (stage === "propose" && !has(`${dir}/proposal.md`))

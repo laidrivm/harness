@@ -193,6 +193,7 @@ describe("the before-push form", () => {
 		["a detached HEAD [3]", (d: string) => git(d, "switch", "-q", "--detach"), "HEAD names no branch"],
 		["a missing record [4]", () => {}, "no passing pre-PR run record for"],
 		["a tracked edit [5]", (d: string) => writeFileSync(join(d, CHANGE, "tasks.md"), "edited\n"), "tracked files differ from HEAD"],
+		["an index git status cannot read", (d: string) => writeFileSync(join(d, ".git", "index"), "x"), "tracked files differ from HEAD"],
 	])("%s is open, naming it", (_, arrange, reason) => {
 		const dir = tasks(TWO);
 		const state = reason.startsWith("no passing") ? stateWith() : stateWith(runRecord(dir));

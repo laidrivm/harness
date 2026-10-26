@@ -25,7 +25,11 @@ import { RUNNER_STEPS, record } from "./gate-ledger.ts";
 // trimEnd: porcelain's first line can open with a space that is part of it.
 const git = (...args: string[]) =>
 	Bun.spawnSync(["git", ...args]).stdout.toString().trimEnd();
-const status = () => git("status", "--porcelain");
+// A status git cannot read is never a clean tree: the failure stands in for its lines.
+const status = () => {
+	const run = Bun.spawnSync(["git", "status", "--porcelain"]);
+	return run.exitCode === 0 ? run.stdout.toString().trimEnd() : "git status failed";
+};
 const top = git("rev-parse", "--show-toplevel") || process.cwd();
 
 // Read before the steps run, and again after, so a run that moved either vouches for no commit.

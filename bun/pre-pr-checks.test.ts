@@ -162,6 +162,11 @@ describe("a tree the commit does not hold", () => {
 		expect([records(result.state), result.out]).toEqual([[], expect.stringContaining("?? scratch.txt\n")]);
 	});
 
+	test("a check that leaves an index git status cannot read leaves no record", () => {
+		const result = run(within("printf x > .git/index"));
+		expect([records(result.state), result.out]).toEqual([[], expect.stringContaining("git status failed")]);
+	});
+
 	test("a check that writes only an ignored file records", () => {
 		const dir = within("mkdir -p out && echo x > out/x", { ".gitignore": "out/\n" });
 		expect(records(run(dir).state)).toHaveLength(2);
