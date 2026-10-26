@@ -47,7 +47,8 @@ the gate holds a mistake of order, not a wrong argument (stage 2, question
    `HEAD`, since git would run the whole test suite for a push of nothing.
 5. With no open pull request, `gh pr create --draft -R <repo> --base main
    --head <branch> --title <t> --body-file <f>`, then the same REST read
-   again for its number. The base is named: without `--base`, `gh` prefers a
+   again for its number: exactly one open pull request of the branch, or a
+   failure that marks nothing. The base is named: without `--base`, `gh` prefers a
    branch's `gh-merge-base` setting to the default branch (CodeRabbit on
    #308), and `main` is the branch step 1 already treats as the base.
 6. The card's comments through the ask settings, then `ready()` unless
@@ -125,7 +126,10 @@ harness's own `.claude/settings.json` as
 the harness keeps it across a sync, and no key in `package.json` is needed.
 The matcher stays empty because `settings.ts` lets the `Bash` matcher hold
 the bootstrap alone; the loop guard already runs that way, at one bun start
-per tool call. The path is the pin's, as `harness-updates` requires.
+per tool call. The path is the pin's, as `harness-updates` requires. Its
+`if [ -f ]` skips only where the pin lacks the file: before any install the
+bootstrap refuses every Bash call, and a pin older than this change is the
+window *Risks* names.
 
 It passes every event that is not a Bash call, and an unreadable one, which
 the command guard already blocks. It walks the line with `commands()` and
@@ -170,6 +174,10 @@ way to mark a pull request ready.
   the draft line leaves `core/rules.md` in that group] → the pin bump
   follows the merge; the pre-push refusal, run from the tree, holds from the
   merge.
+- [The draft check reads the state before git updates the ref, so a pull
+  request marked ready during the push is not caught] → only `finish` marks
+  ready, after its own push; the check holds a forgotten order, and GitHub
+  enforces nothing server-side here.
 - [A wrong `--card` marks ready while the right card's question waits] → as
   the card names it: the gate holds a mistake of order, not of argument.
 - [A host clone with `core.hooksPath` set pushes through the draft check]
