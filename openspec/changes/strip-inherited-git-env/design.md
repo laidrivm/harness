@@ -134,7 +134,9 @@ machine's system and global config name the `osxkeychain` and Git Credential
 Manager helpers. So the probe runs with `GIT_CONFIG_NOSYSTEM=1`,
 `GIT_CONFIG_GLOBAL` naming a scratch file whose `url.<missing path>.insteadOf`
 rewrites `https://github.com/`, `ssh://git@github.com/`, `git@github.com:`
-and `git@GitHub.com:`, `GIT_TERMINAL_PROMPT=0`, no `GH_TOKEN`, and
+and `git@GitHub.com:`, `GIT_TERMINAL_PROMPT=0`, none of `GH_TOKEN`, `GITHUB_TOKEN`,
+`GH_ENTERPRISE_TOKEN` and `GITHUB_ENTERPRISE_TOKEN` (`gh` reads each before
+its config directory), and
 `GH_CONFIG_DIR` an empty directory. None of those is on git's list, so the
 fix's `unset` keeps them in both runs. The probe never runs in the main
 checkout or in a clone with a GitHub remote.
