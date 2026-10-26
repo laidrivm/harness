@@ -48,7 +48,7 @@ decision and rule, as it counts every record.
 ## Order
 
 - **Slice item 0** (card "subagents in worktrees, stripping `GIT_*` in
-  fixtures", not yet proposed): only once subagents work in a worktree
+  fixtures", change `strip-inherited-git-env`): only once subagents work in a worktree
   (`isolation: "worktree"`) is the hook's `cwd` the subagent's branch, as the
   probe of 2026-10-26 showed. Until then a subagent works in a clone it
   reaches by path, its hook's `cwd` is the main checkout, and the record names
