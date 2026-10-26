@@ -30,11 +30,14 @@ this card merges). The card is stage 2's slice item 0.
 - **BREAKING** for whoever runs `bun test` with a repository variable set:
   the suite refuses. `orchestrator/pass.sh` already drops every `GIT_*`, and
   the hook now drops them too.
-- `core/rules.md` drops the Safety rule *Push from a repository's own
-  checkout, never a `git worktree`*, and `core/git-and-prs.md`'s *Remove a
-  worktree as soon as its branch is the one to push* is reworded, under
-  `agent-rulebook`'s *A mechanised prohibition leaves its prose home*, once
-  the probe and both tests pass (user, answer 3 а).
+- Once the probe and both tests pass, in the same pull request (user,
+  answer 3 а), under `agent-rulebook`'s *A mechanised prohibition leaves its
+  prose home*: `core/rules.md`'s Safety rule *Push from a repository's own
+  checkout, never a `git worktree`* shrinks to what the branch's files cannot
+  hold — merge `origin/main` before pushing from a worktree whose branch
+  predates the preload, since that tree still runs the old hook — and
+  `core/git-and-prs.md`'s *Remove a worktree as soon as its branch is the one
+  to push* is reworded.
 
 Not in this change: stripping `GIT_*` in each of the ~159 `Bun.spawn*` calls
 the tests make (variant В on the card — a preload cannot reach
@@ -68,7 +71,6 @@ None.
 ## Impact
 
 - New: `bunfig.toml`, `bun/git-env-guard.ts`, `bun/git-env.test.ts`.
-- Changed: `.githooks/pre-push`, `core/rules.md` (one Safety rule out),
-  `core/git-and-prs.md` (one bullet reworded), and, while `work-finish` is
-  unarchived, its `design.md` sentence citing the rule.
+- Changed: `.githooks/pre-push`, `core/rules.md` (one Safety rule
+  shortened), `core/git-and-prs.md` (one bullet reworded).
 - The suite costs one `git rev-parse` at start.

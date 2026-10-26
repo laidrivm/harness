@@ -44,7 +44,7 @@ proposal measured, on git 2.47.0 and bun 1.4.2:
 **Goals:** a push from a worktree runs the suite against each fixture's own
 repository; any other way into the suite from the root with a repository
 variable set fails loudly rather than writing into another repository; the worktree Safety rule
-leaves once that is shown live.
+shrinks to what neither half can hold once that is shown live.
 
 **Non-Goals:** stripping the variables in each spawn (variant В), consumers'
 hooks and suites (stage 2, question 28 a″: harness first), and the brief and
@@ -57,9 +57,12 @@ change*).
 
 The hook's `unset $(git rev-parse --local-env-vars)` closes the push path in
 one line. The preload closes every other entry — a hand-run `bun test` in a
-hook's environment, `git rebase -x 'bun test'`, a stale hook in an older
-checkout — by refusing rather than repairing, because a repair cannot reach
-`Bun.spawnSync` without `env`. The user chose this over the hook alone and
+hook's environment, `git rebase -x 'bun test'`, another checkout's older
+hook run over this tree — by refusing rather than repairing, because a
+repair cannot reach `Bun.spawnSync` without `env`. Neither half reaches a
+tree that predates this change: a worktree on such a branch runs that
+branch's old hook, and its tree holds no preload (*The rule shrinks to what
+the tree cannot hold*). The user chose this over the hook alone and
 over the per-call strip (answer 1 б).
 
 ### Git's list, never a prefix
@@ -136,18 +139,29 @@ and `git@GitHub.com:`, `GIT_TERMINAL_PROMPT=0`, no `GH_TOKEN`, and
 fix's `unset` keeps them in both runs. The probe never runs in the main
 checkout or in a clone with a GitHub remote.
 
-### The rule leaves in the same pull request
+### The rule shrinks to what the tree cannot hold
 
-Once the probe's after-run and both tests pass, `core/rules.md` drops *Push
-from a repository's own checkout, never a `git worktree`* whole, under
-`agent-rulebook`'s *A mechanised prohibition leaves its prose home*: the hook
-holds the push, and the preload holds the probe's danger, so nothing the rule
-names is left uncovered. `core/git-and-prs.md`'s *Remove a worktree as
+Once the probe's after-run and both tests pass, in the same pull request
+(answer 3 а), `core/rules.md`'s *Push from a repository's own checkout, never
+a `git worktree`* is shortened under `agent-rulebook`'s *A mechanised
+prohibition leaves its prose home*, whose *A rule only partly covered*
+scenario fits: the hook and the preload are files of the branch, so a
+worktree on a branch that predates this change — an open pull request's
+branch cut before the merge — still runs the old hook with no preload, as the
+probe's before-run shows. The rule becomes one line: before pushing from a
+`git worktree`, merge `origin/main` into its branch when the branch predates
+the `bunfig.toml` preload — an older tree's hook hands its tests an absolute
+`GIT_DIR`. A branch cut from `origin/main` after the merge, as the Agent
+tool's worktrees are (card assumption 7), is covered by the mechanism alone.
+The line leaves whole once no open branch predates the merge; that is a
+later rulebook edit, not a task here. Enforcing it outside the branch — a
+global hook or a guard reading the branch's tree — was weighed and not taken:
+it is new code for a window that closes by itself, and no failure has come
+through it (roadmap clarification 11). `core/git-and-prs.md`'s *Remove a worktree as
 soon as its branch is the one to push*, which assumed the push came from the
-main checkout, becomes *once its branch is pushed*, keeping its reason. While
-`work-finish` is unarchived, its `design.md` sentence "a worktree's is the
-trap `core/rules.md` names" is reworded in the same commit, so it does not
-cite a rule that is gone.
+main checkout, becomes *once its branch is pushed*, keeping its reason.
+`work-finish`'s `design.md` sentence "a worktree's is the trap `core/rules.md`
+names" stays true, since the shortened rule still names it.
 
 ### Seams with the slice's other changes
 
@@ -159,7 +173,8 @@ cite a rule that is gone.
   session (its design, *Seams*) is answered by the brief, not by code: the
   subagent's first command is `bun install`, which the fallback guard lets
   through (card assumption 8).
-- `work-finish`: the hook's order, and the design sentence above.
+- `work-finish`: the hook's order; its design sentence citing the rule
+  stays true.
   `finish` pushes from its working directory, so from a worktree after this
   change.
 - `pre-pr-project-checks` and `pre-pr-diff-paths`: the runner runs outside a

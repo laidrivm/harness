@@ -55,13 +55,15 @@ it; the 300-line cap applies to `bun/git-env.test.ts` as to any other.
       branch expected. Put both listings in the pull request's body, then
       delete the scratch repositories
 - [ ] 1.4 With 1.1–1.3 passing, under `agent-rulebook`'s *A mechanised
-      prohibition leaves its prose home*: delete the Safety rule *Push from
-      a repository's own checkout, never a `git worktree`* from
-      `core/rules.md`; reword `core/git-and-prs.md`'s *Remove a worktree as
-      soon as its branch is the one to push* to *once its branch is pushed*,
-      keeping its reason; and, while `openspec/changes/work-finish/` is
-      unarchived, reword its `design.md` "a worktree's is the trap
-      `core/rules.md` names" so it cites no rule. Grep `core/`, `README.md`,
+      prohibition leaves its prose home* (*A rule only partly covered*):
+      shorten the Safety rule *Push from a repository's own checkout, never
+      a `git worktree`* in `core/rules.md` to one line — before pushing from
+      a `git worktree`, merge `origin/main` into its branch when the branch
+      predates the `bunfig.toml` preload, since an older tree's hook hands
+      its tests an absolute `GIT_DIR` (design.md, *The rule shrinks to what
+      the tree cannot hold*); reword `core/git-and-prs.md`'s *Remove a
+      worktree as soon as its branch is the one to push* to *once its branch
+      is pushed*, keeping its reason. Grep `core/`, `README.md`,
       `openspec/specs/` and the active changes for "own checkout",
       "never a `git worktree`" and "push from a worktree", and reconcile
       each site. Verify with `bun test bun/delegation.test.ts
