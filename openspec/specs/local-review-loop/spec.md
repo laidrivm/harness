@@ -2,10 +2,11 @@
 
 ## Purpose
 
-How the agent runs CodeRabbit's local CLI over a branch before pushing — how
-many passes it gets, what it fixes without asking, what it may not dismiss
-without asking, when it stops, and where a skipped finding's justification
-goes. It exists because the bot's PR review
+How the agent runs CodeRabbit's local CLI over a branch before pushing, while
+no pull request is open on it — how many passes it gets, what it fixes without
+asking, what it may not dismiss without asking, when it stops, where a skipped
+finding's justification goes, and how Claude's `/code-review` is measured
+beside it. It exists because the bot's PR review
 arrives after the branch is shared, so every defect it would catch lands as
 review churn on an open PR instead of being fixed while the branch is still
 local and free to be wrong.
@@ -18,10 +19,10 @@ The agent SHALL invoke `/coderabbit-local` against the branch after `/triage`
 and before pushing, only while no pull request is open on the branch. A push
 into an open pull request, draft or ready, SHALL get no local review, since
 CodeRabbit reviews that head on the pull request, a draft's once it is marked
-ready. The agent SHALL read the
-pull request's state before the sequence starts, never infer it from what the
-push carries, and SHALL treat a state it could not read as none open. A branch of documentation, rules or config SHALL get one review
-pass rather than the full loop.
+ready. The agent SHALL read the pull request's state before the sequence
+starts, never infer it from what the push carries, and SHALL treat a state it
+could not read as none open. A branch of documentation, rules or config SHALL
+get one review pass rather than the full loop.
 
 #### Scenario: A code branch reaches the end of the sequence
 
@@ -61,7 +62,8 @@ pass rather than the full loop.
 
 #### Scenario: A documentation branch
 
-- **WHEN** the branch changes only documentation, rules or config
+- **WHEN** the branch changes only documentation, rules or config, and no
+  pull request is open on it
 - **THEN** the agent runs one review pass, not three
 
 ### Requirement: A verified finding is fixed without asking

@@ -53,5 +53,6 @@ rather than the full loop.
 
 #### Scenario: A documentation branch
 
-- **WHEN** the runner classifies the branch as a documentation branch
+- **WHEN** the runner classifies the branch as a documentation branch, and no
+  pull request is open on it
 - **THEN** the agent runs one review pass, not three
