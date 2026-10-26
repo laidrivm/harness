@@ -46,10 +46,15 @@ lower case only, so `README.MD` reads as code, on the cheap side.
 
 ### `--no-renames`, so a move counts on both sides
 
-`git diff --name-only --no-renames <base>...HEAD` lists a renamed file as a
-deletion and an addition. A `.ts` file moved to `.md` keeps its `.ts` path in
-the list, and the branch stays code. With rename detection the list would hold
-only the new name, and git's `diff.renames` setting would decide the outcome.
+`git diff --name-only -z --no-renames --no-relative <base>...HEAD` lists a
+renamed file as a deletion and an addition. A `.ts` file moved to `.md` keeps
+its `.ts` path in the list, and the branch stays code. With rename detection
+the list would hold only the new name, and git's `diff.renames` setting would
+decide the outcome. The other two flags take two more settings out of the
+answer: `-z` prints each path literally, NUL-separated, where `core.quotePath`
+would quote a non-ASCII one and leave `package.json"` as its basename, and
+`--no-relative` lists the whole repository where `diff.relative` and a run
+from a subdirectory would leave out every path outside it.
 
 ### A manifest is `package.json` or `bun.lock`, by basename
 

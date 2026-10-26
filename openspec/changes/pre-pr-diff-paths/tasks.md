@@ -50,7 +50,10 @@ There is one group, shipped as `feat/pre-pr-diff-paths`. It is cut after
         there [19] and `main` where it is unset [20]; `bun/diff-budget.sh`
         with no argument measures from that base [21];
       - a branch renaming a `.ts` file to `.md` names `zombies` with
-        `diff.renames=true` set in the repository [22];
+        `diff.renames=true` set in the repository [22]; a `package.json`
+        under a non-ASCII directory names `warm` with `core.quotePath=true`;
+        a `.ts` file changed outside the subdirectory the runner starts in
+        names `zombies` with `diff.relative=true`;
       - a `gh` that exits non-zero [23], a detached `HEAD` [24], and a merged
         and a closed pull request [25] each read as not open; an open draft
         reads as open [26];
@@ -72,8 +75,8 @@ There is one group, shipped as `feat/pre-pr-diff-paths`. It is cut after
 - [ ] 1.4 Write `bun/pre-pr-steps.ts`: the step ids as exported constants, the
       project checks' id taken from the `rule` `pre-pr-project-checks` gave
       its record; `required(paths, open)`; and the path read over
-      `git diff --name-only --no-renames <base>...HEAD`, returning no list
-      when git fails. Verify: `bun test bun/pre-pr-steps.test.ts` passes.
+      `git diff --name-only -z --no-renames --no-relative <base>...HEAD`,
+      split on NUL, returning no list when git fails. Verify: `bun test bun/pre-pr-steps.test.ts` passes.
 - [ ] 1.5 In `bun/pre-pr.ts`, take the first argument as the base or run
       `diff-base.sh` once, pass that base to the diff budget and the path
       read, record the project checks under the exported constant, read
