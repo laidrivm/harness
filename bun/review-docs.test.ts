@@ -220,12 +220,15 @@ describe("the /code-review bullet measures Claude's review beside the CLI", () =
 		expect(text).toContain("an `idea` card");
 		expect(text).toContain("once CodeRabbit has reviewed the fifth");
 		expect(text).toContain("the session that disposes of that review");
+		expect(text).toContain(
+			"the defects only the CLI flagged, only `/code-review` flagged, both flagged, and what CodeRabbit then raised and the agent applied",
+		);
 	});
 
 	// spec: local-review-loop/the-measurement-ends
 	test("ends at the tenth, and takes no evidence from /ponytail-review", () => {
 		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
-		expect(text).toContain("ends at the tenth");
+		expect(text).toContain("ends at the tenth: after it, `/coderabbit-local` runs alone and the body carries no section");
 		expect(text).toContain("`/ponytail-review`'s record is no evidence about it");
 	});
 });
