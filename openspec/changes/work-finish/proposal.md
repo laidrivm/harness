@@ -25,7 +25,7 @@ model's text. This change is the draft rule's half of the stage's slice item
   arguments read by a strict `util.parseArgs`: it checks the evidence for
   `HEAD`, pushes the branch while its pull request is a draft, opens the pull
   request as a draft when the branch has none open, and marks it ready unless
-  a question waits on the card. A refusal writes nothing; a card it cannot
+  a question waits on the card. A refusal changes nothing but the ledger; a card it cannot
   read leaves the draft and exits non-zero.
 - The evidence check is a stub until the required-steps change lands: the
   pre-PR runner's passing record for `HEAD`, as the goal check reads it.

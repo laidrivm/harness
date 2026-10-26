@@ -18,6 +18,12 @@ ref-update records.
 - **THEN** the hook names `gh pr ready 7 --undo`, exits non-zero before
   `bun test`, and the push does not happen
 
+#### Scenario: A push under another name
+
+- **WHEN** a push sends local `feat/x` to `refs/heads/release`, and `release`
+  has an open pull request that is not a draft
+- **THEN** the hook refuses, reading the branch from the remote ref
+
 #### Scenario: A push into a draft
 
 - **WHEN** a push updates `feat/x` and its open pull request is a draft

@@ -22,8 +22,10 @@ failing case first, its failure recorded, cited as `// spec:
       `PATH` and records on stdin: empty stdin makes no `gh` call and exits
       0; a draft passes; an open non-draft one exits non-zero naming `gh pr
       ready 7 --undo`; a failed read exits non-zero naming `gh auth status`;
-      two records, one ready, refuse and name it; a deletion record, a
-      `refs/tags/` record and a local-path remote are not read; the https,
+      two records, one ready, refuse and name it; a push of `feat/x` to
+      `refs/heads/release` reads `release`'s pull requests; a deletion
+      record, a branch pushed to `refs/tags/` and a local-path remote are
+      not read; the https,
       ssh and scp forms of a `github.com` URL are read; each refusal writes
       one `push-draft` record carrying the pushed sha. Then write
       `bun/push-draft.ts`
@@ -75,8 +77,8 @@ failing case first, its failure recorded, cited as `// spec:
 - [ ] 2.6 Failing cases in `bun/ready-guard.test.ts`: `gh pr ready 7`,
       `gh pr ready 7 --undo=false`, `gh -R o/r pr ready 7`, `cd x && gh pr
       ready 7` and `gh pr create --draft` are refused, naming `bun
-      bun/work.ts finish`; `gh pr ready 7 --undo` passes; a non-Bash event
-      passes; each refusal writes one `ready-guard` record under
+      bun/work.ts finish`; `gh pr ready 7 --undo` passes; `sh -c 'gh pr
+      ready 7'` passes, the stated exception; a non-Bash event passes; each refusal writes one `ready-guard` record under
       `hand-ready` or `hand-create`. Then export `ghFinishes()` from
       `bun/command-guard-gh.ts` and write `bun/ready-guard.ts`
 - [ ] 2.7 Failing cases in `bun/self-pin.test.ts`: the harness's own
