@@ -34,9 +34,10 @@ and exit 2 before any Notion, git or `openspec` call.
 
 `take` SHALL print, in this order, the checkout's `HEAD` commit, then the
 card's `Name`, `Status`, `Pointer`, `Labels` and `Assign`, then the card's
-body as the markdown Notion renders for the page, unchanged. When Notion says
-that markdown is truncated, or that it holds blocks Notion could not render,
-`take` SHALL say so after it.
+body as the markdown Notion renders for the page, unchanged, Notion's own
+`<unknown>` tags for blocks it does not render included. When Notion's answer
+marks that markdown truncated, or lists the ids of blocks it left out, `take`
+SHALL say so after it.
 
 #### Scenario: A card
 
@@ -51,10 +52,10 @@ that markdown is truncated, or that it holds blocks Notion could not render,
 - **THEN** `take` prints the markdown it was given and a line saying the body
   is truncated
 
-#### Scenario: Blocks Notion could not render
+#### Scenario: Blocks Notion left out
 
-- **WHEN** Notion's answer names two blocks it could not render and does not
-  mark the markdown truncated
+- **WHEN** Notion's answer lists the ids of two blocks it left out and does
+  not mark the markdown truncated
 - **THEN** `take` prints the markdown and a line saying two blocks are
   missing from it
 
