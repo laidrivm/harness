@@ -219,6 +219,9 @@ touches `local-review-loop` only. `stage-goal` is shared with none.
 - [A flaky test passes on a second run at the same commit] → the earlier
   `fail` record stays, and the later `pass` satisfies the goal check, which
   is how the budget's records already behave. CI is still the required check.
+- [Passes from two runs at one commit combine] → accepted: each step passed
+  at that commit, and the user rejected a shared run id (card item 9 a,
+  2026-10-26), so the records keep no `run` field.
 - [A consumer without `harness.bumpTest`] → the step gives `error` and the
   goal check stays open, naming nothing new. d2ass and mellon already have
   the key, and the harness gains it in this change.
