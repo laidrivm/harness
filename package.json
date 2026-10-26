@@ -7,6 +7,7 @@
 	},
 	"harness": {
 		"board": "Harness",
+		"bumpTest": "bun test",
 		"diffBudgetExclude": [
 			".claude/commands/opsx/**",
 			"core/skills/playwright-cli/**",

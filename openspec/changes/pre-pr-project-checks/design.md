@@ -140,6 +140,24 @@ path, the clause "plus `bun test` when it adds or removes a directory under
 turn gate's refusal text keeps telling the agent to run the runner, which
 stays correct.
 
+### Taken while applying
+
+- The runner's cases split by the cap: the diff budget's and the records'
+  stay in `bun/pre-pr.test.ts`, the project checks' and the dirty trees' go
+  to `bun/pre-pr-checks.test.ts`, and the spawn and ledger helpers both use
+  are lifted into `bun/pre-pr.fixture.ts`. The goal check and `ranUnder()`
+  cases sit in `bun/gate-ledger-rule.test.ts`, because `goal-check.test.ts`
+  is at the cap.
+- `runRecord` in `bun/goal-check.fixture.ts` returns one record per step, and
+  the fixture's `ledger()` flattens an array, so its callers stay as they
+  were.
+- The old case *the commit is HEAD as the run began* is replaced by *a check
+  that commits leaves no record*: a run whose `HEAD` moved now writes nothing.
+- A missing or blank key, or a manifest that is not JSON, prints
+  `PRE-PR: project checks not run: <the reader's message>` on stderr.
+- When the tree differs before and after the steps, the no-record line names
+  the second reading's lines, and the first's when the second is clean.
+
 ## Seams with the slice's siblings
 
 - **`work-finish`** (slice item 3, the draft rule inside `work.ts finish`,

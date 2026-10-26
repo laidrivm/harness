@@ -74,6 +74,8 @@ const put = (dir: string, tree: Tree) => {
 export const MANIFEST = JSON.stringify({
 	harness: {
 		diffBudgetExclude: ["bun.lock", "*.woff2", "src/fixtures/snapshot.json"],
+		// The pre-PR runner's project checks: never a `bun test` inside `bun test`.
+		bumpTest: "true",
 	},
 });
 

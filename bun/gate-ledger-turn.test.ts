@@ -20,6 +20,7 @@ import {
 	store,
 	TASKS,
 } from "./turn-gate.fixture.ts";
+import { RUNNER_STEPS } from "./gate-ledger.ts";
 
 /**
  * What the turn gate records in the gate ledger. Its own file beside
@@ -75,20 +76,21 @@ const records = (state: string) =>
 		: [];
 const decisions = (state: string) => records(state).map((r) => r.decision);
 
-/** Writes the pre-PR runner's record of the turn's tip, as `pre-pr.ts` does. */
+/** Writes the pre-PR runner's records of the turn's tip, one per step, as `pre-pr.ts` does. */
 function runner(t: Turn) {
 	const head = Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: t.dir });
 	mkdirSync(join(t.state, "harness"), { recursive: true });
-	appendFileSync(
-		ledger(t.state),
-		`${JSON.stringify({
-			gate: "pre-pr",
-			decision: "pass",
-			rule: "diff-budget",
-			project: realpathSync(t.dir),
-			commit: head.stdout.toString().trim(),
-		})}\n`,
-	);
+	for (const rule of RUNNER_STEPS)
+		appendFileSync(
+			ledger(t.state),
+			`${JSON.stringify({
+				gate: "pre-pr",
+				decision: "pass",
+				rule,
+				project: realpathSync(t.dir),
+				commit: head.stdout.toString().trim(),
+			})}\n`,
+		);
 }
 const turnGate = (state: string) =>
 	records(state)

@@ -719,10 +719,10 @@ describe("on the host, through the launcher", () => {
 		writeFileSync(join(h.home, "claude-act"), `echo b > b.txt && git add b.txt && git commit -qm b\n${script}`);
 		writeFileSync(join(h.home, "claude-out"), answer("fixed"));
 	};
-	/** The session's pre-PR run: a passing record of `HEAD` in its own user's ledger. */
+	/** The session's pre-PR run: a passing record of `HEAD` per step in its own user's ledger; printf repeats its format. */
 	const recorded =
-		'd="$HOME/.local/state/harness" && mkdir -p "$d" && ' +
-		'printf \'{"gate":"pre-pr","decision":"pass","commit":"%s","project":"%s"}\\n\' "$(git rev-parse HEAD)" "$(pwd -P)" >> "$d/gates.jsonl"\n';
+		'd="$HOME/.local/state/harness" && mkdir -p "$d" && c=$(git rev-parse HEAD) && p=$(pwd -P) && ' +
+		'printf \'{"gate":"pre-pr","decision":"pass","rule":"%s","commit":"%s","project":"%s"}\\n\' diff-budget "$c" "$p" project-checks "$c" "$p" >> "$d/gates.jsonl"\n';
 	const calls = (h: Host) =>
 		readFileSync(join(h.home, "git-calls"), "utf8")
 			.trim()

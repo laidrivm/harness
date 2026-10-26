@@ -19,7 +19,7 @@
  * recorded in the gate ledger for counting. A record names no change or step,
  * so nothing decides from one, this check included.
  */
-import { ran, ranUnder, record } from "./gate-ledger.ts";
+import { ran, ranUnder, record, RUNNER_STEPS } from "./gate-ledger.ts";
 import { type Pull, readPullRequests } from "./pull-requests.ts";
 import { complete, groups } from "./turn-gate.ts";
 
@@ -91,7 +91,7 @@ if (stage === "archive") {
 const launcher = process.env.HARNESS_AS_AGENT?.split(" ").filter(Boolean) ?? [];
 const recorded = launcher.length
 	? ranUnder([...launcher, process.env.HARNESS_CLONE ?? ""], commit)
-	: ran(commit, top, "pass");
+	: RUNNER_STEPS.every((rule) => ran(commit, top, "pass", undefined, rule));
 if (!recorded) missing.push(`no passing pre-PR run record for ${short}`);
 
 const branch = git("symbolic-ref", "--short", "-q", "HEAD");
