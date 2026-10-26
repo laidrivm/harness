@@ -42,13 +42,18 @@ the `work-finish` and `pre-pr-diff-paths` changes (design.md, *Seams*).
       - an untracked, non-ignored file [15] and an unstaged edit [17] each run
         both steps, write no record, and name the file. An ignored file alone
         records [16]. Rewrite the existing *untracked scratch file* case to
-        match.
+        match;
+      - a check that leaves an untracked file, and one that edits a tracked
+        file, each leave no record and name the file, where a check writing
+        an ignored file records. A check that commits (`git commit
+        --allow-empty`) leaves no record (local review of the proposal).
       (Req: pre-pr-runner — all three modified requirements)
 - [ ] 1.3 Make 1.2 pass in `bun/pre-pr.ts`: export `RUNNER_STEPS` from
       `bun/gate-ledger.ts`, then run both steps, map each exit to 0, 1 or 2,
       exit with the largest, write both records after the second step, and
       take the dirty test from `git status --porcelain`, printing its lines
-      after the no-record line. Update the file's header comment. Verify:
+      after the no-record line. Read `HEAD` and the status again after the
+      steps, and write nothing when either changed. Update the file's header comment. Verify:
       `bun test bun/pre-pr.test.ts`, and the whole run passes under dash for
       the `sh -c` cases on CI.
 - [ ] 1.4 Failing cases for `ran()`'s rule in a new
@@ -72,8 +77,10 @@ the `work-finish` and `pre-pr-diff-paths` changes (design.md, *Seams*).
       and `bun/board-loop-isolation.test.ts` pass.
 - [ ] 1.6 Add `"bumpTest": "bun test"` under `"harness"` in `package.json`.
       In `core/review-toolkit.md`, step 1 becomes the direct `bash
-      bun/diff-budget.sh` look first and the runner once after the last
-      commit, with the 600000 ms timeout or a background run. Drop the docs
+      bun/diff-budget.sh` look first (`bash
+      node_modules/harness/bun/diff-budget.sh` where the harness is
+      installed) and the runner once after the last commit, with the 600000
+      ms timeout or a background run. Drop the docs
       path's "plus `bun test` when it adds or removes a directory under
       `openspec/changes/`", and the closing sentence of the section's
       introduction now says the record proves the budget and the project
