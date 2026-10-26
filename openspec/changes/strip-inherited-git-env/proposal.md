@@ -17,8 +17,8 @@ this card merges). The card is stage 2's slice item 0.
   `git rev-parse --local-env-vars` names, before any command it runs.
 - `bunfig.toml` (new, harness-only) preloads `bun/git-env-guard.ts`, which
   refuses the whole suite before any test file loads while any of those
-  variables is set, and names each one. A suite started by hand, by `git
-  rebase -x` or by a stale hook then fails loudly instead of writing into
+  variables is set, and names each one. A suite started at the root by hand,
+  by `git rebase -x` or by a stale hook then fails loudly instead of writing into
   another repository's `.git`.
 - The list of variables is git's own; the harness keeps no copy of it.
 - Two decoy tests: the hook with a decoy `GIT_DIR` starts no command that

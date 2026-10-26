@@ -27,7 +27,8 @@ in the harness.
 
 ### Requirement: The test suite refuses to start under git's repository variables
 
-The harness's `bun test` SHALL exit non-zero before any test file loads while
+The harness's `bun test`, started at the repository's root, SHALL exit
+non-zero before any test file loads while
 any variable that `git rev-parse --local-env-vars` names is set, whatever its
 value, empty included, and SHALL name each such variable on stderr. A list
 it cannot read SHALL refuse the same way. A variable outside that list SHALL

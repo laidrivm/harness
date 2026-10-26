@@ -42,8 +42,8 @@ proposal measured, on git 2.47.0 and bun 1.4.2:
 ## Goals / Non-Goals
 
 **Goals:** a push from a worktree runs the suite against each fixture's own
-repository; any other way into the suite with a repository variable set fails
-loudly rather than writing into another repository; the worktree Safety rule
+repository; any other way into the suite from the root with a repository
+variable set fails loudly rather than writing into another repository; the worktree Safety rule
 leaves once that is shown live.
 
 **Non-Goals:** stripping the variables in each spawn (variant В), consumers'
@@ -171,8 +171,10 @@ cite a rule that is gone.
 ### Conflict check (stage 2, question 14 б)
 
 `openspec show <change> --json --deltas-only` over every open change on
-`origin/main` (no pull request was open on 2026-10-26): only `work-finish`
-shares a capability, `commit-gates`, with its ADDED *The pre-push hook
+`origin/main` and in the open pull requests on 2026-10-26 (#313
+`work-take`, whose delta is `work-take` alone, and #314, applying
+`local-review-before-pr` to `local-review-loop`): only `work-finish` shares a
+capability, `commit-gates`, with its ADDED *The pre-push hook
 refuses a push into a ready pull request*. Read side by side: no
 contradiction, and the order lives in prose above, not in `after:`.
 
@@ -184,6 +186,13 @@ contradiction, and the order lives in prose above, not in `after:`.
 - [`GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` stay in the suite's environment]
   → inert once `GIT_CONFIG_COUNT` is gone, but a header value can still be
   read there. No failure has shown that threat (roadmap clarification 11).
+- [A `bun test` started in a subdirectory skips the preload] → bun reads
+  `bunfig.toml` from its working directory alone (probed: a run from a
+  subdirectory of the scratch directory ran its test under the dummy
+  variable). The hook, CI and `git rebase -x` start at the root, so the gap
+  is a hand-run in `bun/` or `orchestrator/`; a `bunfig.toml` per directory
+  would be a list of directories to keep in step, for a path no failure has
+  taken (roadmap clarification 11).
 - [A hand-run `bun test` inside `git rebase -x` now refuses] → intended; run
   it as `env -u GIT_DIR …` or outside the rebase.
 - [Parallel worktrees share one `.git`] → a concurrent `fetch` may fail on a
