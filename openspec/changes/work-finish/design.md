@@ -57,8 +57,8 @@ the gate holds a mistake of order, not a wrong argument (stage 2, question
 Every refusal comes before step 4, so a refusal writes nothing. The Notion
 read is last, after the push and its test run, so it sees a question posted
 meanwhile. Step 3 refuses a ready pull request itself although the pre-push
-hook would: with nothing to push the hook never runs, and refusing first
-saves a full test run. Both read it through one `readyOne(pulls)` in
+hook would: with nothing to push `finish` skips the push, so the hook never
+sees it, and refusing first saves a full test run. Both read it through one `readyOne(pulls)` in
 `bun/pull-requests.ts`, the open pull request that is not a draft, so the
 two refusals cannot drift apart.
 
