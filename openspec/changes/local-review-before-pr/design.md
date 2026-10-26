@@ -69,13 +69,18 @@ review on the exact `HEAD`; a pull request open → CodeRabbit reviews the head.
    dismissal rule has nothing to hold: the CLI's gate line still decides.
    The `severity` enum (answer 4) belongs to the run that will gate.
 6. **The tally lives on the pull requests.** Each measured pull request's
-   body carries a `Review measurement` section: one line per verified defect,
-   its file and line, what it was, and which local reviewer flagged it (CLI,
-   `/code-review`, both). The session that opens a pull request is the one
-   that knows the local findings, and the body sits next to the CodeRabbit
-   review it is compared with. Measured pull requests are counted with
-   `gh pr list --repo <repo> --state all --search '"Review measurement"
-   in:body'`. Rejected: the pipeline-yield ledger, which `session-wrapup`
+   body carries a section under the line `## Review measurement`: one line
+   per verified defect, its file and line, what it was, and which local
+   reviewer flagged it (CLI, `/code-review`, both), or the single line `none`
+   when neither flagged one — distinct from a body with no section, which
+   is an unmeasured pull request. The session that opens a pull request is
+   the one that knows the local findings, and the body sits next to the
+   CodeRabbit review it is compared with. `gh pr list --repo <repo> --state
+   all --search '"Review measurement" in:body' --json number,body` lists the
+   candidates, closed and merged ones included; a pull request counts as
+   measured only when a line of its body is exactly `## Review measurement`,
+   since the search also matches a body that merely mentions the phrase, as
+   this change's own does. Rejected: the pipeline-yield ledger, which `session-wrapup`
    alone appends to per session, so a pull request's two halves would land
    in different entries; and a new ledger file, which is new state for five
    rows.

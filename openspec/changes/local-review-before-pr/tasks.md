@@ -18,14 +18,17 @@
 - [ ] 1.2 Add failing cases for a new `/code-review` bullet in *The skills*,
       found by its opening as the `/coderabbit` bullet is: it names
       `/code-review high`, a fresh subagent, the commit of the CLI's first
-      pass, a `Review measurement` section in the pull request's body with
-      one line per verified defect naming which reviewer flagged it, the
-      `gh pr list … --search '"Review measurement" in:body'` count, an
+      pass, a `## Review measurement` heading line in the pull request's
+      body with one line per verified defect naming which reviewer flagged
+      it, or the single line `none` when neither flagged one, the full
+      candidate command `gh pr list --repo <repo> --state all --search
+      '"Review measurement" in:body' --json number,body`, and that only a
+      body with a line exactly `## Review measurement` counts as measured, an
       `idea` card filed once CodeRabbit has reviewed the fifth, by the
       session disposing of that review, the end at the tenth, that it is no gate,
       that a run that does not return leaves no section and is not counted,
       and that `/ponytail-review`'s record is no evidence about it. Cite the
-      five scenarios of *Claude's review is measured beside the CLI before
+      six scenarios of *Claude's review is measured beside the CLI before
       it may replace it*. Verify they fail and record it
 - [ ] 1.3 Edit `core/review-toolkit.md` with the editing tool: the
       `/coderabbit-local` bullet, step 5 and the documentation-branch
