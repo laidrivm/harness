@@ -47,7 +47,8 @@ it; the 300-line cap applies to `bun/git-env.test.ts` as to any other.
       naming a scratch file that rewrites `https://github.com/`,
       `ssh://git@github.com/`, `git@github.com:` and `git@GitHub.com:` to a
       missing path through `url.<path>.insteadOf`, `GIT_TERMINAL_PROMPT=0`,
-      no `GH_TOKEN` and `GH_CONFIG_DIR` an empty directory (design.md, *The
+      none of `GH_TOKEN`, `GITHUB_TOKEN`, `GH_ENTERPRISE_TOKEN` and
+      `GITHUB_ENTERPRISE_TOKEN`, and `GH_CONFIG_DIR` an empty directory (design.md, *The
       probe*). Before: push a probe branch from the worktree on
       `origin/main`'s hook, and list the bare's refs and commits beyond
       that branch — fixture commits expected. After: a fresh bare and clone
