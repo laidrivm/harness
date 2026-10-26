@@ -13,8 +13,9 @@ There is one group, shipped as `feat/pre-pr-diff-paths`. It is cut after
 
 - [ ] 1.1 Write the function's table in `bun/pre-pr-steps.test.ts`, over the
       pure function alone:
-      - no changed path names the documentation branch's steps [1]; no list
-        at all names every step, `warm` included [2];
+      - no changed path (`[]`) names the documentation branch's steps [1];
+        `undefined`, the path read's failure, names every step, `warm`
+        included [2];
       - one `.md` path names the project checks, `triage` and
         `coderabbit-local` [3]; one `.ts` path adds `zombies` and not `warm`
         [4];
@@ -28,12 +29,12 @@ There is one group, shipped as `feat/pre-pr-diff-paths`. It is cut after
       - `.coderabbit.yaml`, a workflow and `.claude/settings.json`, each
         alone, name the code branch's steps;
       - an open pull request names the project checks alone, for a code
-        branch, a documentation branch and no list at all;
+        branch, a documentation branch and `undefined`;
       - each judgement id names a `core/skills/<id>/SKILL.md` whose `name:`
         is that id [15].
       Cite `pre-pr-runner/markdown-alone`, `…/a-proposal-with-one-source-file`,
       `…/config-alone`, `…/a-lockfile-alone`, `…/a-nested-manifest`,
-      `…/nothing-past-the-base`, `…/a-diff-it-cannot-read` and
+      `…/nothing-past-the-base`, `…/a-diff-it-cannot-read`,
       `…/a-code-branch-with-its-pull-request-open` and
       `…/an-open-pull-request-over-a-diff-it-cannot-read`. All fail before
       1.4.
@@ -76,7 +77,10 @@ There is one group, shipped as `feat/pre-pr-diff-paths`. It is cut after
       project checks' id taken from the `rule` `pre-pr-project-checks` gave
       its record; `required(paths, open)`; and the path read over
       `git diff --name-only -z --no-renames --no-relative <base>...HEAD`,
-      split on NUL, returning no list when git fails. Verify: `bun test bun/pre-pr-steps.test.ts` passes.
+      split on NUL. A git failure yields `undefined`, never `[]`, so it
+      cannot read as a branch that changes nothing, and
+      `required(undefined, false)` returns every step. Verify:
+      `bun test bun/pre-pr-steps.test.ts` passes.
 - [ ] 1.5 In `bun/pre-pr.ts`, take the first argument as the base or run
       `diff-base.sh` once, pass that base to the diff budget and the path
       read, record the project checks under the exported constant, read
