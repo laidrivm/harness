@@ -67,6 +67,13 @@ no pull request open.
 - **WHEN** the branch changes a `.ts` file and its pull request is open
 - **THEN** the runner names the project checks alone
 
+#### Scenario: An open pull request over a diff it cannot read
+
+- **WHEN** the branch's pull request is open and its changed paths cannot be
+  read
+- **THEN** the runner names the project checks alone, since no judgement step
+  depends on the diff once the pull request is open
+
 #### Scenario: A merged pull request
 
 - **WHEN** the branch's only pull request is merged or closed
