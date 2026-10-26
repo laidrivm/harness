@@ -13,7 +13,7 @@ Group 1 is one pull request, `feat/judgement-step-record`. Group 2 is ticked
 in the self-pin bump pull request that moves the pin past group 1's merge
 (design.md, *Migration Plan*).
 
-## 1. The hook, `ran()` by rule, and the registration
+## 1. The hook, `ran()` by gate and rule, and the registration
 
 - [ ] 1.1 Write `bun/skill-record.test.ts`, spawning `bun/skill-record.ts`
       with an event on stdin, in a scratch repository with one commit and a
@@ -28,8 +28,8 @@ in the self-pin bump pull request that moves the pin past group 1's merge
         `command_name` `triage`, `cwd` the main checkout, records rule
         `triage` at the main checkout's `HEAD` [4]; the same event with
         `expansion_type` `mcp_prompt` records nothing (local review);
-      - after that record, `ran(HEAD, top, "zombies", "called")` is true and
-        `ran(HEAD, top, "diff-budget")` is false [24];
+      - after that record, `ran()` finds it asked for the gate `skill` and
+        the rule `zombies`, and the runner's default asks find nothing [24];
       - two calls append two records, in order [5];
       - a `cwd` in a subdirectory records the top level as `project` [8];
       - `tool_input.args` and `command_args` holding a path and a token
@@ -48,30 +48,33 @@ in the self-pin bump pull request that moves the pin past group 1's merge
       for the commit its directory holds*, all its scenarios; *A record holds
       no command text*)
 - [ ] 1.2 Write `bun/gate-ledger-ran.test.ts` against `ran()`'s `ledger`
-      argument: a `zombies` record at the commit is no `diff-budget` record
-      [25]; a passing `diff-budget` record is found among `zombies` and
-      `triage` records at the same commit [27]; a `block` record under the
-      asked rule is not found when `called` is asked [28]; with no decision
-      asked, a `fail` record of the rule is found [29]; a `pre-pr` record
-      with no `rule` is no `diff-budget` record [31]. In
-      `bun/turn-gate-record.test.ts`, a `zombies` record for the tip leaves a
-      turn with gate lines refused [25]; in `bun/goal-check.test.ts`, a
-      `zombies` record for `HEAD` without a `diff-budget` one leaves the goal
-      open [26]. Record that they fail. (Req: gate-ledger — *A record proves
-      only its own step*, all its scenarios)
-- [ ] 1.3 Change `ran()` in `bun/gate-ledger.ts` to `ran(commit, top, rule,
-      decision?, ledger?)`, matching `rule`, `commit`, `project` and, when
-      given, `decision`, whatever the gate; `ranUnder` asks for
-      `"diff-budget"` and `"pass"`. Update the callers: `bun/turn-gate.ts`
-      `ran(end, top, "diff-budget")`, `bun/goal-check.ts` `ran(commit, top,
-      "diff-budget", "pass")`; the header comments of both files and of
-      `gate-ledger.ts` that say `ran` reads only the runner's records. Add
-      `"rule":"diff-budget"` to the `pre-pr` records written by
-      `bun/turn-gate-cli.test.ts` and `bun/ci-run.test.ts`. First check
-      whether slice item 1's change has merged this fix: if it has, keep its
-      signature, reuse it, and update design.md D1 in the same commit if it
-      differs. Make 1.2 pass; run `bun test bun/gate-ledger bun/turn-gate
-      bun/goal-check bun/ci-run bun/pre-pr`.
+      argument: a `zombies` skill record at the commit is no runner record,
+      with or without the rule `diff-budget` asked [25]; a passing
+      `diff-budget` runner record is found among `zombies` and `triage` skill
+      records at the same commit [27]; a `triage` skill record is not found
+      when `zombies` is asked [28a]; a `finish` or `command-guard` block
+      naming the commit is found neither as a skill call nor as a runner
+      record [28]; with no decision asked, a `fail` runner record is found
+      [29]; a `pre-pr` record with no `rule` is no `diff-budget` record when
+      that rule is asked [31]. In `bun/turn-gate-record.test.ts`, a `zombies`
+      skill record for the tip leaves a turn with gate lines refused [25];
+      in `bun/goal-check.test.ts`, a `zombies` skill record for `HEAD`
+      without a `diff-budget` one leaves the goal open [26]. Record that they
+      fail. (Req: gate-ledger — *A reader counts a record only for its own
+      gate and step*, all its scenarios)
+- [ ] 1.3 First check whether `work-finish` (#308) or slice item 1 has merged
+      `ran()`'s `rule` filter: if so, keep its signature and add only the
+      gate, defaulting to `pre-pr`; otherwise change `ran()` in
+      `bun/gate-ledger.ts` to `ran(commit, top, {gate = "pre-pr", rule,
+      decision} = {}, ledger?)`, matching `gate`, `commit`, `project`, and
+      `rule` and `decision` when given. `ranUnder` asks for `diff-budget` and
+      `pass`, `bun/goal-check.ts` for the same, and `bun/turn-gate.ts` asks
+      for nothing more than today. Update the header comment of
+      `gate-ledger.ts` that says `ran` reads only the runner's records, and
+      add `"rule":"diff-budget"` to the passing `pre-pr` record
+      `bun/ci-run.test.ts` writes. Update design.md D1 in the same commit if
+      the merged signature differs from it. Make 1.2 pass; run `bun test
+      bun/gate-ledger bun/turn-gate bun/goal-check bun/ci-run bun/pre-pr`.
 - [ ] 1.4 Write `bun/skill-record.ts` per design.md D2–D4: read stdin, take
       the name from `tool_input.skill`, or from `command_name` when
       `expansion_type` is `slash_command`, delete
