@@ -64,8 +64,8 @@ tally for the user; the tenth SHALL end the measurement.
 
 #### Scenario: A branch measured beside the CLI
 
-- **WHEN** a branch with no open pull request reaches step 5 and fewer than
-  ten measured pull requests exist
+- **WHEN** a branch with no open pull request, code or documentation, is
+  due its `/coderabbit-local` and fewer than ten measured pull requests exist
 - **THEN** the agent runs `/coderabbit-local` as before and `/code-review
   high` in a fresh subagent at the commit of the CLI's first pass
 - **AND** applies the verified findings of both under this capability's
@@ -101,5 +101,5 @@ tally for the user; the tenth SHALL end the measurement.
 #### Scenario: The measurement ends
 
 - **WHEN** ten pull requests carry a `Review measurement` section
-- **THEN** a branch reaching step 5 runs `/coderabbit-local` alone, and its
+- **THEN** a branch due its `/coderabbit-local` runs it alone, and its
   pull request carries no `Review measurement` section
