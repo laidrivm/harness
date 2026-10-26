@@ -177,13 +177,16 @@ stays correct.
 `openspec show pre-pr-project-checks --json --deltas-only` touches
 `pre-pr-runner` (three MODIFIED) and `stage-goal` (one MODIFIED). On
 `origin/main` the only open change is `host-deploy`, which touches
-`orchestrator` alone: no shared capability. No pull request is open. The
-siblings' working copies show `pre-pr-runner` in `work-finish` (ADDED, see
-*Seams*: order through prose) and in `pre-pr-diff-paths` (three ADDED: the
-steps the diff requires, the open-PR rule, and one base). Neither restates a
-requirement this change modifies, so there is no contradiction, and the order
-goes through prose. `local-review-before-pr` touches `local-review-loop`
-only. `stage-goal` is shared with none.
+`orchestrator` alone: no shared capability. The one open pull request, #308
+(`spec/work-finish`), adds *A run record counts only for its own step* to
+`pre-pr-runner` (see *Seams*: order through prose). If `work-finish` archives
+first, that requirement is live before this change archives, and this change
+then gains a MODIFIED copy of it that says "every runner step". The
+siblings' working copies show `pre-pr-runner` in `pre-pr-diff-paths` too
+(three ADDED: the steps the diff requires, the open-PR rule, and one base).
+Neither sibling restates a requirement this change modifies, so there is no
+contradiction, and the order goes through prose. `local-review-before-pr`
+touches `local-review-loop` only. `stage-goal` is shared with none.
 
 ## Risks / Trade-offs
 
