@@ -55,8 +55,10 @@ the gate holds a mistake of order, not a wrong argument (stage 2, question
    out of `ask()` into one export of `bun/notion-ask.ts` that both call, so
    the ask command and `finish` read the same integration the same way.
 
-Every refusal comes before step 4, so a refusal changes nothing in git,
-GitHub or Notion; it writes only its ledger record (*Records*). The Notion
+Every refusal of `finish()` comes before step 4, so it changes nothing in
+git, GitHub or Notion and writes only its ledger record (*Records*). The
+hooks refuse on their own: the draft check inside step 4's push, the ready
+guard outside `finish` altogether, each with its record too. The Notion
 read is last, after the push and its test run, so it sees a question posted
 meanwhile. Step 3 refuses a ready pull request itself although the pre-push
 hook would: with nothing to push `finish` skips the push, so the hook never
