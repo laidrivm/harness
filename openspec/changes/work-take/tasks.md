@@ -36,10 +36,12 @@ of the case's own, against a Notion stub of the case's own reached through
       for byte, a fenced block and a table included; an empty body prints its
       heading and no `undefined`; `truncated` true adds its line and false
       adds none; two ids in `unknown_block_ids` with `truncated` false add
-      a line naming two blocks, and an empty list adds none;
+      a line naming two blocks, and an empty list adds none; a body holding
+      an `<unknown url="…" alt="bookmark"/>` tag and no ids prints the tag
+      unchanged and adds no line;
       the markdown call carries `Notion-Version: 2026-03-11` and every other
       call `2025-09-03` (`a-card`, `a-truncated-body`,
-      `blocks-notion-could-not-render`)
+      `blocks-notion-left-out`)
 - [ ] 1.5 Failing cases for the comments: three comments returned out of
       order print oldest first, each with its time; the settings' user prints
       as `user`, a bot's id as its hex; an unanswered last question ends on
