@@ -142,7 +142,9 @@ describe("the local review runs only while no pull request is open", () => {
 
 	// spec: local-review-loop/the-pull-request-s-state-cannot-be-read
 	test.each(sites)("%s runs it on a state the read could not get", (_, find) => {
-		expect(find(toolkit()) ?? "").toContain("a state the read could not get runs it");
+		const text = find(toolkit()) ?? "";
+		expect(text).toContain("a state the read could not get runs it");
+		expect(text).toContain("the report says the state was unread");
 	});
 
 	// spec: local-review-loop/a-branch-whose-pull-request-was-closed-unmerged
@@ -153,10 +155,17 @@ describe("the local review runs only while no pull request is open", () => {
 	});
 
 	// spec: local-review-loop/a-push-into-an-open-pull-request
-	test("step 5 says CodeRabbit reviews that head, and points at the measurement", () => {
-		const text = block(toolkit(), STEP_5) ?? "";
-		expect(text).toContain("CodeRabbit reviews the head on the pull request");
-		expect(text).toContain("the `/code-review` bullet");
+	test.each(sites.slice(1))("%s has the report say CodeRabbit reviews that head", (_, find) => {
+		expect(find(toolkit()) ?? "").toContain("its report says CodeRabbit reviews the head on the pull request");
+	});
+
+	// spec: local-review-loop/a-push-into-an-open-pull-request
+	test.each(sites.slice(0, 2))("%s says a draft's head is reviewed once it is marked ready", (_, find) => {
+		expect(find(toolkit()) ?? "").toContain("a draft's once it is marked ready");
+	});
+
+	test.each(sites.slice(1))("%s points at the measurement", (_, find) => {
+		expect(find(toolkit()) ?? "").toContain("the `/code-review` bullet");
 	});
 
 	test("a numbered step is found without the blank line a paragraph needs", () => {
@@ -176,6 +185,23 @@ describe("the /code-review bullet measures Claude's review beside the CLI", () =
 			"verified findings of both are applied",
 		])
 			expect(text).toContain(words);
+	});
+
+	// spec: local-review-loop/a-branch-measured-beside-the-cli
+	test("gives the subagent its target, never its working directory", () => {
+		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
+		expect(text).toContain("The subagent is given its target explicitly");
+		expect(text).toContain("its working directory is the project's main checkout");
+		expect(text).toContain(
+			"a review that names files the branch did not change read another tree, and counts as a run that does not return",
+		);
+	});
+
+	// spec: local-review-loop/the-cli-is-unavailable
+	test("leaves a branch whose CLI is unavailable unmeasured", () => {
+		expect(bullet(toolkit(), CODE_REVIEW) ?? "").toContain(
+			"A branch whose CLI is unavailable has no first pass and goes unmeasured",
+		);
 	});
 
 	// spec: local-review-loop/a-branch-measured-beside-the-cli

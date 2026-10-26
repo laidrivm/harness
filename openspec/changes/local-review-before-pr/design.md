@@ -57,7 +57,18 @@ review on the exact `HEAD`; a pull request open → CodeRabbit reviews the head.
    write the code, which is the separate context the card's option names;
    the session's own context would review its own reasoning. `high` is named
    because `/code-review` with no level reuses the last one typed, which
-   would make the runs incomparable.
+   would make the runs incomparable. The subagent is given its target
+   explicitly — the branch, or the clone's path when the session works in a
+   clone outside the project — because its working directory is the
+   project's main checkout whatever clone the session works in: on this
+   change's own branch a run left to its working directory reviewed main's
+   last commits, an empty diff there. A pull request number is no target
+   here, since the run precedes the pull request. Whether `/code-review`
+   reads a clone's path as that checkout's diff was not probed, so a review
+   that names files the branch did not change counts as a run that did not
+   return. A branch whose CLI is unavailable has no first pass and goes
+   unmeasured: a section with only `/code-review`'s defects would skew the
+   comparison the tally exists for.
 4. **Both reviewers' verified findings are applied.** The branch ships either
    way, and leaving a known defect in to keep the experiment clean would
    ship it. The question the tally answers is whether `/code-review` flags
