@@ -72,7 +72,8 @@ tally SHALL go to the user; the tenth SHALL end the measurement.
   policy
 - **AND** the pull request opens with a `Review measurement` section — a
   body line reading exactly `## Review measurement` — listing each verified
-  defect and which local reviewer flagged it, or the single line `none` when
+  defect with its file and line, what it was and which local reviewer
+  flagged it, or the single line `none` when
   neither flagged one
 
 #### Scenario: A pull request that only names the section

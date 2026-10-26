@@ -76,8 +76,9 @@ review on the exact `HEAD`; a pull request open → CodeRabbit reviews the head.
    is an unmeasured pull request. The session that opens a pull request is
    the one that knows the local findings, and the body sits next to the
    CodeRabbit review it is compared with. `gh pr list --repo <repo> --state
-   all --search '"Review measurement" in:body' --json number,body` lists the
-   candidates, closed and merged ones included; a pull request counts as
+   all --search '"Review measurement" in:body' --json number,body --limit
+   1000` lists the candidates, closed and merged ones included — without
+   `--limit` it stops at 30; a pull request counts as
    measured only when a line of its body is exactly `## Review measurement`,
    since the search also matches a body that merely mentions the phrase, as
    this change's own does. Rejected: the pipeline-yield ledger, which `session-wrapup`
