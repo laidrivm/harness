@@ -28,13 +28,15 @@ There is one group, shipped as `feat/pre-pr-diff-paths`. It is cut after
       - `.coderabbit.yaml`, a workflow and `.claude/settings.json`, each
         alone, name the code branch's steps;
       - an open pull request names the project checks alone, for a code
-        branch and a documentation branch;
+        branch, a documentation branch and no list at all;
       - each judgement id names a `core/skills/<id>/SKILL.md` whose `name:`
         is that id [15].
       Cite `pre-pr-runner/markdown-alone`, `…/a-proposal-with-one-source-file`,
       `…/config-alone`, `…/a-lockfile-alone`, `…/a-nested-manifest`,
       `…/nothing-past-the-base`, `…/a-diff-it-cannot-read` and
-      `…/a-code-branch-with-its-pull-request-open`. All fail before 1.4.
+      `…/a-code-branch-with-its-pull-request-open` and
+      `…/an-open-pull-request-over-a-diff-it-cannot-read`. All fail before
+      1.4.
       Verify: `bun test bun/pre-pr-steps.test.ts` fails on the missing module.
 - [ ] 1.2 Write the runner's cases in `bun/pre-pr-steps-run.test.ts`, spawning
       `bun/pre-pr.ts` in a scratch repository with a base branch, as
