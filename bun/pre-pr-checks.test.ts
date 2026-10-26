@@ -155,6 +155,13 @@ describe("a tree the commit does not hold", () => {
 		expect([records(result.state), result.out]).toEqual([[], expect.stringContaining(`${named}\n`)]);
 	});
 
+	test("a check that deletes the untracked file found before it still leaves no record, naming the file", () => {
+		const dir = within("rm scratch.txt");
+		writeFileSync(join(dir, "scratch.txt"), "notes");
+		const result = run(dir);
+		expect([records(result.state), result.out]).toEqual([[], expect.stringContaining("?? scratch.txt\n")]);
+	});
+
 	test("a check that writes only an ignored file records", () => {
 		const dir = within("mkdir -p out && echo x > out/x", { ".gitignore": "out/\n" });
 		expect(records(run(dir).state)).toHaveLength(2);
