@@ -55,7 +55,8 @@ the gate holds a mistake of order, not a wrong argument (stage 2, question
    out of `ask()` into one export of `bun/notion-ask.ts` that both call, so
    the ask command and `finish` read the same integration the same way.
 
-Every refusal comes before step 4, so a refusal writes nothing. The Notion
+Every refusal comes before step 4, so a refusal changes nothing in git,
+GitHub or Notion; it writes only its ledger record (*Records*). The Notion
 read is last, after the push and its test run, so it sees a question posted
 meanwhile. Step 3 refuses a ready pull request itself although the pre-push
 hook would: with nothing to push `finish` skips the push, so the hook never
@@ -94,8 +95,10 @@ slice's items 1 and 2 (user, 2026-10-26).
 `bun/push-draft.ts`, the hook's first command: `bun bun/push-draft.ts "$@"`.
 Its name keeps the hook's text free of `pre-pr`. It reads the records on
 standard input, `<local ref> <local sha> <remote ref> <remote sha>`, and
-keeps each `refs/heads/<branch>` whose local sha is not all zeros — a
-deletion lands nothing for review. The repository comes from the remote's
+keeps each record whose remote ref is `refs/heads/<branch>`, taking the
+branch from that remote ref, never the local one — `git push origin
+feat/x:release` updates `release` — and whose local sha is not all zeros, as
+a deletion lands nothing for review. A push to a tag is no branch update. The repository comes from the remote's
 URL, `$2`, through `remoteRepository()`, and only on the host `github.com`;
 any other remote, a fixture's local path among them, passes unread.
 `readPullRequests()` takes that repository as a parameter, defaulting to
@@ -129,7 +132,9 @@ the command guard already blocks. It walks the line with `commands()` and
 `ghPublish()` and reusing its subcommand reader, finds `pr create`, or `pr
 ready` without `--undo`. `--undo=false` is no undo. It does not descend into
 `sh -c` or `eval`: it holds a forgotten order, not an intent to get round it
-(stage 2, question 23), and says so in a `shortcut:` comment. Rejected: the
+(stage 2, question 23; roadmap clarification 11). The requirement states that
+exception, a test pins it, and a `shortcut:` comment names when to lift it:
+the first refusal walked past that way. Rejected: the
 check inside `command-guard.ts`, which every consumer runs; an environment
 switch in the settings, a key by another name.
 

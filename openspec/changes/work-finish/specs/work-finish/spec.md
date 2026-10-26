@@ -26,11 +26,11 @@ print the usage and exit 2 before any git, `gh` or Notion call.
 - **WHEN** `finish` runs with `--force`
 - **THEN** it prints the usage and exits 2
 
-### Requirement: Finish writes nothing without the evidence for HEAD
+### Requirement: Finish changes nothing without the evidence for HEAD
 
-Before any push, `finish` SHALL refuse, exit 1 and write nothing when a
-tracked file differs from `HEAD`, when `HEAD` names no branch or names
-`main`, or when the evidence the branch owes for `HEAD` is missing. Until the
+Before any push, `finish` SHALL refuse and exit 1, changing nothing in git,
+GitHub or Notion, when a tracked file differs from `HEAD`, when `HEAD` names
+no branch or names `main`, or when the evidence the branch owes for `HEAD` is missing. Until the
 required steps are derived from the diff, that evidence SHALL be the pre-PR
 runner's passing run record of the diff budget for `HEAD` in this checkout,
 as the goal check reads it.
@@ -125,7 +125,9 @@ GitHub refuses SHALL leave the draft and exit 1.
 
 In the harness's own sessions a hook SHALL refuse a hand-run `gh pr ready`
 that does not carry `--undo`, and a hand-run `gh pr create`, naming
-`bun bun/work.ts finish`; `gh pr ready --undo` SHALL pass. The hook SHALL be
+`bun bun/work.ts finish`; `gh pr ready --undo` SHALL pass. A command handed
+to a shell or `eval` is not read: the hook holds a forgotten order, not an
+intent to get round it (stage 2, question 23). The hook SHALL be
 registered in the harness's own `.claude/settings.json` alone and SHALL NOT be
 among the hooks the harness gives a consumer, until the roadmap's stage 11
 ships the gate to consumers.
@@ -139,6 +141,11 @@ ships the gate to consumers.
 
 - **WHEN** an agent runs `gh pr ready 7 --undo`
 - **THEN** the hook allows it
+
+#### Scenario: A ready handed to a shell
+
+- **WHEN** an agent runs `sh -c 'gh pr ready 7'`
+- **THEN** the hook allows it, as the stated exception
 
 #### Scenario: A hand-run create
 
