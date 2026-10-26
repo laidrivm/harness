@@ -13,7 +13,8 @@ of the case's own, against a Notion stub of the case's own reached through
 
 - [ ] 1.1 Read Notion's API reference for the page markdown read and confirm
       its path `GET /v1/pages/{id}/markdown`, its version `2026-03-11` and
-      the fields `markdown` and `truncated`. Where it differs, correct
+      the fields `markdown`, `truncated` and `unknown_block_ids`. Where it
+      differs, correct
       `design.md`'s *Context* and *The order, and what each part reads* and
       the spec's scenarios in the same commit as the stub that follows it
 - [ ] 1.2 If `work-finish`'s task 2.1 has merged, drop this task naming its
@@ -34,9 +35,11 @@ of the case's own, against a Notion stub of the case's own reached through
       five names, those three with no value; the stub's markdown prints byte
       for byte, a fenced block and a table included; an empty body prints its
       heading and no `undefined`; `truncated` true adds its line and false
-      adds none;
+      adds none; two ids in `unknown_block_ids` with `truncated` false add
+      a line naming two blocks, and an empty list adds none;
       the markdown call carries `Notion-Version: 2026-03-11` and every other
-      call `2025-09-03` (`a-card`, `a-truncated-body`)
+      call `2025-09-03` (`a-card`, `a-truncated-body`,
+      `blocks-notion-could-not-render`)
 - [ ] 1.5 Failing cases for the comments: three comments returned out of
       order print oldest first, each with its time; the settings' user prints
       as `user`, a bot's id as its hex; an unanswered last question ends on
