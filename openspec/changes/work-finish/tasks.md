@@ -59,7 +59,7 @@ failing case first, its failure recorded, cited as `// spec:
       ready 7 --undo`), and no open one with no `--title`. An untracked file
       alone does not refuse
 - [ ] 2.4 Failing cases in the same file for the sequence: a first finish
-      pushes, opens a draft with the title and body file, re-reads its
+      pushes, opens a draft with `--base main`, the title and the body file, re-reads its
       number over REST and marks it ready, in that order; a draft with a new
       commit pushes and marks ready with no create; `origin` already at
       `HEAD` makes no push and still marks ready; one merged and one open

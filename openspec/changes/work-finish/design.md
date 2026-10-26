@@ -45,10 +45,11 @@ the gate holds a mistake of order, not a wrong argument (stage 2, question
    `--no-verify`, so the pre-push hook runs `bun test` and the draft check —
    skipped when `git ls-remote origin refs/heads/<branch>` already names
    `HEAD`, since git would run the whole test suite for a push of nothing.
-5. With no open pull request, `gh pr create --draft -R <repo> --head
-   <branch> --title <t> --body-file <f>`, then the same REST read again for
-   its number; the base is the repository's default branch, `gh`'s own
-   default.
+5. With no open pull request, `gh pr create --draft -R <repo> --base main
+   --head <branch> --title <t> --body-file <f>`, then the same REST read
+   again for its number. The base is named: without `--base`, `gh` prefers a
+   branch's `gh-merge-base` setting to the default branch (CodeRabbit on
+   #308), and `main` is the branch step 1 already treats as the base.
 6. The card's comments through the ask settings, then `ready()` unless
    `waiting()` says a question waits. The settings read and the client move
    out of `ask()` into one export of `bun/notion-ask.ts` that both call, so
