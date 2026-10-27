@@ -14,7 +14,7 @@ the `work-finish` and `pre-pr-diff-paths` changes (design.md, *Seams*).
 
 ## 1. The project checks in the runner, one record per step, and `ran()` by rule
 
-- [ ] 1.1 Add `bumpTest: "true"` to `MANIFEST` in
+- [x] 1.1 Add `bumpTest: "true"` to `MANIFEST` in
       `bun/diff-budget.fixture.ts`, so that no runner case starts a `bun test`
       inside `bun test`. Lift the blank check out of `bump.ts verify` into one
       reader in `bun/config.ts`, which returns the command or throws naming
@@ -22,7 +22,7 @@ the `work-finish` and `pre-pr-diff-paths` changes (design.md, *Seams*).
       `bun/bump-verify.test.ts` and `bun/config.test.ts` stay green, the blank
       and whitespace cases included [26], and add a `config.test.ts` case for
       the reader itself.
-- [ ] 1.2 Failing runner cases in `bun/pre-pr.test.ts`, or in a split file
+- [x] 1.2 Failing runner cases in `bun/pre-pr.test.ts`, or in a split file
       beside it:
       - with nothing past the base, two `pass` records [1]. Within budget with
         `true`: exit 0, records `diff-budget` then `project-checks`, both
@@ -48,7 +48,7 @@ the `work-finish` and `pre-pr-diff-paths` changes (design.md, *Seams*).
         an ignored file records. A check that commits (`git commit
         --allow-empty`) leaves no record (local review of the proposal).
       (Req: pre-pr-runner — all three modified requirements)
-- [ ] 1.3 Make 1.2 pass in `bun/pre-pr.ts`: export `RUNNER_STEPS` from
+- [x] 1.3 Make 1.2 pass in `bun/pre-pr.ts`: export `RUNNER_STEPS` from
       `bun/gate-ledger.ts`, then run both steps, map each exit to 0, 1 or 2,
       exit with the largest, write both records after the second step, and
       take the dirty test from `git status --porcelain`, printing its lines
@@ -56,7 +56,7 @@ the `work-finish` and `pre-pr-diff-paths` changes (design.md, *Seams*).
       steps, and write nothing when either changed. Update the file's header comment. Verify:
       `bun test bun/pre-pr.test.ts`, and the whole run passes under dash for
       the `sh -c` cases on CI.
-- [ ] 1.4 Failing cases for `ran()`'s rule in a new
+- [x] 1.4 Failing cases for `ran()`'s rule in a new
       `bun/gate-ledger-rule.test.ts`: the step's own record is found [19]; a
       passing `diff-budget` record alone does not answer `project-checks`
       [20]; a `pre-pr` record under an unknown rule answers neither step [21].
@@ -69,13 +69,13 @@ the `work-finish` and `pre-pr-diff-paths` changes (design.md, *Seams*).
       [25]. If `work-finish` merged the parameter first, add only the callers,
       naming its pull request. (Req: stage-goal — A stage is done when the
       check says so)
-- [ ] 1.5 Update the fixtures that fabricate a runner record, so each writes
+- [x] 1.5 Update the fixtures that fabricate a runner record, so each writes
       both steps' records: `runRecord` in `bun/goal-check.fixture.ts`, `run`
       in `bun/turn-gate-record.test.ts`, `runner` in
       `bun/gate-ledger-turn.test.ts`, and the `printf` stand-in in
       `bun/ci-run.test.ts`, which carries no `rule` today. Verify: those files
       and `bun/board-loop-isolation.test.ts` pass.
-- [ ] 1.6 Add `"bumpTest": "bun test"` under `"harness"` in `package.json`.
+- [x] 1.6 Add `"bumpTest": "bun test"` under `"harness"` in `package.json`.
       In `core/review-toolkit.md`, step 1 becomes the direct `bash
       bun/diff-budget.sh` look first (`bash
       node_modules/harness/bun/diff-budget.sh` where the harness is
@@ -88,7 +88,7 @@ the `work-finish` and `pre-pr-diff-paths` changes (design.md, *Seams*).
       the same command. Verify: grep `core/`, `README.md` and `.claude/` for
       `pre-pr.ts`, `first, and again` and `when it adds or removes`, and read
       every hit back.
-- [ ] 1.7 Run the whole pre-PR sequence for a code branch, ending with the
+- [x] 1.7 Run the whole pre-PR sequence for a code branch, ending with the
       runner on the final commit. Verify: its two `pass` records of `HEAD` are
       in the ledger, and a live probe on this checkout with an untracked file
       prints the no-record line naming it.

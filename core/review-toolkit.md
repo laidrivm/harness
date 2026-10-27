@@ -158,21 +158,26 @@ runner's record of the commit it ends on, or a `BLOCKED` naming what only the
 user can settle. What it does not see: a pull request that changes code
 outside a task group starts the sequence too. A `/goal` run that reaches its
 round ceiling ends without the refusal, since refusing would only continue
-it. The record proves that step 1 ran at that commit; the other steps' gate
-lines report them, and nothing proves they ran.
+it. The runner's records prove that the diff budget and the project checks
+ran at that commit; the other steps' gate lines report them, and nothing
+proves they ran.
 
-1. The runner, `bun bun/pre-pr.ts` (`bun node_modules/harness/bun/pre-pr.ts`
-   where the harness is installed), first, and again after the sequence's last
-   commit, since its record names the commit it read. It runs the diff budget
-   and records the run; the pre-push hook and CI measure the budget without
-   recording. The budget goes first because over budget says the reviewable
-   unit was cut too wide rather than that the code is wrong — and re-cutting it
-   changes the diff every gate below reads. It reports how many lines the
-   reviewer must read, and names its own thresholds and, where it has one, the
-   remedy in the gate line, so a reader never looks either up here. A gate
-   that reports it could not measure is neither over budget nor within it: it
-   means the base is unresolvable, and in CI it fails the check rather than
-   passing unmeasured.
+1. The diff budget first, looked at with `bash bun/diff-budget.sh` (`bash
+   node_modules/harness/bun/diff-budget.sh` where the harness is installed),
+   which records nothing. Then the runner, `bun bun/pre-pr.ts` (`bun
+   node_modules/harness/bun/pre-pr.ts`), once, after the sequence's last
+   commit, since its records name the commit it read. It runs the diff budget,
+   then the project checks — the command under `harness.bumpTest` — and
+   records each; give the call a 600000 ms timeout or run it in the
+   background, since the full test run takes minutes. The pre-push hook and
+   CI measure the budget without recording. The budget goes first because
+   over budget says the reviewable unit was cut too wide rather than that the
+   code is wrong — and re-cutting it changes the diff every gate below reads.
+   It reports how many lines the reviewer must read, and names its own
+   thresholds and, where it has one, the remedy in the gate line, so a reader
+   never looks either up here. A gate that reports it could not measure is
+   neither over budget nor within it: it means the base is unresolvable, and
+   in CI it fails the check rather than passing unmeasured.
 2. `/zombies` with **no arguments** — diff mode reads the real code and
    existing tests, cross-checks the implementation against the
    proposal-stage edge-case list, and catches the edges only implementation
@@ -196,11 +201,10 @@ it would have told you to re-cut, and a branch never pushed is a branch never
 measured.
 
 A branch of documentation, rules or config runs step 1, then `/triage` alone,
-plus a grep for every site restating what it changes, plus `bun test` when it
-adds or removes a directory under `openspec/changes/` — a test pins the tree's
-change set — then one pass of `/coderabbit-local` — one, not three — with
-the measurement the `/code-review` bullet sets out. That pass, too, runs only
-while no pull request is open on the branch, a draft counting as open: a push
+plus a grep for every site restating what it changes, then one pass of
+`/coderabbit-local` — one, not three — with the measurement the
+`/code-review` bullet sets out. That pass, too, runs only while no pull
+request is open on the branch, a draft counting as open: a push
 into an open one skips it while the earlier steps run, and its report says
 CodeRabbit reviews the head on the pull request; a state the read could not
 get runs it, and the report says the state was unread.

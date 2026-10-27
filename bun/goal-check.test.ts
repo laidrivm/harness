@@ -126,8 +126,8 @@ describe("the run record", () => {
 	test("HEAD's record is found among other projects' and gates' [8]", () => {
 		const dir = proposal();
 		const state = stateWith(
-			{ ...runRecord(dir), project: "/elsewhere" },
-			{ ...runRecord(dir), gate: "turn-gate" },
+			runRecord(dir).map((r) => ({ ...r, project: "/elsewhere" })),
+			runRecord(dir).map((r) => ({ ...r, gate: "turn-gate" })),
 			runRecord(dir),
 		);
 		expect(run(dir, ["propose", "demo"], { state }).code).toBe(0);
@@ -165,7 +165,7 @@ describe("the run record", () => {
 	// spec: stage-goal/two-targets-at-one-commit
 	test("another change's goal record at HEAD leaves the step open", () => {
 		const dir = tasks(TWO);
-		const goal = { ...runRecord(dir, "met"), gate: "goal", rule: "apply" };
+		const goal = { ...runRecord(dir, "met")[0], gate: "goal", rule: "apply" };
 		const state = stateWith(runRecord(dir), goal);
 		const r = run(dir, ["apply", "demo", "1"], { state });
 		expect(r.last).toMatch(/^goal open: .*1\. First/);
@@ -193,6 +193,7 @@ describe("the before-push form", () => {
 		["a detached HEAD [3]", (d: string) => git(d, "switch", "-q", "--detach"), "HEAD names no branch"],
 		["a missing record [4]", () => {}, "no passing pre-PR run record for"],
 		["a tracked edit [5]", (d: string) => writeFileSync(join(d, CHANGE, "tasks.md"), "edited\n"), "tracked files differ from HEAD"],
+		["an index git status cannot read", (d: string) => writeFileSync(join(d, ".git", "index"), "x"), "tracked files differ from HEAD"],
 	])("%s is open, naming it", (_, arrange, reason) => {
 		const dir = tasks(TWO);
 		const state = reason.startsWith("no passing") ? stateWith() : stateWith(runRecord(dir));
@@ -265,7 +266,7 @@ describe("with a launcher", () => {
 	])("%s, the session's clone's record of the tip, read through the launcher, is met", (_, args, gh) => {
 		const push = tasks(TWO);
 		const session = realpathSync(emptyDir("goal-check-session-"));
-		const as = launcher(stateWith({ ...runRecord(push), project: session }));
+		const as = launcher(stateWith(runRecord(push).map((r) => ({ ...r, project: session }))));
 		const env = { HARNESS_AS_AGENT: as.path, HARNESS_CLONE: session };
 		// The runner's own ledger holds the push clone's record, which must not count.
 		const r = run(push, args, { gh, env, state: stateWith(runRecord(push)) });
