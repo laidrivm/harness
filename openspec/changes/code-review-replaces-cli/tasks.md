@@ -24,10 +24,13 @@
 
 - [ ] 2.1 Probe, in this branch's worktree, which argument `/code-review`
       reads as the base of its diff and which as a tree (design.md decision
-      1): run it once with the runner's base named, and check that the files
-      it names are all in `git diff --name-only <base>...HEAD`. Record the
-      form that works in design.md decision 1 before 2.2 cites it; if none
-      does, stop and report it
+      1): run it once with the runner's base named. Count a form as working
+      only on positive evidence that it read `<base>...HEAD` in this tree —
+      the review's own statement of the range or tree it diffed matching
+      them, or a finding on a file `git diff --name-only <base>...HEAD`
+      lists; an empty review proves nothing. Record a working form in
+      design.md decision 1 before 2.2 cites it; if the probe is
+      inconclusive, record none, and stop and report it
 - [ ] 2.2 In `bun/review-docs.test.ts`, turn the cases of *the local review
       runs only while no pull request is open* to read step 5
       (`5. \`/code-review\``), the documentation-branch paragraph and a
@@ -37,8 +40,8 @@
       `--post`, has the session grade each finding Trivial to Critical and name the grade
       in its report (design.md decision 3, cite
       `local-review-loop/a-finding-the-review-gives-no-severity`), says the session writes the `CODE-REVIEW gate:` line, and that a
-      review that does not return or names a file the branch's diff does not
-      change is reported and the push goes on (cite
+      review that does not return, or whose findings name no file the
+      branch's diff changes, is reported and the push goes on (cite
       `local-review-loop/the-review-does-not-return`); that the
       `/coderabbit-local` bullet says it is in no sequence and no gate; and
       that the `/coderabbit` bullet disposes on the same terms as
@@ -54,9 +57,20 @@
       sentence; step 5 and the documentation-branch paragraph name
       `/code-review high`; the `/coderabbit` bullet points at `/code-review`'s
       terms. Verify with `bun test bun/review-docs.test.ts` green
-- [ ] 2.4 Edit `README.md`'s sentence on `Skill(code-review)` to name step 5
+- [ ] 2.4 Add failing cases to `bun/review-docs.test.ts` that the two
+      exceptions of `core/autonomy.md` (an unattended pull request opening
+      over a non-`PASS` local gate) name `CODE-REVIEW` reading `OPEN` only
+      over a proposed 🟠 Major or 🔴 Critical dismissal and `CODE-REVIEW`
+      reading `BLOCKED` only over a Major or above the third pass left
+      unresolved, and no `CODERABBIT-LOCAL`; then edit both exceptions with
+      the editing tool. Cite
+      `agent-autonomy/the-pull-request-opens-over-a-proposed-dismissal` and
+      `agent-autonomy/the-pull-request-opens-over-a-major-left-unresolved`.
+      Verify red, then green
+- [ ] 2.5 Edit `README.md`'s sentence on `Skill(code-review)` to name step 5
       rather than the measurement, and `core/skills/session-wrapup/SKILL.md`'s
-      example ledger line to `code-review`. Then grep the tree for
+      example ledger line to `code-review`. Then grep the tree,
+      case-insensitively (`grep -rin`, so `CODERABBIT-LOCAL` is caught), for
       `coderabbit-local`, `Review measurement`, `measured beside` and `local
       CLI`, leaving as they are the archive, `docs/context/` (records of past
       sessions), other open changes, the skill itself, `README.md`'s table

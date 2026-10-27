@@ -49,8 +49,10 @@ documentation branch, as `pre-pr-runner` (*The runner names the steps the
 branch requires from its diff*) classifies one, SHALL get one review pass
 rather than the full loop. The review SHALL read the branch's diff against
 the base the runner measured from, in the tree the branch is checked out in;
-a review naming a file that diff does not change read another diff, and
-SHALL count as a review that does not return. Since `/code-review` names no
+a review with findings none of which names a file that diff changes read
+another diff, and SHALL count as a review that does not return. A finding
+that names an unchanged file beside findings on changed ones — a caller the
+change breaks — SHALL be kept and verified like any other. Since `/code-review` names no
 severity, the agent SHALL grade each of its findings 🔵 Trivial, 🟡 Minor,
 🟠 Major or 🔴 Critical while verifying it, dispose of it on that grade, and
 name the grade beside the finding in its report.
@@ -87,8 +89,8 @@ name the grade beside the finding in its report.
 #### Scenario: The review does not return
 
 - **WHEN** `/code-review` ends without a review — a usage limit, an error,
-  a refused call — or its review names a file the branch's diff does not
-  change
+  a refused call — or it reports findings and none names a file the
+  branch's diff changes
 - **THEN** the agent reports why
 - **AND** pushes without the gate rather than blocking the branch
 

@@ -20,8 +20,8 @@ because, since #320, a subagent works in its own worktree, where
   gets, run `/code-review high` instead of `/coderabbit-local`, under the
   same conditions: only while no pull request is open on the branch, a draft
   counting as open, and a state the read could not get running it. It reads
-  the diff against the base the runner measured from, and a review naming a
-  file that diff does not change counts as one that did not return.
+  the diff against the base the runner measured from, and a review whose
+  findings name no file that diff changes counts as one that did not return.
 - The disposal policy `/coderabbit-local` had moves to `/code-review`
   unchanged: a verified finding is applied without asking, dismissing a
   Major or above goes to the user, at most three reviews, Minor findings
@@ -77,6 +77,8 @@ None.
 - `bun/pre-pr-steps.ts` and its tests: the step id.
 - `bun/review-docs.test.ts`: the cases pinning the measurement give way to
   cases pinning `/code-review` as the local review.
+- `core/autonomy.md`: the two exceptions an unattended pull request opens
+  over name `CODE-REVIEW` for `CODERABBIT-LOCAL`.
 - `README.md`: the sentence on `Skill(code-review)` for unattended sessions.
 - Order: after `pre-pr-diff-paths`, whose archive (#324, merged) synced the two
   `pre-pr-runner` requirements and the `local-review-loop` requirement this
