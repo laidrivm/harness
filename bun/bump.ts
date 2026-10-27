@@ -16,7 +16,7 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { movePin, pinOf } from "./bump-pin.ts";
-import { read } from "./config.ts";
+import { bumpTest } from "./config.ts";
 
 /** Runs `argv` in `cwd` and returns its exit code. */
 type Run = (argv: string[], cwd: string) => number;
@@ -113,10 +113,7 @@ export async function verify(
 	root: string,
 	deps: Deps,
 ): Promise<{ sha: string; tree: string }> {
-	const bumpTest = read(root, "bumpTest");
-	// `sh -c ""` exits 0, which would pass every bump with no test run at all.
-	if (typeof bumpTest !== "string" || bumpTest.trim() === "")
-		throw new Error("package.json: harness.bumpTest is blank");
+	const tests = bumpTest(root);
 	const manifest = join(root, "package.json");
 	const text = readFileSync(manifest, "utf8");
 	const pin = pinOf(text);
@@ -128,7 +125,7 @@ export async function verify(
 	step("sync", SYNC);
 	step("check", ["bun", "node_modules/harness/bun/check.ts"]);
 	const tree = stage(root);
-	step("bumpTest", ["sh", "-c", bumpTest]);
+	step("bumpTest", ["sh", "-c", tests]);
 	return { sha: head, tree };
 }
 

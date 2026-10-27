@@ -44,6 +44,12 @@ export function ledgerFile(): string {
 }
 
 /**
+ * The pre-PR runner's steps, in the order it runs them: each record it writes
+ * carries one as its `rule`, and a passing run is a pass of every one.
+ */
+export const RUNNER_STEPS = ["diff-budget", "project-checks"] as const;
+
+/**
  * Whether the ledger holds the pre-PR runner's record of `commit` made in the
  * checkout whose top level is `top`. The runner records its checkout's top
  * level wherever it runs, so the match is exact: a path under `top` can be a
@@ -51,12 +57,15 @@ export function ledgerFile(): string {
  * cannot be read, or a torn line, holds none. Given `decision`, only a run
  * that ended so counts: the goal check asks for a pass, the turn gate for any.
  * `ledger` is another user's ledger as read for the caller, in place of this one's.
+ * Given `rule`, only that step's record counts, so one step's pass never
+ * stands in for another's; given none, any step's does.
  */
 export function ran(
 	commit: string,
 	top: string | undefined,
 	decision?: string,
 	ledger?: string,
+	rule?: string,
 ): boolean {
 	if (!top) return false;
 	let text = ledger ?? "";
@@ -71,7 +80,8 @@ export function ran(
 			const parsed = JSON.parse(line) ?? {};
 			const { gate, project, commit: read } = parsed;
 			const ended = !decision || parsed.decision === decision;
-			return gate === "pre-pr" && read === commit && project === top && ended;
+			const step = !rule || parsed.rule === rule;
+			return gate === "pre-pr" && read === commit && project === top && ended && step;
 		} catch {
 			return false;
 		}
@@ -83,16 +93,19 @@ const AGENT_LEDGER = 'd=${XDG_STATE_HOME-}; case $d in /*) ;; *) d=$HOME/.local/
 
 /**
  * On the host, whether the session's clone holds a passing pre-PR record of
- * `commit`: read through `under`, the launcher's words and the clone, as the
- * session user, from that user's 0600 ledger and against that user's view of
- * the clone's top level. The runner's own ledger never stands in for it.
+ * `commit` for every runner step: read through `under`, the launcher's words
+ * and the clone, as the session user, from that user's 0600 ledger and against
+ * that user's view of the clone's top level, each read once. The runner's own
+ * ledger never stands in for it.
  */
 export function ranUnder(under: string[], commit: string): boolean {
 	const agent = (...cmd: string[]) => {
 		const run = Bun.spawnSync([...under, ...cmd]);
 		return run.exitCode === 0 ? run.stdout.toString() : undefined;
 	};
-	return ran(commit, agent("pwd", "-P")?.trim(), "pass", agent("sh", "-c", AGENT_LEDGER) ?? "");
+	const top = agent("pwd", "-P")?.trim();
+	const ledger = agent("sh", "-c", AGENT_LEDGER) ?? "";
+	return RUNNER_STEPS.every((rule) => ran(commit, top, "pass", ledger, rule));
 }
 
 /**

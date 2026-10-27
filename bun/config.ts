@@ -47,3 +47,15 @@ export function read<K extends keyof Config>(root: string, key: K): Config[K] {
 		);
 	return value as Config[K];
 }
+
+/**
+ * The project's unit-test command, `harness.bumpTest`, which a bump and the
+ * pre-PR runner run as `sh -c <value>`. Throws naming the key when it is
+ * absent or blank: `sh -c ""` exits 0, a pass with no test run at all.
+ */
+export function bumpTest(root: string): string {
+	const value = read(root, "bumpTest");
+	if (typeof value !== "string" || value.trim() === "")
+		throw new Error("package.json: harness.bumpTest is blank");
+	return value;
+}
