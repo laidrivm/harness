@@ -6,7 +6,7 @@
  * nothing (`openspec/specs/work-take/`, and
  * `openspec/changes/archive/2026-10-27-work-take/design.md`). Notion is read
  * through the ask integration; a read that fails ends the run on a line naming
- * its step, and no line holds the token.
+ * its step, and no line it composes holds the token.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
