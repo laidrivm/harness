@@ -5,9 +5,9 @@
 The session wrap-up SHALL append one `first review` line to the
 pipeline-yield entry it writes: of the pull requests whose first CodeRabbit
 review completed since the previous entry, how many raised no Critical or
-Major finding, naming each. The first review is the earliest commit of the
-pull request that the bot marked `Review completed`; its findings are the
-bot's reviews of that commit, by the bot's own severity label.
+Major finding, naming each. The first review is the earliest commit the bot
+marked `Review completed` for that pull request; its findings are the bot's
+reviews of that commit, by the bot's own severity label.
 
 #### Scenario: A Major on the first reviewed commit
 
@@ -27,7 +27,15 @@ bot's reviews of that commit, by the bot's own severity label.
 - **WHEN** no commit of a pull request reads `Review completed`, because the
   bot skipped it, hit its rate limit or never ran
 - **THEN** the line names that pull request as unmeasured and leaves it out
-  of both counts
+  of both counts, and a later wrap-up that finds it reviewed counts it
+
+#### Scenario: A commit the bot reviewed for another pull request
+
+- **WHEN** a stacked pull request's earliest commit reads `Review completed`
+  for the pull request below it, and its own first review lands on a later
+  commit
+- **THEN** the line counts the later commit's review, not the earlier
+  commit's absence of one
 
 #### Scenario: A Major later dismissed
 
