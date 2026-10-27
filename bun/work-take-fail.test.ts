@@ -22,6 +22,12 @@ describe("take fails closed", () => {
 		expect([run.code, failed(run.out), run.seen, run.ran]).toEqual([1, "take: the ask settings read failed — no ask integration is configured", [], ""]);
 	});
 
+	test("settings its group may read: the mode named, and no call", async () => {
+		const run = await take({ config: home(true, 0o640) });
+		expect([run.code, failed(run.out)?.startsWith("take: the ask settings read failed — notion-bot: "), run.seen]).toEqual([1, true, []]);
+		expect(failed(run.out)).toContain("has mode 0640");
+	});
+
 	// spec: work-take/a-page-the-integration-cannot-read
 	test("403 on the page read: the step and the status, and no change file", async () => {
 		const run = await take({ cwd: checkout(DEMO), stub: { page: page("openspec/changes/demo/"), fail: { [`GET /v1/pages/${CARD}`]: 403 } } });

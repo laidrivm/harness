@@ -54,14 +54,14 @@ export type Stub = { page?: unknown; markdown?: unknown; comments?: unknown[][];
 
 /** Serves Notion as `stub` says, and the calls it saw. */
 export function notion(stub: Stub = {}) {
-	const seen: { call: string; version: string | null }[] = [];
+	const seen: { call: string; version: string | null; auth: string | null }[] = [];
 	const server = Bun.serve({
 		port: 0,
 		fetch(req) {
 			const url = new URL(req.url);
 			const cursor = url.searchParams.get("start_cursor");
 			const call = `${req.method} ${url.pathname}${cursor ? `#${cursor}` : ""}`;
-			seen.push({ call, version: req.headers.get("Notion-Version") });
+			seen.push({ call, version: req.headers.get("Notion-Version"), auth: req.headers.get("Authorization") });
 			const status = stub.fail?.[call];
 			if (status) return Response.json({}, { status });
 			if (/^\/v1\/pages\/[^/]+\/markdown$/.test(url.pathname)) return Response.json(stub.markdown ?? body("# Card\n"));
@@ -77,13 +77,13 @@ export function notion(stub: Stub = {}) {
 	return { seen, url: server.url.origin };
 }
 
-/** A home whose config holds the ask settings, or none. */
-export function home(settings = true): string {
+/** A home whose config holds the ask settings at `mode`, or none. */
+export function home(settings = true, mode = 0o600): string {
 	const dir = emptyDir("work-take-home-");
 	if (!settings) return dir;
 	mkdirSync(join(dir, "harness"));
 	writeFileSync(join(dir, "harness", "notion-ask.json"), JSON.stringify({ token: TOKEN, user: USER }));
-	chmodSync(join(dir, "harness", "notion-ask.json"), 0o600);
+	chmodSync(join(dir, "harness", "notion-ask.json"), mode);
 	return dir;
 }
 
