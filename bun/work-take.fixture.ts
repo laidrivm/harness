@@ -101,7 +101,7 @@ export function bin(code: number | null = 0) {
 	symlinkSync(git, join(dir, "git"));
 	const log = join(dir, "openspec.log");
 	if (code !== null) {
-		writeFileSync(join(dir, "openspec"), `#!/bin/sh\necho "$@" >> '${log}'\nprintf '${LISTING.replaceAll("\n", "\\n")}'\nexit ${code}\n`);
+		writeFileSync(join(dir, "openspec"), `#!/bin/sh\necho "OPENSPEC_TELEMETRY=$OPENSPEC_TELEMETRY $*" >> '${log}'\nprintf '${LISTING.replaceAll("\n", "\\n")}'\nexit ${code}\n`);
 		chmodSync(join(dir, "openspec"), 0o755);
 	}
 	return { dir, ran: () => (existsSync(log) ? readFileSync(log, "utf8") : "") };
