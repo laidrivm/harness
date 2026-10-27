@@ -19,10 +19,12 @@ The agent SHALL invoke `/coderabbit-local` against the branch after `/triage`
 and before pushing, only while no pull request is open on the branch. A push
 into an open pull request, draft or ready, SHALL get no local review, since
 CodeRabbit reviews that head on the pull request, a draft's once it is marked
-ready. The agent SHALL read the pull request's state before the sequence
-starts, never infer it from what the push carries, and SHALL treat a state it
-could not read as none open. A branch of documentation, rules or config SHALL
-get one review pass rather than the full loop.
+ready. The agent SHALL read the
+pull request's state before the sequence starts, never infer it from what the
+push carries, and SHALL treat a state it could not read as none open. A
+documentation branch, as `pre-pr-runner` (*The runner names the steps the
+branch requires from its diff*) classifies one, SHALL get one review pass
+rather than the full loop.
 
 #### Scenario: A code branch reaches the end of the sequence
 
@@ -62,7 +64,7 @@ get one review pass rather than the full loop.
 
 #### Scenario: A documentation branch
 
-- **WHEN** the branch changes only documentation, rules or config, and no
+- **WHEN** the runner classifies the branch as a documentation branch, and no
   pull request is open on it
 - **THEN** the agent runs one review pass, not three
 
