@@ -60,7 +60,9 @@ is a code branch and requires `zombies` as well, and `warm` where a path named
 Once the branch's pull request is open, draft or not, the runner SHALL name
 the project checks and no judgement step, since the reviewer on the pull
 request reviews its head. A read of the pull request that fails SHALL count as
-no pull request open.
+no pull request open. The list is the least a push into it requires: the steps
+before `/coderabbit-local` still run ahead of one, as `local-review-loop`
+(*The gate runs after triage and before the push*) sets out.
 
 #### Scenario: A code branch with its pull request open
 
