@@ -3,6 +3,37 @@
 - FROM: `### Requirement: The local review passes the guidelines the PR bot reads`
 - TO: `### Requirement: The CLI review passes the guidelines the PR bot reads`
 
+## MODIFIED Requirements
+
+### Requirement: The CLI review passes the guidelines the PR bot reads
+
+The prescribed invocation of `/coderabbit-local` SHALL pass `--config` with
+`.coderabbit.yaml`, `CLAUDE.md` and every tracked file that a pattern under
+the config's `knowledge_base.code_guidelines.filePatterns` matches. It SHALL
+pass each file once and leave out any the repository lacks, so the CLI review
+reads the guidelines the PR bot reads. A pattern SHALL match as the bot
+matches it: a `*` never crosses a `/`.
+
+#### Scenario: The config names guideline files
+
+- **WHEN** the review runs in a repository whose `.coderabbit.yaml` names
+  `core/*.md`
+- **THEN** the invocation passes `.coderabbit.yaml`, `CLAUDE.md` and each
+  tracked markdown file directly under `core/`
+- **AND** it passes no file under `core/skills/`
+
+#### Scenario: A repository with no config
+
+- **WHEN** the repository has no `.coderabbit.yaml`
+- **THEN** the invocation passes `CLAUDE.md` and no guideline file, adding
+  `AGENTS.md` or `.cursorrules` once each where the repository has them
+
+#### Scenario: A file two sources name
+
+- **WHEN** a configured pattern matches `CLAUDE.md`, which the invocation
+  already names
+- **THEN** `CLAUDE.md` is passed once
+
 ## ADDED Requirements
 
 ### Requirement: The local review runs after triage and before the push
@@ -16,13 +47,17 @@ pull request's state before the sequence starts, never infer it from what the
 push carries, and SHALL treat a state it could not read as none open. A
 documentation branch, as `pre-pr-runner` (*The runner names the steps the
 branch requires from its diff*) classifies one, SHALL get one review pass
-rather than the full loop.
+rather than the full loop. The review SHALL read the branch's diff against
+the base the runner measured from, in the tree the branch is checked out in;
+a review naming a file that diff does not change read another diff, and
+SHALL count as a review that does not return.
 
 #### Scenario: A code branch reaches the end of the sequence
 
 - **WHEN** `/triage` has been run over the final diff of a code branch with
   no open pull request
-- **THEN** the agent invokes `/code-review high` before pushing
+- **THEN** the agent invokes `/code-review high` before pushing, over the
+  diff against the base the runner measured from
 
 #### Scenario: A push into an open pull request
 
@@ -49,7 +84,8 @@ rather than the full loop.
 #### Scenario: The review does not return
 
 - **WHEN** `/code-review` ends without a review — a usage limit, an error,
-  a refused call
+  a refused call — or its review names a file the branch's diff does not
+  change
 - **THEN** the agent reports why
 - **AND** pushes without the gate rather than blocking the branch
 

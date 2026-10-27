@@ -32,39 +32,49 @@ and which the session that writes it owns.
 
 ## Decisions
 
-1. **The invocation is `/code-review high`, with no other argument.** `high`
+1. **The invocation is `/code-review high`, over the runner's diff.** `high`
    is named because `/code-review` with no level reuses the last one typed,
    which a later session cannot know. No `--comment`, no `--fix`, no `ultra`
    or `--post`: the first and the last post under the user's name on the
    pull request, which has none yet, and `--fix` applies findings before they
-   are verified, which the disposal policy forbids. No target either where
-   the session works in its working directory — its worktree or checkout —
-   since the review reads the branch's own diff there; a session working in a
-   clone outside it passes the clone's path, the one target the skill takes
-   that names a tree. Refusing the posting
+   are verified, which the disposal policy forbids. Refusing the posting
    arguments by a hook is the card *Refuse posting arguments to /code-review
-   in a PreToolUse hook on Skill*, after the roadmap.
-2. **The session runs it itself, not a fresh subagent, and records no SHA.**
-   The fresh subagent and the SHA were the measurement's: one held the two
-   lists comparable, the other caught a subagent that reviewed the main
-   checkout instead of the branch (the card's caveat). The user dropped the
-   SHA (answer 1 а, *можно без записи sha*) because since #320 a subagent
-   works in its own worktree; the session that runs the review in the tree it
-   works in has nothing to mismatch. *Alternative: keep the fresh subagent* —
-   rejected: it reopens the question of which tree the subagent reads, which
-   is the caveat the user closed, and "Claude reviews Claude" is held where
-   the card's option 1 put it, by CodeRabbit on the pull request.
-3. **The disposal terms move unchanged.** Apply every verified finding
-   without asking, put a Major-or-above dismissal to the user, at most three
-   reviews stopping at one with nothing above Minor, Minor findings reported
-   once. `/code-review` names no severity in CodeRabbit's terms, so a
-   correctness finding counts as 🟠 Major and a reuse, simplification or
-   efficiency cleanup as 🟡 Minor, unless the review states a severity of its
-   own. The scale is the reviewer's kind of finding, not the session's
-   judgement, so the session cannot lower a finding to dismiss it alone.
-   *Alternative: the session grades each finding* — rejected for that reason.
-   *Alternative: wait for the `--json-schema` run* — rejected: it needs the
-   runner to launch the reviewer, which the user did not ask for now.
+   in a PreToolUse hook on Skill*, after the roadmap. With no target the
+   skill diffs against the local `main` (its own run on this branch said
+   so), which in a worktree or a long-lived checkout trails `origin/main`:
+   on this branch that diff held 209 files where the branch changes 7. The
+   review must read the diff the runner measured, in the tree the branch is
+   checked out in, so the session names that base, and a clone's path where
+   it works in a clone outside its working directory. Which argument form
+   the skill reads as a base and which as a tree was not probed; task 2.1
+   probes it before the doc names it.
+2. **The session runs it itself, not a fresh subagent, records no SHA, and
+   checks the files.** The fresh subagent and the SHA were the measurement's:
+   one held the two lists comparable, the other caught a subagent that
+   reviewed the main checkout instead of the branch (the card's caveat). The
+   user dropped the SHA (answer 1 а, *можно без записи sha*) because since
+   #320 a subagent works in its own worktree. What stays is the cheap half
+   of the old guard: a review naming a file the branch's diff does not change
+   read another tree or another base, and counts as a review that does not
+   return. It costs one `git diff --name-only` and catches both decision 1's
+   stale base and a session in a clone. *Alternative: keep the fresh
+   subagent* — rejected: it reopens which tree the subagent reads, the
+   caveat the user closed, and "Claude reviews Claude" is held where the
+   card's option 1 put it, by CodeRabbit on the pull request.
+3. **The disposal terms move unchanged, every finding counting as 🟠
+   Major.** Apply every verified finding without asking, put a
+   Major-or-above dismissal to the user, at most three reviews, Minor
+   findings reported once. `/code-review` reports each finding as a file, a
+   line, a summary and a failure scenario — no severity and no kind, as its
+   run on this branch showed. Any split into Major and Minor would be the
+   session's own judgement, which lets it lower a finding and dismiss it
+   alone; counting every finding Major puts every dismissal to the user and
+   leaves the loop's stop condition — a review with nothing above Minor — as
+   a review with no finding. A wrong Major costs one question, never a
+   dismissal reaching the merge. This waits on the user's answer (card,
+   question 4); *the session grades each finding* and *wait for the
+   `--json-schema` run*, which needs the runner to launch the reviewer, are
+   the alternatives put to them.
 4. **The session writes the gate line.** The built-in skill ends on no
    `GATE:` line, and `bun/turn-gate.ts` asks for some gate line, never this
    one. The session ends its disposition on `CODE-REVIEW gate: PASS|OPEN|
@@ -74,10 +84,10 @@ and which the session that writes it owns.
 5. **The step's id is `code-review`.** `JUDGEMENT` names it in place of
    `coderabbit-local`; the `Skill` hook's record carries the skill's name, so
    the two meet without either change citing the other's code. The pin that
-   each id names a skill under `core/skills/` cannot hold a built-in one: the
-   test pins `code-review` instead where it is defined for the harness's
-   sessions, the `Skill(code-review)` entry of `.claude/settings.json`, which
-   an unattended call needs anyway.
+   each id names a skill under `core/skills/` cannot hold a built-in one: it
+   skips `code-review` and names the case of `bun/review-docs.test.ts` that
+   already pins the `Skill(code-review)` entry of `.claude/settings.json`,
+   rather than asserting it a second time.
 6. **`/coderabbit-local` stays, outside the sequence.** It moves to the
    bullets like `/ponytail-review`: available, not a gate, run when a user
    asks for CodeRabbit's take before a push. Retiring it would reach d2ass
@@ -96,12 +106,25 @@ and which the session that writes it owns.
    requirements — a verified finding fixed without asking, a Major dismissal
    the user's, Minor findings once, three reviews, a justification kept only
    as a convention — speak of the reviewer ("the bot") and its findings,
-   never of how the CLI is invoked, and hold for `/code-review` unchanged. *The local review passes the
-   guidelines the PR bot reads* is the one about the CLI's `--config`
-   invocation, which the kept skill still makes: it is renamed *The CLI
-   review passes the guidelines the PR bot reads*, its text untouched.
-   `/code-review` runs in the session, which has `CLAUDE.md` and the
-   rulebook loaded already.
+   never of how the CLI is invoked, and hold for `/code-review` unchanged.
+   *The local review passes the guidelines the PR bot reads* is the one
+   about the CLI's `--config` invocation, which the kept skill still makes:
+   it is renamed *The CLI review passes the guidelines the PR bot reads*,
+   and its body says the CLI review where it said the local review. The
+   capability's Purpose, which no delta reaches, is rewritten by hand in the
+   archive (task 2.4).
+8. **`/code-review` reads `CLAUDE.md` and `core/rules.md`, not the docs the
+   rulebook indexes.** The session has both loaded; `core/code-style.md`,
+   `core/testing.md` and the others are read on demand, and the review's
+   recipe reads `CLAUDE.md` files only. A rule kept in an indexed doc under
+   *A justification survives only when it is a convention* is therefore read
+   by CodeRabbit on the pull request, not by the local review. Accepted:
+   `core/rules.md` §*The loop* already lets the always-on budget decide
+   between the two homes, and the pull request's review is where a rule the
+   bot keeps re-raising was always read back. *Alternative: brief the review
+   with the indexed docs* — rejected: the skill takes no such argument, and
+   reading them into every session spends the budget the indexing exists to
+   save.
 
 ## Conflict check (roadmap question 14 б)
 
@@ -123,7 +146,15 @@ and which the session that writes it owns.
 - `work-finish` — `commit-gates`, `gate-ledger`, `pre-pr-runner` (*ADDED* a
   reader asking for one step's evidence), `work-finish`. Shared:
   `pre-pr-runner`, different requirements; `finish` takes its list from
-  `required()`, which now names `code-review`. No contradiction.
+  `required()`, which now names `code-review`. No contradiction today: until
+  the required steps are derived from the diff, `finish` asks only for the
+  runner's diff-budget record. Order via prose for the change that makes it
+  ask per step: a review that does not return leaves no `code-review` record,
+  where *The local review runs after triage and before the push* lets the
+  push go on — as the unavailable CLI did, with no `coderabbit-local`
+  record — so that change decides how `finish` reads a step the spec
+  excuses, and a fix commit after the last review, which leaves no record at
+  `HEAD` for any judgement step, is the same question there.
 - `strip-inherited-git-env` — `commit-gates`: no shared capability.
 - `host-deploy` — `orchestrator` alone: no shared capability; it keeps the
   CLI in the image, which decision 6 needs.
@@ -134,9 +165,15 @@ and which the session that writes it owns.
 - [A review by the context that wrote the code] → CodeRabbit on the pull
   request stays, and on the five measured pull requests it caught three
   defects both local reviewers missed.
-- [`/code-review`'s findings carry no CodeRabbit severity] → decision 3's
-  rule by kind; a correctness finding wrongly counted Major costs one
-  question to the user, never a dismissal reaching the merge.
+- [`/code-review`'s findings carry no CodeRabbit severity] → decision 3
+  counts each Major; a finding wrongly counted Major costs one question to
+  the user, never a dismissal reaching the merge.
+- [The review reads a stale base or another tree] → decision 2's file check
+  turns it into a review that does not return, and decision 1 names the
+  runner's base. The runner itself falls back to the local `main` where
+  `origin/HEAD` is unset, as on this branch's first run; that is the
+  checkout's setting, not this change's (`git remote set-head origin
+  --auto` sets it).
 - [The `Skill` hook records a built-in skill under another name] → the
   runner's line would ask for a record that never comes; the apply step of
   `judgement-step-record` or this change's verify reads one live record of a
