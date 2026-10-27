@@ -206,4 +206,28 @@ describe("the suite under git's repository variables", () => {
 			false,
 		]);
 	}, 90_000);
+
+	/** A `PATH` holding only a `git` that runs `body`. */
+	const stubGit = (body: string): string => {
+		const dir = scratch("git-env-stubgit-");
+		writeFileSync(join(dir, "git"), `#!/bin/sh\n${body}\n`);
+		chmodSync(join(dir, "git"), 0o755);
+		return dir;
+	};
+
+	// spec: commit-gates/the-list-cannot-be-read
+	test("a git that fails the read refuses, naming its exit code", () => {
+		const { code, err } = suite({ PATH: stubGit("exit 3") });
+		expect([code === 0, err.includes("exited 3"), RAN.test(err)]).toEqual([false, true, false]);
+	}, 90_000);
+
+	// spec: commit-gates/the-list-cannot-be-read
+	test("a read that prints no variable refuses rather than passing on an empty list", () => {
+		const { code, err } = suite({ PATH: stubGit("exit 0") });
+		expect([code === 0, err.includes("printed no variable"), RAN.test(err)]).toEqual([
+			false,
+			true,
+			false,
+		]);
+	}, 90_000);
 });
