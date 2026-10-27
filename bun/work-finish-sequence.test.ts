@@ -5,6 +5,8 @@
  * usage and refusals are `work-finish.test.ts`'s.
  */
 import { afterAll, describe, expect, test } from "bun:test";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, git } from "./diff-budget.fixture.ts";
 import { head } from "./goal-check.fixture.ts";
 import { BRANCH, CARD, checkout, finish, pull } from "./work-finish.fixture.ts";
@@ -20,10 +22,17 @@ const READY = "pr ready 7 -R o/demo";
 const DRAFT = { before: [pull(7, "OPEN", true)] };
 const OPENING = ["finish", "--card", CARD, "--title", "Demo", "--body-file", "body.md"];
 
+/** A checkout holding the body file, untracked, which `finish` checks for before the push. */
+function withBody() {
+	const cwd = checkout();
+	writeFileSync(join(cwd, "body.md"), "Body\n");
+	return cwd;
+}
+
 describe("the sequence", () => {
 	// spec: work-finish/a-first-finish
 	test("a first finish pushes, opens a draft against main, re-reads its number and marks it ready, in that order", async () => {
-		const cwd = checkout();
+		const cwd = withBody();
 		const run = await finish({ cwd, args: OPENING, gh: { before: [], after: [pull(7, "OPEN", true)] } });
 		expect(run.calls).toEqual([
 			READ,
@@ -62,7 +71,7 @@ describe("the sequence", () => {
 
 	test("a closed unmerged pull request alone: a new draft is opened", async () => {
 		const closed = pull(6, "CLOSED", false);
-		const run = await finish({ args: OPENING, gh: { before: [closed], after: [closed, pull(7, "OPEN", true)] } });
+		const run = await finish({ cwd: withBody(), args: OPENING, gh: { before: [closed], after: [closed, pull(7, "OPEN", true)] } });
 		expect(run.calls.filter((call) => call.startsWith("pr ")).map((call) => call.split(" -R")[0])).toEqual(["pr create --draft", "pr ready 7"]);
 		expect(run.last).toBe("finish: ready #7");
 	});
@@ -111,14 +120,14 @@ describe("the failures after the refusals", () => {
 	});
 
 	test("a create that fails marks nothing", async () => {
-		const run = await finish({ args: OPENING, gh: { before: [], create: 1 } });
+		const run = await finish({ cwd: withBody(), args: OPENING, gh: { before: [], create: 1 } });
 		expect(run.code).toBe(1);
 		expect(run.last).toStartWith("finish: failed — ");
 		expect(run.calls.at(-1)).toStartWith("pr create ");
 	});
 
 	test("a created pull request the re-read does not find marks nothing", async () => {
-		const run = await finish({ args: OPENING, gh: { before: [], after: [] } });
+		const run = await finish({ cwd: withBody(), args: OPENING, gh: { before: [], after: [] } });
 		expect(run.code).toBe(1);
 		expect(run.last).toStartWith("finish: failed — ");
 		expect(run.calls).not.toContain(READY);

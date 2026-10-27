@@ -39,8 +39,8 @@ export async function work(args: string[]): Promise<{ lines: string[]; code: num
 	if (subcommand === "finish") {
 		const set = values(rest, { card: { type: "string" }, title: { type: "string" }, "body-file": { type: "string" } });
 		const { card, title, "body-file": body } = (set ?? {}) as Record<string, string | undefined>;
-		// Both or neither, and neither empty: `gh` would open a pull request with no title, or read no body.
-		const opening = title === undefined && body === undefined ? undefined : title && body ? { title, body } : null;
+		// Both or neither, and neither blank: `gh` would open a pull request with no title, or read no body.
+		const opening = title === undefined && body === undefined ? undefined : title?.trim() && body ? { title, body } : null;
 		if (typeof card === "string" && ID.test(card) && opening !== null) return finish(card, opening);
 	}
 	return { lines: USAGE, code: 2 };

@@ -41,7 +41,9 @@ the gate holds a mistake of order, not a wrong argument (stage 2, question
    not a draft: refuse, naming `gh pr ready <n> --undo`.
 3. The evidence for `HEAD` (*The evidence seam* below), told whether a pull
    request is open — read before it for that reason (group 2's apply). None
-   open and no `--title`/`--body-file`: refuse.
+   open and no `--title`/`--body-file`, or a body file that is not a file:
+   refuse, since `gh pr create` would fail on it only after the push and its
+   test run (review on `feat/work-finish-2`).
 4. The push, `git push -u origin HEAD`, never `--force`, never
    `--no-verify`, so the pre-push hook runs `bun test` and the draft check —
    skipped when `git ls-remote origin refs/heads/<branch>` already names
@@ -156,8 +158,12 @@ It passes every event that is not a Bash call, and an unreadable one, which
 the command guard already blocks. It walks the line with `commands()` and
 `invocations()`, as the command guard does, and refuses where
 `ghFinishes(rest)`, exported from `bun/command-guard-gh.ts` beside
-`ghPublish()` and reusing its subcommand reader, finds `pr create`, or `pr
-ready` without `--undo`. `--undo=false` is no undo. It does not descend into
+`ghPublish()` and reusing its subcommand reader, finds `pr create` or its
+alias `pr new`, or `pr ready` without `--undo`, with `pr` the top-level
+command as gh resolves it. `--undo=false` is no undo. The REST call that
+opens a pull request (`gh api repos/<o>/<r>/pulls`), which the command guard
+allows as a cloud session's only way to open one, is not read: spelling it
+is getting round the gate, not forgetting it. It does not descend into
 `sh -c` or `eval`: it holds a forgotten order, not an intent to get round it
 (stage 2, question 23; roadmap clarification 11). The requirement states that
 exception, a test pins it, and a `shortcut:` comment names when to lift it:

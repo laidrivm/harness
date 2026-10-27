@@ -35,6 +35,7 @@ describe("refused, naming bun bun/work.ts finish", () => {
 		["cd x && gh pr ready 7", "hand-ready"],
 		["/usr/bin/gh pr ready 7", "hand-ready"],
 		["gh pr create --draft --title t --body-file b", "hand-create"],
+		["gh pr new --title t --body-file b", "hand-create"],
 	])("%s", (command, rule) => {
 		const run = guard(bash(command));
 		expect(run.code).toBe(2);
@@ -51,6 +52,8 @@ describe("allowed, recording nothing", () => {
 		"gh pr ready --undo 7",
 		"gh pr ready 7 --undo=true",
 		"gh pr view 7",
+		"gh issue create -t pr ready",
+		"gh label create pr --description create",
 		"echo gh pr ready 7",
 		"sh -c 'gh pr ready 7'",
 		"eval 'gh pr ready 7'",
