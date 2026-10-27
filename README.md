@@ -47,7 +47,7 @@ One vocabulary everywhere: `🔴 Critical` > `🟠 Major` > `🟡 Minor` > `🔵
 
 ## Gate lines
 
-`warm`, `zombies`, `triage`, `coderabbit` and `coderabbit-local` end their output with a machine-readable last line — `WARM gate: PASS — 3 dependencies vetted.`, `ZOMBIES gate: BLOCKED — 3 gaps unaddressed.`, `TRIAGE gate: OPEN — 4 groups, 2 high-risk — High/Medium unread.`, `CODERABBIT gate: PASS — 7 findings, 7 dispositioned.` A driving agent reads the outcome without re-parsing the report, and a PR template or pre-push hook can require the lines to be present and `PASS`. The three states mean:
+`warm`, `zombies`, `triage`, `coderabbit` and `coderabbit-local` end their output with a machine-readable last line — `WARM gate: PASS — 3 dependencies vetted.`, `ZOMBIES gate: BLOCKED — 3 gaps unaddressed.`, `TRIAGE gate: OPEN — 4 groups, 2 high-risk — High/Medium unread.`, `CODERABBIT gate: PASS — 7 findings, 7 dispositioned.` The built-in `/code-review`, step 5's local review, prints none: the session writes its `CODE-REVIEW gate:` line, grading each finding on the ladder above. A driving agent reads the outcome without re-parsing the report, and a PR template or pre-push hook can require the lines to be present and `PASS`. The three states mean:
 
 - **PASS** — nothing to act on, or everything dispositioned with a stated reason.
 - **OPEN** — findings exist, nobody has dispositioned them yet. Transient: it must not survive the turn, unless what it waits on is the user's dismissal or, for `coderabbit`, a review of the head commit that has not landed. `triage` and `zombies` can only ever emit `OPEN`, because by design they decide nothing themselves.

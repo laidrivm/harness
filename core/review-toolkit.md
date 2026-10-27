@@ -43,15 +43,16 @@ limit, gets no review on its own — stop waiting on it and report it.
   decision or value the diff changes for the sites that restate it.
 - `/code-review` — Claude's own review of the working branch, before there
   is a PR: the local review. Invoke it yourself, as `/code-review high
-  <base>` from the branch's own worktree, `<base>` being the ref the runner
-  measured from (`origin/main` in a worktree), which the skill reads as `git
-  diff <base>...HEAD` in the tree it runs in: the level is named because
-  `/code-review` with none reuses the last one typed, and the base because
-  with no target the skill diffs against an upstream or the local `main`,
-  which in a worktree trails `origin/main`. Pass it nothing else: its
-  arguments that post write under the user's name on a pull request that has
-  none yet, and the one that fixes applies findings before they are
-  verified. It runs only while no pull request is open on the branch, a
+  <base>...HEAD` from the branch's own worktree, `<base>` being the base the
+  runner measured from — the ref it was given, else what `bun/diff-base.sh`
+  prints — so the review reads the diff the runner measured, in the tree it
+  runs in: the level is named because `/code-review` with none reuses the
+  last one typed, and the range because with no target the skill diffs
+  against an upstream or the local `main`, which in a worktree trails
+  `origin/main`, while a bare ref reads as a branch to review. Pass it
+  nothing else: its arguments that post write under the user's name on a
+  pull request that has none yet, and the one that fixes applies findings
+  before they are verified. It runs only while no pull request is open on the branch, a
   draft counting as open: a push into an open one skips it while the earlier
   steps run, because CodeRabbit reviews
   that head on the pull request — a draft's once it is marked ready — and
@@ -62,8 +63,9 @@ limit, gets no review on its own — stop waiting on it and report it.
   the read could not get runs it too, and the report says the state was
   unread, since a skipped review is the costlier mistake. A review that does
   not return — a usage limit, an error, a refused call — or whose findings
-  name no file the branch's diff changes (the runner's `changedPaths(<base>)`
-  in `bun/pre-pr-steps.ts`), having read another diff or another tree, is
+  name no file the branch's diff changes (the paths `git diff --name-only
+  --no-renames <base>...HEAD` lists, as the runner's step list reads them),
+  having read another diff or another tree, is
   reported and the push goes on without the gate rather than blocking the
   branch. One finding on an unchanged file beside findings on changed ones —
   a caller the change breaks — is kept and verified like the rest, and an
@@ -192,7 +194,7 @@ below say why each one exists.
    ever reaching for a dependency.
 4. `/triage`, over the final diff, so it maps the diff the reviewer
    will actually see.
-5. `/code-review` last, as `/code-review high <base>` on the terms the
+5. `/code-review` last, as `/code-review high <base>...HEAD` on the terms the
    `/code-review` bullet sets out, then push — only while no pull request is
    open on the branch, a draft counting as open: a push into an open one
    skips it while the earlier steps run, and its report says CodeRabbit
@@ -207,7 +209,7 @@ it would have told you to re-cut, and a branch never pushed is a branch never
 measured.
 
 A documentation branch, as the runner classifies one, gets one pass of
-`/code-review high <base>` — one, not three — on the terms the
+`/code-review high <base>...HEAD` — one, not three — on the terms the
 `/code-review` bullet sets out. That pass, too, runs only while no pull
 request is open on the branch, a draft counting as open: a push
 into an open one skips it while the earlier steps run, and its report says
