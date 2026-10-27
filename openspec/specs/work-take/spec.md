@@ -68,8 +68,8 @@ ask command decides it. It SHALL read every page of the comments.
 
 #### Scenario: A question with no answer
 
-- **WHEN** the card's last comment opens with the question mark and the user
-  wrote nothing after it
+- **WHEN** no comment by the user follows the card's last comment opening
+  with the question mark, though another author's may
 - **THEN** `take` prints the comments and `question waiting: yes`
 
 #### Scenario: An answered question
@@ -87,8 +87,9 @@ ask command decides it. It SHALL read every page of the comments.
 
 When the card's `Pointer` is exactly `openspec/changes/<slug>/`, the slug
 lower-case and not `archive`, `take` SHALL
-print that change's `proposal.md`, `design.md`, `tasks.md` and every delta
-spec from the checkout, each under its path, and the names of the
+print each of that change's `proposal.md`, `design.md` and `tasks.md` the
+checkout holds, skipping one it lacks, and every delta spec, each under its
+path, and the names of the
 capabilities the deltas touch, never their live specs. Any other `Pointer`
 SHALL print one line saying why no change is printed.
 
@@ -131,7 +132,8 @@ the checkout, unchanged.
 `take` SHALL write nothing — no Notion call but a read, no git ref, no ledger
 record, no file. It SHALL read Notion through the ask integration's settings.
 No settings, or a read that fails — Notion, git or `openspec` — SHALL exit 1
-with a line naming the step, and no line SHALL hold the token.
+with a line naming the step, and no line `take` composes itself SHALL hold
+the token; the body and the comments print as Notion holds them.
 
 #### Scenario: No ask settings
 
