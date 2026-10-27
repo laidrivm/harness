@@ -120,7 +120,7 @@ describe("the /coderabbit bullet", () => {
 
 const LOCAL = "`/coderabbit-local [base]` —";
 const STEP_5 = "5. `/coderabbit-local`";
-const DOCS_PATH = "A branch of documentation, rules or config";
+const DOCS_PATH = "A documentation branch, as the runner classifies one";
 const CODE_REVIEW = "`/code-review` —";
 const toolkit = () => read("core/review-toolkit.md");
 
@@ -258,5 +258,11 @@ describe("the /code-review bullet measures Claude's review beside the CLI", () =
 		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
 		expect(text).toContain("ends at the tenth: after it, `/coderabbit-local` runs alone and the body carries no section");
 		expect(text).toContain("`/ponytail-review`'s record is no evidence about it");
+	});
+
+	// Unattended, a skill call with no allow entry is refused, a run that does not return.
+	test("the harness's own settings allow the skill by its exact name", () => {
+		// A `Skill(...)` rule matches the skill's name, never its arguments, so this covers `/code-review high`.
+		expect(JSON.parse(read(".claude/settings.json")).permissions.allow).toContain("Skill(code-review)");
 	});
 });

@@ -23,15 +23,8 @@ die() {
 }
 
 base="${1:-}"
-if [ -z "$base" ]; then
-	# The remote-tracking ref is kept whole: `origin/main` resolves wherever
-	# `main` does and also where the local branch was never checked out.
-	# Not `rev-parse --abbrev-ref origin/HEAD` — with no origin/HEAD it echoes
-	# the argument back, and `HEAD...HEAD` is an empty diff, so every branch
-	# would read PASS at 0 lines.
-	base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)
-	base="${base:-main}"
-fi
+# Found beside this script, as a consumer's `node_modules/harness/bun/` holds both.
+[ -n "$base" ] || base=$(bash "$(dirname "${BASH_SOURCE[0]}")/diff-base.sh")
 
 git rev-parse --verify --quiet "${base}^{commit}" >/dev/null ||
 	die "cannot resolve base ref '${base}'"

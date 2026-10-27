@@ -29,10 +29,9 @@ completes, name the next step and the exact command.
 - Before the proposal is finalised: run `/zombies "<feature description>"`
   against the proposal text. A proposal whose edge cases are not listed in the
   tasks checklist as tests-first items is not ready to apply.
-- Before pushing `spec/<proposal-slug>`, run the pre-PR sequence's path for a
-  branch of documentation, rules or config (`review-toolkit.md`) in the same
-  turn: a proposal branch is that kind of branch, and `/zombies` alone is not
-  its sequence.
+- Before pushing `spec/<proposal-slug>`, run the pre-PR sequence in the same
+  turn, the steps the runner's last line names (`review-toolkit.md`):
+  `/zombies` alone is not a proposal branch's sequence.
 - A change to a gate the harness ships is measured against every consumer's
   tree before it is proposed, not only the consumer that reported it: the fix
   for one consumer's false positive can be another's new failure.
@@ -372,7 +371,9 @@ for them is already here.
   history cannot settle it. Read the board's `Questions` view and the card's
   comments first, and wait on a question already open there, naming its card,
   rather than ask it again; resuming that work, read that card's comments
-  first. Every page-level comment on a card joins one discussion, so a card
+  first, with `bun node_modules/harness/bun/work.ts take --card <id>`
+  (`bun bun/work.ts` in the harness itself), which prints them beside the
+  card. Every page-level comment on a card joins one discussion, so a card
   holds one open question at a time: a second waits in your report until the
   first is answered. Open the comment with the gate's mark,
   `` `harness-question` `` with a single backtick on each side of the word, set `Assign`, read

@@ -114,6 +114,23 @@ request's included, after every step has run. It is the same `PRE-PR:` family
 as its no-record line, so the turn gate's `GATE_LINE` never reads it as a
 report. The runner's exit status is unchanged by it.
 
+### Taken at apply
+
+- `PROJECT_CHECKS` is `RUNNER_STEPS[1]` from `bun/gate-ledger.ts`, which
+  `pre-pr-project-checks` made the list the runner records under. The name
+  stays defined there once; this module re-exports it rather than the ledger
+  importing a constant from here.
+- The path read passes `--end-of-options` before `<base>...HEAD` and `--`
+  after it, so a base opening with `-` is a revision git refuses, never an
+  option it obeys.
+- The path read runs in the caller's working directory, not the top level,
+  so `--no-relative` is what keeps a run from a subdirectory whole, and the
+  `diff.relative` case pins the flag.
+- `warm` is a code branch's step only: a `package.json` under `openspec/`
+  alone leaves the branch documentation, with no `warm`.
+- A base the runner could not resolve to any text (`diff-base.sh` printed
+  nothing) is read as a diff it cannot read, never as `...HEAD`.
+
 ## Seams with the sibling changes
 
 The siblings' slugs below are the working names their cards give; none is on

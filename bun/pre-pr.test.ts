@@ -26,7 +26,8 @@ describe("the step the runner runs", () => {
 	// spec: pre-pr-runner/a-branch-within-budget
 	test("within budget, the diff budget's line is printed unchanged [3]", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
-		expect(run(dir).out.trim()).toBe(gate(dir).line);
+		// The first line: the step list follows it.
+		expect(run(dir).out.split("\n")[0]).toBe(gate(dir).line);
 	});
 
 	// spec: pre-pr-runner/a-branch-within-budget pre-pr-runner/a-branch-over-budget
@@ -134,7 +135,7 @@ describe("the record of a run", () => {
 		const blocker = join(emptyDir("pre-pr-file-"), "state");
 		writeFileSync(blocker, "a file where the state directory would be");
 		const result = run(dir, { XDG_STATE_HOME: blocker });
-		expect([result.code, result.out.trim()]).toEqual([0, gate(dir).line]);
+		expect([result.code, result.out.split("\n")[0]]).toEqual([0, gate(dir).line]);
 	});
 });
 
