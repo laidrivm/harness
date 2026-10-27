@@ -43,7 +43,9 @@ describe("the project checks", () => {
 	test("their output passes through unchanged, after the budget's line [4]", () => {
 		const dir = within("printf 'checks said %s\\n' hi; printf 'to stderr\\n' >&2; exit 1");
 		const result = run(dir);
-		expect([result.code, result.out, result.err]).toEqual([1, `${gate(dir).line}\nchecks said hi\n`, "to stderr\n"]);
+		// Less the runner's own step list, which follows them.
+		const before = result.out.replace(/PRE-PR steps: [^\n]*\n$/, "");
+		expect([result.code, before, result.err]).toEqual([1, `${gate(dir).line}\nchecks said hi\n`, "to stderr\n"]);
 	});
 
 	// spec: pre-pr-runner/a-failing-run

@@ -150,7 +150,7 @@ limit, gets no review on its own — stop waiting on it and report it.
 
 ## The pre-PR sequence
 
-Before every PR that changes code — a feature, a bugfix, a chore alike, and
+Before every PR — a feature, a bugfix, a chore, a proposal alike, and
 whether or not it goes through the OpenSpec stages. Completing a task group
 starts the sequence in the same turn, and `bun/turn-gate.ts` refuses a turn
 that commits a group's last task and ends without the gate lines and the
@@ -161,6 +161,13 @@ round ceiling ends without the refusal, since refusing would only continue
 it. The runner's records prove that the diff budget and the project checks
 ran at that commit; the other steps' gate lines report them, and nothing
 proves they ran.
+
+Which of the steps below a branch requires is not the agent's call: the
+runner's last line, `PRE-PR steps: <id>, <id>, …`, names them by the skill
+each runs, from the branch's diff against the base the budget measured and
+from its pull request's state, as `pre-pr-runner` (*The runner names the
+steps the branch requires from its diff*) sets out. The steps below say why
+each one exists.
 
 1. The diff budget first, looked at with `bash bun/diff-budget.sh` (`bash
    node_modules/harness/bun/diff-budget.sh` where the harness is installed),
@@ -182,8 +189,9 @@ proves they ran.
    existing tests, cross-checks the implementation against the
    proposal-stage edge-case list, and catches the edges only implementation
    decisions create. Fix what it finds.
-3. `/warm`, only when a dependency manifest changed, having walked the
-   ponytail ladder before ever reaching for a dependency.
+3. `/warm`, when the runner names it, since a new or upgraded dependency is
+   code nobody on the branch wrote, having walked the ponytail ladder before
+   ever reaching for a dependency.
 4. `/triage`, over the final diff, so it maps the diff the reviewer
    will actually see.
 5. `/coderabbit-local` last, then push — only while no pull request is open
@@ -200,8 +208,7 @@ the first reading: a count that arrives with the push arrives after the step
 it would have told you to re-cut, and a branch never pushed is a branch never
 measured.
 
-A branch of documentation, rules or config runs step 1, then `/triage` alone,
-plus a grep for every site restating what it changes, then one pass of
+A documentation branch, as the runner classifies one, gets one pass of
 `/coderabbit-local` — one, not three — with the measurement the
 `/code-review` bullet sets out. That pass, too, runs only while no pull
 request is open on the branch, a draft counting as open: a push

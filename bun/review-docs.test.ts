@@ -120,7 +120,7 @@ describe("the /coderabbit bullet", () => {
 
 const LOCAL = "`/coderabbit-local [base]` —";
 const STEP_5 = "5. `/coderabbit-local`";
-const DOCS_PATH = "A branch of documentation, rules or config";
+const DOCS_PATH = "A documentation branch, as the runner classifies one";
 const CODE_REVIEW = "`/code-review` —";
 const toolkit = () => read("core/review-toolkit.md");
 
