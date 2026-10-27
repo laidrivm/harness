@@ -7,7 +7,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup, git } from "./diff-budget.fixture.ts";
 import { head } from "./goal-check.fixture.ts";
-import { BOT, body, CARD, checkout, files, LISTING, page, question, said, stopServers, take, USER } from "./work-take.fixture.ts";
+import { BOT, body, CARD, checkout, files, LISTING, page, question, said, stopServers, TOKEN, take, USER } from "./work-take.fixture.ts";
 
 afterAll(() => {
 	stopServers();
@@ -101,12 +101,17 @@ describe("the card", () => {
 		expect(run.out).toContain(`## Body\nBefore.\n${tag}\nAfter.\n## Comments`);
 	});
 
-	test("the markdown call carries 2026-03-11, every other 2025-09-03", async () => {
+	test("one block left out reads in the singular", async () => {
+		expect((await take({ stub: { markdown: body("Some.", false, ["b1"]) } })).out).toContain("Some.\nNotion left 1 block out of the body\n");
+	});
+
+	test("the markdown call carries 2026-03-11, every other 2025-09-03, each the ask settings' bearer", async () => {
 		const run = await take();
+		const auth = `Bearer ${TOKEN}`;
 		expect(run.seen).toEqual([
-			{ call: `GET /v1/pages/${CARD}`, version: "2025-09-03" },
-			{ call: `GET /v1/pages/${CARD}/markdown`, version: "2026-03-11" },
-			{ call: "GET /v1/comments", version: "2025-09-03" },
+			{ call: `GET /v1/pages/${CARD}`, version: "2025-09-03", auth },
+			{ call: `GET /v1/pages/${CARD}/markdown`, version: "2026-03-11", auth },
+			{ call: "GET /v1/comments", version: "2025-09-03", auth },
 		]);
 	});
 });
@@ -161,6 +166,13 @@ describe("the change", () => {
 		const run = await take({ cwd: checkout(DEMO), stub: { page: page("openspec/changes/demo/") } });
 		for (const [path, text] of Object.entries(DEMO)) expect(run.out).toContain(`### ${path}\n${text}`);
 		expect(run.out).toContain("capabilities: task-board\n## Open changes");
+	});
+
+	test("two deltas print both and name their capabilities sorted", async () => {
+		const tree = { ...DEMO, "openspec/changes/demo/specs/agent-rulebook/spec.md": "## MODIFIED Requirements\n" };
+		const run = await take({ cwd: checkout(tree), stub: { page: page("openspec/changes/demo/") } });
+		expect(run.out).toContain("### openspec/changes/demo/specs/agent-rulebook/spec.md\n## MODIFIED Requirements\n");
+		expect(run.out).toContain("capabilities: agent-rulebook, task-board\n");
 	});
 
 	test("a change with no design.md prints the rest", async () => {
