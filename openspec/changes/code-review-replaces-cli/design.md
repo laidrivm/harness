@@ -71,10 +71,10 @@ and which the session that writes it owns.
    alone; counting every finding Major puts every dismissal to the user and
    leaves the loop's stop condition — a review with nothing above Minor — as
    a review with no finding. A wrong Major costs one question, never a
-   dismissal reaching the merge. This waits on the user's answer (card,
-   question 4); *the session grades each finding* and *wait for the
-   `--json-schema` run*, which needs the runner to launch the reviewer, are
-   the alternatives put to them.
+   dismissal reaching the merge. The user chose this on 2026-10-27 (card,
+   question 4 а, *ок, давай попробуем а*) over *the session grades each
+   finding* and *wait for the `--json-schema` run*, which needs the runner
+   to launch the reviewer.
 4. **The session writes the gate line.** The built-in skill ends on no
    `GATE:` line, and `bun/turn-gate.ts` asks for some gate line, never this
    one. The session ends its disposition on `CODE-REVIEW gate: PASS|OPEN|
@@ -131,18 +131,18 @@ and which the session that writes it owns.
 `openspec show code-review-replaces-cli --json --deltas-only`:
 `agent-autonomy`, `local-review-loop`, `pre-pr-runner`.
 
-- `pre-pr-diff-paths` — on `origin/main`, its archive open as #324 (ready,
-  checks green). Shared: `local-review-loop` (its `MODIFIED` of *The gate runs
-  after triage and before the push*) and `pre-pr-runner` (its two `ADDED`
+- `pre-pr-diff-paths` — archived by #324, merged while this proposal was
+  open. Shared: `local-review-loop` (its `MODIFIED` of *The gate runs after
+  triage and before the push*) and `pre-pr-runner` (its two `ADDED`
   requirements this change modifies). No contradiction: #324 rewords which
   branch is a documentation branch and adds the steps the runner names; this
-  change keeps both and swaps the reviewer. The deltas here are copied from
-  #324's synced specs, so the order is fixed: #324 merges first, this branch
-  merges `origin/main` after it, and `openspec validate` then stops reporting
-  that the `pre-pr-runner` headers are missing. Order via prose, not
-  `after:`, since #324 moves the directory into the archive.
+  change keeps both and swaps the reviewer. The deltas here were copied from
+  #324's synced specs; after merging `origin/main`, the live text differs
+  from them only by this change's edits, and `openspec validate --strict`
+  passes with no missing header.
 - `judgement-step-record` — `gate-ledger`, `harness-updates`: no shared
-  capability. Seam: decision 5.
+  capability. Seam: decision 5. Its group 1 (#325) merged `bun/skill-record.ts`,
+  which records `tool_input.skill` as the rule, as decision 5 assumes.
 - `work-finish` — `commit-gates`, `gate-ledger`, `pre-pr-runner` (*ADDED* a
   reader asking for one step's evidence), `work-finish`. Shared:
   `pre-pr-runner`, different requirements; `finish` takes its list from
@@ -155,10 +155,13 @@ and which the session that writes it owns.
   record — so that change decides how `finish` reads a step the spec
   excuses, and a fix commit after the last review, which leaves no record at
   `HEAD` for any judgement step, is the same question there.
-- `strip-inherited-git-env` — `commit-gates`: no shared capability.
 - `host-deploy` — `orchestrator` alone: no shared capability; it keeps the
   CLI in the image, which decision 6 needs.
-- Open pull requests: #324 alone, above.
+- `strip-inherited-git-env` was archived by #327 and `pre-pr-diff-paths` by
+  #324; neither left an open pull request with a change directory. The one
+  other open pull request, #326 (`work-finish` step 1), changes no delta,
+  only that change's design and tasks; it also edits `README.md`, which task
+  2.4 edits at apply — a text merge at most, in different sentences.
 
 ## Risks / Trade-offs
 

@@ -1,8 +1,8 @@
 # Tasks
 
-Apply after #324 (the archive of `pre-pr-diff-paths`) has merged: merge
-`origin/main` into the branch first, then `openspec validate
-code-review-replaces-cli --strict` reports no missing `pre-pr-runner` header.
+#324 (the archive of `pre-pr-diff-paths`) has merged, so the
+`pre-pr-runner` requirements this change modifies are live; merge
+`origin/main` into the apply branch first, as for any step.
 
 ## 1. The runner names `code-review`
 
@@ -34,8 +34,7 @@ code-review-replaces-cli --strict` reports no missing `pre-pr-runner` header.
       `/code-review` bullet found by its opening (`` `/code-review` — ``),
       each naming `/code-review high`; add cases that the bullet names the
       form 2.1 recorded for the base, names no `--comment`, `--fix` or
-      `--post`, counts each finding 🟠 Major as the card's answer 4 settles
-      it, says the session writes the `CODE-REVIEW gate:` line, and that a
+      `--post`, counts each finding 🟠 Major (design.md decision 3), says the session writes the `CODE-REVIEW gate:` line, and that a
       review that does not return or names a file the branch's diff does not
       change is reported and the push goes on (cite
       `local-review-loop/the-review-does-not-return`); that the
