@@ -6,7 +6,8 @@ failing case first, its failure recorded, cited as `// spec:
 
 ## 1. Refuse a push into a ready pull request
 
-- [ ] 1.1 Failing cases in `bun/gate-ledger-rule.test.ts`: a passing `pre-pr`
+- [x] 1.1 Dropped: `pre-pr-project-checks` (#316) merged the filter first,
+      with its cases in `bun/gate-ledger-rule.test.ts`. Failing cases in `bun/gate-ledger-rule.test.ts`: a passing `pre-pr`
       record of `C` under another rule is not found when the diff budget is
       asked for; the diff budget's own is; a call naming no rule finds either.
       Then give `ran()` its `rule` parameter and pass `diff-budget` from
@@ -14,11 +15,11 @@ failing case first, its failure recorded, cited as `// spec:
       Verify with `bun/gate-ledger-rule.test.ts`, `bun/goal-check.test.ts`
       and the `turn-gate*` tests. If a sibling merged the filter first, drop
       this task naming its pull request
-- [ ] 1.2 Failing cases in `bun/pull-requests.test.ts`: `readPullRequests()`
+- [x] 1.2 Failing cases in `bun/pull-requests.test.ts`: `readPullRequests()`
       given a repository reads that one and spawns no git; `readyOne()`
       answers the open non-draft pull request, none for a draft, a merged
       one or an empty list. Then add both
-- [ ] 1.3 Failing cases in `bun/push-draft.test.ts`, with a `gh` stub on
+- [x] 1.3 Failing cases in `bun/push-draft.test.ts`, with a `gh` stub on
       `PATH` and records on stdin: empty stdin makes no `gh` call and exits
       0; a draft passes; an open non-draft one exits non-zero naming `gh pr
       ready 7 --undo`; a failed read exits non-zero naming `gh auth status`;
@@ -29,12 +30,12 @@ failing case first, its failure recorded, cited as `// spec:
       ssh and scp forms of a `github.com` URL are read; each refusal writes
       one `push-draft` record carrying the pushed sha. Then write
       `bun/push-draft.ts`
-- [ ] 1.4 Make `bun bun/push-draft.ts "$@"` the first command of
+- [x] 1.4 Make `bun bun/push-draft.ts "$@"` the first command of
       `.githooks/pre-push` after its `unset $(git rev-parse
       --local-env-vars)` line, which stays above it, and add a case to `bun/pre-pr.test.ts` that it
       stands before `bun test`, the hook still naming `diff-budget.sh` and
       not `pre-pr`. Verify with `bun/pre-pr.test.ts`
-- [ ] 1.5 `core/git-and-prs.md`'s pull request bullet: a push into an open
+- [x] 1.5 `core/git-and-prs.md`'s pull request bullet: a push into an open
       pull request that is not a draft is refused by the pre-push hook, and
       the user's own push too — `gh pr ready <n> --undo` first. Grep
       `core/`, `README.md` and `openspec/specs/` for "pre-push" and draft

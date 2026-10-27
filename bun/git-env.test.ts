@@ -106,10 +106,13 @@ function carried(calls: string[][], names: string[]): string[] {
 	return names.filter((name) => calls.some((lines) => lines.some((l) => l.startsWith(`${name}=`))));
 }
 
+/** The hook's `bun` calls: the draft check, then the suite. */
+const BUNS = 2;
+
 describe("the pre-push hook", () => {
-	test("with no repository variable set it runs the suite and exits 0 [1]", () => {
+	test("with no repository variable set it runs the draft check and the suite and exits 0 [1]", () => {
 		const { code, calls } = hook({});
-		expect([code, calls.length]).toEqual([0, 1]);
+		expect([code, calls.length]).toEqual([0, BUNS]);
 	});
 
 	// spec: commit-gates/a-push-from-a-worktree
@@ -118,20 +121,20 @@ describe("the pre-push hook", () => {
 		const tree = join(scratch("git-env-tree-"), "wt");
 		git(repo, "worktree", "add", "-q", tree);
 		const { calls } = hook({ GIT_DIR: join(repo, ".git", "worktrees", "wt") });
-		expect([calls.length, carried(calls, ["GIT_DIR"])]).toEqual([1, []]);
+		expect([calls.length, carried(calls, ["GIT_DIR"])]).toEqual([BUNS, []]);
 	});
 
 	// spec: commit-gates/every-variable-on-git-s-list
 	test("none of a decoy's variables reaches a command it starts [3]", () => {
 		const env = decoyEnv(decoy());
 		const { calls } = hook(env);
-		expect([calls.length, carried(calls, Object.keys(env))]).toEqual([1, []]);
+		expect([calls.length, carried(calls, Object.keys(env))]).toEqual([BUNS, []]);
 	});
 
 	// spec: commit-gates/every-variable-on-git-s-list
 	test("GIT_PREFIX set empty reaches no command it starts [4]", () => {
 		const { calls } = hook({ GIT_PREFIX: "" });
-		expect([calls.length, carried(calls, ["GIT_PREFIX"])]).toEqual([1, []]);
+		expect([calls.length, carried(calls, ["GIT_PREFIX"])]).toEqual([BUNS, []]);
 	});
 
 	// spec: commit-gates/every-variable-on-git-s-list

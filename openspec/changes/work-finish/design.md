@@ -91,7 +91,9 @@ alone (stage 2, question 24). The records from the `Skill` hook (slice item
 `ran()` gains a `rule` parameter; the goal check, `ranUnder()` and
 `unproven()` pass `diff-budget`, and the turn gate, asking only whether the
 runner ran, passes none. It ships here only if this change merges before the
-slice's items 1 and 2 (user, 2026-10-26).
+slice's items 1 and 2 (user, 2026-10-26). It did not: `pre-pr-project-checks`
+(#316) shipped the filter, the goal check and `ranUnder()` passing each runner
+step, so group 1 drops task 1.1 and `unproven()` reuses it.
 
 ### The pre-push draft check
 
@@ -110,6 +112,15 @@ any other remote, a fixture's local path among them, passes unread.
 `originRepository()`, so `push-draft.ts` makes no git call: inside a hook git's own
 environment is set, and from a worktree its `GIT_DIR` names that worktree's
 directory under the shared `.git`.
+
+It runs after the `unset`, not before it: it spawns no git, but the `gh` it
+starts would otherwise inherit git's repository variables, and dropping
+them is no check that could refuse first. The host is read by `remoteHost()` beside `remoteRepository()`, from the
+same two URL forms, and `ssh.github.com` (GitHub's SSH over port 443)
+counts as `github.com`. An `~/.ssh/config` alias for the host passes unread,
+and so does a fork's pull request into another repository, which
+`readPullRequests()` leaves out — the harness pushes to `origin`'s own
+repository (review on `feat/work-finish-1`).
 
 A read that fails refuses, naming `gh auth status` — stage 2 says an error
 closes the write, and an unread state is never a draft. Question 26 asked
@@ -199,4 +210,4 @@ bun/work.ts finish --card <id> …`; `gh pr ready <n> --undo` stays. A live
 probe on one card: a refused push into a ready pull request, a finish that
 opens a draft and marks it ready, one that leaves it a draft behind a
 question. Rollback: revert the registration line in the harness's settings
-and the hook's first line.
+and the hook's `push-draft.ts` line.

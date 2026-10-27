@@ -173,6 +173,15 @@ describe("when no record is written", () => {
 		expect([said.length, reported(said.join("\n"))]).toEqual([1, false]);
 	});
 
+	// spec: commit-gates/a-push-into-a-ready-pull-request
+	test("the hook runs the draft check before bun test, after dropping git's variables", () => {
+		const commands = readFileSync(join(import.meta.dir, "..", ".githooks/pre-push"), "utf8")
+			.split("\n")
+			.filter((line) => line.trim() && !line.startsWith("#"));
+		const [unset, draft, suite] = ["unset $(git rev-parse --local-env-vars)", 'bun bun/push-draft.ts "$@"', "bun test"].map((c) => commands.indexOf(c));
+		expect([unset >= 0, unset < draft, draft < suite]).toEqual([true, true, true]);
+	});
+
 	// spec: pre-pr-runner/a-push
 	test.each([".githooks/pre-push", ".github/workflows/diff-budget.yml"])(
 		"%s calls the diff budget, never the runner [18]",

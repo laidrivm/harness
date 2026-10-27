@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { chmodSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
+import { type Pull, readyOne } from "./pull-requests.ts";
 
 /**
  * `readPullRequests` spawned in a fabricated repository, with a `gh` stub on
@@ -21,6 +22,8 @@ type Case = {
 	config?: [string, string][];
 	/** A mint command stub: what it prints and its exit status. */
 	mint?: [string, number];
+	/** The repository handed to the read; the child then has no `git` on `PATH`. */
+	repo?: { owner: string; repo: string };
 };
 
 /** The read's result, `"failed"` for undefined, and the stub's calls; `tokens` is the `GH_TOKEN` each `gh` call saw. */
@@ -30,7 +33,7 @@ function read(c: Case = {}) {
 	if (c.origin !== null) git(dir, "remote", "add", "origin", c.origin ?? "https://github.com/o/r.git");
 	for (const [key, value] of c.config ?? []) git(dir, "config", key, value);
 	const bin = emptyDir("pull-requests-bin-");
-	symlinkSync(Bun.which("git") ?? "git", join(bin, "git"));
+	if (!c.repo) symlinkSync(Bun.which("git") ?? "git", join(bin, "git"));
 	const log = join(bin, "calls");
 	const tokens = join(bin, "tokens");
 	writeFileSync(
@@ -41,10 +44,10 @@ function read(c: Case = {}) {
 	const mint = c.mint && join(bin, "mint");
 	if (mint && c.mint) writeFileSync(mint, `#!/bin/sh\nprintf 'mint %s\\n' "$*" >> '${log}'\nprintf '%s' '${c.mint[0]}'\nexit ${c.mint[1]}\n`, { mode: 0o755 });
 	const entry = join(bin, "entry.ts");
-	writeFileSync(entry, `import { readPullRequests } from ${JSON.stringify(module)};\nconsole.log(JSON.stringify(readPullRequests(process.argv[2]) ?? "failed"));\n`);
+	writeFileSync(entry, `import { readPullRequests } from ${JSON.stringify(module)};\nconsole.log(JSON.stringify(readPullRequests(process.argv[2], JSON.parse(process.argv[3]) ?? undefined) ?? "failed"));\n`);
 	// HOME and no system config: the user's own `insteadOf` rewrites stay out.
 	const env = { PATH: bin, HOME: emptyDir("pull-requests-home-"), GIT_CONFIG_NOSYSTEM: "1", ...(mint ? { HARNESS_GITHUB_APP_MINT: `${mint} -n` } : {}) };
-	const p = Bun.spawnSync([process.execPath, entry, c.branch ?? "feat/x"], { cwd: dir, env });
+	const p = Bun.spawnSync([process.execPath, entry, c.branch ?? "feat/x", JSON.stringify(c.repo ?? null)], { cwd: dir, env });
 	const lines = (file: string) => {
 		try {
 			return readFileSync(file, "utf8").split("\n").filter(Boolean);
@@ -181,5 +184,29 @@ describe("a read that fails", () => {
 		["output that is not JSON", { answer: "not json" }, "[24]"],
 	])("%s fails %s", (_, c) => {
 		expect(read(c).result).toBe("failed");
+	});
+});
+
+describe("a repository handed to the read", () => {
+	test("reads that repository and spawns no git, with none on PATH and no origin", () => {
+		const { result, calls } = read({ origin: null, repo: { owner: "x", repo: "y" } });
+		expect([result, calls]).toEqual([[], ["api repos/x/y/pulls?head=x:feat%2Fx&state=all&per_page=100"]]);
+	});
+});
+
+describe("readyOne()", () => {
+	const pull = (number: number, state: Pull["state"], draft: boolean): Pull => ({ number, state, headRefOid: `s${number}`, draft });
+
+	test("answers the open pull request that is not a draft", () => {
+		expect(readyOne([pull(3, "MERGED", false), pull(7, "OPEN", false)])).toEqual(pull(7, "OPEN", false));
+	});
+
+	test.each([
+		["a draft", [pull(7, "OPEN", true)]],
+		["a merged one", [pull(7, "MERGED", false)]],
+		["a closed one", [pull(7, "CLOSED", false)]],
+		["an empty list", []],
+	])("answers none for %s", (_, pulls) => {
+		expect(readyOne(pulls)).toBeUndefined();
 	});
 });
