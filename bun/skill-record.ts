@@ -27,12 +27,6 @@ type Event = {
 	command_name?: unknown;
 };
 
-/** git's trimmed stdout in `dir`, or `undefined` when it fails. */
-const git = (dir: string, ...args: string[]) => {
-	const p = Bun.spawnSync(["git", "-C", dir, ...args]);
-	return p.exitCode === 0 ? p.stdout.toString().trim() : undefined;
-};
-
 try {
 	const event: Event = JSON.parse(await Bun.stdin.text()) ?? {};
 	// An MCP server's prompt shares the expansion event, and can share a skill's name.
@@ -40,10 +34,18 @@ try {
 		event.tool_input?.skill ?? (event.expansion_type === "slash_command" ? event.command_name : undefined);
 	const dir = event.cwd;
 	if (typeof name === "string" && name && typeof dir === "string") {
-		const commit = git(dir, "rev-parse", "--verify", "-q", "HEAD");
-		const top = git(dir, "rev-parse", "--show-toplevel");
+		// A session started under a git hook inherits its GIT_DIR, which outranks `-C`: drop every variable git names as local.
+		const local = new Set(Bun.spawnSync(["git", "rev-parse", "--local-env-vars"]).stdout.toString().split("\n"));
+		const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !local.has(key)));
+		/** git's trimmed stdout in `dir`, or `undefined` when it fails. */
+		const git = (...args: string[]) => {
+			const p = Bun.spawnSync(["git", "-C", dir, ...args], { env });
+			return p.exitCode === 0 ? p.stdout.toString().trim() : undefined;
+		};
+		const commit = git("rev-parse", "--verify", "-q", "HEAD");
+		const top = git("rev-parse", "--show-toplevel");
 		// A status git cannot read is never a clean tree.
-		const status = git(dir, "status", "--porcelain", "--untracked-files=no");
+		const status = git("status", "--porcelain", "--untracked-files=no");
 		if (commit && top && status === "") {
 			// `record()` prefers CLAUDE_PROJECT_DIR, the session's project, which
 			// can be another checkout than the one the call ran in.
@@ -52,6 +54,6 @@ try {
 		}
 	}
 } catch {
-	// Unreadable stdin or an event that is no JSON: nothing to record.
+	// Unreadable stdin, an event that is no JSON, or no git: nothing to record.
 }
 process.exit(0);

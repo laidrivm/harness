@@ -64,11 +64,17 @@ const typed = (name: string, cwd: string, type = "slash_command", args = "") => 
 
 /** The hook run on each event in turn, in one state directory; the ledger's lines after. */
 function hook(main: string, ...events: unknown[]) {
+	return hookWith({}, main, ...events);
+}
+
+/** `hook`, with `extra` in the hook's environment. */
+function hookWith(extra: Record<string, string>, main: string, ...events: unknown[]) {
 	const state = emptyDir("skill-record-state-");
 	const runs = events.map((event) =>
-		Bun.spawnSync(["bun", HOOK], {
+		// bun by its path: a case's PATH can hold no programs at all.
+		Bun.spawnSync([process.execPath, HOOK], {
 			stdin: Buffer.from(typeof event === "string" ? event : JSON.stringify(event)),
-			env: env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main }),
+			env: env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }),
 		}),
 	);
 	let text = "";
@@ -123,6 +129,12 @@ describe("a skill call is recorded", () => {
 		expect(hook(main, called("zombies", join(main, "sub"))).records[0]?.project).toBe(main);
 	});
 
+	test("an inherited GIT_DIR and GIT_WORK_TREE do not outrank the event's cwd", () => {
+		const { main, tree, head } = scratch();
+		const r = hookWith({ GIT_DIR: join(main, ".git"), GIT_WORK_TREE: main }, main, called("zombies", tree));
+		expect(r.records.map((x) => [x.commit, x.project])).toEqual([[head(tree), tree]]);
+	});
+
 	test("a cwd reached through a symlink records the real top level", () => {
 		const { main } = scratch();
 		const link = join(realpathSync(emptyDir("skill-record-link-")), "link");
@@ -159,6 +171,11 @@ describe("no record, exit 0 and nothing printed", () => {
 		expect(r.text).toBe("");
 		expect(r.outs.every(([code, out]) => code === 0 && out === "")).toBe(true);
 	};
+
+	test("for a PATH with no git on it", () => {
+		const { main } = scratch();
+		nothing(hookWith({ PATH: emptyDir("skill-record-path-") }, main, called("zombies", main)));
+	});
 
 	// spec: gate-ledger/an-mcp-prompt-the-user-types
 	test("for an MCP server's prompt", () => {
