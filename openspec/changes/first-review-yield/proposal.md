@@ -23,8 +23,9 @@ baseline (question 2 в).
 - The skill's `allowed-tools` gains `Bash(gh api:*)` and
   `Bash(gh pr list:*)`, which those reads need.
 - The baseline is computed once, by the same definition, and appended to
-  `docs/context/pipeline-yield-2026-10.md` as an entry of its own: 14 of the
-  20 measured pull requests #309–#328 raised no Major or above (design.md,
+  the pipeline-yield ledger as an entry of its own. Read on 2026-10-27, 14
+  of the last 20 measured pull requests, #309–#328, raised no Major or
+  above; the apply step re-reads the window up to the gate (design.md,
   *Baseline*).
 - No code: no script reads CodeRabbit's markup. The session that closes
   stage 2 picks the five pull requests from these lines and writes the
@@ -55,7 +56,8 @@ None.
   without CodeRabbit writes `none reviewed`.
 - A new test file pinning the skill's text, in the way
   `bun/transcript-archive-catch-up.test.ts` pins step 3's catch-up.
-- `docs/context/pipeline-yield-2026-10.md`: the baseline entry.
+- `docs/context/pipeline-yield-<yyyy-mm>.md` of the apply month: the
+  baseline entry.
 - Order: applies after `work-finish` group 2 (`work.ts finish` and the ready
   guard), whose landing opens the measured window; the skill text does not
   depend on it (design.md, *Seams*).

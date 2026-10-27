@@ -53,8 +53,12 @@ requests counting toward stage 2.
    are the bot's reviews with that `commit_id`, inline and in the body; none
    is zero findings. A pull request with no such commit — skipped, rate
    limited, never run — is named unmeasured and counted in neither number.
-   A commit shared with another pull request (a stacked branch, #305 and
-   #306) counts under each pull request's own reviews of it.
+   A commit's check run counts for this pull request only when its summary
+   links `/pull/<n>` of it: a stacked branch carries a commit the bot
+   reviewed for another pull request (#306 holds #305's `ee1597a`), and
+   without the check the walk would stop there and read this one as clean.
+   The older commit status names no pull request; it counts as it stands,
+   which touches no pull request of the baseline window.
 3. **A Major or above is the bot's Critical or Major label**, never
    re-graded, and a dismissed one still counts — as the `captures` line
    counts a declined capture, the line measures what the step raised.
@@ -62,32 +66,43 @@ requests counting toward stage 2.
    to take, for each finding, the word the bot labels it with — after its
    icon or in its category line — and names both forms as examples, not as
    the definition. A finding with no word gets the kind its heading implies
-   (`⚠️ Potential issue` → Major), marked `(inferred)`, as the `coderabbit`
-   skill's step 2 does. Rejected: a script matching CodeRabbit's markup — the
-   format has already changed once, and the roadmap puts an automatic count
-   at stage 13.
+   (`⚠️ Potential issue` → Major), as the `coderabbit` skill's step 2 does,
+   and the pull request's mark gains `inferred` — `#a (Major+, inferred)`,
+   or `#a (inferred)` where the inferred kind is below Major. Rejected: a
+   script matching CodeRabbit's markup — the format has already changed
+   once, and the roadmap puts an automatic count at stage 13.
 5. **Which pull requests a line covers.** Those whose first review
-   completed on or after the date in the previous entry's heading, found
-   from `gh pr list --state all --search "updated:>=<since>"`, less any the
-   previous entry's `first review` line already names — the heading holds a
-   date, not a time. The reads, in the order the step names them:
+   completed on or after the day before the date in the previous entry's
+   heading — the heading holds a local date, GitHub's times are UTC — and
+   that no earlier `first review` line in `docs/context/pipeline-yield-*.md`
+   names as measured. A pull request named only as unmeasured is read again,
+   since a draft at one wrap-up is reviewed by the next. The margin day and
+   the name check together keep a pull request out of two lines written one
+   after the other. The reads, in the order the step names them, with gh's
+   own `{owner}/{repo}` placeholder so a consumer needs no other tool to
+   name its repository:
 
    ```bash
-   gh pr list --repo <owner/repo> --state all --search "updated:>=<since>" --limit 100 --json number
-   gh api repos/<owner/repo>/pulls/<n>/commits --paginate --jq '.[].sha'
-   gh api repos/<owner/repo>/commits/<sha>/check-runs --jq '.check_runs[] | select(.name == "CodeRabbit") | .output.summary'
-   gh api repos/<owner/repo>/commits/<sha>/status --jq '.statuses[] | select(.context == "CodeRabbit") | .description'
-   gh api repos/<owner/repo>/pulls/<n>/reviews --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | .id, .body'
-   gh api repos/<owner/repo>/pulls/<n>/reviews/<id>/comments --paginate --jq '.[].body'
+   gh pr list --state all --search "updated:>=<since>" --limit 1000 --json number
+   gh api 'repos/{owner}/{repo}/pulls/<n>/commits' --paginate --jq '.[].sha'
+   gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs' --jq '.check_runs[] | select(.name == "CodeRabbit") | [.completed_at, .output.summary] | @tsv'
+   gh api 'repos/{owner}/{repo}/commits/<sha>/status' --jq '.statuses[] | select(.context == "CodeRabbit") | [.created_at, .description] | @tsv'
+   gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | .id, .body'
+   gh api 'repos/{owner}/{repo}/pulls/<n>/reviews/<id>/comments' --paginate --jq '.[].body'
    ```
 
-   The commits are walked oldest first and the walk stops at the first
-   `Review completed`. The line reads
+   `<since>` is that day before, and on the first entry ever, today. The
+   first read is a superset, cut by the first-review time the third or
+   fourth gives; `--limit 1000` because gh's
+   default of 30 is the cut-off that the goal check once read as the whole
+   list (#131). The commits are walked oldest first and the walk stops at the
+   first `Review completed` that counts for this pull request (decision 2).
+   The line reads
    `- first review: k of n without Major+ — #a, #b (Major+), #c (unmeasured)`,
    or `- first review: none reviewed`. `allowed-tools` gains
    `Bash(gh api:*)` and `Bash(gh pr list:*)`, the two the `coderabbit` skill
-   already holds; the command guard reads a `gh api` call with no method and
-   no field as a read.
+   already holds; the command guard passed each of these reads on
+   2026-10-27, as a `gh api` call with no method and no field.
 6. **Stage 2's count is the closing session's, not the skill's** (decision
    6 on the card). «Without bypass» means the pull request was opened and
    marked ready after `work-finish` group 2 (`work.ts finish` and the ready
@@ -95,20 +110,32 @@ requests counting toward stage 2.
    `project-checks` whose `commit` is the first reviewed commit — what the
    ready gate is to require (stage 2, question 24). The five are consecutive
    by first-review time, harness pull requests only. The closing session
-   takes them from the `first review` lines, checks each in the ledger, and
-   writes under stage 2 in the roadmap the line «value — date — source»
-   (roadmap question 12), through the Notion connector until `notion-bot`
-   writes it. No new ledger record is needed.
-7. **The baseline is written once, as its own entry** in
-   `docs/context/pipeline-yield-2026-10.md`, so the first gated count has
-   something to sit beside (*Baseline* below).
+   takes them from the `first review` lines, counting a pull request named
+   in two entries once — two sessions on parallel branches each append to
+   their own copy of the ledger file. It checks each in the gate ledger by
+   `commit` alone, under any `project`: a subagent's run in a scratch clone
+   records the clone's path, not the main checkout's. The ledger is this
+   laptop's; a pull request whose runner ran elsewhere counts as bypassed
+   until the VPS writes one. It then writes under stage 2 in the roadmap the
+   line «value — date — source» (roadmap question 12), through the Notion
+   connector until `notion-bot` writes it. No new ledger record is needed.
+7. **The baseline is written once, as its own entry** in the pipeline-yield
+   ledger of the month it is written in, so the first gated count has
+   something to sit beside. The user's window is the last 20 measured pull
+   requests before the gate, and the gate is `work-finish` group 2's merge,
+   which has not happened: *Baseline* below is that window as read on
+   2026-10-27, and task 2.1, which runs after the merge, re-reads it ending
+   at the merge, so the pull requests between #328 and the gate fall in the
+   baseline rather than in neither window.
 
 ## Baseline
 
-The last 20 measured pull requests before the gate, read on 2026-10-27,
-after #328 merged: **14 of 20 without Major+ (70 %)** — #309–#328, first
-reviews from 2026-10-26 20:48 to 2026-10-27 21:32 UTC. Not rough: every
-finding carried a severity word.
+The last 20 measured pull requests as of 2026-10-27, after #328 merged —
+the provisional baseline, which task 2.1 re-reads up to the gate:
+**14 of 20 without Major+ (70 %)** — #309–#328, first reviews from
+2026-10-26 20:48 to 2026-10-27 21:32 UTC. Not rough: every finding carried
+a severity word, and no commit of the window was shared with another pull
+request.
 
 | PR | first reviewed commit | Major+ |
 | --- | --- | --- |
@@ -179,7 +206,10 @@ contradiction, and no order beyond the prose one above.
 - [The bot's markup changes again] → the session reads the word; the
   examples in the step are named as examples.
 - [The step costs several `gh` reads per pull request] → the walk stops at
-  the first reviewed commit, and a wrap-up covers the pull requests of one
-  session.
+  the first reviewed commit, and a wrap-up covers only the pull requests
+  first reviewed since the previous entry, which on this repository has
+  been a dozen or two a day.
+- [Two parallel branches each write a line naming the same pull request] →
+  the closing session counts it once (decision 6).
 - [A consumer without CodeRabbit] → the skill reaches d2ass and mellon through
   `sync`; with no bot, the line reads `none reviewed`.
