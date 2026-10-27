@@ -58,6 +58,8 @@ try {
 	console.error(`PRE-PR: project checks not run: ${(error as Error).message}`);
 }
 
+// The checks' output can end mid-line; the runner's own lines must each open one.
+console.log();
 const left = status();
 if (!commit || dirty || left || git("rev-parse", "--verify", "-q", "HEAD") !== commit) {
 	// Not shaped like a gate line, which the turn gate would read as a report.

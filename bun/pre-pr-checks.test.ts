@@ -44,7 +44,7 @@ describe("the project checks", () => {
 		const dir = within("printf 'checks said %s\\n' hi; printf 'to stderr\\n' >&2; exit 1");
 		const result = run(dir);
 		// Less the runner's own step list, which follows them.
-		const before = result.out.replace(/PRE-PR steps: [^\n]*\n$/, "");
+		const before = result.out.replace(/\nPRE-PR steps: [^\n]*\n$/, "");
 		expect([result.code, before, result.err]).toEqual([1, `${gate(dir).line}\nchecks said hi\n`, "to stderr\n"]);
 	});
 
