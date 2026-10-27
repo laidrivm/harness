@@ -18,6 +18,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { git } from "./turn-gate.fixture.ts";
 
 const ROOT = join(import.meta.dir, "..");
 const HOOK = join(ROOT, ".githooks", "pre-push");
@@ -33,15 +34,6 @@ function scratch(prefix: string): string {
 	return dir;
 }
 
-function git(dir: string, ...args: string[]): string {
-	const run = Bun.spawnSync(
-		["git", "-c", "user.name=decoy", "-c", "user.email=decoy@example.invalid", ...args],
-		{ cwd: dir, timeout: 10_000 },
-	);
-	if (run.exitCode !== 0) throw new Error(run.stderr.toString());
-	return run.stdout.toString();
-}
-
 /** A repository with one commit and no remote. */
 function decoy(): string {
 	const dir = scratch("git-env-decoy-");
@@ -50,12 +42,13 @@ function decoy(): string {
 	return dir;
 }
 
-/** What a stray write would change: the decoy's config, HEAD and every ref. */
+/** What a stray write would change: the decoy's config, HEAD, every ref and what its index stages. */
 function snapshot(dir: string): string[] {
 	return [
 		readFileSync(join(dir, ".git", "config"), "utf8"),
 		readFileSync(join(dir, ".git", "HEAD"), "utf8"),
 		git(dir, "for-each-ref"),
+		git(dir, "diff", "--cached", "--name-status"),
 	];
 }
 
@@ -72,8 +65,10 @@ function decoyEnv(dir: string): Record<string, string> {
 /**
  * Runs the hook from an empty directory with a stub `bun` first on `PATH`
  * that records its environment, and returns one environment per call the
- * stub received. `bash bun/diff-budget.sh` finds no script there, and the
- * hook's `|| true` absorbs it.
+ * stub received. The stub also writes a config key as a fixture would: with
+ * no inherited `GIT_DIR` the ceiling stops git finding any repository, so the
+ * write fails harmlessly; with one, it lands in the decoy. `bash
+ * bun/diff-budget.sh` finds no script there, and the hook's `|| true` absorbs it.
  */
 function hook(env: Record<string, string>): { code: number; calls: string[][] } {
 	const dir = scratch("git-env-hook-");
@@ -81,7 +76,16 @@ function hook(env: Record<string, string>): { code: number; calls: string[][] } 
 	mkdirSync(stub);
 	const record = join(dir, "record");
 	writeFileSync(record, "");
-	writeFileSync(join(stub, "bun"), '#!/bin/sh\nenv >> "$RECORD"\necho --- >> "$RECORD"\n');
+	writeFileSync(
+		join(stub, "bun"),
+		[
+			"#!/bin/sh",
+			'env >> "$RECORD"',
+			'echo --- >> "$RECORD"',
+			`GIT_CEILING_DIRECTORIES=${dir} git config probe.written yes 2>/dev/null || true`,
+			"",
+		].join("\n"),
+	);
 	chmodSync(join(stub, "bun"), 0o755);
 	const work = join(dir, "work");
 	mkdirSync(work);
@@ -103,7 +107,6 @@ function carried(calls: string[][], names: string[]): string[] {
 }
 
 describe("the pre-push hook", () => {
-	// spec: commit-gates/a-push-from-a-worktree
 	test("with no repository variable set it runs the suite and exits 0 [1]", () => {
 		const { code, calls } = hook({});
 		expect([code, calls.length]).toEqual([0, 1]);
