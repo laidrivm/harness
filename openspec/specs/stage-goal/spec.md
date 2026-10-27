@@ -21,8 +21,9 @@ gate accepts. It SHALL exit 0 for `met` and 1 for `open`.
 #### Scenario: A proposal ready for review
 
 - **WHEN** the change's `proposal.md` is in `HEAD`, the ledger holds a
-  `pre-pr` record of `pass` for the full `HEAD`, and a pull request whose
-  head is `HEAD` is open or merged
+  `pre-pr` record of `pass` for the full `HEAD` from every runner step
+  (`pre-pr-runner`, *The runner records each run for the commit it read*), and
+  a pull request whose head is `HEAD` is open or merged
 - **THEN** `propose` reports `goal met` and exits 0
 
 #### Scenario: An apply step
@@ -50,6 +51,13 @@ gate accepts. It SHALL exit 0 for `met` and 1 for `open`.
 - **WHEN** the record for `HEAD` has the outcome `fail` or `error`
 - **THEN** the check reports `goal open`, because a run that failed is no
   pass
+
+#### Scenario: The project checks failed
+
+- **WHEN** the diff budget's record for `HEAD` is `pass` and the project
+  checks' record for `HEAD` is `fail` or `error`, or there is none
+- **THEN** the check reports `goal open` and names the missing passing record
+  for `HEAD`
 
 #### Scenario: The pull request has merged
 
