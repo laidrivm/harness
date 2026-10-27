@@ -106,7 +106,8 @@ URL, `$2`, through `remoteRepository()`, and only on the host `github.com`;
 any other remote, a fixture's local path among them, passes unread.
 `readPullRequests()` takes that repository as a parameter, defaulting to
 `originRepository()`, so the hook makes no git call: inside a hook git's own
-environment is set, and a worktree's is the trap `core/rules.md` names.
+environment is set, and from a worktree its `GIT_DIR` names that worktree's
+directory under the shared `.git`.
 
 A read that fails refuses, naming `gh auth status` — stage 2 says an error
 closes the write, and an unread state is never a draft. Question 26 asked
@@ -185,7 +186,8 @@ way to mark a pull request ready.
   takes no ready one.
 - [Sub-agents move to worktrees (card `40539875c31b8147818fcdcc791611f2`)]
   → `finish` reads everything from its working directory; a push from a
-  worktree waits on that card.
+  worktree is safe once that card's change, `strip-inherited-git-env`, has
+  merged.
 
 ## Migration Plan
 
