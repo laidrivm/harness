@@ -79,6 +79,7 @@
 			"Bash(grep *)",
 			"Bash(mkdir *)",
 			"Bash(command -v *)",
+			"Skill(code-review)",
 			"Skill(coderabbit-local)",
 			"Skill(opsx:apply)",
 			"Skill(opsx:archive)",
