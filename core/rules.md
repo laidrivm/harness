@@ -218,10 +218,6 @@ not age with the code.
 - After a generator runs, compare the directories it writes against a listing
   taken before it, ignored ones included — `git status` hides what
   `.gitignore` covers.
-- Push from a repository's own checkout, never a `git worktree` — a hook there
-  hands the tests it runs an absolute `GIT_DIR`, and a fixture's push then
-  lands in that repository's real `origin`; probe that path only in a clone
-  whose remotes point at a local bare repository.
 - Delete a branch, local or remote, only when the user asks for it — never
   folded into a command run for another purpose (unattended: user — delete
   nothing, and name the branch in the report).

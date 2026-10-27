@@ -38,7 +38,7 @@ it; the 300-line cap applies to `bun/git-env.test.ts` as to any other.
       preload = ["./bun/git-env-guard.ts"]`. Verify with `bun test
       bun/git-env.test.ts bun/sync-bunfig.test.ts bun/test-retry.test.ts`,
       then the whole `bun test` from a shell with no repository variable
-- [ ] 1.3 The live probe, `push from a worktree` [12], never in the main
+- [x] 1.3 The live probe, `push from a worktree` [12], never in the main
       checkout or a clone with a GitHub remote. In the scratchpad: a bare
       clone of this repository, a clone of that bare whose `git remote -v`
       names the bare alone, `core.hooksPath=.githooks`, a `git worktree add`
@@ -55,7 +55,7 @@ it; the 300-line cap applies to `bun/git-env.test.ts` as to any other.
       as before, the worktree on this branch, the same push — only the probe
       branch expected. Put both listings in the pull request's body, then
       delete the scratch repositories
-- [ ] 1.4 With 1.1–1.3 passing, under `agent-rulebook`'s *A mechanised
+- [x] 1.4 With 1.1–1.3 passing, under `agent-rulebook`'s *A mechanised
       prohibition leaves its prose home*: delete the Safety rule *Push from
       a repository's own checkout, never a `git worktree`* from
       `core/rules.md` whole — the user rejected a shortened form and accepted
