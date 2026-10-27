@@ -128,8 +128,8 @@ describe("the /coderabbit bullet", () => {
 });
 
 const LOCAL = "`/code-review` —";
-// The form task 2.1 of code-review-replaces-cli probed: the ref after the level is the base.
-const BASE_FORM = "`/code-review high <base>` from the branch's own worktree";
+// The form code-review-replaces-cli probed (design.md decision 1): the range after the level is the diff read.
+const BASE_FORM = "`/code-review high <base>...HEAD` from the branch's own worktree";
 const CLI = "`/coderabbit-local [base]` —";
 const STEP_5 = "5. `/code-review`";
 const DOCS_PATH = "A documentation branch, as the runner classifies one";
@@ -232,12 +232,7 @@ describe("the /code-review bullet is the local review", () => {
 	test("the doc holds no measurement", () => {
 		expect(flat(toolkit())).not.toContain("Review measurement");
 	});
-
-	// Unattended, a skill call with no allow entry is refused, a run that does not return.
-	test("the harness's own settings allow the skill by its exact name", () => {
-		// A `Skill(...)` rule matches the skill's name, never its arguments, so this covers `/code-review high`.
-		expect(JSON.parse(read(".claude/settings.json")).permissions.allow).toContain("Skill(code-review)");
-	});
+	// Its `Skill(code-review)` allow entry is pinned in pre-pr-steps.test.ts, beside every judgement step's.
 });
 
 describe("an unattended pull request opens over the local review's gate", () => {

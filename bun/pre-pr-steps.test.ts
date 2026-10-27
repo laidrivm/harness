@@ -94,7 +94,8 @@ describe("a branch whose pull request is open", () => {
 });
 
 describe("the ids", () => {
-	// The `Skill` hook records the skill's name; unattended, a call no entry allows is refused and leaves no record.
+	// The `Skill` hook records the skill's name; unattended, a call no entry allows is refused and leaves no
+	// record. A `Skill(...)` rule matches the name, never the arguments, so it covers `/code-review high`.
 	test.each(JUDGEMENT.map((id) => [id]))("`%s` is a skill the harness's settings allow by that name", (id) => {
 		const allow = JSON.parse(readFileSync(join(import.meta.dir, "..", ".claude", "settings.json"), "utf8")).permissions.allow;
 		expect(allow).toContain(`Skill(${id})`);

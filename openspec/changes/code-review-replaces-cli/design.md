@@ -51,7 +51,11 @@ and which the session that writes it owns.
    worktree as its directory, reported "the committed range is a single
    commit, 94a0c99", and named findings on `bun/pre-pr-steps.test.ts`,
    which `changedPaths("origin/main")` lists; it read the working tree's
-   uncommitted edits as well. So the doc names `/code-review high <base>`.
+   uncommitted edits as well. The skill's recipe, though, says a branch
+   name passed as an argument is the target to review, so a bare ref reads
+   as either, and on a model's reading (the branch's second review, a 🟠
+   Major). The doc names the range, `/code-review high <base>...HEAD`,
+   which reads one way.
    A clone's path as the tree was not probed — since #320 a session works
    in its own worktree, where the review's directory is the branch's — so
    the doc names no form for it, and a session in a clone outside its
@@ -101,9 +105,12 @@ and which the session that writes it owns.
    `coderabbit-local`; the `Skill` hook's record carries the skill's name, so
    the two meet without either change citing the other's code. The pin that
    each id names a skill under `core/skills/` cannot hold a built-in one: it
-   skips `code-review` and names the case of `bun/review-docs.test.ts` that
-   already pins the `Skill(code-review)` entry of `.claude/settings.json`,
-   rather than asserting it a second time.
+   skips `code-review`. In its place a case of `bun/pre-pr-steps.test.ts`
+   pins a `Skill(<id>)` entry of `.claude/settings.json` for every id in
+   `JUDGEMENT`, and the case of `bun/review-docs.test.ts` that pinned
+   `Skill(code-review)` alone is deleted: a pin on the literal would not tie
+   the step's id to the entry, and two pins on one entry drift (`/code-review`
+   on this branch, both passes).
 6. **`/coderabbit-local` stays, outside the sequence.** It moves to the
    bullets like `/ponytail-review`: available, not a gate, run when a user
    asks for CodeRabbit's take before a push. Retiring it would reach d2ass
