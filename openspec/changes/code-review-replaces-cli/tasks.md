@@ -6,7 +6,7 @@
 
 ## 1. The runner names `code-review`
 
-- [ ] 1.1 In `bun/pre-pr-steps.test.ts` and `bun/pre-pr-steps-run.test.ts`,
+- [x] 1.1 In `bun/pre-pr-steps.test.ts` and `bun/pre-pr-steps-run.test.ts`,
       make the expected lists name a `CODE_REVIEW` id of `"code-review"`
       where they name `CODERABBIT_LOCAL`, and the `[3]` case's title
       `code-review`; make the case that reads each id's `SKILL.md` under
@@ -15,7 +15,7 @@
       decision 5). Verify with `bun test bun/pre-pr-steps.test.ts
       bun/pre-pr-steps-run.test.ts` that they fail on the missing export, and
       record it
-- [ ] 1.2 In `bun/pre-pr-steps.ts`, export `CODE_REVIEW = "code-review"` in
+- [x] 1.2 In `bun/pre-pr-steps.ts`, export `CODE_REVIEW = "code-review"` in
       place of `CODERABBIT_LOCAL` and name it in `JUDGEMENT`; grep `bun/` and
       `orchestrator/` for `CODERABBIT_LOCAL` and `"coderabbit-local"` and
       switch every caller. Verify with the two test files green
