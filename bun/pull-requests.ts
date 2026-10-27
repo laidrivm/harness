@@ -46,10 +46,12 @@ export function originRepository() {
  * The branch's pull requests in every state, newest first, or undefined for a
  * read that failed: no `origin` naming an owner and name, a non-zero or
  * missing exit status, a spawn that throws, or output that is not a JSON array.
+ * `repo` names the repository to read, so no git is spawned — inside a hook
+ * git's own environment is set; given none, `origin` names it.
  */
-export function readPullRequests(branch: string): Pull[] | undefined {
+export function readPullRequests(branch: string, repo?: { owner: string; repo: string }): Pull[] | undefined {
 	try {
-		const found = originRepository();
+		const found = repo ?? originRepository();
 		if (!found) return undefined;
 		const full = `${found.owner}/${found.repo}`;
 		// shortcut: the head filter uses origin's owner, so an owner transfer origin has not caught up with finds nothing; upgrade by reading the owner from `gh api repos/<full>` if one happens.
@@ -80,3 +82,6 @@ export function readPullRequests(branch: string): Pull[] | undefined {
 		return undefined;
 	}
 }
+
+/** The open pull request that is not a draft, which no push may go into, or undefined. */
+export const readyOne = (pulls: Pull[]) => pulls.find((pr) => pr.state === "OPEN" && !pr.draft);

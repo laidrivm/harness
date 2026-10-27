@@ -91,12 +91,18 @@ alone (stage 2, question 24). The records from the `Skill` hook (slice item
 `ran()` gains a `rule` parameter; the goal check, `ranUnder()` and
 `unproven()` pass `diff-budget`, and the turn gate, asking only whether the
 runner ran, passes none. It ships here only if this change merges before the
-slice's items 1 and 2 (user, 2026-10-26).
+slice's items 1 and 2 (user, 2026-10-26). It did not: `pre-pr-project-checks`
+(#316) shipped the filter, the goal check and `ranUnder()` passing each runner
+step, so group 1 drops task 1.1 and `unproven()` reuses it.
 
 ### The pre-push draft check
 
-`bun/push-draft.ts`, the hook's first command: `bun bun/push-draft.ts "$@"`.
-Its name keeps the hook's text free of `pre-pr`. It reads the records on
+`bun/push-draft.ts`, the hook's first check: `bun bun/push-draft.ts "$@"`.
+Its name keeps the hook's text free of `pre-pr`. It runs right after the
+`unset $(git rev-parse --local-env-vars)` that `strip-inherited-git-env`
+(#320) put first after this design was written, and before `bun test`: the
+check spawns no git, but the `gh` it starts would otherwise inherit git's
+repository variables, and the unset is no check that could refuse first. It reads the records on
 standard input, `<local ref> <local sha> <remote ref> <remote sha>`, and
 keeps each record whose remote ref is `refs/heads/<branch>`, taking the
 branch from that remote ref, never the local one — `git push origin
@@ -197,4 +203,4 @@ bun/work.ts finish --card <id> …`; `gh pr ready <n> --undo` stays. A live
 probe on one card: a refused push into a ready pull request, a finish that
 opens a draft and marks it ready, one that leaves it a draft behind a
 question. Rollback: revert the registration line in the harness's settings
-and the hook's first line.
+and the hook's `push-draft.ts` line.

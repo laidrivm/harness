@@ -7,5 +7,8 @@ set -euo pipefail
 # then write into the shared .git. If this read fails, the suite's preload
 # (bunfig.toml) sees the variables and refuses.
 unset $(git rev-parse --local-env-vars)
+# A push into an open pull request that is not a draft is refused before the
+# suite runs. After the unset, so no `gh` it starts inherits git's variables.
+bun bun/push-draft.ts "$@"
 bun test
 bash bun/diff-budget.sh || true
