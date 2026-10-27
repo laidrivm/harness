@@ -18,7 +18,8 @@ agent-rulebook/<slug>`.
       for this pull request (a check run linking its `/pull/<n>`, or the
       status); it takes `<since>` as the day before the previous heading's
       date and skips a pull request an earlier `first review` line names as
-      measured, not one named unmeasured; it counts a dismissed Major; it
+      measured, not one named unmeasured, which it adds to the `updated:`
+      search's numbers; it counts a dismissed Major; it
       tells the session to read each finding's severity word and names both
       markup forms as examples; `allowed-tools` holds
       `Bash(gh api:*)` and `Bash(gh pr list:*)`; the example block holds a
