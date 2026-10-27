@@ -34,7 +34,9 @@
       `/code-review` bullet found by its opening (`` `/code-review` — ``),
       each naming `/code-review high`; add cases that the bullet names the
       form 2.1 recorded for the base, names no `--comment`, `--fix` or
-      `--post`, counts each finding 🟠 Major (design.md decision 3), says the session writes the `CODE-REVIEW gate:` line, and that a
+      `--post`, has the session grade each finding Trivial to Critical and name the grade
+      in its report (design.md decision 3, cite
+      `local-review-loop/a-finding-the-review-gives-no-severity`), says the session writes the `CODE-REVIEW gate:` line, and that a
       review that does not return or names a file the branch's diff does not
       change is reported and the push goes on (cite
       `local-review-loop/the-review-does-not-return`); that the
