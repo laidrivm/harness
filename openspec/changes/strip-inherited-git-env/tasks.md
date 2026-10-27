@@ -9,7 +9,7 @@ it; the 300-line cap applies to `bun/git-env.test.ts` as to any other.
 
 ## 1. Drop git's repository variables in the hook, refuse them in the suite
 
-- [ ] 1.1 Failing hook cases in `bun/git-env.test.ts`, running
+- [x] 1.1 Failing hook cases in `bun/git-env.test.ts`, running
       `.githooks/pre-push` from an empty temporary directory with a stub
       `bun` first on `PATH` that appends its environment to a file and exits
       0: no repository variable set, the stub runs and the hook exits 0 [1];
@@ -23,7 +23,7 @@ it; the 300-line cap applies to `bun/git-env.test.ts` as to any other.
       command — above `bun bun/push-draft.ts "$@"` too if `work-finish`'s
       group 1 merged first (design.md, *The hook's order*). Verify with
       `bun test bun/git-env.test.ts bun/pre-pr.test.ts`
-- [ ] 1.2 Failing suite cases in `bun/git-env.test.ts`, each spawning a child
+- [x] 1.2 Failing suite cases in `bun/git-env.test.ts`, each spawning a child
       `bun test bun/tracked.test.ts` from the repository's root: `GIT_DIR`
       naming a decoy with no remote exits non-zero and names `GIT_DIR` on
       stderr [6]; that run reports no test run, and the decoy's refs and
