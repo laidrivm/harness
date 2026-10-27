@@ -166,7 +166,10 @@ clarification 11).
 The rule also reaches consumers through `bun/sync.ts`, whose hooks this
 change does not touch; the user chose to delete it for them too (card
 question 9 а, 2026-10-27), because stripping the fixtures' `GIT_*` removes
-the incident's cause and worktrees become the subagent default.
+the incident's cause and worktrees become the subagent default. Sync
+delivers neither this hook nor the preload, so a consumer whose pre-push
+hook runs its fixtures from a linked worktree stays exposed until its own
+hook drops git's repository variables; the user accepted that risk.
 
 `core/git-and-prs.md`'s *Remove a worktree as soon as its branch is the one
 to push*, which assumed the push came from the main checkout, becomes *once
