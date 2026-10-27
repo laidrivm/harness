@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { ran } from "./gate-ledger.ts";
@@ -121,6 +121,13 @@ describe("a skill call is recorded", () => {
 		const { main } = scratch();
 		mkdirSync(join(main, "sub"));
 		expect(hook(main, called("zombies", join(main, "sub"))).records[0]?.project).toBe(main);
+	});
+
+	test("a cwd reached through a symlink records the real top level", () => {
+		const { main } = scratch();
+		const link = join(realpathSync(emptyDir("skill-record-link-")), "link");
+		symlinkSync(main, link);
+		expect(hook(main, called("zombies", link)).records[0]?.project).toBe(main);
 	});
 
 	// spec: gate-ledger/a-skill-called-with-only-an-untracked-file
