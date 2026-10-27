@@ -1,3 +1,8 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: The local review passes the guidelines the PR bot reads`
+- TO: `### Requirement: The CLI review passes the guidelines the PR bot reads`
+
 ## ADDED Requirements
 
 ### Requirement: The local review runs after triage and before the push

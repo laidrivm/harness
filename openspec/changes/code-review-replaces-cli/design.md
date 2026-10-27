@@ -92,7 +92,16 @@ and which the session that writes it owns.
    local review runs after triage and before the push*, its text the
    archived one with `/code-review high` for the CLI and *The review does not
    return* for the unavailable CLI. The other scenario names stay, so the
-   tests citing them keep their identifiers.
+   tests citing them keep their identifiers. The capability's other
+   requirements — a verified finding fixed without asking, a Major dismissal
+   the user's, Minor findings once, three reviews, a justification kept only
+   as a convention — speak of the reviewer ("the bot") and its findings,
+   never of how the CLI is invoked, and hold for `/code-review` unchanged. *The local review passes the
+   guidelines the PR bot reads* is the one about the CLI's `--config`
+   invocation, which the kept skill still makes: it is renamed *The CLI
+   review passes the guidelines the PR bot reads*, its text untouched.
+   `/code-review` runs in the session, which has `CLAUDE.md` and the
+   rulebook loaded already.
 
 ## Conflict check (roadmap question 14 б)
 
