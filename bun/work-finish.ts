@@ -8,6 +8,7 @@
  * the ledger, and is one `finish` record of `HEAD`; a failure after the push
  * leaves the draft and records nothing.
  */
+import { statSync } from "node:fs";
 import { ready } from "./ci-run-draft.ts";
 import { ran, record, RUNNER_STEPS } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
@@ -40,6 +41,8 @@ export async function finish(card: string, opening?: Opening): Promise<{ lines: 
 	const commit = git("rev-parse", "--verify", "-q", "HEAD");
 	const top = git("rev-parse", "--show-toplevel");
 	const refuse = (id: string, why: string) => {
+		// The writer prefers CLAUDE_PROJECT_DIR, which can name another checkout; the record names the one read, as the goal check's does.
+		delete process.env.CLAUDE_PROJECT_DIR;
 		record("finish", "block", id, { session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: top }, commit);
 		return done(`finish: refused — ${why}`, 1);
 	};
@@ -59,6 +62,9 @@ export async function finish(card: string, opening?: Opening): Promise<{ lines: 
 	const owed = unproven(commit, top, !open);
 	if (owed.length) return refuse("unproven", owed.join("; "));
 	if (!open && !opening) return refuse("untitled", `${branch} has no open pull request; pass --title and --body-file to open one`);
+	// Before the push, or `gh pr create` would fail on it after the whole suite ran.
+	if (!open && opening && !statSync(opening.body, { throwIfNoEntry: false })?.isFile())
+		return refuse("unread-body", `the body file ${opening.body} is not a file`);
 
 	const full = `${repo.owner}/${repo.repo}`;
 	const failed = (what: string) => done(open ? `finish: draft #${open.number} — ${what}` : `finish: failed — ${what}`, 1);

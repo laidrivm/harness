@@ -69,10 +69,10 @@ function bin(gh: Gh) {
 }
 
 /** `hook` is the exit code of the checkout's pre-push hook, which logs `push` beside the `gh` calls; git runs it even for a push of nothing. */
-export type Finish = { args?: string[]; cwd?: string; gh?: Gh; stub?: Stub; state?: string; config?: string; hook?: number };
+export type Finish = { args?: string[]; cwd?: string; gh?: Gh; stub?: Stub; state?: string; config?: string; hook?: number; env?: Record<string, string> };
 
 /** `bun bun/work.ts finish --card CARD`, or `args`, and what it did. */
-export async function finish({ args = ["finish", "--card", CARD], cwd = checkout(), gh = {}, stub, state, config = home(), hook = 0 }: Finish = {}) {
+export async function finish({ args = ["finish", "--card", CARD], cwd = checkout(), gh = {}, stub, state, config = home(), hook = 0, env }: Finish = {}) {
 	const ledger = state ?? stateWith(runRecord(cwd));
 	const path = bin(gh);
 	const hooks = join(cwd, ".git", "hooks");
@@ -82,7 +82,7 @@ export async function finish({ args = ["finish", "--card", CARD], cwd = checkout
 	const api = notion(stub);
 	const child = Bun.spawn([process.execPath, join(import.meta.dir, "work.ts"), ...args], {
 		cwd,
-		env: { PATH: path.dir, HOME: config, XDG_CONFIG_HOME: config, XDG_STATE_HOME: ledger, HARNESS_NOTION_API_URL: api.url },
+		env: { PATH: path.dir, HOME: config, XDG_CONFIG_HOME: config, XDG_STATE_HOME: ledger, HARNESS_NOTION_API_URL: api.url, ...env },
 		stdout: "pipe",
 		stderr: "pipe",
 	});

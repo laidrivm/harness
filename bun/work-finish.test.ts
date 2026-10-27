@@ -6,8 +6,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, git } from "./diff-budget.fixture.ts";
-import { head, runRecord, stateWith } from "./goal-check.fixture.ts";
+import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
+import { head, records, runRecord, stateWith } from "./goal-check.fixture.ts";
 import { USAGE } from "./work.ts";
 import { CARD, checkout, finish, pull } from "./work-finish.fixture.ts";
 import { stopServers } from "./work-take.fixture.ts";
@@ -29,6 +29,7 @@ describe("the arguments", () => {
 		["--body-file without --title", ["finish", "--card", CARD, "--body-file", "b"]],
 		["an empty --title", ["finish", "--card", CARD, "--title", "", "--body-file", "b"]],
 		["an empty --body-file", ["finish", "--card", CARD, "--title", "t", "--body-file", ""]],
+		["a blank --title", ["finish", "--card", CARD, "--title", " \t", "--body-file", "b"]],
 		["--force", ["finish", "--card", CARD, "--force"]],
 		["a positional", ["finish", "--card", CARD, "more"]],
 		["a 31-hex card", ["finish", "--card", CARD.slice(1)]],
@@ -115,5 +116,19 @@ describe("the refusals before the push", () => {
 		refused(run, "untitled");
 		expect(run.last).toContain("--title");
 		expect(run.last).toContain("--body-file");
+	});
+
+	test("a body file that is not there, when one is to be opened", async () => {
+		const run = await finish({ args: ["finish", "--card", CARD, "--title", "t", "--body-file", "nowhere.md"] });
+		refused(run, "unread-body");
+		expect(run.last).toContain("nowhere.md");
+	});
+
+	test("the record names the checkout finish read, whatever CLAUDE_PROJECT_DIR says", async () => {
+		const cwd = checkout();
+		const state = stateWith();
+		await finish({ cwd, state, env: { CLAUDE_PROJECT_DIR: emptyDir("work-finish-elsewhere-") } });
+		const top = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], { cwd }).stdout.toString().trim();
+		expect(records(state, "finish").map((r) => r.project)).toEqual([top]);
 	});
 });
