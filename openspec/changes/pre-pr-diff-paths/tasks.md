@@ -11,7 +11,7 @@ There is one group, shipped as `feat/pre-pr-diff-paths`. It is cut after
 
 ## 1. The required steps, one base, and the docs that stop listing them
 
-- [ ] 1.1 Write the function's table in `bun/pre-pr-steps.test.ts`, over the
+- [x] 1.1 Write the function's table in `bun/pre-pr-steps.test.ts`, over the
       pure function alone:
       - no changed path (`[]`) names the documentation branch's steps [1];
         `undefined`, the path read's failure, names every step, `warm`
@@ -39,7 +39,7 @@ There is one group, shipped as `feat/pre-pr-diff-paths`. It is cut after
       `…/an-open-pull-request-over-a-diff-it-cannot-read`. All fail before
       1.4.
       Verify: `bun test bun/pre-pr-steps.test.ts` fails on the missing module.
-- [ ] 1.2 Write the runner's cases in `bun/pre-pr-steps-run.test.ts`, spawning
+- [x] 1.2 Write the runner's cases in `bun/pre-pr-steps-run.test.ts`, spawning
       `bun/pre-pr.ts` in a scratch repository with a base branch, as
       `bun/pre-pr.test.ts` does:
       - the record a run writes for the project checks carries the id the
@@ -69,11 +69,11 @@ There is one group, shipped as `feat/pre-pr-diff-paths`. It is cut after
       `…/no-base-passed` and `…/a-base-passed`. All fail before 1.5.
       Verify: `bun test bun/pre-pr-steps-run.test.ts` fails on the missing
       line and script.
-- [ ] 1.3 Move the base rule out of `bun/diff-budget.sh` into
+- [x] 1.3 Move the base rule out of `bun/diff-budget.sh` into
       `bun/diff-base.sh`, with the comment on `rev-parse --abbrev-ref` moving
       with it, and make `diff-budget.sh` call it when given no argument.
       Verify: cases [19]–[21] and every `bun/diff-budget*.test.ts` pass.
-- [ ] 1.4 Write `bun/pre-pr-steps.ts`: the step ids as exported constants, the
+- [x] 1.4 Write `bun/pre-pr-steps.ts`: the step ids as exported constants, the
       project checks' id taken from the `rule` `pre-pr-project-checks` gave
       its record; `required(paths, open)`; and the path read over
       `git diff --name-only -z --no-renames --no-relative <base>...HEAD`,
@@ -81,13 +81,13 @@ There is one group, shipped as `feat/pre-pr-diff-paths`. It is cut after
       cannot read as a branch that changes nothing, and
       `required(undefined, false)` returns every step. Verify:
       `bun test bun/pre-pr-steps.test.ts` passes.
-- [ ] 1.5 In `bun/pre-pr.ts`, take the first argument as the base or run
+- [x] 1.5 In `bun/pre-pr.ts`, take the first argument as the base or run
       `diff-base.sh` once, pass that base to the diff budget and the path
       read, record the project checks under the exported constant, read
       `open` from `readPullRequests()` for the current branch, and print the
       `PRE-PR steps:` line last. Keep the file under 300 lines. Verify:
       `bun test bun/pre-pr-steps-run.test.ts bun/pre-pr.test.ts` passes.
-- [ ] 1.6 In `core/review-toolkit.md`, replace the two paths with the runner's
+- [x] 1.6 In `core/review-toolkit.md`, replace the two paths with the runner's
       list: keep why each step exists, name `bun/pre-pr.ts`'s last line as
       the list, drop the documentation path's `bun test` and its separate
       grep (now `/triage`'s), and keep the pass counts of

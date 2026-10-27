@@ -29,10 +29,9 @@ completes, name the next step and the exact command.
 - Before the proposal is finalised: run `/zombies "<feature description>"`
   against the proposal text. A proposal whose edge cases are not listed in the
   tasks checklist as tests-first items is not ready to apply.
-- Before pushing `spec/<proposal-slug>`, run the pre-PR sequence's path for a
-  branch of documentation, rules or config (`review-toolkit.md`) in the same
-  turn: a proposal branch is that kind of branch, and `/zombies` alone is not
-  its sequence.
+- Before pushing `spec/<proposal-slug>`, run the pre-PR sequence in the same
+  turn, the steps the runner's last line names (`review-toolkit.md`):
+  `/zombies` alone is not a proposal branch's sequence.
 - A change to a gate the harness ships is measured against every consumer's
   tree before it is proposed, not only the consumer that reported it: the fix
   for one consumer's false positive can be another's new failure.
