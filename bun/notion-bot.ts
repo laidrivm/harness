@@ -105,14 +105,16 @@ const opens = (mark: string) => (comment: Comment) => {
 const marked = opens("harness-question");
 const answered = opens("harness-answer");
 
+/** `comments` oldest first; stable, so ties keep the order the API returned them. */
+export const oldest = (comments: Comment[]) => comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time)));
+
 /**
  * Whether the last question has no answer after it: no comment by `user` that
  * opens with neither mark, and no `harness-answer` by `self`, the
  * integration's own id, when one was read.
  */
 export function waits(comments: Comment[], user: string, self?: string): boolean {
-	// Stable: ties keep the order the API returned them.
-	const ordered = comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time)));
+	const ordered = oldest(comments);
 	const last = ordered.findLastIndex(marked);
 	return (
 		last !== -1 &&

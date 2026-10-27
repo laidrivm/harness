@@ -83,16 +83,19 @@ describe("the card", () => {
 	});
 
 	// spec: work-take/a-truncated-body
-	test("truncated true adds its line; false adds none", async () => {
+	test("truncated true adds its line", async () => {
 		expect((await take({ stub: { markdown: body("Part.", true) } })).out).toContain("Part.\nthe body is truncated: Notion left part of it out\n");
 	});
 
+	test("truncated false and no ids left out add no line", async () => {
+		expect((await take({ stub: { markdown: body("Whole.") } })).out).toContain("## Body\nWhole.\n## Comments");
+	});
+
 	// spec: work-take/blocks-notion-left-out
-	test("two ids left out add a line naming two blocks; an empty list adds none", async () => {
+	test("two ids left out add a line naming two blocks", async () => {
 		const run = await take({ stub: { markdown: body("Some.", false, ["b1", "b2"]) } });
 		expect(run.out).toContain("Some.\nNotion left 2 blocks out of the body\n");
 		expect(run.out).not.toContain("truncated");
-		expect((await take()).out).not.toContain("left");
 	});
 
 	test("an unknown tag with no ids prints unchanged and adds no line", async () => {
@@ -117,7 +120,7 @@ describe("the card", () => {
 });
 
 describe("the comments", () => {
-	const answer = said(USER, "2026-10-20T10:00:00Z", { plain_text: "Yes, ship." });
+	const answer = () => said(USER, "2026-10-20T10:00:00Z", { plain_text: "Yes, ship." });
 
 	// spec: work-take/a-question-with-no-answer
 	test("out of order, printed oldest first with each time; an unanswered question waits", async () => {
@@ -137,7 +140,7 @@ describe("the comments", () => {
 
 	// spec: work-take/an-answered-question
 	test("the user's answer after it: no question waits", async () => {
-		const run = await take({ stub: { comments: [[question("2026-10-20T09:00:00Z"), answer]] } });
+		const run = await take({ stub: { comments: [[question("2026-10-20T09:00:00Z"), answer()]] } });
 		expect(run.out).toContain("2026-10-20T10:00:00Z user: Yes, ship.\nquestion waiting: no\n");
 	});
 
@@ -147,7 +150,7 @@ describe("the comments", () => {
 
 	// spec: work-take/comments-over-more-than-one-page
 	test("two pages joined by next_cursor print all their comments", async () => {
-		const run = await take({ stub: { comments: [[question("2026-10-20T09:00:00Z")], [answer]] } });
+		const run = await take({ stub: { comments: [[question("2026-10-20T09:00:00Z")], [answer()]] } });
 		expect(run.out).toContain("harness-question Ship?\n2026-10-20T10:00:00Z user: Yes, ship.\nquestion waiting: no\n");
 		expect(run.seen.map((s) => s.call)).toContain("GET /v1/comments#1");
 	});

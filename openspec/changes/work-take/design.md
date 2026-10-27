@@ -125,8 +125,12 @@ still reads no page, so its requirement in `task-board` keeps its words.
 
 - The lifted export is `integration(timeout, env)` in `bun/notion-ask.ts`,
   answering `{ settings, call }` or the reason as a string; `env` names the
-  config home as `where()` reads it, so its cases need no process-wide
-  setting. `finish` calls it as is.
+  config home as `where()` reads it, while the client still reads
+  `HARNESS_NOTION_API_URL` from the process, as every `client()` does.
+  `finish` calls it as is.
+- Comments print in the order `waits()` reads them, through one exported
+  `oldest()` in `bun/notion-bot.ts`, so the printed last comment and the
+  `question waiting:` line cannot drift apart.
 - `work.ts` keeps one `if` per subcommand over a shared strict `values()`,
   and one usage line each, printed to standard error with exit 2; `finish`
   adds its branch and its line.
