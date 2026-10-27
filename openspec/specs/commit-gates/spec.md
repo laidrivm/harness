@@ -315,12 +315,13 @@ runner's path as the project reaches it. No repository state need change for a
 blocked turn to end, so the hook SHALL NOT be able to refuse indefinitely, and
 SHALL NOT depend on a loop-protection field to guarantee it.
 
-This requirement SHALL claim that the sequence's deterministic step ran at the
-tip, and nothing beyond that. The run record proves that step. The steps that
+This requirement SHALL claim that the runner ran the sequence's deterministic
+steps at the tip, and nothing beyond that. Any of the run's records proves
+that it ran. The steps that
 need judgement are still only reported, and the hook reads the final message
 for their gate lines, so a judgement step's gate line written without running
 that step passes it. What it catches is the turn that ends silently, and the
-turn whose deterministic step never ran at the commit it reports on.
+turn whose deterministic steps never ran at the commit it reports on.
 
 Nor SHALL it claim to reach every turn. A turn that ends by a path which does
 not invoke this hook — an interruption, or a failure that ends the turn

@@ -140,6 +140,15 @@ describe("a tree the commit does not hold", () => {
 		expect(result.out).toMatch(/no run record[^\n]*\n\?\? scratch\.txt\n/);
 	});
 
+	// spec: pre-pr-runner/an-untracked-scratch-file
+	test("an untracked file still records nothing where git is set to hide untracked files", () => {
+		const dir = within("true");
+		Bun.spawnSync(["git", "config", "status.showUntrackedFiles", "no"], { cwd: dir });
+		writeFileSync(join(dir, "scratch.txt"), "notes");
+		const result = run(dir);
+		expect([records(result.state), result.out]).toEqual([[], expect.stringContaining("?? scratch.txt\n")]);
+	});
+
 	// spec: pre-pr-runner/an-uncommitted-edit
 	test("an unstaged edit records nothing and is named [17]", () => {
 		const dir = within("true");

@@ -135,7 +135,7 @@ deploy() {
 	# The merge alone reports success over a local commit, and leaves an edit
 	# or an untracked file the build would take in.
 	local tree
-	git merge -q --ff-only origin/main && tree=$(git status --porcelain) && [ -z "$tree" ] &&
+	git merge -q --ff-only origin/main && tree=$(git status --porcelain --untracked-files=normal) && [ -z "$tree" ] &&
 		[ "$(git rev-parse HEAD)" = "$head" ] || {
 		failed "the fast-forward"
 		return 1

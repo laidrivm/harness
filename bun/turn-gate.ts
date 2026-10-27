@@ -34,8 +34,8 @@
  * cannot read holds no record, and the once-per-mark bound limits that to one
  * refusal.
  *
- * The runner's record proves that the deterministic step ran at the tip, and
- * nothing more. The judgement steps are read from the final message alone, so
+ * Any of the runner's records proves that it ran the deterministic steps at the
+ * tip, and nothing more. The judgement steps are read from the final message alone, so
  * a gate line for one of them, written without running it, still passes.
  *
  * Run as the hook, it records each refusal, pass and release of a turn that

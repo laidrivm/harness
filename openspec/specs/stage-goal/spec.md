@@ -309,8 +309,8 @@ pushes for it SHALL be held to this form.
 #### Scenario: Ready with no pull request
 
 - **WHEN** `apply demo 2 --before-push` runs at a clean `HEAD` on a branch,
-  group 2 is complete, the ledger holds a passing `pre-pr` record for `HEAD`,
-  and the branch has no pull request
+  group 2 is complete, the ledger holds a passing `pre-pr` record for `HEAD`
+  from every runner step, and the branch has no pull request
 - **THEN** the check reports `goal met` before the push, exits 0, and runs no
   pull request query
 
