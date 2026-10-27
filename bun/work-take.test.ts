@@ -218,7 +218,7 @@ describe("the open changes and the writes", () => {
 	test("openspec list's output ends the run unchanged", async () => {
 		const run = await take();
 		expect(run.out).toEndWith(`## Open changes\n${LISTING}\n`);
-		expect(run.ran).toBe("list\n");
+		expect(run.ran).toBe("OPENSPEC_TELEMETRY=0 list\n");
 	});
 
 	// spec: work-take/only-reads

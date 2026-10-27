@@ -37,10 +37,10 @@ function text(property: Property | undefined): string {
 	return "";
 }
 
-/** Runs `command` in `cwd`, its standard output, or throws naming how it failed. */
-function output(command: string[], cwd?: string): string {
+/** Runs `command` in `cwd` under `env`, its standard output, or throws naming how it failed. */
+function output(command: string[], cwd?: string, env: Record<string, string | undefined> = process.env): string {
 	if (!Bun.which(command[0])) throw new Error(`no ${command[0]} on PATH`);
-	const run = Bun.spawnSync(command, { cwd, stdout: "pipe", stderr: "pipe" });
+	const run = Bun.spawnSync(command, { cwd, env, stdout: "pipe", stderr: "pipe" });
 	if (run.exitCode !== 0) {
 		const said = run.stderr.toString().trim().split("\n")[0];
 		throw new Error(`${command.slice(0, 2).join(" ")} exited ${run.exitCode}${said ? `: ${said}` : ""}`);
@@ -101,7 +101,8 @@ export async function take(card: string, timeout = 30_000): Promise<{ lines: str
 		lines.push("## Change", ...change(text(properties.Pointer), top, commit));
 
 		step = "the open changes read";
-		lines.push("## Open changes", output(["openspec", "list"], top));
+		// Telemetry off: take writes nothing, and openspec's telemetry keeps state and sends events.
+		lines.push("## Open changes", output(["openspec", "list"], top, { ...process.env, OPENSPEC_TELEMETRY: "0" }));
 		return { lines, code: 0 };
 	} catch (error) {
 		return { lines: [...lines, `take: ${step} failed — ${(error as Error).message}`], code: 1 };
