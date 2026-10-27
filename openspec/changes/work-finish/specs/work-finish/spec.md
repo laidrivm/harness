@@ -32,8 +32,8 @@ Before any push, `finish` SHALL refuse and exit 1, changing nothing in git,
 GitHub or Notion, when a tracked file differs from `HEAD`, when `HEAD` names
 no branch or names `main`, or when the evidence the branch owes for `HEAD` is missing. Until the
 required steps are derived from the diff, that evidence SHALL be the pre-PR
-runner's passing run record of the diff budget for `HEAD` in this checkout,
-as the goal check reads it.
+runner's passing run record of each of its steps for `HEAD` in this
+checkout, as the goal check reads them.
 
 #### Scenario: No run record for HEAD
 

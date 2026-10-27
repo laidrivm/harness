@@ -37,10 +37,11 @@ the gate holds a mistake of order, not a wrong argument (stage 2, question
 
 1. Refusals that need no network: a tracked file differs from `HEAD`; `HEAD`
    names no branch, or names `main`.
-2. The evidence for `HEAD` (*The evidence seam* below).
-3. The branch's pull requests, read once. Unreadable: refuse. One open and
-   not a draft: refuse, naming `gh pr ready <n> --undo`. None open and no
-   `--title`/`--body-file`: refuse.
+2. The branch's pull requests, read once. Unreadable: refuse. One open and
+   not a draft: refuse, naming `gh pr ready <n> --undo`.
+3. The evidence for `HEAD` (*The evidence seam* below), told whether a pull
+   request is open — read before it for that reason (group 2's apply). None
+   open and no `--title`/`--body-file`: refuse.
 4. The push, `git push -u origin HEAD`, never `--force`, never
    `--no-verify`, so the pre-push hook runs `bun test` and the draft check —
    skipped when `git ls-remote origin refs/heads/<branch>` already names
@@ -69,7 +70,9 @@ two refusals cannot drift apart.
 
 Output is one `finish:` line per step and a last line that says the outcome:
 `finish: ready #7`, `finish: draft #7 — a question waits on <card>`,
-`finish: refused — <why>`, or `finish: draft #7 — <what failed>`. Exit 0 for
+`finish: refused — <why>`, or `finish: draft #7 — <what failed>`, and
+`finish: failed — <what failed>` where no pull request is open to name: a
+push, a create or its read-back that failed before one was. Exit 0 for
 ready or a waiting question, 1 for a refusal or a failure, 2 for the usage.
 Rejected: a `start` subcommand — `gh pr ready <n> --undo` is one line, and
 the pre-push refusal makes forgetting it fail loudly at the first push.
@@ -79,8 +82,11 @@ the pre-push refusal makes forgetting it fail loudly at the first push.
 `unproven(commit, top, opening)` in `bun/work-finish.ts` answers what the
 branch still owes for `commit`, as lines. Until the required-steps change
 lands (card `3f739875c31b81e6b473f8a1fb6fa5b3`, its question 1 still open),
-it is a working stub: the pre-PR runner's passing `diff-budget` record of
-`commit` in `top`, read as the goal check reads it, and `opening` is unused.
+it is a working stub: the pre-PR runner's passing record of `commit` in
+`top` for each of `RUNNER_STEPS`, read as the goal check reads them, and
+`opening` is unused. Every step, not the diff budget alone: since
+`pre-pr-project-checks` (#316) the runner records the project checks too, and
+the goal check asks for both (group 2's apply).
 That change replaces the body and keeps the call: `opening` true asks for
 project checks and the local review on `HEAD`, false for project checks
 alone (stage 2, question 24). The records from the `Skill` hook (slice item
@@ -93,7 +99,8 @@ alone (stage 2, question 24). The records from the `Skill` hook (slice item
 runner ran, passes none. It ships here only if this change merges before the
 slice's items 1 and 2 (user, 2026-10-26). It did not: `pre-pr-project-checks`
 (#316) shipped the filter, the goal check and `ranUnder()` passing each runner
-step, so group 1 drops task 1.1 and `unproven()` reuses it.
+step, so group 1 drops task 1.1 and `unproven()` passes each runner step the
+same way.
 
 ### The pre-push draft check
 
