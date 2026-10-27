@@ -8,7 +8,8 @@ in `bun/notion-ask.ts`, the ask settings and a REST client; `boardState(tree)`
 in `bun/board-state.ts`, which derives `proposing`, `proposed` and `done`
 from a directory; `groups()` and `complete()` in `bun/turn-gate.ts`, which
 count a task list's boxes per `## ` group; `record()` in `bun/gate-ledger.ts`;
-and the `PATCH` form of a `select` write in `bun/notion-pause.ts`. The allow
+the property `PATCH` of `assign()` in `bun/notion-bot.ts`; and the `select`
+value `bun/notion-pause.ts` creates a card with. The allow
 entry `Bash(bun bun/work.ts *)` is already in `.claude/settings.json`.
 Nothing checks a `Status` write today: `bun/notion-guard.ts` refuses only
 `properties` under another command.
@@ -56,7 +57,10 @@ task-board's definitions.
 
 ### The tree is origin/main's
 
-`status` runs `git fetch -q origin main` in the checkout's top level, then
+`status` runs `git fetch -q origin +refs/heads/main:refs/remotes/origin/main`
+in the checkout's top level — the refspec named, as `bun/ci-run-clone.ts`
+names its own, so a single-branch clone or a narrowed `remote.origin.fetch`
+still moves `origin/main` — then
 `git archive origin/main openspec/changes` into a fresh temporary directory
 (extracted with `tar`, removed afterwards), and calls `boardState()` on it
 unchanged. `tasks.md` is read from the same directory. Nothing reads the
@@ -88,22 +92,40 @@ requirement says so.
 The slug comes from the `Pointer` matched whole against
 `openspec/changes/<slug>/` — `POINTER` in `bun/work-take.ts`, exported — or
 `openspec/changes/archive/<name>/`, its name matched by `ARCHIVED` in
-`bun/board-state.ts`, exported. The slug must have an entry in the derived
-status map: active or archived, either proves its slug's floor. A
-cross-repository `Pointer` (`<repo>: openspec/changes/<slug>/`) refuses: this
-tree decides only its own board. The card's board is not compared with the
-board `harness.board` names (proposal, non-goal).
+`bun/board-state.ts`, exported. An active pointer's slug must have an entry
+in the derived status map, active or archived, since the archive moves the
+directory a card may still point at; an archived pointer's directory must
+exist in the extracted tree as named. Either path behind `<name>: `, where
+`<name>` is the checkout's `package.json` `name`, is read the same — the
+cross-repository form of task-board's *A card for another repository's
+change points across*, which a `D2ASS` card on a harness change carries;
+any other repository's refuses, since this tree decides only its own
+changes. The card's board is not compared with the board `harness.board`
+names (proposal, non-goal).
+
+shortcut: a slug both archived and active again derives `done` in
+`boardState()` — the archive is its later fact — so an active pointer at a
+reopened change is proven `done`; read the active directory alone when a
+reopened change first reaches a card.
 
 ### The WIP count
 
 The page read gives the card's current `Status` and `parent.data_source_id`.
-Only a move from outside the seven range statuses into one of them counts:
-`POST /v1/data_sources/{id}/query` with an `or` filter of `Status` equal to
-each of the seven and `page_size: 100`, and the count is the results' length,
-or 100 when `has_more` — any limit that high is reached either way, so there
-is no pagination. `HARNESS_WIP_LIMIT` is read only then, and must match
-`^\d+$` whole. The card itself is outside the range at that moment, so it is
-never in its own count.
+Only a move from outside the seven range statuses into one of the five that
+need no evidence counts: a proven `proposed` or `applied` is work already
+done, and refusing it would leave a card behind its floor that task-board's
+reconciliation must correct, with the connector's write refused too. The
+count is `POST /v1/data_sources/{id}/query` with an `or` filter of `Status`
+equal to each of the seven and `page_size: 100`; `has_more` refuses at any
+limit, so there is no pagination. `HARNESS_WIP_LIMIT` is read only then, and
+must match `^\d+$` whole. The card itself is outside the range at that
+moment, so it is never in its own count.
+
+A card at `idea` enters like one at `approved`. `core/feature-workflow.md`
+lets a session the user directs at an `idea` card move it to `exploring`,
+the instruction being the approval, and the command cannot tell a directed
+session from an unattended one, whose taking no work from `idea` stays that
+file's rule (card question 9).
 
 ### The order of checks and the write
 
@@ -111,15 +133,16 @@ never in its own count.
 2. `--to` `idea`, `approved` or `discarded`: refused, no call.
 3. The ask settings, then the page read: no settings, a failed read, or a
    parent that is no data source refuses. A `discarded` card refuses.
-4. The WIP count, when the move enters the range.
-5. The evidence, when `--to` is `proposed`, `applied` or `done`.
+4. The evidence, when `--to` is `proposed`, `applied` or `done`.
+5. The WIP count, when the move enters the range unproven.
 6. `PATCH /v1/pages/{card}` with `{ properties: { Status: { select: { name } } } }`,
-   the form `bun/notion-pause.ts` creates with. Notion answers with the page;
+   a sibling of `assign()` in `bun/notion-bot.ts`, sent through the ask
+   integration's `call`. Notion answers with the page;
    `status` prints `status: <card> <from> → <to>` from that answer, the
    read-back `core/feature-workflow.md` asks for.
 
-Notion is read before git, so a refusal of the user's or the WIP's never
-waits on a fetch. Output is one line; a refusal reads `status: refused —
+The evidence comes before the count, since a proven move is not counted, and
+the user's statuses need neither. Output is one line; a refusal reads `status: refused —
 <why>`. Rejected: putting the command in `bun/notion-bot.ts` (279 of its 300
 lines), as the card's title has it; `bun/work-status.ts` is the module, as
 `take` and `finish` each have one.
@@ -168,7 +191,7 @@ the Notion interface.
 - [The ask integration's *Update content* and a data source query from it are
   unmeasured; `bun/work-take.fixture.ts` gives `Status` the `status` type
   where task-board fixes `select`] → the fixture for `status` uses `select`;
-  the live probe in 1.6 moves a real card before group 2 merges.
+  the live probe in 2.4 records the first real move the command makes.
 - [A checkout whose `origin` is unreachable cannot move a merged status] →
   fail closed, as stage 2 asks; the session retries.
 - [The hook runs from the pin, so it holds only once the pin passes group 2's
@@ -185,12 +208,17 @@ the Notion interface.
 `openspec show <slug> --json --deltas-only` on 2026-10-27 for every open
 change on `origin/main` — `work-finish`, `judgement-step-record`,
 `host-deploy`, `code-review-replaces-cli` — and no open pull request carrying
-a change: this change touches `work-status` alone, which no other change
-touches, so no capability is shared. The seams are files, not requirements:
-`bun/work.ts` and `.claude/settings.json` with `work-finish` group 2 (order
-in the proposal's prose), and harness-updates' harness-only rule from
-`judgement-step-record`, which this hook follows and does not restate as a
-delta. Not one changes another's requirement: no contradiction.
+a change. Shared capability: `gate-ledger`. `work-finish` modifies *Every
+gate refusal is recorded* to name its three gates, and this change modifies
+the same requirement to add its two; its delta is `work-finish`'s copy plus
+those, so the two agree, and the order is prose — re-copy from the live spec
+before this change archives (`core/feature-workflow.md`, *Copy a `MODIFIED`
+requirement whole*). `judgement-step-record` modifies another gate-ledger
+requirement, the record's fields, which this change does not touch. The
+other seams are files: `bun/work.ts` and `.claude/settings.json` with
+`work-finish` group 2, and harness-updates' harness-only rule from
+`judgement-step-record`, which this hook follows and does not restate. No
+contradiction; order via prose.
 
 ## Migration Plan
 
