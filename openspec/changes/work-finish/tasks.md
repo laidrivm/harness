@@ -30,7 +30,8 @@ failing case first, its failure recorded, cited as `// spec:
       one `push-draft` record carrying the pushed sha. Then write
       `bun/push-draft.ts`
 - [ ] 1.4 Make `bun bun/push-draft.ts "$@"` the first command of
-      `.githooks/pre-push`, and add a case to `bun/pre-pr.test.ts` that it
+      `.githooks/pre-push` after its `unset $(git rev-parse
+      --local-env-vars)` line, which stays above it, and add a case to `bun/pre-pr.test.ts` that it
       stands before `bun test`, the hook still naming `diff-budget.sh` and
       not `pre-pr`. Verify with `bun/pre-pr.test.ts`
 - [ ] 1.5 `core/git-and-prs.md`'s pull request bullet: a push into an open

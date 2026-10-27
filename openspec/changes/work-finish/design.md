@@ -95,7 +95,9 @@ slice's items 1 and 2 (user, 2026-10-26).
 
 ### The pre-push draft check
 
-`bun/push-draft.ts`, the hook's first command: `bun bun/push-draft.ts "$@"`.
+`bun/push-draft.ts`, the hook's first command after the `unset` line that
+`strip-inherited-git-env` put first (`commit-gates`, *The pre-push hook drops
+git's repository variables*): `bun bun/push-draft.ts "$@"`.
 Its name keeps the hook's text free of `pre-pr`. It reads the records on
 standard input, `<local ref> <local sha> <remote ref> <remote sha>`, and
 keeps each record whose remote ref is `refs/heads/<branch>`, taking the
@@ -105,7 +107,7 @@ a deletion lands nothing for review. A push to a tag is no branch update. The re
 URL, `$2`, through `remoteRepository()`, and only on the host `github.com`;
 any other remote, a fixture's local path among them, passes unread.
 `readPullRequests()` takes that repository as a parameter, defaulting to
-`originRepository()`, so the hook makes no git call: inside a hook git's own
+`originRepository()`, so `push-draft.ts` makes no git call: inside a hook git's own
 environment is set, and from a worktree its `GIT_DIR` names that worktree's
 directory under the shared `.git`.
 
