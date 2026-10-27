@@ -28,8 +28,10 @@ proposal measured, on git 2.47.0 and bun 1.4.2:
   `unset`'s arguments: `unset $(false)` continues (probed).
 - A Claude Code Bash call carries `GIT_EDITOR` (observed in this session);
   `bun/github-app.ts` sets `GIT_AUTHOR_*`, `GIT_COMMITTER_*` and
-  `GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` for the runner. None of those is on
-  git's list.
+  `GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` for the runner, none of them on
+  git's list, and `GIT_CONFIG_COUNT`, which is (found at apply): the
+  runner's own fetch, `gh` and push carry it, the hook a push runs drops it,
+  and the sessions' allowlist never passes it on.
 - The harness has no `bunfig.toml` today. `bun/sync-settings.ts` writes only
   the `[install]` table of a consumer's own `bunfig.toml`, and a
   `bunfig.toml` under `node_modules/harness/` is never read. The runner
@@ -160,6 +162,14 @@ branch carries both halves. Enforcing it outside the branch — a global hook,
 or a guard reading the branch's tree — is new code for a window that closes
 as old branches merge, and no failure has come through it (roadmap
 clarification 11).
+
+The rule also reaches consumers through `bun/sync.ts`, whose hooks this
+change does not touch; the user chose to delete it for them too (card
+question 9 а, 2026-10-27), because stripping the fixtures' `GIT_*` removes
+the incident's cause and worktrees become the subagent default. Sync
+delivers neither this hook nor the preload, so a consumer whose pre-push
+hook runs its fixtures from a linked worktree stays exposed until its own
+hook drops git's repository variables; the user accepted that risk.
 
 `core/git-and-prs.md`'s *Remove a worktree as soon as its branch is the one
 to push*, which assumed the push came from the main checkout, becomes *once
