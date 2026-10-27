@@ -166,8 +166,10 @@ Which of the steps below a branch requires is not the agent's call: the
 runner's last line, `PRE-PR steps: <id>, <id>, …`, names them by the skill
 each runs, from the branch's diff against the base the budget measured and
 from its pull request's state, as `pre-pr-runner` (*The runner names the
-steps the branch requires from its diff*) sets out. The steps below say why
-each one exists.
+steps the branch requires from its diff*) sets out. Once a pull request is
+open, draft or not, it names the project checks alone: that is the least a
+push into it requires, and step 5 says what still runs before one. The steps
+below say why each one exists.
 
 1. The diff budget first, looked at with `bash bun/diff-budget.sh` (`bash
    node_modules/harness/bun/diff-budget.sh` where the harness is installed),
@@ -217,4 +219,5 @@ CodeRabbit reviews the head on the pull request; a state the read could not
 get runs it, and the report says the state was unread.
 
 Your sequence ends there — the PR link is the deliverable. `/coderabbit`
-closes the loop on either, once the bot has reviewed the head commit.
+closes the loop on the pull request, once the bot has reviewed the head
+commit.
