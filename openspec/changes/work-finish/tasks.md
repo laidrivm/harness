@@ -110,4 +110,8 @@ failing case first, its failure recorded, cited as `// spec:
       body the draft it opened, the ready it set or the question it waited
       behind, and a push into it while ready refused by the hook. The ready
       guard runs from the pin, so its probe follows the pin bump (design,
-      *Migration Plan*)
+      *Migration Plan*). 2026-10-27, here as `gh pr edit` is unused: `finish`
+      pushed `444a448`, opened draft #332 and left it behind the card's
+      unanswered 25.10 question, exit 0. Open: the user's answer to it, then
+      `finish --card` marks #332 ready and a push into it is probed; the
+      ready guard waits for the pin bump
