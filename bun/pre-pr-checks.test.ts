@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, gate, lines, repo } from "./diff-budget.fixture.ts";
 import { RUNNER_STEPS } from "./gate-ledger.ts";
@@ -147,6 +147,15 @@ describe("a tree the commit does not hold", () => {
 		writeFileSync(join(dir, "scratch.txt"), "notes");
 		const result = run(dir);
 		expect([records(result.state), result.out]).toEqual([[], expect.stringContaining("?? scratch.txt\n")]);
+	});
+
+	// spec: pre-pr-runner/an-untracked-scratch-file
+	test("an untracked file in a new directory is named itself, not its directory", () => {
+		const dir = within("true");
+		mkdirSync(join(dir, "scratch"));
+		writeFileSync(join(dir, "scratch", "result.txt"), "notes");
+		const result = run(dir);
+		expect([records(result.state), result.out]).toEqual([[], expect.stringContaining("?? scratch/result.txt\n")]);
 	});
 
 	// spec: pre-pr-runner/an-uncommitted-edit
