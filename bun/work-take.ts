@@ -10,7 +10,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { integration } from "./notion-ask.ts";
-import { client, discussion, hex, plain, waits } from "./notion-bot.ts";
+import { client, discussion, hex, oldest, plain, waits } from "./notion-bot.ts";
 
 /** The markdown read's API version, for that call alone: the others stay on the one their cases ran against. */
 const MARKDOWN = "2026-03-11";
@@ -72,7 +72,8 @@ export async function take(card: string, timeout = 30_000): Promise<{ lines: str
 		const found = integration(timeout);
 		if (typeof found === "string") throw new Error(found);
 		step = "the checkout read";
-		const [top, commit] = output(["git", "rev-parse", "--show-toplevel", "HEAD"]).trim().split("\n");
+		// Only git's terminator, not `trim()`: a checkout's path may end in a space (bun/root.ts).
+		const [top, commit] = output(["git", "rev-parse", "--show-toplevel", "HEAD"]).replace(/\n$/, "").split("\n");
 		lines.push(`## Checkout: ${top} at ${commit}`);
 
 		step = "the page read";
@@ -92,7 +93,7 @@ export async function take(card: string, timeout = 30_000): Promise<{ lines: str
 		const comments = await discussion(found.call, card);
 		const by = (id: unknown) => (hex(id) === hex(found.settings.user) ? "user" : hex(id));
 		lines.push("## Comments");
-		for (const comment of comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time))))
+		for (const comment of oldest(comments))
 			lines.push(`${comment.created_time} ${by(comment.created_by?.id)}: ${plain(comment.rich_text)}`);
 		lines.push(`question waiting: ${waits(comments, found.settings.user) ? "yes" : "no"}`);
 

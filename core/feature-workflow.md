@@ -372,8 +372,9 @@ for them is already here.
   history cannot settle it. Read the board's `Questions` view and the card's
   comments first, and wait on a question already open there, naming its card,
   rather than ask it again; resuming that work, read that card's comments
-  first, with `bun bun/work.ts take --card <id>` (from the pin in a
-  consumer), which prints them beside the card. Every page-level comment on a card joins one discussion, so a card
+  first, with `bun node_modules/harness/bun/work.ts take --card <id>`
+  (`bun bun/work.ts` in the harness itself), which prints them beside the
+  card. Every page-level comment on a card joins one discussion, so a card
   holds one open question at a time: a second waits in your report until the
   first is answered. Open the comment with the gate's mark,
   `` `harness-question` `` with a single backtick on each side of the word, set `Assign`, read
