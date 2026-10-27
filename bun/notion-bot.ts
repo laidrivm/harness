@@ -110,7 +110,7 @@ const answered = opens("harness-answer");
  * opens with neither mark, and no `harness-answer` by `self`, the
  * integration's own id, when one was read.
  */
-function waits(comments: Comment[], user: string, self?: string): boolean {
+export function waits(comments: Comment[], user: string, self?: string): boolean {
 	// Stable: ties keep the order the API returned them.
 	const ordered = comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time)));
 	const last = ordered.findLastIndex(marked);
@@ -123,8 +123,9 @@ function waits(comments: Comment[], user: string, self?: string): boolean {
 /**
  * A REST call with `token`, which throws naming the step and Notion's status
  * or the error's name: a `Transient` for no answer, the timeout, a 5xx or a 429.
+ * `version` is Notion's API version for every call it makes.
  */
-export function client(token: string, timeout = 30_000) {
+export function client(token: string, timeout = 30_000, version = VERSION) {
 	const base = process.env.HARNESS_NOTION_API_URL || "https://api.notion.com";
 	return async (step: string, path: string, method = "GET", body?: unknown) => {
 		// Parsed outside the catch: a malformed HARNESS_NOTION_API_URL is a plain Error, so a rejected fetch is only the network.
@@ -133,7 +134,7 @@ export function client(token: string, timeout = 30_000) {
 		try {
 			response = await fetch(url, {
 				method,
-				headers: { Authorization: `Bearer ${token}`, "Notion-Version": VERSION, "Content-Type": "application/json" },
+				headers: { Authorization: `Bearer ${token}`, "Notion-Version": version, "Content-Type": "application/json" },
 				body: body === undefined ? undefined : JSON.stringify(body),
 				signal: AbortSignal.timeout(timeout),
 			});
@@ -164,7 +165,7 @@ export async function waiting(call: Call, card: string, user: string, self?: str
 }
 
 /** Every page of the card's page-level comments, following `next_cursor`. */
-async function discussion(call: Call, card: string): Promise<Comment[]> {
+export async function discussion(call: Call, card: string): Promise<Comment[]> {
 	const comments: Comment[] = [];
 	const read = new Set<string>();
 	let cursor: string | undefined;

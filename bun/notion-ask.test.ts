@@ -9,6 +9,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Server } from "bun";
+import { integration } from "./notion-ask.ts";
 import { MARK, REMEDY } from "./question-gate.ts";
 
 const made: string[] = [];
@@ -176,5 +177,41 @@ describe("nothing is posted", () => {
 		const { seen, url } = notion(stub);
 		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line, code: 1 });
 		expect(seen.filter((s) => s.call === "POST /v1/comments").length).toBeLessThanOrEqual(1);
+	});
+});
+
+describe("the ask settings, as work.ts reads them", () => {
+	/** `integration()` over the config home `config`, its client against `api`. */
+	const lifted = (api: string, config: string) => {
+		const before = process.env.HARNESS_NOTION_API_URL;
+		process.env.HARNESS_NOTION_API_URL = api;
+		try {
+			return integration(30_000, { HOME: config, XDG_CONFIG_HOME: config });
+		} finally {
+			if (before === undefined) delete process.env.HARNESS_NOTION_API_URL;
+			else process.env.HARNESS_NOTION_API_URL = before;
+		}
+	};
+
+	test("the ask command and the export read the same settings and call with the same bearer and version", async () => {
+		const { seen, url } = notion();
+		const config = home();
+		await ask(url, config, [CARD, asked()]);
+		const found = lifted(url, config);
+		if (typeof found === "string") throw new Error(found);
+		expect(found.settings).toEqual({ token: TOKEN, user: USER });
+		await found.call("the comments read", `/v1/comments?block_id=${CARD}`);
+		expect(seen.at(-1)).toEqual({ ...seen[0], call: "GET /v1/comments" });
+	});
+
+	test("no settings answer the reason, and no call", () => {
+		const { seen, url } = notion();
+		expect(lifted(url, home({}))).toBe("no ask integration is configured");
+		expect(seen).toEqual([]);
+	});
+
+	test("a mode the settings refuse answers that reason", () => {
+		const { url } = notion();
+		expect(lifted(url, home(undefined, 0o640))).toContain("has mode 0640");
 	});
 });

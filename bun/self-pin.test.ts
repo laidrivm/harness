@@ -46,6 +46,10 @@ describe("the harness's own hook registrations", () => {
 		).toEqual([]);
 	});
 
+	test("the harness's own settings allow bun/work.ts, the session's take and finish", () => {
+		expect(tracked(".claude/settings.json").permissions.allow).toContain("Bash(bun bun/work.ts *)");
+	});
+
 	test("the harness pins itself as a development dependency at a full commit", () => {
 		const manifest = tracked("package.json");
 		expect(manifest.dependencies?.harness).toBeUndefined();
