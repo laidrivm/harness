@@ -629,8 +629,11 @@ describe("the scheduled and flaky routes", () => {
 	test.each([
 		["a commit", commit],
 		["a changed file", "echo c >> a.txt\n"],
+		["a file in a directory already untracked", "echo c > scratch/b.txt\n"],
 	])("a scheduled session that made %s: exit 1 naming the clone [56]", async (_, script) => {
 		const h = host();
+		mkdirSync(join(h.clone, "scratch"));
+		writeFileSync(join(h.clone, "scratch", "a.txt"), "a");
 		writeFileSync(join(h.home, "claude-act"), script);
 		const r = await deliver(h, scheduled(), { env: clones(h) });
 		expect(r.code).toBe(1);

@@ -242,11 +242,12 @@ async function resume(clone: string, app: App, run: Run, id: string, ask: (log: 
  */
 async function fresh(clone: string, app: App, run: Run, said: string, ask: (log: string) => string): Promise<Outcome> {
 	const as = await identity(app);
-	const [head, tree] = [git(clone, "rev-parse", "HEAD"), git(clone, "status", "--porcelain", "--untracked-files=normal")];
+	// `all`: these two snapshots are compared, and `normal` folds a new file into an already untracked directory's line.
+	const [head, tree] = [git(clone, "rev-parse", "HEAD"), git(clone, "status", "--porcelain", "--untracked-files=all")];
 	const log = logOf(run);
 	if (!logged(app, run, log)) return ["failed", `${said}; the failed logs of run ${run.id} could not be read`];
 	const outcome = await answered(clone, ask(log), as, ["--session-id", randomUUID()]);
-	if (git(clone, "rev-parse", "HEAD") !== head || git(clone, "status", "--porcelain", "--untracked-files=normal") !== tree)
+	if (git(clone, "rev-parse", "HEAD") !== head || git(clone, "status", "--porcelain", "--untracked-files=all") !== tree)
 		return ["failed", `${said}; the session changed ${clone}, which is left as it is`];
 	rmSync(log, { force: true });
 	if (!outcome) return ["failed", `${said}; the session gave no answer that matches the schema`];
