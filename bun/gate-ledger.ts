@@ -1,8 +1,8 @@
 /**
  * The gate ledger: one JSON line per decision a harness gate records, so that
  * whether a gate earns its place is decided on counts. The wrap-up reads it
- * with `jq`; `ran` below reads back only the pre-PR runner's records, for the
- * turn gate and the goal check.
+ * with `jq`; `ran` below reads back one gate's records of a commit: the pre-PR
+ * runner's, for the turn gate and the goal check, or the skill-call hook's.
  *
  * It lives in the user's state directory, outside every working tree, so no
  * consumer has an ignore entry to add and nothing in it can be staged. A
@@ -50,8 +50,10 @@ export function ledgerFile(): string {
 export const RUNNER_STEPS = ["diff-budget", "project-checks"] as const;
 
 /**
- * Whether the ledger holds the pre-PR runner's record of `commit` made in the
- * checkout whose top level is `top`. The runner records its checkout's top
+ * Whether the ledger holds `gate`'s record of `commit` made in the checkout
+ * whose top level is `top`: the pre-PR runner's by default, or `skill`, the
+ * skill-call hook's, so neither writer's record ever stands in for the other's,
+ * and a refusal for neither. The runner records its checkout's top
  * level wherever it runs, so the match is exact: a path under `top` can be a
  * worktree nested there, measured against its own base refs. A ledger that
  * cannot be read, or a torn line, holds none. Given `decision`, only a run
@@ -66,6 +68,7 @@ export function ran(
 	decision?: string,
 	ledger?: string,
 	rule?: string,
+	gate = "pre-pr",
 ): boolean {
 	if (!top) return false;
 	let text = ledger ?? "";
@@ -78,10 +81,10 @@ export function ran(
 	return text.split("\n").some((line) => {
 		try {
 			const parsed = JSON.parse(line) ?? {};
-			const { gate, project, commit: read } = parsed;
+			const { project, commit: read } = parsed;
 			const ended = !decision || parsed.decision === decision;
 			const step = !rule || parsed.rule === rule;
-			return gate === "pre-pr" && read === commit && project === top && ended && step;
+			return parsed.gate === gate && read === commit && project === top && ended && step;
 		} catch {
 			return false;
 		}

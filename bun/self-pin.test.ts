@@ -5,10 +5,14 @@
  * edit to a gate holds no session until it merges and the pin moves past it.
  * The pin itself is a development dependency, which a consumer never installs.
  */
-import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { afterAll, describe, expect, test } from "bun:test";
+import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { HOOKS, registration } from "./bootstrap.ts";
+import { HOOKS, MARK, registration } from "./bootstrap.ts";
+import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
+import { syncSettings } from "./sync-settings.ts";
+
+afterAll(cleanup);
 
 type Entry = { matcher?: string; hooks?: { command?: string }[] };
 
@@ -16,6 +20,56 @@ const tracked = (path: string) =>
 	JSON.parse(readFileSync(join(import.meta.dir, "..", path), "utf8"));
 const hooks = (): Record<string, Entry[]> =>
 	tracked(".claude/settings.json").hooks ?? {};
+
+/** A settings tree's hooks of `event` under `matcher`, an absent one included. */
+const under = (all: Record<string, Entry[]>, event: string, matcher?: string) =>
+	(all[event] ?? []).filter((entry) => entry.matcher === matcher).flatMap((entry) => entry.hooks ?? []);
+
+// The pinned copy, with no mark: the harness keeps this hook to itself (judgement-step-record D5).
+const SKILL_RECORD = {
+	type: "command",
+	command: 'g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/skill-record.ts"; if [ -f "$g" ]; then bun "$g"; fi',
+};
+const SKILL_EVENTS = [
+	["PostToolUse", "Skill"],
+	["UserPromptExpansion", undefined],
+] as const;
+
+/** `syncSettings` run over a tree holding `settings`, or none; the hooks it leaves. */
+function synced(settings?: string): Record<string, Entry[]> {
+	const root = emptyDir("self-pin-sync-");
+	mkdirSync(join(root, ".claude"));
+	if (settings) copyFileSync(settings, join(root, ".claude/settings.json"));
+	syncSettings(root);
+	return JSON.parse(readFileSync(join(root, ".claude/settings.json"), "utf8")).hooks ?? {};
+}
+
+describe("the skill-call hook the harness keeps to itself", () => {
+	// spec: harness-updates/the-skill-call-hook-s-registration
+	test.each(SKILL_EVENTS)("is registered under %s, in the foreground with no if [32, 33, 34]", (event, matcher) => {
+		// The whole hook object: an `if`, `async`, `asyncRewake`, `shell` or `args` would change whether it runs or blocks.
+		expect(under(hooks(), event, matcher)).toContainEqual(SKILL_RECORD);
+		expect(SKILL_RECORD.command.endsWith(MARK)).toBe(false);
+	});
+
+	test("no HOOKS entry names its script [35]", () => {
+		expect(HOOKS.filter((hook) => hook.command.includes("skill-record.ts"))).toEqual([]);
+	});
+
+	// spec: harness-updates/the-harness-s-own-settings-are-synced
+	test("a sync of the harness's own settings leaves both registrations as they were [36]", () => {
+		const after = synced(join(import.meta.dir, "..", ".claude/settings.json"));
+		for (const [event, matcher] of SKILL_EVENTS)
+			expect(under(after, event, matcher)).toEqual(under(hooks(), event, matcher));
+	});
+
+	// spec: harness-updates/a-consumer-syncs
+	test("a consumer's sync writes no Skill or UserPromptExpansion hook [35]", () => {
+		const after = synced();
+		expect([under(after, "PostToolUse", "Skill"), after.UserPromptExpansion]).toEqual([[], undefined]);
+		expect(JSON.stringify(after)).not.toContain("skill-record.ts");
+	});
+});
 
 describe("the harness's own hook registrations", () => {
 	// spec: harness-updates/a-registration-is-missing-from-the-harness-s-settings

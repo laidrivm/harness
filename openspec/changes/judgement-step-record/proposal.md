@@ -25,7 +25,7 @@ not that it was followed, and the review catches the rest.
   decision `called`, rule the skill's name, the commit `HEAD` names in the
   hook's `cwd`, and that checkout's top level as the project. It writes no
   record when that directory has no `HEAD`, or when a tracked file differs
-  from `HEAD`, the rule the pre-PR runner already follows. It never prints,
+  from `HEAD`, the pre-PR runner's rule for tracked files. It never prints,
   never blocks, and records no argument the skill was given.
 - `ran()` in `bun/gate-ledger.ts` matches a record by its gate (the runner's
   by default) and, when the reader names it, its `rule`, so a step's record

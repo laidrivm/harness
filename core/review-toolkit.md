@@ -159,8 +159,11 @@ user can settle. What it does not see: a pull request that changes code
 outside a task group starts the sequence too. A `/goal` run that reaches its
 round ceiling ends without the refusal, since refusing would only continue
 it. The runner's records prove that the diff budget and the project checks
-ran at that commit; the other steps' gate lines report them, and nothing
-proves they ran.
+ran at that commit; the other steps' gate lines report them. In the
+harness's own sessions a hook records each skill call at the commit its
+directory holds, with no tracked file changed (`gate-ledger`, *Each skill
+call is recorded for the commit its directory holds*): that proves the skill
+was called, not that the step was followed. Elsewhere nothing proves they ran.
 
 Which of the steps below a branch requires is not the agent's call: the
 runner's last line, `PRE-PR steps: <id>, <id>, …`, names them by the skill
