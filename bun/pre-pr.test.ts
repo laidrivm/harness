@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { copyFileSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	cleanup,
@@ -9,61 +9,18 @@ import {
 	lines,
 	repo,
 } from "./diff-budget.fixture.ts";
+import { head, ledger, records, run } from "./pre-pr.fixture.ts";
 import { reported } from "./turn-gate.ts";
 
 /**
- * `pre-pr.ts`, spawned as an agent runs it: the step it runs, the record it
- * leaves in the gate ledger, and when it leaves none. Each case builds its
- * environment from what it needs — `XDG_STATE_HOME` always a directory of its
- * own — and runs in a fabricated repository holding no `.env`, so nothing
- * reaches the user's own ledger. Bracketed numbers are the proposal-stage
+ * `pre-pr.ts`, spawned as an agent runs it: the diff budget it runs, the
+ * records it leaves in the gate ledger, and when it leaves none. The project
+ * checks are `true` here, from the fabricated manifest; the cases about them
+ * are in `pre-pr-checks.test.ts`. Bracketed numbers are the proposal-stage
  * `/zombies` ideas.
  */
 
 afterAll(cleanup);
-
-const runner = join(import.meta.dir, "pre-pr.ts");
-
-type Env = Record<string, string | undefined>;
-
-function run(dir: string, env: Env = {}, args: string[] = [], script = runner) {
-	const state = emptyDir("pre-pr-state-");
-	const call = Bun.spawnSync(["bun", script, ...args], {
-		cwd: dir,
-		env: {
-			PATH: process.env.PATH,
-			HOME: emptyDir("pre-pr-home-"),
-			XDG_STATE_HOME: state,
-			PR_BODY: "",
-			...env,
-		},
-	});
-	return {
-		code: call.exitCode,
-		out: call.stdout.toString(),
-		err: call.stderr.toString(),
-		state,
-	};
-}
-
-const ledger = (state: string) => join(state, "harness", "gates.jsonl");
-function records(state: string): Record<string, unknown>[] {
-	let text = "";
-	try {
-		text = readFileSync(ledger(state), "utf8");
-	} catch {
-		return [];
-	}
-	return text
-		.split("\n")
-		.filter(Boolean)
-		.map((line) => JSON.parse(line));
-}
-
-const head = (dir: string) =>
-	Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: dir })
-		.stdout.toString()
-		.trim();
 
 describe("the step the runner runs", () => {
 	// spec: pre-pr-runner/a-branch-within-budget
@@ -73,8 +30,7 @@ describe("the step the runner runs", () => {
 	});
 
 	// spec: pre-pr-runner/a-branch-within-budget pre-pr-runner/a-branch-over-budget
-	// pre-pr-runner/a-base-it-cannot-resolve pre-pr-runner/a-failing-run
-	// pre-pr-runner/an-unmeasured-run
+	// pre-pr-runner/a-base-it-cannot-resolve pre-pr-runner/an-unmeasured-run
 	test.each([
 		["within budget", lines(3), [], 0, "pass"],
 		["in the WARN band [7]", lines(600), [], 0, "pass"],
@@ -124,16 +80,16 @@ describe("the record of a run", () => {
 		expect(records(run(dir).state)[0]?.decision).toBe("pass");
 	});
 
-	test("the first run creates the ledger with one line [2]", () => {
+	test("the first run creates the ledger with a line per step [2]", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
-		expect(records(run(dir).state)).toHaveLength(1);
+		expect(records(run(dir).state)).toHaveLength(2);
 	});
 
-	test("two runs at one commit leave two records [5]", () => {
+	test("two runs at one commit leave four records [5]", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
 		const { state } = run(dir);
 		run(dir, { XDG_STATE_HOME: state });
-		expect(records(state)).toHaveLength(2);
+		expect(records(state)).toHaveLength(4);
 	});
 
 	test("runs at A, then B, leave records naming each in order [6]", () => {
@@ -142,7 +98,8 @@ describe("the record of a run", () => {
 		const { state } = run(dir);
 		git(dir, "commit", "-q", "--allow-empty", "-m", "b");
 		run(dir, { XDG_STATE_HOME: state });
-		expect(records(state).map((r) => r.commit)).toEqual([a, head(dir)]);
+		const b = head(dir);
+		expect(records(state).map((r) => r.commit)).toEqual([a, a, b, b]);
 	});
 
 	test("a set CLAUDE_CODE_SESSION_ID is the record's session", () => {
@@ -169,21 +126,6 @@ describe("the record of a run", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
 		const result = run(dir, { CLAUDE_CODE_SESSION_ID: "" });
 		expect(records(result.state)[0]?.session).toBeNull();
-	});
-
-	test("the commit is HEAD as the run began, not as it ended [17]", () => {
-		const dir = repo({}, { "a.ts": lines(3) });
-		const before = head(dir);
-		// A copy of the runner beside a step that commits while it runs.
-		const bin = emptyDir("pre-pr-bin-");
-		copyFileSync(runner, join(bin, "pre-pr.ts"));
-		copyFileSync(join(import.meta.dir, "gate-ledger.ts"), join(bin, "gate-ledger.ts"));
-		writeFileSync(
-			join(bin, "diff-budget.sh"),
-			"git -c user.email=t@e -c user.name=T commit -q --allow-empty -m moved\n",
-		);
-		const { state } = run(dir, {}, [], join(bin, "pre-pr.ts"));
-		expect(records(state)[0]?.commit).toBe(before);
 	});
 
 	// spec: pre-pr-runner/an-unwritable-ledger
@@ -228,13 +170,6 @@ describe("when no record is written", () => {
 		writeFileSync(join(dir, "a.ts"), lines(4));
 		const said = run(dir).out.split("\n").filter((l) => l.includes("no run record"));
 		expect([said.length, reported(said.join("\n"))]).toEqual([1, false]);
-	});
-
-	// spec: pre-pr-runner/an-untracked-scratch-file
-	test("an untracked file alone still records [11]", () => {
-		const dir = repo({}, { "a.ts": lines(3) });
-		writeFileSync(join(dir, "scratch.txt"), "notes");
-		expect(records(run(dir).state)).toHaveLength(1);
 	});
 
 	// spec: pre-pr-runner/a-push

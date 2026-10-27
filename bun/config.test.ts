@@ -6,7 +6,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { read } from "./config.ts";
+import { bumpTest, read } from "./config.ts";
 import { stray } from "./repo-layout.ts";
 
 const made: string[] = [];
@@ -39,6 +39,12 @@ describe("reading a value", () => {
 			"bun test",
 		);
 		expect(() => read(consumer({}), "bumpTest")).toThrow("harness.bumpTest");
+	});
+
+	test("the project's test command is returned, and an absent or blank one names the key [26]", () => {
+		expect(bumpTest(consumer({ bumpTest: "bun test" }))).toBe("bun test");
+		for (const harness of [{}, { bumpTest: "" }, { bumpTest: "   " }, { bumpTest: 1 }])
+			expect(() => bumpTest(consumer(harness))).toThrow("harness.bumpTest");
 	});
 
 	test("a manifest with no harness object names the key it lacks", () => {

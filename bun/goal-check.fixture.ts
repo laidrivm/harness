@@ -19,6 +19,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { emptyDir, git, repo } from "./diff-budget.fixture.ts";
+import { RUNNER_STEPS } from "./gate-ledger.ts";
 
 const check = join(import.meta.dir, "goal-check.ts");
 export const CHANGE = "openspec/changes/demo";
@@ -81,28 +82,32 @@ export const prs = (...list: object[]) => ({ answer: JSON.stringify(list), code:
 /** An open pull request whose head is the repository's `HEAD`. */
 const prAt = (dir: string) => prs(pr(head(dir), "OPEN"));
 
-/** Appends ledger lines; a string is written as it stands, a torn line say. */
+/**
+ * Appends ledger lines; a string is written as it stands, a torn line say,
+ * and an array as its lines, so a run's records go in as `runRecord` gives them.
+ */
 export function ledger(state: string, ...lines: (object | string)[]): void {
 	mkdirSync(join(state, "harness"), { recursive: true });
-	for (const line of lines)
+	for (const line of lines.flat())
 		appendFileSync(
 			join(state, "harness", "gates.jsonl"),
 			`${typeof line === "string" ? line : JSON.stringify(line)}\n`,
 		);
 }
 
-/** The runner's record of `commit` in `dir`'s checkout. */
+/** The runner's records of `commit` in `dir`'s checkout, one per step, each ending in `decision`. */
 export const runRecord = (
 	dir: string,
 	decision = "pass",
 	commit = head(dir),
-) => ({
-	gate: "pre-pr",
-	decision,
-	rule: "diff-budget",
-	project: out(dir, "rev-parse", "--show-toplevel"),
-	commit,
-});
+) =>
+	RUNNER_STEPS.map((rule) => ({
+		gate: "pre-pr",
+		decision,
+		rule,
+		project: out(dir, "rev-parse", "--show-toplevel"),
+		commit,
+	}));
 
 /** A state directory whose ledger holds the given lines. */
 export function stateWith(...lines: (object | string)[]): string {

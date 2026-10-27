@@ -14,6 +14,7 @@ import {
 	store,
 	TASKS,
 } from "./turn-gate.fixture.ts";
+import { RUNNER_STEPS } from "./gate-ledger.ts";
 import { decide, mark } from "./turn-gate.ts";
 
 /**
@@ -52,18 +53,21 @@ function ledger(...lines: string[]) {
 	writeFileSync(join(state, "harness", "gates.jsonl"), lines.join(""));
 }
 
-/** One ledger line as the runner writes it. */
+/** A run's ledger lines as the runner writes them, one per step. */
 const run = (commit: string, project: string, extra: object = {}) =>
-	`${JSON.stringify({
-		at: "2026-10-13T00:00:00.000Z",
-		gate: "pre-pr",
-		decision: "pass",
-		rule: "diff-budget",
-		project,
-		session: null,
-		commit,
-		...extra,
-	})}\n`;
+	RUNNER_STEPS.map(
+		(rule) =>
+			`${JSON.stringify({
+				at: "2026-10-13T00:00:00.000Z",
+				gate: "pre-pr",
+				decision: "pass",
+				rule,
+				project,
+				session: null,
+				commit,
+				...extra,
+			})}\n`,
+	).join("");
 
 const real = (dir: string) => realpathSync(dir);
 
