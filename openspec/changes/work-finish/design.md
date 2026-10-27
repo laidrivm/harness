@@ -97,12 +97,10 @@ step, so group 1 drops task 1.1 and `unproven()` reuses it.
 
 ### The pre-push draft check
 
-`bun/push-draft.ts`, the hook's first check: `bun bun/push-draft.ts "$@"`.
-Its name keeps the hook's text free of `pre-pr`. It runs right after the
-`unset $(git rev-parse --local-env-vars)` that `strip-inherited-git-env`
-(#320) put first after this design was written, and before `bun test`: the
-check spawns no git, but the `gh` it starts would otherwise inherit git's
-repository variables, and the unset is no check that could refuse first. It reads the records on
+`bun/push-draft.ts`, the hook's first command after the `unset` line that
+`strip-inherited-git-env` put first (`commit-gates`, *The pre-push hook drops
+git's repository variables*): `bun bun/push-draft.ts "$@"`.
+Its name keeps the hook's text free of `pre-pr`. It reads the records on
 standard input, `<local ref> <local sha> <remote ref> <remote sha>`, and
 keeps each record whose remote ref is `refs/heads/<branch>`, taking the
 branch from that remote ref, never the local one — `git push origin
@@ -111,11 +109,13 @@ a deletion lands nothing for review. A push to a tag is no branch update. The re
 URL, `$2`, through `remoteRepository()`, and only on the host `github.com`;
 any other remote, a fixture's local path among them, passes unread.
 `readPullRequests()` takes that repository as a parameter, defaulting to
-`originRepository()`, so the hook makes no git call: inside a hook git's own
+`originRepository()`, so `push-draft.ts` makes no git call: inside a hook git's own
 environment is set, and from a worktree its `GIT_DIR` names that worktree's
 directory under the shared `.git`.
 
-The host is read by `remoteHost()` beside `remoteRepository()`, from the
+It runs after the `unset`, not before it: it spawns no git, but the `gh` it
+starts would otherwise inherit git's repository variables, and dropping
+them is no check that could refuse first. The host is read by `remoteHost()` beside `remoteRepository()`, from the
 same two URL forms, and `ssh.github.com` (GitHub's SSH over port 443)
 counts as `github.com`. An `~/.ssh/config` alias for the host passes unread,
 and so does a fork's pull request into another repository, which

@@ -40,7 +40,7 @@ for (const line of (await Bun.stdin.text()).split("\n")) {
 	if (ready)
 		refuse(
 			"ready",
-			`#${ready.number} on ${branch} is not a draft, so a push into it is refused; run \`gh pr ready ${ready.number} --undo\` first, then push`,
+			`#${ready.number} on ${branch} is not a draft, so a push into it is refused; run \`gh pr ready ${ready.number} --undo -R ${repo.owner}/${repo.repo}\` first, then push`,
 			sha,
 		);
 }

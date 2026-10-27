@@ -99,7 +99,8 @@ describe("what the check decides", () => {
 	// spec: commit-gates/a-push-into-a-ready-pull-request gate-ledger/a-push-into-a-ready-pull-request
 	test("an open pull request that is not a draft refuses, naming its undo, with one record of the pushed sha", () => {
 		const run = push({ stdin: update("refs/heads/feat/x"), answers: { "feat/x": pull(7, false) } });
-		expect(run).toMatchObject({ code: 1, err: expect.stringContaining("gh pr ready 7 --undo") });
+		// Qualified: `gh` alone would act on the checkout's repository, not the one pushed to.
+		expect(run).toMatchObject({ code: 1, err: expect.stringContaining("gh pr ready 7 --undo -R o/r") });
 		expect(run.ledger).toEqual([{ gate: "push-draft", decision: "block", rule: "ready", commit: SHA }]);
 	});
 
