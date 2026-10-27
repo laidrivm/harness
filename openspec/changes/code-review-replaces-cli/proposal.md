@@ -19,12 +19,16 @@ because, since #320, a subagent works in its own worktree, where
 - Step 5 of the pre-PR sequence, and the one pass a documentation branch
   gets, run `/code-review high` instead of `/coderabbit-local`, under the
   same conditions: only while no pull request is open on the branch, a draft
-  counting as open, and a state the read could not get running it.
+  counting as open, and a state the read could not get running it. It reads
+  the diff against the base the runner measured from, and a review naming a
+  file that diff does not change counts as one that did not return.
 - The disposal policy `/coderabbit-local` had moves to `/code-review`
   unchanged: a verified finding is applied without asking, dismissing a
   Major or above goes to the user, at most three reviews, Minor findings
-  reported once. The session writes the `CODE-REVIEW gate:` line itself,
-  since the built-in skill prints none.
+  reported once. `/code-review` names no severity, so each finding counts
+  as 🟠 Major unless the user settles otherwise (card, question 4). The
+  session writes the `CODE-REVIEW gate:` line itself, since the built-in
+  skill prints none.
 - The measurement of `/code-review` beside the CLI ends: no fresh-subagent
   run at the CLI's first commit, no `## Review measurement` section, no tally
   card.
@@ -54,12 +58,15 @@ None.
   naming `/code-review high` as the local review and trading the scenario *The
   CLI is unavailable* for *The review does not return*, which a `MODIFIED`
   block cannot do; *Claude's review is measured beside the CLI before it may
-  replace it* is removed.
+  replace it* is removed; *The local review passes the guidelines the PR bot
+  reads* becomes *The CLI review passes the guidelines the PR bot reads*,
+  since `/code-review` passes no `--config`.
 - `pre-pr-runner`: *The runner names the steps the branch requires from its
   diff* and *An open pull request requires the project checks alone* name
   `code-review` for `coderabbit-local`.
-- `agent-autonomy`: the scenarios of *Every step names its unattended mode*
-  that name `/coderabbit-local` name the local review.
+- `agent-autonomy`: the three scenarios of *Three classes say what an
+  unattended session does at a step that names the user* that name
+  `/coderabbit-local` name `/code-review`.
 
 ## Impact
 
