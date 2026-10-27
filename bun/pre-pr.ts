@@ -26,8 +26,9 @@ import { RUNNER_STEPS, record } from "./gate-ledger.ts";
 const git = (...args: string[]) =>
 	Bun.spawnSync(["git", ...args]).stdout.toString().trimEnd();
 // A status git cannot read is never a clean tree: the failure stands in for its lines.
+// The flag overrides `status.showUntrackedFiles`, which can hide the untracked files a step reads.
 const status = () => {
-	const run = Bun.spawnSync(["git", "status", "--porcelain"]);
+	const run = Bun.spawnSync(["git", "status", "--porcelain", "--untracked-files=normal"]);
 	return run.exitCode === 0 ? run.stdout.toString().trimEnd() : "git status failed";
 };
 const top = git("rev-parse", "--show-toplevel") || process.cwd();

@@ -219,7 +219,7 @@ async function resume(clone: string, app: App, run: Run, id: string, ask: (log: 
 	if (!ready || head !== run.head_sha) return done(["failed", `${clone} could not be brought to ${branch} at ${run.head_sha}`]);
 	if (!logged(app, run, log)) return done(["failed", `the failed logs of run ${run.id} could not be read`]);
 	const outcome = await answered(clone, ask(log), as, ["-r", id]);
-	if (git(clone, "status", "--porcelain") !== "")
+	if (git(clone, "status", "--porcelain", "--untracked-files=normal") !== "")
 		return [["failed", `the session left ${clone} with uncommitted changes; nothing pushed, the clone left as it is`], outcome === "blocked"];
 	if (!outcome) return done(["failed", "the session gave no answer that matches the schema; nothing pushed"]);
 	if (outcome !== "fixed" || !fixing) return done(["handled", `the session answered ${outcome}, nothing pushed`], outcome === "blocked");
@@ -242,11 +242,11 @@ async function resume(clone: string, app: App, run: Run, id: string, ask: (log: 
  */
 async function fresh(clone: string, app: App, run: Run, said: string, ask: (log: string) => string): Promise<Outcome> {
 	const as = await identity(app);
-	const [head, tree] = [git(clone, "rev-parse", "HEAD"), git(clone, "status", "--porcelain")];
+	const [head, tree] = [git(clone, "rev-parse", "HEAD"), git(clone, "status", "--porcelain", "--untracked-files=normal")];
 	const log = logOf(run);
 	if (!logged(app, run, log)) return ["failed", `${said}; the failed logs of run ${run.id} could not be read`];
 	const outcome = await answered(clone, ask(log), as, ["--session-id", randomUUID()]);
-	if (git(clone, "rev-parse", "HEAD") !== head || git(clone, "status", "--porcelain") !== tree)
+	if (git(clone, "rev-parse", "HEAD") !== head || git(clone, "status", "--porcelain", "--untracked-files=normal") !== tree)
 		return ["failed", `${said}; the session changed ${clone}, which is left as it is`];
 	rmSync(log, { force: true });
 	if (!outcome) return ["failed", `${said}; the session gave no answer that matches the schema`];

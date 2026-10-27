@@ -78,7 +78,7 @@ SHALL NOT count as another's.
 #### Scenario: A diff-budget record among skill records
 
 - **WHEN** the ledger holds `zombies` and `triage` skill records and a passing
-  `diff-budget` runner record, all for commit `C` in this checkout
+  runner record of every runner step, all for commit `C` in this checkout
 - **THEN** the goal check finds the passing run record for `C`
 
 #### Scenario: Another skill's record
