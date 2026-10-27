@@ -40,11 +40,13 @@ const ARTEFACTS = ["proposal.md", "design.md", "tasks.md"];
  */
 const ARCHIVED = /^\d{4}-\d{2}-\d{2}-(.+)$/;
 
+// Sorted: readdir's order is the filesystem's (hashed on Linux's ext4), and the pick prompt lists changes in it.
 const subdirs = (path: string): string[] =>
 	lstatSync(path, { throwIfNoEntry: false })?.isDirectory()
 		? readdirSync(path, { withFileTypes: true })
 				.filter((entry) => entry.isDirectory())
 				.map((entry) => entry.name)
+				.sort()
 		: [];
 
 const isFile = (path: string) =>
