@@ -3,5 +3,9 @@
 # package has no lifecycle scripts, so no install can register it. The diff
 # budget is soft here and hard in CI, as `change-slicing` requires.
 set -euo pipefail
+# Git hands a hook run from a worktree an absolute GIT_DIR; a fixture would
+# then write into the shared .git. If this read fails, the suite's preload
+# (bunfig.toml) sees the variables and refuses.
+unset $(git rev-parse --local-env-vars)
 bun test
 bash bun/diff-budget.sh || true
