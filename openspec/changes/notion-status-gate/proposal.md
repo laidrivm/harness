@@ -12,8 +12,8 @@ settled the two open choices on the card on 2026-10-27: the evidence is the
 tree on `origin/main` (answer 1 в), and a hook refuses the connector's own
 `Status` write in the harness's sessions (answer 2 а).
 
-**Deviation from the stage's letter.** *Потом* 6 and the card's title say
-"by goal-check's verdict". This change runs no goal check: `bun/goal-check.ts`
+**Deviation from the stage's letter.** *Потом* 6, question 30's revision of
+2026-10-26 and the card's title say "by goal-check's verdict". This change runs no goal check: `bun/goal-check.ts`
 judges one checkout's `HEAD` from the ledger records of that checkout, and the
 statuses that need evidence mean *merged*, which no worktree's `HEAD` answers.
 The evidence is what `origin/main` holds after a fetch, read through
@@ -84,5 +84,5 @@ whoever does the work, and the command is the hand.
 - Notion: the ask integration (khepri-local) needs *Update content*, which the
   user grants (card assumption 7); one page read, at most one data source
   query and one page write per call.
-- Git: one `git fetch origin main` and one `git archive` of
+- Git: one `git fetch` of `origin`'s `main` and one `git archive` of
   `openspec/changes` per call that needs evidence.
