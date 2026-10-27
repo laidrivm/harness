@@ -187,7 +187,7 @@ way to mark a pull request ready.
 - [Sub-agents move to worktrees (card `40539875c31b8147818fcdcc791611f2`)]
   → `finish` reads everything from its working directory; a push from a
   worktree is safe once that card's change, `strip-inherited-git-env`, has
-  merged.
+  merged, on a branch cut after the merge.
 
 ## Migration Plan
 

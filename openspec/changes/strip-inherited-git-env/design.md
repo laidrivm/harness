@@ -28,8 +28,10 @@ proposal measured, on git 2.47.0 and bun 1.4.2:
   `unset`'s arguments: `unset $(false)` continues (probed).
 - A Claude Code Bash call carries `GIT_EDITOR` (observed in this session);
   `bun/github-app.ts` sets `GIT_AUTHOR_*`, `GIT_COMMITTER_*` and
-  `GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` for the runner. None of those is on
-  git's list.
+  `GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` for the runner, none of them on
+  git's list, and `GIT_CONFIG_COUNT`, which is (found at apply): the
+  runner's own fetch, `gh` and push carry it, the hook a push runs drops it,
+  and the sessions' allowlist never passes it on.
 - The harness has no `bunfig.toml` today. `bun/sync-settings.ts` writes only
   the `[install]` table of a consumer's own `bunfig.toml`, and a
   `bunfig.toml` under `node_modules/harness/` is never read. The runner
