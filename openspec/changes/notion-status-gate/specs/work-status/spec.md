@@ -16,15 +16,10 @@ eleven statuses task-board defines. Any other option, a positional argument,
 a missing value, a malformed id or another `--to` SHALL print the usage and
 exit 2 before any git or Notion call.
 
-#### Scenario: No target
-
-- **WHEN** `status` runs with `--card <id>` alone
-- **THEN** it prints the usage, exits 2, and calls nothing
-
 #### Scenario: A status the board does not have
 
-- **WHEN** `status` runs with `--to merged`
-- **THEN** it prints the usage and exits 2
+- **WHEN** `status` runs with `--to merged`, or without `--to`
+- **THEN** it prints the usage, exits 2, and calls nothing
 
 ### Requirement: The user's statuses are refused
 
@@ -64,13 +59,8 @@ NOT be counted: a proven move records work already done.
 
 - **WHEN** the card reads `approved`, five cards of its board are at
   `exploring` … `archiving`, and `HARNESS_WIP_LIMIT` is unset
-- **THEN** `status --to exploring` refuses naming the limit and writes nothing
-
-#### Scenario: Room under the limit
-
-- **WHEN** the card reads `approved` and four cards of its board are in the
-  range
-- **THEN** `status --to exploring` writes the status
+- **THEN** `status --to exploring` refuses naming the limit and writes
+  nothing, where four cards would let it write
 
 #### Scenario: A move within the range
 
