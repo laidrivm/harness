@@ -33,40 +33,29 @@ question 23). The card's answer 1 в chose this knowingly.
   - an entry into `exploring` … `archiving` from outside them, unless
     `origin/main` proves it, while the card's own board already holds
     `HARNESS_WIP_LIMIT` cards there (unset: 5; not a whole number: refused);
-  - `proposed`, `applied` or `done` without evidence on `origin/main`, fetched
-    first and never the local tree: `proposed` when the tree derives
-    `proposed` or `done` for the card's change, `done` when it derives `done`,
-    `applied` when it derives `done`, or `proposed` with every task group of
-    `tasks.md` ticked. The change is the one the card's `Pointer` names, wholly
-    `openspec/changes/<slug>/` or `openspec/changes/archive/<date>-<slug>/`,
-    or either behind this repository's own name, and present on
-    `origin/main`;
+  - `proposed`, `applied` or `done` that `origin/main`, fetched first and
+    never the local tree, does not prove for the change the card's `Pointer`
+    names wholly — `applied` needing every task group of `tasks.md` ticked;
   - any read that fails — the fetch, the tree, the card, the board's query.
-- A `PreToolUse` hook on the connector's `notion-update-page` refuses any call
-  whose `properties` carry `Status`, naming the command. It is registered in
-  the harness's own `.claude/settings.json` alone, never in the set
-  `sync-settings` writes into a consumer (stage 2, question 28 a″), as
-  `work-finish`'s ready guard is.
-- `core/feature-workflow.md` names the command where it says the eight
-  statuses are moved by hand, and the README says the ask integration needs
-  *Update content*.
+- A `PreToolUse` hook refuses a connector `notion-update-page` call whose
+  `properties` carry `Status`, naming the command, registered in the
+  harness's own settings alone (stage 2, question 28 a″), as `work-finish`'s
+  ready guard is.
+- `core/feature-workflow.md` and the README name the command, and the ask
+  integration's *Update content*.
 
-Not in this change, each by roadmap clarification 11 (protection only where a
-failure showed the threat): the order of the statuses — `approved` to
-`archiving` passes when the WIP limit has room, and a scenario pins it; the
-card's board against the board the tree decides — a card on another board
-whose `Pointer` names a slug this tree also holds is proven by it, as a wrong
-`--card` is in `work-finish`; the connector's other writes (`notion-create-pages`
-with a `Status`, `Assign`, the body), and a write handed to another tool. Also
-not here: the card text validator (card `3f639875c31b812fa7e6e5358fe596bb`), a
-later change of its own; moving `Assign` into the bot; the VPS bot's settings
-(roadmap stage 5, question 20); the board loop's pick write, which stage 7
-removes.
+Not in this change, by roadmap clarification 11 (protection only where a
+failure showed the threat): the order of the statuses, which a scenario pins
+as unchecked; the card's board against the tree's, as a wrong `--card` in
+`work-finish`; the connector's other writes (`notion-create-pages`,
+`Assign`, the body). Also not here: the card text validator (card
+`3f639875c31b812fa7e6e5358fe596bb`), a later change; `Assign` in the bot; the
+VPS bot's settings (stage 5, question 20); the board loop's pick write, which
+stage 7 removes.
 
 Order: this change applies after `work-finish` group 2, which adds `finish`
-to the same `bun/work.ts` dispatcher and the first harness-only hook
-registration to `.claude/settings.json`; it is kept in this prose rather than
-`after:`, since `work-finish` is not archived.
+to `bun/work.ts` and the first harness-only hook registration; kept in prose,
+not `after:`, since `work-finish` is not archived.
 
 ## Capabilities
 
