@@ -63,8 +63,9 @@ limit, gets no review on its own — stop waiting on it and report it.
   the read could not get runs it too, and the report says the state was
   unread, since a skipped review is the costlier mistake. A review that does
   not return — a usage limit, an error, a refused call — or whose findings
-  name no file the branch's diff changes (the paths `git diff --name-only
-  --no-renames <base>...HEAD` lists, as the runner's step list reads them),
+  name no file the branch's diff changes (the paths `changedPaths(<base>)` in
+  the runner's `bun/pre-pr-steps.ts` reads: `git diff --name-only -z
+  --no-renames --no-relative <base>...HEAD`),
   having read another diff or another tree, is
   reported and the push goes on without the gate rather than blocking the
   branch. One finding on an unchanged file beside findings on changed ones —
@@ -105,8 +106,9 @@ limit, gets no review on its own — stop waiting on it and report it.
   do not poll the checks, do not sleep on a timer, do not re-run `gh` to see
   whether the bot has posted. Once the review has landed, dispose of the
   findings on `/code-review`'s finding-disposal terms alone — not its base,
-  its changed-file check or its `CODE-REVIEW` gate line, which are the local
-  review's: any verified finding
+  its changed-file check, its grading or its `CODE-REVIEW` gate line, which
+  are the local review's, since CodeRabbit grades its own findings and a
+  Major it raised stays a Major: any verified finding
   applied without asking, a Major or Critical dismissal put to the user
   (unattended: card — hand it on with what the bot missed), Minor read and
   then fixed or skipped with its reason, overriding the skill's "No fixes
