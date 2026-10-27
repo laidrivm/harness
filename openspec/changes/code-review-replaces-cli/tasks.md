@@ -83,7 +83,7 @@
 
 ## 3. Verify
 
-- [ ] 3.1 `openspec validate code-review-replaces-cli --strict`, `bun test
+- [x] 3.1 `openspec validate code-review-replaces-cli --strict`, `bun test
       bun/board-state-hygiene.test.ts bun/spec-coverage-sweep.test.ts
       bun/spec-coverage-floor.test.ts`, then the pre-PR sequence with
       `/code-review high` as its step 5 in the form 2.1 recorded; read one

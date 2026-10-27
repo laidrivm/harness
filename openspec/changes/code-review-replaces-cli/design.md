@@ -55,7 +55,12 @@ and which the session that writes it owns.
    name passed as an argument is the target to review, so a bare ref reads
    as either, and on a model's reading (the branch's second review, a 🟠
    Major). The doc names the range, `/code-review high <base>...HEAD`,
-   which reads one way.
+   which reads one way. The branch's third review ran in that form, as
+   `/code-review high origin/main...HEAD` from the worktree at c0a494e: it
+   ran `git diff origin/main...HEAD`, reported "8 issues on
+   `origin/main...HEAD`", and named findings on `README.md` and
+   `core/review-toolkit.md`, both of which `changedPaths("origin/main")`
+   lists.
    A clone's path as the tree was not probed — since #320 a session works
    in its own worktree, where the review's directory is the branch's — so
    the doc names no form for it, and a session in a clone outside its

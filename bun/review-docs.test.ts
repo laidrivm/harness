@@ -121,7 +121,8 @@ describe("the /coderabbit bullet", () => {
 	test("shares /code-review's finding-disposal terms alone, keeping its pull-request behaviour", () => {
 		const text = bullet(read("core/review-toolkit.md"), CODERABBIT) ?? "";
 		expect(text).toContain("on `/code-review`'s finding-disposal terms alone");
-		expect(text).toContain("not its base, its changed-file check or its `CODE-REVIEW` gate line");
+		expect(text).toContain("not its base, its changed-file check, its grading or its `CODE-REVIEW` gate line");
+		expect(text).toContain("CodeRabbit grades its own findings and a Major it raised stays a Major");
 		expect(text).toContain("Once a PR is open, say so and stop");
 		expect(text).not.toContain("/coderabbit-local");
 	});
@@ -197,9 +198,11 @@ describe("the /code-review bullet is the local review", () => {
 		expect(bullet(toolkit(), LOCAL) ?? "").toContain(BASE_FORM);
 	});
 
-	test("names no argument that posts or applies findings", () => {
-		const text = bullet(toolkit(), LOCAL) ?? "";
-		for (const flag of ["--comment", "--fix", "--post", "ultra"]) expect(text).not.toContain(flag);
+	test("names no argument that posts or applies findings, in the bullet, step 5 or the documentation path", () => {
+		for (const text of [bullet(toolkit(), LOCAL), block(toolkit(), STEP_5), block(toolkit(), DOCS_PATH)]) {
+			expect(text).toContain("`/code-review high");
+			for (const flag of ["--comment", "--fix", "--post", "ultra"]) expect(text).not.toContain(flag);
+		}
 	});
 
 	// spec: local-review-loop/a-finding-the-review-gives-no-severity
