@@ -84,11 +84,12 @@ entry, a hook or a CI check leaves this file the way it would leave
   the switch to ready, so ready before the push would review the old head and
   then the new one; ending without one, it marks it ready as soon as it knows
   no push will come. The pre-push hook refuses a push into an open pull
-  request that is not a draft, the user's own push too — run `gh pr ready
-  <n> --undo` first — and a push to GitHub whose pull requests it cannot
-  read. A question to the user on the card keeps it draft regardless, and the CI flow (`bun/ci-run.ts`) holds its pull request the
-  same way, keeping it draft when its session answers `blocked`. Batch every fix
-  into that one final push, and push without waiting for CI. A check that
+  request of the same repository that is not a draft (one from a fork is
+  not read), the user's own push too — run `gh pr ready <n> --undo` first —
+  and a push to GitHub whose pull requests it cannot read. A question to
+  the user on the card keeps it draft regardless, and the CI flow
+  (`bun/ci-run.ts`) holds its pull request the same way, keeping it draft
+  when its session answers `blocked`. Batch every fix into that one final push, and push without waiting for CI. A check that
   then fails is fixed on the same PR in the next push, which also carries the
   fixes for any CodeRabbit findings already posted — the CI flow does not
   wait for the review; the PR is mergeable only once CI is green and

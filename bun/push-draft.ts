@@ -1,7 +1,8 @@
 /**
  * The pre-push hook's draft check, `bun bun/push-draft.ts "$@"`: refuses a
  * push that updates a branch on github.com while that branch has an open pull
- * request that is not a draft, and one whose pull requests cannot be read —
+ * request of the same repository that is not a draft — `readPullRequests()`
+ * leaves a fork's out — and one whose pull requests cannot be read —
  * an unread state is never a draft. The branch comes from each ref-update
  * record's remote ref, never the local one: `git push origin feat/x:release`
  * updates `release`. A deletion, a tag and any other host pass unread, and no
