@@ -53,6 +53,10 @@ describe("the last line", () => {
 		expect([line, reported(line)]).toEqual([CODE, false]);
 	});
 
+	test("it opens a line of its own after checks whose output ends with no newline", () => {
+		expect(steps(repo({ "package.json": checks("printf done") }, { "a.ts": lines(3) }))).toBe(CODE);
+	});
+
 	test("the exit status is the one the steps alone give [18]", () => {
 		expect(run(code()).code).toBe(0);
 		expect(run(repo({ "package.json": checks("false") }, { "a.ts": lines(3) })).code).toBe(1);
