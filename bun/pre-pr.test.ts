@@ -178,8 +178,8 @@ describe("when no record is written", () => {
 		const commands = readFileSync(join(import.meta.dir, "..", ".githooks/pre-push"), "utf8")
 			.split("\n")
 			.filter((line) => line.trim() && !line.startsWith("#"));
-		const at = (command: string) => commands.indexOf(command);
-		expect([at("unset $(git rev-parse --local-env-vars)"), at('bun bun/push-draft.ts "$@"'), at("bun test")]).toEqual([1, 2, 3]);
+		const [unset, draft, suite] = ["unset $(git rev-parse --local-env-vars)", 'bun bun/push-draft.ts "$@"', "bun test"].map((c) => commands.indexOf(c));
+		expect([unset >= 0, unset < draft, draft < suite]).toEqual([true, true, true]);
 	});
 
 	// spec: pre-pr-runner/a-push

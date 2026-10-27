@@ -8,14 +8,12 @@
  * git is spawned: inside a hook git's own environment is set.
  */
 import { record } from "./gate-ledger.ts";
-import { readPullRequests, readyOne, remoteRepository } from "./pull-requests.ts";
-
-/** The host of a URL or of git's scp form `user@host:path`; a local path has none. */
-const host = (url: string) =>
-	/^[a-z][a-z\d+.-]*:\/\/(?:[^@/]*@)?([^/:]*)/i.exec(url)?.[1] ?? /^(?:[^@/:]*@)?([^/:]+):/.exec(url)?.[1];
+import { readPullRequests, readyOne, remoteHost, remoteRepository } from "./pull-requests.ts";
 
 const url = process.argv[3] ?? "";
-const repo = host(url)?.toLowerCase() === "github.com" ? remoteRepository(url) : undefined;
+// `ssh.github.com` is GitHub's SSH over port 443.
+// shortcut: an `~/.ssh/config` alias for github.com passes unread; resolve it with `ssh -G <host>` if one is seen.
+const repo = ["github.com", "ssh.github.com"].includes(remoteHost(url) ?? "") ? remoteRepository(url) : undefined;
 
 /** Writes the reason, records it with the sha the push would land, and stops the push. */
 function refuse(id: string, reason: string, sha: string): never {
@@ -25,13 +23,19 @@ function refuse(id: string, reason: string, sha: string): never {
 }
 
 // Each record: <local ref> <local sha> <remote ref> <remote sha>. Empty when there is nothing to push.
+// shortcut: one read per record, in turn; list the open pull requests once if `git push --all` grows slow.
 for (const line of (await Bun.stdin.text()).split("\n")) {
 	const [, sha = "", ref = ""] = line.split(" ");
 	const branch = ref.startsWith("refs/heads/") ? ref.slice("refs/heads/".length) : "";
 	// An all-zero local sha is a deletion, which lands nothing for review.
 	if (!repo || !branch || /^0+$/.test(sha)) continue;
 	const pulls = readPullRequests(branch, repo);
-	if (!pulls) refuse("unread", `cannot read ${repo.owner}/${repo.repo}'s pull requests for ${branch}; check \`gh auth status\``, sha);
+	if (!pulls)
+		refuse(
+			"unread",
+			`cannot read ${repo.owner}/${repo.repo}'s pull requests for ${branch} — gh missing, not logged in, timed out or answering no list; check \`gh auth status\``,
+			sha,
+		);
 	const ready = readyOne(pulls);
 	if (ready)
 		refuse(

@@ -16,13 +16,23 @@ export function limit(): number {
 	return /^[1-9]\d*$/.test(env) ? Number(env) : 30_000;
 }
 
+/** A remote URL's authority and path, in the URL form or git's scp form `user@host:path`; a local path has neither. */
+const URL_FORM = /^[a-z][a-z\d+.-]*:\/\/([^/]*)(\/.*)$/i;
+const SCP_FORM = /^([^/:]+):(.*)$/;
+
+/** A remote URL's host, lower-cased, without user or port, or undefined for a local path. */
+export function remoteHost(url: string) {
+	const authority = URL_FORM.exec(url)?.[1] ?? SCP_FORM.exec(url)?.[1];
+	return authority?.replace(/^.*@/, "").replace(/:\d*$/, "").toLowerCase();
+}
+
 /**
  * The owner and name a remote URL's last two path segments give, on any host,
  * or undefined when it has no two segments of GitHub's name characters. The
  * scp form `user@host:o/r` counts its colon as a separator.
  */
 export function remoteRepository(url: string) {
-	const path = /^[a-z][a-z\d+.-]*:\/\/[^/]*(\/.*)$/i.exec(url)?.[1] ?? /^[^/:]+:(.*)$/.exec(url)?.[1] ?? url;
+	const path = URL_FORM.exec(url)?.[2] ?? SCP_FORM.exec(url)?.[2] ?? url;
 	const parts = path.replace(/\/+$/, "").replace(/\.git$/, "").split("/");
 	const [owner, repo] = parts.slice(-2);
 	// A segment of dots alone would move the API call's path out of the repository's, or name none.

@@ -84,6 +84,7 @@ describe("what the check reads", () => {
 		["scp", "git@github.com:o/r"],
 		["https with a user", "https://u@github.com/o/r"],
 		["upper-case", "HTTPS://GitHub.com/o/r"],
+		["ssh over port 443", "ssh://git@ssh.github.com:443/o/r.git"],
 	])("the %s form of a github.com URL is read", (_, url) => {
 		expect(push({ stdin: update("refs/heads/feat/x"), url })).toMatchObject({ code: 0, calls: [query("feat/x")] });
 	});

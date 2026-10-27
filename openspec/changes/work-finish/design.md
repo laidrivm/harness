@@ -115,6 +115,13 @@ any other remote, a fixture's local path among them, passes unread.
 environment is set, and from a worktree its `GIT_DIR` names that worktree's
 directory under the shared `.git`.
 
+The host is read by `remoteHost()` beside `remoteRepository()`, from the
+same two URL forms, and `ssh.github.com` (GitHub's SSH over port 443)
+counts as `github.com`. An `~/.ssh/config` alias for the host passes unread,
+and so does a fork's pull request into another repository, which
+`readPullRequests()` leaves out — the harness pushes to `origin`'s own
+repository (review on `feat/work-finish-1`).
+
 A read that fails refuses, naming `gh auth status` — stage 2 says an error
 closes the write, and an unread state is never a draft. Question 26 asked
 for the check here only if `isDraft` is cheap: one REST read took 0.67 s on
