@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, gate, lines, repo } from "./diff-budget.fixture.ts";
 import { RUNNER_STEPS } from "./gate-ledger.ts";
@@ -138,6 +138,24 @@ describe("a tree the commit does not hold", () => {
 		expect(result.out).toContain("DIFF gate:");
 		expect(result.out).toContain("the checks ran");
 		expect(result.out).toMatch(/no run record[^\n]*\n\?\? scratch\.txt\n/);
+	});
+
+	// spec: pre-pr-runner/an-untracked-scratch-file
+	test("an untracked file still records nothing where git is set to hide untracked files", () => {
+		const dir = within("true");
+		Bun.spawnSync(["git", "config", "status.showUntrackedFiles", "no"], { cwd: dir });
+		writeFileSync(join(dir, "scratch.txt"), "notes");
+		const result = run(dir);
+		expect([records(result.state), result.out]).toEqual([[], expect.stringContaining("?? scratch.txt\n")]);
+	});
+
+	// spec: pre-pr-runner/an-untracked-scratch-file
+	test("an untracked file in a new directory is named itself, not its directory", () => {
+		const dir = within("true");
+		mkdirSync(join(dir, "scratch"));
+		writeFileSync(join(dir, "scratch", "result.txt"), "notes");
+		const result = run(dir);
+		expect([records(result.state), result.out]).toEqual([[], expect.stringContaining("?? scratch/result.txt\n")]);
 	});
 
 	// spec: pre-pr-runner/an-uncommitted-edit
