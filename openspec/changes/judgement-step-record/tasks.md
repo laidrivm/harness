@@ -9,13 +9,14 @@ a run under a hook with an inherited `GIT_DIR` reads the scratch repository
 (slice item 0 makes that general; until then each new test does it itself).
 `wc -l` every file before adding to it, and split by the 300-line cap first.
 
-Group 1 is one pull request, `feat/judgement-step-record`. Group 2 is ticked
+Group 1 is one pull request, `feat/judgement-step-record-1` (two groups, so
+the board loop's step branch, `consider()` in `bun/board-loop-takeable.ts`). Group 2 is ticked
 in the self-pin bump pull request that moves the pin past group 1's merge
 (design.md, *Migration Plan*).
 
 ## 1. The hook, `ran()` by gate and rule, and the registration
 
-- [ ] 1.1 Write `bun/skill-record.test.ts`, spawning `bun/skill-record.ts`
+- [x] 1.1 Write `bun/skill-record.test.ts`, spawning `bun/skill-record.ts`
       with an event on stdin, in a scratch repository with one commit and a
       `git worktree add` of it at a second commit, `CLAUDE_PROJECT_DIR` set to
       the main checkout:
@@ -47,7 +48,7 @@ in the self-pin bump pull request that moves the pin past group 1's merge
       Record that they fail. (Req: gate-ledger — *Each skill call is recorded
       for the commit its directory holds*, all its scenarios; *A record holds
       no command text*)
-- [ ] 1.2 Write `bun/gate-ledger-ran.test.ts` against `ran()`'s `ledger`
+- [x] 1.2 Write `bun/gate-ledger-ran.test.ts` against `ran()`'s `ledger`
       argument: a `zombies` skill record at the commit is no runner record,
       with or without the rule `diff-budget` asked [25]; a passing
       `diff-budget` runner record is found among `zombies` and `triage` skill
@@ -58,11 +59,13 @@ in the self-pin bump pull request that moves the pin past group 1's merge
       [29]; a `pre-pr` record with no `rule` is no `diff-budget` record when
       that rule is asked [31]. In `bun/turn-gate-record.test.ts`, a `zombies`
       skill record for the tip leaves a turn with gate lines refused [25];
-      in `bun/goal-check.test.ts`, a `zombies` skill record for `HEAD`
-      without a `diff-budget` one leaves the goal open [26]. Record that they
+      a `zombies` skill record for `HEAD` without a `diff-budget` one leaves
+      the goal open [26] (in `bun/gate-ledger-ran.test.ts` through the goal
+      check's fixture, as `bun/gate-ledger-rule.test.ts` does, since
+      `bun/goal-check.test.ts` is at 289 of its 300 lines). Record that they
       fail. (Req: gate-ledger — *A reader counts a record only for its own
       gate and step*, all its scenarios)
-- [ ] 1.3 First check whether `work-finish` (#308) or slice item 1 has merged
+- [x] 1.3 First check whether `work-finish` (#308) or slice item 1 has merged
       `ran()`'s `rule` filter: if so, keep its signature and add only the
       gate, defaulting to `pre-pr`; otherwise change `ran()` in
       `bun/gate-ledger.ts` to `ran(commit, top, {gate = "pre-pr", rule,
@@ -75,14 +78,14 @@ in the self-pin bump pull request that moves the pin past group 1's merge
       `bun/ci-run.test.ts` writes. Update design.md D1 in the same commit if
       the merged signature differs from it. Make 1.2 pass; run `bun test
       bun/gate-ledger bun/turn-gate bun/goal-check bun/ci-run bun/pre-pr`.
-- [ ] 1.4 Write `bun/skill-record.ts` per design.md D2–D4: read stdin, take
+- [x] 1.4 Write `bun/skill-record.ts` per design.md D2–D4: read stdin, take
       the name from `tool_input.skill`, or from `command_name` when
       `expansion_type` is `slash_command`, delete
       `CLAUDE_PROJECT_DIR`, read `HEAD`, the top level and
       `git status --porcelain --untracked-files=no` in the event's `cwd`,
       and call `record("skill", "called", name, {session_id, cwd: top},
       head)`; print nothing, exit 0 on every path. Make 1.1 pass.
-- [ ] 1.5 In `bun/self-pin.test.ts`, write first and record that they fail:
+- [x] 1.5 In `bun/self-pin.test.ts`, write first and record that they fail:
       the tracked settings register the skill-call hook under `PostToolUse`
       with the matcher `Skill` [32] and under `UserPromptExpansion` in a group
       with no matcher [33], each `{type: "command", command}` with no `if`,
@@ -95,7 +98,7 @@ in the self-pin bump pull request that moves the pin past group 1's merge
       Then add the two registrations to `.claude/settings.json`. (Req:
       harness-updates — *A hook the harness keeps to itself reaches no
       consumer*, all its scenarios)
-- [ ] 1.6 Docs: `README.md`'s line that `.claude/settings.json` registers the
+- [x] 1.6 Docs: `README.md`'s line that `.claude/settings.json` registers the
       hooks `bun/bootstrap.ts` lists gains the one hook kept to the harness
       and why; `core/review-toolkit.md`'s "nothing proves they ran" says that
       in the harness's own sessions a hook records each skill call at the

@@ -113,6 +113,13 @@ describe("which record discharges a reported turn", () => {
 		expect(decide(end(dir, REPORTED), marks)).toBeString();
 	});
 
+	// spec: gate-ledger/a-skill-record-at-the-tip
+	test("a skill call recorded for the tip does not discharge (judgement-step-record [25])", () => {
+		const { dir, marks, tip } = finished();
+		ledger(run(tip, real(dir), { gate: "skill", decision: "called", rule: "zombies" }).split("\n")[0]);
+		expect(decide(end(dir, REPORTED), marks)).toBeString();
+	});
+
 	// spec: commit-gates/a-run-record-from-another-checkout
 	test("a record for the tip from another clone does not discharge", () => {
 		const { dir, marks, tip } = finished();
