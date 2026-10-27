@@ -26,7 +26,7 @@ because, since #320, a subagent works in its own worktree, where
   unchanged: a verified finding is applied without asking, dismissing a
   Major or above goes to the user, at most three reviews, Minor findings
   reported once. `/code-review` names no severity, so each finding counts
-  as 🟠 Major unless the user settles otherwise (card, question 4). The
+  as 🟠 Major (card, question 4 а, 2026-10-27). The
   session writes the `CODE-REVIEW gate:` line itself, since the built-in
   skill prints none.
 - The measurement of `/code-review` beside the CLI ends: no fresh-subagent
@@ -77,6 +77,6 @@ None.
 - `bun/review-docs.test.ts`: the cases pinning the measurement give way to
   cases pinning `/code-review` as the local review.
 - `README.md`: the sentence on `Skill(code-review)` for unattended sessions.
-- Order: after `pre-pr-diff-paths`, whose archive (#324) syncs the two
+- Order: after `pre-pr-diff-paths`, whose archive (#324, merged) synced the two
   `pre-pr-runner` requirements and the `local-review-loop` requirement this
   change modifies (design.md, *Conflict check*).
