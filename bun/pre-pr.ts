@@ -41,7 +41,9 @@ const exit = (code: number | null) => (code === 0 || code === 1 ? code : 2);
 const shown = { stdout: "inherit", stderr: "inherit" } as const;
 
 const budget = exit(
-	Bun.spawnSync(["bash", join(import.meta.dir, "diff-budget.sh"), ...process.argv.slice(2)], shown).exitCode,
+	// From the top level: the budget's `.` pathspec would otherwise count only the subdirectory.
+	Bun.spawnSync(["bash", join(import.meta.dir, "diff-budget.sh"), ...process.argv.slice(2)], { cwd: top, ...shown })
+		.exitCode,
 );
 let checks = 2;
 try {

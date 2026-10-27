@@ -159,6 +159,8 @@ stays correct.
   the second reading's lines, and the first's when the second is clean.
 - A `git status` that fails counts as a dirty tree, named `git status
   failed`, in the runner and in the goal check alike (CodeRabbit on #316).
+- The runner runs the diff budget from the top level too, since its `.`
+  pathspec counts only the directory it starts in (CodeRabbit on #316).
 
 ## Seams with the slice's siblings
 

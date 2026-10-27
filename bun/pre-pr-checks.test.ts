@@ -57,6 +57,13 @@ describe("the project checks", () => {
 	});
 
 	// spec: pre-pr-runner/a-branch-over-budget
+	test("run from a subdirectory, the budget still counts the whole branch", () => {
+		const dir = repo({}, { "big.ts": lines(800), "src/a.ts": lines(1) });
+		const result = run(join(dir, "src"));
+		expect([result.code, records(result.state)[0]?.decision]).toEqual([1, "fail"]);
+	});
+
+	// spec: pre-pr-runner/a-branch-over-budget
 	test("over budget and failing, it exits 1 with two `fail` records [5]", () => {
 		const result = run(over("false"));
 		expect([result.code, outcomes(result.state)]).toEqual([1, [["diff-budget", "fail"], ["project-checks", "fail"]]]);
