@@ -163,6 +163,11 @@ or a guard reading the branch's tree — is new code for a window that closes
 as old branches merge, and no failure has come through it (roadmap
 clarification 11).
 
+The rule also reaches consumers through `bun/sync.ts`, whose hooks this
+change does not touch; the user chose to delete it for them too (card
+question 9 а, 2026-10-27), because stripping the fixtures' `GIT_*` removes
+the incident's cause and worktrees become the subagent default.
+
 `core/git-and-prs.md`'s *Remove a worktree as soon as its branch is the one
 to push*, which assumed the push came from the main checkout, becomes *once
 its branch is pushed*, keeping its reason. While `work-finish` is
