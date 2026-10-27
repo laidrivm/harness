@@ -48,6 +48,7 @@
 			"Bash(bun bun/settings-local.ts)",
 			"Bash(bun bun/notion-ask.ts *)",
 			"Bash(bun node_modules/harness/bun/notion-ask.ts *)",
+			"Bash(bun bun/work.ts *)",
 			"Bash(bash bun/diff-budget.sh *)",
 			"Bash(openspec --version)",
 			"Bash(openspec archive *)",
