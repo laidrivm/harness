@@ -46,14 +46,21 @@ its gate and rule.
 
 ### D1. `ran()` matches the gate, and the rule when one is asked for
 
-`ran(commit, top, {gate = "pre-pr", rule, decision} = {}, ledger?)` keeps a
+`ran(commit, top, decision?, ledger?, rule?, gate = "pre-pr")` keeps a
 record whose `gate`, `commit` and `project` match, and whose `rule` and
 `decision` match when the reader names them. The hook writes the gate
 `skill` and the decision `called`, so `work.ts finish` will ask `ran(head,
-top, {gate: "skill", rule: "zombies"})`. The goal check asks `{rule:
-"diff-budget", decision: "pass"}`, `ranUnder` keeps its signature and asks the
-same inside, and the turn gate asks nothing more than today: any record the
-runner wrote for the tip, since a failing run still proves it ran.
+top, undefined, undefined, "zombies", "skill")`. The goal check and `ranUnder`
+ask for a `pass` of every one of `RUNNER_STEPS`, and the turn gate asks
+nothing more than before: any record the runner wrote for the tip, since a
+failing run still proves it ran.
+
+*Applied (2026-10-27):* the proposal drafted an options object, `ran(commit,
+top, {gate, rule, decision} = {}, ledger?)`. By apply time `pre-pr-project-checks`
+(#316) had merged the `rule` half as a fifth positional parameter, with
+`RUNNER_STEPS` and the goal check and `ranUnder` asking for every step, so
+task 1.3's "keep its signature and add only the gate" holds: `gate` is a sixth
+positional parameter defaulting to `pre-pr`, and no existing call changes.
 
 - *Alternative: `ran()` matches by `rule` whatever gate wrote the record* (the
   card's first option). Rejected after the conflict check against
@@ -107,8 +114,18 @@ project, which can be another checkout than the one the call ran in (the main
 one, for a subagent in a worktree, where the probe saw only `cwd`), and
 `ran()` matches the top level of the checkout the call ran in.
 
+Each git call runs with every variable `git rev-parse --local-env-vars` lists
+removed from its environment (applied, after the local review): a session
+started under a git hook inherits that hook's `GIT_DIR`, which outranks `-C`
+and would name another repository's `HEAD`.
+
 No record is written when there is no `HEAD`, or when `git status --porcelain
---untracked-files=no` prints anything — the pre-PR runner's rule. The record
+--untracked-files=no` prints anything, or fails — the pre-PR runner's rule for
+tracked files. Since this was drafted the runner also counts an untracked
+file (`pre-pr-runner`, *No record for a tree the commit does not hold*, after
+#316 and #321), because its project checks run the whole tree; the hook keeps
+the spec's *A skill called with only an untracked file* and records, since a
+review skill reads the branch's commits and their diff. The record
 names a commit, and a review skill run over an uncommitted edit read a tree no
 commit holds; the reader checks the exact `HEAD` before a pull request opens
 (stage 2, question 24 a′), so a record of a stale commit would mislead it. The
