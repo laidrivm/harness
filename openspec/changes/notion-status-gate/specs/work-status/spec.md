@@ -43,13 +43,22 @@ session sets the other eight, `exploring` to `done`.
 - **WHEN** the card reads `discarded` and `status` runs with `--to exploring`
 - **THEN** it refuses and writes nothing
 
+#### Scenario: An idea card a session is directed at
+
+- **WHEN** the card reads `idea`, the range has room, and `--to` is
+  `exploring`
+- **THEN** `status` writes the status: the user's instruction is the
+  approval (`core/feature-workflow.md`), which the command cannot see, and an
+  unattended session's taking no work from `idea` stays that file's rule
+
 ### Requirement: Entering the work range is held to the WIP limit
 
 When the card reads a status outside `exploring` … `archiving` and `--to` is
-one of those seven, `status` SHALL count the cards of the card's own board
-at those seven and refuse when the count has reached `HARNESS_WIP_LIMIT`,
-which reads 5 when unset and SHALL be a whole number. A move within the
-seven, or to `done`, SHALL NOT be counted.
+one of those seven that needs no evidence, `status` SHALL count the cards of
+the card's own board at the seven and refuse when the count has reached
+`HARNESS_WIP_LIMIT`, which reads 5 when unset and SHALL be a whole number. A
+move within the seven, to `done`, or to a status `origin/main` proves SHALL
+NOT be counted: a proven move records work already done.
 
 #### Scenario: The limit reached
 
@@ -68,6 +77,17 @@ seven, or to `done`, SHALL NOT be counted.
 - **WHEN** the card reads `proposing`, the range holds five cards and `--to`
   is `proposed`
 - **THEN** no count is made and the WIP limit refuses nothing
+
+#### Scenario: A card behind its floor at a full limit
+
+- **WHEN** the card reads `approved`, five cards are in the range, and
+  `origin/main` proves `proposed` for its change
+- **THEN** `status --to proposed` makes no count and writes the status
+
+#### Scenario: More cards than one page
+
+- **WHEN** the board's query answers a full page and says it has more
+- **THEN** `status` refuses the entry whatever the limit
 
 #### Scenario: A limit that is not a number
 
@@ -135,10 +155,12 @@ the change's `tasks.md` holding a ticked box and no open one. A derived
 ### Requirement: The card's Pointer names the change proven
 
 For a merged status, the change SHALL be the one the card's `Pointer` names
-when it is wholly `openspec/changes/<slug>/` or
-`openspec/changes/archive/<date>-<slug>/`, with a directory for that slug on
-`origin/main`. An empty, decorated or cross-repository `Pointer`, or a slug
-`origin/main` lacks, SHALL refuse, quoting the `Pointer`.
+when it is wholly `openspec/changes/<slug>/`, with that slug active or
+archived on `origin/main`, or `openspec/changes/archive/<date>-<slug>/`, with
+that directory there. The same path behind this repository's own name, as
+task-board's cross-repository form writes it, SHALL count alike. An empty,
+decorated or other repository's `Pointer`, or a path `origin/main` lacks,
+SHALL refuse, quoting the `Pointer`.
 
 #### Scenario: An empty pointer
 
@@ -161,6 +183,19 @@ when it is wholly `openspec/changes/<slug>/` or
 - **WHEN** the `Pointer` is `openspec/changes/archive/2026-10-27-foo/` and
   `origin/main` holds that archive
 - **THEN** `status --to done` writes the status
+
+#### Scenario: An archive dated otherwise
+
+- **WHEN** the `Pointer` is `openspec/changes/archive/2026-10-27-foo/` and
+  `origin/main` holds `foo` active and no archive of that name
+- **THEN** `status --to proposed` refuses
+
+#### Scenario: This repository's change from another board
+
+- **WHEN** the `Pointer` is `harness: openspec/changes/foo/` in the harness,
+  and `origin/main` holds `foo`
+- **THEN** it is read as `openspec/changes/foo/`, and `d2ass:
+  openspec/changes/foo/` refuses
 
 ### Requirement: The other statuses need no evidence and no order
 

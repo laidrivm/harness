@@ -30,16 +30,17 @@ question 23). The card's answer 1 в chose this knowingly.
 - It refuses, changing nothing and writing one ledger record each:
   - `idea`, `approved` or `discarded` as the target, and any move out of
     `discarded` — the user's alone (task-board);
-  - an entry into `exploring` … `archiving` from outside them while the card's
-    own board already holds `HARNESS_WIP_LIMIT` cards there (unset: 5; not a
-    whole number: refused);
+  - an entry into `exploring` … `archiving` from outside them, unless
+    `origin/main` proves it, while the card's own board already holds
+    `HARNESS_WIP_LIMIT` cards there (unset: 5; not a whole number: refused);
   - `proposed`, `applied` or `done` without evidence on `origin/main`, fetched
     first and never the local tree: `proposed` when the tree derives
     `proposed` or `done` for the card's change, `done` when it derives `done`,
     `applied` when it derives `done`, or `proposed` with every task group of
     `tasks.md` ticked. The change is the one the card's `Pointer` names, wholly
     `openspec/changes/<slug>/` or `openspec/changes/archive/<date>-<slug>/`,
-    with a directory for that slug on `origin/main`;
+    or either behind this repository's own name, and present on
+    `origin/main`;
   - any read that fails — the fetch, the tree, the card, the board's query.
 - A `PreToolUse` hook on the connector's `notion-update-page` refuses any call
   whose `properties` carry `Status`, naming the command. It is registered in
@@ -77,9 +78,11 @@ registration to `.claude/settings.json`; it is kept in this prose rather than
 
 ### Modified Capabilities
 
-None. task-board's eight hand-moved statuses stay moved by whoever does the
-work; the command is the hand, and its requirement says so where it is
-defined.
+- `gate-ledger`: *Every gate refusal is recorded* names `work.ts status` and
+  the status guard beside the gates `work-finish` adds.
+
+task-board is not modified: its eight hand-moved statuses stay moved by
+whoever does the work, and the command is the hand.
 
 ## Impact
 
