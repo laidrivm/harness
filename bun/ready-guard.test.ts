@@ -29,6 +29,8 @@ describe("refused, naming bun bun/work.ts finish", () => {
 	test.each([
 		["gh pr ready 7", "hand-ready"],
 		["gh pr ready 7 --undo=false", "hand-ready"],
+		["gh pr ready 7 --undo --undo=false", "hand-ready"],
+		["gh pr ready 7 --undo; gh pr ready 8", "hand-ready"],
 		["gh -R o/r pr ready 7", "hand-ready"],
 		["cd x && gh pr ready 7", "hand-ready"],
 		["/usr/bin/gh pr ready 7", "hand-ready"],
@@ -47,6 +49,7 @@ describe("allowed, recording nothing", () => {
 	test.each([
 		"gh pr ready 7 --undo",
 		"gh pr ready --undo 7",
+		"gh pr ready 7 --undo=true",
 		"gh pr view 7",
 		"echo gh pr ready 7",
 		"sh -c 'gh pr ready 7'",

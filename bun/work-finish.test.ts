@@ -28,6 +28,7 @@ describe("the arguments", () => {
 		["--title without --body-file", ["finish", "--card", CARD, "--title", "t"]],
 		["--body-file without --title", ["finish", "--card", CARD, "--body-file", "b"]],
 		["an empty --title", ["finish", "--card", CARD, "--title", "", "--body-file", "b"]],
+		["an empty --body-file", ["finish", "--card", CARD, "--title", "t", "--body-file", ""]],
 		["--force", ["finish", "--card", CARD, "--force"]],
 		["a positional", ["finish", "--card", CARD, "more"]],
 		["a 31-hex card", ["finish", "--card", CARD.slice(1)]],
