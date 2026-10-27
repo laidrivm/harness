@@ -25,8 +25,9 @@ because, since #320, a subagent works in its own worktree, where
 - The disposal policy `/coderabbit-local` had moves to `/code-review`
   unchanged: a verified finding is applied without asking, dismissing a
   Major or above goes to the user, at most three reviews, Minor findings
-  reported once. `/code-review` names no severity, so each finding counts
-  as 🟠 Major (card, question 4 а, 2026-10-27). The
+  reported once. `/code-review` names no severity, so the session grades
+  each finding on CodeRabbit's ladder, Trivial to Critical (the user's
+  answer 4 б, 2026-10-27). The
   session writes the `CODE-REVIEW gate:` line itself, since the built-in
   skill prints none.
 - The measurement of `/code-review` beside the CLI ends: no fresh-subagent

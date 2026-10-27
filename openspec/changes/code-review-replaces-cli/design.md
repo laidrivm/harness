@@ -61,20 +61,23 @@ and which the session that writes it owns.
    subagent* — rejected: it reopens which tree the subagent reads, the
    caveat the user closed, and "Claude reviews Claude" is held where the
    card's option 1 put it, by CodeRabbit on the pull request.
-3. **The disposal terms move unchanged, every finding counting as 🟠
-   Major.** Apply every verified finding without asking, put a
-   Major-or-above dismissal to the user, at most three reviews, Minor
-   findings reported once. `/code-review` reports each finding as a file, a
-   line, a summary and a failure scenario — no severity and no kind, as its
-   run on this branch showed. Any split into Major and Minor would be the
-   session's own judgement, which lets it lower a finding and dismiss it
-   alone; counting every finding Major puts every dismissal to the user and
-   leaves the loop's stop condition — a review with nothing above Minor — as
-   a review with no finding. A wrong Major costs one question, never a
-   dismissal reaching the merge. The user chose this on 2026-10-27 (card,
-   question 4 а, *ок, давай попробуем а*) over *the session grades each
-   finding* and *wait for the `--json-schema` run*, which needs the runner
-   to launch the reviewer.
+3. **The disposal terms move unchanged, the session grading each
+   finding.** Apply every verified finding without asking, put a
+   Major-or-above dismissal to the user, at most three reviews stopping at
+   one with nothing above Minor, Minor findings reported once.
+   `/code-review` reports each finding as a file, a line, a summary and a
+   failure scenario — no severity and no kind, as its run on this branch
+   showed. So the session grades each finding on the ladder the `coderabbit`
+   skill reads, 🔵 Trivial < 🟡 Minor < 🟠 Major < 🔴 Critical, while it
+   verifies it, and disposes of it on that grade; the report names the
+   grade beside each finding, so a dismissal's grade can be read back. The
+   user chose this on 2026-10-27 (in chat, replacing the card's answer 4 а
+   with б: *если агент будет приносить мне 5 вопросов на одно ревью — пусть
+   сессия сама решает, что major, а что minor*). *Alternative: every finding
+   counts as 🟠 Major* — the card's first answer, withdrawn: it puts every
+   dismissal to the user, five questions for one review. *Alternative: wait
+   for the `--json-schema` run* — it needs the runner to launch the
+   reviewer.
 4. **The session writes the gate line.** The built-in skill ends on no
    `GATE:` line, and `bun/turn-gate.ts` asks for some gate line, never this
    one. The session ends its disposition on `CODE-REVIEW gate: PASS|OPEN|
@@ -168,9 +171,10 @@ and which the session that writes it owns.
 - [A review by the context that wrote the code] → CodeRabbit on the pull
   request stays, and on the five measured pull requests it caught three
   defects both local reviewers missed.
-- [`/code-review`'s findings carry no CodeRabbit severity] → decision 3
-  counts each Major; a finding wrongly counted Major costs one question to
-  the user, never a dismissal reaching the merge.
+- [The session grades a finding below Major and dismisses it alone] →
+  accepted by the user's choice (decision 3); the report names each grade
+  beside its finding and its disposition, and CodeRabbit on the pull request
+  reviews the head the dismissal left.
 - [The review reads a stale base or another tree] → decision 2's file check
   turns it into a review that does not return, and decision 1 names the
   runner's base. The runner itself falls back to the local `main` where

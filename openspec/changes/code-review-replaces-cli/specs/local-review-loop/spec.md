@@ -50,7 +50,10 @@ branch requires from its diff*) classifies one, SHALL get one review pass
 rather than the full loop. The review SHALL read the branch's diff against
 the base the runner measured from, in the tree the branch is checked out in;
 a review naming a file that diff does not change read another diff, and
-SHALL count as a review that does not return.
+SHALL count as a review that does not return. Since `/code-review` names no
+severity, the agent SHALL grade each of its findings 🔵 Trivial, 🟡 Minor,
+🟠 Major or 🔴 Critical while verifying it, dispose of it on that grade, and
+name the grade beside the finding in its report.
 
 #### Scenario: A code branch reaches the end of the sequence
 
@@ -88,6 +91,15 @@ SHALL count as a review that does not return.
   change
 - **THEN** the agent reports why
 - **AND** pushes without the gate rather than blocking the branch
+
+#### Scenario: A finding the review gives no severity
+
+- **WHEN** `/code-review` reports a finding as a file, a line, a summary and
+  a failure scenario, with no severity
+- **THEN** the agent grades it on CodeRabbit's ladder while verifying it,
+  and a dismissal it grades 🟠 Major or above goes to the user while one
+  it grades 🟡 Minor or 🔵 Trivial is skipped with its reason
+- **AND** the report names the grade beside the finding
 
 #### Scenario: A documentation branch
 
