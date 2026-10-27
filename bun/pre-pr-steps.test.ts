@@ -94,14 +94,14 @@ describe("a branch whose pull request is open", () => {
 });
 
 describe("the ids", () => {
-	// The `Skill` hook records the built-in skill's name, `code-review`.
-	test("the local review's id is `code-review`", () => {
-		expect(CODE_REVIEW).toBe("code-review");
+	// The `Skill` hook records the skill's name; unattended, a call no entry allows is refused and leaves no record.
+	test.each(JUDGEMENT.map((id) => [id]))("`%s` is a skill the harness's settings allow by that name", (id) => {
+		const allow = JSON.parse(readFileSync(join(import.meta.dir, "..", ".claude", "settings.json"), "utf8")).permissions.allow;
+		expect(allow).toContain(`Skill(${id})`);
 	});
 
 	// A missing skill would leave its step with no record ever matching it. `code-review` is built in,
-	// with no `SKILL.md` here: review-docs.test.ts's "the harness's own settings allow the skill by
-	// its exact name" pins its `Skill(code-review)` entry instead.
+	// with no `SKILL.md` here: the case above pins its `Skill(code-review)` entry instead.
 	test.each(JUDGEMENT.filter((id) => id !== CODE_REVIEW).map((id) => [id]))("`%s` names a skill of that name [15]", (id) => {
 		const skill = readFileSync(join(import.meta.dir, "..", "core", "skills", id, "SKILL.md"), "utf8");
 		expect(skill.match(/^name:\s*(\S+)\s*$/m)?.[1]).toBe(id);

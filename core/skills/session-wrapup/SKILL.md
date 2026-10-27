@@ -75,7 +75,7 @@ Example:
 - triage: OPEN — 4 groups, 2 high-risk — High/Medium read
 - warm: PASS — 2 dependencies vetted, 0 findings, 0 acted on
 - zombies: OPEN — 6 gaps, 6 acted on
-- coderabbit-local: PASS — 7 findings, 7 dispositioned (3 fixed, 4 skipped)
+- code-review: PASS — 7 findings, 7 dispositioned (3 fixed, 4 skipped)
 - Not run: preflight
 - gates: command-guard block main-commit ×2, turn-gate refused pre-pr-sequence ×1
 - captures: 0 mechanism, 1 card + rule, 1 rule, 0 skill edit, 0 memory

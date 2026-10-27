@@ -44,10 +44,18 @@ and which the session that writes it owns.
    so), which in a worktree or a long-lived checkout trails `origin/main`:
    on this branch that diff held 209 files where the branch changes 7. The
    review must read the diff the runner measured, in the tree the branch is
-   checked out in, so the session names that base, and a clone's path where
-   it works in a clone outside its working directory. Which argument form
-   the skill reads as a base and which as a tree was not probed; task 2.1
-   probes it before the doc names it.
+   checked out in, so the session names that base. Task 2.1 probed the
+   form on 2026-10-27, from this branch's worktree at 94a0c99:
+   `/code-review high origin/main` reads the ref after the level as the
+   base. The forked review ran `git diff origin/main...HEAD` with the
+   worktree as its directory, reported "the committed range is a single
+   commit, 94a0c99", and named findings on `bun/pre-pr-steps.test.ts`,
+   which `changedPaths("origin/main")` lists; it read the working tree's
+   uncommitted edits as well. So the doc names `/code-review high <base>`.
+   A clone's path as the tree was not probed — since #320 a session works
+   in its own worktree, where the review's directory is the branch's — so
+   the doc names no form for it, and a session in a clone outside its
+   working directory gets the file check of decision 2 as its guard.
 2. **The session runs it itself, not a fresh subagent, records no SHA, and
    checks the files.** The fresh subagent and the SHA were the measurement's:
    one held the two lists comparable, the other caught a subagent that
