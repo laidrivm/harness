@@ -114,6 +114,11 @@ project, which can be another checkout than the one the call ran in (the main
 one, for a subagent in a worktree, where the probe saw only `cwd`), and
 `ran()` matches the top level of the checkout the call ran in.
 
+Each git call runs with every variable `git rev-parse --local-env-vars` lists
+removed from its environment (applied, after the local review): a session
+started under a git hook inherits that hook's `GIT_DIR`, which outranks `-C`
+and would name another repository's `HEAD`.
+
 No record is written when there is no `HEAD`, or when `git status --porcelain
 --untracked-files=no` prints anything, or fails — the pre-PR runner's rule for
 tracked files. Since this was drafted the runner also counts an untracked
