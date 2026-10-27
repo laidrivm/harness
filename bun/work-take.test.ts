@@ -14,7 +14,8 @@ afterAll(() => {
 	cleanup();
 });
 
-const USAGE = "usage: work.ts take --card <id>";
+// Both subcommands' lines, the first take's: one usage for the dispatcher.
+const USAGE = ["usage: work.ts take --card <id>", "       work.ts finish --card <id> [--title <text> --body-file <path>]"].join("\n");
 
 describe("the arguments", () => {
 	// spec: work-take/no-card

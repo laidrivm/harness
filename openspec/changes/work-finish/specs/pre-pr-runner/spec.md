@@ -4,8 +4,8 @@
 
 ### Requirement: A run record counts only for its own step
 
-A reader asking for one step's evidence — `work.ts finish` asks for the diff
-budget's, and the goal check for each runner step's — SHALL count a runner's record only when
+A reader asking for one step's evidence — `work.ts finish` and the goal
+check each ask for every runner step's — SHALL count a runner's record only when
 the record's `rule` names that step, beside its gate, commit, checkout and
 outcome. The turn gate asks only whether the runner ran, and any of its
 records answers that. One step's record SHALL NOT stand in for another's once the runner
