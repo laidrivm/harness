@@ -1,0 +1,86 @@
+## MODIFIED Requirements
+
+### Requirement: The runner names the steps the branch requires from its diff
+
+The runner SHALL print, as its last line, the ids of the steps the branch
+requires. While no pull request of it is open, a branch whose every changed
+path is a `*.md` file or lies under `openspec/` is a documentation branch and
+requires the project checks, `triage` and `code-review`. Any other branch
+is a code branch and requires `zombies` as well, and `warm` where a path named
+`package.json` or `bun.lock` changed. A judgement step's id is its skill's name.
+
+#### Scenario: Markdown alone
+
+- **WHEN** every changed path ends in `.md`
+- **THEN** the runner names the project checks, `triage` and
+  `code-review`, and neither `zombies` nor `warm`
+
+#### Scenario: A proposal with one source file
+
+- **WHEN** the changed paths are files under `openspec/` and one `.ts` file
+- **THEN** the runner names `zombies` along with the documentation branch's
+  steps
+
+#### Scenario: Config alone
+
+- **WHEN** the only changed path is `.coderabbit.yaml`, a workflow or
+  `.claude/settings.json`
+- **THEN** the runner names the code branch's steps
+
+#### Scenario: A source file moved to Markdown
+
+- **WHEN** the branch renames a `.ts` file to a `.md` file
+- **THEN** the runner names `zombies`, since the removed `.ts` path is a
+  changed path too
+
+#### Scenario: A lockfile alone
+
+- **WHEN** `bun.lock` changed and `package.json` did not
+- **THEN** the runner names `warm`
+
+#### Scenario: A nested manifest
+
+- **WHEN** a `package.json` below the repository root changed
+- **THEN** the runner names `warm`
+
+#### Scenario: Nothing past the base
+
+- **WHEN** the branch changes no path
+- **THEN** the runner names the documentation branch's steps
+
+#### Scenario: A diff it cannot read
+
+- **WHEN** the changed paths cannot be read
+- **THEN** the runner names every step, `warm` included
+
+### Requirement: An open pull request requires the project checks alone
+
+Once the branch's pull request is open, draft or not, the runner SHALL name
+the project checks and no judgement step, since the reviewer on the pull
+request reviews its head. A read of the pull request that fails SHALL count as
+no pull request open. The list is the least a push into it requires: the steps
+before `/code-review` still run ahead of one, as `local-review-loop`
+(*The local review runs after triage and before the push*) sets out.
+
+#### Scenario: A code branch with its pull request open
+
+- **WHEN** the branch changes a `.ts` file and its pull request is open
+- **THEN** the runner names the project checks alone
+
+#### Scenario: An open pull request over a diff it cannot read
+
+- **WHEN** the branch's pull request is open and its changed paths cannot be
+  read
+- **THEN** the runner names the project checks alone, since no judgement step
+  depends on the diff once the pull request is open
+
+#### Scenario: A merged pull request
+
+- **WHEN** the branch's only pull request is merged or closed
+- **THEN** the runner names the steps its diff requires
+
+#### Scenario: The pull request cannot be read
+
+- **WHEN** the read of the branch's pull requests fails
+- **THEN** the runner names the steps its diff requires
+
