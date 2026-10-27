@@ -129,6 +129,19 @@ describe("the base", () => {
 		const result = run(code(), {}, ["nope"]);
 		expect([result.code, last(result.out)]).toEqual([2, EVERY]);
 	});
+
+	test("a base opening with `-` is no option: it names every step and writes no file", () => {
+		const dir = code();
+		const result = run(dir, {}, ["--output=x"]);
+		const files = Bun.spawnSync(["git", "status", "--porcelain"], { cwd: dir }).stdout.toString();
+		expect([result.code, last(result.out), files]).toEqual([2, EVERY, ""]);
+	});
+
+	test("a repository with no commit names every step", () => {
+		const dir = emptyDir("pre-pr-steps-bare-");
+		git(dir, "init", "-q");
+		expect(steps(dir)).toBe(EVERY);
+	});
 });
 
 describe("the pull request's state", () => {
@@ -152,6 +165,11 @@ describe("the pull request's state", () => {
 	])("a %s pull request reads as not open [25]", (_, extra) => {
 		const dir = code();
 		expect(steps(dir, github(dir, [pull("closed", extra)]))).toBe(CODE);
+	});
+
+	test("a closed pull request beside an open one reads as open", () => {
+		const dir = code();
+		expect(steps(dir, github(dir, [pull("closed"), pull("open", { number: 2 })]))).toBe(ALONE);
 	});
 
 	test("an open draft reads as open [26]", () => {
