@@ -56,7 +56,8 @@ and which the session that writes it owns.
    #320 a subagent works in its own worktree. What stays is the cheap half
    of the old guard: a review with findings none of which names a file the
    branch's diff changes read another tree or another base, and counts as a
-   review that does not return. It costs one `git diff --name-only` and
+   review that does not return. It costs one read of the runner's
+   `changedPaths(<base>)`, the same path set the runner's step list reads, and
    catches both decision 1's stale base and a session in a clone. One
    finding on an unchanged file is no such sign — `/code-review` reads the
    connected code, and a caller the change breaks sits outside the diff — so

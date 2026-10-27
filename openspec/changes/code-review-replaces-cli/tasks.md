@@ -27,8 +27,8 @@
       1): run it once with the runner's base named. Count a form as working
       only on positive evidence that it read `<base>...HEAD` in this tree —
       the review's own statement of the range or tree it diffed matching
-      them, or a finding on a file `git diff --name-only <base>...HEAD`
-      lists; an empty review proves nothing. Record a working form in
+      them, or a finding on a file the runner's `changedPaths(<base>)`
+      (`bun/pre-pr-steps.ts`) lists; an empty review proves nothing. Record a working form in
       design.md decision 1 before 2.2 cites it; if the probe is
       inconclusive, record none, and stop and report it
 - [ ] 2.2 In `bun/review-docs.test.ts`, turn the cases of *the local review
@@ -44,8 +44,9 @@
       branch's diff changes, is reported and the push goes on (cite
       `local-review-loop/the-review-does-not-return`); that the
       `/coderabbit-local` bullet says it is in no sequence and no gate; and
-      that the `/coderabbit` bullet disposes on the same terms as
-      `/code-review`. Delete the cases of *the /code-review bullet measures
+      that the `/coderabbit` bullet shares `/code-review`'s finding-disposal
+      terms alone — not its base, changed-file or `CODE-REVIEW` gate rules,
+      which are the local review's — and keeps its pull-request behaviour. Delete the cases of *the /code-review bullet measures
       Claude's review beside the CLI* but the `Skill(code-review)` one, and
       add a case that the doc holds no `Review measurement`. Normalise
       whitespace before matching. Verify they fail and record it
@@ -56,7 +57,7 @@
       skill, in no sequence and no gate (decision 6), keeping its guideline
       sentence; step 5 and the documentation-branch paragraph name
       `/code-review high`; the `/coderabbit` bullet points at `/code-review`'s
-      terms. Verify with `bun test bun/review-docs.test.ts` green
+      finding-disposal terms alone, per 2.2. Verify with `bun test bun/review-docs.test.ts` green
 - [ ] 2.4 Add failing cases to `bun/review-docs.test.ts` that the two
       exceptions of `core/autonomy.md` (an unattended pull request opening
       over a non-`PASS` local gate) name `CODE-REVIEW` reading `OPEN` only
