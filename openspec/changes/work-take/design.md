@@ -121,6 +121,29 @@ false; both say instead that it reads pages and comments and writes no
 property, so the session still sets `Assign` itself. The command itself
 still reads no page, so its requirement in `task-board` keeps its words.
 
+### Settled while applying
+
+- The lifted export is `integration(timeout, env)` in `bun/notion-ask.ts`,
+  answering `{ settings, call }` or the reason as a string; `env` names the
+  config home as `where()` reads it, while the client still reads
+  `HARNESS_NOTION_API_URL` from the process, as every `client()` does.
+  `finish` calls it as is.
+- Comments print in the order `waits()` reads them, through one exported
+  `oldest()` in `bun/notion-bot.ts`, so the printed last comment and the
+  `question waiting:` line cannot drift apart.
+- `work.ts` keeps one `if` per subcommand over a shared strict `values()`,
+  and one usage line each, printed to standard error with exit 2; `finish`
+  adds its branch and its line.
+- The lines: `## Checkout: <top> at <sha>`, then `## Card`, `## Body`,
+  `## Comments`, `## Change` (each file under `### <path>`, then
+  `capabilities: <names>` or `none`) and `## Open changes`; the body's notes
+  read `the body is truncated: Notion left part of it out` and `Notion left
+  <n> blocks out of the body`. Status reads a `select` as it reads a
+  `status`, since a board may hold either.
+- The live probe of 2026-10-27 confirmed the read under the ask
+  integration's grant: the markdown read answered under `2026-03-11`, the
+  page and comments reads under `2025-09-03`.
+
 ## Seams
 
 - `work-finish` (proposal merged): shares `bun/work.ts`, the allow entry and

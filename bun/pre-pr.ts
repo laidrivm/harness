@@ -5,7 +5,8 @@
  * records each in the gate ledger for the commit it read. The turn gate and
  * the goal check read those records back, so a gate line no longer stands
  * alone as the evidence that a step ran. The steps that need judgement stay
- * with the agent.
+ * with the agent; its last line names the ones the branch still requires
+ * (`pre-pr-steps.ts`), from the diff against the base the budget measured.
  *
  * Both steps always run, and their output passes through untouched: the
  * runner reads only each exit status, and exits with the worse. The records
@@ -21,6 +22,8 @@
 import { join } from "node:path";
 import { bumpTest } from "./config.ts";
 import { RUNNER_STEPS, record } from "./gate-ledger.ts";
+import { changedPaths, required } from "./pre-pr-steps.ts";
+import { readPullRequests } from "./pull-requests.ts";
 
 // trimEnd: porcelain's first line can open with a space that is part of it.
 const git = (...args: string[]) =>
@@ -39,10 +42,12 @@ const dirty = status();
 /** 0, 1, or 2 for every other status, a signal's `null` included. */
 const exit = (code: number | null) => (code === 0 || code === 1 ? code : 2);
 const shown = { stdout: "inherit", stderr: "inherit" } as const;
+// Resolved once, so the budget and the step list read one diff.
+const base = process.argv[2] || Bun.spawnSync(["bash", join(import.meta.dir, "diff-base.sh")], { cwd: top }).stdout.toString().trim();
 
 const budget = exit(
 	// From the top level: the budget's `.` pathspec would otherwise count only the subdirectory.
-	Bun.spawnSync(["bash", join(import.meta.dir, "diff-budget.sh"), ...process.argv.slice(2)], { cwd: top, ...shown })
+	Bun.spawnSync(["bash", join(import.meta.dir, "diff-budget.sh"), base, ...process.argv.slice(3)], { cwd: top, ...shown })
 		.exitCode,
 );
 let checks = 2;
@@ -53,6 +58,8 @@ try {
 	console.error(`PRE-PR: project checks not run: ${(error as Error).message}`);
 }
 
+// The checks' output can end mid-line; the runner's own lines must each open one.
+console.log();
 const left = status();
 if (!commit || dirty || left || git("rev-parse", "--verify", "-q", "HEAD") !== commit) {
 	// Not shaped like a gate line, which the turn gate would read as a report.
@@ -70,4 +77,10 @@ if (!commit || dirty || left || git("rev-parse", "--verify", "-q", "HEAD") !== c
 		record("pre-pr", ["pass", "fail", "error"][codes[i]], rule, { session_id: session, cwd: top }, commit),
 	);
 }
+
+// A detached HEAD, a failed read and no pull request all read as none open, which requires more steps, never fewer.
+const branch = git("symbolic-ref", "--quiet", "--short", "HEAD");
+const open = branch !== "" && (readPullRequests(branch)?.some((pr) => pr.state === "OPEN") ?? false);
+// Not shaped like a gate line either, and last, so it is read after every step's output.
+console.log(`PRE-PR steps: ${required(base ? changedPaths(base) : undefined, open).join(", ")}`);
 process.exit(Math.max(budget, checks));
