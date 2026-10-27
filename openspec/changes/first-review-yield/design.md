@@ -85,17 +85,24 @@ requests counting toward stage 2.
    ```bash
    gh pr list --state all --search "updated:>=<since>" --limit 1000 --json number
    gh api 'repos/{owner}/{repo}/pulls/<n>/commits' --paginate --jq '.[].sha'
-   gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs' --jq '.check_runs[] | select(.name == "CodeRabbit") | [.completed_at, .output.summary] | @tsv'
-   gh api 'repos/{owner}/{repo}/commits/<sha>/status' --jq '.statuses[] | select(.context == "CodeRabbit") | [.created_at, .description] | @tsv'
+   gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit") | [.completed_at, .output.summary] | @tsv'
+   gh api 'repos/{owner}/{repo}/commits/<sha>/statuses' --paginate --jq '.[] | select(.context == "CodeRabbit") | [.created_at, .description] | @tsv'
    gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | .id, .body'
    gh api 'repos/{owner}/{repo}/pulls/<n>/reviews/<id>/comments' --paginate --jq '.[].body'
    ```
 
    `<since>` is that day before, and on the first entry ever, today. The
-   first read is a superset, cut by the first-review time the third or
-   fourth gives; `--limit 1000` because gh's
-   default of 30 is the cut-off that the goal check once read as the whole
-   list (#131). The commits are walked oldest first and the walk stops at the
+   candidates are the first read's numbers together with every pull request
+   an earlier `first review` line names as unmeasured and no later one names
+   as measured — a review that completes with no update to its pull request
+   leaves it out of the `updated:` search. The candidates are cut by the
+   first-review time the third or fourth read gives; `--limit 1000` because
+   gh's default of 30 is the cut-off that the goal check once read as the
+   whole list (#131). `filter=all` and the `statuses` list, not the latest
+   check run and the combined status: one commit holds several CodeRabbit
+   results — `c59320a` a skipped run and then a completed one, `ee1597a`
+   a draft skip, a run in progress and a completion — and the latest alone
+   can hide the completed one. The commits are walked oldest first and the walk stops at the
    first `Review completed` that counts for this pull request (decision 2).
    The line reads
    `- first review: k of n without Major+ — #a, #b (Major+), #c (unmeasured)`,
@@ -107,8 +114,11 @@ requests counting toward stage 2.
    6 on the card). «Without bypass» means the pull request was opened and
    marked ready after `work-finish` group 2 (`work.ts finish` and the ready
    guard) merged, and the gate ledger holds a `pre-pr` `pass` record under
-   `project-checks` whose `commit` is the first reviewed commit — what the
-   ready gate is to require (stage 2, question 24). The five are consecutive
+   `project-checks` whose `commit` is the first reviewed commit and whose
+   `at` precedes that review's completion — what the ready gate is to
+   require (stage 2, question 24). The bot reviews a head once it is ready,
+   so a record written after the review was written after the ready too,
+   and the pull request reached ready without it. The five are consecutive
    by first-review time, harness pull requests only. The closing session
    takes them from the `first review` lines, counting a pull request named
    in two entries once — two sessions on parallel branches each append to
@@ -164,7 +174,11 @@ How it was read: three GraphQL reads of #296–#328, each pull request's
 commits with their `CodeRabbit` status and check runs, and the bot's reviews
 with their comments; the first reviewed commit and its reviews were selected
 by decision 2, and the severity word after each finding's icon was read and
-checked by hand. Every one of #296–#328 was measured. Order is by the time
+checked by hand. Those reads saw only the latest result per commit, so
+every result was re-read for each commit before a first reviewed one —
+`statuses` for #309–#317, all check runs naming the pull request for
+#318–#328 — and no first reviewed commit moved. Every one of #296–#328 was
+measured. Order is by the time
 of the commit's first `CodeRabbit` status or check run, which is approximate
 but does not move the window's edge: #308, the next older, was first
 reviewed at 20:39. The 13 older ones (#296–#308) are outside the window;
