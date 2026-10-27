@@ -54,10 +54,14 @@ and which the session that writes it owns.
    reviewed the main checkout instead of the branch (the card's caveat). The
    user dropped the SHA (answer 1 а, *можно без записи sha*) because since
    #320 a subagent works in its own worktree. What stays is the cheap half
-   of the old guard: a review naming a file the branch's diff does not change
-   read another tree or another base, and counts as a review that does not
-   return. It costs one `git diff --name-only` and catches both decision 1's
-   stale base and a session in a clone. *Alternative: keep the fresh
+   of the old guard: a review with findings none of which names a file the
+   branch's diff changes read another tree or another base, and counts as a
+   review that does not return. It costs one `git diff --name-only` and
+   catches both decision 1's stale base and a session in a clone. One
+   finding on an unchanged file is no such sign — `/code-review` reads the
+   connected code, and a caller the change breaks sits outside the diff — so
+   that finding is kept and verified like the rest (CodeRabbit on #328).
+   An empty review proves nothing either way and passes, as the CLI's did. *Alternative: keep the fresh
    subagent* — rejected: it reopens which tree the subagent reads, the
    caveat the user closed, and "Claude reviews Claude" is held where the
    card's option 1 put it, by CodeRabbit on the pull request.
@@ -115,7 +119,7 @@ and which the session that writes it owns.
    it is renamed *The CLI review passes the guidelines the PR bot reads*,
    and its body says the CLI review where it said the local review. The
    capability's Purpose, which no delta reaches, is rewritten by hand in the
-   archive (task 2.4).
+   archive (task 2.5).
 8. **`/code-review` reads `CLAUDE.md` and `core/rules.md`, not the docs the
    rulebook indexes.** The session has both loaded; `core/code-style.md`,
    `core/testing.md` and the others are read on demand, and the review's
