@@ -33,6 +33,7 @@ describe("a Status write through the connector is refused", () => {
 	test.each([
 		["update_properties with Status", { command: "update_properties", properties: { Status: "done" } }],
 		["update_content with Status beside Assign", { command: "update_content", properties: { Assign: [], Status: "applied" } }],
+		["a Status cleared to null", { command: "update_properties", properties: { Status: null } }],
 	])("%s", (_, input) => {
 		const run = guard(update(input));
 		expect(run.code).toBe(2);
