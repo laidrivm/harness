@@ -18,7 +18,7 @@ a failing case first in `tasks.md`:
 | `complete()` answers the groups that are done, not whether all are; `Dropped` boxes are ticked | the same requirement: every group, and a ticked `Dropped …` counts |
 | `Pointer` is free text, and a wrong or archived one proves another change | *The card's Pointer names the change proven* |
 | moves without evidence check only WIP, so `approved` to `archiving` passes | *The other statuses need no evidence and no order*, a non-goal pinned by a scenario |
-| a live refusal for each kind of check | `tasks.md` 1.6 and 2.4 |
+| a live refusal for each kind of check | `tasks.md` 1.6 and 3.1 |
 
 ## Goals / Non-Goals
 
@@ -58,7 +58,9 @@ message: `bun/board-state-hygiene.test.ts` keeps `main` free of those.
 task-board's floors: `proposed` ⇐ derived `proposed` or `done`; `done` ⇐
 derived `done`; `applied` ⇐ derived `done`, or derived `proposed` with
 `groups(tasks).size > 0` and `complete(tasks).length === groups(tasks).size`
-— a group with no box is not complete. A `Dropped: …` task is written ticked
+— a group with no box is not complete, and a `## ` heading written twice
+refuses, since `groups()` keys by heading and the later would hide the
+earlier. A `Dropped: …` task is written ticked
 (`work-finish` 1.1) and counts as ticked on purpose.
 
 ### The Pointer
@@ -123,8 +125,9 @@ lines), as the card's title has it; `bun/work-status.ts` is the module, as
 
 ### Records
 
-Each refusal is `record("status", "block", id, null, commit)`, `commit` the
-`origin/main` SHA where the tree was read. Ids: `user-only`, `wip-full`,
+Each refusal is `record("status", "block", id, { cwd: top }, commit)`, `top`
+the checkout's top level, so the record names its project where
+`CLAUDE_PROJECT_DIR` is unset, and `commit` the `origin/main` SHA read. Ids: `user-only`, `wip-full`,
 `wip-limit` (the variable is not a number), `no-pointer`, `no-evidence`,
 `unread` (any failed read: settings, page, query, fetch, archive). A failed
 write is no refusal and records nothing, as in `work-finish`. These records
@@ -151,7 +154,7 @@ question 2 б), which leaves the gate optional.
 
 - [*Update content* and a data source query from the ask integration are
   unmeasured; `bun/work-take.fixture.ts` types `Status` as `status`] → this
-  fixture uses `select`; 2.4 records the first real moves.
+  fixture uses `select`; 3.1 records the first real moves.
 - [No reachable `origin`, no merged move] → fail closed (stage 2).
 - [The hook runs from the pin] → its probe follows the pin bump.
 - [The board loop's pick sets `applying` through the connector] → its prompt
