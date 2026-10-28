@@ -105,13 +105,10 @@ failing case first, its failure recorded, cited as `// spec:
       ready, keeping `gh pr ready <n> --undo` by hand. Grep `core/`,
       `README.md`, `openspec/specs/` and the card for `gh pr ready` and
       `gh pr create` sites the change makes false, and fix each
-- [ ] 2.9 Live probe from the tree on this group's own card: open this
+- [x] 2.9 Live probe from the tree on this group's own card: open this
       group's pull request with `bun bun/work.ts finish`, and record in its
       body the draft it opened, the ready it set or the question it waited
       behind, and a push into it while ready refused by the hook. The ready
       guard runs from the pin, so its probe follows the pin bump (design,
-      *Migration Plan*). 2026-10-27, here as `gh pr edit` is unused: `finish`
-      pushed `444a448`, opened draft #332 and left it behind the card's
-      unanswered 25.10 question, exit 0. Open: the user's answer to it, then
-      `finish --card` marks #332 ready and a push into it is probed; the
-      ready guard waits for the pin bump
+      *Migration Plan*)
+      Recorded in #332's report, not its body: draft behind a question, ready, a push refused
