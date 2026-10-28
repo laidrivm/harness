@@ -1,8 +1,9 @@
 # gate-ledger — delta
 
-Copied from `work-finish`'s delta of the same requirement. Before this
-change archives, re-copy it from the live spec and keep only this change's
-edits: the status guard, `work.ts status`, and the last scenario.
+Re-copied from the live spec once `work-finish` archived and synced it.
+This change's edits alone: the status guard, `work.ts status`, and the last
+scenario. Before this change archives, diff the copy against the live spec
+again and re-copy it if the live text moved.
 
 ## MODIFIED Requirements
 
