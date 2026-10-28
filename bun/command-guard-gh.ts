@@ -145,6 +145,24 @@ export function ghPublish(rest: string[]): string | undefined {
 	return `command-guard: \`gh ${write.join(" ")}\` publishes text under the user's name. Report what you would have written and let them send it.`;
 }
 
+/**
+ * Which of the acts `bun/work.ts finish` owns `gh` with these words performs:
+ * `create` for `pr create` or its alias `pr new`, a draft too, and `ready` for
+ * `pr ready` unless its last `--undo` holds — pflag reads `--undo=false` as no
+ * undo. The top-level command is resolved as gh does, so a value spelled `pr`
+ * in `gh issue create -t pr ready` is none. Read for the ready guard, never
+ * the command guard, which every consumer runs.
+ */
+export function ghFinishes(rest: string[]): "create" | "ready" | undefined {
+	const at = subcommandAt(rest, -1);
+	if (rest[at] !== "pr") return undefined;
+	const sub = subcommandOf(rest, at);
+	if (sub === "create" || sub === "new") return "create";
+	const undo = rest.filter((word) => word === "--undo" || word.startsWith("--undo=")).at(-1);
+	const undone = undo !== undefined && /^--undo(=(1|t|T|true|TRUE|True))?$/.test(undo);
+	return sub === "ready" && !undone ? "ready" : undefined;
+}
+
 /** Why these words make a `gh api` call that writes, or `undefined`. */
 export function ghApiWrite(rest: string[]): string | undefined {
 	// The top-level command, resolved as gh does: `api` as a flag's value in

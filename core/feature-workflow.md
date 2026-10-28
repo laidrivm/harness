@@ -102,7 +102,7 @@ completes, name the next step and the exact command.
   delta in the pull request's body).
 
 - When all Stage 3 gates pass: push the branch and offer to open the PR
-  (`gh pr create`, ready for review — see Git & PRs) with the description per
+  (`work.ts finish`, which marks it ready — see Git & PRs) with the description per
   Git & PRs. Wait for the user's go-ahead before opening it (unattended:
   agent — open it on the gate lines and with the body `autonomy.md`'s
   `agent` sets out; under the board loop, push nothing and name the pull

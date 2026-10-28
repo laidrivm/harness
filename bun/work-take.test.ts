@@ -7,6 +7,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup, git } from "./diff-budget.fixture.ts";
 import { head } from "./goal-check.fixture.ts";
+import { USAGE as WORK_USAGE } from "./work.ts";
 import { BOT, body, CARD, checkout, files, LISTING, page, question, said, stopServers, TOKEN, take, USER } from "./work-take.fixture.ts";
 
 afterAll(() => {
@@ -14,7 +15,8 @@ afterAll(() => {
 	cleanup();
 });
 
-const USAGE = "usage: work.ts take --card <id>";
+// The dispatcher's one usage, both subcommands' lines.
+const USAGE = WORK_USAGE.join("\n");
 
 describe("the arguments", () => {
 	// spec: work-take/no-card

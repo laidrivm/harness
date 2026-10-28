@@ -71,6 +71,31 @@ describe("the skill-call hook the harness keeps to itself", () => {
 	});
 });
 
+// The pinned copy, with no mark: the harness keeps the ready guard to itself (work-finish, stage 2 question 28 a″).
+const READY_GUARD = {
+	type: "command",
+	command: 'g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/ready-guard.ts"; if [ -f "$g" ]; then bun "$g"; fi',
+};
+
+describe("the ready guard the harness keeps to itself", () => {
+	// spec: work-finish/a-hand-run-ready
+	test("is registered under PreToolUse with no matcher, in the foreground with no if and no mark", () => {
+		// The whole hook object: an `if`, `async`, `asyncRewake`, `shell`, `args` or a matcher would change whether it runs or blocks.
+		expect(under(hooks(), "PreToolUse")).toContainEqual(READY_GUARD);
+		expect(READY_GUARD.command.endsWith(MARK)).toBe(false);
+		expect(HOOKS.filter((hook) => hook.command.includes("ready-guard.ts"))).toEqual([]);
+	});
+
+	test("a sync of the harness's own settings keeps it", () => {
+		expect(under(synced(join(import.meta.dir, "..", ".claude/settings.json")), "PreToolUse")).toContainEqual(READY_GUARD);
+	});
+
+	// spec: work-finish/a-consumer-s-settings
+	test("a consumer's sync writes no ready guard", () => {
+		expect(JSON.stringify(synced())).not.toContain("ready-guard.ts");
+	});
+});
+
 describe("the harness's own hook registrations", () => {
 	// spec: harness-updates/a-registration-is-missing-from-the-harness-s-settings
 	test.each(HOOKS.map((hook) => [`${hook.name} (${hook.event})`, hook]))(
