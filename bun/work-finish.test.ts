@@ -32,6 +32,7 @@ describe("the arguments", () => {
 		["--force", ["finish", "--card", CARD, "--force"]],
 		["a positional", ["finish", "--card", CARD, "more"]],
 		["a 31-hex card", ["finish", "--card", CARD.slice(1)]],
+		["an empty --card, which is not no card", ["finish", "--card", ""]],
 	])("%s prints the usage and exits 2, calling nothing", async (_, args) => {
 		const run = await finish({ args });
 		expect([run.code, run.err.trim(), run.calls, run.seen, run.refusals, run.remote]).toEqual([2, USAGE.join("\n"), [], [], [], ""]);
