@@ -29,10 +29,26 @@ export const OTHER = "99998888777766665555444433332222";
  * whether the card already holds an unanswered question; `state.cards`, what a
  * data source query finds; `state.fail`, the status a call, as `seen` names it,
  * is answered with instead; `state.slug`, the change a card's `Pointer` names;
- * `state.assign`, the ids on its `Assign`.
+ * `state.assign`, the ids on its `Assign`; `state.status`, its `select`
+ * `Status`, which a `PATCH` setting one changes before the page answers;
+ * `state.pointer`, a `Pointer` in place of the slug's; `state.parent`, the
+ * page's parent; `state.more`, the query's `has_more`.
  */
 export function standIn() {
-	const state = { me: 200, pending: false, slug: "demo", assign: [USER, OTHER], seen: [] as string[], bodies: [] as unknown[], cards: [] as unknown[], fail: {} as Record<string, number> };
+	const state = {
+		me: 200,
+		pending: false,
+		slug: "demo",
+		assign: [USER, OTHER],
+		seen: [] as string[],
+		bodies: [] as unknown[],
+		cards: [] as unknown[],
+		fail: {} as Record<string, number>,
+		status: "approved",
+		pointer: undefined as string | undefined,
+		parent: { type: "data_source_id", data_source_id: "ds1" } as object,
+		more: false,
+	};
 	const server = Bun.serve({
 		port: 0,
 		async fetch(req) {
@@ -42,12 +58,17 @@ export function standIn() {
 			state.bodies.push(req.method === "GET" ? undefined : await req.json());
 			if (state.fail[call]) return Response.json({}, { status: state.fail[call] });
 			if (url.pathname === "/v1/users/me") return Response.json({ object: "user", type: "bot", id: BOT }, { status: state.me });
-			if (req.method === "POST" && url.pathname.endsWith("/query")) return Response.json({ results: state.cards, has_more: false });
+			if (req.method === "POST" && url.pathname.endsWith("/query")) return Response.json({ results: state.cards, has_more: state.more });
 			if (req.method === "POST" && url.pathname === "/v1/pages") return Response.json({ object: "page", id: FILED });
+			if (req.method === "PATCH") state.status = (state.bodies.at(-1) as { properties?: { Status?: { select?: { name: string } } } })?.properties?.Status?.select?.name ?? state.status;
 			if (url.pathname.startsWith("/v1/pages/"))
 				return Response.json({
-					parent: { type: "data_source_id", data_source_id: "ds1" },
-					properties: { Pointer: { rich_text: [{ plain_text: `openspec/changes/${state.slug}/` }] }, Assign: { people: state.assign.map((id) => ({ id })) } },
+					parent: state.parent,
+					properties: {
+						Pointer: { rich_text: [{ plain_text: state.pointer ?? `openspec/changes/${state.slug}/` }] },
+						Assign: { people: state.assign.map((id) => ({ id })) },
+						Status: { type: "select", select: { name: state.status } },
+					},
 				});
 			if (url.pathname.startsWith("/v1/data_sources/")) return Response.json({ title: [{ plain_text: "Demo" }] });
 			const asked = { id: "c1", created_by: { id: BOT }, created_time: "2026-10-24T00:00:00Z", rich_text: [{ plain_text: `${MARK} Ship?` }] };

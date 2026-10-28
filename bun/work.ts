@@ -9,15 +9,19 @@
  * - `finish --card <id> [--title <text> --body-file <path>]`
  *   (`work-finish.ts`): pushes the branch, opens its pull request as a draft
  *   when none is open, and marks it ready unless a question waits on the card.
+ * - `status --card <id> --to <status>` (`work-status.ts`): moves the card's
+ *   `Status` once the evidence and the WIP limit allow it.
  */
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import { ID } from "./notion-bot.ts";
 import { finish } from "./work-finish.ts";
+import { status, STATUSES } from "./work-status.ts";
 import { take } from "./work-take.ts";
 
 export const USAGE = [
 	"usage: work.ts take --card <id>",
 	"       work.ts finish --card <id> [--title <text> --body-file <path>]",
+	"       work.ts status --card <id> --to <status>",
 ];
 
 /** The options `args` sets under `options`, or `undefined` when strict parsing refuses them. */
@@ -42,6 +46,10 @@ export async function work(args: string[]): Promise<{ lines: string[]; code: num
 		// Both or neither, and neither blank: `gh` would open a pull request with no title, or read no body.
 		const opening = title === undefined && body === undefined ? undefined : title?.trim() && body ? { title, body } : null;
 		if (typeof card === "string" && ID.test(card) && opening !== null) return finish(card, opening);
+	}
+	if (subcommand === "status") {
+		const { card, to } = (values(rest, { card: { type: "string" }, to: { type: "string" } }) ?? {}) as Record<string, string | undefined>;
+		if (typeof card === "string" && ID.test(card) && typeof to === "string" && STATUSES.includes(to)) return status(card, to);
 	}
 	return { lines: USAGE, code: 2 };
 }

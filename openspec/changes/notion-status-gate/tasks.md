@@ -12,7 +12,7 @@ suite's preload requires.
 
 ## 1. `work.ts status`
 
-- [ ] 1.1 Failing cases in `bun/work-status.test.ts` for the arguments: no
+- [x] 1.1 Failing cases in `bun/work-status.test.ts` for the arguments: no
       arguments, `--card` alone, `--to` alone, `--to merged`, a positional,
       an unknown option and a 31-hex card each print the usage and exit 2
       with no stand-in call and no `git` run; `--to idea`, `approved` and
@@ -20,7 +20,7 @@ suite's preload requires.
       `user-only`; a card reading `discarded` refuses any `--to` after the
       page read alone. Then add the `status` subcommand to `bun/work.ts`
       and its usage line, and `bun/work-status.ts` with the checks so far
-- [ ] 1.2 Failing cases in the same file for the WIP limit, each with the
+- [x] 1.2 Failing cases in the same file for the WIP limit, each with the
       page read and the query asserted on the stand-in: from `approved`, five
       cards in the range refuse under `wip-full`, four write; from `idea` the
       same (the directed-session scenario); from `proposing` to `proposed`,
@@ -30,7 +30,7 @@ suite's preload requires.
       refuse under `wip-limit`; the query's filter names exactly the seven
       range statuses and the card's `data_source_id`; `has_more` refuses
       under `HARNESS_WIP_LIMIT=150`. Then the count
-- [ ] 1.3 Failing cases in `bun/work-status-tree.test.ts`, with a bare
+- [x] 1.3 Failing cases in `bun/work-status-tree.test.ts`, with a bare
       `origin` whose `main` the test advances after the clone: a change
       archived on `origin/main` and not in the clone's tree or local `main`
       proves `done`, in a clone made with `--single-branch` of a feature
@@ -47,7 +47,7 @@ suite's preload requires.
       directory is left after a pass or a refusal. Then the fetch, the
       archive, the evidence, exporting nothing from `bun/turn-gate.ts` it
       does not already export
-- [ ] 1.4 Failing cases in the same file for the `Pointer`, each under
+- [x] 1.4 Failing cases in the same file for the `Pointer`, each under
       `no-pointer` and quoting it: empty; `openspec/changes/foo/ (step 2)`;
       `other: openspec/changes/foo/` where the fixture's `package.json` names
       `demo`; `openspec/changes/archive/foo/`; a well-formed slug
@@ -59,7 +59,7 @@ suite's preload requires.
       `bun/work-take.ts` and `ARCHIVED` from `bun/board-state.ts`, read
       by both callers, and use them; `bun/work-take.test.ts` and the
       `board-state*` tests stay green
-- [ ] 1.5 Failing cases in `bun/work-status.test.ts` for the rest: from
+- [x] 1.5 Failing cases in `bun/work-status.test.ts` for the rest: from
       `approved` with room, `--to archiving` writes (the order is not
       checked); `exploring` to `explored` writes and runs no `git`; no ask
       settings, a page read answering 500, a query answering 500 and a page

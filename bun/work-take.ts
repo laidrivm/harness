@@ -15,7 +15,8 @@ import { client, discussion, hex, oldest, plain, waits } from "./notion-bot.ts";
 
 /** The markdown read's API version, for that call alone: the others stay on the one their cases ran against. */
 const MARKDOWN = "2026-03-11";
-const POINTER = /^openspec\/changes\/([a-z0-9-]+)\/$/;
+/** A `Pointer` at an active change, wholly; `work-status.ts` reads it too. */
+export const POINTER = /^openspec\/changes\/([a-z0-9-]+)\/$/;
 
 type Property = { type?: unknown; [key: string]: unknown };
 const named = (value: unknown) => (typeof (value as { name?: unknown })?.name === "string" ? (value as { name: string }).name : "");
