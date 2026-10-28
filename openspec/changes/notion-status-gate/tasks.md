@@ -1,7 +1,8 @@
 # notion-status-gate — tasks
 
-Two groups, one pull request each: `feat/notion-status-gate-1`, then `-2`,
-both after `work-finish` group 2 has merged (proposal, *Order*). Each failing
+Groups 1 and 2 are a pull request each, `feat/notion-status-gate-1` then
+`-2`, after `work-finish` group 2 merges (proposal, *Order*); group 3, the
+probe after the pin bump, is ticked in the pull request that records it. Each failing
 case first, its failure recorded, cited as `// spec: work-status/<slug>`.
 The Notion stand-in is `bun/notion-bot.fixture.ts`'s `standIn()`, given a
 `select`-typed `Status` on the page it answers and the page a `PATCH`
@@ -39,8 +40,9 @@ suite's preload requires.
       change without `design.md` on `origin/main` refuses `proposed`; a
       complete change proves `proposed`; groups 1 ticked and 2 open refuse
       `applied` naming group 2; every group ticked, one task reading
-      `Dropped: …`, proves `applied`; a `tasks.md` with no boxed group
-      refuses `applied`; an archived change proves `applied`; a tree
+      `Dropped: …`, proves `applied`; a `tasks.md` with no boxed group, or
+      an open group and a ticked one under the same `## ` heading, refuses
+      `applied`; an archived change proves `applied`; a tree
       `boardState()` throws on refuses with its message; no temporary
       directory is left after a pass or a refusal. Then the fetch, the
       archive, the evidence, exporting nothing from `bun/turn-gate.ts` it
@@ -66,7 +68,8 @@ suite's preload requires.
       name } } } }` alone and prints `status: <card> <from> → <to>` from
       the `PATCH` answer; a `PATCH` answering 500 exits 1 and records
       nothing; no printed line holds the token; each refusal's record carries
-      its id (`// spec: gate-ledger/a-status-move-refused`). Then finish
+      its id and, with `CLAUDE_PROJECT_DIR` unset, the checkout as its
+      project (`// spec: gate-ledger/a-status-move-refused`). Then finish
       `bun/work-status.ts`; `wc -l` every file touched, each under 300
 - [ ] 1.6 Live probe from the tree, in this group's pull request, with the
       ask integration granted *Update content*; each refusal writes nothing:
@@ -104,10 +107,13 @@ suite's preload requires.
       `openspec/specs/`, the sub-agent brief and this card for "moved by
       hand", "set Status" and `notion-update-page` sites the change makes
       false, and fix each
-- [ ] 2.4 Live probe after the pin passes this group's merge: a
+
+## 3. The probe after the pin bump
+
+- [ ] 3.1 Live probe once the pin passes group 2's merge: a
       `notion-update-page` call setting this card's `Status` refused by the
       hook in a harness session, and one setting `Assign` alone passing;
       and the first moves the command wrote since group 1 merged, each line
-      as printed and the card read back. Record them on the card, then move
-      it to `applied` with `bun bun/work.ts status` once `origin/main` holds
-      every group ticked
+      as printed and the card read back. Record them in that pull request
+      and on the card; once it merges, move the card to `applied` with
+      `bun bun/work.ts status`
