@@ -71,7 +71,7 @@ suite's preload requires.
       its id and, with `CLAUDE_PROJECT_DIR` unset, the checkout as its
       project (`// spec: gate-ledger/a-status-move-refused`). Then finish
       `bun/work-status.ts`; `wc -l` every file touched, each under 300
-- [ ] 1.6 Live probe from the tree, in this group's pull request, with the
+- [x] 1.6 Live probe from the tree, in this group's pull request, with the
       ask integration granted *Update content*; each refusal writes nothing:
       `--to approved`, an `idea` card entering the range under
       `HARNESS_WIP_LIMIT` set to the board's live count, `--to done` on
@@ -79,17 +79,20 @@ suite's preload requires.
       2 is open, and `--to done` from a branch holding an unpushed commit
       that archives this change. Record each command and its line in the
       pull request body
+      — Probed 2026-10-28 from `origin/main` 8797561, recorded on the card
+      under *Проба 1.6* and in group 2's pull request: all five refused live,
+      the empty-`Pointer` one run by the user in their own terminal.
 
 ## 2. The connector's Status write and the prose
 
-- [ ] 2.1 Failing cases in `bun/status-guard.test.ts`, the event on stdin:
+- [x] 2.1 Failing cases in `bun/status-guard.test.ts`, the event on stdin:
       `update_properties` with `Status`, and `update_content` with `Status`
       beside `Assign`, exit 2 naming `bun bun/work.ts status` and write one
       `status-guard` record under `mcp-status`; `Assign` alone, no
       `properties`, an empty one, and `properties` as a string pass; a
       non-JSON event and one with no `tool_input` pass. Then write
       `bun/status-guard.ts`
-- [ ] 2.2 Failing cases in `bun/self-pin.test.ts`: the harness's settings
+- [x] 2.2 Failing cases in `bun/self-pin.test.ts`: the harness's settings
       hold the status guard in a `PreToolUse` group of its own under
       `^mcp__.+__notion-update-page$`, type `command`, no `if`, not async,
       the exact pin-path text with no `# harness-managed` mark; `HOOKS` holds
@@ -97,7 +100,7 @@ suite's preload requires.
       writes no `status-guard.ts`; `bun/settings.ts`'s check still passes
       the harness's settings. Then add the registration to
       `.claude/settings.json`
-- [ ] 2.3 Prose: `core/feature-workflow.md`'s *Move the card* bullet — in the
+- [x] 2.3 Prose: `core/feature-workflow.md`'s *Move the card* bullet — in the
       harness a session moves the eight statuses with `bun bun/work.ts status
       --card <id> --to <status>`, which refuses what this change's spec
       lists, and the connector's `Status` write is refused there; elsewhere
