@@ -15,6 +15,7 @@ function guard(event: unknown) {
 	const state = emptyDir("ready-guard-state-");
 	const run = Bun.spawnSync([process.execPath, script], {
 		stdin: Buffer.from(typeof event === "string" ? event : JSON.stringify(event)),
+		cwd: emptyDir("ready-guard-cwd-"), // no .env there for bun to load
 		env: { PATH: process.env.PATH, HOME: emptyDir("ready-guard-home-"), XDG_STATE_HOME: state },
 	});
 	const ledger = records(state, "ready-guard").map(({ decision, rule }) => ({ decision, rule }));
