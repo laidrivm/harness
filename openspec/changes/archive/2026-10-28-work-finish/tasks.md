@@ -112,3 +112,10 @@ failing case first, its failure recorded, cited as `// spec:
       guard runs from the pin, so its probe follows the pin bump (design,
       *Migration Plan*)
       Recorded in #332's report, not its body: draft behind a question, ready, a push refused
+
+## Follow-up after the archive
+
+The ready guard's live refusal of a hand-run `gh pr ready` is the one part of
+task 2.9's probe not yet run: the guard runs from the pin, which still
+predates #332. It runs once the self-pin moves past #332's merge, and its
+result goes on the change's card.
