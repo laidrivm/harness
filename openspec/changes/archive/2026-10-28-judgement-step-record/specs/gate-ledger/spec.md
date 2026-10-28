@@ -89,7 +89,8 @@ SHALL NOT count as another's.
 
 #### Scenario: A refusal at the commit
 
-- **WHEN** the ledger holds a refusal that names commit `C` in this checkout
+- **WHEN** the ledger holds a refusal that names commit `C` in this checkout,
+  and no runner or skill record of `C`
 - **THEN** a reader asking for a skill call or a runner record at `C` finds
   none
 
