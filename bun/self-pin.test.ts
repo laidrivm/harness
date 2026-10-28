@@ -8,8 +8,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { HOOKS, MARK, registration } from "./bootstrap.ts";
+import { HOOKS, MARK, NOTION_MATCHER, registration } from "./bootstrap.ts";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
+import { settings } from "./settings.ts";
 import { syncSettings } from "./sync-settings.ts";
 
 afterAll(cleanup);
@@ -93,6 +94,41 @@ describe("the ready guard the harness keeps to itself", () => {
 	// spec: work-finish/a-consumer-s-settings
 	test("a consumer's sync writes no ready guard", () => {
 		expect(JSON.stringify(synced())).not.toContain("ready-guard.ts");
+	});
+});
+
+// The pinned copy, with no mark, in a group of its own: the harness keeps the status guard to itself (notion-status-gate).
+const STATUS_GUARD = {
+	matcher: NOTION_MATCHER,
+	hooks: [
+		{
+			type: "command",
+			command: 'g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/status-guard.ts"; if [ -f "$g" ]; then bun "$g"; fi',
+		},
+	],
+};
+
+describe("the status guard the harness keeps to itself", () => {
+	// spec: work-status/a-status-set-through-the-connector
+	test("is a PreToolUse group of its own under the update-page matcher, in the foreground with no if and no mark", () => {
+		// The whole group: another matcher, an `if`, `async`, `asyncRewake`, `shell` or `args` would change whether it runs or blocks.
+		expect(hooks().PreToolUse).toContainEqual(STATUS_GUARD);
+		expect(STATUS_GUARD.hooks[0].command.endsWith(MARK)).toBe(false);
+		expect(HOOKS.filter((hook) => hook.command.includes("status-guard.ts"))).toEqual([]);
+	});
+
+	// spec: work-status/a-consumer-s-settings
+	test("a sync of the harness's own settings keeps it", () => {
+		expect(synced(join(import.meta.dir, "..", ".claude/settings.json")).PreToolUse).toContainEqual(STATUS_GUARD);
+	});
+
+	test("a consumer's sync writes no status guard", () => {
+		expect(JSON.stringify(synced())).not.toContain("status-guard.ts");
+	});
+
+	test("the settings check still passes the harness's own settings", () => {
+		// Its `.claude/settings.json` alone: the harness's `bunfig.toml` holds no `[install]`, which this change does not touch.
+		expect(settings(join(import.meta.dir, "..")).filter((problem) => problem.startsWith(".claude/settings.json"))).toEqual([]);
 	});
 });
 
