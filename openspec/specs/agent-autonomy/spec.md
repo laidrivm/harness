@@ -91,7 +91,7 @@ reaches it.
 #### Scenario: The pull request opens over a proposed dismissal
 
 - **WHEN** an unattended session has passed the pre-PR sequence, and
-  `/coderabbit-local` left a 🟠 Major that it proposes to dismiss
+  `/code-review` left a 🟠 Major that it proposes to dismiss
 - **THEN** it opens the pull request
 - **AND** the body names that finding's severity, its file and line, what it
   says, and why dismissal is proposed
@@ -99,7 +99,7 @@ reaches it.
 
 #### Scenario: The pull request opens over a Major left unresolved
 
-- **WHEN** an unattended session's third `/coderabbit-local` pass still
+- **WHEN** an unattended session's third `/code-review` pass still
   reports a 🟠 Major that no fix resolved and no dismissal was proposed for
 - **THEN** it pushes and opens the pull request
 - **AND** the body names that finding's severity, its file and line, what it
@@ -115,10 +115,10 @@ reaches it.
 
 #### Scenario: A question that waits on the card
 
-- **WHEN** an unattended session would dismiss a 🟠 Major that `/coderabbit-local`
+- **WHEN** an unattended session would dismiss a 🟠 Major that `/code-review`
   raised, and the step is marked `card`
 - **THEN** it hands the dismissal on through the card-questions procedure, with
-  what the bot missed, and does not settle the dismissal itself
+  what the reviewer missed, and does not settle the dismissal itself
 - **AND** if it opens the pull request, the body lists the finding as
   *The pull request opens over a proposed dismissal* sets out
 

@@ -6,12 +6,19 @@
  * the usage and exits 2 before the subcommand runs.
  *
  * - `take --card <id>` (`work-take.ts`): prints the card's context.
+ * - `finish --card <id> [--title <text> --body-file <path>]`
+ *   (`work-finish.ts`): pushes the branch, opens its pull request as a draft
+ *   when none is open, and marks it ready unless a question waits on the card.
  */
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import { ID } from "./notion-bot.ts";
+import { finish } from "./work-finish.ts";
 import { take } from "./work-take.ts";
 
-const USAGE = ["usage: work.ts take --card <id>"];
+export const USAGE = [
+	"usage: work.ts take --card <id>",
+	"       work.ts finish --card <id> [--title <text> --body-file <path>]",
+];
 
 /** The options `args` sets under `options`, or `undefined` when strict parsing refuses them. */
 function values(args: string[], options: ParseArgsConfig["options"]) {
@@ -28,6 +35,13 @@ export async function work(args: string[]): Promise<{ lines: string[]; code: num
 	if (subcommand === "take") {
 		const card = values(rest, { card: { type: "string" } })?.card;
 		if (typeof card === "string" && ID.test(card)) return take(card);
+	}
+	if (subcommand === "finish") {
+		const set = values(rest, { card: { type: "string" }, title: { type: "string" }, "body-file": { type: "string" } });
+		const { card, title, "body-file": body } = (set ?? {}) as Record<string, string | undefined>;
+		// Both or neither, and neither blank: `gh` would open a pull request with no title, or read no body.
+		const opening = title === undefined && body === undefined ? undefined : title?.trim() && body ? { title, body } : null;
+		if (typeof card === "string" && ID.test(card) && opening !== null) return finish(card, opening);
 	}
 	return { lines: USAGE, code: 2 };
 }

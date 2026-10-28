@@ -177,11 +177,6 @@ Rules about how work is carried out here. They do not age with the code.
 - Pass `--full-tree` to a `git ls-tree` whose pathspec names a path from the
   repository root — a working directory below the root resolves it against
   itself and lists nothing.
-- Mark a pull request draft (`gh pr ready --undo`) when you start work on it,
-  and ready (`gh pr ready`) only when that work ends and no question to the
-  user on its card is open: immediately after its final push succeeds, or
-  once you know no push will come — CodeRabbit reviews on the switch to
-  ready, so ready before the push reviews the old head and then the new one.
 - Before a commit, run the build's own scan over every file the commit writes
   that the scan covers, since a fixture in a test can be valid input to the
   scan it tests.
@@ -226,4 +221,5 @@ not age with the code.
   file — through an interpreter (`python3 -c`, `bun -e`, `node -e`) or a
   throwaway script, committed or not; the guard refuses only the program text
   it cannot read, so a committed script carrying the act reads to both checks
-  as an ordinary call and walks past.
+  as an ordinary call and walks past. `bun bun/work.ts finish` is the one
+  script the allow list grants a push, a pull request and a ready.
