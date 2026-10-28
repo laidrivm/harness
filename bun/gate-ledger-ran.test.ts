@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup } from "./diff-budget.fixture.ts";
-import { ran } from "./gate-ledger.ts";
+import { ran, RUNNER_STEPS } from "./gate-ledger.ts";
 import { run, runRecord, stateWith, tasks, TWO } from "./goal-check.fixture.ts";
 
 /**
@@ -27,9 +27,12 @@ describe("a reader counts a record only for its own gate and step", () => {
 	});
 
 	// spec: gate-ledger/a-diff-budget-record-among-skill-records
-	test("a passing diff-budget record is found among skill records [27]", () => {
-		const ledger = [skill("zombies"), runner("diff-budget"), skill("triage")].join("\n");
-		expect(ran(C, TOP, "pass", ledger, "diff-budget")).toBe(true);
+	test("a passing record of every runner step is found among skill records [27]", () => {
+		const ledger = [skill("zombies"), ...RUNNER_STEPS.map((rule) => runner(rule)), skill("triage")].join("\n");
+		expect(RUNNER_STEPS.every((rule) => ran(C, TOP, "pass", ledger, rule))).toBe(true);
+		// A skill call named after a step does not stand in for that step's runner record.
+		const short = [skill("zombies"), runner("diff-budget"), skill("project-checks")].join("\n");
+		expect(RUNNER_STEPS.every((rule) => ran(C, TOP, "pass", short, rule))).toBe(false);
 	});
 
 	// spec: gate-ledger/another-skill-s-record
