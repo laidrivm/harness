@@ -39,6 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: main
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
@@ -56,7 +57,10 @@ jobs:
       contents: write
     steps:
       # Credentials kept: this job pushes, running only the harness's own code.
+      # `ref: main` in both jobs: a dispatch from another branch must not land it on main.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.2
@@ -131,5 +135,5 @@ git diff            # see what changed upstream
 A cloud session or routine runs the harness as a local one does ([cloud-sessions](openspec/specs/cloud-sessions/spec.md)):
 
 - Attach `harness` alone: a session with two repositories reads no hooks, so the harness would be off without a word. Network access Trusted and no variables or secrets. Setup script: `npm i -g bun@1.4.2`, the bun CI runs. Nothing updates that version but a hand edit of every site that names it; `bun/bun-version.test.ts` fails when they disagree.
-- GitHub's GraphQL API is closed there, so `gh pr` fails: open the pull request with `gh api -X POST repos/<owner>/<repo>/pulls`. `.githooks` is off, so CI alone runs the tests. A consumer's cloud session gets the proxy's 403 for the harness tarball until its own cloud card is done.
+- GitHub's GraphQL API is closed there, so `gh pr` fails: open the pull request with `gh api -X POST repos/<owner>/<repo>/pulls -f title=<title> -f head=<branch> -f base=main`. `.githooks` is off, so CI alone runs the tests. A consumer's cloud session gets the proxy's 403 for the harness tarball until its own cloud card is done.
 - A routine's prompt is the unattended line and one tracked skill: see *Routines* in [core/autonomy.md](core/autonomy.md).
