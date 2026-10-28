@@ -77,7 +77,9 @@ test("counts a dismissed Major", () => {
 
 // spec: agent-rulebook/nothing-reviewed-since-the-previous-entry
 test("writes none reviewed when nothing was, or there is no CodeRabbit", () => {
-	expect(step()).toContain("`- first review: none reviewed` when none was, or the project has no CodeRabbit");
+	expect(step()).toContain(
+		"`- first review: none reviewed` when none was measured, or the project has no CodeRabbit, still naming any `#c (unmeasured)` after a dash",
+	);
 });
 
 test("takes <since> as the day before the previous heading and adds every open pull request", () => {

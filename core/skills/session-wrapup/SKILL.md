@@ -79,7 +79,7 @@ gh api 'repos/{owner}/{repo}/pulls/<n>/reviews/<id>/comments' --paginate --jq '.
 gh api 'repos/{owner}/{repo}/issues/<n>/comments' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]") | .body'
 ```
 
-Write `- first review: k of n without Major+ — #a, #b (Major+), #c (unmeasured)`, or `- first review: none reviewed` when none was, or the project has no CodeRabbit.
+Write `- first review: k of n without Major+ — #a, #b (Major+), #c (unmeasured)`, or `- first review: none reviewed` when none was measured, or the project has no CodeRabbit, still naming any `#c (unmeasured)` after a dash.
 
 A skill that ran and found nothing is the point of this step, not a boring result — record it as `0 findings`. Over a month of sessions this is what shows which step of the pipeline has never once caught anything, so the pipeline gets shortened on evidence instead of by feel. Count only findings the skill itself reported; don't reclassify them.
 

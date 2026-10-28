@@ -102,4 +102,4 @@
 ## 2026-10-28 — baseline (first-review-yield)
 
 - first review: 13 of 20 without Major+ — #316 (Major+), #317 (Major+), #318 (Major+), #319, #320, #321, #322, #323, #324, #325, #326, #327, #328 (Major+), #329 (Major+), #331, #333, #334, #335, #330 (Major+), #332 (Major+)
-- Window: the last 20 measured pull requests whose first CodeRabbit review completed before `work-finish` group 2 merged (#332, 2026-10-28 15:28:45 UTC), in first-review order; method and per-PR findings in `openspec/changes/first-review-yield/design.md`, *Baseline*
+- Window: the last 20 measured pull requests whose first CodeRabbit review completed before `work-finish` group 2 merged (#332, 2026-10-28 15:28:45 UTC), in first-review order; method and per-PR findings in the `first-review-yield` change's `design.md` (under `openspec/changes/archive/` once archived), *Baseline*
