@@ -6,6 +6,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { realpathSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { USAGE } from "./work.ts";
 import { archived, CARD, change, clone, PAGE, PATCH, refused, status } from "./work-status.fixture.ts";
@@ -38,14 +39,14 @@ describe("the user's statuses", () => {
 	test.each(["idea", "approved", "discarded"])("--to %s refuses naming the user, calling nothing", async (target) => {
 		const run = await status({ args: to(target) });
 		refused(run, "user-only");
-		expect([run.seen, run.git, run.last.includes("user")]).toEqual([[], [], true]);
+		expect([run.seen, run.last.includes("user")]).toEqual([[], true]);
 	});
 
 	// spec: work-status/a-discarded-card
 	test.each(["exploring", "done"])("a discarded card refuses --to %s after the page read alone", async (target) => {
 		const run = await status({ args: to(target), page: { status: "discarded" } });
 		refused(run, "user-only");
-		expect([run.seen, run.git]).toEqual([[PAGE], []]);
+		expect(run.seen).toEqual([PAGE]);
 	});
 });
 
@@ -127,15 +128,23 @@ describe("the reads and the write", () => {
 		expect([run.code, run.bodies[2], run.last, run.refusals]).toEqual([0, { properties: { Status: { select: { name: "exploring" } } } }, `status: ${CARD} approved → exploring`, []]);
 	});
 
+	test("a write Notion answers with another status prints it and exits 1", async () => {
+		const run = await status({ args: to("exploring"), page: { answer: "applying" } });
+		expect([run.code, run.last, run.refusals]).toEqual([1, `status: ${CARD} approved → applying`, []]);
+	});
+
 	test("a write answering 500 exits 1 and records nothing", async () => {
 		const run = await status({ args: to("exploring"), fail: { [PATCH]: 500 } });
 		expect([run.code, run.last.startsWith("status: refused"), run.refusals]).toEqual([1, false, []]);
 	});
 
 	// spec: gate-ledger/a-status-move-refused
-	test("a refusal's record carries its id and the checkout as its project", async () => {
-		const cwd = emptyDir("work-status-cwd-");
-		const run = await status({ args: to("approved"), cwd });
-		expect(run.refusals.map(({ decision, rule, project }) => ({ decision, rule, project }))).toEqual([{ decision: "block", rule: "user-only", project: realpathSync(cwd) }]);
+	test.each([
+		["a checkout's subdirectory", "checkout"],
+		["a directory outside any checkout", "outside"],
+	])("a refusal's record from %s carries its id and the checkout as its project", async (_, where) => {
+		const top = where === "checkout" ? clone(change("demo")).dir : emptyDir("work-status-cwd-");
+		const run = await status({ args: to("approved"), cwd: where === "checkout" ? join(top, "openspec") : top });
+		expect(run.refusals.map(({ decision, rule, project }) => ({ decision, rule, project }))).toEqual([{ decision: "block", rule: "user-only", project: realpathSync(top) }]);
 	});
 });

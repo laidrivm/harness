@@ -32,7 +32,8 @@ export const OTHER = "99998888777766665555444433332222";
  * `state.assign`, the ids on its `Assign`; `state.status`, its `select`
  * `Status`, which a `PATCH` setting one changes before the page answers;
  * `state.pointer`, a `Pointer` in place of the slug's; `state.parent`, the
- * page's parent; `state.more`, the query's `has_more`.
+ * page's parent; `state.more`, the query's `has_more`; `state.answer`, the
+ * `Status` a `PATCH` sets in place of the one it sent.
  */
 export function standIn() {
 	const state = {
@@ -48,6 +49,7 @@ export function standIn() {
 		pointer: undefined as string | undefined,
 		parent: { type: "data_source_id", data_source_id: "ds1" } as object,
 		more: false,
+		answer: undefined as string | undefined,
 	};
 	const server = Bun.serve({
 		port: 0,
@@ -60,7 +62,7 @@ export function standIn() {
 			if (url.pathname === "/v1/users/me") return Response.json({ object: "user", type: "bot", id: BOT }, { status: state.me });
 			if (req.method === "POST" && url.pathname.endsWith("/query")) return Response.json({ results: state.cards, has_more: state.more });
 			if (req.method === "POST" && url.pathname === "/v1/pages") return Response.json({ object: "page", id: FILED });
-			if (req.method === "PATCH") state.status = (state.bodies.at(-1) as { properties?: { Status?: { select?: { name: string } } } })?.properties?.Status?.select?.name ?? state.status;
+			if (req.method === "PATCH") state.status = state.answer ?? (state.bodies.at(-1) as { properties?: { Status?: { select?: { name: string } } } })?.properties?.Status?.select?.name ?? state.status;
 			if (url.pathname.startsWith("/v1/pages/"))
 				return Response.json({
 					parent: state.parent,
