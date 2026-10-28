@@ -129,8 +129,11 @@ requests counting toward stage 2.
    by first-review time, harness pull requests only. The closing session
    takes them from the `first review` lines, counting a pull request named
    in two entries once — two sessions on parallel branches each append to
-   their own copy of the ledger file. It checks each in the gate ledger by
-   `commit` alone, under any `project`: a subagent's run in a scratch clone
+   their own copy of the ledger file. The lines hold no time, so it orders
+   the pull requests by the first-review time it re-reads with step 5's
+   check-run and status reads; the line's format stays as it is. It checks
+   each in the gate ledger by `commit` alone, under any `project`: a
+   subagent's run in a scratch clone
    records the clone's path, not the main checkout's, and a commit names one
    tree whichever checkout ran it — CodeRabbit's ask on #329 to match the
    repository too was rejected for this (user, answer а). The ledger is this
