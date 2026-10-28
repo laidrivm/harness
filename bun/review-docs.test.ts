@@ -97,7 +97,7 @@ describe("the App's name in code", () => {
 
 describe("the /coderabbit bullet", () => {
 	test("is found by its opening, never by the local bullet's three reviews [10]", () => {
-		const doc = "- `/coderabbit-local [base]` — at most three reviews.\n- `/coderabbit [pr]` — chews.\n";
+		const doc = "- `/code-review` — at most three reviews.\n- `/coderabbit [pr]` — chews.\n";
 		expect(bullet(doc, CODERABBIT)).toBe("`/coderabbit [pr]` — chews. ");
 	});
 
@@ -116,17 +116,29 @@ describe("the /coderabbit bullet", () => {
 		expect(text).toContain("`task-board`");
 		expect(text).toContain("posts nothing in the pull request");
 	});
+
+	// The local review's base, changed-file check and gate line have no meaning on a pull request.
+	test("shares /code-review's finding-disposal terms alone, keeping its pull-request behaviour", () => {
+		const text = bullet(read("core/review-toolkit.md"), CODERABBIT) ?? "";
+		expect(text).toContain("on `/code-review`'s finding-disposal terms alone");
+		expect(text).toContain("not its base, its changed-file check, its grading or its `CODE-REVIEW` gate line");
+		expect(text).toContain("CodeRabbit grades its own findings and a Major it raised stays a Major");
+		expect(text).toContain("Once a PR is open, say so and stop");
+		expect(text).not.toContain("/coderabbit-local");
+	});
 });
 
-const LOCAL = "`/coderabbit-local [base]` —";
-const STEP_5 = "5. `/coderabbit-local`";
+const LOCAL = "`/code-review` —";
+// The form code-review-replaces-cli probed (design.md decision 1): the range after the level is the diff read.
+const BASE_FORM = "`/code-review high <base>...HEAD` from the branch's own worktree";
+const CLI = "`/coderabbit-local [base]` —";
+const STEP_5 = "5. `/code-review`";
 const DOCS_PATH = "A documentation branch, as the runner classifies one";
-const CODE_REVIEW = "`/code-review` —";
 const toolkit = () => read("core/review-toolkit.md");
 
 describe("the local review runs only while no pull request is open", () => {
 	const sites: [string, (doc: string) => string | undefined][] = [
-		["the /coderabbit-local bullet", (doc) => bullet(doc, LOCAL)],
+		["the /code-review bullet", (doc) => bullet(doc, LOCAL)],
 		["step 5", (doc) => block(doc, STEP_5)],
 		["the documentation-branch path", (doc) => block(doc, DOCS_PATH)],
 	];
@@ -164,105 +176,83 @@ describe("the local review runs only while no pull request is open", () => {
 		expect(find(toolkit()) ?? "").toContain("a draft's once it is marked ready");
 	});
 
-	test.each(sites.slice(1))("%s points at the measurement", (_, find) => {
+	// spec: local-review-loop/a-code-branch-reaches-the-end-of-the-sequence
+	// spec: local-review-loop/a-documentation-branch
+	test.each(sites)("%s names `/code-review high`", (_, find) => {
+		expect(find(toolkit()) ?? "").toContain("`/code-review high");
+	});
+
+	test.each(sites.slice(1))("%s points at the bullet's terms", (_, find) => {
 		expect(find(toolkit()) ?? "").toContain("the `/code-review` bullet");
 	});
 
 	test("a numbered step is found without the blank line a paragraph needs", () => {
-		const doc = "4. `/triage`.\n5. `/coderabbit-local` last.\n\nNext.\n";
-		expect(block(doc, STEP_5)).toBe("5. `/coderabbit-local` last.");
+		const doc = "4. `/triage`.\n5. `/code-review` last.\n\nNext.\n";
+		expect(block(doc, STEP_5)).toBe("5. `/code-review` last.");
 	});
 });
 
-describe("the /code-review bullet measures Claude's review beside the CLI", () => {
-	// spec: local-review-loop/a-branch-measured-beside-the-cli
-	test("runs it at effort high in a fresh subagent at the CLI's first commit, applying both", () => {
-		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
-		for (const words of [
-			"`/code-review high`",
-			"fresh subagent",
-			"the commit of the CLI's first pass",
-			"verified findings of both are applied",
-		])
-			expect(text).toContain(words);
+describe("the /code-review bullet is the local review", () => {
+	// spec: local-review-loop/a-code-branch-reaches-the-end-of-the-sequence
+	test("names the runner's base in the form the probe found working", () => {
+		expect(bullet(toolkit(), LOCAL) ?? "").toContain(BASE_FORM);
 	});
 
-	// spec: local-review-loop/a-branch-measured-beside-the-cli
-	test("gives the subagent its target, never its working directory", () => {
-		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
-		expect(text).toContain("The subagent is given its target explicitly");
-		expect(text).toContain("the first pass's commit SHA");
-		expect(text).toContain("its working directory is the project's main checkout");
-		expect(text).toContain("It reports the SHA it reviewed");
-		expect(text).toContain(
-			"a review of another SHA, or one that names files the branch did not change, read another tree and counts as a run that does not return",
+	test("names no argument that posts or applies findings, in the bullet, step 5 or the documentation path", () => {
+		for (const text of [bullet(toolkit(), LOCAL), block(toolkit(), STEP_5), block(toolkit(), DOCS_PATH)]) {
+			expect(text).toContain("`/code-review high");
+			for (const flag of ["--comment", "--fix", "--post", "ultra"]) expect(text).not.toContain(flag);
+		}
+	});
+
+	// spec: local-review-loop/a-finding-the-review-gives-no-severity
+	test("has the session grade each finding Trivial to Critical and name the grade", () => {
+		const text = bullet(toolkit(), LOCAL) ?? "";
+		for (const grade of ["🔵 Trivial", "🟡 Minor", "🟠 Major", "🔴 Critical"]) expect(text).toContain(grade);
+		expect(text).toContain("names the grade beside each finding in its report");
+	});
+
+	test("has the session write the `CODE-REVIEW gate:` line", () => {
+		const text = bullet(toolkit(), LOCAL) ?? "";
+		expect(text).toContain("the session writes the `CODE-REVIEW gate:` line");
+		expect(text).toContain("the built-in skill prints none");
+	});
+
+	// spec: local-review-loop/the-review-does-not-return
+	test("reports a review that does not return, or that read another diff, and pushes on", () => {
+		const text = bullet(toolkit(), LOCAL) ?? "";
+		expect(text).toContain("A review that does not return —");
+		expect(text).toContain("or whose findings name no file the branch's diff changes");
+		expect(text).toContain("is reported and the push goes on without the gate");
+	});
+
+	test("the /coderabbit-local bullet is in no sequence and no gate", () => {
+		const text = bullet(toolkit(), CLI) ?? "";
+		expect(text).toContain("in no sequence and no gate");
+		expect(text).toContain("the guideline files that the config's `code_guidelines` patterns match");
+	});
+
+	test("the doc holds no measurement", () => {
+		expect(flat(toolkit())).not.toContain("Review measurement");
+	});
+	// Its `Skill(code-review)` allow entry is pinned in pre-pr-steps.test.ts, beside every judgement step's.
+});
+
+describe("an unattended pull request opens over the local review's gate", () => {
+	const autonomy = () => read("core/autonomy.md");
+
+	// spec: agent-autonomy/the-pull-request-opens-over-a-proposed-dismissal
+	test("`CODE-REVIEW` reading `OPEN` only over a proposed Major or Critical dismissal", () => {
+		expect(bullet(autonomy(), "`CODE-REVIEW` reading `OPEN`")?.trim()).toBe(
+			"`CODE-REVIEW` reading `OPEN` only over a 🟠 Major or 🔴 Critical dismissal it proposes;",
 		);
 	});
 
-	// spec: local-review-loop/the-cli-is-unavailable
-	test("leaves a branch whose CLI is unavailable unmeasured", () => {
-		expect(bullet(toolkit(), CODE_REVIEW) ?? "").toContain(
-			"A branch whose CLI is unavailable has no first pass and goes unmeasured",
+	// spec: agent-autonomy/the-pull-request-opens-over-a-major-left-unresolved
+	test("`CODE-REVIEW` reading `BLOCKED` only over a Major or above the third pass left", () => {
+		expect(bullet(autonomy(), "`CODE-REVIEW` reading `BLOCKED`")?.trim()).toBe(
+			"`CODE-REVIEW` reading `BLOCKED` only over a 🟠 Major or 🔴 Critical that the third pass left unresolved.",
 		);
-	});
-
-	// spec: local-review-loop/a-branch-measured-beside-the-cli
-	test("records each verified defect under the section's heading line, or `none`", () => {
-		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
-		for (const words of [
-			"a line reading `## Review measurement`",
-			"one line per verified defect",
-			"its file and line, what it was and which reviewer flagged it",
-			"the single line `none` when neither flagged one",
-		])
-			expect(text).toContain(words);
-	});
-
-	// spec: local-review-loop/a-pull-request-that-only-names-the-section
-	test("lists the candidates closed and merged alike, counting only an exact heading line", () => {
-		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
-		expect(text).toContain(
-			"`gh pr list --repo <repo> --state all --search '\"Review measurement\" in:body' --json number,body --limit 1000`",
-		);
-		expect(text).toContain("only a body with a line exactly `## Review measurement` counts as measured");
-	});
-
-	// spec: local-review-loop/a-finding-of-claude-s-review-the-agent-would-skip
-	test("is no gate: a skipped finding keeps its reason and the CLI's gate line", () => {
-		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
-		expect(text).toContain("is no gate");
-		expect(text).toContain("skipped with its reason in the report");
-		expect(text).toContain("the gate line stays as `/coderabbit-local` set it");
-	});
-
-	// spec: local-review-loop/claude-s-review-does-not-return
-	test("a run that does not return leaves the pull request unmeasured", () => {
-		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
-		expect(text).toContain("A run that does not return —");
-		expect(text).toContain("— leaves no section and is not counted, and the report names why");
-	});
-
-	// spec: local-review-loop/the-fifth-measured-pull-request
-	test("files an idea card once CodeRabbit has reviewed the fifth", () => {
-		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
-		expect(text).toContain("an `idea` card");
-		expect(text).toContain("once CodeRabbit has reviewed the fifth");
-		expect(text).toContain("the session that disposes of that review");
-		expect(text).toContain(
-			"the defects only the CLI flagged, only `/code-review` flagged, both flagged, and what CodeRabbit then raised and the agent applied",
-		);
-	});
-
-	// spec: local-review-loop/the-measurement-ends
-	test("ends at the tenth, and takes no evidence from /ponytail-review", () => {
-		const text = bullet(toolkit(), CODE_REVIEW) ?? "";
-		expect(text).toContain("ends at the tenth: after it, `/coderabbit-local` runs alone and the body carries no section");
-		expect(text).toContain("`/ponytail-review`'s record is no evidence about it");
-	});
-
-	// Unattended, a skill call with no allow entry is refused, a run that does not return.
-	test("the harness's own settings allow the skill by its exact name", () => {
-		// A `Skill(...)` rule matches the skill's name, never its arguments, so this covers `/code-review high`.
-		expect(JSON.parse(read(".claude/settings.json")).permissions.allow).toContain("Skill(code-review)");
+		expect(autonomy()).not.toContain("CODERABBIT-LOCAL");
 	});
 });

@@ -44,10 +44,27 @@ and which the session that writes it owns.
    so), which in a worktree or a long-lived checkout trails `origin/main`:
    on this branch that diff held 209 files where the branch changes 7. The
    review must read the diff the runner measured, in the tree the branch is
-   checked out in, so the session names that base, and a clone's path where
-   it works in a clone outside its working directory. Which argument form
-   the skill reads as a base and which as a tree was not probed; task 2.1
-   probes it before the doc names it.
+   checked out in, so the session names that base. Task 2.1 probed the
+   form on 2026-10-27, from this branch's worktree at 94a0c99:
+   `/code-review high origin/main` reads the ref after the level as the
+   base. The forked review ran `git diff origin/main...HEAD` with the
+   worktree as its directory, reported "the committed range is a single
+   commit, 94a0c99", and named findings on `bun/pre-pr-steps.test.ts`,
+   which `changedPaths("origin/main")` lists; it read the working tree's
+   uncommitted edits as well. The skill's recipe, though, says a branch
+   name passed as an argument is the target to review, so a bare ref reads
+   as either, and on a model's reading (the branch's second review, a 🟠
+   Major). The doc names the range, `/code-review high <base>...HEAD`,
+   which reads one way. The branch's third review ran in that form, as
+   `/code-review high origin/main...HEAD` from the worktree at c0a494e: it
+   ran `git diff origin/main...HEAD`, reported "8 issues on
+   `origin/main...HEAD`", and named findings on `README.md` and
+   `core/review-toolkit.md`, both of which `changedPaths("origin/main")`
+   lists.
+   A clone's path as the tree was not probed — since #320 a session works
+   in its own worktree, where the review's directory is the branch's — so
+   the doc names no form for it, and a session in a clone outside its
+   working directory gets the file check of decision 2 as its guard.
 2. **The session runs it itself, not a fresh subagent, records no SHA, and
    checks the files.** The fresh subagent and the SHA were the measurement's:
    one held the two lists comparable, the other caught a subagent that
@@ -93,9 +110,12 @@ and which the session that writes it owns.
    `coderabbit-local`; the `Skill` hook's record carries the skill's name, so
    the two meet without either change citing the other's code. The pin that
    each id names a skill under `core/skills/` cannot hold a built-in one: it
-   skips `code-review` and names the case of `bun/review-docs.test.ts` that
-   already pins the `Skill(code-review)` entry of `.claude/settings.json`,
-   rather than asserting it a second time.
+   skips `code-review`. In its place a case of `bun/pre-pr-steps.test.ts`
+   pins a `Skill(<id>)` entry of `.claude/settings.json` for every id in
+   `JUDGEMENT`, and the case of `bun/review-docs.test.ts` that pinned
+   `Skill(code-review)` alone is deleted: a pin on the literal would not tie
+   the step's id to the entry, and two pins on one entry drift (`/code-review`
+   on this branch, both passes).
 6. **`/coderabbit-local` stays, outside the sequence.** It moves to the
    bullets like `/ponytail-review`: available, not a gate, run when a user
    asks for CodeRabbit's take before a push. Retiring it would reach d2ass

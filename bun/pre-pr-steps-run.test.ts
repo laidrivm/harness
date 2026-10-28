@@ -3,7 +3,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git, lines, repo, script } from "./diff-budget.fixture.ts";
 import { checks, records, run } from "./pre-pr.fixture.ts";
-import { CODERABBIT_LOCAL, PROJECT_CHECKS, TRIAGE, WARM, ZOMBIES } from "./pre-pr-steps.ts";
+import { CODE_REVIEW, PROJECT_CHECKS, TRIAGE, WARM, ZOMBIES } from "./pre-pr-steps.ts";
 import { reported } from "./turn-gate.ts";
 
 /**
@@ -16,9 +16,9 @@ import { reported } from "./turn-gate.ts";
 
 afterAll(cleanup);
 
-const DOCS = `PRE-PR steps: ${[PROJECT_CHECKS, TRIAGE, CODERABBIT_LOCAL].join(", ")}`;
-const CODE = `PRE-PR steps: ${[PROJECT_CHECKS, ZOMBIES, TRIAGE, CODERABBIT_LOCAL].join(", ")}`;
-const EVERY = `PRE-PR steps: ${[PROJECT_CHECKS, ZOMBIES, WARM, TRIAGE, CODERABBIT_LOCAL].join(", ")}`;
+const DOCS = `PRE-PR steps: ${[PROJECT_CHECKS, TRIAGE, CODE_REVIEW].join(", ")}`;
+const CODE = `PRE-PR steps: ${[PROJECT_CHECKS, ZOMBIES, TRIAGE, CODE_REVIEW].join(", ")}`;
+const EVERY = `PRE-PR steps: ${[PROJECT_CHECKS, ZOMBIES, WARM, TRIAGE, CODE_REVIEW].join(", ")}`;
 const ALONE = `PRE-PR steps: ${PROJECT_CHECKS}`;
 
 const last = (out: string) => out.trimEnd().split("\n").at(-1);

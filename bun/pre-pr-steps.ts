@@ -13,9 +13,9 @@ export const PROJECT_CHECKS = RUNNER_STEPS[1];
 export const ZOMBIES = "zombies";
 export const WARM = "warm";
 export const TRIAGE = "triage";
-export const CODERABBIT_LOCAL = "coderabbit-local";
+export const CODE_REVIEW = "code-review";
 /** The judgement steps, in the sequence's order. */
-export const JUDGEMENT = [ZOMBIES, WARM, TRIAGE, CODERABBIT_LOCAL] as const;
+export const JUDGEMENT = [ZOMBIES, WARM, TRIAGE, CODE_REVIEW] as const;
 
 // Documentation is the enumerated side, so a path nobody foresaw reads as code,
 // where a misread costs one `/zombies` run rather than a dropped review.
