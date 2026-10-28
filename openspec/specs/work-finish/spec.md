@@ -84,8 +84,8 @@ the card holds. The switch to ready is then the one CodeRabbit reviews.
 
 - **WHEN** the branch has no open pull request and `finish` has a title and a
   body file
-- **THEN** it pushes, opens the pull request as a draft with them, and goes on
-  to the ready switch
+- **THEN** it pushes, unless `origin` already holds `HEAD`, opens the pull
+  request as a draft with them, and goes on to the ready switch
 
 #### Scenario: A first finish with no title
 
