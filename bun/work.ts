@@ -6,9 +6,10 @@
  * the usage and exits 2 before the subcommand runs.
  *
  * - `take --card <id>` (`work-take.ts`): prints the card's context.
- * - `finish --card <id> [--title <text> --body-file <path>]`
+ * - `finish [--card <id>] [--title <text> --body-file <path>]`
  *   (`work-finish.ts`): pushes the branch, opens its pull request as a draft
- *   when none is open, and marks it ready unless a question waits on the card.
+ *   when none is open, and marks it ready unless a question waits on the
+ *   card; with no card, it reads none.
  * - `status --card <id> --to <status>` (`work-status.ts`): moves the card's
  *   `Status` once the evidence and the WIP limit allow it.
  */
@@ -20,7 +21,7 @@ import { take } from "./work-take.ts";
 
 export const USAGE = [
 	"usage: work.ts take --card <id>",
-	"       work.ts finish --card <id> [--title <text> --body-file <path>]",
+	"       work.ts finish [--card <id>] [--title <text> --body-file <path>]",
 	"       work.ts status --card <id> --to <status>",
 ];
 
@@ -45,7 +46,7 @@ export async function work(args: string[]): Promise<{ lines: string[]; code: num
 		const { card, title, "body-file": body } = (set ?? {}) as Record<string, string | undefined>;
 		// Both or neither, and neither blank: `gh` would open a pull request with no title, or read no body.
 		const opening = title === undefined && body === undefined ? undefined : title?.trim() && body ? { title, body } : null;
-		if (typeof card === "string" && ID.test(card) && opening !== null) return finish(card, opening);
+		if ((card === undefined || ID.test(card)) && set && opening !== null) return finish(card, opening);
 	}
 	if (subcommand === "status") {
 		const { card, to } = (values(rest, { card: { type: "string" }, to: { type: "string" } }) ?? {}) as Record<string, string | undefined>;

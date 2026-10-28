@@ -20,11 +20,10 @@ afterAll(() => {
 const DRAFT = { before: [pull(7, "OPEN", true)] };
 
 describe("the arguments", () => {
-	// spec: work-finish/no-card
+	// spec: work-finish/a-malformed-card
 	// spec: work-finish/an-option-it-does-not-know
 	test.each([
 		["no arguments", []],
-		["no --card", ["finish"]],
 		["--title without --body-file", ["finish", "--card", CARD, "--title", "t"]],
 		["--body-file without --title", ["finish", "--card", CARD, "--body-file", "b"]],
 		["an empty --title", ["finish", "--card", CARD, "--title", "", "--body-file", "b"]],
@@ -96,6 +95,12 @@ describe("the refusals before the push", () => {
 		const run = await finish({ cwd, gh: DRAFT, state: stateWith(...lines(cwd)) });
 		refused(run, "unproven");
 		expect(run.last).toContain("no passing pre-PR run record");
+	});
+
+	// spec: work-finish/no-card-no-question-check
+	test("no --card and no run record of HEAD refuses as with a card", async () => {
+		const run = await finish({ args: ["finish"], gh: DRAFT, state: stateWith() });
+		refused(run, "unproven");
 	});
 
 	test("an unreadable pull request state", async () => {

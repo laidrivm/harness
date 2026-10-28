@@ -36,7 +36,7 @@ for (const part of parts)
 	for (const [name, rest] of invocations(part)) {
 		const act = name === "gh" ? ghFinishes(rest) : undefined;
 		if (act === "create")
-			block("hand-create", "ready-guard: `gh pr create` is `bun bun/work.ts finish`'s: run `bun bun/work.ts finish --card <id> --title <text> --body-file <path>`, which opens it as a draft after the push.");
+			block("hand-create", "ready-guard: `gh pr create` is `bun bun/work.ts finish`'s: run `bun bun/work.ts finish [--card <id>] --title <text> --body-file <path>`, which opens it as a draft after the push.");
 		if (act === "ready")
-			block("hand-ready", "ready-guard: marking a pull request ready is `bun bun/work.ts finish`'s: run `bun bun/work.ts finish --card <id>`, which marks it ready after the push unless a question waits on the card. `gh pr ready <n> --undo` stays yours.");
+			block("hand-ready", "ready-guard: marking a pull request ready is `bun bun/work.ts finish`'s: run `bun bun/work.ts finish [--card <id>]`, which marks it ready after the push unless a question waits on the card it names. `gh pr ready <n> --undo` stays yours.");
 	}

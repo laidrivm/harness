@@ -77,7 +77,8 @@ entry, a hook or a CI check leaves this file the way it would leave
   auto-review skips drafts, so no review fires on work an answer may still
   change. A local session does both with `bun node_modules/harness/bun/work.ts
   finish --card <id> --title <text> --body-file <path>` (`bun bun/work.ts` in
-  the harness; `--card` alone once a PR is open; a cloud session, with no `gh
+  the harness; `--card` alone once a PR is open, and no `--card`, so no
+  question read, for a PR no card stands behind; a cloud session, with no `gh
   pr`, opens it over `gh api` as the README's *Cloud sessions* says): it
   refuses without the pre-PR runner's passing records of `HEAD`, pushes while
   the PR is a draft, opens it as a draft when none is open, and marks it ready
