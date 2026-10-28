@@ -95,7 +95,7 @@ requests counting toward stage 2.
    gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit" and .conclusion == "success") | [.completed_at, .output.summary] | @tsv'
    gh api 'repos/{owner}/{repo}/commits/<sha>/statuses' --paginate --jq '.[] | select(.context == "CodeRabbit" and .state == "success") | [.created_at, .description] | @tsv'
    gh api 'repos/{owner}/{repo}/commits/<sha>/pulls' --jq '.[].number'
-   gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | .id, .body'
+   gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | [.id, .body] | @tsv'
    gh api 'repos/{owner}/{repo}/pulls/<n>/reviews/<id>/comments' --paginate --jq '.[].body'
    gh api 'repos/{owner}/{repo}/issues/<n>/comments' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]") | .body'
    ```
@@ -153,7 +153,11 @@ requests counting toward stage 2.
    which had not happened when this was proposed: task 2.1, run after the
    merge, re-read the window ending at it, so the pull requests between
    #328 and the gate fall in the baseline rather than in neither window;
-   *Baseline* below is that re-read.
+   *Baseline* below is that re-read. The entry holds no `gates` line, so
+   step 5 takes the gates line's start, `<gates-since>`, from the previous
+   entry that holds one: otherwise the baseline's date would end the
+   ledger's gate window without a line counting it (local review on the
+   apply pull request).
 
 ## Baseline
 
