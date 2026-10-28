@@ -1,8 +1,5 @@
 # commit-gates — delta
 
-The requirement keeps its name, which other changes cite; what the turn
-reports its gates by is now the runner's records, not its message.
-
 ## MODIFIED Requirements
 
 ### Requirement: A turn that commits reports its gates before it ends
@@ -104,7 +101,10 @@ that costs to one refusal.
 The refusal SHALL name the groups the turn completed, the tip, and the
 runner's path as the project reaches it, and SHALL say that it is not
 repeated for this mark, so a turn whose blocker only the user can settle
-knows its next stop ends it. No repository state need change for a blocked
+knows its next stop ends it. It SHALL tell the model to end that stop on the
+whole final message it meant to end on — its report, a `BLOCKED` line, and
+any line a launcher reads — because a launcher reads the continued turn's
+last message, not the refused one. No repository state need change for a blocked
 turn to end, so the hook SHALL NOT be able to refuse indefinitely, and SHALL
 NOT depend on a loop-protection field to guarantee it.
 
