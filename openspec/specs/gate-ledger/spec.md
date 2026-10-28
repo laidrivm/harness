@@ -11,8 +11,8 @@ than by feel.
 ### Requirement: Every gate refusal is recorded
 
 Each refusal a harness gate makes — the command guard, the Notion update
-guard, the turn gate or the loop guard — SHALL append one record to the
-ledger. Every reason a
+guard, the turn gate, the loop guard, the ready guard, the pre-push hook's
+draft check or `work.ts finish` — SHALL append one record to the ledger. Every reason a
 guard blocks for counts, including an event it could not read. The turn gate
 SHALL also record a turn that completed a task group and was let through
 because its final message reported, so that a count of refusals has a
@@ -75,6 +75,19 @@ gate ledger* requires, so that the wrap-up counts flakes beside refusals.
 
 - **WHEN** a turn commits, completes no task group, and ends with a gate line
 - **THEN** the ledger is unchanged — it is no pass, because nothing was owed
+
+#### Scenario: A push into a ready pull request
+
+- **WHEN** the pre-push hook's draft check refuses a push into a pull request
+  that is not a draft
+- **THEN** the ledger gains one record naming that check, a block, its
+  prohibition's id and the commit pushed
+
+#### Scenario: A finish refused
+
+- **WHEN** `work.ts finish` refuses for a missing run record
+- **THEN** the ledger gains one record naming `finish`, a block, its
+  prohibition's id and `HEAD`
 
 ### Requirement: A refusal walked past is recorded
 

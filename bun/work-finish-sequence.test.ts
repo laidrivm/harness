@@ -76,6 +76,20 @@ describe("the sequence", () => {
 		expect(run.last).toBe("finish: ready #7");
 	});
 
+	// spec: work-finish/no-card-no-question-check
+	test("no --card: a first finish pushes, opens the draft and marks it ready, reading nothing from Notion", async () => {
+		const cwd = withBody();
+		const run = await finish({ cwd, args: OPENING.filter((a) => a !== "--card" && a !== CARD), gh: { before: [], after: [pull(7, "OPEN", true)] } });
+		expect(run.calls).toEqual([READ, "push", `pr create --draft -R o/demo --base main --head ${BRANCH} --title Demo --body-file body.md`, READ, READY]);
+		expect([run.code, run.last, run.remote, run.seen]).toEqual([0, "finish: ready #7", head(cwd), []]);
+		expect(run.out).toContain("finish: no --card, so no card's question was read\n");
+	});
+
+	test("no --card and no ask settings: still marked ready", async () => {
+		const run = await finish({ args: ["finish"], gh: DRAFT, config: home(false) });
+		expect([run.code, run.last, run.calls]).toEqual([0, "finish: ready #7", [READ, "push", READY]]);
+	});
+
 	// spec: work-finish/a-question-waits
 	test("a question waiting on the card leaves the draft, names the card and exits 0", async () => {
 		const cwd = checkout();

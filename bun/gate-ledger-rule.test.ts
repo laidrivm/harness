@@ -18,6 +18,7 @@ const line = (rule: string, decision = "pass") =>
 	JSON.stringify({ gate: "pre-pr", decision, rule, project: TOP, commit: C });
 
 describe("a rule given to ran()", () => {
+	// spec: pre-pr-runner/the-step-s-own-record
 	test("finds the step's own record [19]", () => {
 		const ledger = [line("diff-budget"), line("project-checks")].join("\n");
 		expect(RUNNER_STEPS.map((rule) => ran(C, TOP, "pass", ledger, rule))).toEqual([true, true]);
@@ -26,6 +27,11 @@ describe("a rule given to ran()", () => {
 	// spec: pre-pr-runner/a-record-of-one-step-only
 	test("a passing diff-budget record alone does not answer project-checks [20]", () => {
 		expect(ran(C, TOP, "pass", line("diff-budget"), "project-checks")).toBe(false);
+	});
+
+	// spec: pre-pr-runner/another-step-s-record
+	test("a passing project-checks record alone does not answer the diff budget", () => {
+		expect(ran(C, TOP, "pass", line("project-checks"), "diff-budget")).toBe(false);
 	});
 
 	test("a pre-pr record under an unknown rule answers neither step [21]", () => {
