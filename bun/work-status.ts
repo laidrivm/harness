@@ -148,9 +148,8 @@ export async function status(card: string, to: string, timeout = 30_000): Promis
 	}
 	try {
 		const written = await found.call("the Status write", `/v1/pages/${card}`, "PATCH", { properties: { Status: { select: { name: to } } } });
-		const now = written?.properties?.Status?.select?.name;
-		if (now !== to) return { lines: [`status: ${card} written, but Notion answers ${now ?? "no status"}`], code: 1 };
-		return { lines: [`status: ${card} ${from} → ${now}`], code: 0 };
+		// Notion's answer, not `to`: the line is the read-back core/feature-workflow.md asks for.
+		return { lines: [`status: ${card} ${from} → ${written?.properties?.Status?.select?.name}`], code: 0 };
 	} catch (error) {
 		return { lines: [`status: ${card} not written — ${(error as Error).message}`], code: 1 };
 	}

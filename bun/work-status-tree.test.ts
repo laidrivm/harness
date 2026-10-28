@@ -47,6 +47,12 @@ describe("the tree is origin/main's", () => {
 		refused(await status({ args: to("proposed"), cwd: dir }), "unread");
 	});
 
+	test("an origin/main with no openspec/changes refuses", async () => {
+		const run = await status({ args: to("proposed"), cwd: clone().dir });
+		refused(run, "unread");
+		expect(run.left).toEqual([]);
+	});
+
 	test("a tree boardState() throws on refuses with its message", async () => {
 		const { dir } = clone({ ...change("demo"), "openspec/changes/archive/undated/proposal.md": "# p\n" });
 		const run = await status({ args: to("proposed"), cwd: dir });

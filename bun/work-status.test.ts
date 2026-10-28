@@ -80,7 +80,7 @@ describe("the WIP limit", () => {
 	});
 
 	// spec: work-status/a-limit-that-is-not-a-number
-	test.each(["five", "-1", "5x"])("HARNESS_WIP_LIMIT=%s refuses naming the variable", async (limit) => {
+	test.each(["five", "-1", "5x", ""])("HARNESS_WIP_LIMIT=%p refuses naming the variable", async (limit) => {
 		const run = await status({ args: to("exploring"), env: { HARNESS_WIP_LIMIT: limit } });
 		refused(run, "wip-limit");
 		expect([run.seen, run.last.includes("HARNESS_WIP_LIMIT")]).toEqual([[PAGE], true]);
@@ -116,6 +116,7 @@ describe("the reads and the write", () => {
 		["a page read answering 500", { fail: { [PAGE]: 500 } }],
 		["a query answering 500", { fail: { [QUERY]: 500 } }],
 		["a page on no data source", { page: { parent: { type: "page_id", page_id: "p" } } }],
+		["a Status that is no status", { page: { status: "merged" } }],
 	])("%s refuses under unread", async (_, given) => {
 		refused(await status({ args: to("exploring"), ...given }), "unread");
 	});
