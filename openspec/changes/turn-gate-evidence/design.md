@@ -54,11 +54,10 @@ a bare acknowledgement there would lose the question (local review, Major).
 **D5. Names stay.** The requirement keeps *A turn that commits reports its
 gates before it ends*, cited by name in archived changes. `stage-goal`'s
 "SHALL NOT be a gate line that the turn gate accepts" and *The line the turn
-gate reads* turn vacuous once the gate accepts no line, and are left: a
-`MODIFIED` copy of that requirement is ~100 lines and takes this proposal
-over the 800-line budget. The next change that touches `stage-goal` drops
-them; until then `goal-check-io.test.ts`'s case keeps the citation, asserting
-only the line's opening.
+gate reads* turn vacuous once the gate accepts no line. A `MODIFIED` copy of
+that requirement is ~100 lines and would take this proposal over the 800-line
+budget, so the apply pull request adds that `stage-goal` delta (task 1.4)
+beside the test it moves.
 
 ## Consumers
 

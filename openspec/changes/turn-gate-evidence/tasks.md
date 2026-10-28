@@ -41,9 +41,15 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
 - [ ] 1.4 Delete the tests of what went: `reported()`'s cases in
       `bun/turn-gate.test.ts` (their citations now sit on 1.2's cases), and
       the `reported()` assertions and imports in `bun/goal-check.test.ts`,
-      `bun/goal-check-io.test.ts` (its case citing
-      `stage-goal/the-line-the-turn-gate-reads` keeps only the line's opening),
-      `bun/pre-pr.test.ts` and `bun/pre-pr-steps-run.test.ts`. Rewrite every
+      `bun/goal-check-io.test.ts`, `bun/pre-pr.test.ts` and
+      `bun/pre-pr-steps-run.test.ts`. Add `specs/stage-goal/spec.md` to this
+      change: *A stage is done when the check says so* without "SHALL NOT be a
+      gate line that the turn gate accepts", and *The line the turn gate
+      reads* rewritten to "a final message carrying only the check's `goal
+      met` line ends a turn that completed a group when the ledger holds a
+      passing run record of the tip, and is refused when it holds none"; move
+      its citation from `goal-check-io.test.ts` to that pair of cases in
+      `bun/turn-gate-record.test.ts`. Rewrite every
       other case in `bun/turn-gate*.test.ts` and
       `bun/gate-ledger-turn.test.ts` that passes on a gate line or a `BLOCKED`
       to pass on `run(tip, top)`, its citation unchanged.
