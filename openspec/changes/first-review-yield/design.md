@@ -51,7 +51,9 @@ requests counting toward stage 2.
    that reads `Review completed`**, from the check run or the status — both,
    because the bot moved from one to the other on 2026-10-27. Its findings
    are the bot's reviews with that `commit_id`, inline and in the body; none
-   is zero findings. A pull request with no such commit — skipped, rate
+   is zero findings, as the bot's walkthrough comment says where its
+   `Commit` names that commit: «No actionable comments were generated in the
+   recent review» (#325). A pull request with no such commit — skipped, rate
    limited, never run — is named unmeasured and counted in neither number.
    A commit's check run counts for this pull request only when its summary
    links `/pull/<n>` of it: a stacked branch carries a commit the bot
@@ -92,10 +94,12 @@ requests counting toward stage 2.
    gh api 'repos/{owner}/{repo}/commits/<sha>/pulls' --jq '.[].number'
    gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | .id, .body'
    gh api 'repos/{owner}/{repo}/pulls/<n>/reviews/<id>/comments' --paginate --jq '.[].body'
+   gh api 'repos/{owner}/{repo}/issues/<n>/comments' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]") | .body'
    ```
 
    `<since>` is that day before, and on the first entry ever, today. The
-   candidates are the first two reads' numbers: a review completing adds no
+   candidates are the union of the first two reads' numbers, each pull
+   request once: a review completing adds no
    update to its pull request, so one opened before `<since>` and first
    reviewed after it is missing from the `updated:` search while it stays
    open, and closing it is an update. The candidates are cut by the
@@ -127,7 +131,9 @@ requests counting toward stage 2.
    in two entries once — two sessions on parallel branches each append to
    their own copy of the ledger file. It checks each in the gate ledger by
    `commit` alone, under any `project`: a subagent's run in a scratch clone
-   records the clone's path, not the main checkout's. The ledger is this
+   records the clone's path, not the main checkout's, and a commit names one
+   tree whichever checkout ran it — CodeRabbit's ask on #329 to match the
+   repository too was rejected for this (user, answer а). The ledger is this
    laptop's; a pull request whose runner ran elsewhere counts as bypassed
    until the VPS writes one. It then writes under stage 2 in the roadmap the
    line «value — date — source» (roadmap question 12), through the Notion
