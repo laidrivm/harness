@@ -55,7 +55,7 @@ stage 7 removes.
 
 Order: this change applies after `work-finish` group 2, which adds `finish`
 to `bun/work.ts` and the first harness-only hook registration; kept in prose,
-not `after:`, since `work-finish` is not archived.
+not `after:`; group 2 has merged (#332), and `work-finish` is archived.
 
 ## Capabilities
 

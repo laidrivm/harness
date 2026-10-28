@@ -169,8 +169,9 @@ change on `origin/main` — `work-finish`, `judgement-step-record`,
 (`first-review-yield`) touches `agent-rulebook` alone. Shared capability:
 `gate-ledger`. `work-finish` modifies *Every
 gate refusal is recorded* to name its three gates, and this change modifies
-the same requirement to add its two; its delta is `work-finish`'s copy plus
-those, so the two agree, and the order is prose — re-copy from the live spec
+the same requirement to add its two; its delta, re-copied from the live spec
+once `work-finish` archived (2026-10-28), is that text plus those, so the two
+agree, and the order is prose — re-copy from the live spec again
 before this change archives (`core/feature-workflow.md`, *Copy a `MODIFIED`
 requirement whole*). `judgement-step-record` modifies another gate-ledger
 requirement, the record's fields, which this change does not touch. The
