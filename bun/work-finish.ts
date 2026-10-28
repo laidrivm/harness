@@ -1,8 +1,8 @@
 /**
- * `work.ts finish --card <id> [--title <text> --body-file <path>]`: ends an
+ * `work.ts finish [--card <id>] [--title <text> --body-file <path>]`: ends an
  * agent's work on a branch in the order the draft rule sets — the refusals,
  * then the push while the pull request is a draft, the draft opened when none
- * is, and the ready switch unless a question waits on the card
+ * is, and the ready switch unless a question waits on the card, when one is given
  * (`openspec/changes/archive/2026-10-28-work-finish/design.md`, *The
  * sequence and where each refusal sits*). Every refusal comes before the
  * push, changes nothing but the ledger, and is one `finish` record of
@@ -34,8 +34,8 @@ export function unproven(commit: string, top: string, opening: boolean): string[
 
 export type Opening = { title: string; body: string };
 
-/** The lines `finish` prints for `card`, the last saying the outcome, and its exit code: 0 ready or waiting, 1 otherwise. */
-export async function finish(card: string, opening?: Opening): Promise<{ lines: string[]; code: number }> {
+/** The lines `finish` prints for `card`, if any, the last saying the outcome, and its exit code: 0 ready or waiting, 1 otherwise. */
+export async function finish(card: string | undefined, opening?: Opening): Promise<{ lines: string[]; code: number }> {
 	const lines: string[] = [];
 	const done = (line: string, code: number) => ({ lines: [...lines, line], code });
 	const commit = git("rev-parse", "--verify", "-q", "HEAD");
@@ -89,13 +89,17 @@ export async function finish(card: string, opening?: Opening): Promise<{ lines: 
 		lines.push(`finish: opened draft #${number}`);
 	}
 
-	// Last, after the push and its test run, so it sees a question posted meanwhile.
-	const found = integration();
-	if (typeof found === "string") return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);
-	try {
-		if (await waiting(found.call, card, found.settings.user)) return done(`finish: draft #${number} — a question waits on ${card}`, 0);
-	} catch (error) {
-		return done(`finish: draft #${number} — the card's comments could not be read: ${(error as Error).message}`, 1);
+	// No card, no question to read: a pin bump or a hotfix has none (`work-finish` spec, *No card: no question check*).
+	if (!card) lines.push("finish: no --card, so no card's question was read");
+	else {
+		// Last, after the push and its test run, so it sees a question posted meanwhile.
+		const found = integration();
+		if (typeof found === "string") return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);
+		try {
+			if (await waiting(found.call, card, found.settings.user)) return done(`finish: draft #${number} — a question waits on ${card}`, 0);
+		} catch (error) {
+			return done(`finish: draft #${number} — the card's comments could not be read: ${(error as Error).message}`, 1);
+		}
 	}
 	if (!ready(full, Number(number))) return done(`finish: draft #${number} — gh pr ready ${number} failed`, 1);
 	return done(`finish: ready #${number}`, 0);

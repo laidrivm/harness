@@ -59,6 +59,7 @@ describe("allowed, recording nothing", () => {
 		"sh -c 'gh pr ready 7'",
 		"eval 'gh pr ready 7'",
 		"bun bun/work.ts finish --card aaaabbbbccccddddeeeeffff00001111",
+		"bun bun/work.ts finish --title t --body-file b",
 		"echo 'unclosed",
 	])("%s", (command) => {
 		expect(guard(bash(command))).toEqual({ code: 0, err: "", ledger: [] });
