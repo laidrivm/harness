@@ -57,8 +57,9 @@ requests counting toward stage 2.
    links `/pull/<n>` of it: a stacked branch carries a commit the bot
    reviewed for another pull request (#306 holds #305's `ee1597a`), and
    without the check the walk would stop there and read this one as clean.
-   The older commit status names no pull request; it counts as it stands,
-   which touches no pull request of the baseline window.
+   The older commit status names no pull request, so it counts only when
+   `commits/<sha>/pulls` lists this pull request alone — for `ee1597a` it
+   lists #305 — and no commit of the baseline window was shared.
 3. **A Major or above is the bot's Critical or Major label**, never
    re-graded, and a dismissed one still counts — as the `captures` line
    counts a declined capture, the line measures what the step raised.
@@ -84,20 +85,22 @@ requests counting toward stage 2.
 
    ```bash
    gh pr list --state all --search "updated:>=<since>" --limit 1000 --json number
+   gh pr list --state open --limit 1000 --json number
    gh api 'repos/{owner}/{repo}/pulls/<n>/commits' --paginate --jq '.[].sha'
    gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit") | [.completed_at, .output.summary] | @tsv'
    gh api 'repos/{owner}/{repo}/commits/<sha>/statuses' --paginate --jq '.[] | select(.context == "CodeRabbit") | [.created_at, .description] | @tsv'
+   gh api 'repos/{owner}/{repo}/commits/<sha>/pulls' --jq '.[].number'
    gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | .id, .body'
    gh api 'repos/{owner}/{repo}/pulls/<n>/reviews/<id>/comments' --paginate --jq '.[].body'
    ```
 
    `<since>` is that day before, and on the first entry ever, today. The
-   candidates are the first read's numbers together with every pull request
-   an earlier `first review` line names as unmeasured and no later one names
-   as measured — a review that completes with no update to its pull request
-   leaves it out of the `updated:` search. The candidates are cut by the
-   first-review time the third or fourth read gives; `--limit 1000` because
-   gh's default of 30 is the cut-off that the goal check once read as the
+   candidates are the first two reads' numbers: a review completing adds no
+   update to its pull request, so one opened before `<since>` and first
+   reviewed after it is missing from the `updated:` search while it stays
+   open, and closing it is an update. The candidates are cut by the
+   first-review time the check-run or status read gives; `--limit 1000`
+   because gh's default of 30 is the cut-off that the goal check once read as the
    whole list (#131). `filter=all` and the `statuses` list, not the latest
    check run and the combined status: one commit holds several CodeRabbit
    results — `c59320a` a skipped run and then a completed one, `ee1597a`
@@ -109,16 +112,16 @@ requests counting toward stage 2.
    or `- first review: none reviewed`. `allowed-tools` gains
    `Bash(gh api:*)` and `Bash(gh pr list:*)`, the two the `coderabbit` skill
    already holds; the command guard passed each of these reads on
-   2026-10-27, as a `gh api` call with no method and no field.
+   2026-10-27 and 28, as a `gh api` call with no method and no field.
 6. **Stage 2's count is the closing session's, not the skill's** (decision
    6 on the card). «Without bypass» means the pull request was opened and
    marked ready after `work-finish` group 2 (`work.ts finish` and the ready
    guard) merged, and the gate ledger holds a `pre-pr` `pass` record under
    `project-checks` whose `commit` is the first reviewed commit and whose
-   `at` precedes that review's completion — what the ready gate is to
-   require (stage 2, question 24). The bot reviews a head once it is ready,
-   so a record written after the review was written after the ready too,
-   and the pull request reached ready without it. The five are consecutive
+   `at` precedes the switch to ready that review followed — the last
+   `ready_for_review` in `gh api 'repos/{owner}/{repo}/issues/<n>/events'`
+   before it, or the pull request's `created_at` where there is none — what
+   the ready gate is to require (stage 2, question 24). The five are consecutive
    by first-review time, harness pull requests only. The closing session
    takes them from the `first review` lines, counting a pull request named
    in two entries once — two sessions on parallel branches each append to
