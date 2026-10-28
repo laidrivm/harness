@@ -41,25 +41,46 @@ limit, gets no review on its own — stop waiting on it and report it.
   It returns no findings by design, so acting on it means reading the files it
   ranks High and Medium, reporting the defects they hold, and grepping every
   decision or value the diff changes for the sites that restate it.
-- `/coderabbit-local [base]` — the same review against the working branch,
-  before there is a PR. Invoke it yourself. It runs only while no pull
-  request is open on the branch, a draft counting as open: a push into an
-  open one skips it while the earlier steps run, because CodeRabbit reviews
+- `/code-review` — Claude's own review of the working branch, before there
+  is a PR: the local review. Invoke it yourself, as `/code-review high
+  <base>...HEAD` from the branch's own worktree, `<base>` being the base the
+  runner measured from — the ref it was given, else what `bun/diff-base.sh`
+  prints — so the review reads the diff the runner measured, in the tree it
+  runs in: the level is named because `/code-review` with none reuses the
+  last one typed, and the range because with no target the skill diffs
+  against an upstream or the local `main`, which in a worktree trails
+  `origin/main`, while a bare ref reads as a branch to review. Pass it
+  nothing else: its arguments that post write under the user's name on a
+  pull request that has none yet, and the one that fixes applies findings
+  before they are verified. It runs only while no pull request is open on the branch, a
+  draft counting as open: a push into an open one skips it while the earlier
+  steps run, because CodeRabbit reviews
   that head on the pull request — a draft's once it is marked ready — and
   `/coderabbit` disposes of its findings. Read the pull request's state
   before the sequence starts, as `git-and-prs.md` has it read before a review
   pass, and never infer it from what the push carries. A branch whose only
   pull request was closed unmerged has none open and runs it again; a state
   the read could not get runs it too, and the report says the state was
-  unread, since a skipped review is the costlier mistake. A finding that
-  survives
-  verification is applied without asking, whatever its severity, overriding the
-  skill's own "No fixes before approval" — the branch is unpushed, so being
-  wrong costs a `git checkout`. Dismissing a 🟠 Major or 🔴 Critical goes the
-  other way: it is put to the user with what the bot missed, and the gate line
-  reads `OPEN` until they settle it, because a wrong dismissal reaches the
-  merge where a wrong fix does not (unattended: card — hand it on with what
-  the bot missed, and list it in the pull request's body as `autonomy.md`'s
+  unread, since a skipped review is the costlier mistake. A review that does
+  not return — a usage limit, an error, a refused call — or whose findings
+  name no file the branch's diff changes (the paths `changedPaths(<base>)` in
+  the runner's `bun/pre-pr-steps.ts` reads: `git diff --name-only -z
+  --no-renames --no-relative <base>...HEAD`),
+  having read another diff or another tree, is
+  reported and the push goes on without the gate rather than blocking the
+  branch. One finding on an unchanged file beside findings on changed ones —
+  a caller the change breaks — is kept and verified like the rest, and an
+  empty review proves nothing either way and passes. `/code-review` names no
+  severity, so the session grades each finding 🔵 Trivial, 🟡 Minor, 🟠 Major
+  or 🔴 Critical — the ladder `/coderabbit` reads — while verifying it,
+  disposes of it on that grade, and names the grade beside each finding in
+  its report. A finding that survives verification is applied without
+  asking, whatever its severity — the branch is unpushed, so being wrong
+  costs a `git checkout`. Dismissing a 🟠 Major or 🔴 Critical goes the
+  other way: it is put to the user with what the review missed, and the gate
+  line reads `OPEN` until they settle it, because a wrong dismissal reaches
+  the merge where a wrong fix does not (unattended: card — hand it on with
+  what the review missed, and list it in the pull request's body as `autonomy.md`'s
   `agent` sets out). At most three reviews with fixes between them; stop
   early the moment a review returns nothing above 🟡 Minor, and if Major or
   above survives the third, report it and stop rather than starting a fourth
@@ -67,22 +88,27 @@ limit, gets no review on its own — stop waiting on it and report it.
   as still open; under the board loop, name the pull request with that
   listing in its body, and the runner opens it).
   Collect Minor findings across all passes and report them once at the end,
-  each fixed or skipped with its reason. The CLI looks for
-  `.coderabbit.yaml` on its own only while no `--config` is given, and the
-  skill always gives one. So the skill passes the config explicitly, together
-  with the guideline files that the config's `code_guidelines` patterns match.
-  A local review that skips them is a differently aligned reviewer, not a
-  cheaper one.
+  each fixed or skipped with its reason, and the session writes the
+  `CODE-REVIEW gate:` line itself, since the built-in skill prints none: it
+  ends the disposition on `CODE-REVIEW gate: PASS|OPEN|BLOCKED — …`, `OPEN`
+  over a proposed Major or Critical dismissal and `BLOCKED` over a Major or
+  above the third review left. The review reads `CLAUDE.md`
+  and `core/rules.md`, not the docs the rulebook indexes, so a rule kept in
+  one of those is read back by CodeRabbit on the pull request rather than by
+  this review.
 - `/coderabbit [pr]` — chews the bot's PR comments. Run it once the bot has
   reviewed the head commit, never to wait for that, because the bot's
   review arrives on its own schedule and waiting for it burns a session doing
-  nothing — the cost is the wait, which a synchronous CLI review does not
+  nothing — the cost is the wait, which a synchronous local review does not
   have, and that is the whole difference between this bullet and the one above
   it. A run that finds no review of the head commit ends `OPEN` after one
   read. Once a PR is open, say so and stop —
   do not poll the checks, do not sleep on a timer, do not re-run `gh` to see
   whether the bot has posted. Once the review has landed, dispose of the
-  findings on the same terms as `/coderabbit-local`: any verified finding
+  findings on `/code-review`'s finding-disposal terms alone — not its base,
+  its changed-file check, its grading or its `CODE-REVIEW` gate line, which
+  are the local review's, since CodeRabbit grades its own findings and a
+  Major it raised stays a Major: any verified finding
   applied without asking, a Major or Critical dismissal put to the user
   (unattended: card — hand it on with what the bot missed), Minor read and
   then fixed or skipped with its reason, overriding the skill's "No fixes
@@ -107,46 +133,17 @@ limit, gets no review on its own — stop waiting on it and report it.
   one question on the card, which waits behind one already open there as
   `task-board` sets out; the run posts nothing in the pull request). A
   fourth round with only findings skipped with a reason is not capped.
-- `/code-review` — Claude's own review, measured beside `/coderabbit-local`
-  until the user decides whether it replaces the CLI (the reviewer-rotation
-  card's step 2). While fewer than ten pull requests are measured, a branch
-  that runs `/coderabbit-local` also runs `/code-review high` in a fresh
-  subagent at the commit of the CLI's first pass: the same commit makes the
-  two lists comparable, a fresh subagent reviews code its context did not
-  write, and the level is named because `/code-review` with none reuses the
-  last one typed. The subagent is given its target explicitly — the first
-  pass's commit SHA, with the clone's path when the session works in a clone
-  outside the project — since its working directory is the project's main
-  checkout whatever clone the session works in, and a branch moves on. It
-  reports the SHA it reviewed; a review of another SHA, or one that names
-  files the branch did not change, read another tree and counts as a run
-  that does not return. A branch whose CLI is unavailable has no first pass and goes
-  unmeasured. The verified findings of both are applied on the
-  `/coderabbit-local` terms above, since the branch ships either way. It is
-  no gate and carries no severity while measured: a finding of it judged
-  wrong or not worth fixing is skipped with its reason in the report, and the
-  gate line stays as `/coderabbit-local` set it. The pull request opens with
-  a section under a line reading `## Review measurement`: one line per
-  verified defect, giving its file and line, what it was and which reviewer
-  flagged it (CLI, `/code-review`, both), or the single line `none` when
-  neither flagged one. A run that does not return — a usage limit, an error,
-  a subagent that ends without a review — leaves no section and is not
-  counted, and the report names why.
-  `gh pr list --repo <repo> --state all --search '"Review measurement"
-  in:body' --json number,body --limit 1000` lists the candidates, closed and
-  merged ones included; only a body with a line exactly `## Review
-  measurement` counts as measured, since the search also matches a body that
-  merely names the phrase. The tally goes to the user once CodeRabbit has
-  reviewed the fifth measured pull request: the session that disposes of that
-  review files an `idea` card on the Harness board with, for each measured
-  pull request, the defects only the CLI flagged, only `/code-review`
-  flagged, both flagged, and what CodeRabbit then raised and the agent
-  applied (a subagent without Notion access names the card in its report,
-  and its caller files it). The measurement ends at the tenth: after it,
-  `/coderabbit-local` runs alone and the body carries no section.
-  `/ponytail-review`'s record is no evidence about it: that plugin was tuned
-  to shape, not defects, and the code it read was written under the same
-  plugin.
+- `/coderabbit-local [base]` — CodeRabbit's CLI review of the working
+  branch, run when the user asks for CodeRabbit's take before a push. It is
+  available and in no sequence and no gate: `/code-review` replaced it as the
+  local review on 2026-10-27, having flagged 18 defects the CLI missed
+  against 1 over five measured pull requests, and the CLI draws on the
+  allowance CodeRabbit's review on the pull request needs. The CLI looks for
+  `.coderabbit.yaml` on its own only while no `--config` is given, and the
+  skill always gives one. So the skill passes the config explicitly, together
+  with the guideline files that the config's `code_guidelines` patterns match.
+  A CLI review that skips them is a differently aligned reviewer, not a
+  cheaper one.
 
 ## The pre-PR sequence
 
@@ -199,13 +196,13 @@ below say why each one exists.
    ever reaching for a dependency.
 4. `/triage`, over the final diff, so it maps the diff the reviewer
    will actually see.
-5. `/coderabbit-local` last, then push — only while no pull request is open
-   on the branch, a draft counting as open: a push into an open one skips it
-   while the earlier steps run, and its report says CodeRabbit reviews the
-   head on the pull request, a draft's once it is marked ready, where
-   `/coderabbit` disposes of the findings; a state the read could not get
-   runs it, and the report says the state was unread. Beside it runs the measurement
-   the `/code-review` bullet sets out.
+5. `/code-review` last, as `/code-review high <base>...HEAD` on the terms the
+   `/code-review` bullet sets out, then push — only while no pull request is
+   open on the branch, a draft counting as open: a push into an open one
+   skips it while the earlier steps run, and its report says CodeRabbit
+   reviews the head on the pull request, a draft's once it is marked ready,
+   where `/coderabbit` disposes of the findings; a state the read could not
+   get runs it, and the report says the state was unread.
 
 CI measures the budget on every pull request and the pre-push hook measures it
 last of all, once every gate that can refuse the push has passed. Neither is
@@ -214,7 +211,7 @@ it would have told you to re-cut, and a branch never pushed is a branch never
 measured.
 
 A documentation branch, as the runner classifies one, gets one pass of
-`/coderabbit-local` — one, not three — with the measurement the
+`/code-review high <base>...HEAD` — one, not three — on the terms the
 `/code-review` bullet sets out. That pass, too, runs only while no pull
 request is open on the branch, a draft counting as open: a push
 into an open one skips it while the earlier steps run, and its report says

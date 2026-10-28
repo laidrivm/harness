@@ -6,7 +6,7 @@
 
 ## 1. The runner names `code-review`
 
-- [ ] 1.1 In `bun/pre-pr-steps.test.ts` and `bun/pre-pr-steps-run.test.ts`,
+- [x] 1.1 In `bun/pre-pr-steps.test.ts` and `bun/pre-pr-steps-run.test.ts`,
       make the expected lists name a `CODE_REVIEW` id of `"code-review"`
       where they name `CODERABBIT_LOCAL`, and the `[3]` case's title
       `code-review`; make the case that reads each id's `SKILL.md` under
@@ -15,14 +15,14 @@
       decision 5). Verify with `bun test bun/pre-pr-steps.test.ts
       bun/pre-pr-steps-run.test.ts` that they fail on the missing export, and
       record it
-- [ ] 1.2 In `bun/pre-pr-steps.ts`, export `CODE_REVIEW = "code-review"` in
+- [x] 1.2 In `bun/pre-pr-steps.ts`, export `CODE_REVIEW = "code-review"` in
       place of `CODERABBIT_LOCAL` and name it in `JUDGEMENT`; grep `bun/` and
       `orchestrator/` for `CODERABBIT_LOCAL` and `"coderabbit-local"` and
       switch every caller. Verify with the two test files green
 
 ## 2. The toolkit runs `/code-review` as the local review
 
-- [ ] 2.1 Probe, in this branch's worktree, which argument `/code-review`
+- [x] 2.1 Probe, in this branch's worktree, which argument `/code-review`
       reads as the base of its diff and which as a tree (design.md decision
       1): run it once with the runner's base named. Count a form as working
       only on positive evidence that it read `<base>...HEAD` in this tree —
@@ -31,7 +31,7 @@
       (`bun/pre-pr-steps.ts`) lists; an empty review proves nothing. Record a working form in
       design.md decision 1 before 2.2 cites it; if the probe is
       inconclusive, record none, and stop and report it
-- [ ] 2.2 In `bun/review-docs.test.ts`, turn the cases of *the local review
+- [x] 2.2 In `bun/review-docs.test.ts`, turn the cases of *the local review
       runs only while no pull request is open* to read step 5
       (`5. \`/code-review\``), the documentation-branch paragraph and a
       `/code-review` bullet found by its opening (`` `/code-review` — ``),
@@ -50,7 +50,7 @@
       Claude's review beside the CLI* but the `Skill(code-review)` one, and
       add a case that the doc holds no `Review measurement`. Normalise
       whitespace before matching. Verify they fail and record it
-- [ ] 2.3 Edit `core/review-toolkit.md` with the editing tool: the
+- [x] 2.3 Edit `core/review-toolkit.md` with the editing tool: the
       `/code-review` bullet takes the local-review terms of the
       `/coderabbit-local` bullet and design.md decisions 1–4 and 8, losing
       the measurement; the `/coderabbit-local` bullet shrinks to an on-demand
@@ -58,7 +58,7 @@
       sentence; step 5 and the documentation-branch paragraph name
       `/code-review high`; the `/coderabbit` bullet points at `/code-review`'s
       finding-disposal terms alone, per 2.2. Verify with `bun test bun/review-docs.test.ts` green
-- [ ] 2.4 Add failing cases to `bun/review-docs.test.ts` that the two
+- [x] 2.4 Add failing cases to `bun/review-docs.test.ts` that the two
       exceptions of `core/autonomy.md` (an unattended pull request opening
       over a non-`PASS` local gate) name `CODE-REVIEW` reading `OPEN` only
       over a proposed 🟠 Major or 🔴 Critical dismissal and `CODE-REVIEW`
@@ -68,7 +68,7 @@
       `agent-autonomy/the-pull-request-opens-over-a-proposed-dismissal` and
       `agent-autonomy/the-pull-request-opens-over-a-major-left-unresolved`.
       Verify red, then green
-- [ ] 2.5 Edit `README.md`'s sentence on `Skill(code-review)` to name step 5
+- [x] 2.5 Edit `README.md`'s sentence on `Skill(code-review)` to name step 5
       rather than the measurement, and `core/skills/session-wrapup/SKILL.md`'s
       example ledger line to `code-review`. Then grep the tree,
       case-insensitively (`grep -rin`, so `CODERABBIT-LOCAL` is caught), for
@@ -83,7 +83,7 @@
 
 ## 3. Verify
 
-- [ ] 3.1 `openspec validate code-review-replaces-cli --strict`, `bun test
+- [x] 3.1 `openspec validate code-review-replaces-cli --strict`, `bun test
       bun/board-state-hygiene.test.ts bun/spec-coverage-sweep.test.ts
       bun/spec-coverage-floor.test.ts`, then the pre-PR sequence with
       `/code-review high` as its step 5 in the form 2.1 recorded; read one
