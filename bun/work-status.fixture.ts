@@ -41,7 +41,8 @@ export function commit(dir: string, tree: Tree, push = false) {
 export function clone(tree: Tree = {}, single = false) {
 	const seed = repo({ "package.json": JSON.stringify({ name: "demo" }), ...tree }, {});
 	const bare = join(emptyDir("work-status-origin-"), "demo.git");
-	git(seed, "init", "-q", "--bare", bare);
+	// `-b main`: with no `init.defaultBranch` (CI) the bare's HEAD names `master`, and the clone checks out nothing.
+	git(seed, "init", "-q", "--bare", "-b", "main", bare);
 	git(seed, "remote", "add", "origin", bare);
 	git(seed, "push", "-q", "origin", "main", "feature");
 	git(seed, "checkout", "-q", "main");
