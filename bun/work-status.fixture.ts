@@ -56,7 +56,7 @@ export function clone(tree: Tree = {}, single = false) {
 export type Run = {
 	args: string[];
 	cwd?: string;
-	page?: { status?: string; pointer?: string; parent?: object };
+	page?: { status?: string; pointer?: string; parent?: object; answer?: string };
 	cards?: number;
 	more?: boolean;
 	fail?: Record<string, number>;

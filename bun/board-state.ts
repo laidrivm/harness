@@ -153,9 +153,9 @@ function cycles(edges: Record<string, Edges>): string[][] {
  * answer and the complaint invites the answer being read on its own.
  */
 export function boardState(tree: string): State {
-	// `tree` rather than `root`, which this module imports for its own entry
-	// point below: a parameter shadowing that import reads as the repository
-	// root in a function whose whole point is to answer for a fabricated one.
+	// `tree` rather than `root`, the name the entry point below gives the
+	// repository's root: here it would read as that root in a function whose
+	// whole point is to answer for a fabricated one.
 	const changes = join(tree, "openspec/changes");
 	const problems: string[] = [];
 	// Prototype-free, because every key below is a directory name off the

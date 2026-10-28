@@ -15,7 +15,7 @@ import { record } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { plain } from "./notion-bot.ts";
 import { complete, groups } from "./turn-gate.ts";
-import { POINTER } from "./work-take.ts";
+import { output, POINTER } from "./work-take.ts";
 
 /** The eleven statuses task-board defines, which `--to` names one of. */
 export const STATUSES = [...ORDER, "discarded"];
@@ -35,12 +35,13 @@ class Refusal extends Error {
 	}
 }
 
-/** `git …args` in `cwd`, its output without git's terminator, or a refusal under `unread`. */
+/** `git …args` in `cwd`, its output without git's terminator, or a refusal under `unread`; git never prompts for credentials. */
 function git(cwd: string, ...args: string[]): string {
-	const run = Bun.spawnSync(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
-	const said = run.stderr.toString().trim().split("\n")[0];
-	if (run.exitCode !== 0) throw new Refusal("unread", `git ${args[0]} exited ${run.exitCode}${said ? `: ${said}` : ""}`);
-	return run.stdout.toString().replace(/\n$/, "");
+	try {
+		return output(["git", ...args], cwd, { ...process.env, GIT_TERMINAL_PROMPT: "0" }).replace(/\n$/, "");
+	} catch (error) {
+		throw new Refusal("unread", (error as Error).message);
+	}
 }
 
 /** The `name` of `top`'s `package.json`, or `undefined`. */
@@ -113,7 +114,13 @@ function evidence(top: string, pointer: string, to: string, seen: { commit?: str
 export async function status(card: string, to: string, timeout = 30_000): Promise<{ lines: string[]; code: number }> {
 	const seen: { top?: string; commit?: string } = {};
 	const refuse = (id: string, why: string) => {
-		record("status", "block", id, { session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: seen.top ?? process.cwd() }, seen.commit);
+		// Read here, not first: a move that needs no evidence runs no git.
+		try {
+			seen.top ??= git(process.cwd(), "rev-parse", "--show-toplevel");
+		} catch {
+			seen.top = process.cwd();
+		}
+		record("status", "block", id, { session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: seen.top }, seen.commit);
 		return { lines: [`status: refused — ${why}`], code: 1 };
 	};
 	if (USER_ONLY.includes(to)) return refuse("user-only", `only the user moves a card to ${to}, in Notion`);
@@ -149,7 +156,8 @@ export async function status(card: string, to: string, timeout = 30_000): Promis
 	try {
 		const written = await found.call("the Status write", `/v1/pages/${card}`, "PATCH", { properties: { Status: { select: { name: to } } } });
 		// Notion's answer, not `to`: the line is the read-back core/feature-workflow.md asks for.
-		return { lines: [`status: ${card} ${from} → ${written?.properties?.Status?.select?.name}`], code: 0 };
+		const now = written?.properties?.Status?.select?.name;
+		return { lines: [`status: ${card} ${from} → ${now ?? "no status"}`], code: now === to ? 0 : 1 };
 	} catch (error) {
 		return { lines: [`status: ${card} not written — ${(error as Error).message}`], code: 1 };
 	}

@@ -129,8 +129,8 @@ lines), as the card's title has it; `bun/work-status.ts` is the module, as
 Each refusal is `record("status", "block", id, { cwd: top }, commit)`, `top`
 the checkout's top level, so the record names its project where
 `CLAUDE_PROJECT_DIR` is unset, and `commit` the `origin/main` SHA read. A
-refusal before the evidence runs no git, so `top` there is the working
-directory (`exploring` to `explored` runs no git). Ids: `user-only`, `wip-full`,
+refusal before the evidence reads `top` as it records, so a move that
+passes without evidence runs no git. Ids: `user-only`, `wip-full`,
 `wip-limit` (the variable is not a number), `no-pointer`, `no-evidence`,
 `unread` (any failed read: settings, page, query, fetch, archive). A failed
 write is no refusal and records nothing, as in `work-finish`. These records
