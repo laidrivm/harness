@@ -24,9 +24,14 @@ describe("a rule given to ran()", () => {
 		expect(RUNNER_STEPS.map((rule) => ran(C, TOP, "pass", ledger, rule))).toEqual([true, true]);
 	});
 
-	// spec: pre-pr-runner/a-record-of-one-step-only pre-pr-runner/another-step-s-record
+	// spec: pre-pr-runner/a-record-of-one-step-only
 	test("a passing diff-budget record alone does not answer project-checks [20]", () => {
 		expect(ran(C, TOP, "pass", line("diff-budget"), "project-checks")).toBe(false);
+	});
+
+	// spec: pre-pr-runner/another-step-s-record
+	test("a passing project-checks record alone does not answer the diff budget", () => {
+		expect(ran(C, TOP, "pass", line("project-checks"), "diff-budget")).toBe(false);
 	});
 
 	test("a pre-pr record under an unknown rule answers neither step [21]", () => {
