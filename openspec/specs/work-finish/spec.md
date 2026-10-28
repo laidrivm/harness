@@ -50,7 +50,9 @@ checkout, as the goal check reads them.
 ### Requirement: Finish pushes only while the pull request is a draft
 
 `finish` SHALL push `HEAD` to the branch of the same name on `origin`, never
-by force, only when no open pull request of that branch is ready. An open
+by force, only when no open pull request of that branch in `origin`'s
+repository is ready; one against another repository, a fork's upstream, is
+not read. An open
 pull request that is not a draft SHALL be refused before the push, naming
 `gh pr ready <n> --undo`. When `origin` already holds `HEAD` on that branch,
 `finish` SHALL skip the push and go on. A push that fails SHALL exit 1 with
