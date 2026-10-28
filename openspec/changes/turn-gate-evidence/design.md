@@ -2,12 +2,9 @@
 
 ## Context
 
-See proposal.md, *Why*. `decide()` in `bun/turn-gate.ts` passes a turn that
-completed a group on `NAMED_BLOCK`, or on `GATE_LINE` plus `ran(end, top)` —
-any `pre-pr` record of the tip in this checkout, whatever its step or
-outcome. `reported()` is exported only for four test files' assertions. The
-goal check and `ranUnder()` already ask the stricter question — a `pass`
-record of the tip for every `RUNNER_STEPS` step — each in its own copy.
+See proposal.md, *Why*. Today `GATE_LINE` plus `ran(end, top)` passes on any
+`pre-pr` record of the tip, whatever its step or outcome; `reported()` is
+exported only for four test files.
 
 ## User's answers, 28.10
 
@@ -42,20 +39,26 @@ failure; with no line it would end a turn on a failed step in silence. The
 goal check and `finish` ask the same, so one run meets all three. A failing
 step costs one refusal, as answer 1 accepts for a blocked turn.
 
-**D3. One export.** `passed(commit, top, ledger?)` in `gate-ledger.ts` is
-`RUNNER_STEPS.every((rule) => ran(commit, top, "pass", ledger, rule))`;
-`ranUnder()` and the goal check switch to it in the same change.
+**D3. One export.** The goal check and `ranUnder()` each copy
+`RUNNER_STEPS.every((rule) => ran(commit, top, "pass", ledger, rule))`; it
+becomes `passed(commit, top, ledger?)` in `gate-ledger.ts`, and both switch.
 `work-finish.ts` keeps its `filter`, which names the missing steps.
 
 **D4. One refusal text**, naming the groups, the tip and the runner's path,
 saying the refusal is not repeated for this turn, so a turn blocked on the
-user ends at its next stop.
+user ends at its next stop — and telling it to end that stop on its whole
+final message again: the board loop's launcher and the `/goal` condition read
+the continued turn's last message (`BLOCKED —`, `QUESTION:`, `PR-TITLE:`), and
+a bare acknowledgement there would lose the question (local review, Major).
 
 **D5. Names stay.** The requirement keeps *A turn that commits reports its
 gates before it ends*, cited by name in archived changes. `stage-goal`'s
 "SHALL NOT be a gate line that the turn gate accepts" and *The line the turn
-gate reads* stay true once the gate accepts no line; a case in
-`turn-gate-record.test.ts` takes over that scenario's citation.
+gate reads* turn vacuous once the gate accepts no line, and are left: a
+`MODIFIED` copy of that requirement is ~100 lines and takes this proposal
+over the 800-line budget. The next change that touches `stage-goal` drops
+them; until then `goal-check-io.test.ts`'s case keeps the citation, asserting
+only the line's opening.
 
 ## Consumers
 
@@ -89,10 +92,15 @@ No `after:` is needed.
 
 ## Risks / Trade-offs
 
-- [A turn blocked on the user pays one refusal] → bounded per mark; the
-  refusal says so.
+- [A release no longer means only a refusal walked past] → a turn blocked on
+  the user, one whose step keeps failing and one that ignored the refusal all
+  record `released`; `gate-ledger` says so: a count of releases bounds
+  bypasses from above.
+- [A branch with a valid `oversize:` override] → `pre-pr.ts` passes no
+  `PR_BODY`, so its diff budget records `fail` and each group it completes
+  costs one refusal, as `finish` and the goal check refuse it already.
+  Accepted here.
 - [The harness's sessions run the old hook until the self-pin moves] → the
   live probe, group 2, runs after the bump.
-- [`notion-status-gate` archives first] → the re-copy note in both deltas.
 
 Rollback is a revert of group 1; the ledger and the marks keep their format.

@@ -49,11 +49,8 @@ None.
 
 ## Impact
 
-- Code: `bun/turn-gate.ts`, `bun/gate-ledger.ts`, `bun/goal-check.ts`, the
-  `bun/turn-gate*.test.ts` files, `bun/gate-ledger-turn.test.ts`,
-  `bun/gate-ledger-ran.test.ts`, and the `reported()` assertions in
-  `bun/goal-check*.test.ts`, `bun/pre-pr.test.ts` and
-  `bun/pre-pr-steps-run.test.ts`. Docs: `README.md`, `core/review-toolkit.md`.
+- Code: `bun/turn-gate.ts`, `bun/gate-ledger.ts`, `bun/goal-check.ts` and
+  their tests (tasks.md). Docs: `README.md`, `core/review-toolkit.md`.
 - Consumers (d2ass, mellon): the hook reaches them on their next pin bump,
   with the same registration (design.md, *Consumers*).
 - `notion-status-gate`'s `gate-ledger` delta copies the same requirement

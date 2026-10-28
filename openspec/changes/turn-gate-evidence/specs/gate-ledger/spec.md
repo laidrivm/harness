@@ -1,11 +1,7 @@
 # gate-ledger — delta
 
-Copied from the live spec on 2026-10-28. This change's edits alone: what lets
-a turn through and what is released, and the scenarios of a turn refused and
-then let through or released. `notion-status-gate`'s delta
-modifies *Every gate refusal is recorded* too; before this change archives,
-diff the copy against the live spec again and re-copy it if the live text
-moved.
+Copied from the live spec on 2026-10-28; `notion-status-gate` modifies the
+first requirement too. Before archiving, re-copy it if the live text moved.
 
 ## MODIFIED Requirements
 
@@ -94,8 +90,11 @@ gate ledger* requires, so that the wrap-up counts flakes beside refusals.
 
 When the turn gate lets a turn end only because it has already refused once
 for that mark, and the ledger still holds no passing run record of the tip, it
-SHALL record that release. That record is the one case where an agent ended a
-turn the gate had refused, without doing what the refusal asked.
+SHALL record that release. That record is a turn the gate refused and let end
+with no passing run: one that walked past the refusal, one blocked on what
+only the user can settle, or one whose step kept failing. The gate reads no
+text, so it does not tell them apart, and a count of releases bounds the
+refusals walked past from above.
 
 #### Scenario: Refused, then ended without gates
 

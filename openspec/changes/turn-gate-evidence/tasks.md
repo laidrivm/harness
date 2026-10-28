@@ -30,10 +30,9 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       (`…/blocked-without-a-run`), then the same mark releases
       (`…/the-turn-names-what-only-the-user-can-settle`); an event with no
       `last_assistant_message` and no record refuses
-      (`…/the-final-message-cannot-be-read`); a `goal met` line with no record
-      refuses (`stage-goal/the-line-the-turn-gate-reads`); the refusal names
-      the group, the tip, the runner's path and `not repeated`. Record which
-      fail
+      (`…/the-final-message-cannot-be-read`); the refusal names the group, the
+      tip, the runner's path, `not repeated`, and ending on the whole final
+      message again. Record which fail
 - [ ] 1.3 Make them pass in `bun/turn-gate.ts`: delete `GATE_LINE`,
       `NAMED_BLOCK` and `reported()`; `decide()` reads no message field and
       passes on `passed(end, top)`; one refusal text (design.md, D4); the
@@ -56,11 +55,15 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       records; its turn gate bullet names the passing records of both steps
       and drops the `BLOCKED` exit. `core/review-toolkit.md`'s pre-PR sequence
       paragraph does the same, and says a turn blocked on the user is refused
-      once. Grep `README.md`, `core/` and `openspec/specs/` for "gate line"
-      beside "turn gate" or `turn-gate` and fix each site this change makes
-      false; the skills, `core/autonomy.md` and `session-wrapup` stay
-- [ ] 1.6 Probe from the tree in a scratch clone of the harness, with
-      `XDG_STATE_HOME` in the scratchpad and the event on stdin of `bun
+      once. The code comments that say the turn gate reads gate lines go too:
+      `bun/pre-pr.ts`'s header and its two "not shaped like a gate line"
+      comments, and `bun/goal-check.ts`'s header. Grep `README.md`, `core/`,
+      `bun/` and `openspec/specs/` for "gate line" beside "turn gate" or
+      `turn-gate` and fix each site this change makes false; the skills,
+      `core/autonomy.md` and `session-wrapup` stay
+- [ ] 1.6 Probe from the tree in a scratch clone of the harness, after `bun
+      install` and `git fetch origin` there so both runner steps can pass,
+      with `XDG_STATE_HOME` in the scratchpad and the event on stdin of `bun
       bun/turn-gate.ts stop` after `mark`: a commit completing a group with no
       runner record exits 2 naming the tip; after `bun bun/pre-pr.ts` at that
       commit, the same session's next stop exits 0, and the ledger holds
