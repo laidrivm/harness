@@ -99,7 +99,7 @@ A card at `idea` enters like one at `approved`. `core/feature-workflow.md`
 lets a session the user directs at an `idea` card move it to `exploring`,
 the instruction being the approval, and the command cannot tell a directed
 session from an unattended one, whose taking no work from `idea` stays that
-file's rule (card question 9).
+file's rule (card question 9, answered а on 2026-10-28).
 
 ### The order of checks and the write
 
@@ -159,10 +159,12 @@ question 2 б), which leaves the gate optional.
 
 ## Conflict check
 
-`openspec show <slug> --json --deltas-only` on 2026-10-27 for every open
+`openspec show <slug> --json --deltas-only` on 2026-10-28 for every open
 change on `origin/main` — `work-finish`, `judgement-step-record`,
-`host-deploy`, `code-review-replaces-cli` — and no open pull request carrying
-a change. Shared capability: `gate-ledger`. `work-finish` modifies *Every
+`host-deploy`, `code-review-replaces-cli` — and the open pull requests: #332
+(`work-finish` group 2) leaves its gate-ledger delta as copied here, and #329
+(`first-review-yield`) touches `agent-rulebook` alone. Shared capability:
+`gate-ledger`. `work-finish` modifies *Every
 gate refusal is recorded* to name its three gates, and this change modifies
 the same requirement to add its two; its delta is `work-finish`'s copy plus
 those, so the two agree, and the order is prose — re-copy from the live spec
