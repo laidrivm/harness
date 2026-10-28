@@ -116,7 +116,9 @@ requests counting toward stage 2.
    first `Review completed` that counts for this pull request (decision 2).
    The line reads
    `- first review: k of n without Major+ — #a, #b (Major+), #c (unmeasured)`,
-   or `- first review: none reviewed`. `allowed-tools` gains
+   or `- first review: none reviewed`, still naming any `#c (unmeasured)`
+   after a dash, so a pull request the bot skipped is never hidden.
+   `allowed-tools` gains
    `Bash(gh api:*)` and `Bash(gh pr list:*)`, the two the `coderabbit` skill
    already holds; the command guard passed each of these reads on
    2026-10-27 and 28, as a `gh api` call with no method and no field.
@@ -125,8 +127,10 @@ requests counting toward stage 2.
    marked ready after `work-finish` group 2 (`work.ts finish` and the ready
    guard) merged, and the gate ledger holds a `pre-pr` `pass` record under
    `project-checks` whose `commit` is the first reviewed commit and whose
-   `at` precedes the switch to ready that review followed — the last
-   `ready_for_review` before it in
+   `at` precedes the switch to ready that launched that review — the last
+   `ready_for_review` before the result started (the check run's
+   `started_at`, or the status's first `pending`; not its completion, since
+   a second switch can land while the review runs) in
    `gh api 'repos/{owner}/{repo}/issues/<n>/events' --paginate` (paginated,
    or one past the first page is missed), or the pull request's
    `created_at` where there is none — what
