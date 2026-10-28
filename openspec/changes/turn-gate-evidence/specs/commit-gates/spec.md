@@ -1,0 +1,378 @@
+# commit-gates — delta
+
+The requirement keeps its name, which other changes cite; what the turn
+reports its gates by is now the runner's records, not its message.
+
+## MODIFIED Requirements
+
+### Requirement: A turn that commits reports its gates before it ends
+
+A `Stop` hook registered in the tracked `.claude/settings.json` SHALL refuse
+to end a turn when all of the following hold: the turn left at least one commit
+on the branch that was not there when control arrived, a task group in a change
+outside `openspec/changes/archive/` has at least one box and no unticked one
+left and was complete neither in the task lists as committed at the mark nor
+in those `origin/main` holds when the turn ends, and the gate ledger holds no
+passing run record of the turn's tip in this checkout (`pre-pr-runner`, *The
+runner records each run for the commit it read*): a `pass` record of the tip
+for every step the runner runs. The
+tip is the commit the turn's work is read from, as the paragraph on the mark
+below decides it. A record is this checkout's when the project it names is the
+repository's top level, as git resolves it from the turn's working directory.
+A run in another clone or worktree at the same commit does not count, nested
+inside this one or not, because it measured against its own base refs. It
+SHALL block by exiting **2** with the reason on stderr, which is
+the only code that prevents the turn ending, and the only channel the model
+reads — stderr from a hook exiting 0 reaches the debug log alone.
+
+The hook SHALL NOT read the turn's final message. What the message says —
+a gate line, a `BLOCKED`, or nothing — neither discharges the obligation nor
+qualifies the turn, because a line of text proves nothing a record does not,
+and code that parsed the model's text is where the previous design broke.
+
+A group with no boxes at all SHALL NOT count as complete, because the absence
+of an unticked box is not evidence that a box was ticked. A group already
+complete at the mark SHALL NOT qualify the turn either: it was completed, and
+reported or not, by an earlier turn, and counting it would refuse every turn
+that commits anything while any active change holds a finished group. A
+group absent at the mark SHALL qualify the turn like one with an unticked box
+there: the turn that wrote it and ticked it completed it, and excluding it
+lets a whole group of findings, added and closed in one turn, end silently.
+
+Nor SHALL a group qualify the turn that is already complete in the task lists
+as `origin/main` holds them when the turn ends, the base ref the merged-branch
+guard reads (`agent-permissions`). That group reached the default branch
+through a pull request of its own, and a turn that pulled it, fetched it or
+merged `main` into its branch brought it in rather than completed it. Counting
+it refused 8 of the last 14 pulls on `main` in the harness's orchestrator
+session on 2026-10-13, each of which committed nothing. The ref SHALL be read
+when the turn ends, not at the mark, because the fetch that brings a group in
+is the same one that moves the ref. A repository without that ref SHALL read it
+as holding no task list, which excludes nothing. The cost is accepted: a turn
+that completes a group, merges its own pull request and fetches the merge
+before ending ends without a run. Merging is not among the commands the
+harness's settings allow without a prompt, and the pre-push hook has run on
+what merged.
+
+The state at the mark and on `origin/main` SHALL be read from git — the task
+files as the marked commit and the ref hold them — rather than recorded beside
+the mark, which would be the second source of truth this requirement already
+refuses.
+
+The branch's push state SHALL NOT be a condition. A turn that commits and
+pushes before it ends is precisely the case the sequence exists to prevent, so
+treating a push as discharge would build the bypass into the gate. What
+discharges the obligation is the runner's passing run record of the tip, and
+nothing else. A run record for any commit but the tip SHALL NOT discharge it:
+a commit made after the run is one the run never read. Nor SHALL a record
+whose outcome is `fail`, or one step's record without the other's: a step that
+failed, or did not run, is no evidence that the tip is ready.
+
+Whether the turn left commits SHALL be decided against a mark of `HEAD` taken
+when control arrived, written by a `UserPromptSubmit` hook. A turn that commits
+and then returns `HEAD` to the mark SHALL be treated as having left none,
+unless the branch's remote-tracking ref holds a commit the mark does not: the
+gate exists so that work reaching a branch is reported, and work withdrawn
+before the turn ends reaches nothing — but a commit pushed and then reset
+locally has reached the remote branch, whatever `HEAD` says afterwards. A tip
+read from that ref is decided like any other, so a fetch on `main`, whose
+remote-tracking ref is `origin/main`, completes no group. The mark SHALL be keyed by the session it
+belongs to, since two sessions in one repository otherwise share one mark and
+answer each other's question. It SHALL live no longer than the turn that
+follows it: a record of what the sequence has already reported would be a
+second source of truth about work the repository already describes, and one
+that can disagree with it.
+
+The hook SHALL refuse at most once per mark. A refused turn is continued rather
+than restarted, so no new mark is written, and the second refusal a repeated
+condition would produce is suppressed by that. This bounds the cost of a
+condition the model cannot satisfy — a blocker only the user can settle, or a
+step that keeps failing — to one turn, without depending on any field of the
+hook event to detect the repetition.
+
+Where the hook cannot read what it needs — no mark, no repository, or a `HEAD`
+naming no branch — it SHALL allow the turn to end. This is the one place in
+this capability where an undecidable case does not block, and it is a choice
+rather than an oversight: a hook that refuses when its partner did not run
+makes a partial installation into a session that cannot end a turn.
+
+The gate ledger is not among those inputs. A ledger that is absent or cannot be
+read SHALL be treated as holding no run record, because a missing record is the
+case the record clause exists to catch. The once-per-mark bound limits what
+that costs to one refusal.
+
+The refusal SHALL name the groups the turn completed, the tip, and the
+runner's path as the project reaches it, and SHALL say that it is not
+repeated for this mark, so a turn whose blocker only the user can settle
+knows its next stop ends it. No repository state need change for a blocked
+turn to end, so the hook SHALL NOT be able to refuse indefinitely, and SHALL
+NOT depend on a loop-protection field to guarantee it.
+
+This requirement SHALL claim that the runner ran the sequence's deterministic
+steps at the tip and that they passed, and nothing beyond that. The steps that
+need judgement are not read here: a record of a skill call is `work.ts
+finish`'s business (`work-finish`), and their gate lines are a report for the
+model and the human. What it catches is the turn that completes a group and
+ends with no passing run at the commit it ends on.
+
+Nor SHALL it claim to reach every turn. A turn that ends by a path which does
+not invoke this hook — an interruption, or a failure that ends the turn
+without it — is not gated, and the obligation falls back to the prose rule for
+those. An interrupted headless turn was measured firing `SessionEnd` and no
+`Stop`; that is an observation, not a behaviour this requirement asserts.
+
+Every consumer SHALL register both halves in its tracked
+`.claude/settings.json` with the text the harness supplies, character for
+character, and the consumer's check SHALL fail when either registration is
+missing or differs, as it fails a Bash hook that is not the bootstrap. That
+text SHALL run the installed package's script, and SHALL end the turn — and
+let the prompt through — when the package is not installed: a clone before
+`bun install` is the partial installation the fail-open paragraph above
+already refuses to make unusable. The harness registers the same text in its
+own settings, as `harness-updates`' *The harness's own sessions run its gates
+from its pin* requires.
+
+#### Scenario: A task group is completed and the turn ends silently
+
+- **WHEN** a turn commits the last task of a group, and the ledger holds no
+  runner record for the tip
+- **THEN** the hook blocks the turn from ending, and the reason names the
+  tip, the runner's path and that it is not repeated
+
+#### Scenario: The turn reports its gates
+
+- **WHEN** the same turn ends while the ledger holds a passing run record of
+  the tip in this checkout
+- **THEN** the turn ends, whatever its final message says
+
+#### Scenario: Gate lines with no run behind them
+
+- **WHEN** a turn commits the last task of a group and ends with gate lines
+  reading `PASS`, and the ledger holds no runner record for the tip
+- **THEN** the hook blocks, because it reads no text
+
+#### Scenario: A run record for an earlier commit
+
+- **WHEN** the runner recorded commit `A`, the turn then committed `B`, and it
+  completed a group
+- **THEN** the hook blocks, because the run never read `B`
+
+#### Scenario: A run record from another checkout
+
+- **WHEN** a second clone of the repository recorded a run at the tip, and
+  this checkout did not
+- **THEN** the hook blocks, because that run measured against the other
+  clone's base refs
+
+#### Scenario: A run from a subdirectory
+
+- **WHEN** the runner recorded the tip from a subdirectory of this checkout
+- **THEN** the record discharges the turn, because the runner records the
+  checkout's top level wherever in it it runs
+
+#### Scenario: A worktree nested inside the checkout
+
+- **WHEN** a worktree kept under this checkout's directory recorded a run at
+  the tip, and this checkout did not
+- **THEN** the hook blocks, because the record names that worktree's top
+  level, not this one's
+
+#### Scenario: A run record and no gate line
+
+- **WHEN** the ledger holds a passing run record of the tip and the final
+  message carries no gate line
+- **THEN** the turn ends, because the hook reads no text
+
+#### Scenario: A run that failed
+
+- **WHEN** the runner's record of the tip for the project checks has the
+  outcome `fail`, and the diff budget's has `pass`
+- **THEN** the hook blocks once, because a failed step is no evidence that
+  the tip is ready, and the next end of that turn is let through by the
+  once-per-mark bound
+
+#### Scenario: One step's record alone
+
+- **WHEN** the ledger holds a `pass` record of the tip for the diff budget and
+  none for the project checks
+- **THEN** the hook blocks, because one step's record does not stand in for
+  another's
+
+#### Scenario: No ledger at all
+
+- **WHEN** a turn completes a group, and the ledger file does not exist
+- **THEN** the hook blocks once, and the next end of that turn is let through
+  by the once-per-mark bound
+
+#### Scenario: Blocked without a run
+
+- **WHEN** the final message carries `BLOCKED` naming what the user must
+  decide, and the ledger holds no run record for the tip
+- **THEN** the hook blocks once, and the reason says it is not repeated
+
+#### Scenario: The turn names what only the user can settle
+
+- **WHEN** a turn the hook has refused for this mark ends again with
+  `BLOCKED` followed by what the user must decide, and still no run record
+- **THEN** the turn ends, by the once-per-mark bound and not by the marker
+
+#### Scenario: A bare marker with nothing after it
+
+- **WHEN** the final message carries `BLOCKED` and nothing after it, and the
+  ledger holds a passing run record of the tip
+- **THEN** the turn ends, because the hook reads no text: a marker neither
+  clears a turn nor holds one
+
+#### Scenario: The turn commits and pushes before ending
+
+- **WHEN** a turn commits the last task of a group, pushes the branch, and
+  the ledger holds no runner record for the tip
+- **THEN** the hook blocks, because the push is the event the sequence was
+  meant to precede rather than a discharge of it
+
+#### Scenario: A turn whose commits are withdrawn before it ends
+
+- **WHEN** a turn commits and then returns `HEAD` to where the mark left it
+- **THEN** the turn ends, because nothing it committed survives to be reported
+
+#### Scenario: A turn that pushes, then resets to the mark
+
+- **WHEN** a turn commits the last task of a group, pushes the branch, and
+  returns `HEAD` to the mark
+- **THEN** the hook blocks, because the branch's remote-tracking ref holds a
+  commit the mark does not, so the work reached a branch
+
+#### Scenario: A refusal is not repeated
+
+- **WHEN** a turn already refused under this requirement ends again with the
+  same mark and the condition still met
+- **THEN** the turn ends, because the hook refuses at most once per mark
+
+#### Scenario: Two sessions in one repository
+
+- **WHEN** a second session's turn ends while the first session's mark is the
+  most recently written
+- **THEN** the second session is decided against its own mark, not the first's
+
+#### Scenario: A turn that commits nothing
+
+- **WHEN** a turn answers a question while a task group stands complete, and
+  `HEAD` is where the mark left it
+- **THEN** the turn ends, whatever the ledger holds
+
+#### Scenario: A group that carries no boxes
+
+- **WHEN** the only group whose text holds no `- [ ]` also holds no `- [x]`
+- **THEN** the turn ends, because the absence of an unticked box is not
+  evidence that a box was ticked
+
+#### Scenario: Every group still has work in it
+
+- **WHEN** a turn commits while every task group in every active change still
+  has an unticked box
+- **THEN** the turn ends, because no group has been completed
+
+#### Scenario: A group completed in an earlier turn
+
+- **WHEN** a turn commits work for a group that still has an unticked box,
+  while another group was already fully ticked in the task lists the marked
+  commit holds
+- **THEN** the turn ends, because no group was completed in this turn
+
+#### Scenario: A group created and completed in the same turn
+
+- **WHEN** a turn adds a task group the marked commit does not hold, ticks
+  every box in it, commits, and the ledger holds no runner record for the tip
+- **THEN** the hook blocks, because the group was not complete at the mark,
+  whether the turn committed it unticked first or not
+
+#### Scenario: A complete group the turn renamed
+
+- **WHEN** a turn renames the heading or the change directory of a group
+  already complete at the mark, and the ledger holds no runner record for the
+  tip
+- **THEN** the hook blocks once, because the group reads as absent at the
+  mark — a cost the refusal-once rule bounds to one turn
+
+#### Scenario: The completed group belongs to an archived change
+
+- **WHEN** the only fully ticked group is in a change under
+  `openspec/changes/archive/`
+- **THEN** the turn ends, because archiving is what retires the obligation
+
+#### Scenario: A pull brings in another pull request's completed group
+
+- **WHEN** a turn on `main` fast-forwards it to `origin/main`, which completes
+  a group that was open at the mark, and the ledger holds no runner record for
+  the tip
+- **THEN** the turn ends, because the group was already complete on
+  `origin/main`
+
+#### Scenario: A fetch on main moves the tip to its remote-tracking ref
+
+- **WHEN** a turn on `main` fetches, leaves `HEAD` at the mark, and
+  `origin/main` now completes a group
+- **THEN** the turn ends, because a tip read from the remote-tracking ref is
+  decided like any other
+
+#### Scenario: Main merged into a feature branch
+
+- **WHEN** a turn merges `origin/main` into its branch, the merge brings in a
+  group complete there, and the turn completes nothing of its own
+- **THEN** the turn ends
+
+#### Scenario: The turn's own group beside a pulled one
+
+- **WHEN** a turn completes a group `origin/main` does not hold complete, and
+  also pulls in another group `origin/main` does, and the ledger holds no
+  runner record for the tip
+- **THEN** the hook blocks, and the reason names the turn's own group and not
+  the pulled one
+
+#### Scenario: A repository without origin/main
+
+- **WHEN** no `origin/main` ref exists and a turn completes a group
+- **THEN** the hook blocks as it would without this exclusion, because a ref
+  that is absent excludes nothing
+
+#### Scenario: A turn that merges its own pull request
+
+- **WHEN** a turn completes a group, pushes, merges its pull request, fetches
+  `origin/main`, and the ledger holds no runner record for the tip
+- **THEN** the turn ends — the accepted cost, because `origin/main` now holds
+  the group complete
+
+#### Scenario: The mark was never written
+
+- **WHEN** `Stop` finds no record of `HEAD` from the start of the turn
+- **THEN** the turn ends, because a partial installation must not make the
+  session unusable
+
+#### Scenario: The final message cannot be read
+
+- **WHEN** the hook event carries no final assistant message, a turn completed
+  a group, and the ledger holds no runner record for the tip
+- **THEN** the hook blocks, because it decides on the repository and the
+  ledger and reads no text
+
+#### Scenario: There is no repository, or no branch
+
+- **WHEN** the turn ends outside a git repository, or on a `HEAD` that names
+  no branch
+- **THEN** the turn ends, because no commit of a task group can be in
+  question
+
+#### Scenario: A consumer without the registrations
+
+- **WHEN** a consumer's tracked `.claude/settings.json` lacks the `Stop` or
+  the `UserPromptSubmit` registration, or carries one that differs from the
+  harness's text, is not of type `command`, is narrowed by `if`, or runs in
+  a form that cannot block (`async`, `asyncRewake`, `args`, a non-bash `shell`), or the
+  settings set `disableAllHooks`
+- **THEN** the consumer's check fails and names the registration
+
+#### Scenario: A consumer clone before install
+
+- **WHEN** a prompt arrives or a turn ends in a consumer whose
+  `node_modules/harness` is absent
+- **THEN** the prompt goes through and the turn ends, with nothing printed

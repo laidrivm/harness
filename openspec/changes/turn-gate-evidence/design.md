@@ -1,0 +1,98 @@
+# turn-gate-evidence — design
+
+## Context
+
+See proposal.md, *Why*. `decide()` in `bun/turn-gate.ts` passes a turn that
+completed a group on `NAMED_BLOCK`, or on `GATE_LINE` plus `ran(end, top)` —
+any `pre-pr` record of the tip in this checkout, whatever its step or
+outcome. `reported()` is exported only for four test files' assertions. The
+goal check and `ranUnder()` already ask the stricter question — a `pass`
+record of the tip for every `RUNNER_STEPS` step — each in its own copy.
+
+## User's answers, 28.10
+
+1. а — delete the `BLOCKED` exit and `NAMED_BLOCK` too: the hook reads no
+   text; a blocked turn costs one refusal, then the mark releases it.
+2. а — the turn gate checks only the runner's records of the turn's last
+   commit; judgement-step records are not its business.
+3. б — `unproven()` in `work.ts finish` is not filled here: card
+   `40739875c31b81a2b885cca94a3fd1ad` holds it, taken on a seen skip.
+4. Moot while `unproven()` reads no skill records; on that card too.
+5. а — the five skills keep their gate lines as a report; `core/autonomy.md`'s
+   "every gate line reads `PASS`" and `session-wrapup`'s count stay; the
+   README and `core/review-toolkit.md` stop calling them machine-checked.
+
+Assumptions accepted: 6 — the `commit-gates` scenarios about gate lines are
+rewritten to the runner's record, not added to; 7 — the mark, one refusal per
+mark and the `/goal` round ceiling stay.
+
+## Decisions
+
+**D1. No field of the message is read.** The early return on a missing
+`last_assistant_message` goes with it: that fail-open existed because the
+escape from a refusal was text in the message, and the escape is now the
+runner. `openspec` refuses a `MODIFIED` that drops a scenario, so the
+scenarios about gate lines and `BLOCKED` keep their names with bodies
+rewritten (assumption 6).
+
+**D2. The evidence is a passing record of every runner step**,
+`pre-pr-runner`'s "passing run record". Rejected: "any record", which with a
+gate line beside it let a failed run pass because the line reported the
+failure; with no line it would end a turn on a failed step in silence. The
+goal check and `finish` ask the same, so one run meets all three. A failing
+step costs one refusal, as answer 1 accepts for a blocked turn.
+
+**D3. One export.** `passed(commit, top, ledger?)` in `gate-ledger.ts` is
+`RUNNER_STEPS.every((rule) => ran(commit, top, "pass", ledger, rule))`;
+`ranUnder()` and the goal check switch to it in the same change.
+`work-finish.ts` keeps its `filter`, which names the missing steps.
+
+**D4. One refusal text**, naming the groups, the tip and the runner's path,
+saying the refusal is not repeated for this turn, so a turn blocked on the
+user ends at its next stop.
+
+**D5. Names stay.** The requirement keeps *A turn that commits reports its
+gates before it ends*, cited by name in archived changes. `stage-goal`'s
+"SHALL NOT be a gate line that the turn gate accepts" and *The line the turn
+gate reads* stay true once the gate accepts no line; a case in
+`turn-gate-record.test.ts` takes over that scenario's citation.
+
+## Consumers
+
+d2ass and mellon register `node_modules/harness/bun/turn-gate.ts` and get
+the change on their next pin bump. Read on 2026-10-28, both pins (`f2fc4fa`,
+`dc107b3`) already refuse a reported turn without a runner record of the tip,
+and ship `bun/pre-pr.ts` with a `harness.bumpTest`. For them: no gate line is
+needed to end a turn; both runner steps must have passed at the tip, where
+any record did; a `BLOCKED` ending or a failed step costs one refusal —
+mellon's project checks fail without a CouchDB, so a session there pays it
+until it runs them against one. The registration text is unchanged.
+
+## Conflict check (roadmap Q14 б)
+
+Against `origin/main` `c015e4c` and the open pull requests (#342 alone):
+
+- `notion-status-gate` (group 3 open): its `gate-ledger` delta copies
+  *Every gate refusal is recorded* with "because its final message reported"
+  and *A turn refused, then let through*'s "ends with gate lines". Both
+  deltas say to re-copy against the live spec before archiving, so whichever
+  archives second keeps the other's edits. Its code imports
+  `groups`/`complete` from `turn-gate.ts`, which stay.
+- `first-review-yield` (#342): `session-wrapup` step 5 and `agent-rulebook`,
+  neither touched here. The stage's five pull requests count once the
+  self-pin passes this change's apply merge.
+- `host-deploy`: `orchestrator` and host scripts; no turn gate, gate line or
+  `BLOCKED` in it.
+- `finish-without-card`: `work-finish`; `finish` is left alone (answer 3 б).
+
+No `after:` is needed.
+
+## Risks / Trade-offs
+
+- [A turn blocked on the user pays one refusal] → bounded per mark; the
+  refusal says so.
+- [The harness's sessions run the old hook until the self-pin moves] → the
+  live probe, group 2, runs after the bump.
+- [`notion-status-gate` archives first] → the re-copy note in both deltas.
+
+Rollback is a revert of group 1; the ledger and the marks keep their format.
