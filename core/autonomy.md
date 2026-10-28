@@ -74,9 +74,9 @@ every gate line reads `PASS` — under the board loop it pushes nothing and ends
 its final message with a `PR-TITLE:` line and a `PR-BODY:` line, the body
 below it, and the runner opens it — with two exceptions:
 
-- `CODERABBIT-LOCAL` reading `OPEN` only over a 🟠 Major or 🔴 Critical
+- `CODE-REVIEW` reading `OPEN` only over a 🟠 Major or 🔴 Critical
   dismissal it proposes;
-- `CODERABBIT-LOCAL` reading `BLOCKED` only over a 🟠 Major or 🔴 Critical
+- `CODE-REVIEW` reading `BLOCKED` only over a 🟠 Major or 🔴 Critical
   that the third pass left unresolved.
 
 Any other gate line short of `PASS` holds the pull request back. In
@@ -88,7 +88,8 @@ dismissal is proposed or it is unresolved after the third pass. Each entry
 gives the finding's severity, its file and line, and what it says. For a
 proposed dismissal it adds the reason dismissal is proposed; for an
 unresolved finding, that it is still open. A bare count does not do. The
-gate lines stay as the review set them, and the merge stays with the user.
+gate lines stay as they were set — `CODE-REVIEW`'s by the session, since
+`/code-review` prints none — and the merge stays with the user.
 
 ### `card`
 

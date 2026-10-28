@@ -1,16 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CODERABBIT_LOCAL, JUDGEMENT, PROJECT_CHECKS, required, TRIAGE, WARM, ZOMBIES } from "./pre-pr-steps.ts";
+import { CODE_REVIEW, JUDGEMENT, PROJECT_CHECKS, required, TRIAGE, WARM, ZOMBIES } from "./pre-pr-steps.ts";
 
 /**
  * `required` alone, over the paths a diff lists and whether the branch's pull
  * request is open. Bracketed numbers are the proposal-stage `/zombies` ideas.
  */
 
-const DOCS = [PROJECT_CHECKS, TRIAGE, CODERABBIT_LOCAL];
-const CODE = [PROJECT_CHECKS, ZOMBIES, TRIAGE, CODERABBIT_LOCAL];
-const EVERY = [PROJECT_CHECKS, ZOMBIES, WARM, TRIAGE, CODERABBIT_LOCAL];
+const DOCS = [PROJECT_CHECKS, TRIAGE, CODE_REVIEW];
+const CODE = [PROJECT_CHECKS, ZOMBIES, TRIAGE, CODE_REVIEW];
+const EVERY = [PROJECT_CHECKS, ZOMBIES, WARM, TRIAGE, CODE_REVIEW];
 
 describe("a branch with no pull request open", () => {
 	// spec: pre-pr-runner/nothing-past-the-base
@@ -24,7 +24,7 @@ describe("a branch with no pull request open", () => {
 	});
 
 	// spec: pre-pr-runner/markdown-alone
-	test("one `.md` path names the project checks, `triage` and `coderabbit-local` [3]", () => {
+	test("one `.md` path names the project checks, `triage` and `code-review` [3]", () => {
 		expect(required(["README.md"], false)).toEqual(DOCS);
 	});
 
@@ -94,8 +94,16 @@ describe("a branch whose pull request is open", () => {
 });
 
 describe("the ids", () => {
-	// A missing skill would leave its step with no record ever matching it.
-	test.each(JUDGEMENT.map((id) => [id]))("`%s` names a skill of that name [15]", (id) => {
+	// The `Skill` hook records the skill's name; unattended, a call no entry allows is refused and leaves no
+	// record. A `Skill(...)` rule matches the name, never the arguments, so it covers `/code-review high`.
+	test.each(JUDGEMENT.map((id) => [id]))("`%s` is a skill the harness's settings allow by that name", (id) => {
+		const allow = JSON.parse(readFileSync(join(import.meta.dir, "..", ".claude", "settings.json"), "utf8")).permissions.allow;
+		expect(allow).toContain(`Skill(${id})`);
+	});
+
+	// A missing skill would leave its step with no record ever matching it. `code-review` is built in,
+	// with no `SKILL.md` here: the case above pins its `Skill(code-review)` entry instead.
+	test.each(JUDGEMENT.filter((id) => id !== CODE_REVIEW).map((id) => [id]))("`%s` names a skill of that name [15]", (id) => {
 		const skill = readFileSync(join(import.meta.dir, "..", "core", "skills", id, "SKILL.md"), "utf8");
 		expect(skill.match(/^name:\s*(\S+)\s*$/m)?.[1]).toBe(id);
 	});

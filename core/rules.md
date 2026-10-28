@@ -5,8 +5,8 @@
 ### The loop — agent responsibilities
 
 Whenever a mistake is confirmed — a bug the user reports, a failed test, a
-review finding (human, /triage, /zombies, /warm, /ponytail-review, or
-CodeRabbit) the user agrees with, or a mistake you catch in your own earlier
+review finding (human, /triage, /zombies, /warm, /ponytail-review,
+/code-review, or CodeRabbit) the user agrees with, or a mistake you catch in your own earlier
 output — do BOTH.
 The same applies to **style preferences**: when the user pauses an apply run
 (or any task) to say "do it this way instead", that correction is a lesson —
