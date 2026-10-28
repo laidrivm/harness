@@ -319,10 +319,10 @@ for them is already here.
   `proposed`, `done`, on the board the repository names under `harness.board`
   in its `package.json`. Each board is derived from its own repository. The
   other eight are moved by hand. In the harness itself a session moves them
-  — and makes a reconciliation's corrections — with `bun bun/work.ts status
-  --card <id> --to <status>`, which refuses the moves the `work-status`
-  capability lists, and the connector's `Status` write is
-  refused there. Elsewhere this bullet is the whole of what holds them until
+  — and makes a reconciliation's corrections, reporting one it refuses as a
+  card left behind — with `bun bun/work.ts status --card <id> --to
+  <status>`, which refuses the moves the `work-status` capability lists, and
+  the connector's `Status` write is refused there. Elsewhere this bullet is the whole of what holds them until
   roadmap stage 11 — which is why it is stated as an obligation rather than
   as a convention. Which eleven, and so which eight, is fixed in the harness's
   `openspec/specs/task-board/` and named nowhere else; a second copy here is

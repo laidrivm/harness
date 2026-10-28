@@ -17,7 +17,5 @@ import { blocker } from "./gate-ledger.ts";
 
 const event = await Bun.stdin.json().catch(() => null);
 const properties = event?.tool_input?.properties;
-if (properties && typeof properties === "object" && Object.hasOwn(properties, "Status")) {
-	const block: (id: string, reason: string) => never = blocker("status-guard", event);
-	block("mcp-status", "status-guard: a card's Status moves through `bun bun/work.ts status --card <id> --to <status>`, which checks origin/main's evidence and the WIP limit. Send any other property in a call without Status.");
-}
+if (properties && typeof properties === "object" && Object.hasOwn(properties, "Status"))
+	blocker("status-guard", event)("mcp-status", "status-guard: a card's Status moves through `bun bun/work.ts status --card <id> --to <status>`, which checks origin/main's evidence and the WIP limit. Send any other property in a call without Status.");
