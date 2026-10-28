@@ -166,7 +166,9 @@ question 2 б), which leaves the gate optional.
 change on `origin/main` — `work-finish`, `judgement-step-record`,
 `host-deploy`, `code-review-replaces-cli` — and the open pull requests: #332
 (`work-finish` group 2) leaves its gate-ledger delta as copied here, and #329
-(`first-review-yield`) touches `agent-rulebook` alone. Shared capability:
+(`first-review-yield`) touches `agent-rulebook` alone. Since then #332 has
+merged and `work-finish` has archived, so of these only the gate-ledger
+overlap below still stands. Shared capability:
 `gate-ledger`. `work-finish` modifies *Every
 gate refusal is recorded* to name its three gates, and this change modifies
 the same requirement to add its two; its delta, re-copied from the live spec

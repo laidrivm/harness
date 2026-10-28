@@ -4,9 +4,9 @@
  * then the push while the pull request is a draft, the draft opened when none
  * is, and the ready switch unless a question waits on the card
  * (`openspec/changes/archive/2026-10-28-work-finish/design.md`, *The
- * sequence and where each refusal sits*). Every refusal comes before the push, changes nothing but
- * the ledger, and is one `finish` record of `HEAD`; a failure after the push
- * leaves the draft and records nothing.
+ * sequence and where each refusal sits*). Every refusal comes before the
+ * push, changes nothing but the ledger, and is one `finish` record of
+ * `HEAD`; a failure after the push leaves the draft and records nothing.
  */
 import { statSync } from "node:fs";
 import { ready } from "./ci-run-draft.ts";

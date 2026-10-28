@@ -54,8 +54,9 @@ VPS bot's settings (stage 5, question 20); the board loop's pick write, which
 stage 7 removes.
 
 Order: this change applies after `work-finish` group 2, which adds `finish`
-to `bun/work.ts` and the first harness-only hook registration; kept in prose,
-not `after:`; group 2 has merged (#332), and `work-finish` is archived.
+to `bun/work.ts` and the first harness-only hook registration. The order is
+met — group 2 merged (#332) and `work-finish` is archived — so it needs no
+`after:`.
 
 ## Capabilities
 
