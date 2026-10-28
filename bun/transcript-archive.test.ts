@@ -18,9 +18,11 @@ import {
 import { join } from "node:path";
 import { git } from "./command-guard.fixture.ts";
 import {
+	ago,
 	archive,
 	cleanup,
 	copyOf,
+	DAY,
 	event,
 	machine,
 	session,
@@ -74,7 +76,9 @@ describe("an ended session's copy", () => {
 	test("keeps its source's modification time [15]", () => {
 		const m = machine();
 		const path = session(m, "s1");
-		const then = new Date("2026-05-01T12:00:00Z");
+		// Relative to now, never a fixed date: the archive prunes a copy past
+		// `KEEP` in transcript-archive.ts, so a fixed date ages out of it.
+		const then = ago(DAY);
 		utimesSync(path, then, then);
 		archive(m, event(m, path));
 		expect(statSync(`${copyOf(m, "s1")}.jsonl`).mtimeMs).toBe(then.getTime());

@@ -18,10 +18,12 @@ import {
 import { join } from "node:path";
 import { git } from "./command-guard.fixture.ts";
 import {
+	ago,
 	archive,
 	catchUp,
 	cleanup,
 	copyOf,
+	DAY,
 	event,
 	machine,
 	put,
@@ -29,9 +31,6 @@ import {
 } from "./transcript-archive.fixture.ts";
 
 afterAll(cleanup);
-
-const DAY = 86_400_000;
-const ago = (ms: number) => new Date(Date.now() - ms);
 const read = (path: string) => readFileSync(path, "utf8");
 const record = (path: string) => JSON.parse(read(`${path}.meta.json`));
 const today = () => new Date().toISOString().slice(0, 10);
