@@ -15,7 +15,8 @@ import { client, discussion, hex, oldest, plain, waits } from "./notion-bot.ts";
 
 /** The markdown read's API version, for that call alone: the others stay on the one their cases ran against. */
 const MARKDOWN = "2026-03-11";
-const POINTER = /^openspec\/changes\/([a-z0-9-]+)\/$/;
+/** A `Pointer` at an active change, wholly; `work-status.ts` reads it too. */
+export const POINTER = /^openspec\/changes\/([a-z0-9-]+)\/$/;
 
 type Property = { type?: unknown; [key: string]: unknown };
 const named = (value: unknown) => (typeof (value as { name?: unknown })?.name === "string" ? (value as { name: string }).name : "");
@@ -38,10 +39,11 @@ function text(property: Property | undefined): string {
 	return "";
 }
 
-/** Runs `command` in `cwd` under `env`, its standard output, or throws naming how it failed. */
-function output(command: string[], cwd?: string, env: Record<string, string | undefined> = process.env): string {
+/** Runs `command` in `cwd` under `env`, its standard output, or throws naming how it failed; `work-status.ts` runs git through it too. */
+export function output(command: string[], cwd?: string, env: Record<string, string | undefined> = process.env): string {
 	if (!Bun.which(command[0])) throw new Error(`no ${command[0]} on PATH`);
-	const run = Bun.spawnSync(command, { cwd, env, stdout: "pipe", stderr: "pipe" });
+	// Bounded, so a stalled remote or a prompt nobody answers ends in a failure, not a hang.
+	const run = Bun.spawnSync(command, { cwd, env, stdout: "pipe", stderr: "pipe", timeout: 120_000, killSignal: "SIGKILL" });
 	if (run.exitCode !== 0) {
 		const said = run.stderr.toString().trim().split("\n")[0];
 		throw new Error(`${command.slice(0, 2).join(" ")} exited ${run.exitCode}${said ? `: ${said}` : ""}`);
