@@ -74,7 +74,9 @@ describe("an ended session's copy", () => {
 	test("keeps its source's modification time [15]", () => {
 		const m = machine();
 		const path = session(m, "s1");
-		const then = new Date("2026-05-01T12:00:00Z");
+		// A day ago, not a fixed date: the archive prunes a copy past its 180-day
+		// window, so a fixed date ages out. Whole seconds, so mtimeMs compares exactly.
+		const then = new Date(Math.floor(Date.now() / 1000) * 1000 - 86_400_000);
 		utimesSync(path, then, then);
 		archive(m, event(m, path));
 		expect(statSync(`${copyOf(m, "s1")}.jsonl`).mtimeMs).toBe(then.getTime());
