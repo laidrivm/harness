@@ -89,8 +89,9 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		lines.push(`finish: opened draft #${number}`);
 	}
 
-	// No card, no question to read: a pin bump or a hotfix has none (`openspec/changes/finish-without-card/`).
-	if (card) {
+	// No card, no question to read: a pin bump or a hotfix has none (`work-finish` spec, *No card: no question check*).
+	if (!card) lines.push("finish: no --card, so no card's question was read");
+	else {
 		// Last, after the push and its test run, so it sees a question posted meanwhile.
 		const found = integration();
 		if (typeof found === "string") return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);

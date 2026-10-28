@@ -82,6 +82,7 @@ describe("the sequence", () => {
 		const run = await finish({ cwd, args: OPENING.filter((a) => a !== "--card" && a !== CARD), gh: { before: [], after: [pull(7, "OPEN", true)] } });
 		expect(run.calls).toEqual([READ, "push", `pr create --draft -R o/demo --base main --head ${BRANCH} --title Demo --body-file body.md`, READ, READY]);
 		expect([run.code, run.last, run.remote, run.seen]).toEqual([0, "finish: ready #7", head(cwd), []]);
+		expect(run.out).toContain("finish: no --card, so no card's question was read\n");
 	});
 
 	test("no --card and no ask settings: still marked ready", async () => {

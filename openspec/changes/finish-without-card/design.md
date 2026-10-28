@@ -4,7 +4,10 @@
 
 `openspec/specs/work-finish/spec.md` is not on `main` yet: PR #338 archives
 `work-finish` and syncs it. The delta's MODIFIED blocks copy #338's synced
-text; whichever of the two merges second reconciles them.
+text. Archiving this change first is refused, since `openspec archive` will not
+apply a MODIFIED delta to a spec that does not exist; an `after:` key would
+fail `openspec validate --strict` as unknown. Whichever of the two merges second reconciles them, including the
+*No card* scenario that `work-finish`'s own delta still holds.
 
 ## Goals / Non-Goals
 
@@ -25,4 +28,7 @@ question 23).
 ## Risks / Trade-offs
 
 A session that forgets `--card` marks ready past a waiting question. Accepted:
-the user's call (2026-10-28), and CI plus the human merge still stand.
+the user's call (2026-10-28), and CI plus the human merge still stand. To make
+the gap less likely, `finish` prints that it read no card, and the ready
+guard's refusal names `--card` first and says it may be left out only for a
+pull request with no card behind it.

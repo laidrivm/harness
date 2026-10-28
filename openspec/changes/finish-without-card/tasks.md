@@ -3,7 +3,7 @@
 ## 1. Tests first
 
 - [x] 1.1 In `bun/work-finish.test.ts`, drop *no --card* from the usage table and re-cite it to `work-finish/a-malformed-card`; record that a card-less run now fails the new cases below
-- [x] 1.2 In `bun/work-finish-sequence.test.ts`, add a card-less first finish (push, draft, ready, no Notion read), a card-less finish with no ask settings (still ready), and a card-less finish with no run record (refused before the push), cited to `work-finish/no-card-no-question-check`; run them and record that they fail
+- [x] 1.2 In `bun/work-finish-sequence.test.ts`, add a card-less first finish (push, draft, ready, no Notion read) and a card-less finish with no ask settings (still ready), and in `bun/work-finish.test.ts` a card-less finish with no run record (refused before the push), cited to `work-finish/no-card-no-question-check`; run them and record that they fail
 
 ## 2. Code
 

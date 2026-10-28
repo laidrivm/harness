@@ -19,13 +19,13 @@ print the usage and exit 2 before any git, `gh` or Notion call.
 
 ### Requirement: Finish marks ready only when no question waits
 
-After the push, or its skip, `finish` SHALL read the card's comments through
-the ask integration and mark the pull request ready only when no question to
-the user waits there. A waiting question SHALL leave the draft and exit 0,
-naming the card. No ask settings, a read Notion does not answer, or a ready
-GitHub refuses SHALL leave the draft and exit 1. Without `--card`, `finish`
-SHALL read no card and mark the pull request ready; every refusal before the
-push still holds.
+After the push, or its skip, `finish` given `--card` SHALL read the card's
+comments through the ask integration and mark the pull request ready only
+when no question to the user waits there. A waiting question SHALL leave the
+draft and exit 0, naming the card. No ask settings, a read Notion does not
+answer, or a ready GitHub refuses SHALL leave the draft and exit 1. Without
+`--card`, `finish` SHALL read no card, say so, and mark the pull request
+ready; every refusal before the push still holds.
 
 #### Scenario: No question on the card
 
@@ -45,7 +45,7 @@ push still holds.
 
 #### Scenario: No ask settings
 
-- **WHEN** the machine has no ask settings
+- **WHEN** `finish` has a card and the machine has no ask settings
 - **THEN** the pull request stays a draft and `finish` exits 1
 
 #### Scenario: No card: no question check
@@ -53,5 +53,5 @@ push still holds.
 - **WHEN** `finish` runs without `--card` on a branch with no open pull
   request, with a title, a body file and the run records of `HEAD`
 - **THEN** it pushes, opens the draft and marks it ready, reading nothing
-  from Notion, and without the run records it refuses before the push as
-  with a card
+  from Notion and printing that no card's question was read, and without
+  the run records it refuses before the push as with a card
