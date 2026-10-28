@@ -157,7 +157,7 @@ produced as a side effect of the event the sequence exists to precede.
 The runner SHALL print, as its last line, the ids of the steps the branch
 requires. While no pull request of it is open, a branch whose every changed
 path is a `*.md` file or lies under `openspec/` is a documentation branch and
-requires the project checks, `triage` and `coderabbit-local`. Any other branch
+requires the project checks, `triage` and `code-review`. Any other branch
 is a code branch and requires `zombies` as well, and `warm` where a path named
 `package.json` or `bun.lock` changed. A judgement step's id is its skill's name.
 
@@ -165,7 +165,7 @@ is a code branch and requires `zombies` as well, and `warm` where a path named
 
 - **WHEN** every changed path ends in `.md`
 - **THEN** the runner names the project checks, `triage` and
-  `coderabbit-local`, and neither `zombies` nor `warm`
+  `code-review`, and neither `zombies` nor `warm`
 
 #### Scenario: A proposal with one source file
 
@@ -211,8 +211,8 @@ Once the branch's pull request is open, draft or not, the runner SHALL name
 the project checks and no judgement step, since the reviewer on the pull
 request reviews its head. A read of the pull request that fails SHALL count as
 no pull request open. The list is the least a push into it requires: the steps
-before `/coderabbit-local` still run ahead of one, as `local-review-loop`
-(*The gate runs after triage and before the push*) sets out.
+before `/code-review` still run ahead of one, as `local-review-loop`
+(*The local review runs after triage and before the push*) sets out.
 
 #### Scenario: A code branch with its pull request open
 
