@@ -46,7 +46,8 @@ names its own, so a single-branch clone or a narrowed `remote.origin.fetch`
 still moves `origin/main` — then
 `git archive origin/main openspec/changes` into a fresh temporary directory
 (extracted with `tar`, removed afterwards), and calls `boardState()` on it
-unchanged; `tasks.md` is read from there too. Rejected: `boardState(top)`,
+unchanged — `board-state.ts` now loads `root.ts`, which runs git on import, in
+its entry point alone, so `work.ts` runs no git before a subcommand asks; `tasks.md` is read from there too. Rejected: `boardState(top)`,
 which answers for the checkout; `git ls-tree`/`git show`, which would restate
 `boardState`'s derivation beside it (`core/rules.md`, Code); a `git
 worktree`, which writes into the shared repository's files. `boardState()`
@@ -127,7 +128,9 @@ lines), as the card's title has it; `bun/work-status.ts` is the module, as
 
 Each refusal is `record("status", "block", id, { cwd: top }, commit)`, `top`
 the checkout's top level, so the record names its project where
-`CLAUDE_PROJECT_DIR` is unset, and `commit` the `origin/main` SHA read. Ids: `user-only`, `wip-full`,
+`CLAUDE_PROJECT_DIR` is unset, and `commit` the `origin/main` SHA read. A
+refusal before the evidence runs no git, so `top` there is the working
+directory (`exploring` to `explored` runs no git). Ids: `user-only`, `wip-full`,
 `wip-limit` (the variable is not a number), `no-pointer`, `no-evidence`,
 `unread` (any failed read: settings, page, query, fetch, archive). A failed
 write is no refusal and records nothing, as in `work-finish`. These records

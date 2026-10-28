@@ -17,7 +17,6 @@
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { read } from "./config.ts";
-import { root } from "./root.ts";
 
 export type Status = "done" | "proposed" | "proposing";
 
@@ -38,7 +37,7 @@ const ARTEFACTS = ["proposal.md", "design.md", "tasks.md"];
  * `2026-08-01-archive` as covering `archive-preflight`, which is the collision
  * `openspec/specs/review-bot-config/spec.md` already documents in another tool.
  */
-const ARCHIVED = /^\d{4}-\d{2}-\d{2}-(.+)$/;
+export const ARCHIVED = /^\d{4}-\d{2}-\d{2}-(.+)$/;
 
 // Sorted: readdir's order is the filesystem's (hashed on Linux's ext4), and the pick prompt lists changes in it.
 const subdirs = (path: string): string[] =>
@@ -227,7 +226,7 @@ export function boardState(tree: string): State {
  * The ten statuses a card moves through, in the order `task-board` lists them.
  * `discarded`, the eleventh, is outside the order: only the user sets it.
  */
-const ORDER: readonly string[] = [
+export const ORDER: readonly string[] = [
 	"idea",
 	"approved",
 	"exploring",
@@ -277,7 +276,10 @@ export function board(tree: string): string {
 	return named;
 }
 
-if (import.meta.main)
+if (import.meta.main) {
+	// Imported here alone: `root.ts` runs git on import, which `work.ts status` must not do for every subcommand.
+	const { root } = await import("./root.ts");
 	console.log(
 		JSON.stringify({ board: board(root), ...boardState(root) }, null, "\t"),
 	);
+}
