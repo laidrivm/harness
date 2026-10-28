@@ -110,10 +110,23 @@ in the self-pin bump pull request that moves the pin past group 1's merge
 
 ## 2. Live probe, once the pin moves past group 1
 
-- [ ] 2.1 In the self-pin bump pull request that moves the pin past group 1's
+- [x] 2.1 In the self-pin bump pull request that moves the pin past group 1's
       merge, after `bun install`: start a session in the harness's checkout,
       call `/zombies` through the `Skill` tool and type `/triage`, then read
       the ledger's last two records with `jq` and confirm each names the
       gate `skill`, its skill and the checkout's `HEAD` [37]. Record the
       result, or the field name the platform actually sends, in the pull
       request; a mismatch reopens 1.4.
+
+      Run on 2026-10-28, after the self-pin bump (#335) merged, in the
+      harness's main checkout at `HEAD`
+      `fa77b75a1c414c59cde63232c46c7ecbd82416a9` after `bun install`, with no
+      session restart needed. `/zombies` called through the `Skill` tool
+      wrote `{"at":"2026-10-28T15:26:31.344Z","gate":"skill",
+      "decision":"called","rule":"zombies","project":"<the checkout>",
+      "session":"2214216e-…","commit":"fa77b75a…"}`, and the user typing
+      `/triage` wrote the same record at `15:27:53.358Z` with the rule
+      `triage`. Each names the gate `skill`, its skill and the checkout's
+      `HEAD`; the field names the platform sends matched design.md D2, so 1.4
+      stays closed. The record is kept here because the bump pull request
+      merged before the probe ran.
