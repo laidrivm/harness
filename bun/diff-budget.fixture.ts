@@ -54,7 +54,7 @@ export const git = (cwd: string, ...args: string[]) => {
 /** `null` deletes the file; `Uint8Array` writes bytes, so a binary stays binary. */
 type Tree = Record<string, string | Uint8Array | null>;
 
-const put = (dir: string, tree: Tree) => {
+export const put = (dir: string, tree: Tree) => {
 	for (const [path, content] of Object.entries(tree)) {
 		const full = join(dir, path);
 		if (content === null) {
