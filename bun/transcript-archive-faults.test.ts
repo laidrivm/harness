@@ -16,9 +16,11 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import {
+	ago,
 	archive,
 	cleanup,
 	copyOf,
+	DAY,
 	event,
 	machine,
 	put,
@@ -27,9 +29,6 @@ import {
 } from "./transcript-archive.fixture.ts";
 
 afterAll(cleanup);
-
-const DAY = 86_400_000;
-const ago = (ms: number) => new Date(Date.now() - ms);
 
 describe("a fault", () => {
 	// spec: transcript-archive/a-malformed-event
