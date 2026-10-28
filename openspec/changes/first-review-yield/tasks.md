@@ -10,8 +10,9 @@ agent-rulebook/<slug>`.
 
 - [x] 1.1 Count a first review only on a success result: the check-run read
       selects `.conclusion == "success"` and the status read `.state ==
-      "success"`, beside the text `Review completed` (design.md decision 2
-      and its reads) — a draft skip is a `success` status too, so the text
+      "success"` (and `pending`, printing the state, for decision 6's start
+      time), beside the text `Review completed` (design.md decision 2 and
+      its reads) — a draft skip is a `success` status too, so the text
       still decides. Deferred from CodeRabbit's last round on #329
 - [x] 1.2 Read `issues/<n>/events` with `--paginate` (design.md decision 6),
       so a `ready_for_review` past the first page is not missed. Deferred

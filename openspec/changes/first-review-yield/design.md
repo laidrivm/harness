@@ -52,7 +52,9 @@ requests counting toward stage 2.
    because the bot moved from one to the other on 2026-10-27 — on a success
    result only: the check run's `conclusion` or the status's `state` is
    `success`, which the reads below select, since the text alone is not the
-   outcome (CodeRabbit on #329, deferred to apply). Its findings
+   outcome (CodeRabbit on #329, deferred to apply). The status read also
+   prints `pending` records, and the check-run read `started_at`, for
+   decision 6's start time; a `pending` record never counts. Its findings
    are the bot's reviews with that `commit_id`, inline and in the body; none
    is zero findings, as the bot's walkthrough comment says where its
    `Commit` names that commit: «No actionable comments were generated in the
@@ -92,8 +94,8 @@ requests counting toward stage 2.
    gh pr list --state all --search "updated:>=<since>" --limit 1000 --json number
    gh pr list --state open --limit 1000 --json number
    gh api 'repos/{owner}/{repo}/pulls/<n>/commits' --paginate --jq '.[].sha'
-   gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit" and .conclusion == "success") | [.completed_at, .output.summary] | @tsv'
-   gh api 'repos/{owner}/{repo}/commits/<sha>/statuses' --paginate --jq '.[] | select(.context == "CodeRabbit" and .state == "success") | [.created_at, .description] | @tsv'
+   gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit" and .conclusion == "success") | [.started_at, .completed_at, .output.summary] | @tsv'
+   gh api 'repos/{owner}/{repo}/commits/<sha>/statuses' --paginate --jq '.[] | select(.context == "CodeRabbit" and (.state == "success" or .state == "pending")) | [.created_at, .state, .description] | @tsv'
    gh api 'repos/{owner}/{repo}/commits/<sha>/pulls' --jq '.[].number'
    gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | [.id, .body] | @tsv'
    gh api 'repos/{owner}/{repo}/pulls/<n>/reviews/<id>/comments' --paginate --jq '.[].body'
