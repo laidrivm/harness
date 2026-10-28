@@ -75,19 +75,19 @@ entry, a hook or a CI check leaves this file the way it would leave
   alike, as a draft while a question to the user on its card is unanswered,
   and mark it ready only once the answers settle every item — CodeRabbit's
   auto-review skips drafts, so no review fires on work an answer may still
-  change. A session does both with `bun node_modules/harness/bun/work.ts
-  finish --card <id> --title <text> --body-file <path>` (`bun bun/work.ts`
-  in the harness itself; `--card` alone once a PR is open): it
+  change. A local session does both with `bun node_modules/harness/bun/work.ts
+  finish --card <id> --title <text> --body-file <path>` (`bun bun/work.ts` in
+  the harness; `--card` alone once a PR is open; a cloud session, with no `gh
+  pr`, opens it over `gh api` as the README's *Cloud sessions* says): it
   refuses without the pre-PR runner's passing records of `HEAD`, pushes while
-  the PR is a draft, opens it as a draft when none is open, and marks it
-  ready right after the push unless a question waits on the card; in the
-  harness's own sessions a hook refuses a hand-run `gh pr create`, and `gh
-  pr ready` without `--undo`. An agent that then works on an existing PR
-  marks it draft by hand (`gh pr ready <n> --undo`) as it starts, and runs
-  `finish` only when that work ends — CodeRabbit skips a head pushed to a
-  draft and reviews on the switch to ready, so ready before the push would
-  review the old head and then the new one; with nothing to push, `finish`
-  skips the push and marks it ready. The pre-push hook refuses a push into an open pull
+  the PR is a draft, opens it as a draft when none is open, and marks it ready
+  right after the push unless a question waits on the card; in the harness's
+  own sessions a hook refuses a hand-run `gh pr create`, and `gh pr ready`
+  without `--undo`. An agent that then works on an existing PR marks it draft
+  by hand (`gh pr ready <n> --undo`) as it starts, and runs `finish` only when
+  that work ends — CodeRabbit reviews on the switch to ready, so ready before
+  the push would review the old head and then the new one; with nothing to
+  push, `finish` marks it ready. The pre-push hook refuses a push into an open pull
   request of the same repository that is not a draft (one from a fork is
   not read), the user's own push too — run `gh pr ready <n> --undo` first —
   and a push to GitHub whose pull requests it cannot read. A question to
