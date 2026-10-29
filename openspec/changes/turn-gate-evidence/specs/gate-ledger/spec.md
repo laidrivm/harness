@@ -1,15 +1,18 @@
 # gate-ledger — delta
 
-Copied from the live spec on 2026-10-28; `notion-status-gate` modifies the
-first requirement too. Before archiving, re-copy it if the live text moved.
+Copied from the live spec on 2026-10-28, and the first requirement re-copied
+on 2026-10-29 once `notion-status-gate` archived and synced it (the status
+guard, `work.ts status` and *A status move refused*). Before archiving,
+re-copy it if the live text moved.
 
 ## MODIFIED Requirements
 
 ### Requirement: Every gate refusal is recorded
 
 Each refusal a harness gate makes — the command guard, the Notion update
-guard, the turn gate, the loop guard, the ready guard, the pre-push hook's
-draft check or `work.ts finish` — SHALL append one record to the ledger. Every reason a
+guard, the turn gate, the loop guard, the ready guard, the status guard, the
+pre-push hook's draft check, `work.ts finish` or `work.ts status` — SHALL
+append one record to the ledger. Every reason a
 guard blocks for counts, including an event it could not read. The turn gate
 SHALL also record a turn that completed a task group and was let through
 because the ledger held a passing run record of its tip, so that a count of
@@ -85,6 +88,14 @@ gate ledger* requires, so that the wrap-up counts flakes beside refusals.
 - **WHEN** `work.ts finish` refuses for a missing run record
 - **THEN** the ledger gains one record naming `finish`, a block, its
   prohibition's id and `HEAD`
+
+#### Scenario: A status move refused
+
+- **WHEN** `work.ts status` refuses `--to done` that `origin/main` does not
+  prove, or the status guard refuses a connector `Status` write
+- **THEN** the ledger gains one record naming `status` or `status-guard`, a
+  block, and its prohibition's id, the `status` record with the `origin/main`
+  commit it read
 
 ### Requirement: A refusal walked past is recorded
 

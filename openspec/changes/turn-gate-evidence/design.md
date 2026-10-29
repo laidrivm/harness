@@ -81,7 +81,9 @@ Against `origin/main` `c015e4c` and the open pull requests (#342 alone):
   *Every gate refusal is recorded* with "because its final message reported"
   and *A turn refused, then let through*'s "ends with gate lines". Both
   deltas say to re-copy against the live spec before archiving, so whichever
-  archives second keeps the other's edits. Its code imports
+  archives second keeps the other's edits. It archived first, on
+  2026-10-29, and this change's delta was re-copied from the synced text
+  then, keeping its two edits. Its code imports
   `groups`/`complete` from `turn-gate.ts`, which stay.
 - `first-review-yield` (#342): `session-wrapup` step 5 and `agent-rulebook`,
   neither touched here. The stage's five pull requests count once the
