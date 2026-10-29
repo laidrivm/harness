@@ -4,8 +4,8 @@
  * `openspec/changes/archive/2026-10-29-notion-status-gate/design.md` sets
  * (*The order of checks and the write*): the user's statuses, the page read,
  * the evidence on `origin/main` for a merged status, the WIP limit for an
- * unproven entry into the range. Each refusal writes nothing in Notion and is one `status` record;
- * a failed write records nothing.
+ * unproven entry into the range. Each refusal writes nothing in Notion and is
+ * one `status` record; a failed write records nothing.
  */
 import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
