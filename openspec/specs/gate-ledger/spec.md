@@ -193,21 +193,21 @@ let through what it exists to stop.
 ### Requirement: The wrap-up reports the gate decisions
 
 `session-wrapup` SHALL add one line to the pipeline-yield entry it writes,
-counting this project's records since the date of the previous entry, per gate,
-decision and id. A session in which no gate recorded anything SHALL record
-that as well.
+counting this project's records since the date of the previous entry that
+holds a gates line, per gate, decision and id. A session in which no gate
+recorded anything SHALL record that as well.
 
 #### Scenario: Two blocks and a refused turn
 
 - **WHEN** the guard blocked twice for one id and the turn gate refused once
-  since the previous entry
+  since the previous entry with a gates line
 - **THEN** the entry's gates line names both gates, with the guard's two
   blocks under that id and the turn gate's one refusal
 
 #### Scenario: A quiet session
 
 - **WHEN** the ledger holds no record for this project since the previous
-  entry
+  entry with a gates line
 - **THEN** the entry carries a gates line saying none fired
 
 ### Requirement: An interpreter the guard refuses is recorded once

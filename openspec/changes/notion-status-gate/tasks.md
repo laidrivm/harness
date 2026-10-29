@@ -113,10 +113,26 @@ suite's preload requires.
 
 ## 3. The probe after the pin bump
 
-- [ ] 3.1 Live probe once the pin passes group 2's merge: a
+- [x] 3.1 Live probe once the pin passes group 2's merge: a
       `notion-update-page` call setting this card's `Status` refused by the
       hook in a harness session, and one setting `Assign` alone passing;
       and the first moves the command wrote since group 1 merged, each line
       as printed and the card read back. Record them in that pull request
       and on the card; once it merges, move the card to `applied` with
       `bun bun/work.ts status`
+      — The hook was probed on 2026-10-28 by the main session in the main
+      checkout on the pin c015e4c, recorded on the card under *Живая проба
+      после бампа пина*: `notion-update-page` setting `Status` on the board card
+      `40439875c31b81948820e823c8af6045` (another card: the guard reads no
+      card id) was refused with ``status-guard: a
+      card's Status moves through `bun bun/work.ts status --card <id> --to
+      <status>` …`` and the ledger line `status-guard` / `block` /
+      `mcp-status`, and the same call setting `Assign` alone passed. The
+      command's moves: 1.6's five refusals, in the ledger as `status` /
+      `block` under `user-only`, `no-evidence` twice, `wip-full` and
+      `no-pointer`, each writing nothing, the `wip-full` one after a live
+      data source query that counted 4; and its first write since,
+      `bun bun/work.ts status --card 40739875c31b81a0841fd0e24efd7df3 --to
+      done` on 2026-10-29, printing `status:
+      40739875c31b81a0841fd0e24efd7df3 archiving → done`, the card read back
+      as `done`.
