@@ -193,7 +193,7 @@ let through what it exists to stop.
 ### Requirement: The wrap-up reports the gate decisions
 
 `session-wrapup` SHALL add one line to the pipeline-yield entry it writes,
-counting this project's records since the date of the previous entry, per gate,
+counting this project's records since the date of the previous entry that holds a gates line, per gate,
 decision and id. A session in which no gate recorded anything SHALL record
 that as well.
 
