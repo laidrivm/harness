@@ -55,11 +55,10 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       to pass on `run(tip, top)`, its citation unchanged.
       `git grep -n -e GATE_LINE -e NAMED_BLOCK -e "reported(" -- bun` names
       nothing of the turn gate's; the touched test files pass
-- [ ] 1.5 Prose: the README's *Gate lines* section stops saying a hook can
-      require the lines and that the last one makes the rule "mechanically
-      checkable" — they are the report, and the turn gate reads the runner's
-      records; its turn gate bullet names the passing records of both steps
-      and drops the `BLOCKED` exit. `core/review-toolkit.md`'s pre-PR sequence
+- [ ] 1.5 Prose: the README's *Turn gate* row (since #345) names the passing
+      records of both runner steps, not "the pre-PR gate lines and records",
+      and its line on review skills' gate lines calls them the report, not
+      what a hook checks. `core/review-toolkit.md`'s pre-PR sequence
       paragraph does the same, and says a turn blocked on the user is refused
       once. The code comments that say the turn gate reads gate lines go too:
       `bun/pre-pr.ts`'s header and its two "not shaped like a gate line"
