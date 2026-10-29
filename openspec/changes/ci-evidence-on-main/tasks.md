@@ -42,15 +42,15 @@ one. Task 1.4 waits on it.
         before merging*: off.
       - *Require a pull request before merging*: keep it, with *Required
         approvals* 1.
-      - Recommended, the user's call (design.md, *A stale approval*):
-        *Dismiss stale pull request approvals when new commits are pushed*:
-        on. Left off, an earlier head's approval still counts after a push,
-        as `core/git-and-prs.md` says.
+      - *Dismiss stale pull request approvals when new commits are pushed*:
+        on — left off, an earlier head's approval would still count after a
+        push (design.md, *A stale approval*).
       - Bypass list: unchanged (Admin, always).
 
       Done when `gh api repos/laidrivm/harness/rulesets/25440192` lists a
       `required_status_checks` rule naming `test` and `budget` with the
-      GitHub Actions integration id (15368).
+      GitHub Actions integration id (15368), and its `pull_request` rule
+      reads `dismiss_stale_reviews_on_push: true`.
 - [ ] 1.4 Live probe, after 1.3: on this change's own pull request,
       CodeRabbit either requests changes (actionable findings) or approves
       (a reviewed head with every required thread resolved), and the merge

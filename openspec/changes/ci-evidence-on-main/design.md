@@ -67,10 +67,10 @@ shape; this design records the decisions and what they touch.
 - **A stale approval.** With `dismiss_stale_reviews_on_push: false`, the
   bot's approval of an earlier head still counts after a push, until the
   bot reviews the new head — and a push into a draft is reviewed only once
-  the pull request is marked ready. The user's task therefore recommends,
-  as their call, turning on *Dismiss stale pull request approvals when new
-  commits are pushed* in the same edit; with it, every push waits for the
-  bot's review of its head.
+  the pull request is marked ready. The user's task therefore requires
+  *Dismiss stale pull request approvals when new commits are pushed* in the
+  same edit (CodeRabbit's review of #347; the user turned it on on 29
+  October); with it, every push waits for the bot's review of its head.
 - **An author's own approval.** `reviews.auto_approvals.allow_author_approval`
   defaults to `true`: a pull request's author may comment
   `@coderabbitai resolve` or `@coderabbitai approve`, and with Automatic
