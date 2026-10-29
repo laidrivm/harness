@@ -67,7 +67,7 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       `bun/` and `openspec/specs/` for "gate line" beside "turn gate" or
       `turn-gate` and fix each site this change makes false; the skills,
       `core/autonomy.md` and `session-wrapup` stay
-- [ ] 1.6 Probe from the tree in a scratch clone of the harness, after `bun
+- [x] 1.6 Probe from the tree in a scratch clone of the harness, after `bun
       install` and `git fetch origin` there so both runner steps can pass,
       with `XDG_STATE_HOME` in the scratchpad and the event on stdin of `bun
       bun/turn-gate.ts stop` after `mark`: a commit completing a group with no
