@@ -98,3 +98,8 @@
 - Live checks, not a skill: 4 run by the user (1.4 and 2.4 of `step-branch-retry`, 1.8 of `question-gate-reason`, 2.7 of `pick-claim-answer`), all passed; 1.8's first try found the indented-line defect (#155), 2.7 found the attribution line (#161) and the final-message gate-line round trip (carded)
 - Not run by the orchestrator: zombies, warm, triage, coderabbit-local, preflight, ponytail-review, simplify, code-review — every code and spec change went through a sub-agent's pre-PR sequence
 - gates: command-guard block gh-api-write ×1, command-guard block unread-program ×2, command-guard block unreadable-branch ×3, goal met apply ×2, goal open apply ×5, loop open apply ×2, pre-pr pass diff-budget ×3, question-gate allowed question ×1, question-gate passed not-a-card ×1, question-gate passed unmarked ×2, question-gate refused unmarked ×1, turn-gate passed pre-pr-sequence ×1, turn-gate refused pre-pr-sequence ×1
+
+## 2026-10-28 — baseline (first-review-yield)
+
+- first review: 13 of 20 without Major+ — #316 (Major+), #317 (Major+), #318 (Major+), #319, #320, #321, #322, #323, #324, #325, #326, #327, #328 (Major+), #329 (Major+), #331, #333, #334, #335, #330 (Major+), #332 (Major+)
+- Window: the last 20 measured pull requests whose first CodeRabbit review completed before `work-finish` group 2 merged (#332, 2026-10-28 15:28:45 UTC), in first-review order; method and per-PR findings in the `first-review-yield` change's `design.md` (under `openspec/changes/archive/` once archived), *Baseline*

@@ -49,7 +49,12 @@ requests counting toward stage 2.
    decides nothing).
 2. **The first reviewed commit is the earliest commit of the pull request
    that reads `Review completed`**, from the check run or the status — both,
-   because the bot moved from one to the other on 2026-10-27. Its findings
+   because the bot moved from one to the other on 2026-10-27 — on a success
+   result only: the check run's `conclusion` or the status's `state` is
+   `success`, which the reads below select, since the text alone is not the
+   outcome (CodeRabbit on #329, deferred to apply). The status read also
+   prints `pending` records, and the check-run read `started_at`, for
+   decision 6's start time; a `pending` record never counts. Its findings
    are the bot's reviews with that `commit_id`, inline and in the body; none
    is zero findings, as the bot's walkthrough comment says where its
    `Commit` names that commit: «No actionable comments were generated in the
@@ -89,10 +94,10 @@ requests counting toward stage 2.
    gh pr list --state all --search "updated:>=<since>" --limit 1000 --json number
    gh pr list --state open --limit 1000 --json number
    gh api 'repos/{owner}/{repo}/pulls/<n>/commits' --paginate --jq '.[].sha'
-   gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit") | [.completed_at, .output.summary] | @tsv'
-   gh api 'repos/{owner}/{repo}/commits/<sha>/statuses' --paginate --jq '.[] | select(.context == "CodeRabbit") | [.created_at, .description] | @tsv'
+   gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit" and .conclusion == "success") | [.started_at, .completed_at, .output.summary] | @tsv'
+   gh api 'repos/{owner}/{repo}/commits/<sha>/statuses' --paginate --jq '.[] | select(.context == "CodeRabbit" and (.state == "success" or .state == "pending")) | [.created_at, .state, .description] | @tsv'
    gh api 'repos/{owner}/{repo}/commits/<sha>/pulls' --jq '.[].number'
-   gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | .id, .body'
+   gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | [.id, .body] | @tsv'
    gh api 'repos/{owner}/{repo}/pulls/<n>/reviews/<id>/comments' --paginate --jq '.[].body'
    gh api 'repos/{owner}/{repo}/issues/<n>/comments' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]") | .body'
    ```
@@ -113,7 +118,9 @@ requests counting toward stage 2.
    first `Review completed` that counts for this pull request (decision 2).
    The line reads
    `- first review: k of n without Major+ — #a, #b (Major+), #c (unmeasured)`,
-   or `- first review: none reviewed`. `allowed-tools` gains
+   or `- first review: none reviewed`, still naming any `#c (unmeasured)`
+   after a dash, so a pull request the bot skipped is never hidden.
+   `allowed-tools` gains
    `Bash(gh api:*)` and `Bash(gh pr list:*)`, the two the `coderabbit` skill
    already holds; the command guard passed each of these reads on
    2026-10-27 and 28, as a `gh api` call with no method and no field.
@@ -122,9 +129,13 @@ requests counting toward stage 2.
    marked ready after `work-finish` group 2 (`work.ts finish` and the ready
    guard) merged, and the gate ledger holds a `pre-pr` `pass` record under
    `project-checks` whose `commit` is the first reviewed commit and whose
-   `at` precedes the switch to ready that review followed — the last
-   `ready_for_review` in `gh api 'repos/{owner}/{repo}/issues/<n>/events'`
-   before it, or the pull request's `created_at` where there is none — what
+   `at` precedes the switch to ready that launched that review — the last
+   `ready_for_review` at or before the second the result started (the check run's
+   `started_at`, or the status's first `pending`; not its completion, since
+   a second switch can land while the review runs) in
+   `gh api 'repos/{owner}/{repo}/issues/<n>/events' --paginate` (paginated,
+   or one past the first page is missed), or the pull request's
+   `created_at` where there is none — what
    the ready gate is to require (stage 2, question 24). The five are consecutive
    by first-review time, harness pull requests only. The closing session
    takes them from the `first review` lines, counting a pull request named
@@ -145,29 +156,31 @@ requests counting toward stage 2.
    ledger of the month it is written in, so the first gated count has
    something to sit beside. The user's window is the last 20 measured pull
    requests before the gate, and the gate is `work-finish` group 2's merge,
-   which has not happened: *Baseline* below is that window as read on
-   2026-10-27, and task 2.1, which runs after the merge, re-reads it ending
-   at the merge, so the pull requests between #328 and the gate fall in the
-   baseline rather than in neither window.
+   which had not happened when this was proposed: task 2.1, run after the
+   merge, re-read the window ending at it, so the pull requests between
+   #328 and the gate fall in the baseline rather than in neither window;
+   *Baseline* below is that re-read. The entry holds no `gates` line, so
+   step 5 takes the gates line's start, `<gates-since>`, from the previous
+   entry that holds one: otherwise the baseline's date would end the
+   ledger's gate window without a line counting it (local review on the
+   apply pull request).
 
 ## Baseline
 
-The last 20 measured pull requests as of 2026-10-27, after #328 merged —
-the provisional baseline, which task 2.1 re-reads up to the gate:
-**14 of 20 without Major+ (70 %)** — #309–#328, first reviews from
-2026-10-26 20:48 to 2026-10-27 21:32 UTC. Not rough: every finding carried
-a severity word, and no commit of the window was shared with another pull
-request.
+The last 20 measured pull requests whose first review completed before
+`work-finish` group 2 merged (#332, 2026-10-28 15:28:45 UTC), re-read by
+task 2.1 on 2026-10-28 with step 5's reads:
+**13 of 20 without Major+ (65 %)** — #316–#335, first reviews from
+2026-10-26 23:27 to 2026-10-28 14:10 UTC, in that order. Not rough: every
+finding carried a severity word, and no commit of the window was shared
+with another pull request. The provisional read of 2026-10-27 was 14 of 20
+over #309–#328; the seven pull requests up to the gate pushed out #309–#315
+(two of them with a Major), and three of the seven raised one. No pull
+request opened before the gate was first reviewed after it, so none falls
+between the windows.
 
 | PR | first reviewed commit | Major+ |
 | --- | --- | --- |
-| #309 | `a89ffa9` | no (2 Minor) |
-| #310 | `15c98e0` | no (2 Minor) |
-| #311 | `76bbaff` | no (no review) |
-| #312 | `ba1328b` | no (3 Minor) |
-| #313 | `36b0f3f` | no (1 Minor) |
-| #314 | `9f66516` | yes (1 Major) |
-| #315 | `b841b7e` | yes (1 Major) |
 | #316 | `3af9c77` | yes (1 Major) |
 | #317 | `3fa8a90` | yes (1 Minor, 1 Major) |
 | #318 | `9c91b6c` | yes (1 Trivial, 1 Major) |
@@ -181,6 +194,13 @@ request.
 | #326 | `6d369e6` | no (1 Minor) |
 | #327 | `4bcede2` | no (no review) |
 | #328 | `a191163` | yes (3 Major) |
+| #329 | `c59320a` | yes (3 Major) |
+| #331 | `1f2df1a` | no (1 Minor) |
+| #333 | `9b05956` | no (no review) |
+| #334 | `31c2da5` | no (no review) |
+| #335 | `36d3779` | no (no review) |
+| #330 | `2120465` | yes (3 Major, 2 Minor) |
+| #332 | `88bfbb1` | yes (2 Major, 2 Minor) |
 
 How it was read: three GraphQL reads of #296–#328, each pull request's
 commits with their `CodeRabbit` status and check runs, and the bot's reviews
@@ -196,6 +216,13 @@ but does not move the window's edge: #308, the next older, was first
 reviewed at 20:39. The 13 older ones (#296–#308) are outside the window;
 #299 and #308 among them raised a Major. The card's exploration had
 estimated about 14 of 20.
+
+Task 2.1 read #329–#335, every pull request opened before the gate, with
+step 5's `gh` reads, success results only: each first reviewed commit's
+check run links its own `/pull/<n>`, and every comment of the bot's reviews
+of it carries its severity word. The window's new edge holds: #315, the
+next older, was first reviewed at 2026-10-26 22:52, before #316's 23:27;
+#336 and later were opened after the gate.
 
 ## Seams
 
@@ -227,6 +254,9 @@ contradiction, and no order beyond the prose one above.
 
 ## Risks / Trade-offs
 
+- [A force-push drops a reviewed commit from `pulls/<n>/commits`] → the
+  walk can read a later review as the first. A limit, not read around: the
+  command guard refuses a force-push here (CodeRabbit on #342).
 - [CodeRabbit's quota leaves a pull request unreviewed] → it is named
   unmeasured and breaks no series; the five take longer to gather.
 - [The bot's markup changes again] → the session reads the word; the

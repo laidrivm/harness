@@ -6,7 +6,8 @@ The session wrap-up SHALL append one `first review` line to the
 pipeline-yield entry it writes: of the pull requests whose first CodeRabbit
 review completed since the previous entry, how many raised no Critical or
 Major finding, naming each. The first review is the earliest commit the bot
-marked `Review completed` for that pull request; its findings are the bot's
+marked `Review completed`, with a `success` result, for that pull request;
+its findings are the bot's
 reviews of that commit, by the bot's own severity label.
 
 #### Scenario: A Major on the first reviewed commit
