@@ -12,7 +12,8 @@ reading them from the config the bot parses, and SHALL fail when it cannot.
 #### Scenario: The config leaves Automatic Approvals off
 
 - **WHEN** `.coderabbit.yaml` sets `reviews.auto_approvals.enabled` to
-  anything but `true`, or does not set it, or does not parse
+  anything but `true`, or does not set it, or does not parse, or also sets
+  the schema's legacy alias of that key, `reviews.request_changes_workflow`
 - **THEN** the test fails, since no approval would come and every agent
   merge would wait on a bypass it does not have
 

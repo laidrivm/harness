@@ -102,11 +102,15 @@ entry, a hook or a CI check leaves this file the way it would leave
 - In the harness, the ruleset `main` holds a merge to that: `test` and
   `budget` green from GitHub Actions — a PR over the budget's cap passes
   `budget` only with `oversize: <reason>` in its body — and one approval,
-  which CodeRabbit gives once it has reviewed the head and every required
-  thread is resolved. The user's admin bypass lifts all of it; an agent
-  identity has none. A thread whose finding is dismissed is resolved by the
-  user, by hand or with a top-level `@coderabbitai resolve` — never by an
-  agent posting as the user.
+  which CodeRabbit gives once it has reviewed the latest commit and every
+  required thread is resolved; unless the ruleset dismisses stale approvals,
+  one given to an earlier head still counts after a push. The user's admin
+  bypass lifts all of it; an agent identity has none. A thread whose finding
+  is dismissed is resolved by the user, by hand on that thread.
+  `@coderabbitai resolve` resolves every one of the bot's threads, and it and
+  `@coderabbitai approve`, which a PR's author may post, approve without a
+  review of the head — so no agent posts either, nor any other comment as the
+  user.
 - Keep the PR description to what the diff can't say: a link to the
   proposal, the criteria the step closes named by their `### Requirement:`
   headings — or a line saying it closes none — decisions taken, anything the
