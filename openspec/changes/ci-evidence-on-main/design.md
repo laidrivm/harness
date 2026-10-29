@@ -52,7 +52,13 @@ shape; this design records the decisions and what they touch.
    that does not parse fails the case with the helper's message. The parser
    is YAML's, not CodeRabbit's own; where the two would differ is not
    probed.
-7. **Strict stays off** (assumption 5): the rule to merge `origin/main`
+7. **Reviews never pause.** `reviews.auto_review.auto_pause_after_reviewed_commits`
+   defaults to five in CodeRabbit's schema; past it the bot reviews no new
+   head until someone posts `@coderabbitai review`, so no approval comes
+   (and, with stale approvals kept, an earlier head's still counts). The
+   config sets it to `0` (CodeRabbit's review of #347). The cost is a review
+   on every push of a long pull request, against the bot's rate limit.
+8. **Strict stays off** (assumption 5): the rule to merge `origin/main`
    before pushing already holds, and strict would add rounds of CI and
    review.
 

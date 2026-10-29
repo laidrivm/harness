@@ -22,3 +22,18 @@ reading them from the config the bot parses, and SHALL fail when it cannot.
 - **WHEN** `.coderabbit.yaml` sets `reviews.auto_review.drafts` to `true`
 - **THEN** the test fails, since a draft is pushed to while its work goes
   on and the bot reviews it once it is marked ready
+
+### Requirement: The review bot does not pause on a long pull request
+
+The harness's `.coderabbit.yaml` SHALL set
+`reviews.auto_review.auto_pause_after_reviewed_commits` to `0`, since a
+paused bot neither reviews nor approves a new head, and an agent identity
+has no bypass to merge without that approval. A test SHALL pin it, reading
+it from the config the bot parses.
+
+#### Scenario: A pull request past the default pause
+
+- **WHEN** `.coderabbit.yaml` leaves
+  `reviews.auto_review.auto_pause_after_reviewed_commits` unset, whose
+  default is five, or sets it to anything but `0`
+- **THEN** the test fails
