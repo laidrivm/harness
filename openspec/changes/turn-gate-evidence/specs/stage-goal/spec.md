@@ -113,3 +113,45 @@ followed by each missing condition. It SHALL exit 0 for `met` and 1 for
 - **WHEN** the check is called with an unknown stage, no change, or `apply`
   with no step, or outside a repository
 - **THEN** it prints its usage, exits 2, and records nothing
+
+### Requirement: A goal run ends at a round ceiling
+
+The turn gate's `Stop` half SHALL count, per session, the stops that arrive
+with `stop_hook_active` true since that session's last prompt. On the
+twentieth it SHALL end the session, which no other `Stop` hook can then
+continue, rather than let the run go on. A new prompt, a resume included,
+SHALL start the count again. An event it cannot read SHALL count nothing and
+end nothing.
+
+#### Scenario: Below the ceiling
+
+- **WHEN** a goal run reaches its nineteenth continued stop since the prompt
+- **THEN** the turn gate decides that stop exactly as it would without a
+  ceiling
+
+#### Scenario: At the ceiling
+
+- **WHEN** the twentieth stop since the prompt arrives with
+  `stop_hook_active` true
+- **THEN** the session ends, even though the goal's own hook asks it to go on
+
+#### Scenario: A new prompt
+
+- **WHEN** a prompt arrives after eighteen continued stops
+- **THEN** the count starts again from zero
+
+#### Scenario: Two sessions
+
+- **WHEN** two sessions in one repository each run a goal
+- **THEN** each is counted against its own prompt, not the other's
+
+#### Scenario: The ceiling and a refusal at the same stop
+
+- **WHEN** the twentieth continued stop also completes a task group, and the
+  ledger holds no passing run record of the tip
+- **THEN** the session ends at the ceiling, and the turn gate does not refuse
+
+#### Scenario: An unreadable event
+
+- **WHEN** the stop event is not JSON or carries no session id
+- **THEN** no count is kept and the session is not ended by the ceiling

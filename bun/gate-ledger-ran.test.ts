@@ -29,10 +29,10 @@ describe("a reader counts a record only for its own gate and step", () => {
 	// spec: gate-ledger/a-diff-budget-record-among-skill-records
 	test("a passing record of every runner step is found among skill records [27]", () => {
 		const ledger = [skill("zombies"), ...RUNNER_STEPS.map((rule) => runner(rule)), skill("triage")].join("\n");
-		expect(RUNNER_STEPS.every((rule) => ran(C, TOP, "pass", ledger, rule))).toBe(true);
+		expect(passed(C, TOP, ledger)).toBe(true);
 		// A skill call named after a step does not stand in for that step's runner record.
 		const short = [skill("zombies"), runner("diff-budget"), skill("project-checks")].join("\n");
-		expect(RUNNER_STEPS.every((rule) => ran(C, TOP, "pass", short, rule))).toBe(false);
+		expect(passed(C, TOP, short)).toBe(false);
 	});
 
 	// spec: gate-ledger/another-skill-s-record
@@ -81,6 +81,10 @@ describe("passed(): a pass of every runner step for the commit here", () => {
 	test.each(RUNNER_STEPS)("a fail of %s beside the other's pass is none", (rule) => {
 		const ledger = RUNNER_STEPS.map((r) => runner(r, r === rule ? "fail" : "pass")).join("\n");
 		expect(passed(C, TOP, ledger)).toBe(false);
+	});
+
+	test("an earlier pass at the commit still counts after a later fail of that step (design.md D2)", () => {
+		expect(passed(C, TOP, [both, runner("project-checks", "fail")].join("\n"))).toBe(true);
 	});
 
 	test("another commit's or another project's passes are none", () => {

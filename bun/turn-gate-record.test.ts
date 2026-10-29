@@ -10,11 +10,11 @@ import {
 	OPEN,
 	prompt,
 	repo,
+	runLines as run,
 	SILENT,
 	store,
 	TASKS,
 } from "./turn-gate.fixture.ts";
-import { RUNNER_STEPS } from "./gate-ledger.ts";
 import { decide, mark } from "./turn-gate.ts";
 
 /**
@@ -53,22 +53,6 @@ function ledger(...lines: string[]) {
 	mkdirSync(join(state, "harness"), { recursive: true });
 	writeFileSync(join(state, "harness", "gates.jsonl"), lines.join(""));
 }
-
-/** A run's ledger lines as the runner writes them, one per step of `steps`. */
-const run = (commit: string, project: string, extra: object = {}, steps: readonly string[] = RUNNER_STEPS) =>
-	steps.map(
-		(rule) =>
-			`${JSON.stringify({
-				at: "2026-10-13T00:00:00.000Z",
-				gate: "pre-pr",
-				decision: "pass",
-				rule,
-				project,
-				session: null,
-				commit,
-				...extra,
-			})}\n`,
-	).join("");
 
 const real = (dir: string) => realpathSync(dir);
 

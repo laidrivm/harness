@@ -238,8 +238,9 @@ export function decide(
 		"the commit it reads — and fix what fails. This refusal is not repeated " +
 		"for this turn: if only the user can settle what stops it, the next " +
 		"stop ends it. End that stop on the whole final message you meant to " +
-		"end on — your report, a `BLOCKED` line and any line a launcher reads — " +
-		"because a launcher reads the continued turn's last message."
+		"end on, unchanged: a launcher reads the continued turn's last message, " +
+		"so each line it reads (`BLOCKED —`, `QUESTION:`, `PR-TITLE:`) stays " +
+		"where it was."
 	);
 }
 
