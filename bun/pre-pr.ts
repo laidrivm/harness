@@ -21,7 +21,7 @@
  */
 import { join } from "node:path";
 import { bumpTest } from "./config.ts";
-import { RUNNER_STEPS, record } from "./gate-ledger.ts";
+import { RUNNER_STEPS, recordCheckout } from "./gate-ledger.ts";
 import { changedPaths, required } from "./pre-pr-steps.ts";
 import { readPullRequests } from "./pull-requests.ts";
 
@@ -70,12 +70,10 @@ if (!commit || dirty || left || git("rev-parse", "--verify", "-q", "HEAD") !== c
 	if (left || dirty) console.log(left || dirty);
 } else {
 	const session = process.env.CLAUDE_CODE_SESSION_ID || undefined;
-	// The writer prefers CLAUDE_PROJECT_DIR, which can name another checkout;
-	// the turn gate matches the top level of the one the run read.
-	delete process.env.CLAUDE_PROJECT_DIR;
 	const codes = [budget, checks]; // in RUNNER_STEPS' order
+	// The turn gate matches the top level of the checkout the run read.
 	RUNNER_STEPS.forEach((rule, i) =>
-		record("pre-pr", ["pass", "fail", "error"][codes[i]], rule, { session_id: session, cwd: top }, commit),
+		recordCheckout("pre-pr", ["pass", "fail", "error"][codes[i]], rule, { session_id: session, cwd: top }, commit),
 	);
 }
 
