@@ -18,11 +18,9 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 
 type Event = { session_id?: unknown; cwd?: unknown } | null;
 
-/** The project's real path: `CLAUDE_PROJECT_DIR`, then the event's `cwd`. */
-function project(event: Event): string {
-	const dir =
-		process.env.CLAUDE_PROJECT_DIR ||
-		(typeof event?.cwd === "string" ? event.cwd : "");
+/** The project's real path: `preferred` when set, then the event's `cwd`. */
+function project(event: Event, preferred: string | undefined): string {
+	const dir = preferred || (typeof event?.cwd === "string" ? event.cwd : "");
 	if (!dir) return "unknown";
 	try {
 		return realpathSync(dir);
@@ -112,17 +110,26 @@ export function ranUnder(under: string[], commit: string): boolean {
 }
 
 /**
- * Appends one record. Best-effort and silent: a gate whose log is unwritable
- * must decide exactly as it would have, so every error is swallowed here.
- * `commit` is set only by a gate that read one, and left out otherwise.
+ * Appends one record, naming the session's project, `CLAUDE_PROJECT_DIR`, and
+ * the event's `cwd` only without it: for a hook the session runs. Best-effort
+ * and silent: a gate whose log is unwritable must decide exactly as it would
+ * have, so every error is swallowed here. `commit` is set only by a gate that
+ * read one, and left out otherwise.
  */
-export function record(
-	gate: string,
-	decision: string,
-	rule: string,
-	event: unknown,
-	commit?: string,
-): void {
+export function record(gate: string, decision: string, rule: string, event: unknown, commit?: string): void {
+	append(gate, decision, rule, event, commit, process.env.CLAUDE_PROJECT_DIR);
+}
+
+/**
+ * `record` for a writer that can run in another checkout than the session's
+ * own — a command or a git hook: the record names the checkout it read, the
+ * event's `cwd`, whatever `CLAUDE_PROJECT_DIR` says.
+ */
+export function recordCheckout(gate: string, decision: string, rule: string, event: unknown, commit?: string): void {
+	append(gate, decision, rule, event, commit, undefined);
+}
+
+function append(gate: string, decision: string, rule: string, event: unknown, commit: string | undefined, preferred: string | undefined): void {
 	try {
 		const seen = (typeof event === "object" ? event : null) as Event;
 		const file = ledgerFile();
@@ -133,7 +140,7 @@ export function record(
 			gate,
 			decision,
 			rule,
-			project: project(seen),
+			project: project(seen, preferred),
 			session: typeof seen?.session_id === "string" ? seen.session_id : null,
 			commit,
 		});

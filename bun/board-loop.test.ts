@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { cleanup } from "./diff-budget.fixture.ts";
+import { realpathSync } from "node:fs";
+import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { advance, change, clone, lowered, records, run, TICKED } from "./board-loop.fixture.ts";
 
 /** The install and the pick; who may start the runner and the clone sit in `board-loop-clone.test.ts`. [n]: `/zombies` ideas. */
@@ -157,6 +158,12 @@ describe("the pick", () => {
 		expect([r.code, r.last]).toEqual([0, "board-loop: idle — the pick session found no takeable card on the board"]);
 		expect(staged(r.calls)).toBe(false);
 		expect(records(r.state).map((x) => x.decision)).toEqual(["idle"]);
+	});
+
+	test("the pass's record names the clone it ran in, whatever CLAUDE_PROJECT_DIR says", () => {
+		const { dir } = clone();
+		const r = run(dir, [], { pick: "PICK: none" }, { env: { CLAUDE_PROJECT_DIR: emptyDir("board-loop-elsewhere-") } });
+		expect(records(r.state).map((x) => x.project)).toEqual([realpathSync(dir)]);
 	});
 
 	// spec: board-loop/a-pick-outside-the-list

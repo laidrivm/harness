@@ -11,7 +11,7 @@ import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ARCHIVED, boardState, ORDER } from "./board-state.ts";
-import { record } from "./gate-ledger.ts";
+import { recordCheckout } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { plain } from "./notion-bot.ts";
 import { complete, groups } from "./turn-gate.ts";
@@ -120,7 +120,7 @@ export async function status(card: string, to: string, timeout = 30_000): Promis
 		} catch {
 			seen.top = process.cwd();
 		}
-		record("status", "block", id, { session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: seen.top }, seen.commit);
+		recordCheckout("status", "block", id, { session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: seen.top }, seen.commit);
 		return { lines: [`status: refused — ${why}`], code: 1 };
 	};
 	if (USER_ONLY.includes(to)) return refuse("user-only", `only the user moves a card to ${to}, in Notion`);
