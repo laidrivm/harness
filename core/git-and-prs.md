@@ -100,8 +100,9 @@ entry, a hook or a CI check leaves this file the way it would leave
   wait for the review; the PR is mergeable only once CI is green and
   CodeRabbit has reviewed its head with every finding dispositioned.
 - In the harness, the ruleset `main` holds a merge to that: `test` and
-  `budget` green from GitHub Actions — a PR over the budget's cap passes
-  `budget` only with `oversize: <reason>` in its body — and one approval,
+  `budget` green from GitHub Actions — a PR at or over the budget's cap
+  passes `budget` only with `oversize: <reason>` in its body, and one that
+  authors a proposal only by being split — and one approval,
   which CodeRabbit gives once it has reviewed the latest commit and every
   required thread is resolved; a push dismisses an approval given to an
   earlier head. The user's admin bypass lifts all of it; an agent identity

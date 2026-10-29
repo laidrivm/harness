@@ -49,8 +49,11 @@ one. Task 1.4 waits on it.
 
       Done when `gh api repos/laidrivm/harness/rulesets/25440192` lists a
       `required_status_checks` rule naming `test` and `budget` with the
-      GitHub Actions integration id (15368), and its `pull_request` rule
-      reads `dismiss_stale_reviews_on_push: true`.
+      GitHub Actions integration id (15368) and
+      `strict_required_status_checks_policy: false`, its `pull_request` rule
+      reads `required_approving_review_count: 1` and
+      `dismiss_stale_reviews_on_push: true`, and its bypass is the Admin role,
+      `always`.
 - [ ] 1.4 Live probe, after 1.3: on this change's own pull request,
       CodeRabbit either requests changes (actionable findings) or approves
       (a reviewed head with every required thread resolved), and the merge
