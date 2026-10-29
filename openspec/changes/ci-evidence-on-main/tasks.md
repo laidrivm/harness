@@ -6,7 +6,7 @@ one. Task 1.4 waits on it.
 
 ## 1. The bot's approval, the doc, the ruleset and the probe
 
-- [ ] 1.1 Test first: in `bun/review-config.test.ts`, a case reading the
+- [x] 1.1 Test first: in `bun/review-config.test.ts`, a case reading the
       repository's `.coderabbit.yaml` with `Bun.YAML.parse` expects
       `reviews.auto_approvals.enabled` to be `true` and
       `reviews.auto_review.drafts` not to be `true`, tagged with both of the
@@ -16,7 +16,7 @@ one. Task 1.4 waits on it.
       the config does nothing but point the bot at the rulebook.
       `bun test bun/review-config.test.ts` is green. (Req: local-review-loop
       — The review bot's approval is the pull request's one approval)
-- [ ] 1.2 In `core/git-and-prs.md`, beside the sentence ending "the PR is
+- [x] 1.2 In `core/git-and-prs.md`, beside the sentence ending "the PR is
       mergeable only once CI is green and CodeRabbit has reviewed its head
       with every finding dispositioned", one short paragraph: a merge into
       `main` needs `test` and `budget` green from GitHub Actions and one

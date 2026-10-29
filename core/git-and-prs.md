@@ -99,6 +99,14 @@ entry, a hook or a CI check leaves this file the way it would leave
   fixes for any CodeRabbit findings already posted — the CI flow does not
   wait for the review; the PR is mergeable only once CI is green and
   CodeRabbit has reviewed its head with every finding dispositioned.
+- In the harness, the ruleset `main` holds a merge to that: `test` and
+  `budget` green from GitHub Actions — a PR over the budget's cap passes
+  `budget` only with `oversize: <reason>` in its body — and one approval,
+  which CodeRabbit gives once it has reviewed the head and every required
+  thread is resolved. The user's admin bypass lifts all of it; an agent
+  identity has none. A thread whose finding is dismissed is resolved by the
+  user, by hand or with a top-level `@coderabbitai resolve` — never by an
+  agent posting as the user.
 - Keep the PR description to what the diff can't say: a link to the
   proposal, the criteria the step closes named by their `### Requirement:`
   headings — or a line saying it closes none — decisions taken, anything the

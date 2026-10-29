@@ -2,10 +2,17 @@
  * Fails when the harness's `.coderabbit.yaml` stops reaching its rulebook: a
  * doc the rulebook indexes outside every configured guideline pattern, a
  * pattern that matches no tracked file, or a config the check cannot read.
- * Each reads, to the review bot, as a rulebook with nothing in it.
+ * Each reads, to the review bot, as a rulebook with nothing in it. Also fails
+ * when the config turns the bot's approval off or its draft reviews on.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { unreached } from "./review-config.ts";
@@ -60,6 +67,24 @@ function fabricate(
 describe("the repository as it stands", () => {
 	test("its config reaches the rulebook and every doc it indexes", () => {
 		expect(unreached(root)).toEqual([]);
+	});
+});
+
+describe("the bot's approval", () => {
+	// spec: local-review-loop/the-config-leaves-automatic-approvals-off local-review-loop/the-config-turns-draft-reviews-on
+	test("Automatic Approvals is on and draft reviews are not", () => {
+		// Parsed as the bot parses it: a config that does not parse throws here.
+		const text = readFileSync(join(root, ".coderabbit.yaml"), "utf8");
+		const reviews = (
+			Bun.YAML.parse(text) as {
+				reviews?: {
+					auto_approvals?: { enabled?: unknown };
+					auto_review?: { drafts?: unknown };
+				};
+			} | null
+		)?.reviews;
+		expect(reviews?.auto_approvals?.enabled).toBe(true);
+		expect(reviews?.auto_review?.drafts).not.toBe(true);
 	});
 });
 
