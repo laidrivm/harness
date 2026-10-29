@@ -74,6 +74,14 @@ describe("the bot's approval", () => {
 		// The schema's legacy alias of `auto_approvals.enabled`: one switch, one key.
 		expect(at(read.config, "reviews.request_changes_workflow")).toBeUndefined();
 	});
+
+	// spec: local-review-loop/a-pull-request-past-the-default-pause
+	test("automatic reviews never pause", () => {
+		const read = parsed(root);
+		if (typeof read === "string") throw new Error(read);
+		const key = "reviews.auto_review.auto_pause_after_reviewed_commits";
+		expect(at(read.config, key)).toBe(0);
+	});
 });
 
 describe("a doc out of reach", () => {

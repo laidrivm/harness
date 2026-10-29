@@ -1,11 +1,16 @@
 # CodeRabbit config for the harness. It points the review bot at the rulebook
-# and the docs beside it, and turns on the bot's approval. bun/review-config.test.ts
-# pins both, and openspec/specs/local-review-loop holds the contract.
+# and the docs beside it, turns on the bot's approval and keeps it reviewing.
+# bun/review-config.test.ts pins each, and openspec/specs/local-review-loop
+# holds the contract.
 reviews:
   auto_approvals:
     # The bot's approval is the one the main ruleset requires: it comes only
     # on a reviewed head with every required thread resolved.
     enabled: true
+  auto_review:
+    # The default pauses after five reviewed pushes, and a paused bot neither
+    # reviews nor approves the head an agent identity needs approved.
+    auto_pause_after_reviewed_commits: 0
 knowledge_base:
   code_guidelines:
     # Added on top of CodeRabbit's defaults, which already read **/CLAUDE.md,
