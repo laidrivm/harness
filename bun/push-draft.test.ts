@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmodSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { records } from "./pre-pr.fixture.ts";
@@ -28,7 +28,7 @@ const pull = (number: number, draft: boolean) =>
 
 const query = (branch: string) => `api repos/o/r/pulls?head=o:${encodeURIComponent(branch)}&state=all&per_page=100`;
 
-type Case = { stdin: string; url?: string; answers?: Record<string, string>; code?: number };
+type Case = { stdin: string; url?: string; answers?: Record<string, string>; code?: number; cwd?: string; env?: Record<string, string> };
 
 function push(c: Case) {
 	const bin = emptyDir("push-draft-bin-");
@@ -42,7 +42,8 @@ function push(c: Case) {
 	const state = emptyDir("push-draft-state-");
 	const run = Bun.spawnSync([process.execPath, script, "origin", c.url ?? GITHUB], {
 		stdin: Buffer.from(c.stdin),
-		env: { PATH: bin, HOME: emptyDir("push-draft-home-"), XDG_STATE_HOME: state },
+		cwd: c.cwd,
+		env: { PATH: bin, HOME: emptyDir("push-draft-home-"), XDG_STATE_HOME: state, ...c.env },
 	});
 	let calls: string[] = [];
 	try {
@@ -51,7 +52,8 @@ function push(c: Case) {
 		// `gh` was never called.
 	}
 	const ledger = records(state).map(({ gate, decision, rule, commit }) => ({ gate, decision, rule, commit }));
-	return { code: run.exitCode, err: run.stderr.toString(), calls, ledger };
+	const projects = records(state).map((r) => r.project);
+	return { code: run.exitCode, err: run.stderr.toString(), calls, ledger, projects };
 }
 
 describe("what the check reads", () => {
@@ -117,5 +119,12 @@ describe("what the check decides", () => {
 		const run = push({ stdin, answers: { "feat/a": pull(7, true), "feat/b": pull(8, false) } });
 		expect([run.code, run.calls, run.ledger]).toEqual([1, [query("feat/a"), query("feat/b")], [{ gate: "push-draft", decision: "block", rule: "ready", commit: ready }]]);
 		expect(run.err).toContain("gh pr ready 8 --undo");
+	});
+
+	// A subagent's worktree pushes while the session's project directory names the main checkout.
+	test("a refusal's record names the directory the hook ran in, whatever CLAUDE_PROJECT_DIR says", () => {
+		const cwd = emptyDir("push-draft-cwd-");
+		const run = push({ stdin: update("refs/heads/feat/x"), code: 1, cwd, env: { CLAUDE_PROJECT_DIR: emptyDir("push-draft-elsewhere-") } });
+		expect([run.code, run.projects]).toEqual([1, [realpathSync(cwd)]]);
 	});
 });
