@@ -179,7 +179,9 @@ review completed since the previous entry, how many raised no Critical or
 Major finding, naming each. The first review is the earliest commit the bot
 marked `Review completed`, with a `success` result, for that pull request;
 its findings are the bot's
-reviews of that commit, by the bot's own severity label.
+reviews of that commit, by the bot's own severity label, or, for a finding
+that carries none, by the kind its heading implies, the pull request then
+marked as inferred.
 
 #### Scenario: A Major on the first reviewed commit
 
