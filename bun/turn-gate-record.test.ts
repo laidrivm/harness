@@ -10,16 +10,16 @@ import {
 	OPEN,
 	prompt,
 	repo,
+	runLines as run,
 	SILENT,
 	store,
 	TASKS,
 } from "./turn-gate.fixture.ts";
-import { RUNNER_STEPS } from "./gate-ledger.ts";
 import { decide, mark } from "./turn-gate.ts";
 
 /**
- * What the turn gate makes of the pre-PR runner's record: which record
- * discharges a reported turn, and what an absent or damaged ledger reads as.
+ * What the turn gate makes of the pre-PR runner's records: which discharge a
+ * turn, whatever its message, and what an absent or damaged ledger reads as.
  * Bracketed numbers are the proposal-stage `/zombies` ideas. `XDG_STATE_HOME`
  * points at a directory of each case's own, and is restored after the file.
  */
@@ -36,6 +36,7 @@ beforeEach(() => {
 	process.env.XDG_STATE_HOME = state;
 });
 
+// A `PASS` gate line, which the gate does not read: the records alone decide.
 const REPORTED = `${SILENT}\n\nTRIAGE gate: PASS — 1 groups.`;
 
 /** A repository whose turn has committed the last task of its group. */
@@ -53,25 +54,9 @@ function ledger(...lines: string[]) {
 	writeFileSync(join(state, "harness", "gates.jsonl"), lines.join(""));
 }
 
-/** A run's ledger lines as the runner writes them, one per step. */
-const run = (commit: string, project: string, extra: object = {}) =>
-	RUNNER_STEPS.map(
-		(rule) =>
-			`${JSON.stringify({
-				at: "2026-10-13T00:00:00.000Z",
-				gate: "pre-pr",
-				decision: "pass",
-				rule,
-				project,
-				session: null,
-				commit,
-				...extra,
-			})}\n`,
-	).join("");
-
 const real = (dir: string) => realpathSync(dir);
 
-describe("which record discharges a reported turn", () => {
+describe("which record discharges a turn", () => {
 	// spec: commit-gates/the-turn-reports-its-gates
 	test("a record for the tip ends the turn [21]", () => {
 		const { dir, marks, tip } = finished();
@@ -147,11 +132,10 @@ describe("which record discharges a reported turn", () => {
 		expect(decide(end(dir, REPORTED), marks)).toBeUndefined();
 	});
 
-	// spec: commit-gates/a-run-that-failed
-	test("a `fail` record discharges [29]", () => {
+	test("a `fail` record of both steps does not discharge [29]", () => {
 		const { dir, marks, tip } = finished();
 		ledger(run(tip, real(dir), { decision: "fail" }));
-		expect(decide(end(dir, REPORTED), marks)).toBeUndefined();
+		expect(decide(end(dir, REPORTED), marks)).toBeString();
 	});
 
 	test("a `turn-gate` record naming the tip does not discharge [32]", () => {
@@ -161,19 +145,67 @@ describe("which record discharges a reported turn", () => {
 	});
 });
 
-describe("what the message still has to carry", () => {
+describe("the hook reads the runner's records, not the message", () => {
+	/** Decides the same mark twice: a refusal, then what the bound makes of it. */
+	const twice = (dir: string, marks: string, message?: string) => [
+		typeof decide(end(dir, message), marks),
+		decide(end(dir, message), marks),
+	];
+
 	// spec: commit-gates/a-run-record-and-no-gate-line
-	test("a record with no gate line is refused [33]", () => {
+	test("a silent turn with a passing run of the tip ends", () => {
 		const { dir, marks, tip } = finished();
 		ledger(run(tip, real(dir)));
-		expect(decide(end(dir, SILENT), marks)).toBeString();
+		expect(decide(end(dir, SILENT), marks)).toBeUndefined();
+	});
+
+	// spec: commit-gates/a-bare-marker-with-nothing-after-it
+	test("a bare `BLOCKED` with a passing run ends", () => {
+		const { dir, marks, tip } = finished();
+		ledger(run(tip, real(dir)));
+		expect(decide(end(dir, "BLOCKED"), marks)).toBeUndefined();
+	});
+
+	// spec: commit-gates/a-run-that-failed
+	test("a failed project checks' record beside the budget's pass refuses once, then releases", () => {
+		const { dir, marks, tip } = finished();
+		ledger(run(tip, real(dir), {}, ["diff-budget"]), run(tip, real(dir), { decision: "fail" }, ["project-checks"]));
+		expect(twice(dir, marks, REPORTED)).toEqual(["string", undefined]);
+	});
+
+	// spec: commit-gates/one-step-s-record-alone
+	test("the diff budget's pass alone refuses", () => {
+		const { dir, marks, tip } = finished();
+		ledger(run(tip, real(dir), {}, ["diff-budget"]));
+		expect(decide(end(dir, REPORTED), marks)).toBeString();
 	});
 
 	// spec: commit-gates/blocked-without-a-run
-	test("a named `BLOCKED` with no record ends the turn [34]", () => {
+	// spec: commit-gates/the-turn-names-what-only-the-user-can-settle
+	test("a named `BLOCKED` with no record refuses once, then the mark releases it", () => {
 		const { dir, marks } = finished();
-		const message = "BLOCKED — pick a name for the flag.";
-		expect(decide(end(dir, message), marks)).toBeUndefined();
+		expect(twice(dir, marks, "BLOCKED — pick a name for the flag.")).toEqual(["string", undefined]);
+	});
+
+	// spec: commit-gates/the-final-message-cannot-be-read
+	test("an event with no final message and no record refuses", () => {
+		const { dir, marks } = finished();
+		expect(decide(end(dir), marks)).toBeString();
+	});
+
+	// spec: stage-goal/the-line-the-turn-gate-reads
+	test("the goal check's `goal met` line ends a turn with a passing run, and is refused once without one", () => {
+		const [met, ran, bare] = ["goal met: apply c step 1 at 1234567", finished(), finished()] as const;
+		ledger(run(ran.tip, real(ran.dir)));
+		expect([decide(end(ran.dir, met), ran.marks), ...twice(bare.dir, bare.marks, met)]).toEqual([undefined, "string", undefined]);
+	});
+
+	// spec: commit-gates/a-task-group-is-completed-and-the-turn-ends-silently
+	test("the refusal names the group, the tip, the runner, that it is not repeated, and the whole final message", () => {
+		const { dir, marks, tip } = finished();
+		const reason = decide(end(dir, SILENT), marks) ?? "";
+		for (const part of ["1. Group", tip, "pre-pr.ts", "not repeated", "whole final message"])
+			expect(reason).toContain(part);
 	});
 });
 

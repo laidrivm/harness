@@ -9,6 +9,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { RUNNER_STEPS } from "./gate-ledger.ts";
 
 const made: string[] = [];
 
@@ -81,6 +82,24 @@ export const DONE = "# c\n\n## 1. Group\n\n- [x] 1.1 a\n- [x] 1.2 b\n";
 
 /** A turn's final message carrying no report. */
 export const SILENT = "Group 1 is done. Want me to run the pre-PR sequence?";
+
+/** A run's ledger lines as the runner writes them, one per step of `steps`. */
+export const runLines = (commit: string, project: string, extra: object = {}, steps: readonly string[] = RUNNER_STEPS) =>
+	steps
+		.map(
+			(rule) =>
+				`${JSON.stringify({
+					at: "2026-10-13T00:00:00.000Z",
+					gate: "pre-pr",
+					decision: "pass",
+					rule,
+					project,
+					session: null,
+					commit,
+					...extra,
+				})}\n`,
+		)
+		.join("");
 
 export const prompt = (cwd: string, session = "s1") => ({
 	session_id: session,

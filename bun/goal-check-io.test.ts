@@ -17,7 +17,6 @@ import {
 	TWO,
 	tasks,
 } from "./goal-check.fixture.ts";
-import { reported } from "./turn-gate.ts";
 
 /**
  * The goal check's pull request and tree conditions, the line it prints, its
@@ -196,16 +195,12 @@ describe("the pull request and the tree", () => {
 });
 
 describe("the line, the exits and the record", () => {
-	// spec: stage-goal/the-line-the-turn-gate-reads
+	// The turn gate reads no line at all: `turn-gate-record.test.ts` holds that case.
 	test.each([
 		["met", "2"],
 		["open", "1"],
-	])("the turn gate reads the %s line as no report [21]", (verdict, step) => {
-		const r = run(tasks(TWO), ["apply", "demo", step]);
-		expect([r.last.startsWith(`goal ${verdict}`), reported(r.last)]).toEqual([
-			true,
-			false,
-		]);
+	])("the last line opens `goal %s` [21]", (verdict, step) => {
+		expect(run(tasks(TWO), ["apply", "demo", step]).last).toStartWith(`goal ${verdict}`);
 	});
 
 	// spec: stage-goal/a-proposal-ready-for-review

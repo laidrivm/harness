@@ -150,17 +150,20 @@ limit, gets no review on its own — stop waiting on it and report it.
 Before every PR — a feature, a bugfix, a chore, a proposal alike, and
 whether or not it goes through the OpenSpec stages. Completing a task group
 starts the sequence in the same turn, and `bun/turn-gate.ts` refuses a turn
-that commits a group's last task and ends without the gate lines and the
-runner's record of the commit it ends on, or a `BLOCKED` naming what only the
-user can settle. What it does not see: a pull request that changes code
-outside a task group starts the sequence too. A `/goal` run that reaches its
-round ceiling ends without the refusal, since refusing would only continue
-it. The runner's records prove that the diff budget and the project checks
-ran at that commit; the other steps' gate lines report them. In the
-harness's own sessions a hook records each skill call at the commit its
-directory holds, with no tracked file changed (`gate-ledger`, *Each skill
-call is recorded for the commit its directory holds*): that proves the skill
-was called, not that the step was followed. Elsewhere nothing proves they ran.
+that commits a group's last task and ends while the gate ledger holds no
+passing record of both runner steps for the commit it ends on. It reads no
+text, so neither a gate line nor a `BLOCKED` clears it: a turn blocked on what
+only the user can settle is refused once, and its next stop ends it. What it
+does not see: a pull request that changes code outside a task group starts
+the sequence too. A `/goal` run that reaches its round ceiling ends without
+the refusal, since refusing would only continue it. The runner's records
+prove that the diff budget and the project checks passed at that commit; the
+other steps' gate lines are the report to the model and the human, which no
+hook checks. In the harness's own sessions a hook records each skill call at
+the commit its directory holds, with no tracked file changed (`gate-ledger`,
+*Each skill call is recorded for the commit its directory holds*): that
+proves the skill was called, not that the step was followed. Elsewhere
+nothing proves they ran.
 
 Which of the steps below a branch requires is not the agent's call: the
 runner's last line, `PRE-PR steps: <id>, <id>, …`, names them by the skill
