@@ -38,8 +38,9 @@ commit, not one run's records. Rejected: a run id that ties the steps to one
 run (CodeRabbit on #346; user, 29.10, 1 а). Rejected: "any record", which with a
 gate line beside it let a failed run pass because the line reported the
 failure; with no line it would end a turn on a failed step in silence. The
-goal check and `finish` ask the same, so one run meets all three. A failing
-step costs one refusal, as answer 1 accepts for a blocked turn.
+goal check and `finish` ask the same, so one run meets all three. A step with
+no passing record for the tip costs one refusal, as answer 1 accepts for a
+blocked turn; an earlier pass at that commit still counts after a later fail.
 
 **D3. One export.** The goal check and `ranUnder()` each copy
 `RUNNER_STEPS.every((rule) => ran(commit, top, "pass", ledger, rule))`; it

@@ -185,8 +185,8 @@ from its pin* requires.
 
 #### Scenario: A run that failed
 
-- **WHEN** the runner's record of the tip for the project checks has the
-  outcome `fail`, and the diff budget's has `pass`
+- **WHEN** the runner's only record of the tip for the project checks has
+  the outcome `fail`, and the diff budget's has `pass`
 - **THEN** the hook blocks once, because a failed step is no evidence that
   the tip is ready, and the next end of that turn is let through by the
   once-per-mark bound
