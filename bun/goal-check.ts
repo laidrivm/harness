@@ -19,7 +19,7 @@
  * recorded in the gate ledger for counting. A record names no change or step,
  * so nothing decides from one, this check included.
  */
-import { ran, ranUnder, record, RUNNER_STEPS } from "./gate-ledger.ts";
+import { ran, ranUnder, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
 import { type Pull, readPullRequests } from "./pull-requests.ts";
 import { complete, groups } from "./turn-gate.ts";
 
@@ -134,10 +134,7 @@ function pullRequests(branch: string): Pull[] | undefined {
 const target = `${stage} ${change}${step ? ` step ${step}` : ""} at ${short}${before ? ", before the push" : ""}`;
 const met = missing.length === 0;
 console.log(met ? `goal met: ${target}` : `goal open: ${target} — ${missing.join("; ")}`);
-// The writer prefers CLAUDE_PROJECT_DIR, which can name another checkout; the
-// record names the one the check read, as the runner's does.
-delete process.env.CLAUDE_PROJECT_DIR;
-record(
+recordCheckout(
 	"goal",
 	met ? "met" : "open",
 	stage,

@@ -10,7 +10,7 @@
  */
 import { statSync } from "node:fs";
 import { ready } from "./ci-run-draft.ts";
-import { ran, record, RUNNER_STEPS } from "./gate-ledger.ts";
+import { ran, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
 import { limit, originRepository, readPullRequests, readyOne } from "./pull-requests.ts";
@@ -41,9 +41,7 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	const commit = git("rev-parse", "--verify", "-q", "HEAD");
 	const top = git("rev-parse", "--show-toplevel");
 	const refuse = (id: string, why: string) => {
-		// The writer prefers CLAUDE_PROJECT_DIR, which can name another checkout; the record names the one read, as the goal check's does.
-		delete process.env.CLAUDE_PROJECT_DIR;
-		record("finish", "block", id, { session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: top }, commit);
+		recordCheckout("finish", "block", id, { session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: top }, commit);
 		return done(`finish: refused — ${why}`, 1);
 	};
 	if (!commit || !top) return refuse("unread-checkout", "no commit in a git checkout here");
