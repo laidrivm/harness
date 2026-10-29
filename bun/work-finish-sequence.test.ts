@@ -85,6 +85,7 @@ describe("the sequence", () => {
 		expect(run.out).toContain("finish: no --card, so no card's question was read\n");
 	});
 
+	// spec: work-finish/no-card-no-question-check
 	test("no --card and no ask settings: still marked ready", async () => {
 		const run = await finish({ args: ["finish"], gh: DRAFT, config: home(false) });
 		expect([run.code, run.last, run.calls]).toEqual([0, "finish: ready #7", [READ, "push", READY]]);
