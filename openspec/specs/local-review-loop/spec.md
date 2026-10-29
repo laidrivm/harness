@@ -6,7 +6,9 @@ How the agent runs `/code-review high` over a branch before pushing, while no
 pull request is open on it — how many passes it gets, what it fixes without
 asking, what it may not dismiss without asking, when it stops, where a skipped
 finding's justification goes, and which guidelines CodeRabbit's CLI reads when
-a session runs `/coderabbit-local` by hand. It exists because the bot's PR
+a session runs `/coderabbit-local` by hand. It also pins the PR bot's config:
+the docs it reads, its approval as the pull request's one approval, and its
+never pausing. It exists because the bot's PR
 review arrives after the branch is shared, so every defect it would catch lands
 as review churn on an open PR instead of being fixed while the branch is still
 local and free to be wrong.
