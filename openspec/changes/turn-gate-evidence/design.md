@@ -33,7 +33,9 @@ scenarios about gate lines and `BLOCKED` keep their names with bodies
 rewritten (assumption 6).
 
 **D2. The evidence is a passing record of every runner step**,
-`pre-pr-runner`'s "passing run record". Rejected: "any record", which with a
+`pre-pr-runner`'s "passing run record": a `pass` record per step for the
+commit, not one run's records. Rejected: a run id that ties the steps to one
+run (CodeRabbit on #346; user, 29.10, 1 а). Rejected: "any record", which with a
 gate line beside it let a failed run pass because the line reported the
 failure; with no line it would end a turn on a failed step in silence. The
 goal check and `finish` ask the same, so one run meets all three. A failing
