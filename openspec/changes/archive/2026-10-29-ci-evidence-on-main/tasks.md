@@ -34,7 +34,7 @@ one. Task 1.4 waits on it.
       agent posts that command, `@coderabbitai approve` or any comment as
       the user.
       `bun test` is green (the doc checks read `core/`).
-- [ ] 1.3 **The user**, before this pull request merges — 1.4 probes it
+- [x] 1.3 **The user**, before this pull request merges — 1.4 probes it
       here, and `core/git-and-prs.md` states the ruleset as in force — in
       Settings → Rules → Rulesets → `main`:
       - *Require status checks to pass*: on; add `test` and `budget`, each
@@ -54,7 +54,12 @@ one. Task 1.4 waits on it.
       reads `required_approving_review_count: 1` and
       `dismiss_stale_reviews_on_push: true`, and its bypass is the Admin role,
       `always`.
-- [ ] 1.4 Live probe, after 1.3: on this change's own pull request,
+
+      Done by the user on 2026-10-29; read the same day: required `test`
+      and `budget`, each with integration 15368 (GitHub Actions),
+      `strict_required_status_checks_policy: false`, 1 approval,
+      `dismiss_stale_reviews_on_push: true`, bypass Admin, `always`.
+- [x] 1.4 Live probe, after 1.3: on this change's own pull request,
       CodeRabbit either requests changes (actionable findings) or approves
       (a reviewed head with every required thread resolved), and the merge
       box shows `test` and `budget` as required; `gh pr view <n> --json
@@ -62,3 +67,9 @@ one. Task 1.4 waits on it.
       approved, and `BLOCKED` before. Leave this unticked while 1.3 is
       undone. (Req: local-review-loop — The review bot's approval is the
       pull request's one approval)
+
+      Probed on #347, 2026-10-29: CodeRabbit requested changes on each
+      head while its threads were open (last on `5cb5b9f`), and approved
+      `5cb5b9f` (review 5705644004) once the user had resolved them;
+      `reviewDecision` read `APPROVED`, and the user merged without the
+      admin bypass, with `test` and `budget` required.
