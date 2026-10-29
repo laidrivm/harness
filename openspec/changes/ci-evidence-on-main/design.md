@@ -24,10 +24,11 @@ shape; this design records the decisions and what they touch.
    merger it is for.
 2. **Source GitHub Actions** (answer 2 а). With *any source*, a commit
    status named `test`, which a user token can set, would satisfy the check.
-3. **`budget` is required too** (answer 3 б). A pull request over 800 lines
-   still merges, but only with `oversize: <reason>` in its body, which
-   `bun/diff-budget.sh` reads and turns into `OVERRIDE` and exit 0; an agent
-   cannot merge one silently.
+3. **`budget` is required too** (answer 3 б). A pull request of 800 lines
+   or more still merges, but only with `oversize: <reason>` in its body,
+   which `bun/diff-budget.sh` reads and turns into `OVERRIDE` and exit 0 —
+   unless it authors a proposal, which the gate makes split instead; an
+   agent cannot merge one silently.
 4. **Automatic Approvals instead of a required `CodeRabbit` check**
    (answer 4). A required check passes on `skipped` and `neutral`, which is
    where no review happened. An approval comes only when the latest commit
@@ -88,8 +89,8 @@ shape; this design records the decisions and what they touch.
   `bun/bump-verify.test.ts` already pins the name `test`.
 - **A flaky `test`** (the flock cases run only on Linux) or an Actions
   outage blocks a merge: re-run it, or the user bypasses.
-- **Whether the approval counts** rests on CodeRabbit's docs; the live probe
-  on this change's own pull request confirms it.
+- **Whether the approval counts** rests on CodeRabbit's docs until the live
+  probe on this change's own pull request (task 1.4) shows it.
 
 ## Conflict check against open changes
 
