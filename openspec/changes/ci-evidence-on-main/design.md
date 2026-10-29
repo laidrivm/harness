@@ -42,12 +42,16 @@ shape; this design records the decisions and what they touch.
    user's standing decision): a draft is pushed to while its work goes on,
    and the bot reviews it once it is marked ready.
 6. **The pin is a test over the repository's config, with no fixture
-   tree.** It parses `.coderabbit.yaml` as the bot does and expects
-   `reviews.auto_approvals.enabled` to be `true` and
-   `reviews.auto_review.drafts` not to be. An absent key reads `undefined`
-   and fails the first; a config that does not parse throws and fails the
-   case. `bun/review-config.ts` is left alone: it answers what the bot cannot
-   *reach*, and two key reads earn no module.
+   tree.** It reads `.coderabbit.yaml` through the parse and key walk
+   `bun/review-config.ts` already used for `filePatterns`, lifted into two
+   exported helpers (`parsed`, `at`) so the file is read and parsed in one
+   place, and expects `reviews.auto_approvals.enabled` to be `true`,
+   `reviews.auto_review.drafts` not to be, and the legacy alias
+   `reviews.request_changes_workflow` to be absent, so one key holds the
+   switch. An absent key reads `undefined` and fails the first; a config
+   that does not parse fails the case with the helper's message. The parser
+   is YAML's, not CodeRabbit's own; where the two would differ is not
+   probed.
 7. **Strict stays off** (assumption 5): the rule to merge `origin/main`
    before pushing already holds, and strict would add rounds of CI and
    review.
@@ -69,7 +73,11 @@ shape; this design records the decisions and what they touch.
   own that way. No session posts to a pull request (the `gh` writes stay
   refused, and the App writes only from the runner or the orchestrator), so
   the threat is not seen, and setting it `false` would take the command
-  from the user on the pull requests they author. Left at its default.
+  from the user on the pull requests they author. Left at its default;
+  `core/git-and-prs.md` says no agent posts either command.
+- **`@coderabbitai resolve` resolves every thread**, not the one a finding
+  was dismissed on, and then approves. `core/git-and-prs.md` therefore has
+  the user resolve a dismissed finding's thread by hand.
 - **A renamed job** blocks every pull request, its check pending forever;
   `bun/bump-verify.test.ts` already pins the name `test`.
 - **A flaky `test`** (the flock cases run only on Linux) or an Actions
@@ -95,5 +103,8 @@ shape; this design records the decisions and what they touch.
   review object. With Automatic Approvals a clean review whose threads are
   all resolved submits an approval on the head, which the step's first test
   already accepts; one with an earlier thread still open submits none, as
-  the sentence says. The skill's stance that it never resolves a thread
-  stays.
+  the sentence says. An approval by command (`@coderabbitai approve` or
+  `resolve`) also lands as a review on the head without one having run, and
+  that test would read it as reviewed; only the user posts either, so the
+  skill is not changed here, and the gap is reported on the card for a
+  follow-up. The skill's stance that it never resolves a thread stays.

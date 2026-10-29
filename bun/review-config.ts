@@ -19,26 +19,36 @@ const RULEBOOK = "core/rules.md";
 // `CLAUDE.md` links the README for the package's layout; it holds no rule.
 const EXEMPT = new Set(["README.md"]);
 
+/** The harness's `.coderabbit.yaml` parsed as YAML, or why it cannot be. */
+export function parsed(root: string): { config: unknown } | string {
+	const path = join(root, CONFIG);
+	if (!existsSync(path)) return `${CONFIG}: absent`;
+	try {
+		return { config: Bun.YAML.parse(readFileSync(path, "utf8")) };
+	} catch (e) {
+		return `${CONFIG}: does not parse — ${e instanceof Error ? e.message : String(e)}`;
+	}
+}
+
+/** The value at a dotted key path, `undefined` where a step is missing. */
+export function at(value: unknown, path: string): unknown {
+	for (const key of path.split("."))
+		value =
+			value && typeof value === "object"
+				? (value as Record<string, unknown>)[key]
+				: undefined;
+	return value;
+}
+
 /**
  * The patterns the config names, or the one problem that stops them being
  * read. Read from the structure the bot parses, never from a line resembling
  * it.
  */
 function patterns(root: string): string[] | string {
-	const path = join(root, CONFIG);
-	if (!existsSync(path)) return `${CONFIG}: absent`;
-	let parsed: unknown;
-	try {
-		parsed = Bun.YAML.parse(readFileSync(path, "utf8"));
-	} catch (e) {
-		return `${CONFIG}: does not parse — ${e instanceof Error ? e.message : String(e)}`;
-	}
-	let list: unknown = parsed;
-	for (const key of KEY.split("."))
-		list =
-			list && typeof list === "object"
-				? (list as Record<string, unknown>)[key]
-				: undefined;
+	const read = parsed(root);
+	if (typeof read === "string") return read;
+	const list = at(read.config, KEY);
 	if (list === undefined) return `${CONFIG}: ${KEY} is missing`;
 	if (!Array.isArray(list)) return `${CONFIG}: ${KEY} is not a list`;
 	if (list.length === 0) return `${CONFIG}: ${KEY} is empty`;

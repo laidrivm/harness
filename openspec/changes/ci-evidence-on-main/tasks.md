@@ -7,9 +7,11 @@ one. Task 1.4 waits on it.
 ## 1. The bot's approval, the doc, the ruleset and the probe
 
 - [x] 1.1 Test first: in `bun/review-config.test.ts`, a case reading the
-      repository's `.coderabbit.yaml` with `Bun.YAML.parse` expects
-      `reviews.auto_approvals.enabled` to be `true` and
-      `reviews.auto_review.drafts` not to be `true`, tagged with both of the
+      repository's `.coderabbit.yaml` through `bun/review-config.ts`'s parse
+      (lifted into exported `parsed` and `at`) expects
+      `reviews.auto_approvals.enabled` to be `true`,
+      `reviews.auto_review.drafts` not to be `true` and the legacy alias
+      `reviews.request_changes_workflow` to be absent, tagged with both of the
       new requirement's scenarios. Record that it fails, then add
       `reviews.auto_approvals.enabled: true` to `.coderabbit.yaml` with a
       one-line comment saying why, and update the header comment that says
