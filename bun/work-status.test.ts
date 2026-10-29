@@ -142,15 +142,10 @@ describe("the reads and the write", () => {
 	test.each([
 		["a checkout's subdirectory", "checkout"],
 		["a directory outside any checkout", "outside"],
-	])("a refusal's record from %s carries its id and the checkout as its project", async (_, where) => {
+	])("a refusal's record from %s carries its id and the checkout as its project, whatever CLAUDE_PROJECT_DIR says", async (_, where) => {
 		const top = where === "checkout" ? clone(change("demo")).dir : emptyDir("work-status-cwd-");
-		const run = await status({ args: to("approved"), cwd: where === "checkout" ? join(top, "openspec") : top });
+		const env = { CLAUDE_PROJECT_DIR: emptyDir("work-status-elsewhere-") };
+		const run = await status({ args: to("approved"), cwd: where === "checkout" ? join(top, "openspec") : top, env });
 		expect(run.refusals.map(({ decision, rule, project }) => ({ decision, rule, project }))).toEqual([{ decision: "block", rule: "user-only", project: realpathSync(top) }]);
-	});
-
-	test("a refusal's record names the checkout, whatever CLAUDE_PROJECT_DIR says", async () => {
-		const top = clone(change("demo")).dir;
-		const run = await status({ args: to("approved"), cwd: top, env: { CLAUDE_PROJECT_DIR: emptyDir("work-status-elsewhere-") } });
-		expect(run.refusals.map((r) => r.project)).toEqual([realpathSync(top)]);
 	});
 });
