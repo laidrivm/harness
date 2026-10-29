@@ -2,9 +2,9 @@
 /**
  * The pre-PR sequence's runner: it runs the sequence's deterministic steps —
  * the diff budget, then the project checks named by `harness.bumpTest` — and
- * records each in the gate ledger for the commit it read. The turn gate and
- * the goal check read those records back, so a gate line no longer stands
- * alone as the evidence that a step ran. The steps that need judgement stay
+ * records each in the gate ledger for the commit it read. The turn gate, the
+ * goal check and `work.ts finish` read those records back as the evidence
+ * that the steps passed; no gate line is. The steps that need judgement stay
  * with the agent; its last line names the ones the branch still requires
  * (`pre-pr-steps.ts`), from the diff against the base the budget measured.
  *
@@ -64,7 +64,6 @@ try {
 console.log();
 const left = status();
 if (!commit || dirty || left || git("rev-parse", "--verify", "-q", "HEAD") !== commit) {
-	// Not shaped like a gate line, which the turn gate would read as a report.
 	console.log(
 		"PRE-PR: no run record written: files differ from HEAD, HEAD moved during the run, or there is no HEAD. Commit or ignore them, then run this again.",
 	);
@@ -81,6 +80,6 @@ if (!commit || dirty || left || git("rev-parse", "--verify", "-q", "HEAD") !== c
 // A detached HEAD, a failed read and no pull request all read as none open, which requires more steps, never fewer.
 const branch = git("symbolic-ref", "--quiet", "--short", "HEAD");
 const open = branch !== "" && (readPullRequests(branch)?.some((pr) => pr.state === "OPEN") ?? false);
-// Not shaped like a gate line either, and last, so it is read after every step's output.
+// Last, so it is read after every step's output.
 console.log(`PRE-PR steps: ${required(base ? changedPaths(base) : undefined, open).join(", ")}`);
 process.exit(Math.max(budget, checks));

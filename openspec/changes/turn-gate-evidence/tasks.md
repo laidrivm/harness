@@ -9,7 +9,7 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
 
 ## 1. The hook reads the runner's records, not the message
 
-- [ ] 1.1 Failing cases in `bun/gate-ledger-ran.test.ts` for a new
+- [x] 1.1 Failing cases in `bun/gate-ledger-ran.test.ts` for a new
       `passed(commit, top, ledger?)`: a `pass` record of every
       `RUNNER_STEPS` step for `C` in `TOP` answers true; one step's alone, a
       `fail` for either, another commit or another project answers false; an
@@ -18,7 +18,7 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       `bun/gate-ledger.ts` and switch `ranUnder()` and `bun/goal-check.ts`'s
       local branch to it; `bun/goal-check*.test.ts` and
       `bun/gate-ledger-rule.test.ts` stay green
-- [ ] 1.2 Failing cases in `bun/turn-gate-record.test.ts`, each calling
+- [x] 1.2 Failing cases in `bun/turn-gate-record.test.ts`, each calling
       `decide()` on `finished()`: `SILENT` with `run(tip, top)` ends
       (`commit-gates/a-run-record-and-no-gate-line`); a bare `BLOCKED` with
       `run(tip, top)` ends (`…/a-bare-marker-with-nothing-after-it`); a `PASS`
@@ -33,12 +33,12 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       (`…/the-final-message-cannot-be-read`); the refusal names the group, the
       tip, the runner's path, `not repeated`, and ending on the whole final
       message again. Record which fail
-- [ ] 1.3 Make them pass in `bun/turn-gate.ts`: delete `GATE_LINE`,
+- [x] 1.3 Make them pass in `bun/turn-gate.ts`: delete `GATE_LINE`,
       `NAMED_BLOCK` and `reported()`; `decide()` reads no message field and
       passes on `passed(end, top)`; one refusal text (design.md, D4); the
       header comment says what the hook now reads and drops the message
       fail-open. `wc -l` stays under 300
-- [ ] 1.4 Delete the tests of what went: `reported()`'s cases in
+- [x] 1.4 Delete the tests of what went: `reported()`'s cases in
       `bun/turn-gate.test.ts` (their citations now sit on 1.2's cases), and
       the `reported()` assertions and imports in `bun/goal-check.test.ts`,
       `bun/goal-check-io.test.ts`, `bun/pre-pr.test.ts` and
@@ -56,7 +56,7 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       to pass on `run(tip, top)`, its citation unchanged.
       `git grep -n -e GATE_LINE -e NAMED_BLOCK -e "reported(" -- bun` names
       nothing of the turn gate's; the touched test files pass
-- [ ] 1.5 Prose: the README's *Turn gate* row (since #345) names the passing
+- [x] 1.5 Prose: the README's *Turn gate* row (since #345) names the passing
       records of both runner steps, not "the pre-PR gate lines and records",
       and its line on review skills' gate lines calls them the report, not
       what a hook checks. `core/review-toolkit.md`'s pre-PR sequence
@@ -67,7 +67,7 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       `bun/` and `openspec/specs/` for "gate line" beside "turn gate" or
       `turn-gate` and fix each site this change makes false; the skills,
       `core/autonomy.md` and `session-wrapup` stay
-- [ ] 1.6 Probe from the tree in a scratch clone of the harness, after `bun
+- [x] 1.6 Probe from the tree in a scratch clone of the harness, after `bun
       install` and `git fetch origin` there so both runner steps can pass,
       with `XDG_STATE_HOME` in the scratchpad and the event on stdin of `bun
       bun/turn-gate.ts stop` after `mark`: a commit completing a group with no

@@ -16,11 +16,11 @@ import {
 	OPEN,
 	prompt,
 	repo,
+	runLines,
 	SILENT,
 	store,
 	TASKS,
 } from "./turn-gate.fixture.ts";
-import { RUNNER_STEPS } from "./gate-ledger.ts";
 
 /**
  * What the turn gate records in the gate ledger. Its own file beside
@@ -80,17 +80,7 @@ const decisions = (state: string) => records(state).map((r) => r.decision);
 function runner(t: Turn) {
 	const head = Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: t.dir });
 	mkdirSync(join(t.state, "harness"), { recursive: true });
-	for (const rule of RUNNER_STEPS)
-		appendFileSync(
-			ledger(t.state),
-			`${JSON.stringify({
-				gate: "pre-pr",
-				decision: "pass",
-				rule,
-				project: realpathSync(t.dir),
-				commit: head.stdout.toString().trim(),
-			})}\n`,
-		);
+	appendFileSync(ledger(t.state), runLines(head.stdout.toString().trim(), realpathSync(t.dir)));
 }
 const turnGate = (state: string) =>
 	records(state)
@@ -112,28 +102,29 @@ describe("a turn that completed a group", () => {
 		]);
 	});
 
-	test("a refused turn ended with a named BLOCKED records a pass", () => {
+	// spec: gate-ledger/refused-then-ended-without-gates
+	test("a refused turn ended with a named BLOCKED and no run records a release, not a pass", () => {
 		const t = turn(DONE);
 		stop(t, SILENT);
 		stop(t, "BLOCKED — the user must choose the id list.");
-		expect(decisions(t.state)).toEqual(["refused", "passed"]);
+		expect(decisions(t.state)).toEqual(["refused", "released"]);
 	});
 
-	test("a turn ending with gate lines and the runner's record records a pass", () => {
+	test("a turn with the runner's passing record records a pass, a gate line or not", () => {
 		const t = turn(DONE);
 		runner(t);
 		stop(t, GATES);
 		expect(turnGate(t.state)).toEqual(["passed"]);
 	});
 
-	test("a turn ending with gate lines and no runner record records a refusal", () => {
+	test("a turn with no runner record records a refusal, gate lines and all", () => {
 		const t = turn(DONE);
 		stop(t, GATES);
 		expect(decisions(t.state)).toEqual(["refused"]);
 	});
 
 	// spec: gate-ledger/a-turn-refused-then-let-through
-	test("a refused turn continued to gate lines records a refusal, then a pass", () => {
+	test("a refused turn continued to a passing run records a refusal, then a pass", () => {
 		const t = turn(DONE);
 		stop(t, SILENT);
 		runner(t);
@@ -142,7 +133,7 @@ describe("a turn that completed a group", () => {
 	});
 
 	// spec: gate-ledger/refused-then-ended-without-gates
-	test("a refused turn ended again without gate lines records a release", () => {
+	test("a refused turn ended again without a passing run records a release", () => {
 		const t = turn(DONE);
 		stop(t, SILENT);
 		stop(t, SILENT);
@@ -186,6 +177,6 @@ test("an unwritable ledger still refuses the turn with its reason", () => {
 	const t = turn(DONE, state);
 	expect(stop(t, SILENT)).toEqual({
 		code: 2,
-		reason: expect.stringContaining("reports no gates"),
+		reason: expect.stringContaining("no passing pre-PR run"),
 	});
 });
