@@ -8,7 +8,7 @@
  * updates `release`. A deletion, a tag and any other host pass unread, and no
  * git is spawned: inside a hook git's own environment is set.
  */
-import { record } from "./gate-ledger.ts";
+import { recordCheckout } from "./gate-ledger.ts";
 import { readPullRequests, readyOne, remoteHost, remoteRepository } from "./pull-requests.ts";
 
 const url = process.argv[3] ?? "";
@@ -19,7 +19,7 @@ const repo = ["github.com", "ssh.github.com"].includes(remoteHost(url) ?? "") ? 
 /** Writes the reason, records it with the sha the push would land, and stops the push. */
 function refuse(id: string, reason: string, sha: string): never {
 	process.stderr.write(`push-draft: ${reason}\n`);
-	record("push-draft", "block", id, { cwd: process.cwd() }, sha);
+	recordCheckout("push-draft", "block", id, { cwd: process.cwd() }, sha);
 	process.exit(1);
 }
 

@@ -17,7 +17,7 @@
  * be blocked by a hook, and its stdout can reach the model; a recorder must do
  * neither.
  */
-import { record } from "./gate-ledger.ts";
+import { recordCheckout } from "./gate-ledger.ts";
 
 type Event = {
 	session_id?: unknown;
@@ -47,10 +47,7 @@ try {
 		// A status git cannot read is never a clean tree.
 		const status = git("status", "--porcelain", "--untracked-files=no");
 		if (commit && top && status === "") {
-			// `record()` prefers CLAUDE_PROJECT_DIR, the session's project, which
-			// can be another checkout than the one the call ran in.
-			delete process.env.CLAUDE_PROJECT_DIR;
-			record("skill", "called", name, { session_id: event.session_id, cwd: top }, commit);
+			recordCheckout("skill", "called", name, { session_id: event.session_id, cwd: top }, commit);
 		}
 	}
 } catch {

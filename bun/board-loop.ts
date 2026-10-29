@@ -37,7 +37,7 @@ import { publish, sh } from "./board-loop-push.ts";
 import { type Kill, session, trusted } from "./board-loop-session.ts";
 import { consider, left } from "./board-loop-takeable.ts";
 import { ready } from "./ci-run-draft.ts";
-import { record } from "./gate-ledger.ts";
+import { recordCheckout } from "./gate-ledger.ts";
 import { configured, identity } from "./github-app.ts";
 import { ALREADY, asked, own, POSTED, post, type Settings, settings, UNREACHED } from "./notion-bot.ts";
 import { triage } from "./notion-triage.ts";
@@ -57,9 +57,7 @@ type Outcome = "met" | "open" | "waiting" | "timeout" | "idle" | "refused" | "re
 /** Prints the pass's one line and records it. Recording never changes it. */
 function end(outcome: Outcome, detail: string): number {
 	console.log(`board-loop: ${outcome} — ${detail}`);
-	// The writer prefers CLAUDE_PROJECT_DIR, which can name another checkout.
-	delete process.env.CLAUDE_PROJECT_DIR;
-	record("loop", outcome, "apply", { cwd: process.cwd() });
+	recordCheckout("loop", outcome, "apply", { cwd: process.cwd() });
 	return outcome === "retry" ? TEMPFAIL : outcome === "met" || outcome === "idle" || outcome === "waiting" ? 0 : 1;
 }
 

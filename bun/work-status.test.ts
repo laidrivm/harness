@@ -147,4 +147,10 @@ describe("the reads and the write", () => {
 		const run = await status({ args: to("approved"), cwd: where === "checkout" ? join(top, "openspec") : top });
 		expect(run.refusals.map(({ decision, rule, project }) => ({ decision, rule, project }))).toEqual([{ decision: "block", rule: "user-only", project: realpathSync(top) }]);
 	});
+
+	test("a refusal's record names the checkout, whatever CLAUDE_PROJECT_DIR says", async () => {
+		const top = clone(change("demo")).dir;
+		const run = await status({ args: to("approved"), cwd: top, env: { CLAUDE_PROJECT_DIR: emptyDir("work-status-elsewhere-") } });
+		expect(run.refusals.map((r) => r.project)).toEqual([realpathSync(top)]);
+	});
 });
