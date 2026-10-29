@@ -58,7 +58,8 @@ one. Task 1.4 waits on it.
       Done by the user on 2026-10-29; read the same day: required `test`
       and `budget`, each with integration 15368 (GitHub Actions),
       `strict_required_status_checks_policy: false`, 1 approval,
-      `dismiss_stale_reviews_on_push: true`, bypass Admin, `always`.
+      `dismiss_stale_reviews_on_push: true`, bypass Admin, `always`; also
+      on, left as it was, `require_extra_approval_for_unattributed_changes`.
 - [x] 1.4 Live probe, after 1.3: on this change's own pull request,
       CodeRabbit either requests changes (actionable findings) or approves
       (a reviewed head with every required thread resolved), and the merge
@@ -70,6 +71,8 @@ one. Task 1.4 waits on it.
 
       Probed on #347, 2026-10-29: CodeRabbit requested changes on each
       head while its threads were open (last on `5cb5b9f`), and approved
-      `5cb5b9f` (review 5705644004) once the user had resolved them;
-      `reviewDecision` read `APPROVED`, and the user merged without the
-      admin bypass, with `test` and `budget` required.
+      `5cb5b9f` (review 5705644004) once the user had resolved them.
+      Before, on `4c106a3`, `reviewDecision` read `CHANGES_REQUESTED` and
+      `mergeStateStatus` `BLOCKED` with `test` and `budget` green and
+      required (the card's probe record); after, `reviewDecision` read
+      `APPROVED`, and the user reports merging without the admin bypass.
