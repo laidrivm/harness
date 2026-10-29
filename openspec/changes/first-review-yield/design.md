@@ -130,7 +130,7 @@ requests counting toward stage 2.
    guard) merged, and the gate ledger holds a `pre-pr` `pass` record under
    `project-checks` whose `commit` is the first reviewed commit and whose
    `at` precedes the switch to ready that launched that review — the last
-   `ready_for_review` before the result started (the check run's
+   `ready_for_review` at or before the second the result started (the check run's
    `started_at`, or the status's first `pending`; not its completion, since
    a second switch can land while the review runs) in
    `gh api 'repos/{owner}/{repo}/issues/<n>/events' --paginate` (paginated,
@@ -254,6 +254,9 @@ contradiction, and no order beyond the prose one above.
 
 ## Risks / Trade-offs
 
+- [A force-push drops a reviewed commit from `pulls/<n>/commits`] → the
+  walk can read a later review as the first. A limit, not read around: the
+  command guard refuses a force-push here (CodeRabbit on #342).
 - [CodeRabbit's quota leaves a pull request unreviewed] → it is named
   unmeasured and breaks no series; the five take longer to gather.
 - [The bot's markup changes again] → the session reads the word; the
