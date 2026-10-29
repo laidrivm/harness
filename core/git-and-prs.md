@@ -103,9 +103,9 @@ entry, a hook or a CI check leaves this file the way it would leave
   `budget` green from GitHub Actions — a PR over the budget's cap passes
   `budget` only with `oversize: <reason>` in its body — and one approval,
   which CodeRabbit gives once it has reviewed the latest commit and every
-  required thread is resolved; unless the ruleset dismisses stale approvals,
-  one given to an earlier head still counts after a push. The user's admin
-  bypass lifts all of it; an agent identity has none. A thread whose finding
+  required thread is resolved; a push dismisses an approval given to an
+  earlier head. The user's admin bypass lifts all of it; an agent identity
+  has none. A thread whose finding
   is dismissed is resolved by the user, by hand on that thread.
   `@coderabbitai resolve` resolves every one of the bot's threads, and it and
   `@coderabbitai approve`, which a PR's author may post, approve without a
