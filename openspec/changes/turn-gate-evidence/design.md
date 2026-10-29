@@ -77,7 +77,7 @@ until it runs them against one. The registration text is unchanged.
 
 Against `origin/main` `c015e4c` and the open pull requests (#342 alone):
 
-- `notion-status-gate` (group 3 open): its `gate-ledger` delta copies
+- `notion-status-gate` (group 3 open then): its `gate-ledger` delta copies
   *Every gate refusal is recorded* with "because its final message reported"
   and *A turn refused, then let through*'s "ends with gate lines". Both
   deltas say to re-copy against the live spec before archiving, so whichever
