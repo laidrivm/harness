@@ -45,9 +45,10 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       `bun/pre-pr-steps-run.test.ts`. Add `specs/stage-goal/spec.md` to this
       change: *A stage is done when the check says so* without "SHALL NOT be a
       gate line that the turn gate accepts", and *The line the turn gate
-      reads* rewritten to "a final message carrying only the check's `goal
-      met` line ends a turn that completed a group when the ledger holds a
-      passing run record of the tip, and is refused when it holds none"; move
+      reads* rewritten to "a turn that completed a group ends when the ledger
+      holds a passing run record of the tip — a `pass` for every runner step —
+      whatever its final message, the check's `goal met` line included, and is
+      refused once per mark when it holds none"; move
       its citation from `goal-check-io.test.ts` to that pair of cases in
       `bun/turn-gate-record.test.ts`. Rewrite every
       other case in `bun/turn-gate*.test.ts` and
