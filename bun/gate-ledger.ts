@@ -57,7 +57,7 @@ export const RUNNER_STEPS = ["diff-budget", "project-checks"] as const;
  * level wherever it runs, so the match is exact: a path under `top` can be a
  * worktree nested there, measured against its own base refs. A ledger that
  * cannot be read, or a torn line, holds none. Given `decision`, only a run
- * that ended so counts: the goal check asks for a pass, the turn gate for any.
+ * that ended so counts: `passed()` asks for a pass.
  * `ledger` is another user's ledger as read for the caller, in place of this one's.
  * Given `rule`, only that step's record counts, so one step's pass never
  * stands in for another's; given none, any step's does.
@@ -91,6 +91,14 @@ export function ran(
 	});
 }
 
+/**
+ * Whether `commit` has a passing run record here: a `pass` of every runner
+ * step, made in the checkout whose top level is `top` — per step, not per run
+ * (`pre-pr-runner`). The turn gate, the goal check and `ranUnder()` ask it.
+ */
+export const passed = (commit: string, top: string | undefined, ledger?: string) =>
+	RUNNER_STEPS.every((rule) => ran(commit, top, "pass", ledger, rule));
+
 // `stateDir()`'s rule, in the session user's shell, so it reads that user's environment.
 const AGENT_LEDGER = 'd=${XDG_STATE_HOME-}; case $d in /*) ;; *) d=$HOME/.local/state ;; esac; cat "$d/harness/gates.jsonl"';
 
@@ -108,7 +116,7 @@ export function ranUnder(under: string[], commit: string): boolean {
 	};
 	const top = agent("pwd", "-P")?.trim();
 	const ledger = agent("sh", "-c", AGENT_LEDGER) ?? "";
-	return RUNNER_STEPS.every((rule) => ran(commit, top, "pass", ledger, rule));
+	return passed(commit, top, ledger);
 }
 
 /**

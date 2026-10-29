@@ -78,7 +78,7 @@ Until `bun install` has run, the hooks stand aside: the bootstrap lets only the 
 | Piece | What it is for | Contract |
 |---|---|---|
 | Bootstrap and command guard (`PreToolUse` Bash) | lets only the install through before it, then checks every command against the policy | [agent-permissions](openspec/specs/agent-permissions/spec.md), [commit-gates](openspec/specs/commit-gates/spec.md) |
-| Turn gate (`UserPromptSubmit`, `Stop`) | refuses a turn that completes a task group without the pre-PR gate lines and records; ends a `/goal` run at its round ceiling | [commit-gates](openspec/specs/commit-gates/spec.md), [stage-goal](openspec/specs/stage-goal/spec.md) |
+| Turn gate (`UserPromptSubmit`, `Stop`) | refuses, once, a turn that completes a task group without passing records of both pre-PR runner steps at its tip, whatever its message says; ends a `/goal` run at its round ceiling | [commit-gates](openspec/specs/commit-gates/spec.md), [stage-goal](openspec/specs/stage-goal/spec.md) |
 | Loop guard (`PreToolUse`, `PostToolUseFailure`) | warns on the third identical failed call and refuses it until the next prompt | [loop-guard](openspec/specs/loop-guard/spec.md) |
 | Flake watch (`PostToolUse`, `PostToolUseFailure` Bash) | names a run that passes after an identical failed one as flaky; never blocks | [flaky-tests](openspec/specs/flaky-tests/spec.md) |
 | Notion update guard | refuses a card write whose `properties` the connector would drop | [task-board](openspec/specs/task-board/spec.md) |
@@ -111,7 +111,7 @@ Until `bun install` has run, the hooks stand aside: the bootstrap lets only the 
 
 To add one, create `core/skills/<name>/SKILL.md` with `name` and `description` frontmatter and its instructions in the body below, and add a row here — name and one line, nothing the frontmatter already says. Use `spec-generator` and `feature-generator` only in a project that does not follow [OpenSpec](https://github.com/fission-ai/openspec).
 
-Severities follow CodeRabbit's ladder, `🔴 Critical` > `🟠 Major` > `🟡 Minor` > `🔵 Trivial`; `triage`'s High/Medium/Low are risk tiers, not severities. Review skills end on a gate line, `PASS`, `OPEN` or `BLOCKED`, and the last one of the turn counts ([review toolkit](core/review-toolkit.md)).
+Severities follow CodeRabbit's ladder, `🔴 Critical` > `🟠 Major` > `🟡 Minor` > `🔵 Trivial`; `triage`'s High/Medium/Low are risk tiers, not severities. Review skills end on a gate line, `PASS`, `OPEN` or `BLOCKED`, and the last one of the turn counts ([review toolkit](core/review-toolkit.md)); the line is the report to the model and the human, which no hook reads.
 
 Skills listed in `skills-lock.json` are vendored: never edit them, re-vendor instead. The skills CLI writes to `.claude/skills/`, where the tracked link to `core/skills/` sits, so from the repository root take the link away first, move the result by hand and restore the link; the installer updates the hash in `skills-lock.json` itself:
 

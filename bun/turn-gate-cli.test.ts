@@ -15,6 +15,7 @@ import {
 	store,
 	TASKS,
 } from "./turn-gate.fixture.ts";
+import { RUNNER_STEPS } from "./gate-ledger.ts";
 
 /**
  * `turn-gate.ts` as the hooks run it: a spawned process reading the event on
@@ -65,27 +66,21 @@ describe("how the refusal leaves the process", () => {
 		expect(run("stop", end(dir, SILENT), dir, tmp).code).toBe(2);
 	});
 
-	test("the reason names running the sequence and writing `BLOCKED` [15]", () => {
+	test("the reason names running the runner and ending on a `BLOCKED` line [15]", () => {
 		const { dir, tmp } = finished();
 		const { reason } = run("stop", end(dir, SILENT), dir, tmp);
-		expect(reason).toContain("Run the pre-PR sequence");
-		expect(reason).toContain("BLOCKED —");
+		expect(reason).toContain("pre-pr.ts` with `HEAD` at that commit");
+		expect(reason).toContain("a `BLOCKED` line");
 	});
 
 	// spec: commit-gates/the-turn-reports-its-gates
-	test("a reported turn with the runner's record exits 0 with nothing on stderr", () => {
+	test("a silent turn with a passing run of the tip exits 0 with nothing on stderr", () => {
 		const { dir, tmp } = finished();
 		mkdirSync(join(tmp, "harness"));
-		writeFileSync(
-			join(tmp, "harness", "gates.jsonl"),
-			`${JSON.stringify({
-				gate: "pre-pr",
-				project: realpathSync(dir),
-				commit: git(dir, "rev-parse", "HEAD"),
-			})}\n`,
-		);
-		const message = `${SILENT}\n\nTRIAGE gate: PASS — 1 groups.`;
-		expect(run("stop", end(dir, message), dir, tmp)).toEqual({
+		const pass = (rule: string) =>
+			JSON.stringify({ gate: "pre-pr", decision: "pass", rule, project: realpathSync(dir), commit: git(dir, "rev-parse", "HEAD") });
+		writeFileSync(join(tmp, "harness", "gates.jsonl"), `${RUNNER_STEPS.map(pass).join("\n")}\n`);
+		expect(run("stop", end(dir, SILENT), dir, tmp)).toEqual({
 			code: 0,
 			reason: "",
 			out: "",

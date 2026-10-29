@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { cleanup, emptyDir, git, lines, repo, script } from "./diff-budget.fixture.ts";
 import { checks, records, run } from "./pre-pr.fixture.ts";
 import { CODE_REVIEW, PROJECT_CHECKS, TRIAGE, WARM, ZOMBIES } from "./pre-pr-steps.ts";
-import { reported } from "./turn-gate.ts";
 
 /**
  * The runner's last line, the steps the branch requires, spawned in a
@@ -48,9 +47,8 @@ describe("the last line", () => {
 		expect(records(run(code()).state).map((r) => r.rule)).toContain(PROJECT_CHECKS);
 	});
 
-	test("it opens `PRE-PR steps:` and the turn gate reads no report in it [17]", () => {
-		const line = steps(code()) ?? "";
-		expect([line, reported(line)]).toEqual([CODE, false]);
+	test("it opens `PRE-PR steps:` [17]", () => {
+		expect(steps(code())).toBe(CODE);
 	});
 
 	test("it opens a line of its own after checks whose output ends with no newline", () => {

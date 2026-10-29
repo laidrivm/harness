@@ -14,12 +14,11 @@
  * `--before-push`, last, holds every condition but the pull request's, for a
  * session whose launcher pushes and opens it; `HEAD` must still name a branch.
  *
- * Its last line opens `goal met` or `goal open`, never a gate line: the turn
- * gate would read one as the pre-PR sequence's report. Each verdict is
- * recorded in the gate ledger for counting. A record names no change or step,
+ * Its last line opens `goal met` or `goal open`. Each verdict is recorded in
+ * the gate ledger for counting. A record names no change or step,
  * so nothing decides from one, this check included.
  */
-import { ran, ranUnder, record, RUNNER_STEPS } from "./gate-ledger.ts";
+import { passed, ranUnder, record } from "./gate-ledger.ts";
 import { type Pull, readPullRequests } from "./pull-requests.ts";
 import { complete, groups } from "./turn-gate.ts";
 
@@ -92,7 +91,7 @@ if (stage === "archive") {
 const launcher = process.env.HARNESS_AS_AGENT?.split(" ").filter(Boolean) ?? [];
 const recorded = launcher.length
 	? ranUnder([...launcher, process.env.HARNESS_CLONE ?? ""], commit)
-	: RUNNER_STEPS.every((rule) => ran(commit, top, "pass", undefined, rule));
+	: passed(commit, top);
 if (!recorded) missing.push(`no passing pre-PR run record for ${short}`);
 
 const branch = git("symbolic-ref", "--short", "-q", "HEAD");

@@ -17,7 +17,6 @@ import {
 	TWO,
 	tasks,
 } from "./goal-check.fixture.ts";
-import { reported } from "./turn-gate.ts";
 
 /**
  * The goal check's verdict for each stage, and the run record it reads. The
@@ -230,10 +229,9 @@ describe("the before-push form", () => {
 	});
 
 	// spec: stage-goal/ready-with-no-pull-request
-	test("its last line names the form, is no gate line, and records as the full check does [9]", () => {
+	test("its last line names the form, and records as the full check does [9]", () => {
 		const r = run(tasks(TWO), BEFORE, { gh: null });
 		expect(r.last).toEndWith(", before the push");
-		expect(reported(r.last)).toBe(false);
 		expect(records(r.state).map(({ decision, rule }) => [decision, rule])).toEqual([["met", "apply"]]);
 	});
 

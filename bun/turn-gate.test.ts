@@ -11,13 +11,12 @@ import {
 	store,
 	TASKS,
 } from "./turn-gate.fixture.ts";
-import { complete, decide, mark, reported } from "./turn-gate.ts";
+import { complete, decide, mark } from "./turn-gate.ts";
 
 /**
- * What `turn-gate.ts` reads: which task groups a task list completes, and
- * whether a final message reports. What a turn did to the branch is
- * `turn-gate-turn.test.ts`'s. Bracketed numbers are the proposal-stage
- * `/zombies` ideas, as `tasks.md` numbers them.
+ * What `turn-gate.ts` reads: which task groups a task list completes. What
+ * a turn did to the branch is `turn-gate-turn.test.ts`'s. Bracketed numbers
+ * are the proposal-stage `/zombies` ideas, as `tasks.md` numbers them.
  */
 
 afterAll(cleanup);
@@ -145,50 +144,5 @@ describe("which task lists a turn is decided on", () => {
 		commit(dir, { [TASKS]: DONE.replace("1. Group", "1. Renamed") });
 		expect(decide(end(dir, SILENT), marks)).toBeDefined();
 		expect(decide(end(dir, SILENT), marks)).toBeUndefined();
-	});
-});
-
-describe("whether the final message reports", () => {
-	// spec: commit-gates/the-turn-reports-its-gates
-	test("a gate line reports [16]", () => {
-		expect(reported("Done.\n\nTRIAGE gate: PASS — 1 groups.")).toBe(true);
-	});
-
-	test("a gate line set in bold reports", () => {
-		expect(reported("**TRIAGE gate: PASS — 1 groups.**")).toBe(true);
-	});
-
-	test("an `OPEN` gate line reports — the hook reads for a report, not a verdict", () => {
-		expect(reported("ZOMBIES gate: OPEN — 2 gaps unaddressed.")).toBe(true);
-	});
-
-	test("the words “gate line” in prose do not [16]", () => {
-		expect(reported("I will write the gate line next time.")).toBe(false);
-	});
-
-	// spec: commit-gates/the-turn-names-what-only-the-user-can-settle
-	test("`BLOCKED` with what the user must settle reports", () => {
-		expect(reported("BLOCKED — pick a name for the flag.")).toBe(true);
-	});
-
-	// spec: commit-gates/a-bare-marker-with-nothing-after-it
-	test.each([
-		"BLOCKED",
-		"Stopping here.\nBLOCKED —",
-	])("a bare `BLOCKED` does not: %p", (message) => {
-		expect(reported(message)).toBe(false);
-	});
-
-	test("an empty message does not [3]", () => {
-		expect(reported("")).toBe(false);
-	});
-
-	// spec: commit-gates/the-final-message-cannot-be-read
-	test("a payload with no final assistant message ends the turn [21]", () => {
-		const dir = repo({ [TASKS]: OPEN });
-		const marks = store();
-		mark(prompt(dir), marks);
-		commit(dir, { [TASKS]: DONE });
-		expect(decide(end(dir, undefined), marks)).toBeUndefined();
 	});
 });

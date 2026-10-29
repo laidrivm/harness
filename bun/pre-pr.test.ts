@@ -10,7 +10,6 @@ import {
 	repo,
 } from "./diff-budget.fixture.ts";
 import { head, ledger, records, run } from "./pre-pr.fixture.ts";
-import { reported } from "./turn-gate.ts";
 
 /**
  * `pre-pr.ts`, spawned as an agent runs it: the diff budget it runs, the
@@ -166,11 +165,11 @@ describe("when no record is written", () => {
 		]);
 	});
 
-	test("the line saying no record was written is not read as a gate line", () => {
+	test("a dirty tree is said once to leave no record", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
 		writeFileSync(join(dir, "a.ts"), lines(4));
 		const said = run(dir).out.split("\n").filter((l) => l.includes("no run record"));
-		expect([said.length, reported(said.join("\n"))]).toEqual([1, false]);
+		expect(said.length).toBe(1);
 	});
 
 	// spec: commit-gates/a-push-into-a-ready-pull-request

@@ -9,10 +9,10 @@
  * `bun turn-gate.ts stop` is the `Stop` half. It refuses, by exiting 2 with
  * the reason on stderr, to end a turn that left commits on the branch and
  * completed a task group of an active change — one complete neither at the
- * mark nor on `origin/main` as the turn ends — unless the final message
- * carries `BLOCKED` naming what only the user can settle, or carries a gate
- * line while the gate ledger holds the pre-PR runner's record of the tip in
- * this checkout.
+ * mark nor on `origin/main` as the turn ends — unless the gate ledger holds a
+ * passing run of the tip in this checkout: a `pass` of every runner step
+ * (`passed()`). It reads no text: not the final message, not a gate line, not
+ * a `BLOCKED`.
  *
  * It refuses at most once per mark. A refused turn is continued, not
  * restarted, so no new mark is written. That bounds a condition the model
@@ -25,18 +25,16 @@
  * refusal would only hand the goal another round. `commit-gates`' "SHALL NOT
  * depend on a loop-protection field" is about the refusal, so the ceiling may.
  *
- * Whatever it cannot read — no mark, no message, no repository, a detached
- * `HEAD`, an event that is not JSON — ends the turn. This is fail-open on
- * purpose, unlike the command guard. A hook that refuses when its partner did
- * not run turns a partial installation into a session that cannot end a turn.
- * And the escape from a refusal is text in the message, so refusing over an
- * unreadable one leaves nothing to act on. The ledger is the exception: one it
- * cannot read holds no record, and the once-per-mark bound limits that to one
- * refusal.
+ * Whatever it cannot read — no mark, no repository, a detached `HEAD`, an
+ * event that is not JSON — ends the turn. This is fail-open on purpose,
+ * unlike the command guard. A hook that refuses when its partner did not run
+ * turns a partial installation into a session that cannot end a turn. The
+ * ledger is the exception: one it cannot read holds no record, and the
+ * once-per-mark bound limits that to one refusal.
  *
- * Any of the runner's records proves that it ran the deterministic steps at the
- * tip, and nothing more. The judgement steps are read from the final message alone, so
- * a gate line for one of them, written without running it, still passes.
+ * A passing run proves that the deterministic steps passed at the tip, and
+ * nothing more. The judgement steps are not its business: their records are
+ * `work.ts finish`'s, and their gate lines a report for the model and the human.
  *
  * Run as the hook, it records each refusal, pass and release of a turn that
  * completed a group in the gate ledger (`gate-ledger.ts`); `decide` called
@@ -47,14 +45,10 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { BASE } from "./branch-state.ts";
-import { ran, record } from "./gate-ledger.ts";
+import { passed, record } from "./gate-ledger.ts";
 import { countRound, resetRounds } from "./goal-rounds.ts";
 
-type Event = {
-	session_id?: unknown;
-	cwd?: unknown;
-	last_assistant_message?: unknown;
-};
+type Event = { session_id?: unknown; cwd?: unknown };
 
 type Boxes = { ticked: number; open: number };
 
@@ -95,15 +89,6 @@ export function complete(text: string): string[] {
 		.filter(([, b]) => b.ticked > 0 && b.open === 0)
 		.map(([heading]) => heading);
 }
-
-const GATE_LINE = /^\W*[A-Z][A-Z-]* gate: (PASS|OPEN|BLOCKED)\b/m;
-
-/** A line opening with `BLOCKED` and naming something after it. */
-const NAMED_BLOCK = /^\W*BLOCKED\b[^\w\n]*\w/m;
-
-/** Whether a final message reports: a gate line, or a `BLOCKED` with content. */
-export const reported = (message: string) =>
-	GATE_LINE.test(message) || NAMED_BLOCK.test(message);
 
 /** Where a session's mark lives, or nothing for an id unsafe as a file name. */
 function markFile(store: string, event: Event): string | undefined {
@@ -212,10 +197,9 @@ function runner(cwd: string): string {
 
 /**
  * The refusal for this turn, or nothing when it may end. A turn that completed
- * a group is handed to `log` as `passed` when it names a `BLOCKED`, or carries
- * a gate line and the runner's record of the tip; `released` when the
- * once-per-mark bound alone lets it end; or `refused`. The groups are computed
- * before the message is read for that, so a gate line alone is no pass.
+ * a group is handed to `log` as `passed` when the ledger holds a passing run
+ * of the tip; `released` when the once-per-mark bound alone lets it end; or
+ * `refused`.
  */
 export function decide(
 	event: Event,
@@ -223,8 +207,8 @@ export function decide(
 	log: (decision: string) => void = () => {},
 ): string | undefined {
 	const file = markFile(store, event);
-	const { cwd, last_assistant_message: message } = event;
-	if (!file || typeof cwd !== "string" || typeof message !== "string") return;
+	const { cwd } = event;
+	if (!file || typeof cwd !== "string") return;
 	let recorded: string;
 	try {
 		recorded = readFileSync(file, "utf8");
@@ -237,9 +221,7 @@ export function decide(
 	const end = tip(cwd, at);
 	const done = end ? completed(cwd, at, end) : [];
 	if (done.length === 0 || !end) return;
-	const gated = GATE_LINE.test(message);
-	const top = gated ? git(cwd, "rev-parse", "--show-toplevel") : undefined;
-	if (NAMED_BLOCK.test(message) || (gated && ran(end, top))) {
+	if (passed(end, git(cwd, "rev-parse", "--show-toplevel"))) {
 		log("passed");
 		return;
 	}
@@ -249,22 +231,15 @@ export function decide(
 	}
 	writeFileSync(file, `${at} refused`);
 	log("refused");
-	if (gated)
-		return (
-			`This turn committed and completed ${done.join(", ")}, and reports ` +
-			`gates, but the gate ledger holds no pre-PR runner record of ${end} ` +
-			"in this checkout. Run `bun " +
-			runner(cwd) +
-			"` with `HEAD` at that commit — it records only the commit it reads " +
-			"— and end with its line and the other gate lines, or end with " +
-			"`BLOCKED — <what the user must decide>`."
-		);
 	return (
-		`This turn committed and completed ${done.join(", ")}, and its final ` +
-		"message reports no gates. Run the pre-PR sequence now " +
-		"(core/review-toolkit.md) and end with its gate lines — or, if only " +
-		"the user can settle what stops it, end with a line " +
-		"`BLOCKED — <what they must decide>`."
+		`This turn committed and completed ${done.join(", ")}, but the gate ` +
+		`ledger holds no passing pre-PR run of ${end} in this checkout. Run ` +
+		`\`bun ${runner(cwd)}\` with \`HEAD\` at that commit — it records only ` +
+		"the commit it reads — and fix what fails. This refusal is not repeated " +
+		"for this turn: if only the user can settle what stops it, the next " +
+		"stop ends it. End that stop on the whole final message you meant to " +
+		"end on — your report, a `BLOCKED` line and any line a launcher reads — " +
+		"because a launcher reads the continued turn's last message."
 	);
 }
 

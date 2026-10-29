@@ -112,11 +112,12 @@ describe("a turn that completed a group", () => {
 		]);
 	});
 
-	test("a refused turn ended with a named BLOCKED records a pass", () => {
+	// spec: gate-ledger/refused-then-ended-without-gates
+	test("a refused turn ended with a named BLOCKED and no run records a release, not a pass", () => {
 		const t = turn(DONE);
 		stop(t, SILENT);
 		stop(t, "BLOCKED — the user must choose the id list.");
-		expect(decisions(t.state)).toEqual(["refused", "passed"]);
+		expect(decisions(t.state)).toEqual(["refused", "released"]);
 	});
 
 	test("a turn ending with gate lines and the runner's record records a pass", () => {
@@ -186,6 +187,6 @@ test("an unwritable ledger still refuses the turn with its reason", () => {
 	const t = turn(DONE, state);
 	expect(stop(t, SILENT)).toEqual({
 		code: 2,
-		reason: expect.stringContaining("reports no gates"),
+		reason: expect.stringContaining("no passing pre-PR run"),
 	});
 });
