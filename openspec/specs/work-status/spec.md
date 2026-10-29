@@ -210,7 +210,8 @@ held only once a failure shows the need (roadmap clarification 11).
 A Notion read that fails, no ask settings, or a card on no board SHALL
 refuse. Each refusal SHALL exit 1, write nothing in Notion, and append one
 gate-ledger record under gate `status` with its own id. A write SHALL print
-the status the card reads back from Notion's answer, and exit 0.
+the status the card reads back from Notion's answer, and exit 0 only when
+that status is the one asked for, 1 otherwise.
 
 #### Scenario: Notion does not answer
 
