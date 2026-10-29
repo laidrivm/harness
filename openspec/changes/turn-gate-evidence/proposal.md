@@ -53,5 +53,6 @@ None.
   their tests (tasks.md). Docs: `README.md`, `core/review-toolkit.md`.
 - Consumers (d2ass, mellon): the hook reaches them on their next pin bump,
   with the same registration (design.md, *Consumers*).
-- `notion-status-gate`'s `gate-ledger` delta copies the same requirement
-  (design.md, *Conflict check*).
+- `notion-status-gate`'s `gate-ledger` delta copied the same requirement;
+  it archived on 2026-10-29 and this delta was re-copied from the synced
+  text (design.md, *Conflict check*).
