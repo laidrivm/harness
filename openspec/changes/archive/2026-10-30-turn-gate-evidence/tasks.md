@@ -91,4 +91,6 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       once with the new text, the ledger reading `turn-gate refused` at
       00:22:06Z; in the same turn `bun bun/pre-pr.ts origin/main` passed (Ran
       3096 tests, 0 fail) and the turn ended, the ledger reading `turn-gate
-      passed` at 00:30:49Z (the card's probe record)
+      passed` at 00:30:49Z (the card's probe record). An earlier attempt in
+      that session, on `b14eaf2`, was refused at 00:10:38Z and recorded no
+      pass; `a8e6d78` unticked 2.1 to repeat the probe in a turn of its own
