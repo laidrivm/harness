@@ -84,3 +84,11 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
       `bun bun/pre-pr.ts`, ends; `turn-gate` records `refused` then `passed`
       for that session in the ledger. Record it on the card and in that pull
       request
+
+      Probed on 2026-10-30 at the pin `68f62d0`, session
+      `2214216e-cb89-4a0d-b947-656d241def7d`: commit `7e877d5` ticked 2.1,
+      completing group 2 without the runner, and the turn's end was refused
+      once with the new text, the ledger reading `turn-gate refused` at
+      00:22:06Z; in the same turn `bun bun/pre-pr.ts origin/main` passed (Ran
+      3096 tests, 0 fail) and the turn ended, the ledger reading `turn-gate
+      passed` at 00:30:49Z (the card's probe record)
