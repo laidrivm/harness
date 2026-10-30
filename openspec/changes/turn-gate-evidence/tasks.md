@@ -78,7 +78,7 @@ marks and ledger are `bun/turn-gate.fixture.ts`'s and
 
 ## 2. The probe after the pin bump
 
-- [x] 2.1 Once the self-pin passes group 1's merge, in a harness session: a
+- [ ] 2.1 Once the self-pin passes group 1's merge, in a harness session: a
       turn that ticks a group's last box and commits without running the
       runner is refused once with the new text; the continued turn, after
       `bun bun/pre-pr.ts`, ends; `turn-gate` records `refused` then `passed`
