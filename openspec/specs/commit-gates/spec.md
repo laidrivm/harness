@@ -276,11 +276,10 @@ to end a turn when all of the following hold: the turn left at least one commit
 on the branch that was not there when control arrived, a task group in a change
 outside `openspec/changes/archive/` has at least one box and no unticked one
 left and was complete neither in the task lists as committed at the mark nor
-in those `origin/main` holds when the turn ends, the turn's final assistant
-message carries no `BLOCKED` naming what only the user
-can settle, and either that message carries no gate line or the gate ledger
-holds no record of the pre-PR runner for the turn's tip in this checkout
-(`pre-pr-runner`, *The runner records each run for the commit it read*). The
+in those `origin/main` holds when the turn ends, and the gate ledger holds no
+passing run record of the turn's tip in this checkout (`pre-pr-runner`, *The
+runner records each run for the commit it read*): a `pass` record of the tip
+for every step the runner runs. The
 tip is the commit the turn's work is read from, as the paragraph on the mark
 below decides it. A record is this checkout's when the project it names is the
 repository's top level, as git resolves it from the turn's working directory.
@@ -289,6 +288,11 @@ inside this one or not, because it measured against its own base refs. It
 SHALL block by exiting **2** with the reason on stderr, which is
 the only code that prevents the turn ending, and the only channel the model
 reads — stderr from a hook exiting 0 reaches the debug log alone.
+
+The hook SHALL NOT read the turn's final message. What the message says —
+a gate line, a `BLOCKED`, or nothing — neither discharges the obligation nor
+qualifies the turn, because a line of text proves nothing a record does not,
+and code that parsed the model's text is where the previous design broke.
 
 A group with no boxes at all SHALL NOT count as complete, because the absence
 of an unticked box is not evidence that a box was ticked. A group already
@@ -310,25 +314,23 @@ when the turn ends, not at the mark, because the fetch that brings a group in
 is the same one that moves the ref. A repository without that ref SHALL read it
 as holding no task list, which excludes nothing. The cost is accepted: a turn
 that completes a group, merges its own pull request and fetches the merge
-before ending ends without reporting. Merging is not among the commands the
+before ending ends without a run. Merging is not among the commands the
 harness's settings allow without a prompt, and the pre-push hook has run on
 what merged.
 
 The state at the mark and on `origin/main` SHALL be read from git — the task
 files as the marked commit and the ref hold them — rather than recorded beside
 the mark, which would be the second source of truth this requirement already
-refuses. A bare `BLOCKED`
-with nothing after it SHALL NOT satisfy the message condition, on the terms
-this project already applies to an `oversize:` marker in a pull request body:
-a marker with nothing after it clears nothing.
+refuses.
 
 The branch's push state SHALL NOT be a condition. A turn that commits and
 pushes before it ends is precisely the case the sequence exists to prevent, so
 treating a push as discharge would build the bypass into the gate. What
-discharges the obligation is the report backed by the runner's record for the
-tip, or a named `BLOCKED`, and nothing else. A run record for any commit but
-the tip SHALL NOT discharge it: a commit made after the run is one the run
-never read.
+discharges the obligation is the runner's passing run record of the tip, and
+nothing else. A run record for any commit but the tip SHALL NOT discharge it:
+a commit made after the run is one the run never read. Nor SHALL a record
+whose outcome is `fail`, or one step's record without the other's: a step that
+failed, or did not run, is no evidence that the tip is ready.
 
 Whether the turn left commits SHALL be decided against a mark of `HEAD` taken
 when control arrived, written by a `UserPromptSubmit` hook. A turn that commits
@@ -348,38 +350,37 @@ that can disagree with it.
 The hook SHALL refuse at most once per mark. A refused turn is continued rather
 than restarted, so no new mark is written, and the second refusal a repeated
 condition would produce is suppressed by that. This bounds the cost of a
-condition the model cannot satisfy to one turn, without depending on any field
-of the hook event to detect the repetition.
+condition the model cannot satisfy — a blocker only the user can settle, or a
+step that keeps failing — to one turn, without depending on any field of the
+hook event to detect the repetition.
 
-Where the hook cannot read what it needs — no mark, no final message, no
-repository, or a `HEAD` naming no branch — it SHALL allow the turn to end.
-This is the one place in this capability where an undecidable case does not
-block, and it is a choice rather than an oversight. A hook that refuses when
-its partner did not run makes a partial installation into a session that
-cannot end a turn; and refusing when the final message is unreadable would
-refuse with an instruction that cannot be followed, since the escape from the
-refusal is text in that same message.
+Where the hook cannot read what it needs — no mark, no repository, or a `HEAD`
+naming no branch — it SHALL allow the turn to end. This is the one place in
+this capability where an undecidable case does not block, and it is a choice
+rather than an oversight: a hook that refuses when its partner did not run
+makes a partial installation into a session that cannot end a turn.
 
 The gate ledger is not among those inputs. A ledger that is absent or cannot be
 read SHALL be treated as holding no run record, because a missing record is the
-case the record clause exists to catch. The once-per-mark bound below limits
-what that costs to one refusal.
+case the record clause exists to catch. The once-per-mark bound limits what
+that costs to one refusal.
 
-The refusal SHALL name both endings the rule already admits — running the
-sequence, or writing `BLOCKED` with what only the user can settle — because
-each is text the next message can carry. Where the message carried a gate line
-and only the record is missing, the refusal SHALL name the tip and the
-runner's path as the project reaches it. No repository state need change for a
-blocked turn to end, so the hook SHALL NOT be able to refuse indefinitely, and
-SHALL NOT depend on a loop-protection field to guarantee it.
+The refusal SHALL name the groups the turn completed, the tip, and the
+runner's path as the project reaches it, and SHALL say that it is not
+repeated for this mark, so a turn whose blocker only the user can settle
+knows its next stop ends it. It SHALL tell the model to end that stop on the
+whole final message it meant to end on — its report, a `BLOCKED` line, and
+any line a launcher reads — because a launcher reads the continued turn's
+last message, not the refused one. No repository state need change for a blocked
+turn to end, so the hook SHALL NOT be able to refuse indefinitely, and SHALL
+NOT depend on a loop-protection field to guarantee it.
 
 This requirement SHALL claim that the runner ran the sequence's deterministic
-steps at the tip, and nothing beyond that. Any of the run's records proves
-that it ran. The steps that
-need judgement are still only reported, and the hook reads the final message
-for their gate lines, so a judgement step's gate line written without running
-that step passes it. What it catches is the turn that ends silently, and the
-turn whose deterministic steps never ran at the commit it reports on.
+steps at the tip and that they passed, and nothing beyond that. The steps that
+need judgement are not read here: a record of a skill call is `work.ts
+finish`'s business (`work-finish`), and their gate lines are a report for the
+model and the human. What it catches is the turn that completes a group and
+ends with no passing run at the commit it ends on.
 
 Nor SHALL it claim to reach every turn. A turn that ends by a path which does
 not invoke this hook — an interruption, or a failure that ends the turn
@@ -400,27 +401,27 @@ from its pin* requires.
 
 #### Scenario: A task group is completed and the turn ends silently
 
-- **WHEN** a turn commits the last task of a group and its final message
-  carries no gate line
-- **THEN** the hook blocks the turn from ending, and the reason names running
-  the sequence or writing `BLOCKED`
+- **WHEN** a turn commits the last task of a group, and the ledger holds no
+  runner record for the tip
+- **THEN** the hook blocks the turn from ending, and the reason names the
+  tip, the runner's path and that it is not repeated
 
 #### Scenario: The turn reports its gates
 
-- **WHEN** the same turn's final message carries the sequence's gate line, and
-  the ledger holds a runner record for the tip
-- **THEN** the turn ends
+- **WHEN** the same turn ends while the ledger holds a passing run record of
+  the tip in this checkout
+- **THEN** the turn ends, whatever its final message says
 
 #### Scenario: Gate lines with no run behind them
 
-- **WHEN** a turn commits the last task of a group and ends with gate lines,
-  and the ledger holds no runner record for the tip
-- **THEN** the hook blocks, and the reason names the tip and the runner's path
+- **WHEN** a turn commits the last task of a group and ends with gate lines
+  reading `PASS`, and the ledger holds no runner record for the tip
+- **THEN** the hook blocks, because it reads no text
 
 #### Scenario: A run record for an earlier commit
 
 - **WHEN** the runner recorded commit `A`, the turn then committed `B`, and it
-  ends with gate lines
+  completed a group
 - **THEN** the hook blocks, because the run never read `B`
 
 #### Scenario: A run record from another checkout
@@ -445,22 +446,28 @@ from its pin* requires.
 
 #### Scenario: A run record and no gate line
 
-- **WHEN** the ledger holds a runner record for the tip and the final message
-  carries no gate line
-- **THEN** the hook blocks, because the steps that need judgement are still
-  reported only in the message
+- **WHEN** the ledger holds a passing run record of the tip and the final
+  message carries no gate line
+- **THEN** the turn ends, because the hook reads no text
 
 #### Scenario: A run that failed
 
-- **WHEN** the runner's record for the tip has the outcome `fail`, and the
-  message carries gate lines
-- **THEN** the turn ends: the record proves that the step ran, and the gate
-  line reports what it found
+- **WHEN** the runner's only record of the tip for the project checks has
+  the outcome `fail`, and the diff budget's has `pass`
+- **THEN** the hook blocks once, because a failed step is no evidence that
+  the tip is ready, and the next end of that turn is let through by the
+  once-per-mark bound
+
+#### Scenario: One step's record alone
+
+- **WHEN** the ledger holds a `pass` record of the tip for the diff budget and
+  none for the project checks
+- **THEN** the hook blocks, because one step's record does not stand in for
+  another's
 
 #### Scenario: No ledger at all
 
-- **WHEN** a turn completes a group and ends with gate lines, and the ledger
-  file does not exist
+- **WHEN** a turn completes a group, and the ledger file does not exist
 - **THEN** the hook blocks once, and the next end of that turn is let through
   by the once-per-mark bound
 
@@ -468,25 +475,25 @@ from its pin* requires.
 
 - **WHEN** the final message carries `BLOCKED` naming what the user must
   decide, and the ledger holds no run record for the tip
-- **THEN** the turn ends
+- **THEN** the hook blocks once, and the reason says it is not repeated
 
 #### Scenario: The turn names what only the user can settle
 
-- **WHEN** the final message carries `BLOCKED` followed by what the user must
-  decide
-- **THEN** the turn ends, because that is an ending the rule already admits
+- **WHEN** a turn the hook has refused for this mark ends again with
+  `BLOCKED` followed by what the user must decide, and still no run record
+- **THEN** the turn ends, by the once-per-mark bound and not by the marker
 
 #### Scenario: A bare marker with nothing after it
 
-- **WHEN** the final message carries `BLOCKED` and nothing naming what the
-  user must settle
-- **THEN** the hook blocks, because a marker with nothing after it clears
-  nothing
+- **WHEN** the final message carries `BLOCKED` and nothing after it, and the
+  ledger holds a passing run record of the tip
+- **THEN** the turn ends, because the hook reads no text: a marker neither
+  clears a turn nor holds one
 
 #### Scenario: The turn commits and pushes before ending
 
 - **WHEN** a turn commits the last task of a group, pushes the branch, and
-  ends with no gate line
+  the ledger holds no runner record for the tip
 - **THEN** the hook blocks, because the push is the event the sequence was
   meant to precede rather than a discharge of it
 
@@ -518,7 +525,7 @@ from its pin* requires.
 
 - **WHEN** a turn answers a question while a task group stands complete, and
   `HEAD` is where the mark left it
-- **THEN** the turn ends, whatever the message says
+- **THEN** the turn ends, whatever the ledger holds
 
 #### Scenario: A group that carries no boxes
 
@@ -542,14 +549,15 @@ from its pin* requires.
 #### Scenario: A group created and completed in the same turn
 
 - **WHEN** a turn adds a task group the marked commit does not hold, ticks
-  every box in it, commits, and ends with no gate line
+  every box in it, commits, and the ledger holds no runner record for the tip
 - **THEN** the hook blocks, because the group was not complete at the mark,
   whether the turn committed it unticked first or not
 
 #### Scenario: A complete group the turn renamed
 
 - **WHEN** a turn renames the heading or the change directory of a group
-  already complete at the mark, and ends with no gate line
+  already complete at the mark, and the ledger holds no runner record for the
+  tip
 - **THEN** the hook blocks once, because the group reads as absent at the
   mark — a cost the refusal-once rule bounds to one turn
 
@@ -562,7 +570,8 @@ from its pin* requires.
 #### Scenario: A pull brings in another pull request's completed group
 
 - **WHEN** a turn on `main` fast-forwards it to `origin/main`, which completes
-  a group that was open at the mark, and ends with no gate line
+  a group that was open at the mark, and the ledger holds no runner record for
+  the tip
 - **THEN** the turn ends, because the group was already complete on
   `origin/main`
 
@@ -582,7 +591,8 @@ from its pin* requires.
 #### Scenario: The turn's own group beside a pulled one
 
 - **WHEN** a turn completes a group `origin/main` does not hold complete, and
-  also pulls in another group `origin/main` does, and ends with no gate line
+  also pulls in another group `origin/main` does, and the ledger holds no
+  runner record for the tip
 - **THEN** the hook blocks, and the reason names the turn's own group and not
   the pulled one
 
@@ -595,7 +605,7 @@ from its pin* requires.
 #### Scenario: A turn that merges its own pull request
 
 - **WHEN** a turn completes a group, pushes, merges its pull request, fetches
-  `origin/main`, and ends with no gate line
+  `origin/main`, and the ledger holds no runner record for the tip
 - **THEN** the turn ends — the accepted cost, because `origin/main` now holds
   the group complete
 
@@ -607,9 +617,10 @@ from its pin* requires.
 
 #### Scenario: The final message cannot be read
 
-- **WHEN** the hook event carries no final assistant message
-- **THEN** the turn ends, because the escape from a refusal is text in that
-  message, and refusing over an unreadable one cannot be acted on
+- **WHEN** the hook event carries no final assistant message, a turn completed
+  a group, and the ledger holds no runner record for the tip
+- **THEN** the hook blocks, because it decides on the repository and the
+  ledger and reads no text
 
 #### Scenario: There is no repository, or no branch
 

@@ -15,8 +15,8 @@ The goal check SHALL report a stage `met` only when every condition for it
 holds at `HEAD`, and `open` otherwise. Each condition is read from the
 repository, the gate ledger or the pull request, and never from the
 conversation. Its last line SHALL open with `goal met` or with `goal open`
-followed by each missing condition, and SHALL NOT be a gate line that the turn
-gate accepts. It SHALL exit 0 for `met` and 1 for `open`.
+followed by each missing condition. It SHALL exit 0 for `met` and 1 for
+`open`.
 
 #### Scenario: A proposal ready for review
 
@@ -107,9 +107,10 @@ gate accepts. It SHALL exit 0 for `met` and 1 for `open`.
 
 #### Scenario: The line the turn gate reads
 
-- **WHEN** a final message carries the check's `goal met` line and no gate
-  line
-- **THEN** the turn gate treats the message as not reporting
+- **WHEN** a turn that completed a group ends on the check's `goal met` line
+- **THEN** the turn ends when the ledger holds a passing run record of the
+  tip — a `pass` for every runner step — whatever its final message, that
+  line included, and is refused once per mark when it holds none
 
 #### Scenario: A malformed call
 
@@ -243,8 +244,8 @@ end nothing.
 
 #### Scenario: The ceiling and a refusal at the same stop
 
-- **WHEN** the twentieth continued stop also completes a task group and its
-  message reports no gates
+- **WHEN** the twentieth continued stop also completes a task group, and the
+  ledger holds no passing run record of the tip
 - **THEN** the session ends at the ceiling, and the turn gate does not refuse
 
 #### Scenario: An unreadable event

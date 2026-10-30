@@ -16,8 +16,8 @@ pre-push hook's draft check, `work.ts finish` or `work.ts status` — SHALL
 append one record to the ledger. Every reason a
 guard blocks for counts, including an event it could not read. The turn gate
 SHALL also record a turn that completed a task group and was let through
-because its final message reported, so that a count of refusals has a
-denominator. A call a guard allows SHALL NOT be recorded. The one exception
+because the ledger held a passing run record of its tip, so that a count of
+refusals has a denominator. A call a guard allows SHALL NOT be recorded. The one exception
 is the question gate, which refuses only in an unattended session: it SHALL
 record each call it sees, as allowed, as passed to the prompt, or as
 refused, as agent-permissions' *A question to the user on a board card needs
@@ -39,7 +39,7 @@ gate ledger* requires, so that the wrap-up counts flakes beside refusals.
 #### Scenario: A turn refused, then let through
 
 - **WHEN** the turn gate refuses a turn that completed a group, and the
-  continued turn ends with gate lines
+  continued turn runs the pre-PR runner at the tip, which passes, and ends
 - **THEN** the ledger gains a refusal and then a pass for that group
 
 #### Scenario: An ordinary command
@@ -101,14 +101,17 @@ gate ledger* requires, so that the wrap-up counts flakes beside refusals.
 ### Requirement: A refusal walked past is recorded
 
 When the turn gate lets a turn end only because it has already refused once
-for that mark, and the turn still carries no gate line, it SHALL record that
-release. That record is the one case where an agent ended a turn the gate had
-refused, without doing what the refusal asked.
+for that mark, and the ledger still holds no passing run record of the tip, it
+SHALL record that release. That record is a turn the gate refused and let end
+with no passing run: one that walked past the refusal, one blocked on what
+only the user can settle, or one whose step kept failing. The gate reads no
+text, so it does not tell them apart, and a count of releases bounds the
+refusals walked past from above.
 
 #### Scenario: Refused, then ended without gates
 
 - **WHEN** the turn gate refuses a turn, and the continued turn ends again
-  without a gate line or a named `BLOCKED`
+  with no passing run record of the tip, whatever its message says
 - **THEN** the ledger gains a refusal and then a release, and no pass
 
 ### Requirement: Each prohibition has a stable id
