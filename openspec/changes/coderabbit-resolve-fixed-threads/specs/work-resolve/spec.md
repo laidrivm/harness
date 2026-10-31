@@ -12,8 +12,8 @@ resolved, does not wait on the user for a fix already on the pull request.
 
 `bun bun/work.ts resolve` SHALL take `--pr <n>`, a positive integer, and one or
 more `--comment <id>`, each a positive integer. Any other option, a positional
-argument, a missing value, a value that is not wholly digits or no `--comment`
-at all SHALL print the usage and exit 2 before any git or `gh` call.
+argument, a missing value, a value that is not wholly digits, a repeated
+`--pr` or no `--comment` at all SHALL print the usage and exit 2 before any git or `gh` call.
 
 #### Scenario: No comment named
 
@@ -24,6 +24,11 @@ at all SHALL print the usage and exit 2 before any git or `gh` call.
 
 - **WHEN** `resolve` runs with `--pr 7 --comment 123x`
 - **THEN** it prints the usage and exits 2
+
+#### Scenario: Two pull requests named
+
+- **WHEN** `resolve` runs with `--pr 7 --pr 8 --comment 1`
+- **THEN** it prints the usage and exits 2, acting on neither
 
 #### Scenario: Several comments
 

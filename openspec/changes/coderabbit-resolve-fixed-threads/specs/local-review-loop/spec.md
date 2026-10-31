@@ -4,11 +4,14 @@
 
 ### Requirement: The thread of a fixed finding is resolved once the fix is on the pull request
 
-The `coderabbit` skill SHALL write nothing to GitHub. A run that applied fixes
-SHALL name, as one `bun bun/work.ts resolve` command, the id of each inline
-comment whose every finding it fixed or found already fixed. The session
-SHALL run it only after its own `finish` has pushed the fix. No agent SHALL resolve the thread of a skipped or
-rejected finding, nor post `@coderabbitai resolve` or `@coderabbitai approve`.
+The `coderabbit` skill SHALL write nothing to GitHub. A run SHALL name, as one
+`bun bun/work.ts resolve` command, the first comment's id of each unresolved
+thread of the bot's whose every finding — the first comment's and each
+reply's carrying its own severity line — it fixed or found already fixed. The
+session SHALL run it once each fix is on the pull request's head: after its
+own `finish` pushed the run's fixes, or at once when the run applied none. No
+agent SHALL resolve the thread of a skipped or rejected finding, nor post
+`@coderabbitai resolve` or `@coderabbitai approve`.
 
 #### Scenario: Two fixes and a skip
 
@@ -23,6 +26,26 @@ rejected finding, nor post `@coderabbitai resolve` or `@coderabbitai approve`.
 - **WHEN** an inline comment carries two findings and the run fixes one and
   skips the other
 - **THEN** the comment's id is not named, and its thread stays open
+
+#### Scenario: A fixed finding in a reply
+
+- **WHEN** the bot posts a finding as a reply inside its own thread opened by
+  comment 11, and the run fixes it and the first comment's finding
+- **THEN** the command names 11, the thread's first comment, never the
+  reply's id
+
+#### Scenario: A skipped finding in a reply
+
+- **WHEN** the run fixes the finding of a thread's first comment and skips a
+  finding a later reply of the bot's carries in the same thread
+- **THEN** the thread's id is not named, and the thread stays open
+
+#### Scenario: Only findings already fixed
+
+- **WHEN** the run applies no fix and verifies an unresolved thread's finding
+  as already fixed on the head
+- **THEN** the session runs the named `resolve` at once, with no `finish`
+  before it
 
 #### Scenario: A fix outside the diff
 

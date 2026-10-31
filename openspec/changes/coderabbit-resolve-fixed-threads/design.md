@@ -107,13 +107,20 @@ on the usage. The gate ledger records nothing: `resolve` is no gate.
 
 ### The skill names the ids; it resolves nothing itself
 
-A run that applied fixes prints, right above its gate line, the one command
-`bun bun/work.ts resolve --pr <n> --comment <id> …`, listing each inline
-comment whose every finding it fixed or verified as already fixed. A comment
-that also carries a skipped or rejected finding is left out — its thread is
-the user's. A finding from a review body has no thread and is never named.
-The *Never post to the PR* rule stays, rewording "no resolves" to point at
-the command.
+A run prints, right above its gate line, the one command `bun bun/work.ts
+resolve --pr <n> --comment <id> …`. The unit is the thread, since a resolve
+closes the whole thread: it names the first comment's id of each unresolved
+thread of the bot's whose every finding — the first comment's and each
+reply's with a severity line of its own — it fixed or verified as already
+fixed. A thread that also carries a skipped or rejected finding is left out
+— it is the user's. A reply's id is never named, since `resolve` places only
+first comments. A finding from a review body has no thread and is never
+named. The skill keeps a comment only when its `user.login` is exactly
+`coderabbitai[bot]`, the REST spelling of the login `resolve` checks, so no
+id it names is refused for its author. The session runs the command once
+every fix is on the head: after its own `finish` pushed, or at once when the
+run applied none. The *Never post to the PR* rule stays, rewording "no
+resolves" to point at the command.
 
 Step 1 today drops a thread that is resolved *or outdated*, listing it as
 `already resolved`. An outdated thread that is not resolved still holds the
@@ -158,12 +165,22 @@ The skill reads the runs with its own `gh api` call; `bun/coderabbit-run.ts`,
 the module `finish-review-arrives` adds, is a module with no command line,
 and no second reader is written in `bun/`. Two statements of one rule drift
 silently, so a test holds them together (`core/rules.md`, *Pin a name one
-system looks up in another with a test*): it reads the skill's step 1 for
-the `success` conclusion, the `Review skipped` title prefix and the app's
-slug, against the spec scenario that sets them while the module is not on
-`main`, and against the module's own constants once it lands — whichever of
-the two changes applies second points the test there. The cited requirement
-sits in that change's delta until it archives.
+system looks up in another with a test*). While the module is not on
+`main`, it holds the skill's step 1, which names the `success` conclusion
+and the `Review skipped` title prefix, against the requirement's own words,
+"succeeded with a title not opening `Review skipped`", read from that
+change's delta or, once archived, `openspec/specs/work-finish/spec.md`; the
+delta names no slug, so the app's slug is pinned only later. Once the module
+lands, the test reads its constants — conclusion, title prefix and slug —
+instead, and whichever of the two changes applies second makes that switch. The cited requirement
+sits in that change's delta until it archives, so this change archives
+after it (tasks.md, group 3) — no `after:` edge, which would hold the apply
+too, not only the archive.
+
+Not done here, though `finish-review-arrives`' design expected this card to
+do it: a command line for `bun/coderabbit-run.ts` that both skills call.
+The main session settled the skill's own read on 31.10; `session-wrapup`'s
+check-run read stays a third, unpinned statement of the rule, left to a card.
 
 ### Severity is a word read, not a pattern matched
 

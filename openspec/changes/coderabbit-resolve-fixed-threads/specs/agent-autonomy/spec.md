@@ -16,8 +16,9 @@ a `CODERABBIT gate: OPEN` line naming that commit as not yet reviewed, after
 that one read, with no sleep and no second read. A run that finds the head
 reviewed, by any of the three, SHALL dispose of the findings of every review
 on it on the finding-disposal terms `local-review-loop` sets in *A verified
-finding is fixed without asking* and *Dismissing a Major or above is the
-user's call*, SHALL read
+finding is fixed without asking*, *Dismissing a Major or above is the user's
+call*, *Minor findings are reported once, at the end* and *A justification
+survives only when it is a convention*, SHALL read
 the head again before applying a fix, and SHALL re-fetch once before its gate
 line to reconcile against the bot's count, without sleeping or looping. Each
 step that waits on the user SHALL carry an `(unattended: card` marker.
@@ -50,11 +51,13 @@ step that waits on the user SHALL carry an `(unattended: card` marker.
 
 #### Scenario: The head moves before a fix is applied
 
-- **WHEN** a run that counted the head as reviewed by its check run alone is
-  about to apply a fix, and the head has moved since step 1
-- **THEN** it re-fetches once and verifies each finding against the new head
-  before applying it, and ends on the no-review `OPEN` line if the bot has
-  not reviewed the new head
+- **WHEN** a run that counted the head as reviewed, by a review object or by
+  its check runs alone, is about to apply a fix, and the head has moved since
+  step 1
+- **THEN** it reads the head's reviews again and verifies each finding
+  against the new head before applying it — a read apart from the single
+  re-fetch before the gate line — and ends on the no-review `OPEN` line if
+  the bot has not reviewed the new head
 
 #### Scenario: A review lands while the run disposes of the first
 
