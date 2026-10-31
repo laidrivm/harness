@@ -16,7 +16,8 @@ file nears the 300-line cap.
       progress gives `reviewing`; skipped plus neutral `Review rate limited`
       gives `rate limited`; rate limited plus succeeded gives `reviewed` in
       either list order; a neutral run with another title gives that
-      conclusion and title; skipped alone gives `skipped`. Then write the
+      conclusion and title; skipped alone, and a success titled `Review
+      skipped`, give `skipped`. Then write the
       state in `bun/coderabbit-run.ts`
 - [ ] 1.2 Failing cases in `bun/coderabbit-run.test.ts` over the read, with
       a `gh` stub on `PATH`: it calls `api
@@ -39,16 +40,19 @@ file nears the 300-line cap.
       call and end on `finish: ready #7`; run from a subdirectory of a
       checkout tracking it at the top, `finish` reads the check runs; the
       `gh` call order is the PR read, the push, the check-run reads until a
-      run appears, the ready, then the check-run reads; no run before the
-      60 s wait's end on the clock says so and still marks ready; a failed
-      read before the ready switch counts as no run and the reads go on; a
+      completed run appears, the ready, then the check-run reads; an
+      in-progress run alone does not end the wait; no completed run in 12
+      reads says so and still marks ready; with `origin` already at `HEAD`
+      and the draft opened in this call, the reads go on until the skip
+      appears; a failed read before the ready switch counts as none and the
+      reads go on; a
       question waiting makes no read after the question read and leaves the
       draft; `reviewing` after ready ends on `finish: ready #7 — CodeRabbit
       reviewing <short>`; a failed read after the switch, then `reviewing`,
       ends on reviewing; `reviewed`, `rate limited` and another conclusion
-      end on their lines from design.md; `skipped` to the 90 s wait's end
-      ends on `finish: ready #7 — CodeRabbit skipped <short>`; a last read
-      that fails ends unread; every one exits 0. Then add the wait and the
+      end on their lines from design.md; 18 reads of `skipped`, and 17 then
+      a failure, end on `finish: ready #7 — CodeRabbit skipped <short>`;
+      every read failing ends unread; every one exits 0. Then add the wait and the
       reads to `finish()`
 - [ ] 1.5 Prose: `README.md`'s `finish` row says it waits for CodeRabbit's
       run and names its state of the head; `core/review-toolkit.md`'s
