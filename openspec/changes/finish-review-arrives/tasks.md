@@ -9,7 +9,7 @@ file nears the 300-line cap.
 
 ## 1. Wait for CodeRabbit's run and report its state
 
-- [ ] 1.1 Failing cases in `bun/coderabbit-run.test.ts` over the pure
+- [x] 1.1 Failing cases in `bun/coderabbit-run.test.ts` over the pure
       state of a check-run list: an empty list and one holding only another
       app's runs give no run; a `CodeRabbit` run of another app slug is
       ignored; skipped plus in progress gives `reviewing`; succeeded plus in
@@ -19,7 +19,7 @@ file nears the 300-line cap.
       conclusion and title; skipped alone, and a success titled `Review
       skipped`, give `skipped`. Then write the
       state in `bun/coderabbit-run.ts`
-- [ ] 1.2 Failing cases in `bun/coderabbit-run.test.ts` over the read, with
+- [x] 1.2 Failing cases in `bun/coderabbit-run.test.ts` over the read, with
       a `gh` stub on `PATH`: it calls `api
       repos/o/demo/commits/<sha>/check-runs?filter=all&per_page=100
       --paginate --jq .check_runs[]`, and a run on a second page counts; an
@@ -29,14 +29,14 @@ file nears the 300-line cap.
       positive-whole-number parse in `bun/pull-requests.ts` into one helper
       that `limit()` and the interval both call; `bun/pull-requests.test.ts`
       still passes
-- [ ] 1.3 Extend `bun/work-finish.fixture.ts`: the `gh` stub answers a
+- [x] 1.3 Extend `bun/work-finish.fixture.ts`: the `gh` stub answers a
       `check-runs` read from a queue of answers, one per call, the last
       repeated; logs each call as today; the case sets
       `HARNESS_CODERABBIT_POLL_MS=1`, and tracks `.coderabbit.yaml` only when
       it asks to, so the existing cases keep no config. Verify
       `bun/work-finish.test.ts` and `bun/work-finish-sequence.test.ts` still
       pass unchanged
-- [ ] 1.4 Failing cases in `bun/work-finish-review.test.ts`: no tracked
+- [x] 1.4 Failing cases in `bun/work-finish-review.test.ts`: no tracked
       `.coderabbit.yaml`, and a gitignored untracked one, make no check-run
       call and end on `finish: ready #7`; run from a subdirectory of a
       checkout tracking it at the top, `finish` reads the check runs; the
@@ -57,7 +57,7 @@ file nears the 300-line cap.
       a failure, end on `finish: ready #7 — CodeRabbit skipped <short>`;
       every read failing ends unread; every one exits 0. Then add the wait and the
       reads to `finish()`
-- [ ] 1.5 Prose: `README.md`'s `finish` row says it waits for CodeRabbit's
+- [x] 1.5 Prose: `README.md`'s `finish` row says it waits for CodeRabbit's
       run and names its state of the head; `core/review-toolkit.md`'s
       passage on a head whose state reads skipped or rate-limited names
       `finish`'s last line as where it is first seen; `core/git-and-prs.md`'s
@@ -71,11 +71,11 @@ file nears the 300-line cap.
 
 ## 2. Ask once for the review of a skipped head
 
-- [ ] 2.1 Extend `bun/work-finish.fixture.ts`: the stub answers an
+- [x] 2.1 Extend `bun/work-finish.fixture.ts`: the stub answers an
       `issues/7/comments` read with the case's comments, one JSON object a
       line as `--jq` prints them, or with an exit the case sets, and logs a
       `pr comment` call with an exit the case sets
-- [ ] 2.2 Failing cases in `bun/work-finish-review.test.ts`: `skipped` and no
+- [x] 2.2 Failing cases in `bun/work-finish-review.test.ts`: `skipped` and no
       request posts exactly one `pr comment 7 -R o/demo --body @coderabbitai
       review` and says it asked; a request created at the head's earliest
       run's `started_at`, and one padded with whitespace, count as asked and
@@ -87,7 +87,7 @@ file nears the 300-line cap.
       nothing and names why; a post `gh` refuses with exit 1 is made once
       and named; `rate limited`, `reviewing` and unread read no comments;
       every one exits 0. Then add the request to `finish()`
-- [ ] 2.3 Prose: `core/review-toolkit.md` says `finish` asks once for a
+- [x] 2.3 Prose: `core/review-toolkit.md` says `finish` asks once for a
       skipped head and that a rate-limited one is reported, never retried;
       `README.md`'s `finish` row names the request; `core/git-and-prs.md`'s
       *… nor any other comment as the user* and *Send, reply, comment or
@@ -96,7 +96,7 @@ file nears the 300-line cap.
       `@coderabbitai review` as the exception (answer 4 b, 2026-10-31).
       Grep the same places as 1.5, and `comment as the user` and `under the
       user's name`, for wording the step makes false
-- [ ] 2.4 Live probe from the tree on this group's own pull request: open it
+- [x] 2.4 Live probe from the tree on this group's own pull request: open it
       with `bun bun/work.ts finish --card <card> --title <text> --body-file
       <path>`, and record in its body
       `finish`'s last line and, where it read `skipped`, the request it

@@ -124,10 +124,11 @@ which a 1 ms interval makes shorter than one spawn of the test's stub.
 
 ### Only where CodeRabbit is configured
 
-`finish` reads no check run unless `git -C <top> ls-files --error-unmatch --
-.coderabbit.yaml` succeeds, `<top>` being the checkout's top `finish`
-already reads — run from a subdirectory, a bare `ls-files` would resolve
-the path against it and find nothing. A consumer without
+`finish` reads no check run unless `.coderabbit.yaml` is among the paths
+`tracked(<top>)` from `bun/tracked.ts` lists, `<top>` being the checkout's
+top `finish` already reads — run from a subdirectory, a bare `ls-files`
+would resolve the path against it and find nothing, and `tracked.test.ts`
+refuses a second listing of the tree. A consumer without
 CodeRabbit would otherwise pay 60 s and 90 s on every `finish` for runs that
 never come. A repository running CodeRabbit with no config file keeps
 today's behaviour, which is no regression. Tracked rather than present: a

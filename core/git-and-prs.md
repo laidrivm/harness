@@ -82,7 +82,10 @@ entry, a hook or a CI check leaves this file the way it would leave
   pr`, opens it over `gh api` as the README's *Cloud sessions* says): it
   refuses without the pre-PR runner's passing records of `HEAD`, pushes while
   the PR is a draft, opens it as a draft when none is open, and marks it ready
-  right after the push unless a question waits on the card; in the harness's
+  unless a question waits on the card — where the checkout tracks
+  `.coderabbit.yaml`, only once CodeRabbit's run on the head has completed or
+  12 reads have found none, and its last line then names CodeRabbit's state
+  of the head; in the harness's
   own sessions a hook refuses a hand-run `gh pr create`, and `gh pr ready`
   without `--undo`. An agent that then works on an existing PR marks it draft
   by hand (`gh pr ready <n> --undo`) as it starts, and runs `finish` only when
@@ -111,7 +114,8 @@ entry, a hook or a CI check leaves this file the way it would leave
   `@coderabbitai resolve` resolves every one of the bot's threads, and it and
   `@coderabbitai approve`, which a PR's author may post, approve without a
   review of the head — so no agent posts either, nor any other comment as the
-  user.
+  user, but for the one `@coderabbitai review` that `finish` posts on a head
+  CodeRabbit skipped, under the user's standing permission (2026-10-31).
 - Keep the PR description to what the diff can't say: a link to the
   proposal, the criteria the step closes named by their `### Requirement:`
   headings — or a line saying it closes none — decisions taken, anything the
@@ -133,7 +137,9 @@ entry, a hook or a CI check leaves this file the way it would leave
 - Commit a session's wrap-up artefacts — the pipeline-yield ledger, a save
   point — to the branch in hand, never a branch of their own.
 - Send, reply, comment or review under the user's name only through a call the
-  user approved at its prompt; the `gh` writes stay refused. Never through a
+  user approved at its prompt, or as the one `@coderabbitai review` `finish`
+  posts on a head CodeRabbit skipped, which the user granted standing
+  (2026-10-31); the `gh` writes stay refused. Never through a
   channel no permission entry reaches — a browser form, a direct HTTP call:
   report what you would have written and let them send it. Opening the pull
   request they asked for is not that, and nor is a question the question gate
@@ -145,7 +151,9 @@ entry, a hook or a CI check leaves this file the way it would leave
 - Never re-run a check whose own output already proved it passed and whose
   inputs have not changed since — a later command's success is not that proof.
 - Never wait on a result someone else produces — CI, a review bot, a queue:
-  report where it will appear and end the turn.
+  report where it will appear and end the turn. The one exception is
+  `finish`'s two bounded waits for CodeRabbit's run on the head, before the
+  ready switch and after it (the user's choice, 2026-10-31).
 - This repo is public: before anything is staged or committed, read every new
   file whole, `git diff HEAD` for the rest, and the commit message about to be
   written, looking for capability URLs, internal and account identifiers, and
