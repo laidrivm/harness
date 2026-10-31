@@ -136,10 +136,10 @@ through; the line is the signal.
 ### Requirement: Finish asks once for the review of a skipped head
 
 When the reads end on `skipped` and one more read right before the post
-gives `skipped` too, `finish` SHALL post `@coderabbitai review`, and nothing
-else, under the identity `gh` runs with, unless the pull request holds that
-exact comment posted at or after the start of `HEAD`'s first CodeRabbit
-run; at most one per call. A failed comment or run read SHALL post nothing.
+gives `skipped` too, `finish` SHALL post exactly `@coderabbitai review` as
+the identity `gh` holds, unless the pull request holds a comment whose
+trimmed body is that line, posted at or after the start of `HEAD`'s first
+CodeRabbit run; at most one per call. A failed comment or run read SHALL post nothing.
 The last line SHALL say whether it asked, had already asked, read another
 state, could not read, or failed to post.
 
