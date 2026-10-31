@@ -61,10 +61,6 @@ describe("a pull request that does not prove done", () => {
 		expect(run.last).toContain("release");
 	});
 
-	test("a merged one whose answer has no base refuses", async () => {
-		refused(await status({ args: to("done"), cwd: checkout().dir, page: { pointer: "pr:350" }, gh: pr({ base: null }) }), "no-evidence");
-	});
-
 	// spec: work-status/a-pull-request-closed-without-merging
 	test("one closed unmerged refuses [17]", async () => {
 		refused(await status({ args: to("done"), cwd: checkout().dir, page: { pointer: "pr:350" }, gh: pr({ merged_at: null }) }), "no-evidence");
@@ -81,6 +77,7 @@ describe("a pull request that does not prove done", () => {
 	test.each([
 		["a gh that exits 1", "[18]", { ...pr(), code: 1 }],
 		["no gh at all", "[19]", undefined],
+		["a merged one whose answer has no base", "(local review)", pr({ base: null })],
 	])("%s refuses under unread %s", async (_, __, gh) => {
 		refused(await status({ args: to("done"), cwd: checkout().dir, page: { pointer: "pr:350" }, gh }), "unread");
 	});
