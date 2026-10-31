@@ -4,12 +4,16 @@
  * then the push while the pull request is a draft, the draft opened when none
  * is, and the ready switch unless a question waits on the card, when one is given
  * (`openspec/changes/archive/2026-10-28-work-finish/design.md`, *The
- * sequence and where each refusal sits*). Every refusal comes before the
+ * sequence and where each refusal sits*). Where the checkout tracks
+ * `.coderabbit.yaml`, it waits for CodeRabbit's run on `HEAD` before the
+ * question read and names CodeRabbit's state of `HEAD` after the ready switch
+ * (`finish-review-arrives`'s design). Every refusal comes before the
  * push, changes nothing but the ledger, and is one `finish` record of
  * `HEAD`; a failure after the push leaves the draft and records nothing.
  */
 import { statSync } from "node:fs";
 import { ready } from "./ci-run-draft.ts";
+import { interval, own, read, type State, state } from "./coderabbit-run.ts";
 import { ran, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
@@ -87,6 +91,13 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		lines.push(`finish: opened draft #${number}`);
 	}
 
+	const short = commit.slice(0, 7);
+	// Tracked at the top, not present: a gitignored copy is in the author's checkout and absent in a clone.
+	const watched = git("-C", top, "ls-files", "--error-unmatch", "--", ".coderabbit.yaml") !== undefined;
+	// Before the question read and the ready switch, so the push's event is handled before the ready one; it gates nothing.
+	if (watched && !(await reads(12, () => runsOf(full, commit).some((run) => run.status === "completed"))))
+		lines.push(`finish: no completed CodeRabbit run on ${short} after 12 reads`);
+
 	// No card, no question to read: a pin bump or a hotfix has none (`work-finish` spec, *No card: no question check*).
 	if (!card) lines.push("finish: no --card, so no card's question was read");
 	else {
@@ -100,5 +111,39 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		}
 	}
 	if (!ready(full, Number(number))) return done(`finish: draft #${number} — gh pr ready ${number} failed`, 1);
-	return done(`finish: ready #${number}`, 0);
+	if (!watched) return done(`finish: ready #${number}`, 0);
+	// The last read that answered decides, so one failure at the end does not hide the skips before it.
+	let last: State = { name: "unread", why: "no read answered" };
+	await reads(18, () => {
+		const got = read(full, commit);
+		if (Array.isArray(got)) last = state(got);
+		else if (last.name === "unread") last = got;
+		return !["skipped", "no run", "unread"].includes(last.name);
+	});
+	// Exit 0 whatever the state: the ready switch went through, and the line is the signal.
+	return done(`finish: ready #${number} — ${said(last, short)}`, 0);
+}
+
+/** CodeRabbit's runs on `sha`, none when the read fails. */
+const runsOf = (repo: string, sha: string) => {
+	const got = read(repo, sha);
+	return Array.isArray(got) ? own(got) : [];
+};
+
+/** Calls `enough` up to `times` times, an interval apart, until it answers true; whether it did. */
+async function reads(times: number, enough: () => boolean) {
+	for (let i = 0; i < times; i++) {
+		if (i) await Bun.sleep(interval());
+		if (enough()) return true;
+	}
+	return false;
+}
+
+/** What `finish`'s last line says of the state `got` on the commit `short`. */
+function said(got: State, short: string) {
+	if (got.name === "rate limited") return `CodeRabbit rate limited on ${short}; no review asked for`;
+	if (got.name === "other") return `CodeRabbit ${got.conclusion} "${got.title}" on ${short}`;
+	if (got.name === "no run") return `no CodeRabbit run on ${short} after 18 reads`;
+	if (got.name === "unread") return `CodeRabbit's runs on ${short} unread: ${got.why}`;
+	return `CodeRabbit ${got.name} ${short}`;
 }

@@ -20,7 +20,10 @@ counts as reviewed once its `CodeRabbit` status is `success` with the
 description `Review completed`; a draft's `success` reads `Review skipped:
 draft pull request`, and marking the pull request ready starts the review of
 its head. A head whose status reads `Review skipped…`, or names a rate or usage
-limit, gets no review on its own — stop waiting on it and report it.
+limit, gets no review on its own — stop waiting on it and report it. Where
+such a head is first seen is `finish`'s last line, which names CodeRabbit's
+state of the head it marked ready from the head's check runs: `skipped`,
+`rate limited`, or another.
 
 ## The skills
 

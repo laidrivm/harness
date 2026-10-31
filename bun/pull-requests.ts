@@ -9,11 +9,16 @@
  */
 import { minted } from "./github-app-minted.ts";
 
+/** The setting `name` when it is a positive whole number, `fallback` otherwise. */
+export function positive(name: string, fallback: number): number {
+	const env = process.env[name] ?? "";
+	// Never 0: `spawnSync` reads a timeout of 0 as no limit at all.
+	return /^[1-9]\d*$/.test(env) ? Number(env) : fallback;
+}
+
 /** The limit in ms: `HARNESS_GH_TIMEOUT_MS` when it is a positive whole number, 30 s otherwise. */
 export function limit(): number {
-	const env = process.env.HARNESS_GH_TIMEOUT_MS ?? "";
-	// Never 0: `spawnSync` reads a timeout of 0 as no limit at all.
-	return /^[1-9]\d*$/.test(env) ? Number(env) : 30_000;
+	return positive("HARNESS_GH_TIMEOUT_MS", 30_000);
 }
 
 /** A remote URL's authority and path, in the URL form or git's scp form `user@host:path`; a local path has neither. */
