@@ -15,13 +15,8 @@ checked deeper than it was. On 26.10 the user chose to bring the hook up to
 the spec rather than narrow the spec to the hook (card *Bring harness's own
 pre-push hook up to the commit-gates spec*, explored 2026-10-31).
 
-The user's answers of 2026-10-31 settle the explore's five questions: the
-formatter is on and the tree is reformatted now, in one pull request of its
-own (1 б); Stryker covers every module, once as a baseline module by module
-and afterwards incrementally, a push mutating only the modules its branch
-changed (2, 3); the type check is `strict` with `noUncheckedIndexedAccess`
-(4 б); and the CI jobs the spec requires and the harness lacks are part of
-this change (5 а).
+The user's answers of 2026-10-31 settle the explore's five questions;
+design.md records them.
 
 ## What Changes
 
