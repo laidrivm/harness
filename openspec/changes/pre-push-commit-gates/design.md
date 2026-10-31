@@ -26,7 +26,7 @@ not. `bun/git-env.test.ts` and `bun/pre-pr.test.ts` pin the hook's lines.
    command runner on one module, showing a second run with no changes is
    near-instant; if it is not, stop and ask on the card.
 3. In the hook, only the changed modules. Where the baseline runs was left
-   to this design (decision 6 below).
+   to this design (decision 5 below).
 4. б — `tsc` as in d2ass: `strict` plus `noUncheckedIndexedAccess`.
 5. а — the missing CI jobs (suppression scan, `gitleaks`, lint, type check)
    are part of this change; making them required in the ruleset is the
