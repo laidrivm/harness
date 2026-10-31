@@ -40,11 +40,13 @@ The cases are the proposal-stage `/zombies` ideas, bracketed by number.
       cases unchanged
 - [ ] 1.3 Name the form where the `Pointer` is described. In
       `core/feature-workflow.md`, the bullet that opens "A card's `Pointer` is
-      a directory of this tree" gains the `pr:<N>` form. The session that
-      opened the closing pull request writes it beside its `Ссылки` link, and
-      the session that learns the pull request merged moves the card with
-      `status --to done` in that turn. The reconciliation bullet skips a
-      `pr:` pointer, as it skips a cross-repository one. `README.md`'s `work.ts status` row says that
+      a directory of this tree" gains the `pr:<N>` form, which the turn that
+      adds the closing pull request's `Ссылки` link writes too. That is the
+      session that opened the pull request, or, when the user opened it, the
+      first turn that learns it exists. The session that learns the pull
+      request merged moves the card with `status --to done` in that turn,
+      unless the card is `discarded`. The reconciliation bullet skips a `pr:`
+      pointer, as it skips a cross-repository one. `README.md`'s `work.ts status` row says that
       `done` is also proven by a pull request merged into `main`. Verify:
       `grep -n 'pr:<N>' core/feature-workflow.md README.md` finds each place,
       and `bun test` passes

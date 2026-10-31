@@ -29,8 +29,10 @@ card on 2026-10-31 (answers 1 a, 2 a, 3 a).
   the tree derives nothing for it.
 - `core/feature-workflow.md` and the README name the new form.
 
-The session that opened the closing pull request writes `pr:<N>` into the
-card's `Pointer`, with the link under `Ссылки` (card assumption 6). Since no
+The turn that adds the closing pull request's link under `Ссылки` writes
+`pr:<N>` into the card's `Pointer` too (card assumption 6). That is the
+session that opened the pull request, or, when the user opened it, the first
+turn that learns it exists, as for the link (`core/feature-workflow.md`). Since no
 reconciliation derives a `pr:` card's floor, the session that learns the pull
 request merged runs `status --to done` in that turn, under the existing
 obligation to move a card the turn its pull request merges
