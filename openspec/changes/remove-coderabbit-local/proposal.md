@@ -42,9 +42,12 @@ written when the review does not return.
   is replaced whole under a new name, *A skipped convention becomes a rule,
   a one-off does not*; no test cites it.
 - The scenario *A Major finding the bot got wrong* keeps its title, its
-  text saying «the review». Renaming it would rename *A verified finding is
+  text saying «the review». `openspec validate --strict` refuses a
+  `MODIFIED` block whose scenario titles differ from the live spec's, since
+  the old title reads as dropped, and refuses one name in both `REMOVED` and
+  `ADDED`; so renaming the scenario takes renaming *A verified finding is
   fixed without asking*, which `coderabbit-resolve-fixed-threads` cites by
-  name in `agent-autonomy`, and the citation would dangle once both archive.
+  name in `agent-autonomy`, and that citation would dangle once both archive.
 - *A skipped convention becomes a rule, a one-off does not* says that
   CodeRabbit's review on the pull request reads the docs the rulebook
   indexes, and `/code-review` reads `CLAUDE.md` and `core/rules.md` only,
