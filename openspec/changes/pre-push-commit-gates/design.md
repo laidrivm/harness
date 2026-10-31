@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md — Why. The explore of 2026-10-31 (on the card) measured, on
+See proposal.md — Why. The explore of 2026-10-31 measured, on
 the laptop and read-only: the YAML check 0.06 s and clean; the suppression
 scan fails only for want of `harness.suppressions`; `tsc --noEmit` (TS 7)
 0.4 s, 57 errors under `strict` and 198 with d2ass's
