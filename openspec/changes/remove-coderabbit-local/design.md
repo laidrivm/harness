@@ -64,8 +64,8 @@ CLI.
    card on the Harness board, *Поменять агента-ревьюера с одного coderabbit
    на ротацию нескольких* (done), listed the Dockerfile and the README step
    among step 2's edits; its remaining subject is CodeRabbit on the pull
-   request, in CI, not the CLI, and the card says so from 2026-10-31 at the
-   user's request. `host-deploy` edits other steps of
+   request, in CI, not the CLI, as the user asked that card to say on
+   2026-10-31. `host-deploy` edits other steps of
    `orchestrator/README.md` (its task 4.1 adds one after step 11), so the
    two merge without a textual clash, though whichever lands second merges
    `origin/main` first.
