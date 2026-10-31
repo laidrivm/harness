@@ -62,7 +62,14 @@ written when the review does not return.
 - `agent-autonomy`'s *A pull request gets CodeRabbit's fixes for at most
   three rounds* applies a third round's fix on the finding-disposal terms
   of *A verified finding is fixed without asking* and *Dismissing a Major or
-  above is the user's call*, not on all of the local review's terms.
+  above is the user's call*, not on all of the local review's terms. A
+  fourth round names the cap in the report's line before its gate line and
+  ends on the `coderabbit` skill's own `CODERABBIT gate: BLOCKED — N
+  findings, M undispositioned.`, whose form the skill fixes, where the
+  requirement and `core/review-toolkit.md` had the gate line name the cap
+  (the user's answer 4 б, 2026-10-31, to CodeRabbit's finding on #359). This
+  pull request carries that toolkit sentence and its `bun/review-docs.test.ts`
+  case.
 
 Out of scope: *The bot's review is worked once it has landed on the head
 commit* in `agent-autonomy`, whose «on the terms `local-review-loop` sets»
