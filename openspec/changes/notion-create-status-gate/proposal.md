@@ -22,10 +22,11 @@ The user asked for it as a card of its own on 2026-10-31 (answer 4 b on card
   as it is.
 - On `notion-create-pages` the guard refuses the call when any page in its
   `pages` carries `properties.Status` with a value other than `"idea"`,
-  naming the page's index and the way out: create the card at `idea` or with
-  no `Status`, the user moves it to `approved`, and later moves go through
-  `bun bun/work.ts status`. A missing or `null` `Status` passes, whatever the
-  parent, with no list of boards (user's answer 1 а).
+  naming the page's index and the way out: create the card at `idea`, the
+  user moves it to `approved`, and later moves go through `bun bun/work.ts
+  status`. A missing or `null` `Status` passes, whatever the parent, with no
+  list of boards (user's answer 1 а). A `pages` sent as a JSON string is
+  read as the array it holds.
 - A card an agent files on the user's word starts at `idea` too: the guard
   makes no exception for `approved` (answer 2 а).
 - The refusal is the same ledger record as today's, `status-guard` /
