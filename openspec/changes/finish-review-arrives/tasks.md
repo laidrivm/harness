@@ -40,16 +40,17 @@ file nears the 300-line cap.
       `.coderabbit.yaml`, and a gitignored untracked one, make no check-run
       call and end on `finish: ready #7`; run from a subdirectory of a
       checkout tracking it at the top, `finish` reads the check runs; the
-      `gh` call order is the PR read, the push, the draft's opening and
+      logged order of `gh` calls and the push marker (the card's question
+      read is logged apart, so its place is shown by what follows it) is
+      the PR read, the push, the draft's opening and
       re-read when `finish` opens one, the check-run reads until a
       completed run appears, the ready, then the check-run reads; an
       in-progress run alone does not end the wait; no completed run in 12
       reads says so and still marks ready; with `origin` already at `HEAD`
-      and the draft opened in this call, the reads go on until the skip
-      appears; a failed read before the ready switch counts as none and the
-      reads go on; a
-      question waiting makes no read after the question read and leaves the
-      draft; `reviewing` after ready ends on `finish: ready #7 — CodeRabbit
+      and the draft opened in this call, the reads go on until a completed
+      run appears; a failed read before the ready switch counts as none and
+      the reads go on; a question waiting leaves the draft, and the log
+      ends on the pre-ready reads, with no ready and no read after them; `reviewing` after ready ends on `finish: ready #7 — CodeRabbit
       reviewing <short>`; a failed read after the switch, then `reviewing`,
       ends on reviewing; `reviewed`, `rate limited` and another conclusion
       end on their lines from design.md; 18 reads of `skipped`, and 17 then
