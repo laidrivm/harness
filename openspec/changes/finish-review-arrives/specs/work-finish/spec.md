@@ -81,7 +81,9 @@ none.
 
 - **WHEN** `origin` already holds `HEAD` and `finish` opens the draft, so
   no CodeRabbit run is on `HEAD` yet
-- **THEN** `finish` reads until the draft's skip appears, then goes on
+- **THEN** `finish` reads, at most 12 times, until the draft's skip
+  appears, and with none says so; either way it goes on to the question
+  read and the ready switch
 
 #### Scenario: A question waits
 
@@ -139,9 +141,9 @@ When the reads end on `skipped` and one more read right before the post
 gives `skipped` too, `finish` SHALL post exactly `@coderabbitai review` as
 the identity `gh` holds, unless the pull request holds a comment whose
 trimmed body is that line, posted at or after the start of `HEAD`'s first
-CodeRabbit run; at most one per call. A failed comment or run read SHALL post nothing.
-The last line SHALL say whether it asked, had already asked, read another
-state, could not read, or failed to post.
+CodeRabbit run; at most one per call. A failed comment read, or a failed
+read right before the post, SHALL post nothing; the last line SHALL say
+which of these happened.
 
 #### Scenario: A first request
 
