@@ -14,7 +14,9 @@ no findings submits no review object. When none holds, the run SHALL end with
 a `CODERABBIT gate: OPEN` line naming that commit as not yet reviewed, after
 that one read, with no sleep and no second read. A run that finds the head
 reviewed, by any of the three, SHALL dispose of the findings of every review
-on it on the terms `local-review-loop` sets for the local review, SHALL read
+on it on the finding-disposal terms `local-review-loop` sets in *A verified
+finding is fixed without asking* and *Dismissing a Major or above is the
+user's call*, SHALL read
 the head again before applying a fix, and SHALL re-fetch once before its gate
 line to reconcile against the bot's count, without sleeping or looping. Each
 step that waits on the user SHALL carry an `(unattended: card` marker.
