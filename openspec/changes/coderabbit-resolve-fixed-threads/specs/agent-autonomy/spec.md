@@ -21,7 +21,9 @@ call*, *Minor findings are reported once, at the end* and *A justification
 survives only when it is a convention*, SHALL read
 the head again before applying a fix and before naming a `resolve` command,
 and SHALL re-fetch once before its gate line to reconcile against the bot's
-count, without sleeping or looping. A head with no review object on it SHALL
+count, without sleeping or looping; that re-fetch reads the head again, and
+a head that moved, which none of the three tests counts as reviewed, ends
+the run on the no-review `OPEN` line naming it, never on `PASS`. A head with no review object on it SHALL
 reach `PASS` only while the bot's walkthrough says no actionable comments were
 generated and names that head as its commit; otherwise the run SHALL end on
 the no-review `OPEN` line. Each
@@ -78,6 +80,13 @@ step that waits on the user SHALL carry an `(unattended: card` marker.
   while the run is disposing of the first one's findings
 - **THEN** the single re-fetch before the gate line finds the second review,
   and its findings are dispositioned before the gate line reads `PASS`
+
+#### Scenario: The head moves before the gate line
+
+- **WHEN** a run has disposed of every finding on head `A`, and its re-fetch
+  before the gate line reads head `B`, which has no review object, no
+  `Review completed` status and check runs reading anything but `reviewed`
+- **THEN** the run ends on the no-review `OPEN` line naming `B`
 
 #### Scenario: A landed review with a dismissal
 
