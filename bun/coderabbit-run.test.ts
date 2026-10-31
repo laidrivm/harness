@@ -25,46 +25,30 @@ const DONE = run("completed", "success", "Finished");
 const LIMITED = run("completed", "neutral", "Review rate limited");
 
 describe("state", () => {
-	test("an empty list, and one holding only another app's runs, give no run", () => {
-		expect(state([]).name).toBe("no run");
-		expect(state([run("completed", "success", "Build", "github-actions", "test")]).name).toBe("no run");
-	});
-
 	// spec: work-finish/a-run-another-app-posted
-	test("a run named CodeRabbit that another app posted is ignored", () => {
-		expect(state([run("completed", "success", "Finished", "impostor")]).name).toBe("no run");
-		expect(state([SKIPPED, run("completed", "success", "Finished", "impostor")]).name).toBe("skipped");
-	});
-
 	// spec: work-finish/a-skipped-run-and-a-review-in-progress
-	test("skipped plus in progress, and succeeded plus in progress, give reviewing", () => {
-		expect(state([SKIPPED, RUNNING]).name).toBe("reviewing");
-		expect(state([DONE, RUNNING]).name).toBe("reviewing");
-	});
-
 	// spec: work-finish/a-skip-and-a-rate-limit
-	test("skipped plus a neutral Review rate limited gives rate limited", () => {
-		expect(state([SKIPPED, LIMITED]).name).toBe("rate limited");
-	});
-
-	test("rate limited plus succeeded gives reviewed, in either order", () => {
-		expect(state([LIMITED, DONE]).name).toBe("reviewed");
-		expect(state([DONE, LIMITED]).name).toBe("reviewed");
+	// spec: work-finish/only-a-skip
+	// spec: work-finish/a-skip-reported-as-a-success
+	test.each<[string, Run[], string]>([
+		["an empty list", [], "no run"],
+		["only another app's runs", [run("completed", "success", "Build", "github-actions", "test")], "no run"],
+		["a run named CodeRabbit another app posted", [run("completed", "success", "Finished", "impostor")], "no run"],
+		["a skip beside another app's CodeRabbit success", [SKIPPED, run("completed", "success", "Finished", "impostor")], "skipped"],
+		["skipped plus in progress", [SKIPPED, RUNNING], "reviewing"],
+		["succeeded plus in progress", [DONE, RUNNING], "reviewing"],
+		["skipped plus a neutral Review rate limited", [SKIPPED, LIMITED], "rate limited"],
+		["rate limited, then succeeded", [LIMITED, DONE], "reviewed"],
+		["succeeded, then rate limited", [DONE, LIMITED], "reviewed"],
+		["skipped alone", [SKIPPED], "skipped"],
+		["a success titled Review skipped", [run("completed", "success", "Review skipped: draft pull request")], "skipped"],
+		["a success with no output at all", [{ ...DONE, output: null }], "reviewed"],
+	])("%s gives %p", (_, runs, name) => {
+		expect(state(runs).name).toBe(name);
 	});
 
 	test("a neutral run with another title gives that conclusion and title", () => {
 		expect(state([SKIPPED, run("completed", "neutral", "Review paused")])).toEqual({ name: "other", conclusion: "neutral", title: "Review paused" });
-	});
-
-	// spec: work-finish/only-a-skip
-	// spec: work-finish/a-skip-reported-as-a-success
-	test("skipped alone, and a success titled Review skipped, give skipped", () => {
-		expect(state([SKIPPED]).name).toBe("skipped");
-		expect(state([run("completed", "success", "Review skipped: draft pull request")]).name).toBe("skipped");
-	});
-
-	test("a success with no output at all is a review", () => {
-		expect(state([{ ...DONE, output: null }]).name).toBe("reviewed");
 	});
 });
 
@@ -108,9 +92,12 @@ describe("read", () => {
 		expect(read("HTTP 502\n", 1).result).toEqual({ name: "unread", why: "gh exited 1: HTTP 502" });
 	});
 
-	test("an output that is not JSON, and a line that is JSON but no object, are unread, saying so", () => {
-		for (const out of ["<html>\n", "null\n", `[${JSON.stringify(DONE)}]\n`])
-			expect(read(out).result).toEqual({ name: "unread", why: "gh's output is not one JSON object a line" });
+	test.each([
+		["not JSON", "<html>\n"],
+		["JSON null", "null\n"],
+		["a JSON array", `[${JSON.stringify(DONE)}]\n`],
+	])("a line that is %s is unread, saying so", (_, out) => {
+		expect(read(out).result).toEqual({ name: "unread", why: "gh's output is not one JSON object a line" });
 	});
 
 	test("a read killed at the limit is unread, saying so", () => {
@@ -125,13 +112,15 @@ describe("interval", () => {
 		else process.env.HARNESS_CODERABBIT_POLL_MS = saved;
 	});
 
-	test("unset, 0, -5 and x give 5000; 7 gives 7", () => {
-		delete process.env.HARNESS_CODERABBIT_POLL_MS;
-		const got = [interval()];
-		for (const value of ["0", "-5", "x", "7"]) {
-			process.env.HARNESS_CODERABBIT_POLL_MS = value;
-			got.push(interval());
-		}
-		expect(got).toEqual([5000, 5000, 5000, 5000, 7]);
+	test.each<[string | undefined, number]>([
+		[undefined, 5000],
+		["0", 5000],
+		["-5", 5000],
+		["x", 5000],
+		["7", 7],
+	])("HARNESS_CODERABBIT_POLL_MS %p gives %p", (value, expected) => {
+		if (value === undefined) delete process.env.HARNESS_CODERABBIT_POLL_MS;
+		else process.env.HARNESS_CODERABBIT_POLL_MS = value;
+		expect(interval()).toBe(expected);
 	});
 });

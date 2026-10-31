@@ -207,21 +207,23 @@ describe("the request for a skipped head", () => {
 	});
 
 	// spec: work-finish/already-asked-for-this-head
-	test("a request at the head's earliest run's start, and one padded with whitespace, count as asked", async () => {
-		for (const comment of [asked("2026-10-31T09:55:22Z"), asked("2026-10-31T10:30:00Z", "  @coderabbitai review\n")]) {
-			const run = await watched([[SKIPPED]], { comments: [comment] });
-			expect(run.calls.at(-1)).toBe(COMMENTS);
-			expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; a review was already asked for`]);
-		}
+	test.each([
+		["at the head's earliest run's start", asked("2026-10-31T09:55:22Z")],
+		["padded with whitespace", asked("2026-10-31T10:30:00Z", "  @coderabbitai review\n")],
+	])("a request %s counts as asked", async (_, comment) => {
+		const run = await watched([[SKIPPED]], { comments: [comment] });
+		expect(run.calls.at(-1)).toBe(COMMENTS);
+		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; a review was already asked for`]);
 	});
 
 	// spec: work-finish/an-older-request
-	test("a request a second earlier, and one asking more than the review, do not count", async () => {
-		for (const comment of [asked("2026-10-31T09:55:21Z"), asked("2026-10-31T10:30:00Z", "@coderabbitai review please")]) {
-			const run = await watched([[SKIPPED]], { comments: [comment] });
-			expect(run.calls.at(-1)).toBe(ASK);
-			expect(run.last).toEndWith("; asked for a review");
-		}
+	test.each([
+		["a second earlier", asked("2026-10-31T09:55:21Z")],
+		["asking more than the review", asked("2026-10-31T10:30:00Z", "@coderabbitai review please")],
+	])("a request %s does not count", async (_, comment) => {
+		const run = await watched([[SKIPPED]], { comments: [comment] });
+		expect(run.calls.at(-1)).toBe(ASK);
+		expect(run.last).toEndWith("; asked for a review");
 	});
 
 	test("with the head's runs out of time order, the earliest start is the one compared", async () => {
@@ -255,11 +257,13 @@ describe("the request for a skipped head", () => {
 		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; the request failed, gh exited 1`]);
 	});
 
-	test("rate limited, reviewing and unread read no comments", async () => {
-		for (const after of [[SKIPPED, LIMITED], [SKIPPED, RUNNING], 1]) {
-			const run = await watched([[SKIPPED], after]);
-			expect(run.code).toBe(0);
-			expect(run.calls.filter((call) => call === COMMENTS || call.startsWith("pr comment"))).toEqual([]);
-		}
+	test.each<[string, object[] | number]>([
+		["rate limited", [SKIPPED, LIMITED]],
+		["reviewing", [SKIPPED, RUNNING]],
+		["unread", 1],
+	])("%s reads no comments", async (_, after) => {
+		const run = await watched([[SKIPPED], after]);
+		expect(run.code).toBe(0);
+		expect(run.calls.filter((call) => call === COMMENTS || call.startsWith("pr comment"))).toEqual([]);
 	});
 });

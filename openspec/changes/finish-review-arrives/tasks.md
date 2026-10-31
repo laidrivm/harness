@@ -96,7 +96,7 @@ file nears the 300-line cap.
       `@coderabbitai review` as the exception (answer 4 b, 2026-10-31).
       Grep the same places as 1.5, and `comment as the user` and `under the
       user's name`, for wording the step makes false
-- [ ] 2.4 Live probe from the tree on this group's own pull request: open it
+- [x] 2.4 Live probe from the tree on this group's own pull request: open it
       with `bun bun/work.ts finish --card <card> --title <text> --body-file
       <path>`, and record in its body
       `finish`'s last line and, where it read `skipped`, the request it
