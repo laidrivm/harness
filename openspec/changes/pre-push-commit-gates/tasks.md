@@ -65,8 +65,9 @@ adds a dependency runs `/warm` when the runner names it.
       exits 0 (`a-tool-the-machine-does-not-have`); a stub `gitleaks` exiting
       1 fails the hook (`a-tool-the-machine-has-reporting-a-finding`) and is
       given `--log-opts=<base>..HEAD` with the base `bun/diff-base.sh`
-      prints (`a-secret-that-is-already-in-the-base-branch`), or with the
-      base passed to `gates.sh` when one is
+      prints (`a-secret-that-is-already-in-the-base-branch`), or with
+      `HARNESS_BASE` when it is set; `bun/pre-pr.ts` given `origin/main`
+      runs `harness.bumpTest` with `HARNESS_BASE=origin/main`
 - [ ] 4.4 Write `.githooks/gates.sh` per design decision 1, without the
       mutation step; the hook calls it after the draft check and keeps
       `bash bun/diff-budget.sh || true` last; set `harness.bumpTest` to
@@ -92,7 +93,8 @@ adds a dependency runs `/warm` when the runner names it.
       its incremental file, then again with no change. Record on the card
       both run times, whether the file is byte-identical after the second,
       which fields depend on the machine, whether Stryker reads the file with
-      those fields removed, whether a changed test file alone is re-run
+      those fields removed and a fingerprint key added, whether a changed
+      test file alone is re-run
       without `--force`, how the
       per-module values are passed, and whether `node -v` answers on the
       host. If the second run is not near-instant, stop here, ask on the
@@ -103,9 +105,13 @@ adds a dependency runs `/warm` when the runner names it.
       runs incrementally (`the-module-s-source-changed`); a changed
       `bun/pre-pr-steps.test.ts` forces `bun/pre-pr.ts` and
       `bun/pre-pr-steps.ts` and nothing else (`a-test-file-changed`), and a
-      changed fixture and a deleted test file force the same way; a test
-      change older than the module's last committed stored file runs
-      incrementally (`a-test-change-already-measured`); no
+      changed fixture, a deleted test and both paths of a renamed one force
+      the same way; a test state the stored fingerprint already records
+      runs incrementally (`a-test-change-already-measured`); a new module
+      with no stored file runs whole and fails until it is committed
+      (`a-new-module-has-no-stored-file`); a module with a test file and no
+      stored file fails naming it (`a-module-with-tests-and-no-stored-file`);
+      no
       change under `bun/`, and a change to `bun/diff-budget.sh` alone, run
       nothing; a base that cannot be resolved fails naming it rather than
       reading as no change; a Stryker exit that is not 0 fails before the
@@ -119,7 +125,7 @@ adds a dependency runs `/warm` when the runner names it.
       (`a-push-whose-run-rewrote-a-stored-file`); the merge sums every
       stored file's survivors
       (`unchanged-modules-counted-from-their-stored-results`). Then write
-      `bun/mutation-run.ts` with `--all` and an optional base. Verify the
+      `bun/mutation-run.ts` with `--all`, reading `HARNESS_BASE`. Verify the
       cases pass and a run on `bun/command-parse.ts` writes
       `mutation/command-parse.json`
 

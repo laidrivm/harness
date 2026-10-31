@@ -57,8 +57,9 @@ the push accepts (the explore's seam). A second command list in
 Under `.githooks/` because git runs only files named after a hook, so the
 script is inert there, and the list sits beside the hook it serves. The
 `gitleaks` range and the mutation step's changed modules both read the base
-from `bun/diff-base.sh`, as the budget does; `gates.sh` takes an optional
-base argument, which CI passes as `HEAD^1`.
+from `HARNESS_BASE` when it is set and from `bun/diff-base.sh` otherwise;
+`bun/pre-pr.ts` sets it to the base it gave the budget, and CI to `HEAD^1`,
+so an explicit base reaches the gates as it reaches the budget.
 
 ### 2. Biome as d2ass has it, reformat first
 
@@ -104,15 +105,17 @@ the per-module values — `mutate: bun/<name>.ts`, the command
 where Stryker takes them, otherwise through a configuration file written
 under `.stryker-tmp`; the probe settles which.
 
-The changed set is `git diff --name-only <base>...HEAD -- bun/`. A changed
-module runs incrementally; a changed test or fixture `bun/<t>` re-runs with
-`--force` every module whose `bun/<name>` prefixes it, because the command
-runner reports no tests and so Stryker cannot see a test change in the
-stored file (the probe confirms this, and `--force` goes if it is wrong).
-The force applies only while the test changed after the module's stored file
-was last committed (`git log -1 -- mutation/<name>.json`): measured against
-the base alone, every later push of the branch and every CI run on it would
-repeat a whole-module run whose results are already committed.
+The changed set is `git diff --name-only --no-renames <base>...HEAD --
+bun/`, so a renamed test counts at both paths. A changed module runs
+incrementally, or whole when it has no stored file; a changed test or fixture
+`bun/<t>` re-runs with `--force` every module whose `bun/<name>` prefixes it,
+because the command runner reports no tests and so Stryker cannot see a test
+change in the stored file (the probe confirms this, and `--force` goes if it
+is wrong). The force applies only while the module's test and fixture blobs
+(`git ls-files -s`) hash differently from the fingerprint its stored file
+records: a test change that leaves every result as it was still rewrites the
+fingerprint, so the next push runs incrementally — the stored file's commit
+history would prove neither that much nor which branch measured it.
 A change to a helper another module imports re-runs only the helper's own
 module: the importer's stored survivors can go stale, and `--all --force`
 by hand refreshes everything. Deriving importers was the alternative,
@@ -121,13 +124,14 @@ rejected as machinery for a rare case.
 Stryker's incremental file is a full report, carrying `projectRoot` (an
 absolute path), `system`, `performance` timings and `config`. The step
 stores each file with those fields removed, keeping what the incremental run
-reads (`files`, `testFiles`, the schema version) — so a re-run in CI, in
-another worktree or on the host writes the same bytes for the same results,
-and no author's home directory lands in the tree. The probe confirms Stryker
-reads the trimmed file.
+reads (`files`, `testFiles`, the schema version) plus the fingerprint — so a
+re-run in CI, in another worktree or on the host writes the same bytes for
+the same results, and no author's home directory lands in the tree. The probe
+confirms Stryker reads the trimmed file with the extra key.
 
 After the runs the step fails on a stored file whose module is untracked or
-has no test file, and on one differing from `HEAD`'s, then merges every `mutation/*.json` into
+has no test file, on a module with a test file and no stored file, and on a
+stored file differing from `HEAD`'s, then merges every `mutation/*.json` into
 `reports/mutation/mutation.json`, deleting the old report first as
 `mutation-floor` requires, and `bun/mutation-floor.ts` checks the total
 against `harness.mutationFloor`. Stored files rather than a cache outside
