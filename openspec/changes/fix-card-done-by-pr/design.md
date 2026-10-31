@@ -32,7 +32,7 @@ directories.
 
 - `finish` writing the `Pointer`; a list of pull requests; checking that the
   pull request is the card's own (proposal, *What Changes*).
-- The status guard on `notion-create-pages` (answer 4 б), which is a card of
+- The status guard on `notion-create-pages` (answer 4 b), which is a card of
   its own.
 - `proposed` or `applied` for a `pr:` card.
 
@@ -40,7 +40,7 @@ directories.
 
 ### The form: `pr:<N>` in `Pointer`
 
-Answer 1 а. Rejected: a `PR` number property (option B), which changes the
+Answer 1 a. Rejected: a `PR` number property (option B), which changes the
 board's schema and still holds one number; the card's `Ссылки` (option C),
 prose naming several pull requests with nothing saying which closes it — #350's
 card links #338, #326 and #350; `refs/pull/<N>/head` an ancestor of
@@ -50,7 +50,14 @@ owner, as task-board's *rich_text rather than url* already refuses.
 
 The pattern is `^pr:([1-9]\d*)$`, anchored both ends, read after the
 `<name>: ` prefix is stripped exactly as for a path. The number goes into
-the API path, so nothing but digits may reach it.
+the API path, so nothing but digits may reach it, and it goes there as the
+matched string, never through `Number()`, which rounds a number past 2^53 to
+another pull request's.
+
+Every other reader of `Pointer` keeps reading `pr:` as no change, which is
+what a fix card is: `take` says the pointer names no change of this checkout,
+and the board loop and its pause notice match only a change's path. No
+shared classifier is added for them, since none of them acts on a fix card.
 
 ### The check: merged, into `main`
 
@@ -63,13 +70,20 @@ merged into `main` closes the card as well as a branch's.
 
 ### The reader: `readPullRequest(n, repo?)` beside `readPullRequests`
 
-It returns `{ state, base }`, `state` in `Pull`'s `OPEN`/`MERGED`/`CLOSED`
-mapping and `base` the `base.ref` as read, or `undefined` for a failed read.
-The mint, the environment, `spawnSync` with `limit()` and `SIGKILL`, and the
-JSON parse lift into one private function both readers call, so the second
-read is no second copy (rule: *Write logic a second time only by lifting it*).
+It takes the number as the digits the `Pointer` held, and returns
+`{ state, base }`, `state` in `Pull`'s `OPEN`/`MERGED`/`CLOSED` mapping and
+`base` the `base.ref` as read, or `undefined` for a failed read. An answer
+that is not an object whose `number` is that number and whose `state` is
+`open` or `closed` is a failed read, so an error body that `gh` printed with
+exit 0 refuses under `unread`, never as a closed pull request. Two things
+lift into private functions both readers call, so the second read is no second
+copy (rule: *Write logic a second time only by lifting it*). One is the mint,
+the environment, `spawnSync` with `limit()` and `SIGKILL`, and the JSON parse.
+The other is the `state` mapping from `state` and `merged_at`. Only
 `readPullRequests`' own filtering stays its own. The token is minted with
-`pull_requests=read`, as for the branch read.
+`pull_requests=read`, as for the branch read. The module's opening comment,
+which describes a branch's pull requests and their callers, is rewritten to
+cover both reads.
 
 ### The order in `evidence()`
 
@@ -110,7 +124,7 @@ file of their own, `bun/work-status-pr.test.ts`, beside the tree file.
   read's failed fetch.
 - [A card created straight at a `Status` other than `idea` through
   `notion-create-pages`, which the status guard does not match] → the user
-  chose to close it now (answer 4 б), in a card of its own on the `Harness`
+  chose to close it now (answer 4 b), in a card of its own on the `Harness`
   board, `40a39875c31b81468d11f38edc885528`; this change leaves the guard as
   it is.
 - [`main` hard-coded] → the tree evidence hard-codes it already; both move

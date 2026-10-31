@@ -9,14 +9,17 @@ The cases are the proposal-stage `/zombies` ideas, bracketed by number.
 - [ ] 1.1 Failing cases in `bun/pull-requests.test.ts` for
       `readPullRequest(n, repo?)`, over the file's `gh` stub: a pull request
       merged into `main` reads `{ state: "MERGED", base: "main" }`, its query
-      `repos/o/r/pulls/350` [2]; an open draft reads `OPEN` [4]; `{}` reads
-      `CLOSED`, with the base undefined [1]; an empty `merged_at` is not merged [3];
-      `gh` exiting 1 [5], an array answer [6], no `origin` with no `gh` call [7]
-      and a failing mint with no `gh` call [8] each read `"failed"`; the minted
-      token reaches `gh` [9]. Then add the reader, lifting the mint, spawn and
-      parse that `readPullRequests` makes into one function both call (design,
-      *The reader*). Verify: `bun test bun/pull-requests.test.ts` passes,
-      and the existing `readPullRequests` cases pass unchanged
+      `repos/o/r/pulls/350` [2]; an open draft reads `OPEN` [4]; an empty
+      `merged_at` on a closed one is not merged [3]. These each read
+      `undefined`, which the file's entry prints as `"failed"`: `{}`, an error
+      body, and an answer whose `number` is not 350 [1]; `gh` exiting 1 [5]; an
+      array answer [6]; no `origin`, with no `gh` call [7]; a failing mint, with
+      no `gh` call [8]. The minted token reaches `gh` [9]. Then add the reader,
+      lifting the mint, spawn and parse, and the `state` mapping, into
+      functions both readers call, and rewrite the module's opening comment
+      to cover both reads (design, *The reader*). Verify: `bun test
+      bun/pull-requests.test.ts` passes, with the existing `readPullRequests`
+      cases unchanged
 - [ ] 1.2 Give `bun/work-status.fixture.ts`'s `Run` an optional `gh` answer
       and exit status, written as a logging stub into the run's `bin`, with
       no `gh` on `PATH` without one. Then write failing cases in a new
@@ -37,10 +40,11 @@ The cases are the proposal-stage `/zombies` ideas, bracketed by number.
       cases unchanged
 - [ ] 1.3 Name the form where the `Pointer` is described. In
       `core/feature-workflow.md`, the bullet that opens "A card's `Pointer` is
-      a directory of this tree" gains the `pr:<N>` form, which the session
-      that opened the closing pull request writes beside its `Ссылки` link,
-      and the reconciliation bullet skips a `pr:` pointer as it skips a
-      cross-repository one. `README.md`'s `work.ts status` row says that
+      a directory of this tree" gains the `pr:<N>` form. The session that
+      opened the closing pull request writes it beside its `Ссылки` link, and
+      the session that learns the pull request merged moves the card with
+      `status --to done` in that turn. The reconciliation bullet skips a
+      `pr:` pointer, as it skips a cross-repository one. `README.md`'s `work.ts status` row says that
       `done` is also proven by a pull request merged into `main`. Verify:
       `grep -n 'pr:<N>' core/feature-workflow.md README.md` finds each place,
       and `bun test` passes
