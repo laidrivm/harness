@@ -233,8 +233,14 @@ describe("one pull request by its number", () => {
 		["gh exiting 1", { answer: one(), code: 1 }, "[5]"],
 		["an array", { answer: `[${one()}]` }, "[6]"],
 		["output that is not JSON", { answer: "not json" }, "[6]"],
+		["a JSON null", { answer: "null" }, "[6]"],
 	])("%s fails %s", (_, c) => {
 		expect(read({ number: "350", ...c }).result).toBe("failed");
+	});
+
+	test("a number past 2^53 reaches the query as its digits, and the answer parsing rounds fails", () => {
+		const { result, calls } = read({ number: "9007199254740993", answer: one({ number: 9007199254740993 }) });
+		expect([result, calls]).toEqual(["failed", ["api repos/o/r/pulls/9007199254740993"]]);
 	});
 
 	// spec: work-status/github-does-not-answer
