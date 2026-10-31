@@ -9,7 +9,10 @@ The `coderabbit` skill SHALL write nothing to GitHub. A run SHALL name, as one
 thread of the bot's whose every finding — the first comment's and each
 reply's carrying its own severity line — it fixed or found already fixed. The
 session SHALL run it once each fix is on the pull request's head: after its
-own `finish` pushed the run's fixes, or at once when the run applied none. No
+own `finish` pushed the run's fixes, or at once when the run applied none —
+and only while the pull request's head, read right before, is the commit the
+run verified against or the one that push made; on any other head it SHALL
+run `/coderabbit` again instead. No
 agent SHALL resolve the thread of a skipped or rejected finding, nor post
 `@coderabbitai resolve` or `@coderabbitai approve`.
 
@@ -46,6 +49,12 @@ agent SHALL resolve the thread of a skipped or rejected finding, nor post
   as already fixed on the head
 - **THEN** the session runs the named `resolve` at once, with no `finish`
   before it
+
+#### Scenario: The head moved before the resolve
+
+- **WHEN** the run found a finding already fixed on commit `A`, and the
+  pull request's head reads `B` when the session is about to run `resolve`
+- **THEN** it runs no `resolve` and runs `/coderabbit` again over `B`
 
 #### Scenario: A fix outside the diff
 

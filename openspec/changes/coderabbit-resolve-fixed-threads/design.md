@@ -73,8 +73,13 @@ branch's pull requests through `bun/pull-requests.ts`, and refuses unless
 two. It then reads every review thread with one query, `gh api graphql
 --paginate --slurp` (gh 2.97 here; without `--slurp` each page prints as its
 own JSON object and one `JSON.parse` fails past 100 threads) — the skill's
-fourth call plus each thread's `id` and its first comment's `author.login`,
-`comments(first:1)` — and places each id as the first comment of one thread.
+fourth call plus each thread's `id` and its first comment's `author.login`
+and `fullDatabaseId`, `comments(first:1)` — and places each id as the first
+comment of one thread, comparing the id as the decimal string
+`fullDatabaseId` carries. `databaseId` is GraphQL's 32-bit `Int`, which
+GitHub documents as not holding 64-bit ids; #358's comment ids already pass
+2³¹ (`4433138725`, read through both fields on 31.10). The skill's own
+fourth call moves to `fullDatabaseId` too (tasks.md 2.2).
 Any id it cannot place, or that opens a thread whose author login is not
 exactly `coderabbitai`, refuses the whole call before the first mutation. A
 prefix test would pass `coderabbitai-x`, a login anyone can register
@@ -147,8 +152,14 @@ before its status or check run is then always in the read that follows them.
 That it does post first is read, not assumed: on #347's three reviewed heads
 and #353's one (31.10), each review's `submitted_at` comes 2–8 seconds before
 the check run's `completed_at` (`01:14:16`/`01:14:23`, `09:11:37`/`09:11:43`,
-`10:13:40`/`10:13:48`, `23:03:29`/`23:03:31`). Four samples are no contract;
-the single re-fetch before the gate line covers a review that lands later.
+`10:13:40`/`10:13:48`, `23:03:29`/`23:03:31`). Four samples are no contract,
+so a head counted by its check runs or status alone, with no review object
+on it, reaches `PASS` only on a signal that says there are no findings: the
+bot's walkthrough reading «No actionable comments were generated» while its
+`Commit` names the head, the signal `session-wrapup` already reads (on #355,
+31.10: «No actionable comments were generated in the recent review.» beside
+`Commit**: [afccbcd]`). Without
+it the run ends on the no-review `OPEN` line, and the next run reads again.
 The status is kept beside the check run: it is how the bot reported until
 27.10, and a draft's `Review skipped: draft pull request` is read there.
 

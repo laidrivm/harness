@@ -33,7 +33,8 @@ each page of the threads query, each mutation — and logs every call.
       ids opening the user's thread refuses the whole call with no mutation;
       `coderabbitai-x` and a `null` author each refuse; a failed thread read
       refuses; an id opening the 101st thread, served as the second page of
-      a `--paginate --slurp` read, is placed. Then the read
+      a `--paginate --slurp` read, is placed; `4433138725`, past 2³¹, is
+      placed by its `fullDatabaseId` string. Then the read
 - [ ] 1.5 Failing cases for the resolves: one id, unresolved, makes one
       `resolveReviewThread` call with its thread's id, prints `resolve: <id>
       resolved` and exits 0; a resolved and an unresolved one make one call,
@@ -68,9 +69,13 @@ each page of the threads query, each mutation — and logs every call.
       `success`/`Review completed`, or runs of CodeRabbit's app with none in
       progress and one concluded `success` titled anything not opening
       `Review skipped` — never the summary's text; the head counted without
-      a review object is disposed of and re-fetched like any review
+      a review object is disposed of and re-fetched like any review, and
+      ends `PASS` only while the walkthrough reads «No actionable comments
+      were generated» naming the head as its `Commit`, else the no-review
+      `OPEN` line; a head that moved before a fix re-reads all three signals
 - [ ] 2.2 Step 1's filters: a comment counts only when its `user.login` is
-      exactly `coderabbitai[bot]`; a resolved thread is dropped as `already
+      exactly `coderabbitai[bot]`; the fourth call reads `fullDatabaseId`
+      for `databaseId`; a resolved thread is dropped as `already
       resolved`; an outdated thread that is not resolved is verified like
       any finding. Step 2: read each finding's severity word, the two markups
       (`**<picture>…</picture> Major**`, `_🟠 Major_`) as examples, not a
@@ -81,7 +86,9 @@ each page of the threads query, each mutation — and logs every call.
       each unresolved thread of the bot's whose every finding, its replies'
       included, it fixed or found fixed — never a reply's id, never a thread
       holding a skipped or rejected one; run after the session's own
-      `finish` pushed, or at once when the run applied no fix; a session
+      `finish` pushed, or at once when the run applied no fix, and only
+      while the head read right before is the verified or the pushed
+      commit, else `/coderabbit` again; a session
       whose launcher pushes names it in its final message and runs nothing. The *Never post to the PR* rule's "no resolves" points at that
       command, `@coderabbitai resolve`/`approve` still named as forbidden.
       Grep the skill for "resolve" afterwards and read each hit

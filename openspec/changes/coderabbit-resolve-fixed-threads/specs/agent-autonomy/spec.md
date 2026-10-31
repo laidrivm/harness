@@ -19,8 +19,12 @@ on it on the finding-disposal terms `local-review-loop` sets in *A verified
 finding is fixed without asking*, *Dismissing a Major or above is the user's
 call*, *Minor findings are reported once, at the end* and *A justification
 survives only when it is a convention*, SHALL read
-the head again before applying a fix, and SHALL re-fetch once before its gate
-line to reconcile against the bot's count, without sleeping or looping. Each
+the head again before applying a fix and before naming a `resolve` command,
+and SHALL re-fetch once before its gate line to reconcile against the bot's
+count, without sleeping or looping. A head with no review object on it SHALL
+reach `PASS` only while the bot's walkthrough says no actionable comments were
+generated and names that head as its commit; otherwise the run SHALL end on
+the no-review `OPEN` line. Each
 step that waits on the user SHALL carry an `(unattended: card` marker.
 
 #### Scenario: The head commit has no review yet
@@ -39,8 +43,16 @@ step that waits on the user SHALL carry an `(unattended: card` marker.
   and its check runs are CodeRabbit's skip, `skipped` titled `Review
   skipped`, and a later run that succeeded titled `Finished`
 - **THEN** the run counts the head as reviewed, reads every review body and
-  comment for findings on it, re-fetches once before its gate line, and does
-  not end on the no-review `OPEN` line
+  comment for findings on it, re-fetches once before its gate line, and ends
+  on `PASS` when the walkthrough says no actionable comments were generated
+  and names the head as its commit
+
+#### Scenario: Counted by its check runs, the walkthrough not yet updated
+
+- **WHEN** the head has no review object, its check runs read `reviewed`,
+  and the bot's walkthrough still names an earlier commit
+- **THEN** the run ends on the no-review `OPEN` line naming the head, never
+  on `PASS`
 
 #### Scenario: A review posted between the reads
 
@@ -54,10 +66,11 @@ step that waits on the user SHALL carry an `(unattended: card` marker.
 - **WHEN** a run that counted the head as reviewed, by a review object or by
   its check runs alone, is about to apply a fix, and the head has moved since
   step 1
-- **THEN** it reads the head's reviews again and verifies each finding
-  against the new head before applying it — a read apart from the single
-  re-fetch before the gate line — and ends on the no-review `OPEN` line if
-  the bot has not reviewed the new head
+- **THEN** it reads the new head's check runs, commit status and reviews
+  again, in step 1's order, and verifies each finding against the new head
+  before applying it — a read apart from the single re-fetch before the gate
+  line — and ends on the no-review `OPEN` line if none of step 1's three
+  tests counts the new head as reviewed
 
 #### Scenario: A review lands while the run disposes of the first
 
