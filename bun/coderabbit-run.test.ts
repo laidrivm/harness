@@ -75,20 +75,29 @@ function read(out: string, code = 0, hang = false) {
 	writeFileSync(join(bin, "answer"), out);
 	// Builtins alone: `PATH` holds nothing else, so a hang spins rather than sleeps.
 	const spin = hang ? "while :; do :; done\n" : "";
-	writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\n${spin}while IFS= read -r l; do printf '%s\\n' "$l"; done < '${bin}/answer'\nexit ${code}\n`);
+	const colour = `printf '%s %s %s\\n' "\${CLICOLOR_FORCE-unset}" "\${GH_FORCE_TTY-unset}" "\${NO_COLOR-unset}" > '${bin}/colour'\n`;
+	writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\n${colour}${spin}while IFS= read -r l; do printf '%s\\n' "$l"; done < '${bin}/answer'\nexit ${code}\n`);
 	chmodSync(join(bin, "gh"), 0o755);
 	const entry = join(bin, "entry.ts");
 	writeFileSync(entry, `import { read } from ${JSON.stringify(join(import.meta.dir, "coderabbit-run.ts"))};\nconsole.log(JSON.stringify(read("o/demo", "abc")));\n`);
-	const p = Bun.spawnSync([process.execPath, entry], { env: { PATH: bin, HARNESS_GH_TIMEOUT_MS: "300" }, timeout: 10_000 });
-	return { result: JSON.parse(p.stdout.toString() || '"crashed"'), calls: readFileSync(log, "utf8").split("\n").filter(Boolean) };
+	// The session's own settings that make `gh` colour and pretty-print `--jq`'s output.
+	const env = { PATH: bin, HARNESS_GH_TIMEOUT_MS: "300", CLICOLOR_FORCE: "1", GH_FORCE_TTY: "1" };
+	const p = Bun.spawnSync([process.execPath, entry], { env, timeout: 10_000 });
+	const lines = (file: string) => readFileSync(join(bin, file), "utf8").split("\n").filter(Boolean);
+	return { result: JSON.parse(p.stdout.toString() || '"crashed"'), calls: lines("calls"), colour: lines("colour")[0] };
 }
 
 describe("read", () => {
-	test("calls the check-runs list of every page, one run a line, and a run on the second page counts", () => {
+	// `--paginate` with `--jq` prints each page's runs as lines of their own, so a second page's run is a later line.
+	test("calls the check-runs list with --paginate, and a run on a later line, as a second page's is, counts", () => {
 		const { result, calls } = read(`${JSON.stringify(SKIPPED)}\n${JSON.stringify(DONE)}\n`);
 		expect(calls).toEqual(["api repos/o/demo/commits/abc/check-runs?filter=all&per_page=100 --paginate --jq .check_runs[]"]);
 		expect(result).toEqual([SKIPPED, DONE]);
 		expect(state(result).name).toBe("reviewed");
+	});
+
+	test("gh runs with colour off and no forced terminal, whatever the session sets", () => {
+		expect(read("").colour).toBe("0 unset 1");
 	});
 
 	test("no runs at all is an empty list", () => {

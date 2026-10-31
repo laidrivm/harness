@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { cleanup, git } from "./diff-budget.fixture.ts";
 import { head } from "./goal-check.fixture.ts";
 import { BRANCH, CARD, checkout, finish, type Gh, pull } from "./work-finish.fixture.ts";
-import { question, stopServers } from "./work-take.fixture.ts";
+import { home, question, stopServers } from "./work-take.fixture.ts";
 
 afterAll(() => {
 	stopServers();
@@ -107,6 +107,19 @@ describe("the wait before the ready switch", () => {
 		const create = `pr create --draft -R o/demo --base main --head ${BRANCH} --title Demo --body-file body.md`;
 		expect(run.calls).toEqual([READ, create, READ, ...times(4, runs(cwd)), READY, runs(cwd)]);
 		expect(run.last).toBe(`finish: ready #7 — CodeRabbit reviewing ${short(cwd)}`);
+	});
+
+	test("every read before the switch failing says the last one's reason, and still marks ready", async () => {
+		const run = await watched([...times(12, "").map(() => 1), [SKIPPED, RUNNING]]);
+		expect(run.out).toContain(`finish: no completed CodeRabbit run on ${short(run.cwd)} after 12 reads; the last read failed: gh exited 1\n`);
+		expect(run.last).toBe(`finish: ready #7 — CodeRabbit reviewing ${short(run.cwd)}`);
+	});
+
+	test("missing ask settings end the call before any wait", async () => {
+		const cwd = checkout(true);
+		const run = await finish({ cwd, gh: { before: DRAFT, runs: [[SKIPPED]] }, config: home(false) });
+		expect(run.calls).toEqual([READ, "push"]);
+		expect(run.code).toBe(1);
 	});
 
 	test("a failed read before the ready switch counts as none and the reads go on", async () => {

@@ -24,7 +24,8 @@ export type State =
 /**
  * What counts as CodeRabbit's review of a commit: a run that ended in
  * `conclusion` with a title not opening `skippedTitle`, since a skip is also
- * reported as a success. The `coderabbit` skill's step 1 reads the same rule.
+ * reported as a success. Exported for the `coderabbit` skill's step 1, which
+ * reads the commit status today and is to read this rule (#358).
  */
 export const REVIEWED = { conclusion: "success", skippedTitle: "Review skipped" } as const;
 
@@ -45,8 +46,18 @@ export function state(runs: Run[]): State {
 	return mine.length ? { name: "skipped" } : { name: "no run" };
 }
 
-/** How a `gh` call that failed ended: a call killed at the limit has no exit code. */
-export const exited = (run: { exitCode: number | null }) => (run.exitCode === null ? "gh was killed at its limit" : `gh exited ${run.exitCode}`);
+/** How a `gh` call that failed ended. */
+export function exited(run: { exitCode: number | null; exitedDueToTimeout?: boolean; signalCode?: string | null }) {
+	if (run.exitedDueToTimeout) return "gh was killed at its limit";
+	return run.exitCode === null ? `gh was killed by ${run.signalCode ?? "a signal"}` : `gh exited ${run.exitCode}`;
+}
+
+/** The environment a `gh` call runs in: never coloured or pretty-printed, which would split `--jq`'s one object a line. */
+export function plain() {
+	const env: Record<string, string | undefined> = { ...process.env, NO_COLOR: "1", CLICOLOR_FORCE: "0" };
+	delete env.GH_FORCE_TTY;
+	return env;
+}
 
 /**
  * `gh api <query> --paginate --jq <jq>` as the objects it prints, one a line
@@ -56,7 +67,7 @@ export const exited = (run: { exitCode: number | null }) => (run.exitCode === nu
 export function objects(query: string, jq: string): Record<string, unknown>[] | { name: "unread"; why: string } {
 	let run: ReturnType<typeof Bun.spawnSync>;
 	try {
-		run = Bun.spawnSync(["gh", "api", query, "--paginate", "--jq", jq], { timeout: limit(), killSignal: "SIGKILL" });
+		run = Bun.spawnSync(["gh", "api", query, "--paginate", "--jq", jq], { env: plain(), timeout: limit(), killSignal: "SIGKILL" });
 	} catch (error) {
 		return { name: "unread", why: `gh could not start: ${(error as Error).message}` };
 	}
