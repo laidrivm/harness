@@ -74,7 +74,9 @@ work-status/<slug>`. The event goes on the guard's stdin as
       with a lower-case `status` key at `idea` (harmless either way), read
       back: `idea` where the control read no status means the connector maps
       the key (design, *Risks*); and one call with `pages` as a JSON string
-      at `idea`, read back, showing whether the connector parses it. A
-      mapped key, or a parsed string `properties` on update, becomes a card
-      on the `Harness` board. Record each on this change's card and in that
+      at `idea`, read back, showing whether the connector parses it. Either
+      answer that opens a gap — a mapped lower-case key, or a parsed string
+      parameter, which would also let `notion-update-page`'s string
+      `properties` through — is filed as a follow-up card on the `Harness`
+      board; the probe makes no `notion-update-page` call. Record each on this change's card and in that
       pull request; the probe cards stay as created for the user to discard
