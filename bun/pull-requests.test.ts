@@ -5,9 +5,10 @@ import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { type Pull, readyOne } from "./pull-requests.ts";
 
 /**
- * `readPullRequests` spawned in a fabricated repository, with a `gh` stub on
- * `PATH` that logs its arguments and answers what the case sets. Bracketed
- * numbers are the proposal-stage `/zombies` ideas of `cloud-sessions`.
+ * `readPullRequests` and `readPullRequest` spawned in a fabricated
+ * repository, with a `gh` stub on `PATH` that logs its arguments and answers
+ * what the case sets. Bracketed numbers are the proposal-stage `/zombies`
+ * ideas of `cloud-sessions`, and of `fix-card-done-by-pr` in its describe.
  */
 
 afterAll(cleanup);
@@ -24,6 +25,8 @@ type Case = {
 	mint?: [string, number];
 	/** The repository handed to the read; the child then has no `git` on `PATH`. */
 	repo?: { owner: string; repo: string };
+	/** The pull request's number as the `Pointer` holds it: the read is then `readPullRequest`'s. */
+	number?: string;
 };
 
 /** The read's result, `"failed"` for undefined, and the stub's calls; `tokens` is the `GH_TOKEN` each `gh` call saw. */
@@ -44,10 +47,11 @@ function read(c: Case = {}) {
 	const mint = c.mint && join(bin, "mint");
 	if (mint && c.mint) writeFileSync(mint, `#!/bin/sh\nprintf 'mint %s\\n' "$*" >> '${log}'\nprintf '%s' '${c.mint[0]}'\nexit ${c.mint[1]}\n`, { mode: 0o755 });
 	const entry = join(bin, "entry.ts");
-	writeFileSync(entry, `import { readPullRequests } from ${JSON.stringify(module)};\nconsole.log(JSON.stringify(readPullRequests(process.argv[2], JSON.parse(process.argv[3]) ?? undefined) ?? "failed"));\n`);
+	const reader = c.number === undefined ? "readPullRequests" : "readPullRequest";
+	writeFileSync(entry, `import { ${reader} } from ${JSON.stringify(module)};\nconsole.log(JSON.stringify(${reader}(process.argv[2], JSON.parse(process.argv[3]) ?? undefined) ?? "failed"));\n`);
 	// HOME and no system config: the user's own `insteadOf` rewrites stay out.
 	const env = { PATH: bin, HOME: emptyDir("pull-requests-home-"), GIT_CONFIG_NOSYSTEM: "1", ...(mint ? { HARNESS_GITHUB_APP_MINT: `${mint} -n` } : {}) };
-	const p = Bun.spawnSync([process.execPath, entry, c.branch ?? "feat/x", JSON.stringify(c.repo ?? null)], { cwd: dir, env });
+	const p = Bun.spawnSync([process.execPath, entry, c.number ?? c.branch ?? "feat/x", JSON.stringify(c.repo ?? null)], { cwd: dir, env });
 	const lines = (file: string) => {
 		try {
 			return readFileSync(file, "utf8").split("\n").filter(Boolean);
@@ -191,6 +195,70 @@ describe("a repository handed to the read", () => {
 	test("reads that repository and spawns no git, with none on PATH and no origin", () => {
 		const { result, calls } = read({ origin: null, repo: { owner: "x", repo: "y" } });
 		expect([result, calls]).toEqual([[], ["api repos/x/y/pulls?head=x:feat%2Fx&state=all&per_page=100"]]);
+	});
+});
+
+describe("one pull request by its number", () => {
+	/** Pull request 350 as the REST endpoint answers it, merged into `main` unless `fields` say otherwise. */
+	const one = (fields: object = {}) => JSON.stringify({ number: 350, state: "closed", merged_at: "2026-10-31T00:00:00Z", draft: false, base: { ref: "main" }, ...fields });
+	const ONE = "api repos/o/r/pulls/350";
+
+	// spec: work-status/a-pull-request-merged-into-main
+	test("one merged into main reads MERGED and its base, after one call [2]", () => {
+		expect(read({ number: "350", answer: one() })).toEqual({ result: { state: "MERGED", base: "main" }, calls: [ONE], tokens: [] });
+	});
+
+	// spec: work-status/a-pull-request-still-open
+	test("an open draft reads OPEN [4]", () => {
+		expect(read({ number: "350", answer: one({ state: "open", merged_at: null, draft: true }) }).result).toEqual({ state: "OPEN", base: "main" });
+	});
+
+	// spec: work-status/a-pull-request-closed-without-merging
+	test("a closed one with an empty merged_at is not merged [3]", () => {
+		expect(read({ number: "350", answer: one({ merged_at: "" }) }).result).toEqual({ state: "CLOSED", base: "main" });
+	});
+
+	// spec: work-status/a-pull-request-merged-into-another-branch
+	test("the base is the one read", () => {
+		expect(read({ number: "350", answer: one({ base: { ref: "release" } }) }).result).toEqual({ state: "MERGED", base: "release" });
+	});
+
+	// spec: work-status/github-does-not-answer
+	test.each([
+		["an empty object", { answer: "{}" }, "[1]"],
+		["an error body with exit 0", { answer: '{"message":"Not Found","status":"404"}' }, "[1]"],
+		["another pull request's number", { answer: one({ number: 351 }) }, "[1]"],
+		["the number as a string", { answer: one({ number: "350" }) }, "[1]"],
+		["a state neither open nor closed", { answer: one({ state: "merged" }) }, "[1]"],
+		["gh exiting 1", { answer: one(), code: 1 }, "[5]"],
+		["an array", { answer: `[${one()}]` }, "[6]"],
+		["output that is not JSON", { answer: "not json" }, "[6]"],
+	])("%s fails %s", (_, c) => {
+		expect(read({ number: "350", ...c }).result).toBe("failed");
+	});
+
+	// spec: work-status/github-does-not-answer
+	test("no origin fails with no gh call [7]", () => {
+		expect(read({ number: "350", origin: null, answer: one() })).toEqual({ result: "failed", calls: [], tokens: [] });
+	});
+
+	test.each(["035", "0", "35/x", ""])("the number %p, which the Pointer's pattern refuses, fails with no gh call", (number) => {
+		expect(read({ number, answer: one() })).toEqual({ result: "failed", calls: [], tokens: [] });
+	});
+
+	// spec: orchestrator/a-private-repository-s-pull-requests
+	test("a mint that fails fails the read, with no gh call [8]", () => {
+		expect(read({ number: "350", answer: one(), mint: ["", 1] })).toEqual({ result: "failed", calls: ["mint -n o/r pull_requests=read"], tokens: [] });
+	});
+
+	// spec: orchestrator/a-private-repository-s-pull-requests
+	test("the minted pull_requests=read token reaches gh [9]", () => {
+		const run = read({ number: "350", answer: one(), mint: ["ghs_read", 0] });
+		expect(run).toEqual({ result: { state: "MERGED", base: "main" }, calls: ["mint -n o/r pull_requests=read", ONE], tokens: ["ghs_read"] });
+	});
+
+	test("a repository handed to the read is read, with no git spawned", () => {
+		expect(read({ number: "350", origin: null, repo: { owner: "x", repo: "y" }, answer: one() }).calls).toEqual(["api repos/x/y/pulls/350"]);
 	});
 });
 
