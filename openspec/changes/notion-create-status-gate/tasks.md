@@ -16,18 +16,24 @@ work-status/<slug>`. The event goes on the guard's stdin as
       `mcp-status`; two pages, `idea` then `exploring`, refuse naming
       `pages[1]` (`// spec: work-status/a-card-created-past-idea`); two pages
       both past `idea` refuse naming `pages[0]`; `"Idea"`, `" idea"`, `""`
-      and `{ select: { name: "approved" } }` each refuse. Passing with
-      no output and no record (`// spec:
+      and `{ select: { name: "approved" } }` each refuse; the reason names
+      `idea` and not "no Status"; `mcp__notion__notion-create-pages` at
+      `approved` refuses (another server name); `pages` sent as the JSON
+      string of a one-page array at `approved` refuses, and so does an
+      entry whose `properties` is the JSON string `{"Status":"approved"}`.
+      Passing with no output and no record (`// spec:
       work-status/a-card-created-at-idea-or-with-no-status`): `idea`, `null`,
-      no `Status`, no `properties`, a `page_id` parent with only `title`, a
-      server name other than `claude_ai_Notion`, an empty `pages`; and
-      failing open: `pages` as a string or an object, an entry that is
-      `null` or a string, a `properties` that is a string, no `tool_input`.
+      no `Status`, no `properties`, a `page_id` parent with only `title`,
+      `mcp__notion__notion-create-pages` at `idea`, an empty `pages`; and
+      failing open: `pages` as a string that does not parse or as an
+      object, an entry that is `null` or a string, a `properties` that is a
+      number, no `tool_input`.
       A create event whose top-level `properties` holds `Status` and whose
       `pages` hold none passes, and so does an event with `pages` at
       `approved` and no `tool_name`, read as an update with no
       `properties`. Today's update cases stay green unchanged, the update
-      `Status: null` refusal among them. Then add the create branch to
+      `Status: null` refusal and the passing string `properties` among
+      them. Then add the create branch to
       `bun/status-guard.ts`, keyed on `tool_name` ending in
       `__notion-create-pages`, and its header comment naming both tools;
       verify with `bun test bun/status-guard.test.ts`
@@ -40,16 +46,21 @@ work-status/<slug>`. The event goes on the guard's stdin as
       `notion-create-pages-x`, `notion-duplicate-page` and
       `claude_ai_Notion__notion-create-pages` do not; `NOTION_MATCHER` still
       equals `^mcp__.+__notion-update-page$`. Then change the group's
-      matcher in `.claude/settings.json`; verify with `bun test
+      matcher in `.claude/settings.json`, and the `STATUS_GUARD` comment and
+      its test title, which name the update-page matcher; verify with `bun test
       bun/self-pin.test.ts bun/settings-notion.test.ts` and the settings
       check case in the same file
 - [ ] 1.3 Prose: in `core/feature-workflow.md`, *the connector's `Status`
       write is refused there* names creating a card at any `Status` but
-      `idea` too. Grep `core/`, `README.md`, `openspec/specs/` and the
-      active changes for `notion-update-page` and "Status write" sites this
-      change makes false — `fix-card-done-by-pr`'s risk line naming this
-      card stays true until this merges — and fix each; `bun test` green,
-      `wc -l` every touched file under 300
+      `idea` too; beside *an unattended session takes no work from `idea`*,
+      a clause that a card a session files for its own task is created at
+      `idea` and moved with `bun bun/work.ts status` in the same turn
+      (design, *A session's own card*). Grep `core/`, `README.md`,
+      `openspec/specs/` and the active changes for `notion-update-page`,
+      "Status write" and "create its card" sites this change makes false —
+      `fix-card-done-by-pr`'s risk line naming this card stays true until
+      this merges — and fix each; `bun test` green, `wc -l` every touched
+      `.ts` file under 300
 
 ## 2. The probe after the pin bump
 
@@ -58,9 +69,12 @@ work-status/<slug>`. The event goes on the guard's stdin as
       page at `Status` `approved` refused by the hook with the reason above
       and a `status-guard` / `block` / `mcp-status` ledger line; the same
       call at `idea` passing, the created card then moved to `discarded` by
-      the user or left at `idea` for them; and one call with a lower-case
-      `status` key at `idea` (harmless either way), the card read back: a
-      `Status` of `idea` means the connector maps the key (design, *Risks*),
-      which becomes a card on the `Harness` board. Record each on this
-      change's card and in that pull request; both probe cards stay at `idea`
-      for the user to discard
+      the user or left at `idea` for them; a control call with no `Status`
+      key, read back, showing what the board fills in by itself; one call
+      with a lower-case `status` key at `idea` (harmless either way), read
+      back: `idea` where the control read no status means the connector maps
+      the key (design, *Risks*); and one call with `pages` as a JSON string
+      at `idea`, read back, showing whether the connector parses it. A
+      mapped key, or a parsed string `properties` on update, becomes a card
+      on the `Harness` board. Record each on this change's card and in that
+      pull request; the probe cards stay as created for the user to discard

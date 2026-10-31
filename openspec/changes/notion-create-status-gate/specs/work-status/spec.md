@@ -6,10 +6,10 @@ In the harness's own sessions a `PreToolUse` hook on the connector's
 `notion-update-page` and `notion-create-pages`, under any server name, SHALL
 refuse a `notion-update-page` call whose `properties` carry `Status`,
 whatever its command, and a `notion-create-pages` call in which any page's
-`properties` carry `Status` with a value other than `"idea"`, whatever its
-parent, naming `bun bun/work.ts status`, and record it. A page with no
-`Status` or a `null` one SHALL pass. Every other call, and an event it cannot
-read, SHALL pass. It SHALL be registered in the harness's
+`properties` carry `Status` with a value other than `"idea"` or `null`,
+whatever its parent, naming `idea` and `bun bun/work.ts status`, and record
+it. On `notion-create-pages` a page with no `Status` or a `null` one SHALL
+pass. Every other call, and an event it cannot read, SHALL pass. It SHALL be registered in the harness's
 `.claude/settings.json` alone.
 
 #### Scenario: A status set through the connector

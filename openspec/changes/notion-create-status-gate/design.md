@@ -67,21 +67,42 @@ rather than on which key is present reads the structure the tool parses
 (`core/rules.md`, *Read a value a tool consumes …*): a stray top-level
 `properties` on a create call is nothing the connector writes.
 
-On a create call, when `pages` is an array, the guard walks it and refuses
-on the first entry that is an object whose `properties` is an object with its
-own key `Status` holding anything but the string `"idea"` or `null` — so
-`"approved"`, `"Idea"`, `""` and `{ select: … }` all refuse. A `pages` that is
-no array, an entry that is no object and a `properties` that is no object
-pass: the guard fails open on what it cannot read, as today's does.
+On a create call the guard reads `pages`, and each entry's `properties`,
+through `JSON.parse` first when it is a string — a client may send a nested
+parameter as a JSON string and a server may coerce it, and a string the guard
+passed unread would be the bypass this change closes. When `pages` is then an
+array, the guard walks it and refuses on the first entry that is an object
+whose `properties` is an object with its own key `Status` holding anything
+but the string `"idea"` or `null` — so `"approved"`, `"Idea"`, `" idea"`,
+`""` and `{ select: … }` all refuse. A string that does not parse, a `pages`
+that is no array, an entry that is no object and a `properties` that is no
+object pass: the guard fails open on what it cannot read, as today's does.
+Update calls keep today's reading, a string `properties` passing (*Risks*
+below).
 `null` passes on create, where today's update refuses it, since a page
 created with no status is what `idea`'s alternative means here, while an
 update to `null` is still a status move.
 
 The reason, on stderr: ``status-guard: pages[<i>] is created at Status
-<value as JSON>; create a card at `idea` or with no Status — only the user
-moves it to `approved`, and later moves go through `bun bun/work.ts status
---card <id> --to <status>`.`` — the index counted from 0, as `pages` is
-written in the call.
+<value as JSON>; create a card at `idea` — only the user moves it to
+`approved`, and later moves go through `bun bun/work.ts status --card <id>
+--to <status>`.`` — the index counted from 0, as `pages` is written in the
+call. It names `idea` alone, not "or with no Status": `bun/work-status.ts`
+refuses to move a card whose `Status` reads no status, so a card created
+without one waits for the user.
+
+### A session's own card
+
+`core/rules.md`'s *find or create its card on the board … and move it to
+that stage's status* now reads as two steps for a card a session creates for
+its own task: create it at `idea`, then `bun bun/work.ts status --card <id>
+--to <stage>` in the same turn, which the command allows from `idea` within
+the WIP limit (`notion-status-gate`, *The WIP count*). This widens nothing:
+before this change such a session created the card straight at the stage.
+`core/feature-workflow.md`'s *an unattended session takes no work from
+`idea`* is about choosing a card someone else filed, not about the one the
+session files for the work it was given; 1.3 says so where that sentence
+stands.
 
 ### The same ledger rule
 
@@ -107,6 +128,12 @@ the ledger for the split.
 - [`notion-duplicate-page` copies a card with its status;
   `notion-move-pages` can bring a page into a board] → open until a failure
   shows them (clarification 11).
+- [A card created with no `Status`] → passes, by decision 1, and cannot be
+  moved by `bun/work.ts status` until the user sets one; the reason names
+  `idea` alone so a session does not choose it.
+- [A string `properties` on `notion-update-page`] → passes as today; whether
+  the connector parses a string parameter is unverified, and 2.1 probes it
+  on a create with `idea`, which is harmless either way.
 - [A non-board database with a `Status` property is gated in harness
   sessions too] → none is used there today (decision 1 accepts it).
 - [A batch flow that filed a card straight at `approved` from the user's
