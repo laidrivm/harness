@@ -69,13 +69,14 @@ None. The check-run reading is `work-finish`'s until card
 - New: `bun/coderabbit-run.ts` and its test, `bun/work-finish-review.test.ts`.
 - Changed: `bun/work-finish.ts`, `bun/work-finish.fixture.ts` (the `gh`
   stub answers the check-run and comment reads and logs the comment),
-  `core/review-toolkit.md`, `core/git-and-prs.md`, `core/rules.md`,
+  `bun/pull-requests.ts` (one parse of a positive whole-number setting, for
+  `limit()` and the poll interval), `core/review-toolkit.md`, `core/git-and-prs.md`, `core/rules.md`,
   `README.md`.
 - Every `finish` in a repository that tracks `.coderabbit.yaml` takes longer:
   about 7 s before the ready switch and 25–35 s after it when the review
   starts, up to 60 s and 90 s when it does not.
-- `finish` posts under the user's GitHub account, on exactly the terms
-  answer 4 b grants — the one comment as the user the harness makes without
-  a prompt, which `core/git-and-prs.md` and `core/rules.md` name as such. A
-  session holds no GitHub App token, so the App bot's request is the host
-  runner's, in the follow-up card.
+- `finish` posts under the identity `gh` holds (answer 2), the user's on the
+  laptop, on exactly the terms answer 4 b grants — the one comment as the
+  user the harness makes without a prompt, which `core/git-and-prs.md` and
+  `core/rules.md` name as such. A session holds no GitHub App token, so the
+  App bot's request is the host runner's, in the follow-up card.

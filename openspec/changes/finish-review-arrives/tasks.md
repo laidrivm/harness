@@ -23,25 +23,33 @@ file nears the 300-line cap.
       repos/o/demo/commits/<sha>/check-runs?filter=all&per_page=100`; an
       exit that is not 0 and an output that is not JSON give unread with a
       reason; `HARNESS_CODERABBIT_POLL_MS` unset, `0`, `-5` and `x` give
-      5000 and `7` gives 7. Then write the read and the interval
+      5000 and `7` gives 7. Then write the read, and lift `limit()`'s
+      positive-whole-number parse in `bun/pull-requests.ts` into one helper
+      that `limit()` and the interval both call; `bun/pull-requests.test.ts`
+      still passes
 - [ ] 1.3 Extend `bun/work-finish.fixture.ts`: the `gh` stub answers a
       `check-runs` read from a queue of answers, one per call, the last
-      repeated; logs each call as today; and the case sets
-      `HARNESS_CODERABBIT_POLL_MS=1` and tracks `.coderabbit.yaml` unless
-      told not to. Verify `bun/work-finish.test.ts` and
-      `bun/work-finish-sequence.test.ts` still pass unchanged, untracked
-      config included
+      repeated; logs each call as today; the case sets
+      `HARNESS_CODERABBIT_POLL_MS=1`, and tracks `.coderabbit.yaml` only when
+      it asks to, so the existing cases keep no config. Verify
+      `bun/work-finish.test.ts` and `bun/work-finish-sequence.test.ts` still
+      pass unchanged
 - [ ] 1.4 Failing cases in `bun/work-finish-review.test.ts`: no tracked
       `.coderabbit.yaml`, and a gitignored untracked one, make no check-run
-      call and end on `finish: ready #7`; the `gh` call order is the PR
-      read, the push, the check-run reads until a run appears, the ready,
-      then the check-run reads; no run within 12 reads says so and still
-      marks ready; a question waiting makes no read after the question read
-      and leaves the draft; `reviewing` after ready ends on `finish: ready #7
-      — CodeRabbit reviewing <short>`; `reviewed`, `rate limited` and another
-      conclusion end on their lines from design.md; 18 reads of `skipped`
-      end on the skip; a last read that fails ends unread; every one exits
-      0. Then add the wait and the reads to `finish()`
+      call and end on `finish: ready #7`; run from a subdirectory of a
+      checkout tracking it at the top, `finish` reads the check runs; the
+      `gh` call order is the PR read, the push, the check-run reads until a
+      run appears, the ready, then the check-run reads; no run before the
+      60 s wait's end on the clock says so and still marks ready; a failed
+      read before the ready switch counts as no run and the reads go on; a
+      question waiting makes no read after the question read and leaves the
+      draft; `reviewing` after ready ends on `finish: ready #7 — CodeRabbit
+      reviewing <short>`; a failed read after the switch, then `reviewing`,
+      ends on reviewing; `reviewed`, `rate limited` and another conclusion
+      end on their lines from design.md; `skipped` to the 90 s wait's end
+      ends on `finish: ready #7 — CodeRabbit skipped <short>`; a last read
+      that fails ends unread; every one exits 0. Then add the wait and the
+      reads to `finish()`
 - [ ] 1.5 Prose: `README.md`'s `finish` row says it waits for CodeRabbit's
       run and names its state of the head; `core/review-toolkit.md`'s
       passage on a head whose state reads skipped or rate-limited names
@@ -57,8 +65,9 @@ file nears the 300-line cap.
 ## 2. Ask once for the review of a skipped head
 
 - [ ] 2.1 Extend `bun/work-finish.fixture.ts`: the stub answers an
-      `issues/7/comments` read from the case's comments or with an exit the
-      case sets, and logs a `pr comment` call with an exit the case sets
+      `issues/7/comments` read with the case's comments, one JSON object a
+      line as `--jq` prints them, or with an exit the case sets, and logs a
+      `pr comment` call with an exit the case sets
 - [ ] 2.2 Failing cases in `bun/work-finish-review.test.ts`: `skipped` and no
       request posts exactly one `pr comment 7 -R o/demo --body @coderabbitai
       review` and says it asked; a request created at the head's earliest
