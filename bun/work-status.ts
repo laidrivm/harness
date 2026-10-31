@@ -3,7 +3,8 @@
  * the ask integration once its checks pass, in the order
  * `openspec/changes/archive/2026-10-29-notion-status-gate/design.md` sets
  * (*The order of checks and the write*): the user's statuses, the page read,
- * the evidence on `origin/main` for a merged status, the WIP limit for an
+ * the evidence on `origin/main` for a merged status — on GitHub for a fix
+ * card's pull request (`fix-card-done-by-pr`) — the WIP limit for an
  * unproven entry into the range. Each refusal writes nothing in Notion and is
  * one `status` record; a failed write records nothing.
  */
@@ -14,6 +15,7 @@ import { ARCHIVED, boardState, ORDER } from "./board-state.ts";
 import { recordCheckout } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { plain } from "./notion-bot.ts";
+import { readPullRequest } from "./pull-requests.ts";
 import { complete, groups } from "./turn-gate.ts";
 import { output, POINTER } from "./work-take.ts";
 
@@ -24,6 +26,8 @@ const USER_ONLY = ["idea", "approved", "discarded"];
 const RANGE = ORDER.slice(ORDER.indexOf("exploring"), ORDER.indexOf("done"));
 const MERGED = ["proposed", "applied", "done"];
 const ARCHIVE = /^openspec\/changes\/archive\/([^/]+)\/$/;
+/** A fix card's `Pointer`: the one pull request that closes it (task-board). */
+const PR = /^pr:([1-9]\d*)$/;
 
 /** A refusal under the ledger id `id`. */
 class Refusal extends Error {
@@ -66,12 +70,28 @@ function unticked(tasks: string): string | undefined {
 	return open.length ? `its tasks.md leaves open: ${open.join(", ")}` : undefined;
 }
 
+/** Why pull request `n` of `origin`'s repository does not prove `to`, or nothing; it proves `done` alone, merged into `main`. */
+function merged(n: string, to: string): string | undefined {
+	if (to !== "done") return `the card's Pointer names pull request ${n}, which proves done alone, never ${to}`;
+	const read = readPullRequest(n);
+	if (!read) throw new Refusal("unread", `pull request ${n} of origin's repository could not be read from GitHub`);
+	if (read.state !== "MERGED") return `pull request ${n} is ${read.state.toLowerCase()}, not merged`;
+	// `main`, as the tree evidence fetches it.
+	return read.base === "main" ? undefined : `pull request ${n} merged into ${read.base}, not main`;
+}
+
 /**
  * Why `origin/main`, fetched into `top`, does not prove `to` for the change
  * `pointer` names, or nothing; `seen.commit` is set to the commit it read.
+ * A `Pointer` naming a pull request is proven by GitHub alone, with no fetch.
  * The tree is extracted into a temporary directory removed on every path.
  */
 function evidence(top: string, pointer: string, to: string, seen: { commit?: string }): string | undefined {
+	const name = named(top);
+	// This repository's own change or fix as a card on another board points at it (task-board).
+	const path = name && pointer.startsWith(`${name}: `) ? pointer.slice(name.length + 2) : pointer;
+	const pr = PR.exec(path)?.[1];
+	if (pr) return merged(pr, to);
 	// The refspec named, so a single-branch clone or a narrowed fetch still moves origin/main.
 	git(top, "fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main");
 	seen.commit = git(top, "rev-parse", "--verify", "-q", "refs/remotes/origin/main^{commit}");
@@ -86,9 +106,6 @@ function evidence(top: string, pointer: string, to: string, seen: { commit?: str
 		} catch (error) {
 			throw new Refusal("unread", (error as Error).message.replaceAll("\n", " "));
 		}
-		const name = named(top);
-		// This repository's own change as a card on another board points at it (task-board).
-		const path = name && pointer.startsWith(`${name}: `) ? pointer.slice(name.length + 2) : pointer;
 		const active = POINTER.exec(path)?.[1];
 		const archive = ARCHIVE.exec(path)?.[1];
 		const slug =

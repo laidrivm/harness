@@ -132,8 +132,10 @@ retried, since a retry spends the same limit.
   name, never the App's `laidrivm-harness-agent[bot]`, so a session with no
   memory of the earlier rounds reaches the same count. A fourth round or later
   whose review carries a finding the run would apply gets none applied: the
-  run ends on `CODERABBIT gate: BLOCKED` naming the cap and reports each
-  finding left with its severity, file and line, because churn past three
+  run reports each finding left with its severity, file and line, names the
+  cap in the line before its gate line and ends on the skill's own
+  `CODERABBIT gate: BLOCKED — N findings, M undispositioned.`, whose form the
+  skill fixes, because churn past three
   rounds is a signal to talk (unattended: card — hand the findings left on as
   one question on the card, which waits behind one already open there as
   `task-board` sets out; the run posts nothing in the pull request). A
