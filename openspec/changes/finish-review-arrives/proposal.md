@@ -40,7 +40,9 @@ the host has Windmill post the request once the window opens (answer 3).
   request and stops. A session on the host does the same until Windmill can
   post the request when the window opens, which a follow-up card holds.
 - `core/review-toolkit.md` names `finish`'s line as where a skipped or
-  rate-limited head is first seen; the `README.md` row for `finish` says it.
+  rate-limited head is first seen; the `README.md` row for `finish` says it;
+  `core/git-and-prs.md` and `core/rules.md` name the bounded waits and the
+  one request as the exceptions they are.
 
 Not in this change: the Windmill job for a rate limit (roadmap stage 6), the
 board loop's and `ci-run`'s own ready switches on the host, which mark a pull
@@ -67,10 +69,13 @@ None. The check-run reading is `work-finish`'s until card
 - New: `bun/coderabbit-run.ts` and its test, `bun/work-finish-review.test.ts`.
 - Changed: `bun/work-finish.ts`, `bun/work-finish.fixture.ts` (the `gh`
   stub answers the check-run and comment reads and logs the comment),
-  `core/review-toolkit.md`, `README.md`.
+  `core/review-toolkit.md`, `core/git-and-prs.md`, `core/rules.md`,
+  `README.md`.
 - Every `finish` in a repository that tracks `.coderabbit.yaml` takes longer:
   about 7 s before the ready switch and 25–35 s after it when the review
   starts, up to 60 s and 90 s when it does not.
-- On the laptop `finish` posts under the user's GitHub account, on exactly
-  the terms answer 4 b grants; under a GitHub App's token it posts as the
-  App's bot.
+- `finish` posts under the user's GitHub account, on exactly the terms
+  answer 4 b grants — the one comment as the user the harness makes without
+  a prompt, which `core/git-and-prs.md` and `core/rules.md` name as such. A
+  session holds no GitHub App token, so the App bot's request is the host
+  runner's, in the follow-up card.

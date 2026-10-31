@@ -146,10 +146,29 @@ more for than the first.
 
 `gh` posts as whoever it is authenticated as. On the laptop that is the
 user, under the standing permission of answer 4 b for exactly this line and
-nothing else. Under a GitHub App's token, as on the host, it is the App's
-bot; the user says that bot holds a CodeRabbit seat, so its command is
-expected to work, which the explore's evidence from other repositories
-(CodeRabbit ignoring bot accounts) predates. That is an assumption, below.
+nothing else. This is the one comment under the user's name the harness
+makes without a prompt, so `core/git-and-prs.md`'s two bullets that forbid
+any (*… nor any other comment as the user*, *Send, reply, comment or review
+under the user's name only through a call the user approved*) and
+`core/rules.md`'s Safety rule naming what `finish` is granted name it as
+their exception. The `gh pr comment` deny entry stays: it holds the agent's
+own hand, and `finish` runs `gh` from code, as it already runs `gh pr
+create`.
+
+A session holds no token of the GitHub App's (`github-app-identity`), so
+`finish` never posts as the App's bot; that request is the host runner's,
+in the follow-up card. The user says the bot holds a CodeRabbit seat, so its
+command is expected to work, which the explore's evidence from other
+repositories (CodeRabbit ignoring bot accounts) predates. That is an
+assumption, below.
+
+### The bounded wait is the user's exception to *never wait on a review bot*
+
+`core/git-and-prs.md` says never to wait on a result a review bot produces.
+`finish`'s two waits are bounded at 60 s and 90 s, run in code rather than
+in the agent's turn, and were chosen by the user (answer 1 a); that bullet
+names them as its exception, and the agent still ends its turn on
+`finish`'s last line rather than waiting for the review itself.
 
 ### The host
 

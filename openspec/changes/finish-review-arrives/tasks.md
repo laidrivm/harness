@@ -45,9 +45,14 @@ file nears the 300-line cap.
 - [ ] 1.5 Prose: `README.md`'s `finish` row says it waits for CodeRabbit's
       run and names its state of the head; `core/review-toolkit.md`'s
       passage on a head whose state reads skipped or rate-limited names
-      `finish`'s last line as where it is first seen. Grep `core/`,
-      `README.md` and `openspec/specs/` for `finish: ready` and for that
-      passage's wording, and fix each site the step makes false
+      `finish`'s last line as where it is first seen; `core/git-and-prs.md`'s
+      pull request bullet says `finish` waits for CodeRabbit's run before
+      the ready switch rather than marking ready *right after the push*,
+      and its *Never wait on a result someone else produces* bullet names
+      `finish`'s two bounded waits as the exception. Grep `core/`,
+      `README.md` and `openspec/specs/` for `finish: ready`, `right after
+      the push` and that passage's wording, and fix each site the step
+      makes false
 
 ## 2. Ask once for the review of a skipped head
 
@@ -66,8 +71,13 @@ file nears the 300-line cap.
       every one exits 0. Then add the request to `finish()`
 - [ ] 2.3 Prose: `core/review-toolkit.md` says `finish` asks once for a
       skipped head and that a rate-limited one is reported, never retried;
-      `README.md`'s `finish` row names the request. Grep the same places as
-      1.5 for wording the step makes false
+      `README.md`'s `finish` row names the request; `core/git-and-prs.md`'s
+      *… nor any other comment as the user* and *Send, reply, comment or
+      review under the user's name …* bullets, and `core/rules.md`'s Safety
+      rule naming what `bun/work.ts finish` is granted, name that one
+      `@coderabbitai review` as the exception (answer 4 b, 2026-10-31).
+      Grep the same places as 1.5, and `comment as the user` and `under the
+      user's name`, for wording the step makes false
 - [ ] 2.4 Live probe from the tree on this group's own pull request: open it
       with `bun bun/work.ts finish --card <card>`, and record in its body
       `finish`'s last line and, where it read `skipped`, the request it
