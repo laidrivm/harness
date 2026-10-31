@@ -66,7 +66,9 @@ change):
 Not in this change: a `bun/` reader of CodeRabbit's check run (the sibling
 change `finish-review-arrives`, card 40739875c31b811bb7d7e83e7dca89de, adds
 one for `finish`; the skill is prose and reads the check run with its own
-`gh api` call); whether the App's token can resolve a thread, and whether the
+`gh api` call); resolving from the board loop's runner after its push, since
+a session whose launcher pushes runs no `finish` and only names the command;
+whether the App's token can resolve a thread, and whether the
 last resolve alone brings the approval — both checked live in stage 2.5's
 probe (step 7).
 

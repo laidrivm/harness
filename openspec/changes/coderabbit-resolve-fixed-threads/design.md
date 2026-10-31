@@ -63,14 +63,26 @@ Standing from the card:
 
 It reads the branch (`git symbolic-ref`), `origin`'s repository and the
 branch's pull requests through `bun/pull-requests.ts`, and refuses unless
-`--pr` is the open one. It then reads every review thread with one paginated
-query — the skill's fourth call plus each thread's `id` and its first
-comment's `author.login`, `comments(first:1)` — and places each id as the
-first comment of one thread. Any id it cannot place, or that opens a thread
-whose author does not start with `coderabbitai` (GraphQL spells the bot
-`coderabbitai`, REST `coderabbitai[bot]`), refuses the whole call before the
-first mutation. Then it resolves the unresolved ones in the order given and
-stops at the first failure.
+`--pr` is one of the branch's open ones — a branch open into two bases has
+two. It then reads every review thread with one query, `gh api graphql
+--paginate --slurp` (gh 2.97 here; without `--slurp` each page prints as its
+own JSON object and one `JSON.parse` fails past 100 threads) — the skill's
+fourth call plus each thread's `id` and its first comment's `author.login`,
+`comments(first:1)` — and places each id as the first comment of one thread.
+Any id it cannot place, or that opens a thread whose author login is not
+exactly `coderabbitai`, refuses the whole call before the first mutation. A
+prefix test would pass `coderabbitai-x`, a login anyone can register
+(`core/rules.md`, *A guard against malformed input must cover the whole
+value*). GraphQL spells the bot `coderabbitai` (read on #347, 31.10), and a
+deleted author reads `null`, which is not the bot. Then it resolves the
+unresolved ones in the order given and stops at the first failure.
+
+Every `gh` call, the reads and the mutations, runs under `gh`'s own
+identity. `readPullRequests()` uses a minted read token when
+`HARNESS_GITHUB_APP_MINT` is set; `resolve` is not run where it is (see the
+board loop below). A cloud session's proxy refuses GraphQL, so there the
+thread read fails and `resolve` exits 1 having changed nothing — the safe
+side, and the README's *Cloud sessions* names it.
 
 - Alternative: resolve what it can and report the rest. Rejected: an id that
   does not place is a wrong hand-off from the skill, and half the call done
@@ -91,20 +103,39 @@ on the usage. The gate ledger records nothing: `resolve` is no gate.
 
 A run that applied fixes prints, right above its gate line, the one command
 `bun bun/work.ts resolve --pr <n> --comment <id> …`, listing each inline
-comment whose every finding it fixed. A comment that also carries a skipped
-or rejected finding is left out — its thread is the user's. A finding from a
-review body has no thread and is never named. The *Never post to the PR* rule
-stays, rewording "no resolves" to point at the command.
+comment whose every finding it fixed or verified as already fixed. A comment
+that also carries a skipped or rejected finding is left out — its thread is
+the user's. A finding from a review body has no thread and is never named.
+The *Never post to the PR* rule stays, rewording "no resolves" to point at
+the command.
+
+Step 1 today drops a thread that is resolved *or outdated*, listing it as
+`already resolved`. An outdated thread that is not resolved still holds the
+approval back, so it is verified like any finding instead: already fixed on
+the head, its id is named; otherwise it is dispositioned as usual.
 
 - Alternative: the skill resolves after the push itself. Rejected by
   decision 2: the skill runs before the push, and a thread resolved over a
   head without the fix lets the bot approve it.
+
+### The board loop is out of scope
+
+A session whose launcher pushes runs no `finish` and holds no App token
+(`bun/github-app.ts`), so it runs no `resolve` and names the command in its
+final message, as it names the pull request's title and body. Resolving
+after the runner's push — under the App's token, decision 7 — is the runner's
+and is left to stage 2.5's probe, step 7, which checks that token can.
 
 ### Step 1 reads the head's state before the reviews, and the check run too
 
 Order: `headRefOid`, then the head's `CodeRabbit` check run and its commit
 status, then the reviews, then the other calls. A review the bot posts
 before its status or check run is then always in the read that follows them.
+That it does post first is read, not assumed: on #347's three reviewed heads
+and #353's one (31.10), each review's `submitted_at` comes 2–8 seconds before
+the check run's `completed_at` (`01:14:16`/`01:14:23`, `09:11:37`/`09:11:43`,
+`10:13:40`/`10:13:48`, `23:03:29`/`23:03:31`). Four samples are no contract;
+the single re-fetch before the gate line covers a review that lands later.
 The status is kept beside the check run: it is how the bot reported until
 27.10, and a draft's `Review skipped: draft pull request` is read there. The
 check run counts only as `completed`/`success` with that exact first summary
@@ -113,7 +144,15 @@ line; anything else is no review.
 The skill reads the check run with its own `gh api` call. The sibling change
 `finish-review-arrives` adds a `bun/` reader of the same check run for
 `finish`; a second reader in `bun/` is not written here, and the skill does
-not call that one, since prose runs `gh` and the reader is a module.
+not call that one, since prose runs `gh` and the reader is a module. That
+leaves the summary line `Result: Success - Review completed` written in two
+places, which drift apart silently when the bot rewords it. A test holds
+them together (`core/rules.md`, *Pin a name one system looks up in another
+with a test*): it reads the line from the skill and from the sibling's
+module, and fails when they differ. If the sibling has not merged when this
+is applied, the test reads the skill alone against the line the design
+records, and the sibling's pull request, or whichever merges second, points
+it at the module.
 
 ### Severity is a word read, not a pattern matched
 
@@ -131,15 +170,17 @@ script the allow list grants a push, a pull request and a ready." Proposed:
 > pull request and a ready, and `bun bun/work.ts resolve` the one it grants a
 > review thread's resolve.
 
-The edit is applied in the apply step only after the user approves it on
-the card; until then the rule stands as it is, which is true while `resolve`
-does not exist.
+The rule also forbids running an act the guard refuses through a committed
+script, and the mutation is such an act. So the wording is settled before
+`resolve` is written: the apply's first task waits on the user's answer on
+the card, and applies the wording they approve in the same commit as the
+subcommand. If they decline the rule's change, `resolve` is not built, and
+the apply stops and reports `BLOCKED` naming the conflict with decision 1.
 
 ## Risks / Trade-offs
 
 - [The thread is resolved as the user on the laptop] → it writes no text,
-  only the thread's state, and decision 1 settles it; under the board loop
-  the App's token does it, which decision 7 leaves to the probe.
+  only the thread's state, and decision 1 settles it.
 - [The bot changes the check run's summary wording again] → the head reads as
   unreviewed and the run ends `OPEN`, the safe side; the next live failure
   names it, as #319 did.

@@ -34,13 +34,19 @@ at all SHALL print the usage and exit 2 before any git or `gh` call.
 
 `resolve` SHALL refuse and exit 1, resolving nothing, when `HEAD` names no
 branch, when the branch's pull requests on `origin` cannot be read, or when
-the pull request it names is not the branch's open one.
+the pull request it names is not one of the branch's open ones.
 
 #### Scenario: Another branch's pull request
 
 - **WHEN** `resolve --pr 8 --comment 1` runs on a branch whose open pull
   request is #7
 - **THEN** it refuses naming #7, exits 1, and resolves nothing
+
+#### Scenario: A branch open into two bases
+
+- **WHEN** a branch has open pull requests #7 into `main` and #9 into
+  `release`, and `resolve --pr 9 --comment 1` runs
+- **THEN** it reads #9's threads, as for a branch with one
 
 #### Scenario: A detached head
 
@@ -51,14 +57,25 @@ the pull request it names is not the branch's open one.
 
 `resolve` SHALL read every review thread of the pull request and place each
 named id as the first comment of one thread. When any id is the first comment
-of no thread, or of a thread whose first comment's author login does not
-start with `coderabbitai`, it SHALL refuse, naming each such id, exit 1, and
+of no thread, or of a thread whose first comment's author login is not
+exactly `coderabbitai`, it SHALL refuse, naming each such id, exit 1, and
 resolve nothing.
 
 #### Scenario: A thread the user opened
 
 - **WHEN** one of two named ids opens a thread the user started
 - **THEN** it refuses naming that id, exits 1, and neither thread is resolved
+
+#### Scenario: A login that only starts like the bot's
+
+- **WHEN** a named id opens a thread whose author login is `coderabbitai-x`
+- **THEN** it refuses naming that id and resolves nothing
+
+#### Scenario: A thread whose author is gone
+
+- **WHEN** a named id opens a thread whose author GitHub reads as `null`, a
+  deleted account
+- **THEN** it refuses naming that id, as for any author but the bot
 
 #### Scenario: A reply's id
 
