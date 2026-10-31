@@ -18,9 +18,10 @@ and SHALL report each finding left.
 - **WHEN** CodeRabbit's reviews on a pull request name three distinct commits,
   and the head commit's review carries a verified finding
 - **THEN** the run applies it on the finding-disposal terms
-  `local-review-loop` sets, as in any earlier round — not the local review's
-  base, changed-file check, grading or `CODE-REVIEW` gate line, since
-  CodeRabbit grades its own findings
+  `local-review-loop` sets in *A verified finding is fixed without asking*
+  and *Dismissing a Major or above is the user's call*, as in any earlier
+  round, and not on the local review's base, changed-file check or grading,
+  since CodeRabbit grades its own findings
 
 #### Scenario: A fourth round with a finding to apply, attended
 
