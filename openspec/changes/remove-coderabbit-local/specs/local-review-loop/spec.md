@@ -22,9 +22,12 @@ change breaks — SHALL be kept and verified like any other. Since `/code-review
 severity, the agent SHALL grade each of its findings 🔵 Trivial, 🟡 Minor,
 🟠 Major or 🔴 Critical while verifying it, dispose of it on that grade, and
 name the grade beside the finding in its report. Since `/code-review` prints
-no gate line either, the agent SHALL write the run's `CODE-REVIEW gate:` line
-itself once every finding is disposed of, and SHALL write none for a review
-that does not return.
+no gate line either, the agent SHALL end the loop on a `CODE-REVIEW gate:`
+line it writes itself, reading `PASS`, `OPEN` or `BLOCKED` as *Dismissing a
+Major or above is the user's call* sets, whenever a pass of the loop returned
+a review. It SHALL write none only when no pass returned one. A pass that does
+not return after one that did ends the loop, and the line reads on what the
+passes that returned left.
 
 #### Scenario: A code branch reaches the end of the sequence
 
@@ -59,17 +62,23 @@ that does not return.
 
 - **WHEN** `/code-review` ends without a review — a usage limit, an error,
   a refused call — or it reports findings and none names a file the
-  branch's diff changes
+  branch's diff changes, on the loop's first pass
 - **THEN** the agent reports why and writes no `CODE-REVIEW gate:` line
 - **AND** pushes without the gate rather than blocking the branch
 
 #### Scenario: The session writes the gate line
 
-- **WHEN** `/code-review` returns a review over the branch's diff and the
-  agent has disposed of each of its findings
-- **THEN** the agent ends the disposition on a `CODE-REVIEW gate: PASS`,
-  `OPEN` or `BLOCKED` line it writes itself, since the built-in skill prints
-  none
+- **WHEN** a pass of the loop returned a review over the branch's diff, and
+  the loop ends
+- **THEN** the agent ends it on a `CODE-REVIEW gate: PASS`, `OPEN` or
+  `BLOCKED` line it writes itself, since the built-in skill prints none
+
+#### Scenario: A later pass does not return
+
+- **WHEN** the first pass proposed dismissing a 🟠 Major, and the second
+  pass ends without a review
+- **THEN** the loop ends, and the gate line the agent writes reads `OPEN`
+  over that dismissal, since a pending dismissal always holds the gate
 
 #### Scenario: A finding the review gives no severity
 
@@ -159,9 +168,7 @@ single list when the loop ends, each marked fixed or skipped with a reason.
 - **THEN** the report gives the reason — taste, a settled convention the
   reviewer does not know, or a fix costing more than the defect is worth
 
-## ADDED Requirements
-
-### Requirement: A verified finding is applied without asking
+### Requirement: A verified finding is fixed without asking
 
 A finding that survives verification against the current code SHALL be applied
 without pausing for approval, **whatever its severity**, overriding the skills'
@@ -190,12 +197,14 @@ reported once, at the end*, and that call is the agent's alone.
   and self-contained
 - **THEN** the agent applies it without asking, exactly as it would a Major
 
-#### Scenario: A Major finding the review got wrong
+#### Scenario: A Major finding the bot got wrong
 
 - **WHEN** verification shows the finding does not hold against the current
   code
 - **THEN** the agent states concretely what the review missed and puts the
   dismissal to the user rather than closing it
+
+## ADDED Requirements
 
 ### Requirement: A skipped convention becomes a rule, a one-off does not
 
@@ -222,16 +231,6 @@ A one-off SHALL NOT become a rule.
 - **THEN** the reason stays in the report and no rule is added
 
 ## REMOVED Requirements
-
-### Requirement: A verified finding is fixed without asking
-
-**Reason**: Its scenario *A Major finding the bot got wrong* names the PR bot
-where the local reviewer is `/code-review` (card answer 2 а, 2026-10-31). A
-`MODIFIED` block cannot drop a scenario, so *A verified finding is applied
-without asking* replaces it whole, its scenario renamed *A Major finding the
-review got wrong* and its other text kept but for «the bot».
-
-**Migration**: None; no test cites the renamed scenario.
 
 ### Requirement: A justification survives only when it is a convention
 
