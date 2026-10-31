@@ -34,13 +34,9 @@ not. `bun/git-env.test.ts` and `bun/pre-pr.test.ts` pin the hook's lines.
 
 ## Goals / Non-Goals
 
-**Goals:** the hook runs what `commit-gates` lists; the runner's project
-checks run the same list; CI runs each gate where its verdict binds.
-
-**Non-Goals:** mutating `orchestrator/`; changing `bun/mutation-floor.ts`
-or `bun/check-yaml.ts`, which consumers run, and `bun/no-suppressions.ts`
-beyond one exempt path a consumer's tree does not hold;
-an import graph to find which modules a changed helper affects (decision 4).
+**Non-Goals:** changing `bun/mutation-floor.ts` or `bun/check-yaml.ts`,
+which consumers run, or `bun/no-suppressions.ts` beyond one exempt path; an
+import graph of which modules a changed helper affects (decision 4).
 
 ## Decisions
 
@@ -79,20 +75,16 @@ by hand in the hook's group.
 Warnings (`noTemplateCurlyInString` on shell strings) do not fail `biome
 ci` and stay warnings; no rule is turned off (`core/rules.md`).
 
-Width 80 lengthens files. Before the reformat, a scratch run measures which
-tracked `.ts` would then pass the 300-line cap (`change-slicing`); any such
-file is split first, on its own branch, to the length it will have after
-formatting.
+Width 80 lengthens files, so a file the reformat would push past the
+300-line cap is split first, on its own branch (task 1.2).
 
 ### 3. The type check as strict as d2ass's
 
 `tsconfig.json` is d2ass's without DOM, JSX and Preact; `typescript` 7.0.2
-and `@types/bun` 1.4.2, the bun pin. An error is fixed by narrowing or by a
-read that throws naming what was missing where absence is a bug — never a
-`@ts-` marker. A fix that changes behaviour (the explore names
-`bun/ci-run-clone.ts:59`, `string | Transient` reaching `string |
-undefined`) gets its failing test first. The gate joins the hook only once
-the last fix lands, so no push in between is refused by it.
+and `@types/bun` 1.4.2, the bun pin. An error is fixed by narrowing, or by a
+read that throws naming what is missing, never by a `@ts-` marker; a fix
+that changes behaviour (`bun/ci-run-clone.ts:59`) gets its failing test
+first. The gate joins the hook once the last fix lands.
 
 ### 4. Stryker per module, incremental, results in the tree
 
