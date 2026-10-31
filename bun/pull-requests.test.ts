@@ -234,12 +234,15 @@ describe("one pull request by its number", () => {
 		["an array", { answer: `[${one()}]` }, "[6]"],
 		["output that is not JSON", { answer: "not json" }, "[6]"],
 		["a JSON null", { answer: "null" }, "[6]"],
+		["no base branch", { answer: one({ base: null }) }, "(local review)"],
 	])("%s fails %s", (_, c) => {
 		expect(read({ number: "350", ...c }).result).toBe("failed");
 	});
 
 	test("a number past 2^53 reaches the query as its digits, and the answer parsing rounds fails", () => {
-		const { result, calls } = read({ number: "9007199254740993", answer: one({ number: 9007199254740993 }) });
+		// The digits written raw: a JS literal of them would round before the stub sends it.
+		const answer = one().replace('"number":350', '"number":9007199254740993');
+		const { result, calls } = read({ number: "9007199254740993", answer });
 		expect([result, calls]).toEqual(["failed", ["api repos/o/r/pulls/9007199254740993"]]);
 	});
 

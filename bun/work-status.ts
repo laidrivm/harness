@@ -77,7 +77,7 @@ function merged(n: string, to: string): string | undefined {
 	if (!read) throw new Refusal("unread", `pull request ${n} of origin's repository could not be read from GitHub`);
 	if (read.state !== "MERGED") return `pull request ${n} is ${read.state.toLowerCase()}, not merged`;
 	// `main`, as the tree evidence fetches it.
-	return read.base === "main" ? undefined : `pull request ${n} merged into ${JSON.stringify(read.base)}, not main`;
+	return read.base === "main" ? undefined : `pull request ${n} merged into ${read.base}, not main`;
 }
 
 /**
