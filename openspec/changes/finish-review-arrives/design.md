@@ -54,17 +54,27 @@ Only `app.slug === "coderabbitai"` counts, so another app's run named
 another neutral run; the summary's wording is left alone, since CodeRabbit's
 format already moved once (status to check run, 2026-10-27).
 
-The `coderabbit` skill reads the commit status today (card
+The state is a commit's, not a pull request's or a ready event's: an earlier
+rate limit or review of the same commit decides it. That is accepted. A
+rate-limited head is reported, not re-run through `finish` (answer 3 a), and
+a commit reviewed under another pull request was reviewed. Alternative
+rejected: only runs started after the ready switch, which compares the
+laptop's clock with GitHub's and reads a silent skip as no run.
+
+The `coderabbit` skill reads the commit status today, and `session-wrapup`
+reads the check runs with a `gh api … --jq` of its own (card
 `40539875c31b8168a338eb254c353d08`). That card gives the module a command
-line and points the skill's step 1 at it; this change adds no entry point no
+line and points both skills at it; this change adds no entry point no
 shipped path calls. Alternative rejected: a command line now, which nothing
 would run until that card lands.
 
 ### The wait before the ready switch (answer 1 a)
 
 After the push or its skip and the draft's opening, `finish` reads `HEAD`'s
-state every poll interval until it is other than no run, at most 12 polls —
-60 s at the default 5 s. It runs before the card's question read, which stays
+state every poll interval until it is other than no run or unread, for at
+most 12 intervals on the clock — 60 s at the default 5 s, plus at most one
+read's `limit()` when the last read hangs. A failed read counts as no run and
+the reads go on. It runs before the card's question read, which stays
 last before `ready()` so that it sees a question posted meanwhile, as the
 archived `work-finish` design set; a question that then waits has cost up to
 60 s, the price of keeping that order. A wait that ends with no run prints
@@ -77,10 +87,12 @@ already there, so the first read returns.
 ### The reads after it (answer 1 a, option B of the explore)
 
 After `ready()`, `finish` reads `HEAD`'s state every poll interval until it
-is neither `skipped` nor no run, at most 18 polls — 90 s at the default. The
-review starts 25–35 s after the switch when it comes (#338, #342). The last
-line is the outcome, joined to the ready one so the last line stays the one
-the agent reads:
+is neither `skipped`, no run nor unread, for at most 18 intervals on the
+clock — 90 s at the default, with the same one-read overrun. A failed read
+does not end the reads; only the last read decides the line. The review
+starts 25–35 s after the switch when it comes (#338, #342). The last line is
+the outcome, joined to the ready one so the last line stays the one the
+agent reads:
 
 - `finish: ready #7 — CodeRabbit reviewing 1a2b3c4`
 - `finish: ready #7 — CodeRabbit reviewed 1a2b3c4`
@@ -88,23 +100,29 @@ the agent reads:
 - `finish: ready #7 — CodeRabbit <conclusion> "<title>" on 1a2b3c4`
 - `finish: ready #7 — no CodeRabbit run on 1a2b3c4 after 90 s`
 - `finish: ready #7 — CodeRabbit's runs on 1a2b3c4 unread: <why>`
-- for a skip, one of the request's four endings below
+- `finish: ready #7 — CodeRabbit skipped 1a2b3c4`, step 1's line for a
+  skip, which step 2 extends with one of the request's four endings below
 
 Every one exits 0: the ready switch went through, and an exit of 1 means the
 pull request is still a draft everywhere else in `finish`.
 
 ### The poll interval is one knob
 
-`HARNESS_CODERABBIT_POLL_MS`, a positive whole number of milliseconds, read
-as `limit()` reads `HARNESS_GH_TIMEOUT_MS`; 5000 otherwise. The two waits are
-counts of polls, so the tests run the whole sequence in milliseconds and no
-second knob is needed. Alternative rejected: separate deadlines in seconds,
-three knobs for one test need.
+`HARNESS_CODERABBIT_POLL_MS`, a positive whole number of milliseconds;
+5000 otherwise. Its parse and `limit()`'s parse of `HARNESS_GH_TIMEOUT_MS`
+are one helper in `bun/pull-requests.ts`, `limit()` switched to it in the
+same step, so the *never 0* guard `spawnSync` needs is written once. The two
+waits are 12 and 18 intervals on the clock, so the tests run the whole
+sequence in milliseconds and no second knob is needed. Alternative rejected:
+separate deadlines in seconds, three knobs for one test need; and counts of
+polls, which a slow `gh` stretches to minutes while the line still says 60 s.
 
 ### Only where CodeRabbit is configured
 
-`finish` reads no check run unless `git ls-files --error-unmatch
-.coderabbit.yaml` succeeds at the checkout's top. A consumer without
+`finish` reads no check run unless `git -C <top> ls-files --error-unmatch --
+.coderabbit.yaml` succeeds, `<top>` being the checkout's top `finish`
+already reads — run from a subdirectory, a bare `ls-files` would resolve
+the path against it and find nothing. A consumer without
 CodeRabbit would otherwise pay 60 s and 90 s on every `finish` for runs that
 never come. A repository running CodeRabbit with no config file keeps
 today's behaviour, which is no regression. Tracked rather than present: a
@@ -114,7 +132,9 @@ gitignored copy is in the author's checkout and absent in a clone.
 
 On a `skipped` state when the reads end, `finish` reads the pull request's
 comments (`gh api repos/<repo>/issues/<n>/comments?per_page=100
---paginate`) and posts `gh pr comment <n> -R <repo> --body "@coderabbitai
+--paginate --jq '.[] | {created_at, body}'`, one JSON object a line, since
+`--paginate` alone prints each page's array after the last, which is not
+one JSON value past 100 comments) and posts `gh pr comment <n> -R <repo> --body "@coderabbitai
 review"` unless a comment whose body, trimmed, is exactly `@coderabbitai
 review` was created at or after the `started_at` of `HEAD`'s earliest
 CodeRabbit run. That time stands for when the head arrived; a request
@@ -144,8 +164,11 @@ more for than the first.
 
 ### Identity
 
-`gh` posts as whoever it is authenticated as. On the laptop that is the
-user, under the standing permission of answer 4 b for exactly this line and
+`gh` posts as whoever it is authenticated as, which answer 2 asks for in
+those words (*под тем айдентити, что у него есть от гитхаба*) and does not
+limit to a machine. Where that is the user, the laptop's case and that of a
+host session whose `gh` holds the user's scoped access alike, it posts
+under the standing permission of answer 4 b for exactly this line and
 nothing else. This is the one comment under the user's name the harness
 makes without a prompt, so `core/git-and-prs.md`'s two bullets that forbid
 any (*… nor any other comment as the user*, *Send, reply, comment or review
@@ -181,7 +204,11 @@ written only in CodeRabbit's summary comment, which the check run does not
 carry. It goes to a follow-up card on the Harness board, status `idea`. The
 board loop's and `ci-run`'s own ready switches (`bun/board-loop.ts`,
 `bun/ci-run-draft.ts`), which mark a pull request ready without `finish`,
-read nothing yet; that card names them too.
+read nothing yet; that card names them too. Alternative rejected: one
+ready-and-report helper all three call, now — the runner's request is the
+App bot's, which the stage 2.5 probe has not yet shown CodeRabbit obeys, and
+its rate-limit path is the Windmill job; the helper is that card's to lift
+once both are known, from the module this change ships.
 
 ## Assumptions
 
@@ -204,7 +231,7 @@ read nothing yet; that card names them too.
   pull request, only on `skipped`, and only in a repository that tracks
   `.coderabbit.yaml`.
 - [The comments read pages through every comment on the pull request] →
-  harness pull requests carry tens; `--paginate` keeps it correct past 100.
+  harness pull requests carry tens, and `--jq` keeps the pages one stream.
 
 ## Migration Plan
 

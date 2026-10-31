@@ -38,10 +38,11 @@ else no run. A read that fails SHALL name the state unread.
 
 Where the checkout tracks `.coderabbit.yaml`, `finish` SHALL, after the push
 or its skip and the draft's opening, and before it reads the card's
-question, wait for CodeRabbit's state of `HEAD` to be other than no run, for
-at most 60 s. A wait that ends with no run SHALL say so and go on to the
-question read and the ready switch. Without that file `finish` SHALL read no
-check run and wait for none.
+question, read CodeRabbit's state of `HEAD` until it is neither no run nor
+unread, starting no read after 60 s. A wait that ends so SHALL say no run
+came and go on to the question read and the ready switch. Without that file,
+tracked at the checkout's top, `finish` SHALL read no check run and wait for
+none.
 
 #### Scenario: The draft's skip arrives
 
@@ -62,6 +63,12 @@ check run and wait for none.
 - **THEN** `finish` reads no check run, waits for none, and ends on
   `finish: ready #7` as before
 
+#### Scenario: Run from a subdirectory
+
+- **WHEN** `finish` runs from a subdirectory of a checkout that tracks
+  `.coderabbit.yaml` at its top
+- **THEN** it reads the check runs and waits as it would from the top
+
 #### Scenario: A question waits
 
 - **WHEN** the wait ends and the card's last question has no answer
@@ -72,9 +79,10 @@ check run and wait for none.
 
 Where the checkout tracks `.coderabbit.yaml`, `finish` SHALL, after the
 ready switch, read CodeRabbit's state of `HEAD` until it is neither
-`skipped` nor no run, for at most 90 s, and end on one line naming the pull
-request ready, that state and `HEAD`'s short hash. Every state SHALL exit
-0, since the ready switch went through; the line is the signal.
+`skipped`, no run nor unread, starting no read after 90 s, and end on one
+line naming the pull request ready, the last read's state and `HEAD`'s short
+hash. Every state SHALL exit 0, since the ready switch went through; the
+line is the signal.
 
 #### Scenario: The review starts
 
@@ -98,6 +106,12 @@ request ready, that state and `HEAD`'s short hash. Every state SHALL exit
 - **WHEN** the last read of `HEAD`'s check runs fails
 - **THEN** the last line says CodeRabbit's state is unread, no review is
   asked for, and `finish` exits 0
+
+#### Scenario: One failed read among others
+
+- **WHEN** the second read after the ready switch fails and the third reads
+  `reviewing`
+- **THEN** `finish` reads on past the failure and ends on reviewing
 
 ### Requirement: Finish asks once for the review of a skipped head
 
