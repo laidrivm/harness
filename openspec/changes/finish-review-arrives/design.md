@@ -170,20 +170,12 @@ their exception. The `gh pr comment` deny entry stays: it holds the agent's
 own hand, and `finish` runs `gh` from code, as it already runs `gh pr
 create`.
 
-A session holds no token of the GitHub App's (`github-app-identity`), so
-`finish` never posts as the App's bot; that request is the host runner's,
-in the follow-up card. The user says the bot holds a CodeRabbit seat, so its
-command is expected to work, which the explore's evidence from other
-repositories (CodeRabbit ignoring bot accounts) predates. That is an
-assumption, below.
+A session holds no GitHub App token (`github-app-identity`), so `finish`
+never posts as the App's bot; that request is the host runner's, in the
+follow-up card.
 
-### The bounded wait is the user's exception to *never wait on a review bot*
-
-`core/git-and-prs.md` says never to wait on a result a review bot produces.
-`finish`'s two waits are bounded at 60 s and 90 s, run in code rather than
-in the agent's turn, and were chosen by the user (answer 1 a); that bullet
-names them as its exception, and the agent still ends its turn on
-`finish`'s last line rather than waiting for the review itself.
+`core/git-and-prs.md`'s *never wait on a review bot* names `finish`'s two
+bounded waits, the user's choice (answer 1 a), as its exception.
 
 ### The host
 
@@ -207,9 +199,10 @@ once both are known, from the module this change ships.
 - The silent skip is the race of the push's event and the ready one. If it
   is not, the wait before the switch costs about 7 s per `finish` and buys
   nothing, and the reads and the request after it still catch the skip.
-- The App's bot can run `@coderabbitai review` because it holds a seat. The
-  roadmap's stage 2.5 live probe on the host checks it; until then only the
-  laptop path has been seen to work, by the user's own comments.
+- The App's bot can run `@coderabbitai review` because it holds a
+  CodeRabbit seat (the user, 2026-10-31), which the explore's evidence of
+  CodeRabbit ignoring bot accounts predates. The stage 2.5 live probe on the
+  host checks it.
 - CodeRabbit keeps naming its check run `CodeRabbit` and the rate limit's
   title `Review rate limited`. A rename reads as no run or another
   conclusion, which the last line prints by name: visible, not silent.
