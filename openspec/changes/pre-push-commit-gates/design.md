@@ -152,14 +152,12 @@ fails naming Node when a module changed and none is found.
 
 ### 5. Where the baseline runs: by hand, on the laptop
 
-`bun bun/mutation-run.ts --all`, run by hand on the laptop, module after
-module, each module's results committed as it finishes; an interrupted run
-resumes, since a module with current stored results is near-instant. The
-results are committed in pull requests, a batch of modules each. Not CI on a
-schedule: the results must be committed, every workflow here holds `contents:
-read`, and a write token in a scheduled job for a once-off run is a standing
-risk for a single use — and roughly 9 000 mutants is hours of runner time.
-Not the host: 2 vCPU and 3.5 GiB beside parallel agents.
+`bun bun/mutation-run.ts --all` by hand on the laptop, committed in pull
+requests of a batch of modules each; an interrupted run resumes, a module
+with current stored results being near-instant. Not CI on a schedule: the
+results must be committed, every workflow here holds `contents: read`, and a
+write token for a once-off run of hours is a standing risk for one use. Not
+the host: 2 vCPU and 3.5 GiB beside parallel agents.
 
 ### 6. CI jobs
 
@@ -177,8 +175,8 @@ dependency. The user then adds the new check names to the ruleset.
 ## Risks / Trade-offs
 
 - [The reformat conflicts with every open branch] → it lands alone; a
-  branch merging it takes its own side of a conflict and re-runs `biome
-  check --write` over its files.
+  branch merging it takes its own side and re-runs the reformat's two
+  commands over its files.
 - [The baseline takes hours] → resumable per module, run by hand in batches.
 - [Tests that read the repository through git behave differently inside
   Stryker's sandbox] → the probe and the baseline show it per module; a
@@ -189,13 +187,11 @@ dependency. The user then adds the new check names to the ruleset.
 - [A local base of `main` older than `origin/main`] → more modules mutate
   than the branch changed: slower, not wrong.
 - [The stored results grow the repository by megabytes and churn with each
-  module edit, and consumers download them] → `package.json` has no `files`
-  list, so a consumer's install of the GitHub dependency carries the whole
-  tree: `mutation/`, and `tsconfig.json`, `biome.json` and
-  `stryker.config.json`, none of which a consumer's run of
-  `node_modules/harness/bun/*.ts` reads for anything but `tsconfig.json`,
-  which sets nothing bun applies at run time. The size is measured at the
-  baseline and reported on the card; a `files` list is a change of its own.
+  module edit, and consumers download them, `package.json` having no
+  `files` list] → the size is measured at the baseline and reported on the
+  card; a `files` list is a change of its own. Of the new configuration
+  files a consumer's install carries, bun reads only `tsconfig.json`, which
+  sets nothing it applies at run time.
 - [Lockfile lines count toward the diff budget] → group 1 adds `bun.lock`
   to `harness.diffBudgetExclude`, as d2ass does; `/warm` reads the lockfile.
 - [A Stryker incremental file that is not byte-stable across identical runs
