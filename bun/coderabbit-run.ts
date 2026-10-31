@@ -45,6 +45,9 @@ export function state(runs: Run[]): State {
 	return mine.length ? { name: "skipped" } : { name: "no run" };
 }
 
+/** How a `gh` call that failed ended: a call killed at the limit has no exit code. */
+export const exited = (run: { exitCode: number | null }) => (run.exitCode === null ? "gh was killed at its limit" : `gh exited ${run.exitCode}`);
+
 /**
  * `gh api <query> --paginate --jq <jq>` as the objects it prints, one a line
  * across every page, or the unread state saying why not. Killed at `limit()`,
@@ -59,8 +62,7 @@ export function objects(query: string, jq: string): Record<string, unknown>[] | 
 	}
 	const said = run.stdout?.toString() ?? "";
 	const first = (run.stderr?.toString() || said).trim().split("\n")[0];
-	// A run killed at the limit has no exit code.
-	if (run.exitCode !== 0) return { name: "unread", why: `gh exited ${run.exitCode ?? "killed at its limit"}${first ? `: ${first}` : ""}` };
+	if (run.exitCode !== 0) return { name: "unread", why: `${exited(run)}${first ? `: ${first}` : ""}` };
 	try {
 		return said
 			.split("\n")

@@ -62,19 +62,24 @@ describe("state", () => {
 		expect(state([SKIPPED]).name).toBe("skipped");
 		expect(state([run("completed", "success", "Review skipped: draft pull request")]).name).toBe("skipped");
 	});
+
+	test("a success with no output at all is a review", () => {
+		expect(state([{ ...DONE, output: null }]).name).toBe("reviewed");
+	});
 });
 
-/** `read("o/demo", "abc")` spawned with a `gh` stub printing `out` and exiting `code`; its result and the stub's calls. */
-function read(out: string, code = 0) {
+/** `read("o/demo", "abc")` spawned with a `gh` stub printing `out` and exiting `code`, or spinning when `hang`; its result and the stub's calls. */
+function read(out: string, code = 0, hang = false) {
 	const bin = emptyDir("coderabbit-run-bin-");
 	const log = join(bin, "calls");
 	writeFileSync(join(bin, "answer"), out);
-	// Builtins alone: `PATH` holds nothing else.
-	writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\nwhile IFS= read -r l; do printf '%s\\n' "$l"; done < '${bin}/answer'\nexit ${code}\n`);
+	// Builtins alone: `PATH` holds nothing else, so a hang spins rather than sleeps.
+	const spin = hang ? "while :; do :; done\n" : "";
+	writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\n${spin}while IFS= read -r l; do printf '%s\\n' "$l"; done < '${bin}/answer'\nexit ${code}\n`);
 	chmodSync(join(bin, "gh"), 0o755);
 	const entry = join(bin, "entry.ts");
 	writeFileSync(entry, `import { read } from ${JSON.stringify(join(import.meta.dir, "coderabbit-run.ts"))};\nconsole.log(JSON.stringify(read("o/demo", "abc")));\n`);
-	const p = Bun.spawnSync([process.execPath, entry], { env: { PATH: bin } });
+	const p = Bun.spawnSync([process.execPath, entry], { env: { PATH: bin, HARNESS_GH_TIMEOUT_MS: "300" }, timeout: 10_000 });
 	return { result: JSON.parse(p.stdout.toString() || '"crashed"'), calls: readFileSync(log, "utf8").split("\n").filter(Boolean) };
 }
 
@@ -94,8 +99,13 @@ describe("read", () => {
 		expect(read("HTTP 502\n", 1).result).toEqual({ name: "unread", why: "gh exited 1: HTTP 502" });
 	});
 
-	test("an output that is not JSON is unread, saying so", () => {
-		expect(read("<html>\n").result).toEqual({ name: "unread", why: "gh's output is not one JSON object a line" });
+	test("an output that is not JSON, and a line that is JSON but no object, are unread, saying so", () => {
+		for (const out of ["<html>\n", "null\n", `[${JSON.stringify(DONE)}]\n`])
+			expect(read(out).result).toEqual({ name: "unread", why: "gh's output is not one JSON object a line" });
+	});
+
+	test("a read killed at the limit is unread, saying so", () => {
+		expect(read("", 0, true).result).toEqual({ name: "unread", why: "gh was killed at its limit" });
 	});
 });
 

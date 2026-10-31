@@ -13,7 +13,7 @@
  */
 import { statSync } from "node:fs";
 import { ready } from "./ci-run-draft.ts";
-import { arrived, interval, objects, own, type Run, read, type State, state } from "./coderabbit-run.ts";
+import { arrived, exited, interval, objects, own, type Run, read, type State, state } from "./coderabbit-run.ts";
 import { ran, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
@@ -145,7 +145,7 @@ function request(repo: string, n: number, sha: string, runs: Run[]) {
 	const now = Array.isArray(fresh) ? state(fresh) : fresh;
 	if (now.name !== "skipped") return said(now, sha.slice(0, 7));
 	const post = Bun.spawnSync(["gh", "pr", "comment", String(n), "-R", repo, "--body", REQUEST], { timeout: limit(), killSignal: "SIGKILL" });
-	return post.exitCode === 0 ? `${skipped}; asked for a review` : `${skipped}; the request failed, gh exited ${post.exitCode ?? "killed at its limit"}`;
+	return post.exitCode === 0 ? `${skipped}; asked for a review` : `${skipped}; the request failed, ${exited(post)}`;
 }
 
 /** CodeRabbit's runs on `sha`, none when the read fails. */

@@ -115,6 +115,19 @@ describe("the wait before the ready switch", () => {
 		expect(run.out).not.toContain("no completed CodeRabbit run");
 	});
 
+	test("with no --card, finish still waits for a completed run before the ready switch", async () => {
+		const cwd = checkout(true);
+		const run = await finish({ cwd, args: ["finish"], gh: { before: DRAFT, runs: [[], [SKIPPED], [RUNNING]] } });
+		expect(run.calls).toEqual([READ, "push", ...times(2, runs(cwd)), READY, runs(cwd)]);
+		expect(run.last).toBe(`finish: ready #7 — CodeRabbit reviewing ${short(cwd)}`);
+	});
+
+	test("a ready switch gh refuses ends on the draft, exit 1, with no read after it", async () => {
+		const run = await watched([[SKIPPED]], { ready: 1 });
+		expect(run.calls).toEqual([READ, "push", runs(run.cwd), READY]);
+		expect([run.code, run.last]).toEqual([1, "finish: draft #7 — gh pr ready 7 failed"]);
+	});
+
 	// spec: work-finish/a-question-waits
 	test("a question waiting leaves the draft, and the log ends on the pre-ready reads", async () => {
 		const cwd = checkout(true);
