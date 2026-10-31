@@ -13,11 +13,13 @@ boards, not here: the goal check reads only this tree.
       bullet says the session writes no `CODE-REVIEW gate:` line only when
       no pass returned a review, that a pass failing after one that returned
       ends the loop on the line the earlier passes left, and that `BLOCKED`
-      wins over `OPEN` and `OPEN` over `PASS` (design.md decision 5); and add `// spec:
-      agent-autonomy/the-third-round-still-gets-its-fixes` above the case
-      *shares /code-review's finding-disposal terms alone, keeping its
-      pull-request behaviour*, which pins what that scenario now says. Verify with `bun test bun/review-docs.test.ts`
-      that the new assertion fails, and record it
+      wins over `OPEN` and `OPEN` over `PASS` (design.md decision 5), citing
+      `local-review-loop/a-later-pass-does-not-return` beside it; and add
+      `// spec: agent-autonomy/the-third-round-still-gets-its-fixes` above
+      the case *shares /code-review's finding-disposal terms alone, keeping
+      its pull-request behaviour*, which pins what that scenario now says.
+      Verify with `bun test bun/review-docs.test.ts` that each new assertion
+      fails on its own, and record it
 - [ ] 1.2 Edit `core/review-toolkit.md` with the editing tool: delete the
       `/coderabbit-local [base]` bullet, and make the `/code-review` bullet
       say the three things 1.1 pins, beside «the push goes on without the
@@ -40,24 +42,34 @@ boards, not here: the goal check reads only this tree.
       `orchestrator/README.md`, drop the `coderabbit auth login` step — the
       sentence that leads to it, its code block and «A `localhost` callback
       it prints is handed over the same way.» — keeping «`/exit`» where the
-      step began (design.md decision 2). Merge `origin/main` first if
+      step began, and add one line saying that a host which ran it revokes
+      that login in CodeRabbit and deletes the CLI's config from `agent`'s
+      home, naming the directory the CLI's own docs give (design.md
+      decision 2, *Risks*). Merge `origin/main` first if
       `host-deploy` has landed. Verify with `bun test orchestrator/` green and
       `git grep -n -i coderabbit -- orchestrator` printing nothing
 
 ## 3. Verify
 
 - [ ] 3.1 Grep the tree case-insensitively for `coderabbit-local`,
-      `coderabbit doctor`, `coderabbit review`, `coderabbit auth`,
-      `CODERABBIT_VERSION` and `CodeRabbit's CLI`, leaving the archive,
+      `coderabbit doctor`, `coderabbit review --`, `coderabbit review \*`,
+      `coderabbit auth`, `CODERABBIT_VERSION` and `CodeRabbit's CLI` — not
+      a bare `coderabbit review`, which matches prose about the bot's
+      review — leaving the archive,
       `docs/context/`, other open changes and this change's own artefacts;
       list any remaining hit and its disposition in the commit message. Then
       `openspec validate remove-coderabbit-local --strict` and `bun test
       bun/board-state-hygiene.test.ts bun/spec-coverage-sweep.test.ts
       bun/spec-coverage-floor.test.ts`, green
-At archive, not at apply: re-copy the `MODIFIED` block of *The local review
-runs after triage and before the push* from main if another change modified
-it since, re-applying this change's edits; and rewrite the Purpose of
-`openspec/specs/local-review-loop/spec.md`, which no delta reaches, to drop
-«which guidelines CodeRabbit's CLI reads when a session runs
-`/coderabbit-local` by hand» (design.md decision 7), so that `git grep -n
-coderabbit-local -- openspec/specs` prints nothing.
+
+## 4. At archive
+
+Ticked by the archive, not by the apply.
+
+- [ ] 4.1 Re-copy the `MODIFIED` block of *The local review runs after
+      triage and before the push* from main if another change modified it
+      since, re-applying this change's edits; and rewrite the Purpose of
+      `openspec/specs/local-review-loop/spec.md`, which no delta reaches, to
+      drop «which guidelines CodeRabbit's CLI reads when a session runs
+      `/coderabbit-local` by hand» (design.md decision 7). Verify with `git
+      grep -n coderabbit-local -- openspec/specs` printing nothing
