@@ -46,8 +46,10 @@ boards, not here: the goal check reads only this tree.
       that login in CodeRabbit and deletes the CLI's config from `agent`'s
       home, naming the directory the CLI's own docs give (design.md
       decision 2, *Risks*). Merge `origin/main` first if
-      `host-deploy` has landed. Verify with `bun test orchestrator/` green and
-      `git grep -n -i coderabbit -- orchestrator` printing nothing
+      `host-deploy` has landed. Verify with `bun test orchestrator/` green,
+      `git grep -n -i coderabbit -- orchestrator ':(exclude)orchestrator/README.md'`
+      printing nothing, and the same grep over `orchestrator/README.md`
+      printing only the revocation line this task adds
 
 ## 3. Verify
 
