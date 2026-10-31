@@ -6,10 +6,11 @@
 
 `finish` SHALL name CodeRabbit's state of a commit from every check run named
 `CodeRabbit` that CodeRabbit's app posted on it, never from a comment's text:
-`reviewing` while one is not completed, else `reviewed` when one succeeded,
-else `rate limited` when one is neutral titled `Review rate limited`, else
-the conclusion and title of any other, else `skipped` when one was skipped,
-else no run. A read that fails SHALL name the state unread.
+`reviewing` while one is not completed, else `reviewed` when one succeeded
+with a title not opening `Review skipped`, else `rate limited` when one is
+neutral titled `Review rate limited`, else the conclusion and title of any
+other, else `skipped` when one was skipped or so titled, else no run. A read
+that fails SHALL name the state unread.
 
 #### Scenario: A skipped run and a review in progress
 
@@ -28,6 +29,12 @@ else no run. A read that fails SHALL name the state unread.
 - **WHEN** a commit's only CodeRabbit run is skipped
 - **THEN** its state is `skipped`
 
+#### Scenario: A skip reported as a success
+
+- **WHEN** a commit's only CodeRabbit run succeeded with the title
+  `Review skipped`
+- **THEN** its state is `skipped`
+
 #### Scenario: A run another app posted
 
 - **WHEN** a commit holds a check run named `CodeRabbit` that another app
@@ -38,9 +45,10 @@ else no run. A read that fails SHALL name the state unread.
 
 Where the checkout tracks `.coderabbit.yaml`, `finish` SHALL, after the push
 or its skip and the draft's opening, and before it reads the card's
-question, read CodeRabbit's state of `HEAD` until it is neither no run nor
-unread, starting no read after 60 s. A wait that ends so SHALL say no run
-came and go on to the question read and the ready switch. Without that file,
+question, read CodeRabbit's state of `HEAD` until a read finds a completed
+run, at most 12 reads an interval apart (60 s at the default 5 s). A wait
+that ends without one SHALL say so and go on to the question read and the
+ready switch. Without that file,
 tracked at the checkout's top, `finish` SHALL read no check run and wait for
 none.
 
@@ -53,7 +61,7 @@ none.
 
 #### Scenario: No run within the wait
 
-- **WHEN** no CodeRabbit run appears on `HEAD` within 60 s
+- **WHEN** no completed CodeRabbit run appears on `HEAD` in 12 reads
 - **THEN** `finish` says that no run came, and still reads the question and
   marks the pull request ready
 
@@ -69,6 +77,12 @@ none.
   `.coderabbit.yaml` at its top
 - **THEN** it reads the check runs and waits as it would from the top
 
+#### Scenario: A branch pushed before its draft
+
+- **WHEN** `origin` already holds `HEAD` and `finish` opens the draft, so
+  no CodeRabbit run is on `HEAD` yet
+- **THEN** `finish` reads until the draft's skip appears, then goes on
+
 #### Scenario: A question waits
 
 - **WHEN** the wait ends and the card's last question has no answer
@@ -79,10 +93,11 @@ none.
 
 Where the checkout tracks `.coderabbit.yaml`, `finish` SHALL, after the
 ready switch, read CodeRabbit's state of `HEAD` until it is neither
-`skipped`, no run nor unread, starting no read after 90 s, and end on one
-line naming the pull request ready, the last read's state and `HEAD`'s short
-hash. Every state SHALL exit 0, since the ready switch went through; the
-line is the signal.
+`skipped`, no run nor unread, at most 18 reads an interval apart (90 s at
+the default), and end on one line naming the pull request ready, the state
+the last read that answered gave, unread only when none answered, and
+`HEAD`'s short hash. Every state SHALL exit 0, since the ready switch went
+through; the line is the signal.
 
 #### Scenario: The review starts
 
@@ -98,12 +113,17 @@ line is the signal.
 
 #### Scenario: Still skipped when the reads end
 
-- **WHEN** `HEAD`'s state is `skipped` for the whole 90 s
+- **WHEN** `HEAD`'s state is `skipped` for all 18 reads
 - **THEN** `finish` goes on to the review request
+
+#### Scenario: A last read that fails after skips
+
+- **WHEN** 17 reads give `skipped` and the 18th fails
+- **THEN** the state is `skipped` and `finish` goes on to the review request
 
 #### Scenario: Unread
 
-- **WHEN** the last read of `HEAD`'s check runs fails
+- **WHEN** every read of `HEAD`'s check runs after the switch fails
 - **THEN** the last line says CodeRabbit's state is unread, no review is
   asked for, and `finish` exits 0
 
@@ -118,7 +138,8 @@ line is the signal.
 When `HEAD`'s state is still `skipped` as the reads end, `finish` SHALL post
 the comment `@coderabbitai review`, and nothing else, on the pull request
 under the identity `gh` runs with, unless the pull request already holds a
-comment of exactly that text posted after `HEAD`'s first CodeRabbit run,
+comment of exactly that text posted at or after the start of `HEAD`'s first
+CodeRabbit run,
 and SHALL post at most one per call. A comment read that fails SHALL post
 nothing. The last line SHALL say whether it asked, had already asked, could
 not read the comments, or failed to post.
@@ -126,21 +147,22 @@ not read the comments, or failed to post.
 #### Scenario: A first request
 
 - **WHEN** `HEAD`'s state stays `skipped` and the pull request holds no
-  `@coderabbitai review` comment newer than `HEAD`'s first CodeRabbit run
+  `@coderabbitai review` comment from the start of `HEAD`'s first
+  CodeRabbit run on
 - **THEN** `finish` posts one comment whose body is exactly
   `@coderabbitai review`, and its last line says it asked
 
 #### Scenario: Already asked for this head
 
-- **WHEN** `HEAD`'s state stays `skipped` and such a comment was posted after
-  `HEAD`'s first CodeRabbit run
+- **WHEN** `HEAD`'s state stays `skipped` and such a comment was posted in
+  the second `HEAD`'s first CodeRabbit run started, or later
 - **THEN** `finish` posts nothing and its last line says a review was
   already asked for
 
 #### Scenario: An older request
 
-- **WHEN** the pull request's only `@coderabbitai review` comment is older
-  than `HEAD`'s first CodeRabbit run
+- **WHEN** the pull request's only `@coderabbitai review` comment was posted
+  before `HEAD`'s first CodeRabbit run started
 - **THEN** `finish` posts one
 
 #### Scenario: The comments cannot be read

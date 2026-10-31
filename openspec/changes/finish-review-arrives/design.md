@@ -66,25 +66,31 @@ would run until that card lands.
 ### The wait before the ready switch (answer 1 a)
 
 After the push or its skip and the draft's opening, `finish` reads `HEAD`'s
-state every poll interval until it is other than no run or unread, for at
-most 12 intervals on the clock — 60 s at the default 5 s, plus at most one
-read's `limit()` when the last read hangs. A failed read counts as no run and
-the reads go on. It runs before the card's question read, which stays
-last before `ready()` so that it sees a question posted meanwhile, as the
-archived `work-finish` design set; a question that then waits has cost up to
-60 s, the price of keeping that order. A wait that ends with no run prints
-`finish: no CodeRabbit run on <short> after 60 s` and goes on: the wait
-narrows a race, it gates nothing.
+runs until one is completed, at most 12 reads an interval apart. Completed,
+not merely present, so that a run still in progress for the push's event
+cannot end the wait while that event is being handled. A failed read counts
+as none and the reads go on. It runs before the card's question read, which
+stays last before `ready()` so that it sees a question posted meanwhile, as
+the archived `work-finish` design set; a question that then waits has cost
+up to 60 s, the price of keeping that order. A wait that ends with none
+prints `finish: no completed CodeRabbit run on <short> after 12 reads` and
+goes on: the wait narrows a race, it gates nothing.
 
-No push in this call does not skip the wait: the run from an earlier push is
-already there, so the first read returns.
+With no push in this call, an earlier push's run is usually there and the
+first read returns; a branch pushed before its draft opened has none until
+the opening's skip arrives, about 7 s later.
+
+The skips seen so far complete in the second they start (#355's and #344's
+`started_at` equals `completed_at`), so a `reviewing` after the switch is
+not an earlier skip still in progress.
 
 ### The reads after it (answer 1 a, option B of the explore)
 
 After `ready()`, `finish` reads `HEAD`'s state every poll interval until it
-is neither `skipped`, no run nor unread, for at most 18 intervals on the
-clock — 90 s at the default, with the same one-read overrun. A failed read
-does not end the reads; only the last read decides the line. The review
+is neither `skipped`, no run nor unread, at most 18 reads an interval apart.
+A failed read does not end the reads, and the last read that answered
+decides the line, so one failure at the end cannot drop the request. The
+review
 starts 25–35 s after the switch when it comes (#338, #342). The last line is
 the outcome, joined to the ready one so the last line stays the one the
 agent reads:
@@ -93,8 +99,9 @@ agent reads:
 - `finish: ready #7 — CodeRabbit reviewed 1a2b3c4`
 - `finish: ready #7 — CodeRabbit rate limited on 1a2b3c4; no review asked for`
 - `finish: ready #7 — CodeRabbit <conclusion> "<title>" on 1a2b3c4`
-- `finish: ready #7 — no CodeRabbit run on 1a2b3c4 after 90 s`
-- `finish: ready #7 — CodeRabbit's runs on 1a2b3c4 unread: <why>`
+- `finish: ready #7 — no CodeRabbit run on 1a2b3c4 after 18 reads`
+- `finish: ready #7 — CodeRabbit's runs on 1a2b3c4 unread: <why>`, when no
+  read after the switch answered
 - `finish: ready #7 — CodeRabbit skipped 1a2b3c4`, step 1's line for a
   skip, which step 2 extends with one of the request's four endings below
 
@@ -107,10 +114,12 @@ pull request is still a draft everywhere else in `finish`.
 5000 otherwise. Its parse and `limit()`'s parse of `HARNESS_GH_TIMEOUT_MS`
 are one helper in `bun/pull-requests.ts`, `limit()` switched to it in the
 same step, so the *never 0* guard `spawnSync` needs is written once. The two
-waits are 12 and 18 intervals on the clock, so the tests run the whole
-sequence in milliseconds and no second knob is needed. Alternative rejected:
-separate deadlines in seconds, three knobs for one test need; and counts of
-polls, which a slow `gh` stretches to minutes while the line still says 60 s.
+waits are 12 and 18 reads, so a test sets the interval to 1 ms and gets the
+same reads in the same order whatever the runner's speed, and the lines
+name reads rather than seconds, so they stay true under the knob. Each read
+is killed at `limit()`, so a `gh` that hangs on every read stretches a wait
+past 60 s; that is the cost. Alternative rejected: deadlines on the clock,
+which a 1 ms interval makes shorter than one spawn of the test's stub.
 
 ### Only where CodeRabbit is configured
 
@@ -210,7 +219,7 @@ once both are known, from the module this change ships.
 ## Risks / Trade-offs
 
 - [Every `finish` is slower, by about 35 s when the review comes and up to
-  150 s when it does not] → the alternative is an agent waiting an hour on a
+  150 s at the default interval when it does not, longer when `gh` hangs] → the alternative is an agent waiting an hour on a
   review that never comes, which is what the card records.
 - [A post under the user's account] → one line, at most once per head per
   pull request, only on `skipped`, and only in a repository that tracks

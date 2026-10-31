@@ -18,8 +18,8 @@ The user settled the explore's question on 2026-10-31: `finish` separates
 the ready switch from the push and says afterwards whether the review is
 coming (answer 1 a); on a skipped head it posts `@coderabbitai review` under
 whatever GitHub identity it runs with (answer 2), with standing permission to
-post exactly that line under the user's own account on the laptop (answer
-4 b); on a rate limit, a local session reports and stops, and a session on
+post exactly that line under the user's own account (answer 4 b, asked with
+no machine named); on a rate limit, a local session reports and stops, and a session on
 the host has Windmill post the request once the window opens (answer 3).
 
 ## What Changes
@@ -28,7 +28,7 @@ the host has Windmill post the request once the window opens (answer 3).
   commit and names its state: `reviewing`, `reviewed`, `rate limited`,
   `skipped`, another conclusion by name, or no run.
 - `finish`, where the checkout tracks `.coderabbit.yaml`, waits after the
-  push up to about 60 s for a CodeRabbit run on `HEAD` before the question
+  push up to about 60 s for a completed CodeRabbit run on `HEAD` before the question
   read and the ready switch, so the push's event is handled before the
   ready one.
 - After the ready switch `finish` reads `HEAD`'s runs for up to about 90 s
