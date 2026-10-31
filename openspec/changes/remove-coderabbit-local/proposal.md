@@ -53,7 +53,12 @@ written when the review does not return.
 - *The local review runs after triage and before the push* says the session
   writes the `CODE-REVIEW gate:` line itself whenever a pass of the loop
   returned a review, and none only when no pass did, so a later pass that
-  fails leaves an earlier pass's `OPEN` or `BLOCKED` standing.
+  fails leaves an earlier pass's `OPEN` or `BLOCKED` standing; `BLOCKED`
+  wins over `OPEN` and `OPEN` over `PASS`. The `/code-review` bullet of
+  `core/review-toolkit.md`, whose «the push goes on without the gate» reads
+  as no gate line on any failed pass, says the same, and the
+  `bun/review-docs.test.ts` case citing *The review does not return* pins
+  it.
 - `agent-autonomy`'s *A pull request gets CodeRabbit's fixes for at most
   three rounds* applies a third round's fix on the finding-disposal terms
   of *A verified finding is fixed without asking* and *Dismissing a Major or

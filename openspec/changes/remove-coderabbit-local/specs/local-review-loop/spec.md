@@ -15,8 +15,9 @@ documentation branch, as `pre-pr-runner` (*The runner names the steps the
 branch requires from its diff*) classifies one, SHALL get one review pass
 rather than the full loop. The review SHALL read the branch's diff against
 the base the runner measured from, in the tree the branch is checked out in;
-a review with findings none of which names a file that diff changes read
-another diff, and SHALL count as a review that does not return. A finding
+a review with findings none of which names a file that diff changes did not
+review that diff, and SHALL count, on any pass, as a review that does not
+return. A finding
 that names an unchanged file beside findings on changed ones — a caller the
 change breaks — SHALL be kept and verified like any other. Since `/code-review` names no
 severity, the agent SHALL grade each of its findings 🔵 Trivial, 🟡 Minor,
@@ -25,7 +26,9 @@ name the grade beside the finding in its report. Since `/code-review` prints
 no gate line either, the agent SHALL end the loop on a `CODE-REVIEW gate:`
 line it writes itself, reading `PASS`, `OPEN` or `BLOCKED` as *Dismissing a
 Major or above is the user's call* sets, whenever a pass of the loop returned
-a review. It SHALL write none only when no pass returned one. A pass that does
+a review. Where findings in more than one of those states remain, `BLOCKED`
+SHALL win over `OPEN` and `OPEN` over `PASS`, and the line SHALL name every
+finding behind it. It SHALL write none only when no pass returned one. A pass that does
 not return after one that did ends the loop, and the line reads on what the
 passes that returned left.
 
@@ -211,9 +214,10 @@ reported once, at the end*, and that call is the agent's alone.
 Where a skipped Minor reflects a settled convention of this project, the
 agent SHALL capture it as a rule in the rulebook's "Rules" list or in a doc
 the rulebook indexes. `core/rules.md` §*The loop* decides which of the two,
-because the repository's `.coderabbit.yaml` names both under
-`knowledge_base.code_guidelines.filePatterns`, so CodeRabbit's review on the
-pull request reads either. `/code-review` reads `CLAUDE.md` and
+because the pattern the repository's `.coderabbit.yaml` names under
+`knowledge_base.code_guidelines.filePatterns`, `core/*.md`, matches
+`core/rules.md` and every doc beside it, so CodeRabbit's review on the pull
+request reads either. `/code-review` reads `CLAUDE.md` and
 `core/rules.md`, not the docs the rulebook indexes, so a rule kept in one of
 those docs is read back on the pull request rather than by the local review.
 A one-off SHALL NOT become a rule.
