@@ -29,8 +29,10 @@ card on 2026-10-31 (answers 1 a, 2 a, 3 a).
   the tree derives nothing for it.
 - `core/feature-workflow.md` and the README name the new form.
 
-The turn that adds the closing pull request's link under `Ссылки` writes
-`pr:<N>` into the card's `Pointer` too (card assumption 6). That is the
+On a fix card, one with no change directory, the turn that adds the closing
+pull request's link under `Ссылки` writes `pr:<N>` into the card's `Pointer`
+too, or `<repo>: pr:<N>` on another repository's board (card assumption 6). A
+card whose `Pointer` names a change keeps it. That is the
 session that opened the pull request, or, when the user opened it, the first
 turn that learns it exists, as for the link (`core/feature-workflow.md`). Since no
 reconciliation derives a `pr:` card's floor, the session that learns the pull

@@ -40,8 +40,9 @@ The cases are the proposal-stage `/zombies` ideas, bracketed by number.
       cases unchanged
 - [ ] 1.3 Name the form where the `Pointer` is described. In
       `core/feature-workflow.md`, the bullet that opens "A card's `Pointer` is
-      a directory of this tree" gains the `pr:<N>` form, which the turn that
-      adds the closing pull request's `Ссылки` link writes too. That is the
+      a directory of this tree" gains the `pr:<N>` form, `<repo>: pr:<N>` on
+      another repository's board. On a fix card with no change directory, the
+      turn that adds the closing pull request's `Ссылки` link writes it too. That is the
       session that opened the pull request, or, when the user opened it, the
       first turn that learns it exists. The session that learns the pull
       request merged moves the card with `status --to done` in that turn,
