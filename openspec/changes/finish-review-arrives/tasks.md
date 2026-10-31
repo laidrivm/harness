@@ -21,7 +21,8 @@ file nears the 300-line cap.
       state in `bun/coderabbit-run.ts`
 - [ ] 1.2 Failing cases in `bun/coderabbit-run.test.ts` over the read, with
       a `gh` stub on `PATH`: it calls `api
-      repos/o/demo/commits/<sha>/check-runs?filter=all&per_page=100`; an
+      repos/o/demo/commits/<sha>/check-runs?filter=all&per_page=100
+      --paginate --jq .check_runs[]`, and a run on a second page counts; an
       exit that is not 0 and an output that is not JSON give unread with a
       reason; `HARNESS_CODERABBIT_POLL_MS` unset, `0`, `-5` and `x` give
       5000 and `7` gives 7. Then write the read, and lift `limit()`'s
@@ -78,7 +79,9 @@ file nears the 300-line cap.
       run's `started_at`, and one padded with whitespace, count as asked and
       post nothing; a request a second earlier, and `@coderabbitai review
       please`, do not count; with the head's runs listed out of time order
-      the earliest `started_at` is used; a failed comment read posts
+      the earliest `started_at` is used; a read right before the post that
+      gives `rate limited`, or fails, posts nothing and says which; a
+      failed comment read posts
       nothing and names why; a post `gh` refuses with exit 1 is made once
       and named; `rate limited`, `reviewing` and unread read no comments;
       every one exits 0. Then add the request to `finish()`
@@ -92,6 +95,7 @@ file nears the 300-line cap.
       Grep the same places as 1.5, and `comment as the user` and `under the
       user's name`, for wording the step makes false
 - [ ] 2.4 Live probe from the tree on this group's own pull request: open it
-      with `bun bun/work.ts finish --card <card>`, and record in its body
+      with `bun bun/work.ts finish --card <card> --title <text> --body-file
+      <path>`, and record in its body
       `finish`'s last line and, where it read `skipped`, the request it
       posted and whether CodeRabbit answered it

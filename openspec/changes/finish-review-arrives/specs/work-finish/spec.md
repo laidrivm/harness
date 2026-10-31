@@ -135,14 +135,13 @@ through; the line is the signal.
 
 ### Requirement: Finish asks once for the review of a skipped head
 
-When `HEAD`'s state is still `skipped` as the reads end, `finish` SHALL post
-the comment `@coderabbitai review`, and nothing else, on the pull request
-under the identity `gh` runs with, unless the pull request already holds a
-comment of exactly that text posted at or after the start of `HEAD`'s first
-CodeRabbit run,
-and SHALL post at most one per call. A comment read that fails SHALL post
-nothing. The last line SHALL say whether it asked, had already asked, could
-not read the comments, or failed to post.
+When the reads end on `skipped` and one more read right before the post
+gives `skipped` too, `finish` SHALL post `@coderabbitai review`, and nothing
+else, under the identity `gh` runs with, unless the pull request holds that
+exact comment posted at or after the start of `HEAD`'s first CodeRabbit
+run; at most one per call. A failed comment or run read SHALL post nothing.
+The last line SHALL say whether it asked, had already asked, read another
+state, could not read, or failed to post.
 
 #### Scenario: A first request
 
@@ -164,6 +163,19 @@ not read the comments, or failed to post.
 - **WHEN** the pull request's only `@coderabbitai review` comment was posted
   before `HEAD`'s first CodeRabbit run started
 - **THEN** `finish` posts one
+
+#### Scenario: A rate limit by the read before the post
+
+- **WHEN** the reads end on `skipped` and the read right before the post
+  gives `rate limited`
+- **THEN** `finish` posts nothing and its last line names the rate limit
+
+#### Scenario: The read before the post fails
+
+- **WHEN** the reads end on `skipped` and the read right before the post
+  fails
+- **THEN** `finish` posts nothing and its last line says the runs are
+  unread
 
 #### Scenario: The comments cannot be read
 

@@ -35,8 +35,9 @@ laptop (answer 3 a: a retry costs the same limit).
 
 `bun/coderabbit-run.ts` holds a pure `state(runs)` over the check-run list
 and `read(repo, sha)`, which runs `gh api
-repos/<repo>/commits/<sha>/check-runs?filter=all&per_page=100` killed at
-`limit()` from `bun/pull-requests.ts`, as every `gh` read there is.
+repos/<repo>/commits/<sha>/check-runs?filter=all&per_page=100 --paginate
+--jq .check_runs[]`, one run a line across every page, killed at `limit()`
+from `bun/pull-requests.ts`, as every `gh` read there is.
 `filter=all`, because the default `latest` keeps one run per name, and which
 of a skip and a review counts as latest depends on an order CodeRabbit does
 not promise. The states and their precedence are the spec's (*CodeRabbit's
@@ -148,7 +149,14 @@ the once-per-head rule are tested rather than left to a brief. Alternative
 rejected: the agent running `gh pr comment` itself, whose text and count no
 check reads.
 
-The four endings:
+Right before the post, `finish` reads `HEAD`'s runs once more and posts only
+when that read answers `skipped`; any other state ends on its own line, and
+a failed read posts nothing. The decision then never rests on a stale skip —
+17 skips and a failed 18th read could hide a rate limit (CodeRabbit on #357)
+— while one failure at the end of the reads still does not drop the
+request, as an unread ending would.
+
+The four endings, besides the fresh read's other states:
 
 - `finish: ready #7 — CodeRabbit skipped 1a2b3c4; asked for a review`
 - `finish: ready #7 — CodeRabbit skipped 1a2b3c4; a review was already asked for`
