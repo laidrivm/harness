@@ -37,6 +37,54 @@ such a card without comparing or listing it.
 - **WHEN** a card on `D2ASS` carries `harness: pr:350`
 - **THEN** dota2's reconciliation SHALL neither compare nor list it
 
+### Requirement: A board is reconciled when it is read and when a session ends
+
+A session SHALL reconcile its repository's board at two moments: at the
+`Board view` read it makes to choose work, and at `session-wrapup`, for the
+cards the session's own changes point at. Each moment runs
+`bun/board-state.ts`. It then compares every card whose `Pointer` is wholly a
+directory of this tree with the floor printed for that slug, corrects a card
+behind it, and reports each correction. A card at `discarded` is behind no
+floor and is left as it is.
+
+#### Scenario: A card behind its floor at the board read
+
+- **WHEN** a session reads its board's `Board view` to choose work and a card
+  whose `Pointer` names `openspec/changes/archive/<date>-<slug>/` reads
+  `proposed`
+- **THEN** in that turn it SHALL set the card to `done`, re-read it, and report
+  the correction
+
+#### Scenario: A stage moved and its card forgotten
+
+- **WHEN** a session archives a change and reaches `session-wrapup` with that
+  change's card still at `archiving` or earlier
+- **THEN** the wrap-up SHALL set the card to `done`, re-read it, and report the
+  correction, before the next session's board read could find it
+
+#### Scenario: A session that touched no change
+
+- **WHEN** `session-wrapup` runs in a session whose work pointed at no change
+  directory
+- **THEN** it SHALL report that it reconciled nothing, and SHALL NOT read the
+  rest of the board
+
+#### Scenario: A card whose pointer names no directory of this tree
+
+- **WHEN** a card on the board this repository names carries a `Pointer` that
+  is empty, or carries text around a path, in a form other than the
+  cross-repository one or the pull-request one
+- **THEN** the reconciliation SHALL NOT compare it, and SHALL list it as
+  naming no directory of this tree rather than correcting it
+
+#### Scenario: A well-formed pointer to a slug the tree lacks
+
+- **WHEN** a card's `Pointer` is wholly `openspec/changes/<slug>/` or
+  `openspec/changes/archive/<date>-<slug>/`, and the tree has no directory at
+  that path
+- **THEN** the reconciliation SHALL list the card as missing from the tree,
+  and SHALL NOT change its status
+
 ## ADDED Requirements
 
 ### Requirement: A fix card points at the pull request that closes it
@@ -66,6 +114,13 @@ such a card without comparing or listing it.
 - **WHEN** a reconciliation reads a card whose `Pointer` is wholly `pr:350`
 - **THEN** it SHALL neither compare the card against the tree nor list it,
   and SHALL leave its status as it is
+
+#### Scenario: The closing pull request merges
+
+- **WHEN** #350 merges and a card's `Pointer` reads `pr:350`
+- **THEN** the session that learns of the merge SHALL move the card to `done`
+  in that turn (*A stage that completes moves its card in the same turn*),
+  since no reconciliation derives a floor for it
 
 #### Scenario: Text around the number
 

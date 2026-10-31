@@ -28,6 +28,42 @@ tree (*A fix card's done is proven by its merged pull request*).
 - **WHEN** `git fetch` cannot reach `origin`
 - **THEN** `status --to proposed` refuses and writes nothing
 
+### Requirement: Each merged status has its own evidence
+
+On `origin/main`, `proposed` SHALL be proven when the board state derives
+`proposed` or `done` for the change, `done` when it derives `done`, and
+`applied` when it derives `done`, or `proposed` with every `## ` group of
+the change's `tasks.md` holding a ticked box and no open one. A derived
+`proposing` proves nothing. A ticked `Dropped …` task counts as ticked. A
+card whose `Pointer` names a pull request names no change, and its `done` is
+proven as *A fix card's done is proven by its merged pull request* sets out.
+
+#### Scenario: A proposal not complete on main
+
+- **WHEN** `origin/main` holds the change without its `design.md`
+- **THEN** `status --to proposed` refuses and writes nothing
+
+#### Scenario: One group still open
+
+- **WHEN** the change's `tasks.md` on `origin/main` has group 1 ticked and
+  group 2 with an open box
+- **THEN** `status --to applied` refuses naming the open group
+
+#### Scenario: Every group ticked, one task dropped
+
+- **WHEN** every group is ticked and one ticked task reads `Dropped: …`
+- **THEN** `status --to applied` writes the status
+
+#### Scenario: A task list with no group
+
+- **WHEN** the change's `tasks.md` has no `## ` group with a box
+- **THEN** `status --to applied` refuses
+
+#### Scenario: An archived change asked for applied
+
+- **WHEN** `origin/main` holds the change only under the archive
+- **THEN** `status --to applied` writes the status
+
 ### Requirement: The card's Pointer names the change proven
 
 For a merged status, the change SHALL be the one the card's `Pointer` names
