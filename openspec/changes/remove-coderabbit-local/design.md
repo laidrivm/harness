@@ -20,6 +20,9 @@ the skill or the CLI on main, outside the archive and
 | `orchestrator/runner/Dockerfile` | `CODERABBIT_VERSION` and the CLI install |
 | `orchestrator/README.md` | the `coderabbit auth login` step |
 
+`.claude/settings.json` also allows `WebFetch(domain:docs.coderabbit.ai)`,
+which stays: CodeRabbit still reviews every pull request, and its docs are
+where `.coderabbit.yaml`'s keys and the review limits are read.
 `skills-lock.json` lists only `playwright-cli`, so it has no entry to drop.
 `bun/sync.ts` writes no skill link and no `allow` entry into a consumer, so
 nothing there names the skill. No harness script, workflow or hook runs the
@@ -42,9 +45,13 @@ CLI.
   copy (answer 3 а). Two `MODIFIED` copies of one requirement would have the
   later archive revert the earlier.
 - `core/rules.md` §*The loop* still says «a settled project convention the
-  bot cannot know» of a Minor the local review raised. The user's answer 2 а
-  covers the spec; the rulebook is always-on text every consumer syncs, and
-  is left for its own card.
+  bot cannot know» of a Minor the local review raised, and that a rule in it
+  or in an indexed doc «is read back by the next review», which holds for
+  CodeRabbit on the pull request and not for `/code-review`. The user's
+  answer 2 а covers the spec; the rulebook is always-on text every consumer
+  syncs, so both phrases are left to the Harness card *Say in core/rules.md
+  which review reads a rule back, now that the local review reads only the
+  rulebook*.
 - Changing a consumer's tree. mellon and D2ASS each get a card instead
   (*Consumers*).
 
@@ -108,6 +115,13 @@ CLI.
    over `OPEN` and `OPEN` over `PASS` (the local review and CodeRabbit on
    #359). Nothing in `bun/` parses `CODE-REVIEW`. The toolkit sentence says
    both, so the case citing *The review does not return* can pin it.
+   `core/autonomy.md` opens an unattended pull request over `BLOCKED` only
+   when a Major the third pass left is all it names, and over `OPEN` only
+   over a proposed dismissal. So a `BLOCKED` line that also names a proposed
+   dismissal, or one written after a failed pass left a Major undecided
+   before any third review, holds the pull request back. That is kept on
+   purpose: each case leaves the user a Major to settle, and no exception
+   is widened here.
 
 6. **`agent-autonomy`'s three-round cap is a different requirement from the
    one resolve-threads owns.** Explore item 2 sits in *A pull request gets
@@ -162,8 +176,15 @@ board, status `idea`, names the removal.
   push* is long, and another change may modify it before this one archives]
   → re-copy it from main right before archive and re-apply this change's
   three edits.
-- [A consumer's bump fails until its card is done] → the cards exist before
-  this change merges; the failure names the link, so it is not silent.
+- [A consumer's bump fails every day until its card is done, unrelated
+  harness fixes included] → the cards exist before this change merges, and
+  removing the link is safe at any pin, so the apply's pull request names
+  both cards in its body for the user to settle before merging it; the
+  failure names the link, so it is not silent.
+- [A host that ran `coderabbit auth login` keeps the CLI's token in the
+  `agent_home` volume after the image drops the CLI] → task 2.1 has the
+  README say to revoke that login in CodeRabbit and delete the CLI's
+  config from `agent`'s home.
 - [A session somewhere still runs `/coderabbit-local` from memory] → the
   skill is gone, so the call fails visibly rather than running a reviewer no
   gate reads.
