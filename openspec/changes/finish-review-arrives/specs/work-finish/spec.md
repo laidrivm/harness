@@ -81,9 +81,9 @@ none.
 
 - **WHEN** `origin` already holds `HEAD` and `finish` opens the draft, so
   no CodeRabbit run is on `HEAD` yet
-- **THEN** `finish` reads, at most 12 times, until the draft's skip
-  appears, and with none says so; either way it goes on to the question
-  read and the ready switch
+- **THEN** `finish` reads, at most 12 times, until a completed CodeRabbit
+  run appears, and with none says so; either way it goes on to the
+  question read and the ready switch
 
 #### Scenario: A question waits
 
