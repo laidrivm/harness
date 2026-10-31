@@ -40,7 +40,8 @@ file nears the 300-line cap.
       `.coderabbit.yaml`, and a gitignored untracked one, make no check-run
       call and end on `finish: ready #7`; run from a subdirectory of a
       checkout tracking it at the top, `finish` reads the check runs; the
-      `gh` call order is the PR read, the push, the check-run reads until a
+      `gh` call order is the PR read, the push, the draft's opening and
+      re-read when `finish` opens one, the check-run reads until a
       completed run appears, the ready, then the check-run reads; an
       in-progress run alone does not end the wait; no completed run in 12
       reads says so and still marks ready; with `origin` already at `HEAD`
