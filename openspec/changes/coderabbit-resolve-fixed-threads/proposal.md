@@ -48,25 +48,27 @@ change):
   pushes with `finish`, then runs it. A thread whose finding was skipped or
   rejected stays the user's. `@coderabbitai resolve` and `approve` stay
   forbidden.
-- Step 1 reads the head commit, then its `CodeRabbit` check run and commit
+- Step 1 reads the head commit, then its `CodeRabbit` check runs and commit
   status, then the reviews; the head counts as reviewed by a review on it, by
-  the status `success`/`Review completed`, or by the check run
-  `completed`/`success` whose summary opens `Result: Success - Review
-  completed`. The head counted with no review object gets the same
-  disposition and single re-fetch.
+  the status `success`/`Review completed`, or by its check runs reading
+  `reviewed` under the one rule `finish-review-arrives` sets — a run of
+  CodeRabbit's app that succeeded with a title not opening `Review skipped`,
+  none still in progress — and its module `bun/coderabbit-run.ts` will hold.
+  The head counted with no review object gets the same disposition and
+  single re-fetch.
 - Step 2 reads each finding's severity word, with both markups shown as
   examples, never as a pattern; the gate-line legend names `success` and the
   check run.
 - `core/review-toolkit.md` and `core/git-and-prs.md` say the same; the
   broken code span is rejoined.
 - The Safety rule in `core/rules.md` naming `finish` as the one script
-  granted a push is reworded to name `resolve` too — proposed wording in
-  `design.md`, applied only once the user approves it.
+  granted a push is reworded to name `resolve` too, in the wording the user
+  approved on 31.10 (`design.md`).
 
-Not in this change: a `bun/` reader of CodeRabbit's check run (the sibling
-change `finish-review-arrives`, card 40739875c31b811bb7d7e83e7dca89de, adds
-one for `finish`; the skill is prose and reads the check run with its own
-`gh api` call); resolving from the board loop's runner after its push, since
+Not in this change: a `bun/` reader of CodeRabbit's check runs —
+`finish-review-arrives` (card 40739875c31b811bb7d7e83e7dca89de) adds
+`bun/coderabbit-run.ts` for `finish`; the skill is prose and reads the runs
+with its own `gh api` call, pinned to that rule by a test; resolving from the board loop's runner after its push, since
 a session whose launcher pushes runs no `finish` and only names the command;
 whether the App's token can resolve a thread, and whether the
 last resolve alone brings the approval — both checked live in stage 2.5's
@@ -96,6 +98,6 @@ probe (step 7).
 - Changed: `bun/work.ts` (dispatch and usage), `core/skills/coderabbit/SKILL.md`,
   `bun/command-guard-gh-api.test.ts` (the skill's check-run read passes),
   `core/review-toolkit.md`, `core/git-and-prs.md`, `README.md` (the command
-  table), and, once approved, `core/rules.md`.
+  table), and `core/rules.md` (its last Safety rule).
 - A thread is resolved under the identity `gh` holds — the user's on the
   laptop. It writes no text, and the user decided it on 31.10.

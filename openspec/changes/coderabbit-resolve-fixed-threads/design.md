@@ -14,13 +14,14 @@ See `proposal.md` for why. What shapes the approach:
   pushes and calls `gh pr ready` from inside the process.
   `bun/pull-requests.ts` reads `origin`'s owner and name and the branch's pull
   requests.
-- Read live on 31.10: #355's head `afccbcd` has no `CodeRabbit` commit status
-  and one `CodeRabbit` check run, `completed`/`success`, whose summary's first
-  line is `Result: Success - Review completed`. The read
-  `gh api "repos/OWNER/REPO/commits/<head sha>/check-runs?check_name=CodeRabbit"
-  --jq '.check_runs[] | [.status, .conclusion, (.output.summary // "" |
-  split("\n")[0])]'` printed `["completed","success","Result: Success -
-  Review completed"]`, and `bun/command-guard.ts` exits 0 on it.
+- Read live on 31.10: #355's head `afccbcd` has no `CodeRabbit` commit status.
+  The read `gh api
+  "repos/OWNER/REPO/commits/<head sha>/check-runs?check_name=CodeRabbit&filter=all&per_page=100"
+  --paginate --jq '.check_runs[] | select(.app.slug == "coderabbitai") |
+  [.status, .conclusion, .output.title]'` printed
+  `["completed","success","Finished"]` and
+  `["completed","skipped","Review skipped"]`, and `bun/command-guard.ts`
+  exits 0 on it.
 - Read live on 31.10: #347's inline findings open
   `**<picture>…major-16.svg…</picture> Major** · **Stability & Availability**
   · **Quick win**` — severity, category, effort, in that order.
@@ -56,6 +57,11 @@ Standing from the card:
 8. Assumption: resolving the last thread brings the approval by itself — on
    #347 it came after the hand resolves, with no push. Checked in the same
    probe.
+
+On the card's second question (31.10), answered there at 19:24:
+
+9. **а** — the Safety rule's wording below, *The Safety rule names
+   `resolve`*, is adopted as proposed.
 
 ## Decisions
 
@@ -137,22 +143,27 @@ the check run's `completed_at` (`01:14:16`/`01:14:23`, `09:11:37`/`09:11:43`,
 `10:13:40`/`10:13:48`, `23:03:29`/`23:03:31`). Four samples are no contract;
 the single re-fetch before the gate line covers a review that lands later.
 The status is kept beside the check run: it is how the bot reported until
-27.10, and a draft's `Review skipped: draft pull request` is read there. The
-check run counts only as `completed`/`success` with that exact first summary
-line; anything else is no review.
+27.10, and a draft's `Review skipped: draft pull request` is read there.
 
-The skill reads the check run with its own `gh api` call. The sibling change
-`finish-review-arrives` adds a `bun/` reader of the same check run for
-`finish`; a second reader in `bun/` is not written here, and the skill does
-not call that one, since prose runs `gh` and the reader is a module. That
-leaves the summary line `Result: Success - Review completed` written in two
-places, which drift apart silently when the bot rewords it. A test holds
-them together (`core/rules.md`, *Pin a name one system looks up in another
-with a test*): it reads the line from the skill and from the sibling's
-module, and fails when they differ. If the sibling has not merged when this
-is applied, the test reads the skill alone against the line the design
-records, and the sibling's pull request, or whichever merges second, points
-it at the module.
+The check runs count by one rule for "reviewed", `finish-review-arrives`'s
+(*CodeRabbit's state of a commit is read from its check runs*, main
+session's decision, 31.10): over every run named `CodeRabbit` that
+CodeRabbit's app posted (`filter=all`, `app.slug` `coderabbitai`), none
+still in progress and one with the conclusion `success` and a title not
+opening `Review skipped`. Conclusion and title, never the summary's text,
+which already moved once. A head whose runs read anything else — skipped,
+rate limited, in progress, none — is no review.
+
+The skill reads the runs with its own `gh api` call; `bun/coderabbit-run.ts`,
+the module `finish-review-arrives` adds, is a module with no command line,
+and no second reader is written in `bun/`. Two statements of one rule drift
+silently, so a test holds them together (`core/rules.md`, *Pin a name one
+system looks up in another with a test*): it reads the skill's step 1 for
+the `success` conclusion, the `Review skipped` title prefix and the app's
+slug, against the spec scenario that sets them while the module is not on
+`main`, and against the module's own constants once it lands — whichever of
+the two changes applies second points the test there. The cited requirement
+sits in that change's delta until it archives.
 
 ### Severity is a word read, not a pattern matched
 
@@ -161,29 +172,28 @@ Step 2 says: read the severity word of each finding — after its icon, as in
 — these are examples, not a pattern, as `session-wrapup` already words it.
 The order of category and severity on the line is not relied on.
 
-### The Safety rule names `resolve` — the user's to approve
+### The Safety rule names `resolve` (user's decision 9)
 
 `core/rules.md`'s last Safety rule ends: "`bun bun/work.ts finish` is the one
-script the allow list grants a push, a pull request and a ready." Proposed:
+script the allow list grants a push, a pull request and a ready." It becomes:
 
 > `bun bun/work.ts finish` is the one script the allow list grants a push, a
 > pull request and a ready, and `bun bun/work.ts resolve` the one it grants a
 > review thread's resolve.
 
 The rule also forbids running an act the guard refuses through a committed
-script, and the mutation is such an act. So the wording is settled before
-`resolve` is written: the apply's first task waits on the user's answer on
-the card, and applies the wording they approve in the same commit as the
-subcommand. If they decline the rule's change, `resolve` is not built, and
-the apply stops and reports `BLOCKED` naming the conflict with decision 1.
+script, and the mutation is such an act, so the edit lands in the commit
+that adds the subcommand: before it the rule would forbid `resolve`, after
+it a `resolve` without the edit would make the rule false.
 
 ## Risks / Trade-offs
 
 - [The thread is resolved as the user on the laptop] → it writes no text,
   only the thread's state, and decision 1 settles it.
-- [The bot changes the check run's summary wording again] → the head reads as
-  unreviewed and the run ends `OPEN`, the safe side; the next live failure
-  names it, as #319 did.
+- [The bot renames a run's title or conclusion] → the head reads as
+  unreviewed and the run ends `OPEN`, the safe side, in the skill and in
+  `finish` alike, since both read one rule; the next live failure names it,
+  as #319 did.
 - [A commit heads two pull requests and its check run belongs to the other]
   → the head is counted as reviewed by the other's run. Accepted: a shared
   head is rare, the reviews are still read per pull request, and

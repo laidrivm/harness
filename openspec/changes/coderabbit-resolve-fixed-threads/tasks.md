@@ -9,12 +9,10 @@ each page of the threads query, each mutation — and logs every call.
 
 ## 1. `work.ts resolve`
 
-- [ ] 1.1 Read the card's answer to the Safety-rule question first
-      (`design.md`, *The Safety rule names `resolve`*). Approved, or
-      reworded by the user: the wording they gave goes into the last Safety
-      rule of `core/rules.md` in the commit that adds the subcommand (1.2).
-      Declined: build nothing and report `BLOCKED`, naming the conflict with
-      decision 1. Unanswered: wait, building nothing
+- [ ] 1.1 The last Safety rule of `core/rules.md` takes the wording the user
+      adopted (`design.md`, decision 9, *The Safety rule names `resolve`*),
+      in the commit that adds the subcommand (1.2). Verify by reading the
+      rule back against the design's quote
 - [ ] 1.2 Failing cases in `bun/work-resolve.test.ts` for the arguments: no
       `--comment`; `--comment 123x`, `--comment ""`, `--comment -1`; `--pr 0`,
       no `--pr`; a positional; an unknown option — each prints the usage,
@@ -53,16 +51,22 @@ each page of the threads query, each mutation — and logs every call.
 - [ ] 2.1 Failing cases in `bun/command-guard-gh-api.test.ts`: the skill's
       `check-runs?check_name=CodeRabbit` read, its `<head sha>` filled in,
       passes the guard; the existing `<head sha>/status` case keeps passing.
-      A failing case pinning the summary line: the skill's `Result: Success -
-      Review completed` equals the one `finish-review-arrives`'s module
-      exports, or, if that module is not on `main` yet, the line `design.md`
-      records (*Step 1 reads the head's state before the reviews*). Then
-      rewrite step 1 of `core/skills/coderabbit/SKILL.md`: head, then the
-      check run and the status, then the reviews; reviewed by a review on the
-      head, the status `success`/`Review completed`, or the check run
-      `completed`/`success` whose summary's first line is that line; the head
-      counted without a review object is disposed of and re-fetched like any
-      review
+      A failing case pinning the skill to `finish-review-arrives`'s rule for
+      "reviewed": step 1 names the `success` conclusion, the `Review skipped`
+      title prefix and the `coderabbitai` app slug that the scenario *A skip
+      reported as a success* and its requirement, *CodeRabbit's state of a
+      commit is read from its check runs*, set — read from that change's
+      delta (or `openspec/specs/work-finish/spec.md` once archived) while
+      `bun/coderabbit-run.ts` is not on `main`; once it is, the case reads
+      the module's constants instead, and whichever change applies second
+      makes that switch. Then rewrite step 1 of
+      `core/skills/coderabbit/SKILL.md`: head, then the check runs
+      (`check_name=CodeRabbit&filter=all`, paginated) and the status, then
+      the reviews; reviewed by a review on the head, the status
+      `success`/`Review completed`, or runs of CodeRabbit's app with none in
+      progress and one concluded `success` titled anything not opening
+      `Review skipped` — never the summary's text; the head counted without
+      a review object is disposed of and re-fetched like any review
 - [ ] 2.2 Step 1's drop rule: a resolved thread is dropped as `already
       resolved`; an outdated thread that is not resolved is verified like
       any finding. Step 2: read each finding's severity word, the two markups
