@@ -1,11 +1,9 @@
 # pre-push-commit-gates — tasks
 
 Seven groups, one pull request each unless a task says otherwise, on
-`feat/pre-push-commit-gates-<n>`; every pull request but the reformat stays
-under the 800-line budget, measured with `bash bun/diff-budget.sh` before the
-push. Failing cases first, their failure recorded, cited as `// spec:
-commit-gates/<slug>` or `// spec: mutation-floor/<slug>`. Each group that
-adds a dependency runs `/warm` when the runner names it.
+`feat/pre-push-commit-gates-<n>`, each but the reformat under the 800-line
+budget. Failing cases first, their failure recorded, cited as `// spec:
+<capability>/<slug>`; `/warm` wherever the runner names it.
 
 ## 1. Biome, and the reformat alone
 
