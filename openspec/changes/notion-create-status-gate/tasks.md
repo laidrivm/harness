@@ -14,16 +14,19 @@ work-status/<slug>`. The event goes on the guard's stdin as
       parent: one page at `approved` exits 2 naming `pages[0]`, `idea` and
       `bun bun/work.ts status`, with one `status-guard` record under
       `mcp-status`; two pages, `idea` then `exploring`, refuse naming
-      `pages[1]` (`// spec: work-status/a-card-created-past-idea`); `"Idea"`,
-      `""` and `{ select: { name: "approved" } }` each refuse. Passing with
+      `pages[1]` (`// spec: work-status/a-card-created-past-idea`); two pages
+      both past `idea` refuse naming `pages[0]`; `"Idea"`, `" idea"`, `""`
+      and `{ select: { name: "approved" } }` each refuse. Passing with
       no output and no record (`// spec:
       work-status/a-card-created-at-idea-or-with-no-status`): `idea`, `null`,
       no `Status`, no `properties`, a `page_id` parent with only `title`, a
-      server name other than `claude_ai_Notion`; and failing open: `pages`
+      server name other than `claude_ai_Notion`, an empty `pages`; and
+      failing open: `pages`
       as a string or an object, an entry that is `null` or a string, a
       `properties` that is a string, no `tool_input`. A create event whose
       top-level `properties` holds `Status` and whose `pages` hold none
-      passes. Today's update cases stay green unchanged, the update `Status:
+      passes, and so does an event with `pages` at `approved` and no
+      `tool_name`, read as an update with no `properties`. Today's update cases stay green unchanged, the update `Status:
       null` refusal among them. Then add the create branch to
       `bun/status-guard.ts`, keyed on `tool_name` ending in
       `__notion-create-pages`, and its header comment naming both tools;
