@@ -21,13 +21,13 @@ work-status/<slug>`. The event goes on the guard's stdin as
       work-status/a-card-created-at-idea-or-with-no-status`): `idea`, `null`,
       no `Status`, no `properties`, a `page_id` parent with only `title`, a
       server name other than `claude_ai_Notion`, an empty `pages`; and
-      failing open: `pages`
-      as a string or an object, an entry that is `null` or a string, a
-      `properties` that is a string, no `tool_input`. A create event whose
-      top-level `properties` holds `Status` and whose `pages` hold none
-      passes, and so does an event with `pages` at `approved` and no
-      `tool_name`, read as an update with no `properties`. Today's update cases stay green unchanged, the update `Status:
-      null` refusal among them. Then add the create branch to
+      failing open: `pages` as a string or an object, an entry that is
+      `null` or a string, a `properties` that is a string, no `tool_input`.
+      A create event whose top-level `properties` holds `Status` and whose
+      `pages` hold none passes, and so does an event with `pages` at
+      `approved` and no `tool_name`, read as an update with no
+      `properties`. Today's update cases stay green unchanged, the update
+      `Status: null` refusal among them. Then add the create branch to
       `bun/status-guard.ts`, keyed on `tool_name` ending in
       `__notion-create-pages`, and its header comment naming both tools;
       verify with `bun test bun/status-guard.test.ts`
