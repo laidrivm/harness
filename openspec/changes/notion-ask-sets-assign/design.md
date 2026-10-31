@@ -34,32 +34,45 @@ scenario *A second question for a card*) and in the same bullet of
 - A question the ask command posts leaves the card assigned to the user, or
   says plainly that it did not.
 - A question that arises while another waits on the card is posted at once.
+- A card `status` moves keeps `Assign` on the user only while a question
+  waits.
 
 **Non-Goals:**
 
 - The runner's refusal (`board-loop`, *A question already waits*): see
-  decision 7.
+  *The runner keeps its refusal*.
 - Any change to `waits()`, `finish`, `take` or the board loop's answer pick.
 - Setting `Assign` on the four cards left unassigned on 2026-10-31: a one-off
   for the main session.
 
 ## Decisions
 
-### The user's decisions (card, 2026-10-31 20:21)
+### The user's decisions (card and chat, 2026-10-31)
 
-1. `notion-ask` posts a question even when another one already waits on the
+1. (card, 20:21) `notion-ask` posts a question even when another one already waits on the
    card; the refusal "a question already waits" goes. Numbering is
    continuous across the card's questions: a new question continues the
    numbers of the previous ones. `notion-ask` sets `Assign` to the user on
    every post, and sets it again if it was cleared. The rule stays that
    questions known at the same time go in one comment, and a separate comment
    is only for a question that arose later.
-2. (a) When the post landed and the `Assign` write failed, the command exits 1
-   and prints `question: posted on <id>, Assign not set — <why>`.
+2. (card, 20:21, answer а) When the post landed and the `Assign` write
+   failed, the command exits 1 and prints `question: posted on <id>, Assign
+   not set — <why>`.
+3. (card, 20:31, item 3 а) The session keeps the continuous numbering; no
+   code checks it, and `notion-ask` reads no comments: it posts and writes
+   `Assign` (*Numbering* below).
+4. (chat, widening the change) `bun bun/work.ts status` clears the card's
+   `Assign` when it moves the card and no question waits there, by the rule
+   `waits()` applies, and leaves it when one waits. Cards moved to
+   `proposing` kept `Assign` on the user with no question open.
 
-The user left two details to this proposal: 4 and 5 below.
+The user left two details to this proposal: *Numbering*, which the user
+settled as decision 3, and *What answers several questions*. Decision 4
+meets an existing requirement on one move, asked on the card as item 4
+(*Clearing `Assign` on a move*).
 
-### 3. The write: `assign()`, then the user read back from its answer
+### The write: `assign()`, then the user read back from its answer
 
 After `comment()` resolves, the command calls `assign()` and checks that the
 PATCH's answer holds the user's id in `properties.Assign.people`, compared as
@@ -76,7 +89,7 @@ asks; a card someone cleared is set again by the next post (decision 1).
 Rejected: a GET of the page after the PATCH, a second call that proves no
 more than the PATCH's own answer.
 
-### 4. Numbering: the session keeps it, no check in code
+### Numbering: the session keeps it, no check in code
 
 Proposed: the session numbers on from the highest number on the card, as the
 launch forms already ask it to number in one sequence; it has read the card's
@@ -90,13 +103,10 @@ read `3.`, `3)` or `3 —`, the options are lettered, and the text carries
 other numbers ("1500 символов", a PR number, a time). A check would need a
 parser over every past question's text, and a false refusal blocks a real
 question for a cosmetic fault, while a duplicate number is one the user sees
-and answers around. If the user chooses the check, the command reads the
-comments again before the post (`discussion()`), takes the first number at
-the start of a line of each `harness-question` comment, and refuses with
-`question: not posted — numbering restarts at <n>, the card is at <m>`.
-This is a real choice the user named, so it is asked on the card (item 3).
+and answers around. Asked on the card as item 3, since the user named both;
+the user chose this proposal (decision 3).
 
-### 5. What answers several questions: unchanged
+### What answers several questions: unchanged
 
 The questions on a card wait while no comment by the user without a mark
 follows the last question; such a comment answers them all. That is
@@ -110,7 +120,7 @@ session that reads the card, but the card waits until the later one is
 answered, as task-board's scenario *An answer before the last question*
 already says. No real choice is left here, so nothing is asked.
 
-### 6. The prose step and the pins
+### The prose step and the pins
 
 Where each piece runs decides when the prose can go:
 
@@ -140,7 +150,7 @@ under `QUESTION:`, which every launch form already asks of it. The doc's
 "a second waits in your report" sentence changes to the grouping and
 numbering rule, which holds under either pin.
 
-### 7. The runner keeps its refusal
+### The runner keeps its refusal
 
 `post()` refuses while a question waits. A pass never launches a stage on a
 card whose question waits (the takeable list passes over it), so a waiting
@@ -149,6 +159,43 @@ again, or a race with another poster. Either way a second post would put the
 same question on the card twice. The user's decision names `notion-ask`,
 whose sessions do meet a second question while the first waits; the runner's
 sessions do not.
+
+### Clearing `Assign` on a move
+
+Decision 4. Once every check of `status` has passed, it reads the card's
+comments with `waiting(call, card, user)`, as `finish` does, and the page it
+has already read gives `Assign`. When no question waits and `Assign` holds
+anyone, the `Status` PATCH also carries `Assign: { people: [] }`: one call,
+so the two land or fail together. The line reads `status: <card> <from> →
+<to>, Assign cleared` when Notion's answer holds no one in `Assign`, and
+`…, Assign not cleared` with exit 1 when it still holds someone. With a
+question waiting, or `Assign` already empty, the PATCH carries `Status`
+alone and the line is today's. A failed comments read refuses under
+`unread` and writes nothing, as *Status fails closed* asks of every read.
+
+`waiting()` is given no integration id, as in `finish`, so a triage's
+`harness-answer` does not count as an answer here and `Assign` stays: the
+side that keeps a question visible.
+
+Rejected: clearing at `finish`, when the pull request opens, which the user
+did not name and which misses moves with no pull request (`exploring`,
+`explored`); a second PATCH after the `Status` write, which can leave the
+two split.
+
+One move meets an existing requirement. task-board's *An answer the board
+loop carries is applied when its pull request opens* clears `Assign` when
+that step's pull request opens "and never earlier", and the board loop's
+pick takes an answer candidate only while its `Assign` holds the user. The
+pick moves such a card to `applying` before the step. In a consumer it does
+so through the connector, so `status` is not on that path; in the harness
+the status guard refuses the connector's `Status` write and names `status`,
+so a pick there can make that move through it. Proposed, as card item 4 a: a
+move into `applying` leaves `Assign` as it is, and every other move clears
+it when no question waits. Rejected for now: clearing on that move too and
+dropping the pick's `Assign` condition (4 b), which widens the change into
+`board-loop`; or accepting that a step which fails before its pull request
+loses its answer to the next pass (4 c). The tasks follow 4 a; another
+answer changes them before apply.
 
 ## Risks / Trade-offs
 
@@ -162,8 +209,13 @@ sessions do not.
   `question: posted`, and the prose and the gate's message say never to run
   the command again for a question it printed as posted.
 - [Numbering drifts when a session miscounts.] → The user sees it and answers
-  by the numbers as written; decision 4 keeps the check out until a drift is
-  seen, unless the user chooses it.
+  by the numbers as written; decision 3 keeps the check out.
+- [`status` clears `Assign` on a card whose answer has not been applied yet,
+  when a session moves it before applying the answer.] → Outside `applying`
+  no reader of `Assign` tells an applied answer from an unapplied one; the
+  session reads the answer from the comments, which stay.
+- [`status` makes one more Notion read per move.] → The same comments read
+  `finish` and `take` make; a failure refuses, as a failed page read does.
 - [Two sessions posting on one card at once.] → Each sets `Assign` to the
   same value; both questions stand, numbered by whoever read the card first.
 

@@ -1,10 +1,10 @@
 # notion-ask-sets-assign — tasks
 
-One group, one pull request, `feat/notion-ask-sets-assign`. Each failing case
-is written first, its failure recorded, and cited as
-`// spec: task-board/<slug>`. The bracketed numbers are the proposal-stage
-`/zombies` ideas. If the user chooses the numbering check (design, decision
-4; card item 3), a second group adds it before this one is applied.
+Two groups, one pull request each, on `feat/notion-ask-sets-assign`. Each
+failing case is written first, its failure recorded, and cited as
+`// spec: <capability>/<slug>`. The bracketed numbers are the proposal-stage
+`/zombies` ideas. Group 2 follows card item 4 a (design, *Clearing `Assign`
+on a move*); another answer changes it before it is applied.
 
 ## 1. The ask command sets `Assign` and posts while a question waits
 
@@ -55,3 +55,36 @@ is written first, its failure recorded, and cited as
       command, say the integration also sets `Assign`. Verify: `git grep -n
       "one open question at a time\|sets \`Assign\` itself"` prints nothing,
       and `bun bun/check.ts` passes
+
+## 2. `status` clears `Assign` when no question waits
+
+- [ ] 2.1 Let `bun/notion-bot.fixture.ts`'s stand-in apply a PATCH's
+      `Assign` to `state.assign`, unless a case's own option keeps it, and
+      let `bun/work-status.fixture.ts`'s `Run` pass `assign`, `pending` and
+      that option through. Verify: `bun test bun/work-status bun/work-take
+      bun/notion-bot` passes unchanged
+- [ ] 2.2 Failing cases in `bun/work-status.test.ts`, cited
+      `// spec: work-status/<slug>`. With `Assign` on the user and no
+      question pending, `--to exploring` sends `Status` and
+      `Assign: { people: [] }` in one PATCH, prints `status: <card>
+      approved → exploring, Assign cleared`, exit 0 [13]. A card with no
+      question at all clears it the same way [14]. A pending question sends
+      `Status` alone and prints the move alone [15], as does a card whose
+      only comment after the question is a `harness-answer` [16], `--to
+      applying` with no question pending [17], and an empty `Assign` [18]. A
+      PATCH answer still holding the user prints `Assign not cleared`,
+      exit 1 [19]. A comments read answered 500 refuses under `unread` with
+      no PATCH [20]. A refusal under `user-only` or `wip-full` makes no
+      comments read [21]. Verify: each new case fails against today's
+      command, and the existing cases pass
+- [ ] 2.3 In `bun/work-status.ts`, after the checks, read `waiting(found.call,
+      card, found.settings.user)` inside the same `try` as the page read, and
+      add `Assign: { people: [] }` to the PATCH when none waits, `Assign`
+      holds anyone and `to` is not `applying`; read both properties back
+      from the answer. Update the module's header. Verify: `bun test
+      bun/work-status` passes
+- [ ] 2.4 In `core/feature-workflow.md`'s *Ask the user* bullet, after "clear
+      `Assign` once it is applied", say that in the harness `bun bun/work.ts
+      status` clears it with the card's next move when no question waits,
+      except a move into `applying`; in `README.md`'s row for `status`, name
+      the clear. Verify: `bun bun/check.ts` passes
