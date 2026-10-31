@@ -5,12 +5,13 @@
 ### Requirement: The bot's review is worked once it has landed on the head commit, never waited for
 
 `/coderabbit` SHALL first read the pull request's head commit, then the
-head's `CodeRabbit` check run and `CodeRabbit` commit status, and only then
+head's `CodeRabbit` check runs and `CodeRabbit` commit status, and only then
 its reviews. The head counts as reviewed when a review from the bot is on it,
 when that status reads `success` with the description `Review completed`, or
-when that check run is `completed` with the conclusion `success` and a summary
-whose first line is `Result: Success - Review completed`, since a review with
-no findings submits no review object. When none holds, the run SHALL end with
+when CodeRabbit's state of the head, read from its check runs as
+`work-finish` (*CodeRabbit's state of a commit is read from its check runs*)
+reads it, is `reviewed`, since a review with no findings submits no review
+object. When none holds, the run SHALL end with
 a `CODERABBIT gate: OPEN` line naming that commit as not yet reviewed, after
 that one read, with no sleep and no second read. A run that finds the head
 reviewed, by any of the three, SHALL dispose of the findings of every review
@@ -27,15 +28,15 @@ step that waits on the user SHALL carry an `(unattended: card` marker.
   newest bot review is on an earlier commit, whose head's `CodeRabbit`
   status is anything but `success` with the description `Review completed`,
   a `success` reading `Review skipped: draft pull request` included, and
-  whose head has no `CodeRabbit` check run reading `Review completed`
+  whose head's check runs read as any state but `reviewed`
 - **THEN** the run ends on `CODERABBIT gate: OPEN` naming the head commit's
   short SHA, after one read, with no sleep and no second read
 
 #### Scenario: The head counted by its check run alone
 
 - **WHEN** the head has no review object and no `CodeRabbit` commit status,
-  and its `CodeRabbit` check run is `completed`/`success` with the summary
-  `Result: Success - Review completed`
+  and its check runs are CodeRabbit's skip, `skipped` titled `Review
+  skipped`, and a later run that succeeded titled `Finished`
 - **THEN** the run counts the head as reviewed, reads every review body and
   comment for findings on it, re-fetches once before its gate line, and does
   not end on the no-review `OPEN` line
@@ -43,7 +44,7 @@ step that waits on the user SHALL carry an `(unattended: card` marker.
 #### Scenario: A review posted between the reads
 
 - **WHEN** the bot posts its review of the head after the run has read the
-  head's check run as `Review completed`
+  head's check runs as `reviewed`
 - **THEN** the run's read of the reviews, which comes after, finds that
   review and dispositions its findings
 
