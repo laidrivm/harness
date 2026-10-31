@@ -45,19 +45,21 @@ export function state(runs: Run[]): State {
 	return mine.length ? { name: "skipped" } : { name: "no run" };
 }
 
-/** Every check run on `sha` in `repo`, across every page, or the unread state saying why not. Killed at `limit()`, as every `gh` read is. */
-export function read(repo: string, sha: string): Run[] | { name: "unread"; why: string } {
-	const query = `repos/${repo}/commits/${sha}/check-runs?filter=all&per_page=100`;
+/**
+ * `gh api <query> --paginate --jq <jq>` as the objects it prints, one a line
+ * across every page, or the unread state saying why not. Killed at `limit()`,
+ * as every `gh` read is.
+ */
+export function objects(query: string, jq: string): Record<string, unknown>[] | { name: "unread"; why: string } {
 	let run: ReturnType<typeof Bun.spawnSync>;
 	try {
-		// `filter=all`: the default `latest` keeps one run per name, and which of a skip and a review is latest is CodeRabbit's order.
-		run = Bun.spawnSync(["gh", "api", query, "--paginate", "--jq", ".check_runs[]"], { timeout: limit(), killSignal: "SIGKILL" });
+		run = Bun.spawnSync(["gh", "api", query, "--paginate", "--jq", jq], { timeout: limit(), killSignal: "SIGKILL" });
 	} catch (error) {
 		return { name: "unread", why: `gh could not start: ${(error as Error).message}` };
 	}
 	const said = run.stdout?.toString() ?? "";
-	// A run killed at the limit has no exit code.
 	const first = (run.stderr?.toString() || said).trim().split("\n")[0];
+	// A run killed at the limit has no exit code.
 	if (run.exitCode !== 0) return { name: "unread", why: `gh exited ${run.exitCode ?? "killed at its limit"}${first ? `: ${first}` : ""}` };
 	try {
 		return said
@@ -66,12 +68,20 @@ export function read(repo: string, sha: string): Run[] | { name: "unread"; why: 
 			.map((line) => {
 				const parsed: unknown = JSON.parse(line);
 				if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
-				return parsed as Run;
+				return parsed as Record<string, unknown>;
 			});
 	} catch {
 		return { name: "unread", why: "gh's output is not one JSON object a line" };
 	}
 }
+
+/** Every check run on `sha` in `repo`, or the unread state saying why not. */
+export const read = (repo: string, sha: string): Run[] | { name: "unread"; why: string } =>
+	// `filter=all`: the default `latest` keeps one run per name, and which of a skip and a review is latest is CodeRabbit's order.
+	objects(`repos/${repo}/commits/${sha}/check-runs?filter=all&per_page=100`, ".check_runs[]");
+
+/** The earliest `started_at` of CodeRabbit's runs in `runs`, in ms, standing for when the commit arrived; `Infinity` for none. */
+export const arrived = (runs: Run[]) => Math.min(...own(runs).map((run) => Date.parse(String(run.started_at))).filter(Number.isFinite));
 
 /** The poll interval in ms: `HARNESS_CODERABBIT_POLL_MS` when it is a positive whole number, 5 s otherwise. */
 export const interval = () => positive("HARNESS_CODERABBIT_POLL_MS", 5000);

@@ -71,11 +71,11 @@ file nears the 300-line cap.
 
 ## 2. Ask once for the review of a skipped head
 
-- [ ] 2.1 Extend `bun/work-finish.fixture.ts`: the stub answers an
+- [x] 2.1 Extend `bun/work-finish.fixture.ts`: the stub answers an
       `issues/7/comments` read with the case's comments, one JSON object a
       line as `--jq` prints them, or with an exit the case sets, and logs a
       `pr comment` call with an exit the case sets
-- [ ] 2.2 Failing cases in `bun/work-finish-review.test.ts`: `skipped` and no
+- [x] 2.2 Failing cases in `bun/work-finish-review.test.ts`: `skipped` and no
       request posts exactly one `pr comment 7 -R o/demo --body @coderabbitai
       review` and says it asked; a request created at the head's earliest
       run's `started_at`, and one padded with whitespace, count as asked and
@@ -87,7 +87,7 @@ file nears the 300-line cap.
       nothing and names why; a post `gh` refuses with exit 1 is made once
       and named; `rate limited`, `reviewing` and unread read no comments;
       every one exits 0. Then add the request to `finish()`
-- [ ] 2.3 Prose: `core/review-toolkit.md` says `finish` asks once for a
+- [x] 2.3 Prose: `core/review-toolkit.md` says `finish` asks once for a
       skipped head and that a rate-limited one is reported, never retried;
       `README.md`'s `finish` row names the request; `core/git-and-prs.md`'s
       *… nor any other comment as the user* and *Send, reply, comment or

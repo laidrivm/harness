@@ -114,7 +114,8 @@ entry, a hook or a CI check leaves this file the way it would leave
   `@coderabbitai resolve` resolves every one of the bot's threads, and it and
   `@coderabbitai approve`, which a PR's author may post, approve without a
   review of the head — so no agent posts either, nor any other comment as the
-  user.
+  user, but for the one `@coderabbitai review` that `finish` posts on a head
+  CodeRabbit skipped, under the user's standing permission (2026-10-31).
 - Keep the PR description to what the diff can't say: a link to the
   proposal, the criteria the step closes named by their `### Requirement:`
   headings — or a line saying it closes none — decisions taken, anything the
@@ -136,7 +137,9 @@ entry, a hook or a CI check leaves this file the way it would leave
 - Commit a session's wrap-up artefacts — the pipeline-yield ledger, a save
   point — to the branch in hand, never a branch of their own.
 - Send, reply, comment or review under the user's name only through a call the
-  user approved at its prompt; the `gh` writes stay refused. Never through a
+  user approved at its prompt, or as the one `@coderabbitai review` `finish`
+  posts on a head CodeRabbit skipped, which the user granted standing
+  (2026-10-31); the `gh` writes stay refused. Never through a
   channel no permission entry reaches — a browser form, a direct HTTP call:
   report what you would have written and let them send it. Opening the pull
   request they asked for is not that, and nor is a question the question gate

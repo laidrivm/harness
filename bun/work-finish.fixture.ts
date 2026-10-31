@@ -38,9 +38,19 @@ export const pull = (n: number, state: string, draft: boolean) => ({ ...pr("x", 
  * runs, `after` from then on; `read`, `create` and `ready` are those calls'
  * exit codes. `runs` answers the check-run reads in turn, the last repeated:
  * a list of runs, printed one a line as `--jq` prints them, or an exit code
- * with no output.
+ * with no output. `comments` answers the read of #7's comments the same way,
+ * and `comment` is `gh pr comment`'s exit code.
  */
-export type Gh = { before?: object[]; after?: object[]; read?: number; create?: number; ready?: number; runs?: (object[] | number)[] };
+export type Gh = {
+	before?: object[];
+	after?: object[];
+	read?: number;
+	create?: number;
+	ready?: number;
+	runs?: (object[] | number)[];
+	comments?: object[] | number;
+	comment?: number;
+};
 
 /** A `PATH` of git and a `gh` stub; `calls()` is every `gh` call, and `push` where the checkout's pre-push hook ran. */
 function bin(gh: Gh) {
@@ -51,12 +61,16 @@ function bin(gh: Gh) {
 	const log = join(dir, "calls");
 	writeFileSync(join(dir, "before"), JSON.stringify(gh.before ?? []));
 	writeFileSync(join(dir, "after"), JSON.stringify(gh.after ?? []));
+	/** The answer `name` prints, one object a line, and its exit code in `name.code`. */
+	const answer = (name: string, value: object[] | number) => {
+		writeFileSync(join(dir, name), typeof value === "number" ? "" : value.map((item) => `${JSON.stringify(item)}\n`).join(""));
+		writeFileSync(join(dir, `${name}.code`), `${typeof value === "number" ? value : 0}\n`);
+	};
 	const runs = gh.runs ?? [[]];
-	runs.forEach((answer, i) => {
-		writeFileSync(join(dir, `runs${i}`), typeof answer === "number" ? "" : answer.map((run) => `${JSON.stringify(run)}\n`).join(""));
-		writeFileSync(join(dir, `code${i}`), `${typeof answer === "number" ? answer : 0}\n`);
-	});
+	runs.forEach((value, i) => answer(`runs${i}`, value));
+	answer("comments", gh.comments ?? []);
 	writeFileSync(join(dir, "n"), "0\n");
+	const print = (name: string) => `while IFS= read -r l; do printf '%s\\n' "$l"; done < "${dir}/${name}"; read -r c < "${dir}/${name}.code"; exit "$c"`;
 	writeFileSync(
 		join(dir, "gh"),
 		[
@@ -64,10 +78,12 @@ function bin(gh: Gh) {
 			`printf '%s\\n' "$*" >> '${log}'`,
 			'case "$1 $2" in',
 			// Builtins alone: `PATH` holds no `cat` or `grep`.
-			`"api repos/o/demo/commits/"*) read -r n < '${dir}/n'; if [ "$n" -lt ${runs.length - 1} ]; then echo $((n + 1)) > '${dir}/n'; fi; while IFS= read -r l; do printf '%s\\n' "$l"; done < "${dir}/runs$n"; read -r c < "${dir}/code$n"; exit "$c" ;;`,
+			`"api repos/o/demo/commits/"*) read -r n < '${dir}/n'; if [ "$n" -lt ${runs.length - 1} ]; then echo $((n + 1)) > '${dir}/n'; fi; ${print("runs$n")} ;;`,
+			`"api repos/o/demo/issues/7/comments"*) ${print("comments")} ;;`,
 			`"api "*) f='${dir}/before'; if [ -f '${dir}/made' ]; then f='${dir}/after'; fi; read -r j < "$f"; printf '%s' "$j"; exit ${gh.read ?? 0} ;;`,
 			`"pr create") : > '${dir}/made'; exit ${gh.create ?? 0} ;;`,
 			`"pr ready") exit ${gh.ready ?? 0} ;;`,
+			`"pr comment") exit ${gh.comment ?? 0} ;;`,
 			"esac",
 			"exit 9",
 			"",

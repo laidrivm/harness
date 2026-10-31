@@ -13,7 +13,7 @@
  */
 import { statSync } from "node:fs";
 import { ready } from "./ci-run-draft.ts";
-import { interval, own, read, type State, state } from "./coderabbit-run.ts";
+import { arrived, interval, objects, own, type Run, read, type State, state } from "./coderabbit-run.ts";
 import { ran, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
@@ -114,14 +114,38 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	if (!watched) return done(`finish: ready #${number}`, 0);
 	// The last read that answered decides, so one failure at the end does not hide the skips before it.
 	let last: State = { name: "unread", why: "no read answered" };
+	let seen: Run[] = [];
 	await reads(18, () => {
 		const got = read(full, commit);
-		if (Array.isArray(got)) last = state(got);
+		if (Array.isArray(got)) [seen, last] = [got, state(got)];
 		else if (last.name === "unread") last = got;
 		return !["skipped", "no run", "unread"].includes(last.name);
 	});
 	// Exit 0 whatever the state: the ready switch went through, and the line is the signal.
-	return done(`finish: ready #${number} — ${said(last, short)}`, 0);
+	const outcome = last.name === "skipped" ? request(full, Number(number), commit, seen) : said(last, short);
+	return done(`finish: ready #${number} — ${outcome}`, 0);
+}
+
+const REQUEST = "@coderabbitai review";
+
+/**
+ * Posts `@coderabbitai review` on #`n` as whoever `gh` holds, once per head:
+ * not when such a comment came at or after `HEAD`'s first CodeRabbit run in
+ * `runs`, and only when one more read of `sha`, right before the post, still
+ * gives `skipped` (`core/git-and-prs.md` names the one comment as the user's
+ * standing permission, answer 4 b). What the last line says of it.
+ */
+function request(repo: string, n: number, sha: string, runs: Run[]) {
+	const skipped = `CodeRabbit skipped ${sha.slice(0, 7)}`;
+	const comments = objects(`repos/${repo}/issues/${n}/comments?per_page=100`, ".[] | {created_at, body}");
+	if (!Array.isArray(comments)) return `${skipped}; comments unread, nothing asked: ${comments.why}`;
+	const since = arrived(runs);
+	if (comments.some((c) => String(c.body).trim() === REQUEST && Date.parse(String(c.created_at)) >= since)) return `${skipped}; a review was already asked for`;
+	const fresh = read(repo, sha);
+	const now = Array.isArray(fresh) ? state(fresh) : fresh;
+	if (now.name !== "skipped") return said(now, sha.slice(0, 7));
+	const post = Bun.spawnSync(["gh", "pr", "comment", String(n), "-R", repo, "--body", REQUEST], { timeout: limit(), killSignal: "SIGKILL" });
+	return post.exitCode === 0 ? `${skipped}; asked for a review` : `${skipped}; the request failed, gh exited ${post.exitCode ?? "killed at its limit"}`;
 }
 
 /** CodeRabbit's runs on `sha`, none when the read fails. */
