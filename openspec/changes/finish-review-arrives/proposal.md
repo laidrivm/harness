@@ -26,7 +26,8 @@ the host has Windmill post the request once the window opens (answer 3).
 
 - One module, `bun/coderabbit-run.ts`, reads CodeRabbit's check runs on a
   commit and names its state: `reviewing`, `reviewed`, `rate limited`,
-  `skipped`, another conclusion by name, or no run.
+  `skipped`, another conclusion by name, no run, or unread when the read
+  fails.
 - `finish`, where the checkout tracks `.coderabbit.yaml`, waits after the
   push up to about 60 s for a completed CodeRabbit run on `HEAD` before the question
   read and the ready switch, so the push's event is handled before the
@@ -66,7 +67,8 @@ None. The check-run reading is `work-finish`'s until card
 
 ## Impact
 
-- New: `bun/coderabbit-run.ts` and its test, `bun/work-finish-review.test.ts`.
+- New: `bun/coderabbit-run.ts` and its test `bun/coderabbit-run.test.ts`;
+  `bun/work-finish-review.test.ts` for `finish`'s cases.
 - Changed: `bun/work-finish.ts`, `bun/work-finish.fixture.ts` (the `gh`
   stub answers the check-run and comment reads and logs the comment),
   `bun/pull-requests.ts` (one parse of a positive whole-number setting, for
@@ -74,7 +76,8 @@ None. The check-run reading is `work-finish`'s until card
   `README.md`.
 - Every `finish` in a repository that tracks `.coderabbit.yaml` takes longer:
   about 7 s before the ready switch and 25–35 s after it when the review
-  starts, up to 60 s and 90 s when it does not.
+  starts. When it does not, the waits are 12 and 18 reads, 60 s and 90 s
+  at the default interval, longer when a `gh` read hangs to its limit.
 - `finish` posts under the identity `gh` holds (answer 2), the user's on the
   laptop, on exactly the terms answer 4 b grants — the one comment as the
   user the harness makes without a prompt, which `core/git-and-prs.md` and
