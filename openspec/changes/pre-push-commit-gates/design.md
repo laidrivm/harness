@@ -37,8 +37,9 @@ not. `bun/git-env.test.ts` and `bun/pre-pr.test.ts` pin the hook's lines.
 **Goals:** the hook runs what `commit-gates` lists; the runner's project
 checks run the same list; CI runs each gate where its verdict binds.
 
-**Non-Goals:** mutating `orchestrator/`; changing `bun/mutation-floor.ts`,
-`bun/no-suppressions.ts` or `bun/check-yaml.ts`, which consumers run;
+**Non-Goals:** mutating `orchestrator/`; changing `bun/mutation-floor.ts`
+or `bun/check-yaml.ts`, which consumers run, and `bun/no-suppressions.ts`
+beyond one exempt path a consumer's tree does not hold;
 an import graph to find which modules a changed helper affects (decision 4).
 
 ## Decisions
@@ -63,11 +64,17 @@ base argument, which CI passes as `HEAD^1`.
 
 `biome.json` is d2ass's without its `src/model.ts` override: recommended
 rules plus `noImportCycles`, tabs, double quotes, organise imports, the git
-ignore file honoured. It excludes `mutation/**` (Stryker's output, which a
-reformat would make differ from what Stryker writes) and the vendored
-`core/skills/playwright-cli/**`. The reformat is `biome check --write` with
-safe fixes only — formatting and import order — so the pull request holds
-no hand edit; the three linter errors are fixed by hand in the hook's group.
+ignore file honoured. It excludes every tracked file another tool writes, so
+that tool's next write cannot fail `biome ci`: `mutation/**` (Stryker),
+`skills-lock.json` (the skills CLI), `.claude/settings.json`
+(`bun/sync-settings.ts`), and the vendored `core/skills/playwright-cli/**`;
+group 1 lists the rest from `git ls-files` before the reformat. The reformat
+is `biome format --write` and then `biome check --write
+--linter-enabled=false`, which applies import order alone — `biome check
+--write` would also apply the linter's safe fixes, which rewrite code and
+comments (`bun/no-suppressions.ts` records one), and the pull request
+claims no hand edit and no semantic one. The three linter errors are fixed
+by hand in the hook's group.
 Warnings (`noTemplateCurlyInString` on shell strings) do not fail `biome
 ci` and stay warnings; no rule is turned off (`core/rules.md`).
 
@@ -102,13 +109,25 @@ module runs incrementally; a changed test or fixture `bun/<t>` re-runs with
 `--force` every module whose `bun/<name>` prefixes it, because the command
 runner reports no tests and so Stryker cannot see a test change in the
 stored file (the probe confirms this, and `--force` goes if it is wrong).
+The force applies only while the test changed after the module's stored file
+was last committed (`git log -1 -- mutation/<name>.json`): measured against
+the base alone, every later push of the branch and every CI run on it would
+repeat a whole-module run whose results are already committed.
 A change to a helper another module imports re-runs only the helper's own
 module: the importer's stored survivors can go stale, and `--all --force`
 by hand refreshes everything. Deriving importers was the alternative,
 rejected as machinery for a rare case.
 
-After the runs the step fails on a stored file of an untracked module and on
-one differing from `HEAD`'s, then merges every `mutation/*.json` into
+Stryker's incremental file is a full report, carrying `projectRoot` (an
+absolute path), `system`, `performance` timings and `config`. The step
+stores each file with those fields removed, keeping what the incremental run
+reads (`files`, `testFiles`, the schema version) — so a re-run in CI, in
+another worktree or on the host writes the same bytes for the same results,
+and no author's home directory lands in the tree. The probe confirms Stryker
+reads the trimmed file.
+
+After the runs the step fails on a stored file whose module is untracked or
+has no test file, and on one differing from `HEAD`'s, then merges every `mutation/*.json` into
 `reports/mutation/mutation.json`, deleting the old report first as
 `mutation-floor` requires, and `bun/mutation-floor.ts` checks the total
 against `harness.mutationFloor`. Stored files rather than a cache outside
@@ -116,10 +135,13 @@ git, because a clone, a worktree, the host and CI must all read the same
 results. They are excluded from the diff budget (`mutation/**` in
 `harness.diffBudgetExclude`): the reviewed number is the floor's line.
 
-The stored copy of `bun/no-suppressions.ts` carries its three markers. They
-are approved by path, marker and count in `harness.suppressions`, the
-mechanism the scan has for an approval; exempting `mutation/` in the scan
-was the alternative, and would change both the scan and its requirement.
+The stored copy of `bun/no-suppressions.ts` carries its three markers. The
+scan exempts that one file by path, beside its own script and test and for
+the same reason (`commit-gates` delta). Approving it in `harness.suppressions`
+was the alternative: it would pin a count every edit to the script moves, and
+falsify the requirement's scenario that the tree passes with an empty
+allowlist. Exempting all of `mutation/` was rejected too: a marker in any
+other module's source is one the scan must still see there.
 
 Stryker needs Node on `PATH` (d2ass's `mutation.yml` records why); the step
 fails naming Node when a module changed and none is found.
@@ -145,7 +167,8 @@ updates them. `.github/workflows/mutation.yml` runs the mutation step and
 the floor with base `HEAD^1`, on Node pinned as d2ass pins it: with current
 stored results it mutates nothing, and on a branch pushed without the hook
 it re-runs the changed modules and fails on the stale files. `test.yml` is
-unchanged. The user then adds the new check names to the ruleset.
+unchanged but for its comment that the harness's own pin is the one dev
+dependency. The user then adds the new check names to the ruleset.
 
 ## Risks / Trade-offs
 
@@ -162,10 +185,18 @@ unchanged. The user then adds the new check names to the ruleset.
 - [A local base of `main` older than `origin/main`] → more modules mutate
   than the branch changed: slower, not wrong.
 - [The stored results grow the repository by megabytes and churn with each
-  module edit] → measured at the baseline and reported on the card.
-- [A Stryker incremental file that is not byte-stable across identical runs]
-  → the probe checks it; if it is not, the step writes a stored file only
-  when its mutants' results changed.
+  module edit, and consumers download them] → `package.json` has no `files`
+  list, so a consumer's install of the GitHub dependency carries the whole
+  tree: `mutation/`, and `tsconfig.json`, `biome.json` and
+  `stryker.config.json`, none of which a consumer's run of
+  `node_modules/harness/bun/*.ts` reads for anything but `tsconfig.json`,
+  which sets nothing bun applies at run time. The size is measured at the
+  baseline and reported on the card; a `files` list is a change of its own.
+- [Lockfile lines count toward the diff budget] → group 1 adds `bun.lock`
+  to `harness.diffBudgetExclude`, as d2ass does; `/warm` reads the lockfile.
+- [A Stryker incremental file that is not byte-stable across identical runs
+  even when trimmed] → the probe checks it; if it is not, the step writes a
+  stored file only when its mutants' results changed.
 
 ## Migration Plan
 

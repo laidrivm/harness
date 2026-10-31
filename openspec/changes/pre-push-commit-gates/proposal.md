@@ -47,7 +47,9 @@ this change (5 а).
 - CI jobs for Biome, the type check, the YAML check, the suppression scan,
   `actionlint`, `gitleaks` and the mutation step. Making them required in
   the repository's ruleset is the user's step.
-- `harness.suppressions` and `harness.mutationFloor` in `package.json`.
+- `harness.suppressions` and `harness.mutationFloor` in `package.json`; the
+  suppression scan exempts the stored results of its own script, which hold
+  its markers verbatim.
 
 Not in this change: mutating `orchestrator/`, which the user's answer names
 no module of; the browser suite, coverage and `bun audit`, which the spec
@@ -64,7 +66,8 @@ None.
 
 - `commit-gates`: the pre-push hook's mutation run covers only the modules
   the branch changed, and the hook's judged gates are the ones the pre-PR
-  runner's project checks run.
+  runner's project checks run; the suppression scan exempts
+  `mutation/no-suppressions.json`.
 - `mutation-floor`: what the harness mutates — every `bun/` module, each
   against its own tests, with results stored per module — and that the floor
   counts all of them.
@@ -75,7 +78,8 @@ None.
   `.githooks/gates.sh`, `.github/workflows/lint.yml`,
   `.github/workflows/mutation.yml`, `bun/mutation-run.ts` and its test,
   `mutation/*.json`.
-- Changed: every formatted file in one pull request; the files the type
+- Changed: `bun/no-suppressions.ts` and its test (one exempt path); every
+  formatted file in one pull request; the files the type
   errors sit in; `.githooks/pre-push`; `package.json` and `bun.lock`;
   `.gitignore` (`reports`, `.stryker-tmp`); `bun/git-env.test.ts` and
   `bun/pre-pr.test.ts`, which pin the hook's lines; `README.md`'s *Working on
@@ -86,5 +90,7 @@ None.
   tests changed.
 - Stryker needs Node on `PATH`, as d2ass's mutation job records; a push that
   changed a module fails on a machine without it.
-- Consumers are untouched: they install none of the package's dev
-  dependencies and run their own hooks.
+- Consumers install none of the package's dev dependencies and run their
+  own hooks, but their install of the GitHub dependency carries the whole
+  tree, `mutation/` and the new configuration files included (design.md,
+  Risks).
