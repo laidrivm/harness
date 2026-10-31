@@ -28,8 +28,10 @@ Each mutated module's results SHALL be stored as Stryker's incremental file,
 one tracked file per module under `mutation/`, so that every clone reads the
 same results. The floor SHALL count the survivors across every stored file.
 A stored file whose module is no longer tracked, or no longer has a test
-file, SHALL fail the run, naming it, because its survivors would be counted
-for code nothing judges. A stored file SHALL hold nothing that depends on
+file, SHALL fail the run, naming it, and so SHALL a module with a test file
+and no stored file: either way the count would leave out, or include, code
+nothing judged. A stored file SHALL record a fingerprint of the test and
+fixture files it was measured against, and SHALL hold nothing that depends on
 the machine or the checkout that wrote it — no absolute path, system or
 timing — so that every clone writes the same file for the same results.
 
@@ -49,6 +51,13 @@ timing — so that every clone writes the same file for the same results.
   `mutation/<name>.json` is not
 - **THEN** the run fails and names `mutation/<name>.json`
 
+#### Scenario: A module with tests and no stored file
+
+- **WHEN** `mutation/<name>.json` is deleted and `bun/<name>.ts` still has a
+  test file
+- **THEN** the run fails and names the missing file, whether or not the
+  branch changed anything under `bun/`
+
 #### Scenario: The same results written in another checkout
 
 - **WHEN** CI or another worktree re-runs a module whose results it does not
@@ -59,10 +68,17 @@ timing — so that every clone writes the same file for the same results.
 
 A run SHALL mutate the modules the branch changed against its base, the base
 the diff budget resolves, and no other. A changed module SHALL be re-run
-incrementally from its stored file. A module whose test or fixture files
-changed since its stored file was last committed SHALL be re-run whole,
-because the command runner reports no tests, so the stored file cannot show a
-changed test. The baseline SHALL be the same run asked for every module.
+incrementally from its stored file, and whole when it has none. A module
+whose test and fixture files no longer match its stored fingerprint SHALL be
+re-run whole, because the command runner reports no tests, so the stored
+results cannot show a changed test. The baseline SHALL be the same run asked
+for every module.
+
+#### Scenario: A new module has no stored file
+
+- **WHEN** a branch adds `bun/new.ts` and `bun/new.test.ts`
+- **THEN** the run mutates `bun/new.ts` whole, writes `mutation/new.json`,
+  and fails until that file is committed
 
 #### Scenario: The module's source changed
 
@@ -72,15 +88,15 @@ changed test. The baseline SHALL be the same run asked for every module.
 
 #### Scenario: A test file changed
 
-- **WHEN** a branch changes `bun/pre-pr-steps.test.ts` only, and no stored
-  file of the modules it matches was committed after that change
+- **WHEN** a branch changes `bun/pre-pr-steps.test.ts` only, and the stored
+  files of the modules it matches record the earlier test state
 - **THEN** the run re-runs whole every module whose test filter matches that
   path — `bun/pre-pr.ts` and `bun/pre-pr-steps.ts` — and no other
 
 #### Scenario: A test change already measured
 
 - **WHEN** a branch changed `bun/command-parse.test.ts`, and
-  `mutation/command-parse.json` was committed after that change
+  `mutation/command-parse.json` records the changed test state
 - **THEN** the run re-runs that module incrementally, not whole
 
 #### Scenario: A run asked for every module
