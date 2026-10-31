@@ -26,13 +26,8 @@ read alike, which is why the state below is `skipped` and never `draft`.
 
 ## Goals / Non-Goals
 
-**Goals:** the ready switch comes after CodeRabbit has seen the push; the
-agent learns from `finish`'s last line whether the review is coming; a
-skipped head gets one `@coderabbitai review` from code, not from the agent.
-
-**Non-Goals:** the proposal's list, and retrying a rate limit on the laptop
-(answer 3 a: the retry costs the same limit, and the window runs 40 min and
-more).
+Goals and non-goals are the proposal's, plus no retry of a rate limit on the
+laptop (answer 3 a: a retry costs the same limit).
 
 ## Decisions
 
@@ -156,11 +151,8 @@ The four endings:
 not yet reviewed. A second `finish` on the same head is refused before any
 of this while the pull request is ready (`gh pr ready <n> --undo` first), and
 the comment read holds it when it is not.
-
-The explore's option C, `gh pr ready --undo` and a second `finish`, is
-superseded by answer 2, which asks for the review directly rather than
-through a second ready event that CodeRabbit's documentation promises no
-more for than the first.
+The explore's option C (`gh pr ready --undo`, `finish` again) is superseded
+by answer 2.
 
 ### Identity
 
@@ -230,14 +222,8 @@ once both are known, from the module this change ships.
 - [A post under the user's account] → one line, at most once per head per
   pull request, only on `skipped`, and only in a repository that tracks
   `.coderabbit.yaml`.
-- [The comments read pages through every comment on the pull request] →
-  harness pull requests carry tens, and `--jq` keeps the pages one stream.
 
-## Migration Plan
+## Migration Plan and Open Questions
 
-None: the next `finish` after the merge behaves the new way, and nothing
-parses its output.
-
-## Open Questions
-
-None. The answers of 2026-10-31 settle the explore's four questions.
+None: nothing parses `finish`'s output, and the answers of 2026-10-31
+settle the explore's questions.
