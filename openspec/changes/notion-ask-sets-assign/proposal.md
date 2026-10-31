@@ -18,8 +18,7 @@ second question no longer waits for the first one's answer.
   the existing `assign()` of `bun/notion-bot.ts`, and reads it back from the
   PATCH's answer. It prints `question: posted on <id>, Assign set`, or
   `question: posted on <id>, Assign not set — <why>` and exits 1 (answer 2 a).
-  A post on a card whose `Assign` was cleared sets it again (answer 1). The
-  read-back moves into `assign()`, so the runner's post reads it back too.
+  A post on a card whose `Assign` was cleared sets it again (answer 1).
 - **BREAKING** for a session that relied on it: `notion-ask` no longer
   refuses while a question waits. It posts a question whatever the card
   holds, and so no longer reads the card's comments (answer 1). A post that
@@ -62,7 +61,8 @@ None.
   scenario *A second question for a card* changes. *A session asks through the
   ask integration where one is configured* moves the `Assign` write into the
   command and drops its refusal.
-- `work-status`: a move clears `Assign` when no question waits.
+- `work-status`: a move clears `Assign` when no question waits, and the
+  move's line says so.
 
 ## Impact
 

@@ -74,13 +74,13 @@ meets an existing requirement on one move, asked on the card as item 4
 
 ### The write: `assign()`, then the user read back from its answer
 
-After `comment()` resolves, the command calls `assign()`, which now checks
-that the PATCH's answer holds the user's id in `properties.Assign.people`,
-compared as `hex()` compares ids, and throws when it does not. The check
-lives in `assign()`, so the runner's `post()` and its pause notice, which
-print `Assign set` on any accepted PATCH today, read it back too. That is
-how `work-status` reads `Status` back from its own PATCH, and it costs no
-second call. An accepted PATCH whose answer lacks
+After `comment()` resolves, the command calls `assign()` and checks that the
+PATCH's answer holds the user's id in `properties.Assign.people`, compared as
+`hex()` compares ids. That is how `work-status` reads `Status` back from its
+own PATCH, and it costs no second call. The check stays in the command, not
+in `assign()`: the runner's `post()` and its pause notice print `Assign set`
+on any accepted PATCH, and changing that is a `board-loop` change no failure
+has asked for yet. An accepted PATCH whose answer lacks
 the user (a renamed property, a people list Notion trimmed) prints `Assign not
 set — the Assign write did not hold the user`. A thrown error prints the
 client's message, which names the step and Notion's status and never the
@@ -95,9 +95,13 @@ more than the PATCH's own answer.
 ### Numbering: the session keeps it, no check in code
 
 Proposed: the session numbers on from the highest number on the card, as the
-launch forms already ask it to number in one sequence; it has read the card's
-comments before posting, which the launch forms and the question gate already
-require. The command then needs no read of the comments at all and makes two
+launch forms already ask it to number in one sequence; the launch forms ask
+it to read the card and its comments before writing the question, though no
+gate checks that for the ask command, which the question gate never sees.
+Nothing mechanical then stops a session from posting a question already
+open on the card, as the old refusal did; task-board's *A question already
+open is not asked again* stays a rule the session keeps. The command then
+needs no read of the comments at all and makes two
 calls: the post and the `Assign` write.
 
 Rejected for now: the command refusing when the new question's first number
@@ -172,7 +176,9 @@ every check has passed, `status` reads the card's comments with
 comments, so a failed read cannot refuse a move whose write it would not
 change. When no question waits, the `Status` PATCH also carries `Assign`
 with the user removed and everyone else kept, as `notion-unassign` already
-removes the user alone: one call, so the two land or fail together. The line
+removes the user alone, and like it writes nothing to `Assign` when the page
+read lists 25 people, the most a read returns, since writing back a cut-off
+list would drop the rest: one call, so the two land or fail together. The line
 reads `status: <card> <from> → <to>, Assign cleared` when Notion's answer
 holds `Assign.people` as a list without the user, and `…, Assign not
 cleared` with exit 1 otherwise, a missing or malformed list included.
@@ -237,8 +243,9 @@ another answer changes them before apply.
   comments read `finish` and `take` make; a failure refuses, as a failed
   page read does.
 - [The post reaches Notion but its answer does not (a timeout, a 5xx), and
-  with the refusal gone a rerun posts the question twice.] → On a failure
-  the client counts as transient, the command prints `question: may be
+  with the refusal gone a rerun posts the question twice.] → On no answer,
+  the timeout or a 5xx (the client's `Transient` less its 429, which Notion
+  refused unprocessed), the command prints `question: may be
   posted on <id> — <why>; read the card's comments before running it
   again`, exits 1, and writes no `Assign`; the prose says to read the card
   before any rerun.

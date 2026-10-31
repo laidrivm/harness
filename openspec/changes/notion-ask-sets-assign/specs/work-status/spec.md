@@ -1,9 +1,34 @@
+## MODIFIED Requirements
+
+### Requirement: Status fails closed and records each refusal
+
+A Notion read that fails, no ask settings, or a card on no board SHALL
+refuse. Each refusal SHALL exit 1, write nothing in Notion, and append one
+gate-ledger record under gate `status` with its own id. A write SHALL print
+the status the card reads back from Notion's answer, followed by what *A
+move clears `Assign` when no question waits* adds, and exit 0 only when that
+status is the one asked for and that requirement's read-back held, 1
+otherwise.
+
+#### Scenario: Notion does not answer
+
+- **WHEN** the card's page read fails
+- **THEN** `status` refuses, exits 1, and the ledger gains one `status`
+  record
+
+#### Scenario: A move written
+
+- **WHEN** a move passes every check
+- **THEN** `status` writes the card's `Status`, prints the card, the old and
+  the new status as Notion answered it, then `, Assign cleared` where it
+  cleared `Assign`, and exits 0
+
 ## ADDED Requirements
 
 ### Requirement: A move clears `Assign` when no question waits
 
-When the card's `Assign` holds the user and `--to` is neither `applying` nor
-`applied`, `status` SHALL, once every check has passed, read the card's
+When the card's `Assign` holds the user, the page read lists fewer than 25
+people there, and `--to` is neither `applying` nor `applied`, `status` SHALL, once every check has passed, read the card's
 comments and decide whether a question waits there as `finish` does, with no
 integration id. When none waits, the write SHALL remove the user from
 `Assign`, keeping everyone else, in the same PATCH as `Status`, and the line
@@ -50,7 +75,8 @@ comments read that fails SHALL refuse under `unread` and write nothing.
 
 #### Scenario: The user not on `Assign`
 
-- **WHEN** the card's `Assign` does not hold the user
+- **WHEN** the card's `Assign` does not hold the user, or the page read
+  lists 25 people there, the most a read returns
 - **THEN** `status` reads no comments and the line is the move alone
 
 #### Scenario: The answer still holds the user
