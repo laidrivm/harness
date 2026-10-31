@@ -111,6 +111,7 @@ file of their own, `bun/work-status-pr.test.ts`, beside the tree file.
 - [A card created straight at a `Status` other than `idea` through
   `notion-create-pages`, which the status guard does not match] → the user
   chose to close it now (answer 4 б), in a card of its own on the `Harness`
-  board; this change leaves the guard as it is.
+  board, `40a39875c31b81468d11f38edc885528`; this change leaves the guard as
+  it is.
 - [`main` hard-coded] → the tree evidence hard-codes it already; both move
   together if a repository's default branch is ever named otherwise.

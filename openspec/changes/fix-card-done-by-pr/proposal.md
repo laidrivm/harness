@@ -35,7 +35,7 @@ this change: `work.ts finish` writing it by itself, until a hand-written one is
 seen forgotten; a list of pull requests in one `Pointer`, until a card needs
 one; tying the pull request to the card it closes (roadmap clarification 11).
 The status guard's reach to `notion-create-pages` (answer 4 б) is a card of
-its own, not this change.
+its own, `40a39875c31b81468d11f38edc885528`, not this change.
 
 ## Capabilities
 
