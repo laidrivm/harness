@@ -1,6 +1,6 @@
 # coderabbit-resolve-fixed-threads — tasks
 
-Two groups, one pull request: `feat/coderabbit-resolve-fixed-threads`. Each
+Three groups, one pull request: `feat/coderabbit-resolve-fixed-threads`. Each
 failing case first, its failure seen, cited as `// spec: <capability>/<slug>`.
 The bare `origin` comes from `bun/work-finish.fixture.ts`; its `gh` stub
 answers every `gh api` call with one file, so `bun/work-resolve.fixture.ts`
@@ -15,10 +15,11 @@ each page of the threads query, each mutation — and logs every call.
       rule back against the design's quote
 - [ ] 1.2 Failing cases in `bun/work-resolve.test.ts` for the arguments: no
       `--comment`; `--comment 123x`, `--comment ""`, `--comment -1`; `--pr 0`,
-      no `--pr`; a positional; an unknown option — each prints the usage,
-      exits 2 and logs no `gh` call. `--pr 7 --comment 1 --comment 2` reaches
-      the command with both ids. Then add the `resolve` branch and usage line
-      to `bun/work.ts`, `parseArgs` with `multiple: true`, each value anchored
+      no `--pr`, `--pr 7 --pr 8`; a positional; an unknown option — each
+      prints the usage, exits 2 and logs no `gh` call. `--pr 7 --comment 1
+      --comment 2` reaches the command with both ids. Then add the `resolve`
+      branch and usage line to `bun/work.ts`, `parseArgs` with `multiple:
+      true` on both options and `--pr` taken only once, each value anchored
       `^[1-9]\d*$`
 - [ ] 1.3 Failing cases for the pull request: a detached `HEAD` refuses before
       any thread read; `--pr 8` on a branch whose open pull request is #7
@@ -52,14 +53,15 @@ each page of the threads query, each mutation — and logs every call.
       `check-runs?check_name=CodeRabbit` read, its `<head sha>` filled in,
       passes the guard; the existing `<head sha>/status` case keeps passing.
       A failing case pinning the skill to `finish-review-arrives`'s rule for
-      "reviewed": step 1 names the `success` conclusion, the `Review skipped`
-      title prefix and the `coderabbitai` app slug that the scenario *A skip
-      reported as a success* and its requirement, *CodeRabbit's state of a
-      commit is read from its check runs*, set — read from that change's
-      delta (or `openspec/specs/work-finish/spec.md` once archived) while
-      `bun/coderabbit-run.ts` is not on `main`; once it is, the case reads
-      the module's constants instead, and whichever change applies second
-      makes that switch. Then rewrite step 1 of
+      "reviewed": while `bun/coderabbit-run.ts` is not on `main`, step 1
+      names the `success` conclusion and the `Review skipped` title prefix,
+      and the requirement *CodeRabbit's state of a commit is read from its
+      check runs*, read from that change's delta (or
+      `openspec/specs/work-finish/spec.md` once archived), still says
+      "succeeded with a title not opening `Review skipped`"; once the module
+      is on `main`, the case reads its constants — conclusion, title prefix
+      and app slug — instead, and whichever change applies second makes that
+      switch. Then rewrite step 1 of
       `core/skills/coderabbit/SKILL.md`: head, then the check runs
       (`check_name=CodeRabbit&filter=all`, paginated) and the status, then
       the reviews; reviewed by a review on the head, the status
@@ -67,18 +69,20 @@ each page of the threads query, each mutation — and logs every call.
       progress and one concluded `success` titled anything not opening
       `Review skipped` — never the summary's text; the head counted without
       a review object is disposed of and re-fetched like any review
-- [ ] 2.2 Step 1's drop rule: a resolved thread is dropped as `already
+- [ ] 2.2 Step 1's filters: a comment counts only when its `user.login` is
+      exactly `coderabbitai[bot]`; a resolved thread is dropped as `already
       resolved`; an outdated thread that is not resolved is verified like
       any finding. Step 2: read each finding's severity word, the two markups
       (`**<picture>…</picture> Major**`, `_🟠 Major_`) as examples, not a
       pattern; take every severity in a body, as now. Step 6's legend names
       `success` and the check run on the no-review `OPEN` line
-- [ ] 2.3 The skill's report: right above the gate line, a run that applied
-      fixes or found one already fixed names `bun bun/work.ts resolve --pr
-      <n> --comment <id> …` for each inline comment whose every finding it
-      fixed or found fixed, to run after the session's own `finish` pushed;
-      a session whose launcher pushes names it in its final message and runs
-      nothing. The *Never post to the PR* rule's "no resolves" points at that
+- [ ] 2.3 The skill's report: right above the gate line, `bun bun/work.ts
+      resolve --pr <n> --comment <id> …` naming the first comment's id of
+      each unresolved thread of the bot's whose every finding, its replies'
+      included, it fixed or found fixed — never a reply's id, never a thread
+      holding a skipped or rejected one; run after the session's own
+      `finish` pushed, or at once when the run applied no fix; a session
+      whose launcher pushes names it in its final message and runs nothing. The *Never post to the PR* rule's "no resolves" points at that
       command, `@coderabbitai resolve`/`approve` still named as forbidden.
       Grep the skill for "resolve" afterwards and read each hit
 - [ ] 2.4 `core/review-toolkit.md`: the head with no findings counts by its
@@ -88,3 +92,12 @@ each page of the threads query, each mutation — and logs every call.
       resolve` after `finish` pushed it; a dismissed one stays the user's.
       Grep `core/`, `README.md` and `openspec/specs/` for `Review completed`
       and "resolve" wording these contradict
+
+## 3. Archive order
+
+- [ ] 3.1 Before `/opsx:archive`, confirm `finish-review-arrives` is under
+      `openspec/changes/archive/`, so the `agent-autonomy` requirement's
+      citation of *CodeRabbit's state of a commit is read from its check
+      runs* resolves in `openspec/specs/work-finish/spec.md`; if it is not,
+      wait for it. Verify with `ls openspec/changes/archive | grep
+      finish-review-arrives`
