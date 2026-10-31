@@ -18,23 +18,27 @@ second question no longer waits for the first one's answer.
   the existing `assign()` of `bun/notion-bot.ts`, and reads it back from the
   PATCH's answer. It prints `question: posted on <id>, Assign set`, or
   `question: posted on <id>, Assign not set — <why>` and exits 1 (answer 2 a).
-  A post on a card whose `Assign` was cleared sets it again (answer 1).
+  A post on a card whose `Assign` was cleared sets it again (answer 1). The
+  read-back moves into `assign()`, so the runner's post reads it back too.
 - **BREAKING** for a session that relied on it: `notion-ask` no longer
   refuses while a question waits. It posts a question whatever the card
-  holds, and so no longer reads the card's comments (answer 1).
+  holds, and so no longer reads the card's comments (answer 1). A post that
+  may have reached Notion without an answer prints `question: may be posted`
+  and asks for the card to be read before a rerun.
 - A card may hold several questions. Questions known at the same time go in
   one comment, and a separate comment carries only a question that arose
   after the last one was posted. Numbering continues across the card's
   questions, never restarting at 1 (answer 1). The session keeps the
-  numbering; no code checks it (answer 3 а).
+  numbering; no code checks it (answer 3 a).
 - What answers several questions stays the rule `waits()` already applies: the
   questions wait while no comment by the user without a mark follows the
   last question (design, *What answers several questions*). `finish`, `take`
   and the board loop change nothing.
-- `bun bun/work.ts status` clears the card's `Assign` in the same write as
-  `Status` when no question waits there, and leaves it when one waits, or
-  when the move is into `applying` (the user's widening in chat; the
-  `applying` exception is card item 4, open). The prose "clear `Assign` once
+- `bun bun/work.ts status` removes the user from the card's `Assign` in the
+  same write as `Status` when no question waits there, and leaves it when
+  one waits, or when the move is into `applying` or `applied`, where the
+  board loop's pick looks for an answer not yet carried (the user's widening
+  in chat; the exception is card item 4, open). The prose "clear `Assign` once
   it is applied" stays for the boards `status` does not move.
 - The board loop's runner keeps its refusal (`board-loop`, *A question
   already waits*): it guards a retried pass against posting twice.
