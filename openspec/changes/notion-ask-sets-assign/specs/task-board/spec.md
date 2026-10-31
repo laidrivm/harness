@@ -4,12 +4,12 @@
 
 Every question that blocks an agent's work and only the user can settle
 SHALL be put in a comment on the card of the task it blocks. Questions an
-agent knows at the same time SHALL go in one comment, or in consecutive
-comments where one would pass the question gate's length cap, and a later
-comment SHALL carry only a question that arose after the last one was
-posted, its items numbered on from the highest number the card's questions already use,
-never restarting at 1. The card's questions SHALL wait while no answer follows
-the last of them. That agent SHALL post it, through the ask
+agent knows at the same time SHALL go in one comment, split into
+consecutive comments only where one would pass the question gate's length
+cap; any other later comment SHALL carry only a question that arose after
+the last one was posted. Each comment's items SHALL be numbered on from the
+highest number the card's questions already use, never restarting at 1. The
+card's questions SHALL wait while no answer follows the last of them. That agent SHALL post it, through the ask
 integration where one is configured (*A session asks through the ask
 integration where one is configured*), unless the board loop's runner posts
 it for the session (`board-loop`, *The runner posts a stage session's
@@ -157,8 +157,8 @@ Notion's answer to that write. It SHALL print one line, `question: posted on
 <why>` when the post held and the write did not, `question: may be posted on
 <id> — <why>; read the card's comments before running it again` when the
 post failed in a way that may have reached Notion (no answer, the timeout, a
-5xx or a 429), or `question: not posted — <why>`; it SHALL exit 0 only on
-the first, and never print the token. It SHALL read neither the page nor its
+5xx; a 429 is a refusal Notion never processed), or `question: not posted
+— <why>`; it SHALL exit 0 only on the first, and never print the token. It SHALL read neither the page nor its
 comments, and write no property but `Assign`. A session whose command
 printed a line opening `question: posted` and not ending `Assign set` SHALL
 set `Assign` to the user through the connector; no session SHALL run the
@@ -202,15 +202,15 @@ posted` before reading the card's comments.
 
 #### Scenario: A page the integration cannot reach
 
-- **WHEN** Notion answers the post with a 4xx other than 429, a page outside
+- **WHEN** Notion answers the post with a 4xx, a 429 included, a page outside
   the connected boards included
 - **THEN** the command posts nothing, writes no `Assign`, prints the step and
   Notion's status, and exits non-zero
 
 #### Scenario: A post that may have landed
 
-- **WHEN** the post gets no answer, times out, or is answered with a 5xx or
-  a 429
+- **WHEN** the post gets no answer, times out, or is answered with a 5xx
+  status
 - **THEN** the command writes no `Assign`, prints that the question may be
   posted and that the card's comments are to be read before running it
   again, and exits non-zero
