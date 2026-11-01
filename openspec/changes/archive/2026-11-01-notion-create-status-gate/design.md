@@ -39,10 +39,10 @@ what this design decided:
 
 5. `Status` is matched exactly: no case folding and no `userDefined:` prefix,
    which the connector's schema asks of `id` and `url` alone; a lower-case
-   `status` is 2.1's to probe (а).
+   `status` is 2.1's to probe (а) — not run there (tasks, 2.1).
 6. A string `properties` on `notion-update-page` still passes; if 2.1 shows
    the connector parses a string parameter, a card of its own closes it on
-   update (а).
+   update (а) — not run there (tasks, 2.1), so no card follows from it.
 7. Until the pin passes this change's merge the hook runs the old script, as
    every harness hook does (*Risks*, *Migration Plan*); no caveat goes into
    `core/feature-workflow.md` (а).
@@ -158,11 +158,14 @@ the ledger for the split.
   moves it (decision 2).
 - [The hook runs from the pin] → it holds a session only once the pin passes
   this change's merge; the live probe (group 2) follows that bump, as
-  `notion-status-gate`'s did.
-- [A session started before the pin bump keeps the hook registration it read
-  at start] → the widened matcher holds only in a session started after it
-  lands; 2.1 saw a session from before the bump create a card at `approved`
-  unrefused, and a new one refused the same call.
+  `notion-status-gate`'s did. 2.1 adds that a session running before the
+  change merged may not hold the widened matcher even after the pin passes
+  it: one such session created a card at `approved` unrefused, with no
+  ledger record, while the installed script carried the create branch and
+  the settings file the new matcher; a session started afterwards refused
+  the same call. That contradicts `core/verification.md`'s *a hook is re-read
+  from the settings file per tool call*, and the cause is not established —
+  start a new session before probing a hook change.
 
 ## Conflict check
 

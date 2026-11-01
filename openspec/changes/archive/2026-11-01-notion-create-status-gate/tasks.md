@@ -88,9 +88,12 @@ work-status/<slug>`. The event goes on the guard's stdin as
       at `idea`, written as the plain string "idea" — only the user moves it to
       `approved`, and later moves go through `bun bun/work.ts status --card
       <id> --to <status>`.``, with the ledger record `status-guard` / `block`
-      / `mcp-status` at 18:10:52Z. The same call from a session started before
-      the bump (`2214216e`) passed and created a card at `approved`: a session
-      keeps the hook registration it read at start (design, *Risks*). The user
+      / `mcp-status` at 18:10:52Z. The same call from a session running since
+      before the change merged (`2214216e`) passed, created a card at
+      `approved` and wrote no ledger record, while that checkout's installed
+      `status-guard.ts` (installed 16:33) carried the create branch and its
+      `.claude/settings.json` the new matcher; the cause is not established
+      (design, *Risks*). The user
       deleted the throwaway cards. The `idea`, no-`Status`, lower-case
       `status` and string-`pages` calls were not run, so the two gaps they
       probe stay open as the design's *Risks* list them.
