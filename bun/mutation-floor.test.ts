@@ -115,6 +115,11 @@ describe("loading the report", () => {
 /** A reason the floor carries, which every case not about reasons gives. */
 const why = "measured";
 
+/** What `gauge` returns for a floor whose one fault is `field`. */
+const naming = (field: string) => [
+	expect.stringContaining(`harness.mutationFloor.${field}`),
+];
+
 describe("the count against the floor", () => {
 	test("a count equal to the floor passes", () => {
 		expect(gauge(12, 12, why)).toEqual([]);
@@ -158,37 +163,34 @@ describe("the count against the floor", () => {
 
 // spec: mutation-floor/the-floor-changed-with-no-reason-given
 describe("the floor changed with no reason given", () => {
-	test("an empty reason fails", () => {
-		expect(gauge(12, 12, "")).not.toEqual([]);
+	test("an empty reason fails naming the field", () => {
+		expect(gauge(12, 12, "")).toEqual(naming("why"));
 	});
 
-	test("a reason of whitespace alone fails", () => {
-		expect(gauge(12, 12, "   ")).not.toEqual([]);
+	test("a reason of whitespace alone fails naming the field", () => {
+		expect(gauge(12, 12, "   ")).toEqual(naming("why"));
 	});
 
 	test("an absent reason fails naming the field, rather than throwing", () => {
-		expect(gauge(12, 12, undefined)).toEqual([
-			expect.stringContaining("harness.mutationFloor.why"),
-		]);
+		expect(gauge(12, 12, undefined)).toEqual(naming("why"));
 	});
 
-	test("an empty reason fails naming the field", () => {
-		expect(gauge(12, 12, "")).toEqual([
-			expect.stringContaining("harness.mutationFloor.why"),
-		]);
+	test("a reason that is not text fails naming the field", () => {
+		expect(gauge(12, 12, ["measured"])).toEqual(naming("why"));
 	});
 });
 
-describe("a floor that is not a number", () => {
+// spec: mutation-floor/a-floor-that-is-not-a-whole-number
+describe("a floor that is not a whole number", () => {
 	test("a floor written as a string fails naming the field", () => {
-		expect(gauge(12, "12", why)).toEqual([
-			expect.stringContaining("harness.mutationFloor.surviving"),
-		]);
+		expect(gauge(12, "12", why)).toEqual(naming("surviving"));
 	});
 
 	test("an absent floor fails naming the field", () => {
-		expect(gauge(12, undefined, why)).toEqual([
-			expect.stringContaining("harness.mutationFloor.surviving"),
-		]);
+		expect(gauge(12, undefined, why)).toEqual(naming("surviving"));
+	});
+
+	test("a fractional floor fails naming the field", () => {
+		expect(gauge(12, 12.5, why)).toEqual(naming("surviving"));
 	});
 });

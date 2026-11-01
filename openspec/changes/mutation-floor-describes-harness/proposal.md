@@ -37,7 +37,8 @@ mutates and where the results are stored.
 
 - The check names an absent `why` and a `surviving` that is not a whole
   number as the field at fault, where it threw a `TypeError` or reported a gap
-  no edit closes (design.md, decision 5).
+  no edit closes, under a fifth scenario, *A floor that is not a whole
+  number* (design.md, decision 5).
 
 ## Capabilities
 
