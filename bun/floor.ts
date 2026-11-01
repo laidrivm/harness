@@ -39,8 +39,9 @@ export function gauge(
 		problems.push(
 			`the floor states no reason — write why as text in harness.${at.key}.why`,
 		);
-	// `typeof` as well, since `Number.isInteger` does not narrow `unknown`.
-	if (typeof floor !== "number" || !Number.isInteger(floor))
+	// `typeof` as well, since `Number.isInteger` does not narrow `unknown`; a
+	// negative floor no count can equal would report a gain that is not one.
+	if (typeof floor !== "number" || !Number.isInteger(floor) || floor < 0)
 		problems.push(`harness.${at.key}.${at.field} is not a whole number`);
 	else if (count !== floor) {
 		const gap = `${count} ${at.counted} against a floor of ${floor}`;

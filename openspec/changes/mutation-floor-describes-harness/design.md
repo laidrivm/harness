@@ -106,6 +106,10 @@ cites.
 - [`openspec validate --strict` warns on `after:`, a key OpenSpec does not
   know] → kept: `bun/board-state.ts` reads it to order the change, as for
   the archived changes that carry it; the plain `validate` passes.
+- [The harness's own `package.json` declares no `harness.uncitedFloor`] →
+  none is owed: the uncited floor runs among `bun/check.ts`'s gates, which
+  the consumers run over themselves and the harness does not, so task 1.1
+  checks only `mutationFloor`, the floor the harness runs over its own tree.
 - [`bun/floor.ts` is a new module, and `pre-push-commit-gates` stores one
   result file per module under `mutation/`] → that step is not on `main` yet,
   so this change adds no `mutation/floor.json`; its apply mutates the module

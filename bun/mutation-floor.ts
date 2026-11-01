@@ -13,7 +13,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { read } from "./config.ts";
-import { gauge as owed } from "./floor.ts";
+import { type Floor, gauge as owed } from "./floor.ts";
 import { root } from "./root.ts";
 
 /** Statuses meaning the tests let the mutant through. */
@@ -99,19 +99,16 @@ export function survivors(report: Report): number {
 	return count;
 }
 
+const FLOOR: Floor = {
+	key: "mutationFloor",
+	field: "surviving",
+	counted: "surviving mutants",
+	lower: "kill one",
+};
+
 /** What the survivor count owes `harness.mutationFloor` — see `./floor.ts`. */
 export const gauge = (count: number, floor: unknown, why: unknown) =>
-	owed(
-		{
-			key: "mutationFloor",
-			field: "surviving",
-			counted: "surviving mutants",
-			lower: "kill one",
-		},
-		count,
-		floor,
-		why,
-	);
+	owed(FLOOR, count, floor, why);
 
 /**
  * Resolved from the repository root rather than the working directory, so the
