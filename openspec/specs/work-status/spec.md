@@ -240,8 +240,8 @@ whatever its command, and a `notion-create-pages` call in which any page's
 `properties` carry `Status` with a value other than `"idea"` or `null`,
 whatever its parent, naming `idea` and `bun bun/work.ts status`, and record
 it. On `notion-create-pages` a page with no `Status` or a `null` one SHALL
-pass. Every other call, and an event it cannot read, SHALL pass. It SHALL be registered in the harness's
-`.claude/settings.json` alone.
+pass. Every other call, and an event it cannot read, SHALL pass. It SHALL
+be registered in the harness's `.claude/settings.json` alone.
 
 #### Scenario: A status set through the connector
 
