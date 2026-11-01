@@ -67,13 +67,13 @@ the same file for the same results.
 
 ### Requirement: A run mutates only what its stored results do not cover
 
-A run SHALL mutate exactly the modules whose source differs from the copy
-their stored file holds, or that have no stored file, re-run incrementally,
-or whole when there is none; a branch's changes are those, and so is a stale
-file a merge left behind. A module whose tests and the fixtures they import
-no longer match its stored fingerprint SHALL be re-run whole, because the
-command runner reports no tests. The baseline SHALL be the same run asked
-for every module.
+A run SHALL mutate exactly the modules that have no stored file, whose
+source differs from the copy their stored file holds, or whose tests, the
+fixtures they import and the shared test configuration no longer match its
+fingerprint — a branch's changes, and any stale file a merge left. The last
+SHALL re-run whole, because the command runner reports no tests, and a
+module with no stored file too; the rest incrementally. The baseline SHALL
+be the same run asked for every module.
 
 #### Scenario: A new module has no stored file
 
