@@ -959,7 +959,7 @@ floor and is left as it is.
 
 - **WHEN** a card on the board this repository names carries a `Pointer` that
   is empty, or carries text around a path, in a form other than the
-  cross-repository one
+  cross-repository one or the pull-request one
 - **THEN** the reconciliation SHALL NOT compare it, and SHALL list it as
   naming no directory of this tree rather than correcting it
 
@@ -976,10 +976,11 @@ floor and is left as it is.
 A card whose work lies in a change of another repository SHALL carry the
 pointer `<repo>: openspec/changes/<slug>/`, or the archived path in the same
 form: the repository's name, a colon and a space, then the path with nothing
-after it. A task number SHALL go in the card's body. This is the one exception
-to the repository-relative path *A board records a task's status and nothing
-the tree holds* fixes. A reconciliation SHALL skip such a card without
-comparing or listing it.
+after it. A card whose work another repository's pull request closes SHALL
+carry `<repo>: pr:<N>` in the same form. A task number SHALL go in the card's
+body. This is an exception to the repository-relative path *A board records a
+task's status and nothing the tree holds* fixes. A reconciliation SHALL skip
+such a card without comparing or listing it.
 
 #### Scenario: A consumer card for a harness change
 
@@ -999,6 +1000,11 @@ comparing or listing it.
 - **WHEN** a consumer card carries one task of another repository's change
 - **THEN** the task's number SHALL be written in the card's body, and the
   pointer SHALL hold the repository and the path alone
+
+#### Scenario: A consumer card for a harness fix
+
+- **WHEN** a card on `D2ASS` carries `harness: pr:350`
+- **THEN** dota2's reconciliation SHALL neither compare nor list it
 
 ### Requirement: An answer the board loop carries is applied when its pull request opens
 
@@ -1082,3 +1088,45 @@ and write no property.
 - **WHEN** the ask settings file is missing
 - **THEN** the command posts nothing and prints that no ask integration is
   configured
+
+### Requirement: A fix card points at the pull request that closes it
+
+A card whose work has no change directory, and which one pull request of this
+repository closes, MAY carry the `Pointer` `pr:<N>`: `pr:`, then that pull
+request's number, with nothing around it. The `Pointer` SHALL name that one
+pull request; the others the work took SHALL stay under the card's links.
+This is an exception to the repository-relative path *A board records a
+task's status and nothing the tree holds* fixes. A reconciliation SHALL skip
+such a card without comparing or listing it.
+
+#### Scenario: A fix card closed by a pull request
+
+- **WHEN** a card's work merged in #350 with no change directory
+- **THEN** its `Pointer` MAY read `pr:350`, its body stays the record, and
+  #350 is linked under its `Ссылки` as well
+
+#### Scenario: Several pull requests for one card
+
+- **WHEN** a fix took #338, #326 and #350, and #350 closes it
+- **THEN** the `Pointer` reads `pr:350`, and #338 and #326 stay under
+  `Ссылки`
+
+#### Scenario: A reconciliation meets a pull-request pointer
+
+- **WHEN** a reconciliation reads a card whose `Pointer` is wholly `pr:350`
+- **THEN** it SHALL neither compare the card against the tree nor list it,
+  and SHALL leave its status as it is
+
+#### Scenario: The closing pull request merges
+
+- **WHEN** #350 merges into `main` and a card's `Pointer` reads `pr:350`
+- **THEN** the session that learns of the merge SHALL move the card to `done`
+  in that turn (*A stage that completes moves its card in the same turn*),
+  since no reconciliation derives a floor for it, and SHALL leave a card at
+  `discarded` as it is
+
+#### Scenario: Text around the number
+
+- **WHEN** a card's `Pointer` reads `pr:350 (fix)` or `#350`
+- **THEN** the reconciliation SHALL list it as naming no directory of this
+  tree
