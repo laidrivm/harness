@@ -22,7 +22,11 @@ cap.
       directly after it, so *Insert content* is granted and `after` honoured.
       The `Pointer` write was not reached (the branch adds no file under
       `openspec/changes/`), so this box stays open until a `Pointer` write
-      and its read-back are recorded here, with 3.3's
+      and its read-back are recorded here, with 3.3's. Closed by the
+      archive pull request's own `finish --card`: its branch adds only
+      `openspec/changes/archive/2026-11-01-finish-writes-card/`, so the
+      `Pointer`, reading `openspec/changes/finish-writes-card/`, is re-pointed
+      there; ticked once that write and its read-back are recorded here
 
 ## 2. The record
 
@@ -84,7 +88,8 @@ cap.
       board. Done but the `Pointer`: pre-PR green, #383 opened that way, its
       `Ссылки` item read back; this branch adds no file under
       `openspec/changes/`, so no `Pointer` was written — the first
-      `finish --card` on a branch adding a change, read back, closes it
+      `finish --card` on a branch adding a change, read back, closes it —
+      the archive pull request's, as 1.1 records
 
 ## 4. The user's answers of 2026-11-01
 
