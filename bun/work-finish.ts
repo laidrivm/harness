@@ -144,7 +144,8 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		if (freed.line) lines.push(freed.line);
 		// Put back, or meant to be: something arrived during the release, or its read failed, so the draft stays.
 		if (freed.back === "unread") return done(`finish: draft #${number} — the card's comments could not be read after the release`, 1);
-		if (freed.back || freed.restoreFailed) return done(`finish: draft #${number} — a question waits on ${card}`, freed.restoreFailed ? 1 : 0);
+		if (freed.back || freed.restoreFailed)
+			return done(`finish: draft #${number} — a question or a pause notice waits on ${card}`, freed.restoreFailed ? 1 : 0);
 	}
 	if (!ready(full, Number(number))) return done(`finish: draft #${number} — gh pr ready ${number} failed`, 1);
 	if (!watched) return done(`finish: ready #${number}`, 0);

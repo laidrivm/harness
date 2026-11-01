@@ -5,8 +5,9 @@
  * REST calls that post the question from the integration and set `Assign`
  * (`openspec/changes/archive/2026-10-22-notion-bot-questions/design.md`). The ask command makes
  * two of those calls with its own settings; the pause notice, the comment and
- * the `Assign` write with the runner's, and `notion-unassign.ts` steps 1 and 2
- * and its own `Assign` write. The token reaches `fetch` only as a
+ * the `Assign` write with the runner's, and `notion-unassign.ts` steps 1 and 2,
+ * its `Assign` write being `release()` in `notion-release.ts`, which the work
+ * commands share. The token reaches `fetch` only as a
  * header, and no line this module prints or throws holds it.
  */
 import { ID, type Settings } from "./notion-bot-settings.ts";

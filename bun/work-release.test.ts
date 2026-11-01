@@ -103,8 +103,19 @@ describe("finish --card", () => {
 	// spec: work-finish/a-question-arrives-during-the-release
 	test("a question during the release: the user back, and the draft left [37]", async () => {
 		const run = await finish({ gh: DRAFT, stub: { assign: [UUID], next: { [PATCH]: [{ comments: later() }] } } });
-		expect([run.code, run.last, run.calls]).toEqual([0, `finish: draft #7 — a question waits on ${CARD}`, [READ, "push"]]);
+		expect([run.code, run.last, run.calls]).toEqual([0, `finish: draft #7 — a question or a pause notice waits on ${CARD}`, [READ, "push"]]);
 		expect(run.out).toContain(`assign: restored the user on ${CARD}\n`);
+	});
+
+	// spec: work-finish/a-question-arrives-during-the-release
+	test("a question that only the release's first read finds: no write, and the draft left (local review)", async () => {
+		const run = await finish({ gh: DRAFT, stub: { assign: [UUID], next: { "GET /v1/comments": [{ comments: later() }] } } });
+		expect([run.code, run.last, run.calls, run.out.includes("assign:")]).toEqual([
+			0,
+			`finish: draft #7 — a question or a pause notice waits on ${CARD}`,
+			[READ, "push"],
+			false,
+		]);
 	});
 
 	// spec: work-finish/a-question-arrives-during-the-release

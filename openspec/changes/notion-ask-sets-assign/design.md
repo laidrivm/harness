@@ -233,9 +233,10 @@ question or a pause notice now waits by the same test, or when that read
 fails, PATCHes the list it read with the user kept, and reads the user back.
 It returns `{ line, back, restoreFailed }`: `unassign()`'s line forms plus
 `assign: restored the user on <card>`, or no line when it wrote nothing;
-`back` says whether it put the user back for something waiting or for an
-unread second read, which `finish` reports as its own failed comments read
-(local review on the apply pull request).
+`back` says whether its reads found something waiting, whether it then wrote
+nothing or put the user back, or whether its second read failed, which
+`finish` reports as its own failed comments read; `finish` keeps the draft
+on either (local review on the apply pull request).
 
 `status` calls it after its `Status` write and `take` after its reads (its
 comments print as read before). `finish` calls it after its own comments

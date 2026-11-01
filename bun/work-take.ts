@@ -111,7 +111,7 @@ export async function take(card: string, timeout = 30_000): Promise<{ lines: str
 		lines.push("## Change", ...change(text(properties.Pointer), top, commit));
 
 		step = "the open changes read";
-		// Telemetry off: take writes nothing, and openspec's telemetry keeps state and sends events.
+		// Telemetry off: take writes nothing but the release, and openspec's telemetry keeps state and sends events.
 		lines.push("## Open changes", output(["openspec", "list"], top, { ...process.env, OPENSPEC_TELEMETRY: "0" }));
 		return { lines, code };
 	} catch (error) {

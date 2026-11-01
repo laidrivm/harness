@@ -37,11 +37,19 @@ export async function release(call: Call, card: string, user: string, go: (liste
 	if (!(await go(listed))) return false;
 	// shortcut: a page read lists 25 references of a property at most, so a longer `Assign` is left whole rather than written back cut; page through `/v1/pages/<id>/properties/<property>` if a card ever needs it.
 	if (listed.length >= 25) throw new Error(`${card} lists 25 people on Assign, the most a page read returns`);
-	const now = people(await write(call, card, without(listed, user)));
-	if (!now || holds(now, user)) throw new Error("the Assign write did not remove the user");
+	let now: Person[] | undefined;
+	try {
+		now = people(await write(call, card, without(listed, user)));
+	} catch (error) {
+		throw new AtWrite((error as Error).message);
+	}
+	if (!now || holds(now, user)) throw new AtWrite("the Assign write did not remove the user");
 	return true;
 }
 const without = (listed: Person[], user: string) => listed.filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
+
+/** A `release()` failure at or after its write, which may have landed, unlike one before it. */
+export class AtWrite extends Error {}
 
 /** Whether a question or a `harness-pause` notice waits on `card` for `user`, read with no integration id. */
 async function open(call: Call, card: string, user: string) {
@@ -49,7 +57,12 @@ async function open(call: Call, card: string, user: string) {
 	return waits(comments, user) || waits(comments, user, undefined, "harness-pause");
 }
 
-/** What `cleared()` did: the line to print, none when it wrote nothing; why it put the user back, if it did; and whether a restore failed. */
+/**
+ * What `cleared()` did: the line to print, none when it wrote nothing; `back`,
+ * `waits` when its own reads found a question or a pause notice, whether it
+ * then wrote nothing or put the user back, and `unread` when its second read
+ * failed; and whether a restore failed.
+ */
 export type Cleared = { line?: string; back?: "waits" | "unread"; restoreFailed: boolean };
 
 /**
@@ -63,18 +76,20 @@ export type Cleared = { line?: string; back?: "waits" | "unread"; restoreFailed:
 export async function cleared(call: Call, card: string, user: string): Promise<Cleared> {
 	const failed = (why: string, restoreFailed = false): Cleared => ({ line: `${UNASSIGN_FAILED} ${why}`, restoreFailed });
 	let listed: Person[] = [];
-	let past = false;
+	let waiting = false;
 	let fault: string | undefined;
 	try {
 		const done = await release(call, card, user, async (read) => {
 			listed = read;
-			past = holds(read, user) && !(await open(call, card, user));
-			return past;
+			if (!holds(read, user)) return false;
+			waiting = await open(call, card, user);
+			return !waiting;
 		});
-		if (!done) return { restoreFailed: false };
+		// `back`, so `finish` keeps the draft for what this read found after its own.
+		if (!done) return waiting ? { back: "waits", restoreFailed: false } : { restoreFailed: false };
 	} catch (error) {
 		// Before the write, nothing changed; at it, the write may have landed.
-		if (!past || listed.length >= 25) return failed((error as Error).message);
+		if (!(error instanceof AtWrite)) return failed((error as Error).message);
 		fault = (error as Error).message;
 	}
 	let back: Cleared["back"];
@@ -85,10 +100,13 @@ export async function cleared(call: Call, card: string, user: string): Promise<C
 		back = "unread";
 	}
 	if (!back) return fault ? failed(fault) : { line: `assign: removed the user from ${card}`, restoreFailed: false };
+	// The release's own fault first, so a restore that fails as the release did names both.
+	const before = fault ? `${fault}; ` : "";
 	try {
-		if (!holds(people(await write(call, card, [...without(listed, user), { id: user }])), user)) return failed("the restore did not hold the user", true);
+		if (!holds(people(await write(call, card, [...without(listed, user), { id: user }])), user))
+			return failed(`${before}the restore did not hold the user`, true);
 	} catch (error) {
-		return failed(`the restore: ${(error as Error).message}`, true);
+		return failed(`${before}the restore: ${(error as Error).message}`, true);
 	}
 	return { line: `assign: restored the user on ${card}`, back, restoreFailed: false };
 }
