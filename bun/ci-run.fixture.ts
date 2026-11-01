@@ -2,8 +2,7 @@
  * What the CI flow's test files share: the event handler run as the engine
  * runs it, against a stand-in for GitHub's API, and a host to run it on.
  * `start` and `stop` are not registered here: each test file registers them,
- * and `diff-budget.fixture.ts`'s `cleanup`, itself. [n]: `ci-run-agent`'s
- * `/zombies` items.
+ * and `diff-budget.fixture.ts`'s `cleanup`, itself.
  */
 import { expect } from "bun:test";
 import { createHmac, generateKeyPairSync, randomUUID } from "node:crypto";
@@ -33,7 +32,7 @@ export let api: {
 	failPost: boolean;
 };
 let server: ReturnType<typeof Bun.serve>;
-export let key = "";
+let key = "";
 /** A `flock` that takes no lock and runs its command, one that reports its bound reached, and the real one alone. */
 export let free = "";
 export let bound = "";

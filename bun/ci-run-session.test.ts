@@ -17,7 +17,7 @@ import {
 	start,
 	stop,
 } from "./ci-run.fixture.ts";
-import { cleanup, git } from "./diff-budget.fixture.ts";
+import { cleanup } from "./diff-budget.fixture.ts";
 
 /**
  * The CI flow's session after its comment, run through the event handler
