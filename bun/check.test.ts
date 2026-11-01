@@ -61,7 +61,9 @@ describe("the gates over a consumer", () => {
 	test("an unreadable approval is reported beside the other gates' problems", () => {
 		const harness = {
 			rootFiles: {},
-			suppressions: { "src/a.ts biome-ignore": { count: 1 } },
+			// A key naming no marker, so this file carries none for the scan to
+			// find: the entry's fields are what is read.
+			suppressions: { "src/a.ts some-marker": { count: 1 } },
 			uncitedFloor: { count: 0 },
 		};
 		const said = gates(
@@ -74,7 +76,7 @@ describe("the gates over a consumer", () => {
 			}),
 		);
 		expect(said).toContain(
-			'harness.suppressions["src/a.ts biome-ignore"].why gives no reason — write one as text',
+			'harness.suppressions["src/a.ts some-marker"].why gives no reason — write one as text',
 		);
 		expect(said).toContainEqual(
 			expect.stringContaining("harness.uncitedFloor.why"),
