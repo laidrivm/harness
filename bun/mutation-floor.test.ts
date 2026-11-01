@@ -165,4 +165,30 @@ describe("the floor changed with no reason given", () => {
 	test("a reason of whitespace alone fails", () => {
 		expect(gauge(12, 12, "   ")).not.toEqual([]);
 	});
+
+	test("an absent reason fails naming the field, rather than throwing", () => {
+		expect(gauge(12, 12, undefined)).toEqual([
+			expect.stringContaining("harness.mutationFloor.why"),
+		]);
+	});
+
+	test("an empty reason fails naming the field", () => {
+		expect(gauge(12, 12, "")).toEqual([
+			expect.stringContaining("harness.mutationFloor.why"),
+		]);
+	});
+});
+
+describe("a floor that is not a number", () => {
+	test("a floor written as a string fails naming the field", () => {
+		expect(gauge(12, "12", why)).toEqual([
+			expect.stringContaining("harness.mutationFloor.surviving"),
+		]);
+	});
+
+	test("an absent floor fails naming the field", () => {
+		expect(gauge(12, undefined, why)).toEqual([
+			expect.stringContaining("harness.mutationFloor.surviving"),
+		]);
+	});
 });
