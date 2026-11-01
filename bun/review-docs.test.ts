@@ -239,8 +239,11 @@ describe("the /code-review bullet is the local review", () => {
 		expect(text).toContain("a pass that does not return after one that did ends the loop on the line the earlier passes left");
 		expect(text).toContain("`BLOCKED` wins over `OPEN` and `OPEN` over `PASS`");
 		// The scenario's outcome: an earlier pass's pending dismissal still holds the line at OPEN.
-		expect(text).toContain("the gate line reads `OPEN` until they settle it");
-		expect(text).toContain("one a pass left before a later pass did not return");
+		expect(text).toContain("which decides the push as any gate line does — a dismissal an earlier pass proposed still reads `OPEN`");
+	});
+
+	test("the doc names no /coderabbit-local", () => {
+		expect(flat(toolkit())).not.toContain("/coderabbit-local");
 	});
 
 	test("the doc holds no measurement", () => {

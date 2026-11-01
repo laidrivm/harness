@@ -70,10 +70,11 @@ limit, gets no review on its own — stop waiting on it and report it.
   pass the push then goes on without the gate rather than blocking the
   branch: the session writes no `CODE-REVIEW gate:` line only when no pass
   returned a review, and a pass that does not return after one that did ends
-  the loop on the line the earlier passes left. One finding on an unchanged
-  file beside findings on changed ones — a caller the change breaks — is
-  kept and verified like the rest, and an empty review proves nothing either
-  way and passes. `/code-review` names no
+  the loop on the line the earlier passes left, which decides the push as
+  any gate line does — a dismissal an earlier pass proposed still reads
+  `OPEN`. One finding on an unchanged file beside findings on changed ones —
+  a caller the change breaks — is kept and verified like the rest, and an
+  empty review proves nothing either way and passes. `/code-review` names no
   severity, so the session grades each finding 🔵 Trivial, 🟡 Minor, 🟠 Major
   or 🔴 Critical — the ladder `/coderabbit` reads — while verifying it,
   disposes of it on that grade, and names the grade beside each finding in
@@ -95,11 +96,9 @@ limit, gets no review on its own — stop waiting on it and report it.
   `CODE-REVIEW gate:` line itself, since the built-in skill prints none: it
   ends the disposition on `CODE-REVIEW gate: PASS|OPEN|BLOCKED — …`, `OPEN`
   over a proposed Major or Critical dismissal and `BLOCKED` over a Major or
-  above that no fix resolved and no dismissal was proposed for — one the
-  third review left, or one a pass left before a later pass did not return;
-  where the findings left fit more than one of those lines, `BLOCKED` wins
-  over `OPEN` and `OPEN` over `PASS`, and the line names every finding
-  behind it. The review reads `CLAUDE.md`
+  above the third review left; where the findings left fit more than one of
+  those lines, `BLOCKED` wins over `OPEN` and `OPEN` over `PASS`, and the
+  line names every finding behind it. The review reads `CLAUDE.md`
   and `core/rules.md`, not the docs the rulebook indexes, so a rule kept in
   one of those is read back by CodeRabbit on the pull request rather than by
   this review.
