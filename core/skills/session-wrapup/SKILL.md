@@ -71,7 +71,7 @@ Then one `first review` line: of the pull requests whose first CodeRabbit review
 gh pr list --state all --search "updated:>=<since>" --limit 1000 --json number
 gh pr list --state open --limit 1000 --json number
 gh api 'repos/{owner}/{repo}/pulls/<n>/commits' --paginate --jq '.[].sha'
-gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit" and .app.slug == "coderabbitai" and .conclusion == "success") | [.started_at, .completed_at, .output.title, .output.summary] | @tsv'
+gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?check_name=CodeRabbit&filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit" and .app.slug == "coderabbitai" and .conclusion == "success") | [.started_at, .completed_at, .output.title, .output.summary] | @tsv'
 gh api 'repos/{owner}/{repo}/commits/<sha>/statuses' --paginate --jq '.[] | select(.context == "CodeRabbit" and (.state == "success" or .state == "pending")) | [.created_at, .state, .description] | @tsv'
 gh api 'repos/{owner}/{repo}/commits/<sha>/pulls' --jq '.[].number'
 gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | [.id, .body] | @tsv'

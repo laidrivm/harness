@@ -198,7 +198,8 @@ marked as inferred.
 #### Scenario: A first review with no findings
 
 - **WHEN** a pull request's first reviewed commit has a `CodeRabbit` check
-  run concluded `success` and titled `Finished`, and the bot submitted no
+  run concluded `success` and titled `Finished`, or only a `CodeRabbit`
+  status reading `success` with `Review completed`, and the bot submitted no
   review of it
 - **THEN** the line counts that pull request as one without a Major or above
 
