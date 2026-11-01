@@ -24,17 +24,22 @@ const write = (call: Call, card: string, kept: { id: unknown }[]) =>
 
 /**
  * Reads `card`'s `Assign` and, once `go` agrees with the list read, writes it
- * back without `user`, keeping everyone else. Returns Notion's answer, or
- * nothing when `go` declined; throws naming the step, or at 25 people, the
- * most a page read lists. `go` is asked first, so a card it declines never
- * reads as failed for its length.
+ * back without `user`, keeping everyone else, and reads the user's absence
+ * back from Notion's answer, for every caller, `unassign()` included (the
+ * user's answer 11 b). Returns `true` once written and read back, `false`
+ * when `go` declined; throws naming the step, at 25 people, the most a page
+ * read lists, or when the answer still holds the user or lists no `Assign`.
+ * `go` is asked first, so a card it declines never reads as failed for its
+ * length.
  */
 export async function release(call: Call, card: string, user: string, go: (listed: Person[]) => Promise<boolean> = async () => true) {
 	const listed = people(await call("the page read", `/v1/pages/${card}`)) ?? [];
-	if (!(await go(listed))) return undefined;
+	if (!(await go(listed))) return false;
 	// shortcut: a page read lists 25 references of a property at most, so a longer `Assign` is left whole rather than written back cut; page through `/v1/pages/<id>/properties/<property>` if a card ever needs it.
 	if (listed.length >= 25) throw new Error(`${card} lists 25 people on Assign, the most a page read returns`);
-	return { answer: await write(call, card, without(listed, user)) };
+	const now = people(await write(call, card, without(listed, user)));
+	if (!now || holds(now, user)) throw new Error("the Assign write did not remove the user");
+	return true;
 }
 const without = (listed: Person[], user: string) => listed.filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
 
@@ -67,8 +72,6 @@ export async function cleared(call: Call, card: string, user: string): Promise<C
 			return past;
 		});
 		if (!done) return { restoreFailed: false };
-		const now = people(done.answer);
-		if (!now || holds(now, user)) fault = "the Assign write did not remove the user";
 	} catch (error) {
 		// Before the write, nothing changed; at it, the write may have landed.
 		if (!past || listed.length >= 25) return failed((error as Error).message);

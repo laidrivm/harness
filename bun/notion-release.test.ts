@@ -1,12 +1,13 @@
 /**
- * `cleared()`, the release the work commands run, against `standIn()`: what
- * it reads, what it writes back, and the line it returns. [n]: the
- * proposal-stage `/zombies` list of `notion-ask-sets-assign`'s tasks.md.
+ * `cleared()`, the release the work commands run, and `release()`, the write
+ * it shares with `unassign()`, against `standIn()`: what they read, what they
+ * write back, and what they return. [n]: the proposal-stage `/zombies` list
+ * of `notion-ask-sets-assign`'s tasks.md.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { client } from "./notion-bot.ts";
 import { CARD, OTHER, standIn, TOKEN, USER } from "./notion-bot.fixture.ts";
-import { cleared } from "./notion-release.ts";
+import { cleared, release as write } from "./notion-release.ts";
 
 const notion = standIn();
 let before: string | undefined;
@@ -125,5 +126,28 @@ describe("something arrives during the release", () => {
 	test("a restore answered 500: restoreFailed [35]", async () => {
 		const run = await release({ next: { [COMMENTS]: { comments: [question(3)] }, [PATCH]: { fail: { [PATCH]: 500 } } } });
 		expect([run.line?.startsWith("assign: failed — "), run.restoreFailed]).toEqual([true, true]);
+	});
+});
+
+describe("release(), which unassign() shares", () => {
+	/** `release()` on the stand-in as `c` says: what it returned, or the message it threw. */
+	const released = async (c: Case) => {
+		Object.assign(notion.state, { assign: [USER, OTHER], comments: [], keep: false, unlisted: false, fail: {}, next: {} }, c);
+		return write(client(TOKEN), CARD, USER).then(
+			(done) => (done ? "written" : "declined"),
+			(error: Error) => error.message,
+		);
+	};
+
+	// spec: task-board/the-release-fails
+	test.each([
+		["an answer still holding the user", { keep: true }],
+		["an answer with no Assign list", { unlisted: true }],
+	])("%s throws, so every caller fails on it (the user's answer 11 b)", async (_, c) => {
+		expect(await released(c)).toBe("the Assign write did not remove the user");
+	});
+
+	test("an answer without the user is written", async () => {
+		expect(await released({})).toBe("written");
 	});
 });

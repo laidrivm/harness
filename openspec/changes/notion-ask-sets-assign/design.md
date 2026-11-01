@@ -100,6 +100,13 @@ scenario *A second question for a card*) and in the same bullet of
     Concurrent `Assign` writes stay as they are, with no lock and no
     conditional write: only the user is ever assigned, which extends
     decision 10.
+13. (card, 2026-11-01, item 11 b, on the local review of the apply pull
+    request) The check that Notion's answer no longer holds the user lives
+    in `release()`, so every caller, `unassign()` included, has it from one
+    place: `core/rules.md`'s "write logic a second time only by lifting it
+    into one module" (the user extended it: a copy that would fail loudly
+    is no exception). `unassign()` then prints `assign: failed —` and the
+    runner refuses the pass in that case.
 
 The user left two details to this proposal: *Numbering*, which the user
 settled as decision 3, and *What answers several questions*. Decision 4 met
@@ -207,17 +214,19 @@ Decisions 4 to 6. `unassign()` in `bun/notion-unassign.ts` already reads the
 page, refuses at 25 people (the most a page read lists), and PATCHes
 `Assign` without the user, keeping everyone else. Its read and write are
 lifted into one function, `release(call, card, user, go)`, which `unassign()`
-calls after its card checks and which returns the write's answer, asking
-`go` with the list it read before the cap and the write;
-`unassign()`'s behaviour and lines stay as they are, so the runner's pass is
-unchanged. A second function, `cleared(call, card, user)`, is what the three
+calls after its card checks, which asks `go` with the list it read before
+the cap and the write, and which reads the user's absence back from the
+write's answer (decision 13); `unassign()`'s behaviour and lines stay as
+they are but when that answer still holds the user or lists no `Assign`,
+where it now prints `assign: failed —` and the runner refuses the pass. A
+second function, `cleared(call, card, user)`, is what the three
 commands call: it reads the page, and only when `Assign` holds the user
 reads the comments with `discussion()` and decides with `waits()`. `waits()`
 gains a `mark` argument, defaulting to `harness-question`, so the
 `harness-pause` test is the same function with the other mark, not a second
 copy (no integration id either way, as `finish` does today, so a triage's
 `harness-answer` keeps `Assign`, the side that keeps a question visible).
-When nothing waits it calls `release()` and reads the user's absence back
+When nothing waits it calls `release()`, which reads the user's absence back
 from the PATCH's answer. It then reads the comments once more, after any
 write that may have landed, its answer read back or not, and, when a
 question or a pause notice now waits by the same test, or when that read
