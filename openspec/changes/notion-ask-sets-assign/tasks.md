@@ -27,13 +27,18 @@ Each failing case is written first, its failure recorded, and cited as
       PATCH [10]; these replace the comments-read cases. A POST answered 503
       prints `question: may be posted on <card> — …; read the card's comments
       before running it again`, exit 1, no PATCH [22]; one answered 429
-      prints `not posted` [23]. Verify: each new case fails against today's
-      command, and the suite fails only on them
-- [ ] 1.2 In `bun/notion-ask.ts`, drop the `waiting()` read and its refusal,
-      call `assign()` after `comment()` and check the answer's
+      prints `not posted` [23]; one answered 200 with a body that does not
+      parse counts as posted and goes on to the PATCH [31]. In
+      `bun/transient.test.ts`, a `Transient` from a 503 carries `status`
+      503 and one from a timeout none [32]. Verify: each new case fails
+      against today's code, and the suites fail only on them
+- [ ] 1.2 Give `Transient` in `bun/transient.ts` the `status` the client
+      raised it for. In `bun/notion-ask.ts`, drop the `waiting()` read and
+      its refusal, call `assign()` after `comment()` and check the answer's
       `properties.Assign.people` for the user's id, compared as `hex()`
-      compares ids; print the lines the spec names, the post's no answer,
-      timeout or 5xx as `may be posted`, and exit 0 only on `Assign set`.
+      compares ids; print the lines the spec names, a `Transient` from the
+      post with no `status` or a 5xx one as `may be posted`, a `SyntaxError`
+      from it as posted, and exit 0 only on `Assign set`.
       Rewrite the header to say what the command reads and writes now
       (design, *The write*). Verify: `bun test bun/notion-ask.test.ts`
       passes
@@ -77,24 +82,33 @@ Each failing case is written first, its failure recorded, and cited as
       `Assign` without the user reads no comments [18]; 25 people read [26],
       an answer still holding the user [19] or with no `Assign` list [25],
       and a comments read answered 500 [20] return `assign: failed —` lines;
-      a question the stand-in adds between the first comments read and the
-      write puts the user back on `Assign` [29]; a `harness-pause` followed
-      only by a marked comment of the user's still waits [30].
-      Verify: each case fails, the module not existing yet
-- [ ] 2.2 Lift `unassign()`'s page read, cap and write in
-      `bun/notion-unassign.ts` into `release()`, with the read-back, and add
-      `cleared()` beside it (design, *Releasing `Assign`*); `unassign()` calls
-      `release()`. Verify: `bun test bun/notion-release
-      bun/notion-unassign bun/board-loop` passes
+      a question [29] or a `harness-pause` [33] the stand-in adds between
+      the first comments read and the write, and a second comments read
+      answered 500 [34], put the user back on `Assign` beside the other
+      person and return `assign: restored the user on <card>`; a restore
+      answered 500 returns an `assign: failed —` line with `restoreFailed`
+      [35]; a `harness-pause` followed only by a marked comment of the
+      user's still waits [30]. In `bun/notion-bot.test.ts`, `waits()` with
+      the mark `harness-pause` reads a pause notice as it reads a question
+      [36]. Verify: each case fails, the module not existing yet
+- [ ] 2.2 Give `waits()` in `bun/notion-bot.ts` a `mark` argument defaulting
+      to `harness-question`. Lift `unassign()`'s page read, cap and write in
+      `bun/notion-unassign.ts` into `release()`, which returns the list it
+      wrote, and add `cleared()` beside it with the read-back and the
+      restore (design, *Releasing `Assign`*); `unassign()` calls `release()`
+      and keeps its lines. Verify: `bun test bun/notion-release
+      bun/notion-bot bun/notion-unassign bun/board-loop` passes, the
+      board-loop cases unchanged
 - [ ] 2.3 Failing cases, then the calls: `status` prints `cleared()`'s line
       after its own, on any move, `--to applying` [17] and `--to applied`
       [24] included, and a refusal makes no release [21]
       (`bun/work-status.test.ts`); `take` prints it after the comments, and
       its *Only reads* case holds where nothing is released
       (`bun/work-take.test.ts`); `finish --card` prints it after its comments
-      read, ready or draft alike (`bun/work-finish-sequence.test.ts`); in
-      each, a failed release leaves the other lines and the exit as they
-      were [28]. Give the fixtures' `Run` an `assign` defaulting to none, so
+      read and before the ready switch, and leaves the draft when the
+      release restored the user [37] (`bun/work-finish-sequence.test.ts`);
+      in each, a failed release leaves the other lines and the exit as they
+      were [28], and a failed restore makes the exit 1 [38]. Give the fixtures' `Run` an `assign` defaulting to none, so
       the existing cases keep their calls and lines. Update the three
       modules' headers. Verify: `bun test bun/work-status bun/work-take
       bun/work-finish` passes
