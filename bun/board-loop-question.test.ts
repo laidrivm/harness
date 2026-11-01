@@ -103,7 +103,7 @@ describe("the runner posts the question", () => {
 			READ_BACK,
 			// [11]: no rerun for a posted question, and the comments read before any other.
 			"never run the command again for a question it printed as posted",
-			"read the comments of the card before running it again after any other line",
+			"after any other line read the comments of the card before running it again, setting the `Assign` of the card to the user instead where the question is already there",
 			...FORM,
 		])
 			expect(lines[3]).toContain(part);
