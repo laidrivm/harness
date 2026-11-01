@@ -148,7 +148,7 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		return Array.isArray(got) ? !["skipped", "no run"].includes(last.name) : null;
 	});
 	// Exit 0 whatever the state: the ready switch went through, and the line is the signal.
-	const outcome = last.name === "skipped" ? request(full, Number(number), commit, short, seen) : said(last, short, after.made);
+	const outcome = last.name === "skipped" ? request(full, Number(number), commit, seen) : said(last, short, after.made);
 	return done(`finish: ready #${number} — ${outcome}`, 0);
 }
 
@@ -169,9 +169,10 @@ const FAILS = 3;
  * not when such a comment came at or after `HEAD`'s first CodeRabbit run in
  * `runs`, and only when one more read of `sha`, right before the post, still
  * gives `skipped` (`core/git-and-prs.md` names the one comment as the user's
- * standing permission, answer 4 b). What the last line says of it, naming `sha` as `short`.
+ * standing permission, answer 4 b). What the last line says of it.
  */
-function request(repo: string, n: number, sha: string, short: string, runs: Run[]) {
+function request(repo: string, n: number, sha: string, runs: Run[]) {
+	const short = sha.slice(0, 7);
 	const skipped = `CodeRabbit skipped ${short}`;
 	const comments = objects(`repos/${repo}/issues/${n}/comments?per_page=100`, ".[] | {created_at, body}");
 	if (!Array.isArray(comments)) return `${skipped}; comments unread, nothing asked: ${comments.why}`;
