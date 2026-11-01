@@ -2,9 +2,9 @@
  * `finish --card`'s record on the card: the card's `Pointer` names the one
  * change directory the branch adds files to against its merge base with
  * `origin/main`, and its pull request is linked under `Ссылки`
- * (`openspec/changes/archive/2026-11-01-finish-writes-card/design.md`). Each write is made only
- * where it is missing, so a rerun after a failure finishes the job; every
- * failure throws naming its step.
+ * (`openspec/changes/archive/2026-11-01-finish-writes-card/design.md`).
+ * Each write is made only where it is missing, so a rerun after a failure
+ * finishes the job; every failure throws naming its step.
  */
 import { ARCHIVED, board } from "./board-state.ts";
 import { across, named } from "./config.ts";
