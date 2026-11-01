@@ -30,7 +30,16 @@ const said = (author: string, time: string, ...runs: Run[]) => ({ created_by: { 
 const question = (time: string) =>
 	said(BOT, time, { plain_text: "harness-question", annotations: { code: true } }, { plain_text: " Ship?" });
 
-type Stub = { comments?: unknown[][]; read?: number; post?: number };
+/** `USER` as the API writes an id, a UUID. */
+const UUID = "01234567-89ab-cdef-0123-456789abcdef";
+const OTHER = "99999999-8888-7777-6666-555555555555";
+const held = (...people: string[]) => ({ object: "page", properties: { Assign: { type: "people", people: people.map((id) => ({ object: "user", id })) } } });
+
+/**
+ * `post` answers the comment's post, its body `raw` when one is given; `patch`
+ * and `assigned` the `Assign` write, which holds the user by default.
+ */
+type Stub = { comments?: unknown[][]; read?: number; post?: number; raw?: string; patch?: number; assigned?: unknown };
 
 /** Serves Notion as `stub` says, and the calls it saw, each as `METHOD /path` with its body. */
 function notion(stub: Stub = {}) {
@@ -45,7 +54,8 @@ function notion(stub: Stub = {}) {
 				version: req.headers.get("Notion-Version"),
 				body: req.method === "GET" ? undefined : await req.json(),
 			});
-			if (req.method === "POST") return Response.json({}, { status: stub.post ?? 200 });
+			if (req.method === "POST") return stub.raw === undefined ? Response.json({}, { status: stub.post ?? 200 }) : new Response(stub.raw, { status: stub.post ?? 200 });
+			if (req.method === "PATCH" && url.pathname === `/v1/pages/${CARD}`) return Response.json(stub.assigned ?? held(UUID), { status: stub.patch ?? 200 });
 			if (url.pathname !== "/v1/comments") return Response.json({}, { status: 500 });
 			const pages = stub.comments ?? [[]];
 			const at = Number(url.searchParams.get("start_cursor") ?? 0);
@@ -90,29 +100,61 @@ async function ask(api: string, config: string, args: string[]) {
 }
 
 const POSTED = `question: posted on ${CARD}`;
+const SET = `${POSTED}, Assign set`;
+const unset = (why: string) => `${POSTED}, Assign not set — ${why}`;
 const not = (why: string) => `question: not posted — ${why}`;
+const calls = (seen: { call: string }[]) => seen.map((s) => s.call);
+const ASSIGN = `PATCH /v1/pages/${CARD}`;
 
 describe("a question posted", () => {
 	// spec: task-board/a-question-posted-from-the-laptop
-	test("the comments read, then the post, each with the version and the bearer; no page read and no PATCH [44] [51]", async () => {
+	test("the post, then the Assign write, each with the version and the bearer; no comments read [1] [2] [44] [51]", async () => {
 		const { seen, url } = notion();
-		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line: POSTED, code: 0 });
-		expect(seen.map((s) => s.call)).toEqual(["GET /v1/comments", "POST /v1/comments"]);
+		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line: SET, code: 0 });
+		expect(calls(seen)).toEqual(["POST /v1/comments", ASSIGN]);
 		for (const s of seen) expect([s.version, s.auth]).toEqual(["2025-09-03", `Bearer ${TOKEN}`]);
-		expect(seen[1].body).toEqual({
+		expect(seen[0].body).toEqual({
 			parent: { page_id: CARD },
 			rich_text: [
 				{ type: "text", text: { content: "harness-question" }, annotations: { code: true } },
 				{ type: "text", text: { content: " Ship the hook as one group?" } },
 			],
 		});
+		expect(seen[1].body).toEqual({ properties: { Assign: { people: [{ id: USER }] } } });
+	});
+
+	// spec: task-board/a-question-posted-from-the-laptop
+	test("a user id of 32 hex digits in the settings matches the UUID in the write's answer [5]", async () => {
+		const { url } = notion({ assigned: held(OTHER.toUpperCase(), UUID.toUpperCase()) });
+		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line: SET, code: 0 });
+	});
+
+	// spec: task-board/a-question-already-waits
+	// spec: task-board/assign-cleared-while-a-question-waits
+	test.each([
+		["a waiting question on the second page [45]", [[said(USER, "2026-10-20T08:00:00Z", { plain_text: "An earlier answer." })], [question("2026-10-20T09:00:00Z")]]],
+		[
+			"a harness-answer after it, which does not unblock [46]",
+			[[question("2026-10-20T09:00:00Z"), said(BOT, "2026-10-20T10:00:00Z", { plain_text: "harness-answer", annotations: { code: true } }, { plain_text: " Yes." })]],
+		],
+	])("%s: posted and assigned all the same [3]", async (_, comments) => {
+		const { seen, url } = notion({ comments });
+		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line: SET, code: 0 });
+		expect(calls(seen)).toEqual(["POST /v1/comments", ASSIGN]);
+	});
+
+	// spec: task-board/a-post-that-may-have-landed
+	test("a 200 whose body does not parse counts as posted, and the write follows [31]", async () => {
+		const { seen, url } = notion({ raw: "not json" });
+		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line: SET, code: 0 });
+		expect(calls(seen)).toEqual(["POST /v1/comments", ASSIGN]);
 	});
 
 	// spec: task-board/text-the-gate-would-not-allow
 	test("1500 characters is posted, 1501 is refused in the gate's words [47]", async () => {
 		const { url } = notion();
 		const sized = (n: number) => asked(`${MARK} ${"q".repeat(n - MARK.length - 1)}`);
-		expect((await ask(url, home(), [CARD, sized(1500)])).line).toBe(POSTED);
+		expect((await ask(url, home(), [CARD, sized(1500)])).line).toBe(SET);
 		expect(await ask(url, home(), [CARD, sized(1501)])).toEqual({
 			line: not(`the question fails the question gate (length): ${REMEDY.length}`),
 			code: 1,
@@ -121,7 +163,22 @@ describe("a question posted", () => {
 
 	test.each([0o600, 0o400].map((mode) => [mode.toString(8), mode] as const))("a settings file at mode 0%s is read [48]", async (_, mode) => {
 		const { url } = notion();
-		expect((await ask(url, home(undefined, mode), [CARD, asked()])).line).toBe(POSTED);
+		expect((await ask(url, home(undefined, mode), [CARD, asked()])).line).toBe(SET);
+	});
+});
+
+describe("posted, and Assign not set", () => {
+	// spec: task-board/the-assign-write-fails
+	test.each([
+		["another person alone [4]", { assigned: held(OTHER) }, unset("the Assign write did not hold the user")],
+		["an empty people list [6]", { assigned: held() }, unset("the Assign write did not hold the user")],
+		["an answer of {} [7]", { assigned: {} }, unset("the Assign write did not hold the user")],
+		["a write answered 500 [8]", { patch: 500 }, unset("the Assign write answered 500")],
+		["a write answered 403 [9]", { patch: 403 }, unset("the Assign write answered 403")],
+	])("%s: the line names why, exit 1, one post", async (_, stub, line) => {
+		const { seen, url } = notion(stub);
+		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line, code: 1 });
+		expect(calls(seen)).toEqual(["POST /v1/comments", ASSIGN]);
 	});
 });
 
@@ -155,28 +212,27 @@ describe("nothing is posted", () => {
 		expect(seen).toEqual([]);
 	});
 
-	// spec: task-board/a-question-already-waits
-	test.each([
-		["a waiting question on the second page [45]", [[said(USER, "2026-10-20T08:00:00Z", { plain_text: "An earlier answer." })], [question("2026-10-20T09:00:00Z")]]],
-		[
-			"a harness-answer after it, which does not unblock [46]",
-			[[question("2026-10-20T09:00:00Z"), said(BOT, "2026-10-20T10:00:00Z", { plain_text: "harness-answer", annotations: { code: true } }, { plain_text: " Yes." })]],
-		],
-	])("%s: no post", async (_, comments) => {
-		const { seen, url } = notion({ comments });
-		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line: not(`a question already waits on ${CARD}`), code: 1 });
-		expect(seen.map((s) => s.call)).not.toContain("POST /v1/comments");
-	});
-
 	// spec: task-board/a-page-the-integration-cannot-reach
 	test.each([
-		["a 404 on the comments read [53]", { read: 404 }, not("the comments read answered 404")],
-		["a bad token, answered 401 [49]", { read: 401 }, not("the comments read answered 401")],
-		["a failed POST [54]", { post: 500 }, not("the comment's post answered 500")],
-	])("%s: the step and Notion's status, exit 1", async (_, stub, line) => {
-		const { seen, url } = notion(stub);
-		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line, code: 1 });
-		expect(seen.filter((s) => s.call === "POST /v1/comments").length).toBeLessThanOrEqual(1);
+		["a post answered 404 [53]", 404],
+		["a bad token, answered 401 [49]", 401],
+		["a post answered 429 [23]", 429],
+	])("%s: the step and Notion's status, exit 1, no write [10]", async (_, post) => {
+		const { seen, url } = notion({ post });
+		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line: not(`the comment's post answered ${post}`), code: 1 });
+		expect(calls(seen)).toEqual(["POST /v1/comments"]);
+	});
+});
+
+describe("a post that may have landed", () => {
+	// spec: task-board/a-post-that-may-have-landed
+	test("a post answered 503: may be posted, read the comments first, exit 1, no write [22] [54]", async () => {
+		const { seen, url } = notion({ post: 503 });
+		expect(await ask(url, home(), [CARD, asked()])).toEqual({
+			line: `question: may be posted on ${CARD} — the comment's post answered 503; read the card's comments before running it again`,
+			code: 1,
+		});
+		expect(calls(seen)).toEqual(["POST /v1/comments"]);
 	});
 });
 
@@ -201,7 +257,7 @@ describe("the ask settings, as work.ts reads them", () => {
 		if (typeof found === "string") throw new Error(found);
 		expect(found.settings).toEqual({ token: TOKEN, user: USER });
 		await found.call("the comments read", `/v1/comments?block_id=${CARD}`);
-		expect(seen.at(-1)).toEqual({ ...seen[0], call: "GET /v1/comments" });
+		expect(seen.at(-1)).toEqual({ call: "GET /v1/comments", auth: seen[0].auth, version: seen[0].version, body: undefined });
 	});
 
 	test("no settings answer the reason, and no call", () => {

@@ -4,15 +4,16 @@
  * in `<file>` on the card from the ask integration, whose settings are
  * `notion-ask.json` under the user's config home (task-board, *A session asks
  * through the ask integration where one is configured*). It checks the text as
- * the question gate does, reads the card's comments and posts nothing while a
- * question waits, then posts the comment. The command reads no page and writes
- * no property: the integration reads pages and comments and writes comments
- * alone, so the session sets `Assign` itself. It prints one line and exits 1
- * when it posted nothing; no line holds the token.
+ * the question gate does, posts the comment whatever questions already wait on
+ * the card, then sets the card's `Assign` to the user alone and reads the user
+ * back from that write's answer. It reads neither the page nor its comments,
+ * and writes no property but `Assign`. It prints one line, exits 0 only when
+ * the post and the write both held, and no line holds the token.
  */
 import { readFileSync } from "node:fs";
-import { type Call, client, comment, failed, ID, type Settings, settings, waiting } from "./notion-bot.ts";
+import { assign, type Call, client, comment, failed, hex, ID, type Settings, settings } from "./notion-bot.ts";
 import { ASK_SETTINGS, where } from "./question-gate.ts";
+import { Transient } from "./transient.ts";
 
 /**
  * The ask settings and a client over them, or why there are none: what the
@@ -30,9 +31,9 @@ export function integration(timeout = 30_000, env: Record<string, string | undef
 	return { settings: found, call: client(found.token, timeout) };
 }
 
-/** The line the command prints, and whether it posted. */
-export async function ask(args: string[], timeout = 30_000): Promise<{ line: string; posted: boolean }> {
-	const not = (why: string) => ({ line: `question: not posted — ${why}`, posted: false });
+/** The line the command prints, and whether the post and the `Assign` write both held. */
+export async function ask(args: string[], timeout = 30_000): Promise<{ line: string; ok: boolean }> {
+	const not = (why: string) => ({ line: `question: not posted — ${why}`, ok: false });
 	if (args.length !== 2) return not("usage: notion-ask.ts <card id> <file>");
 	const [card, file] = args;
 	const found = integration(timeout);
@@ -47,16 +48,32 @@ export async function ask(args: string[], timeout = 30_000): Promise<{ line: str
 	const fault = failed(text);
 	if (fault) return not(fault);
 	try {
-		if (await waiting(found.call, card, found.settings.user)) return not(`a question already waits on ${card}`);
 		await comment(found.call, card, text);
 	} catch (error) {
-		return not((error as Error).message);
+		const why = (error as Error).message;
+		// A 2xx whose body did not parse is `response.json()`'s SyntaxError: the post held.
+		if (!(error instanceof SyntaxError)) {
+			// No answer or a 5xx may have reached Notion; a 429 it refused unprocessed.
+			if (error instanceof Transient && (error.status === undefined || error.status >= 500))
+				return { line: `question: may be posted on ${card} — ${why}; read the card's comments before running it again`, ok: false };
+			return not(why);
+		}
 	}
-	return { line: `question: posted on ${card}`, posted: true };
+	const unset = (why: string) => ({ line: `question: posted on ${card}, Assign not set — ${why}`, ok: false });
+	let written: { properties?: { Assign?: { people?: unknown } } } | undefined;
+	try {
+		written = await assign(found.call, card, found.settings.user);
+	} catch (error) {
+		return unset((error as Error).message);
+	}
+	const people = written?.properties?.Assign?.people;
+	if (!Array.isArray(people) || !people.some((person) => hex(person?.id) === hex(found.settings.user)))
+		return unset("the Assign write did not hold the user");
+	return { line: `question: posted on ${card}, Assign set`, ok: true };
 }
 
 if (import.meta.main) {
-	const { line, posted } = await ask(process.argv.slice(2));
+	const { line, ok } = await ask(process.argv.slice(2));
 	console.log(line);
-	process.exit(posted ? 0 : 1);
+	process.exit(ok ? 0 : 1);
 }

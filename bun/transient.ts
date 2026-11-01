@@ -5,8 +5,15 @@
  * reads a message the runner itself printed.
  */
 
-/** A failure the next tick may not meet: no answer, a timeout, a 5xx or a 429. */
-export class Transient extends Error {}
+/** A failure the next tick may not meet: no answer, a timeout, a 5xx or a 429; `status` is the answer's, none when no answer came. */
+export class Transient extends Error {
+	constructor(
+		message: string,
+		readonly status?: number,
+	) {
+		super(message);
+	}
+}
 
 /** `EX_TEMPFAIL` from `sysexits.h`: what a pass ended `retry` and the mint's transient failure exit. */
 export const TEMPFAIL = 75;

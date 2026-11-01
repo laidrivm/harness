@@ -103,7 +103,10 @@ export function client(token: string, timeout = 30_000, version = VERSION) {
 			// The name alone: a message may quote the request.
 			throw new Transient(`${step} failed: ${(error as Error).name}`);
 		}
-		if (!response.ok) throw new (transientStatus(response.status) ? Transient : Error)(`${step} answered ${response.status}`);
+		if (!response.ok) {
+			const why = `${step} answered ${response.status}`;
+			throw transientStatus(response.status) ? new Transient(why, response.status) : new Error(why);
+		}
 		return response.json();
 	};
 }
