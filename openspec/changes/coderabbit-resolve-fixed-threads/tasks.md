@@ -17,7 +17,7 @@ each page of the threads query, each mutation — and logs every call.
       `--comment`; `--comment 123x`, `--comment ""`, `--comment -1`; `--pr 0`,
       no `--pr`, `--pr 7 --pr 8`; no `--head`, `--head 1a2b3c4`, `--head
       PUSHED_SHA`, two `--head`; a positional; an unknown option — each
-      prints the usage, exits 2 and logs no `gh` call. `--pr 7 --head <40
+      prints the usage, exits 2 and logs no `gh` or `git` call (a logging `git` on `PATH`). `--pr 7 --head <40
       hex> --comment 1 --comment 2` reaches the command with both ids. Then
       add the `resolve` branch and usage line to `bun/work.ts`, `parseArgs`
       with `multiple: true` on every option and `--pr` and `--head` taken

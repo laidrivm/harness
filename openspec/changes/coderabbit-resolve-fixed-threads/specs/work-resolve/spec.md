@@ -134,7 +134,7 @@ resolve nothing.
 
 Once every id is placed, `resolve` SHALL leave a thread already resolved
 untouched, saying so, and resolve each other one through GraphQL's
-`resolveReviewThread`, printing one line per id. It SHALL exit 0 when every
+`resolveReviewThread`, printing one line per id it skips or attempts and none for an id after a failure. It SHALL exit 0 when every
 named thread ends resolved, and 1 naming the id when a resolve fails, the
 threads resolved before it staying resolved, so a second run skips them.
 
