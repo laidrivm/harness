@@ -11,7 +11,7 @@
  * the post and the write both held, and no line holds the token.
  */
 import { readFileSync } from "node:fs";
-import { assign, type Call, client, comment, failed, hex, ID, type Settings, settings } from "./notion-bot.ts";
+import { assign, type Call, client, comment, failed, hex, ID, POSTED, type Settings, settings, Unread } from "./notion-bot.ts";
 import { ASK_SETTINGS, where } from "./question-gate.ts";
 import { Transient } from "./transient.ts";
 
@@ -51,25 +51,21 @@ export async function ask(args: string[], timeout = 30_000): Promise<{ line: str
 		await comment(found.call, card, text);
 	} catch (error) {
 		const why = (error as Error).message;
-		// A 2xx whose body did not parse is `response.json()`'s SyntaxError: the post held.
-		if (!(error instanceof SyntaxError)) {
-			// No answer or a 5xx may have reached Notion; a 429 it refused unprocessed.
-			if (error instanceof Transient && (error.status === undefined || error.status >= 500))
-				return { line: `question: may be posted on ${card} — ${why}; read the card's comments before running it again`, ok: false };
-			return not(why);
-		}
+		// No answer or a 5xx may have reached Notion; a 429 it refused unprocessed.
+		if (error instanceof Transient && (error.status === undefined || error.status >= 500))
+			return { line: `question: may be posted on ${card} — ${why}; read the card's comments before running it again`, ok: false };
+		// A 2xx whose body could not be read: the post held, so the write follows.
+		if (!(error instanceof Unread)) return not(why);
 	}
-	const unset = (why: string) => ({ line: `question: posted on ${card}, Assign not set — ${why}`, ok: false });
-	let written: { properties?: { Assign?: { people?: unknown } } } | undefined;
+	const unset = (why: string) => ({ line: `${POSTED} ${card}, Assign not set — ${why}`, ok: false });
 	try {
-		written = await assign(found.call, card, found.settings.user);
+		const people = (await assign(found.call, card, found.settings.user))?.properties?.Assign?.people;
+		if (!Array.isArray(people) || !people.some((person) => hex(person?.id) === hex(found.settings.user)))
+			return unset("the Assign write did not hold the user");
 	} catch (error) {
 		return unset((error as Error).message);
 	}
-	const people = written?.properties?.Assign?.people;
-	if (!Array.isArray(people) || !people.some((person) => hex(person?.id) === hex(found.settings.user)))
-		return unset("the Assign write did not hold the user");
-	return { line: `question: posted on ${card}, Assign set`, ok: true };
+	return { line: `${POSTED} ${card}, Assign set`, ok: true };
 }
 
 if (import.meta.main) {

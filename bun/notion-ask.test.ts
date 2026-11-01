@@ -37,9 +37,11 @@ const held = (...people: string[]) => ({ object: "page", properties: { Assign: {
 
 /**
  * `post` answers the comment's post, its body `raw` when one is given; `patch`
- * and `assigned` the `Assign` write, which holds the user by default.
+ * and `assigned` the `Assign` write, which holds the user by default, a string
+ * `assigned` being the body as sent.
  */
-type Stub = { comments?: unknown[][]; read?: number; post?: number; raw?: string; patch?: number; assigned?: unknown };
+type Stub = { comments?: unknown[][]; post?: number; raw?: string; patch?: number; assigned?: unknown };
+const answer = (body: unknown, status: number) => (typeof body === "string" ? new Response(body, { status }) : Response.json(body, { status }));
 
 /** Serves Notion as `stub` says, and the calls it saw, each as `METHOD /path` with its body. */
 function notion(stub: Stub = {}) {
@@ -54,13 +56,13 @@ function notion(stub: Stub = {}) {
 				version: req.headers.get("Notion-Version"),
 				body: req.method === "GET" ? undefined : await req.json(),
 			});
-			if (req.method === "POST") return stub.raw === undefined ? Response.json({}, { status: stub.post ?? 200 }) : new Response(stub.raw, { status: stub.post ?? 200 });
-			if (req.method === "PATCH" && url.pathname === `/v1/pages/${CARD}`) return Response.json(stub.assigned ?? held(UUID), { status: stub.patch ?? 200 });
+			if (req.method === "POST") return answer(stub.raw ?? {}, stub.post ?? 200);
+			if (req.method === "PATCH" && url.pathname === `/v1/pages/${CARD}`) return answer(stub.assigned ?? held(UUID), stub.patch ?? 200);
 			if (url.pathname !== "/v1/comments") return Response.json({}, { status: 500 });
 			const pages = stub.comments ?? [[]];
 			const at = Number(url.searchParams.get("start_cursor") ?? 0);
 			const more = at + 1 < pages.length;
-			return Response.json({ results: pages[at], has_more: more, next_cursor: more ? String(at + 1) : null }, { status: stub.read ?? 200 });
+			return Response.json({ results: pages[at], has_more: more, next_cursor: more ? String(at + 1) : null });
 		},
 	});
 	servers.push(server);
@@ -175,6 +177,7 @@ describe("posted, and Assign not set", () => {
 		["an answer of {} [7]", { assigned: {} }, unset("the Assign write did not hold the user")],
 		["a write answered 500 [8]", { patch: 500 }, unset("the Assign write answered 500")],
 		["a write answered 403 [9]", { patch: 403 }, unset("the Assign write answered 403")],
+		["a 200 whose body does not parse, the step named and no body quoted", { assigned: "not json" }, unset("the Assign write answered 200 with a body that could not be read: SyntaxError")],
 	])("%s: the line names why, exit 1, one post", async (_, stub, line) => {
 		const { seen, url } = notion(stub);
 		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line, code: 1 });
@@ -233,6 +236,15 @@ describe("a post that may have landed", () => {
 			code: 1,
 		});
 		expect(calls(seen)).toEqual(["POST /v1/comments"]);
+	});
+
+	// spec: task-board/a-post-that-may-have-landed
+	test("a post that gets no answer: may be posted, exit 1", async () => {
+		const gone = Bun.serve({ port: 0, fetch: () => new Response() });
+		const url = gone.url.origin;
+		gone.stop(true);
+		const { line, code } = await ask(url, home(), [CARD, asked()]);
+		expect([line.startsWith(`question: may be posted on ${CARD} — the comment's post failed: `), line.endsWith("; read the card's comments before running it again"), code]).toEqual([true, true, 1]);
 	});
 });
 

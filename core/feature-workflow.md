@@ -177,7 +177,7 @@ the user's config home (see the README), the fourth line names the ask
 command instead, in the board loop's form and the hand-launched ones alike:
 
 ```text
-A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with `harness-question`, a single backtick on each side of the word and no character before it, run `bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`, and once it prints `question: posted`, unless that line ends `Assign set`, set the `Assign` of the card to the user and read the card back to confirm it holds the user; never run the command again for a question it printed as posted, and read the comments of the card before running it again after any other line. Then repeat the question in the final message under a line `QUESTION: <the id of the card of the change>`, before any `PR-TITLE:` line. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.
+A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with `harness-question`, a single backtick on each side of the word and no character before it, run `bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`, and once it prints `question: posted`, unless that line ends `Assign set`, set the `Assign` of the card to the user and read the card back to confirm it holds the user; never run the command again for a question it printed as posted, and after any other line read the comments of the card before running it again, setting the `Assign` of the card to the user instead where the question is already there. Then repeat the question in the final message under a line `QUESTION: <the id of the card of the change>`, before any `PR-TITLE:` line. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.
 ```
 
 Without the ask settings, the hand-launched forms keep the fourth line
@@ -415,7 +415,8 @@ for them is already here.
   `question: posted`, unless that line ends `Assign set`, set `Assign` to the
   user and read the card back, and never run it again for a question it
   printed as posted, nor after any other line before reading the card's
-  comments. The question gate refuses the comment from the user's account
+  comments, where a question already there takes `Assign` instead of a
+  rerun. The question gate refuses the comment from the user's account
   there. An answer
   the board loop carries counts as applied in the turn its step's pull request
   opens, or the turn an `idea` card is filed for an answer that asks for a

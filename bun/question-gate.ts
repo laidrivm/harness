@@ -64,7 +64,7 @@ const UNATTENDED = "This session runs unattended.";
 export const REMEDY: Record<string, string> = {
 	runner:
 		"the runner that launched this session posts its questions. Post no comment: end the final message with a line `QUESTION: <the card's id>` and the question below it, opening with the mark.",
-	ask: `on this machine a question goes to the ask command, never from the user's account. Write the question to a file, opening with the mark, run \`${ASK_COMMAND} <the card's id> <that file>\` (\`bun bun/notion-ask.ts\` in the harness itself), and once it prints \`question: posted\`, unless that line ends \`Assign set\`, set the card's \`Assign\` to the user and read the card back; never run the command again for a question it printed as posted, and read the card's comments before running it again after any other line.`,
+	ask: `on this machine a question goes to the ask command, never from the user's account. Write the question to a file, opening with the mark, run \`${ASK_COMMAND} <the card's id> <that file>\` (\`bun bun/notion-ask.ts\` in the harness itself), and once it prints \`question: posted\`, unless that line ends \`Assign set\`, set the card's \`Assign\` to the user and read the card back; never run the command again for a question it printed as posted, and after any other line read the card's comments before running it again, setting the card's \`Assign\` to the user instead where the question is already there.`,
 	reply: "it replies in a thread. Post a new page-level comment, without `discussion_id` or `reply_to_comment_id`.",
 	anchored: "it is anchored on a passage. Send it without `selection_with_ellipsis`; the comment goes on the page.",
 	"rich-text": "its text is `rich_text`. Send the text as `markdown`, not `rich_text`.",
