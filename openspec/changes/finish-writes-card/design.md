@@ -63,7 +63,9 @@ archive; any other card text; a board property; consumers' sessions.
    rich_text: [{ text: { content } }] } } }`, and Notion's answer is the
    read-back.
 4. **The link.** The pull request's URL is
-   `https://github.com/<owner>/<repo>/pull/<N>` from `originRepository()`.
+   `https://github.com/<owner>/<repo>/pull/<N>` from `originRepository()`:
+   `origin` is on GitHub.com, as `finish`'s `gh … -R <owner>/<repo>` calls
+   already assume, and another host is out of scope.
    The card's top-level blocks are read (`GET /v1/blocks/{card}/children`,
    every page); a block whose rich text carries that `href` means the link
    is there. Else the first paragraph or heading whose plain text, trimmed

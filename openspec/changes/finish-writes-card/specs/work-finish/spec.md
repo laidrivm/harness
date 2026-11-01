@@ -41,7 +41,8 @@ naming the step. Without `--card`, `finish` SHALL write nothing to Notion.
 
 #### Scenario: A second finish on the same pull request
 
-- **WHEN** `finish --card` runs again on that branch after a push
+- **WHEN** `finish --card` runs again on that branch after a push, its pull
+  request a draft again
 - **THEN** it writes neither the `Pointer` nor a second link, and says the
   `Pointer` already names the change
 
