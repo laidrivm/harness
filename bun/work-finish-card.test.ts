@@ -293,14 +293,16 @@ describe("finish", () => {
 		writeFileSync(join(cwd, "body.md"), "Body\n");
 		const args = ["finish", "--card", CARD, "--title", "Demo", "--body-file", "body.md"];
 		const run = await finish({ cwd, args, gh: { before: [], after: [pull(7, "OPEN", true)] }, stub: { blocks: [[]] } });
-		expect(run.seen).toEqual([`GET /v1/pages/${CARD}`, "GET /v1/data_sources/ds1", PAGE, `GET /v1/blocks/${CARD}/children`, APPEND, "GET /v1/comments"]);
+		// The record's calls, the question before the ready switch, then the release's page read.
+		expect(run.seen).toEqual([`GET /v1/pages/${CARD}`, "GET /v1/data_sources/ds1", PAGE, `GET /v1/blocks/${CARD}/children`, APPEND, "GET /v1/comments", `GET /v1/pages/${CARD}`]);
 		expect([run.code, run.last]).toEqual([0, "finish: ready #7"]);
 	});
 
 	// spec: work-finish/a-second-finish-on-the-same-pull-request
 	test("a second writes neither", async () => {
 		const run = await finish({ cwd: adding(), gh: DRAFT, stub: { page: page(FOO), blocks: [[linked(7)]] } });
-		expect(run.seen).toEqual([`GET /v1/pages/${CARD}`, `GET /v1/blocks/${CARD}/children`, "GET /v1/comments"]);
+		// The record's two reads, the question before the ready switch, then the release's page read.
+		expect(run.seen).toEqual([`GET /v1/pages/${CARD}`, `GET /v1/blocks/${CARD}/children`, "GET /v1/comments", `GET /v1/pages/${CARD}`]);
 		expect(run.last).toBe("finish: ready #7");
 	});
 
@@ -308,7 +310,8 @@ describe("finish", () => {
 	test("a refused write is said, and finish goes on to the question read and the ready switch", async () => {
 		const run = await finish({ cwd: adding(), gh: DRAFT, stub: { blocks: [[]], fail: { [APPEND]: 403 } } });
 		expect(run.out).toContain("finish: the card's record stopped, a rerun writes the rest — the link's append answered 403\n");
-		expect(run.seen.at(-1)).toBe("GET /v1/comments");
+		// The question read, then the release's page read.
+		expect(run.seen.slice(-2)).toEqual(["GET /v1/comments", `GET /v1/pages/${CARD}`]);
 		expect([run.code, run.last, run.calls.at(-1)]).toEqual([0, "finish: ready #7", READY]);
 	});
 
@@ -316,7 +319,8 @@ describe("finish", () => {
 	test("a merge base that cannot be found is said, and finish still marks ready", async () => {
 		const run = await finish({ cwd: unrelated(adding()), gh: DRAFT });
 		expect(run.out).toMatch(/^finish: could not tell the branch's change, so the card's Pointer and link are left — the merge base with origin\/main failed: /m);
-		expect([run.code, run.last, run.seen]).toEqual([0, "finish: ready #7", ["GET /v1/comments"]]);
+		// The question read, then the release's page read.
+		expect([run.code, run.last, run.seen]).toEqual([0, "finish: ready #7", ["GET /v1/comments", `GET /v1/pages/${CARD}`]]);
 	});
 
 	test("no --card makes no Notion call", async () => {
