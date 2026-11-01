@@ -732,7 +732,7 @@ SHALL be put in a comment on the card of the task it blocks. Questions an
 agent knows at the same time SHALL go in one comment, split into
 consecutive comments only where one would pass the question gate's length
 cap; any other later comment SHALL carry only a question that arose after
-the last one was posted. Each comment's items SHALL be numbered on from the
+the last one was posted, or the items an answer left unanswered. Each comment's items SHALL be numbered on from the
 highest number the card's questions already use, never restarting at 1. The
 card's questions SHALL wait while no answer follows the last of them. That agent SHALL post it, through the ask
 integration where one is configured (*A session asks through the ask

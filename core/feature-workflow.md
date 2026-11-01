@@ -282,9 +282,10 @@ for them is already here.
   *A card can be ranked without opening the repository* fixes. A pull
   request's link goes under the card's `Ссылки` line, with its number and
   kind (`proposal`, `apply`, `archive`): `bun bun/work.ts finish --card`
-  writes it on a run that opened the pull request or found it open and
-  reached its question read, whose output then says `linked` or `already
-  linked`; otherwise the turn the pull request opens adds it — or, when the
+  writes it on a run that opened the pull request or found it open, whose
+  output then says `linked` or `already linked`; where it says `the card's
+  record stopped`, a rerun of `finish --card` writes the rest; otherwise the
+  turn the pull request opens adds it — or, when the
   user opened it, the first turn that learns it exists, at the latest the one
   told it merged; the turn a proposal
   merges adds its `proposal.md` on the default branch; the archive re-points
