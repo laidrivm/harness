@@ -163,9 +163,9 @@ the ledger for the split.
   it: one such session created a card at `approved` unrefused, with no
   ledger record, while the installed script carried the create branch and
   the settings file the new matcher; a session started afterwards refused
-  the same call. That contradicts `core/verification.md`'s *a hook is re-read
-  from the settings file per tool call*, and the cause is not established —
-  start a new session before probing a hook change.
+  the same call. The result is unexplained: the hooks that session had
+  registered were not read, and `core/verification.md` now asks for a new
+  session before a hook registration change is probed.
 
 ## Conflict check
 
