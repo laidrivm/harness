@@ -8,13 +8,21 @@ cap.
 
 ## 1. Probe
 
-- [ ] 1.1 The user grants the ask integration *Insert content*. On a
+- [x] 1.1 The user grants the ask integration *Insert content*. On a
       throwaway card of the `Harness` board, through the integration under
       API version `2025-09-03`: read the top-level blocks, write `Pointer`,
       append a bulleted item `after` a named block, and read the item back,
       recording each answer's shape in this task's line and the card's
       comment. A 403 or an ignored `after` stops apply and goes to the card
-      as a question
+      as a question. Ran instead as #383's own `finish --card` on the card,
+      2026-11-01: the command guard refused a scratch probe script, which
+      no other shape replaced. The block read gave the `Ссылки` paragraph
+      and the `#370` item by `id` and `type`; the append, `after` the `#370` item,
+      answered 200 and the item `[#383](…/pull/383) — apply` reads back
+      directly after it, so *Insert content* is granted and `after` honoured.
+      The `Pointer` write was not reached (the branch adds no file under
+      `openspec/changes/`); its shape is the `Status` write's, which the same
+      *Update content* takes
 
 ## 2. The record
 
@@ -68,7 +76,7 @@ cap.
       whoever opened the pull request, since `finish` never writes it; the
       kinds read `proposal`, `apply`, `archive`; `README.md`'s `finish` row says it writes both, and needs
       the ask integration's *Update content* and *Insert content*
-- [ ] 3.3 `bun bun/pre-pr.ts origin/main` green; the PR opens through
+- [x] 3.3 `bun bun/pre-pr.ts origin/main` green; the PR opens through
       `bun bun/work.ts finish --card 40a39875c31b81f0b5f2c66f8e89de9e`, and
       the card's `Pointer` and `Ссылки` it writes are read back on the
       board
