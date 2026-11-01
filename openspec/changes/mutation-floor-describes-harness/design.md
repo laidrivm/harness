@@ -12,9 +12,9 @@ after that one.
 
 ## Goals / Non-Goals
 
-**Non-Goals:** any change to `bun/mutation-floor.ts` or its tests beyond
-decision 5; the requirements `pre-push-commit-gates` adds to
-`mutation-floor`.
+**Non-Goals:** any change to the floor checks beyond decisions 5 and 6; the
+requirements `pre-push-commit-gates` adds to `mutation-floor`; checking the
+shape of every `harness` key in `bun/config.ts`.
 
 ## Decisions
 
@@ -78,10 +78,25 @@ number, in place of the comparison. The requirement gains the one sentence on
 the whole number and the scenario *A floor that is not a whole number*, which
 the new cases cite; the four scenarios it had keep their text.
 
-`bun/spec-coverage.ts` carries a second `gauge`, for `harness.uncitedFloor`,
-with the same two faults. It is left as it is here: lifting both into one
-module adds a module the mutation step of `pre-push-commit-gates` must store
-results for, while that change's apply is open (the card's question).
+### 6. One `gauge` for both floors
+
+`bun/spec-coverage.ts` carried a second `gauge`, for `harness.uncitedFloor`,
+with the same two faults. The user chose, on the card's question 1
+(2026-11-01), to lift both into one module in this change: `bun/floor.ts`
+holds the arithmetic and the field checks once, and each caller binds it to
+its key, field and wording, keeping its own `gauge(count, floor, why)` so
+`bun/check.ts` and the callers' cases are unchanged. `bun/config.ts`'s
+contract stays as it is: checking each key's shape in `read` would change it
+for every gate, a change of its own.
+
+So `spec-test-traceability`'s floor changes behaviour too: an absent
+`harness.uncitedFloor.why` is named rather than thrown, and a `count` that is
+not a whole number is named rather than compared. Its requirement still
+described d2ass — a floor constant with a trailing comment, shipped as
+`scripts/spec-coverage.test.ts` — so it gains a MODIFIED delta in harness
+terms as `mutation-floor`'s does, its scenario names kept and *A floor that is
+not a whole number* added, which a case in `bun/spec-coverage-floor.test.ts`
+cites.
 
 ## Risks / Trade-offs
 
@@ -91,3 +106,7 @@ results for, while that change's apply is open (the card's question).
 - [`openspec validate --strict` warns on `after:`, a key OpenSpec does not
   know] → kept: `bun/board-state.ts` reads it to order the change, as for
   the archived changes that carry it; the plain `validate` passes.
+- [`bun/floor.ts` is a new module, and `pre-push-commit-gates` stores one
+  result file per module under `mutation/`] → that step is not on `main` yet,
+  so this change adds no `mutation/floor.json`; its apply mutates the module
+  with the rest, `bun/floor.test.ts` being the tests whose path begins with it.

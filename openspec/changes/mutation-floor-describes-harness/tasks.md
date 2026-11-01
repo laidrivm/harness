@@ -1,7 +1,7 @@
 # mutation-floor-describes-harness — tasks
 
-One group, one pull request. The one code change is task 1.4 (design.md,
-decision 5), whose failing cases come first.
+One group, one pull request. The code changes are tasks 1.4 and 1.5
+(design.md, decisions 5 and 6), whose failing cases come first.
 
 ## 1. The spec describes the harness
 
@@ -33,9 +33,18 @@ decision 5), whose failing cases come first.
       — each expecting one problem naming its field, and see the absent `why`
       throw and the floors fail; then change `gauge`. Verify with `bun test
       bun/mutation-floor` green
+- [x] 1.5 Lift both floors' `gauge` into `bun/floor.ts` (design.md, decision
+      6): first add `bun/floor.test.ts` over the gap, the reason and the
+      whole number, and to `bun/spec-coverage-floor.test.ts` an absent `why`
+      and a string `count` — the last under `// spec:
+      spec-test-traceability/a-floor-that-is-not-a-whole-number` — and see
+      them fail; then write the module and bind it in `bun/mutation-floor.ts`
+      and `bun/spec-coverage.ts`. Verify with `bun test bun/floor
+      bun/mutation-floor bun/spec-coverage bun/check` green
 
 The archive runs separately, once every box above is ticked (design.md,
 decision 2): in the commit that syncs the delta it copies that Purpose into
 `openspec/specs/mutation-floor/spec.md`, then checks that `grep -n
 "src/model\|FLOOR" openspec/specs/mutation-floor/spec.md` prints nothing and
-`openspec validate mutation-floor --type spec` passes.
+`openspec validate mutation-floor --type spec` and `openspec validate
+spec-test-traceability --type spec` pass.

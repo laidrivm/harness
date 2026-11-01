@@ -51,6 +51,21 @@ describe("the floor carries a reason", () => {
 			expect(gauge(count, 380, "").join("\n")).toContain("reason");
 		}
 	});
+
+	test("an absent reason names harness.uncitedFloor.why, rather than throwing", () => {
+		expect(gauge(380, 380, undefined)).toEqual([
+			expect.stringContaining("harness.uncitedFloor.why"),
+		]);
+	});
+});
+
+// spec: spec-test-traceability/a-floor-that-is-not-a-whole-number
+describe("a floor that is not a whole number", () => {
+	test("a count written as a string names harness.uncitedFloor.count", () => {
+		expect(gauge(380, "380", "measured")).toEqual([
+			expect.stringContaining("harness.uncitedFloor.count"),
+		]);
+	});
 });
 
 // spec: spec-test-traceability/a-change-is-archived-with-its-tests-already-written
