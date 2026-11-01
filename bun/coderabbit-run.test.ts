@@ -117,6 +117,7 @@ describe("interval", () => {
 		["0", 5000],
 		["-5", 5000],
 		["x", 5000],
+		["9".repeat(309), 5000],
 		["7", 7],
 	])("HARNESS_CODERABBIT_POLL_MS %p gives %p", (value, expected) => {
 		if (value === undefined) delete process.env.HARNESS_CODERABBIT_POLL_MS;
