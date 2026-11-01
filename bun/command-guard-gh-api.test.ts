@@ -140,10 +140,13 @@ describe("the skill's rule for a reviewed head", () => {
 	test("step 1 counts a run by the conclusion and title finish-review-arrives' requirement names", () => {
 		const step = flat(readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8").split("### 1. Fetch")[1]?.split("### 2.")[0] ?? "");
 		expect(step).toContain("concluded `success` with a title not opening `Review skipped`");
+		// A queued run is not `in_progress` either: the requirement's "while one is not completed" holds both.
+		expect(step).toContain("every one of them `completed`");
 		const where = ["openspec/specs/work-finish/spec.md", "openspec/changes/finish-review-arrives/specs/work-finish/spec.md"]
 			.map((path) => `${import.meta.dir}/../${path}`)
 			.find((path) => existsSync(path) && readFileSync(path, "utf8").includes("CodeRabbit's state of a commit is read from its check runs"));
 		const requirement = flat(readFileSync(where ?? "", "utf8").split("### Requirement: CodeRabbit's state of a commit is read from its check runs")[1]?.split("####")[0] ?? "");
 		expect(requirement).toContain("succeeded with a title not opening `Review skipped`");
+		expect(requirement).toContain("`reviewing` while one is not completed");
 	});
 });

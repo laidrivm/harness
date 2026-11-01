@@ -17,8 +17,8 @@ design, because settling it is the user's. `/coderabbit`'s `OPEN` over a head
 commit the bot has not reviewed yet is the other: there is nothing to act on
 until the review lands, and the next run picks it up. A head with no findings
 counts as reviewed once one of the bot's `CodeRabbit` check runs on it
-concluded `success` with a title not opening `Review skipped`, none still in
-progress, or once its `CodeRabbit` status is `success` with the description
+concluded `success` with a title not opening `Review skipped`, every one of
+them `completed`, or once its `CodeRabbit` status is `success` with the description
 `Review completed`, as the bot reported until 27.10; a draft's `success` reads
 `Review skipped: draft pull request`, and marking the pull request ready
 starts the review of its head. A head whose status or check run reads
