@@ -21,8 +21,9 @@ concluded `success` with a title not opening `Review skipped`, none still in
 progress, or once its `CodeRabbit` status is `success` with the description
 `Review completed`, as the bot reported until 27.10; a draft's `success` reads
 `Review skipped: draft pull request`, and marking the pull request ready
-starts the review of its head. A head whose status reads `Review skipped…`, or names a rate or usage
-limit, gets no review on its own — stop waiting on it and report it.
+starts the review of its head. A head whose status or check run reads
+`Review skipped…`, or names a rate or usage limit, gets no review on its own —
+stop waiting on it and report it.
 
 ## The skills
 

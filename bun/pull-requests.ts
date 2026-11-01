@@ -55,11 +55,17 @@ function api(full: string, query: string): unknown {
 	// A mint that fails throws, failing the read: never an unauthenticated read that misses a private repository's.
 	const mint = process.env.HARNESS_GITHUB_APP_MINT;
 	const env = mint ? { ...process.env, GH_TOKEN: minted(mint, full, ["pull_requests=read"]) } : process.env;
-	// SIGKILL: a `gh` that ignores the default SIGTERM holds `spawnSync` past
-	// the limit. A killed read exits with no status, so it fails here.
-	const run = Bun.spawnSync(["gh", "api", query], { env, timeout: limit(), killSignal: "SIGKILL" });
+	const run = gh(["api", query], env);
 	return run.exitCode === 0 && JSON.parse(run.stdout.toString());
 }
+
+/**
+ * `gh args`, killed at `limit()`. SIGKILL: a `gh` that ignores the default
+ * SIGTERM holds `spawnSync` past the limit. A killed call exits with no
+ * status, so a caller reading the exit code fails it.
+ */
+export const gh = (args: string[], env: Record<string, string | undefined> = process.env) =>
+	Bun.spawnSync(["gh", ...args], { env, timeout: limit(), killSignal: "SIGKILL" });
 
 /** `Pull`'s state for a REST answer: `merged_at` alone tells a merged pull request from a closed one, which both read `closed`. */
 const stateOf = (pr: Listed): Pull["state"] => (pr?.state === "open" ? "OPEN" : pr?.state === "closed" && pr.merged_at ? "MERGED" : "CLOSED");

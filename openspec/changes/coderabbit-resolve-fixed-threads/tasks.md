@@ -122,4 +122,7 @@ each page of the threads query, each mutation — and logs every call.
       runs* resolves in `openspec/specs/work-finish/spec.md`; if it is not,
       wait for it; and that 2.1's pin reads `REVIEWED` once #361 is on
       `main`, switching it here if `finish-review-arrives` applied second.
+      In the archive commit, relink `README.md`'s `resolve` row from this
+      change's delta to `openspec/specs/work-resolve/spec.md`, which exists
+      only from then on (as `work-status`' row was).
       Verify with `ls openspec/changes/archive | grep finish-review-arrives`

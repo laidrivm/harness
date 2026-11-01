@@ -77,7 +77,7 @@ describe("the pull request", () => {
 	test("--pr 9 on a branch open as #7 and #9 reads #9's threads", async () => {
 		const run = await resolve({ args: ["resolve", "--pr", "9", "--head", A, "--comment", "11"], gh: { pulls: [[open(7, B), open(9)]], pages: [page(thread("11"))] } });
 		expect([run.code, run.lines]).toEqual([0, ["resolve: 11 resolved"]]);
-		expect(run.threads[0].gh).toContain("n=9");
+		expect(run.threads[0].args).toContain("n=9");
 	});
 
 	test("a branch with no open pull request refuses, saying it has none", async () => {
@@ -91,7 +91,7 @@ describe("the pull request", () => {
 	test("HARNESS_GITHUB_APP_MINT set refuses before any gh call", async () => {
 		const run = await resolve({ gh: PR7, env: { HARNESS_GITHUB_APP_MINT: "/nowhere" } });
 		refused(run, "HARNESS_GITHUB_APP_MINT");
-		expect(run.calls.filter((c) => c.gh)).toEqual([]);
+		expect(run.gh).toEqual([]);
 	});
 });
 
@@ -116,14 +116,23 @@ describe("the head", () => {
 		expect([run.reads.length, run.threads]).toEqual([2, []]);
 	}, 10_000);
 
-	test("a second read that fails refuses the same way", async () => {
+	test("a second read that fails refuses the same way, saying the read failed", async () => {
 		const run = await resolve({ gh: { pulls: [[open(7, B)]], pullsCode: [0, 1], pages: [page(thread("11"))] } });
-		refused(run, A, B);
+		refused(run, A, B, "could not be read again", "gh auth status");
 		expect([run.reads.length, run.threads]).toEqual([2, []]);
 	}, 10_000);
 });
 
 describe("placing the ids", () => {
+	test("the threads read sends the owner and name as strings, the number typed", async () => {
+		const run = await resolve({ gh: { ...PR7, pages: [page(thread("11"))] } });
+		expect(run.threads[0].args).toEqual(expect.arrayContaining(["-f", "o=o", "-f", "r=demo", "-F", "n=7"]));
+	});
+
+	test("a thread with no id of its own refuses", async () => {
+		refused(await resolve({ gh: { ...PR7, pages: [page({ ...thread("11"), id: null })] } }), "11");
+	});
+
 	test("no threads at all refuses the id as unplaced", async () => {
 		refused(await resolve({ gh: { ...PR7, pages: [page()] } }), "11");
 	});
@@ -166,7 +175,7 @@ describe("placing the ids", () => {
 		const first = page(...Array.from({ length: 100 }, (_, i) => thread(String(i + 1))));
 		const run = await resolve({ args: args("101"), gh: { ...PR7, pages: [first, page(thread("101"))] } });
 		expect([run.code, run.lines, run.mutations]).toEqual([0, ["resolve: 101 resolved"], ["T_101"]]);
-		expect(run.threads[0].gh).toEqual(expect.arrayContaining(["--paginate", "--slurp"]));
+		expect(run.threads[0].args).toEqual(expect.arrayContaining(["--paginate", "--slurp"]));
 	});
 
 	test("4433138725, past 2^31, is placed by its fullDatabaseId string", async () => {
@@ -196,6 +205,11 @@ describe("the resolves", () => {
 	test("an outdated unresolved thread is resolved", async () => {
 		const run = await resolve({ gh: { ...PR7, pages: [page(thread("11", { outdated: true }))] } });
 		expect([run.code, run.mutations]).toEqual([0, ["T_11"]]);
+	});
+
+	test("a mutation that exits 0 with the thread still unresolved fails", async () => {
+		const run = await resolve({ gh: { ...PR7, pages: [page(thread("11"))], unresolved: [0] } });
+		expect([run.code, run.lines]).toEqual([1, ["resolve: 11 failed — the thread does not read resolved"]]);
 	});
 
 	// spec: work-resolve/a-resolve-that-fails

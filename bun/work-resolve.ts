@@ -9,7 +9,7 @@
  * mutation runs in this process under `gh`'s identity, as `finish`'s push
  * does, so the command guard, which refuses a raw one, is not changed.
  */
-import { limit, originRepository, readPullRequests } from "./pull-requests.ts";
+import { gh, originRepository, readPullRequests } from "./pull-requests.ts";
 
 /** GraphQL's spelling of the bot's login, compared whole: a prefix would pass `coderabbitai-x`, which anyone can register. */
 const BOT = "coderabbitai";
@@ -21,15 +21,17 @@ const RESOLVE = "mutation($t:ID!){resolveReviewThread(input:{threadId:$t}){threa
 
 type Thread = { id?: unknown; isResolved?: unknown; comments?: { nodes?: { fullDatabaseId?: unknown; author?: { login?: unknown } | null }[] } };
 
-const gh = (...args: string[]) => {
-	const run = Bun.spawnSync(["gh", ...args], { timeout: limit(), killSignal: "SIGKILL" });
+/** `gh api graphql args`: whether it exited 0, its output, and the first line it said otherwise. */
+const graphql = (...args: string[]) => {
+	const run = gh(["api", "graphql", ...args]);
 	return { ok: run.exitCode === 0, out: run.stdout.toString(), said: run.stderr.toString().trim().split("\n")[0] || `gh exited ${run.exitCode}` };
 };
 
 /** Every review thread of `n`, across `--paginate --slurp`'s pages, or undefined for a read that failed. */
 function threads(owner: string, repo: string, n: string): Thread[] | undefined {
 	// `--slurp`: without it each page prints as its own JSON object, and one parse fails past 100 threads.
-	const run = gh("api", "graphql", "--paginate", "--slurp", "-F", `o=${owner}`, "-F", `r=${repo}`, "-F", `n=${n}`, "-f", `query=${THREADS}`);
+	// `-f` for the names: `-F` would send a repository named `2048` or `true` as a number or a boolean.
+	const run = graphql("--paginate", "--slurp", "-f", `o=${owner}`, "-f", `r=${repo}`, "-F", `n=${n}`, "-f", `query=${THREADS}`);
 	try {
 		const pages = run.ok && JSON.parse(run.out);
 		if (!Array.isArray(pages)) return undefined;
@@ -56,10 +58,13 @@ export async function resolve(pr: string, head: string, ids: string[]): Promise<
 	let target = pulls.find((p) => String(p.number) === pr);
 	if (!target) return refuse(`#${pr} is not an open pull request of ${branch}; ${pulls.length ? `its open ones: ${pulls.map((p) => `#${p.number}`).join(", ")}` : "it has none"}`);
 	if (target.headRefOid !== head) {
-		const seen = target.headRefOid;
+		const seen = String(target.headRefOid);
 		// Once, 2 s later: GitHub's API can lag a push (the user's decision 10).
 		await Bun.sleep(2000);
-		target = read()?.find((p) => String(p.number) === pr);
+		const again = read();
+		// A failed read is no proof of another head, so it says so rather than send the session to review `seen`.
+		if (!again) return refuse(`#${pr}'s head read ${seen}, not ${head}, and could not be read again; check \`gh auth status\``);
+		target = again.find((p) => String(p.number) === pr);
 		if (target?.headRefOid !== head) return refuse(`#${pr}'s head is ${String(target?.headRefOid ?? seen)}, not ${head}`);
 	}
 
@@ -67,7 +72,8 @@ export async function resolve(pr: string, head: string, ids: string[]): Promise<
 	if (!all) return refuse(`cannot read the review threads of #${pr}`);
 	const placed = ids.map((id) => {
 		const found = all.find((t) => String(t?.comments?.nodes?.[0]?.fullDatabaseId) === id);
-		return { id, thread: found?.comments?.nodes?.[0]?.author?.login === BOT ? found : undefined };
+		const usable = found?.comments?.nodes?.[0]?.author?.login === BOT && typeof found.id === "string" && found.id !== "";
+		return { id, thread: usable ? found : undefined };
 	});
 	const unplaced = placed.filter((p) => !p.thread).map((p) => p.id);
 	if (unplaced.length) return refuse(`${unplaced.join(", ")} open${unplaced.length === 1 ? "s" : ""} no thread of ${BOT}'s on #${pr}`);
@@ -78,8 +84,14 @@ export async function resolve(pr: string, head: string, ids: string[]): Promise<
 			lines.push(`resolve: ${id} already resolved, skipped`);
 			continue;
 		}
-		const run = gh("api", "graphql", "-f", `query=${RESOLVE}`, "-f", `t=${String(thread?.id)}`);
-		if (!run.ok) return { lines: [...lines, `resolve: ${id} failed — ${run.said}`], code: 1 };
+		const run = graphql("-f", `query=${RESOLVE}`, "-f", `t=${String(thread?.id)}`);
+		let done = false;
+		try {
+			done = run.ok && JSON.parse(run.out)?.data?.resolveReviewThread?.thread?.isResolved === true;
+		} catch {
+			// Output that is not JSON is no resolve.
+		}
+		if (!done) return { lines: [...lines, `resolve: ${id} failed — ${run.ok ? "the thread does not read resolved" : run.said}`], code: 1 };
 		lines.push(`resolve: ${id} resolved`);
 	}
 	return { lines, code: 0 };

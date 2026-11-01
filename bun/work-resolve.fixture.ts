@@ -34,11 +34,12 @@ export const page = (...nodes: object[]) => ({
  * The stub's answers: `pulls` is the pull-request list of each read in turn,
  * the last repeating, and `pullsCode` each read's exit code; `pages` the
  * threads read's pages, which `--slurp` prints as one array, and `threadsCode`
- * its exit code; `fail` the places, from 0, of the mutations that fail.
+ * its exit code; `fail` the places, from 0, of the mutations that fail, and
+ * `unresolved` of those that exit 0 with the thread still unresolved.
  */
-export type Gh = { pulls?: object[][]; pullsCode?: number[]; pages?: object[]; threadsCode?: number; fail?: number[] };
+export type Gh = { pulls?: object[][]; pullsCode?: number[]; pages?: object[]; threadsCode?: number; fail?: number[]; unresolved?: number[] };
 
-export type Call = { git?: string[]; gh?: string[]; at: number };
+export type Call = { kind: "git" | "pulls" | "threads" | "mutation" | "other"; args: string[]; at: number };
 
 const stub = (dir: string, name: string, body: string) => {
 	const path = join(dir, name);
@@ -52,22 +53,24 @@ function bin(gh: Gh) {
 	if (!real) throw new Error("no git on PATH");
 	const log = join(dir, "calls");
 	writeFileSync(join(dir, "gh.json"), JSON.stringify(gh));
-	const append = `require("node:fs").appendFileSync(${JSON.stringify(log)}, JSON.stringify({ KIND: process.argv.slice(2), at: Date.now() }) + "\\n");`;
-	stub(dir, "git", `${append.replace("KIND", "git")}\nprocess.exit(Bun.spawnSync([${JSON.stringify(real)}, ...process.argv.slice(2)], { stdin: "inherit", stdout: "inherit", stderr: "inherit" }).exitCode ?? 1);\n`);
+	// The stub alone classifies a call, and logs the kind it chose, so the fixture never reads a call another way.
+	const append = (kind: string) =>
+		`require("node:fs").appendFileSync(${JSON.stringify(log)}, JSON.stringify({ kind: ${kind}, args: process.argv.slice(2), at: Date.now() }) + "\\n");`;
+	stub(dir, "git", `${append('"git"')}\nprocess.exit(Bun.spawnSync([${JSON.stringify(real)}, ...process.argv.slice(2)], { stdin: "inherit", stdout: "inherit", stderr: "inherit" }).exitCode ?? 1);\n`);
 	stub(
 		dir,
 		"gh",
 		[
 			`const fs = require("node:fs");`,
 			`const args = process.argv.slice(2);`,
-			`const kind = (a) => a[0] !== "api" ? "other" : a[1].startsWith("repos/") ? "pulls" : a.some((s) => s.startsWith("query=mutation")) ? "mutation" : a[1] === "graphql" ? "threads" : "other";`,
-			`const prior = fs.existsSync(${JSON.stringify(log)}) ? fs.readFileSync(${JSON.stringify(log)}, "utf8").split("\\n").filter(Boolean).map(JSON.parse).filter((c) => c.gh && kind(c.gh) === kind(args)).length : 0;`,
-			append.replace("KIND", "gh"),
+			`const kind = (a) => a[0] !== "api" ? "other" : String(a[1]).startsWith("repos/") ? "pulls" : a.some((s) => s.startsWith("query=mutation")) ? "mutation" : a[1] === "graphql" ? "threads" : "other";`,
+			`const prior = fs.existsSync(${JSON.stringify(log)}) ? fs.readFileSync(${JSON.stringify(log)}, "utf8").split("\\n").filter(Boolean).map(JSON.parse).filter((c) => c.kind === kind(args)).length : 0;`,
+			append("kind(args)"),
 			`const gh = JSON.parse(fs.readFileSync(${JSON.stringify(join(dir, "gh.json"))}, "utf8"));`,
 			`const fail = (code) => { console.error("GraphQL: stub failure"); process.exit(code); };`,
 			`if (kind(args) === "pulls") { const code = gh.pullsCode?.[prior] ?? 0; if (code) fail(code); const list = gh.pulls ?? [[]]; console.log(JSON.stringify(list[Math.min(prior, list.length - 1)])); }`,
 			`else if (kind(args) === "threads") { if (gh.threadsCode) fail(gh.threadsCode); console.log(JSON.stringify(gh.pages ?? [])); }`,
-			`else if (kind(args) === "mutation") { if (gh.fail?.includes(prior)) fail(1); console.log('{"data":{"resolveReviewThread":{"thread":{"isResolved":true}}}}'); }`,
+			`else if (kind(args) === "mutation") { if (gh.fail?.includes(prior)) fail(1); console.log(JSON.stringify({ data: { resolveReviewThread: { thread: { isResolved: !gh.unresolved?.includes(prior) } } } })); }`,
 			`else process.exit(9);`,
 			"",
 		].join("\n"),
@@ -89,17 +92,18 @@ export async function resolve({ args = ["resolve", "--pr", "7", "--head", A, "--
 	});
 	const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
 	const calls = path.calls();
-	const gh_ = calls.filter((c) => c.gh);
-	const kind = (a: string[]) => (a[1].startsWith("repos/") ? "pulls" : a.some((s) => s.startsWith("query=mutation")) ? "mutation" : "threads");
+	const of = (kind: Call["kind"]) => calls.filter((c) => c.kind === kind);
 	return {
 		out,
 		err,
 		code,
 		lines: out.trim().split("\n").filter(Boolean),
 		calls,
-		reads: gh_.filter((c) => kind(c.gh as string[]) === "pulls"),
-		threads: gh_.filter((c) => kind(c.gh as string[]) === "threads"),
+		/** Every `gh` call, of whatever kind. */
+		gh: calls.filter((c) => c.kind !== "git"),
+		reads: of("pulls"),
+		threads: of("threads"),
 		/** The thread id each mutation named. */
-		mutations: gh_.filter((c) => kind(c.gh as string[]) === "mutation").map((c) => (c.gh as string[]).find((s) => s.startsWith("t="))?.slice(2)),
+		mutations: of("mutation").map((c) => c.args.find((s) => s.startsWith("t="))?.slice(2)),
 	};
 }

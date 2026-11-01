@@ -38,7 +38,7 @@ If none holds, stop there and end on `CODERABBIT gate: OPEN — no CodeRabbit re
 gh api "repos/OWNER/REPO/pulls/N/comments?per_page=100" --paginate
 gh api "repos/OWNER/REPO/issues/N/comments?per_page=100" --paginate
 gh api "repos/OWNER/REPO/pulls/N/reviews?per_page=100" --paginate
-gh api graphql --paginate -F o=OWNER -F r=REPO -F n=N -f query='query($o:String!,$r:String!,$n:Int!,$endCursor:String){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated comments(first:100){nodes{fullDatabaseId}}}}}}}'
+gh api graphql --paginate -f o=OWNER -f r=REPO -F n=N -f query='query($o:String!,$r:String!,$n:Int!,$endCursor:String){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated comments(first:100){nodes{fullDatabaseId}}}}}}}'
 ```
 
 The first call returns inline review comments (where the findings live); the second returns the walkthrough / summary comments (where CodeRabbit sometimes parks extra findings in a collapsed "Outside diff range" or "Nitpick" section — read those bodies too, they contain findings that never became inline comments).
