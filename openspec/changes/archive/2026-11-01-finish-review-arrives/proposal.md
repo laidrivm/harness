@@ -28,11 +28,11 @@ the host has Windmill post the request once the window opens (answer 3).
   commit and names its state: `reviewing`, `reviewed`, `rate limited`,
   `skipped`, another conclusion by name, no run, or unread when the read
   fails.
-- `finish`, where the checkout tracks `.coderabbit.yaml`, waits after the
-  push up to about 60 s for a completed CodeRabbit run on `HEAD` before the question
-  read and the ready switch, so the push's event is handled before the
-  ready one.
-- After the ready switch `finish` reads `HEAD`'s runs for up to about 90 s
+- `finish`, where the checkout tracks `.coderabbit.yaml`, reads the card's
+  question after the push, then waits up to about 55 s for a completed
+  CodeRabbit run on `HEAD` and reads the question again before the ready
+  switch, so the push's event is handled before the ready one.
+- After the ready switch `finish` reads `HEAD`'s runs for up to about 85 s
   and ends on one line saying `ready #N` and CodeRabbit's state of `HEAD`.
 - On a head still only skipped, `finish` posts `@coderabbitai review` on the
   pull request, once per head: not when such a comment was already posted
@@ -76,7 +76,7 @@ None. The check-run reading is `work-finish`'s until card
   `README.md`.
 - Every `finish` in a repository that tracks `.coderabbit.yaml` takes longer:
   about 7 s before the ready switch and 25–35 s after it when the review
-  starts. When it does not, the waits are 12 and 18 reads, 60 s and 90 s
+  starts. When it does not, the waits are 12 and 18 reads, 55 s and 85 s
   at the default interval, longer when a `gh` read hangs to its limit.
 - `finish` posts under the identity `gh` holds (answer 2), the user's on the
   laptop, on exactly the terms answer 4 b grants — the one comment as the
