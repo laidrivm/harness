@@ -247,7 +247,7 @@ settle the explore's questions.
 - 10 b (third review): three failed reads in a row now end either wait. That replaces "a failed read does not end the reads" above, so a revoked token or a dead network costs three reads, not thirty. One failure between answers still does not end them.
 - 11 b: an earlier `@coderabbitai full review` counts as the request too.
 - 12 b: where the wait runs, the card's question is read before it as well, so a question already waiting costs no wait. The read before the ready switch stays, to catch a question posted meanwhile.
-- 9 b: done in the archive pull request. `finish` carries the card inside `found`, so `!found` alone says whether a question is read; the short hash is computed once and handed to `request()`; the fixture reads `runs: []` as a read of no runs, which the 12-reads case now passes. `/opsx:update` brought the delta spec into line with 10 b and 11 b and with the 55 s and 85 s figures.
+- 9 b: done in the archive pull request. `finish` carries the card inside `found`, so `!found` alone says whether a question is read; the short hash is computed once in `finish()` and once in `request()`, which derives it from the hash it reads with rather than take a second argument that must agree; the fixture reads `runs: []` as a read of no runs, which the 12-reads case now passes. `/opsx:update` brought the delta spec into line with 10 b, 11 b and 12 b (the scenario *A question already waits*, renamed so its slug no longer repeats the older *A question waits*) and with the 55 s and 85 s figures.
 
 ## Left as they are (#361's last local review, merged by the user, 2026-11-01)
 

@@ -143,7 +143,7 @@ describe("the wait before the ready switch", () => {
 		expect([run.code, run.last]).toEqual([1, "finish: draft #7 — gh pr ready 7 failed"]);
 	});
 
-	// spec: work-finish/a-question-waits
+	// spec: work-finish/a-question-already-waits
 	// The user's answer 12 b (2026-11-01): the question is read before the wait too.
 	test("a question already waiting leaves the draft with no wait and no check-run read", async () => {
 		const cwd = checkout(true);
