@@ -126,3 +126,12 @@ each page of the threads query, each mutation — and logs every call.
       change's delta to `openspec/specs/work-resolve/spec.md`, which exists
       only from then on (as `work-status`' row was).
       Verify with `ls openspec/changes/archive | grep finish-review-arrives`
+- [ ] 3.2 In the archive pull request (the user folded card
+      40a39875c31b81159fe1f4e870d9fd3a, *Point session-wrapup at the one
+      rule for a CodeRabbit-reviewed head*, into it on 1.11): point
+      `core/skills/session-wrapup/SKILL.md`'s check-run read at the same
+      rule for "reviewed" — conclusion `success`, a title not opening
+      `Review skipped`, never the summary's text — and pin it with a test as
+      2.1 pins the `coderabbit` skill, against `REVIEWED` from
+      `bun/coderabbit-run.ts` once #361 is on `main`. Verify with the pin
+      test failing first over today's wording
