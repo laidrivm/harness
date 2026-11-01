@@ -10,6 +10,7 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, 
 import { join } from "node:path";
 import type { Server } from "bun";
 import { emptyDir, repo } from "./diff-budget.fixture.ts";
+import { advance } from "./notion-bot.fixture.ts";
 
 export const TOKEN = "ntn_secret0value";
 export const USER = "0123456789abcdef0123456789abcdef";
@@ -27,7 +28,7 @@ type Run = { plain_text: string; annotations?: { code: boolean } };
 export const said = (author: string, time: string, ...runs: Run[]) => ({ created_by: { id: author }, created_time: time, rich_text: runs });
 export const question = (time: string) => said(BOT, time, { plain_text: "harness-question", annotations: { code: true } }, { plain_text: " Ship?" });
 
-/** A card's page with every property set, `properties` replacing any of them. */
+/** A card's page with every property set, `properties` replacing any of them; `Assign` holds no one, so the release reads no comments. */
 export const page = (pointer = "", properties: Record<string, unknown> = {}) => ({
 	object: "page",
 	parent: { type: "data_source_id", data_source_id: "ds1" },
@@ -36,7 +37,7 @@ export const page = (pointer = "", properties: Record<string, unknown> = {}) => 
 		Status: { type: "status", status: { name: "proposing" } },
 		Pointer: { type: "rich_text", rich_text: pointer ? [{ plain_text: pointer }] : [] },
 		Labels: { type: "multi_select", multi_select: [{ name: "pivot-step-2-1" }, { name: "later" }] },
-		Assign: { type: "people", people: [{ object: "user", id: "01234567-89ab-cdef-0123-456789abcdef" }] },
+		Assign: { type: "people", people: [] },
 		...properties,
 	},
 });
@@ -54,34 +55,79 @@ export const body = (markdown: string, truncated = false, unknown_block_ids: str
  * `fail` answers a call, as `seen` names it, with that status; a comments or
  * blocks page past the first is named `#<cursor>`. `blocks` are the card's
  * top-level blocks, page by page, and `board` the data source's title.
- */
-export type Stub = { page?: unknown; markdown?: unknown; comments?: unknown[][]; blocks?: unknown[][]; board?: string; fail?: Record<string, number> };
+ * `assign`, when set, is the ids the page's `Assign` holds, which a `PATCH` replaces; `next`, for a call as `seen`
+ * names it, what to merge into the stub after each of its answers in turn.
+ */   
+export type Stub = {
+  page?: unknown;
+  markdown?: unknown;   
+  comments?: unknown[][];
+  blocks?: unknown[][]; 
+  board?: string;
+  fail?: Record<string, number>;
+  assign?: string[];    
+  next?: Record<string, Partial<Stub>[]>;   
+};
 
 /** Serves Notion as `stub` says, and the calls it saw with the body each sent. */
 export function notion(stub: Stub = {}) {
 	const seen: { call: string; version: string | null; auth: string | null; body?: unknown }[] = [];
+	/** The page as the stub holds it, its `Assign` the stub's people when it names some. */
+	const card = () => {
+		const read = (stub.page ?? page()) as { properties?: Record<string, unknown> };
+		if (!stub.assign) return read;
+		return {
+			...read,
+			properties: {
+				...read.properties,
+				Assign: { type: "people", people: stub.assign.map((id) => ({ object: "user", id })) },
+			},
+		};
+	};
+	const respond = (
+		req: Request,
+		url: URL,
+		call: string,
+		cursor: string | null,
+		sent: Awaited<ReturnType<Request["json"]>>,
+	) => {
+		const status = stub.fail?.[call];
+		if (status) return Response.json({}, { status });
+		if (/^\/v1\/pages\/[^/]+\/markdown$/.test(url.pathname)) return Response.json(stub.markdown ?? body("# Card\n"));
+		if (req.method === "PATCH") {
+			const people = sent?.properties?.Assign?.people;
+			if (Array.isArray(people)) stub.assign = people.map((p: { id: string }) => p.id);
+		}
+		// A `Pointer` write answers the page as written, as Notion does.
+		const pointer = sent?.properties?.Pointer?.rich_text?.[0]?.text?.content;
+		if (/^\/v1\/pages\/[^/]+$/.test(url.pathname)) return Response.json(pointer === undefined ? card() : page(pointer));
+		if (/^\/v1\/data_sources\/[^/]+$/.test(url.pathname))
+			return Response.json({ title: [{ plain_text: stub.board ?? "Harness" }] });
+		const blocks = /^\/v1\/blocks\/[^/]+\/children$/.test(url.pathname);
+		if (blocks && req.method === "PATCH") return Response.json({ object: "list", results: sent.children });
+		if (!blocks && url.pathname !== "/v1/comments") return Response.json({}, { status: 404 });
+		const pages = (blocks ? stub.blocks : stub.comments) ?? [[]];
+		const at = Number(cursor ?? 0);
+		const more = at + 1 < pages.length;
+		return Response.json({ results: pages[at], has_more: more, next_cursor: more ? String(at + 1) : null });
+	};
 	const server = Bun.serve({
 		port: 0,
 		async fetch(req) {
 			const url = new URL(req.url);
 			const cursor = url.searchParams.get("start_cursor");
 			const call = `${req.method} ${url.pathname}${cursor ? `#${cursor}` : ""}`;
+			// Read once: the PATCH of `Assign` and the `Pointer` write both need it.
 			const sent = req.method === "GET" ? undefined : await req.json();
-			seen.push({ call, version: req.headers.get("Notion-Version"), auth: req.headers.get("Authorization"), body: sent });
-			const status = stub.fail?.[call];
-			if (status) return Response.json({}, { status });
-			if (/^\/v1\/pages\/[^/]+\/markdown$/.test(url.pathname)) return Response.json(stub.markdown ?? body("# Card\n"));
-			// A `Pointer` write answers the page as written, as Notion does.
-			const pointer = sent?.properties?.Pointer?.rich_text?.[0]?.text?.content;
-			if (/^\/v1\/pages\/[^/]+$/.test(url.pathname)) return Response.json(pointer === undefined ? (stub.page ?? page()) : page(pointer));
-			if (/^\/v1\/data_sources\/[^/]+$/.test(url.pathname)) return Response.json({ title: [{ plain_text: stub.board ?? "Harness" }] });
-			if (/^\/v1\/blocks\/[^/]+\/children$/.test(url.pathname) && req.method === "PATCH") return Response.json({ object: "list", results: sent.children });
-			const blocks = /^\/v1\/blocks\/[^/]+\/children$/.test(url.pathname);
-			if (!blocks && url.pathname !== "/v1/comments") return Response.json({}, { status: 404 });
-			const pages = (blocks ? stub.blocks : stub.comments) ?? [[]];
-			const at = Number(cursor ?? 0);
-			const more = at + 1 < pages.length;
-			return Response.json({ results: pages[at], has_more: more, next_cursor: more ? String(at + 1) : null });
+			seen.push({
+				call,
+				version: req.headers.get("Notion-Version"),
+				auth: req.headers.get("Authorization"),
+				body: sent,
+			});
+			const answered = respond(req, url, call, cursor, sent);
+			advance(stub, stub.next, call);
+			return answered;
 		},
 	});
 	servers.push(server);

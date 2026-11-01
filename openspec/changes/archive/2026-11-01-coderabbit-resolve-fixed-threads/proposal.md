@@ -79,6 +79,10 @@ and whether the last resolve brings the approval — stage 2.5's probe, step 7.
 - `local-review-loop`: the threads of fixed findings are resolved through
   `work.ts resolve` once the fix is on the pull request, and no other thread
   by an agent.
+- `agent-rulebook`: the wrap-up's first review is a commit the bot reviewed
+  by the same rule — a check run concluded `success` with a title not
+  opening `Review skipped`, or the `Review completed` status — folded in at
+  archive time (tasks.md, 3.2).
 
 ## Impact
 
