@@ -2,7 +2,7 @@
  * `work.ts resolve --pr <n> --head <sha> --comment <id> …`: resolves the
  * review bot's threads a session fixed, on the current branch's open pull
  * request while its head is `--head`
- * (`openspec/changes/coderabbit-resolve-fixed-threads/design.md`, *`resolve`
+ * (`openspec/changes/archive/2026-11-01-coderabbit-resolve-fixed-threads/design.md`, *`resolve`
  * places every id before it changes anything*). Every refusal comes before the
  * first mutation; the mutations run in the order given and stop at the first
  * failure, a rerun skipping what is resolved. The `resolveReviewThread`
