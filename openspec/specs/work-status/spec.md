@@ -329,7 +329,8 @@ fixes, and print its line after its own. A refusal SHALL release nothing.
 
 #### Scenario: A move releases
 
-- **WHEN** a move is written and nothing waits on the card
+- **WHEN** a move is written on a card whose `Assign` holds the user and
+  nothing waits on the card
 - **THEN** `status` prints the move, then `assign: removed the user from
   <card>`, and exits as the move alone decides
 

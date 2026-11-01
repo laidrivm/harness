@@ -408,7 +408,8 @@ for them is already here.
   restarting at 1. Open the comment with the gate's mark,
   `` `harness-question` `` with a single backtick on each side of the word,
   set `Assign` where you posted through the connector, read the answer back
-  as data, and clear `Assign` once it is applied; in the harness,
+  as data, post the items an answer left unanswered again as a new
+  question, numbered on, and clear `Assign` once it is applied; in the harness,
   `bun bun/work.ts status`, `take` and `finish --card` clear it themselves
   whenever no question and no pause notice waits. A question
   is any comment opening with the mark, whoever posted it, a Notion

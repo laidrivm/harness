@@ -379,8 +379,8 @@ SHALL release nothing.
 
 #### Scenario: A push after the answer
 
-- **WHEN** `finish --card` pushes and no question or pause notice waits on
-  the card
+- **WHEN** `finish --card` pushes, the card's `Assign` holds the user, and
+  no question or pause notice waits on the card
 - **THEN** it prints `assign: removed the user from <card>` beside its
   other lines, which are what they would have been without it
 

@@ -830,14 +830,22 @@ back from the card's comments and applied as data.
 - **THEN** the agent posts it as a comment of its own, its items numbered on
   from the highest number the card's questions use, and `Assign` holds the
   user; where the board loop's runner posts for the session, which refuses
-  while a question waits, the second stays in the session's final message
-  and is posted once the first is answered
+  while a question waits, the runner posts nothing for the second, which
+  stays in the session's final message and reaches the card only when a
+  later pass's session meets it again
 
 #### Scenario: One answer to several questions
 
 - **WHEN** two questions wait on a card and a comment by the user's account
   without a mark follows the later one
 - **THEN** that comment is the answer to both, and no question waits
+
+#### Scenario: An answer to some of the items
+
+- **WHEN** the user's comment after the last question answers only some of
+  the items the card's questions number
+- **THEN** no question waits, and the session applying the answer posts the
+  items left unanswered again as a new question, numbered on
 
 #### Scenario: Another member comments in the discussion
 
@@ -1037,8 +1045,8 @@ count as applied in the turn that step's pull request opens. If the session
 files a card for the work instead, it counts as applied in the turn the card
 is filed. `Assign` SHALL be cleared by then at the latest; *The work
 commands release `Assign` when nothing waits* may clear it earlier, and the
-board loop's pick, which takes the answer only while `Assign` holds the
-user, then passes over it. An answer SHALL
+board loop's pick, which takes the user's answer only while `Assign` holds
+the user, then passes over it. An answer SHALL
 be read from the card's page-level discussion whether or not that discussion
 is resolved.
 
