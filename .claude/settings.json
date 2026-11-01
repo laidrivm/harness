@@ -141,7 +141,7 @@
 				]
 			},
 			{
-				"matcher": "^mcp__.+__notion-update-page$",
+				"matcher": "^mcp__.+__notion-(update-page|create-pages)$",
 				"hooks": [
 					{
 						"type": "command",
