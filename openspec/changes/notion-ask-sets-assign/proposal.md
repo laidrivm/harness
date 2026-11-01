@@ -17,7 +17,8 @@ second question no longer waits for the first one's answer.
 - `notion-ask` sets the card's `Assign` to the user after every post, through
   the existing `assign()` of `bun/notion-bot.ts`, and reads it back from the
   PATCH's answer. It prints `question: posted on <id>, Assign set`, or
-  `question: posted on <id>, Assign not set — <why>` and exits 1 (answer 2 a).
+  `question: posted on <id>, Assign not set — <why>` and exits 1 (answers 2 a
+  and 6 a; the line forbids a rerun).
   A post on a card whose `Assign` was cleared sets it again (answer 1).
 - **BREAKING** for a session that relied on it: `notion-ask` no longer
   refuses while a question waits. It posts a question whatever the card
@@ -41,7 +42,9 @@ second question no longer waits for the first one's answer.
 - The board loop's pick takes a card carrying an answer whatever its
   `Assign` holds, and task-board clears `Assign` "by then at the latest"
   rather than "never earlier" than the answer step's pull request (item 4
-  b). What then marks an answer as carried is card item 5, open.
+  b). Nothing then marks an answer as carried, so the old board loop may
+  carry one twice; the user accepted that (item 5 c), since roadmap stage
+  2.5 switches that loop off and stage 7 deletes it.
 - The board loop's runner keeps its refusal (`board-loop`, *A question
   already waits*): it guards a retried pass against posting twice.
 - The prose step "set `Assign` after `question: posted`" becomes "unless the
