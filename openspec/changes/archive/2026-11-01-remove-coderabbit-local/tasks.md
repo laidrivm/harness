@@ -68,7 +68,7 @@ boards, not here: the goal check reads only this tree.
 
 Ticked by the archive, not by the apply.
 
-- [ ] 4.1 Re-copy the `MODIFIED` block of *The local review runs after
+- [x] 4.1 Re-copy the `MODIFIED` block of *The local review runs after
       triage and before the push* from main if another change modified it
       since, re-applying this change's edits; and rewrite the Purpose of
       `openspec/specs/local-review-loop/spec.md`, which no delta reaches, to
