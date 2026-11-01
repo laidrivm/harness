@@ -26,12 +26,12 @@ filename produces no report, and the check then fails on an absent file at
 every run.
 
 The check SHALL run no tool. Whoever invokes it produces the report first, as
-a separate command — in the harness, the mutation step the pre-push hook and
-the CI job run before the check, which runs Stryker on the modules its stored
-results do not cover, or on none, and writes the report as the merge of every
-stored result — so a Stryker that crashed is a non-zero exit the shell
+a separate command, so a Stryker that crashed is a non-zero exit the shell
 already surfaces, and the check never has to tell its own verdict apart from
-the tool's failure. For the same reason the invoker, not the check, SHALL
+the tool's failure. In the harness that invoker is the mutation step the
+pre-push hook and the CI job run before the check: the step runs Stryker on
+the modules its stored results do not cover, or on none, and writes the
+report as the merge of every stored result. For the same reason the invoker, not the check, SHALL
 delete the previous report before writing it: a reader cannot tell a stale
 file from a fresh one, and an absent report already fails.
 
