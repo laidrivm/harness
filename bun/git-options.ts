@@ -13,14 +13,7 @@
  * `--exec-path` is absent on purpose: bare, it prints the path and runs
  * nothing, so treating the next token as its value would be wrong.
  */
-export const VALUE_OPTIONS = new Set([
-	"-C",
-	"-c",
-	"--git-dir",
-	"--work-tree",
-	"--namespace",
-	"--config-env",
-]);
+export const VALUE_OPTIONS = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace", "--config-env"]);
 
 /**
  * Short flags bundle — git reads `push -uf` as `-u -f` — so the single-dash
@@ -88,9 +81,7 @@ export function pushWords(args: string[]): {
 			switches.push(name);
 			if (name === arg && PUSH_VALUE_OPTIONS.has(name)) at++;
 		} else {
-			const value = [...arg].findIndex(
-				(letter, i) => i > 0 && SHORT_VALUES.includes(letter),
-			);
+			const value = [...arg].findIndex((letter, i) => i > 0 && SHORT_VALUES.includes(letter));
 			if (value === -1) switches.push(arg);
 			else {
 				if (value > 1) switches.push(arg.slice(0, value));

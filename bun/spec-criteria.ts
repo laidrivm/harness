@@ -33,8 +33,7 @@ function parse(file: string, capability: string): Criterion[] {
 	for (const line of readFileSync(file, "utf8").split("\n")) {
 		if (line.startsWith("```")) fenced = !fenced;
 		else if (fenced) continue;
-		else if (line.startsWith("### Requirement:"))
-			requirement = line.slice(16).trim();
+		else if (line.startsWith("### Requirement:")) requirement = line.slice(16).trim();
 		else if (line.startsWith("#### Scenario:"))
 			found.push({
 				id: `${capability}/${slug(line.slice(14))}`,
@@ -57,9 +56,7 @@ function subdirs(path: string): string[] {
 const under = (specs: string): Criterion[] =>
 	subdirs(specs).flatMap((capability) => {
 		const file = join(specs, capability, "spec.md");
-		return lstatSync(file, { throwIfNoEntry: false })?.isFile()
-			? parse(file, capability)
-			: [];
+		return lstatSync(file, { throwIfNoEntry: false })?.isFile() ? parse(file, capability) : [];
 	});
 
 /** The set the count is taken over. */

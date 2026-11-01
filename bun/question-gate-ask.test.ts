@@ -34,7 +34,11 @@ describe("a question on a machine with the ask settings", () => {
 		expect([code, answer.behavior]).toEqual([0, "deny"]);
 		expect(answer.message).toContain("notion-ask.ts");
 		// [12]: the step the session takes after the command, as the launch forms word it.
-		for (const part of ["unless that line ends `Assign set`", "never run the command again for a question it printed as posted", "instead where the question is already there"])
+		for (const part of [
+			"unless that line ends `Assign set`",
+			"never run the command again for a question it printed as posted",
+			"instead where the question is already there",
+		])
 			expect(answer.message).toContain(part);
 		expect(ledger).toEqual([expect.objectContaining({ decision: "refused", rule: "ask" })]);
 	});
@@ -55,6 +59,9 @@ describe("every other call is decided as before", () => {
 	// spec: agent-permissions/a-comment-that-is-not-a-question
 	test("a reply gets no answer, recorded passed [60]", () => {
 		const { out, ledger } = run(asked({ discussion_id: "discussion://a/b/c" }), undefined, config("file"));
-		expect({ out, ledger }).toEqual({ out: "", ledger: [expect.objectContaining({ decision: "passed", rule: "reply" })] });
+		expect({ out, ledger }).toEqual({
+			out: "",
+			ledger: [expect.objectContaining({ decision: "passed", rule: "reply" })],
+		});
 	});
 });

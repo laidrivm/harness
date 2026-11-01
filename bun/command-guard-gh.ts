@@ -131,16 +131,13 @@ function subcommandAt(words: string[], at: number): number {
 	return -1;
 }
 
-const subcommandOf = (words: string[], at: number) =>
-	words[subcommandAt(words, at)];
+const subcommandOf = (words: string[], at: number) => words[subcommandAt(words, at)];
 
 /** Why `gh` with these words after it publishes text, or `undefined`. */
 export function ghPublish(rest: string[]): string | undefined {
 	// Anywhere, not the first two words: a global flag's value sits in front of
 	// them in `gh --repo a/b pr comment`.
-	const write = GH_WRITES.find(([a, b]) =>
-		rest.some((word, at) => word === a && subcommandOf(rest, at) === b),
-	);
+	const write = GH_WRITES.find(([a, b]) => rest.some((word, at) => word === a && subcommandOf(rest, at) === b));
 	if (!write) return undefined;
 	return `command-guard: \`gh ${write.join(" ")}\` publishes text under the user's name. Report what you would have written and let them send it.`;
 }
@@ -208,9 +205,7 @@ function opensPullRequest(flags: Flag[], operands: string[]): boolean {
 		operands.length === 1 &&
 		PULLS.test(operands[0] ?? "") &&
 		flags.every(({ name, value }) =>
-			name === "method"
-				? value.toUpperCase() === "POST"
-				: READ_FLAGS.has(name) || isField(name) || name === "input",
+			name === "method" ? value.toUpperCase() === "POST" : READ_FLAGS.has(name) || isField(name) || name === "input",
 		)
 	);
 }
@@ -224,18 +219,12 @@ function opensPullRequest(flags: Flag[], operands: string[]): boolean {
  * the guard errs in; a document from a file (`@`, `--input`) blocks unread.
  */
 function graphqlRead(flags: Flag[]): boolean {
-	const query = ({ name, value }: Flag) =>
-		isField(name) && value.startsWith("query");
+	const query = ({ name, value }: Flag) => isField(name) && value.startsWith("query");
 	const documents = flags.filter(query);
 	return (
 		documents.length > 0 &&
-		documents.every(
-			({ value }) =>
-				/^query=\s*query\b/.test(value) && !/mutation/i.test(value),
-		) &&
-		flags.every(
-			({ name }) => READ_FLAGS.has(name) || name === "method" || isField(name),
-		)
+		documents.every(({ value }) => /^query=\s*query\b/.test(value) && !/mutation/i.test(value)) &&
+		flags.every(({ name }) => READ_FLAGS.has(name) || name === "method" || isField(name))
 	);
 }
 

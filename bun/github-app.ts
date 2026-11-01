@@ -81,7 +81,8 @@ export async function request(path: string, bearer?: string, body?: unknown, tim
 	const answer = await fetch(url, init).catch((error: Error) => {
 		throw new Transient(`GitHub's API could not be reached for ${path}: ${error.message}`);
 	});
-	if (!answer.ok) throw new (answered(answer.status) ? Transient : Error)(`GitHub's API answered ${path} with ${answer.status}`);
+	if (!answer.ok)
+		throw new (answered(answer.status) ? Transient : Error)(`GitHub's API answered ${path} with ${answer.status}`);
 	return answer.json().catch(() => ({}));
 }
 
@@ -94,7 +95,9 @@ async function call(path: string, field: string, type: "string" | "number", bear
 
 /** The App's slug, from `GET /app`: its pull requests' author is `app/<slug>`, its commits' `<slug>[bot]`. */
 export const slug = async (app: App) =>
-	app.mint ? minted(app.mint, `${app.owner}/${app.repo}`, ["--slug"]) : call("/app", "slug", "string", jwt(app.id, app.key as KeyObject));
+	app.mint
+		? minted(app.mint, `${app.owner}/${app.repo}`, ["--slug"])
+		: call("/app", "slug", "string", jwt(app.id, app.key as KeyObject));
 
 /** The `GIT_*` variables that author and commit a session's work as the App's bot user. */
 export async function identity(app: App): Promise<Record<string, string>> {
@@ -106,7 +109,11 @@ export async function identity(app: App): Promise<Record<string, string>> {
 /** An installation token for the App's one repository, holding the `permissions` its caller names and no more. */
 export async function mint(app: App, permissions: Record<string, "read" | "write">): Promise<string> {
 	if (app.mint)
-		return minted(app.mint, `${app.owner}/${app.repo}`, Object.entries(permissions).map(([name, level]) => `${name}=${level}`));
+		return minted(
+			app.mint,
+			`${app.owner}/${app.repo}`,
+			Object.entries(permissions).map(([name, level]) => `${name}=${level}`),
+		);
 	const bearer = jwt(app.id, app.key as KeyObject);
 	const installation = await call(`/repos/${app.owner}/${app.repo}/installation`, "id", "number", bearer);
 	return call(`/app/installations/${installation}/access_tokens`, "token", "string", bearer, {

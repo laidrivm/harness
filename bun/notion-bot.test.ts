@@ -81,11 +81,14 @@ describe("the settings file", () => {
 		expect(settings(file({ token: TOKEN, user: USER, board }))).toEqual({ token: TOKEN, user: USER, board });
 	});
 
-	test.each([`${USER}x`, "Harness", 42, null])("the board id %p is refused, naming the key and never the value", (board) => {
-		const path = file({ token: TOKEN, user: USER, board });
-		refused(path, "`board`");
-		expect(() => settings(path)).toThrow(`notion-bot: ${path}: \`board\` is not 32 hex digits, alone or as a UUID`);
-	});
+	test.each([`${USER}x`, "Harness", 42, null])(
+		"the board id %p is refused, naming the key and never the value",
+		(board) => {
+			const path = file({ token: TOKEN, user: USER, board });
+			refused(path, "`board`");
+			expect(() => settings(path)).toThrow(`notion-bot: ${path}: \`board\` is not 32 hex digits, alone or as a UUID`);
+		},
+	);
 
 	test("the file is found under XDG_CONFIG_HOME, then under ~/.config [5]", () => {
 		expect(where("notion-bot.json", { XDG_CONFIG_HOME: "/x", HOME: "/h" })).toBe("/x/harness/notion-bot.json");
@@ -124,7 +127,11 @@ describe("the QUESTION: line", () => {
 	test.each([
 		["two lines [11]", `QUESTION: ${CARD}\n${QUESTION}\nQUESTION: ${CARD}\n${QUESTION}`, "more than one"],
 		["one after PR-BODY: [12]", `PR-TITLE: t\nPR-BODY:\nb\nQUESTION: ${CARD}\n${QUESTION}`, "after PR-BODY:"],
-		["one between PR-TITLE: and PR-BODY: [12]", `PR-TITLE: t\nQUESTION: ${CARD}\n${QUESTION}\nPR-BODY:\nb`, "after PR-TITLE:"],
+		[
+			"one between PR-TITLE: and PR-BODY: [12]",
+			`PR-TITLE: t\nQUESTION: ${CARD}\n${QUESTION}\nPR-BODY:\nb`,
+			"after PR-TITLE:",
+		],
 		["an id with text after it [15]", `QUESTION: ${CARD} please\n${QUESTION}`, "card id"],
 		["a short id", `QUESTION: ${CARD.slice(1)}\n${QUESTION}`, "card id"],
 	])("%s posts nothing and says why", (_, said, why) => {
@@ -146,7 +153,11 @@ describe("the QUESTION: line", () => {
 	test.each([
 		["at most 1500 characters is posted [14]", `${MARK} ${"q".repeat(1500 - MARK.length - 1)}`, undefined],
 		["1501 characters is not [14]", `${MARK} ${"q".repeat(1500 - MARK.length)}`, "length"],
-		["1500 counted by code point, as the gate counts [14]", `${MARK} ${"😀".repeat(1500 - MARK.length - 1)}`, undefined],
+		[
+			"1500 counted by code point, as the gate counts [14]",
+			`${MARK} ${"😀".repeat(1500 - MARK.length - 1)}`,
+			undefined,
+		],
 		["empty text [17]", "", "unmarked"],
 		["a mention [18]", `${QUESTION} <mention-user url="user://u"/>`, "mention"],
 		["the mark after the first characters [19]", `Hi ${QUESTION}`, "unmarked"],

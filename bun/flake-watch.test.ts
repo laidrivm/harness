@@ -3,15 +3,7 @@
  * counts as the same tree and as a test run is `flake-watch-tree.test.ts`'s.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	chmodSync,
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-	statSync,
-	writeFileSync,
-} from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { HOOKS } from "./bootstrap.ts";
 import {
@@ -78,7 +70,12 @@ describe("the one case", () => {
 		play([failed(dir, error, secret), passed(dir, PASSING, secret)], tmp);
 		const text = readFileSync(ledger(tmp), "utf8");
 		const head = Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: dir });
-		expect(text.trim().split("\n").map((l) => JSON.parse(l))).toMatchObject([
+		expect(
+			text
+				.trim()
+				.split("\n")
+				.map((l) => JSON.parse(l)),
+		).toMatchObject([
 			{
 				gate: "flake-watch",
 				decision: "flaky",
@@ -86,8 +83,7 @@ describe("the one case", () => {
 				commit: head.stdout.toString().trim(),
 			},
 		]);
-		for (const word of ["swordfish", "hunter2", "bun test", "(fail)"])
-			expect(text).not.toContain(word);
+		for (const word of ["swordfish", "hunter2", "bun test", "(fail)"]) expect(text).not.toContain(word);
 	});
 });
 
@@ -136,9 +132,7 @@ describe("the many cases", () => {
 			Bun.spawn(["bun", script], {
 				cwd: tmp,
 				env: { PATH: process.env.PATH, TMPDIR: tmp, XDG_STATE_HOME: tmp },
-				stdin: Buffer.from(
-					JSON.stringify(failed(dir, undefined, command(`bun test ${n}`))),
-				),
+				stdin: Buffer.from(JSON.stringify(failed(dir, undefined, command(`bun test ${n}`)))),
 			}),
 		);
 		await Promise.all(calls.map((call) => call.exited));
@@ -157,20 +151,18 @@ describe("the interface cases", () => {
 			PostToolUse: passed(dir),
 			PostToolUseFailure: failed(dir, `${PASSING}\nerror: failed to push`),
 		};
-		const events = HOOKS.filter((h) => h.name === "harness flake watch").map(
-			(h) => h.event as keyof typeof pass,
-		);
+		const events = HOOKS.filter((h) => h.name === "harness flake watch").map((h) => h.event as keyof typeof pass);
 		expect(events).toEqual(["PostToolUse", "PostToolUseFailure"]);
 		const answered = events.map(
-			(event) =>
-				JSON.parse(play([failed(dir), pass[event]])).hookSpecificOutput.hookEventName,
+			(event) => JSON.parse(play([failed(dir), pass[event]])).hookSpecificOutput.hookEventName,
 		);
 		expect(answered).toEqual(events);
 	});
 
 	test("the installed bun's reporter is read for the name and the count [25]", () => {
 		const dir = temp();
-		const body = 'import { describe, expect, test } from "bun:test";\n' +
+		const body =
+			'import { describe, expect, test } from "bun:test";\n' +
 			'describe("grp", () => test("flips", () => expect(1).toBe(2)));\n';
 		writeFileSync(join(dir, "x.test.ts"), body);
 		const call = Bun.spawnSync(["bun", "test"], {
@@ -281,9 +273,7 @@ describe("the simple scenarios", () => {
 	])("%s %s failing, then passing, is named", (c, _, error, stdout) => {
 		const dir = repo();
 		const first =
-			error === undefined
-				? passed(dir, failing("grp > flips"), command(c))
-				: failed(dir, error, command(c));
+			error === undefined ? passed(dir, failing("grp > flips"), command(c)) : failed(dir, error, command(c));
 		const said = hint(play([first, passed(dir, stdout, command(c))]));
 		expect(said).toContain("grp > flips");
 	});

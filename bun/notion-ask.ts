@@ -11,7 +11,19 @@
  * the post and the write both held, and no line holds the token.
  */
 import { readFileSync } from "node:fs";
-import { assign, type Call, client, comment, failed, hex, ID, POSTED, type Settings, settings, Unread } from "./notion-bot.ts";
+import {
+	assign,
+	type Call,
+	client,
+	comment,
+	failed,
+	hex,
+	ID,
+	POSTED,
+	type Settings,
+	settings,
+	Unread,
+} from "./notion-bot.ts";
 import { ASK_SETTINGS, where } from "./question-gate.ts";
 import { Transient } from "./transient.ts";
 
@@ -20,7 +32,10 @@ import { Transient } from "./transient.ts";
  * ask command and `bun/work.ts` both read Notion through. `env` names the
  * config home, as `where()` reads it.
  */
-export function integration(timeout = 30_000, env: Record<string, string | undefined> = process.env): { settings: Settings; call: Call } | string {
+export function integration(
+	timeout = 30_000,
+	env: Record<string, string | undefined> = process.env,
+): { settings: Settings; call: Call } | string {
 	let found: Settings | undefined;
 	try {
 		found = settings(where(ASK_SETTINGS, env));
@@ -53,7 +68,10 @@ export async function ask(args: string[], timeout = 30_000): Promise<{ line: str
 		const why = (error as Error).message;
 		// No answer or a 5xx may have reached Notion; a 429 it refused unprocessed.
 		if (error instanceof Transient && (error.status === undefined || error.status >= 500))
-			return { line: `question: may be posted on ${card} — ${why}; read the card's comments before running it again`, ok: false };
+			return {
+				line: `question: may be posted on ${card} — ${why}; read the card's comments before running it again`,
+				ok: false,
+			};
 		// A 2xx whose body could not be read: the post held, so the write follows.
 		if (!(error instanceof Unread)) return not(why);
 	}

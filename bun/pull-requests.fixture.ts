@@ -41,13 +41,29 @@ export function read(c: Case = {}) {
 	);
 	chmodSync(join(bin, "gh"), 0o755);
 	const mint = c.mint && join(bin, "mint");
-	if (mint && c.mint) writeFileSync(mint, `#!/bin/sh\nprintf 'mint %s\\n' "$*" >> '${log}'\nprintf '%s' '${c.mint[0]}'\nexit ${c.mint[1]}\n`, { mode: 0o755 });
+	if (mint && c.mint)
+		writeFileSync(
+			mint,
+			`#!/bin/sh\nprintf 'mint %s\\n' "$*" >> '${log}'\nprintf '%s' '${c.mint[0]}'\nexit ${c.mint[1]}\n`,
+			{ mode: 0o755 },
+		);
 	const entry = join(bin, "entry.ts");
 	const reader = c.number === undefined ? "readPullRequests" : "readPullRequest";
-	writeFileSync(entry, `import { ${reader} } from ${JSON.stringify(module)};\nconsole.log(JSON.stringify(${reader}(process.argv[2], JSON.parse(process.argv[3]) ?? undefined) ?? "failed"));\n`);
+	writeFileSync(
+		entry,
+		`import { ${reader} } from ${JSON.stringify(module)};\nconsole.log(JSON.stringify(${reader}(process.argv[2], JSON.parse(process.argv[3]) ?? undefined) ?? "failed"));\n`,
+	);
 	// HOME and no system config: the user's own `insteadOf` rewrites stay out.
-	const env = { PATH: bin, HOME: emptyDir("pull-requests-home-"), GIT_CONFIG_NOSYSTEM: "1", ...(mint ? { HARNESS_GITHUB_APP_MINT: `${mint} -n` } : {}) };
-	const p = Bun.spawnSync([process.execPath, entry, c.number ?? c.branch ?? "feat/x", JSON.stringify(c.repo ?? null)], { cwd: dir, env });
+	const env = {
+		PATH: bin,
+		HOME: emptyDir("pull-requests-home-"),
+		GIT_CONFIG_NOSYSTEM: "1",
+		...(mint ? { HARNESS_GITHUB_APP_MINT: `${mint} -n` } : {}),
+	};
+	const p = Bun.spawnSync([process.execPath, entry, c.number ?? c.branch ?? "feat/x", JSON.stringify(c.repo ?? null)], {
+		cwd: dir,
+		env,
+	});
 	const lines = (file: string) => {
 		try {
 			return readFileSync(file, "utf8").split("\n").filter(Boolean);

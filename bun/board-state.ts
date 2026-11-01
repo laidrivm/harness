@@ -48,8 +48,7 @@ const subdirs = (path: string): string[] =>
 				.sort()
 		: [];
 
-const isFile = (path: string) =>
-	lstatSync(path, { throwIfNoEntry: false })?.isFile() === true;
+const isFile = (path: string) => lstatSync(path, { throwIfNoEntry: false })?.isFile() === true;
 
 /**
  * Whether `specs/` holds a delta spec — any markdown under it, at any depth,
@@ -96,8 +95,7 @@ function declared(path: string, named: string, problems: string[]): string[] {
 	// which the unresolvable-slug report below would then blame on a typo in a
 	// file whose real defect is that it holds a scalar.
 	if (!Array.isArray(after)) {
-		const shape =
-			typeof after === "string" ? "a bare string" : `a ${typeof after}`;
+		const shape = typeof after === "string" ? "a bare string" : `a ${typeof after}`;
 		problems.push(`${named}: after: is ${shape} rather than a list of slugs`);
 		return [];
 	}
@@ -167,18 +165,14 @@ export function boardState(tree: string): State {
 	const unapplied = subdirs(changes).filter((name) => name !== "archive");
 	for (const slug of unapplied) {
 		const dir = join(changes, slug);
-		const whole =
-			ARTEFACTS.every((name) => isFile(join(dir, name))) &&
-			delta(join(dir, "specs"));
+		const whole = ARTEFACTS.every((name) => isFile(join(dir, name))) && delta(join(dir, "specs"));
 		status[slug] = whole ? "proposed" : "proposing";
 	}
 
 	for (const name of subdirs(join(changes, "archive"))) {
 		const slug = ARCHIVED.exec(name)?.[1];
 		if (slug === undefined) {
-			problems.push(
-				`openspec/changes/archive/${name}: not <date>-<slug>, so it names no change`,
-			);
+			problems.push(`openspec/changes/archive/${name}: not <date>-<slug>, so it names no change`);
 			continue;
 		}
 		// `done` whatever else the tree holds: a slug with a directory in both
@@ -190,19 +184,13 @@ export function boardState(tree: string): State {
 	const edges: Record<string, Edges> = Object.create(null);
 	for (const slug of unapplied) {
 		const named = `openspec/changes/${slug}/.openspec.yaml`;
-		const after = declared(
-			join(changes, slug, ".openspec.yaml"),
-			named,
-			problems,
-		);
+		const after = declared(join(changes, slug, ".openspec.yaml"), named, problems);
 		for (const entry of after) {
 			// `hasOwn`, not `in`: every object inherits `toString`, `constructor`
 			// and `valueOf`, so `in` would resolve an `after:` naming any of those
 			// against a tree holding no such change.
 			if (entry !== slug && !Object.hasOwn(status, entry))
-				problems.push(
-					`${named}: after: names ${entry}, which has no directory under openspec/changes/ or its archive`,
-				);
+				problems.push(`${named}: after: names ${entry}, which has no directory under openspec/changes/ or its archive`);
 		}
 		edges[slug] = {
 			after,
@@ -210,15 +198,9 @@ export function boardState(tree: string): State {
 		};
 	}
 
-	for (const ring of cycles(edges))
-		problems.push(
-			`${ring.join(" → ")}: an after: cycle, which no order satisfies`,
-		);
+	for (const ring of cycles(edges)) problems.push(`${ring.join(" → ")}: an after: cycle, which no order satisfies`);
 
-	if (problems.length > 0)
-		throw new Error(
-			["the tree does not derive a board state:", ...problems].join("\n"),
-		);
+	if (problems.length > 0) throw new Error(["the tree does not derive a board state:", ...problems].join("\n"));
 	return { status, edges };
 }
 
@@ -257,8 +239,7 @@ export function corrected(card: string, floor: Status): Status | undefined {
  * boards are private and this repository is public, so an address is refused
  * whatever the name around it.
  */
-const ADDRESS =
-	/:\/\/|[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}/i;
+const ADDRESS = /:\/\/|[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}/i;
 
 /**
  * The board `tree`'s `package.json` names. A refusal names the key and never
@@ -267,19 +248,14 @@ const ADDRESS =
  */
 export function board(tree: string): string {
 	const named: unknown = read(tree, "board");
-	if (typeof named !== "string" || named.trim() === "")
-		throw new Error(`"harness.board" holds no board name`);
+	if (typeof named !== "string" || named.trim() === "") throw new Error(`"harness.board" holds no board name`);
 	if (ADDRESS.test(named))
-		throw new Error(
-			`"harness.board" holds a board's address rather than its name — the value is not repeated here`,
-		);
+		throw new Error(`"harness.board" holds a board's address rather than its name — the value is not repeated here`);
 	return named;
 }
 
 if (import.meta.main) {
 	// Imported here alone: `root.ts` runs git on import, which `work.ts status` must not do for every subcommand.
 	const { root } = await import("./root.ts");
-	console.log(
-		JSON.stringify({ board: board(root), ...boardState(root) }, null, "\t"),
-	);
+	console.log(JSON.stringify({ board: board(root), ...boardState(root) }, null, "\t"));
 }

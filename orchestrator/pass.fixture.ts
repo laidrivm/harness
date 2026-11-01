@@ -9,7 +9,10 @@ export const bash = Bun.which("bash") ?? "bash";
 export const CLAUDE = "throwaway-claude-token-4f1d";
 export const GH = "throwaway-gh-token-9c2e";
 /** The App's two settings a host configures: its id and the key holder's mint command, never a key's path. */
-export const APP = { HARNESS_GITHUB_APP_ID: "7", HARNESS_GITHUB_APP_MINT: "sudo -n -u keyholder /opt/orchestrator/mint" };
+export const APP = {
+	HARNESS_GITHUB_APP_ID: "7",
+	HARNESS_GITHUB_APP_MINT: "sudo -n -u keyholder /opt/orchestrator/mint",
+};
 export const URL = "https://github.com/owner/repo.git";
 export const IDLE = "board-loop: idle — nothing takeable";
 export const OPEN = "board-loop: open — apply demo step 1";
@@ -85,7 +88,11 @@ export function tick(h: Host, name: string, extra?: Record<string, string>, path
  * leader on the host, so its pid names its process group.
  */
 export async function running(h: Host, name: string, lead = false, extra?: Record<string, string>) {
-	const p = Bun.spawn([...(lead ? [Bun.which("setsid") ?? "setsid"] : []), bash, script, name], { cwd: h.root, env: env(h, extra), stdout: "pipe" });
+	const p = Bun.spawn([...(lead ? [Bun.which("setsid") ?? "setsid"] : []), bash, script, name], {
+		cwd: h.root,
+		env: env(h, extra),
+		stdout: "pipe",
+	});
 	const started = join(h.clones, name, ".fake/started");
 	while (!existsSync(started)) {
 		if (p.exitCode !== null) throw new Error(`the tick ended with ${p.exitCode} before its runner started`);
@@ -117,7 +124,9 @@ export const skip = !Bun.which("flock") && !process.env.CI;
  * One process owns the descriptor: `flock <file> <command>` forks, and the child would keep the lock past the kill.
  */
 export async function held(file: string) {
-	const holder = Bun.spawn(["sh", "-c", 'exec 9>>"$1" && flock 9 && echo held && exec sleep 60', "hold", file], { stdout: "pipe" });
+	const holder = Bun.spawn(["sh", "-c", 'exec 9>>"$1" && flock 9 && echo held && exec sleep 60', "hold", file], {
+		stdout: "pipe",
+	});
 	const reader = holder.stdout.getReader();
 	await reader.read();
 	reader.releaseLock();

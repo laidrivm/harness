@@ -7,24 +7,24 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fault, RUNNER_ASKS } from "./question-gate.ts";
 import {
-	CARD,
-	MARK,
-	QUESTION,
-	UNATTENDED,
 	asked,
+	CARD,
 	cleanup,
 	comments,
 	event,
 	fetched,
+	MARK,
 	type Prompt,
+	QUESTION,
 	read,
 	run,
 	said,
 	scratch,
 	transcript,
+	UNATTENDED,
 } from "./question-gate.fixture.ts";
+import { fault, RUNNER_ASKS } from "./question-gate.ts";
 
 afterAll(cleanup);
 
@@ -34,12 +34,10 @@ const STAGE = `/goal Carry step 2 of the OpenSpec change demo.\n${UNATTENDED}\nT
 const UNMARKED = "Ship the hook as one group?";
 
 /** The gate's verdict on an unmarked comment on the card, read after `prompts`. */
-const unmarked = (...prompts: Prompt[]) =>
-	run(asked({ markdown: UNMARKED }, read(...prompts)));
+const unmarked = (...prompts: Prompt[]) => run(asked({ markdown: UNMARKED }, read(...prompts)));
 
 /** The decision an answer carries, or `null` for no answer. */
-const decision = (out: string) =>
-	out ? JSON.parse(out).hookSpecificOutput.decision : null;
+const decision = (out: string) => (out ? JSON.parse(out).hookSpecificOutput.decision : null);
 
 describe("in an unattended session", () => {
 	// spec: agent-permissions/a-call-the-hook-does-not-allow-in-an-unattended-session
@@ -79,20 +77,31 @@ describe("in an unattended session", () => {
 	test.each([
 		["reply", () => asked({ reply_to_comment_id: "c1" }, path()), "`discussion_id` or `reply_to_comment_id`"],
 		["anchored", () => asked({ selection_with_ellipsis: "# A...b" }, path()), "without `selection_with_ellipsis`"],
-		["rich-text", () => event({ page_id: CARD, rich_text: [{ text: { content: QUESTION } }] }, path()), "as `markdown`, not `rich_text`"],
+		[
+			"rich-text",
+			() => event({ page_id: CARD, rich_text: [{ text: { content: QUESTION } }] }, path()),
+			"as `markdown`, not `rich_text`",
+		],
 		["unmarked", () => asked({ markdown: UNMARKED }, path()), `opens with ${MARK}, its backticks included`],
 		["mention", () => asked({ markdown: `${QUESTION} <mention-user url="user://u"/>` }, path()), "no user mention"],
 		["length", () => asked({ markdown: `${MARK} ${"q".repeat(1500)}` }, path()), "at most 1500 characters"],
 		["not-a-card", () => asked({}, transcript([comments(CARD)], [], [STAGE])), "`notion-fetch` first"],
-		["comments-unread", () => asked({}, transcript([fetched(CARD, "Harness")], [], [STAGE])), "`notion-get-comments` first"],
+		[
+			"comments-unread",
+			() => asked({}, transcript([fetched(CARD, "Harness")], [], [STAGE])),
+			"`notion-get-comments` first",
+		],
 		["unreadable", () => event({ page_id: "card", markdown: QUESTION }, path()), "32-hex id"],
-	])("%s is refused with a message that opens on its rule [15] and names its remedy [6] [11]", (rule, stdin, remedy) => {
-		const { out, ledger } = run(stdin());
-		const { message } = decision(out);
-		expect(message).toStartWith(`question-gate refused this comment (${rule}): `);
-		expect(message).toContain(remedy);
-		expect(ledger.map((r) => [r.decision, r.rule])).toEqual([["refused", rule]]);
-	});
+	])(
+		"%s is refused with a message that opens on its rule [15] and names its remedy [6] [11]",
+		(rule, stdin, remedy) => {
+			const { out, ledger } = run(stdin());
+			const { message } = decision(out);
+			expect(message).toStartWith(`question-gate refused this comment (${rule}): `);
+			expect(message).toContain(remedy);
+			expect(ledger.map((r) => [r.decision, r.rule])).toEqual([["refused", rule]]);
+		},
+	);
 
 	test("the not-a-card message names every board", () => {
 		const { out } = run(asked({}, transcript([comments(CARD)], [], [STAGE])));
@@ -151,7 +160,10 @@ describe("which session is unattended", () => {
 	// spec: agent-autonomy/a-declared-line-copied-from-a-terminal
 	test.each([
 		["the line as the prompt's last line, no newline after it [10]", `Carry step 2.\n${UNATTENDED}`],
-		["the line inside the /goal wrapper [12]", { goal: `Carry step 2 of the OpenSpec change demo.\n${UNATTENDED}\nThe goal is met.` }],
+		[
+			"the line inside the /goal wrapper [12]",
+			{ goal: `Carry step 2 of the OpenSpec change demo.\n${UNATTENDED}\nThe goal is met.` },
+		],
 		["a prompt written as a list of text parts [13]", { parts: ["Read the brief.", `Carry step 2.\n${UNATTENDED}`] }],
 		["the line indented by two spaces [t1]", `Carry step 2.\n  ${UNATTENDED}\n  The goal.`],
 		["the line ending in a carriage return [t2]", `Carry step 2.\r\n${UNATTENDED}\r\nThe goal.`],

@@ -55,10 +55,7 @@ describe("the pull request and the tree", () => {
 		["answering {} [14]", { answer: "{}", code: 0 }],
 	])("gh %s is open after three tries, not four", (_, gh) => {
 		const r = run(proposal(), ["propose", "demo"], { gh });
-		expect([r.last, r.calls]).toEqual([
-			expect.stringContaining("pull request's state could not be read"),
-			3,
-		]);
+		expect([r.last, r.calls]).toEqual([expect.stringContaining("pull request's state could not be read"), 3]);
 	});
 
 	// spec: stage-goal/a-proposal-ready-for-review
@@ -72,23 +69,31 @@ describe("the pull request and the tree", () => {
 	test.each([
 		["hangs [3]", false],
 		["hangs ignoring SIGTERM [5]", true],
-	])("gh that %s on every try is open after three calls", (_, stubborn) => {
-		const dir = proposal();
-		const gh = { ...prs(pr(head(dir), "OPEN")), fails: 3, hang: true, stubborn };
-		const r = run(dir, ["propose", "demo"], { gh, env: { HARNESS_GH_TIMEOUT_MS: "1000" } });
-		expect([r.last, r.calls]).toEqual([expect.stringContaining("state could not be read"), 3]);
-	}, 15_000);
+	])(
+		"gh that %s on every try is open after three calls",
+		(_, stubborn) => {
+			const dir = proposal();
+			const gh = { ...prs(pr(head(dir), "OPEN")), fails: 3, hang: true, stubborn };
+			const r = run(dir, ["propose", "demo"], { gh, env: { HARNESS_GH_TIMEOUT_MS: "1000" } });
+			expect([r.last, r.calls]).toEqual([expect.stringContaining("state could not be read"), 3]);
+		},
+		15_000,
+	);
 
 	// spec: stage-goal/a-read-that-hangs-and-then-answers
 	test.each([
 		["a first try that hangs is met after two calls [4]", { fails: 1, hang: true }, "1000", 2],
 		["a try answering inside the limit is met after one call [1]", { delay: 0.2 }, "2000", 1],
-	])("%s", (_, stub, limit, calls) => {
-		const dir = proposal();
-		const gh = { ...prs(pr(head(dir), "OPEN")), ...stub };
-		const r = run(dir, ["propose", "demo"], { gh, env: { HARNESS_GH_TIMEOUT_MS: limit } });
-		expect([r.code, r.calls]).toEqual([0, calls]);
-	}, 15_000);
+	])(
+		"%s",
+		(_, stub, limit, calls) => {
+			const dir = proposal();
+			const gh = { ...prs(pr(head(dir), "OPEN")), ...stub };
+			const r = run(dir, ["propose", "demo"], { gh, env: { HARNESS_GH_TIMEOUT_MS: limit } });
+			expect([r.code, r.calls]).toEqual([0, calls]);
+		},
+		15_000,
+	);
 
 	// spec: stage-goal/the-pull-request-is-behind
 	test("a pull request behind HEAD is open [27]", () => {
@@ -141,9 +146,7 @@ describe("the pull request and the tree", () => {
 		// The closed one, where there is one, sits at HEAD and comes first.
 		const gh = prs(...states.map((s) => pr(s === "CLOSED" ? head(dir) : main, s)));
 		const r = run(dir, ["propose", "demo"], { gh });
-		expect(r.last).toContain(
-			`the pull request's head is ${main.slice(0, 7)}, not ${head(dir).slice(0, 7)}`,
-		);
+		expect(r.last).toContain(`the pull request's head is ${main.slice(0, 7)}, not ${head(dir).slice(0, 7)}`);
 	});
 
 	// spec: stage-goal/the-pull-request-was-closed-unmerged
@@ -153,19 +156,13 @@ describe("the pull request and the tree", () => {
 	])("the only pull request at HEAD, %s, is open", (_, state) => {
 		const dir = proposal();
 		const r = run(dir, ["propose", "demo"], { gh: prs(pr(head(dir), state)) });
-		expect([r.code, r.last]).toEqual([
-			1,
-			expect.stringContaining("no open or merged pull request for feature"),
-		]);
+		expect([r.code, r.last]).toEqual([1, expect.stringContaining("no open or merged pull request for feature")]);
 	});
 
 	// spec: stage-goal/the-pull-request-was-closed-unmerged
 	test("a null record is no pull request, and the check still prints its line", () => {
 		const r = run(proposal(), ["propose", "demo"], { gh: { answer: "[null]", code: 0 } });
-		expect([r.code, r.last]).toEqual([
-			1,
-			expect.stringContaining("no open or merged pull request for feature"),
-		]);
+		expect([r.code, r.last]).toEqual([1, expect.stringContaining("no open or merged pull request for feature")]);
 	});
 
 	// spec: stage-goal/the-pull-request-is-behind

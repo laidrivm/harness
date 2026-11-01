@@ -29,8 +29,7 @@ export type Floor = {
  * be reported that is not one. A type guard, since `Number.isInteger` does not
  * narrow `unknown`.
  */
-const whole = (n: unknown): n is number =>
-	typeof n === "number" && Number.isInteger(n) && n >= 0;
+const whole = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 0;
 
 /**
  * What is wrong with a `{ <field>: count, why }` entry at `path` — a floor, or
@@ -39,27 +38,15 @@ const whole = (n: unknown): n is number =>
  * written as `"12"` is named here rather than thrown as a `TypeError` or
  * compared as never equal, or as `NaN`, which nothing exceeds.
  */
-export function unreadable(
-	path: string,
-	field: string,
-	count: unknown,
-	why: unknown,
-): string[] {
+export function unreadable(path: string, field: string, count: unknown, why: unknown): string[] {
 	return [
-		...(typeof why === "string" && why.trim()
-			? []
-			: [`${path}.why gives no reason — write one as text`]),
+		...(typeof why === "string" && why.trim() ? [] : [`${path}.why gives no reason — write one as text`]),
 		...(whole(count) ? [] : [`${path}.${field} is not a whole number`]),
 	];
 }
 
 /** The gap between `count` and the floor, after what `unreadable` names. */
-export function gauge(
-	at: Floor,
-	count: number,
-	floor: unknown,
-	why: unknown,
-): string[] {
+export function gauge(at: Floor, count: number, floor: unknown, why: unknown): string[] {
 	const problems = unreadable(`harness.${at.key}`, at.field, floor, why);
 	if (whole(floor) && count !== floor) {
 		const gap = `${count} ${at.counted} against a floor of ${floor}`;

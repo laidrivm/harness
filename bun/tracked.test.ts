@@ -64,13 +64,7 @@ describe("the tracked-file sweep", () => {
 		// A gitlink needs no real submodule: the index entry is what git lists,
 		// and the directory beside it is what a check would fail to read.
 		mkdirSync(join(dir, "sub"));
-		git(
-			dir,
-			"update-index",
-			"--add",
-			"--cacheinfo",
-			`160000,${"1".repeat(40)},sub`,
-		);
+		git(dir, "update-index", "--add", "--cacheinfo", `160000,${"1".repeat(40)},sub`);
 		const { paths, files } = tracked(dir);
 		expect(paths).toEqual(["gone.ts", "kept.ts", "link.ts", "sub"]);
 		expect(files).toEqual(["kept.ts"]);
@@ -111,16 +105,11 @@ describe("the tracked-file sweep", () => {
 const OWN_LISTING: Record<string, string> = {
 	"bun/tracked.ts": "the sweep itself",
 	"bun/tracked.test.ts": "fabricates repositories, and holds the pattern below",
-	"bun/check.ts":
-		"lists one directory with `-s`, for the mode the sweep does not return",
-	"bun/command-guard-interpreters.ts":
-		"asks with `--error-unmatch` whether one named file is tracked",
-	"bun/flake-watch.ts":
-		"lists untracked files to fingerprint the tree, and the sweep reads tracked files only",
-	"bun/repo-layout.test.ts":
-		"enumerates a fabricated repository to build its expectation",
-	"bun/spec-coverage-sweep.test.ts":
-		"asks whether a fabricated repository tracks a directory",
+	"bun/check.ts": "lists one directory with `-s`, for the mode the sweep does not return",
+	"bun/command-guard-interpreters.ts": "asks with `--error-unmatch` whether one named file is tracked",
+	"bun/flake-watch.ts": "lists untracked files to fingerprint the tree, and the sweep reads tracked files only",
+	"bun/repo-layout.test.ts": "enumerates a fabricated repository to build its expectation",
+	"bun/spec-coverage-sweep.test.ts": "asks whether a fabricated repository tracks a directory",
 };
 
 const SOURCE = /\.(?:[cm]?[jt]sx?)$/;
@@ -156,14 +145,10 @@ describe("one listing", () => {
 			"bun/shell.ts": "await Bun.$`git ls-files -z`;",
 			"bun/sh.ts": 'Bun.spawnSync(["sh", "-c", "git ls-files -z"]);',
 			"bun/prose.ts": "// `git ls-files` run in a subdirectory lists less",
-			"bun/quoted.ts": '// "git ls-files" is documented here\n/* \'ls-files -z\' */',
+			"bun/quoted.ts": "// \"git ls-files\" is documented here\n/* 'ls-files -z' */",
 			"bun/root.ts": 'spawn(["git", "rev-parse", "--show-toplevel"]);',
 		});
-		expect(ownListings(dir)).toEqual([
-			"bun/gate.ts",
-			"bun/sh.ts",
-			"bun/shell.ts",
-		]);
+		expect(ownListings(dir)).toEqual(["bun/gate.ts", "bun/sh.ts", "bun/shell.ts"]);
 	});
 
 	test("every exemption still names a tracked file", () => {

@@ -54,8 +54,7 @@ const normal = (rule: string) => rule.replace(/:\*\)$/, " *)");
 function covers(rule: string, entry: string): boolean {
 	const [r, e] = [normal(rule), normal(entry)];
 	const tool = e.split("(")[0] ?? e;
-	if (!r.includes("(") || r === "Bash(*)")
-		return new RegExp(`^${glob(r === "Bash(*)" ? "Bash" : r)}$`).test(tool);
+	if (!r.includes("(") || r === "Bash(*)") return new RegExp(`^${glob(r === "Bash(*)" ? "Bash" : r)}$`).test(tool);
 	if (r === e) return true;
 	if (!r.startsWith("Bash(") || !e.startsWith("Bash(")) return false;
 	const body = r.slice(5, -1);
@@ -70,9 +69,7 @@ function covers(rule: string, entry: string): boolean {
  * or a gap. Decided lines come before gaps. `undefined` when there is no local
  * file to sweep.
  */
-export function sweep(
-	dir: string,
-): { reported: string[]; kept: string[] } | undefined {
+export function sweep(dir: string): { reported: string[]; kept: string[] } | undefined {
 	if (!existsSync(join(dir, LOCAL))) return undefined;
 	const local = permissions(dir, LOCAL).allow ?? [];
 	// A string would otherwise be swept one character at a time.
@@ -80,9 +77,7 @@ export function sweep(
 	const tracked = permissions(dir, TRACKED);
 	// Claude Code skips an allow glob in the tool name unless a glob-free
 	// `mcp__<server>__` comes first, so such a rule grants nothing.
-	tracked.allow = (tracked.allow ?? []).filter(
-		(r) => r.includes("(") || !r.includes("*") || /^mcp__[^*]+__/.test(r),
-	);
+	tracked.allow = (tracked.allow ?? []).filter((r) => r.includes("(") || !r.includes("*") || /^mcp__[^*]+__/.test(r));
 	const decided: string[] = [];
 	const gaps: string[] = [];
 	const kept: string[] = [];
@@ -96,10 +91,7 @@ export function sweep(
 		const why = machineLocal(entry, dir);
 		if (by) decided.push(`decided: ${entry} — ${by.list} holds ${by.rule}`);
 		else if (why) kept.push(`kept: ${entry} — ${why}`);
-		else
-			gaps.push(
-				`gap: ${entry} — promote it to ${TRACKED} or drop it`,
-			);
+		else gaps.push(`gap: ${entry} — promote it to ${TRACKED} or drop it`);
 	}
 	return { reported: [...decided, ...gaps], kept };
 }

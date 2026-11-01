@@ -42,7 +42,8 @@ describe("where CodeRabbit is configured", () => {
 		writeFileSync(join(ignored, ".coderabbit.yaml"), "reviews: {}\n");
 		writeFileSync(join(ignored, ".git", "info", "exclude"), ".coderabbit.yaml\n");
 		const run = await finish({ cwd: ignored, gh: { before: DRAFT } });
-		for (const { calls, code, last } of [bare, run]) expect({ calls, code, last }).toEqual({ calls: [READ, "push", READY], code: 0, last: "finish: ready #7" });
+		for (const { calls, code, last } of [bare, run])
+			expect({ calls, code, last }).toEqual({ calls: [READ, "push", READY], code: 0, last: "finish: ready #7" });
 	});
 
 	test("a checkout whose tracked files cannot be listed after the push ends on the open draft, exit 1", async () => {
@@ -75,7 +76,13 @@ describe("the wait before the ready switch", () => {
 		expect(run.calls).toEqual([READ, "push", create, READ, ...times(3, runs(cwd)), READY, ...times(2, runs(cwd))]);
 		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit reviewing ${short(cwd)}`]);
 		// The card's record once, the question before the wait and again before the ready switch, then the release's page read.
-		expect(run.seen).toEqual([`GET /v1/pages/${CARD}`, `GET /v1/blocks/${CARD}/children`, "GET /v1/comments", "GET /v1/comments", `GET /v1/pages/${CARD}`]);
+		expect(run.seen).toEqual([
+			`GET /v1/pages/${CARD}`,
+			`GET /v1/blocks/${CARD}/children`,
+			"GET /v1/comments",
+			"GET /v1/comments",
+			`GET /v1/pages/${CARD}`,
+		]);
 	});
 
 	test("an in-progress run alone does not end the wait", async () => {
@@ -89,7 +96,10 @@ describe("the wait before the ready switch", () => {
 		const run = await watched([]);
 		expect(run.calls).toEqual([READ, "push", ...times(12, runs(run.cwd)), READY, ...times(18, runs(run.cwd))]);
 		expect(run.out).toContain(`finish: no completed CodeRabbit run on ${short(run.cwd)} after 12 reads\n`);
-		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — no CodeRabbit run on ${short(run.cwd)} after 18 reads`]);
+		expect([run.code, run.last]).toEqual([
+			0,
+			`finish: ready #7 — no CodeRabbit run on ${short(run.cwd)} after 18 reads`,
+		]);
 	});
 
 	// spec: work-finish/a-branch-pushed-before-its-draft
@@ -97,7 +107,11 @@ describe("the wait before the ready switch", () => {
 		const cwd = checkout(true);
 		writeFileSync(join(cwd, "body.md"), "Body\n");
 		git(cwd, "push", "-q", "--no-verify", "origin", BRANCH);
-		const run = await finish({ cwd, args: OPENING, gh: { before: [], after: DRAFT, runs: [[], [], [], [SKIPPED], [RUNNING]] } });
+		const run = await finish({
+			cwd,
+			args: OPENING,
+			gh: { before: [], after: DRAFT, runs: [[], [], [], [SKIPPED], [RUNNING]] },
+		});
 		const create = `pr create --draft -R o/demo --base main --head ${BRANCH} --title Demo --body-file body.md`;
 		expect(run.calls).toEqual([READ, create, READ, ...times(4, runs(cwd)), READY, runs(cwd)]);
 		expect(run.last).toBe(`finish: ready #7 — CodeRabbit reviewing ${short(cwd)}`);
@@ -108,7 +122,9 @@ describe("the wait before the ready switch", () => {
 	test("three failed reads in a row end the wait before the switch, saying the last one's reason, and still mark ready", async () => {
 		const run = await watched([1, 1, 1, [SKIPPED, RUNNING]]);
 		expect(run.calls).toEqual([READ, "push", ...times(3, runs(run.cwd)), READY, runs(run.cwd)]);
-		expect(run.out).toContain(`finish: no completed CodeRabbit run on ${short(run.cwd)} after 3 reads; the last read failed: gh exited 1\n`);
+		expect(run.out).toContain(
+			`finish: no completed CodeRabbit run on ${short(run.cwd)} after 3 reads; the last read failed: gh exited 1\n`,
+		);
 		expect(run.last).toBe(`finish: ready #7 — CodeRabbit reviewing ${short(run.cwd)}`);
 	});
 
@@ -147,7 +163,11 @@ describe("the wait before the ready switch", () => {
 	// The user's answer 12 b (2026-11-01): the question is read before the wait too.
 	test("a question already waiting leaves the draft with no wait and no check-run read", async () => {
 		const cwd = checkout(true);
-		const run = await finish({ cwd, gh: { before: DRAFT, runs: [[], [SKIPPED]] }, stub: { comments: [[question("2026-10-27T00:00:00.000Z")]] } });
+		const run = await finish({
+			cwd,
+			gh: { before: DRAFT, runs: [[], [SKIPPED]] },
+			stub: { comments: [[question("2026-10-27T00:00:00.000Z")]] },
+		});
 		expect(run.calls).toEqual([READ, "push"]);
 		expect([run.code, run.last]).toEqual([0, `finish: draft #7 — a question waits on ${CARD}`]);
 	});
@@ -185,8 +205,20 @@ describe("the reads after the ready switch", () => {
 		const all = await watched([[SKIPPED]]);
 		const failing = await watched([[SKIPPED], ...times(17, "").map(() => [SKIPPED]), 1, [SKIPPED]]);
 		for (const run of [all, failing]) {
-			expect(run.calls).toEqual([READ, "push", runs(run.cwd), READY, ...times(18, runs(run.cwd)), COMMENTS, runs(run.cwd), ASK]);
-			expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; asked for a review`]);
+			expect(run.calls).toEqual([
+				READ,
+				"push",
+				runs(run.cwd),
+				READY,
+				...times(18, runs(run.cwd)),
+				COMMENTS,
+				runs(run.cwd),
+				ASK,
+			]);
+			expect([run.code, run.last]).toEqual([
+				0,
+				`finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; asked for a review`,
+			]);
 		}
 	});
 
@@ -194,6 +226,9 @@ describe("the reads after the ready switch", () => {
 	test("every read after the switch failing ends unread after three", async () => {
 		const run = await watched([[SKIPPED], 1]);
 		expect(run.calls).toEqual([READ, "push", runs(run.cwd), READY, ...times(3, runs(run.cwd))]);
-		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit's runs on ${short(run.cwd)} unread: gh exited 1`]);
+		expect([run.code, run.last]).toEqual([
+			0,
+			`finish: ready #7 — CodeRabbit's runs on ${short(run.cwd)} unread: gh exited 1`,
+		]);
 	});
 });

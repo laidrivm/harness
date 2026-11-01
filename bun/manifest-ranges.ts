@@ -37,8 +37,7 @@ const EXEMPT = new Set(["scripts", "simple-git-hooks", "harness"]);
  * looks like has to tell them apart from one. The cost is that a date would
  * read as a span; no field here holds one, and the report names the field.
  */
-const RANGE =
-	/^[\^~<>=]|\|\||^[x*]$|^\d+(\.\d+)?$|^\d+(\.\d+)*\.[x*]$|^\d[\d.]*\s*-\s*\d/i;
+const RANGE = /^[\^~<>=]|\|\||^[x*]$|^\d+(\.\d+)?$|^\d+(\.\d+)*\.[x*]$|^\d[\d.]*\s*-\s*\d/i;
 
 /**
  * A spec naming a Git repository, which names whatever its reference points at
@@ -50,8 +49,7 @@ const RANGE =
  * tarball URL has the shape of `homepage` or `repository.url`. A complete check
  * would read `bun.lock`, where every dependency's source is written out whole.
  */
-const GIT =
-	/^(github|gitlab|bitbucket|gist|git(\+[a-z]+)?):|^git@|\.git(#.*)?$|^[a-z0-9][\w.-]*\/[\w.-]+#/i;
+const GIT = /^(github|gitlab|bitbucket|gist|git(\+[a-z]+)?):|^git@|\.git(#.*)?$|^[a-z0-9][\w.-]*\/[\w.-]+#/i;
 
 /**
  * The one Git spec admitted, and for the `harness` entry alone: a full commit
@@ -68,23 +66,18 @@ export function ranges(manifest: string): string[] {
 			// The key, not the path's tail: `my.harness` is a package of its own.
 			if (key === "harness" && path !== key) {
 				if (!HARNESS_PIN.test(value))
-					found.push(
-						`package.json: ${path} is ${value}, not github:laidrivm/harness#<40-hex commit>`,
-					);
-			} else if (RANGE.test(value) || GIT.test(value))
-				found.push(`package.json: ${path} is ${value}, not one version`);
+					found.push(`package.json: ${path} is ${value}, not github:laidrivm/harness#<40-hex commit>`);
+			} else if (RANGE.test(value) || GIT.test(value)) found.push(`package.json: ${path} is ${value}, not one version`);
 			return;
 		}
 		// `null` first: it is an object to `typeof`, and `Object.entries` throws
 		// on it rather than returning nothing.
 		if (value === null || typeof value !== "object") return;
-		for (const [name, inner] of Object.entries(value))
-			walk(inner, `${path}.${name}`, name);
+		for (const [name, inner] of Object.entries(value)) walk(inner, `${path}.${name}`, name);
 	};
 
 	const parsed = JSON.parse(manifest) as Record<string, unknown>;
-	for (const [key, value] of Object.entries(parsed))
-		if (!EXEMPT.has(key)) walk(value, key, key);
+	for (const [key, value] of Object.entries(parsed)) if (!EXEMPT.has(key)) walk(value, key, key);
 
 	return found;
 }

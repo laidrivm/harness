@@ -83,7 +83,10 @@ function hookWith(extra: Record<string, string>, main: string, ...events: unknow
 	} catch {}
 	return {
 		text,
-		records: text.split("\n").filter(Boolean).map((line) => JSON.parse(line)),
+		records: text
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line)),
 		outs: runs.map((r) => [r.exitCode, r.stdout.toString()]),
 	};
 }
@@ -94,7 +97,14 @@ describe("a skill call is recorded", () => {
 		const { main, tree, head } = scratch();
 		const r = hook(main, called("zombies", tree));
 		expect(r.records).toEqual([
-			expect.objectContaining({ gate: "skill", decision: "called", rule: "zombies", commit: head(tree), project: tree, session: SESSION }),
+			expect.objectContaining({
+				gate: "skill",
+				decision: "called",
+				rule: "zombies",
+				commit: head(tree),
+				project: tree,
+				session: SESSION,
+			}),
 		]);
 	});
 
@@ -213,11 +223,14 @@ describe("no record, exit 0 and nothing printed", () => {
 
 	// spec: gate-ledger/a-skill-called-outside-a-repository
 	test.each([
-		["a repository with no commit [12]", () => {
-			const dir = realpathSync(emptyDir("skill-record-bare-"));
-			git(dir, "init", "-q");
-			return dir;
-		}],
+		[
+			"a repository with no commit [12]",
+			() => {
+				const dir = realpathSync(emptyDir("skill-record-bare-"));
+				git(dir, "init", "-q");
+				return dir;
+			},
+		],
 		["a cwd that is no repository [13]", () => realpathSync(emptyDir("skill-record-none-"))],
 		["a cwd that does not exist [14]", () => join(realpathSync(emptyDir("skill-record-gone-")), "missing")],
 	])("for %s", (_, dir) => {

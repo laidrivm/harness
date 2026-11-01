@@ -64,7 +64,9 @@ describe("which pull requests are judged", () => {
 	// spec: pr-sweep/a-draft
 	test("a draft reads skipped, with no status [45]", () => {
 		const r = sweep(listing([pull(1, { isDraft: true })]));
-		expect(r.lines).toEqual([{ repo: "o/r", pr: 1, branch: "feat/demo-1", sha: sha(1), outcome: "skipped", reason: "draft", handoffs: [] }]);
+		expect(r.lines).toEqual([
+			{ repo: "o/r", pr: 1, branch: "feat/demo-1", sha: sha(1), outcome: "skipped", reason: "draft", handoffs: [] },
+		]);
 		expect(r.calls).toEqual([LOGIN, LIST]);
 	});
 
@@ -83,7 +85,9 @@ describe("a marked head", () => {
 		["PENDING", "a mark in a state other than success [15]"],
 	])("%s: %s with nothing new reads skipped, reads no drift and no description [45]", (state) => {
 		const rollup = [run("test", "SUCCESS"), status("harness/sweep", state)];
-		const r = sweep(listing([pull(1, { statusCheckRollup: rollup })], { [compare("main", sha(1))]: { out: { behind_by: 0 } } }));
+		const r = sweep(
+			listing([pull(1, { statusCheckRollup: rollup })], { [compare("main", sha(1))]: { out: { behind_by: 0 } } }),
+		);
 		expect(r.lines.map((l) => [l.outcome, l.reason])).toEqual([["skipped", "marked"]]);
 		expect(r.calls).toEqual([LOGIN, LIST, compare("main", sha(1))]);
 	});
@@ -191,7 +195,10 @@ describe("the GitHub App", () => {
 			},
 		});
 		key = join(emptyDir("pr-sweep-key-"), "app.pem");
-		const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs1", format: "pem" } });
+		const { privateKey } = generateKeyPairSync("rsa", {
+			modulusLength: 2048,
+			privateKeyEncoding: { type: "pkcs1", format: "pem" },
+		});
 		writeFileSync(key, privateKey, { mode: 0o600 });
 	});
 	afterAll(() => server.stop(true));
@@ -208,7 +215,11 @@ describe("the GitHub App", () => {
 		["the ID alone [13]", () => ({ HARNESS_GITHUB_APP_ID: "7" }), "HARNESS_GITHUB_APP_KEY is unset"],
 		["the key alone [13]", () => ({ HARNESS_GITHUB_APP_KEY: key }), "HARNESS_GITHUB_APP_ID is unset"],
 		["an empty ID [32]", () => ({ ...both(), HARNESS_GITHUB_APP_ID: "" }), "HARNESS_GITHUB_APP_ID is blank"],
-		["a whitespace-only key path [32]", () => ({ ...both(), HARNESS_GITHUB_APP_KEY: " " }), "HARNESS_GITHUB_APP_KEY is blank"],
+		[
+			"a whitespace-only key path [32]",
+			() => ({ ...both(), HARNESS_GITHUB_APP_KEY: " " }),
+			"HARNESS_GITHUB_APP_KEY is blank",
+		],
 	])("%s exits 1 naming it, and lists nothing", async (_, env, reason) => {
 		const r = await run(listing([pull(1)], green(1)), env());
 		expect([r.code, r.out, r.calls, requests]).toEqual([1, "", [], []]);

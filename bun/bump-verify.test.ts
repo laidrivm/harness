@@ -3,25 +3,12 @@
  * GitHub's API and a real git repository. The install and the gate's
  * commands are injected, so no case reaches the network or runs a suite.
  */
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	test,
-} from "bun:test";
-import {
-	mkdirSync,
-	mkdtempSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { CHECK, verify } from "./bump.ts";
 import { GREEN, git, type Served, serve } from "./bump.fixture.ts";
+import { CHECK, verify } from "./bump.ts";
 
 const OLD = "eddf1fdd56642c48a3b222034ec6268c9b55971f";
 const NEW = "9d321b61a74c70d4d3324d11e64fef488f2202a0";
@@ -73,10 +60,7 @@ function consumer(harness: Record<string, unknown> = { bumpTest: "bun test" }) {
 function runner(fail?: string) {
 	const calls: { argv: string[]; cwd: string }[] = [];
 	const step = (argv: string[]) =>
-		argv[0] === "sh"
-			? "bumpTest"
-			: (argv.find((a) => a.endsWith(".ts"))?.match(/(\w+)\.ts$/)?.[1] ??
-				"install");
+		argv[0] === "sh" ? "bumpTest" : (argv.find((a) => a.endsWith(".ts"))?.match(/(\w+)\.ts$/)?.[1] ?? "install");
 	const run = (argv: string[], cwd: string) => {
 		calls.push({ argv, cwd });
 		return step(argv) === fail ? 1 : 0;
@@ -96,11 +80,7 @@ describe("choosing a target", () => {
 		["failed", NEW, [{ conclusion: "failure" }]],
 		["absent", NEW, []],
 		["green but already pinned", OLD, [GREEN]],
-		[
-			"green only from another app",
-			NEW,
-			[{ conclusion: "success", app: { slug: "other" } }],
-		],
+		["green only from another app", NEW, [{ conclusion: "success", app: { slug: "other" } }]],
 	])("a head whose test run is %s reports no target and changes nothing", async (_, sha, served) => {
 		api.head = sha;
 		api.runs = served;
@@ -173,9 +153,7 @@ describe("what verify stages and asks", () => {
 				return base(argv, cwd);
 			};
 			const { tree } = await verify(dir, deps(run));
-			expect(git(dir, "ls-tree", "-r", "--name-only", tree)).not.toContain(
-				leftover,
-			);
+			expect(git(dir, "ls-tree", "-r", "--name-only", tree)).not.toContain(leftover);
 		},
 	);
 
@@ -189,9 +167,7 @@ describe("what verify stages and asks", () => {
 	test("an API answer that is not OK rejects naming the path", async () => {
 		api.broken = true;
 		const { run, calls } = runner();
-		await expect(verify(consumer(), deps(run))).rejects.toThrow(
-			"commits/main: 500",
-		);
+		await expect(verify(consumer(), deps(run))).rejects.toThrow("commits/main: 500");
 		expect(calls).toEqual([]);
 	});
 });
@@ -227,9 +203,7 @@ describe("bump.ts run as a script", () => {
 describe("the check a bump waits for", () => {
 	// A check run is named by its job's `name`, or by the job's key without one.
 	test("the harness's own CI has a job of that name, run on a push to main", () => {
-		const workflow = Bun.YAML.parse(
-			readFileSync(join(import.meta.dir, "../.github/workflows/test.yml"), "utf8"),
-		) as {
+		const workflow = Bun.YAML.parse(readFileSync(join(import.meta.dir, "../.github/workflows/test.yml"), "utf8")) as {
 			on: { push?: { branches?: string[] } };
 			jobs: Record<string, { name?: string }>;
 		};

@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { realpathSync } from "node:fs";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
-import { ran, ranUnder, RUNNER_STEPS } from "./gate-ledger.ts";
-import { run, runRecord, stateWith, tasks, TWO } from "./goal-check.fixture.ts";
+import { RUNNER_STEPS, ran, ranUnder } from "./gate-ledger.ts";
+import { run, runRecord, stateWith, TWO, tasks } from "./goal-check.fixture.ts";
 
 /**
  * `ran()` asked about one runner step: only that step's record answers it, so

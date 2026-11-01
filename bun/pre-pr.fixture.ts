@@ -47,10 +47,7 @@ export function records(state: string): Record<string, unknown>[] {
 		.map((line) => JSON.parse(line));
 }
 
-export const head = (dir: string) =>
-	Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: dir })
-		.stdout.toString()
-		.trim();
+export const head = (dir: string) => Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: dir }).stdout.toString().trim();
 
 /** The fabricated manifest with `harness.bumpTest` set to `command`, or left out. */
 export function checks(command?: string): string {

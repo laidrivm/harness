@@ -9,30 +9,20 @@
  * to the tree to find out which.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	archived,
-	cleanup,
-	complete,
-	fabricate,
-} from "./board-state.fixture.ts";
+import { archived, cleanup, complete, fabricate } from "./board-state.fixture.ts";
 import { boardState } from "./board-state.ts";
 
 afterAll(cleanup);
 
 /** A change whose `.openspec.yaml` carries `after`, written as `yaml` says. */
-const ordered = (slug: string, after: string) =>
-	complete(slug, `schema: spec-driven\nafter: ${after}\n`);
+const ordered = (slug: string, after: string) => complete(slug, `schema: spec-driven\nafter: ${after}\n`);
 
 // spec: task-board/an-after-naming-a-slug-that-does-not-exist
 describe("an after: naming a slug the tree does not hold", () => {
 	test("fails naming the slug and the file, rather than reading it as landed", () => {
-		const tree = fabricate(
-			ordered("score-calibration", "[outcome-calibraton]"),
-		);
+		const tree = fabricate(ordered("score-calibration", "[outcome-calibraton]"));
 		expect(() => boardState(tree)).toThrow(/outcome-calibraton/);
-		expect(() => boardState(tree)).toThrow(
-			/openspec\/changes\/score-calibration\/\.openspec\.yaml/,
-		);
+		expect(() => boardState(tree)).toThrow(/openspec\/changes\/score-calibration\/\.openspec\.yaml/);
 	});
 
 	test("an archived slug resolves, the archive being where landed work sits", () => {
@@ -64,34 +54,21 @@ describe("an after: that is not a list", () => {
 	});
 
 	test("a mapping fails naming the file", () => {
-		const tree = fabricate(
-			complete(
-				"score-calibration",
-				"schema: spec-driven\nafter:\n  outcome-calibration: true\n",
-			),
-		);
-		expect(() => boardState(tree)).toThrow(
-			/score-calibration\/\.openspec\.yaml/,
-		);
+		const tree = fabricate(complete("score-calibration", "schema: spec-driven\nafter:\n  outcome-calibration: true\n"));
+		expect(() => boardState(tree)).toThrow(/score-calibration\/\.openspec\.yaml/);
 	});
 
 	test("a list holding something that is not a slug fails naming the file", () => {
 		const tree = fabricate(ordered("score-calibration", "[7]"));
-		expect(() => boardState(tree)).toThrow(
-			/score-calibration\/\.openspec\.yaml/,
-		);
+		expect(() => boardState(tree)).toThrow(/score-calibration\/\.openspec\.yaml/);
 	});
 
 	test("a file that is not YAML at all fails naming the file", () => {
-		const tree = fabricate(
-			complete("score-calibration", "after: [a\n  - unclosed: {\n"),
-		);
+		const tree = fabricate(complete("score-calibration", "after: [a\n  - unclosed: {\n"));
 		// "not YAML" as well as the path: every other case in this block also
 		// throws naming that file, so the path alone would pass on a parse that
 		// succeeded and failed further down for a different reason.
-		expect(() => boardState(tree)).toThrow(
-			/score-calibration\/\.openspec\.yaml: not YAML/,
-		);
+		expect(() => boardState(tree)).toThrow(/score-calibration\/\.openspec\.yaml: not YAML/);
 	});
 });
 
@@ -134,15 +111,8 @@ describe("an ordering that contradicts itself", () => {
 		} catch (error) {
 			said = error instanceof Error ? error.message : String(error);
 		}
-		for (const slug of [
-			"beta-refit",
-			"score-calibration",
-			"side-and-phase-deltas",
-		])
-			expect(said).toContain(slug);
-		expect(
-			said.split("\n").filter((line) => line.includes("cycle")).length,
-		).toBe(1);
+		for (const slug of ["beta-refit", "score-calibration", "side-and-phase-deltas"]) expect(said).toContain(slug);
+		expect(said.split("\n").filter((line) => line.includes("cycle")).length).toBe(1);
 	});
 
 	test("a ring reached from outside it is still reported once", () => {
@@ -161,9 +131,7 @@ describe("an ordering that contradicts itself", () => {
 		} catch (error) {
 			said = error instanceof Error ? error.message : String(error);
 		}
-		expect(
-			said.split("\n").filter((line) => line.includes("cycle")).length,
-		).toBe(1);
+		expect(said.split("\n").filter((line) => line.includes("cycle")).length).toBe(1);
 		expect(said).toContain("beta-refit");
 		expect(said).toContain("score-calibration");
 	});
@@ -183,8 +151,6 @@ describe("an ordering that contradicts itself", () => {
 		expect(said).toContain("suggestion-calibration");
 		// Once, from whichever member the sweep reaches first: a cycle reported
 		// once per member reads as two arguments rather than as one.
-		expect(
-			said.split("\n").filter((line) => line.includes("cycle")).length,
-		).toBe(1);
+		expect(said.split("\n").filter((line) => line.includes("cycle")).length).toBe(1);
 	});
 });

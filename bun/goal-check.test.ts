@@ -7,8 +7,8 @@ import {
 	CHANGE,
 	head,
 	out,
-	prs,
 	proposal,
+	prs,
 	records,
 	run,
 	runRecord,
@@ -178,7 +178,10 @@ describe("the before-push form", () => {
 	// spec: stage-goal/ready-with-no-pull-request
 	test("a ready step with no pull request and no gh on PATH is met [1]", () => {
 		const r = run(tasks(TWO), BEFORE, { gh: null });
-		expect([r.code, r.last]).toEqual([0, expect.stringMatching(/^goal met: apply demo step 2 at \w{7}, before the push$/)]);
+		expect([r.code, r.last]).toEqual([
+			0,
+			expect.stringMatching(/^goal met: apply demo step 2 at \w{7}, before the push$/),
+		]);
 	});
 
 	// spec: stage-goal/ready-with-no-pull-request
@@ -191,8 +194,16 @@ describe("the before-push form", () => {
 	test.each([
 		["a detached HEAD [3]", (d: string) => git(d, "switch", "-q", "--detach"), "HEAD names no branch"],
 		["a missing record [4]", () => {}, "no passing pre-PR run record for"],
-		["a tracked edit [5]", (d: string) => writeFileSync(join(d, CHANGE, "tasks.md"), "edited\n"), "tracked files differ from HEAD"],
-		["an index git status cannot read", (d: string) => writeFileSync(join(d, ".git", "index"), "x"), "tracked files differ from HEAD"],
+		[
+			"a tracked edit [5]",
+			(d: string) => writeFileSync(join(d, CHANGE, "tasks.md"), "edited\n"),
+			"tracked files differ from HEAD",
+		],
+		[
+			"an index git status cannot read",
+			(d: string) => writeFileSync(join(d, ".git", "index"), "x"),
+			"tracked files differ from HEAD",
+		],
 	])("%s is open, naming it", (_, arrange, reason) => {
 		const dir = tasks(TWO);
 		const state = reason.startsWith("no passing") ? stateWith() : stateWith(runRecord(dir));

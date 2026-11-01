@@ -29,10 +29,7 @@ export function repo(tracked: Lists, local?: string[] | string): string {
 	config.permissions = { deny: [], ask: [], allow: [], ...tracked };
 	const files: Record<string, string> = {};
 	if (local !== undefined)
-		files[LOCAL] =
-			typeof local === "string"
-				? local
-				: JSON.stringify({ permissions: { allow: local } });
+		files[LOCAL] = typeof local === "string" ? local : JSON.stringify({ permissions: { allow: local } });
 	return consumer(config, files);
 }
 
@@ -56,9 +53,7 @@ export function run(dir: string) {
 }
 
 /** What the sweep reports for one local entry against `tracked`. */
-export const report = (tracked: Lists, entry: string) =>
-	sweep(repo(tracked, [entry]))?.reported ?? [];
+export const report = (tracked: Lists, entry: string) => sweep(repo(tracked, [entry]))?.reported ?? [];
 
 /** The line the sweep reports for a gap. */
-export const gap = (entry: string) =>
-	`gap: ${entry} — promote it to .claude/settings.json or drop it`;
+export const gap = (entry: string) => `gap: ${entry} — promote it to .claude/settings.json or drop it`;

@@ -8,19 +8,13 @@
  * and the seam is whether the tree derives an answer at all.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	archived,
-	cleanup,
-	complete,
-	fabricate,
-} from "./board-state.fixture.ts";
+import { archived, cleanup, complete, fabricate } from "./board-state.fixture.ts";
 import { boardState } from "./board-state.ts";
 
 afterAll(cleanup);
 
 /** A change whose `.openspec.yaml` carries `after`, written as `yaml` says. */
-const ordered = (slug: string, after: string) =>
-	complete(slug, `schema: spec-driven\nafter: ${after}\n`);
+const ordered = (slug: string, after: string) => complete(slug, `schema: spec-driven\nafter: ${after}\n`);
 
 // spec: task-board/a-change-whose-predecessor-has-not-landed
 describe("a predecessor that has not landed", () => {
@@ -42,9 +36,7 @@ describe("a predecessor that has not landed", () => {
 			...ordered("score-calibration", "[outcome-calibration]"),
 			...half,
 		});
-		expect(boardState(tree).edges["score-calibration"]?.blocking).toEqual([
-			"outcome-calibration",
-		]);
+		expect(boardState(tree).edges["score-calibration"]?.blocking).toEqual(["outcome-calibration"]);
 	});
 
 	test("only the predecessors that have not landed are named", () => {
@@ -101,11 +93,10 @@ describe("a change naming no predecessor", () => {
 	test("an empty .openspec.yaml reports takeable rather than malformed", () => {
 		// YAML parses an empty document to `null`, which is neither a mapping
 		// carrying no `after:` nor a shape worth reporting.
-		expect(
-			boardState(fabricate(complete("focus-restore-idiom", ""))).edges[
-				"focus-restore-idiom"
-			],
-		).toEqual({ after: [], blocking: [] });
+		expect(boardState(fabricate(complete("focus-restore-idiom", ""))).edges["focus-restore-idiom"]).toEqual({
+			after: [],
+			blocking: [],
+		});
 	});
 });
 

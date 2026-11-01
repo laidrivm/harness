@@ -39,10 +39,7 @@ export function fabricate(tree: Record<string, string>): string {
 }
 
 /** Every artefact a complete change directory holds, for one slug. */
-export function complete(
-	slug: string,
-	yaml = "schema: spec-driven\n",
-): Record<string, string> {
+export function complete(slug: string, yaml = "schema: spec-driven\n"): Record<string, string> {
 	const dir = `openspec/changes/${slug}`;
 	return {
 		[`${dir}/.openspec.yaml`]: yaml,
@@ -54,9 +51,6 @@ export function complete(
 }
 
 /** An archived change directory, named the way `openspec archive` names one. */
-export const archived = (
-	date: string,
-	slug: string,
-): Record<string, string> => ({
+export const archived = (date: string, slug: string): Record<string, string> => ({
 	[`openspec/changes/archive/${date}-${slug}/proposal.md`]: "",
 });

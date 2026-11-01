@@ -4,8 +4,8 @@
  * `settings.test.ts`, which is near its cap.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { ASK, settings } from "./settings.ts";
 import { changed, cleanup, consumer } from "./settings.fixture.ts";
+import { ASK, settings } from "./settings.ts";
 
 afterAll(cleanup);
 
@@ -28,7 +28,13 @@ describe("the gh run ask entries", () => {
 	// spec: agent-permissions/re-running-a-failed-run agent-permissions/a-flag-before-the-subcommand agent-permissions/cancelling-or-deleting-a-run
 	test("ASK holds each write in both forms, after the manifest entries (plan review)", () => {
 		expect(ASK.slice(-GH_RUN.length)).toEqual(GH_RUN);
-		for (const command of ["gh run rerun 1", "gh run -R o/r rerun 1", "gh run rerun", "gh run cancel 1", "gh run delete 1"])
+		for (const command of [
+			"gh run rerun 1",
+			"gh run -R o/r rerun 1",
+			"gh run rerun",
+			"gh run cancel 1",
+			"gh run delete 1",
+		])
 			expect(ASK.some((entry) => matches(entry, command))).toBe(true);
 	});
 

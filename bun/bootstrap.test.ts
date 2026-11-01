@@ -8,14 +8,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	BOOTSTRAP,
-	HOOKS,
-	NOTION_GUARD,
-	QUESTION_GATE,
-	TURN_MARK,
-	TURN_STOP,
-} from "./bootstrap.ts";
+import { BOOTSTRAP, HOOKS, NOTION_GUARD, QUESTION_GATE, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
 
 const made: string[] = [];
 
@@ -29,10 +22,7 @@ function project(guard?: string): string {
 	made.push(dir);
 	if (guard !== undefined) {
 		mkdirSync(join(dir, "node_modules/harness/bun"), { recursive: true });
-		writeFileSync(
-			join(dir, "node_modules/harness/bun/command-guard.ts"),
-			guard,
-		);
+		writeFileSync(join(dir, "node_modules/harness/bun/command-guard.ts"), guard);
 	}
 	return dir;
 }
@@ -48,16 +38,12 @@ function raw(dir: string, input: string) {
 }
 
 /** The hook's verdict on `command` in `dir`. */
-const hook = (dir: string, command: string) =>
-	raw(dir, JSON.stringify({ tool_name: "Bash", tool_input: { command } }));
+const hook = (dir: string, command: string) => raw(dir, JSON.stringify({ tool_name: "Bash", tool_input: { command } }));
 
 describe("before the install", () => {
-	test.each(["bun install", "bun i", "bun install --frozen-lockfile"])(
-		"%s runs",
-		(command) => {
-			expect(hook(project(), command).code).toBe(0);
-		},
-	);
+	test.each(["bun install", "bun i", "bun install --frozen-lockfile"])("%s runs", (command) => {
+		expect(hook(project(), command).code).toBe(0);
+	});
 
 	test.each([
 		["any other command", "git status"],
@@ -99,11 +85,7 @@ describe("after the install", () => {
 });
 
 /** A project with `script` installed as `file`, the turn gate by default. */
-function gated(
-	script?: string,
-	prefix = "harness-turn-gate-",
-	file = "turn-gate.ts",
-): string {
+function gated(script?: string, prefix = "harness-turn-gate-", file = "turn-gate.ts"): string {
 	const dir = mkdtempSync(join(tmpdir(), prefix));
 	made.push(dir);
 	if (script !== undefined) {
@@ -168,8 +150,7 @@ describe("the turn gate after the install", () => {
 });
 
 /** A project with `script` installed as the Notion guard. */
-const guarded = (script: string) =>
-	gated(script, "harness-notion-guard-", "notion-guard.ts");
+const guarded = (script: string) => gated(script, "harness-notion-guard-", "notion-guard.ts");
 
 describe("the Notion guard's registration", () => {
 	test("before the install, the call goes through with nothing printed", () => {
@@ -194,8 +175,7 @@ describe("the Notion guard's registration", () => {
 });
 
 describe("the question gate's registration", () => {
-	const gate = (script: string) =>
-		gated(script, "harness-question-gate-", "question-gate.ts");
+	const gate = (script: string) => gated(script, "harness-question-gate-", "question-gate.ts");
 
 	test("before the install, nothing is printed, so the prompt stands", () => {
 		expect(turn(QUESTION_GATE, gated())).toEqual({
@@ -206,9 +186,7 @@ describe("the question gate's registration", () => {
 	});
 
 	test("after the install, the gate's answer reaches Claude Code", () => {
-		expect(turn(QUESTION_GATE, gate("console.log('allow');\n")).stdout).toBe(
-			"allow\n",
-		);
+		expect(turn(QUESTION_GATE, gate("console.log('allow');\n")).stdout).toBe("allow\n");
 	});
 
 	test("a gate that fails to run prints no answer", () => {
@@ -219,9 +197,7 @@ describe("the question gate's registration", () => {
 describe("the loop guard's registrations", () => {
 	/** The text `HOOKS` registers the guard with on `event`. */
 	const on = (event: string) => {
-		const hook = HOOKS.find(
-			(h) => h.event === event && h.name === "harness loop guard",
-		);
+		const hook = HOOKS.find((h) => h.event === event && h.name === "harness loop guard");
 		expect(hook).toBeDefined();
 		return hook?.command ?? "";
 	};

@@ -58,9 +58,7 @@ const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 /** Every object's keys sorted, at any depth, so key order never splits a call. */
 const sorted = (_: string, value: unknown) =>
 	value && typeof value === "object" && !Array.isArray(value)
-		? Object.fromEntries(
-				Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
-			)
+		? Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
 		: value;
 
 /**
@@ -69,9 +67,7 @@ const sorted = (_: string, value: unknown) =>
  */
 export function callKey(tool: string, input: unknown): string {
 	const call =
-		input && typeof input === "object" && !Array.isArray(input)
-			? { ...input, description: undefined }
-			: input;
+		input && typeof input === "object" && !Array.isArray(input) ? { ...input, description: undefined } : input;
 	return sha(JSON.stringify([tool, call], sorted));
 }
 
@@ -86,12 +82,7 @@ export function fingerprint(key: string, error: string): string {
 }
 
 /** The count after one more failure; from the third on, the call is barred. */
-export function fail(
-	count: Count,
-	key: string,
-	print: string,
-	prompt: string | null,
-): Count {
+export function fail(count: Count, key: string, print: string, prompt: string | null): Count {
 	const n = (Number(count.failures[print]) || 0) + 1;
 	const failures = { ...count.failures, [print]: n };
 	if (n < BAR_AT) return { ...count, failures };
@@ -100,8 +91,7 @@ export function fail(
 
 /** What both the warning and the refusal tell the agent to do instead. */
 const ADVICE =
-	"Do not retry it: change approach, or end the turn with `BLOCKED` " +
-	"naming what only the user can settle.";
+	"Do not retry it: change approach, or end the turn with `BLOCKED` " + "naming what only the user can settle.";
 
 /** The warning beside the error of a failure that bars its call. */
 export function warning(tool: string, n: number): string {
@@ -112,12 +102,7 @@ export function warning(tool: string, n: number): string {
 }
 
 /** The refusal of a call about to run, or nothing when it may run. */
-export function refusal(
-	count: Count,
-	tool: string,
-	key: string,
-	prompt: string | null,
-): string | undefined {
+export function refusal(count: Count, tool: string, key: string, prompt: string | null): string | undefined {
 	const bar = count.barred[key];
 	if (bar?.prompt !== prompt) return;
 	return (
@@ -150,8 +135,7 @@ function load(file: string): Count {
  */
 function countFile(store: string, event: Event): string | undefined {
 	const { session_id: session, agent_id: agent } = event;
-	const safe = (id: unknown): id is string =>
-		typeof id === "string" && /^[\w-]+$/.test(id);
+	const safe = (id: unknown): id is string => typeof id === "string" && /^[\w-]+$/.test(id);
 	if (!safe(session) || (agent != null && !safe(agent))) return;
 	return join(store, agent == null ? session : `${session}.${agent}`);
 }

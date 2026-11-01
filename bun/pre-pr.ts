@@ -27,7 +27,9 @@ import { readPullRequests } from "./pull-requests.ts";
 
 // trimEnd: porcelain's first line can open with a space that is part of it.
 const git = (...args: string[]) =>
-	Bun.spawnSync(["git", ...args]).stdout.toString().trimEnd();
+	Bun.spawnSync(["git", ...args])
+		.stdout.toString()
+		.trimEnd();
 // A status git cannot read is never a clean tree: the failure stands in for its lines.
 // The flag overrides `status.showUntrackedFiles`, which can hide the untracked files a step reads;
 // `all` names a file in a new directory, where `normal` names only the directory.
@@ -45,12 +47,18 @@ const dirty = status();
 const exit = (code: number | null) => (code === 0 || code === 1 ? code : 2);
 const shown = { stdout: "inherit", stderr: "inherit" } as const;
 // Resolved once, so the budget and the step list read one diff.
-const base = process.argv[2] || Bun.spawnSync(["bash", join(import.meta.dir, "diff-base.sh")], { cwd: top }).stdout.toString().trim();
+const base =
+	process.argv[2] ||
+	Bun.spawnSync(["bash", join(import.meta.dir, "diff-base.sh")], { cwd: top })
+		.stdout.toString()
+		.trim();
 
 const budget = exit(
 	// From the top level: the budget's `.` pathspec would otherwise count only the subdirectory.
-	Bun.spawnSync(["bash", join(import.meta.dir, "diff-budget.sh"), base, ...process.argv.slice(3)], { cwd: top, ...shown })
-		.exitCode,
+	Bun.spawnSync(["bash", join(import.meta.dir, "diff-budget.sh"), base, ...process.argv.slice(3)], {
+		cwd: top,
+		...shown,
+	}).exitCode,
 );
 let checks = 2;
 try {

@@ -4,13 +4,7 @@
  * the consumer's to assert, from its own tree.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	mkdirSync,
-	mkdtempSync,
-	rmSync,
-	symlinkSync,
-	writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { gates, links, pin, workflows } from "./check.ts";
@@ -22,8 +16,7 @@ afterAll(() => {
 });
 
 /** The link a consumer tracks for `name`, as `bun install` resolves it. */
-const intoPackage = (name: string) =>
-	`../../node_modules/harness/core/skills/${name}`;
+const intoPackage = (name: string) => `../../node_modules/harness/core/skills/${name}`;
 
 /**
  * A consumer repository holding `files` and `symlinks`, all tracked, beside an
@@ -51,8 +44,7 @@ function consumer({
 	}
 	Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
 	Bun.spawnSync(["git", "add", "-A"], { cwd: dir });
-	for (const name of installed)
-		write(`node_modules/harness/core/skills/${name}/SKILL.md`, `# ${name}\n`);
+	for (const name of installed) write(`node_modules/harness/core/skills/${name}/SKILL.md`, `# ${name}\n`);
 	return dir;
 }
 
@@ -75,12 +67,8 @@ describe("the gates over a consumer", () => {
 				},
 			}),
 		);
-		expect(said).toContain(
-			'harness.suppressions["src/a.ts some-marker"].why gives no reason — write one as text',
-		);
-		expect(said).toContainEqual(
-			expect.stringContaining("harness.uncitedFloor.why"),
-		);
+		expect(said).toContain('harness.suppressions["src/a.ts some-marker"].why gives no reason — write one as text');
+		expect(said).toContainEqual(expect.stringContaining("harness.uncitedFloor.why"));
 	});
 });
 
@@ -112,9 +100,7 @@ describe("a skill link", () => {
 
 	test("a tracked file that is not a link fails, naming it", () => {
 		const dir = consumer({ files: { ".claude/skills/local/SKILL.md": "x\n" } });
-		expect(links(dir)).toEqual([
-			".claude/skills/local/SKILL.md: tracked, and not a link into the harness",
-		]);
+		expect(links(dir)).toEqual([".claude/skills/local/SKILL.md: tracked, and not a link into the harness"]);
 	});
 
 	test("an untracked entry is not read", () => {
@@ -139,9 +125,7 @@ describe("a workflow", () => {
 				),
 			},
 		});
-		expect(workflows(dir)).toEqual([
-			".github/workflows/lint.yml: job check checks out laidrivm/harness",
-		]);
+		expect(workflows(dir)).toEqual([".github/workflows/lint.yml: job check checks out laidrivm/harness"]);
 	});
 
 	test("calling a reusable workflow from the harness fails, naming it", () => {
@@ -170,14 +154,10 @@ describe("a workflow", () => {
 	test("a step running an action from the harness is named", () => {
 		const dir = consumer({
 			files: {
-				".github/workflows/lint.yml": workflow(
-					"      - uses: laidrivm/harness/actions/gates@main\n",
-				),
+				".github/workflows/lint.yml": workflow("      - uses: laidrivm/harness/actions/gates@main\n"),
 			},
 		});
-		expect(workflows(dir)).toEqual([
-			".github/workflows/lint.yml: job check runs laidrivm/harness/actions/gates@main",
-		]);
+		expect(workflows(dir)).toEqual([".github/workflows/lint.yml: job check runs laidrivm/harness/actions/gates@main"]);
 	});
 
 	test("the harness named in another letter case is named all the same", () => {
@@ -188,9 +168,7 @@ describe("a workflow", () => {
 				),
 			},
 		});
-		expect(workflows(dir)).toEqual([
-			".github/workflows/lint.yml: job check checks out laidrivm/harness",
-		]);
+		expect(workflows(dir)).toEqual([".github/workflows/lint.yml: job check checks out laidrivm/harness"]);
 	});
 });
 
@@ -217,9 +195,7 @@ describe("the pin", () => {
 				devDependencies: { harness: spec },
 			}),
 		);
-		expect(pin(dir)).toEqual([
-			"package.json: names the harness 2 times, not once",
-		]);
+		expect(pin(dir)).toEqual(["package.json: names the harness 2 times, not once"]);
 	});
 
 	test("the consumer's values under harness are not a second entry", () => {

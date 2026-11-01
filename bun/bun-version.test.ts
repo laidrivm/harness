@@ -18,9 +18,14 @@ function problems(root: string): string[] {
 	const readme = existsSync(join(root, "README.md")) ? readFileSync(join(root, "README.md"), "utf8") : "";
 	const setup = readme.match(SETUP)?.[1];
 	const found: string[] = [];
-	if (!setup || !EXACT.test(setup)) found.push("README.md holds no setup script line installing bun at an exact version");
+	if (!setup || !EXACT.test(setup))
+		found.push("README.md holds no setup script line installing bun at an exact version");
 	const dir = join(root, ".github/workflows");
-	const workflows = existsSync(dir) ? readdirSync(dir).filter((name) => /\.ya?ml$/.test(name)).sort() : [];
+	const workflows = existsSync(dir)
+		? readdirSync(dir)
+				.filter((name) => /\.ya?ml$/.test(name))
+				.sort()
+		: [];
 	const sites: [string, string][] = [];
 	for (const name of workflows)
 		for (const [, version] of readFileSync(join(dir, name), "utf8").matchAll(PINNED))
@@ -48,7 +53,8 @@ function tree(readme: string, workflows: Record<string, string>): string {
 	return root;
 }
 
-const step = (version: string) => `      - uses: oven-sh/setup-bun@v2\n        with:\n          bun-version: ${version}\n`;
+const step = (version: string) =>
+	`      - uses: oven-sh/setup-bun@v2\n        with:\n          bun-version: ${version}\n`;
 const SETUP_LINE = "Setup script: `npm i -g bun@1.4.2`.\n";
 
 describe("the bun version sites", () => {
@@ -61,7 +67,9 @@ describe("the bun version sites", () => {
 
 	// spec: cloud-sessions/a-site-the-test-cannot-find
 	test("no workflow naming a bun-version fails, naming it [40]", () => {
-		expect(problems(tree(SETUP_LINE, { "test.yml": "on: push\n" }))).toEqual(["no tracked workflow names a bun-version"]);
+		expect(problems(tree(SETUP_LINE, { "test.yml": "on: push\n" }))).toEqual([
+			"no tracked workflow names a bun-version",
+		]);
 	});
 
 	// spec: cloud-sessions/every-site-agrees

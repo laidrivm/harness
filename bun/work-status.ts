@@ -107,7 +107,8 @@ function evidence(top: string, pointer: string, to: string, seen: { commit?: str
 					? ARCHIVED.exec(archive)?.[1]
 					: undefined;
 		const derived = slug && Object.hasOwn(state.status, slug) ? state.status[slug] : undefined;
-		if (!slug || !derived) throw new Refusal("no-pointer", `the card's Pointer "${pointer}" names no change on origin/main`);
+		if (!slug || !derived)
+			throw new Refusal("no-pointer", `the card's Pointer "${pointer}" names no change on origin/main`);
 		if (derived === "done" || (to === "proposed" && derived === "proposed")) return undefined;
 		if (to === "applied" && derived === "proposed") {
 			const why = unticked(readFileSync(join(dir, "openspec/changes", slug, "tasks.md"), "utf8"));
@@ -129,7 +130,13 @@ export async function status(card: string, to: string, timeout = 30_000): Promis
 		} catch {
 			seen.top = process.cwd();
 		}
-		recordCheckout("status", "block", id, { session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: seen.top }, seen.commit);
+		recordCheckout(
+			"status",
+			"block",
+			id,
+			{ session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: seen.top },
+			seen.commit,
+		);
 		return { lines: [`status: refused — ${why}`], code: 1 };
 	};
 	if (USER_ONLY.includes(to)) return refuse("user-only", `only the user moves a card to ${to}, in Notion`);
@@ -155,16 +162,20 @@ export async function status(card: string, to: string, timeout = 30_000): Promis
 				page_size: 100,
 			});
 			if (!Array.isArray(listed?.results)) throw new Refusal("unread", "the board's query gave no results");
-			if (listed.has_more !== false) throw new Refusal("wip-full", "more than one page of cards is at exploring … archiving");
+			if (listed.has_more !== false)
+				throw new Refusal("wip-full", "more than one page of cards is at exploring … archiving");
 			const n = listed.results.length;
-			if (n >= Number(limit)) throw new Refusal("wip-full", `${n} cards are at exploring … archiving, the WIP limit of ${limit}`);
+			if (n >= Number(limit))
+				throw new Refusal("wip-full", `${n} cards are at exploring … archiving, the WIP limit of ${limit}`);
 		}
 	} catch (error) {
 		return refuse(error instanceof Refusal ? error.id : "unread", (error as Error).message);
 	}
 	let now: string | undefined;
 	try {
-		const written = await found.call("the Status write", `/v1/pages/${card}`, "PATCH", { properties: { Status: { select: { name: to } } } });
+		const written = await found.call("the Status write", `/v1/pages/${card}`, "PATCH", {
+			properties: { Status: { select: { name: to } } },
+		});
 		// Notion's answer, not `to`: the line is the read-back core/feature-workflow.md asks for.
 		now = written?.properties?.Status?.select?.name;
 	} catch (error) {

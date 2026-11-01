@@ -75,7 +75,10 @@ describe("the pull request", () => {
 
 	// spec: work-resolve/a-branch-open-into-two-bases
 	test("--pr 9 on a branch open as #7 and #9 reads #9's threads", async () => {
-		const run = await resolve({ args: ["resolve", "--pr", "9", "--head", A, "--comment", "11"], gh: { pulls: [[open(7, B), open(9)]], pages: [page(thread("11"))] } });
+		const run = await resolve({
+			args: ["resolve", "--pr", "9", "--head", A, "--comment", "11"],
+			gh: { pulls: [[open(7, B), open(9)]], pages: [page(thread("11"))] },
+		});
 		expect([run.code, run.lines]).toEqual([0, ["resolve: 11 resolved"]]);
 		expect(run.threads[0].args).toContain("n=9");
 	});
@@ -145,12 +148,18 @@ describe("placing the ids", () => {
 
 	// spec: work-resolve/a-replys-id
 	test("a reply's id inside the bot's thread refuses", async () => {
-		refused(await resolve({ args: args("12"), gh: { ...PR7, pages: [page(thread("11", { replies: ["12"] }))] } }), "12");
+		refused(
+			await resolve({ args: args("12"), gh: { ...PR7, pages: [page(thread("11", { replies: ["12"] }))] } }),
+			"12",
+		);
 	});
 
 	// spec: work-resolve/a-thread-the-user-opened
 	test("one of two ids opening the user's thread refuses the whole call", async () => {
-		const run = await resolve({ args: args("11", "12"), gh: { ...PR7, pages: [page(thread("11"), thread("12", { login: "laidrivm" }))] } });
+		const run = await resolve({
+			args: args("11", "12"),
+			gh: { ...PR7, pages: [page(thread("11"), thread("12", { login: "laidrivm" }))] },
+		});
 		refused(run, "12");
 		expect(run.lines.at(-1)).not.toContain("11");
 	});
@@ -173,7 +182,10 @@ describe("placing the ids", () => {
 	});
 
 	test("a page with no pull request in it refuses as a failed read", async () => {
-		refused(await resolve({ gh: { ...PR7, pages: [{ data: { repository: { pullRequest: null } } }] } }), "cannot read the review threads of #7");
+		refused(
+			await resolve({ gh: { ...PR7, pages: [{ data: { repository: { pullRequest: null } } }] } }),
+			"cannot read the review threads of #7",
+		);
 	});
 
 	// spec: work-resolve/threads-past-the-first-page
@@ -198,8 +210,15 @@ describe("the resolves", () => {
 
 	// spec: work-resolve/one-resolved-one-open
 	test("a resolved and an unresolved one: one call, a skip and a resolved line", async () => {
-		const run = await resolve({ args: args("1", "2"), gh: { ...PR7, pages: [page(thread("1", { resolved: true }), thread("2"))] } });
-		expect([run.code, run.lines, run.mutations]).toEqual([0, ["resolve: 1 already resolved, skipped", "resolve: 2 resolved"], ["T_2"]]);
+		const run = await resolve({
+			args: args("1", "2"),
+			gh: { ...PR7, pages: [page(thread("1", { resolved: true }), thread("2"))] },
+		});
+		expect([run.code, run.lines, run.mutations]).toEqual([
+			0,
+			["resolve: 1 already resolved, skipped", "resolve: 2 resolved"],
+			["T_2"],
+		]);
 	});
 
 	test("the same id named twice resolves once", async () => {
@@ -220,7 +239,10 @@ describe("the resolves", () => {
 
 	// spec: work-resolve/a-resolve-that-fails
 	test("the second of three failing leaves the first, names the second, skips the third", async () => {
-		const run = await resolve({ args: args("1", "2", "3"), gh: { ...PR7, pages: [page(thread("1"), thread("2"), thread("3"))], fail: [1] } });
+		const run = await resolve({
+			args: args("1", "2", "3"),
+			gh: { ...PR7, pages: [page(thread("1"), thread("2"), thread("3"))], fail: [1] },
+		});
 		expect(run.code).toBe(1);
 		expect(run.mutations).toEqual(["T_1", "T_2"]);
 		expect(run.lines).toEqual(["resolve: 1 resolved", "resolve: 2 failed — GraphQL: stub failure"]);

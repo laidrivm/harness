@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { change, clone, commit, lowered, ONE, run, SAID, TICKED } from "./board-loop.fixture.ts";
+import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { against, BOT, CARD, configured, standIn, TOKEN, USER } from "./notion-bot.fixture.ts";
 import { MARK, RUNNER_ASKS } from "./question-gate.ts";
 
@@ -54,7 +54,8 @@ describe("the launch form's question line", () => {
 		const { dir } = clone(change("demo", tasks));
 		const lines = stage(run(dir).calls);
 		expect(lines).toHaveLength(5);
-		for (const part of [MARK, "`page_id`", "`markdown`", "page-level", READ_BACK, ...FORM]) expect(lines[3]).toContain(part);
+		for (const part of [MARK, "`page_id`", "`markdown`", "page-level", READ_BACK, ...FORM])
+			expect(lines[3]).toContain(part);
 		// The doc's form closes the shell's single quote on this line.
 		expect(forms()).toContain(`${lines[3]}'`);
 	});
@@ -169,7 +170,11 @@ describe("the runner posts the question", () => {
 	// spec: board-loop/the-step-waits-on-the-user-s-answer
 	test("a posted question under goal open ends waiting, exit 0, naming the card", async () => {
 		const { dir } = clone();
-		const r = await pass(dir, { said: ASKED, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" }, configured());
+		const r = await pass(
+			dir,
+			{ said: ASKED, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" },
+			configured(),
+		);
 		expect(r.text).toContain(POSTED);
 		expect([r.code, r.last]).toEqual([0, `board-loop: waiting — apply demo step 1: question on ${CARD}`]);
 	});
@@ -177,7 +182,11 @@ describe("the runner posts the question", () => {
 	test("a question already waiting on the card ends waiting too, and nothing is posted", async () => {
 		const { dir } = clone();
 		notion.state.pending = true;
-		const r = await pass(dir, { said: ASKED, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" }, configured()).finally(() => {
+		const r = await pass(
+			dir,
+			{ said: ASKED, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" },
+			configured(),
+		).finally(() => {
 			notion.state.pending = false;
 		});
 		expect(r.text).toContain(`question: not posted — a question already waits on ${CARD}`);
@@ -188,7 +197,14 @@ describe("the runner posts the question", () => {
 	// spec: board-loop/a-question-the-runner-could-not-post
 	test("a question not posted for another reason under goal open stays open, exit 1", async () => {
 		const { dir } = clone();
-		const r = await pass(dir, { said: `QUESTION: ${CARD}x\n${MARK} Ship?`, beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete" }, configured());
+		const r = await pass(
+			dir,
+			{
+				said: `QUESTION: ${CARD}x\n${MARK} Ship?`,
+				beforePush: "goal open: apply demo step 1 at abc1234, before the push — group 1 is not complete",
+			},
+			configured(),
+		);
 		expect(r.code).toBe(1);
 		expect(r.last).toStartWith("board-loop: open — apply demo step 1: goal open");
 	});
@@ -234,7 +250,14 @@ describe("the triage's answer in the pick", () => {
 	test("settings: the pick prompt names the integration's id as the harness-answer author, Assign or not, the user's comment first [76] [77] [78] [79]", async () => {
 		const { dir } = clone();
 		const prompt = pick((await pass(dir, {}, configured())).calls);
-		for (const part of [`\`harness-answer\` whose author's id is ${BOT}`, "whether or not its `Assign` holds the user", `one by the user, whose id is ${USER}, opening with neither \`harness-question\` nor \`harness-answer\` also follows`, "in either order, the user's is the answer", "A `harness-answer` by any other author is no answer.", "that opens with neither `harness-question` nor `harness-answer`"])
+		for (const part of [
+			`\`harness-answer\` whose author's id is ${BOT}`,
+			"whether or not its `Assign` holds the user",
+			`one by the user, whose id is ${USER}, opening with neither \`harness-question\` nor \`harness-answer\` also follows`,
+			"in either order, the user's is the answer",
+			"A `harness-answer` by any other author is no answer.",
+			"that opens with neither `harness-question` nor `harness-answer`",
+		])
 			expect(prompt).toContain(part);
 	});
 
@@ -242,7 +265,10 @@ describe("the triage's answer in the pick", () => {
 	test("settings: an answer step's first line names which comment is the answer, by both ids, with no apostrophe [85]", async () => {
 		const { dir } = clone(change("demo", TICKED));
 		const first = stage((await pass(dir, {}, configured())).calls)[0];
-		for (const part of [`the first comment by the user, whose id is ${USER}, opening with neither`, `or else the \`harness-answer\` by ${BOT}`])
+		for (const part of [
+			`the first comment by the user, whose id is ${USER}, opening with neither`,
+			`or else the \`harness-answer\` by ${BOT}`,
+		])
 			expect(first).toContain(part);
 		expect(first.slice(first.indexOf("(after"), first.indexOf(") into"))).not.toContain("'");
 	});

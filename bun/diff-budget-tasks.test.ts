@@ -10,16 +10,12 @@ import { cleanup, gate, repo, tasks } from "./diff-budget.fixture.ts";
 afterAll(cleanup);
 
 test("ticking task boxes counts zero", () => {
-	const g = gate(
-		repo({ "tasks.md": tasks(30, " ") }, { "tasks.md": tasks(30, "x") }),
-	);
+	const g = gate(repo({ "tasks.md": tasks(30, " ") }, { "tasks.md": tasks(30, "x") }));
 	expect(g.total).toBe(0);
 });
 
 test("unticking counts zero too", () => {
-	const g = gate(
-		repo({ "tasks.md": tasks(12, "x") }, { "tasks.md": tasks(12, " ") }),
-	);
+	const g = gate(repo({ "tasks.md": tasks(12, "x") }, { "tasks.md": tasks(12, " ") }));
 	expect(g.total).toBe(0);
 });
 
@@ -51,10 +47,7 @@ test("an identical task line moved between files is counted on both sides", () =
 
 test("a task line moved with its box unchanged is counted on both sides", () => {
 	const g = gate(
-		repo(
-			{ "tasks.md": "- [x] write the parser\nmiddle\n" },
-			{ "tasks.md": "middle\n- [x] write the parser\n" },
-		),
+		repo({ "tasks.md": "- [x] write the parser\nmiddle\n" }, { "tasks.md": "middle\n- [x] write the parser\n" }),
 	);
 	expect(g.total).toBe(2);
 });
@@ -62,10 +55,7 @@ test("a task line moved with its box unchanged is counted on both sides", () => 
 test("the same task text ticked in two files pairs within each", () => {
 	const both = (box: " " | "x") => `- [${box}] write the parser\n`;
 	const g = gate(
-		repo(
-			{ "a/tasks.md": both(" "), "b/tasks.md": both(" ") },
-			{ "a/tasks.md": both("x"), "b/tasks.md": both("x") },
-		),
+		repo({ "a/tasks.md": both(" "), "b/tasks.md": both(" ") }, { "a/tasks.md": both("x"), "b/tasks.md": both("x") }),
 	);
 	expect(g.total).toBe(0);
 });
@@ -81,21 +71,11 @@ test("an indented task line pairs on a tick", () => {
 });
 
 test("re-indenting a task line is a change, not a tick", () => {
-	const g = gate(
-		repo(
-			{ "tasks.md": "- [x] write the parser\n" },
-			{ "tasks.md": "    - [x] write the parser\n" },
-		),
-	);
+	const g = gate(repo({ "tasks.md": "- [x] write the parser\n" }, { "tasks.md": "    - [x] write the parser\n" }));
 	expect(g.total).toBe(2);
 });
 
 test("an uppercase box pairs with a lowercase one", () => {
-	const g = gate(
-		repo(
-			{ "tasks.md": "- [ ] write the parser\n" },
-			{ "tasks.md": "- [X] write the parser\n" },
-		),
-	);
+	const g = gate(repo({ "tasks.md": "- [ ] write the parser\n" }, { "tasks.md": "- [X] write the parser\n" }));
 	expect(g.total).toBe(0);
 });

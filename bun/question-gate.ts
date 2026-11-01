@@ -120,9 +120,12 @@ type Use = { name: string; input: Input; result?: string };
 /** A Notion id as 32 lower-case hex digits, from an id or a URL holding one. */
 const id = (value: unknown) =>
 	typeof value === "string"
-		? (value.toLowerCase().replaceAll("-", "").match(/[0-9a-f]{32}/g) ?? []).at(
-				-1,
-			)
+		? (
+				value
+					.toLowerCase()
+					.replaceAll("-", "")
+					.match(/[0-9a-f]{32}/g) ?? []
+			).at(-1)
 		: undefined;
 
 /**
@@ -149,24 +152,16 @@ function uses(path: string): Use[] {
 		for (const block of content) {
 			// Ids are checked as strings: a use and a result that both lack one
 			// would otherwise pair under the key `undefined`.
-			if (
-				block?.type === "tool_use" &&
-				typeof block.id === "string" &&
-				typeof block.name === "string"
-			)
+			if (block?.type === "tool_use" && typeof block.id === "string" && typeof block.name === "string")
 				found.set(block.id, { name: block.name, input: block.input ?? {} });
 			const use =
-				block?.type === "tool_result" &&
-				typeof block.tool_use_id === "string" &&
-				found.get(block.tool_use_id);
+				block?.type === "tool_result" && typeof block.tool_use_id === "string" && found.get(block.tool_use_id);
 			if (use && !block.is_error)
 				use.result =
 					typeof block.content === "string"
 						? block.content
 						: (Array.isArray(block.content) ? block.content : [])
-								.map((part: { text?: unknown }) =>
-									typeof part?.text === "string" ? part.text : "",
-								)
+								.map((part: { text?: unknown }) => (typeof part?.text === "string" ? part.text : ""))
 								.join("");
 		}
 	}
@@ -205,20 +200,10 @@ const comments = (event: { tool_name?: unknown }) =>
 	typeof event.tool_name === "string" && /^mcp__.+__notion-create-comment$/.test(event.tool_name);
 
 /** The first condition the call fails, or `question` when it fails none. */
-function verdict(event: {
-	tool_name?: unknown;
-	tool_input?: Input;
-	transcript_path?: unknown;
-}): string {
+function verdict(event: { tool_name?: unknown; tool_input?: Input; transcript_path?: unknown }): string {
 	const input = event.tool_input;
-	if (
-		!comments(event) ||
-		typeof input !== "object" ||
-		input === null
-	)
-		return "unreadable";
-	if (input.discussion_id !== undefined || input.reply_to_comment_id !== undefined)
-		return "reply";
+	if (!comments(event) || typeof input !== "object" || input === null) return "unreadable";
+	if (input.discussion_id !== undefined || input.reply_to_comment_id !== undefined) return "reply";
 	if (input.selection_with_ellipsis !== undefined) return "anchored";
 	if (input.rich_text !== undefined) return "rich-text";
 	const text = fault(input.markdown);
@@ -235,15 +220,11 @@ function verdict(event: {
 	// last leaves the session with no current view of the card.
 	const latest = (tool: string) =>
 		calls.findLast(
-			(c) =>
-				c.name.endsWith(`__${tool}`) &&
-				id(tool === "notion-fetch" ? c.input.id : c.input.page_id) === page,
+			(c) => c.name.endsWith(`__${tool}`) && id(tool === "notion-fetch" ? c.input.id : c.input.page_id) === page,
 		);
 	const fetch = latest("notion-fetch");
-	if (!fetch?.result || !BOARDS.includes(board(fetch.result) ?? ""))
-		return "not-a-card";
-	if (latest("notion-get-comments")?.result === undefined)
-		return "comments-unread";
+	if (!fetch?.result || !BOARDS.includes(board(fetch.result) ?? "")) return "not-a-card";
+	if (latest("notion-get-comments")?.result === undefined) return "comments-unread";
 	return "question";
 }
 

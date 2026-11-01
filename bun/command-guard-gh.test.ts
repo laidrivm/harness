@@ -15,10 +15,7 @@ const anywhere = () => fabricate("feat/x");
 
 describe("gh commands that publish on the user's behalf", () => {
 	test("a pull request comment blocks", () => {
-		const { code, reason } = run(
-			event('gh pr comment 37 --body "fixed"'),
-			anywhere(),
-		);
+		const { code, reason } = run(event('gh pr comment 37 --body "fixed"'), anywhere());
 		expect(code).toBe(2);
 		expect(reason).toContain("publishes text");
 	});
@@ -32,10 +29,7 @@ describe("gh commands that publish on the user's behalf", () => {
 	});
 
 	test("a review behind a push in a compound command blocks", () => {
-		const { code, reason } = run(
-			event("git push && gh pr review 37 --approve"),
-			anywhere(),
-		);
+		const { code, reason } = run(event("git push && gh pr review 37 --approve"), anywhere());
 		expect(code).toBe(2);
 		// The push is allowed from a feature branch, so the review is what blocks.
 		expect(reason).toContain("`gh pr review`");
@@ -43,16 +37,11 @@ describe("gh commands that publish on the user's behalf", () => {
 
 	test("an absolute path to gh blocks", () => {
 		// This is what the deny entry cannot see and the guard can.
-		expect(
-			run(event("/opt/homebrew/bin/gh pr comment 37 --body x"), anywhere())
-				.code,
-		).toBe(2);
+		expect(run(event("/opt/homebrew/bin/gh pr comment 37 --body x"), anywhere()).code).toBe(2);
 	});
 
 	test("a write behind a global flag blocks", () => {
-		expect(
-			run(event("gh --repo a/b pr comment 37 --body x"), anywhere()).code,
-		).toBe(2);
+		expect(run(event("gh --repo a/b pr comment 37 --body x"), anywhere()).code).toBe(2);
 	});
 
 	test.each([
@@ -64,9 +53,7 @@ describe("gh commands that publish on the user's behalf", () => {
 	});
 
 	test("opening a pull request does not block", () => {
-		expect(run(event("gh pr create --title x --body y"), anywhere()).code).toBe(
-			0,
-		);
+		expect(run(event("gh pr create --title x --body y"), anywhere()).code).toBe(0);
 	});
 
 	test("reading a pull request does not block", () => {
@@ -81,10 +68,7 @@ describe("gh commands that publish on the user's behalf", () => {
 describe("gh api, by the method it sends", () => {
 	// spec: agent-permissions/a-comment-posted-through-the-endpoint
 	test("a comment posted with -X POST blocks, naming the flag", () => {
-		const { code, reason } = run(
-			event("gh api -X POST /repos/o/r/issues/37/comments -f body=hi"),
-			anywhere(),
-		);
+		const { code, reason } = run(event("gh api -X POST /repos/o/r/issues/37/comments -f body=hi"), anywhere());
 		expect(code).toBe(2);
 		expect(reason).toContain("`gh api`");
 		expect(reason).toContain("`-X POST`");
@@ -92,19 +76,12 @@ describe("gh api, by the method it sends", () => {
 
 	// spec: agent-permissions/reading-through-the-endpoint-still-works
 	test("a read naming no method passes", () => {
-		expect(
-			run(
-				event('gh api "repos/o/r/pulls/37/comments?per_page=100" --paginate'),
-				anywhere(),
-			).code,
-		).toBe(0);
+		expect(run(event('gh api "repos/o/r/pulls/37/comments?per_page=100" --paginate'), anywhere()).code).toBe(0);
 	});
 
 	// spec: agent-permissions/a-read-that-carries-parameters
 	test("an explicit GET passes whatever fields it carries", () => {
-		expect(
-			run(event("gh api -X GET /search/issues -f q=repo:o/r"), anywhere()).code,
-		).toBe(0);
+		expect(run(event("gh api -X GET /search/issues -f q=repo:o/r"), anywhere()).code).toBe(0);
 	});
 
 	// spec: agent-permissions/a-comment-posted-through-the-endpoint
@@ -136,9 +113,7 @@ describe("gh api, by the method it sends", () => {
 	});
 
 	test("api as a flag's value is not the api subcommand", () => {
-		expect(
-			run(event("gh --repo api issue list -X POST"), anywhere()).code,
-		).toBe(0);
+		expect(run(event("gh --repo api issue list -X POST"), anywhere()).code).toBe(0);
 	});
 
 	test("api behind a flag and its value still blocks", () => {
@@ -150,10 +125,7 @@ describe("gh api, by the method it sends", () => {
 	});
 
 	test("a write flag blocks even where a later GET is what gh sends", () => {
-		const { code, reason } = run(
-			event("gh api -X POST -X GET /repos/o/r/issues/37/comments"),
-			anywhere(),
-		);
+		const { code, reason } = run(event("gh api -X POST -X GET /repos/o/r/issues/37/comments"), anywhere());
 		expect(code).toBe(2);
 		expect(reason).toContain("`-X POST`");
 	});
@@ -179,16 +151,10 @@ describe("gh api, the words its other flags own", () => {
 		expect(run(event(line), anywhere()).code).toBe(0);
 	});
 
-	test.each([
-		"-f -XPOST -X PUT",
-		"-f body=-XPOST -X PUT",
-	])("a field's value is not read as a method: %s", (flags) => {
+	test.each(["-f -XPOST -X PUT", "-f body=-XPOST -X PUT"])("a field's value is not read as a method: %s", (flags) => {
 		// A field with no method is a write, but step 2's; this pins only the
 		// flag the refusal names.
-		const { reason } = run(
-			event(`gh api repos/o/r/issues ${flags}`),
-			anywhere(),
-		);
+		const { reason } = run(event(`gh api repos/o/r/issues ${flags}`), anywhere());
 		expect(reason).toContain("`-X PUT`");
 	});
 
@@ -198,10 +164,7 @@ describe("gh api, the words its other flags own", () => {
 		["--jq=. -X PATCH", "-X PATCH"],
 		["-iXPOST", "-iXPOST"],
 	])("a write after another flag still blocks: %s", (flags, named) => {
-		const { code, reason } = run(
-			event(`gh api repos/o/r/issues ${flags}`),
-			anywhere(),
-		);
+		const { code, reason } = run(event(`gh api repos/o/r/issues ${flags}`), anywhere());
 		expect(code).toBe(2);
 		expect(reason).toContain(`\`${named}\``);
 	});

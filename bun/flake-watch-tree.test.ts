@@ -7,21 +7,11 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { git } from "./command-guard.fixture.ts";
-import {
-	cleanup,
-	failed,
-	failing,
-	hint,
-	PASSING,
-	passed,
-	play,
-	repo,
-} from "./flake-watch.fixture.ts";
+import { cleanup, failed, failing, hint, PASSING, passed, play, repo } from "./flake-watch.fixture.ts";
 
 afterAll(cleanup);
 
-const write = (dir: string, path: string, text: string) => () =>
-	writeFileSync(join(dir, path), text);
+const write = (dir: string, path: string, text: string) => () => writeFileSync(join(dir, path), text);
 
 describe("the same tree", () => {
 	// spec: flaky-tests/an-edit-between-the-two-runs
@@ -51,12 +41,7 @@ describe("the same tree", () => {
 
 	test("staging a tracked edit between the runs still gives the hint", () => {
 		const dir = repo();
-		const steps = [
-			write(dir, "a.txt", "two\n"),
-			failed(dir),
-			() => git(dir, "add", "a.txt"),
-			passed(dir),
-		];
+		const steps = [write(dir, "a.txt", "two\n"), failed(dir), () => git(dir, "add", "a.txt"), passed(dir)];
 		expect(hint(play(steps))).toContain("grp > flips");
 	});
 
@@ -76,24 +61,13 @@ describe("the same tree", () => {
 
 	test("fail on tree T, pass on U, then pass on T gives no hint [23]", () => {
 		const dir = repo();
-		const steps = [
-			failed(dir),
-			write(dir, "a.txt", "two\n"),
-			passed(dir),
-			write(dir, "a.txt", "one\n"),
-			passed(dir),
-		];
+		const steps = [failed(dir), write(dir, "a.txt", "two\n"), passed(dir), write(dir, "a.txt", "one\n"), passed(dir)];
 		expect(play(steps)).toBe("");
 	});
 
 	test("a fail on T, an edit, then a fail and a pass on the new tree name the new fail only", () => {
 		const dir = repo();
-		const steps = [
-			failed(dir, failing("a")),
-			write(dir, "a.txt", "two\n"),
-			failed(dir, failing("b")),
-			passed(dir),
-		];
+		const steps = [failed(dir, failing("a")), write(dir, "a.txt", "two\n"), failed(dir, failing("b")), passed(dir)];
 		expect(hint(play(steps))).toContain(": b.");
 	});
 
@@ -109,9 +83,7 @@ describe("what output is a test run", () => {
 	test("a `2 fail` summary with no `(fail)` line names the run, saying the names were not in the output [18]", () => {
 		const dir = repo();
 		const error = "Exit code 1\n 0 pass\n 2 fail\nRan 2 tests across 1 file.";
-		expect(hint(play([failed(dir, error), passed(dir)]))).toContain(
-			"(the failing names were not in the output)",
-		);
+		expect(hint(play([failed(dir, error), passed(dir)]))).toContain("(the failing names were not in the output)");
 	});
 
 	test.each([
@@ -132,8 +104,6 @@ describe("what output is a test run", () => {
 	test("a test name containing ` [` loses only its trailing duration [22]", () => {
 		const dir = repo();
 		const error = failing("grp > reads [a] list");
-		expect(hint(play([failed(dir, error), passed(dir)]))).toContain(
-			": grp > reads [a] list.",
-		);
+		expect(hint(play([failed(dir, error), passed(dir)]))).toContain(": grp > reads [a] list.");
 	});
 });

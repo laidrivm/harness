@@ -142,13 +142,22 @@ describe("the calls", () => {
 	});
 
 	/** What `request()` throws for `path`, with a short limit. */
-	const thrown = (path: string) => request(path, undefined, undefined, 200).then(() => undefined, (e: Error) => e);
+	const thrown = (path: string) =>
+		request(path, undefined, undefined, 200).then(
+			() => undefined,
+			(e: Error) => e,
+		);
 
-	test.each(["/status/502", "/status/503", "/status/429", "/hang"])("%p throws a Transient, its message as before", async (path) => {
-		const error = await thrown(path);
-		expect(error).toBeInstanceOf(Transient);
-		expect(error?.message).toStartWith(path === "/hang" ? "GitHub's API could not be reached for /hang: " : `GitHub's API answered ${path} with `);
-	});
+	test.each(["/status/502", "/status/503", "/status/429", "/hang"])(
+		"%p throws a Transient, its message as before",
+		async (path) => {
+			const error = await thrown(path);
+			expect(error).toBeInstanceOf(Transient);
+			expect(error?.message).toStartWith(
+				path === "/hang" ? "GitHub's API could not be reached for /hang: " : `GitHub's API answered ${path} with `,
+			);
+		},
+	);
 
 	test("an unreachable API throws a Transient", async () => {
 		process.env.GITHUB_API_URL = "http://127.0.0.1:1";
@@ -197,7 +206,12 @@ describe("the key holder's mint command", () => {
 
 	test("the App's id and the mint command configure the App, with no key read", () => {
 		const made = command("ghs_minted");
-		expect(configured(env(made.mint), "https://github.com/o/demo.git")).toEqual({ id: "7", mint: made.mint, owner: "o", repo: "demo" });
+		expect(configured(env(made.mint), "https://github.com/o/demo.git")).toEqual({
+			id: "7",
+			mint: made.mint,
+			owner: "o",
+			repo: "demo",
+		});
 	});
 
 	// spec: orchestrator/the-runner-asks-the-key-holder
@@ -220,9 +234,17 @@ describe("the key holder's mint command", () => {
 	});
 
 	test("a command that fails rejects naming its status, and one that prints nothing rejects too", async () => {
-		for (const [out, code] of [["", 0], ["denied", 3]] as const) {
-			const app = configured(env(command(out, code).mint), "https://github.com/o/demo") as NonNullable<ReturnType<typeof configured>>;
-			const failed = await mint(app, BOARD).then(() => "", (e: Error) => e.message);
+		for (const [out, code] of [
+			["", 0],
+			["denied", 3],
+		] as const) {
+			const app = configured(env(command(out, code).mint), "https://github.com/o/demo") as NonNullable<
+				ReturnType<typeof configured>
+			>;
+			const failed = await mint(app, BOARD).then(
+				() => "",
+				(e: Error) => e.message,
+			);
 			expect(failed).toContain(`exited ${code}`);
 		}
 	});

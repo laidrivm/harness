@@ -24,11 +24,20 @@ const update = (remote: string, sha = SHA, local = "refs/heads/feat/x") => `${lo
 
 /** A pull request as the REST endpoint lists it. */
 const pull = (number: number, draft: boolean) =>
-	JSON.stringify([{ number, state: "open", merged_at: null, draft, head: { sha: SHA, repo: { id: 1 } }, base: { repo: { id: 1 } } }]);
+	JSON.stringify([
+		{ number, state: "open", merged_at: null, draft, head: { sha: SHA, repo: { id: 1 } }, base: { repo: { id: 1 } } },
+	]);
 
 const query = (branch: string) => `api repos/o/r/pulls?head=o:${encodeURIComponent(branch)}&state=all&per_page=100`;
 
-type Case = { stdin: string; url?: string; answers?: Record<string, string>; code?: number; cwd?: string; env?: Record<string, string> };
+type Case = {
+	stdin: string;
+	url?: string;
+	answers?: Record<string, string>;
+	code?: number;
+	cwd?: string;
+	env?: Record<string, string>;
+};
 
 function push(c: Case) {
 	const bin = emptyDir("push-draft-bin-");
@@ -37,7 +46,10 @@ function push(c: Case) {
 	const arms = Object.entries(c.answers ?? {})
 		.map(([branch, json]) => `*head=o:${encodeURIComponent(branch)}\\&*) printf '%s' '${json}' ;;`)
 		.join("\n");
-	writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\ncase "$*" in\n${arms}\n*) printf '[]' ;;\nesac\nexit ${c.code ?? 0}\n`);
+	writeFileSync(
+		join(bin, "gh"),
+		`#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\ncase "$*" in\n${arms}\n*) printf '[]' ;;\nesac\nexit ${c.code ?? 0}\n`,
+	);
 	chmodSync(join(bin, "gh"), 0o755);
 	const state = emptyDir("push-draft-state-");
 	const run = Bun.spawnSync([process.execPath, script, "origin", c.url ?? GITHUB], {
@@ -65,7 +77,11 @@ describe("what the check reads", () => {
 	// spec: commit-gates/a-push-under-another-name
 	test("a push of feat/x to refs/heads/release reads release's pull requests", () => {
 		const run = push({ stdin: update("refs/heads/release"), answers: { release: pull(9, false) } });
-		expect([run.code, run.calls, run.err]).toEqual([1, [query("release")], expect.stringContaining("gh pr ready 9 --undo")]);
+		expect([run.code, run.calls, run.err]).toEqual([
+			1,
+			[query("release")],
+			expect.stringContaining("gh pr ready 9 --undo"),
+		]);
 	});
 
 	// spec: commit-gates/a-remote-that-is-not-on-github
@@ -77,7 +93,11 @@ describe("what the check reads", () => {
 		["another host", update("refs/heads/feat/x"), "https://gitlab.com/o/r.git"],
 		["a host that only starts with github.com", update("refs/heads/feat/x"), "https://github.com.example/o/r.git"],
 	])("%s is not read", (_, stdin, url) => {
-		expect(push({ stdin, url, answers: { "feat/x": pull(7, false) } })).toMatchObject({ code: 0, calls: [], ledger: [] });
+		expect(push({ stdin, url, answers: { "feat/x": pull(7, false) } })).toMatchObject({
+			code: 0,
+			calls: [],
+			ledger: [],
+		});
 	});
 
 	test.each([
@@ -95,7 +115,10 @@ describe("what the check reads", () => {
 describe("what the check decides", () => {
 	// spec: commit-gates/a-push-into-a-draft
 	test("a draft passes", () => {
-		expect(push({ stdin: update("refs/heads/feat/x"), answers: { "feat/x": pull(7, true) } })).toMatchObject({ code: 0, ledger: [] });
+		expect(push({ stdin: update("refs/heads/feat/x"), answers: { "feat/x": pull(7, true) } })).toMatchObject({
+			code: 0,
+			ledger: [],
+		});
 	});
 
 	// spec: commit-gates/a-push-into-a-ready-pull-request gate-ledger/a-push-into-a-ready-pull-request
@@ -117,14 +140,23 @@ describe("what the check decides", () => {
 		const ready = "c".repeat(40);
 		const stdin = update("refs/heads/feat/a") + update("refs/heads/feat/b", ready, "refs/heads/feat/b");
 		const run = push({ stdin, answers: { "feat/a": pull(7, true), "feat/b": pull(8, false) } });
-		expect([run.code, run.calls, run.ledger]).toEqual([1, [query("feat/a"), query("feat/b")], [{ gate: "push-draft", decision: "block", rule: "ready", commit: ready }]]);
+		expect([run.code, run.calls, run.ledger]).toEqual([
+			1,
+			[query("feat/a"), query("feat/b")],
+			[{ gate: "push-draft", decision: "block", rule: "ready", commit: ready }],
+		]);
 		expect(run.err).toContain("gh pr ready 8 --undo");
 	});
 
 	// A subagent's worktree pushes while the session's project directory names the main checkout.
 	test("a refusal's record names the directory the hook ran in, whatever CLAUDE_PROJECT_DIR says", () => {
 		const cwd = emptyDir("push-draft-cwd-");
-		const run = push({ stdin: update("refs/heads/feat/x"), code: 1, cwd, env: { CLAUDE_PROJECT_DIR: emptyDir("push-draft-elsewhere-") } });
+		const run = push({
+			stdin: update("refs/heads/feat/x"),
+			code: 1,
+			cwd,
+			env: { CLAUDE_PROJECT_DIR: emptyDir("push-draft-elsewhere-") },
+		});
 		expect([run.code, run.projects]).toEqual([1, [realpathSync(cwd)]]);
 	});
 });

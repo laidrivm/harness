@@ -19,7 +19,11 @@ describe("deploy.sh", () => {
 		const before = log(h).length;
 		const r = deploy(h);
 		expect(r.code).toBe(0);
-		expect(log(h).slice(before).filter((l) => !/^git (fetch|rev-parse)/.test(l))).toEqual([]);
+		expect(
+			log(h)
+				.slice(before)
+				.filter((l) => !/^git (fetch|rev-parse)/.test(l)),
+		).toEqual([]);
 	});
 
 	// spec: orchestrator/the-head-s-test-check-has-not-passed
@@ -44,22 +48,27 @@ describe("deploy.sh", () => {
 		const h = host();
 		deploy(h);
 		const read = log(h).find((l) => l.startsWith("curl "));
-		expect(read).toContain(`https://api.github.com/repos/owner/repo/commits/${HEAD}/check-runs?check_name=test&filter=latest`);
+		expect(read).toContain(
+			`https://api.github.com/repos/owner/repo/commits/${HEAD}/check-runs?check_name=test&filter=latest`,
+		);
 	});
 
 	// spec: orchestrator/a-rerun-after-a-green-run
 	test.each([
 		["pending", null],
 		["failed", "failure"],
-	])("a rerun %s by the read under the locks brings nothing up, records nothing and writes no stop file", (_, conclusion) => {
-		const h = host();
-		answer(h, conclusion, "github-actions", 2);
-		const r = deploy(h);
-		expect(r.code).toBe(0);
-		expect(steps(h)).toEqual(["read", "ff", "build", "hold", "read"]);
-		expect(deployed(h)).toBeUndefined();
-		expect(stopped(h, "one")).toBeUndefined();
-	});
+	])(
+		"a rerun %s by the read under the locks brings nothing up, records nothing and writes no stop file",
+		(_, conclusion) => {
+			const h = host();
+			answer(h, conclusion, "github-actions", 2);
+			const r = deploy(h);
+			expect(r.code).toBe(0);
+			expect(steps(h)).toEqual(["read", "ff", "build", "hold", "read"]);
+			expect(deployed(h)).toBeUndefined();
+			expect(stopped(h, "one")).toBeUndefined();
+		},
+	);
 
 	// spec: orchestrator/a-green-head
 	test("a green head is read, fast-forwarded, built, brought up under the locks, pushed and recorded, in that order", () => {
@@ -167,25 +176,28 @@ describe("deploy.sh", () => {
 
 const flock = Bun.which("flock") ?? "flock";
 
-describe.skipIf(skip)(`deploy.sh under real locks${skip ? " — skipped: flock is not on PATH; CI's ubuntu-latest runs these" : ""}`, () => {
-	// spec: orchestrator/a-pass-is-running-when-main-moves
-	test("a held repository lock keeps up waiting until it is released", async () => {
-		const h = host();
-		const pass = await held(join(h.locks, "owner+repo.lock"));
-		const run = started(h, flock);
-		await Bun.sleep(1500);
-		expect(steps(h)).not.toContain("up");
-		pass.kill();
-		expect(await run.exited).toBe(0);
-		expect(steps(h)).toContain("up");
-		expect(deployed(h)).toBe(`${HEAD}\n`);
-	}, 20_000);
+describe.skipIf(skip)(
+	`deploy.sh under real locks${skip ? " — skipped: flock is not on PATH; CI's ubuntu-latest runs these" : ""}`,
+	() => {
+		// spec: orchestrator/a-pass-is-running-when-main-moves
+		test("a held repository lock keeps up waiting until it is released", async () => {
+			const h = host();
+			const pass = await held(join(h.locks, "owner+repo.lock"));
+			const run = started(h, flock);
+			await Bun.sleep(1500);
+			expect(steps(h)).not.toContain("up");
+			pass.kill();
+			expect(await run.exited).toBe(0);
+			expect(steps(h)).toContain("up");
+			expect(deployed(h)).toBe(`${HEAD}\n`);
+		}, 20_000);
 
-	// spec: orchestrator/the-runner-is-recreated-under-the-locks
-	test("while up runs, another process finds the gate and the repository's lock held", async () => {
-		const h = host();
-		expect(await started(h, flock).exited).toBe(0);
-		const probed = log(h).filter((l) => /^(held|free) /.test(l));
-		expect(probed.toSorted()).toEqual(["held gate.lock", "held owner+repo.lock"]);
-	}, 20_000);
-});
+		// spec: orchestrator/the-runner-is-recreated-under-the-locks
+		test("while up runs, another process finds the gate and the repository's lock held", async () => {
+			const h = host();
+			expect(await started(h, flock).exited).toBe(0);
+			const probed = log(h).filter((l) => /^(held|free) /.test(l));
+			expect(probed.toSorted()).toEqual(["held gate.lock", "held owner+repo.lock"]);
+		}, 20_000);
+	},
+);

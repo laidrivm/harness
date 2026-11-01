@@ -2,7 +2,21 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
-import { clone, host, IDLE, NO_BUN, OPEN, PATH, passEnv, release, running, skip, starts, stop, tick } from "./pass.fixture.ts";
+import {
+	clone,
+	host,
+	IDLE,
+	NO_BUN,
+	OPEN,
+	PATH,
+	passEnv,
+	release,
+	running,
+	skip,
+	starts,
+	stop,
+	tick,
+} from "./pass.fixture.ts";
 
 /** `pass.sh` against a fabricated host (`pass.fixture.ts`). [n]: `/zombies` ideas. */
 
@@ -80,25 +94,33 @@ describe.skipIf(skip)(`pass.sh${skip ? " — skipped: flock is not on PATH; CI's
 		});
 
 		// spec: orchestrator/the-pass-exits-1
-		test.each([1, 137])("a pass exiting %i writes the UTC time, the status and the last line, and returns the status [4][19]", (status) => {
-			const h = host();
-			clone(h, "repo", { status });
-			const r = tick(h, "repo");
-			expect(r.code).toBe(status);
-			expect(readFileSync(stop(h, "repo"), "utf8")).toMatch(new RegExp(`^\\d{8}T\\d{6}Z exit ${status}: ${OPEN}\\n$`));
-		});
+		test.each([1, 137])(
+			"a pass exiting %i writes the UTC time, the status and the last line, and returns the status [4][19]",
+			(status) => {
+				const h = host();
+				clone(h, "repo", { status });
+				const r = tick(h, "repo");
+				expect(r.code).toBe(status);
+				expect(readFileSync(stop(h, "repo"), "utf8")).toMatch(
+					new RegExp(`^\\d{8}T\\d{6}Z exit ${status}: ${OPEN}\\n$`),
+				);
+			},
+		);
 
-		test.each([0, 1])("a pass exiting %i leaves its whole output in passes/<UTC time>-<clone>.log and on stdout [20][42]", (status) => {
-			const h = host();
-			clone(h, "repo", { status });
-			const r = tick(h, "repo");
-			const logs = readdirSync(join(h.state, "passes"));
-			expect(logs).toHaveLength(1);
-			expect(logs[0]).toMatch(/^\d{8}T\d{6}Z-repo\.log$/);
-			expect(readFileSync(join(h.state, "passes", logs[0]), "utf8")).toBe(r.out);
-			expect(passEnv(r.out).HOME).toBe(h.home);
-			expect(r.last).toBe(status === 0 ? IDLE : OPEN);
-		});
+		test.each([0, 1])(
+			"a pass exiting %i leaves its whole output in passes/<UTC time>-<clone>.log and on stdout [20][42]",
+			(status) => {
+				const h = host();
+				clone(h, "repo", { status });
+				const r = tick(h, "repo");
+				const logs = readdirSync(join(h.state, "passes"));
+				expect(logs).toHaveLength(1);
+				expect(logs[0]).toMatch(/^\d{8}T\d{6}Z-repo\.log$/);
+				expect(readFileSync(join(h.state, "passes", logs[0]), "utf8")).toBe(r.out);
+				expect(passEnv(r.out).HOME).toBe(h.home);
+				expect(r.last).toBe(status === 0 ? IDLE : OPEN);
+			},
+		);
 
 		// spec: orchestrator/the-next-tick-after-a-failure
 		test("the next tick after a failure prints the paused line, exits 3 and starts no pass [18]", () => {
@@ -182,14 +204,17 @@ describe.skipIf(skip)(`pass.sh${skip ? " — skipped: flock is not on PATH; CI's
 		});
 
 		// spec: orchestrator/no-app-configured
-		test.each(["HARNESS_GITHUB_APP_ID", "HARNESS_GITHUB_APP_MINT"])("%s unset writes the stop file naming it and never starts the runner", (name) => {
-			const h = host();
-			clone(h, "repo");
-			const r = tick(h, "repo", { [name]: "" });
-			expect(r.code).toBe(1);
-			expect(readFileSync(stop(h, "repo"), "utf8")).toContain(name);
-			expect(starts(h, "repo")).toBe(0);
-		});
+		test.each(["HARNESS_GITHUB_APP_ID", "HARNESS_GITHUB_APP_MINT"])(
+			"%s unset writes the stop file naming it and never starts the runner",
+			(name) => {
+				const h = host();
+				clone(h, "repo");
+				const r = tick(h, "repo", { [name]: "" });
+				expect(r.code).toBe(1);
+				expect(readFileSync(stop(h, "repo"), "utf8")).toContain(name);
+				expect(starts(h, "repo")).toBe(0);
+			},
+		);
 
 		// spec: orchestrator/the-connection-that-started-the-pass-drops
 		test("SIGHUP to the wrapper and its runner mid-pass: the pass completes and the stop file shows its status [23]", async () => {

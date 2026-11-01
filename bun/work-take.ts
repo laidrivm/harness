@@ -21,7 +21,8 @@ const MARKDOWN = "2026-03-11";
 export const POINTER = /^openspec\/changes\/([a-z0-9-]+)\/$/;
 
 type Property = { type?: unknown; [key: string]: unknown };
-const named = (value: unknown) => (typeof (value as { name?: unknown })?.name === "string" ? (value as { name: string }).name : "");
+const named = (value: unknown) =>
+	typeof (value as { name?: unknown })?.name === "string" ? (value as { name: string }).name : "";
 const list = (value: unknown) => (Array.isArray(value) ? value : []);
 
 /** A property's value as text, read by its type; a type it does not know reads as empty. */
@@ -36,7 +37,9 @@ function text(property: Property | undefined): string {
 		case "multi_select":
 			return list(property.multi_select).map(named).join(", ");
 		case "people":
-			return list(property.people).map((person) => hex((person as { id?: unknown })?.id)).join(", ");
+			return list(property.people)
+				.map((person) => hex((person as { id?: unknown })?.id))
+				.join(", ");
 	}
 	return "";
 }
@@ -48,7 +51,14 @@ export const MAIN = "+refs/heads/main:refs/remotes/origin/main";
 export function output(command: string[], cwd?: string, env: Record<string, string | undefined> = process.env): string {
 	if (!Bun.which(command[0])) throw new Error(`no ${command[0]} on PATH`);
 	// Bounded, so a stalled remote or a prompt nobody answers ends in a failure, not a hang.
-	const run = Bun.spawnSync(command, { cwd, env, stdout: "pipe", stderr: "pipe", timeout: 120_000, killSignal: "SIGKILL" });
+	const run = Bun.spawnSync(command, {
+		cwd,
+		env,
+		stdout: "pipe",
+		stderr: "pipe",
+		timeout: 120_000,
+		killSignal: "SIGKILL",
+	});
 	if (run.exitCode !== 0) {
 		const said = run.stderr.toString().trim().split("\n")[0];
 		throw new Error(`${command.slice(0, 2).join(" ")} exited ${run.exitCode}${said ? `: ${said}` : ""}`);
@@ -62,10 +72,18 @@ function change(pointer: string, top: string, commit: string): string[] {
 	if (!pointer) return ["the card points at no change"];
 	if (!slug || slug === "archive") return [`the pointer names no change of this checkout: ${pointer}`];
 	const dir = join(top, pointer);
-	if (!existsSync(dir) || !statSync(dir).isDirectory()) return [`the change ${slug} is not in this checkout at ${commit}`];
+	if (!existsSync(dir) || !statSync(dir).isDirectory())
+		return [`the change ${slug} is not in this checkout at ${commit}`];
 	const specs = join(dir, "specs");
-	const capabilities = existsSync(specs) ? readdirSync(specs).filter((name) => existsSync(join(specs, name, "spec.md"))).sort() : [];
-	const paths = [...["proposal.md", "design.md", "tasks.md"], ...capabilities.map((name) => join("specs", name, "spec.md"))];
+	const capabilities = existsSync(specs)
+		? readdirSync(specs)
+				.filter((name) => existsSync(join(specs, name, "spec.md")))
+				.sort()
+		: [];
+	const paths = [
+		...["proposal.md", "design.md", "tasks.md"],
+		...capabilities.map((name) => join("specs", name, "spec.md")),
+	];
 	const lines = paths
 		.filter((path) => existsSync(join(dir, path)))
 		.flatMap((path) => [`### ${pointer}${path}`, readFileSync(join(dir, path), "utf8")]);
@@ -88,7 +106,12 @@ export async function take(card: string, timeout = 30_000): Promise<{ lines: str
 		step = "the page read";
 		const page = await found.call(step, `/v1/pages/${card}`);
 		const properties: Record<string, Property> = page?.properties ?? {};
-		lines.push("## Card", ...["Name", "Status", "Pointer", "Labels", "Assign"].map((name) => `${name}: ${text(properties[name])}`.trimEnd()));
+		lines.push(
+			"## Card",
+			...["Name", "Status", "Pointer", "Labels", "Assign"].map((name) =>
+				`${name}: ${text(properties[name])}`.trimEnd(),
+			),
+		);
 
 		step = "the markdown read";
 		const body = await client(found.settings.token, timeout, MARKDOWN)(step, `/v1/pages/${card}/markdown`);

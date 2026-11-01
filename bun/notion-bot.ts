@@ -12,7 +12,7 @@
  */
 import { ID, type Settings } from "./notion-bot-settings.ts";
 import { fault, REMEDY } from "./question-gate.ts";
-import { answered as transientStatus, Transient } from "./transient.ts";
+import { Transient, answered as transientStatus } from "./transient.ts";
 
 export { ID, type Settings, settings } from "./notion-bot-settings.ts";
 
@@ -53,20 +53,26 @@ type Run = { plain_text?: unknown; annotations?: { code?: unknown } };
 export type Comment = { id?: unknown; created_by?: { id?: unknown }; created_time?: unknown; rich_text?: Run[] };
 
 export const plain = (runs: unknown) =>
-	Array.isArray(runs) ? runs.map((run: Run) => (typeof run?.plain_text === "string" ? run.plain_text : "")).join("") : "";
+	Array.isArray(runs)
+		? runs.map((run: Run) => (typeof run?.plain_text === "string" ? run.plain_text : "")).join("")
+		: "";
 /** An id as 32 lower-case hex digits: the settings take either form, the API gives a UUID. */
 export const hex = (id: unknown) => (typeof id === "string" ? id.replaceAll("-", "").toLowerCase() : "");
 const by = (comment: Comment, id: string) => hex(comment.created_by?.id) === hex(id);
 /** Whether `comment` opens with `mark` as the API shows it: a code run of it, or text opening with it backticked. */
 const opens = (mark: string) => (comment: Comment) => {
 	const first = comment.rich_text?.[0];
-	return (first?.annotations?.code === true && first.plain_text === mark) || plain(comment.rich_text).startsWith(`\`${mark}\``);
+	return (
+		(first?.annotations?.code === true && first.plain_text === mark) ||
+		plain(comment.rich_text).startsWith(`\`${mark}\``)
+	);
 };
 const marked = opens("harness-question");
 const answered = opens("harness-answer");
 
 /** `comments` oldest first; stable, so ties keep the order the API returned them. */
-export const oldest = (comments: Comment[]) => comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time)));
+export const oldest = (comments: Comment[]) =>
+	comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time)));
 
 /**
  * Whether the last comment opening with `mark`, a question by default, has no
@@ -82,7 +88,10 @@ export function waits(comments: Comment[], user: string, self?: string, mark = "
 		last !== -1 &&
 		!ordered
 			.slice(last + 1)
-			.some((c) => (!asks(c) && !marked(c) && !answered(c) && by(c, user)) || (self !== undefined && answered(c) && by(c, self)))
+			.some(
+				(c) =>
+					(!asks(c) && !marked(c) && !answered(c) && by(c, user)) || (self !== undefined && answered(c) && by(c, self)),
+			)
 	);
 }
 
@@ -116,7 +125,9 @@ export function client(token: string, timeout = 30_000, version = VERSION) {
 			return await response.json();
 		} catch (error) {
 			// The name alone, never the body, which is untrusted text.
-			throw new Unread(`${step} answered ${response.status} with a body that could not be read: ${(error as Error).name}`);
+			throw new Unread(
+				`${step} answered ${response.status} with a body that could not be read: ${(error as Error).name}`,
+			);
 		}
 	};
 }
@@ -142,7 +153,8 @@ export async function waiting(call: Call, card: string, user: string, self?: str
 }
 
 /** Every page of the card's page-level comments, following `next_cursor`. */
-export const discussion = (call: Call, card: string): Promise<Comment[]> => paged<Comment>(call, "the comments read", `/v1/comments?block_id=${card}`);
+export const discussion = (call: Call, card: string): Promise<Comment[]> =>
+	paged<Comment>(call, "the comments read", `/v1/comments?block_id=${card}`);
 
 /** Every page of the list `path` answers, read under `step`, the cursor joined to `path` as its query needs. */
 export async function paged<T = unknown>(call: Call, step: string, path: string): Promise<T[]> {
@@ -154,7 +166,10 @@ export async function paged<T = unknown>(call: Call, step: string, path: string)
 		const listed = await call(step, `${path}${at}`);
 		results.push(...(Array.isArray(listed?.results) ? listed.results : []));
 		// More pages behind no cursor would end the read short; behind one already read, never end it.
-		if (listed?.has_more && (typeof listed.next_cursor !== "string" || !listed.next_cursor || read.has(listed.next_cursor)))
+		if (
+			listed?.has_more &&
+			(typeof listed.next_cursor !== "string" || !listed.next_cursor || read.has(listed.next_cursor))
+		)
 			throw new Error(`${step} gave no new cursor`);
 		cursor = listed?.has_more ? listed.next_cursor : undefined;
 		if (cursor) read.add(cursor);
@@ -167,7 +182,13 @@ export async function paged<T = unknown>(call: Call, step: string, path: string)
  * `text` opens with backticked, a mention of `mention` when one is named, then
  * the rest of the text, in runs of the 2000 characters Notion takes in one.
  */
-export function comment(call: Call, card: string, text: string, mark = "harness-question", mention?: string): Promise<unknown> {
+export function comment(
+	call: Call,
+	card: string,
+	text: string,
+	mark = "harness-question",
+	mention?: string,
+): Promise<unknown> {
 	const rest = text.slice(mark.length + 2).match(/[\s\S]{1,2000}/g) ?? [];
 	return call(mark === "harness-answer" ? "the answer's post" : "the comment's post", "/v1/comments", "POST", {
 		parent: { page_id: card },
@@ -186,7 +207,8 @@ export type Triaged = { answer?: { source: string; quote: string; text: string }
 export async function carded(call: Call, card: string, board: string, slug: string): Promise<string | undefined> {
 	const page = await call("the page read", `/v1/pages/${card}`);
 	if (page?.parent?.type !== "data_source_id") return `${card} is not a card on a board`;
-	if (plain(page.properties?.Pointer?.rich_text) !== `openspec/changes/${slug}/`) return `${card} is not the card of ${slug}`;
+	if (plain(page.properties?.Pointer?.rich_text) !== `openspec/changes/${slug}/`)
+		return `${card} is not the card of ${slug}`;
 	const source = await call("the board read", `/v1/data_sources/${page.parent.data_source_id}`);
 	if (plain(source?.title) !== board) return `${card} is not on the board ${board}`;
 }
@@ -231,7 +253,8 @@ export async function post(
 			if (moved) return not(moved);
 			// A `harness-answer` from anyone but the integration is plain text, and suppresses nothing.
 			const known = new Set(before.map((c) => c.id));
-			const fresh = (c: Comment) => !known.has(c.id) && (marked(c) || (self !== undefined && answered(c) && by(c, self)));
+			const fresh = (c: Comment) =>
+				!known.has(c.id) && (marked(c) || (self !== undefined && answered(c) && by(c, self)));
 			if ((await discussion(call, card)).some(fresh)) return not("the card changed during the triage");
 		}
 		await comment(call, card, text);
@@ -239,9 +262,17 @@ export async function post(
 		return error instanceof Transient ? say(`${UNREACHED} ${error.message}`) : not((error as Error).message);
 	}
 	if (answer) {
-		const quoted = answer.quote.split("\n").map((line) => `> ${line}`).join("\n");
+		const quoted = answer.quote
+			.split("\n")
+			.map((line) => `> ${line}`)
+			.join("\n");
 		try {
-			await comment(call, card, `\`harness-answer\` ${answer.text}\n${quoted}\nSource: ${answer.source}`, "harness-answer");
+			await comment(
+				call,
+				card,
+				`\`harness-answer\` ${answer.text}\n${quoted}\nSource: ${answer.source}`,
+				"harness-answer",
+			);
 			return say(`${POSTED} ${card} and answered from ${answer.source}`);
 		} catch (error) {
 			// The question stands with no answer: it waits for the user, as on `ESCALATE`.

@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { cleanup, git } from "./diff-budget.fixture.ts";
 import { clone, commit, out, records, run, runAsync, SAID, type Stubs } from "./board-loop.fixture.ts";
+import { cleanup, git } from "./diff-budget.fixture.ts";
 import { CARD, configured, standIn } from "./notion-bot.fixture.ts";
 import { MARK } from "./question-gate.ts";
 
@@ -12,7 +12,14 @@ const calls = (log: string, call: string) => log.split("\n").filter((line) => li
 
 /** What `claude -p --output-format json` prints for a session the Claude API ended with `status`. */
 const api = (status: number | null, result = `API Error: ${status}`) =>
-	JSON.stringify({ type: "result", subtype: "success", is_error: true, terminal_reason: "api_error", api_error_status: status, result }).replaceAll("'", "\\u0027");
+	JSON.stringify({
+		type: "result",
+		subtype: "success",
+		is_error: true,
+		terminal_reason: "api_error",
+		api_error_status: status,
+		result,
+	}).replaceAll("'", "\\u0027");
 
 describe("the start", () => {
 	// spec: board-loop/a-transient-failure-ends-the-pass-retry
@@ -33,7 +40,10 @@ describe("the pick session", () => {
 	test("a pick ended on a 529 records retry, exit 75, and starts no stage session", () => {
 		const { dir } = clone();
 		const r = run(dir, [], { pick: api(529) });
-		expect([r.code, r.last.startsWith("board-loop: retry — the pick session ended on a Claude API error")]).toEqual([75, true]);
+		expect([r.code, r.last.startsWith("board-loop: retry — the pick session ended on a Claude API error")]).toEqual([
+			75,
+			true,
+		]);
 		expect(r.calls).not.toContain("claude -p /goal");
 	});
 
@@ -65,7 +75,10 @@ describe("the stage session", () => {
 	// spec: board-loop/the-claude-api-fails-the-stage-mid-edit
 	test("the same with a tracked edit left records open, naming the API error", () => {
 		const { r } = ended({ edits: true });
-		expect([r.code, r.last.startsWith("board-loop: open — apply demo step 1: the stage session ended on a Claude API error")]).toEqual([1, true]);
+		expect([
+			r.code,
+			r.last.startsWith("board-loop: open — apply demo step 1: the stage session ended on a Claude API error"),
+		]).toEqual([1, true]);
 	});
 
 	// spec: board-loop/the-claude-api-refuses-the-session-s-key board-loop/the-subscription-s-usage-limit-is-spent
@@ -100,7 +113,11 @@ describe("the question's post", () => {
 		Object.assign(notion.state, state);
 		const { dir } = clone();
 		try {
-			return await runAsync(dir, { said: asked, beforePush: stuck, ...stubs }, { home: configured(), env: { HARNESS_NOTION_API_URL: notion.server.url.origin } });
+			return await runAsync(
+				dir,
+				{ said: asked, beforePush: stuck, ...stubs },
+				{ home: configured(), env: { HARNESS_NOTION_API_URL: notion.server.url.origin } },
+			);
 		} finally {
 			Object.assign(notion.state, { fail: {}, me: 200 });
 		}
@@ -123,7 +140,10 @@ describe("the question's post", () => {
 
 	test("the same with a tracked edit left records open, since the next pass would refuse that tree", async () => {
 		const r = await pass(reads, { edits: true });
-		expect([r.code, r.last.startsWith("board-loop: open — apply demo step 1: question: not posted — Notion did not answer:")]).toEqual([1, true]);
+		expect([
+			r.code,
+			r.last.startsWith("board-loop: open — apply demo step 1: question: not posted — Notion did not answer:"),
+		]).toEqual([1, true]);
 		expect(r.last).toEndWith(", leaving a tracked edit");
 	}, 40_000);
 

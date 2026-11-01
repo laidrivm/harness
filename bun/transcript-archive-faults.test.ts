@@ -37,26 +37,41 @@ describe("a fault", () => {
 	test.each([
 		["input that is not JSON [19]", () => "{not json"],
 		["an event with no transcript_path", () => ({ session_id: "s1" })],
-		["a session_id of ../x [20]", (path: string) => ({
-			session_id: "../x",
-			transcript_path: join(path, "..", "..", "x.jsonl"),
-		})],
-		["a transcript_path not <session_id>.jsonl [21]", (path: string) => ({
-			session_id: "s2",
-			transcript_path: path,
-		})],
-		["a transcript_path climbing out of its project", (path: string) => ({
-			session_id: "x",
-			transcript_path: `${dirname(path)}/../x.jsonl`,
-		})],
-		["a relative transcript_path", () => ({
-			session_id: "s1",
-			transcript_path: "s1.jsonl",
-		})],
-		["a transcript that does not exist [22]", (path: string) => ({
-			session_id: "gone",
-			transcript_path: join(path, "..", "gone.jsonl"),
-		})],
+		[
+			"a session_id of ../x [20]",
+			(path: string) => ({
+				session_id: "../x",
+				transcript_path: join(path, "..", "..", "x.jsonl"),
+			}),
+		],
+		[
+			"a transcript_path not <session_id>.jsonl [21]",
+			(path: string) => ({
+				session_id: "s2",
+				transcript_path: path,
+			}),
+		],
+		[
+			"a transcript_path climbing out of its project",
+			(path: string) => ({
+				session_id: "x",
+				transcript_path: `${dirname(path)}/../x.jsonl`,
+			}),
+		],
+		[
+			"a relative transcript_path",
+			() => ({
+				session_id: "s1",
+				transcript_path: "s1.jsonl",
+			}),
+		],
+		[
+			"a transcript that does not exist [22]",
+			(path: string) => ({
+				session_id: "gone",
+				transcript_path: join(path, "..", "gone.jsonl"),
+			}),
+		],
 	])("exits 0 and writes nothing on %s", (_, input) => {
 		const m = machine();
 		const path = session(m, "s1");

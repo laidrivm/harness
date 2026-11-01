@@ -6,7 +6,16 @@
  * method, path and `Notion-Version`, as `notion()` in `notion-ask.test.ts`
  * does.
  */
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	symlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { Server } from "bun";
 import { emptyDir, repo } from "./diff-budget.fixture.ts";
@@ -25,8 +34,13 @@ export const stopServers = () => {
 };
 
 type Run = { plain_text: string; annotations?: { code: boolean } };
-export const said = (author: string, time: string, ...runs: Run[]) => ({ created_by: { id: author }, created_time: time, rich_text: runs });
-export const question = (time: string) => said(BOT, time, { plain_text: "harness-question", annotations: { code: true } }, { plain_text: " Ship?" });
+export const said = (author: string, time: string, ...runs: Run[]) => ({
+	created_by: { id: author },
+	created_time: time,
+	rich_text: runs,
+});
+export const question = (time: string) =>
+	said(BOT, time, { plain_text: "harness-question", annotations: { code: true } }, { plain_text: " Ship?" });
 
 /** A card's page with every property set, `properties` replacing any of them; `Assign` holds no one, so the release reads no comments. */
 export const page = (pointer = "", properties: Record<string, unknown> = {}) => ({
@@ -158,7 +172,10 @@ export function bin(code: number | null = 0) {
 	symlinkSync(git, join(dir, "git"));
 	const log = join(dir, "openspec.log");
 	if (code !== null) {
-		writeFileSync(join(dir, "openspec"), `#!/bin/sh\necho "OPENSPEC_TELEMETRY=$OPENSPEC_TELEMETRY $*" >> '${log}'\nprintf '${LISTING.replaceAll("\n", "\\n")}'\nexit ${code}\n`);
+		writeFileSync(
+			join(dir, "openspec"),
+			`#!/bin/sh\necho "OPENSPEC_TELEMETRY=$OPENSPEC_TELEMETRY $*" >> '${log}'\nprintf '${LISTING.replaceAll("\n", "\\n")}'\nexit ${code}\n`,
+		);
 		chmodSync(join(dir, "openspec"), 0o755);
 	}
 	return { dir, ran: () => (existsSync(log) ? readFileSync(log, "utf8") : "") };
@@ -170,7 +187,13 @@ export const checkout = (tree: Record<string, string> = {}) => repo(tree, {});
 export type Take = { stub?: Stub; args?: string[]; cwd?: string; config?: string; path?: ReturnType<typeof bin> };
 
 /** `bun bun/work.ts take --card CARD`, or `args`, and what it printed, which never holds the token. */
-export async function take({ stub, args = ["take", "--card", CARD], cwd = checkout(), config = home(), path = bin() }: Take = {}) {
+export async function take({
+	stub,
+	args = ["take", "--card", CARD],
+	cwd = checkout(),
+	config = home(),
+	path = bin(),
+}: Take = {}) {
 	const api = notion(stub);
 	const child = Bun.spawn([process.execPath, join(import.meta.dir, "work.ts"), ...args], {
 		cwd,
@@ -178,7 +201,11 @@ export async function take({ stub, args = ["take", "--card", CARD], cwd = checko
 		stdout: "pipe",
 		stderr: "pipe",
 	});
-	const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+	const [out, err, code] = await Promise.all([
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+		child.exited,
+	]);
 	if ((out + err).includes(TOKEN)) throw new Error("the token was printed");
 	return { out, err, code, seen: api.seen, ran: path.ran(), cwd, config };
 }

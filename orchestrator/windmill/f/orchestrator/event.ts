@@ -18,14 +18,20 @@ type Event = { raw_string?: string; headers: Record<string, unknown> };
 
 export async function preprocessor(event: Event) {
 	const header = (name: string) => String(event.headers[name] ?? "");
-	return { line: ["x-github-event", "x-github-delivery", "x-hub-signature-256"].map(header).join(" "), body: event.raw_string ?? "" };
+	return {
+		line: ["x-github-event", "x-github-delivery", "x-hub-signature-256"].map(header).join(" "),
+		body: event.raw_string ?? "",
+	};
 }
 
 export async function main(line: string, body: string) {
 	const { BASE_INTERNAL_URL, WM_WORKSPACE, WM_TOKEN } = process.env;
-	const res = await fetch(`${BASE_INTERNAL_URL}/api/w/${WM_WORKSPACE}/variables/get_value/f/orchestrator/runner_event_key`, {
-		headers: { Authorization: `Bearer ${WM_TOKEN}` },
-	});
+	const res = await fetch(
+		`${BASE_INTERNAL_URL}/api/w/${WM_WORKSPACE}/variables/get_value/f/orchestrator/runner_event_key`,
+		{
+			headers: { Authorization: `Bearer ${WM_TOKEN}` },
+		},
+	);
 	if (!res.ok) throw new Error(`the event key: HTTP ${res.status}`);
 	const dir = mkdtempSync(join(tmpdir(), "event-"));
 	const key = join(dir, "key");
@@ -33,7 +39,21 @@ export async function main(line: string, body: string) {
 		writeFileSync(key, Buffer.from(String(await res.json()), "base64"), { mode: 0o600 });
 		// The runner's host key is pinned, so another container answering as runner fails the job.
 		const ssh = Bun.spawn(
-			["ssh", "-i", key, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=/run/secrets/runner_known_hosts", "-o", "LogLevel=ERROR", "runner@runner", line],
+			[
+				"ssh",
+				"-i",
+				key,
+				"-o",
+				"BatchMode=yes",
+				"-o",
+				"StrictHostKeyChecking=yes",
+				"-o",
+				"UserKnownHostsFile=/run/secrets/runner_known_hosts",
+				"-o",
+				"LogLevel=ERROR",
+				"runner@runner",
+				line,
+			],
 			{ stdin: new TextEncoder().encode(body), stdout: "inherit", stderr: "inherit" },
 		);
 		const code = await ssh.exited;

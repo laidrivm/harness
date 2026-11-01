@@ -62,7 +62,10 @@ describe("a question posted", () => {
 		await comment(client(TOKEN), CARD, "`harness-pause` Paused.", "harness-pause", USER);
 		const [mark, ...rest] = (seen[0].body as { rich_text: unknown[] }).rich_text;
 		expect(mark).toEqual({ type: "text", text: { content: "harness-pause" }, annotations: { code: true } });
-		expect(rest).toEqual([{ type: "mention", mention: { type: "user", user: { id: USER } } }, { type: "text", text: { content: " Paused." } }]);
+		expect(rest).toEqual([
+			{ type: "mention", mention: { type: "user", user: { id: USER } } },
+			{ type: "text", text: { content: " Paused." } },
+		]);
 	});
 });
 
@@ -71,7 +74,10 @@ describe("a question already waits", () => {
 	test.each([
 		["one on the second page of comments [21]", [[reply("2026-10-20T08:00:00Z")], [question("2026-10-20T09:00:00Z")]]],
 		["one served before an earlier reply [21]", [[question("2026-10-20T09:00:00Z")], [reply("2026-10-20T08:00:00Z")]]],
-		["one followed only by another member's comment [22]", [[question("2026-10-20T09:00:00Z"), reply("2026-10-20T10:00:00Z", BOT.replace("f", "e"))]]],
+		[
+			"one followed only by another member's comment [22]",
+			[[question("2026-10-20T09:00:00Z"), reply("2026-10-20T10:00:00Z", BOT.replace("f", "e"))]],
+		],
 		["one in a plain backticked mark [23]", [[said(USER, "2026-10-20T09:00:00Z", { plain_text: TEXT })]]],
 	])("%s: nothing is posted", async (_, comments) => {
 		const seen = notion({ comments });
@@ -81,8 +87,14 @@ describe("a question already waits", () => {
 
 	test.each([
 		["the user's reply after it [22]", [[question("2026-10-20T09:00:00Z"), reply("2026-10-20T10:00:00Z")]]],
-		["the user's reply served first, posted later [21]", [[reply("2026-10-20T10:00:00Z")], [question("2026-10-20T09:00:00Z")]]],
-		["the user's reply under a UUID-form id [22a]", [[question("2026-10-20T09:00:00Z"), reply("2026-10-20T10:00:00Z", USER_UUID)]]],
+		[
+			"the user's reply served first, posted later [21]",
+			[[reply("2026-10-20T10:00:00Z")], [question("2026-10-20T09:00:00Z")]],
+		],
+		[
+			"the user's reply under a UUID-form id [22a]",
+			[[question("2026-10-20T09:00:00Z"), reply("2026-10-20T10:00:00Z", USER_UUID)]],
+		],
 	])("%s: the question is answered, and the new one posted", async (_, comments) => {
 		notion({ comments });
 		expect(await line()).toBe(POSTED);
@@ -110,10 +122,26 @@ describe("the triage's answer", () => {
 	// spec: task-board/the-triages-answer task-board/the-user-after-the-triage
 	test.each([
 		["the integration's harness-answer alone [77]", [question(ASKED), answer("2026-10-20T10:00:00Z")], BOT],
-		["a harness-answer, then the user's reply [78]", [question(ASKED), answer("2026-10-20T10:00:00Z"), reply("2026-10-20T11:00:00Z")], BOT],
-		["the user's reply, then a harness-answer [79]", [question(ASKED), reply("2026-10-20T10:00:00Z"), answer("2026-10-20T11:00:00Z")], BOT],
-		["an id read as a UUID, matched by its hex digits [80]", [question(ASKED), answer("2026-10-20T10:00:00Z")], "ffffeeee-dddd-cccc-bbbb-aaaa99998888"],
-		["a backticked mark in plain text [77]", [question(ASKED), said(BOT, "2026-10-20T10:00:00Z", { plain_text: "`harness-answer` One group." })], BOT],
+		[
+			"a harness-answer, then the user's reply [78]",
+			[question(ASKED), answer("2026-10-20T10:00:00Z"), reply("2026-10-20T11:00:00Z")],
+			BOT,
+		],
+		[
+			"the user's reply, then a harness-answer [79]",
+			[question(ASKED), reply("2026-10-20T10:00:00Z"), answer("2026-10-20T11:00:00Z")],
+			BOT,
+		],
+		[
+			"an id read as a UUID, matched by its hex digits [80]",
+			[question(ASKED), answer("2026-10-20T10:00:00Z")],
+			"ffffeeee-dddd-cccc-bbbb-aaaa99998888",
+		],
+		[
+			"a backticked mark in plain text [77]",
+			[question(ASKED), said(BOT, "2026-10-20T10:00:00Z", { plain_text: "`harness-answer` One group." })],
+			BOT,
+		],
 	])("%s answers the question, and the new one is posted", async (_, comments, self) => {
 		notion({ comments: [comments] });
 		expect(await line(CARRIED, undefined, self)).toBe(POSTED);
@@ -121,9 +149,17 @@ describe("the triage's answer", () => {
 
 	// spec: task-board/a-harness-answer-from-another-author
 	test.each([
-		["from the ask integration [81]", [question(ASKED), answer("2026-10-20T10:00:00Z", "11112222333344445555666677778888")], BOT],
+		[
+			"from the ask integration [81]",
+			[question(ASKED), answer("2026-10-20T10:00:00Z", "11112222333344445555666677778888")],
+			BOT,
+		],
 		["from another member [81]", [question(ASKED), answer("2026-10-20T10:00:00Z", USER.replace("0", "9"))], BOT],
-		["from the user, a mark and so no reply of theirs [81]", [question(ASKED), answer("2026-10-20T10:00:00Z", USER)], BOT],
+		[
+			"from the user, a mark and so no reply of theirs [81]",
+			[question(ASKED), answer("2026-10-20T10:00:00Z", USER)],
+			BOT,
+		],
 		["read with no integration id [83]", [question(ASKED), answer("2026-10-20T10:00:00Z")], undefined],
 	])("a harness-answer %s answers nothing", async (_, comments, self) => {
 		notion({ comments: [comments] });
@@ -135,7 +171,9 @@ describe("the integration's own id", () => {
 	test("is read with GET /v1/users/me, with the version and the bearer", async () => {
 		const seen = notion();
 		expect(await own(TOKEN)).toBe(BOT);
-		expect(seen.map((s) => [s.call, s.version, s.auth])).toEqual([["GET /v1/users/me", "2025-09-03", `Bearer ${TOKEN}`]]);
+		expect(seen.map((s) => [s.call, s.version, s.auth])).toEqual([
+			["GET /v1/users/me", "2025-09-03", `Bearer ${TOKEN}`],
+		]);
 	});
 
 	test.each([
@@ -153,7 +191,10 @@ describe("the integration's own id", () => {
 	/** What `own()` throws against `stub`, with a short limit. */
 	const failed = (stub: Stub) => {
 		notion(stub);
-		return own(TOKEN, 200).then(() => undefined, (error: Error) => error);
+		return own(TOKEN, 200).then(
+			() => undefined,
+			(error: Error) => error,
+		);
 	};
 
 	test.each([
@@ -174,7 +215,10 @@ describe("the integration's own id", () => {
 
 	test("a malformed base URL throws a plain Error", async () => {
 		process.env.HARNESS_NOTION_API_URL = "not a url";
-		const error = await own(TOKEN, 200).then(() => undefined, (e: Error) => e);
+		const error = await own(TOKEN, 200).then(
+			() => undefined,
+			(e: Error) => e,
+		);
 		expect(error).toBeInstanceOf(Error);
 		expect(error).not.toBeInstanceOf(Transient);
 	});
@@ -183,9 +227,21 @@ describe("the integration's own id", () => {
 describe("a card the runner refuses", () => {
 	// spec: board-loop/a-page-that-is-not-a-card
 	test.each([
-		["a parent of type database_id [25]", { page: { ...PAGE, parent: { type: "database_id", database_id: "db1" } } }, `${CARD} is not a card on a board`],
-		["a parent of type page_id [25]", { page: { ...PAGE, parent: { type: "page_id", page_id: "p1" } } }, `${CARD} is not a card on a board`],
-		["a board titled Harness copy [24]", { source: { title: [{ plain_text: "Harness copy" }] } }, `${CARD} is not on the board Harness`],
+		[
+			"a parent of type database_id [25]",
+			{ page: { ...PAGE, parent: { type: "database_id", database_id: "db1" } } },
+			`${CARD} is not a card on a board`,
+		],
+		[
+			"a parent of type page_id [25]",
+			{ page: { ...PAGE, parent: { type: "page_id", page_id: "p1" } } },
+			`${CARD} is not a card on a board`,
+		],
+		[
+			"a board titled Harness copy [24]",
+			{ source: { title: [{ plain_text: "Harness copy" }] } },
+			`${CARD} is not on the board Harness`,
+		],
 		["a 404 on the page read [26]", { status: 404 }, "the page read answered 404"],
 	])("%s posts nothing", async (_, stub, why) => {
 		const seen = notion(stub);
@@ -195,7 +251,9 @@ describe("a card the runner refuses", () => {
 
 	test("a card on Harness, from mellon's clone, posts nothing [24]", async () => {
 		notion();
-		expect(await line({ board: "mellon", slug: "demo" })).toBe(`question: not posted — ${CARD} is not on the board mellon`);
+		expect(await line({ board: "mellon", slug: "demo" })).toBe(
+			`question: not posted — ${CARD} is not on the board mellon`,
+		);
 	});
 
 	// spec: board-loop/the-card-of-another-change
@@ -211,7 +269,9 @@ describe("a card the runner refuses", () => {
 describe("a call that fails", () => {
 	test("a stub that never answers ends at the timeout, naming the error [27]", async () => {
 		notion({ hang: true });
-		expect(await line(CARRIED, 200)).toBe("question: not posted — Notion did not answer: the page read failed: TimeoutError");
+		expect(await line(CARRIED, 200)).toBe(
+			"question: not posted — Notion did not answer: the page read failed: TimeoutError",
+		);
 	});
 
 	test("a failed POST sends no PATCH [28]", async () => {

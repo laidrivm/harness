@@ -35,8 +35,7 @@ const args = process.argv.slice(2);
 // Last alone: anywhere else, twice or misspelt, it leaves an argument the shape refuses.
 const before = args.at(-1) === "--before-push";
 const [stage, change, step, ...rest] = before ? args.slice(0, -1) : args;
-const usage =
-	"usage: goal-check.ts propose|archive <change> | apply <change> <step> [--before-push]";
+const usage = "usage: goal-check.ts propose|archive <change> | apply <change> <step> [--before-push]";
 const shaped =
 	["propose", "apply", "archive"].includes(stage) &&
 	// A path segment, so it can neither climb out of `openspec/changes/` nor
@@ -59,11 +58,9 @@ const short = commit.slice(0, 7);
 const missing: string[] = [];
 
 // `!== ""`: a status git cannot read (undefined) is no clean tree.
-if (git("status", "--porcelain", "--untracked-files=no") !== "")
-	missing.push("tracked files differ from HEAD");
+if (git("status", "--porcelain", "--untracked-files=no") !== "") missing.push("tracked files differ from HEAD");
 
-if (stage === "propose" && !has(`${dir}/proposal.md`))
-	missing.push(`no ${dir}/proposal.md in HEAD`);
+if (stage === "propose" && !has(`${dir}/proposal.md`)) missing.push(`no ${dir}/proposal.md in HEAD`);
 
 if (stage === "apply") {
 	const text = show(`${dir}/tasks.md`);
@@ -71,8 +68,7 @@ if (stage === "apply") {
 	const heading = [...groups(text ?? "").keys()][Number(step) - 1];
 	if (text === undefined) missing.push(`no ${dir}/tasks.md in HEAD`);
 	else if (heading === undefined) missing.push(`tasks.md has no group ${step}`);
-	else if (!complete(text).includes(heading))
-		missing.push(`group "${heading}" is not complete`);
+	else if (!complete(text).includes(heading)) missing.push(`group "${heading}" is not complete`);
 }
 
 if (stage === "archive") {

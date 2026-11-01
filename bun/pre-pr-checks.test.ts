@@ -17,15 +17,17 @@ afterAll(cleanup);
 /** A branch within budget whose manifest names `command` as its checks. */
 const within = (command?: string, base: Record<string, string> = {}) =>
 	repo({ "package.json": checks(command), ...base }, { "a.ts": lines(3) });
-const over = (command: string) =>
-	repo({ "package.json": checks(command) }, { "a.ts": lines(800) });
+const over = (command: string) => repo({ "package.json": checks(command) }, { "a.ts": lines(800) });
 const outcomes = (state: string) => records(state).map((r) => [r.rule, r.decision]);
 
 describe("the project checks", () => {
 	// spec: pre-pr-runner/a-passing-run
 	test("with nothing past the base, both steps record `pass` [1]", () => {
 		const { state } = run(repo({}, {}));
-		expect(outcomes(state)).toEqual([["diff-budget", "pass"], ["project-checks", "pass"]]);
+		expect(outcomes(state)).toEqual([
+			["diff-budget", "pass"],
+			["project-checks", "pass"],
+		]);
 	});
 
 	// spec: pre-pr-runner/a-branch-within-budget pre-pr-runner/a-passing-run
@@ -50,7 +52,10 @@ describe("the project checks", () => {
 
 	// spec: pre-pr-runner/a-failing-run
 	test("failing checks within budget record `pass` then `fail`", () => {
-		expect(outcomes(run(within("false")).state)).toEqual([["diff-budget", "pass"], ["project-checks", "fail"]]);
+		expect(outcomes(run(within("false")).state)).toEqual([
+			["diff-budget", "pass"],
+			["project-checks", "fail"],
+		]);
 	});
 
 	test("run from a subdirectory, they run from the top level [13]", () => {
@@ -68,7 +73,13 @@ describe("the project checks", () => {
 	// spec: pre-pr-runner/a-branch-over-budget
 	test("over budget and failing, it exits 1 with two `fail` records [5]", () => {
 		const result = run(over("false"));
-		expect([result.code, outcomes(result.state)]).toEqual([1, [["diff-budget", "fail"], ["project-checks", "fail"]]]);
+		expect([result.code, outcomes(result.state)]).toEqual([
+			1,
+			[
+				["diff-budget", "fail"],
+				["project-checks", "fail"],
+			],
+		]);
 	});
 
 	// spec: pre-pr-runner/a-branch-over-budget
@@ -80,7 +91,13 @@ describe("the project checks", () => {
 	// spec: pre-pr-runner/a-base-it-cannot-resolve
 	test("an unresolvable base exits 2, the budget `error` and the checks `pass` [6]", () => {
 		const result = run(within("true"), {}, ["nope"]);
-		expect([result.code, outcomes(result.state)]).toEqual([2, [["diff-budget", "error"], ["project-checks", "pass"]]]);
+		expect([result.code, outcomes(result.state)]).toEqual([
+			2,
+			[
+				["diff-budget", "error"],
+				["project-checks", "pass"],
+			],
+		]);
 	});
 
 	// spec: pre-pr-runner/project-checks-that-exit-otherwise pre-pr-runner/an-unmeasured-run

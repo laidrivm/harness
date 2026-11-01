@@ -64,10 +64,14 @@ export function prepare(args: string[]) {
 	const unpushed = !held();
 	let noted = unpushed ? at("git", "branch", "--show-current").out : "";
 	// No branch name keeps a detached HEAD's commits once the pass switches off it.
-	if (unpushed && !noted) return end("refused", "HEAD names no branch and is on no remote-tracking branch — unpushed work");
+	if (unpushed && !noted)
+		return end("refused", "HEAD names no branch and is on no remote-tracking branch — unpushed work");
 	/** A refusal goes back to the noted branch first, so the next pass sees its tip again. */
 	const refuse = (detail: string, outcome: "refused" | "retry" = "refused") =>
-		end(outcome, !noted || at("git", "switch", "-q", noted).ok ? detail : `${detail}; switching back to ${noted} failed`);
+		end(
+			outcome,
+			!noted || at("git", "switch", "-q", noted).ok ? detail : `${detail}; switching back to ${noted} failed`,
+		);
 	for (const step of [
 		["fetch", "-q", "origin"],
 		["switch", "-q", DEFAULT],
@@ -75,7 +79,11 @@ export function prepare(args: string[]) {
 	]) {
 		const run = at("git", ...step);
 		// The fetch may bring the tip itself: the host's runner pushes a step's branch from a clone of its own.
-		const off = run.ok && noted && step[0] === "fetch" && (leftover(at, DEFAULT) ? `origin/${DEFAULT} holds its every commit by patch` : held() && "origin holds its tip");
+		const off =
+			run.ok &&
+			noted &&
+			step[0] === "fetch" &&
+			(leftover(at, DEFAULT) ? `origin/${DEFAULT} holds its every commit by patch` : held() && "origin holds its tip");
 		if (off) {
 			console.log(`switching off ${noted}: ${off}`);
 			noted = "";

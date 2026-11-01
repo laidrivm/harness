@@ -7,13 +7,7 @@
  * `afterAll` is not registered here: each test file registers `cleanup`
  * itself, as `spec-coverage.fixture.ts` explains for the same shape.
  */
-import {
-	mkdirSync,
-	mkdtempSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { MARK } from "./bootstrap.ts";
@@ -39,13 +33,11 @@ export function consumer(files: Record<string, string>): string {
 	return dir;
 }
 
-export const read = (dir: string, path: string) =>
-	readFileSync(join(dir, path), "utf8");
+export const read = (dir: string, path: string) => readFileSync(join(dir, path), "utf8");
 export const parsed = (dir: string) => JSON.parse(read(dir, SETTINGS));
 
 /** A previous version's hook: another script, carrying the harness's mark. */
-export const old = (script: string) =>
-	`g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/${script}"; bun "$g" ${MARK}`;
+export const old = (script: string) => `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/${script}"; bun "$g" ${MARK}`;
 
 /** Settings as a previous harness version left them, plus `extra`. */
 export const stale = (extra: Record<string, unknown> = {}) => ({
@@ -55,18 +47,12 @@ export const stale = (extra: Record<string, unknown> = {}) => ({
 		allow: ["Bash(bun test *)"],
 	},
 	hooks: {
-		PreToolUse: [
-			{ matcher: "Bash", hooks: [{ type: "command", command: old("g.ts") }] },
-		],
-		UserPromptSubmit: [
-			{ hooks: [{ type: "command", command: old("turn-gate.ts mark") }] },
-		],
+		PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: old("g.ts") }] }],
+		UserPromptSubmit: [{ hooks: [{ type: "command", command: old("turn-gate.ts mark") }] }],
 		Stop: [{ hooks: [{ type: "command", command: old("turn-gate.ts stop") }] }],
 	},
 	...extra,
 });
 
-export const STALE_BUNFIG =
-	"[install]\nexact = true\nminimumReleaseAge = 86400\nminimumReleaseAgeExcludes = []\n";
-export const CANONICAL =
-	"[install]\nexact = true\nminimumReleaseAge = 259200\nminimumReleaseAgeExcludes = []\n";
+export const STALE_BUNFIG = "[install]\nexact = true\nminimumReleaseAge = 86400\nminimumReleaseAgeExcludes = []\n";
+export const CANONICAL = "[install]\nexact = true\nminimumReleaseAge = 259200\nminimumReleaseAgeExcludes = []\n";

@@ -6,15 +6,8 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { consumer, policy } from "./settings.fixture.ts";
+import { cleanup, gap, LOCAL, repo, report, run } from "./settings-local.fixture.ts";
 import { sweep } from "./settings-local.ts";
-import {
-	cleanup,
-	gap,
-	LOCAL,
-	report,
-	repo,
-	run,
-} from "./settings-local.fixture.ts";
 
 afterAll(cleanup);
 
@@ -45,27 +38,21 @@ describe("nothing to sweep", () => {
 
 describe("one entry of each class", () => {
 	test("an entry the tracked allow list holds is decided, naming it [4]", () => {
-		const { code, err } = run(
-			repo({ allow: ["Bash(bun test *)"] }, ["Bash(bun test *)"]),
-		);
+		const { code, err } = run(repo({ allow: ["Bash(bun test *)"] }, ["Bash(bun test *)"]));
 		expect(code).toBe(1);
 		expect(err).toContain("decided: Bash(bun test *) — allow holds Bash(bun test *)");
 	});
 
 	// spec: agent-permissions/a-gap-in-the-tracked-policy
 	test("an entry no tracked rule matches is a gap, and the run fails [5]", () => {
-		const { code, err } = run(
-			repo({ allow: ["Bash(bun test *)"] }, ["Bash(git push *)"]),
-		);
+		const { code, err } = run(repo({ allow: ["Bash(bun test *)"] }, ["Bash(git push *)"]));
 		expect(code).toBe(1);
 		expect(err).toContain("gap: Bash(git push *)");
 	});
 
 	// spec: agent-permissions/nothing-left-to-promote-or-drop
 	test("a machine-local entry is kept, and the run passes [6]", () => {
-		const { code, out, err } = run(
-			repo({ allow: ["Bash(bun test *)"] }, ["Read(//Users/someone/x/**)"]),
-		);
+		const { code, out, err } = run(repo({ allow: ["Bash(bun test *)"] }, ["Read(//Users/someone/x/**)"]));
 		expect(code).toBe(0);
 		expect(out).toContain("kept: Read(//Users/someone/x/**)");
 		expect(err).toBe("");
@@ -74,15 +61,15 @@ describe("one entry of each class", () => {
 
 describe("the order of the lists", () => {
 	test("an entry deny and allow both match is decided by the deny entry [7]", () => {
-		expect(
-			report({ deny: ["Bash(npm *)"], allow: ["Bash(npm view *)"] }, "Bash(npm view x)"),
-		).toEqual(["decided: Bash(npm view x) — deny holds Bash(npm *)"]);
+		expect(report({ deny: ["Bash(npm *)"], allow: ["Bash(npm view *)"] }, "Bash(npm view x)")).toEqual([
+			"decided: Bash(npm view x) — deny holds Bash(npm *)",
+		]);
 	});
 
 	test("an entry ask and allow both match is decided by the ask entry [8]", () => {
-		expect(
-			report({ ask: ["Bash(bun add *)"], allow: ["Bash(bun *)"] }, "Bash(bun add x)"),
-		).toEqual(["decided: Bash(bun add x) — ask holds Bash(bun add *)"]);
+		expect(report({ ask: ["Bash(bun add *)"], allow: ["Bash(bun *)"] }, "Bash(bun add x)")).toEqual([
+			"decided: Bash(bun add x) — ask holds Bash(bun add *)",
+		]);
 	});
 
 	test("every class in one file: decided before gaps, the kept one listed, the run failing [9]", () => {
@@ -92,13 +79,8 @@ describe("the order of the lists", () => {
 			"Bash(git log --oneline)",
 		]);
 		expect(sweep(dir)).toEqual({
-			reported: [
-				"decided: Bash(git log --oneline) — allow holds Bash(git log *)",
-				gap("Bash(sed -i x y)"),
-			],
-			kept: [
-				"kept: Read(//Users/someone/**) — carries a path a clone does not have",
-			],
+			reported: ["decided: Bash(git log --oneline) — allow holds Bash(git log *)", gap("Bash(sed -i x y)")],
+			kept: ["kept: Read(//Users/someone/**) — carries a path a clone does not have"],
 		});
 		expect(run(dir).code).toBe(1);
 	});
@@ -112,36 +94,25 @@ describe("the documented matching", () => {
 	});
 
 	test("the space before a trailing `*` is a word boundary [11]", () => {
-		expect(report({ allow: ["Bash(ls *)"] }, "Bash(lsof)")).toEqual([
-			gap("Bash(lsof)"),
-		]);
+		expect(report({ allow: ["Bash(ls *)"] }, "Bash(lsof)")).toEqual([gap("Bash(lsof)")]);
 	});
 
 	// spec: agent-permissions/an-entry-the-tracked-file-already-decides
 	test("a trailing `:*` is a trailing ` *`, so an ask entry decides it and the run fails [12]", () => {
-		const { code, err } = run(
-			repo({ ask: ["Bash(bun install *)"] }, ["Bash(bun install:*)"]),
-		);
+		const { code, err } = run(repo({ ask: ["Bash(bun install *)"] }, ["Bash(bun install:*)"]));
 		expect(code).toBe(1);
-		expect(err).toContain(
-			"decided: Bash(bun install:*) — ask holds Bash(bun install *)",
-		);
+		expect(err).toContain("decided: Bash(bun install:*) — ask holds Bash(bun install *)");
 	});
 
 	test("a `:*` inside a rule is literal [13]", () => {
-		expect(report({ allow: ["Bash(git:* push)"] }, "Bash(git push)")).toEqual([
-			gap("Bash(git push)"),
-		]);
+		expect(report({ allow: ["Bash(git:* push)"] }, "Bash(git push)")).toEqual([gap("Bash(git push)")]);
 	});
 
-	test.each(["Bash", "Bash(*)"])(
-		"a tracked %s decides every Bash entry [14]",
-		(rule) => {
-			expect(report({ allow: [rule] }, "Bash(anything at all)")).toEqual([
-				`decided: Bash(anything at all) — allow holds ${rule}`,
-			]);
-		},
-	);
+	test.each(["Bash", "Bash(*)"])("a tracked %s decides every Bash entry [14]", (rule) => {
+		expect(report({ allow: [rule] }, "Bash(anything at all)")).toEqual([
+			`decided: Bash(anything at all) — allow holds ${rule}`,
+		]);
+	});
 
 	test("a tool-name glob in the tracked ask list decides a tool it names", () => {
 		const entry = "mcp__claude_ai_Gmail__send_message";
@@ -151,8 +122,6 @@ describe("the documented matching", () => {
 	});
 
 	test("a Bash rule never decides another tool's entry with the same text [15]", () => {
-		expect(report({ allow: ["Bash(git log *)"] }, "PowerShell(git log)")).toEqual([
-			gap("PowerShell(git log)"),
-		]);
+		expect(report({ allow: ["Bash(git log *)"] }, "PowerShell(git log)")).toEqual([gap("PowerShell(git log)")]);
 	});
 });

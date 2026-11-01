@@ -1,12 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
-import {
-	cleanup,
-	gate,
-	git,
-	lines,
-	repo,
-	tasks,
-} from "./diff-budget.fixture.ts";
+import { cleanup, gate, git, lines, repo, tasks } from "./diff-budget.fixture.ts";
 
 /**
  * The propose stage's own seam. A branch that authors a proposal — adding both
@@ -126,11 +119,7 @@ test("a split half over the threshold still reports the override", () => {
 			"openspec/changes/half/specs/thing/spec.md": lines(400),
 		},
 	);
-	const g = gate(
-		dir,
-		"main",
-		"oversize: the requirements alone run this long\n",
-	);
+	const g = gate(dir, "main", "oversize: the requirements alone run this long\n");
 	expect(g.line).toContain("OVERRIDE — 900 lines");
 	expect(g.code).toBe(0);
 });
@@ -214,10 +203,7 @@ test("modifying both artefacts without adding either is not an unsplit proposal"
 });
 
 test("a proposal.md outside openspec/changes/ does not trigger the refusal", () => {
-	const dir = repo(
-		{ "a.ts": "one\n" },
-		{ "docs/proposal.md": lines(500), "docs/tasks.md": tasks(400, " ") },
-	);
+	const dir = repo({ "a.ts": "one\n" }, { "docs/proposal.md": lines(500), "docs/tasks.md": tasks(400, " ") });
 	const g = gate(dir, "main", "oversize: documentation, not a change\n");
 	expect(g.line).toContain("OVERRIDE — 900 lines");
 	expect(g.code).toBe(0);

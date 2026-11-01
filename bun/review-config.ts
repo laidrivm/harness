@@ -33,10 +33,7 @@ export function parsed(root: string): { config: unknown } | string {
 /** The value at a dotted key path, `undefined` where a step is missing. */
 export function at(value: unknown, path: string): unknown {
 	for (const key of path.split("."))
-		value =
-			value && typeof value === "object"
-				? (value as Record<string, unknown>)[key]
-				: undefined;
+		value = value && typeof value === "object" ? (value as Record<string, unknown>)[key] : undefined;
 	return value;
 }
 
@@ -53,11 +50,7 @@ function patterns(root: string): string[] | string {
 	if (!Array.isArray(list)) return `${CONFIG}: ${KEY} is not a list`;
 	if (list.length === 0) return `${CONFIG}: ${KEY} is empty`;
 	const bad = list.flatMap((p, i) =>
-		typeof p !== "string"
-			? [`${KEY}[${i}] is not a string`]
-			: p.trim() === ""
-				? [`${KEY}[${i}] is blank`]
-				: [],
+		typeof p !== "string" ? [`${KEY}[${i}] is not a string`] : p.trim() === "" ? [`${KEY}[${i}] is blank`] : [],
 	);
 	return bad.length ? `${CONFIG}: ${bad.join("; ")}` : list;
 }
@@ -80,9 +73,7 @@ function indexed(root: string, from: string): string[] {
 		.map((m) => m[1] as string)
 		.filter((t) => !/^[a-z][a-z0-9+.-]*:/i.test(t))
 		.map((t) => normalize(join(dirname(from), t)));
-	if (from === "CLAUDE.md")
-		for (const m of text.matchAll(/^@(\S+\.md)\s*$/gm))
-			targets.push(normalize(m[1] as string));
+	if (from === "CLAUDE.md") for (const m of text.matchAll(/^@(\S+\.md)\s*$/gm)) targets.push(normalize(m[1] as string));
 	return targets;
 }
 
@@ -94,16 +85,10 @@ export function unreached(root: string): string[] {
 	// not the work tree holds it.
 	const { paths } = tracked(root);
 	const globs = named.map((p) => new Glob(p));
-	const docs = new Set([
-		RULEBOOK,
-		...indexed(root, "CLAUDE.md"),
-		...indexed(root, RULEBOOK),
-	]);
+	const docs = new Set([RULEBOOK, ...indexed(root, "CLAUDE.md"), ...indexed(root, RULEBOOK)]);
 	// A glob matches a path string whether or not the file exists, so a doc
 	// the tree lacks would otherwise read as reached.
-	const absent = ["CLAUDE.md", ...docs].filter(
-		(d) => !EXEMPT.has(d) && !paths.includes(d),
-	);
+	const absent = ["CLAUDE.md", ...docs].filter((d) => !EXEMPT.has(d) && !paths.includes(d));
 	return [
 		...named
 			.filter((_, i) => !paths.some((f) => globs[i]?.match(f)))

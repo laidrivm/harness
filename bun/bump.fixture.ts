@@ -36,8 +36,7 @@ export function serve(state: Served): ReturnType<typeof Bun.serve> {
 			const path = new URL(request.url).pathname;
 			state.seen.push(request.headers.get("authorization"));
 			if (state.broken) return new Response("down", { status: 500 });
-			if (path === "/repos/laidrivm/harness/commits/main")
-				return Response.json({ sha: state.head });
+			if (path === "/repos/laidrivm/harness/commits/main") return Response.json({ sha: state.head });
 			if (path === `/repos/laidrivm/harness/commits/${state.head}/check-runs`)
 				return Response.json({ check_runs: state.runs });
 			return new Response("not found", { status: 404 });

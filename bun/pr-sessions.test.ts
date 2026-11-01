@@ -31,14 +31,20 @@ describe("a lookup", () => {
 		const file = table();
 		append(step("o/r", "feat/x", "here"), file);
 		append(step("o/other", "feat/x", "there"), file);
-		expect([lookup("o/r", "feat/x", file)?.session, lookup("o/other", "feat/x", file)?.session]).toEqual(["here", "there"]);
+		expect([lookup("o/r", "feat/x", file)?.session, lookup("o/other", "feat/x", file)?.session]).toEqual([
+			"here",
+			"there",
+		]);
 	});
 
 	// spec: board-loop/a-step-continued-by-a-second-session
 	test.each([
 		["a line cut off mid-JSON", `{"repo":"o/r","branch":"feat/x","session":"cut`],
 		["a line lacking session", `{"repo":"o/r","branch":"feat/x","clone":"/c","at":"2026-10-20T00:00:00.000Z"}`],
-		["a line with an empty session", `{"repo":"o/r","branch":"feat/x","session":"","clone":"/c","at":"2026-10-20T00:00:00.000Z"}`],
+		[
+			"a line with an empty session",
+			`{"repo":"o/r","branch":"feat/x","session":"","clone":"/c","at":"2026-10-20T00:00:00.000Z"}`,
+		],
 	])("skips %s and finds the earlier line [24]", (_, bad) => {
 		const file = table();
 		append(step("o/r", "feat/x", "valid"), file);

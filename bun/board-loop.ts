@@ -93,7 +93,9 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	}
 	// A host session left notion-create-comment posts as whoever the host's Notion MCP is signed in as: the user.
 	if (under.length && !bot)
-		return refuse(`on the host the runner posts each question from the Notion integration, and ${where("notion-bot.json")} is missing`);
+		return refuse(
+			`on the host the runner posts each question from the Notion integration, and ${where("notion-bot.json")} is missing`,
+		);
 	if (steps.size === 0) return end("idle", "no change is takeable");
 	const listed = (answer: boolean) => [...steps].filter(([, s]) => s.answer === answer).map(([name]) => name);
 	const drafts = [...steps].filter(([, s]) => s.draft !== undefined).map(([name]) => name);
@@ -123,7 +125,15 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const withheld = bot ? ["--disallowedTools", "mcp__*__notion-create-comment"] : [];
 	let picked: Awaited<ReturnType<typeof session>>;
 	try {
-		picked = await session(pickPrompt(named, listed(false), listed(true), bot?.self, bot?.user, drafts), limit, kill, true, as, withheld, under);
+		picked = await session(
+			pickPrompt(named, listed(false), listed(true), bot?.self, bot?.user, drafts),
+			limit,
+			kill,
+			true,
+			as,
+			withheld,
+			under,
+		);
 	} catch {
 		return refuse("claude could not be started");
 	}
@@ -142,7 +152,10 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	// The pass has read the draft's answer: the user leaves `Assign` before the stage session acts on it.
 	if (bot && chosen.draft !== undefined) {
 		const card = pickedCard(picked.out);
-		const wrote = typeof card === "string" ? `assign: not written — ${card}` : await unassign(bot, card.card, { board: named, slug });
+		const wrote =
+			typeof card === "string"
+				? `assign: not written — ${card}`
+				: await unassign(bot, card.card, { board: named, slug });
 		// Carried, the draft would go ready with the user still on `Assign`; refused, the next pass reads the answer again.
 		if (wrote.startsWith(UNASSIGN_FAILED)) return refuse(wrote);
 		console.log(wrote);
@@ -159,7 +172,15 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		// Captured, for its title and body: in text mode it prints nothing before its final message.
 		const asks = bot ? "runner" : existsSync(where(ASK_SETTINGS)) ? "ask" : undefined;
 		const flags = ["--session-id", id, ...withheld];
-		staged = await session(prompt(slug, chosen, relative(real, check), resumed, asks, bot?.self, bot?.user), limit, kill, true, as, flags, under);
+		staged = await session(
+			prompt(slug, chosen, relative(real, check), resumed, asks, bot?.self, bot?.user),
+			limit,
+			kill,
+			true,
+			as,
+			flags,
+			under,
+		);
 	} catch {
 		return refuse("claude could not be started");
 	}
@@ -167,7 +188,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	if (stageEnd !== undefined) return stageEnd;
 	if (staged.out.trim()) console.log(staged.out.trim());
 	// A tracked edit left is a pause: the next pass would refuse that tree, and the runner commits nothing of a session's.
-	const retry = (why: string) => (edited() ? end("open", `${target}: ${why}, leaving a tracked edit`) : end("retry", `${target}: ${why}`));
+	const retry = (why: string) =>
+		edited() ? end("open", `${target}: ${why}, leaving a tracked edit`) : end("retry", `${target}: ${why}`);
 	if (staged.transient) return retry("the stage session ended on a Claude API error");
 	// Before the push, so the post never waits on it; only a Notion that did not answer changes the outcome.
 	const question = asked(staged.out);
@@ -178,7 +200,13 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 				? `question: ${typeof question === "string" ? "not posted" : "posted by the session"} — no integration is configured`
 				: typeof question === "string"
 					? `question: not posted — ${question}`
-					: await post(bot, question, { board: named, slug }, undefined, triage(question.text, { at, under, limit, kill, base: DEFAULT, user: bot.user }));
+					: await post(
+							bot,
+							question,
+							{ board: named, slug },
+							undefined,
+							triage(question.text, { at, under, limit, kill, base: DEFAULT, user: bot.user }),
+						);
 	if (line) console.log(line);
 	const ending = line.split("\n").at(-1) ?? "";
 	// Before the push, so a goal met never pushes past a question Notion did not take.
@@ -193,7 +221,16 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	const draft = typeof question === "object" && (posted || !bot);
 
 	const judged = [...bun, join(judge, "goal-check.ts"), "apply", slug, String(chosen.step)];
-	const unready = await publish(staged.out, judged, chosen.branch, DEFAULT, { session: id, clone: real }, app, under, draft);
+	const unready = await publish(
+		staged.out,
+		judged,
+		chosen.branch,
+		DEFAULT,
+		{ session: id, clone: real },
+		app,
+		under,
+		draft,
+	);
 	if (unready instanceof Transient) return end("retry", `${target}: ${unready.message}`);
 	if (unready !== undefined) return open(unready);
 	// The answer carried and nothing left to ask: the draft goes ready right after its push, writing no `Assign`.
@@ -201,7 +238,9 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 		// In the repository the draft was read from, never `gh`'s default, which `GH_REPO` can move.
 		const of = originRepository();
 		const marked = of !== undefined && ready(`${of.owner}/${of.repo}`, chosen.draft);
-		console.log(`pull request #${chosen.draft}: ${marked ? "marked ready for review" : `not marked ready — ${of ? "gh pr ready failed" : "origin names no repository"}; mark it ready by hand`}`);
+		console.log(
+			`pull request #${chosen.draft}: ${marked ? "marked ready for review" : `not marked ready — ${of ? "gh pr ready failed" : "origin names no repository"}; mark it ready by hand`}`,
+		);
 	}
 	// The check's own verdict at the commit the session left, never the exit status.
 	const verdict = sh("bun", ...judged);

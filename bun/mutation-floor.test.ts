@@ -26,18 +26,7 @@ describe("the survivor count", () => {
 	});
 
 	test("only the survivors are counted among every other status", () => {
-		expect(
-			survivors(
-				report(
-					"Killed",
-					"Survived",
-					"Timeout",
-					"Ignored",
-					"CompileError",
-					"RuntimeError",
-				),
-			),
-		).toBe(1);
+		expect(survivors(report("Killed", "Survived", "Timeout", "Ignored", "CompileError", "RuntimeError"))).toBe(1);
 	});
 
 	test("a mutant no test covered counts as surviving", () => {
@@ -53,9 +42,7 @@ describe("the survivor count", () => {
 	});
 
 	test("a mutant carrying no status fails rather than counting as killed", () => {
-		expect(() =>
-			survivors({ files: { "src/model.ts": { mutants: [{}] } } }),
-		).toThrow(/undefined/);
+		expect(() => survivors({ files: { "src/model.ts": { mutants: [{}] } } })).toThrow(/undefined/);
 	});
 
 	test("a report naming no file at all fails", () => {
@@ -65,9 +52,7 @@ describe("the survivor count", () => {
 	});
 
 	test("a report of null file entries fails rather than counting zero", () => {
-		expect(() => survivors({ files: { "src/model.ts": null } })).toThrow(
-			/no mutants/,
-		);
+		expect(() => survivors({ files: { "src/model.ts": null } })).toThrow(/no mutants/);
 	});
 
 	test("a file entry with no mutants key contributes none", () => {

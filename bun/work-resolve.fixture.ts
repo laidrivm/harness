@@ -18,16 +18,23 @@ export const B = "b".repeat(40);
 export const open = (n: number, sha = A) => ({ ...pr(sha, "OPEN"), number: n, draft: true });
 
 /** A review thread whose first comment is `id`, by `login` (`null`: a deleted author), with `replies` after it. */
-export const thread = (id: string, { login = "coderabbitai" as string | null, resolved = false, outdated = false, replies = [] as string[] } = {}) => ({
+export const thread = (
+	id: string,
+	{ login = "coderabbitai" as string | null, resolved = false, outdated = false, replies = [] as string[] } = {},
+) => ({
 	id: `T_${id}`,
 	isResolved: resolved,
 	isOutdated: outdated,
-	comments: { nodes: [id, ...replies].map((fullDatabaseId) => ({ fullDatabaseId, author: login === null ? null : { login } })) },
+	comments: {
+		nodes: [id, ...replies].map((fullDatabaseId) => ({ fullDatabaseId, author: login === null ? null : { login } })),
+	},
 });
 
 /** One page of the threads query, as `gh api graphql --paginate` prints each. */
 export const page = (...nodes: object[]) => ({
-	data: { repository: { pullRequest: { reviewThreads: { pageInfo: { hasNextPage: false, endCursor: null }, nodes } } } },
+	data: {
+		repository: { pullRequest: { reviewThreads: { pageInfo: { hasNextPage: false, endCursor: null }, nodes } } },
+	},
 });
 
 /**
@@ -37,7 +44,14 @@ export const page = (...nodes: object[]) => ({
  * its exit code; `fail` the places, from 0, of the mutations that fail, and
  * `unresolved` of those that exit 0 with the thread still unresolved.
  */
-export type Gh = { pulls?: object[][]; pullsCode?: number[]; pages?: object[]; threadsCode?: number; fail?: number[]; unresolved?: number[] };
+export type Gh = {
+	pulls?: object[][];
+	pullsCode?: number[];
+	pages?: object[];
+	threadsCode?: number;
+	fail?: number[];
+	unresolved?: number[];
+};
 
 export type Call = { kind: "git" | "pulls" | "threads" | "mutation" | "other"; args: string[]; at: number };
 
@@ -56,7 +70,11 @@ function bin(gh: Gh) {
 	// The stub alone classifies a call, and logs the kind it chose, so the fixture never reads a call another way.
 	const append = (kind: string) =>
 		`require("node:fs").appendFileSync(${JSON.stringify(log)}, JSON.stringify({ kind: ${kind}, args: process.argv.slice(2), at: Date.now() }) + "\\n");`;
-	stub(dir, "git", `${append('"git"')}\nprocess.exit(Bun.spawnSync([${JSON.stringify(real)}, ...process.argv.slice(2)], { stdin: "inherit", stdout: "inherit", stderr: "inherit" }).exitCode ?? 1);\n`);
+	stub(
+		dir,
+		"git",
+		`${append('"git"')}\nprocess.exit(Bun.spawnSync([${JSON.stringify(real)}, ...process.argv.slice(2)], { stdin: "inherit", stdout: "inherit", stderr: "inherit" }).exitCode ?? 1);\n`,
+	);
 	stub(
 		dir,
 		"gh",
@@ -75,13 +93,27 @@ function bin(gh: Gh) {
 			"",
 		].join("\n"),
 	);
-	return { dir, calls: (): Call[] => (existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line)) : []) };
+	return {
+		dir,
+		calls: (): Call[] =>
+			existsSync(log)
+				? readFileSync(log, "utf8")
+						.split("\n")
+						.filter(Boolean)
+						.map((line) => JSON.parse(line))
+				: [],
+	};
 }
 
 export type Resolve = { args?: string[]; cwd?: string; gh?: Gh; env?: Record<string, string> };
 
 /** `bun bun/work.ts resolve --pr 7 --head A --comment 11`, or `args`, and what it did. */
-export async function resolve({ args = ["resolve", "--pr", "7", "--head", A, "--comment", "11"], cwd = checkout(), gh = {}, env }: Resolve = {}) {
+export async function resolve({
+	args = ["resolve", "--pr", "7", "--head", A, "--comment", "11"],
+	cwd = checkout(),
+	gh = {},
+	env,
+}: Resolve = {}) {
 	const path = bin(gh);
 	const home = emptyDir("work-resolve-home-");
 	const child = Bun.spawn([process.execPath, join(import.meta.dir, "work.ts"), ...args], {
@@ -90,7 +122,11 @@ export async function resolve({ args = ["resolve", "--pr", "7", "--head", A, "--
 		stdout: "pipe",
 		stderr: "pipe",
 	});
-	const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+	const [out, err, code] = await Promise.all([
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+		child.exited,
+	]);
 	const calls = path.calls();
 	const of = (kind: Call["kind"]) => calls.filter((c) => c.kind === kind);
 	return {

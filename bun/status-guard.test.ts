@@ -32,7 +32,10 @@ describe("a Status write through the connector is refused", () => {
 	// spec: work-status/a-status-set-through-the-connector
 	test.each([
 		["update_properties with Status", { command: "update_properties", properties: { Status: "done" } }],
-		["update_content with Status beside Assign", { command: "update_content", properties: { Assign: [], Status: "applied" } }],
+		[
+			"update_content with Status beside Assign",
+			{ command: "update_content", properties: { Assign: [], Status: "applied" } },
+		],
 		["a Status cleared to null", { command: "update_properties", properties: { Status: null } }],
 	])("%s", (_, input) => {
 		const run = guard(update(input));
@@ -103,7 +106,10 @@ describe("a card created at idea or with no status passes, recording nothing", (
 		["null", () => create([at(null)])],
 		["no Status", () => create([{ properties: { title: "A card" } }])],
 		["no properties", () => create([{ content: "A body" }])],
-		["a page parent with only title", () => create([{ properties: { title: "A page" } }], { parent: { page_id: "0" } })],
+		[
+			"a page parent with only title",
+			() => create([{ properties: { title: "A page" } }], { parent: { page_id: "0" } }),
+		],
 		["another server name at idea", () => create([at("idea")], {}, "mcp__notion__notion-create-pages")],
 		["an empty pages", () => create([])],
 		["pages as a string that does not parse", () => create("[{")],
@@ -113,7 +119,10 @@ describe("a card created at idea or with no status passes, recording nothing", (
 		["properties as a number", () => create([{ properties: 1 }])],
 		["properties as a string that does not parse", () => create([{ properties: '{"Status":' }])],
 		["no tool_input", () => ({ tool_name: CREATE })],
-		["a top-level properties with Status and none in pages", () => create([at("idea")], { properties: { Status: "approved" } })],
+		[
+			"a top-level properties with Status and none in pages",
+			() => create([at("idea")], { properties: { Status: "approved" } }),
+		],
 		["pages at approved with no tool_name, read as an update", () => ({ tool_input: { pages: [at("approved")] } })],
 	])("%s", (_, event) => {
 		expect(guard(event())).toEqual({ code: 0, err: "", ledger: [] });

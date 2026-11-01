@@ -19,7 +19,15 @@ export const runner = (version: string) =>
 
 export function stand() {
 	const root = emptyDir("orchestrator-pin-");
-	const h = { root, home: join(root, "home"), clones: join(root, "clones"), secrets: join(root, "secrets"), gh: join(root, "gh"), bin: join(root, "bin"), hooks: join(root, "hooks") };
+	const h = {
+		root,
+		home: join(root, "home"),
+		clones: join(root, "clones"),
+		secrets: join(root, "secrets"),
+		gh: join(root, "gh"),
+		bin: join(root, "bin"),
+		hooks: join(root, "hooks"),
+	};
 	for (const dir of [h.home, h.clones, h.secrets, h.gh, h.bin, h.hooks]) mkdirSync(dir);
 	writeFileSync(join(h.secrets, "claude_oauth_token"), "throwaway\n");
 	// In the runner's own config, since `pass.sh` drops every `GIT_*` it inherits.
@@ -34,7 +42,10 @@ export function stand() {
 	// The key holder's mint: its arguments logged, one token printed.
 	stub("mint", `echo "$*" >> '${join(root, "minted")}'\necho ghs_read`);
 	// Real git, with what each fetch's environment held logged first.
-	stub("git", `case " $* " in *" fetch "*) echo "$GIT_CONFIG_VALUE_0" >> '${join(root, "fetched")}';; esac\nexec '${Bun.which("git")}' "$@"`);
+	stub(
+		"git",
+		`case " $* " in *" fetch "*) echo "$GIT_CONFIG_VALUE_0" >> '${join(root, "fetched")}';; esac\nexec '${Bun.which("git")}' "$@"`,
+	);
 	return h;
 }
 export type Stand = ReturnType<typeof stand>;
@@ -78,11 +89,20 @@ const env = (h: Stand) => ({
 });
 
 /** One tick for `clone`, which the engine's job says holds `named`; `null` names no repository. */
-export function tick(h: Stand, clone = "repo", named: string | null = "owner/repo", extra: Record<string, string> = {}) {
-	const p = Bun.spawnSync([bash, script, clone, ...(named === null ? [] : [named])], { cwd: h.root, env: { ...env(h), ...extra } });
+export function tick(
+	h: Stand,
+	clone = "repo",
+	named: string | null = "owner/repo",
+	extra: Record<string, string> = {},
+) {
+	const p = Bun.spawnSync([bash, script, clone, ...(named === null ? [] : [named])], {
+		cwd: h.root,
+		env: { ...env(h), ...extra },
+	});
 	const out = p.stdout.toString();
 	const first = out.split("\n")[0];
 	return { code: p.exitCode, out, ran: first.startsWith("{") ? JSON.parse(first) : undefined };
 }
-export const stopped = (h: Stand, clone = "repo") => readFileSync(join(h.home, "orchestrator", `${clone}.stop`), "utf8");
+export const stopped = (h: Stand, clone = "repo") =>
+	readFileSync(join(h.home, "orchestrator", `${clone}.stop`), "utf8");
 export const pinOf = (sha: string) => `github:laidrivm/harness#${sha}`;

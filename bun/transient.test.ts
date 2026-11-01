@@ -56,14 +56,16 @@ describe("the status a Transient carries", () => {
 	test("one from a 503 carries 503, one from a timeout none [32]", async () => {
 		const server = Bun.serve({
 			port: 0,
-			fetch: (req) => (new URL(req.url).pathname === "/slow" ? new Promise<Response>(() => {}) : new Response("{}", { status: 503 })),
+			fetch: (req) =>
+				new URL(req.url).pathname === "/slow" ? new Promise<Response>(() => {}) : new Response("{}", { status: 503 }),
 		});
 		const before = process.env.HARNESS_NOTION_API_URL;
 		process.env.HARNESS_NOTION_API_URL = server.url.origin;
-		const caught = (path: string) => client("t", 100)("the step", path).then(
-			() => undefined,
-			(error: unknown) => error,
-		);
+		const caught = (path: string) =>
+			client("t", 100)("the step", path).then(
+				() => undefined,
+				(error: unknown) => error,
+			);
 		try {
 			const [refused, late] = await Promise.all([caught("/fail"), caught("/slow")]);
 			expect([refused instanceof Transient, (refused as Transient).status]).toEqual([true, 503]);

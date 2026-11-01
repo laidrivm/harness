@@ -4,8 +4,7 @@ import { blank, comments } from "./scan.ts";
 /** `MARK` stands in for whatever a caller is looking for: it survives the scan
  * when it sits in code, and goes when it sits in something the language quotes
  * or comments out. */
-const kept = (source: string, language: "css" | "ts") =>
-	blank(source, language).includes("MARK");
+const kept = (source: string, language: "css" | "ts") => blank(source, language).includes("MARK");
 
 describe("scanning TypeScript", () => {
 	test.each([
@@ -36,27 +35,16 @@ describe("scanning TypeScript", () => {
 		// it would run to the next `/` — the block comment's own opener — and
 		// take the directive inside it with it.
 		["code after a division by a name called `of`", "const a = of / 2; MARK;"],
-		[
-			"code after a block comment that follows a division by `of`",
-			"const a = of / 2; /* hidden */ const MARK = 1;",
-		],
-		[
-			"code after a regex literal holding a comment opener",
-			"const r = /[/*]/; MARK;",
-		],
-		[
-			"code after a template holding an escaped backtick",
-			"const a = `\\``; MARK;",
-		],
+		["code after a block comment that follows a division by `of`", "const a = of / 2; /* hidden */ const MARK = 1;"],
+		["code after a regex literal holding a comment opener", "const r = /[/*]/; MARK;"],
+		["code after a template holding an escaped backtick", "const a = `\\``; MARK;"],
 	])("keeps %s", (_, source) => expect(kept(source, "ts")).toBe(true));
 
 	test("preserves offsets, so a match reads back out of the source", () => {
 		const source = 'const a = "hidden"; const b = 1;';
 
 		expect(blank(source, "ts")).toHaveLength(source.length);
-		expect(blank(source, "ts").indexOf("const b")).toBe(
-			source.indexOf("const b"),
-		);
+		expect(blank(source, "ts").indexOf("const b")).toBe(source.indexOf("const b"));
 	});
 });
 
@@ -70,24 +58,18 @@ describe("scanning CSS", () => {
 	test.each([
 		["a line comment", ".a { background: url(//cdn/MARK.png); }"],
 		["a regex literal", ".a { margin: /MARK/; }"],
-	])("keeps what TypeScript would take for %s", (_, source) =>
-		expect(kept(source, "css")).toBe(true),
-	);
+	])("keeps what TypeScript would take for %s", (_, source) => expect(kept(source, "css")).toBe(true));
 });
 
 const read = (source: string) => comments(source, "ts");
 
 describe("reading comments", () => {
 	test("a block comment spanning lines reports the line it opens on", () => {
-		expect(read("a;\n/* one\ntwo */\nb;")).toEqual([
-			{ text: " one\ntwo ", line: 2, block: true },
-		]);
+		expect(read("a;\n/* one\ntwo */\nb;")).toEqual([{ text: " one\ntwo ", line: 2, block: true }]);
 	});
 
 	test("a line marker inside a block comment is the block's text", () => {
-		expect(read("/* a // b */ c;")).toEqual([
-			{ text: " a // b ", line: 1, block: true },
-		]);
+		expect(read("/* a // b */ c;")).toEqual([{ text: " a // b ", line: 1, block: true }]);
 	});
 
 	test("a block opener inside a line comment opens nothing", () => {
@@ -98,9 +80,7 @@ describe("reading comments", () => {
 	});
 
 	test("a comment inside a template interpolation is one", () => {
-		expect(read("const a = `${ /* c */ 1 }`;")).toEqual([
-			{ text: " c ", line: 1, block: true },
-		]);
+		expect(read("const a = `${ /* c */ 1 }`;")).toEqual([{ text: " c ", line: 1, block: true }]);
 	});
 
 	test.each([
@@ -113,21 +93,17 @@ describe("reading comments", () => {
 	});
 
 	test("a comment opener inside a regex literal opens nothing", () => {
-		expect(read("const r = /[/*]/;\n// c")).toEqual([
-			{ text: " c", line: 2, block: false },
-		]);
+		expect(read("const r = /[/*]/;\n// c")).toEqual([{ text: " c", line: 2, block: false }]);
 	});
 
 	test("CRLF line ends count one line each", () => {
-		expect(read("/* a\r\nb */\r\n// c\r\n").map((c) => c.line)).toEqual([
-			1, 3,
-		]);
+		expect(read("/* a\r\nb */\r\n// c\r\n").map((c) => c.line)).toEqual([1, 3]);
 	});
 
 	// CSS has no line comment, so `//` in a URL is part of the rule.
 	test("CSS reports its block comments and no line comment", () => {
-		expect(
-			comments(".a { background: url(//cdn/x.png); } /* c */", "css"),
-		).toEqual([{ text: " c ", line: 1, block: true }]);
+		expect(comments(".a { background: url(//cdn/x.png); } /* c */", "css")).toEqual([
+			{ text: " c ", line: 1, block: true },
+		]);
 	});
 });

@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { change, clone, records, run } from "./board-loop.fixture.ts";
+import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 
 /** Each pass's one record and one line. [n]: `/zombies` ideas. */
 

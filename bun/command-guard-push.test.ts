@@ -1,11 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	cleanup,
-	detached,
-	event,
-	fabricate,
-	run,
-} from "./command-guard.fixture.ts";
+import { cleanup, detached, event, fabricate, run } from "./command-guard.fixture.ts";
 
 /**
  * What `command-guard.ts` refuses about a push: the force flags, and the
@@ -22,10 +16,7 @@ const branch = () => fabricate("feat/x");
 
 describe("force-pushing", () => {
 	test("the flag last still blocks", () => {
-		const { code, reason } = run(
-			event("git push origin feat/x --force"),
-			branch(),
-		);
+		const { code, reason } = run(event("git push origin feat/x --force"), branch());
 		expect(code).toBe(2);
 		expect(reason).toContain("force-pushing");
 	});
@@ -35,17 +26,13 @@ describe("force-pushing", () => {
 	});
 
 	test("a lease with a value blocks", () => {
-		expect(
-			run(event("git push --force-with-lease=feat/x:abc123"), branch()).code,
-		).toBe(2);
+		expect(run(event("git push --force-with-lease=feat/x:abc123"), branch()).code).toBe(2);
 	});
 
 	test("a dry run does not exempt a force", () => {
 		// What a probe of this gate is run with, so it stays a probe: the flag
 		// decides, not whether the push would have changed anything.
-		expect(
-			run(event("git push --dry-run --force-with-lease"), branch()).code,
-		).toBe(2);
+		expect(run(event("git push --dry-run --force-with-lease"), branch()).code).toBe(2);
 	});
 
 	test("an includes-guarded force blocks", () => {
@@ -75,21 +62,15 @@ describe("force-pushing", () => {
 	test("an abbreviated lease flag blocks", () => {
 		// git takes any unambiguous abbreviation, so `--force-w` reaches the
 		// same code path as the full spelling.
-		expect(run(event("git push --force-w origin feat/x"), branch()).code).toBe(
-			2,
-		);
+		expect(run(event("git push --force-w origin feat/x"), branch()).code).toBe(2);
 	});
 
 	test("an abbreviated includes flag blocks", () => {
-		expect(run(event("git push --force-i origin feat/x"), branch()).code).toBe(
-			2,
-		);
+		expect(run(event("git push --force-i origin feat/x"), branch()).code).toBe(2);
 	});
 
 	test("a force-push inside a command substitution blocks", () => {
-		expect(
-			run(event('echo "$(git push --force origin feat/x)"'), branch()).code,
-		).toBe(2);
+		expect(run(event('echo "$(git push --force origin feat/x)"'), branch()).code).toBe(2);
 	});
 
 	test("an ordinary push does not block", () => {
@@ -97,21 +78,14 @@ describe("force-pushing", () => {
 	});
 
 	test("flags that merely share a prefix do not block", () => {
-		expect(
-			run(event("git push --follow-tags origin feat/x"), branch()).code,
-		).toBe(0);
+		expect(run(event("git push --follow-tags origin feat/x"), branch()).code).toBe(0);
 		expect(run(event("git commit --fixup HEAD"), branch()).code).toBe(0);
 	});
 
 	test("force in the description alone does not block", () => {
 		// The guard reads `tool_input.command`; grepping the payload would
 		// block this one on the description.
-		expect(
-			run(
-				event("git push origin feat/x", "force the branch up to date"),
-				branch(),
-			).code,
-		).toBe(0);
+		expect(run(event("git push origin feat/x", "force the branch up to date"), branch()).code).toBe(0);
 	});
 });
 
@@ -129,16 +103,12 @@ describe("a push whose destination is main", () => {
 	test("named by its full ref", () => {
 		// Carries a `+` too, so it blocks as a force before the destination is
 		// read — both paths refuse it, which is why the form is worth pinning.
-		expect(
-			run(event("git push origin +HEAD:refs/heads/main"), branch()).code,
-		).toBe(2);
+		expect(run(event("git push origin +HEAD:refs/heads/main"), branch()).code).toBe(2);
 	});
 
 	test("named by its ref under heads/", () => {
 		// git matches a `<dst>` outside `refs/` against the remote's refs.
-		expect(run(event("git push origin HEAD:heads/main"), branch()).code).toBe(
-			2,
-		);
+		expect(run(event("git push origin HEAD:heads/main"), branch()).code).toBe(2);
 		expect(run(event("git push origin heads/main"), branch()).code).toBe(2);
 	});
 
@@ -166,16 +136,11 @@ describe("a push whose destination cannot be bounded", () => {
 	});
 
 	test("a wildcard refspec", () => {
-		expect(
-			run(event("git push origin 'refs/heads/*:refs/heads/*'"), branch()).code,
-		).toBe(2);
+		expect(run(event("git push origin 'refs/heads/*:refs/heads/*'"), branch()).code).toBe(2);
 	});
 
 	test("a leading + on an ordinary refspec is a force", () => {
-		const { code, reason } = run(
-			event("git push origin +feat/x:feat/x"),
-			branch(),
-		);
+		const { code, reason } = run(event("git push origin +feat/x:feat/x"), branch());
 		expect(code).toBe(2);
 		expect(reason).toContain("force");
 	});
@@ -262,9 +227,6 @@ describe("the destination check and the paths around it", () => {
 	});
 
 	test("inside a command substitution", () => {
-		expect(
-			run(event('echo "$(git push origin HEAD:main)"'), fabricate("feat/x"))
-				.code,
-		).toBe(2);
+		expect(run(event('echo "$(git push origin HEAD:main)"'), fabricate("feat/x")).code).toBe(2);
 	});
 });

@@ -18,8 +18,7 @@ function refuse(why: string): never {
 let names: string[] = [];
 try {
 	const run = Bun.spawnSync(READ.split(" "), { timeout: 10_000 });
-	if (run.exitCode !== 0)
-		refuse(`\`${READ}\` exited ${run.exitCode}: ${run.stderr.toString().trim()}`);
+	if (run.exitCode !== 0) refuse(`\`${READ}\` exited ${run.exitCode}: ${run.stderr.toString().trim()}`);
 	names = run.stdout.toString().split("\n").filter(Boolean);
 } catch (error) {
 	refuse(`\`${READ}\` failed: ${error instanceof Error ? error.message : String(error)}`);

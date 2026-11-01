@@ -60,8 +60,7 @@ describe("the floor's reason", () => {
 	});
 
 	test("the reason is demanded whichever direction the number moved", () => {
-		for (const count of [6, 7, 8])
-			expect(gauge(at, count, 7, "")[0]).toContain("harness.someFloor.why");
+		for (const count of [6, 7, 8]) expect(gauge(at, count, 7, "")[0]).toContain("harness.someFloor.why");
 	});
 });
 
@@ -85,9 +84,6 @@ describe("a floor that is not a whole number", () => {
 	});
 
 	test("a floor and a reason both unreadable are both named", () => {
-		expect(gauge(at, 7, null, undefined)).toEqual([
-			...naming("someFloor", "why"),
-			...naming("someFloor", "count"),
-		]);
+		expect(gauge(at, 7, null, undefined)).toEqual([...naming("someFloor", "why"), ...naming("someFloor", "count")]);
 	});
 });

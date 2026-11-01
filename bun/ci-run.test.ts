@@ -1,24 +1,24 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { lockOf } from "./ci-run.ts";
 import {
 	ATTEMPT,
+	api,
 	BLOCKED,
 	BOT,
-	type Comment,
-	LIMIT,
-	SHA,
-	api,
 	bound,
+	type Comment,
 	deliver,
 	host,
 	ignored,
+	LIMIT,
 	payload,
 	real,
+	SHA,
 	start,
 	stop,
 } from "./ci-run.fixture.ts";
+import { lockOf } from "./ci-run.ts";
 import { cleanup } from "./diff-budget.fixture.ts";
 
 /**
@@ -107,12 +107,15 @@ describe("the re-read under the lock", () => {
 	});
 
 	// spec: orchestrator/a-newer-attempt-of-the-run
-	test.each([null, "failure"])("a newer attempt still running or failed (%p) starts nothing [64]", async (conclusion) => {
-		const h = host();
-		api.latest = { run_attempt: 2, conclusion };
-		ignored(await deliver(h, payload()), /attempt 2/);
-		expect(api.posted).toEqual([]);
-	});
+	test.each([null, "failure"])(
+		"a newer attempt still running or failed (%p) starts nothing [64]",
+		async (conclusion) => {
+			const h = host();
+			api.latest = { run_attempt: 2, conclusion };
+			ignored(await deliver(h, payload()), /attempt 2/);
+			expect(api.posted).toEqual([]);
+		},
+	);
 
 	test("a tracked edit in the clone fails before any comment [51]", async () => {
 		const h = host();
@@ -186,7 +189,11 @@ describe("the attempts", () => {
 	// spec: orchestrator/a-mark-someone-else-wrote
 	test("marks anyone but the App posted count for nothing [45]", async () => {
 		const h = host();
-		api.comments = [attempt(1, SHA, "laidrivm"), attempt(2, "2".repeat(40), "laidrivm"), mark("laidrivm", `${LIMIT} — x`)];
+		api.comments = [
+			attempt(1, SHA, "laidrivm"),
+			attempt(2, "2".repeat(40), "laidrivm"),
+			mark("laidrivm", `${LIMIT} — x`),
+		];
 		await deliver(h, payload());
 		expect(api.posted).toEqual([`${ATTEMPT} 1/3 — https://github.com/o/r/actions/runs/5 at ${SHA}`]);
 	});
@@ -221,7 +228,8 @@ describe("the repository's lock", () => {
 		const sh = readFileSync(join(import.meta.dir, "../orchestrator/pass.sh"), "utf8").split("\n");
 		const from = (start: string) => sh.findIndex((l) => l.startsWith(start));
 		const derive = `${sh[from("part=")]}\n${sh.slice(from("url="), from("key=") + 1).join("\n")}\nprintf %s "$key"`;
-		const keyOf = (origin: string) => Bun.spawnSync(["bash", "-c", derive], { env: { origin, dir: "x" } }).stdout.toString();
+		const keyOf = (origin: string) =>
+			Bun.spawnSync(["bash", "-c", derive], { env: { origin, dir: "x" } }).stdout.toString();
 		try {
 			for (const [origin, owner, repo] of [
 				["https://github.com/Laid-Drivm/Harness.git", "Laid-Drivm", "Harness"],

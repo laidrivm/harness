@@ -1,13 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
-import {
-	cleanup,
-	emptyDir,
-	gate,
-	git,
-	lines,
-	repo,
-	script,
-} from "./diff-budget.fixture.ts";
+import { cleanup, emptyDir, gate, git, lines, repo, script } from "./diff-budget.fixture.ts";
 
 /**
  * The verdict rather than the count: the `oversize:` marker that turns a FAIL
@@ -65,11 +57,7 @@ test("a body mentioning oversize mid-line is not a marker", () => {
 
 test("the first oversize marker in a body wins", () => {
 	const dir = repo({ "a.ts": "one\n" }, { "b.ts": lines(900) });
-	const g = gate(
-		dir,
-		"main",
-		"oversize: the real reason\noversize: a stale one\n",
-	);
+	const g = gate(dir, "main", "oversize: the real reason\noversize: a stale one\n");
 	expect(g.line).toContain("oversize: the real reason");
 	expect(g.line).not.toContain("stale");
 });
@@ -105,10 +93,7 @@ test("a capitalised marker is not a marker", () => {
 });
 
 test("an unresolvable base exits non-zero rather than reporting a pass", () => {
-	const g = gate(
-		repo({ "a.ts": "one\n" }, { "b.ts": lines(10) }),
-		"no-such-branch",
-	);
+	const g = gate(repo({ "a.ts": "one\n" }, { "b.ts": lines(10) }), "no-such-branch");
 	// 2, not 1: CI has to tell a diff it could not measure from one that is
 	// merely over budget, and the pre-push hook absorbs both alike.
 	expect(g.code).toBe(2);

@@ -5,22 +5,15 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { changed, cleanup, consumer, type Policy } from "./settings.fixture.ts";
 import { MCP_ASK, settings } from "./settings.ts";
-import {
-	changed,
-	cleanup,
-	consumer,
-	type Policy,
-} from "./settings.fixture.ts";
 
 afterAll(cleanup);
 
-const report = (change: (c: Policy) => void) =>
-	settings(consumer(changed(change))).join("\n");
+const report = (change: (c: Policy) => void) => settings(consumer(changed(change))).join("\n");
 
 const mcp = (c: Policy) => c.permissions.ask.filter((e) => e.startsWith("mcp__"));
-const rest = (c: Policy) =>
-	c.permissions.ask.filter((e) => !e.startsWith("mcp__"));
+const rest = (c: Policy) => c.permissions.ask.filter((e) => !e.startsWith("mcp__"));
 const swap = (from: string, to: string) => (c: Policy) => {
 	c.permissions.ask = c.permissions.ask.map((e) => (e === from ? to : e));
 };
@@ -45,25 +38,19 @@ describe("the MCP ask entries", () => {
 	});
 
 	test("an entry naming its server is named [6]", () => {
-		const text = report(
-			swap("mcp__*__send_message", "mcp__claude_ai_Gmail__send_message"),
-		);
+		const text = report(swap("mcp__*__send_message", "mcp__claude_ai_Gmail__send_message"));
 		expect(text).toContain("the mcp__ ask list is not");
 	});
 
 	test("a tool name one character off is named [7]", () => {
-		const text = report(
-			swap("mcp__*__notion-create-comment", "mcp__*__notion-create-comments"),
-		);
+		const text = report(swap("mcp__*__notion-create-comment", "mcp__*__notion-create-comments"));
 		expect(text).toContain("the mcp__ ask list is not");
 	});
 
 	// spec: agent-permissions/an-entry-is-dropped
 	test("one of the four moved to deny is named as missing from ask [11]", () => {
 		const text = report((c) => {
-			c.permissions.ask = c.permissions.ask.filter(
-				(e) => e !== "mcp__*__forward",
-			);
+			c.permissions.ask = c.permissions.ask.filter((e) => e !== "mcp__*__forward");
 			c.permissions.deny.push("mcp__*__forward");
 		});
 		expect(text).toContain("the mcp__ ask list is not");
@@ -77,26 +64,18 @@ describe("the MCP ask entries", () => {
 
 	// spec: agent-permissions/a-project-denies-one-of-the-tools-outright
 	test("a project's own mcp__ deny entry beside the four asks reports nothing", () => {
-		expect(
-			report((c) =>
-				c.permissions.deny.push("mcp__claude_ai_Gmail__forward"),
-			),
-		).toBe("");
+		expect(report((c) => c.permissions.deny.push("mcp__claude_ai_Gmail__forward"))).toBe("");
 	});
 
 	test("an allow entry with a literal server prefix reports nothing", () => {
-		expect(
-			report((c) => c.permissions.allow.push("mcp__design__read_file")),
-		).toBe("");
+		expect(report((c) => c.permissions.allow.push("mcp__design__read_file"))).toBe("");
 	});
 });
 
 describe("the harness's own settings", () => {
 	// No consumer check reads this file, so nothing else pins its entries.
 	test("ask before the four tools [12]", () => {
-		const own = JSON.parse(
-			readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"),
-		);
+		const own = JSON.parse(readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"));
 		const ask: string[] = own.permissions.ask;
 		expect(ask.filter((e) => e.startsWith("mcp__"))).toEqual(MCP_ASK);
 	});

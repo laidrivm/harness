@@ -7,6 +7,4 @@
 import { expect } from "bun:test";
 
 /** What `gauge` returns for a floor under `key` whose one fault is `field`. */
-export const naming = (key: string, field: string) => [
-	expect.stringContaining(`harness.${key}.${field}`),
-];
+export const naming = (key: string, field: string) => [expect.stringContaining(`harness.${key}.${field}`)];

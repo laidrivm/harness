@@ -38,13 +38,18 @@ async function found(call: Call, board: string, slug: string): Promise<{ card: s
 	});
 	// Exactly, as the pick reads it: the filter's match is Notion's, not this check's.
 	const cards = (Array.isArray(listed?.results) ? listed.results : []).filter(
-		(page: { properties?: { Pointer?: { rich_text?: unknown } } }) => plain(page?.properties?.Pointer?.rich_text) === pointer,
+		(page: { properties?: { Pointer?: { rich_text?: unknown } } }) =>
+			plain(page?.properties?.Pointer?.rich_text) === pointer,
 	);
 	if (cards.length === 1 && typeof cards[0].id === "string" && ID.test(cards[0].id)) return { card: cards[0].id };
 	return { why: cards.length ? `${cards.length} cards' Pointer names ${slug}` : `no card's Pointer names ${slug}` };
 }
 
-const paragraph = (content: string) => ({ object: "block", type: "paragraph", paragraph: { rich_text: [{ type: "text", text: { content } }] } });
+const paragraph = (content: string) => ({
+	object: "block",
+	type: "paragraph",
+	paragraph: { rich_text: [{ type: "text", text: { content } }] },
+});
 
 /** The line the command prints for `<stop file> [<log>]`, its settings read from `path`. */
 export async function notice(args: string[], path = where("notion-bot.json"), timeout = 30_000): Promise<string> {

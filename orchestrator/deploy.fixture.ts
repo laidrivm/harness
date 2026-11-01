@@ -65,8 +65,10 @@ export function host(): Host {
 	const runner = join(fake, "orchestrator_runner_home");
 	const agent = join(fake, "orchestrator_agent_home");
 	const locks = join(runner, "orchestrator/locks");
-	for (const dir of [bin, locks, join(agent, "clones/one"), join(agent, "clones/two")]) mkdirSync(dir, { recursive: true });
-	for (const [name, body] of Object.entries(STUBS)) writeFileSync(join(bin, name), PRELUDE + body + "\n", { mode: 0o755 });
+	for (const dir of [bin, locks, join(agent, "clones/one"), join(agent, "clones/two")])
+		mkdirSync(dir, { recursive: true });
+	for (const [name, body] of Object.entries(STUBS))
+		writeFileSync(join(bin, name), PRELUDE + body + "\n", { mode: 0o755 });
 	writeFileSync(join(fake, "head"), `${HEAD}\n`);
 	writeFileSync(join(fake, "server"), SERVER);
 	writeFileSync(join(locks, "owner+repo.lock"), "");
@@ -103,9 +105,11 @@ export function deploy(h: Host, extra: Record<string, string> = {}) {
 }
 
 /** One run left going, with real `flock` under the stub. */
-export const started = (h: Host, flock: string) => Bun.spawn([bash, script], { env: env(h, { REAL_FLOCK: flock }), stdout: "pipe", stderr: "pipe" });
+export const started = (h: Host, flock: string) =>
+	Bun.spawn([bash, script], { env: env(h, { REAL_FLOCK: flock }), stdout: "pipe", stderr: "pipe" });
 
-export const log = (h: Host) => (existsSync(join(h.fake, "log")) ? readFileSync(join(h.fake, "log"), "utf8").trim().split("\n") : []);
+export const log = (h: Host) =>
+	existsSync(join(h.fake, "log")) ? readFileSync(join(h.fake, "log"), "utf8").trim().split("\n") : [];
 
 /** The log as the steps a reader names, jq's runs and the reads of state dropped, a step repeated once. */
 export function steps(h: Host) {
@@ -127,6 +131,8 @@ export function steps(h: Host) {
 	return out;
 }
 
-export const deployed = (h: Host) => (existsSync(join(h.state, "deployed")) ? readFileSync(join(h.state, "deployed"), "utf8") : undefined);
+export const deployed = (h: Host) =>
+	existsSync(join(h.state, "deployed")) ? readFileSync(join(h.state, "deployed"), "utf8") : undefined;
 export const stopOf = (h: Host, clone: string) => join(h.runner, "orchestrator", `${clone}.stop`);
-export const stopped = (h: Host, clone: string) => (existsSync(stopOf(h, clone)) ? readFileSync(stopOf(h, clone), "utf8") : undefined);
+export const stopped = (h: Host, clone: string) =>
+	existsSync(stopOf(h, clone)) ? readFileSync(stopOf(h, clone), "utf8") : undefined;

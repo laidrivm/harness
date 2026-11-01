@@ -34,9 +34,7 @@ function named(groups: object[]): boolean {
 	writeFileSync(join(dir, "bunfig.toml"), "");
 	Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
 	return settings(dir).some((problem) =>
-		problem.includes(
-			"the PermissionRequest hook is not the harness question gate",
-		),
+		problem.includes("the PermissionRequest hook is not the harness question gate"),
 	);
 }
 
@@ -48,14 +46,8 @@ describe("the registration", () => {
 	// spec: agent-permissions/the-hook-in-a-consumer
 	test.each([
 		["missing [23]", []],
-		[
-			"under another matcher",
-			[group("mcp__claude_ai_Notion__notion-create-comment", QUESTION_GATE)],
-		],
-		[
-			"with another command",
-			[group(QUESTION_MATCHER, 'bun "$CLAUDE_PROJECT_DIR/bun/question-gate.ts"')],
-		],
+		["under another matcher", [group("mcp__claude_ai_Notion__notion-create-comment", QUESTION_GATE)]],
+		["with another command", [group(QUESTION_MATCHER, 'bun "$CLAUDE_PROJECT_DIR/bun/question-gate.ts"')]],
 	])("%s is named", (_, groups) => {
 		expect(named(groups)).toBe(true);
 	});

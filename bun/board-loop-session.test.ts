@@ -90,7 +90,10 @@ function abandoned(guard = "") {
 	const clone = join(dir, "clone");
 	mkdirSync(clone);
 	const pidfile = join(dir, "left-pid");
-	writeFileSync(join(dir, "claude"), `#!/bin/sh\nsleep 30 >/dev/null 2>&1 &\necho $! > '${pidfile}'\ncd /\nrm -rf '${clone}'\n`);
+	writeFileSync(
+		join(dir, "claude"),
+		`#!/bin/sh\nsleep 30 >/dev/null 2>&1 &\necho $! > '${pidfile}'\ncd /\nrm -rf '${clone}'\n`,
+	);
 	const launcher = join(dir, "as-agent");
 	writeFileSync(launcher, `#!/bin/sh\n${guard}cd "$1" || exit 2\nshift\nexec "$@"\n`);
 	for (const file of ["claude", "as-agent"]) chmodSync(join(dir, file), 0o755);
@@ -101,13 +104,18 @@ function abandoned(guard = "") {
 		`import { session } from ${JSON.stringify(module)};\nconst r = await session("PICK", 60_000, ${across}, false, {}, [], [${JSON.stringify(launcher)}, ${JSON.stringify(clone)}]);\nconsole.log(JSON.stringify({ left: r.left ?? null }));\n`,
 	);
 	// Bounded: bun cannot fire a test's timeout while this call blocks.
-	const run = Bun.spawnSync([process.execPath, entry], { cwd: dir, env: { PATH: `${dir}:/usr/bin:/bin`, HOME: emptyDir("board-loop-home-") }, timeout: 50_000 });
+	const run = Bun.spawnSync([process.execPath, entry], {
+		cwd: dir,
+		env: { PATH: `${dir}:/usr/bin:/bin`, HOME: emptyDir("board-loop-home-") },
+		timeout: 50_000,
+	});
 	const left = Number(readFileSync(pidfile, "utf8"));
 	return { code: run.exitCode, left: JSON.parse(run.stdout.toString()).left, child: left };
 }
 
 /** A launcher guard whose `sh` runs the signal script with a `kill` that fails, printing `text`. */
-const refusing = (text: string) => `[ "$2" = sh ] && exec /bin/sh -c "kill() { echo '${text}' >&2; return 1; }; $4" "$5" "$6"\n`;
+const refusing = (text: string) =>
+	`[ "$2" = sh ] && exec /bin/sh -c "kill() { echo '${text}' >&2; return 1; }; $4" "$5" "$6"\n`;
 
 describe("a session's group, signalled through the launcher", () => {
 	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
@@ -175,20 +183,33 @@ describe("how a session ended", () => {
 	function ended(printed: string) {
 		const dir = emptyDir("board-loop-result-");
 		writeFileSync(join(dir, "printed"), printed);
-		writeFileSync(join(dir, "claude"), `#!/bin/sh\nprintf '%s\\n' "$@" > '${dir}/argv'\ncat '${dir}/printed'\nexit 1\n`);
+		writeFileSync(
+			join(dir, "claude"),
+			`#!/bin/sh\nprintf '%s\\n' "$@" > '${dir}/argv'\ncat '${dir}/printed'\nexit 1\n`,
+		);
 		chmodSync(join(dir, "claude"), 0o755);
 		const entry = join(dir, "entry.ts");
 		writeFileSync(
 			entry,
 			`import { session } from ${JSON.stringify(module)};\nconst r = await session("PICK", 60_000, process.kill, true);\nconsole.log(JSON.stringify({ out: r.out, printed: r.printed, transient: r.transient }));\n`,
 		);
-		const run = Bun.spawnSync([process.execPath, entry], { cwd: dir, env: { PATH: `${dir}:/usr/bin:/bin`, HOME: dir } });
+		const run = Bun.spawnSync([process.execPath, entry], {
+			cwd: dir,
+			env: { PATH: `${dir}:/usr/bin:/bin`, HOME: dir },
+		});
 		expect(run.exitCode).toBe(0);
 		return { ...JSON.parse(run.stdout.toString()), argv: readFileSync(join(dir, "argv"), "utf8").split("\n") };
 	}
 	/** The result object the probe of 2026-10-25 saw for an API failure, `fields` over it. */
 	const result = (status: number | null, text: string, fields: Record<string, unknown> = {}) =>
-		JSON.stringify({ type: "result", is_error: true, terminal_reason: "api_error", api_error_status: status, result: text, ...fields });
+		JSON.stringify({
+			type: "result",
+			is_error: true,
+			terminal_reason: "api_error",
+			api_error_status: status,
+			result: text,
+			...fields,
+		});
 
 	test.each([
 		[null, "API Error: Connection refused"],
@@ -220,7 +241,9 @@ describe("the stage session's id", () => {
 		const { dir } = clone();
 		const r = run(dir);
 		const ids = [...r.calls.matchAll(/--session-id (\S+)/g)].map((m) => m[1]);
-		const [row] = readFileSync(join(r.home, "orchestrator", "pr-sessions.jsonl"), "utf8").split("\n").filter(Boolean);
+		const [row] = readFileSync(join(r.home, "orchestrator", "pr-sessions.jsonl"), "utf8")
+			.split("\n")
+			.filter(Boolean);
 		expect(ids).toEqual([JSON.parse(row).session]);
 	});
 });

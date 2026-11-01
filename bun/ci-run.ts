@@ -60,7 +60,8 @@ export async function flow(body: string, marker: string): Promise<Outcome> {
 		// `HARNESS_CI_CLONES` names another directory, which only the tests do; no session is resumed.
 		row = { clone: join(process.env.HARNESS_CI_CLONES || "/home/agent/clones", name.split("/")[1]), session: "" };
 	} else {
-		if (!/^(feat|spec)\//.test(run.head_branch)) return ["ignored", `branch ${run.head_branch} is neither feat/ nor spec/`];
+		if (!/^(feat|spec)\//.test(run.head_branch))
+			return ["ignored", `branch ${run.head_branch} is neither feat/ nor spec/`];
 		row = lookup(name, run.head_branch);
 		if (!row) return ["ignored", `the table holds no session for ${run.head_branch}`];
 	}
@@ -70,11 +71,14 @@ export async function flow(body: string, marker: string): Promise<Outcome> {
 	const lock = lockOf(origin.owner, origin.repo);
 	mkdirSync(dirname(lock), { recursive: true });
 	// Bounded where pass.sh's is not: a dropped event is lost, and a pass ends within its hour.
-	const locked = Bun.spawn(["flock", "-w", "7200", "-E", "75", lock, "bun", import.meta.path, row.clone, marker, row.session], {
-		stdin: new Blob([body]),
-		stdout: "pipe",
-		stderr: "inherit",
-	});
+	const locked = Bun.spawn(
+		["flock", "-w", "7200", "-E", "75", lock, "bun", import.meta.path, row.clone, marker, row.session],
+		{
+			stdin: new Blob([body]),
+			stdout: "pipe",
+			stderr: "inherit",
+		},
+	);
 	const [out, code] = await Promise.all([new Response(locked.stdout).text(), locked.exited]);
 	if (code === 75) return ["failed", `${lock} stayed held past the wait's bound`];
 	try {
@@ -114,8 +118,10 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
 	if (!pull) return ["ignored", `no open pull request on ${run.head_branch}`];
 	const bot = `${await slug(app)}[bot]`;
 	if (pull.user?.login !== bot) return ["ignored", `#${pull.number} is not the App's`];
-	if (pull.head?.sha !== run.head_sha) return ["ignored", `#${pull.number} moved past ${run.head_sha}: the run is stale`];
-	if (git(clone, "status", "--porcelain", "--untracked-files=no") !== "") return ["failed", `${clone} holds a tracked edit`];
+	if (pull.head?.sha !== run.head_sha)
+		return ["ignored", `#${pull.number} moved past ${run.head_sha}: the run is stale`];
+	if (git(clone, "status", "--porcelain", "--untracked-files=no") !== "")
+		return ["failed", `${clone} holds a tracked edit`];
 	if (latest.run_attempt > run.run_attempt) {
 		acted(marker);
 		Object.assign(process.env, credentials(token));
@@ -130,7 +136,10 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
 	}
 	const comments: Comment[] = [];
 	for (let page = 1; ; page++) {
-		const next = (await request(`${base}/issues/${pull.number}/comments?per_page=100&page=${page}`, token)) as Comment[];
+		const next = (await request(
+			`${base}/issues/${pull.number}/comments?per_page=100&page=${page}`,
+			token,
+		)) as Comment[];
 		if (!Array.isArray(next)) throw new Error(`the comments of #${pull.number} are not a list`);
 		comments.push(...next);
 		if (next.length < 100) break;
@@ -169,7 +178,9 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
 				`Change nothing. Put one question on the step's card naming #${pull.number} and its three ${ATTEMPT} comments, and answer blocked.`,
 			].join("\n");
 	}
-	const [verdict, why] = await draftWhile(`${app.owner}/${app.repo}`, pull.number, () => resume(clone, app, run, resumed, ask, fixing));
+	const [verdict, why] = await draftWhile(`${app.owner}/${app.repo}`, pull.number, () =>
+		resume(clone, app, run, resumed, ask, fixing),
+	);
 	return [verdict, `${said}; ${why}`];
 }
 
@@ -180,7 +191,14 @@ async function decide(body: string, clone: string, marker: string, resumed: stri
  * session left the tree unclean, which stays as it is for the user. Beside the
  * outcome, whether the session answered `blocked`, its question on the card.
  */
-async function resume(clone: string, app: App, run: Run, id: string, ask: (log: string) => string, fixing: boolean): Promise<[Outcome, boolean]> {
+async function resume(
+	clone: string,
+	app: App,
+	run: Run,
+	id: string,
+	ask: (log: string) => string,
+	fixing: boolean,
+): Promise<[Outcome, boolean]> {
 	const branch = run.head_branch;
 	// Its commits are the App's bot's, as a board-loop stage's are; read before the clone changes, so a failure leaves it as found.
 	const as = await identity(app);
@@ -197,17 +215,24 @@ async function resume(clone: string, app: App, run: Run, id: string, ask: (log: 
 		git(clone, "switch", "-q", branch) !== undefined &&
 		git(clone, "merge", "-q", "--ff-only", `origin/${branch}`) !== undefined;
 	const head = git(clone, "rev-parse", "HEAD");
-	if (!ready || head !== run.head_sha) return done(["failed", `${clone} could not be brought to ${branch} at ${run.head_sha}`]);
+	if (!ready || head !== run.head_sha)
+		return done(["failed", `${clone} could not be brought to ${branch} at ${run.head_sha}`]);
 	if (!logged(app, run, log)) return done(["failed", `the failed logs of run ${run.id} could not be read`]);
 	const outcome = await answered(clone, ask(log), as, ["-r", id]);
 	if (git(clone, "status", "--porcelain", "--untracked-files=normal") !== "")
-		return [["failed", `the session left ${clone} with uncommitted changes; nothing pushed, the clone left as it is`], outcome === "blocked"];
+		return [
+			["failed", `the session left ${clone} with uncommitted changes; nothing pushed, the clone left as it is`],
+			outcome === "blocked",
+		];
 	if (!outcome) return done(["failed", "the session gave no answer that matches the schema; nothing pushed"]);
-	if (outcome !== "fixed" || !fixing) return done(["handled", `the session answered ${outcome}, nothing pushed`], outcome === "blocked");
+	if (outcome !== "fixed" || !fixing)
+		return done(["handled", `the session answered ${outcome}, nothing pushed`], outcome === "blocked");
 	const on = git(clone, "symbolic-ref", "--short", "-q", "HEAD");
-	if (on !== branch) return done(["failed", `the session answered fixed on ${on ?? "no branch"}, not ${branch}; nothing pushed`]);
+	if (on !== branch)
+		return done(["failed", `the session answered fixed on ${on ?? "no branch"}, not ${branch}; nothing pushed`]);
 	const fixed = git(clone, "rev-parse", "HEAD");
-	if (fixed === run.head_sha) return done(["failed", `the session answered fixed with no commit after ${run.head_sha}; nothing pushed`]);
+	if (fixed === run.head_sha)
+		return done(["failed", `the session answered fixed with no commit after ${run.head_sha}; nothing pushed`]);
 	if (git(clone, "merge-base", "--is-ancestor", run.head_sha, "HEAD") === undefined)
 		return done(["failed", `${branch} no longer holds ${run.head_sha}; nothing pushed`]);
 	const refused = pushed(clone, app, branch, fixed as string, run.head_sha);

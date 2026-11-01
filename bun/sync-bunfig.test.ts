@@ -7,17 +7,8 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { INSTALL } from "./settings.ts";
+import { CANONICAL, cleanup, consumer, parsed, read, SETTINGS, STALE_BUNFIG, stale } from "./sync-settings.fixture.ts";
 import { syncSettings } from "./sync-settings.ts";
-import {
-	CANONICAL,
-	cleanup,
-	consumer,
-	parsed,
-	read,
-	SETTINGS,
-	STALE_BUNFIG,
-	stale,
-} from "./sync-settings.fixture.ts";
 
 afterAll(cleanup);
 
@@ -30,7 +21,7 @@ describe("bunfig.toml", () => {
 
 	test("an [install] already equal to the harness's keeps every byte, comments included", () => {
 		const commented =
-			"[install]\n# why exact\nexact = true\n\nminimumReleaseAge = 259200 # 3 days\nminimumReleaseAgeExcludes = []\n\n[test]\nroot = \"src\"\n";
+			'[install]\n# why exact\nexact = true\n\nminimumReleaseAge = 259200 # 3 days\nminimumReleaseAgeExcludes = []\n\n[test]\nroot = "src"\n';
 		expect(sync(commented)).toBe(commented);
 	});
 
@@ -44,9 +35,7 @@ describe("bunfig.toml", () => {
 	});
 
 	test("a header spaced inside its brackets is the section replaced", () => {
-		expect(sync(STALE_BUNFIG.replace("[install]", "[ install ]"))).toBe(
-			CANONICAL,
-		);
+		expect(sync(STALE_BUNFIG.replace("[install]", "[ install ]"))).toBe(CANONICAL);
 	});
 
 	test("a file that is not TOML fails naming bunfig.toml", () => {
@@ -55,9 +44,7 @@ describe("bunfig.toml", () => {
 	});
 
 	test("a missing [install] is appended", () => {
-		expect(sync('[test]\nroot = "src"\n')).toBe(
-			`[test]\nroot = "src"\n\n${CANONICAL}`,
-		);
+		expect(sync('[test]\nroot = "src"\n')).toBe(`[test]\nroot = "src"\n\n${CANONICAL}`);
 	});
 
 	test("a missing bunfig.toml is written with [install] alone", () => {
@@ -68,14 +55,8 @@ describe("bunfig.toml", () => {
 
 	// spec: harness-updates/an-install-section-the-rewrite-would-damage-is-left-untouched
 	test.each([
-		[
-			"a subtable that would stay under [install]",
-			`${STALE_BUNFIG}\n[install.scopes]\nx = "y"\n`,
-		],
-		[
-			"an array line that reads as a header",
-			"[install]\nexact = false\nminimumReleaseAgeExcludes = [\n[\"x\"],\n]\n",
-		],
+		["a subtable that would stay under [install]", `${STALE_BUNFIG}\n[install.scopes]\nx = "y"\n`],
+		["an array line that reads as a header", '[install]\nexact = false\nminimumReleaseAgeExcludes = [\n["x"],\n]\n'],
 	])("%s fails naming bunfig.toml and writes neither file", (_, bunfig) => {
 		const json = JSON.stringify(stale());
 		const dir = consumer({ [SETTINGS]: json, "bunfig.toml": bunfig });

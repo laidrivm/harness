@@ -5,8 +5,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, fabricate, problems, spec } from "./spec-coverage.fixture.ts";
 import { naming } from "./floor.fixture.ts";
+import { cleanup, fabricate, problems, spec } from "./spec-coverage.fixture.ts";
 import { gauge, uncited } from "./spec-coverage.ts";
 
 afterAll(cleanup);
@@ -67,9 +67,7 @@ describe("the floor carries a reason", () => {
 // spec: spec-test-traceability/a-floor-that-is-not-a-whole-number
 describe("a floor that is not a whole number", () => {
 	test("a count written as a string names harness.uncitedFloor.count", () => {
-		expect(gauge(380, "380", "measured")).toEqual(
-			naming("uncitedFloor", "count"),
-		);
+		expect(gauge(380, "380", "measured")).toEqual(naming("uncitedFloor", "count"));
 	});
 });
 
@@ -81,23 +79,16 @@ describe("a change is archived with its tests already written", () => {
 		const dir = fabricate({
 			"openspec/specs/capability/spec.md": spec(...settled),
 			"openspec/changes/in-flight/specs/capability/spec.md": spec(...added),
-			"src/thing.test.ts":
-				'// spec: capability/a-new-thing capability/another-new-thing\ntest("acts", () => {});\n',
+			"src/thing.test.ts": '// spec: capability/a-new-thing capability/another-new-thing\ntest("acts", () => {});\n',
 		});
 		expect(uncited(dir)).toBe(2);
 
 		// Archiving is two filesystem moves: the delta's criteria join the living
 		// spec, and the change drops a directory deeper. Neither touches git,
 		// because only the test files are listed from the index.
-		writeFileSync(
-			join(dir, "openspec/specs/capability/spec.md"),
-			spec(...settled, ...added),
-		);
+		writeFileSync(join(dir, "openspec/specs/capability/spec.md"), spec(...settled, ...added));
 		mkdirSync(join(dir, "openspec/changes/archive"), { recursive: true });
-		renameSync(
-			join(dir, "openspec/changes/in-flight"),
-			join(dir, "openspec/changes/archive/2026-01-01-in-flight"),
-		);
+		renameSync(join(dir, "openspec/changes/in-flight"), join(dir, "openspec/changes/archive/2026-01-01-in-flight"));
 
 		expect(uncited(dir)).toBe(2);
 		expect(problems(dir)).toEqual([]);
@@ -112,10 +103,7 @@ describe("a change archived without its tests", () => {
 		});
 		const before = uncited(dir);
 
-		writeFileSync(
-			join(dir, "openspec/specs/capability/spec.md"),
-			spec("A settled thing", "A thing nothing asserts"),
-		);
+		writeFileSync(join(dir, "openspec/specs/capability/spec.md"), spec("A settled thing", "A thing nothing asserts"));
 
 		expect(uncited(dir)).toBe(before + 1);
 		expect(gauge(uncited(dir), before, "measured").length).toBe(1);

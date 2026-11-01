@@ -57,18 +57,12 @@ const sha = (text: string | Buffer) => createHash("sha256").update(text).digest(
  * name drops only its trailing `[<duration>]`, so a `[` inside one stays.
  */
 export function read(output: string): Run | undefined {
-	const names = [...output.matchAll(/^\(fail\) (.+)$/gm)].map((m) =>
-		(m[1] ?? "").replace(/ \[[^[\]]*\]\s*$/, ""),
-	);
+	const names = [...output.matchAll(/^\(fail\) (.+)$/gm)].map((m) => (m[1] ?? "").replace(/ \[[^[\]]*\]\s*$/, ""));
 	const count = (word: string) =>
-		[...output.matchAll(new RegExp(`^[ \\t]*(\\d+) ${word}[ \\t]*$`, "gm"))].map(
-			(m) => Number(m[1]),
-		);
+		[...output.matchAll(new RegExp(`^[ \\t]*(\\d+) ${word}[ \\t]*$`, "gm"))].map((m) => Number(m[1]));
 	const fails = count("fail");
-	if (names.length || fails.some((n) => n > 0))
-		return { passing: false, names: [...new Set(names)] };
-	if (fails.length && count("pass").some((n) => n > 0))
-		return { passing: true, names: [] };
+	if (names.length || fails.some((n) => n > 0)) return { passing: false, names: [...new Set(names)] };
+	if (fails.length && count("pass").some((n) => n > 0)) return { passing: true, names: [] };
 }
 
 /** `args` run by git in `cwd`, or `undefined` when git refuses. */
@@ -106,15 +100,9 @@ export function tree(cwd: string): { head: string; print: string } | undefined {
  * a failing run adds its names on the same tree and replaces the entry on
  * another; a passing run deletes the entry, naming its names on the same tree.
  */
-export function decide(
-	store: Store,
-	key: string,
-	run: Run,
-	print: string,
-): { store: Store; flaky?: string[] } {
+export function decide(store: Store, key: string, run: Run, print: string): { store: Store; flaky?: string[] } {
 	const { [key]: entry, ...rest } = store;
-	if (run.passing)
-		return { store: rest, flaky: entry?.tree === print ? entry.names : undefined };
+	if (run.passing) return { store: rest, flaky: entry?.tree === print ? entry.names : undefined };
 	const kept = entry?.tree === print ? entry.names : [];
 	return {
 		store: { ...rest, [key]: { tree: print, names: [...new Set([...kept, ...run.names])] } },
@@ -129,8 +117,7 @@ export const hint = (names: string[]) =>
 	"naming these tests, and file a card for it on the project's board. If " +
 	"something outside the tree changed between the runs, say what.";
 
-const isStore = (value: unknown): value is Store =>
-	!!value && typeof value === "object" && !Array.isArray(value);
+const isStore = (value: unknown): value is Store => !!value && typeof value === "object" && !Array.isArray(value);
 
 /** Whether `path` is a directory this user owns and no one else can open. */
 function mine(path: string): boolean {

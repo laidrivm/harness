@@ -30,8 +30,7 @@ type Event = {
 try {
 	const event: Event = JSON.parse(await Bun.stdin.text()) ?? {};
 	// An MCP server's prompt shares the expansion event, and can share a skill's name.
-	const name =
-		event.tool_input?.skill ?? (event.expansion_type === "slash_command" ? event.command_name : undefined);
+	const name = event.tool_input?.skill ?? (event.expansion_type === "slash_command" ? event.command_name : undefined);
 	const dir = event.cwd;
 	if (typeof name === "string" && name && typeof dir === "string") {
 		// A session started under a git hook inherits its GIT_DIR, which outranks `-C`: drop every variable git names as local.

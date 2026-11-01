@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup } from "./diff-budget.fixture.ts";
-import { type Pull, readyOne } from "./pull-requests.ts";
 import { answer, el, QUERY, read } from "./pull-requests.fixture.ts";
+import { type Pull, readyOne } from "./pull-requests.ts";
 
 /**
  * `readPullRequests` and `readPullRequest` against a `gh` stub
@@ -19,12 +19,20 @@ describe("the read and its translation", () => {
 
 	// spec: orchestrator/a-private-repository-s-pull-requests
 	test("with the key holder's mint command, the read alone holds a pull_requests=read token", () => {
-		expect(read({ mint: ["ghs_read", 0] })).toEqual({ result: [], calls: ["mint -n o/r pull_requests=read", QUERY], tokens: ["ghs_read"] });
+		expect(read({ mint: ["ghs_read", 0] })).toEqual({
+			result: [],
+			calls: ["mint -n o/r pull_requests=read", QUERY],
+			tokens: ["ghs_read"],
+		});
 	});
 
 	// spec: orchestrator/a-private-repository-s-pull-requests
 	test("a mint that fails fails the read, with no gh call", () => {
-		expect(read({ mint: ["", 1] })).toEqual({ result: "failed", calls: ["mint -n o/r pull_requests=read"], tokens: [] });
+		expect(read({ mint: ["", 1] })).toEqual({
+			result: "failed",
+			calls: ["mint -n o/r pull_requests=read"],
+			tokens: [],
+		});
 	});
 
 	// spec: stage-goal/an-open-pull-request stage-goal/a-merged-pull-request stage-goal/a-pull-request-closed-unmerged
@@ -46,13 +54,19 @@ describe("the read and its translation", () => {
 		["a ready pull request", false, false],
 		["a draft field that is no boolean", "true", false],
 	])("%s reads draft %p as %p", (_, draft, expected) => {
-		expect(read({ answer: answer({ ...el(3, "open"), draft }) }).result).toEqual([{ number: 3, state: "OPEN", headRefOid: "s3", draft: expected }]);
+		expect(read({ answer: answer({ ...el(3, "open"), draft }) }).result).toEqual([
+			{ number: 3, state: "OPEN", headRefOid: "s3", draft: expected },
+		]);
 	});
 
 	// spec: stage-goal/an-open-pull-request
 	test("the API's order is kept, a mixed list element by element [6, 7]", () => {
 		const list = [el(9, "closed"), el(8, "open"), el(7, "closed", "2026-10-19T00:00:00Z")];
-		expect(read({ answer: answer(...list) }).result.map((p: { state: string }) => p.state)).toEqual(["CLOSED", "OPEN", "MERGED"]);
+		expect(read({ answer: answer(...list) }).result.map((p: { state: string }) => p.state)).toEqual([
+			"CLOSED",
+			"OPEN",
+			"MERGED",
+		]);
 	});
 
 	// spec: stage-goal/where-graphql-is-refused
@@ -64,7 +78,9 @@ describe("the read and its translation", () => {
 
 	// spec: stage-goal/a-branch-name-the-query-string-would-split
 	test("a branch holding &, # and / is encoded [11]", () => {
-		expect(read({ branch: "a&b#c/d" }).calls).toEqual(["api repos/o/r/pulls?head=o:a%26b%23c%2Fd&state=all&per_page=100"]);
+		expect(read({ branch: "a&b#c/d" }).calls).toEqual([
+			"api repos/o/r/pulls?head=o:a%26b%23c%2Fd&state=all&per_page=100",
+		]);
 	});
 });
 
@@ -104,13 +120,17 @@ describe("the repository origin names", () => {
 		const gone = { ...el(2, "open"), head: { sha: "s2", repo: null } };
 		const noBase = { ...el(6, "open"), base: { repo: null } };
 		const list = [5, null, gone, noBase, el(3, "open", null, "o/r", 2), el(4, "open", null, "O/R")];
-		expect(read({ answer: answer(...list) }).result).toEqual([{ number: 4, state: "OPEN", headRefOid: "s4", draft: false }]);
+		expect(read({ answer: answer(...list) }).result).toEqual([
+			{ number: 4, state: "OPEN", headRefOid: "s4", draft: false },
+		]);
 	});
 
 	// spec: stage-goal/a-renamed-repository
 	test("a repository renamed since origin was set keeps its own pull requests (review of #190)", () => {
 		const renamed = { ...el(7, "open", null, "o/renamed"), base: { repo: { id: 1, full_name: "o/renamed" } } };
-		expect(read({ answer: answer(renamed) }).result).toEqual([{ number: 7, state: "OPEN", headRefOid: "s7", draft: false }]);
+		expect(read({ answer: answer(renamed) }).result).toEqual([
+			{ number: 7, state: "OPEN", headRefOid: "s7", draft: false },
+		]);
 	});
 
 	// spec: stage-goal/a-fork-s-branch-of-the-same-name
@@ -138,17 +158,32 @@ describe("a repository handed to the read", () => {
 
 describe("one pull request by its number", () => {
 	/** Pull request 350 as the REST endpoint answers it, merged into `main` unless `fields` say otherwise. */
-	const one = (fields: object = {}) => JSON.stringify({ number: 350, state: "closed", merged_at: "2026-10-31T00:00:00Z", draft: false, base: { ref: "main" }, ...fields });
+	const one = (fields: object = {}) =>
+		JSON.stringify({
+			number: 350,
+			state: "closed",
+			merged_at: "2026-10-31T00:00:00Z",
+			draft: false,
+			base: { ref: "main" },
+			...fields,
+		});
 	const ONE = "api repos/o/r/pulls/350";
 
 	// spec: work-status/a-pull-request-merged-into-main
 	test("one merged into main reads MERGED and its base, after one call [2]", () => {
-		expect(read({ number: "350", answer: one() })).toEqual({ result: { state: "MERGED", base: "main" }, calls: [ONE], tokens: [] });
+		expect(read({ number: "350", answer: one() })).toEqual({
+			result: { state: "MERGED", base: "main" },
+			calls: [ONE],
+			tokens: [],
+		});
 	});
 
 	// spec: work-status/a-pull-request-still-open
 	test("an open draft reads OPEN [4]", () => {
-		expect(read({ number: "350", answer: one({ state: "open", merged_at: null, draft: true }) }).result).toEqual({ state: "OPEN", base: "main" });
+		expect(read({ number: "350", answer: one({ state: "open", merged_at: null, draft: true }) }).result).toEqual({
+			state: "OPEN",
+			base: "main",
+		});
 	});
 
 	// spec: work-status/a-pull-request-closed-without-merging
@@ -158,7 +193,10 @@ describe("one pull request by its number", () => {
 
 	// spec: work-status/a-pull-request-merged-into-another-branch
 	test("the base is the one read", () => {
-		expect(read({ number: "350", answer: one({ base: { ref: "release" } }) }).result).toEqual({ state: "MERGED", base: "release" });
+		expect(read({ number: "350", answer: one({ base: { ref: "release" } }) }).result).toEqual({
+			state: "MERGED",
+			base: "release",
+		});
 	});
 
 	// spec: work-status/github-does-not-answer
@@ -189,28 +227,46 @@ describe("one pull request by its number", () => {
 		expect(read({ number: "350", origin: null, answer: one() })).toEqual({ result: "failed", calls: [], tokens: [] });
 	});
 
-	test.each(["035", "0", "35/x", ""])("the number %p, which the Pointer's pattern refuses, fails with no gh call", (number) => {
-		expect(read({ number, answer: one() })).toEqual({ result: "failed", calls: [], tokens: [] });
-	});
+	test.each(["035", "0", "35/x", ""])(
+		"the number %p, which the Pointer's pattern refuses, fails with no gh call",
+		(number) => {
+			expect(read({ number, answer: one() })).toEqual({ result: "failed", calls: [], tokens: [] });
+		},
+	);
 
 	// spec: orchestrator/a-private-repository-s-pull-requests
 	test("a mint that fails fails the read, with no gh call [8]", () => {
-		expect(read({ number: "350", answer: one(), mint: ["", 1] })).toEqual({ result: "failed", calls: ["mint -n o/r pull_requests=read"], tokens: [] });
+		expect(read({ number: "350", answer: one(), mint: ["", 1] })).toEqual({
+			result: "failed",
+			calls: ["mint -n o/r pull_requests=read"],
+			tokens: [],
+		});
 	});
 
 	// spec: orchestrator/a-private-repository-s-pull-requests
 	test("the minted pull_requests=read token reaches gh [9]", () => {
 		const run = read({ number: "350", answer: one(), mint: ["ghs_read", 0] });
-		expect(run).toEqual({ result: { state: "MERGED", base: "main" }, calls: ["mint -n o/r pull_requests=read", ONE], tokens: ["ghs_read"] });
+		expect(run).toEqual({
+			result: { state: "MERGED", base: "main" },
+			calls: ["mint -n o/r pull_requests=read", ONE],
+			tokens: ["ghs_read"],
+		});
 	});
 
 	test("a repository handed to the read is read, with no git spawned", () => {
-		expect(read({ number: "350", origin: null, repo: { owner: "x", repo: "y" }, answer: one() }).calls).toEqual(["api repos/x/y/pulls/350"]);
+		expect(read({ number: "350", origin: null, repo: { owner: "x", repo: "y" }, answer: one() }).calls).toEqual([
+			"api repos/x/y/pulls/350",
+		]);
 	});
 });
 
 describe("readyOne()", () => {
-	const pull = (number: number, state: Pull["state"], draft: boolean): Pull => ({ number, state, headRefOid: `s${number}`, draft });
+	const pull = (number: number, state: Pull["state"], draft: boolean): Pull => ({
+		number,
+		state,
+		headRefOid: `s${number}`,
+		draft,
+	});
 
 	test("answers the open pull request that is not a draft", () => {
 		expect(readyOne([pull(3, "MERGED", false), pull(7, "OPEN", false)])).toEqual(pull(7, "OPEN", false));

@@ -6,8 +6,23 @@
  * extension's pull request.
  */
 import { afterAll, describe, expect, test } from "bun:test";
+import {
+	ask,
+	asked,
+	BOT,
+	CARD,
+	cleanup,
+	held,
+	home,
+	notion,
+	OTHER,
+	question,
+	said,
+	TOKEN,
+	USER,
+	UUID,
+} from "./notion-ask.fixture.ts";
 import { integration } from "./notion-ask.ts";
-import { ask, asked, BOT, CARD, cleanup, held, home, notion, OTHER, question, said, TOKEN, USER, UUID } from "./notion-ask.fixture.ts";
 import { MARK, REMEDY } from "./question-gate.ts";
 
 afterAll(cleanup);
@@ -45,10 +60,23 @@ describe("a question posted", () => {
 	// spec: task-board/a-question-already-waits
 	// spec: task-board/assign-cleared-while-a-question-waits
 	test.each([
-		["a waiting question on the second page [45]", [[said(USER, "2026-10-20T08:00:00Z", { plain_text: "An earlier answer." })], [question("2026-10-20T09:00:00Z")]]],
+		[
+			"a waiting question on the second page [45]",
+			[[said(USER, "2026-10-20T08:00:00Z", { plain_text: "An earlier answer." })], [question("2026-10-20T09:00:00Z")]],
+		],
 		[
 			"a harness-answer after it, which does not unblock [46]",
-			[[question("2026-10-20T09:00:00Z"), said(BOT, "2026-10-20T10:00:00Z", { plain_text: "harness-answer", annotations: { code: true } }, { plain_text: " Yes." })]],
+			[
+				[
+					question("2026-10-20T09:00:00Z"),
+					said(
+						BOT,
+						"2026-10-20T10:00:00Z",
+						{ plain_text: "harness-answer", annotations: { code: true } },
+						{ plain_text: " Yes." },
+					),
+				],
+			],
 		],
 	])("%s: posted and assigned all the same [3]", async (_, comments) => {
 		const { seen, url } = notion({ comments });
@@ -74,10 +102,13 @@ describe("a question posted", () => {
 		});
 	});
 
-	test.each([0o600, 0o400].map((mode) => [mode.toString(8), mode] as const))("a settings file at mode 0%s is read [48]", async (_, mode) => {
-		const { url } = notion();
-		expect((await ask(url, home(undefined, mode), [CARD, asked()])).line).toBe(SET);
-	});
+	test.each([0o600, 0o400].map((mode) => [mode.toString(8), mode] as const))(
+		"a settings file at mode 0%s is read [48]",
+		async (_, mode) => {
+			const { url } = notion();
+			expect((await ask(url, home(undefined, mode), [CARD, asked()])).line).toBe(SET);
+		},
+	);
 });
 
 describe("posted, and Assign not set", () => {
@@ -88,7 +119,11 @@ describe("posted, and Assign not set", () => {
 		["an answer of {} [7]", { assigned: {} }, unset("the Assign write did not hold the user")],
 		["a write answered 500 [8]", { patch: 500 }, unset("the Assign write answered 500")],
 		["a write answered 403 [9]", { patch: 403 }, unset("the Assign write answered 403")],
-		["a 200 whose body does not parse, the step named and no body quoted", { assigned: "not json" }, unset("the Assign write answered 200 with a body that could not be read: SyntaxError")],
+		[
+			"a 200 whose body does not parse, the step named and no body quoted",
+			{ assigned: "not json" },
+			unset("the Assign write answered 200 with a body that could not be read: SyntaxError"),
+		],
 	])("%s: the line names why, exit 1, one post", async (_, stub, line) => {
 		const { seen, url } = notion(stub);
 		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line, code: 1 });
@@ -103,22 +138,44 @@ describe("nothing is posted", () => {
 		["notion-bot.json alone, never read in its place [52]", { "notion-bot.json": { token: TOKEN, user: USER } }],
 	])("%s: no ask integration is configured, and no call", async (_, files) => {
 		const { seen, url } = notion();
-		expect(await ask(url, home(files), [CARD, asked()])).toEqual({ line: not("no ask integration is configured"), code: 1 });
+		expect(await ask(url, home(files), [CARD, asked()])).toEqual({
+			line: not("no ask integration is configured"),
+			code: 1,
+		});
 		expect(seen).toEqual([]);
 	});
 
-	test.each([0o640, 0o604].map((mode) => [mode.toString(8), mode] as const))("a settings file at mode 0%s is refused, naming its mode, before any call [48]", async (_, mode) => {
-		const { seen, url } = notion();
-		const { line, code } = await ask(url, home(undefined, mode), [CARD, asked()]);
-		expect([line.startsWith(not("notion-bot: ")), line.includes(`mode 0${mode.toString(8)}`), code]).toEqual([true, true, 1]);
-		expect(seen).toEqual([]);
-	});
+	test.each([0o640, 0o604].map((mode) => [mode.toString(8), mode] as const))(
+		"a settings file at mode 0%s is refused, naming its mode, before any call [48]",
+		async (_, mode) => {
+			const { seen, url } = notion();
+			const { line, code } = await ask(url, home(undefined, mode), [CARD, asked()]);
+			expect([line.startsWith(not("notion-bot: ")), line.includes(`mode 0${mode.toString(8)}`), code]).toEqual([
+				true,
+				true,
+				1,
+			]);
+			expect(seen).toEqual([]);
+		},
+	);
 
 	// spec: task-board/text-the-gate-would-not-allow
 	test.each([
-		["an empty question file [43]", () => [CARD, asked("")], not(`the question fails the question gate (unmarked): ${REMEDY.unmarked}`)],
-		["a card id with text after it [50]", () => [`${CARD} and more`, asked()], not(`${CARD} and more is not a card id`)],
-		["a question file that is missing [55]", () => [CARD, "/nonexistent/q.md"], not("/nonexistent/q.md cannot be read")],
+		[
+			"an empty question file [43]",
+			() => [CARD, asked("")],
+			not(`the question fails the question gate (unmarked): ${REMEDY.unmarked}`),
+		],
+		[
+			"a card id with text after it [50]",
+			() => [`${CARD} and more`, asked()],
+			not(`${CARD} and more is not a card id`),
+		],
+		[
+			"a question file that is missing [55]",
+			() => [CARD, "/nonexistent/q.md"],
+			not("/nonexistent/q.md cannot be read"),
+		],
 		["no file named", () => [CARD], not("usage: notion-ask.ts <card id> <file>")],
 	])("%s: no call", async (_, args, line) => {
 		const { seen, url } = notion();
@@ -133,7 +190,10 @@ describe("nothing is posted", () => {
 		["a post answered 429 [23]", 429],
 	])("%s: the step and Notion's status, exit 1, no write [10]", async (_, post) => {
 		const { seen, url } = notion({ post });
-		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line: not(`the comment's post answered ${post}`), code: 1 });
+		expect(await ask(url, home(), [CARD, asked()])).toEqual({
+			line: not(`the comment's post answered ${post}`),
+			code: 1,
+		});
 		expect(calls(seen)).toEqual(["POST /v1/comments"]);
 	});
 });
@@ -155,7 +215,11 @@ describe("a post that may have landed", () => {
 		const url = gone.url.origin;
 		gone.stop(true);
 		const { line, code } = await ask(url, home(), [CARD, asked()]);
-		expect([line.startsWith(`question: may be posted on ${CARD} — the comment's post failed: `), line.endsWith("; read the card's comments before running it again"), code]).toEqual([true, true, 1]);
+		expect([
+			line.startsWith(`question: may be posted on ${CARD} — the comment's post failed: `),
+			line.endsWith("; read the card's comments before running it again"),
+			code,
+		]).toEqual([true, true, 1]);
 	});
 });
 
@@ -180,7 +244,12 @@ describe("the ask settings, as work.ts reads them", () => {
 		if (typeof found === "string") throw new Error(found);
 		expect(found.settings).toEqual({ token: TOKEN, user: USER });
 		await found.call("the comments read", `/v1/comments?block_id=${CARD}`);
-		expect(seen.at(-1)).toEqual({ call: "GET /v1/comments", auth: seen[0].auth, version: seen[0].version, body: undefined });
+		expect(seen.at(-1)).toEqual({
+			call: "GET /v1/comments",
+			auth: seen[0].auth,
+			version: seen[0].version,
+			body: undefined,
+		});
 	});
 
 	test("no settings answer the reason, and no call", () => {

@@ -6,7 +6,8 @@ import { ASK_COMMAND, MARK } from "./question-gate.ts";
 
 const READ_BACK = "read the card back to confirm it holds the user";
 /** Where the session posts its own question, so a runner keeps the pull request a draft. */
-const REPEAT = " Then repeat the question in the final message under a line `QUESTION: <the id of the card of the change>`, before any `PR-TITLE:` line.";
+const REPEAT =
+	" Then repeat the question in the final message under a line `QUESTION: <the id of the card of the change>`, before any `PR-TITLE:` line.";
 
 /**
  * `answer`: the step carries the answer on the card, as step N+1 once every group is ticked, or, with `draft`
@@ -23,7 +24,15 @@ export type Step = { step: number; branch: string; answer: boolean; carried?: nu
  * `self`, `user`: as `pickPrompt` takes them, so the stage session picks the
  * answer the pick did on a card whose `Assign` names nobody.
  */
-export function prompt(slug: string, { step, branch, answer, carried, draft }: Step, check: string, resumed: boolean, asks?: "runner" | "ask", self?: string, user?: string): string {
+export function prompt(
+	slug: string,
+	{ step, branch, answer, carried, draft }: Step,
+	check: string,
+	resumed: boolean,
+	asks?: "runner" | "ask",
+	self?: string,
+	user?: string,
+): string {
 	// No apostrophe, as below.
 	const which = self
 		? ` (after the last \`harness-question\`, the first comment by the user, whose id is ${user}, opening with neither \`harness-question\` nor \`harness-answer\`, or else the \`harness-answer\` by ${self}, the Notion integration of the runner)`
@@ -76,7 +85,14 @@ export function prompt(slug: string, { step, branch, answer, carried, draft }: S
  * the answer candidates on a draft pull request, whose card the pick names
  * in a `CARD:` line where the runner holds the integration (`self`).
  */
-export function pickPrompt(board: string, slugs: string[], answers: string[], self?: string, user?: string, drafts: string[] = []): string {
+export function pickPrompt(
+	board: string,
+	slugs: string[],
+	answers: string[],
+	self?: string,
+	user?: string,
+	drafts: string[] = [],
+): string {
 	const triaged = self
 		? ` Take one too, whether or not its \`Assign\` holds the user, when after the last such comment its discussion holds one opening with \`harness-answer\` whose author's id is ${self}, the runner's Notion integration; when one by the user, whose id is ${user}, opening with neither \`harness-question\` nor \`harness-answer\` also follows that question, in either order, the user's is the answer. A \`harness-answer\` by any other author is no answer.`
 		: " No comment opening with `harness-answer` is an answer.";
@@ -89,7 +105,9 @@ export function pickPrompt(board: string, slugs: string[], answers: string[], se
 		"Before you answer, set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`, or when it reads `applied` and names an answer candidate, then fetch that card again, and write no other card or property. Write nothing when that line names no change listed above. Leave a card already at `applying` unwritten. A write that fails changes nothing about your answer.",
 		"End with one line, `PICK: <slug>` for its change or `PICK: none` when no card names one, and write no other line starting `PICK:`.",
 		...(self && drafts.length
-			? [`These answer candidates carry their answer on a draft pull request: ${drafts.join(", ")}. When your \`PICK:\` line names one of them, also write one line \`CARD: <the id of its card>\`, and no other line starting \`CARD:\`.`]
+			? [
+					`These answer candidates carry their answer on a draft pull request: ${drafts.join(", ")}. When your \`PICK:\` line names one of them, also write one line \`CARD: <the id of its card>\`, and no other line starting \`CARD:\`.`,
+				]
 			: []),
 	].join("\n");
 }

@@ -3,7 +3,18 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git } from "../bun/diff-budget.fixture.ts";
 import { composed, image, mine, read, root, schedules, scripts, wm, yaml } from "./layout.fixture.ts";
-import { atLeast, compose, endsOnSsh, leaks, NOTE, passScript, pins, remoteControl, variableValues, windmillImages } from "./layout.ts";
+import {
+	atLeast,
+	compose,
+	endsOnSsh,
+	leaks,
+	NOTE,
+	passScript,
+	pins,
+	remoteControl,
+	variableValues,
+	windmillImages,
+} from "./layout.ts";
 
 /**
  * What `orchestrator/` may hold: each check over fabricated input, then over the tree
@@ -23,7 +34,11 @@ describe("the engine's workspace", () => {
 	});
 
 	test("the Windmill floor compares numerically [28]", () => {
-		expect([atLeast("1.846.0", "1.846.1"), atLeast("1.846.1", "1.846.1"), atLeast("1.1000.0", "1.846.1")]).toEqual([false, true, true]);
+		expect([atLeast("1.846.0", "1.846.1"), atLeast("1.846.1", "1.846.1"), atLeast("1.1000.0", "1.846.1")]).toEqual([
+			false,
+			true,
+			true,
+		]);
 	});
 
 	// spec: orchestrator/a-windmill-image-older-than-the-floor
@@ -37,10 +52,16 @@ describe("the engine's workspace", () => {
 	});
 
 	test("the pass script carries the tag pass, a timeout of at least 5400 and no concurrent_limit, and its schedule is hourly, on the script and pushed disabled [29]", () => {
-		const s = [{ path: "x.schedule.yaml", doc: { script_path: "f/p", is_flow: false, schedule: "0 0 * * * *", enabled: false } }];
+		const s = [
+			{ path: "x.schedule.yaml", doc: { script_path: "f/p", is_flow: false, schedule: "0 0 * * * *", enabled: false } },
+		];
 		expect(passScript("f/p", { tag: "pass", timeout: 5400 }, s)).toEqual([]);
 		expect(passScript("f/p", { tag: "default", timeout: 3600, concurrent_limit: 1 }, s)).toHaveLength(3);
-		expect(passScript("f/p", { tag: "pass", timeout: 5400 }, [{ path: "y", doc: { script_path: "f/p", is_flow: true, schedule: "*/5 * * * *", enabled: true } }])).toHaveLength(3);
+		expect(
+			passScript("f/p", { tag: "pass", timeout: 5400 }, [
+				{ path: "y", doc: { script_path: "f/p", is_flow: true, schedule: "*/5 * * * *", enabled: true } },
+			]),
+		).toHaveLength(3);
 		const pass = scripts.find((p) => yaml(p).tag === "pass");
 		expect(pass).toBeDefined();
 		const path = (pass as string).slice(wm.length).replace(/\.script\.yaml$/, "");
@@ -49,7 +70,9 @@ describe("the engine's workspace", () => {
 
 	test("the script's last command is the ssh call; a command after it fails [43]", () => {
 		expect(endsOnSsh("p.sh", "set -eu\nssh -i k runner@runner harness\n# done\n")).toEqual([]);
-		expect(endsOnSsh("p.sh", "ssh runner@runner harness\necho pass_status=$?\n")).toEqual(["p.sh: ends on `echo pass_status=$?`, not the ssh call"]);
+		expect(endsOnSsh("p.sh", "ssh runner@runner harness\necho pass_status=$?\n")).toEqual([
+			"p.sh: ends on `echo pass_status=$?`, not the ssh call",
+		]);
 		const body = mine.filter((p) => p.startsWith(wm) && p.endsWith(".sh"));
 		expect(body.length).toBe(1);
 		expect(endsOnSsh(body[0], read(body[0]))).toEqual([]);
@@ -57,26 +80,38 @@ describe("the engine's workspace", () => {
 
 	// spec: orchestrator/a-variable-with-its-value
 	test("a variable file carrying a value fails, naming the file [30, 31]", () => {
-		expect(variableValues([{ path: "f/k.variable.yaml", doc: { value: "x", is_secret: true } }, { path: "f/e.variable.yaml", doc: { value: "" } }])).toEqual(["f/k.variable.yaml: carries a value"]);
-		const vars = mine.filter((p) => p.startsWith(wm) && p.endsWith(".variable.yaml")).map((p) => ({ path: p, doc: yaml(p) }));
+		expect(
+			variableValues([
+				{ path: "f/k.variable.yaml", doc: { value: "x", is_secret: true } },
+				{ path: "f/e.variable.yaml", doc: { value: "" } },
+			]),
+		).toEqual(["f/k.variable.yaml: carries a value"]);
+		const vars = mine
+			.filter((p) => p.startsWith(wm) && p.endsWith(".variable.yaml"))
+			.map((p) => ({ path: p, doc: yaml(p) }));
 		expect(variableValues(vars)).toEqual([]);
 	});
 });
 
 describe("compose", () => {
-	const worker = (tags?: string, replicas?: number) => ({ environment: tags ? { WORKER_TAGS: tags } : {}, deploy: { replicas } });
+	const worker = (tags?: string, replicas?: number) => ({
+		environment: tags ? { WORKER_TAGS: tags } : {},
+		deploy: { replicas },
+	});
 
 	test("one single-replica worker takes the tag pass, and no other does", () => {
 		expect(compose({ services: { windmill_worker_pass: worker("pass", 1), windmill_worker: worker() } })).toEqual([]);
-		expect(compose({ services: { windmill_worker_pass: worker("pass", 2), windmill_worker: worker("deno,pass") } })).toEqual([
-			"windmill_worker_pass: replicas is not 1",
-			"windmill_worker: takes the tag pass",
-		]);
+		expect(
+			compose({ services: { windmill_worker_pass: worker("pass", 2), windmill_worker: worker("deno,pass") } }),
+		).toEqual(["windmill_worker_pass: replicas is not 1", "windmill_worker: takes the tag pass"]);
 	});
 
 	// spec: orchestrator/a-literal-secret-in-the-compose-file
 	test("a literal value for a token, key, secret or password variable fails, naming the service [32]", () => {
-		const services = { windmill_worker_pass: worker("pass", 1), db: { environment: ["POSTGRES_PASSWORD=hunter2", "POSTGRES_PASSWORD_FILE=/run/secrets/db_password"] } };
+		const services = {
+			windmill_worker_pass: worker("pass", 1),
+			db: { environment: ["POSTGRES_PASSWORD=hunter2", "POSTGRES_PASSWORD_FILE=/run/secrets/db_password"] },
+		};
 		expect(compose({ services })).toEqual(["db: POSTGRES_PASSWORD is a literal, not a secret file"]);
 		expect(compose(composed())).toEqual([]);
 	});
@@ -85,7 +120,9 @@ describe("compose", () => {
 describe("every file under orchestrator/", () => {
 	test("a tracked file other than the README that starts Remote Control fails, naming the file", () => {
 		// spec: orchestrator/a-tracked-file-that-starts-remote-control
-		expect(remoteControl("orchestrator/run.sh", `exec ${RC}\n`)).toEqual(["orchestrator/run.sh: starts Remote Control"]);
+		expect(remoteControl("orchestrator/run.sh", `exec ${RC}\n`)).toEqual([
+			"orchestrator/run.sh: starts Remote Control",
+		]);
 		expect(remoteControl("orchestrator/run.sh", `claude ${"-".repeat(2)}remote-control\n`)).toHaveLength(1);
 		expect(remoteControl("orchestrator/README.md", `${RC}\n`)).toEqual([]);
 		expect(mine.flatMap((p) => remoteControl(p, read(p)))).toEqual([]);
@@ -98,7 +135,9 @@ describe("every file under orchestrator/", () => {
 
 	// spec: orchestrator/a-pin-without-its-note
 	test("a pinned line without its note fails, naming the line [34]", () => {
-		expect(pins("compose.yaml", `  db:\n    image: postgres:16@sha256:${"0".repeat(64)}\n`)).toEqual(["compose.yaml:2: no note naming what moves the pin"]);
+		expect(pins("compose.yaml", `  db:\n    image: postgres:16@sha256:${"0".repeat(64)}\n`)).toEqual([
+			"compose.yaml:2: no note naming what moves the pin",
+		]);
 		expect(pins("compose.yaml", `    image: postgres:16@sha256:${"0".repeat(64)} # ${NOTE}\n`)).toEqual([]);
 	});
 
@@ -120,7 +159,8 @@ describe("every file under orchestrator/", () => {
 
 	// spec: orchestrator/the-secrets-directory
 	test("orchestrator/secrets/<file> is ignored [37]", () => {
-		const ignored = (cwd: string) => Bun.spawnSync(["git", "check-ignore", "-q", "orchestrator/secrets/db_password"], { cwd }).exitCode === 0;
+		const ignored = (cwd: string) =>
+			Bun.spawnSync(["git", "check-ignore", "-q", "orchestrator/secrets/db_password"], { cwd }).exitCode === 0;
 		const bare = emptyDir("orchestrator-layout-");
 		git(bare, "init", "-q");
 		writeFileSync(join(bare, ".gitignore"), "node_modules\n");
@@ -137,7 +177,8 @@ describe("the engine's webhook call", () => {
 
 	test("the image holds a root-owned copy of bun/, from a named context compose points at the repository's bun/", () => {
 		expect(read("orchestrator/runner/Dockerfile")).toContain("COPY --from=bun . /opt/orchestrator/bun/");
-		const runner = (composed().services as Record<string, { build?: { additional_contexts?: Record<string, string> } }>).runner;
+		const runner = (composed().services as Record<string, { build?: { additional_contexts?: Record<string, string> } }>)
+			.runner;
 		expect(runner.build?.additional_contexts?.bun).toBe("../bun");
 	});
 
@@ -150,7 +191,9 @@ describe("the engine's webhook call", () => {
 	});
 
 	test("the entrypoint appends a second restricted line that hands on-event.ts the engine's words as one argument", () => {
-		const lines = read(entry).split("\n").filter((l) => l.includes("on-event.ts"));
+		const lines = read(entry)
+			.split("\n")
+			.filter((l) => l.includes("on-event.ts"));
 		expect(lines).toHaveLength(1);
 		expect(lines[0]).toContain(">>/home/runner/.ssh/authorized_keys");
 		const command = (/command="(.*)" %s/.exec(lines[0])?.[1] ?? "").replaceAll('\\\\"', '"');
@@ -168,7 +211,12 @@ describe("the engine's webhook call", () => {
 	test("the entrypoint exits non-zero when the event key file is missing", () => {
 		const dir = emptyDir("orchestrator-key-");
 		for (const f of ["pub", "host"]) writeFileSync(join(dir, f), "x\n");
-		const env = { PATH: process.env.PATH ?? "", PUBKEY_FILE: join(dir, "pub"), HOSTKEY_FILE: join(dir, "host"), EVENT_PUBKEY_FILE: join(dir, "absent") };
+		const env = {
+			PATH: process.env.PATH ?? "",
+			PUBKEY_FILE: join(dir, "pub"),
+			HOSTKEY_FILE: join(dir, "host"),
+			EVENT_PUBKEY_FILE: join(dir, "absent"),
+		};
 		const r = Bun.spawnSync(["sh", join(root, entry), "true"], { env });
 		expect(r.exitCode).not.toBe(0);
 		expect(r.stderr.toString()).toContain("absent");
@@ -176,23 +224,53 @@ describe("the engine's webhook call", () => {
 
 	test("an async, unauthenticated POST route at github hands the raw body to the event script, which no pass delays", () => {
 		const route = yaml(`${wm}f/orchestrator/github.http_trigger.yaml`);
-		expect(route).toMatchObject({ route_path: "github", http_method: "post", request_type: "async", authentication_method: "none", raw_string: true, is_flow: false });
+		expect(route).toMatchObject({
+			route_path: "github",
+			http_method: "post",
+			request_type: "async",
+			authentication_method: "none",
+			raw_string: true,
+			is_flow: false,
+		});
 		expect(route.script_path).toBe(ev.slice(wm.length));
 		const meta = yaml(`${ev}.script.yaml`);
 		expect(meta.tag).toBeUndefined();
 		expect(meta.timeout).toBeGreaterThan(7200 + 3600);
-		expect(yaml(`${wm}wmill.yaml`)).toMatchObject({ includes: ["f/orchestrator/**"], skipVariables: true, skipResources: true, skipResourceTypes: true, skipSecrets: true, includeTriggers: true });
+		expect(yaml(`${wm}wmill.yaml`)).toMatchObject({
+			includes: ["f/orchestrator/**"],
+			skipVariables: true,
+			skipResources: true,
+			skipResourceTypes: true,
+			skipSecrets: true,
+			includeTriggers: true,
+		});
 	});
 
 	test("the event script passes the three headers and the raw body over ssh to a pinned runner", () => {
 		const text = read(`${ev}.ts`);
-		for (const part of ["x-github-event", "x-github-delivery", "x-hub-signature-256", "raw_string", "f/orchestrator/runner_event_key", "StrictHostKeyChecking=yes", "UserKnownHostsFile=/run/secrets/runner_known_hosts"])
+		for (const part of [
+			"x-github-event",
+			"x-github-delivery",
+			"x-hub-signature-256",
+			"raw_string",
+			"f/orchestrator/runner_event_key",
+			"StrictHostKeyChecking=yes",
+			"UserKnownHostsFile=/run/secrets/runner_known_hosts",
+		])
 			expect(text).toContain(part);
 	});
 
 	test("the README provisions the secret and the key, and names the webhook, its ping and the triggers' push", () => {
 		const text = read("orchestrator/README.md");
-		for (const part of ["github_webhook_secret", "runner_event_pubkey", "runner_event_key", "--include-triggers", "/api/r/github", "Workflow runs", "event: ignored — no flow takes ping"])
+		for (const part of [
+			"github_webhook_secret",
+			"runner_event_pubkey",
+			"runner_event_key",
+			"--include-triggers",
+			"/api/r/github",
+			"Workflow runs",
+			"event: ignored — no flow takes ping",
+		])
 			expect(text).toContain(part);
 	});
 });

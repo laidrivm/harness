@@ -33,7 +33,8 @@ const notion = Bun.serve({
 		if (url.pathname.startsWith("/v1/pages/") && req.method === "GET")
 			return Response.json(reads(url.pathname) > 1 && card.pageAfter ? card.pageAfter : PAGE);
 		if (url.pathname.startsWith("/v1/data_sources/")) return Response.json({ title: [{ plain_text: "Demo" }] });
-		if (req.method === "GET") return Response.json({ results: reads(url.pathname) > 1 ? (card.after ?? []) : [], has_more: false });
+		if (req.method === "GET")
+			return Response.json({ results: reads(url.pathname) > 1 ? (card.after ?? []) : [], has_more: false });
 		const answer = body?.rich_text?.[0]?.text?.content === "harness-answer";
 		return Response.json({}, { status: answer ? (card.answerStatus ?? 200) : 200 });
 	},
@@ -45,11 +46,21 @@ const pass = (s: Stubs, c: Card = {}, entry?: string) => {
 	seen.length = 0;
 	card = c;
 	const { dir } = clone({ ...change("demo"), "docs/rule.md": `${QUOTE}\n` });
-	return runAsync(dir, { said: ASKED, ...s }, { home: configured(), entry, env: { HARNESS_NOTION_API_URL: notion.url.origin } });
+	return runAsync(
+		dir,
+		{ said: ASKED, ...s },
+		{ home: configured(), entry, env: { HARNESS_NOTION_API_URL: notion.url.origin } },
+	);
 };
-const posts = () => seen.filter((s) => s.call === "POST /v1/comments").map((s) => s.body?.rich_text?.map((r) => r.text.content).join(""));
+const posts = () =>
+	seen.filter((s) => s.call === "POST /v1/comments").map((s) => s.body?.rich_text?.map((r) => r.text.content).join(""));
 const patched = () => seen.some((s) => s.call.startsWith("PATCH"));
-const comment = (id: string, author: string, text: string) => ({ id, created_by: { id: author }, created_time: "2026-10-20T10:00:00Z", rich_text: [{ plain_text: text }] });
+const comment = (id: string, author: string, text: string) => ({
+	id,
+	created_by: { id: author },
+	created_time: "2026-10-20T10:00:00Z",
+	rich_text: [{ plain_text: text }],
+});
 
 describe("the triage's endings", () => {
 	test("no QUESTION: line starts no triage [63]", async () => {
@@ -61,7 +72,10 @@ describe("the triage's endings", () => {
 	// spec: board-loop/an-answer-already-written board-loop/a-question-posted-from-the-integration
 	test("a source that holds: the question, then the answer with its quote and source, no Assign, and a draft until a pass carries it [64]", async () => {
 		const r = await pass({ triage: ANSWERED });
-		expect(posts()).toEqual(["harness-question One group or two?", `harness-answer One group.\n> ${QUOTE}\nSource: docs/rule.md`]);
+		expect(posts()).toEqual([
+			"harness-question One group or two?",
+			`harness-answer One group.\n> ${QUOTE}\nSource: docs/rule.md`,
+		]);
 		expect(patched()).toBe(false);
 		expect(r.text).toContain(`question: posted on ${CARD} and answered from docs/rule.md`);
 		expect(r.calls).toContain("--body-file - --draft\n");
@@ -118,9 +132,15 @@ describe("a card that changed while the triage ran", () => {
 	// spec: board-loop/a-question-posted-while-the-triage-ran board-loop/a-card-moved-or-re-pointed-while-the-triage-ran
 	test.each([
 		["a question asked [87]", { after: [comment("q2", USER, `${MARK} Another?`)] }],
-		["a question asked and answered by the user [89]", { after: [comment("q2", USER, `${MARK} Another?`), comment("a2", USER, "Yes.")] }],
+		[
+			"a question asked and answered by the user [89]",
+			{ after: [comment("q2", USER, `${MARK} Another?`), comment("a2", USER, "Yes.")] },
+		],
 		["the integration's own harness-answer", { after: [comment("a3", BOT, "`harness-answer` Two.")] }],
-		["a Pointer changed [90]", { pageAfter: { ...PAGE, properties: { Pointer: { rich_text: [{ plain_text: "openspec/changes/other/" }] } } } }],
+		[
+			"a Pointer changed [90]",
+			{ pageAfter: { ...PAGE, properties: { Pointer: { rich_text: [{ plain_text: "openspec/changes/other/" }] } } } },
+		],
 		["a page moved off the board [90]", { pageAfter: { ...PAGE, parent: { type: "page_id", page_id: "p1" } } }],
 	])("%s: neither the answer nor the question is posted", async (_, c) => {
 		const r = await pass({ triage: ANSWERED }, c);

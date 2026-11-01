@@ -41,7 +41,10 @@ export function remoteHost(url: string) {
  */
 export function remoteRepository(url: string) {
 	const path = URL_FORM.exec(url)?.[2] ?? SCP_FORM.exec(url)?.[2] ?? url;
-	const parts = path.replace(/\/+$/, "").replace(/\.git$/, "").split("/");
+	const parts = path
+		.replace(/\/+$/, "")
+		.replace(/\.git$/, "")
+		.split("/");
 	const [owner, repo] = parts.slice(-2);
 	// A segment of dots alone would move the API call's path out of the repository's, or name none.
 	const name = (s?: string) => s !== undefined && /^[\w.-]+$/.test(s) && !/^\.+$/.test(s);
@@ -51,7 +54,14 @@ export function remoteRepository(url: string) {
 export type Pull = { number: unknown; state: "OPEN" | "MERGED" | "CLOSED"; headRefOid: unknown; draft: boolean };
 
 type Repo = { id?: unknown } | null;
-type Listed = { number?: unknown; state?: unknown; merged_at?: unknown; draft?: unknown; head?: { sha?: unknown; repo?: Repo }; base?: { ref?: unknown; repo?: Repo } } | null;
+type Listed = {
+	number?: unknown;
+	state?: unknown;
+	merged_at?: unknown;
+	draft?: unknown;
+	head?: { sha?: unknown; repo?: Repo };
+	base?: { ref?: unknown; repo?: Repo };
+} | null;
 
 /**
  * `gh api query` for the repository `full`, its output parsed, or false for a
@@ -75,7 +85,8 @@ export const gh = (args: string[], env: Record<string, string | undefined> = pro
 	Bun.spawnSync(["gh", ...args], { env, timeout: limit(), killSignal: "SIGKILL" });
 
 /** `Pull`'s state for a REST answer: `merged_at` alone tells a merged pull request from a closed one, which both read `closed`. */
-const stateOf = (pr: Listed): Pull["state"] => (pr?.state === "open" ? "OPEN" : pr?.state === "closed" && pr.merged_at ? "MERGED" : "CLOSED");
+const stateOf = (pr: Listed): Pull["state"] =>
+	pr?.state === "open" ? "OPEN" : pr?.state === "closed" && pr.merged_at ? "MERGED" : "CLOSED";
 
 /** The owner and name `origin` names, the repository every read here is of, or undefined. Throws where git cannot start. */
 export function originRepository() {
@@ -126,7 +137,10 @@ export function readPullRequests(branch: string, repo?: { owner: string; repo: s
  * no leading zero, or an answer that is not that pull request with a base
  * branch, as an error body `gh` printed with exit 0 is not.
  */
-export function readPullRequest(n: string, repo?: { owner: string; repo: string }): { state: Pull["state"]; base: string } | undefined {
+export function readPullRequest(
+	n: string,
+	repo?: { owner: string; repo: string },
+): { state: Pull["state"]; base: string } | undefined {
 	// `n` goes into the API path, so only the digits the Pointer's pattern admits reach it, as the string, never `Number()`'s rounding.
 	if (!/^[1-9]\d*$/.test(n)) return undefined;
 	try {
@@ -134,7 +148,13 @@ export function readPullRequest(n: string, repo?: { owner: string; repo: string 
 		if (!found) return undefined;
 		const pr = api(`${found.owner}/${found.repo}`, `repos/${found.owner}/${found.repo}/pulls/${n}`) as Listed;
 		const base = pr?.base?.ref;
-		if (typeof pr?.number !== "number" || String(pr.number) !== n || (pr.state !== "open" && pr.state !== "closed") || typeof base !== "string") return undefined;
+		if (
+			typeof pr?.number !== "number" ||
+			String(pr.number) !== n ||
+			(pr.state !== "open" && pr.state !== "closed") ||
+			typeof base !== "string"
+		)
+			return undefined;
 		return { state: stateOf(pr), base };
 	} catch {
 		// A git, a mint or a spawn that throws, or output that is not JSON, fails the read.

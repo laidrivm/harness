@@ -7,13 +7,13 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-	CARD,
-	OTHER,
 	asked,
+	CARD,
 	cleanup,
 	comments,
 	event,
 	fetched,
+	OTHER,
 	QUESTION,
 	run,
 	scratch,
@@ -37,9 +37,7 @@ describe("the page is a card on a board", () => {
 		["upper-case hex [16]", "AAAABBBBCCCCDDDDEEEEFFFF00001111"],
 	])("a page id written with %s matches the card", (_, id) => {
 		const path = transcript([fetched(CARD, "Harness"), comments(CARD)]);
-		expect(run(event({ page_id: id, markdown: QUESTION }, path)).out).not.toBe(
-			"",
-		);
+		expect(run(event({ page_id: id, markdown: QUESTION }, path)).out).not.toBe("");
 	});
 
 	test("of two fetches of the page, the latest decides [10]", () => {
@@ -68,13 +66,7 @@ describe("a page that is not a card gets no answer", () => {
 		["a fetch of another page [4]", [fetched(OTHER, "Harness")]],
 		[
 			"a board's ancestor path in the content of a page with none [32]",
-			[
-				fetched(
-					CARD,
-					undefined,
-					'<ancestor-path><parent-data-source name="Harness"/></ancestor-path>',
-				),
-			],
+			[fetched(CARD, undefined, '<ancestor-path><parent-data-source name="Harness"/></ancestor-path>')],
 		],
 	])("%s", (_, calls) => {
 		const { out, ledger } = run(asked({}, transcript([...calls, comments(CARD)])));
@@ -117,17 +109,10 @@ describe("the card's comments were read", () => {
 	test.each([
 		["no comments read [40]", [fetched(CARD, "Harness")]],
 		["another page's comments read [41]", [fetched(CARD, "Harness"), comments(OTHER)]],
-		[
-			"a comments read that failed",
-			[fetched(CARD, "Harness"), { ...comments(CARD), failed: true as const }],
-		],
+		["a comments read that failed", [fetched(CARD, "Harness"), { ...comments(CARD), failed: true as const }]],
 		[
 			"a read that worked, then one that failed",
-			[
-				fetched(CARD, "Harness"),
-				comments(CARD),
-				{ ...comments(CARD), failed: true as const },
-			],
+			[fetched(CARD, "Harness"), comments(CARD), { ...comments(CARD), failed: true as const }],
 		],
 	])("%s: no answer, recorded comments-unread", (_, calls) => {
 		const { out, ledger } = run(asked({}, transcript(calls)));
@@ -158,10 +143,7 @@ describe("the card's comments were read", () => {
 		const path = transcript([fetched(CARD, "Harness"), comments(CARD)]);
 		// One ledger for all ten, so a count kept there would show.
 		const state = join(scratch(), "state");
-		const answers = Array.from(
-			{ length: 10 },
-			() => run(asked({}, path), state).out,
-		);
+		const answers = Array.from({ length: 10 }, () => run(asked({}, path), state).out);
 		expect(answers.every((out) => out !== "")).toBe(true);
 	});
 });

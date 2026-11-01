@@ -3,6 +3,7 @@
 	"version": "0.0.0",
 	"private": true,
 	"devDependencies": {
+		"@biomejs/biome": "2.5.15",
 		"harness": "github:laidrivm/harness#50765a4e3775a7f155995f1303d95bbb51f2036b"
 	},
 	"harness": {
@@ -10,6 +11,7 @@
 		"bumpTest": "bun test",
 		"diffBudgetExclude": [
 			".claude/commands/opsx/**",
+			"bun.lock",
 			"core/skills/playwright-cli/**",
 			"skills-lock.json"
 		]

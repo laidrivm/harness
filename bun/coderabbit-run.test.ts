@@ -11,7 +11,13 @@ import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 afterAll(cleanup);
 
 /** One check run as `check-runs` lists it, CodeRabbit's unless `slug` says otherwise. */
-const run = (status: string, conclusion: string | null, title: string, slug = "coderabbitai", name = "CodeRabbit"): Run => ({
+const run = (
+	status: string,
+	conclusion: string | null,
+	title: string,
+	slug = "coderabbitai",
+	name = "CodeRabbit",
+): Run => ({
 	name,
 	status,
 	conclusion,
@@ -34,7 +40,11 @@ describe("state", () => {
 		["an empty list", [], "no run"],
 		["only another app's runs", [run("completed", "success", "Build", "github-actions", "test")], "no run"],
 		["a run named CodeRabbit another app posted", [run("completed", "success", "Finished", "impostor")], "no run"],
-		["a skip beside another app's CodeRabbit success", [SKIPPED, run("completed", "success", "Finished", "impostor")], "skipped"],
+		[
+			"a skip beside another app's CodeRabbit success",
+			[SKIPPED, run("completed", "success", "Finished", "impostor")],
+			"skipped",
+		],
 		["skipped plus in progress", [SKIPPED, RUNNING], "reviewing"],
 		["succeeded plus in progress", [DONE, RUNNING], "reviewing"],
 		["skipped plus a neutral Review rate limited", [SKIPPED, LIMITED], "rate limited"],
@@ -48,7 +58,11 @@ describe("state", () => {
 	});
 
 	test("a neutral run with another title gives that conclusion and title", () => {
-		expect(state([SKIPPED, run("completed", "neutral", "Review paused")])).toEqual({ name: "other", conclusion: "neutral", title: "Review paused" });
+		expect(state([SKIPPED, run("completed", "neutral", "Review paused")])).toEqual({
+			name: "other",
+			conclusion: "neutral",
+			title: "Review paused",
+		});
 	});
 });
 
@@ -60,10 +74,16 @@ function read(out: string, code = 0, hang = false) {
 	// Builtins alone: `PATH` holds nothing else, so a hang spins rather than sleeps.
 	const spin = hang ? "while :; do :; done\n" : "";
 	const colour = `printf '%s %s %s\\n' "\${CLICOLOR_FORCE-unset}" "\${GH_FORCE_TTY-unset}" "\${NO_COLOR-unset}" > '${bin}/colour'\n`;
-	writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\n${colour}${spin}while IFS= read -r l; do printf '%s\\n' "$l"; done < '${bin}/answer'\nexit ${code}\n`);
+	writeFileSync(
+		join(bin, "gh"),
+		`#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\n${colour}${spin}while IFS= read -r l; do printf '%s\\n' "$l"; done < '${bin}/answer'\nexit ${code}\n`,
+	);
 	chmodSync(join(bin, "gh"), 0o755);
 	const entry = join(bin, "entry.ts");
-	writeFileSync(entry, `import { read } from ${JSON.stringify(join(import.meta.dir, "coderabbit-run.ts"))};\nconsole.log(JSON.stringify(read("o/demo", "abc")));\n`);
+	writeFileSync(
+		entry,
+		`import { read } from ${JSON.stringify(join(import.meta.dir, "coderabbit-run.ts"))};\nconsole.log(JSON.stringify(read("o/demo", "abc")));\n`,
+	);
 	// The session's own settings that make `gh` colour and pretty-print `--jq`'s output.
 	const env = { PATH: bin, HARNESS_GH_TIMEOUT_MS: "300", CLICOLOR_FORCE: "1", GH_FORCE_TTY: "1" };
 	const p = Bun.spawnSync([process.execPath, entry], { env, timeout: 10_000 });
@@ -75,7 +95,9 @@ describe("read", () => {
 	// `--paginate` with `--jq` prints each page's runs as lines of their own, so a second page's run is a later line.
 	test("calls the check-runs list with --paginate, and a run on a later line, as a second page's is, counts", () => {
 		const { result, calls } = read(`${JSON.stringify(SKIPPED)}\n${JSON.stringify(DONE)}\n`);
-		expect(calls).toEqual(["api repos/o/demo/commits/abc/check-runs?filter=all&per_page=100 --paginate --jq .check_runs[]"]);
+		expect(calls).toEqual([
+			"api repos/o/demo/commits/abc/check-runs?filter=all&per_page=100 --paginate --jq .check_runs[]",
+		]);
 		expect(result).toEqual([SKIPPED, DONE]);
 		expect(state(result).name).toBe("reviewed");
 	});

@@ -73,18 +73,34 @@ export function named(said: string): { title: string; body: string } | string {
  * tip; otherwise why nothing was pushed, as a `Transient` where `origin`'s
  * fetch met the network.
  */
-export function carry(under: string[], branch: string, base: string, read: Record<string, string> = {}): string | Transient | undefined {
+export function carry(
+	under: string[],
+	branch: string,
+	base: string,
+	read: Record<string, string> = {},
+): string | Transient | undefined {
 	const dir = mkdtempSync(join(tmpdir(), "board-loop-bundle-"));
 	try {
 		const file = join(dir, "step.bundle");
 		// On stdout, into the runner's own file: the session user needs no directory the runner reads.
-		const made = Bun.spawnSync([...under, "git", "bundle", "create", "-", `refs/heads/${branch}`, `^refs/remotes/origin/${base}`]);
+		const made = Bun.spawnSync([
+			...under,
+			"git",
+			"bundle",
+			"create",
+			"-",
+			`refs/heads/${branch}`,
+			`^refs/remotes/origin/${base}`,
+		]);
 		if (made.exitCode !== 0) {
 			console.error(made.stderr.toString().trim());
 			return `the session's clone could not bundle ${branch}; nothing was pushed`;
 		}
 		writeFileSync(file, made.stdout);
-		for (const [what, ...from] of [["origin", "origin"], ["the bundle", file, `refs/heads/${branch}`]]) {
+		for (const [what, ...from] of [
+			["origin", "origin"],
+			["the bundle", file, `refs/heads/${branch}`],
+		]) {
 			const run = shWith(read, "git", "fetch", "-q", ...from);
 			if (run.ok) continue;
 			console.error(run.err);
@@ -146,7 +162,10 @@ export async function publish(
 			// Minted now, so no session can reach it. Into the runner's own environment, for the push,
 			// `gh` and the full check after it, which reads the pull request with `gh`. `workflows`: GitHub
 			// refuses a push that adds or changes `.github/workflows/` without it, and a step may (user, 2026-10-25).
-			Object.assign(process.env, credentials(await mint(app, { contents: "write", pull_requests: "write", workflows: "write" })));
+			Object.assign(
+				process.env,
+				credentials(await mint(app, { contents: "write", pull_requests: "write", workflows: "write" })),
+			);
 		} catch (error) {
 			const why = `the App's token could not be minted: ${(error as Error).message}; nothing was pushed`;
 			return error instanceof Transient ? new Transient(why) : why;
@@ -166,7 +185,20 @@ export async function publish(
 		const why = `origin refused the push of ${branch}, as printed above`;
 		return network(push.err) ? new Transient(why) : why;
 	}
-	const create = ["gh", "pr", "create", "--base", base, "--head", branch, "--title", pr.title, "--body-file", "-", ...(draft ? ["--draft"] : [])];
+	const create = [
+		"gh",
+		"pr",
+		"create",
+		"--base",
+		base,
+		"--head",
+		branch,
+		"--title",
+		pr.title,
+		"--body-file",
+		"-",
+		...(draft ? ["--draft"] : []),
+	];
 	try {
 		// The body on stdin, where none of its lines can read as a flag.
 		const run = Bun.spawnSync(create, { stdin: Buffer.from(pr.body), env: process.env });

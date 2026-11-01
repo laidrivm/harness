@@ -2,14 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { branchState, FETCH_MAX_AGE } from "./branch-state.ts";
-import {
-	cleanup,
-	event,
-	fabricate,
-	git,
-	run,
-	upstream,
-} from "./command-guard.fixture.ts";
+import { cleanup, event, fabricate, git, run, upstream } from "./command-guard.fixture.ts";
 
 /**
  * What the guard refuses by the state of the branch a commit lands on: one
@@ -24,8 +17,7 @@ afterAll(cleanup);
 const MINUTE = 60_000;
 
 /** What `branch-state.ts` answers for `dir`'s branch. */
-const state = (dir: string, branch = "feat/x", now?: number) =>
-	branchState(dir, branch, now);
+const state = (dir: string, branch = "feat/x", now?: number) => branchState(dir, branch, now);
 
 describe("the marks git cherry prints", () => {
 	// spec: agent-permissions/the-first-commit-of-a-new-branch
@@ -102,8 +94,7 @@ describe("which branches the check reaches", () => {
 
 describe("how recently origin/main was fetched", () => {
 	/** When the fixture's fetch wrote `FETCH_HEAD`, read back from the file. */
-	const fetchedAt = (dir: string) =>
-		statSync(join(dir, ".git", "FETCH_HEAD")).mtimeMs;
+	const fetchedAt = (dir: string) => statSync(join(dir, ".git", "FETCH_HEAD")).mtimeMs;
 
 	// spec: agent-permissions/the-base-ref-is-stale
 	test("a fetch exactly FETCH_MAX_AGE old is accepted", () => {
@@ -114,18 +105,14 @@ describe("how recently origin/main was fetched", () => {
 	// spec: agent-permissions/the-base-ref-is-stale
 	test("a fetch older than FETCH_MAX_AGE is refused", () => {
 		const dir = upstream();
-		expect(state(dir, "feat/x", fetchedAt(dir) + FETCH_MAX_AGE + 1)).toBe(
-			"stale",
-		);
+		expect(state(dir, "feat/x", fetchedAt(dir) + FETCH_MAX_AGE + 1)).toBe("stale");
 	});
 
 	test("a fetch time far in the future is refused, not read as a recent one", () => {
 		// A negative age would sit under any bound for as long as the clock
 		// stayed behind the file.
 		const dir = upstream();
-		expect(state(dir, "feat/x", fetchedAt(dir) - FETCH_MAX_AGE - 1)).toBe(
-			"stale",
-		);
+		expect(state(dir, "feat/x", fetchedAt(dir) - FETCH_MAX_AGE - 1)).toBe("stale");
 	});
 
 	test("a merged branch is merged however old the fetch", () => {
@@ -192,10 +179,7 @@ describe("the guard's refusal", () => {
 
 	// spec: agent-permissions/the-base-ref-is-stale
 	test("the stale reason names fetching, not moving the work", () => {
-		const { code, reason } = run(
-			commit,
-			upstream({ fetchedAgo: 60 * MINUTE }),
-		);
+		const { code, reason } = run(commit, upstream({ fetchedAgo: 60 * MINUTE }));
 		expect(code).toBe(2);
 		expect(reason).toContain("git fetch origin");
 		expect(reason).not.toContain("Move the work");

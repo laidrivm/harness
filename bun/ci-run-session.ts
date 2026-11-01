@@ -32,14 +32,18 @@ const SCHEMA = JSON.stringify({
 });
 
 /** The event's attempt's log file, never the run's latest: a re-run started since would hand over another attempt's logs. */
-export const logOf = (run: Run) => join(process.env.HARNESS_CI_LOGS || "/home/agent/ci-logs", `${run.id}-${run.run_attempt}.log`);
+export const logOf = (run: Run) =>
+	join(process.env.HARNESS_CI_LOGS || "/home/agent/ci-logs", `${run.id}-${run.run_attempt}.log`);
 
 /** Writes the event's attempt's failed logs to `log` with the runner's `gh`; false when `gh` fails. */
 export function logged(app: App, run: Run, log: string) {
 	const repo = `${app.owner}/${app.repo}`;
-	const view = Bun.spawnSync(["gh", "run", "view", String(run.id), "-R", repo, "--attempt", String(run.run_attempt), "--log-failed"], {
-		env: process.env,
-	});
+	const view = Bun.spawnSync(
+		["gh", "run", "view", String(run.id), "-R", repo, "--attempt", String(run.run_attempt), "--log-failed"],
+		{
+			env: process.env,
+		},
+	);
 	if (view.exitCode !== 0) return false;
 	mkdirSync(dirname(log), { recursive: true });
 	// Readable by the session user's group, which the host gives the directory.

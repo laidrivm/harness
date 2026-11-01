@@ -52,9 +52,7 @@ describe("the marker vocabulary", () => {
 
 	test("a marker in a skill under core/skills/ is scanned", () => {
 		const dir = tree({ "skills/warm/SKILL.md": "Stop (unattended: wait — x).\n" });
-		expect(check(dir)).toEqual([
-			"core/skills/warm/SKILL.md: (unattended: wait) names no defined class",
-		]);
+		expect(check(dir)).toEqual(["core/skills/warm/SKILL.md: (unattended: wait) names no defined class"]);
 	});
 
 	test("of several markers, only the unknown one is reported", () => {
@@ -93,24 +91,18 @@ describe("the marker vocabulary", () => {
 
 	test("a hyphenated fourth heading beside the three fails", () => {
 		const dir = tree({ "autonomy.md": `${DOC}\n### \`agent-run\`\n` });
-		expect(check(dir)).toEqual([
-			"core/autonomy.md: defines agent, card and user, found agent, agent-run, card, user",
-		]);
+		expect(check(dir)).toEqual(["core/autonomy.md: defines agent, card and user, found agent, agent-run, card, user"]);
 	});
 
 	test("a fourth class heading fails", () => {
 		const dir = tree({ "autonomy.md": `${DOC}\n### \`bot\`\n` });
-		expect(check(dir)).toEqual([
-			"core/autonomy.md: defines agent, card and user, found agent, bot, card, user",
-		]);
+		expect(check(dir)).toEqual(["core/autonomy.md: defines agent, card and user, found agent, bot, card, user"]);
 	});
 
 	test("a core/ without the doc defines no class", () => {
 		const dir = tree();
 		rmSync(join(dir, "core", "autonomy.md"));
-		expect(check(dir)).toEqual([
-			"core/autonomy.md: defines agent, card and user, found none",
-		]);
+		expect(check(dir)).toEqual(["core/autonomy.md: defines agent, card and user, found none"]);
 	});
 
 	test("a core/ without rules.md links no doc", () => {
@@ -125,9 +117,7 @@ describe("the marker vocabulary", () => {
 	});
 
 	test("rules.md without the link fails", () => {
-		expect(check(tree({ "rules.md": "# Rules\n" }))).toEqual([
-			"core/rules.md: links no autonomy.md",
-		]);
+		expect(check(tree({ "rules.md": "# Rules\n" }))).toEqual(["core/rules.md: links no autonomy.md"]);
 	});
 
 	// spec: agent-autonomy/a-marker-names-an-unknown-class
@@ -232,13 +222,7 @@ describe("the repository", () => {
 		const end = rest.search(/^#{2,3} /m);
 		const section = (end < 0 ? rest : rest.slice(0, end)).replace(/\s+/g, " ");
 		expect(start).toBeGreaterThan(-1);
-		for (const field of [
-			"severity",
-			"file and line",
-			"what it says",
-			"reason dismissal is proposed",
-			"still open",
-		])
+		for (const field of ["severity", "file and line", "what it says", "reason dismissal is proposed", "still open"])
 			expect(section).toContain(field);
 	});
 

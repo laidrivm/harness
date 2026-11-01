@@ -42,9 +42,7 @@ export function run(tmp: string, event: unknown) {
 	const call = Bun.spawnSync(["bun", script], {
 		cwd: tmp,
 		env: env(tmp),
-		stdin: Buffer.from(
-			typeof event === "string" ? event : JSON.stringify(event),
-		),
+		stdin: Buffer.from(typeof event === "string" ? event : JSON.stringify(event)),
 		stdout: "pipe",
 		stderr: "pipe",
 	});
@@ -81,17 +79,11 @@ export const before = (over: object = {}) => ({
 export const thrice = (over: object = {}) => [1, 2, 3].map(() => failure(over));
 
 /** Feeds the failures to one store in order, then decides the call. */
-export function after(
-	failures: object[],
-	call: object = before(),
-	tmp = temp(),
-) {
+export function after(failures: object[], call: object = before(), tmp = temp()) {
 	for (const event of failures) run(tmp, event);
 	return run(tmp, call);
 }
 
 /** The text of each file the guard keeps. */
 export const kept = (tmp: string) =>
-	readdirSync(join(tmp, "loop-guard")).map((name) =>
-		readFileSync(join(tmp, "loop-guard", name), "utf8"),
-	);
+	readdirSync(join(tmp, "loop-guard")).map((name) => readFileSync(join(tmp, "loop-guard", name), "utf8"));

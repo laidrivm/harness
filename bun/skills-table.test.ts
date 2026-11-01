@@ -16,9 +16,7 @@ function rows(root: string): string[] {
 	if (start < 0) throw new Error("README.md has no `## Skills` heading");
 	const rest = readme.slice(start).split("\n").slice(1);
 	const end = rest.findIndex((line) => line.startsWith("## "));
-	const table = (end < 0 ? rest : rest.slice(0, end)).filter((line) =>
-		line.startsWith("|"),
-	);
+	const table = (end < 0 ? rest : rest.slice(0, end)).filter((line) => line.startsWith("|"));
 	// The header and the separator row are the table's first two lines.
 	return table.slice(2);
 }

@@ -33,17 +33,7 @@ const WRAPPERS = new Set([
  * Reserved words that may stand before a command and are never one, so
  * `if true; then git commit; fi` reaches `git` past `then`.
  */
-const KEYWORDS = new Set([
-	"!",
-	"{",
-	"if",
-	"then",
-	"else",
-	"elif",
-	"do",
-	"while",
-	"until",
-]);
+const KEYWORDS = new Set(["!", "{", "if", "then", "else", "elif", "do", "while", "until"]);
 
 /** Shells whose `-c` argument is another command to look inside. */
 export const SHELLS = new Set(["sh", "bash", "zsh", "dash"]);
@@ -112,9 +102,7 @@ const READERS = new Set([...SHELLS, "eval", "source", "."]);
  */
 export const readsScript = (words: string[]) =>
 	invocations(words).some(
-		([name, rest]) =>
-			READERS.has(name) ||
-			(words[words.length - rest.length - 1] ?? "").includes("/"),
+		([name, rest]) => READERS.has(name) || (words[words.length - rest.length - 1] ?? "").includes("/"),
 	);
 
 /** `path` as the shell resolves it from `from`, or `null` where it cannot be read statically. */

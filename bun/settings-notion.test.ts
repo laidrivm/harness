@@ -32,9 +32,7 @@ function named(groups: object[]): boolean {
 	writeFileSync(join(dir, "bunfig.toml"), "");
 	Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
 	return settings(dir).some((problem) =>
-		problem.includes(
-			"the PreToolUse hook is not the harness Notion update guard",
-		),
+		problem.includes("the PreToolUse hook is not the harness Notion update guard"),
 	);
 }
 

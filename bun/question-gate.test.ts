@@ -4,22 +4,12 @@
  * `question-gate-board.test.ts`'s; every case here reads the card first.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	ALLOW,
-	CARD,
-	MARK,
-	QUESTION,
-	asked,
-	cleanup,
-	event,
-	run,
-} from "./question-gate.fixture.ts";
+import { ALLOW, asked, CARD, cleanup, event, MARK, QUESTION, run } from "./question-gate.fixture.ts";
 
 afterAll(cleanup);
 
 /** A question of exactly `length` characters, the mark included. */
-const sized = (length: number) =>
-	asked({ markdown: `${MARK} ${"q".repeat(length - MARK.length - 1)}` });
+const sized = (length: number) => asked({ markdown: `${MARK} ${"q".repeat(length - MARK.length - 1)}` });
 
 describe("a question", () => {
 	// spec: agent-permissions/a-question-on-a-card
@@ -64,7 +54,11 @@ describe("a call that is no question gets no answer", () => {
 		["a selection_with_ellipsis [28]", asked({ selection_with_ellipsis: "# A...b" }), "anchored"],
 		["rich_text [29]", event({ page_id: CARD, rich_text: [{ text: { content: QUESTION } }] }), "rich-text"],
 		["a user mention [30]", asked({ markdown: `${QUESTION} <mention-user url="user://u"/>` }), "mention"],
-		["another tool's name [31]", event({ page_id: CARD, markdown: QUESTION }, undefined, "mcp__claude_ai_Notion__notion-update-page"), "unreadable"],
+		[
+			"another tool's name [31]",
+			event({ page_id: CARD, markdown: QUESTION }, undefined, "mcp__claude_ai_Notion__notion-update-page"),
+			"unreadable",
+		],
 		["an event that is not JSON [33]", "{ not json", "unreadable"],
 	])("%s: exit 0, nothing printed, recorded passed [19]", (_, stdin, rule) => {
 		const { code, out, ledger } = run(stdin);

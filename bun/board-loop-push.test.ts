@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { change, clone, commit, lowered, out, records, run, SAID, TICKED } from "./board-loop.fixture.ts";
+import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { CARD } from "./notion-bot.fixture.ts";
 import { lookup } from "./pr-sessions.ts";
 import { MARK } from "./question-gate.ts";
@@ -68,7 +68,9 @@ describe("a step ready to push", () => {
 	// spec: board-loop/a-step-ready-to-push-beside-a-question board-loop/a-question-the-session-posted-itself
 	test("with no integration, a question the session posted opens the same pull request as a draft, and the full check decides", () => {
 		const { dir } = clone();
-		const r = run(dir, [], { said: `QUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}` });
+		const r = run(dir, [], {
+			said: `QUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}`,
+		});
 		expect(calls(r.calls, "gh pr create")).toEqual([`${CREATE} --draft`]);
 		expect([r.body, r.last]).toEqual(["The body.", "board-loop: met — apply demo step 1"]);
 	});
@@ -95,18 +97,37 @@ describe("a step ready to push", () => {
 describe("a step not ready", () => {
 	// spec: board-loop/a-step-not-ready
 	test.each([
-		["the before-push check reads open [21]", { beforePush: OPEN }, undefined, `board-loop: open — apply demo step 1: ${OPEN}`],
+		[
+			"the before-push check reads open [21]",
+			{ beforePush: OPEN },
+			undefined,
+			`board-loop: open — apply demo step 1: ${OPEN}`,
+		],
 		["HEAD is off the step's branch [22]", { branch: "feat/other" }, undefined, "HEAD is on feat/other, not feat/demo"],
-		["the session ran past the limit [26]", { sleep: 30 }, () => lowered(1000), "board-loop: timeout — apply demo step 1"],
+		[
+			"the session ran past the limit [26]",
+			{ sleep: 30 },
+			() => lowered(1000),
+			"board-loop: timeout — apply demo step 1",
+		],
 		["its group outlived it [27]", {}, () => lowered(60_000, STAGE_EPERM), "outlived apply demo step 1"],
-		["a tampered pin cannot make the before-push run read met [28]", { beforePush: OPEN, tamper: true }, undefined, OPEN],
-	] as const)("%s: nothing is pushed or opened", (_, stubs, entry, line) => {
-		const { dir, origin } = clone();
-		const r = run(dir, [], stubs, { entry: entry?.() });
-		expect([calls(r.calls, "git push"), calls(r.calls, "gh pr create")]).toEqual([[], []]);
-		expect(out(origin, "branch", "--list", "feat/*")).toBe("");
-		expect(r.last).toContain(line);
-	}, 40_000);
+		[
+			"a tampered pin cannot make the before-push run read met [28]",
+			{ beforePush: OPEN, tamper: true },
+			undefined,
+			OPEN,
+		],
+	] as const)(
+		"%s: nothing is pushed or opened",
+		(_, stubs, entry, line) => {
+			const { dir, origin } = clone();
+			const r = run(dir, [], stubs, { entry: entry?.() });
+			expect([calls(r.calls, "git push"), calls(r.calls, "gh pr create")]).toEqual([[], []]);
+			expect(out(origin, "branch", "--list", "feat/*")).toBe("");
+			expect(r.last).toContain(line);
+		},
+		40_000,
+	);
 });
 
 describe("no title or body", () => {
@@ -171,7 +192,10 @@ describe("the PR → session table", () => {
 	const TABLE = join("orchestrator", "pr-sessions.jsonl");
 	const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 	const rows = (home: string) =>
-		readFileSync(join(home, TABLE), "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
+		readFileSync(join(home, TABLE), "utf8")
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line));
 	/** A clone whose `origin` reads as a GitHub URL while git still reaches the bare one. */
 	const github = () => {
 		const made = clone();
@@ -198,7 +222,13 @@ describe("the PR → session table", () => {
 		git(dir, "push", "-q", "origin", "main:refs/heads/feat/demo");
 		const home = emptyDir("board-loop-home-");
 		mkdirSync(join(home, "orchestrator"));
-		const older = { repo: "o/demo", branch: "feat/demo", session: "older", clone: "/c", at: "2026-10-19T00:00:00.000Z" };
+		const older = {
+			repo: "o/demo",
+			branch: "feat/demo",
+			session: "older",
+			clone: "/c",
+			at: "2026-10-19T00:00:00.000Z",
+		};
 		writeFileSync(join(home, TABLE), `${JSON.stringify(older)}\n`);
 		const r = run(dir, [], { commits: true }, { home });
 		const [, latest] = rows(home);

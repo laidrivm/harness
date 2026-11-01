@@ -64,9 +64,7 @@ describe("a repository that names no board", () => {
 			env: { PATH: process.env.PATH },
 		});
 		expect(call.exitCode).not.toBe(0);
-		expect(call.stderr.toString()).toContain(
-			join(realpathSync(dir), "package.json"),
-		);
+		expect(call.stderr.toString()).toContain(join(realpathSync(dir), "package.json"));
 		expect(call.stdout.toString()).toBe("");
 	});
 

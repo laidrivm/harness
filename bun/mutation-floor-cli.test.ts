@@ -39,17 +39,13 @@ describe("the command line entry point", () => {
 	};
 
 	test("it exits 0 and says nothing when the count equals the floor", () => {
-		const run = cli(
-			JSON.stringify(report(...Array(FLOOR).fill("Survived"), "Killed")),
-		);
+		const run = cli(JSON.stringify(report(...Array(FLOOR).fill("Survived"), "Killed")));
 		expect(run.stderr.toString()).toBe("");
 		expect(run.exitCode).toBe(0);
 	});
 
 	test("it exits 1 and names the gap on stderr when the count differs", () => {
-		const run = cli(
-			JSON.stringify(report(...Array(FLOOR + 1).fill("Survived"), "Killed")),
-		);
+		const run = cli(JSON.stringify(report(...Array(FLOOR + 1).fill("Survived"), "Killed")));
 		expect(run.stderr.toString()).toContain(String(FLOOR + 1));
 		expect(run.stdout.toString()).toBe("");
 		expect(run.exitCode).toBe(1);
@@ -74,8 +70,6 @@ describe("the check resolves its report from the repository root", () => {
 		// Derived here rather than taken from `./root.ts`, which is what the
 		// code under test resolves through: an expectation reading that module
 		// would move with a defect in it and report the same pass.
-		expect(run.stdout.toString().trim()).toBe(
-			join(import.meta.dir, "..", "reports", "mutation", "mutation.json"),
-		);
+		expect(run.stdout.toString().trim()).toBe(join(import.meta.dir, "..", "reports", "mutation", "mutation.json"));
 	});
 });

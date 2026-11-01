@@ -1,16 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	cleanup,
-	commit,
-	DONE,
-	end,
-	OPEN,
-	prompt,
-	repo,
-	SILENT,
-	store,
-	TASKS,
-} from "./turn-gate.fixture.ts";
+import { cleanup, commit, DONE, end, OPEN, prompt, repo, SILENT, store, TASKS } from "./turn-gate.fixture.ts";
 import { complete, decide, mark } from "./turn-gate.ts";
 
 /**
@@ -22,10 +11,7 @@ import { complete, decide, mark } from "./turn-gate.ts";
 afterAll(cleanup);
 
 /** Commits `after` over `before` under one mark, and decides a silent turn. */
-function silentTurn(
-	before: Record<string, string>,
-	after: Record<string, string>,
-) {
+function silentTurn(before: Record<string, string>, after: Record<string, string>) {
 	const dir = repo(before);
 	const marks = store();
 	mark(prompt(dir), marks);
@@ -50,9 +36,7 @@ describe("which groups a task list completes", () => {
 	});
 
 	test("`- [X]` counts as ticked [10]", () => {
-		expect(complete("## 1. Group\n\n- [X] 1.1 a\n")).toEqual([
-			"1. Group",
-		]);
+		expect(complete("## 1. Group\n\n- [X] 1.1 a\n")).toEqual(["1. Group"]);
 	});
 
 	test("a checkbox inside a fenced code block does not count [11]", () => {
@@ -61,15 +45,12 @@ describe("which groups a task list completes", () => {
 	});
 
 	test("a `~~~` fence is not closed by a backtick fence inside it", () => {
-		const text =
-			"## 1. Group\n\n- [x] 1.1 a\n\n~~~md\n```\n- [ ] not a task\n~~~\n";
+		const text = "## 1. Group\n\n- [x] 1.1 a\n\n~~~md\n```\n- [ ] not a task\n~~~\n";
 		expect(complete(text)).toEqual(["1. Group"]);
 	});
 
 	test("an unticked box nested under a ticked one keeps the group open", () => {
-		expect(complete("## 1. Group\n\n- [x] 1.1 a\n  - [ ] 1.1.1 b\n")).toEqual(
-			[],
-		);
+		expect(complete("## 1. Group\n\n- [x] 1.1 a\n  - [ ] 1.1.1 b\n")).toEqual([]);
 	});
 
 	test("a file with no group headings completes nothing [9]", () => {
@@ -77,9 +58,7 @@ describe("which groups a task list completes", () => {
 	});
 
 	test("each group is decided on its own boxes", () => {
-		expect(complete(`${DONE}\n## 2. Next\n\n- [ ] 2.1 c\n`)).toEqual([
-			"1. Group",
-		]);
+		expect(complete(`${DONE}\n## 2. Next\n\n- [ ] 2.1 c\n`)).toEqual(["1. Group"]);
 	});
 });
 
@@ -94,15 +73,9 @@ describe("which task lists a turn is decided on", () => {
 		expect(silentTurn({ "a.txt": "a" }, { "a.txt": "b" })).toBeUndefined();
 	});
 
-	test.each([
-		"a",
-		"b",
-	])("of two active changes, completing one in %s triggers [5]", (which) => {
+	test.each(["a", "b"])("of two active changes, completing one in %s triggers [5]", (which) => {
 		const path = (name: string) => `openspec/changes/${name}/tasks.md`;
-		const reason = silentTurn(
-			{ [path("a")]: OPEN, [path("b")]: OPEN },
-			{ [path(which)]: DONE },
-		);
+		const reason = silentTurn({ [path("a")]: OPEN, [path("b")]: OPEN }, { [path(which)]: DONE });
 		expect(reason).toContain(`openspec/changes/${which}/`);
 	});
 
@@ -115,9 +88,7 @@ describe("which task lists a turn is decided on", () => {
 
 	// spec: commit-gates/a-group-created-and-completed-in-the-same-turn
 	test("a group the mark does not hold, complete at the tip, qualifies [12]", () => {
-		expect(silentTurn({ "a.txt": "a" }, { [TASKS]: DONE })).toContain(
-			'"1. Group" in openspec/changes/c/',
-		);
+		expect(silentTurn({ "a.txt": "a" }, { [TASKS]: DONE })).toContain('"1. Group" in openspec/changes/c/');
 	});
 
 	test("a group committed unticked, then ticked, in one turn qualifies [13]", () => {

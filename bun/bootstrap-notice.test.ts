@@ -26,8 +26,7 @@ function project(files?: Record<string, string>): string {
 	if (files !== undefined) {
 		const pkg = join(dir, "node_modules/harness");
 		mkdirSync(join(pkg, "bun"), { recursive: true });
-		for (const [path, text] of Object.entries(files))
-			writeFileSync(join(pkg, path), text);
+		for (const [path, text] of Object.entries(files)) writeFileSync(join(pkg, path), text);
 	}
 	return dir;
 }
@@ -115,9 +114,7 @@ function pinned(manifest: object): string {
 describe("the stale-install notice on a development-dependency pin", () => {
 	// spec: harness-updates/the-notice-reads-a-development-dependency-pin
 	test("a pin held only as a development dependency is named", () => {
-		const { code, out } = notice(
-			pinned({ devDependencies: { harness: `github:laidrivm/harness#${PIN}` } }),
-		);
+		const { code, out } = notice(pinned({ devDependencies: { harness: `github:laidrivm/harness#${PIN}` } }));
 		expect(code).toBe(0);
 		expect(out).toContain("9d321b6");
 		expect(out).toContain(PIN.slice(0, 7));
@@ -234,11 +231,16 @@ describe("the cloud install before the notice", () => {
 		writeFileSync(join(dir, "package.json"), JSON.stringify({ dependencies: { dep: "file:./dep" } }));
 		expect(Bun.spawnSync(["bun", "install"], { cwd: dir }).exitCode).toBe(0);
 		rmSync(join(dir, "node_modules"), { recursive: true, force: true });
-		writeFileSync(join(dir, "package.json"), JSON.stringify({ dependencies: { dep: "file:./dep", dep2: "file:./dep2" } }));
+		writeFileSync(
+			join(dir, "package.json"),
+			JSON.stringify({ dependencies: { dep: "file:./dep", dep2: "file:./dep2" } }),
+		);
 		const before = [readFileSync(join(dir, "package.json"), "utf8"), readFileSync(join(dir, "bun.lock"), "utf8")];
 		const { code, out } = notice(dir, { CLAUDE_CODE_REMOTE: "true" });
 		expect(code).toBe(0);
 		expect(out).toContain("install failed");
-		expect([readFileSync(join(dir, "package.json"), "utf8"), readFileSync(join(dir, "bun.lock"), "utf8")]).toEqual(before);
+		expect([readFileSync(join(dir, "package.json"), "utf8"), readFileSync(join(dir, "bun.lock"), "utf8")]).toEqual(
+			before,
+		);
 	});
 });

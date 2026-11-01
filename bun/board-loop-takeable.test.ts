@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { cleanup } from "./diff-budget.fixture.ts";
 import { change, clone, listed, ONE, run, THREE, TICKED } from "./board-loop.fixture.ts";
 import { prompt } from "./board-loop-prompt.ts";
+import { cleanup } from "./diff-budget.fixture.ts";
 
 /** Which changes a pass may take, and which step of one. [n]: `/zombies` ideas. */
 
@@ -50,7 +50,11 @@ describe("an answer candidate", () => {
 	// spec: board-loop/a-ready-pull-request
 	test.each([
 		["an open pull request on feat/demo-2 [18]", { gh: listed(7, "open") }, "pull request #7 is open on feat/demo-2"],
-		["a closed pull request on feat/demo-2 [19]", { gh: listed(5, "closed") }, "pull request #5 already used feat/demo-2"],
+		[
+			"a closed pull request on feat/demo-2 [19]",
+			{ gh: listed(5, "closed") },
+			"pull request #5 already used feat/demo-2",
+		],
 		["a failing gh [21]", { gh: "", ghCode: 1 }, "the pull request query failed"],
 	])("%s passes the candidate over, naming why", (_, stubs, why) => {
 		const { dir } = clone(change("demo", TICKED));
@@ -123,7 +127,9 @@ describe("passed over, with the reason printed", () => {
 
 /** Groups `1` to `n`, those in `open` holding an unticked box and the rest ticked. */
 const tasks = (n: number, open: number[]) =>
-	Array.from({ length: n }, (_, i) => `## ${i + 1}. G\n\n- [${open.includes(i + 1) ? " " : "x"}] ${i + 1}.1 t\n`).join("\n");
+	Array.from({ length: n }, (_, i) => `## ${i + 1}. G\n\n- [${open.includes(i + 1) ? " " : "x"}] ${i + 1}.1 t\n`).join(
+		"\n",
+	);
 const merged = (number: number) => listed(number, "closed", true);
 
 describe("the unticked tasks of merged groups, carried as a new group", () => {
@@ -183,7 +189,12 @@ describe("the unticked tasks of merged groups, carried as a new group", () => {
 
 	// spec: board-loop/a-carry-step
 	test("a carry's first line names the move, and its other lines are the launch form's", () => {
-		const carry = prompt("demo", { step: 6, branch: "feat/demo-6", answer: false, carried: [4, 5] }, "check.ts", false).split("\n");
+		const carry = prompt(
+			"demo",
+			{ step: 6, branch: "feat/demo-6", answer: false, carried: [4, 5] },
+			"check.ts",
+			false,
+		).split("\n");
 		const plain = prompt("demo", { step: 6, branch: "feat/demo-6", answer: false }, "check.ts", false).split("\n");
 		expect(carry[0]).toContain(
 			"move every unticked task of its group 4, 5, its text unchanged, into a new last group `## 6. Carried over from group 4, 5` of its tasks.md, numbered from 6.1, each moved task opening with `(was <g>.<k>)` and each old place keeping a line `Task <g>.<k> moved to 6.<j>.` with no box, then /opsx:apply demo for that group and the pre-PR sequence, up to a committed HEAD on feat/demo-6,",
@@ -202,13 +213,16 @@ describe("a pull request query that runs past its limit", () => {
 	test.each([
 		["one candidate [7]", ["demo"]],
 		["two candidates [8]", ["demo", "other"]],
-	])("gh hanging on %s passes each over, and the pass is idle", (_, slugs) => {
-		const { dir } = clone(Object.assign({}, ...slugs.map((slug) => change(slug))));
-		const r = run(dir, [], { ghSleep: 30 }, opts);
-		for (const slug of slugs)
-			expect(r.text).toContain(`passed over ${slug}: the pull request query failed`);
-		expect(r.last).toBe("board-loop: idle — no change is takeable");
-	}, 15_000);
+	])(
+		"gh hanging on %s passes each over, and the pass is idle",
+		(_, slugs) => {
+			const { dir } = clone(Object.assign({}, ...slugs.map((slug) => change(slug))));
+			const r = run(dir, [], { ghSleep: 30 }, opts);
+			for (const slug of slugs) expect(r.text).toContain(`passed over ${slug}: the pull request query failed`);
+			expect(r.last).toBe("board-loop: idle — no change is takeable");
+		},
+		15_000,
+	);
 
 	test("the query asks for one page of 100 records [6]", () => {
 		const { dir } = clone();

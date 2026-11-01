@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { advance, change, clone, commit, EPERM, lowered, out, run, TICKED } from "./board-loop.fixture.ts";
+import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 
 /** The clone a pass starts from: unpushed work and the previous pass's branch. [n]: `/zombies` ideas. */
 
@@ -15,8 +15,13 @@ afterAll(cleanup);
  */
 const fromMain = (dir: string, calls: string) => {
 	const lines = calls.split("\n");
-	const before = lines.slice(0, lines.findIndex((line) => line.startsWith("claude ")));
-	return before.includes("git switch -q main") && out(dir, "rev-parse", "main") === out(dir, "rev-parse", "origin/main");
+	const before = lines.slice(
+		0,
+		lines.findIndex((line) => line.startsWith("claude ")),
+	);
+	return (
+		before.includes("git switch -q main") && out(dir, "rev-parse", "main") === out(dir, "rev-parse", "origin/main")
+	);
 };
 
 describe("the clone", () => {
@@ -65,11 +70,32 @@ describe("the clone", () => {
 		// spec: board-loop/unpushed-work board-loop/refused-after-the-switch
 		test.each([
 			["no step's branch [15][16]", change("demo"), "feat/other", {}, none("feat/other"), false],
-			["another step's branch, demo being at step 1 [14]", change("demo", TWO), "feat/demo-2", {}, none("feat/demo-2"), false],
+			[
+				"another step's branch, demo being at step 1 [14]",
+				change("demo", TWO),
+				"feat/demo-2",
+				{},
+				none("feat/demo-2"),
+				false,
+			],
 			["no step's branch, with no takeable change [12]", {}, "feat/other", {}, none("feat/other"), false],
 			["the step's branch, with gh failing [18]", change("demo"), "feat/demo", { ghCode: 1 }, none("feat/demo"), false],
-			["the step's branch, with the install failing", change("demo"), "feat/demo", { install: 1 }, "bun install --frozen-lockfile failed", false],
-			["the step's branch, with a local main that cannot fast-forward", change("demo"), "feat/demo", {}, "main cannot fast-forward", true],
+			[
+				"the step's branch, with the install failing",
+				change("demo"),
+				"feat/demo",
+				{ install: 1 },
+				"bun install --frozen-lockfile failed",
+				false,
+			],
+			[
+				"the step's branch, with a local main that cannot fast-forward",
+				change("demo"),
+				"feat/demo",
+				{},
+				"main cannot fast-forward",
+				true,
+			],
 		] as const)("on %s is refused, back on that branch at its tip", (_, tree, branch, stubs, why, diverged) => {
 			const { dir, origin } = clone(tree);
 			if (diverged) {
@@ -131,7 +157,18 @@ describe("the clone", () => {
 				(dir: string) => {
 					git(dir, "fetch", "-q", "origin");
 					// A merge wants an identity even with `--no-commit`, and CI's runner has none.
-					git(dir, "-c", "user.email=test@example.com", "-c", "user.name=Test", "merge", "-q", "--no-ff", "--no-commit", "origin/main~1");
+					git(
+						dir,
+						"-c",
+						"user.email=test@example.com",
+						"-c",
+						"user.name=Test",
+						"merge",
+						"-q",
+						"--no-ff",
+						"--no-commit",
+						"origin/main~1",
+					);
 					commit(dir, { "resolution.txt": "x\n" });
 				},
 			],
@@ -152,22 +189,26 @@ describe("the clone", () => {
 		test.each([
 			["at its tip", false],
 			["ahead of its tip", true],
-		])("on a branch another clone pushed, origin %s, with its pull request open, the pass switches off it to main", (_, ahead) => {
-			const { dir, origin } = clone();
-			const tip = unpushed(dir, "feat/demo");
-			git(origin, "fetch", "-q", dir, "feat/demo:feat/demo");
-			if (ahead) {
-				const other = emptyDir("board-loop-other-");
-				git(other, "clone", "-q", "-b", "feat/demo", origin, ".");
-				commit(other);
-				git(other, "push", "-q", "origin", "feat/demo");
-			}
-			const open = '[{"number":7,"state":"open","merged_at":null,"head":{"sha":"abc","repo":{"id":1,"full_name":"o/demo"}},"base":{"repo":{"id":1}}}]';
-			const r = run(dir, [], { gh: open });
-			expect(r.last).toBe("board-loop: idle — no change is takeable");
-			expect(r.text).toContain("switching off feat/demo: origin holds its tip");
-			expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "feat/demo")]).toEqual(["main", tip]);
-		});
+		])(
+			"on a branch another clone pushed, origin %s, with its pull request open, the pass switches off it to main",
+			(_, ahead) => {
+				const { dir, origin } = clone();
+				const tip = unpushed(dir, "feat/demo");
+				git(origin, "fetch", "-q", dir, "feat/demo:feat/demo");
+				if (ahead) {
+					const other = emptyDir("board-loop-other-");
+					git(other, "clone", "-q", "-b", "feat/demo", origin, ".");
+					commit(other);
+					git(other, "push", "-q", "origin", "feat/demo");
+				}
+				const open =
+					'[{"number":7,"state":"open","merged_at":null,"head":{"sha":"abc","repo":{"id":1,"full_name":"o/demo"}},"base":{"repo":{"id":1}}}]';
+				const r = run(dir, [], { gh: open });
+				expect(r.last).toBe("board-loop: idle — no change is takeable");
+				expect(r.text).toContain("switching off feat/demo: origin holds its tip");
+				expect([out(dir, "branch", "--show-current"), out(dir, "rev-parse", "feat/demo")]).toEqual(["main", tip]);
+			},
+		);
 
 		// spec: board-loop/a-session-s-process-group-outlived-it
 		// The run blocks bun's own timer, so the case names a limit of its own.

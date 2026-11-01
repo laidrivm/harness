@@ -34,7 +34,9 @@ describe("a branch with no pull request open", () => {
 
 	// spec: pre-pr-runner/a-proposal-with-one-source-file
 	test("`openspec/` files plus one `.ts` file name `zombies` [5]", () => {
-		expect(required(["openspec/changes/x/tasks.md", "openspec/changes/x/.openspec.yaml", "bun/a.ts"], false)).toEqual(CODE);
+		expect(required(["openspec/changes/x/tasks.md", "openspec/changes/x/.openspec.yaml", "bun/a.ts"], false)).toEqual(
+			CODE,
+		);
 	});
 
 	test("`.md` files in nested directories stay documentation [6]", () => {
@@ -47,11 +49,7 @@ describe("a branch with no pull request open", () => {
 		expect(required(paths, false)).toEqual(EVERY);
 	});
 
-	test.each([
-		["README.MD [8]"],
-		["openspec-notes.txt [9]"],
-		["notes.md.ts [10]"],
-	])("%s is code", (path) => {
+	test.each([["README.MD [8]"], ["openspec-notes.txt [9]"], ["notes.md.ts [10]"]])("%s is code", (path) => {
 		expect(required([path.split(" ")[0]], false)).toEqual(CODE);
 	});
 
@@ -97,14 +95,18 @@ describe("the ids", () => {
 	// The `Skill` hook records the skill's name; unattended, a call no entry allows is refused and leaves no
 	// record. A `Skill(...)` rule matches the name, never the arguments, so it covers `/code-review high`.
 	test.each(JUDGEMENT.map((id) => [id]))("`%s` is a skill the harness's settings allow by that name", (id) => {
-		const allow = JSON.parse(readFileSync(join(import.meta.dir, "..", ".claude", "settings.json"), "utf8")).permissions.allow;
+		const allow = JSON.parse(readFileSync(join(import.meta.dir, "..", ".claude", "settings.json"), "utf8")).permissions
+			.allow;
 		expect(allow).toContain(`Skill(${id})`);
 	});
 
 	// A missing skill would leave its step with no record ever matching it. `code-review` is built in,
 	// with no `SKILL.md` here: the case above pins its `Skill(code-review)` entry instead.
-	test.each(JUDGEMENT.filter((id) => id !== CODE_REVIEW).map((id) => [id]))("`%s` names a skill of that name [15]", (id) => {
-		const skill = readFileSync(join(import.meta.dir, "..", "core", "skills", id, "SKILL.md"), "utf8");
-		expect(skill.match(/^name:\s*(\S+)\s*$/m)?.[1]).toBe(id);
-	});
+	test.each(JUDGEMENT.filter((id) => id !== CODE_REVIEW).map((id) => [id]))(
+		"`%s` names a skill of that name [15]",
+		(id) => {
+			const skill = readFileSync(join(import.meta.dir, "..", "core", "skills", id, "SKILL.md"), "utf8");
+			expect(skill.match(/^name:\s*(\S+)\s*$/m)?.[1]).toBe(id);
+		},
+	);
 });

@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup } from "./diff-budget.fixture.ts";
-import { passed, ran, RUNNER_STEPS } from "./gate-ledger.ts";
-import { run, runRecord, stateWith, tasks, TWO } from "./goal-check.fixture.ts";
+import { passed, RUNNER_STEPS, ran } from "./gate-ledger.ts";
+import { run, runRecord, stateWith, TWO, tasks } from "./goal-check.fixture.ts";
 
 /**
  * `ran()` asked about one gate's step: a skill call never stands in for the
@@ -38,7 +38,10 @@ describe("a reader counts a record only for its own gate and step", () => {
 	// spec: gate-ledger/another-skill-s-record
 	test("a triage call is no zombies call [28a]", () => {
 		const ledger = skill("triage");
-		expect([ran(C, TOP, undefined, ledger, "zombies", "skill"), ran(C, TOP, undefined, ledger, "triage", "skill")]).toEqual([false, true]);
+		expect([
+			ran(C, TOP, undefined, ledger, "zombies", "skill"),
+			ran(C, TOP, undefined, ledger, "triage", "skill"),
+		]).toEqual([false, true]);
 	});
 
 	// spec: gate-ledger/a-refusal-at-the-commit

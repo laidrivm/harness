@@ -12,15 +12,7 @@
  * here: a lifecycle hook belongs to the file it runs for, so each test file
  * registers `cleanup` itself.
  */
-import {
-	existsSync,
-	mkdirSync,
-	mkdtempSync,
-	readFileSync,
-	rmSync,
-	unlinkSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -112,8 +104,7 @@ export const gate = (dir: string, base = "main", body?: string) => {
 };
 
 /** N distinct lines, so no pairing can occur by accident. */
-export const lines = (n: number) =>
-	`${Array.from({ length: n }, (_, i) => `line ${i}`).join("\n")}\n`;
+export const lines = (n: number) => `${Array.from({ length: n }, (_, i) => `line ${i}`).join("\n")}\n`;
 
 export const tasks = (n: number, box: " " | "x") =>
 	`${Array.from({ length: n }, (_, i) => `- [${box}] task ${i}`).join("\n")}\n`;

@@ -5,8 +5,8 @@
  * cap.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { settings } from "./settings.ts";
 import { changed, cleanup, consumer } from "./settings.fixture.ts";
+import { settings } from "./settings.ts";
 
 afterAll(cleanup);
 

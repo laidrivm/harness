@@ -42,9 +42,7 @@ export function read<K extends keyof Config>(root: string, key: K): Config[K] {
 	// `null` too: JSON can only spell an absent value that way, and the gate
 	// would otherwise read a field of it and throw something nobody can act on.
 	if (value === undefined || value === null)
-		throw new Error(
-			`${file} has no "harness.${key}" — the gate reads it there`,
-		);
+		throw new Error(`${file} has no "harness.${key}" — the gate reads it there`);
 	return value as Config[K];
 }
 
@@ -55,17 +53,14 @@ export function read<K extends keyof Config>(root: string, key: K): Config[K] {
  */
 export function bumpTest(root: string): string {
 	const value = read(root, "bumpTest");
-	if (typeof value !== "string" || value.trim() === "")
-		throw new Error("package.json: harness.bumpTest is blank");
+	if (typeof value !== "string" || value.trim() === "") throw new Error("package.json: harness.bumpTest is blank");
 	return value;
 }
 
 /** The `name` of `top`'s `package.json`, or `undefined`. */
 export function named(top: string): string | undefined {
 	try {
-		const name = JSON.parse(
-			readFileSync(join(top, "package.json"), "utf8"),
-		)?.name;
+		const name = JSON.parse(readFileSync(join(top, "package.json"), "utf8"))?.name;
 		return typeof name === "string" && name ? name : undefined;
 	} catch {
 		return undefined;
@@ -77,10 +72,7 @@ export function named(top: string): string | undefined {
  * its name, a colon and a space (task-board, *A card for another repository's
  * change points across*), and the path after it; no prefix where it has none.
  */
-export function across(
-	top: string,
-	pointer: string,
-): { prefix: string; path: string } {
+export function across(top: string, pointer: string): { prefix: string; path: string } {
 	const name = named(top);
 	const prefix = name && pointer.startsWith(`${name}: `) ? `${name}: ` : "";
 	return { prefix, path: pointer.slice(prefix.length) };

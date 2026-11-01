@@ -26,14 +26,21 @@ export const CARD = "aaaabbbbccccddddeeeeffff00001111";
 const TEXT = `${MARK} Ship the hook as one group?`;
 
 type Run = { plain_text: string; annotations?: { code: boolean } };
-export const said = (author: string, time: string, ...runs: Run[]) => ({ created_by: { id: author }, created_time: time, rich_text: runs });
+export const said = (author: string, time: string, ...runs: Run[]) => ({
+	created_by: { id: author },
+	created_time: time,
+	rich_text: runs,
+});
 export const question = (time: string) =>
 	said(BOT, time, { plain_text: "harness-question", annotations: { code: true } }, { plain_text: " Ship?" });
 
 /** `USER` as the API writes an id, a UUID. */
 export const UUID = "01234567-89ab-cdef-0123-456789abcdef";
 export const OTHER = "99999999-8888-7777-6666-555555555555";
-export const held = (...people: string[]) => ({ object: "page", properties: { Assign: { type: "people", people: people.map((id) => ({ object: "user", id })) } } });
+export const held = (...people: string[]) => ({
+	object: "page",
+	properties: { Assign: { type: "people", people: people.map((id) => ({ object: "user", id })) } },
+});
 
 /**
  * `post` answers the comment's post, its body `raw` when one is given; `patch`
@@ -41,7 +48,8 @@ export const held = (...people: string[]) => ({ object: "page", properties: { As
  * `assigned` being the body as sent.
  */
 type Stub = { comments?: unknown[][]; post?: number; raw?: string; patch?: number; assigned?: unknown };
-const answer = (body: unknown, status: number) => (typeof body === "string" ? new Response(body, { status }) : Response.json(body, { status }));
+const answer = (body: unknown, status: number) =>
+	typeof body === "string" ? new Response(body, { status }) : Response.json(body, { status });
 
 /** Serves Notion as `stub` says, and the calls it saw, each as `METHOD /path` with its body. */
 export function notion(stub: Stub = {}) {
@@ -57,7 +65,8 @@ export function notion(stub: Stub = {}) {
 				body: req.method === "GET" ? undefined : await req.json(),
 			});
 			if (req.method === "POST") return answer(stub.raw ?? {}, stub.post ?? 200);
-			if (req.method === "PATCH" && url.pathname === `/v1/pages/${CARD}`) return answer(stub.assigned ?? held(UUID), stub.patch ?? 200);
+			if (req.method === "PATCH" && url.pathname === `/v1/pages/${CARD}`)
+				return answer(stub.assigned ?? held(UUID), stub.patch ?? 200);
 			if (url.pathname !== "/v1/comments") return Response.json({}, { status: 500 });
 			const pages = stub.comments ?? [[]];
 			const at = Number(url.searchParams.get("start_cursor") ?? 0);
@@ -70,7 +79,10 @@ export function notion(stub: Stub = {}) {
 }
 
 /** A config home holding `files` under `harness/`, each at `mode`. */
-export function home(files: Record<string, unknown> = { "notion-ask.json": { token: TOKEN, user: USER } }, mode = 0o600): string {
+export function home(
+	files: Record<string, unknown> = { "notion-ask.json": { token: TOKEN, user: USER } },
+	mode = 0o600,
+): string {
 	const dir = mkdtempSync(join(tmpdir(), "notion-ask-"));
 	made.push(dir);
 	mkdirSync(join(dir, "harness"));
@@ -96,7 +108,11 @@ export async function ask(api: string, config: string, args: string[]) {
 		stdout: "pipe",
 		stderr: "pipe",
 	});
-	const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+	const [out, err, code] = await Promise.all([
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+		child.exited,
+	]);
 	expect(out + err).not.toContain(TOKEN);
 	return { line: out.trim(), code };
 }

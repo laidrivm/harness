@@ -22,7 +22,10 @@ describe("the request for a skipped head", () => {
 		const run = await watched([[SKIPPED]], { comments: [{ created_at: "2026-10-31T09:56:00Z", body: "LGTM" }] });
 		expect(run.calls.filter((call) => call.startsWith("pr comment"))).toEqual([ASK]);
 		expect(run.calls.slice(-3)).toEqual([COMMENTS, runs(run.cwd), ASK]);
-		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; asked for a review`]);
+		expect([run.code, run.last]).toEqual([
+			0,
+			`finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; asked for a review`,
+		]);
 	});
 
 	// spec: work-finish/already-asked-for-this-head
@@ -34,7 +37,10 @@ describe("the request for a skipped head", () => {
 	])("a request %s counts as asked", async (_, comment) => {
 		const run = await watched([[SKIPPED]], { comments: [comment] });
 		expect(run.calls.at(-1)).toBe(COMMENTS);
-		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; a review was already asked for`]);
+		expect([run.code, run.last]).toEqual([
+			0,
+			`finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; a review was already asked for`,
+		]);
 	});
 
 	// spec: work-finish/an-older-request
@@ -65,22 +71,34 @@ describe("the request for a skipped head", () => {
 		const limited = await watched([...skips, [SKIPPED, LIMITED]]);
 		const failed = await watched([...skips, 1]);
 		for (const run of [limited, failed]) expect(run.calls.slice(-2)).toEqual([COMMENTS, runs(run.cwd)]);
-		expect([limited.code, limited.last]).toEqual([0, `finish: ready #7 — CodeRabbit rate limited on ${short(limited.cwd)}; no review asked for`]);
-		expect([failed.code, failed.last]).toEqual([0, `finish: ready #7 — CodeRabbit's runs on ${short(failed.cwd)} unread: gh exited 1`]);
+		expect([limited.code, limited.last]).toEqual([
+			0,
+			`finish: ready #7 — CodeRabbit rate limited on ${short(limited.cwd)}; no review asked for`,
+		]);
+		expect([failed.code, failed.last]).toEqual([
+			0,
+			`finish: ready #7 — CodeRabbit's runs on ${short(failed.cwd)} unread: gh exited 1`,
+		]);
 	});
 
 	// spec: work-finish/the-comments-cannot-be-read
 	test("a failed comment read posts nothing and names why", async () => {
 		const run = await watched([[SKIPPED]], { comments: 1 });
 		expect(run.calls.at(-1)).toBe(COMMENTS);
-		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; comments unread, nothing asked: gh exited 1`]);
+		expect([run.code, run.last]).toEqual([
+			0,
+			`finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; comments unread, nothing asked: gh exited 1`,
+		]);
 	});
 
 	// spec: work-finish/the-post-fails
 	test("a post gh refuses is made once and named", async () => {
 		const run = await watched([[SKIPPED]], { comment: 1 });
 		expect(run.calls.filter((call) => call === ASK)).toHaveLength(1);
-		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; the request failed, gh exited 1`]);
+		expect([run.code, run.last]).toEqual([
+			0,
+			`finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; the request failed, gh exited 1`,
+		]);
 	});
 
 	test.each<[string, object[] | number]>([

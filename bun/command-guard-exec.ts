@@ -27,8 +27,7 @@ const REDIRECTION = /^[0-9]*[<>]/;
 
 /** The index of the first word from `at` on that is not a redirection. */
 function firstWord(words: string[], at: number): number {
-	while (at < words.length && REDIRECTION.test(words[at] ?? ""))
-		at += OPEN_REDIRECTION.test(words[at] ?? "") ? 2 : 1;
+	while (at < words.length && REDIRECTION.test(words[at] ?? "")) at += OPEN_REDIRECTION.test(words[at] ?? "") ? 2 : 1;
 	return at;
 }
 
@@ -50,8 +49,7 @@ export function shellWords(rest: string[]) {
 	for (let at = firstWord(rest, 0); at < rest.length; ) {
 		const word = rest[at] ?? "";
 		let next = at + 1;
-		if (word === "--")
-			return { ...found, start: next, operand: firstWord(rest, next) };
+		if (word === "--") return { ...found, start: next, operand: firstWord(rest, next) };
 		if (word === "--version" || word === "--help") found.info = true;
 		else if (/^[-+][^-]/.test(word)) {
 			found.stdin ||= word.includes("s");
@@ -73,9 +71,7 @@ export function shellWords(rest: string[]) {
  * since no repository keeps a script in either.
  */
 const noScript = (operand: string | undefined) =>
-	operand === undefined ||
-	operand === "-" ||
-	/^(\/|(\.\.\/)+)(dev|proc)\//.test(posix.normalize(operand));
+	operand === undefined || operand === "-" || /^(\/|(\.\.\/)+)(dev|proc)\//.test(posix.normalize(operand));
 
 /**
  * Why `name` with `rest` is handed a program the guard cannot read, or
@@ -86,12 +82,7 @@ const noScript = (operand: string | undefined) =>
  * all, so a later candidate is an operand — the trailing `.` of `sudo cp a .`
  * — and only a shell is checked there.
  */
-export function unreadProgram(
-	part: string[],
-	name: string,
-	rest: string[],
-	first: boolean,
-): string | undefined {
+export function unreadProgram(part: string[], name: string, rest: string[], first: boolean): string | undefined {
 	const fed = FED.has(part);
 	let unread = false;
 	if (SHELLS.has(name)) {
@@ -100,19 +91,12 @@ export function unreadProgram(
 		// `xargs` writes its input into a `-c` string (`xargs -I{} sh -c '{}'`),
 		// and without a replacement or a `$` the shell never reads what it
 		// appends, so every `-c` that `xargs` runs is refused.
-		const xargs = part
-			.slice(0, part.length - rest.length - 1)
-			.some((word) => word.split("/").pop() === "xargs");
+		const xargs = part.slice(0, part.length - rest.length - 1).some((word) => word.split("/").pop() === "xargs");
 		if (shell.stdin) unread = true;
 		else if (shell.info) unread = false;
 		else if (shell.command)
 			unread =
-				!program ||
-				rest
-					.slice(shell.start, shell.operand + 1)
-					.some((word) => word.includes("$")) ||
-				fed ||
-				xargs;
+				!program || rest.slice(shell.start, shell.operand + 1).some((word) => word.includes("$")) || fed || xargs;
 		else unread = noScript(program);
 	} else if (first && (name === "source" || name === ".")) {
 		unread = noScript(rest[firstWord(rest, 0)]);
@@ -139,11 +123,7 @@ export function unreadProgram(
 export function bunxInstall(name: string, rest: string[]): string | undefined {
 	let words = rest;
 	if (name === "bun") {
-		const sub = rest.findIndex(
-			(word, at) =>
-				word === "x" ||
-				!(word.startsWith("-") || rest[at - 1]?.startsWith("-")),
-		);
+		const sub = rest.findIndex((word, at) => word === "x" || !(word.startsWith("-") || rest[at - 1]?.startsWith("-")));
 		if (rest[sub] !== "x") return undefined;
 		words = rest.slice(sub + 1);
 	} else if (name !== "bunx") return undefined;
@@ -165,10 +145,7 @@ export function bunxInstall(name: string, rest: string[]): string | undefined {
 export function bunTestRetry(name: string, rest: string[]): string | undefined {
 	if (name !== "bun") return undefined;
 	const sub = rest.findIndex(
-		(word, at) =>
-			word === "test" ||
-			word === "run" ||
-			!(word.startsWith("-") || rest[at - 1]?.startsWith("-")),
+		(word, at) => word === "test" || word === "run" || !(word.startsWith("-") || rest[at - 1]?.startsWith("-")),
 	);
 	const verb = rest[sub];
 	if (verb !== "test" && verb !== "run") return undefined;

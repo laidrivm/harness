@@ -63,4 +63,6 @@ export function consider(slug: string, status: string, blocking: string[]): Step
  * fetch left it: a session that ended before its pull request left it.
  */
 export const left = (at: typeof sh, branch: string) =>
-	[`refs/heads/${branch}`, `refs/remotes/origin/${branch}`].some((ref) => at("git", "rev-parse", "--verify", "-q", ref).ok);
+	[`refs/heads/${branch}`, `refs/remotes/origin/${branch}`].some(
+		(ref) => at("git", "rev-parse", "--verify", "-q", ref).ok,
+	);

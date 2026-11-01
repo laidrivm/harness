@@ -28,7 +28,10 @@ beforeAll(() => {
 				"/repos/o/demo/installation": { id: 99 },
 				"/app/installations/99/access_tokens": { token: "ghs_minted" },
 			};
-			const refused: Record<string, number> = { "/repos/o/busy/installation": 503, "/repos/o/denied/installation": 401 };
+			const refused: Record<string, number> = {
+				"/repos/o/busy/installation": 503,
+				"/repos/o/denied/installation": 401,
+			};
 			if (path in refused) return new Response("no", { status: refused[path] });
 			return path in answers ? Response.json(answers[path]) : new Response("no", { status: 404 });
 		},
@@ -46,7 +49,10 @@ afterAll(() => {
 /** The App's id, its key and the repositories the list names, as the image provisions them. */
 function files(repositories = "o/demo\nO/Other\n") {
 	const dir = emptyDir("github-app-mint-");
-	const key = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs1", format: "pem" } }).privateKey;
+	const key = generateKeyPairSync("rsa", {
+		modulusLength: 2048,
+		privateKeyEncoding: { type: "pkcs1", format: "pem" },
+	}).privateKey;
 	const at = { id: join(dir, "app-id"), key: join(dir, "app.pem"), repositories: join(dir, "repositories") };
 	writeFileSync(at.id, "7\n");
 	writeFileSync(at.key, key);
@@ -58,8 +64,15 @@ describe("the mint", () => {
 	// spec: orchestrator/the-runner-asks-the-key-holder
 	test("prints the one repository's token on stdout, holding exactly the permissions asked", async () => {
 		seen = [];
-		expect(await main(["o/demo", "contents=write", "pull_requests=read"], files())).toEqual({ code: 0, out: "ghs_minted\n", err: "" });
-		expect(JSON.parse(seen[1].body)).toEqual({ repositories: ["demo"], permissions: { contents: "write", pull_requests: "read" } });
+		expect(await main(["o/demo", "contents=write", "pull_requests=read"], files())).toEqual({
+			code: 0,
+			out: "ghs_minted\n",
+			err: "",
+		});
+		expect(JSON.parse(seen[1].body)).toEqual({
+			repositories: ["demo"],
+			permissions: { contents: "write", pull_requests: "read" },
+		});
 	});
 
 	test("workflows at write, the board loop's push of a workflow file, is in the set", async () => {

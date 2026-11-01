@@ -17,16 +17,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { git } from "./command-guard.fixture.ts";
-import {
-	ago,
-	archive,
-	cleanup,
-	copyOf,
-	DAY,
-	event,
-	machine,
-	session,
-} from "./transcript-archive.fixture.ts";
+import { ago, archive, cleanup, copyOf, DAY, event, machine, session } from "./transcript-archive.fixture.ts";
 
 afterAll(cleanup);
 
@@ -35,8 +26,7 @@ const record = (path: string) => JSON.parse(read(`${path}.meta.json`));
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** Every path under `dir`, relative to it, directories included. */
-const tree = (dir: string) =>
-	(readdirSync(dir, { recursive: true }) as string[]).sort();
+const tree = (dir: string) => (readdirSync(dir, { recursive: true }) as string[]).sort();
 
 describe("an ended session's copy", () => {
 	// spec: transcript-archive/a-session-with-subagents
@@ -47,8 +37,7 @@ describe("an ended session's copy", () => {
 		expect(archive(m, event(m, path))).toBe(0);
 		const copy = copyOf(m, "s1");
 		expect(read(`${copy}.jsonl`)).toBe('{"a":1}\n');
-		for (const [name, body] of Object.entries(files))
-			expect(read(join(copy, name))).toBe(body);
+		for (const [name, body] of Object.entries(files)) expect(read(join(copy, name))).toBe(body);
 	});
 
 	// spec: transcript-archive/a-session-with-no-sibling-directory

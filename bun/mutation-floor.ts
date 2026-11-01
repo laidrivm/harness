@@ -30,13 +30,7 @@ const SURVIVING = ["Survived", "NoCoverage"];
  * ignoring it would report a number about a run that never happened. Any status
  * this check predates lands the same way — thrown, by name.
  */
-const COUNTED_OUT = [
-	"Killed",
-	"Timeout",
-	"Ignored",
-	"CompileError",
-	"RuntimeError",
-];
+const COUNTED_OUT = ["Killed", "Timeout", "Ignored", "CompileError", "RuntimeError"];
 
 type Mutant = { status?: unknown };
 /**
@@ -83,8 +77,7 @@ export function survivors(report: Report): number {
 	// and a report made entirely of them reaches the throw below rather than
 	// reading as zero survivors.
 	const mutants = Object.values(report.files).flatMap((f) => f?.mutants ?? []);
-	if (mutants.length === 0)
-		throw new Error("the mutation report holds no mutants");
+	if (mutants.length === 0) throw new Error("the mutation report holds no mutants");
 
 	let count = 0;
 	for (const { status } of mutants) {
@@ -93,8 +86,7 @@ export function survivors(report: Report): number {
 		// which is what a guard would have to do anyway.
 		const name = String(status);
 		if (SURVIVING.includes(name)) count++;
-		else if (!COUNTED_OUT.includes(name))
-			throw new Error(`unrecognised mutant status: ${name}`);
+		else if (!COUNTED_OUT.includes(name)) throw new Error(`unrecognised mutant status: ${name}`);
 	}
 	return count;
 }
@@ -107,8 +99,7 @@ const FLOOR: Floor = {
 };
 
 /** What the survivor count owes `harness.mutationFloor` — see `./floor.ts`. */
-export const gauge = (count: number, floor: unknown, why: unknown) =>
-	owed(FLOOR, count, floor, why);
+export const gauge = (count: number, floor: unknown, why: unknown) => owed(FLOOR, count, floor, why);
 
 /**
  * Resolved from the repository root rather than the working directory, so the
