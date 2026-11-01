@@ -29,8 +29,16 @@ archive; any other card text; a board property; consumers' sessions.
 1. **One module, one call.** `bun/work-finish-card.ts` exports
    `recorded(call, card, top, pull)`, returning `finish`'s lines or throwing
    naming the step; `finish` calls it once the pull request's number is
-   known, before the question read, and turns a throw into
-   `finish: draft #N — <step> …`, exit 1, as it does for the comments read.
+   known, before the question read, and turns a throw into one line,
+   `finish: the card's record stopped, a rerun writes the rest — <step> …`,
+   and goes on to the question read and the ready switch. The record is
+   auxiliary: `finish`'s own work — the push, the pull request, the ready
+   switch — never waits on it (the user's answer 1 c, 2026-11-01). That
+   covers every failure inside the record: the fetch of `origin/main`, the
+   merge base, the branch's diff, and the page, board and block reads, the
+   `Pointer` write and its read-back, and the link's append. It does not
+   cover missing ask settings or the comments read, which gate the ready
+   switch as before.
    Rejected: inlining in `bun/work-finish.ts`, which three changes edit at
    once; adding to `bun/notion-bot.ts`, which has 21 lines of headroom.
 2. **The changes the branch adds files to, at the merge base.**
@@ -42,8 +50,11 @@ archive; any other card text; a board property; consumers' sessions.
    change and a `-plan` branch's design and tasks both name the change, so
    a card whose `Pointer` was left empty by its first half still gets it;
    an archive names only its archived directory, since the old one's files
-   are deleted, not added. A fetch or merge base that fails throws its
-   step, so the draft stays and nothing is written under a wrong kind.
+   are deleted, not added. A fetch, merge base or diff that fails — a
+   shallow clone finds no merge base — writes neither the `Pointer` nor the
+   link, so nothing is written under a wrong kind, and says in one line that
+   the branch's change could not be told; `finish` goes on (the user's
+   answer 1 c, 2026-11-01, over *the draft stays*).
    Rejected: directories new at `HEAD` alone (`git ls-tree`), which leave a
    `-plan` branch naming nothing; the tip of `origin/main`, where a change
    archived on main after the fork reads as one the branch adds.
@@ -67,11 +78,13 @@ archive; any other card text; a board property; consumers' sessions.
    `origin` is on GitHub.com, as `finish`'s `gh … -R <owner>/<repo>` calls
    already assume, and another host is out of scope.
    The card's top-level blocks are read (`GET /v1/blocks/{card}/children`,
-   every page); a block whose rich text carries that `href` means the link
-   is there. Else the first paragraph or heading whose plain text, trimmed
-   of whitespace and a trailing `:`, is `Ссылки` anchors it: the new
-   bulleted item goes `after` the last of the bulleted items directly
-   following it, or after the anchor when none does, in one `PATCH
+   every page); a block whose rich text carries that `href`, or a bookmark
+   or preview whose own `url` is it — in any case, or a page of it such as
+   `/files` — means the link is there. Else the first paragraph or heading
+   whose plain text, trimmed of whitespace and a trailing `:`, is `Ссылки`
+   anchors it: the new bulleted item goes `after` the last of the bulleted
+   items directly following it, blank paragraphs among them skipped, or
+   after the anchor when none does, in one `PATCH
    /v1/blocks/{card}/children`; a later section's bullets are not the
    run. No anchor: a bold `Ссылки` paragraph and the item are appended at
    the end. The cursor loop `discussion()` runs is lifted into
@@ -81,11 +94,14 @@ archive; any other card text; a board property; consumers' sessions.
    no block id to anchor on; one paragraph rewritten under *Update content*,
    which drops the list form and still needs *Insert content* on a card
    with no `Ссылки`.
-5. **Kind.** From the same list: `proposal` when a directory outside
-   `archive/` is in it — a new change or a `-plan` branch's design and
-   tasks; else `archive` when one inside `archive/` is; else `apply` — the three the card names, a fix's pull
-   request reading `apply`. An apply step edits `tasks.md` and adds no file
-   there. The `step 2` of `core/feature-workflow.md` becomes `apply`, so
+5. **Kind.** From the same added paths: `proposal` when one is a
+   `proposal.md`, `design.md` or `tasks.md` of a directory outside
+   `archive/` — a new change or a `-plan` branch's design and tasks (#363,
+   #374); else `archive` when one is inside `archive/`; else `apply` — the
+   three the card names, a fix's pull request reading `apply`. An apply
+   branch that adds a delta spec or another file to its change (#377) reads
+   `apply` (the user's answer 2 b, 2026-11-01, over *any directory outside
+   `archive/`*). The `step 2` of `core/feature-workflow.md` becomes `apply`, so
    prose and code name one convention; a step's number stays in the
    pull request's title.
 6. **Order.** Pointer first, then the link: a refused append leaves the
@@ -95,7 +111,12 @@ archive; any other card text; a board property; consumers' sessions.
 
 - [*Insert content* not granted, or `after` not taken under API version
   `2025-09-03`] → task 1 probes both on a test card before any code; a 403
-  is named by step, and the draft stays.
+  is named by step in one line, and `finish` goes on.
+- [A link nested under a toggle, or the page and block reads one after the
+  other] → kept (the user's answers 3 a and 4 a, 2026-11-01): only
+  top-level blocks are read, so a nested link gets a visible, harmless
+  duplicate; the reads stay serial, so the call order the tests pin is
+  deterministic, at one Notion round trip.
 - [Blocks after the `Ссылки` list stay after it] → Notion's REST surface
   moves no block, and recreating them would drop their ids, comments and
   children; the item lands in the list, where a reader of the links looks.

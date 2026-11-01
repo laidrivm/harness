@@ -2,7 +2,8 @@
  * `work.ts finish [--card <id>] [--title <text> --body-file <path>]`: ends an
  * agent's work on a branch in the order the draft rule sets — the refusals,
  * then the push while the pull request is a draft, the draft opened when none
- * is, and the ready switch unless a question waits on the card, when one is given
+ * is, the card's `Pointer` and link (`work-finish-card.ts`), and the ready
+ * switch unless a question waits on the card, when one is given
  * (`openspec/changes/archive/2026-10-28-work-finish/design.md`, *The
  * sequence and where each refusal sits*). Where the checkout tracks
  * `.coderabbit.yaml`, it reads the card's question, then waits for
@@ -23,6 +24,7 @@ import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
 import { cleared } from "./notion-release.ts";
 import { gh, originRepository, readPullRequests, readyOne } from "./pull-requests.ts";
+import { recorded } from "./work-finish-card.ts";
 import { tracked } from "./tracked.ts";
 
 const git = (...args: string[]) => {
@@ -109,6 +111,13 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	// Looked up before the wait, so settings that are missing cost none.
 	const found = card ? asking(card) : undefined;
 	if (typeof found === "string") return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);
+	// Once, before either question read. Auxiliary: a failure is said and the rest goes on, and a rerun writes what is missing (the user's answer 1 c, 2026-11-01).
+	if (card && found)
+		try {
+			lines.push(...(await recorded(found.call, card, top, { number: Number(number), url: `https://github.com/${full}/pull/${number}` })));
+		} catch (error) {
+			lines.push(`finish: the card's record stopped, a rerun writes the rest — ${(error as Error).message}`);
+		}
 	/** The card's question read: the line that ends `finish` when one waits or the read fails, else undefined. */
 	const question = async () => {
 		if (!found) return undefined;
