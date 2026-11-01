@@ -4,7 +4,10 @@
  * then the push while the pull request is a draft, the draft opened when none
  * is, and the ready switch unless a question waits on the card, when one is given
  * (`openspec/changes/archive/2026-10-28-work-finish/design.md`, *The
- * sequence and where each refusal sits*). Every refusal comes before the
+ * sequence and where each refusal sits*). With a card, after its comments
+ * read and before the ready switch, it releases the card's `Assign` when
+ * nothing waits there (`cleared()`), and keeps the draft when the release put
+ * the user back. Every refusal comes before the
  * push, changes nothing but the ledger, and is one `finish` record of
  * `HEAD`; a failure after the push leaves the draft and records nothing.
  */
@@ -13,6 +16,7 @@ import { ready } from "./ci-run-draft.ts";
 import { ran, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
+import { cleared, RESTORED } from "./notion-release.ts";
 import { limit, originRepository, readPullRequests, readyOne } from "./pull-requests.ts";
 
 const git = (...args: string[]) => {
@@ -98,6 +102,11 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		} catch (error) {
 			return done(`finish: draft #${number} — the card's comments could not be read: ${(error as Error).message}`, 1);
 		}
+		const freed = await cleared(found.call, card, found.settings.user);
+		if (freed.line) lines.push(freed.line);
+		// Put back, or meant to be: a question arrived during the release, so the draft stays.
+		if (freed.restoreFailed || freed.line?.startsWith(RESTORED))
+			return done(`finish: draft #${number} — a question waits on ${card}`, freed.restoreFailed ? 1 : 0);
 	}
 	if (!ready(full, Number(number))) return done(`finish: draft #${number} — gh pr ready ${number} failed`, 1);
 	return done(`finish: ready #${number}`, 0);

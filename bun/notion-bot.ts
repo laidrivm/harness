@@ -68,16 +68,20 @@ const answered = opens("harness-answer");
 export const oldest = (comments: Comment[]) => comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time)));
 
 /**
- * Whether the last question has no answer after it: no comment by `user` that
- * opens with neither mark, and no `harness-answer` by `self`, the
- * integration's own id, when one was read.
+ * Whether the last comment opening with `mark`, a question by default, has no
+ * answer after it: no comment by `user` that opens with neither mark nor
+ * `mark`, and no `harness-answer` by `self`, the integration's own id, when
+ * one was read.
  */
-export function waits(comments: Comment[], user: string, self?: string): boolean {
+export function waits(comments: Comment[], user: string, self?: string, mark = "harness-question"): boolean {
 	const ordered = oldest(comments);
-	const last = ordered.findLastIndex(marked);
+	const asks = opens(mark);
+	const last = ordered.findLastIndex(asks);
 	return (
 		last !== -1 &&
-		!ordered.slice(last + 1).some((c) => (!marked(c) && !answered(c) && by(c, user)) || (self !== undefined && answered(c) && by(c, self)))
+		!ordered
+			.slice(last + 1)
+			.some((c) => (!asks(c) && !marked(c) && !answered(c) && by(c, user)) || (self !== undefined && answered(c) && by(c, self)))
 	);
 }
 

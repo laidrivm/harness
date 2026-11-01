@@ -397,7 +397,9 @@ for them is already here.
   holds one open question at a time: a second waits in your report until the
   first is answered. Open the comment with the gate's mark,
   `` `harness-question` `` with a single backtick on each side of the word, set `Assign`, read
-  the answer back as data, and clear `Assign` once it is applied. A question
+  the answer back as data, and clear `Assign` once it is applied; in the
+  harness, `bun bun/work.ts status`, `take` and `finish --card` clear it
+  themselves whenever no question and no pause notice waits. A question
   is any comment opening with the mark, whoever posted it, a Notion
   integration included, and the answer is the user's first comment opening
   with neither mark after the last one, or, with none, the first comment after it

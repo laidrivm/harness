@@ -27,7 +27,7 @@ type Run = { plain_text: string; annotations?: { code: boolean } };
 export const said = (author: string, time: string, ...runs: Run[]) => ({ created_by: { id: author }, created_time: time, rich_text: runs });
 export const question = (time: string) => said(BOT, time, { plain_text: "harness-question", annotations: { code: true } }, { plain_text: " Ship?" });
 
-/** A card's page with every property set, `properties` replacing any of them. */
+/** A card's page with every property set, `properties` replacing any of them; `Assign` holds no one, so the release reads no comments. */
 export const page = (pointer = "", properties: Record<string, unknown> = {}) => ({
 	object: "page",
 	properties: {
@@ -35,7 +35,7 @@ export const page = (pointer = "", properties: Record<string, unknown> = {}) => 
 		Status: { type: "status", status: { name: "proposing" } },
 		Pointer: { type: "rich_text", rich_text: pointer ? [{ plain_text: pointer }] : [] },
 		Labels: { type: "multi_select", multi_select: [{ name: "pivot-step-2-1" }, { name: "later" }] },
-		Assign: { type: "people", people: [{ object: "user", id: "01234567-89ab-cdef-0123-456789abcdef" }] },
+		Assign: { type: "people", people: [] },
 		...properties,
 	},
 });
@@ -49,28 +49,55 @@ export const body = (markdown: string, truncated = false, unknown_block_ids: str
 	unknown_block_ids,
 });
 
-/** `fail` answers a call, as `seen` names it, with that status; a comments page past the first is named `#<cursor>`. */
-export type Stub = { page?: unknown; markdown?: unknown; comments?: unknown[][]; fail?: Record<string, number> };
+/**
+ * `fail` answers a call, as `seen` names it, with that status; a comments page past the first is named `#<cursor>`.
+ * `assign`, when set, is the ids the page's `Assign` holds, which a `PATCH` replaces; `next`, for a call as `seen`
+ * names it, what to merge into the stub after each of its answers in turn.
+ */
+export type Stub = {
+	page?: unknown;
+	markdown?: unknown;
+	comments?: unknown[][];
+	fail?: Record<string, number>;
+	assign?: string[];
+	next?: Record<string, Partial<Stub>[]>;
+};
 
 /** Serves Notion as `stub` says, and the calls it saw. */
 export function notion(stub: Stub = {}) {
 	const seen: { call: string; version: string | null; auth: string | null }[] = [];
+	/** The page as the stub holds it, its `Assign` the stub's people when it names some. */
+	const card = () => {
+		const read = (stub.page ?? page()) as { properties?: Record<string, unknown> };
+		if (!stub.assign) return read;
+		return { ...read, properties: { ...read.properties, Assign: { type: "people", people: stub.assign.map((id) => ({ object: "user", id })) } } };
+	};
+	const respond = async (req: Request, url: URL, call: string, cursor: string | null) => {
+		const status = stub.fail?.[call];
+		if (status) return Response.json({}, { status });
+		if (/^\/v1\/pages\/[^/]+\/markdown$/.test(url.pathname)) return Response.json(stub.markdown ?? body("# Card\n"));
+		if (req.method === "PATCH") {
+			const people = (await req.json())?.properties?.Assign?.people;
+			if (Array.isArray(people)) stub.assign = people.map((p: { id: string }) => p.id);
+		}
+		if (/^\/v1\/pages\/[^/]+$/.test(url.pathname)) return Response.json(card());
+		if (url.pathname !== "/v1/comments") return Response.json({}, { status: 404 });
+		const pages = stub.comments ?? [[]];
+		const at = Number(cursor ?? 0);
+		const more = at + 1 < pages.length;
+		return Response.json({ results: pages[at], has_more: more, next_cursor: more ? String(at + 1) : null });
+	};
 	const server = Bun.serve({
 		port: 0,
-		fetch(req) {
+		async fetch(req) {
 			const url = new URL(req.url);
 			const cursor = url.searchParams.get("start_cursor");
 			const call = `${req.method} ${url.pathname}${cursor ? `#${cursor}` : ""}`;
 			seen.push({ call, version: req.headers.get("Notion-Version"), auth: req.headers.get("Authorization") });
-			const status = stub.fail?.[call];
-			if (status) return Response.json({}, { status });
-			if (/^\/v1\/pages\/[^/]+\/markdown$/.test(url.pathname)) return Response.json(stub.markdown ?? body("# Card\n"));
-			if (/^\/v1\/pages\/[^/]+$/.test(url.pathname)) return Response.json(stub.page ?? page());
-			if (url.pathname !== "/v1/comments") return Response.json({}, { status: 404 });
-			const pages = stub.comments ?? [[]];
-			const at = Number(cursor ?? 0);
-			const more = at + 1 < pages.length;
-			return Response.json({ results: pages[at], has_more: more, next_cursor: more ? String(at + 1) : null });
+			const answered = await respond(req, url, call, cursor);
+			const then = stub.next?.[call]?.shift();
+			if (then) Object.assign(stub, then);
+			return answered;
 		},
 	});
 	servers.push(server);

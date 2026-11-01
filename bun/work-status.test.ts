@@ -58,13 +58,13 @@ describe("the WIP limit", () => {
 		refused(full, "wip-full");
 		expect([full.seen, full.last.includes("5")]).toEqual([[PAGE, QUERY], true]);
 		const room = await status({ args: to("exploring"), page: { status: from }, cards: 4 });
-		expect([room.code, room.seen, room.last]).toEqual([0, [PAGE, QUERY, PATCH], `status: ${CARD} ${from} → exploring`]);
+		expect([room.code, room.seen, room.last]).toEqual([0, [PAGE, QUERY, PATCH, PAGE], `status: ${CARD} ${from} → exploring`]);
 	});
 
 	// spec: work-status/a-move-within-the-range
 	test("from proposing to a proven proposed, five cards make no count", async () => {
 		const run = await status({ args: to("proposed"), cwd: clone(change("demo")).dir, page: { status: "proposing" }, cards: 5 });
-		expect([run.code, run.seen]).toEqual([0, [PAGE, PATCH]]);
+		expect([run.code, run.seen]).toEqual([0, [PAGE, PATCH, PAGE]]);
 	});
 
 	// spec: work-status/a-card-behind-its-floor-at-a-full-limit
@@ -73,7 +73,7 @@ describe("the WIP limit", () => {
 		["done", archived("demo")],
 	])("from approved to a %s origin/main proves, five cards make no count", async (target, tree) => {
 		const run = await status({ args: to(target), cwd: clone(tree).dir, cards: 5 });
-		expect([run.code, run.seen, run.last]).toEqual([0, [PAGE, PATCH], `status: ${CARD} approved → ${target}`]);
+		expect([run.code, run.seen, run.last]).toEqual([0, [PAGE, PATCH, PAGE], `status: ${CARD} approved → ${target}`]);
 	});
 
 	test("HARNESS_WIP_LIMIT=2 with two cards refuses", async () => {
@@ -108,7 +108,7 @@ describe("the reads and the write", () => {
 	// spec: work-status/explored-needs-no-evidence
 	test("exploring to explored writes and runs no git", async () => {
 		const run = await status({ args: to("explored"), page: { status: "exploring" } });
-		expect([run.code, run.seen, run.git]).toEqual([0, [PAGE, PATCH], []]);
+		expect([run.code, run.seen, run.git]).toEqual([0, [PAGE, PATCH, PAGE], []]);
 	});
 
 	// spec: work-status/notion-does-not-answer

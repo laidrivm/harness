@@ -69,7 +69,7 @@ Each failing case is written first, its failure recorded, and cited as
 
 ## 2. `status`, `take` and `finish` release `Assign` when nothing waits
 
-- [ ] 2.1 Let `bun/notion-bot.fixture.ts`'s stand-in apply a PATCH's
+- [x] 2.1 Let `bun/notion-bot.fixture.ts`'s stand-in apply a PATCH's
       `Assign` to `state.assign` and answer with it, unless a case's option
       keeps the old value. Then failing cases in a new
       `bun/notion-release.test.ts`, cited `// spec: task-board/<slug>`, over
@@ -91,7 +91,7 @@ Each failing case is written first, its failure recorded, and cited as
       user's still waits [30]. In `bun/notion-bot.test.ts`, `waits()` with
       the mark `harness-pause` reads a pause notice as it reads a question
       [36]. Verify: each case fails, the module not existing yet
-- [ ] 2.2 Give `waits()` in `bun/notion-bot.ts` a `mark` argument defaulting
+- [x] 2.2 Give `waits()` in `bun/notion-bot.ts` a `mark` argument defaulting
       to `harness-question`. Lift `unassign()`'s page read, cap and write in
       `bun/notion-unassign.ts` into `release()`, which returns the list it
       wrote, and add `cleared()` beside it with the read-back and the
@@ -99,7 +99,7 @@ Each failing case is written first, its failure recorded, and cited as
       and keeps its lines. Verify: `bun test bun/notion-release
       bun/notion-bot bun/notion-unassign bun/board-loop` passes, the
       board-loop cases unchanged
-- [ ] 2.3 Failing cases, then the calls: `status` prints `cleared()`'s line
+- [x] 2.3 Failing cases, then the calls: `status` prints `cleared()`'s line
       after its own, on any move, `--to applying` [17] and `--to applied`
       [24] included, and a refusal makes no release [21]
       (`bun/work-status.test.ts`); `take` prints it after the comments, and
@@ -112,7 +112,7 @@ Each failing case is written first, its failure recorded, and cited as
       the existing cases keep their calls and lines. Update the three
       modules' headers. Verify: `bun test bun/work-status bun/work-take
       bun/work-finish` passes
-- [ ] 2.4 In `core/feature-workflow.md`'s *Ask the user* bullet, after "clear
+- [x] 2.4 In `core/feature-workflow.md`'s *Ask the user* bullet, after "clear
       `Assign` once it is applied", say that in the harness `status`, `take`
       and `finish --card` clear it when nothing waits; in `README.md`'s rows
       for the three, name the release, and `take`'s "writes nothing" gains
