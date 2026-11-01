@@ -152,6 +152,17 @@ CLI.
    `bun/review-docs.test.ts` case with the delta, so the doc and the spec
    agree from that merge.
 
+9. **Four Majors of the apply's local review are dismissed** (the user's
+   answers 7–10 а, 2026-11-01, on #367):
+   - a pass leaves no Major undecided before the third review, so
+     `BLOCKED` stays the third review's (decision 5);
+   - a later pass that does not return after one that fixed a Major ends
+     on `PASS`, since a pending fix never holds the gate;
+   - `~/.coderabbit` is the CLI's directory: CodeRabbit's Jamf page names
+     it, and a local login sits in its `auth.json`;
+   - the README names no page to revoke the CLI's login on, since
+     CodeRabbit's docs name none.
+
 ## Consumers
 
 `gh api repos/<repo>/git/trees/HEAD?recursive=1` and `gh search code` on
