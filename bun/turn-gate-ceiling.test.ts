@@ -1,26 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	chmodSync,
-	mkdirSync,
-	readFileSync,
-	symlinkSync,
-	writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { TURN_STOP } from "./bootstrap.ts";
 import { CEILING, countRound, resetRounds } from "./goal-rounds.ts";
-import {
-	cleanup,
-	commit,
-	DONE,
-	end,
-	OPEN,
-	prompt,
-	repo,
-	SILENT,
-	store,
-	TASKS,
-} from "./turn-gate.fixture.ts";
+import { cleanup, commit, DONE, end, OPEN, prompt, repo, SILENT, store, TASKS } from "./turn-gate.fixture.ts";
 
 /**
  * The round ceiling: the turn gate's `Stop` half ends a goal run at its
@@ -83,9 +66,9 @@ describe("the count", () => {
 		const mark = marked();
 		rounds(mark, CEILING - 1);
 		const reason = countRound(again(), mark);
-		expect([`${CEILING} continued stops`, "--resume s1", "/goal clear"].filter(
-			(part) => !reason?.includes(part),
-		)).toEqual([]);
+		expect(
+			[`${CEILING} continued stops`, "--resume s1", "/goal clear"].filter((part) => !reason?.includes(part)),
+		).toEqual([]);
 	});
 
 	test("a counter that holds no whole number ends nothing", () => {
@@ -107,19 +90,11 @@ describe("the count", () => {
  * Runs one half. `TMPDIR` points the mark store at the case's own directory,
  * and `XDG_STATE_HOME` the gate ledger, at `tmp` unless the case names one.
  */
-function run(
-	half: "mark" | "stop",
-	event: unknown,
-	cwd: string,
-	tmp: string,
-	state = tmp,
-) {
+function run(half: "mark" | "stop", event: unknown, cwd: string, tmp: string, state = tmp) {
 	const call = Bun.spawnSync(["bun", script, half], {
 		cwd,
 		env: { PATH: process.env.PATH, TMPDIR: tmp, XDG_STATE_HOME: state },
-		stdin: Buffer.from(
-			typeof event === "string" ? event : JSON.stringify(event),
-		),
+		stdin: Buffer.from(typeof event === "string" ? event : JSON.stringify(event)),
 		stdout: "pipe",
 		stderr: "pipe",
 	});

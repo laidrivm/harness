@@ -30,7 +30,9 @@ export function settings(path: string): Settings | undefined {
 	}
 	// On the VPS the session user shares the runner's group, so group access is the session's.
 	if (mode & 0o077)
-		throw new Error(`notion-bot: ${path} has mode 0${mode.toString(8)}, which its group or others may read — chmod 600 it`);
+		throw new Error(
+			`notion-bot: ${path} has mode 0${mode.toString(8)}, which its group or others may read — chmod 600 it`,
+		);
 	let value: { token?: unknown; user?: unknown; board?: unknown } | null;
 	try {
 		value = JSON.parse(readFileSync(path, "utf8"));

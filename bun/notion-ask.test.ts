@@ -26,7 +26,11 @@ const CARD = "aaaabbbbccccddddeeeeffff00001111";
 const TEXT = `${MARK} Ship the hook as one group?`;
 
 type Run = { plain_text: string; annotations?: { code: boolean } };
-const said = (author: string, time: string, ...runs: Run[]) => ({ created_by: { id: author }, created_time: time, rich_text: runs });
+const said = (author: string, time: string, ...runs: Run[]) => ({
+	created_by: { id: author },
+	created_time: time,
+	rich_text: runs,
+});
 const question = (time: string) =>
 	said(BOT, time, { plain_text: "harness-question", annotations: { code: true } }, { plain_text: " Ship?" });
 
@@ -50,7 +54,10 @@ function notion(stub: Stub = {}) {
 			const pages = stub.comments ?? [[]];
 			const at = Number(url.searchParams.get("start_cursor") ?? 0);
 			const more = at + 1 < pages.length;
-			return Response.json({ results: pages[at], has_more: more, next_cursor: more ? String(at + 1) : null }, { status: stub.read ?? 200 });
+			return Response.json(
+				{ results: pages[at], has_more: more, next_cursor: more ? String(at + 1) : null },
+				{ status: stub.read ?? 200 },
+			);
 		},
 	});
 	servers.push(server);
@@ -58,7 +65,10 @@ function notion(stub: Stub = {}) {
 }
 
 /** A config home holding `files` under `harness/`, each at `mode`. */
-function home(files: Record<string, unknown> = { "notion-ask.json": { token: TOKEN, user: USER } }, mode = 0o600): string {
+function home(
+	files: Record<string, unknown> = { "notion-ask.json": { token: TOKEN, user: USER } },
+	mode = 0o600,
+): string {
 	const dir = mkdtempSync(join(tmpdir(), "notion-ask-"));
 	made.push(dir);
 	mkdirSync(join(dir, "harness"));
@@ -84,7 +94,11 @@ async function ask(api: string, config: string, args: string[]) {
 		stdout: "pipe",
 		stderr: "pipe",
 	});
-	const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+	const [out, err, code] = await Promise.all([
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+		child.exited,
+	]);
 	expect(out + err).not.toContain(TOKEN);
 	return { line: out.trim(), code };
 }
@@ -119,10 +133,13 @@ describe("a question posted", () => {
 		});
 	});
 
-	test.each([0o600, 0o400].map((mode) => [mode.toString(8), mode] as const))("a settings file at mode 0%s is read [48]", async (_, mode) => {
-		const { url } = notion();
-		expect((await ask(url, home(undefined, mode), [CARD, asked()])).line).toBe(POSTED);
-	});
+	test.each([0o600, 0o400].map((mode) => [mode.toString(8), mode] as const))(
+		"a settings file at mode 0%s is read [48]",
+		async (_, mode) => {
+			const { url } = notion();
+			expect((await ask(url, home(undefined, mode), [CARD, asked()])).line).toBe(POSTED);
+		},
+	);
 });
 
 describe("nothing is posted", () => {
@@ -132,22 +149,44 @@ describe("nothing is posted", () => {
 		["notion-bot.json alone, never read in its place [52]", { "notion-bot.json": { token: TOKEN, user: USER } }],
 	])("%s: no ask integration is configured, and no call", async (_, files) => {
 		const { seen, url } = notion();
-		expect(await ask(url, home(files), [CARD, asked()])).toEqual({ line: not("no ask integration is configured"), code: 1 });
+		expect(await ask(url, home(files), [CARD, asked()])).toEqual({
+			line: not("no ask integration is configured"),
+			code: 1,
+		});
 		expect(seen).toEqual([]);
 	});
 
-	test.each([0o640, 0o604].map((mode) => [mode.toString(8), mode] as const))("a settings file at mode 0%s is refused, naming its mode, before any call [48]", async (_, mode) => {
-		const { seen, url } = notion();
-		const { line, code } = await ask(url, home(undefined, mode), [CARD, asked()]);
-		expect([line.startsWith(not("notion-bot: ")), line.includes(`mode 0${mode.toString(8)}`), code]).toEqual([true, true, 1]);
-		expect(seen).toEqual([]);
-	});
+	test.each([0o640, 0o604].map((mode) => [mode.toString(8), mode] as const))(
+		"a settings file at mode 0%s is refused, naming its mode, before any call [48]",
+		async (_, mode) => {
+			const { seen, url } = notion();
+			const { line, code } = await ask(url, home(undefined, mode), [CARD, asked()]);
+			expect([line.startsWith(not("notion-bot: ")), line.includes(`mode 0${mode.toString(8)}`), code]).toEqual([
+				true,
+				true,
+				1,
+			]);
+			expect(seen).toEqual([]);
+		},
+	);
 
 	// spec: task-board/text-the-gate-would-not-allow
 	test.each([
-		["an empty question file [43]", () => [CARD, asked("")], not(`the question fails the question gate (unmarked): ${REMEDY.unmarked}`)],
-		["a card id with text after it [50]", () => [`${CARD} and more`, asked()], not(`${CARD} and more is not a card id`)],
-		["a question file that is missing [55]", () => [CARD, "/nonexistent/q.md"], not("/nonexistent/q.md cannot be read")],
+		[
+			"an empty question file [43]",
+			() => [CARD, asked("")],
+			not(`the question fails the question gate (unmarked): ${REMEDY.unmarked}`),
+		],
+		[
+			"a card id with text after it [50]",
+			() => [`${CARD} and more`, asked()],
+			not(`${CARD} and more is not a card id`),
+		],
+		[
+			"a question file that is missing [55]",
+			() => [CARD, "/nonexistent/q.md"],
+			not("/nonexistent/q.md cannot be read"),
+		],
 		["no file named", () => [CARD], not("usage: notion-ask.ts <card id> <file>")],
 	])("%s: no call", async (_, args, line) => {
 		const { seen, url } = notion();
@@ -157,14 +196,30 @@ describe("nothing is posted", () => {
 
 	// spec: task-board/a-question-already-waits
 	test.each([
-		["a waiting question on the second page [45]", [[said(USER, "2026-10-20T08:00:00Z", { plain_text: "An earlier answer." })], [question("2026-10-20T09:00:00Z")]]],
+		[
+			"a waiting question on the second page [45]",
+			[[said(USER, "2026-10-20T08:00:00Z", { plain_text: "An earlier answer." })], [question("2026-10-20T09:00:00Z")]],
+		],
 		[
 			"a harness-answer after it, which does not unblock [46]",
-			[[question("2026-10-20T09:00:00Z"), said(BOT, "2026-10-20T10:00:00Z", { plain_text: "harness-answer", annotations: { code: true } }, { plain_text: " Yes." })]],
+			[
+				[
+					question("2026-10-20T09:00:00Z"),
+					said(
+						BOT,
+						"2026-10-20T10:00:00Z",
+						{ plain_text: "harness-answer", annotations: { code: true } },
+						{ plain_text: " Yes." },
+					),
+				],
+			],
 		],
 	])("%s: no post", async (_, comments) => {
 		const { seen, url } = notion({ comments });
-		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line: not(`a question already waits on ${CARD}`), code: 1 });
+		expect(await ask(url, home(), [CARD, asked()])).toEqual({
+			line: not(`a question already waits on ${CARD}`),
+			code: 1,
+		});
 		expect(seen.map((s) => s.call)).not.toContain("POST /v1/comments");
 	});
 

@@ -29,14 +29,10 @@ export function pinOf(text: string): string {
 	const at = specs.findIndex((spec) => spec != null);
 	const harness = specs[at];
 	if (typeof harness !== "string")
-		throw new Error(
-			"package.json: no dependencies.harness or devDependencies.harness to move",
-		);
+		throw new Error("package.json: no dependencies.harness or devDependencies.harness to move");
 	const sha = SPEC.exec(harness)?.[1];
 	if (sha === undefined)
-		throw new Error(
-			`package.json: ${FIELDS[at]}.harness is ${harness}, not github:laidrivm/harness#<40-hex>`,
-		);
+		throw new Error(`package.json: ${FIELDS[at]}.harness is ${harness}, not github:laidrivm/harness#<40-hex>`);
 	return sha;
 }
 
@@ -48,17 +44,14 @@ export function pinOf(text: string): string {
  * spec is left as it is.
  */
 export function movePin(text: string, sha: string): string {
-	if (!/^[0-9a-f]{40}$/.test(sha))
-		throw new Error(`${sha} is not a full commit hash`);
+	if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error(`${sha} is not a full commit hash`);
 	const old = `github:laidrivm/harness#${pinOf(text)}`;
 	const holding = harnessFields(text).map((spec) => spec === old);
 	const expected = holding.filter(Boolean).length;
 	const quoted = JSON.stringify(old);
 	const count = text.split(quoted).length - 1;
 	if (count !== expected)
-		throw new Error(
-			`package.json: ${old} occurs ${count} times, not ${expected === 1 ? "once" : `${expected} times`}`,
-		);
+		throw new Error(`package.json: ${old} occurs ${count} times, not ${expected === 1 ? "once" : `${expected} times`}`);
 	const next = `github:laidrivm/harness#${sha}`;
 	const moved = text.replaceAll(quoted, JSON.stringify(next));
 	const after = harnessFields(moved);

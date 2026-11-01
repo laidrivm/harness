@@ -5,18 +5,12 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { changed, cleanup, consumer, type Policy } from "./settings.fixture.ts";
 import { ATTRIBUTION, settings } from "./settings.ts";
-import {
-	changed,
-	cleanup,
-	consumer,
-	type Policy,
-} from "./settings.fixture.ts";
 
 afterAll(cleanup);
 
-const report = (change: (c: Policy) => void) =>
-	settings(consumer(changed(change))).join("\n");
+const report = (change: (c: Policy) => void) => settings(consumer(changed(change))).join("\n");
 const named = "attribution is not";
 
 describe("the attribution setting", () => {
@@ -43,18 +37,14 @@ describe("the attribution setting", () => {
 
 	// spec: agent-permissions/the-same-value-with-its-keys-in-another-order
 	test("the two keys in reverse order report nothing [z3]", () => {
-		expect(
-			report((c) => (c.attribution = { sessionUrl: false, pr: "" })),
-		).toBe("");
+		expect(report((c) => (c.attribution = { sessionUrl: false, pr: "" }))).toBe("");
 	});
 });
 
 describe("the harness's own settings", () => {
 	// spec: agent-permissions/the-harness-s-own-settings
 	test("hold the value the check compares [z9]", () => {
-		const own = JSON.parse(
-			readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"),
-		);
+		const own = JSON.parse(readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"));
 		expect(own.attribution).toEqual(ATTRIBUTION);
 	});
 });

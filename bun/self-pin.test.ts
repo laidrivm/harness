@@ -17,10 +17,8 @@ afterAll(cleanup);
 
 type Entry = { matcher?: string; hooks?: { command?: string }[] };
 
-const tracked = (path: string) =>
-	JSON.parse(readFileSync(join(import.meta.dir, "..", path), "utf8"));
-const hooks = (): Record<string, Entry[]> =>
-	tracked(".claude/settings.json").hooks ?? {};
+const tracked = (path: string) => JSON.parse(readFileSync(join(import.meta.dir, "..", path), "utf8"));
+const hooks = (): Record<string, Entry[]> => tracked(".claude/settings.json").hooks ?? {};
 
 /** A settings tree's hooks of `event` under `matcher`, an absent one included. */
 const under = (all: Record<string, Entry[]>, event: string, matcher?: string) =>
@@ -88,7 +86,9 @@ describe("the ready guard the harness keeps to itself", () => {
 	});
 
 	test("a sync of the harness's own settings keeps it", () => {
-		expect(under(synced(join(import.meta.dir, "..", ".claude/settings.json")), "PreToolUse")).toContainEqual(READY_GUARD);
+		expect(under(synced(join(import.meta.dir, "..", ".claude/settings.json")), "PreToolUse")).toContainEqual(
+			READY_GUARD,
+		);
 	});
 
 	// spec: work-finish/a-consumer-s-settings
@@ -123,7 +123,8 @@ describe("the status guard the harness keeps to itself", () => {
 	test("its matcher takes both calls under any server name, and no other tool", () => {
 		const matches = (tool: string) => new RegExp(STATUS_MATCHER).test(tool);
 		for (const server of ["claude_ai_Notion", "notion"])
-			for (const call of ["notion-update-page", "notion-create-pages"]) expect(matches(`mcp__${server}__${call}`)).toBe(true);
+			for (const call of ["notion-update-page", "notion-create-pages"])
+				expect(matches(`mcp__${server}__${call}`)).toBe(true);
 		for (const tool of [
 			"mcp__claude_ai_Notion__notion-create-comment",
 			"mcp__claude_ai_Notion__notion-update-page-x",
@@ -150,7 +151,9 @@ describe("the status guard the harness keeps to itself", () => {
 
 	test("the settings check still passes the harness's own settings", () => {
 		// Its `.claude/settings.json` alone: the harness's `bunfig.toml` holds no `[install]`, which this change does not touch.
-		expect(settings(join(import.meta.dir, "..")).filter((problem) => problem.startsWith(".claude/settings.json"))).toEqual([]);
+		expect(
+			settings(join(import.meta.dir, "..")).filter((problem) => problem.startsWith(".claude/settings.json")),
+		).toEqual([]);
 	});
 });
 
@@ -176,11 +179,7 @@ describe("the harness's own hook registrations", () => {
 			.flat()
 			.flatMap((entry) => entry.hooks ?? [])
 			.map((hook) => hook.command ?? "");
-		expect(
-			commands.filter((command) =>
-				command.includes("$CLAUDE_PROJECT_DIR/bun/"),
-			),
-		).toEqual([]);
+		expect(commands.filter((command) => command.includes("$CLAUDE_PROJECT_DIR/bun/"))).toEqual([]);
 	});
 
 	test("the harness's own settings allow bun/work.ts, the session's take and finish", () => {
@@ -190,8 +189,6 @@ describe("the harness's own hook registrations", () => {
 	test("the harness pins itself as a development dependency at a full commit", () => {
 		const manifest = tracked("package.json");
 		expect(manifest.dependencies?.harness).toBeUndefined();
-		expect(manifest.devDependencies?.harness).toMatch(
-			/^github:laidrivm\/harness#[0-9a-f]{40}$/,
-		);
+		expect(manifest.devDependencies?.harness).toMatch(/^github:laidrivm\/harness#[0-9a-f]{40}$/);
 	});
 });

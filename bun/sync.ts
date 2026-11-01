@@ -12,14 +12,7 @@
  * Run as a script, it also writes the harness's hooks, permission lists and
  * `[install]` into the consumer's settings — `sync-settings.ts`.
  */
-import {
-	copyFileSync,
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-	rmSync,
-} from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { syncSettings } from "./sync-settings.ts";
 
@@ -44,10 +37,7 @@ const MARKDOWN = /\.md$/;
  */
 function source(core: string): string[] {
 	const want = files(core, MARKDOWN);
-	if (!want.includes("rules.md"))
-		throw new Error(
-			`${core} holds no rules.md — the package is not installed whole`,
-		);
+	if (!want.includes("rules.md")) throw new Error(`${core} holds no rules.md — the package is not installed whole`);
 	return want;
 }
 
@@ -62,18 +52,11 @@ export function drift(core: string, copy: string): string[] {
 	const run = "run bun node_modules/harness/bun/sync.ts";
 	return [
 		...want.flatMap((name) => {
-			if (!have.includes(name))
-				return [`harness/${name}: missing from the copy — ${run}`];
-			const same = readFileSync(join(core, name)).equals(
-				readFileSync(join(copy, name)),
-			);
-			return same
-				? []
-				: [`harness/${name}: differs from the pinned package — ${run}`];
+			if (!have.includes(name)) return [`harness/${name}: missing from the copy — ${run}`];
+			const same = readFileSync(join(core, name)).equals(readFileSync(join(copy, name)));
+			return same ? [] : [`harness/${name}: differs from the pinned package — ${run}`];
 		}),
-		...have
-			.filter((name) => !want.includes(name))
-			.map((name) => `harness/${name}: not in the pinned package — ${run}`),
+		...have.filter((name) => !want.includes(name)).map((name) => `harness/${name}: not in the pinned package — ${run}`),
 	];
 }
 
@@ -81,8 +64,7 @@ export function drift(core: string, copy: string): string[] {
 export function sync(core: string, copy: string): void {
 	const want = source(core);
 	mkdirSync(copy, { recursive: true });
-	for (const name of files(copy))
-		if (!want.includes(name)) rmSync(join(copy, name));
+	for (const name of files(copy)) if (!want.includes(name)) rmSync(join(copy, name));
 	for (const name of want) copyFileSync(join(core, name), join(copy, name));
 }
 

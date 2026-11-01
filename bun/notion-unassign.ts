@@ -24,15 +24,23 @@ export const UNASSIGN_FAILED = "assign: failed —";
  * or `Assign` is too long to read whole; no call is retried. Not `assign()`,
  * which sets the user alone: this write keeps everyone else.
  */
-export async function unassign({ token, user }: Settings, card: string, { board, slug }: { board: string; slug: string }, timeout = 30_000): Promise<string> {
+export async function unassign(
+	{ token, user }: Settings,
+	card: string,
+	{ board, slug }: { board: string; slug: string },
+	timeout = 30_000,
+): Promise<string> {
 	const call = client(token, timeout);
 	try {
 		const why = await carded(call, card, board, slug);
 		if (why) return `assign: not written — ${why}`;
 		const people = (await call("the page read", `/v1/pages/${card}`))?.properties?.Assign?.people;
 		// shortcut: a page read lists 25 references of a property at most, so a longer `Assign` is left whole rather than written back cut; page through `/v1/pages/<id>/properties/<property>` if a card ever needs it.
-		if (Array.isArray(people) && people.length >= 25) return `${UNASSIGN_FAILED} ${card} lists 25 people on Assign, the most a page read returns`;
-		const kept = (Array.isArray(people) ? people : []).filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
+		if (Array.isArray(people) && people.length >= 25)
+			return `${UNASSIGN_FAILED} ${card} lists 25 people on Assign, the most a page read returns`;
+		const kept = (Array.isArray(people) ? people : [])
+			.filter((p) => hex(p?.id) !== hex(user))
+			.map((p) => ({ id: p.id }));
 		await call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: kept } } });
 	} catch (error) {
 		return `${UNASSIGN_FAILED} ${(error as Error).message}`;

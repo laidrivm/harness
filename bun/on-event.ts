@@ -26,7 +26,11 @@ const EXIT: Record<Verdict, number> = { handled: 0, ignored: 0, duplicate: 0, re
 const LIMIT = 25 * 1024 * 1024;
 
 /** `X-GitHub-Event`, `X-GitHub-Delivery` and `X-Hub-Signature-256`, each whole. */
-const SHAPES = [/^[a-z_]+$/, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, /^sha256=[0-9a-f]{64}$/];
+const SHAPES = [
+	/^[a-z_]+$/,
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+	/^sha256=[0-9a-f]{64}$/,
+];
 
 const code = (e: unknown) => (e as NodeJS.ErrnoException)?.code;
 
@@ -138,7 +142,8 @@ async function handle(args: string[]): Promise<[Verdict, string]> {
 	const route = FLOWS[event];
 	// The attempt count is the App's comments, and no flow may push as the user.
 	const { HARNESS_GITHUB_APP_ID: id, HARNESS_GITHUB_APP_KEY: key } = process.env;
-	if (route && !(id?.trim() && key?.trim())) return ["failed", `the App's settings are not set, so no flow takes ${event}`];
+	if (route && !(id?.trim() && key?.trim()))
+		return ["failed", `the App's settings are not set, so no flow takes ${event}`];
 	const dir = join(homedir(), "orchestrator", "deliveries");
 	if (!claim(dir, delivery)) return ["duplicate", `delivery ${delivery} is another handler's`];
 	return route ? route(text, join(dir, delivery)) : ["ignored", `no flow takes ${event}`];

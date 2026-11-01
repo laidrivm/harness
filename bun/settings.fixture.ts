@@ -98,41 +98,28 @@ export const policy = () => ({
 			},
 		],
 		PostToolUse: [watch()],
-		PostToolUseFailure: [
-			{ hooks: [{ type: "command", command: LOOP_GUARD } as object] },
-			watch(),
-		],
+		PostToolUseFailure: [{ hooks: [{ type: "command", command: LOOP_GUARD } as object] }, watch()],
 		PermissionRequest: [
 			{
 				matcher: QUESTION_MATCHER,
 				hooks: [{ type: "command", command: QUESTION_GATE } as object],
 			},
 		],
-		UserPromptSubmit: [
-			{ hooks: [{ type: "command", command: TURN_MARK } as Hook] },
-		] as { hooks: Hook[] }[] | undefined,
-		Stop: [{ hooks: [{ type: "command", command: TURN_STOP } as Hook] }] as
+		UserPromptSubmit: [{ hooks: [{ type: "command", command: TURN_MARK } as Hook] }] as { hooks: Hook[] }[] | undefined,
+		Stop: [{ hooks: [{ type: "command", command: TURN_STOP } as Hook] }] as { hooks: Hook[] }[] | undefined,
+		SessionStart: [{ hooks: [{ type: "command", command: NOTICE } as Hook] }] as { hooks: Hook[] }[] | undefined,
+		SessionEnd: [{ hooks: [{ type: "command", command: ARCHIVE, timeout: 60 } as Hook] }] as
 			| { hooks: Hook[] }[]
 			| undefined,
-		SessionStart: [{ hooks: [{ type: "command", command: NOTICE } as Hook] }] as
-			| { hooks: Hook[] }[]
-			| undefined,
-		SessionEnd: [
-			{ hooks: [{ type: "command", command: ARCHIVE, timeout: 60 } as Hook] },
-		] as { hooks: Hook[] }[] | undefined,
 	},
 });
 
 export type Policy = ReturnType<typeof policy>;
 
-export const BUNFIG =
-	"[install]\nexact = true\nminimumReleaseAge = 259200\nminimumReleaseAgeExcludes = []\n";
+export const BUNFIG = "[install]\nexact = true\nminimumReleaseAge = 259200\nminimumReleaseAgeExcludes = []\n";
 
 /** A consumer tracking `config` as its settings, plus `files`. */
-export function consumer(
-	config: Policy,
-	files: Record<string, string> = {},
-): string {
+export function consumer(config: Policy, files: Record<string, string> = {}): string {
 	const dir = mkdtempSync(join(tmpdir(), "harness-settings-"));
 	made.push(dir);
 	const all = {

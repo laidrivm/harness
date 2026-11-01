@@ -70,9 +70,6 @@ describe("pushWords", () => {
 	});
 
 	test("a value never reaches the switches", () => {
-		expect(pushWords(["-fo--all", "--repo", "--force"]).switches).toEqual([
-			"-f",
-			"--repo",
-		]);
+		expect(pushWords(["-fo--all", "--repo", "--force"]).switches).toEqual(["-f", "--repo"]);
 	});
 });

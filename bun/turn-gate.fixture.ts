@@ -26,10 +26,7 @@ function temp(prefix: string): string {
 }
 
 export function git(cwd: string, ...args: string[]): string {
-	const run = Bun.spawnSync(
-		["git", "-c", "user.email=t@e", "-c", "user.name=T", ...args],
-		{ cwd },
-	);
+	const run = Bun.spawnSync(["git", "-c", "user.email=t@e", "-c", "user.name=T", ...args], { cwd });
 	if (run.exitCode !== 0) throw new Error(run.stderr.toString());
 	return run.stdout.toString().trim();
 }
@@ -84,7 +81,12 @@ export const DONE = "# c\n\n## 1. Group\n\n- [x] 1.1 a\n- [x] 1.2 b\n";
 export const SILENT = "Group 1 is done. Want me to run the pre-PR sequence?";
 
 /** A run's ledger lines as the runner writes them, one per step of `steps`. */
-export const runLines = (commit: string, project: string, extra: object = {}, steps: readonly string[] = RUNNER_STEPS) =>
+export const runLines = (
+	commit: string,
+	project: string,
+	extra: object = {},
+	steps: readonly string[] = RUNNER_STEPS,
+) =>
 	steps
 		.map(
 			(rule) =>

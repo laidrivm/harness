@@ -2,8 +2,8 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
-import { claim } from "./on-event.ts";
 import { DELIVERY, deadPid, holder, host, LIMIT, PING, ping, run, SECRET, sign } from "./on-event.fixture.ts";
+import { claim } from "./on-event.ts";
 
 /** The event handler, run as the engine runs it (`on-event.fixture.ts`). [n]: `ci-run-agent`'s `/zombies` items. */
 
@@ -42,21 +42,17 @@ describe("the argument", () => {
 
 describe("the body", () => {
 	// spec: orchestrator/a-valid-delivery-of-an-event-no-flow-takes
-	test(
-		"of exactly 25 MiB is read; one byte more is refused [6]",
-		async () => {
-			const head = '{"pad":"';
-			const fill = (n: number) => `${head}${"x".repeat(n - head.length - 2)}"}`;
-			const exact = fill(LIMIT);
-			expect(exact.length).toBe(LIMIT);
-			const ok = await ping(host(), exact);
-			expect([ok.code, ok.line.startsWith("event: ignored")]).toEqual([0, true]);
-			const over = `${exact} `;
-			const no = await ping(host(), over);
-			expect([no.code, no.line.startsWith("event: refused")]).toEqual([2, true]);
-		},
-		30_000,
-	);
+	test("of exactly 25 MiB is read; one byte more is refused [6]", async () => {
+		const head = '{"pad":"';
+		const fill = (n: number) => `${head}${"x".repeat(n - head.length - 2)}"}`;
+		const exact = fill(LIMIT);
+		expect(exact.length).toBe(LIMIT);
+		const ok = await ping(host(), exact);
+		expect([ok.code, ok.line.startsWith("event: ignored")]).toEqual([0, true]);
+		const over = `${exact} `;
+		const no = await ping(host(), over);
+		expect([no.code, no.line.startsWith("event: refused")]).toEqual([2, true]);
+	}, 30_000);
 
 	// spec: orchestrator/a-wrong-signature
 	test("that is empty under a valid signature verifies, then is refused as no JSON [1]", async () => {
@@ -206,40 +202,32 @@ describe("a claim", () => {
 	});
 
 	// spec: orchestrator/two-copies-at-once
-	test(
-		"by six processes at once is won by exactly one [4]",
-		async () => {
-			const dir = join(emptyDir("on-event-"), "deliveries");
-			const all = Array.from({ length: 6 }, () => holder(dir));
-			try {
-				const said = await Promise.all(all.map((h) => h.said));
-				expect(said.filter((s) => s === "won")).toHaveLength(1);
-				expect(said.filter((s) => s === "lost")).toHaveLength(5);
-			} finally {
-				for (const h of all) h.release();
-				await Promise.all(all.map((h) => h.p.exited));
-			}
-		},
-		30_000,
-	);
+	test("by six processes at once is won by exactly one [4]", async () => {
+		const dir = join(emptyDir("on-event-"), "deliveries");
+		const all = Array.from({ length: 6 }, () => holder(dir));
+		try {
+			const said = await Promise.all(all.map((h) => h.said));
+			expect(said.filter((s) => s === "won")).toHaveLength(1);
+			expect(said.filter((s) => s === "lost")).toHaveLength(5);
+		} finally {
+			for (const h of all) h.release();
+			await Promise.all(all.map((h) => h.p.exited));
+		}
+	}, 30_000);
 
 	// spec: orchestrator/two-handlers-recover-one-dead-marker
-	test(
-		"of one dead marker by six processes at once is won by exactly one [68]",
-		async () => {
-			const dir = join(emptyDir("on-event-"), "deliveries");
-			mkdirSync(dir);
-			writeFileSync(join(dir, DELIVERY), String(deadPid()));
-			const all = Array.from({ length: 6 }, () => holder(dir));
-			try {
-				const said = await Promise.all(all.map((h) => h.said));
-				expect(said.filter((s) => s === "won")).toHaveLength(1);
-				expect(readdirSync(dir)).toEqual([DELIVERY]);
-			} finally {
-				for (const h of all) h.release();
-				await Promise.all(all.map((h) => h.p.exited));
-			}
-		},
-		30_000,
-	);
+	test("of one dead marker by six processes at once is won by exactly one [68]", async () => {
+		const dir = join(emptyDir("on-event-"), "deliveries");
+		mkdirSync(dir);
+		writeFileSync(join(dir, DELIVERY), String(deadPid()));
+		const all = Array.from({ length: 6 }, () => holder(dir));
+		try {
+			const said = await Promise.all(all.map((h) => h.said));
+			expect(said.filter((s) => s === "won")).toHaveLength(1);
+			expect(readdirSync(dir)).toEqual([DELIVERY]);
+		} finally {
+			for (const h of all) h.release();
+			await Promise.all(all.map((h) => h.p.exited));
+		}
+	}, 30_000);
 });

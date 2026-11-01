@@ -29,13 +29,7 @@ const SURVIVING = ["Survived", "NoCoverage"];
  * ignoring it would report a number about a run that never happened. Any status
  * this check predates lands the same way — thrown, by name.
  */
-const COUNTED_OUT = [
-	"Killed",
-	"Timeout",
-	"Ignored",
-	"CompileError",
-	"RuntimeError",
-];
+const COUNTED_OUT = ["Killed", "Timeout", "Ignored", "CompileError", "RuntimeError"];
 
 type Mutant = { status?: unknown };
 /**
@@ -82,8 +76,7 @@ export function survivors(report: Report): number {
 	// and a report made entirely of them reaches the throw below rather than
 	// reading as zero survivors.
 	const mutants = Object.values(report.files).flatMap((f) => f?.mutants ?? []);
-	if (mutants.length === 0)
-		throw new Error("the mutation report holds no mutants");
+	if (mutants.length === 0) throw new Error("the mutation report holds no mutants");
 
 	let count = 0;
 	for (const { status } of mutants) {
@@ -92,8 +85,7 @@ export function survivors(report: Report): number {
 		// which is what a guard would have to do anyway.
 		const name = String(status);
 		if (SURVIVING.includes(name)) count++;
-		else if (!COUNTED_OUT.includes(name))
-			throw new Error(`unrecognised mutant status: ${name}`);
+		else if (!COUNTED_OUT.includes(name)) throw new Error(`unrecognised mutant status: ${name}`);
 	}
 	return count;
 }
@@ -108,10 +100,7 @@ export function survivors(report: Report): number {
  */
 export function gauge(count: number, floor: number, why: string): string[] {
 	const problems: string[] = [];
-	if (!why.trim())
-		problems.push(
-			"the floor states no reason — write why in harness.mutationFloor.why",
-		);
+	if (!why.trim()) problems.push("the floor states no reason — write why in harness.mutationFloor.why");
 	if (count !== floor) {
 		const gap = `${count} surviving mutants against a floor of ${floor}`;
 		problems.push(

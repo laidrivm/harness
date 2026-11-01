@@ -137,7 +137,9 @@ describe("the /coderabbit bullet", () => {
 		expect(text).not.toContain("/coderabbit-local");
 		// The boundary: the third round still gets fixes, the cap bites from the fourth.
 		expect(text).toContain("A pull request gets fixes for at most three rounds");
-		expect(text).toContain("A fourth round or later whose review carries a finding the run would apply gets none applied");
+		expect(text).toContain(
+			"A fourth round or later whose review carries a finding the run would apply gets none applied",
+		);
 	});
 });
 
@@ -238,11 +240,17 @@ describe("the /code-review bullet is the local review", () => {
 		expect(text).toContain("A review that does not return —");
 		expect(text).toContain("or whose findings name no file the branch's diff changes");
 		expect(text).toContain("is reported. On the loop's first pass the push then goes on without the gate");
-		expect(text).toContain("writes a `CODE-REVIEW gate:` line whenever a pass returned a review, and none only when no pass did");
-		expect(text).toContain("a pass that does not return after one that did ends the loop on the line the earlier passes left");
+		expect(text).toContain(
+			"writes a `CODE-REVIEW gate:` line whenever a pass returned a review, and none only when no pass did",
+		);
+		expect(text).toContain(
+			"a pass that does not return after one that did ends the loop on the line the earlier passes left",
+		);
 		expect(text).toContain("`BLOCKED` wins over `OPEN` and `OPEN` over `PASS`");
 		// The scenario's outcome: an earlier pass's pending dismissal still holds the line at OPEN.
-		expect(text).toContain("which decides the push as any gate line does — a dismissal an earlier pass proposed still reads `OPEN`");
+		expect(text).toContain(
+			"which decides the push as any gate line does — a dismissal an earlier pass proposed still reads `OPEN`",
+		);
 	});
 
 	test("the doc holds no measurement", () => {

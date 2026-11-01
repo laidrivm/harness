@@ -33,11 +33,7 @@ const ENDS_WORD = /[\s;&|<>)]/;
  * ends at a `$X` line. A backtick or `(` refuses the call, since the shell
  * reads `$(…)` as part of the word and where that ends is not read here.
  */
-export function delimiter(
-	line: string,
-	at: number,
-	refuse: Refuse,
-): Delimiter | null {
+export function delimiter(line: string, at: number, refuse: Refuse): Delimiter | null {
 	const dash = line[at] === "-";
 	if (dash) at++;
 	while (line[at] === " " || line[at] === "\t") at++;
@@ -101,12 +97,7 @@ export function placeBodies(
 }
 
 /** The first line from `from` equal to the delimiter, lines joined where `join` says. */
-function matchLine(
-	line: string,
-	from: number,
-	word: Delimiter,
-	join: boolean,
-): Body | null {
+function matchLine(line: string, from: number, word: Delimiter, join: boolean): Body | null {
 	let start = from;
 	let carried = "";
 	for (let at = from; at <= line.length; ) {

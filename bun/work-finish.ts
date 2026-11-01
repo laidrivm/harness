@@ -15,7 +15,7 @@
 import { statSync } from "node:fs";
 import { ready } from "./ci-run-draft.ts";
 import { arrived, exited, interval, objects, own, plain, type Run, read, type State, state } from "./coderabbit-run.ts";
-import { ran, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
+import { RUNNER_STEPS, ran, recordCheckout } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
 import { gh, originRepository, readPullRequests, readyOne } from "./pull-requests.ts";
@@ -35,7 +35,9 @@ const git = (...args: string[]) => {
 export function unproven(commit: string, top: string, opening: boolean): string[] {
 	const missing = RUNNER_STEPS.filter((rule) => !ran(commit, top, "pass", undefined, rule));
 	if (!missing.length) return [];
-	return [`no passing pre-PR run record of ${missing.join(", ")} for ${commit.slice(0, 7)}; run \`bun bun/pre-pr.ts\` on it`];
+	return [
+		`no passing pre-PR run record of ${missing.join(", ")} for ${commit.slice(0, 7)}; run \`bun bun/pre-pr.ts\` on it`,
+	];
 }
 
 export type Opening = { title: string; body: string };
@@ -47,12 +49,19 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	const commit = git("rev-parse", "--verify", "-q", "HEAD");
 	const top = git("rev-parse", "--show-toplevel");
 	const refuse = (id: string, why: string) => {
-		recordCheckout("finish", "block", id, { session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: top }, commit);
+		recordCheckout(
+			"finish",
+			"block",
+			id,
+			{ session_id: process.env.CLAUDE_CODE_SESSION_ID || undefined, cwd: top },
+			commit,
+		);
 		return done(`finish: refused — ${why}`, 1);
 	};
 	if (!commit || !top) return refuse("unread-checkout", "no commit in a git checkout here");
 	// `!== ""`: a status git cannot read (undefined) is no clean tree. Untracked files are left out.
-	if (git("status", "--porcelain", "--untracked-files=no") !== "") return refuse("dirty", "tracked files differ from HEAD; commit them first");
+	if (git("status", "--porcelain", "--untracked-files=no") !== "")
+		return refuse("dirty", "tracked files differ from HEAD; commit them first");
 	const branch = git("symbolic-ref", "--short", "-q", "HEAD");
 	if (!branch) return refuse("detached", "HEAD names no branch");
 	if (branch === "main") return refuse("main", "HEAD is on main, which takes no pull request");
@@ -61,19 +70,26 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	const pulls = repo && readPullRequests(branch, repo);
 	if (!repo || !pulls) return refuse("unread", `cannot read the pull requests of ${branch}; check \`gh auth status\``);
 	const out = readyOne(pulls);
-	if (out) return refuse("ready", `#${out.number} is not a draft, so nothing goes into it; run \`gh pr ready ${out.number} --undo\` first`);
+	if (out)
+		return refuse(
+			"ready",
+			`#${out.number} is not a draft, so nothing goes into it; run \`gh pr ready ${out.number} --undo\` first`,
+		);
 	const open = pulls.find((pr) => pr.state === "OPEN");
 	const owed = unproven(commit, top, !open);
 	if (owed.length) return refuse("unproven", owed.join("; "));
-	if (!open && !opening) return refuse("untitled", `${branch} has no open pull request; pass --title and --body-file to open one`);
+	if (!open && !opening)
+		return refuse("untitled", `${branch} has no open pull request; pass --title and --body-file to open one`);
 	// Before the push, or `gh pr create` would fail on it after the whole suite ran.
 	if (!open && opening && !statSync(opening.body, { throwIfNoEntry: false })?.isFile())
 		return refuse("unread-body", `the body file ${opening.body} is not a file`);
 
 	const full = `${repo.owner}/${repo.repo}`;
-	const failed = (what: string) => done(open ? `finish: draft #${open.number} — ${what}` : `finish: failed — ${what}`, 1);
+	const failed = (what: string) =>
+		done(open ? `finish: draft #${open.number} — ${what}` : `finish: failed — ${what}`, 1);
 	// Git runs the pre-push hook, and with it the whole suite, even for a push of nothing.
-	if (git("ls-remote", "origin", `refs/heads/${branch}`)?.split("\t")[0] === commit) lines.push(`finish: origin holds ${commit.slice(0, 7)} on ${branch}, no push`);
+	if (git("ls-remote", "origin", `refs/heads/${branch}`)?.split("\t")[0] === commit)
+		lines.push(`finish: origin holds ${commit.slice(0, 7)} on ${branch}, no push`);
 	else {
 		// Inherited, so the hook's test run shows; never --force, never --no-verify.
 		const push = Bun.spawnSync(["git", "push", "-u", "origin", "HEAD"], { stdout: "inherit", stderr: "inherit" });
@@ -83,7 +99,19 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 
 	let number = open?.number;
 	if (!open && opening) {
-		const args = ["--draft", "-R", full, "--base", "main", "--head", branch, "--title", opening.title, "--body-file", opening.body];
+		const args = [
+			"--draft",
+			"-R",
+			full,
+			"--base",
+			"main",
+			"--head",
+			branch,
+			"--title",
+			opening.title,
+			"--body-file",
+			opening.body,
+		];
 		const create = gh(["pr", "create", ...args]);
 		const said = create.stderr.toString().trim().split("\n")[0];
 		if (create.exitCode !== 0) return failed(`gh pr create exited ${create.exitCode}${said ? `: ${said}` : ""}`);
@@ -100,16 +128,21 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		watched = tracked(top).paths.includes(".coderabbit.yaml");
 	} catch (error) {
 		// After the push and the opening: a throw here would lose the line that names the open draft.
-		return done(`finish: draft #${number} — the checkout's tracked files could not be listed: ${(error as Error).message.trim().split("\n")[0]}`, 1);
+		return done(
+			`finish: draft #${number} — the checkout's tracked files could not be listed: ${(error as Error).message.trim().split("\n")[0]}`,
+			1,
+		);
 	}
 	// Looked up before the wait, so settings that are missing cost none.
 	const found = card ? integration() : undefined;
-	if (typeof found === "string") return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);
+	if (typeof found === "string")
+		return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);
 	/** The card's question read: the line that ends `finish` when one waits or the read fails, else undefined. */
 	const question = async () => {
 		if (!card || !found) return undefined;
 		try {
-			if (await waiting(found.call, card, found.settings.user)) return done(`finish: draft #${number} — a question waits on ${card}`, 0);
+			if (await waiting(found.call, card, found.settings.user))
+				return done(`finish: draft #${number} — a question waits on ${card}`, 0);
 		} catch (error) {
 			return done(`finish: draft #${number} — the card's comments could not be read: ${(error as Error).message}`, 1);
 		}
@@ -172,7 +205,8 @@ function request(repo: string, n: number, sha: string, runs: Run[]) {
 	const since = arrived(runs);
 	// A full review asked for counts too (the user's answer 11 b, 2026-11-01).
 	const asked = [REQUEST, "@coderabbitai full review"];
-	if (comments.some((c) => asked.includes(String(c.body).trim()) && Date.parse(String(c.created_at)) >= since)) return `${skipped}; a review was already asked for`;
+	if (comments.some((c) => asked.includes(String(c.body).trim()) && Date.parse(String(c.created_at)) >= since))
+		return `${skipped}; a review was already asked for`;
 	const fresh = read(repo, sha);
 	const now = Array.isArray(fresh) ? state(fresh) : fresh;
 	if (now.name !== "skipped") return said(now, sha.slice(0, 7));

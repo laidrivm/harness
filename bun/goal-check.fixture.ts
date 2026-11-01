@@ -9,14 +9,7 @@
  * cap. `afterAll` is not registered here: each test file registers
  * `diff-budget.fixture.ts`'s `cleanup` itself.
  */
-import {
-	appendFileSync,
-	chmodSync,
-	mkdirSync,
-	readFileSync,
-	symlinkSync,
-	writeFileSync,
-} from "node:fs";
+import { appendFileSync, chmodSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { emptyDir, git, repo } from "./diff-budget.fixture.ts";
 import { RUNNER_STEPS } from "./gate-ledger.ts";
@@ -25,7 +18,9 @@ const check = join(import.meta.dir, "goal-check.ts");
 export const CHANGE = "openspec/changes/demo";
 
 export const out = (dir: string, ...args: string[]) =>
-	Bun.spawnSync(["git", ...args], { cwd: dir }).stdout.toString().trim();
+	Bun.spawnSync(["git", ...args], { cwd: dir })
+		.stdout.toString()
+		.trim();
 export const head = (dir: string) => out(dir, "rev-parse", "HEAD");
 
 /**
@@ -96,11 +91,7 @@ export function ledger(state: string, ...lines: (object | string)[]): void {
 }
 
 /** The runner's records of `commit` in `dir`'s checkout, one per step, each ending in `decision`. */
-export const runRecord = (
-	dir: string,
-	decision = "pass",
-	commit = head(dir),
-) =>
+export const runRecord = (dir: string, decision = "pass", commit = head(dir)) =>
 	RUNNER_STEPS.map((rule) => ({
 		gate: "pre-pr",
 		decision,
@@ -123,11 +114,7 @@ export function stateWith(...lines: (object | string)[]): string {
  * pause, so the tries are the ones that ship and no case sleeps; `calls` is
  * how many it made.
  */
-export function run(
-	dir: string,
-	args: string[],
-	opts: { gh?: Gh; state?: string; env?: Record<string, string> } = {},
-) {
+export function run(dir: string, args: string[], opts: { gh?: Gh; state?: string; env?: Record<string, string> } = {}) {
 	const state = opts.state ?? stateWith(runRecord(dir));
 	// The read names its repository from `origin`, which the stub answers for;
 	// a directory outside any repository stays as the case made it.
@@ -169,10 +156,8 @@ export function records(state: string, gate = "goal"): Record<string, unknown>[]
 	}
 }
 
-export const proposal = () =>
-	repo({}, { [`${CHANGE}/proposal.md`]: "# demo\n" });
-export const tasks = (text: string) =>
-	repo({}, { [`${CHANGE}/tasks.md`]: text });
+export const proposal = () => repo({}, { [`${CHANGE}/proposal.md`]: "# demo\n" });
+export const tasks = (text: string) => repo({}, { [`${CHANGE}/tasks.md`]: text });
 export const archived = (keep = false) =>
 	repo(
 		{ [`${CHANGE}/proposal.md`]: "# demo\n" },

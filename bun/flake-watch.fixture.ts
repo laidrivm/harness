@@ -50,9 +50,7 @@ export function run(tmp: string, event: unknown) {
 	const call = Bun.spawnSync(["bun", script], {
 		cwd: tmp,
 		env: { PATH: process.env.PATH, TMPDIR: tmp, XDG_STATE_HOME: tmp },
-		stdin: Buffer.from(
-			typeof event === "string" ? event : JSON.stringify(event),
-		),
+		stdin: Buffer.from(typeof event === "string" ? event : JSON.stringify(event)),
 	});
 	expect([call.exitCode, call.stderr.toString()]).toEqual([0, ""]);
 	return call.stdout.toString();
@@ -83,11 +81,7 @@ export const PASSING =
 	"bun test v1.4.2 (744846f84)\n\n 1 pass\n 0 fail\n 1 expect() calls\nRan 1 test across 1 file. [4.00ms]";
 
 /** A Bash call in `cwd` that failed with `error`. */
-export const failed = (
-	cwd: string,
-	error = `Exit code 1\n${failing("grp > flips")}`,
-	over: object = {},
-) => ({
+export const failed = (cwd: string, error = `Exit code 1\n${failing("grp > flips")}`, over: object = {}) => ({
 	hook_event_name: "PostToolUseFailure",
 	session_id: "s1",
 	cwd,

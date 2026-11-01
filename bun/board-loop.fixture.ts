@@ -22,7 +22,16 @@ export const SAID = "Done.\nPR-TITLE: Carry demo\nPR-BODY:\nThe body.";
 
 /** One pull request of the fixture's `o/demo`, as the REST endpoint lists it, for the stub `gh` to print. */
 export const listed = (number: number, state: string, merged = false, draft = false) =>
-	JSON.stringify([{ number, state, draft, merged_at: merged ? "2026-10-20T00:00:00Z" : null, head: { sha: "abc", repo: { id: 1, full_name: "o/demo" } }, base: { repo: { id: 1 } } }]);
+	JSON.stringify([
+		{
+			number,
+			state,
+			draft,
+			merged_at: merged ? "2026-10-20T00:00:00Z" : null,
+			head: { sha: "abc", repo: { id: 1, full_name: "o/demo" } },
+			base: { repo: { id: 1 } },
+		},
+	]);
 
 export type Stubs = {
 	/** What `gh api` prints for the branch's pull requests, or `null` for no `gh` on `PATH`. */
@@ -107,10 +116,15 @@ function bin(log: string, s: Stubs): string {
 	stub("git", `[ "$1" = push ] && { ${saw("push")}; ${table}; }\nexec '${REAL_GIT}' "$@"`);
 	const create = `if [ "$1 $2" = "pr create" ]; then ${saw("create")}; /bin/cat > '${log}.body'; exit ${s.createCode ?? 0}; fi\n[ "$1 $2" = "pr ready" ] && exit ${s.readyCode ?? 0}\n`;
 	// Matched on the query's head filter, `&` closing it so `feat/demo` never matches `feat/demo-2`'s.
-	const by = Object.entries(s.ghBy ?? {}).map(([b, json]) => `*"head=o:${encodeURIComponent(b)}&"*) printf '%s' '${json}'; exit 0 ;;\n`);
+	const by = Object.entries(s.ghBy ?? {}).map(
+		([b, json]) => `*"head=o:${encodeURIComponent(b)}&"*) printf '%s' '${json}'; exit 0 ;;\n`,
+	);
 	const per = by.length ? `case "$2" in\n${by.join("")}esac\n` : "";
 	if (s.gh !== null)
-		stub("gh", `${s.ghSleep ? `exec /bin/sleep ${s.ghSleep}\n` : ""}${create}${per}printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`);
+		stub(
+			"gh",
+			`${s.ghSleep ? `exec /bin/sleep ${s.ghSleep}\n` : ""}${create}${per}printf '%s' '${s.gh ?? "[]"}'\nexit ${s.ghCode ?? 0}`,
+		);
 	const verdict = s.verdict ?? "goal met: apply demo step 1 at abc1234";
 	const before = s.beforePush ?? "goal met: apply demo step 1 at abc1234, before the push";
 	const pin = "node_modules/harness/bun";
@@ -146,7 +160,10 @@ function bin(log: string, s: Stubs): string {
 	// The triage's prompt opens as `notion-triage.ts`'s does.
 	const triage = `${s.triageSleep ? `/bin/sleep ${s.triageSleep}; ` : ""}printf '%s\\n' '${s.triage ?? "ESCALATE"}'`;
 	if (s.claudeCode !== null)
-		stub("claude", `case "$2" in\n/goal*) ${saw("stage")}; ${stage} ;;\n"Decide whether"*) ${saw("triage")}; ${triage} ;;\n*) ${saw("pick")}; ${pick} ;;\nesac`);
+		stub(
+			"claude",
+			`case "$2" in\n/goal*) ${saw("stage")}; ${stage} ;;\n"Decide whether"*) ${saw("triage")}; ${triage} ;;\n*) ${saw("pick")}; ${pick} ;;\nesac`,
+		);
 	return dir;
 }
 
@@ -177,7 +194,14 @@ export const trusting = (...dirs: string[]) =>
 		projects: Object.fromEntries(dirs.map((d) => [realpathSync(d), { hasTrustDialogAccepted: true }])),
 	});
 
-type Opts = { env?: Record<string, string>; state?: string; entry?: string; claudeJson?: string | null; stdin?: number; home?: string };
+type Opts = {
+	env?: Record<string, string>;
+	state?: string;
+	entry?: string;
+	claudeJson?: string | null;
+	stdin?: number;
+	home?: string;
+};
 
 /** What one pass is spawned as, and where it leaves its log and its ledger. */
 function prepare(dir: string, args: string[], s: Stubs, opts: Opts) {
@@ -219,7 +243,10 @@ function result(code: number | null, stdout: string, stderr: string, log: string
 		/** The environment `push`, `create`, `pick`, `stage` or `check` saw, or undefined where none ran. */
 		env: (what: string) => {
 			const lines = saved(`${log}.${what}-env`)?.split("\n").filter(Boolean);
-			return lines && Object.fromEntries(lines.map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]));
+			return (
+				lines &&
+				Object.fromEntries(lines.map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]))
+			);
 		},
 	};
 }

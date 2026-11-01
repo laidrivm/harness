@@ -6,27 +6,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { ARCHIVE, HOOKS, MARK, registration } from "./bootstrap.ts";
 import { ASK, ATTRIBUTION, DENY, settings } from "./settings.ts";
+import { cleanup, consumer, old, parsed, read, SETTINGS, STALE_BUNFIG, stale } from "./sync-settings.fixture.ts";
 import { syncSettings } from "./sync-settings.ts";
-import {
-	cleanup,
-	consumer,
-	old,
-	parsed,
-	read,
-	SETTINGS,
-	STALE_BUNFIG,
-	stale,
-} from "./sync-settings.fixture.ts";
 
 afterAll(cleanup);
 
 /** The MCP ask entries the harness owns, as the check names them. */
-const FOUR = [
-	"mcp__*__send_message",
-	"mcp__*__reply",
-	"mcp__*__forward",
-	"mcp__*__notion-create-comment",
-];
+const FOUR = ["mcp__*__send_message", "mcp__*__reply", "mcp__*__forward", "mcp__*__notion-create-comment"];
 
 describe("the settings file", () => {
 	// spec: harness-updates/a-harness-change-to-its-policy-needs-no-manual-edit
@@ -65,16 +51,8 @@ describe("the settings file", () => {
 		syncSettings(dir);
 		const after = parsed(dir);
 		expect(after.model).toBe("opus");
-		expect(after.permissions.allow).toEqual([
-			"Bash(bun test *)",
-			"mcp__design__read_file",
-		]);
-		expect(after.permissions.deny).toEqual([
-			...DENY,
-			"Edit(.npmrc)",
-			"Edit(secrets/**)",
-			"mcp__notion__update",
-		]);
+		expect(after.permissions.allow).toEqual(["Bash(bun test *)", "mcp__design__read_file"]);
+		expect(after.permissions.deny).toEqual([...DENY, "Edit(.npmrc)", "Edit(secrets/**)", "mcp__notion__update"]);
 		expect(after.hooks.PreToolUse).toContainEqual({
 			matcher: "Edit",
 			hooks: [own],
@@ -89,19 +67,16 @@ describe("the settings file", () => {
 		type Group = { matcher?: string; hooks: object[] };
 		for (const { event, matcher, command } of HOOKS) {
 			// A hook the previous version never registered is only added.
-			const groups: Group[] =
-				config.hooks[event as keyof typeof config.hooks] ?? [];
+			const groups: Group[] = config.hooks[event as keyof typeof config.hooks] ?? [];
 			const group = groups.find((g) => g.matcher === matcher);
 			if (group) group.hooks = [{ type: "command", command: unmarked(command) }];
 		}
 		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
 		syncSettings(dir);
 		for (const hook of HOOKS)
-			expect(
-				parsed(dir).hooks[hook.event].filter(
-					(g: Group) => g.matcher === hook.matcher,
-				),
-			).toEqual([expect.objectContaining({ hooks: [registration(hook)] })]);
+			expect(parsed(dir).hooks[hook.event].filter((g: Group) => g.matcher === hook.matcher)).toEqual([
+				expect.objectContaining({ hooks: [registration(hook)] }),
+			]);
 	});
 
 	test("a sync over a previous version's watch leaves one registration per event [42]", () => {
@@ -140,15 +115,9 @@ describe("the settings file", () => {
 		syncSettings(dir);
 		const after = parsed(dir);
 		expect(after.permissions.deny).toEqual([...DENY, "Edit(.npmrc)"]);
-		expect(after.permissions.ask).toEqual([
-			...ASK,
-			"Edit(bunfig.toml)",
-			...FOUR,
-		]);
+		expect(after.permissions.ask).toEqual([...ASK, "Edit(bunfig.toml)", ...FOUR]);
 		for (const { event, command } of HOOKS)
-			expect(JSON.stringify(after.hooks[event])).toContain(
-				JSON.stringify(command),
-			);
+			expect(JSON.stringify(after.hooks[event])).toContain(JSON.stringify(command));
 	});
 
 	test("an event left with no hooks once a previous version's are gone is dropped", () => {
@@ -169,9 +138,7 @@ describe("the settings file", () => {
 		});
 		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
 		syncSettings(dir);
-		expect(parsed(dir).hooks.SessionEnd).toEqual([
-			{ hooks: [{ type: "command", command: ARCHIVE, timeout: 60 }] },
-		]);
+		expect(parsed(dir).hooks.SessionEnd).toEqual([{ hooks: [{ type: "command", command: ARCHIVE, timeout: 60 }] }]);
 		expect(settings(dir)).toEqual([]);
 	});
 
@@ -180,11 +147,7 @@ describe("the settings file", () => {
 		config.permissions.deny = ["Edit(secrets/**)"];
 		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
 		syncSettings(dir);
-		expect(parsed(dir).permissions.deny).toEqual([
-			"Edit(secrets/**)",
-			...DENY,
-			"Edit(.npmrc)",
-		]);
+		expect(parsed(dir).permissions.deny).toEqual(["Edit(secrets/**)", ...DENY, "Edit(.npmrc)"]);
 	});
 
 	test("interleaved Bash entries collapse where the first stood", () => {
@@ -192,23 +155,14 @@ describe("the settings file", () => {
 		config.permissions.deny = ["Edit(a)", "Bash(npx *)", "Edit(b)", "Bash(x *)"];
 		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
 		syncSettings(dir);
-		expect(parsed(dir).permissions.deny).toEqual([
-			"Edit(a)",
-			...DENY,
-			"Edit(b)",
-			"Edit(.npmrc)",
-		]);
+		expect(parsed(dir).permissions.deny).toEqual(["Edit(a)", ...DENY, "Edit(b)", "Edit(.npmrc)"]);
 	});
 
 	// spec: harness-updates/a-consumer-adopts-the-mcp-ask-entries-through-the-sync
 	test("an ask list with no mcp__ entry gets the four after its others [14]", () => {
 		const dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });
 		syncSettings(dir);
-		expect(parsed(dir).permissions.ask).toEqual([
-			...ASK,
-			"Edit(bunfig.toml)",
-			...FOUR,
-		]);
+		expect(parsed(dir).permissions.ask).toEqual([...ASK, "Edit(bunfig.toml)", ...FOUR]);
 	});
 
 	// spec: agent-permissions/a-consumer-adopts-the-entries-through-the-sync
@@ -216,7 +170,9 @@ describe("the settings file", () => {
 		const dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });
 		syncSettings(dir);
 		const bash = parsed(dir).permissions.ask.filter((e: string) => e.startsWith("Bash(gh run"));
-		expect(bash).toEqual(["rerun", "cancel", "delete"].flatMap((s) => [`Bash(gh run ${s} *)`, `Bash(gh run * ${s} *)`]));
+		expect(bash).toEqual(
+			["rerun", "cancel", "delete"].flatMap((s) => [`Bash(gh run ${s} *)`, `Bash(gh run * ${s} *)`]),
+		);
 	});
 
 	// spec: harness-updates/a-consumer-adopts-the-mcp-ask-entries-through-the-sync
@@ -232,13 +188,7 @@ describe("the settings file", () => {
 		];
 		const dir = consumer({ [SETTINGS]: JSON.stringify(config) });
 		syncSettings(dir);
-		expect(parsed(dir).permissions.ask).toEqual([
-			"Edit(a)",
-			...FOUR,
-			...ASK,
-			"Edit(b)",
-			"Edit(bunfig.toml)",
-		]);
+		expect(parsed(dir).permissions.ask).toEqual(["Edit(a)", ...FOUR, ...ASK, "Edit(b)", "Edit(bunfig.toml)"]);
 	});
 
 	// spec: harness-updates/a-consumer-adopts-the-attribution-setting-through-the-sync

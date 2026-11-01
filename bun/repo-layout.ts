@@ -34,15 +34,11 @@ export const HEADING = "## Where each kind of file lives";
  * `readme-map.test.ts` already reads the ownership map with; the header and
  * separator rows carry none and drop out here.
  */
-export function rows(
-	markdown: string,
-): { path: string | undefined; reserved: boolean }[] | undefined {
+export function rows(markdown: string): { path: string | undefined; reserved: boolean }[] | undefined {
 	// `undefined` where the heading is absent, distinct from a section that is
 	// present and holds no row: the two fail for different reasons and the
 	// heading is matched in one place rather than tested again by the caller.
-	const section = markdown.match(
-		new RegExp(`^${HEADING}$([\\s\\S]*?)(?=\\n#{1,2} |$(?![\\s\\S]))`, "m"),
-	)?.[1];
+	const section = markdown.match(new RegExp(`^${HEADING}$([\\s\\S]*?)(?=\\n#{1,2} |$(?![\\s\\S]))`, "m"))?.[1];
 	if (section === undefined) return undefined;
 	return section
 		.split("\n")
@@ -70,18 +66,15 @@ export function rows(
  */
 export function unbacked(markdown: string, tracked: string[]): string[] {
 	const named = rows(markdown);
-	if (named === undefined)
-		return [`the README carries no "${HEADING}" section`];
+	if (named === undefined) return [`the README carries no "${HEADING}" section`];
 
 	// A reshaped table satisfies every assertion made over its rows by having
 	// none, which is the same vacuous pass as an absent heading by another
 	// route.
-	if (named.length === 0)
-		return [`the "${HEADING}" section names no directory`];
+	if (named.length === 0) return [`the "${HEADING}" section names no directory`];
 
 	return named.flatMap(({ path, reserved }) => {
-		if (path === undefined)
-			return [`the "${HEADING}" section has a row naming no directory`];
+		if (path === undefined) return [`the "${HEADING}" section has a row naming no directory`];
 		if (reserved) return [];
 		const prefix = path.endsWith("/") ? path : `${path}/`;
 		return tracked.some((file) => file.startsWith(prefix))
@@ -111,15 +104,12 @@ export function stray(cwd?: string, exempt?: Record<string, string>): string[] {
 		// and `valueOf`, so `in` would exempt a root file of any of those names
 		// on a list that never mentioned it.
 		if (Object.hasOwn(allowed, path)) continue;
-		found.push(
-			`${path}: at the repository root, and the exemption list does not name it`,
-		);
+		found.push(`${path}: at the repository root, and the exemption list does not name it`);
 	}
 
 	// A sweep that matched nothing satisfies every assertion made over its
 	// result, so it is an error rather than a clean root.
-	if (seen.size === 0)
-		throw new Error(`no tracked file at the root of ${root}`);
+	if (seen.size === 0) throw new Error(`no tracked file at the root of ${root}`);
 
 	for (const [path, reason] of Object.entries(allowed)) {
 		if (!seen.has(path))
@@ -127,8 +117,7 @@ export function stray(cwd?: string, exempt?: Record<string, string>): string[] {
 			// may also name something git lists but this skipped — a symlink, or
 			// a path deleted from the work tree — and the two read the same here.
 			found.push(`${path}: exempted, and the repository tracks no such file`);
-		else if (reason.trim() === "")
-			found.push(`${path}: exempted, and the entry carries no reason`);
+		else if (reason.trim() === "") found.push(`${path}: exempted, and the entry carries no reason`);
 	}
 
 	return found;

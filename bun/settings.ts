@@ -46,12 +46,7 @@ const MANIFEST_WRITES = [
  * more than one. An enumeration of verified names, not a verb glob. Exported
  * so `sync-settings.ts` writes the list this check compares.
  */
-export const MCP_ASK = [
-	"send_message",
-	"reply",
-	"forward",
-	"notion-create-comment",
-].map((tool) => `mcp__*__${tool}`);
+export const MCP_ASK = ["send_message", "reply", "forward", "notion-create-comment"].map((tool) => `mcp__*__${tool}`);
 
 /**
  * The `Bash(` entries `deny` and `ask` hold, whole and in order, and the file
@@ -66,13 +61,8 @@ export const DENY = [...MANAGERS, ...GH_WRITES].map((c) => `Bash(${c} *)`);
  * `allow`, so a consumer's own `Bash(gh run *)` needs no edit
  * (flaky-test-findings D8).
  */
-const GH_RUN_WRITES = ["rerun", "cancel", "delete"].flatMap((sub) => [
-	`gh run ${sub}`,
-	`gh run * ${sub}`,
-]);
-export const ASK = [...MANIFEST_WRITES, ...GH_RUN_WRITES].map(
-	(c) => `Bash(${c} *)`,
-);
+const GH_RUN_WRITES = ["rerun", "cancel", "delete"].flatMap((sub) => [`gh run ${sub}`, `gh run * ${sub}`]);
+export const ASK = [...MANIFEST_WRITES, ...GH_RUN_WRITES].map((c) => `Bash(${c} *)`);
 export const EDIT_DENY = "Edit(.npmrc)";
 export const EDIT_ASK = "Edit(bunfig.toml)";
 
@@ -108,10 +98,7 @@ type Hook = {
  * `shell` other than bash cannot read the POSIX text these hooks carry.
  */
 const blocking = (hook: Hook) =>
-	hook.args === undefined &&
-	!hook.async &&
-	!hook.asyncRewake &&
-	(hook.shell === undefined || hook.shell === "bash");
+	hook.args === undefined && !hook.async && !hook.asyncRewake && (hook.shell === undefined || hook.shell === "bash");
 type Settings = {
 	permissions?: { deny?: string[]; ask?: string[]; allow?: string[] };
 	hooks?: Record<string, { matcher?: string; hooks?: Hook[] }[]>;
@@ -137,9 +124,7 @@ function help(command: string): string {
 function bunForms(ask: string[]): string[] {
 	const problems: string[] = [];
 	const commands = new Set(
-		ask
-			.map((entry) => /^Bash\(bun (\S+)/.exec(entry)?.[1])
-			.filter((command) => command !== undefined),
+		ask.map((entry) => /^Bash\(bun (\S+)/.exec(entry)?.[1]).filter((command) => command !== undefined),
 	);
 	let aliases = 0;
 	for (const command of commands) {
@@ -148,15 +133,9 @@ function bunForms(ask: string[]): string[] {
 		if (alias !== undefined) {
 			aliases++;
 			if (!ask.includes(`Bash(bun ${alias} *)`))
-				problems.push(
-					`bun ${alias}, the alias of bun ${command}, is not asked`,
-				);
+				problems.push(`bun ${alias}, the alias of bun ${command}, is not asked`);
 		}
-		if (
-			!/^Usage: bun (add|install|remove|update|patch|patch-commit|pm) /m.test(
-				text,
-			)
-		)
+		if (!/^Usage: bun (add|install|remove|update|patch|patch-commit|pm) /m.test(text))
 			problems.push(`bun ${command} no longer resolves to a manifest write`);
 	}
 	// A bun that stopped printing aliases would pass every check above.
@@ -181,12 +160,10 @@ function absoluteTokens(entry: string): string[] {
  * keeps it, from this one definition.
  */
 export function machineLocal(entry: string, root: string): string | undefined {
-	if (absoluteTokens(entry).length)
-		return "carries a path a clone does not have";
+	if (absoluteTokens(entry).length) return "carries a path a clone does not have";
 	const path = entry.match(/^(?:Read|Edit)\((.+)\)$/)?.[1];
 	const base = resolve(root); // a trailing `/` on root would double the prefix's
-	if (path !== undefined && !resolve(base, path).startsWith(`${base}/`))
-		return "reaches outside the repository";
+	if (path !== undefined && !resolve(base, path).startsWith(`${base}/`)) return "reaches outside the repository";
 	return undefined;
 }
 
@@ -201,29 +178,20 @@ export function settings(root: string): string[] {
 	const say = (problem: string) => problems.push(`${file}: ${problem}`);
 
 	const bash = (list: string[]) => list.filter((e) => e.startsWith("Bash("));
-	if (JSON.stringify(bash(deny)) !== JSON.stringify(DENY))
-		say(`the Bash deny list is not ${DENY.join(", ")}`);
-	if (JSON.stringify(bash(ask)) !== JSON.stringify(ASK))
-		say(`the Bash ask list is not ${ASK.join(", ")}`);
+	if (JSON.stringify(bash(deny)) !== JSON.stringify(DENY)) say(`the Bash deny list is not ${DENY.join(", ")}`);
+	if (JSON.stringify(bash(ask)) !== JSON.stringify(ASK)) say(`the Bash ask list is not ${ASK.join(", ")}`);
 	problems.push(...bunForms(bash(ask)));
 	const mcp = ask.filter((e) => e.startsWith("mcp__"));
-	if (JSON.stringify(mcp) !== JSON.stringify(MCP_ASK))
-		say(`the mcp__ ask list is not ${MCP_ASK.join(", ")}`);
+	if (JSON.stringify(mcp) !== JSON.stringify(MCP_ASK)) say(`the mcp__ ask list is not ${MCP_ASK.join(", ")}`);
 	for (const entry of [...deny, ...ask, ...allow])
 		if (entry.startsWith("mcp__") && entry.includes("("))
-			say(
-				`${entry} is skipped at load — Claude Code ignores an mcp__ rule written with parentheses`,
-			);
+			say(`${entry} is skipped at load — Claude Code ignores an mcp__ rule written with parentheses`);
 
-	if (parsed.disableAllHooks)
-		say(
-			"disableAllHooks turns every hook off, the guard and turn gate included",
-		);
+	if (parsed.disableAllHooks) say("disableAllHooks turns every hook off, the guard and turn gate included");
 	const fix = "run bun node_modules/harness/bun/sync.ts";
 	for (const { event, matcher, command, name, sole, timeout } of HOOKS) {
 		// The timeout decides whether a hook finishes, so it is pinned too.
-		const same = (h: Hook) =>
-			h.command === command && (timeout === undefined || h.timeout === timeout);
+		const same = (h: Hook) => h.command === command && (timeout === undefined || h.timeout === timeout);
 		// A hook registered with no matcher counts only in a group with none:
 		// one behind a matcher does not run for every tool.
 		const hooks = (parsed.hooks?.[event] ?? [])
@@ -234,13 +202,7 @@ export function settings(root: string): string[] {
 			// undo this one, since any `Stop` hook exiting 2 refuses. A match
 			// under another type, behind `if`, or in a form that cannot block
 			// does not count.
-			const runs = hooks.some(
-				(h) =>
-					h.type === "command" &&
-					h.if === undefined &&
-					blocking(h) &&
-					same(h),
-			);
+			const runs = hooks.some((h) => h.type === "command" && h.if === undefined && blocking(h) && same(h));
 			if (!runs) say(`the ${event} hook is not the ${name} — ${fix}`);
 			continue;
 		}
@@ -249,14 +211,10 @@ export function settings(root: string): string[] {
 			if (hook.type !== "command") say(`the ${matcher} hook is not a command`);
 			// A permission pattern matches the command word literally, so
 			// `command gh` would walk around a hook narrowed by one.
-			if (hook.if !== undefined)
-				say(`the ${matcher} hook is narrowed by \`if\``);
+			if (hook.if !== undefined) say(`the ${matcher} hook is narrowed by \`if\``);
 			if (!blocking(hook))
-				say(
-					`the ${matcher} hook cannot block: \`async\`, \`asyncRewake\`, \`args\` or a non-bash \`shell\``,
-				);
-			if (!same(hook))
-				say(`the ${matcher} hook is not the ${name} — ${fix}`);
+				say(`the ${matcher} hook cannot block: \`async\`, \`asyncRewake\`, \`args\` or a non-bash \`shell\``);
+			if (!same(hook)) say(`the ${matcher} hook is not the ${name} — ${fix}`);
 		}
 	}
 
@@ -265,13 +223,10 @@ export function settings(root: string): string[] {
 
 	if (!deny.includes(EDIT_DENY)) say(`${EDIT_DENY} is not denied`);
 	if (!ask.includes(EDIT_ASK)) say(`${EDIT_ASK} is not asked`);
-	if (deny.includes(EDIT_ASK))
-		say(`${EDIT_ASK} is denied, so its ask entry is unreachable`);
+	if (deny.includes(EDIT_ASK)) say(`${EDIT_ASK} is denied, so its ask entry is unreachable`);
 	for (const entry of [...deny, ...ask, ...allow])
-		if (/^(Write|NotebookEdit|Glob)\(/.test(entry))
-			say(`${entry} never matches — a file rule is written Edit(...)`);
-	for (const entry of [...deny, ...ask])
-		if (allow.includes(entry)) say(`${entry} is gated and allowed back`);
+		if (/^(Write|NotebookEdit|Glob)\(/.test(entry)) say(`${entry} never matches — a file rule is written Edit(...)`);
+	for (const entry of [...deny, ...ask]) if (allow.includes(entry)) say(`${entry} is gated and allowed back`);
 
 	if (allow.length === 0) say("the allow list is empty");
 	for (const entry of allow) {
@@ -279,13 +234,9 @@ export function settings(root: string): string[] {
 		if (why) say(`${entry} ${why}`);
 	}
 
-	const bunfig = Bun.TOML.parse(
-		readFileSync(join(root, "bunfig.toml"), "utf8"),
-	) as { install?: unknown };
+	const bunfig = Bun.TOML.parse(readFileSync(join(root, "bunfig.toml"), "utf8")) as { install?: unknown };
 	if (JSON.stringify(bunfig.install) !== JSON.stringify(INSTALL))
-		problems.push(
-			`bunfig.toml: [install] is not exactly ${JSON.stringify(INSTALL)}`,
-		);
+		problems.push(`bunfig.toml: [install] is not exactly ${JSON.stringify(INSTALL)}`);
 
 	for (const path of tracked(root).paths)
 		if (path === ".npmrc" || path.endsWith("/.npmrc"))

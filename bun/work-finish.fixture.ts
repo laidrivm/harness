@@ -28,7 +28,9 @@ export function checkout(coderabbit = false): string {
 
 /** The commit `origin` holds on `feature`, or "" for none. */
 export const remote = (dir: string) =>
-	Bun.spawnSync(["git", "ls-remote", "origin", `refs/heads/${BRANCH}`], { cwd: dir }).stdout.toString().split("\t")[0];
+	Bun.spawnSync(["git", "ls-remote", "origin", `refs/heads/${BRANCH}`], { cwd: dir })
+		.stdout.toString()
+		.split("\t")[0];
 
 /** A pull request of `o/demo` numbered `n`, as REST lists it, `draft` or not. */
 export const pull = (n: number, state: string, draft: boolean) => ({ ...pr("x", state), number: n, draft });
@@ -63,14 +65,18 @@ function bin(gh: Gh) {
 	writeFileSync(join(dir, "after"), JSON.stringify(gh.after ?? []));
 	/** The answer `name` prints, one object a line, and its exit code in `name.code`. */
 	const answer = (name: string, value: object[] | number) => {
-		writeFileSync(join(dir, name), typeof value === "number" ? "" : value.map((item) => `${JSON.stringify(item)}\n`).join(""));
+		writeFileSync(
+			join(dir, name),
+			typeof value === "number" ? "" : value.map((item) => `${JSON.stringify(item)}\n`).join(""),
+		);
 		writeFileSync(join(dir, `${name}.code`), `${typeof value === "number" ? value : 0}\n`);
 	};
 	const runs = gh.runs ?? [[]];
 	runs.forEach((value, i) => answer(`runs${i}`, value));
 	answer("comments", gh.comments ?? []);
 	writeFileSync(join(dir, "n"), "0\n");
-	const print = (name: string) => `while IFS= read -r l; do printf '%s\\n' "$l"; done < "${dir}/${name}"; read -r c < "${dir}/${name}.code"; exit "$c"`;
+	const print = (name: string) =>
+		`while IFS= read -r l; do printf '%s\\n' "$l"; done < "${dir}/${name}"; read -r c < "${dir}/${name}.code"; exit "$c"`;
 	writeFileSync(
 		join(dir, "gh"),
 		[
@@ -97,10 +103,30 @@ function bin(gh: Gh) {
  * `hook` is the exit code of the checkout's pre-push hook, which logs `push` beside the `gh` calls; git runs it even for a push of nothing.
  * `during` is a shell line the hook runs first, in the checkout's top, for a case that breaks the checkout after the push.
  */
-export type Finish = { args?: string[]; cwd?: string; gh?: Gh; stub?: Stub; state?: string; config?: string; hook?: number; during?: string; env?: Record<string, string> };
+export type Finish = {
+	args?: string[];
+	cwd?: string;
+	gh?: Gh;
+	stub?: Stub;
+	state?: string;
+	config?: string;
+	hook?: number;
+	during?: string;
+	env?: Record<string, string>;
+};
 
 /** `bun bun/work.ts finish --card CARD`, or `args`, and what it did. */
-export async function finish({ args = ["finish", "--card", CARD], cwd = checkout(), gh = {}, stub, state, config = home(), hook = 0, during = "", env }: Finish = {}) {
+export async function finish({
+	args = ["finish", "--card", CARD],
+	cwd = checkout(),
+	gh = {},
+	stub,
+	state,
+	config = home(),
+	hook = 0,
+	during = "",
+	env,
+}: Finish = {}) {
 	const ledger = state ?? stateWith(runRecord(cwd));
 	const path = bin(gh);
 	// The checkout's top: a case may run from a subdirectory.
@@ -111,13 +137,35 @@ export async function finish({ args = ["finish", "--card", CARD], cwd = checkout
 	const api = notion(stub);
 	const child = Bun.spawn([process.execPath, join(import.meta.dir, "work.ts"), ...args], {
 		cwd,
-		env: { PATH: path.dir, HOME: config, XDG_CONFIG_HOME: config, XDG_STATE_HOME: ledger, HARNESS_NOTION_API_URL: api.url, HARNESS_CODERABBIT_POLL_MS: "1", ...env },
+		env: {
+			PATH: path.dir,
+			HOME: config,
+			XDG_CONFIG_HOME: config,
+			XDG_STATE_HOME: ledger,
+			HARNESS_NOTION_API_URL: api.url,
+			HARNESS_CODERABBIT_POLL_MS: "1",
+			...env,
+		},
 		stdout: "pipe",
 		stderr: "pipe",
 	});
-	const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+	const [out, err, code] = await Promise.all([
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+		child.exited,
+	]);
 	if ((out + err).includes(TOKEN)) throw new Error("the token was printed");
 	const refusals = records(ledger, "finish").map(({ decision, rule, commit }) => ({ decision, rule, commit }));
 	const last = out.trim().split("\n").at(-1) ?? "";
-	return { out, err, code, last, calls: path.calls(), seen: api.seen.map((s) => s.call), refusals, cwd, remote: remote(cwd) };
+	return {
+		out,
+		err,
+		code,
+		last,
+		calls: path.calls(),
+		seen: api.seen.map((s) => s.call),
+		refusals,
+		cwd,
+		remote: remote(cwd),
+	};
 }

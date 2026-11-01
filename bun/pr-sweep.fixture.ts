@@ -31,7 +31,12 @@ export const sha = (n: number) => n.toString(16).padStart(40, "0");
 export const file = (text: string) => ({ content: Buffer.from(text).toString("base64"), encoding: "base64" });
 
 /** A check run as the rollup lists it. */
-export const run = (name: string, conclusion: string, startedAt: string | null = "2026-10-20T10:00:00Z", status = "COMPLETED") => ({
+export const run = (
+	name: string,
+	conclusion: string,
+	startedAt: string | null = "2026-10-20T10:00:00Z",
+	status = "COMPLETED",
+) => ({
 	__typename: "CheckRun",
 	name,
 	workflowName: "CI",
@@ -86,7 +91,8 @@ function prepare(table: Table, args: string[], env: Record<string, string>) {
 	mkdirSync(bin);
 	mkdirSync(tmp);
 	const arms = Object.entries(table).map(([key, answer], i) => {
-		const out = typeof answer.out === "string" ? answer.out : answer.out === undefined ? "" : JSON.stringify(answer.out);
+		const out =
+			typeof answer.out === "string" ? answer.out : answer.out === undefined ? "" : JSON.stringify(answer.out);
 		writeFileSync(join(dir, `${i}.out`), out);
 		writeFileSync(join(dir, `${i}.err`), answer.err ?? "");
 		const wait = answer.sleep ? `/bin/sleep ${answer.sleep}; ` : "";
@@ -97,7 +103,12 @@ function prepare(table: Table, args: string[], env: Record<string, string>) {
 		`#!/bin/sh\nprintf '%s\\n' "$*" >> '${dir}/calls'\nprintf '%s\\n' "\${GH_TOKEN-}" >> '${dir}/tokens'\ncase "$*" in\n${arms.join("\n")}\n*) exit 9;;\nesac\n`,
 	);
 	chmodSync(join(bin, "gh"), 0o755);
-	return { dir, tmp, argv: ["bun", script, ...args], env: { PATH: `${bin}:${process.env.PATH}`, HOME: dir, TMPDIR: tmp, ...env } };
+	return {
+		dir,
+		tmp,
+		argv: ["bun", script, ...args],
+		env: { PATH: `${bin}:${process.env.PATH}`, HOME: dir, TMPDIR: tmp, ...env },
+	};
 }
 
 /** A file's lines, or none where no call wrote it. */
@@ -114,7 +125,12 @@ function result(dir: string, tmp: string, code: number | null, out: string, err:
 	return {
 		code,
 		out,
-		lines: out.trim() ? out.trim().split("\n").map((l) => JSON.parse(l)) : [],
+		lines: out.trim()
+			? out
+					.trim()
+					.split("\n")
+					.map((l) => JSON.parse(l))
+			: [],
 		err,
 		calls: logged(join(dir, "calls")),
 		tokens: logged(join(dir, "tokens")),

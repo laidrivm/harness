@@ -98,7 +98,8 @@ export const passed = (commit: string, top: string | undefined, ledger?: string)
 	RUNNER_STEPS.every((rule) => ran(commit, top, "pass", ledger, rule));
 
 // `stateDir()`'s rule, in the session user's shell, so it reads that user's environment.
-const AGENT_LEDGER = 'd=${XDG_STATE_HOME-}; case $d in /*) ;; *) d=$HOME/.local/state ;; esac; cat "$d/harness/gates.jsonl"';
+const AGENT_LEDGER =
+	'd=${XDG_STATE_HOME-}; case $d in /*) ;; *) d=$HOME/.local/state ;; esac; cat "$d/harness/gates.jsonl"';
 
 /**
  * On the host, whether the session's clone holds a passing pre-PR record of
@@ -137,7 +138,14 @@ export function recordCheckout(gate: string, decision: string, rule: string, eve
 	append(gate, decision, rule, event, commit, undefined);
 }
 
-function append(gate: string, decision: string, rule: string, event: unknown, commit: string | undefined, preferred: string | undefined): void {
+function append(
+	gate: string,
+	decision: string,
+	rule: string,
+	event: unknown,
+	commit: string | undefined,
+	preferred: string | undefined,
+): void {
 	try {
 		const seen = (typeof event === "object" ? event : null) as Event;
 		const file = ledgerFile();

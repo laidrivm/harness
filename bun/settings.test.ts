@@ -5,15 +5,8 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { ARCHIVE, BOOTSTRAP, TURN_MARK, TURN_STOP } from "./bootstrap.ts";
+import { BUNFIG, changed, cleanup, consumer, type Hook, policy } from "./settings.fixture.ts";
 import { settings } from "./settings.ts";
-import {
-	BUNFIG,
-	changed,
-	cleanup,
-	consumer,
-	type Hook,
-	policy,
-} from "./settings.fixture.ts";
 
 afterAll(cleanup);
 
@@ -29,18 +22,13 @@ describe("the bootstrap hook", () => {
 			const [entry] = c.hooks.PreToolUse;
 			if (entry) entry.hooks = [{ type: "command", command: `${BOOTSTRAP} ` }];
 		});
-		expect(settings(consumer(config)).join("\n")).toContain(
-			"not the harness bootstrap",
-		);
+		expect(settings(consumer(config)).join("\n")).toContain("not the harness bootstrap");
 	});
 
 	test("a hook narrowed by if is named", () => {
 		const config = changed((c) => {
 			const [entry] = c.hooks.PreToolUse;
-			if (entry)
-				entry.hooks = [
-					{ type: "command", command: BOOTSTRAP, if: "Bash(git *)" },
-				];
+			if (entry) entry.hooks = [{ type: "command", command: BOOTSTRAP, if: "Bash(git *)" }];
 		});
 		expect(settings(consumer(config)).join("\n")).toContain("narrowed by `if`");
 	});
@@ -50,9 +38,7 @@ describe("the bootstrap hook", () => {
 			const [entry] = c.hooks.PreToolUse;
 			entry?.hooks.push({ type: "command", command: "true" });
 		});
-		expect(settings(consumer(config)).join("\n")).toContain(
-			"2 Bash hooks, not one",
-		);
+		expect(settings(consumer(config)).join("\n")).toContain("2 Bash hooks, not one");
 	});
 
 	test("settings that turn every hook off are named", () => {
@@ -70,8 +56,7 @@ describe("the bootstrap hook", () => {
 });
 
 describe("the turn gate's registrations", () => {
-	const report = (change: (c: ReturnType<typeof policy>) => void) =>
-		settings(consumer(changed(change))).join("\n");
+	const report = (change: (c: ReturnType<typeof policy>) => void) => settings(consumer(changed(change))).join("\n");
 	const stop = (hook: Hook) => (c: ReturnType<typeof policy>) => {
 		c.hooks.Stop = [{ hooks: [hook] }];
 	};
@@ -88,16 +73,12 @@ describe("the turn gate's registrations", () => {
 	});
 
 	test("no UserPromptSubmit registration is named [7]", () => {
-		expect(report((c) => delete c.hooks.UserPromptSubmit)).toContain(
-			"the UserPromptSubmit hook",
-		);
+		expect(report((c) => delete c.hooks.UserPromptSubmit)).toContain("the UserPromptSubmit hook");
 	});
 
 	test("a consumer's own prompt hook beside the harness's reports nothing [8]", () => {
 		const extra = { type: "command", command: "echo hi" };
-		expect(
-			report((c) => c.hooks.UserPromptSubmit?.push({ hooks: [extra] })),
-		).toBe("");
+		expect(report((c) => c.hooks.UserPromptSubmit?.push({ hooks: [extra] }))).toBe("");
 	});
 
 	test("a Stop command one character off is named [9]", () => {
@@ -108,9 +89,7 @@ describe("the turn gate's registrations", () => {
 	test("the two texts on each other's events are both named [10]", () => {
 		const text = report((c) => {
 			c.hooks.Stop = [{ hooks: [{ type: "command", command: TURN_MARK }] }];
-			c.hooks.UserPromptSubmit = [
-				{ hooks: [{ type: "command", command: TURN_STOP }] },
-			];
+			c.hooks.UserPromptSubmit = [{ hooks: [{ type: "command", command: TURN_STOP }] }];
 		});
 		expect(text).toContain("the Stop hook");
 		expect(text).toContain("the UserPromptSubmit hook");
@@ -130,13 +109,10 @@ describe("the turn gate's registrations", () => {
 });
 
 describe("the loop guard's registrations", () => {
-	const report = (change: (c: ReturnType<typeof policy>) => void) =>
-		settings(consumer(changed(change))).join("\n");
+	const report = (change: (c: ReturnType<typeof policy>) => void) => settings(consumer(changed(change))).join("\n");
 	/** The policy's matcher-less groups on `event`: there, the guard's alone. */
 	const unmatched = (c: ReturnType<typeof policy>, event: string) =>
-		(c.hooks[event as keyof typeof c.hooks] ?? []).filter(
-			(g) => !("matcher" in g),
-		) as { matcher?: string }[];
+		(c.hooks[event as keyof typeof c.hooks] ?? []).filter((g) => !("matcher" in g)) as { matcher?: string }[];
 
 	// spec: loop-guard/a-consumer-without-the-hooks
 	test.each(["PreToolUse", "PostToolUseFailure"])(
@@ -184,63 +160,41 @@ describe("the transcript archive's registration", () => {
 describe("the permission lists", () => {
 	test("a denied manager dropped is named", () => {
 		const config = changed((c) => {
-			c.permissions.deny = c.permissions.deny.filter(
-				(e) => e !== "Bash(npm *)",
-			);
+			c.permissions.deny = c.permissions.deny.filter((e) => e !== "Bash(npm *)");
 		});
-		expect(settings(consumer(config)).join("\n")).toContain(
-			"the Bash deny list is not",
-		);
+		expect(settings(consumer(config)).join("\n")).toContain("the Bash deny list is not");
 	});
 
 	test("an ask entry dropped is named", () => {
 		const config = changed((c) => {
-			c.permissions.ask = c.permissions.ask.filter(
-				(e) => e !== "Bash(bun r *)",
-			);
+			c.permissions.ask = c.permissions.ask.filter((e) => e !== "Bash(bun r *)");
 		});
-		expect(settings(consumer(config)).join("\n")).toContain(
-			"the Bash ask list is not",
-		);
+		expect(settings(consumer(config)).join("\n")).toContain("the Bash ask list is not");
 	});
 
 	test("a gated entry allowed back is named", () => {
 		const config = changed((c) => c.permissions.allow.push("Bash(bun add *)"));
-		expect(settings(consumer(config)).join("\n")).toContain(
-			"Bash(bun add *) is gated and allowed back",
-		);
+		expect(settings(consumer(config)).join("\n")).toContain("Bash(bun add *) is gated and allowed back");
 	});
 
 	test("a file rule in the form that never matches is named", () => {
 		const config = changed((c) => c.permissions.deny.push("Write(.npmrc)"));
-		expect(settings(consumer(config)).join("\n")).toContain(
-			"Write(.npmrc) never matches",
-		);
+		expect(settings(consumer(config)).join("\n")).toContain("Write(.npmrc) never matches");
 	});
 
 	test("an allowed path a clone does not have is named", () => {
-		const config = changed((c) =>
-			c.permissions.allow.push("Read(//Users/someone/notes/**)"),
-		);
-		expect(settings(consumer(config)).join("\n")).toContain(
-			"carries a path a clone does not have",
-		);
+		const config = changed((c) => c.permissions.allow.push("Read(//Users/someone/notes/**)"));
+		expect(settings(consumer(config)).join("\n")).toContain("carries a path a clone does not have");
 	});
 
 	test("an allowed path outside the repository is named", () => {
-		const config = changed((c) =>
-			c.permissions.allow.push("Edit(../secrets/**)"),
-		);
-		expect(settings(consumer(config)).join("\n")).toContain(
-			"reaches outside the repository",
-		);
+		const config = changed((c) => c.permissions.allow.push("Edit(../secrets/**)"));
+		expect(settings(consumer(config)).join("\n")).toContain("reaches outside the repository");
 	});
 
 	test("a root passed with a trailing slash keeps its own paths inside", () => {
 		const config = changed((c) => c.permissions.allow.push("Edit(src/**)"));
-		expect(settings(`${consumer(config)}/`).join("\n")).not.toContain(
-			"reaches outside the repository",
-		);
+		expect(settings(`${consumer(config)}/`).join("\n")).not.toContain("reaches outside the repository");
 	});
 });
 
@@ -256,8 +210,6 @@ describe("the supply-chain files", () => {
 		const dir = consumer(policy(), {
 			"pkg/.npmrc": "registry=https://x.test\n",
 		});
-		expect(settings(dir)).toContain(
-			"pkg/.npmrc: tracked, and bun reads it as a registry source",
-		);
+		expect(settings(dir)).toContain("pkg/.npmrc: tracked, and bun reads it as a registry source");
 	});
 });

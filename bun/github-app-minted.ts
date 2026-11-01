@@ -22,5 +22,7 @@ export function minted(command: string, repository: string, args: string[], time
 	const why = run.stderr?.toString().trim().split("\n").at(-1);
 	// Any other signal (the OOM killer, an external stop) is no transient failure.
 	const transient = run.exitCode === TEMPFAIL || run.exitedDueToTimeout === true;
-	throw new (transient ? Transient : Error)(`the mint command ${words[0]} exited ${run.exitCode ?? "on a signal"}${why ? `: ${why}` : ""}`);
+	throw new (transient ? Transient : Error)(
+		`the mint command ${words[0]} exited ${run.exitCode ?? "on a signal"}${why ? `: ${why}` : ""}`,
+	);
 }

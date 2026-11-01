@@ -15,7 +15,8 @@ afterAll(cleanup);
 const to = (target: string) => ["status", "--card", CARD, "--to", target];
 const wrote = (run: Awaited<ReturnType<typeof status>>, target: string) =>
 	expect([run.code, run.last, run.left]).toEqual([0, `status: ${CARD} approved → ${target}`, []]);
-const without = (tree: Record<string, string | null>, end: string) => Object.fromEntries(Object.entries(tree).filter(([path]) => !path.endsWith(end)));
+const without = (tree: Record<string, string | null>, end: string) =>
+	Object.fromEntries(Object.entries(tree).filter(([path]) => !path.endsWith(end)));
 
 describe("the tree is origin/main's", () => {
 	// spec: work-status/a-checkout-behind-origin
@@ -64,7 +65,10 @@ describe("the tree is origin/main's", () => {
 describe("each merged status has its own evidence", () => {
 	// spec: work-status/a-proposal-not-complete-on-main
 	test("a change without design.md refuses proposed", async () => {
-		refused(await status({ args: to("proposed"), cwd: clone(without(change("demo"), "design.md")).dir }), "no-evidence");
+		refused(
+			await status({ args: to("proposed"), cwd: clone(without(change("demo"), "design.md")).dir }),
+			"no-evidence",
+		);
 	});
 
 	test("a complete change proves proposed", async () => {
@@ -73,7 +77,10 @@ describe("each merged status has its own evidence", () => {
 
 	// spec: work-status/one-group-still-open
 	test("group 1 ticked and group 2 open refuse applied, naming group 2", async () => {
-		const run = await status({ args: to("applied"), cwd: clone(change("demo", "## 1. One\n\n- [x] 1.1 a\n\n## 2. Two\n\n- [ ] 2.1 b\n")).dir });
+		const run = await status({
+			args: to("applied"),
+			cwd: clone(change("demo", "## 1. One\n\n- [x] 1.1 a\n\n## 2. Two\n\n- [ ] 2.1 b\n")).dir,
+		});
 		refused(run, "no-evidence");
 		expect(run.last).toContain("2. Two");
 	});
@@ -119,12 +126,23 @@ describe("the card's Pointer", () => {
 
 	// spec: work-status/an-archived-pointer
 	test("an archive origin/main holds proves done", async () => {
-		const run = await status({ args: to("done"), cwd: clone(archived("demo")).dir, page: { pointer: "openspec/changes/archive/2026-10-27-demo/" } });
+		const run = await status({
+			args: to("done"),
+			cwd: clone(archived("demo")).dir,
+			page: { pointer: "openspec/changes/archive/2026-10-27-demo/" },
+		});
 		wrote(run, "done");
 	});
 
 	// spec: work-status/this-repository-s-change-from-another-board
 	test("this repository's own name before the path reads as the path", async () => {
-		wrote(await status({ args: to("proposed"), cwd: clone(change("demo")).dir, page: { pointer: "demo: openspec/changes/demo/" } }), "proposed");
+		wrote(
+			await status({
+				args: to("proposed"),
+				cwd: clone(change("demo")).dir,
+				page: { pointer: "demo: openspec/changes/demo/" },
+			}),
+			"proposed",
+		);
 	});
 });

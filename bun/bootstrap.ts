@@ -125,7 +125,7 @@ export const NOTICE = [
 	'o=$(cd "${CLAUDE_PROJECT_DIR:-.}" && bun install --frozen-lockfile --ignore-scripts 2>&1) ||',
 	'{ l=$(printf "%s" "$o" | tail -n 1); echo "The harness cloud install failed${l:+: $l}"; };',
 	"fi;",
-	"bun -e 'const fs = require(\"node:fs\");",
+	'bun -e \'const fs = require("node:fs");',
 	'const d = process.env.CLAUDE_PROJECT_DIR ?? ".";',
 	'if (!fs.existsSync(d + "/node_modules/harness")) {',
 	'console.log("The harness is not installed: run bun install."); process.exit(0); }',

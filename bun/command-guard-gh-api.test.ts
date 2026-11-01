@@ -16,47 +16,32 @@ const anywhere = () => fabricate("feat/x");
 
 /** The `gh api graphql` line of the `coderabbit` skill, as its file holds it. */
 const threadRead = () =>
-	readFileSync(
-		`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`,
-		"utf8",
-	)
+	readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8")
 		.split("\n")
 		.find((line) => line.startsWith("gh api graphql")) ?? "";
 
 describe("gh api with a parameter and no method", () => {
 	// spec: agent-permissions/a-write-with-no-method-flag
 	test("a comment posted by a field alone blocks, naming the field", () => {
-		const { code, reason } = run(
-			event("gh api /repos/o/r/issues/37/comments -f body=hi"),
-			anywhere(),
-		);
+		const { code, reason } = run(event("gh api /repos/o/r/issues/37/comments -f body=hi"), anywhere());
 		expect(code).toBe(2);
 		expect(reason).toContain("`-f body=hi`");
 	});
 
 	// spec: agent-permissions/a-write-with-no-method-flag
-	test.each([
-		"--field body=hi",
-		"--raw-field=body=hi",
-		"-F body=hi",
-		"-iF body=hi",
-		"--input body.json",
-	])("%s blocks", (flags) => {
-		const { code, reason } = run(
-			event(`gh api /repos/o/r/issues/37/comments ${flags}`),
-			anywhere(),
-		);
-		expect(code).toBe(2);
-		expect(reason).toContain(`\`${flags}\``);
-	});
+	test.each(["--field body=hi", "--raw-field=body=hi", "-F body=hi", "-iF body=hi", "--input body.json"])(
+		"%s blocks",
+		(flags) => {
+			const { code, reason } = run(event(`gh api /repos/o/r/issues/37/comments ${flags}`), anywhere());
+			expect(code).toBe(2);
+			expect(reason).toContain(`\`${flags}\``);
+		},
+	);
 
 	test("a flag the read list does not name blocks", () => {
 		// Scoped by the reads it exempts: a flag gh adds later is a write until
 		// someone shows it reads.
-		const { code, reason } = run(
-			event("gh api /repos/o/r/issues --some-future-flag"),
-			anywhere(),
-		);
+		const { code, reason } = run(event("gh api /repos/o/r/issues --some-future-flag"), anywhere());
 		expect(code).toBe(2);
 		expect(reason).toContain("`--some-future-flag`");
 	});
@@ -76,10 +61,7 @@ describe("the reach the gh branch inherits", () => {
 		["an absolute path to gh", `/opt/homebrew/bin/${write}`],
 		["a bash -c wrapper", `bash -c "${write}"`],
 		["the second half of a compound command", `gh pr view 37 && ${write}`],
-		[
-			"a flag in front of the operand",
-			"gh api --hostname github.com /repos/o/r/issues/37/comments -f body=hi",
-		],
+		["a flag in front of the operand", "gh api --hostname github.com /repos/o/r/issues/37/comments -f body=hi"],
 	])("%s blocks", (_, line) => {
 		expect(run(event(line), anywhere()).code).toBe(2);
 	});
@@ -103,10 +85,7 @@ describe("gh api graphql", () => {
 
 	// spec: agent-permissions/a-graphql-read
 	test("an inline query with no mutation in it passes", () => {
-		expect(
-			run(event("gh api graphql -f query='query{viewer{login}}'"), anywhere())
-				.code,
-		).toBe(0);
+		expect(run(event("gh api graphql -f query='query{viewer{login}}'"), anywhere()).code).toBe(0);
 	});
 
 	// spec: agent-permissions/a-graphql-read
@@ -136,11 +115,25 @@ describe("gh api graphql", () => {
 describe("the skill's rule for a reviewed head", () => {
 	// spec: agent-autonomy/the-head-counted-by-its-check-run-alone
 	test("step 1 counts a run by the conclusion and title bun/coderabbit-run.ts holds", () => {
-		const step = flat(readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8").split("### 1. Fetch")[1]?.split("### 2.")[0] ?? "");
-		expect(step).toContain(`concluded \`${REVIEWED.conclusion}\` with a title not opening \`${REVIEWED.skippedTitle}\``);
+		const step = flat(
+			readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8")
+				.split("### 1. Fetch")[1]
+				?.split("### 2.")[0] ?? "",
+		);
+		expect(step).toContain(
+			`concluded \`${REVIEWED.conclusion}\` with a title not opening \`${REVIEWED.skippedTitle}\``,
+		);
 		// A queued run is not `in_progress` either, and the module reads a success beside one as no review yet.
 		expect(step).toContain("every one of them `completed`");
-		const checkRun = (status: string, conclusion: string | null, title: string) => ({ name: "CodeRabbit", app: { slug: "coderabbitai" }, status, conclusion, output: { title } });
-		expect(state([checkRun("completed", REVIEWED.conclusion, "Finished"), checkRun("queued", null, "")]).name).toBe("reviewing");
+		const checkRun = (status: string, conclusion: string | null, title: string) => ({
+			name: "CodeRabbit",
+			app: { slug: "coderabbitai" },
+			status,
+			conclusion,
+			output: { title },
+		});
+		expect(state([checkRun("completed", REVIEWED.conclusion, "Finished"), checkRun("queued", null, "")]).name).toBe(
+			"reviewing",
+		);
 	});
 });

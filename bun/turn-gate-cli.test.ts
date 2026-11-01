@@ -38,9 +38,7 @@ function run(half: "mark" | "stop", event: unknown, cwd: string, tmp: string) {
 		stdout: "pipe",
 		cwd,
 		env: { PATH: process.env.PATH, TMPDIR: tmp, XDG_STATE_HOME: tmp },
-		stdin: Buffer.from(
-			typeof event === "string" ? event : JSON.stringify(event),
-		),
+		stdin: Buffer.from(typeof event === "string" ? event : JSON.stringify(event)),
 		stderr: "pipe",
 	});
 	return {

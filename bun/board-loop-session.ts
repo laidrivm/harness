@@ -35,14 +35,28 @@ export function trusted(dir: string, read?: string): boolean {
  * record a session writes is the one the runner's check reads.
  */
 export const PASSED = new Set([
-	"PATH", "HOME", "USER", "LOGNAME", "SHELL", "TERM", "LANG", "TMPDIR", "TZ",
-	"XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME",
-	"CLAUDE_CONFIG_DIR", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN",
-	"HARNESS_GH_TIMEOUT_MS", "GOAL_CHECK_RETRY_MS",
+	"PATH",
+	"HOME",
+	"USER",
+	"LOGNAME",
+	"SHELL",
+	"TERM",
+	"LANG",
+	"TMPDIR",
+	"TZ",
+	"XDG_CONFIG_HOME",
+	"XDG_DATA_HOME",
+	"XDG_STATE_HOME",
+	"XDG_CACHE_HOME",
+	"CLAUDE_CONFIG_DIR",
+	"ANTHROPIC_API_KEY",
+	"CLAUDE_CODE_OAUTH_TOKEN",
+	"HARNESS_GH_TIMEOUT_MS",
+	"GOAL_CHECK_RETRY_MS",
 ]);
 
 /** The runner's environment cut to the allowlist; every `LC_*` passes, by its whole prefix. */
-const allowed =(env: NodeJS.ProcessEnv) =>
+const allowed = (env: NodeJS.ProcessEnv) =>
 	Object.fromEntries(
 		Object.entries(env).filter(([name, value]) => value !== undefined && (PASSED.has(name) || name.startsWith("LC_"))),
 	) as Record<string, string>;
@@ -62,12 +76,16 @@ const through =
 		const at = [...under.slice(0, -1), "/"];
 		// No `--`: dash, the image's sh, reads it after a signal as a pid and fails.
 		// Read by its message, C locale, as dash and bash both print strerror: exit 3 is ESRCH alone.
-		const script = 'export LC_ALL=C; e=$(kill -$0 "$1" 2>&1 >/dev/null) && exit 0; case $e in *"No such process"*) exit 3 ;; esac; exit 4';
+		const script =
+			'export LC_ALL=C; e=$(kill -$0 "$1" 2>&1 >/dev/null) && exit 0; case $e in *"No such process"*) exit 3 ;; esac; exit 4';
 		const run = Bun.spawn([...at, "sh", "-c", script, name, String(pid)], { stdio: ["ignore", "ignore", "ignore"] });
 		// Raced, never awaited past 3 s: the direct child is setuid sudo, which `runner` may not be able to
 		// signal at all, so a spawnSync timeout's kill could not end it and would block the loop and every timer.
 		let bound: Timer | undefined;
-		const code = await Promise.race([run.exited, new Promise<null>((done) => (bound = setTimeout(() => done(null), 3_000)))]);
+		const code = await Promise.race([
+			run.exited,
+			new Promise<null>((done) => (bound = setTimeout(() => done(null), 3_000))),
+		]);
 		clearTimeout(bound);
 		if (code === null) {
 			run.unref();
@@ -76,7 +94,8 @@ const through =
 			} catch {}
 		}
 		if (code === 3) throw Object.assign(new Error(`kill ${name} ${pid} failed`), { code: "ESRCH" });
-		if (code !== 0) throw Object.assign(new Error(`kill ${name} ${pid} through the launcher failed`), { code: "ELAUNCH" });
+		if (code !== 0)
+			throw Object.assign(new Error(`kill ${name} ${pid} through the launcher failed`), { code: "ELAUNCH" });
 	};
 
 /**

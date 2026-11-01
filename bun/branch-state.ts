@@ -45,18 +45,13 @@ export function headBranch(dir: string): string | null {
 }
 
 /** Whether `ref` exists, by `rev-parse --verify --quiet`: 0 yes, 1 no, else unknown. */
-const verify = (dir: string, ref: string) =>
-	git(dir, "rev-parse", "--verify", "--quiet", ref).code;
+const verify = (dir: string, ref: string) => git(dir, "rev-parse", "--verify", "--quiet", ref).code;
 
 /**
  * Whether a commit on `branch`, checked out in `dir`, would be stranded by a
  * merged pull request, measured against `origin/main` as of `now`.
  */
-export function branchState(
-	dir: string,
-	branch: string,
-	now = Date.now(),
-): BranchState {
+export function branchState(dir: string, branch: string, now = Date.now()): BranchState {
 	const base = verify(dir, BASE);
 	// No upstream for a pull request to have merged into, so nothing to strand:
 	// the one exception to blocking what cannot be decided, since refusing here
@@ -78,23 +73,14 @@ export function branchState(
 	// above does not ask.
 	const pushed = verify(dir, `refs/remotes/origin/${branch}`);
 	if (pushed === 1) return "ok";
-	const paths = git(
-		dir,
-		"rev-parse",
-		"--git-path",
-		"FETCH_HEAD",
-		"--git-common-dir",
-	);
+	const paths = git(dir, "rev-parse", "--git-path", "FETCH_HEAD", "--git-common-dir");
 	if (pushed !== 0 || paths.code !== 0) return "unknown";
 	// A linked worktree keeps a FETCH_HEAD of its own, while a fetch in the main
 	// checkout writes the common one and moves the `origin/main` every worktree
 	// shares — so a fresh fetch recorded in either counts. Outside a worktree
 	// the two paths are one file.
 	const [own = "", common = ""] = paths.out.trim().split("\n");
-	const files = new Set([
-		resolve(dir, own),
-		resolve(dir, common, "FETCH_HEAD"),
-	]);
+	const files = new Set([resolve(dir, own), resolve(dir, common, "FETCH_HEAD")]);
 	const found = [...files].map((file) => fetched(file, now));
 	if (found.includes("ok")) return "ok";
 	return found.includes("stale") ? "stale" : "unknown";
@@ -106,9 +92,7 @@ function fetched(file: string, now: number): BranchState {
 		// Every fetch rewrites FETCH_HEAD, one that updates no ref and so leaves
 		// no reflog entry included; but so does a fetch of some other ref, so only
 		// a line naming `main` shows the base was among what it fetched.
-		const covers = /^[0-9a-f]+\t[^\t]*\tbranch 'main' of /m.test(
-			readFileSync(file, "utf8"),
-		);
+		const covers = /^[0-9a-f]+\t[^\t]*\tbranch 'main' of /m.test(readFileSync(file, "utf8"));
 		// Absolute: a time in the future is a clock fault, not a recent fetch.
 		const age = Math.abs(now - statSync(file).mtimeMs);
 		return covers && age <= FETCH_MAX_AGE ? "ok" : "stale";

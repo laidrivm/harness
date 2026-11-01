@@ -115,7 +115,8 @@ function checks(rollup: Check[]) {
 			if (c.context !== CONTEXT)
 				latest.set(c.context, {
 					at: "",
-					verdict: c.state === "SUCCESS" ? "passed" : c.state === "PENDING" || c.state === "EXPECTED" ? "pending" : "failed",
+					verdict:
+						c.state === "SUCCESS" ? "passed" : c.state === "PENDING" || c.state === "EXPECTED" ? "pending" : "failed",
 				});
 			continue;
 		}
@@ -123,7 +124,8 @@ function checks(rollup: Check[]) {
 		const verdict = c.status !== "COMPLETED" ? "pending" : PASSED.has(c.conclusion ?? "") ? "passed" : "failed";
 		const at = c.startedAt ?? "￿";
 		const seen = latest.get(key);
-		if (!seen || at > seen.at || (at === seen.at && RANK[verdict] > RANK[seen.verdict])) latest.set(key, { at, verdict });
+		if (!seen || at > seen.at || (at === seen.at && RANK[verdict] > RANK[seen.verdict]))
+			latest.set(key, { at, verdict });
 	}
 	const named = (v: string) => [...latest].filter(([, c]) => c.verdict === v).map(([key]) => key);
 	return { any: latest.size > 0, pending: named("pending"), failed: named("failed") };
@@ -132,7 +134,10 @@ function checks(rollup: Check[]) {
 /** Whether the head merges the base into the branch: two parents, the second already in the base. */
 function mergesBase(repo: string, pr: Pull): boolean {
 	const parents = api<{ parents: { sha: string }[] }>(`repos/${repo}/commits/${pr.headRefOid}`).parents;
-	return parents.length === 2 && api<{ ahead_by: number }>(`repos/${repo}/compare/${pr.baseRefName}...${parents[1].sha}`).ahead_by === 0;
+	return (
+		parents.length === 2 &&
+		api<{ ahead_by: number }>(`repos/${repo}/compare/${pr.baseRefName}...${parents[1].sha}`).ahead_by === 0
+	);
 }
 
 const describe = (kinds: string[]) => (kinds.length ? `handed off: ${kinds.join(", ")}` : "nothing to hand off");
@@ -140,9 +145,9 @@ const to = (kind: Kind, detail: string[] = []): Handoff => ({ kind, to: kind ===
 
 /** The kinds a marked head's status names, read only when a hand-off would follow. */
 function markedKinds(repo: string, sha: string): string[] {
-	const own = api<{ statuses: { context: string; description?: string }[] }>(`repos/${repo}/commits/${sha}/status`).statuses.find(
-		(s) => s.context === CONTEXT,
-	);
+	const own = api<{ statuses: { context: string; description?: string }[] }>(
+		`repos/${repo}/commits/${sha}/status`,
+	).statuses.find((s) => s.context === CONTEXT);
 	const said = own?.description ?? "";
 	return said.startsWith("handed off: ") ? said.slice("handed off: ".length).split(", ") : [];
 }
@@ -203,7 +208,12 @@ async function main(argv: string[]): Promise<number> {
 		try {
 			bot = `app/${await slug(app)}`;
 			// Into the sweep's own environment, which every later `gh` inherits: never an argument, which `ps` shows.
-			process.env.GH_TOKEN = await mint(app, { contents: "write", pull_requests: "write", statuses: "write", checks: "read" });
+			process.env.GH_TOKEN = await mint(app, {
+				contents: "write",
+				pull_requests: "write",
+				statuses: "write",
+				checks: "read",
+			});
 		} catch (e) {
 			console.error(`pr-sweep: the App's token could not be minted — ${(e as Error).message}`);
 			return 1;
@@ -223,7 +233,8 @@ async function main(argv: string[]): Promise<number> {
 	let code = 0;
 	for (const pr of pulls as Pull[]) {
 		const by = pr.author?.login;
-		const allowed = (login !== undefined && by === login) || (bot !== undefined && by === bot && pr.author?.is_bot === true);
+		const allowed =
+			(login !== undefined && by === login) || (bot !== undefined && by === bot && pr.author?.is_bot === true);
 		const agent = /^(feat|spec)\//.test(pr.headRefName) && !pr.isCrossRepository && allowed;
 		if (!agent) continue;
 		let verdict: Verdict;
@@ -233,10 +244,30 @@ async function main(argv: string[]): Promise<number> {
 			verdict = { outcome: "failed", reason: e instanceof Error ? e.message : String(e) };
 		}
 		const { mark, ...line } = verdict;
-		console.log(JSON.stringify({ repo, pr: pr.number, branch: pr.headRefName, sha: pr.headRefOid, ...line, handoffs: line.handoffs ?? [] }));
+		console.log(
+			JSON.stringify({
+				repo,
+				pr: pr.number,
+				branch: pr.headRefName,
+				sha: pr.headRefOid,
+				...line,
+				handoffs: line.handoffs ?? [],
+			}),
+		);
 		if (verdict.outcome === "failed") code = 1;
 		if (mark === undefined) continue;
-		const status = gh("api", "-X", "POST", `repos/${repo}/statuses/${pr.headRefOid}`, "-f", "state=success", "-f", `context=${CONTEXT}`, "-f", `description=${mark}`);
+		const status = gh(
+			"api",
+			"-X",
+			"POST",
+			`repos/${repo}/statuses/${pr.headRefOid}`,
+			"-f",
+			"state=success",
+			"-f",
+			`context=${CONTEXT}`,
+			"-f",
+			`description=${mark}`,
+		);
 		if (!status.ok) {
 			console.error(`pr-sweep: #${pr.number} at ${pr.headRefOid}: the mark was not written — ${status.err}`);
 			code = 1;

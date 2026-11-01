@@ -1,11 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	mkdirSync,
-	mkdtempSync,
-	rmSync,
-	symlinkSync,
-	writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type Finding, scan } from "./no-suppressions.ts";
@@ -26,10 +20,7 @@ function write(dir: string, files: Record<string, string>): void {
 }
 
 /** A throwaway repository holding `tracked`, plus `untracked` left unadded. */
-function fabricate(
-	tracked: Record<string, string>,
-	untracked: Record<string, string> = {},
-): string {
+function fabricate(tracked: Record<string, string>, untracked: Record<string, string> = {}): string {
 	const dir = mkdtempSync(join(tmpdir(), "no-suppressions-"));
 	made.push(dir);
 	const git = (...args: string[]) => {
@@ -50,14 +41,11 @@ function fabricate(
 
 /** A consumer manifest approving `counts`, keyed by `<path> <marker>`. */
 function manifest(counts: Record<string, number>): string {
-	const suppressions = Object.fromEntries(
-		Object.entries(counts).map(([key, count]) => [key, { count, why: "x" }]),
-	);
+	const suppressions = Object.fromEntries(Object.entries(counts).map(([key, count]) => [key, { count, why: "x" }]));
 	return JSON.stringify({ harness: { suppressions } }, null, 2);
 }
 
-const at = (found: Finding[]) =>
-	found.map(({ path, line, marker }) => `${path}:${line}: ${marker}`);
+const at = (found: Finding[]) => found.map(({ path, line, marker }) => `${path}:${line}: ${marker}`);
 
 describe("a suppression is added", () => {
 	test("one is reported with its file and line", () => {
@@ -72,10 +60,7 @@ describe("a suppression is added", () => {
 			"src/model.ts": `// @ts-ignore\n`,
 			"src/app/session.tsx": `const a = 1;\n// @ts-expect-error\n`,
 		});
-		expect(at(scan(dir)).sort()).toEqual([
-			"src/app/session.tsx:2: @ts-expect-error",
-			"src/model.ts:1: @ts-ignore",
-		]);
+		expect(at(scan(dir)).sort()).toEqual(["src/app/session.tsx:2: @ts-expect-error", "src/model.ts:1: @ts-ignore"]);
 	});
 
 	test("a .json file is read too", () => {
@@ -115,10 +100,7 @@ describe("what the check does not read", () => {
 	});
 
 	test("an untracked file passes", () => {
-		const dir = fabricate(
-			{ "src/model.ts": "const a = 1;\n" },
-			{ "src/scratch.ts": `// @ts-ignore\n` },
-		);
+		const dir = fabricate({ "src/model.ts": "const a = 1;\n" }, { "src/scratch.ts": `// @ts-ignore\n` });
 		expect(scan(dir)).toEqual([]);
 	});
 
@@ -145,10 +127,7 @@ describe("the allowlist", () => {
 		const dir = fabricate({
 			"src/model.ts": `// biome-ignore a\nconst a = 1;\n// biome-ignore b\n`,
 		});
-		expect(at(scan(dir, approved))).toEqual([
-			"src/model.ts:1: biome-ignore",
-			"src/model.ts:3: biome-ignore",
-		]);
+		expect(at(scan(dir, approved))).toEqual(["src/model.ts:1: biome-ignore", "src/model.ts:3: biome-ignore"]);
 	});
 
 	test("a marker swapped for another kind fails", () => {
@@ -248,9 +227,7 @@ describe("a tree the check cannot read straight through", () => {
 			"src/model.ts": "// @ts-ignore\n",
 			"scripts/tool.ts": "const a = 1;\n",
 		});
-		expect(at(scan(join(dir, "scripts")))).toEqual([
-			"src/model.ts:1: @ts-ignore",
-		]);
+		expect(at(scan(join(dir, "scripts")))).toEqual(["src/model.ts:1: @ts-ignore"]);
 	});
 
 	test("a tracked symlink is skipped rather than followed", () => {

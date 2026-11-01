@@ -3,17 +3,17 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, symlink
 import { join } from "node:path";
 import {
 	ATTEMPT,
-	BLOCKED,
-	type Host,
-	SHA,
 	answer,
 	api,
+	BLOCKED,
 	deliver,
 	free,
+	type Host,
 	host,
 	ignored,
 	payload,
 	rev,
+	SHA,
 	start,
 	stop,
 } from "./ci-run.fixture.ts";
@@ -30,7 +30,8 @@ beforeAll(start);
 afterAll(stop);
 
 describe("the scheduled and flaky routes", () => {
-	const scheduled = (run: Record<string, unknown> = {}) => payload({ event: "schedule", head_branch: "main", name: "nightly", ...run });
+	const scheduled = (run: Record<string, unknown> = {}) =>
+		payload({ event: "schedule", head_branch: "main", name: "nightly", ...run });
 	/** The clones' directory the scheduled route reads, with `r` the host's clone in it. */
 	const clones = (h: Host) => {
 		const dir = join(h.root, "clones");
@@ -55,10 +56,13 @@ describe("the scheduled and flaky routes", () => {
 		const before = table(h);
 		const r = await deliver(h, scheduled(), { env: clones(h) });
 		expect([r.code, r.held, api.posted]).toEqual([0, "acted", []]);
-		expect(r.line).toBe("event: handled — scheduled run https://github.com/o/r/actions/runs/5 failed on main; the session answered blocked");
+		expect(r.line).toBe(
+			"event: handled — scheduled run https://github.com/o/r/actions/runs/5 failed on main; the session answered blocked",
+		);
 		fresh(h);
 		const argv = seen(h, "claude-argv");
-		for (const named of ["harness.board", "nightly", "https://github.com/o/r/actions/runs/5", join(h.logs, "5-1.log")]) expect(argv).toContain(named);
+		for (const named of ["harness.board", "nightly", "https://github.com/o/r/actions/runs/5", join(h.logs, "5-1.log")])
+			expect(argv).toContain(named);
 		expect(seen(h, "claude-pwd").trim()).toBe(realpathSync(h.clone));
 		expect([table(h), rev(h.clone, "HEAD"), status(h)]).toEqual([before, SHA, ""]);
 		expect(seen(h, "gh-calls")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
@@ -139,7 +143,11 @@ describe("on the host, through the launcher", () => {
 	let tools = "";
 	beforeAll(() => {
 		tools = emptyDir("ci-run-host-");
-		writeFileSync(join(tools, "as-agent"), '#!/bin/sh\necho "$*" >> "$HOME/as-agent-calls"\ncd "$1" || exit 1\nshift\nexport AS_AGENT=agent\nexec "$@"\n', { mode: 0o755 });
+		writeFileSync(
+			join(tools, "as-agent"),
+			'#!/bin/sh\necho "$*" >> "$HOME/as-agent-calls"\ncd "$1" || exit 1\nshift\nexport AS_AGENT=agent\nexec "$@"\n',
+			{ mode: 0o755 },
+		);
 		writeFileSync(
 			join(tools, "git"),
 			`#!/bin/sh\nprintf '%s|%s|%s\\n' "\${AS_AGENT:-runner}" "$(pwd -P)" "$*" >> "$HOME/git-calls"\nexec ${Bun.which("git")} "$@"\n`,
@@ -154,7 +162,10 @@ describe("on the host, through the launcher", () => {
 		git(push, "init", "-q");
 		git(push, "remote", "add", "origin", "https://github.com/o/r.git");
 		git(push, "config", `url.${h.bare}.insteadOf`, "https://github.com/o/r.git");
-		return { push: realpathSync(push), env: { HARNESS_AS_AGENT: join(tools, "as-agent"), PASS_PUSH: join(h.root, "push") } };
+		return {
+			push: realpathSync(push),
+			env: { HARNESS_AS_AGENT: join(tools, "as-agent"), PASS_PUSH: join(h.root, "push") },
+		};
 	};
 	const fix = (h: Host, script: string) => {
 		writeFileSync(join(h.home, "claude-act"), `echo b > b.txt && git add b.txt && git commit -qm b\n${script}`);
@@ -181,7 +192,9 @@ describe("on the host, through the launcher", () => {
 		expect(readFileSync(join(h.home, "claude-argv"), "utf8")).toContain("pre-PR");
 		const clone = [h.clone, realpathSync(h.clone)];
 		const ran = calls(h);
-		expect(ran.filter(([who, where, args]) => who === "runner" && clone.some((c) => where === c || args.includes(c)))).toEqual([]);
+		expect(
+			ran.filter(([who, where, args]) => who === "runner" && clone.some((c) => where === c || args.includes(c))),
+		).toEqual([]);
 		const github = ran.filter(([, , args]) => args.includes("https://github.com/o/r.git"));
 		expect(github.length).toBeGreaterThan(0);
 		expect(github.filter(([who, where]) => who !== "runner" || where !== push)).toEqual([]);
@@ -208,6 +221,8 @@ describe("on the host, through the launcher", () => {
 		expect(r.code).toBe(0);
 		const left = Number(readFileSync(join(h.home, "left-pid"), "utf8"));
 		expect(ended(left)).toBe(true);
-		expect(readFileSync(join(h.home, "as-agent-calls"), "utf8")).toMatch(/^\/ sh -c export LC_ALL=C; e=\$\(kill -\$0 "\$1" 2>&1 >\/dev\/null\) .* exit 4 TERM -\d+$/m);
+		expect(readFileSync(join(h.home, "as-agent-calls"), "utf8")).toMatch(
+			/^\/ sh -c export LC_ALL=C; e=\$\(kill -\$0 "\$1" 2>&1 >\/dev\/null\) .* exit 4 TERM -\d+$/m,
+		);
 	}, 40_000);
 });

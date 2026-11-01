@@ -8,8 +8,7 @@ import { dirname, join } from "node:path";
 import { emptyDir, git } from "./diff-budget.fixture.ts";
 
 export const ONE = "## 1. Only\n\n- [ ] 1.1 a\n";
-export const THREE =
-	"## 1. First\n\n- [x] 1.1 a\n\n## 2. Second\n\n- [ ] 2.1 b\n\n## 3. Third\n\n- [ ] 3.1 c\n";
+export const THREE = "## 1. First\n\n- [x] 1.1 a\n\n## 2. Second\n\n- [ ] 2.1 b\n\n## 3. Third\n\n- [ ] 3.1 c\n";
 export const TICKED = "## 1. Only\n\n- [x] 1.1 a\n";
 
 type Tree = Record<string, string>;
@@ -22,9 +21,7 @@ export const change = (slug: string, tasks = ONE, after: string[] = []): Tree =>
 		[`${dir}/design.md`]: `# ${slug}\n`,
 		[`${dir}/tasks.md`]: tasks,
 		[`${dir}/specs/demo/spec.md`]: "# demo\n",
-		[`${dir}/.openspec.yaml`]: after.length
-			? `after:\n${after.map((s) => `  - ${s}\n`).join("")}`
-			: "",
+		[`${dir}/.openspec.yaml`]: after.length ? `after:\n${after.map((s) => `  - ${s}\n`).join("")}` : "",
 	};
 };
 

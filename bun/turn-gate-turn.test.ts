@@ -1,19 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-	cleanup,
-	commit,
-	DONE,
-	end,
-	git,
-	OPEN,
-	prompt,
-	repo,
-	SILENT,
-	store,
-	TASKS,
-} from "./turn-gate.fixture.ts";
+import { cleanup, commit, DONE, end, git, OPEN, prompt, repo, SILENT, store, TASKS } from "./turn-gate.fixture.ts";
 import { decide, mark } from "./turn-gate.ts";
 
 /**
@@ -140,8 +128,7 @@ describe("the mark", () => {
 
 	test("an unreadable mark ends the turn [18]", () => {
 		const { dir, marks } = started();
-		for (const file of readdirSync(marks))
-			writeFileSync(join(marks, file), "not a commit");
+		for (const file of readdirSync(marks)) writeFileSync(join(marks, file), "not a commit");
 		commit(dir, { [TASKS]: DONE });
 		expect(decide(end(dir, SILENT), marks)).toBeUndefined();
 	});

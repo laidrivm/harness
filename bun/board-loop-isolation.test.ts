@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { advance, change, clone, lowered, out, run, runAsync, type Stubs, trusting } from "./board-loop.fixture.ts";
+import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { configured, standIn } from "./notion-bot.fixture.ts";
 
 /** A pass on the host: in a push clone of its own, every command in the session's clone through the launcher. */
@@ -27,7 +27,12 @@ const host = (dir: string) => ({ HARNESS_AS_AGENT: "as-agent", HARNESS_CLONE: di
 
 /** One pass in `push`, with the stand-in launcher, `dir` as the session's clone and the runner's Notion settings. */
 const launched = (dir: string, push: string, s: Stubs = {}, claudeJson = trusting(dir), entry?: string) =>
-	runAsync(push, s, { env: { ...host(dir), HARNESS_NOTION_API_URL: notion.server.url.origin }, claudeJson, home: configured(), entry });
+	runAsync(push, s, {
+		env: { ...host(dir), HARNESS_NOTION_API_URL: notion.server.url.origin },
+		claudeJson,
+		home: configured(),
+		entry,
+	});
 
 /** Each stub call: who ran it, where, and the call itself. */
 const calls = (where: string) =>
@@ -70,7 +75,9 @@ describe("the session's clone", () => {
 	test("a step left on a branch the runner did not name pushes nothing, and the log carries the bundle's error", async () => {
 		const { dir, push } = pair();
 		const r = await launched(dir, push, { branch: "feat/demo-1", commits: true });
-		expect(r.last).toBe("board-loop: open — apply demo step 1: the session's clone could not bundle feat/demo; nothing was pushed");
+		expect(r.last).toBe(
+			"board-loop: open — apply demo step 1: the session's clone could not bundle feat/demo; nothing was pushed",
+		);
 		expect(r.text).toContain("'refs/heads/feat/demo': unknown revision");
 		expect(r.calls).not.toContain("git push");
 	});
@@ -87,7 +94,9 @@ describe("the session's clone", () => {
 	test("a launcher with no Notion integration configured refuses before any session, naming the file", () => {
 		const { dir, push } = pair();
 		const r = run(push, [], {}, { env: host(dir), claudeJson: trusting(dir) });
-		expect(r.last).toStartWith("board-loop: refused — on the host the runner posts each question from the Notion integration, and ");
+		expect(r.last).toStartWith(
+			"board-loop: refused — on the host the runner posts each question from the Notion integration, and ",
+		);
 		expect(r.last).toEndWith("/.config/harness/notion-bot.json is missing");
 		expect(r.calls).not.toContain("claude ");
 	});
@@ -108,7 +117,9 @@ describe("the session's clone", () => {
 		const r = await launched(dir, push, { pickSleep: 30 }, trusting(dir), lowered(1000, across));
 		expect(r.last).toStartWith("board-loop: timeout — the pick session ran past");
 		expect(r.last).not.toContain("outlived");
-		expect(r.calls).toMatch(/as-agent \/ sh -c export LC_ALL=C; e=\$\(kill -\$0 "\$1" 2>&1 >\/dev\/null\) .* exit 4 TERM -\d+/);
+		expect(r.calls).toMatch(
+			/as-agent \/ sh -c export LC_ALL=C; e=\$\(kill -\$0 "\$1" 2>&1 >\/dev\/null\) .* exit 4 TERM -\d+/,
+		);
 	}, 40_000);
 });
 
@@ -131,7 +142,9 @@ describe("the harness the runner runs", () => {
 	// The flags' effect on bun 1.4.2 is task 1.1's probe; `pass.sh` starts the board loop itself with them.
 	test("every bun the runner starts carries the flags that keep a tree's bunfig.toml and .env out", async () => {
 		const { dir, push } = pair();
-		const ran = calls((await launched(dir, push, { commits: true })).where).filter(({ who, call }) => who === "runner" && call.startsWith("bun "));
+		const ran = calls((await launched(dir, push, { commits: true })).where).filter(
+			({ who, call }) => who === "runner" && call.startsWith("bun "),
+		);
 		expect(ran.length).toBeGreaterThan(0);
 		for (const { call } of ran) expect(call).toStartWith("bun --config=/dev/null --no-env-file ");
 	});
@@ -166,7 +179,8 @@ describe("the harness the runner runs", () => {
 		// spec: orchestrator/a-commit-with-no-pre-pr-record
 		test("a tip the before-push check finds no record of pushes nothing", async () => {
 			const { dir, push, origin } = pair();
-			const missing = "goal open: apply demo step 1 at abc1234, before the push — no passing pre-PR run record for abc1234";
+			const missing =
+				"goal open: apply demo step 1 at abc1234, before the push — no passing pre-PR run record for abc1234";
 			const r = await launched(dir, push, { commits: true, beforePush: missing });
 			expect(r.last).toBe(`board-loop: open — apply demo step 1: ${missing}`);
 			expect(r.calls).not.toContain("git push");

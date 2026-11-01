@@ -8,7 +8,21 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup, git } from "./diff-budget.fixture.ts";
 import { head } from "./goal-check.fixture.ts";
 import { USAGE as WORK_USAGE } from "./work.ts";
-import { BOT, body, CARD, checkout, files, LISTING, page, question, said, stopServers, TOKEN, take, USER } from "./work-take.fixture.ts";
+import {
+	BOT,
+	body,
+	CARD,
+	checkout,
+	files,
+	LISTING,
+	page,
+	question,
+	said,
+	stopServers,
+	TOKEN,
+	take,
+	USER,
+} from "./work-take.fixture.ts";
 
 afterAll(() => {
 	stopServers();
@@ -68,9 +82,20 @@ describe("the card", () => {
 	});
 
 	test("Status, Labels and Assign empty print their names with no value", async () => {
-		const empty = { Status: { type: "status", status: null }, Labels: { type: "multi_select", multi_select: [] }, Assign: { type: "people", people: [] } };
+		const empty = {
+			Status: { type: "status", status: null },
+			Labels: { type: "multi_select", multi_select: [] },
+			Assign: { type: "people", people: [] },
+		};
 		const run = await take({ stub: { page: page("", empty) } });
-		expect(run.out.split("\n").slice(1, 7)).toEqual(["## Card", "Name: Demo card", "Status:", "Pointer:", "Labels:", "Assign:"]);
+		expect(run.out.split("\n").slice(1, 7)).toEqual([
+			"## Card",
+			"Name: Demo card",
+			"Status:",
+			"Pointer:",
+			"Labels:",
+			"Assign:",
+		]);
 	});
 
 	test("a select Status reads by name, as a status does", async () => {
@@ -86,7 +111,9 @@ describe("the card", () => {
 
 	// spec: work-take/a-truncated-body
 	test("truncated true adds its line", async () => {
-		expect((await take({ stub: { markdown: body("Part.", true) } })).out).toContain("Part.\nthe body is truncated: Notion left part of it out\n");
+		expect((await take({ stub: { markdown: body("Part.", true) } })).out).toContain(
+			"Part.\nthe body is truncated: Notion left part of it out\n",
+		);
 	});
 
 	test("truncated false and no ids left out add no line", async () => {
@@ -107,7 +134,9 @@ describe("the card", () => {
 	});
 
 	test("one block left out reads in the singular", async () => {
-		expect((await take({ stub: { markdown: body("Some.", false, ["b1"]) } })).out).toContain("Some.\nNotion left 1 block out of the body\n");
+		expect((await take({ stub: { markdown: body("Some.", false, ["b1"]) } })).out).toContain(
+			"Some.\nNotion left 1 block out of the body\n",
+		);
 	});
 
 	test("the markdown call carries 2026-03-11, every other 2025-09-03, each the ask settings' bearer", async () => {
@@ -226,7 +255,10 @@ describe("the open changes and the writes", () => {
 	// spec: work-take/only-reads
 	test("every call a GET, the checkout clean, and no ledger in the home", async () => {
 		const cwd = checkout(DEMO);
-		const run = await take({ cwd, stub: { page: page("openspec/changes/demo/"), comments: [[question("2026-10-20T09:00:00Z")]] } });
+		const run = await take({
+			cwd,
+			stub: { page: page("openspec/changes/demo/"), comments: [[question("2026-10-20T09:00:00Z")]] },
+		});
 		expect(run.code).toBe(0);
 		expect(run.seen.every((s) => s.call.startsWith("GET "))).toBe(true);
 		expect(Bun.spawnSync(["git", "status", "--porcelain"], { cwd }).stdout.toString()).toBe("");

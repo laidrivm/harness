@@ -13,14 +13,19 @@ describe("the runner image", () => {
 	const dockerfile = "orchestrator/runner/Dockerfile";
 
 	test("the entrypoint writes exactly one restricted authorized_keys line naming the clones and pass.sh [38]", () => {
-		const writes = read(entry).split("\n").filter((l) => l.includes("authorized_keys") && l.includes(">") && !l.includes(">>"));
+		const writes = read(entry)
+			.split("\n")
+			.filter((l) => l.includes("authorized_keys") && l.includes(">") && !l.includes(">>"));
 		expect(writes).toHaveLength(1);
-		for (const part of ["restrict,command=", "PASS_CLONES=/home/agent/clones", "/opt/orchestrator/pass.sh"]) expect(writes[0]).toContain(part);
+		for (const part of ["restrict,command=", "PASS_CLONES=/home/agent/clones", "/opt/orchestrator/pass.sh"])
+			expect(writes[0]).toContain(part);
 		expect(writes[0]).not.toContain(">>");
 	});
 
 	test("the entrypoint exits non-zero when the public key file is missing [38]", () => {
-		const r = Bun.spawnSync(["sh", join(root, entry), "true"], { env: { PATH: process.env.PATH ?? "", PUBKEY_FILE: join(emptyDir("orchestrator-key-"), "absent") } });
+		const r = Bun.spawnSync(["sh", join(root, entry), "true"], {
+			env: { PATH: process.env.PATH ?? "", PUBKEY_FILE: join(emptyDir("orchestrator-key-"), "absent") },
+		});
 		expect(r.exitCode).not.toBe(0);
 		expect(r.stderr.toString()).toContain("absent");
 	});
@@ -28,7 +33,9 @@ describe("the runner image", () => {
 	test("the entrypoint exits non-zero when the host key file is missing [38]", () => {
 		const dir = emptyDir("orchestrator-key-");
 		writeFileSync(join(dir, "pub"), "ssh-ed25519 AAAA engine\n");
-		const r = Bun.spawnSync(["sh", join(root, entry), "true"], { env: { PATH: process.env.PATH ?? "", PUBKEY_FILE: join(dir, "pub"), HOSTKEY_FILE: join(dir, "absent") } });
+		const r = Bun.spawnSync(["sh", join(root, entry), "true"], {
+			env: { PATH: process.env.PATH ?? "", PUBKEY_FILE: join(dir, "pub"), HOSTKEY_FILE: join(dir, "absent") },
+		});
 		expect(r.exitCode).not.toBe(0);
 		expect(r.stderr.toString()).toContain("absent");
 	});
@@ -44,7 +51,10 @@ describe("the runner image", () => {
 	});
 
 	test("the host is App-only: the runner mounts no gh_token, and the README writes none", () => {
-		const compose = composed() as { services: Record<string, { secrets?: string[] }>; secrets: Record<string, unknown> };
+		const compose = composed() as {
+			services: Record<string, { secrets?: string[] }>;
+			secrets: Record<string, unknown>;
+		};
 		expect(compose.services.runner.secrets).not.toContain("gh_token");
 		expect(Object.keys(compose.secrets)).not.toContain("gh_token");
 		expect(read("orchestrator/README.md")).not.toContain("gh_token");
@@ -59,12 +69,16 @@ describe("the runner image", () => {
 
 	test("the image copies pass.sh, stop.sh and the name guard both source to /opt/orchestrator/", () => {
 		const text = read(dockerfile);
-		for (const file of ["pass.sh", "stop.sh", "clone-name.sh"]) expect(text).toContain(` ${file} /opt/orchestrator/${file}`);
+		for (const file of ["pass.sh", "stop.sh", "clone-name.sh"])
+			expect(text).toContain(` ${file} /opt/orchestrator/${file}`);
 	});
 
 	// spec: orchestrator/a-clone-name-that-leaves-the-clones-directory
 	test("the forced command hands pass.sh the engine's words split, with globbing off [38]", () => {
-		const line = read(entry).split("\n").find((l) => l.includes("authorized_keys") && l.includes(">")) ?? "";
+		const line =
+			read(entry)
+				.split("\n")
+				.find((l) => l.includes("authorized_keys") && l.includes(">")) ?? "";
 		const command = (/command="(.*?)" %s/.exec(line)?.[1] ?? "").replaceAll('\\\\"', '"');
 		expect(command).toStartWith("set -f; ");
 		const dir = emptyDir("orchestrator-forced-");
@@ -79,7 +93,9 @@ describe("the runner image", () => {
 
 	test("the engine's ssh call names the clone and the repository the job runs [38]", () => {
 		const call = read("orchestrator/windmill/f/orchestrator/pass.sh").trim().split("\n").at(-1) ?? "";
-		expect(call).toMatch(/ runner@runner [A-Za-z0-9][A-Za-z0-9._-]* [A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/);
+		expect(call).toMatch(
+			/ runner@runner [A-Za-z0-9][A-Za-z0-9._-]* [A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/,
+		);
 	});
 });
 
@@ -94,7 +110,8 @@ describe("the host README", () => {
 		const uid = /useradd[^\n]*--uid (\d+)[^\n]* runner\b/.exec(read("orchestrator/runner/Dockerfile"))?.[1];
 		const text = read(readme);
 		expect(uid).toBeDefined();
-		for (const part of [`chown ${uid}:${uid}`, "chmod 0400", "chmod 0500", "chown 65532:65532 tunnel_token"]) expect(text).toContain(part);
+		for (const part of [`chown ${uid}:${uid}`, "chmod 0400", "chmod 0500", "chown 65532:65532 tunnel_token"])
+			expect(text).toContain(part);
 	});
 
 	test("gives stop.sh's one invocation", () => {

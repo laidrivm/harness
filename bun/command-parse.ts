@@ -11,12 +11,7 @@
  * ends inside a quote refuses the call rather than guessing.
  */
 
-import {
-	type Delimiter,
-	delimiter,
-	placeBodies,
-	type Refuse,
-} from "./command-heredoc.ts";
+import { type Delimiter, delimiter, placeBodies, type Refuse } from "./command-heredoc.ts";
 import { readsScript } from "./command-words.ts";
 
 /** Characters that end one command and start the next, outside quotes. */
@@ -46,8 +41,7 @@ const OPEN: Record<string, string> = {
 export function commands(line: string, refuse: Refuse): string[][] {
 	const bodies: string[] = [];
 	const all = scan(line, refuse, false, bodies);
-	if (all.some(readsScript))
-		for (const body of bodies) all.push(...commands(body, refuse));
+	if (all.some(readsScript)) for (const body of bodies) all.push(...commands(body, refuse));
 	return all;
 }
 
@@ -81,12 +75,7 @@ export function commands(line: string, refuse: Refuse): string[][] {
  * A quoted heredoc delimiter's body is data. An unquoted one's is scanned
  * with `inBody`, where only its substitutions are read: the rest is stdin.
  */
-function scan(
-	line: string,
-	refuse: Refuse,
-	inBody: boolean,
-	bodies: string[],
-): string[][] {
+function scan(line: string, refuse: Refuse, inBody: boolean, bodies: string[]): string[][] {
 	const all: string[][] = [];
 	let words: string[] = [];
 	let word = "";
@@ -197,12 +186,7 @@ function scan(
 
 	for (let at = 0; at < line.length; at++) {
 		const char = line.charAt(at);
-		if (
-			inBody &&
-			suspended.length === 0 &&
-			char !== "`" &&
-			!(char === "$" && line[at + 1] === "(")
-		) {
+		if (inBody && suspended.length === 0 && char !== "`" && !(char === "$" && line[at + 1] === "(")) {
 			// Body text is input, so it is dropped. A backslash quotes what follows,
 			// so the parity of a run decides whether `\\$(` or `\$(` substitutes.
 			if (char === "\\") at++;
@@ -229,11 +213,7 @@ function scan(
 			else word += char;
 		} else if (char === '"' || char === "'") {
 			quote = char;
-		} else if (
-			char === "#" &&
-			word === "" &&
-			/^$|[\s;&|()]$/.test(line.slice(at - 1, at))
-		) {
+		} else if (char === "#" && word === "" && /^$|[\s;&|()]$/.test(line.slice(at - 1, at))) {
 			// A `#` opening a word comments out the rest of the line, so a quote
 			// in it opens nothing — read as one, it swallowed the next line's
 			// command. Mid-word, as in `a#b`, it is literal.
@@ -286,9 +266,7 @@ function scan(
 		}
 	}
 	endCommand();
-	const open =
-		OPEN[quote] ??
-		OPEN[suspended.findLast((frame) => frame.kind !== "(")?.kind ?? ""];
+	const open = OPEN[quote] ?? OPEN[suspended.findLast((frame) => frame.kind !== "(")?.kind ?? ""];
 	if (open)
 		refuse(
 			"unclosed-quote",

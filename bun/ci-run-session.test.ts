@@ -3,17 +3,17 @@ import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	ATTEMPT,
-	BLOCKED,
-	BOT,
-	type Host,
-	SECRET,
-	SHA,
 	answer,
 	api,
+	BLOCKED,
+	BOT,
 	deliver,
+	type Host,
 	host,
 	payload,
 	rev,
+	SECRET,
+	SHA,
 	start,
 	stop,
 } from "./ci-run.fixture.ts";
@@ -48,7 +48,17 @@ describe("the session after the comment", () => {
 		const r = await deliver(h, payload());
 		expect([r.code, r.line]).toEqual([0, `event: handled — attempt 1/3 posted on #7; ${BLOCKED}`]);
 		const argv = seen(h, "claude-argv");
-		for (const flag of ["-r", h.session, "--json-schema", "--output-format", "json", "--permission-mode", "auto", "--permission-prompts", "none"])
+		for (const flag of [
+			"-r",
+			h.session,
+			"--json-schema",
+			"--output-format",
+			"json",
+			"--permission-mode",
+			"auto",
+			"--permission-prompts",
+			"none",
+		])
 			expect(argv.split("\n")).toContain(flag);
 		expect(argv).toContain(log(h));
 		expect(argv).toContain("1/3");
@@ -83,7 +93,9 @@ describe("the session after the comment", () => {
 
 	test("a refused push is neither forced nor retried, exit 1 [49]", async () => {
 		const h = host();
-		writeFileSync(join(h.bare, "hooks", "pre-receive"), `#!/bin/sh\necho x >> "${h.root}/receives"\nexit 1\n`, { mode: 0o755 });
+		writeFileSync(join(h.bare, "hooks", "pre-receive"), `#!/bin/sh\necho x >> "${h.root}/receives"\nexit 1\n`, {
+			mode: 0o755,
+		});
 		act(h, commit, "fixed");
 		const r = await deliver(h, payload());
 		expect([r.code, readFileSync(join(h.root, "receives"), "utf8")]).toEqual([1, "x\n"]);
@@ -109,22 +121,30 @@ describe("the session after the comment", () => {
 	test.each([
 		["a tracked change", "fixed", `${commit}echo c >> a.txt\n`],
 		["an untracked file", "blocked", "echo c > c.txt\n"],
-	])("%s left behind (%s): nothing pushed, the clone left as it is, the log kept, exit 1 naming it [66]", async (_, outcome, script) => {
-		const h = host();
-		act(h, script, outcome);
-		const r = await deliver(h, payload());
-		expect(r.code).toBe(1);
-		expect(r.line).toContain(h.clone);
-		expect([pushed(h), on(h), existsSync(log(h))]).toEqual([SHA, "feat/x", true]);
-	});
+	])(
+		"%s left behind (%s): nothing pushed, the clone left as it is, the log kept, exit 1 naming it [66]",
+		async (_, outcome, script) => {
+			const h = host();
+			act(h, script, outcome);
+			const r = await deliver(h, payload());
+			expect(r.code).toBe(1);
+			expect(r.line).toContain(h.clone);
+			expect([pushed(h), on(h), existsSync(log(h))]).toEqual([SHA, "feat/x", true]);
+		},
+	);
 
 	// spec: orchestrator/the-fourth-failure
 	test("past the limit the session gets the limit prompt, and a fixed answer pushes nothing [32]", async () => {
 		const h = host();
-		api.comments = [1, 2, 3].map((n) => ({ user: { login: BOT }, body: `${ATTEMPT} ${n}/3 — run at ${String(n).repeat(40)}` }));
+		api.comments = [1, 2, 3].map((n) => ({
+			user: { login: BOT },
+			body: `${ATTEMPT} ${n}/3 — run at ${String(n).repeat(40)}`,
+		}));
 		act(h, commit, "fixed");
 		const r = await deliver(h, payload());
-		expect(r.line).toBe("event: handled — #7 used its 3 attempts: limit posted; the session answered fixed, nothing pushed");
+		expect(r.line).toBe(
+			"event: handled — #7 used its 3 attempts: limit posted; the session answered fixed, nothing pushed",
+		);
 		expect(seen(h, "claude-argv")).toContain("three");
 		expect(pushed(h)).toBe(SHA);
 	});
@@ -134,7 +154,13 @@ describe("the session after the comment", () => {
 		const h = host();
 		await deliver(h, payload());
 		const env = seen(h, "claude-env");
-		for (const name of ["GH_TOKEN", "GIT_CONFIG_COUNT", "HARNESS_GITHUB_APP_ID", "HARNESS_GITHUB_APP_KEY", "PASS_SECRETS"])
+		for (const name of [
+			"GH_TOKEN",
+			"GIT_CONFIG_COUNT",
+			"HARNESS_GITHUB_APP_ID",
+			"HARNESS_GITHUB_APP_KEY",
+			"PASS_SECRETS",
+		])
 			expect(env).not.toContain(`${name}=`);
 		expect(env).not.toContain(SECRET);
 		expect(env).not.toContain("installation-token");
@@ -150,7 +176,11 @@ describe("the session after the comment", () => {
 		expect(seen(h, "gh-calls").replace(/^pr ready .*\n/gm, "")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
 	});
 
-	const [UNDO, RUN, READY] = ["pr ready 7 -R o/r --undo", "run view 5 -R o/r --attempt 1 --log-failed", "pr ready 7 -R o/r"];
+	const [UNDO, RUN, READY] = [
+		"pr ready 7 -R o/r --undo",
+		"run view 5 -R o/r --attempt 1 --log-failed",
+		"pr ready 7 -R o/r",
+	];
 	// spec: orchestrator/the-ci-flow-works-on-a-draft
 	test.each([
 		["fixed and pushed: ready right after the push", commit, "fixed", [UNDO, RUN, "pushed", READY]],
@@ -159,7 +189,9 @@ describe("the session after the comment", () => {
 		["blocked, a question on the card: left draft", "", "blocked", [UNDO, RUN]],
 	])("%s; draft before the session", async (_, script, outcome, calls) => {
 		const h = host();
-		writeFileSync(join(h.bare, "hooks", "post-receive"), `#!/bin/sh\necho pushed >> "${h.home}/gh-calls"\n`, { mode: 0o755 });
+		writeFileSync(join(h.bare, "hooks", "post-receive"), `#!/bin/sh\necho pushed >> "${h.home}/gh-calls"\n`, {
+			mode: 0o755,
+		});
 		act(h, `cp "$HOME/gh-calls" "$HOME/gh-at-session"\n${script}`, outcome);
 		await deliver(h, payload());
 		expect(seen(h, "gh-at-session")).toBe(`${UNDO}\n${RUN}\n`);

@@ -16,11 +16,11 @@
  *   resolves the review bot's threads those comments open, on the branch's
  *   open pull request while its head is `<sha>`.
  */
-import { parseArgs, type ParseArgsConfig } from "node:util";
+import { type ParseArgsConfig, parseArgs } from "node:util";
 import { ID } from "./notion-bot.ts";
 import { finish } from "./work-finish.ts";
 import { resolve } from "./work-resolve.ts";
-import { status, STATUSES } from "./work-status.ts";
+import { STATUSES, status } from "./work-status.ts";
 import { take } from "./work-take.ts";
 
 export const USAGE = [
@@ -53,19 +53,34 @@ export async function work(args: string[]): Promise<{ lines: string[]; code: num
 		const set = values(rest, { card: { type: "string" }, title: { type: "string" }, "body-file": { type: "string" } });
 		const { card, title, "body-file": body } = (set ?? {}) as Record<string, string | undefined>;
 		// Both or neither, and neither blank: `gh` would open a pull request with no title, or read no body.
-		const opening = title === undefined && body === undefined ? undefined : title?.trim() && body ? { title, body } : null;
+		const opening =
+			title === undefined && body === undefined ? undefined : title?.trim() && body ? { title, body } : null;
 		if ((card === undefined || ID.test(card)) && set && opening !== null) return finish(card, opening);
 	}
 	if (subcommand === "status") {
-		const { card, to } = (values(rest, { card: { type: "string" }, to: { type: "string" } }) ?? {}) as Record<string, string | undefined>;
-		if (typeof card === "string" && ID.test(card) && typeof to === "string" && STATUSES.includes(to)) return status(card, to);
+		const { card, to } = (values(rest, { card: { type: "string" }, to: { type: "string" } }) ?? {}) as Record<
+			string,
+			string | undefined
+		>;
+		if (typeof card === "string" && ID.test(card) && typeof to === "string" && STATUSES.includes(to))
+			return status(card, to);
 	}
 	if (subcommand === "resolve") {
 		// `multiple` on all three, so a repeated `--pr` or `--head` is refused rather than the last one kept.
 		const many = { type: "string", multiple: true } as const;
-		const set = values(rest, { pr: many, head: many, comment: many }) as Record<string, string[] | undefined> | undefined;
+		const set = values(rest, { pr: many, head: many, comment: many }) as
+			| Record<string, string[] | undefined>
+			| undefined;
 		const { pr = [], head = [], comment = [] } = set ?? {};
-		if (set && pr.length === 1 && NUMBER.test(pr[0]) && head.length === 1 && /^[0-9a-f]{40}$/.test(head[0]) && comment.length && comment.every((id) => NUMBER.test(id)))
+		if (
+			set &&
+			pr.length === 1 &&
+			NUMBER.test(pr[0]) &&
+			head.length === 1 &&
+			/^[0-9a-f]{40}$/.test(head[0]) &&
+			comment.length &&
+			comment.every((id) => NUMBER.test(id))
+		)
 			return resolve(pr[0], head[0], [...new Set(comment)]);
 	}
 	return { lines: USAGE, code: 2 };

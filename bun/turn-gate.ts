@@ -85,17 +85,13 @@ export function groups(text: string): Map<string, Boxes> {
  * with no boxes at all has no evidence that one was ticked.
  */
 export function complete(text: string): string[] {
-	return [...groups(text)]
-		.filter(([, b]) => b.ticked > 0 && b.open === 0)
-		.map(([heading]) => heading);
+	return [...groups(text)].filter(([, b]) => b.ticked > 0 && b.open === 0).map(([heading]) => heading);
 }
 
 /** Where a session's mark lives, or nothing for an id unsafe as a file name. */
 function markFile(store: string, event: Event): string | undefined {
 	const id = event.session_id;
-	return typeof id === "string" && /^[\w-]+$/.test(id)
-		? join(store, id)
-		: undefined;
+	return typeof id === "string" && /^[\w-]+$/.test(id) ? join(store, id) : undefined;
 }
 
 function git(cwd: string, ...args: string[]): string | undefined {
@@ -142,9 +138,7 @@ function blobs(cwd: string, specs: string[]): string[] {
 	let at = 0;
 	for (const _ of specs) {
 		const eol = out.indexOf(10, at);
-		const size = /^\S+ blob (\d+)$/.exec(
-			eol < 0 ? "" : out.subarray(at, eol).toString(),
-		)?.[1];
+		const size = /^\S+ blob (\d+)$/.exec(eol < 0 ? "" : out.subarray(at, eol).toString())?.[1];
 		at = eol + 1;
 		if (size === undefined) {
 			texts.push(""); // `missing`, or no answer at all
@@ -165,15 +159,16 @@ function blobs(cwd: string, specs: string[]): string[] {
  * there, so the turn that wrote and ticked it qualifies.
  */
 function completed(cwd: string, at: string, tip: string): string[] {
-	const paths = (
+	const paths =
 		// `--full-tree`: without it a session in a subdirectory lists nothing.
-		git(cwd, "ls-tree", "--full-tree", "-r", "--name-only", tip, "--",
-			"openspec/changes") ?? ""
-	)
-		.split("\n")
-		.filter((path) => ACTIVE.test(path));
+		(git(cwd, "ls-tree", "--full-tree", "-r", "--name-only", tip, "--", "openspec/changes") ?? "")
+			.split("\n")
+			.filter((path) => ACTIVE.test(path));
 	const sides = [at, BASE, tip];
-	const texts = blobs(cwd, paths.flatMap((p) => sides.map((s) => `${s}:${p}`)));
+	const texts = blobs(
+		cwd,
+		paths.flatMap((p) => sides.map((s) => `${s}:${p}`)),
+	);
 	return paths.flatMap((path, i) => {
 		const [atMark, onBase, atTip] = texts.slice(3 * i, 3 * i + 3);
 		const before = new Set([...complete(atMark), ...complete(onBase)]);
@@ -201,11 +196,7 @@ function runner(cwd: string): string {
  * of the tip; `released` when the once-per-mark bound alone lets it end; or
  * `refused`.
  */
-export function decide(
-	event: Event,
-	store: string,
-	log: (decision: string) => void = () => {},
-): string | undefined {
+export function decide(event: Event, store: string, log: (decision: string) => void = () => {}): string | undefined {
 	const file = markFile(store, event);
 	const { cwd } = event;
 	if (!file || typeof cwd !== "string") return;
@@ -253,16 +244,12 @@ if (import.meta.main) {
 		const event = JSON.parse(await Bun.stdin.text());
 		const file = markFile(store, event);
 		// Before `decide`: a session that is ending gains nothing from a refusal.
-		const ceiling =
-			process.argv[2] !== "mark" && file ? countRound(event, file) : undefined;
+		const ceiling = process.argv[2] !== "mark" && file ? countRound(event, file) : undefined;
 		if (process.argv[2] === "mark") mark(event, store);
 		else if (ceiling) {
 			record("goal", "ceiling", "rounds", event);
 			console.log(JSON.stringify({ continue: false, stopReason: ceiling }));
-		} else
-			reason = decide(event, store, (decision) =>
-				record("turn-gate", decision, "pre-pr-sequence", event),
-			);
+		} else reason = decide(event, store, (decision) => record("turn-gate", decision, "pre-pr-sequence", event));
 	} catch {
 		// Fail-open, as the header says: an event this script cannot read
 		// ends the turn rather than holding it.

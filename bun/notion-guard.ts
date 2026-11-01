@@ -27,12 +27,8 @@ type Input = { command?: unknown; properties?: unknown };
 /** Why the call would lose its properties, or `undefined` to let it through. */
 function refusal({ command, properties }: Input): string | undefined {
 	if (command === "update_properties" || properties == null) return;
-	if (typeof properties === "object" && Object.keys(properties).length === 0)
-		return;
-	const under =
-		command === undefined
-			? "with no command"
-			: `under ${JSON.stringify(command)}`;
+	if (typeof properties === "object" && Object.keys(properties).length === 0) return;
+	const under = command === undefined ? "with no command" : `under ${JSON.stringify(command)}`;
 	return (
 		`notion-guard: \`properties\` ${under} would be dropped without an ` +
 		"error — the connector applies them only under `update_properties`. " +
@@ -51,6 +47,5 @@ if (import.meta.main) {
 		// Fail-open, as the header says: an event this script cannot read
 		// lets the call through.
 	}
-	if (reason)
-		blocker("notion-guard", event)("notion-properties-dropped", reason);
+	if (reason) blocker("notion-guard", event)("notion-properties-dropped", reason);
 }

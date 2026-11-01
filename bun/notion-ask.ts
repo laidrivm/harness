@@ -19,7 +19,10 @@ import { ASK_SETTINGS, where } from "./question-gate.ts";
  * ask command and `bun/work.ts` both read Notion through. `env` names the
  * config home, as `where()` reads it.
  */
-export function integration(timeout = 30_000, env: Record<string, string | undefined> = process.env): { settings: Settings; call: Call } | string {
+export function integration(
+	timeout = 30_000,
+	env: Record<string, string | undefined> = process.env,
+): { settings: Settings; call: Call } | string {
 	let found: Settings | undefined;
 	try {
 		found = settings(where(ASK_SETTINGS, env));

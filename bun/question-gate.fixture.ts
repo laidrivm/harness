@@ -96,19 +96,13 @@ export const said = (prompt: Prompt) =>
  * result, as Claude Code writes them; `extra` lines are written verbatim after
  * them.
  */
-export function transcript(
-	calls: Call[],
-	extra: string[] = [],
-	prompts: Prompt[] = [],
-): string {
+export function transcript(calls: Call[], extra: string[] = [], prompts: Prompt[] = []): string {
 	const lines = calls.flatMap((call, n) => [
 		JSON.stringify({
 			type: "assistant",
 			message: {
 				role: "assistant",
-				content: [
-					{ type: "tool_use", id: `t${n}`, name: call.name, input: call.input },
-				],
+				content: [{ type: "tool_use", id: `t${n}`, name: call.name, input: call.input }],
 			},
 		}),
 		JSON.stringify({
@@ -119,9 +113,7 @@ export function transcript(
 					{
 						type: "tool_result",
 						tool_use_id: `t${n}`,
-						content: call.plain
-							? call.result
-							: [{ type: "text", text: call.result }],
+						content: call.plain ? call.result : [{ type: "text", text: call.result }],
 						...(call.failed ? { is_error: true } : {}),
 					},
 				],
@@ -134,15 +126,10 @@ export function transcript(
 }
 
 /** The card read the way a session reads it before asking, after `prompts`. */
-export const read = (...prompts: Prompt[]) =>
-	transcript([fetched(CARD, "Harness"), comments(CARD)], [], prompts);
+export const read = (...prompts: Prompt[]) => transcript([fetched(CARD, "Harness"), comments(CARD)], [], prompts);
 
 /** A `PermissionRequest` event for `notion-create-comment` with `input`. */
-export const event = (
-	input: object,
-	path: string = read(),
-	tool = "mcp__claude_ai_Notion__notion-create-comment",
-) =>
+export const event = (input: object, path: string = read(), tool = "mcp__claude_ai_Notion__notion-create-comment") =>
 	JSON.stringify({
 		session_id: "s1",
 		transcript_path: path,

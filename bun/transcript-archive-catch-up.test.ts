@@ -107,16 +107,16 @@ describe("a catch-up", () => {
 	});
 
 	// spec: transcript-archive/a-record-that-does-not-parse
-	test.each([["not JSON", "{"], ["a JSON array", "[]"]])(
-		"writes a whole catch-up record over one that is %s [41]",
-		(_, text) => {
-			const m = machine();
-			archive(m, event(m, session(m, "s1"), { reason: "logout" }));
-			writeFileSync(`${copyOf(m, "s1")}.meta.json`, text);
-			catchUp(m);
-			expect(record(copyOf(m, "s1"))).toMatchObject({ reason: "catch-up", head: null, archived: today() });
-		},
-	);
+	test.each([
+		["not JSON", "{"],
+		["a JSON array", "[]"],
+	])("writes a whole catch-up record over one that is %s [41]", (_, text) => {
+		const m = machine();
+		archive(m, event(m, session(m, "s1"), { reason: "logout" }));
+		writeFileSync(`${copyOf(m, "s1")}.meta.json`, text);
+		catchUp(m);
+		expect(record(copyOf(m, "s1"))).toMatchObject({ reason: "catch-up", head: null, archived: today() });
+	});
 
 	// spec: transcript-archive/a-change-under-the-sibling-directory-only
 	test("copies a file added under <id>/ and removes one gone from it, the transcript unchanged", () => {

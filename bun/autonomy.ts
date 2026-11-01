@@ -9,7 +9,7 @@
  * check reads the class and the flag and nothing else; whether a marker's text
  * fits its step is left to review.
  */
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 const THREE = ["agent", "card", "user"];
@@ -32,8 +32,7 @@ function flagged(text: string): boolean {
 	if (!block) return false;
 	const meta: unknown = Bun.YAML.parse(block[1]);
 	// Present and not `false` is set: `"true"` and an empty value both count.
-	return typeof meta === "object" && meta !== null && FLAG in meta
-		&& (meta as Record<string, unknown>)[FLAG] !== false;
+	return typeof meta === "object" && meta !== null && FLAG in meta && (meta as Record<string, unknown>)[FLAG] !== false;
 }
 
 /** Every Markdown file under `dir`, at any depth. Nothing is exempt. */
@@ -49,13 +48,9 @@ export function check(root: string): string[] {
 	const core = join(root, "core");
 	const problems: string[] = [];
 	const doc = join(core, "autonomy.md");
-	const defined = existsSync(doc)
-		? [...readFileSync(doc, "utf8").matchAll(HEADING)].map((m) => m[1]).sort()
-		: [];
+	const defined = existsSync(doc) ? [...readFileSync(doc, "utf8").matchAll(HEADING)].map((m) => m[1]).sort() : [];
 	if (defined.join() !== THREE.join())
-		problems.push(
-			`core/autonomy.md: defines agent, card and user, found ${defined.join(", ") || "none"}`,
-		);
+		problems.push(`core/autonomy.md: defines agent, card and user, found ${defined.join(", ") || "none"}`);
 	const rules = join(core, "rules.md");
 	if (!existsSync(rules) || !LINK.test(readFileSync(rules, "utf8")))
 		problems.push("core/rules.md: links no autonomy.md");
@@ -64,9 +59,7 @@ export function check(root: string): string[] {
 		const names = [...text.matchAll(MARKER)].map((m) => m[1]);
 		for (const name of names)
 			if (!defined.includes(name))
-				problems.push(
-					`${relative(root, file)}: (unattended: ${name}) names no defined class`,
-				);
+				problems.push(`${relative(root, file)}: (unattended: ${name}) names no defined class`);
 		if (!SKILL.test(relative(core, file).split(sep).join("/"))) continue;
 		let flag: boolean;
 		try {
@@ -76,9 +69,7 @@ export function check(root: string): string[] {
 			continue;
 		}
 		if (flag && !names.includes("user"))
-			problems.push(
-				`${relative(root, file)}: carries ${FLAG} with no (unattended: user step`,
-			);
+			problems.push(`${relative(root, file)}: carries ${FLAG} with no (unattended: user step`);
 	}
 	return problems;
 }

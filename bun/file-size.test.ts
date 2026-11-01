@@ -7,14 +7,7 @@
  * pre-push hook, so it is blocking from its first commit with no workflow edit.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	mkdirSync,
-	mkdtempSync,
-	rmSync,
-	symlinkSync,
-	unlinkSync,
-	writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { count, oversize } from "./file-size.ts";
@@ -34,10 +27,7 @@ const write = (dir: string, files: Record<string, string>) => {
 };
 
 /** A repository holding `tracked`, and `untracked` left out of the index. */
-function fabricate(
-	tracked: Record<string, string>,
-	untracked: Record<string, string> = {},
-): string {
+function fabricate(tracked: Record<string, string>, untracked: Record<string, string> = {}): string {
 	const dir = mkdtempSync(join(tmpdir(), "file-size-"));
 	made.push(dir);
 	const git = (...args: string[]) => {
@@ -52,8 +42,7 @@ function fabricate(
 }
 
 /** `n` lines, newline-terminated. */
-const long = (n: number) =>
-	`${Array.from({ length: n }, () => "x").join("\n")}\n`;
+const long = (n: number) => `${Array.from({ length: n }, () => "x").join("\n")}\n`;
 
 const paths = (dir: string) => oversize(dir).map((f) => f.path);
 
@@ -73,9 +62,7 @@ describe("a file over the cap", () => {
 describe("a stylesheet over the cap", () => {
 	test("201 lines fails", () => {
 		const dir = fabricate({ "src/a.css": long(201) });
-		expect(oversize(dir)).toEqual([
-			{ path: "src/a.css", count: 201, cap: 200 },
-		]);
+		expect(oversize(dir)).toEqual([{ path: "src/a.css", count: 201, cap: 200 }]);
 	});
 
 	test("200 lines passes", () => {
@@ -86,9 +73,7 @@ describe("a stylesheet over the cap", () => {
 // spec: change-slicing/a-test-file-is-not-exempt
 describe("what the cap covers", () => {
 	test("a test file is not exempt", () => {
-		expect(paths(fabricate({ "src/a.test.ts": long(301) }))).toEqual([
-			"src/a.test.ts",
-		]);
+		expect(paths(fabricate({ "src/a.test.ts": long(301) }))).toEqual(["src/a.test.ts"]);
 	});
 
 	test("a .tsx file is capped like a .ts one", () => {
@@ -96,9 +81,7 @@ describe("what the cap covers", () => {
 	});
 
 	test("a .module.css file is capped at 200 like any stylesheet", () => {
-		expect(paths(fabricate({ "src/a.module.css": long(201) }))).toEqual([
-			"src/a.module.css",
-		]);
+		expect(paths(fabricate({ "src/a.module.css": long(201) }))).toEqual(["src/a.module.css"]);
 	});
 
 	test("the cap is chosen by extension, not one number for everything", () => {
@@ -108,16 +91,11 @@ describe("what the cap covers", () => {
 		expect(paths(dir)).toEqual(["src/a.css"]);
 	});
 
-	test.each(["notes.md", "data.json", "config.yml"])(
-		"%s is not capped at all, however long",
-		(path) => {
-			// A capped file beside it, under its cap: without one the sweep reads
-			// nothing and refuses, which would prove the guard rather than this.
-			expect(
-				paths(fabricate({ [path]: long(400), "src/a.ts": long(10) })),
-			).toEqual([]);
-		},
-	);
+	test.each(["notes.md", "data.json", "config.yml"])("%s is not capped at all, however long", (path) => {
+		// A capped file beside it, under its cap: without one the sweep reads
+		// nothing and refuses, which would prove the guard rather than this.
+		expect(paths(fabricate({ [path]: long(400), "src/a.ts": long(10) }))).toEqual([]);
+	});
 
 	test("an extension in capitals is capped all the same", () => {
 		// `endsWith` is case-sensitive, so this was capped by nothing.
@@ -128,10 +106,7 @@ describe("what the cap covers", () => {
 	test("an untracked file is out of scope", () => {
 		// It is present for its author and absent from a clone, so failing on
 		// it would fail one machine and no other.
-		const dir = fabricate(
-			{ "src/a.ts": long(10) },
-			{ "src/big.ts": long(400) },
-		);
+		const dir = fabricate({ "src/a.ts": long(10) }, { "src/big.ts": long(400) });
 		expect(paths(dir)).toEqual([]);
 	});
 });
@@ -182,9 +157,7 @@ describe("the sweep", () => {
 	test("a run that read no files at all fails rather than passing", () => {
 		// Every assertion above is over a list, and an empty list satisfies all
 		// of them.
-		expect(() => oversize(fabricate({ "notes.md": "x\n" }))).toThrow(
-			/no capped files/i,
-		);
+		expect(() => oversize(fabricate({ "notes.md": "x\n" }))).toThrow(/no capped files/i);
 	});
 });
 
@@ -208,9 +181,7 @@ describe("the tree the sweep reads", () => {
 	});
 
 	test("an empty tracked file counts zero rather than failing to be read", () => {
-		expect(paths(fabricate({ "src/a.ts": "", "src/b.ts": long(10) }))).toEqual(
-			[],
-		);
+		expect(paths(fabricate({ "src/a.ts": "", "src/b.ts": long(10) }))).toEqual([]);
 	});
 
 	test("run from a subdirectory it still reads the whole repository", () => {

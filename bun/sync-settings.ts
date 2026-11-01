@@ -9,15 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { HOOKS, MARK, registration } from "./bootstrap.ts";
-import {
-	ASK,
-	ATTRIBUTION,
-	DENY,
-	EDIT_ASK,
-	EDIT_DENY,
-	INSTALL,
-	MCP_ASK,
-} from "./settings.ts";
+import { ASK, ATTRIBUTION, DENY, EDIT_ASK, EDIT_DENY, INSTALL, MCP_ASK } from "./settings.ts";
 
 type Group = { matcher?: string; hooks?: { command?: unknown }[] };
 type Settings = {
@@ -34,11 +26,9 @@ type Settings = {
  */
 const ours = (command: unknown) =>
 	typeof command === "string" &&
-	(command.endsWith(MARK) ||
-		HOOKS.some((hook) => hook.command === `${command} ${MARK}`));
+	(command.endsWith(MARK) || HOOKS.some((hook) => hook.command === `${command} ${MARK}`));
 
-const read = (file: string) =>
-	existsSync(file) ? readFileSync(file, "utf8") : undefined;
+const read = (file: string) => (existsSync(file) ? readFileSync(file, "utf8") : undefined);
 
 /**
  * `list` with its entries starting with `prefix` replaced by `entries`, where
@@ -54,8 +44,7 @@ function owned(list: string[], prefix: string, entries: string[]) {
 }
 
 /** `list` with `file` appended when absent. */
-const withFile = (list: string[], file: string) =>
-	list.includes(file) ? list : [...list, file];
+const withFile = (list: string[], file: string) => (list.includes(file) ? list : [...list, file]);
 
 /** The settings file's new text: the harness's hooks and lists, the rest kept. */
 function settingsText(text: string | undefined): string {
@@ -67,18 +56,13 @@ function settingsText(text: string | undefined): string {
 	}
 	const hooks = config.hooks ?? {};
 	for (const [event, groups] of Object.entries(hooks)) {
-		if (!Array.isArray(groups))
-			throw new Error(`.claude/settings.json: hooks.${event} is not a list`);
+		if (!Array.isArray(groups)) throw new Error(`.claude/settings.json: hooks.${event} is not a list`);
 		hooks[event] = groups.flatMap((group) => {
 			if (typeof group !== "object" || group === null)
-				throw new Error(
-					`.claude/settings.json: an entry of hooks.${event} is not an object`,
-				);
+				throw new Error(`.claude/settings.json: an entry of hooks.${event} is not an object`);
 			if (group.hooks === undefined) return [group];
 			if (!Array.isArray(group.hooks))
-				throw new Error(
-					`.claude/settings.json: a hooks list under hooks.${event} is not a list`,
-				);
+				throw new Error(`.claude/settings.json: a hooks list under hooks.${event} is not a list`);
 			const kept = group.hooks.filter((hook) => !ours(hook?.command));
 			return kept.length ? [{ ...group, hooks: kept }] : [];
 		});
@@ -90,19 +74,11 @@ function settingsText(text: string | undefined): string {
 		});
 	// An event whose only hooks were a previous version's, and which the
 	// harness no longer registers, would otherwise be left as an empty list.
-	for (const [event, groups] of Object.entries(hooks))
-		if (groups.length === 0) delete hooks[event];
+	for (const [event, groups] of Object.entries(hooks)) if (groups.length === 0) delete hooks[event];
 	config.hooks = hooks;
 	const permissions = config.permissions ?? {};
-	permissions.deny = withFile(
-		owned(permissions.deny ?? [], "Bash(", DENY),
-		EDIT_DENY,
-	);
-	permissions.ask = owned(
-		withFile(owned(permissions.ask ?? [], "Bash(", ASK), EDIT_ASK),
-		"mcp__",
-		MCP_ASK,
-	);
+	permissions.deny = withFile(owned(permissions.deny ?? [], "Bash(", DENY), EDIT_DENY);
+	permissions.ask = owned(withFile(owned(permissions.ask ?? [], "Bash(", ASK), EDIT_ASK), "mcp__", MCP_ASK);
 	config.permissions = permissions;
 	config.attribution = ATTRIBUTION;
 	const indent = text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";
@@ -110,10 +86,7 @@ function settingsText(text: string | undefined): string {
 }
 
 /** JSON's spelling of a boolean, a number and a string array is TOML's too. */
-const SECTION = [
-	"[install]",
-	...Object.entries(INSTALL).map(([k, v]) => `${k} = ${JSON.stringify(v)}`),
-];
+const SECTION = ["[install]", ...Object.entries(INSTALL).map(([k, v]) => `${k} = ${JSON.stringify(v)}`)];
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -152,10 +125,7 @@ function bunfigText(text: string | undefined): string {
 	const after = toml(result);
 	const tables = new Set([...Object.keys(before), ...Object.keys(after)]);
 	tables.delete("install");
-	if (
-		!same(after.install, INSTALL) ||
-		[...tables].some((table) => !same(before[table], after[table]))
-	)
+	if (!same(after.install, INSTALL) || [...tables].some((table) => !same(before[table], after[table])))
 		throw new Error(
 			`bunfig.toml: replacing [install] would not leave exactly ${JSON.stringify(INSTALL)} with every other table unchanged — set it by hand`,
 		);

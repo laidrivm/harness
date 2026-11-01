@@ -1,14 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-	cleanup,
-	emptyDir,
-	gate,
-	git,
-	lines,
-	repo,
-} from "./diff-budget.fixture.ts";
+import { cleanup, emptyDir, gate, git, lines, repo } from "./diff-budget.fixture.ts";
 import { head, ledger, records, run } from "./pre-pr.fixture.ts";
 
 /**
@@ -39,10 +32,7 @@ describe("the step the runner runs", () => {
 	])("a branch %s exits with the step's status and records its outcome [14]", (_, text, args, code, decision) => {
 		const dir = repo({}, { "a.ts": text });
 		const result = run(dir, {}, args as string[]);
-		expect([result.code, records(result.state)[0]?.decision]).toEqual([
-			code,
-			decision,
-		]);
+		expect([result.code, records(result.state)[0]?.decision]).toEqual([code, decision]);
 	});
 
 	test("an unresolvable base prints the step's ERROR line [15]", () => {
@@ -69,9 +59,7 @@ describe("the record of a run", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
 		const { state } = run(dir);
 		const [record] = records(state);
-		expect(Object.keys(record).sort()).toEqual(
-			["at", "commit", "decision", "gate", "project", "rule", "session"],
-		);
+		expect(Object.keys(record).sort()).toEqual(["at", "commit", "decision", "gate", "project", "rule", "session"]);
 		expect(readFileSync(ledger(state), "utf8")).not.toContain("DIFF gate");
 	});
 
@@ -148,10 +136,7 @@ describe("when no record is written", () => {
 		writeFileSync(join(dir, "a.ts"), lines(4));
 		if (stage) git(dir, "add", "a.ts");
 		const result = run(dir);
-		expect([records(result.state).length, result.out]).toEqual([
-			0,
-			expect.stringContaining("no run record"),
-		]);
+		expect([records(result.state).length, result.out]).toEqual([0, expect.stringContaining("no run record")]);
 		expect(result.out).toContain("DIFF gate:");
 	});
 
@@ -159,16 +144,15 @@ describe("when no record is written", () => {
 		const dir = emptyDir("pre-pr-bare-");
 		git(dir, "init", "-q");
 		const result = run(dir);
-		expect([records(result.state).length, result.out]).toEqual([
-			0,
-			expect.stringContaining("no run record"),
-		]);
+		expect([records(result.state).length, result.out]).toEqual([0, expect.stringContaining("no run record")]);
 	});
 
 	test("a dirty tree is said once to leave no record", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
 		writeFileSync(join(dir, "a.ts"), lines(4));
-		const said = run(dir).out.split("\n").filter((l) => l.includes("no run record"));
+		const said = run(dir)
+			.out.split("\n")
+			.filter((l) => l.includes("no run record"));
 		expect(said.length).toBe(1);
 	});
 
@@ -177,7 +161,11 @@ describe("when no record is written", () => {
 		const commands = readFileSync(join(import.meta.dir, "..", ".githooks/pre-push"), "utf8")
 			.split("\n")
 			.filter((line) => line.trim() && !line.startsWith("#"));
-		const [unset, draft, suite] = ["unset $(git rev-parse --local-env-vars)", 'bun bun/push-draft.ts "$@"', "bun test"].map((c) => commands.indexOf(c));
+		const [unset, draft, suite] = [
+			"unset $(git rev-parse --local-env-vars)",
+			'bun bun/push-draft.ts "$@"',
+			"bun test",
+		].map((c) => commands.indexOf(c));
 		expect([unset >= 0, unset < draft, draft < suite]).toEqual([true, true, true]);
 	});
 
@@ -186,10 +174,7 @@ describe("when no record is written", () => {
 		"%s calls the diff budget, never the runner [18]",
 		(path) => {
 			const text = readFileSync(join(import.meta.dir, "..", path), "utf8");
-			expect([text.includes("diff-budget.sh"), text.includes("pre-pr")]).toEqual([
-				true,
-				false,
-			]);
+			expect([text.includes("diff-budget.sh"), text.includes("pre-pr")]).toEqual([true, false]);
 		},
 	);
 });

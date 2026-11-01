@@ -40,7 +40,8 @@ export function state(runs: Run[]): State {
 	const skipped = (run: Run) => run.conclusion === "skipped" || title(run).startsWith(REVIEWED.skippedTitle);
 	if (mine.some((run) => run.status !== "completed")) return { name: "reviewing" };
 	if (mine.some((run) => run.conclusion === REVIEWED.conclusion && !skipped(run))) return { name: "reviewed" };
-	if (mine.some((run) => run.conclusion === "neutral" && title(run) === "Review rate limited")) return { name: "rate limited" };
+	if (mine.some((run) => run.conclusion === "neutral" && title(run) === "Review rate limited"))
+		return { name: "rate limited" };
 	const other = mine.find((run) => !skipped(run));
 	if (other) return { name: "other", conclusion: String(other.conclusion), title: title(other) };
 	return mine.length ? { name: "skipped" } : { name: "no run" };

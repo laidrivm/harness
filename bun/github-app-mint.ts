@@ -48,9 +48,15 @@ const refused = (why: string): Result => ({ code: 2, out: "", err: `github-app-m
 export async function main(args: string[], files = FILES): Promise<Result> {
 	const [named = "", ...asked] = args;
 	const wanted = named.toLowerCase();
-	const listed = readFileSync(files.repositories, "utf8").split("\n").map((line) => line.trim().toLowerCase());
+	const listed = readFileSync(files.repositories, "utf8")
+		.split("\n")
+		.map((line) => line.trim().toLowerCase());
 	// A whole name, two segments: a dot path or an extra segment would move the API call out of the repository.
-	if (!/^[\w.-]+\/[\w.-]+$/.test(wanted) || wanted.split("/").some((part) => /^\.+$/.test(part)) || !listed.includes(wanted))
+	if (
+		!/^[\w.-]+\/[\w.-]+$/.test(wanted) ||
+		wanted.split("/").some((part) => /^\.+$/.test(part)) ||
+		!listed.includes(wanted)
+	)
 		return refused(`${named || "no repository"} is no repository the list names`);
 	const permissions: Record<string, "read" | "write"> = {};
 	const slugOnly = asked.length === 1 && asked[0] === "--slug";
@@ -58,7 +64,8 @@ export async function main(args: string[], files = FILES): Promise<Result> {
 		for (const word of asked) {
 			const [name, level, extra] = word.split("=");
 			// Own keys alone: `constructor` or `__proto__` would read the prototype's.
-			if (extra !== undefined || !Object.hasOwn(ALLOWED, name) || !ALLOWED[name].includes(level)) return refused(`${word} is outside the fixed set of permissions`);
+			if (extra !== undefined || !Object.hasOwn(ALLOWED, name) || !ALLOWED[name].includes(level))
+				return refused(`${word} is outside the fixed set of permissions`);
 			permissions[name] = level as "read" | "write";
 		}
 		// None asked would mint every permission the App holds.
@@ -66,10 +73,19 @@ export async function main(args: string[], files = FILES): Promise<Result> {
 	}
 	const [owner, repo] = wanted.split("/");
 	try {
-		const app: App = { id: readFileSync(files.id, "utf8").trim(), key: createPrivateKey(readFileSync(files.key)), owner, repo };
+		const app: App = {
+			id: readFileSync(files.id, "utf8").trim(),
+			key: createPrivateKey(readFileSync(files.key)),
+			owner,
+			repo,
+		};
 		return { code: 0, out: `${slugOnly ? await slug(app) : await mint(app, permissions)}\n`, err: "" };
 	} catch (error) {
-		return { code: error instanceof Transient ? TEMPFAIL : 1, out: "", err: `github-app-mint: ${(error as Error).message}\n` };
+		return {
+			code: error instanceof Transient ? TEMPFAIL : 1,
+			out: "",
+			err: `github-app-mint: ${(error as Error).message}\n`,
+		};
 	}
 }
 

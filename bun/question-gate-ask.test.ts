@@ -52,6 +52,9 @@ describe("every other call is decided as before", () => {
 	// spec: agent-permissions/a-comment-that-is-not-a-question
 	test("a reply gets no answer, recorded passed [60]", () => {
 		const { out, ledger } = run(asked({ discussion_id: "discussion://a/b/c" }), undefined, config("file"));
-		expect({ out, ledger }).toEqual({ out: "", ledger: [expect.objectContaining({ decision: "passed", rule: "reply" })] });
+		expect({ out, ledger }).toEqual({
+			out: "",
+			ledger: [expect.objectContaining({ decision: "passed", rule: "reply" })],
+		});
 	});
 });

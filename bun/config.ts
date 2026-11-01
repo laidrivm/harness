@@ -42,9 +42,7 @@ export function read<K extends keyof Config>(root: string, key: K): Config[K] {
 	// `null` too: JSON can only spell an absent value that way, and the gate
 	// would otherwise read a field of it and throw something nobody can act on.
 	if (value === undefined || value === null)
-		throw new Error(
-			`${file} has no "harness.${key}" — the gate reads it there`,
-		);
+		throw new Error(`${file} has no "harness.${key}" — the gate reads it there`);
 	return value as Config[K];
 }
 
@@ -55,7 +53,6 @@ export function read<K extends keyof Config>(root: string, key: K): Config[K] {
  */
 export function bumpTest(root: string): string {
 	const value = read(root, "bumpTest");
-	if (typeof value !== "string" || value.trim() === "")
-		throw new Error("package.json: harness.bumpTest is blank");
+	if (typeof value !== "string" || value.trim() === "") throw new Error("package.json: harness.bumpTest is blank");
 	return value;
 }

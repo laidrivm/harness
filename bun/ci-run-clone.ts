@@ -24,7 +24,8 @@ export function git(clone: string, ...args: string[]) {
 }
 
 /** The runner's push clone of the App's repository, where `pass.sh` keeps it: `<PASS_PUSH>/<owner>/<repo>`, lower-cased. */
-const pushOf = (app: App) => join(process.env.PASS_PUSH || join(homedir(), "push"), app.owner.toLowerCase(), app.repo.toLowerCase());
+const pushOf = (app: App) =>
+	join(process.env.PASS_PUSH || join(homedir(), "push"), app.owner.toLowerCase(), app.repo.toLowerCase());
 
 /**
  * Fetches the pull request's `branch` as the App into the clone's
@@ -40,7 +41,10 @@ export function fetched(clone: string, app: App, branch: string, file: string) {
 	process.chdir(push);
 	mkdirSync(dirname(file), { recursive: true });
 	// shortcut: the branch's whole history, since what the session's clone holds is unknown here; fine at these repositories' size.
-	if (!sh("git", "fetch", "-q", over(app), `+refs/heads/${branch}:${ref}`).ok || !sh("git", "bundle", "create", file, ref).ok)
+	if (
+		!sh("git", "fetch", "-q", over(app), `+refs/heads/${branch}:${ref}`).ok ||
+		!sh("git", "bundle", "create", file, ref).ok
+	)
 		return false;
 	return git(clone, "fetch", "-q", file, `+${ref}:${ref}`) !== undefined;
 }

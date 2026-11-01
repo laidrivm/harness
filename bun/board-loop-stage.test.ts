@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { change, clone, commit, EPERM, lowered, ONE, out, records, run, THREE, TICKED } from "./board-loop.fixture.ts";
+import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 
 /** The stage session, its verdict, and each pass's record. [n]: `/zombies` ideas. */
 
@@ -19,9 +19,7 @@ describe("the verdict", () => {
 		const { dir } = clone();
 		const r = run(dir);
 		expect([r.code, r.last]).toEqual([0, "board-loop: met — apply demo step 1"]);
-		expect(records(r.state).map(({ decision, rule }) => [decision, rule])).toEqual([
-			["met", "apply"],
-		]);
+		expect(records(r.state).map(({ decision, rule }) => [decision, rule])).toEqual([["met", "apply"]]);
 	});
 
 	// spec: board-loop/the-session-claims-success-that-the-check-denies
@@ -53,7 +51,10 @@ describe("the verdict", () => {
 		expect(existsSync(marker)).toBe(false);
 	}, 40_000);
 
-	test.each([["stage", "orphan"], ["pick", "pickOrphan"]] as const)(
+	test.each([
+		["stage", "orphan"],
+		["pick", "pickOrphan"],
+	] as const)(
 		"a child the %s session left after exiting on its own is ended before the pass returns",
 		async (_, key) => {
 			const { dir } = clone();
@@ -161,7 +162,9 @@ describe("the session", () => {
 			"/goal Carry step 1 of the OpenSpec change demo: /opsx:apply demo for its group 1 and the pre-PR sequence, up to a committed HEAD on feat/demo, the branch of the step — the runner, not this session, pushes that branch and opens the pull request.\n",
 		);
 		expect(calls).toContain("\nThis session runs unattended.\n");
-		expect(calls).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 1 --before-push`, run after the last commit");
+		expect(calls).toContain(
+			"`bun node_modules/harness/bun/goal-check.ts apply demo 1 --before-push`, run after the last commit",
+		);
 		expect(calls).toContain(`\n${TITLED} --permission-mode`);
 	});
 });
@@ -181,7 +184,9 @@ describe("an answer's step", () => {
 		const { dir } = clone(change("demo", TICKED));
 		const r = run(dir, [], { verdict: "goal open: apply demo step 2 at abc1234 — tasks.md has no group 2" });
 		expect(r.code).toBe(1);
-		expect(r.last).toBe("board-loop: open — apply demo step 2: goal open: apply demo step 2 at abc1234 — tasks.md has no group 2");
+		expect(r.last).toBe(
+			"board-loop: open — apply demo step 2: goal open: apply demo step 2 at abc1234 — tasks.md has no group 2",
+		);
 	});
 
 	// spec: board-loop/an-answer-s-step
@@ -191,13 +196,17 @@ describe("an answer's step", () => {
 		const from = calls.indexOf("\nclaude -p /goal ") + 1;
 		const lines = calls.slice(from, calls.indexOf(" --permission-mode", from)).split("\n");
 		expect(lines).toHaveLength(5);
-		expect(lines[0]).toContain("write the answer on its card into its tasks.md as group 2, then /opsx:apply demo for that group and the pre-PR sequence,");
+		expect(lines[0]).toContain(
+			"write the answer on its card into its tasks.md as group 2, then /opsx:apply demo for that group and the pre-PR sequence,",
+		);
 		// task-board: an answer that asks for a change of its own files a card instead.
 		expect(lines[0]).toEndWith(
 			"the pull request — or, when the answer asks for a change of its own or its work would not fit one step, file an `idea` card for it, clear the card's `Assign`, add no group and end with `BLOCKED — <that card>`.",
 		);
 		expect(lines[1]).toBe("This session runs unattended.");
-		expect(lines[2]).toContain("`bun node_modules/harness/bun/goal-check.ts apply demo 2 --before-push`, run after the last commit");
+		expect(lines[2]).toContain(
+			"`bun node_modules/harness/bun/goal-check.ts apply demo 2 --before-push`, run after the last commit",
+		);
 		expect(lines[4]).toBe(TITLED);
 	});
 });
@@ -211,7 +220,10 @@ describe("a step branch a session left", () => {
 	};
 	const clause = (b: string) =>
 		` A session left the branch ${b}: switch to it with \`git switch ${b}\` rather than create it, merge \`origin/main\` into it before any other work, and carry on from what its commits hold.`;
-	const local = (...names: string[]) => (dir: string) => names.forEach((name) => git(dir, "branch", name));
+	const local =
+		(...names: string[]) =>
+		(dir: string) =>
+			names.forEach((name) => git(dir, "branch", name));
 	const pushed = (name: string) => (dir: string) => git(dir, "push", "-q", "origin", `main:refs/heads/${name}`);
 
 	// spec: board-loop/no-branch-left board-loop/a-local-branch-a-session-left board-loop/a-branch-pushed-without-a-pull-request board-loop/an-answer-step-s-branch
@@ -219,7 +231,12 @@ describe("a step branch a session left", () => {
 		["no branch left gives no clause [1]", ONE, () => {}, null],
 		["a local feat/demo is named [2]", ONE, local("feat/demo"), "feat/demo"],
 		["a feat/demo on origin alone is named [3]", ONE, pushed("feat/demo"), "feat/demo"],
-		["at step 2, feat/demo-2 is named and feat/demo-1 beside it is not [4]", THREE, local("feat/demo-1", "feat/demo-2"), "feat/demo-2"],
+		[
+			"at step 2, feat/demo-2 is named and feat/demo-1 beside it is not [4]",
+			THREE,
+			local("feat/demo-1", "feat/demo-2"),
+			"feat/demo-2",
+		],
 		["a single group's feat/demo-1 gives no clause [5]", ONE, local("feat/demo-1"), null],
 		["at step 2, feat/demo-20 gives no clause [6]", THREE, local("feat/demo-20"), null],
 		["a tag named feat/demo gives no clause", ONE, (dir: string) => git(dir, "tag", "feat/demo"), null],

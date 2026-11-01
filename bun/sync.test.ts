@@ -1,11 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	mkdirSync,
-	mkdtempSync,
-	readdirSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { drift, sync } from "./sync.ts";
@@ -21,8 +15,7 @@ function pair(core: Record<string, string>, copy: Record<string, string>) {
 	made.push(dir);
 	const write = (sub: string, files: Record<string, string>) => {
 		mkdirSync(join(dir, sub));
-		for (const [name, text] of Object.entries(files))
-			writeFileSync(join(dir, sub, name), text);
+		for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, sub, name), text);
 	};
 	write("core", core);
 	write("copy", copy);
@@ -39,28 +32,20 @@ describe("the copy against the package", () => {
 
 	test("three differing files are each named", () => {
 		const three = { "a.md": "a\n", "b.md": "b\n", "c.md": "c\n" };
-		const { core, copy } = pair(
-			{ ...PACKAGE, ...three },
-			{ ...PACKAGE, "a.md": "A\n", "b.md": "B\n", "c.md": "C\n" },
-		);
+		const { core, copy } = pair({ ...PACKAGE, ...three }, { ...PACKAGE, "a.md": "A\n", "b.md": "B\n", "c.md": "C\n" });
 		const problems = drift(core, copy);
 		expect(problems).toHaveLength(3);
-		for (const name of Object.keys(three))
-			expect(problems.join("\n")).toContain(`harness/${name}: differs`);
+		for (const name of Object.keys(three)) expect(problems.join("\n")).toContain(`harness/${name}: differs`);
 	});
 
 	test("a file missing from the copy is named", () => {
 		const { core, copy } = pair(PACKAGE, { "rules.md": "# rules\n" });
-		expect(drift(core, copy)).toEqual([
-			expect.stringContaining("harness/testing.md: missing from the copy"),
-		]);
+		expect(drift(core, copy)).toEqual([expect.stringContaining("harness/testing.md: missing from the copy")]);
 	});
 
 	test("a file only the copy holds is named", () => {
 		const { core, copy } = pair(PACKAGE, { ...PACKAGE, "notes.md": "x\n" });
-		expect(drift(core, copy)).toEqual([
-			expect.stringContaining("harness/notes.md: not in the pinned package"),
-		]);
+		expect(drift(core, copy)).toEqual([expect.stringContaining("harness/notes.md: not in the pinned package")]);
 	});
 
 	test("a one-byte difference is named", () => {
@@ -68,9 +53,7 @@ describe("the copy against the package", () => {
 			...PACKAGE,
 			"rules.md": "# rules \n",
 		});
-		expect(drift(core, copy)).toEqual([
-			expect.stringContaining("harness/rules.md: differs"),
-		]);
+		expect(drift(core, copy)).toEqual([expect.stringContaining("harness/rules.md: differs")]);
 	});
 
 	test("a skill directory beside the rules is not copied", () => {
@@ -98,8 +81,6 @@ describe("syncing", () => {
 
 	test("a package directory that is absent fails the check", () => {
 		const { copy } = pair({}, PACKAGE);
-		expect(() => drift(join(copy, "..", "absent"), copy)).toThrow(
-			/holds no rules\.md/,
-		);
+		expect(() => drift(join(copy, "..", "absent"), copy)).toThrow(/holds no rules\.md/);
 	});
 });

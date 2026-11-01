@@ -4,12 +4,7 @@
  * changes directory is the subject of one case and the fixture of none.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	archived,
-	cleanup,
-	complete,
-	fabricate,
-} from "./board-state.fixture.ts";
+import { archived, cleanup, complete, fabricate } from "./board-state.fixture.ts";
 import { boardState, corrected } from "./board-state.ts";
 
 afterAll(cleanup);
@@ -31,9 +26,7 @@ describe("a change directory holding all four artefacts", () => {
 	test("derives proposed with every task box ticked, the boxes being unread", () => {
 		const whole = complete("candidacy-gate");
 		whole["openspec/changes/candidacy-gate/tasks.md"] = "- [x] 1.1 done\n";
-		expect(boardState(fabricate(whole)).status["candidacy-gate"]).toBe(
-			"proposed",
-		);
+		expect(boardState(fabricate(whole)).status["candidacy-gate"]).toBe("proposed");
 	});
 });
 
@@ -52,32 +45,24 @@ describe("a change directory whose specs/ holds no delta", () => {
 	test("derives proposing where the directory is empty", () => {
 		const whole = without("candidacy-gate", "specs/a-capability/spec.md");
 		whole["openspec/changes/candidacy-gate/specs/"] = "";
-		expect(boardState(fabricate(whole)).status["candidacy-gate"]).toBe(
-			"proposing",
-		);
+		expect(boardState(fabricate(whole)).status["candidacy-gate"]).toBe("proposing");
 	});
 
 	test("derives proposing where the directory is absent", () => {
-		const tree = fabricate(
-			without("candidacy-gate", "specs/a-capability/spec.md"),
-		);
+		const tree = fabricate(without("candidacy-gate", "specs/a-capability/spec.md"));
 		expect(boardState(tree).status["candidacy-gate"]).toBe("proposing");
 	});
 
 	test("derives proposing where the directory holds no markdown", () => {
 		const whole = without("candidacy-gate", "specs/a-capability/spec.md");
 		whole["openspec/changes/candidacy-gate/specs/a-capability/notes.txt"] = "";
-		expect(boardState(fabricate(whole)).status["candidacy-gate"]).toBe(
-			"proposing",
-		);
+		expect(boardState(fabricate(whole)).status["candidacy-gate"]).toBe("proposing");
 	});
 
 	test("derives proposed from a delta at any depth, the walk being recursive", () => {
 		const whole = without("candidacy-gate", "specs/a-capability/spec.md");
 		whole["openspec/changes/candidacy-gate/specs/a/deeper/spec.md"] = "";
-		expect(boardState(fabricate(whole)).status["candidacy-gate"]).toBe(
-			"proposed",
-		);
+		expect(boardState(fabricate(whole)).status["candidacy-gate"]).toBe("proposed");
 	});
 });
 
@@ -177,9 +162,7 @@ describe("what the derivation reports nothing for", () => {
 
 	test("a slug the tree cannot see carries no key, rather than idea", () => {
 		const state = boardState(fabricate(complete("candidacy-gate")));
-		expect(Object.hasOwn(state.status, "a-finding-nobody-proposed")).toBe(
-			false,
-		);
+		expect(Object.hasOwn(state.status, "a-finding-nobody-proposed")).toBe(false);
 		expect(Object.values(state.status)).not.toContain("idea");
 	});
 
@@ -190,16 +173,7 @@ describe("what the derivation reports nothing for", () => {
 				...archived("2026-08-25", "repo-layout"),
 			}),
 		);
-		for (const hand of [
-			"idea",
-			"approved",
-			"exploring",
-			"explored",
-			"applying",
-			"applied",
-			"archiving",
-			"discarded",
-		])
+		for (const hand of ["idea", "approved", "exploring", "explored", "applying", "applied", "archiving", "discarded"])
 			expect(Object.values(state.status)).not.toContain(hand);
 	});
 });
@@ -207,9 +181,7 @@ describe("what the derivation reports nothing for", () => {
 describe("a card reconciled against its floor", () => {
 	// spec: task-board/a-discarded-card-whose-change-directory-exists
 	test("a discarded card is left, its change directory existing", () => {
-		const floor = boardState(fabricate(complete("bot-notion-writes"))).status[
-			"bot-notion-writes"
-		];
+		const floor = boardState(fabricate(complete("bot-notion-writes"))).status["bot-notion-writes"];
 		expect(floor).toBe("proposed");
 		expect(corrected("discarded", floor)).toBeUndefined();
 		expect(corrected("discarded", "done")).toBeUndefined();

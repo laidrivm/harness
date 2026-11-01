@@ -1,5 +1,14 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	realpathSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { cleanup, git } from "../bun/diff-budget.fixture.ts";
 import { pinOf, publish, repository, runner, stand, stopped, tick } from "./pass-pin.fixture.ts";
@@ -22,7 +31,9 @@ describe("pass.sh with a launcher", () => {
 		const r = tick(h);
 		expect(r.code).toBe(0);
 		// Even the check that the name is a clone runs as the session user.
-		expect(readFileSync(join(h.root, "launched"), "utf8")).toStartWith(`${dir} test -d ${dir}/.git\n${dir} git -C ${dir} config --get remote.origin.url\n`);
+		expect(readFileSync(join(h.root, "launched"), "utf8")).toStartWith(
+			`${dir} test -d ${dir}/.git\n${dir} git -C ${dir} config --get remote.origin.url\n`,
+		);
 		expect(r.ran.version).toBe("one");
 		expect(realpathSync(r.ran.cwd)).toBe(realpathSync(join(h.home, "push/owner/repo")));
 		expect([r.ran.env.HARNESS_AS_AGENT, r.ran.env.HARNESS_CLONE]).toEqual([join(h.bin, "as-agent"), dir]);
@@ -118,15 +129,15 @@ describe("the repository the engine's job names", () => {
 		expect(existsSync(join(h.home, "push"))).toBe(false);
 	});
 
-	test.each([["a name that is no <owner>/<repo>", "owner"], ["a third segment", "owner/repo/x"]])(
-		"%s starts no pass",
-		(_, named) => {
-			const h = stand();
-			repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
-			expect(tick(h, "repo", named).code).toBe(2);
-			expect(existsSync(join(h.home, "push"))).toBe(false);
-		},
-	);
+	test.each([
+		["a name that is no <owner>/<repo>", "owner"],
+		["a third segment", "owner/repo/x"],
+	])("%s starts no pass", (_, named) => {
+		const h = stand();
+		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		expect(tick(h, "repo", named).code).toBe(2);
+		expect(existsSync(join(h.home, "push"))).toBe(false);
+	});
 
 	test("a session's clone whose origin names another repository starts no pass, and the stop file names both", () => {
 		const h = stand();
@@ -150,7 +161,11 @@ describe("the repository the engine's job names", () => {
 
 	test("a session's clone on another host starts no pass, though it names the job's repository", () => {
 		const h = stand();
-		const dir = repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		const dir = repository(
+			h,
+			"owner/repo",
+			pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })),
+		);
 		git(dir, "remote", "set-url", "origin", "git@other.example:owner/repo.git");
 		const r = tick(h);
 		expect(r.code).toBe(1);
@@ -160,7 +175,11 @@ describe("the repository the engine's job names", () => {
 
 	test("an SSH origin on github.com runs", () => {
 		const h = stand();
-		const dir = repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
+		const dir = repository(
+			h,
+			"owner/repo",
+			pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })),
+		);
 		git(dir, "remote", "set-url", "origin", "git@GitHub.com:owner/repo.git");
 		expect(tick(h).ran.version).toBe("one");
 	});
@@ -180,7 +199,8 @@ describe("the runner's clones are reset each pass", () => {
 			git(dir, "config", "core.hooksPath", ".git/hooks");
 		}
 		expect(tick(h).ran.version).toBe("one");
-		for (const marker of ["hooked-push", "hooked-harness", "monitored"]) expect(existsSync(join(h.root, marker))).toBe(false);
+		for (const marker of ["hooked-push", "hooked-harness", "monitored"])
+			expect(existsSync(join(h.root, marker))).toBe(false);
 		for (const dir of [push, harness]) {
 			const config = readFileSync(join(dir, ".git/config"), "utf8");
 			expect(config).not.toContain("fsmonitor");
@@ -197,7 +217,11 @@ describe("the runner's clones are reset each pass", () => {
 		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("one") })));
 		const elsewhere = join(h.root, "elsewhere");
 		plant(join(elsewhere, "x"), "post-checkout", join(h.root, "hooked"));
-		const hooks = { GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "core.hooksPath", GIT_CONFIG_VALUE_0: join(elsewhere, "x/.git/hooks") };
+		const hooks = {
+			GIT_CONFIG_COUNT: "1",
+			GIT_CONFIG_KEY_0: "core.hooksPath",
+			GIT_CONFIG_VALUE_0: join(elsewhere, "x/.git/hooks"),
+		};
 		expect(tick(h, "repo", "owner/repo", hooks).ran.version).toBe("one");
 		expect(existsSync(join(h.root, "hooked"))).toBe(false);
 	});

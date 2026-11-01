@@ -28,19 +28,16 @@ describe("a bunx that installs what it runs", () => {
 
 	// A word after one of bun's options may be its value, so it is passed over
 	// on the way to the `x` — `bun --hot app.ts x` included, a refusal accepted.
-	test.each([
-		"bun --cwd /tmp x cowsay",
-		"bun --cwd=/tmp x cowsay",
-		"bun -c cfg x cowsay",
-		"bun --hot app.ts x",
-	])("%s blocks", (line) => installs(line));
+	test.each(["bun --cwd /tmp x cowsay", "bun --cwd=/tmp x cowsay", "bun -c cfg x cowsay", "bun --hot app.ts x"])(
+		"%s blocks",
+		(line) => installs(line),
+	);
 
 	// The interpreter check refuses an option before bun's subcommand; not this one.
-	test.each([
-		"bun run --cwd x script",
-		"bun --cwd /tmp test x.test.ts",
-		"bun --cwd /tmp x --no-install tsc",
-	])("%s is not refused as an install", (line) => expect(verdict(line).rule).not.toBe("bunx-install"));
+	test.each(["bun run --cwd x script", "bun --cwd /tmp test x.test.ts", "bun --cwd /tmp x --no-install tsc"])(
+		"%s is not refused as an install",
+		(line) => expect(verdict(line).rule).not.toBe("bunx-install"),
+	);
 
 	// spec: agent-permissions/the-flag-after-the-package
 	test("the flag after the package blocks", () => {
@@ -53,9 +50,7 @@ describe("a bunx that installs what it runs", () => {
 	});
 
 	// spec: agent-permissions/a-wrapped-bunx
-	test.each([
-		"env FOO=1 bunx cowsay",
-		"~/.bun/bin/bunx cowsay",
-		'bash -c "bunx cowsay"',
-	])("%s blocks", (line) => installs(line));
+	test.each(["env FOO=1 bunx cowsay", "~/.bun/bin/bunx cowsay", 'bash -c "bunx cowsay"'])("%s blocks", (line) =>
+		installs(line),
+	);
 });

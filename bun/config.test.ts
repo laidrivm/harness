@@ -19,10 +19,7 @@ afterAll(() => {
 function consumer(harness?: Record<string, unknown>): string {
 	const dir = mkdtempSync(join(tmpdir(), "harness-config-"));
 	made.push(dir);
-	writeFileSync(
-		join(dir, "package.json"),
-		JSON.stringify(harness === undefined ? {} : { harness }),
-	);
+	writeFileSync(join(dir, "package.json"), JSON.stringify(harness === undefined ? {} : { harness }));
 	Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
 	Bun.spawnSync(["git", "add", "-A"], { cwd: dir });
 	return dir;
@@ -35,9 +32,7 @@ describe("reading a value", () => {
 	});
 
 	test("the bump's test command is read, and its absence names it", () => {
-		expect(read(consumer({ bumpTest: "bun test" }), "bumpTest")).toBe(
-			"bun test",
-		);
+		expect(read(consumer({ bumpTest: "bun test" }), "bumpTest")).toBe("bun test");
 		expect(() => read(consumer({}), "bumpTest")).toThrow("harness.bumpTest");
 	});
 
@@ -65,17 +60,14 @@ describe("reading a value", () => {
 describe("a gate whose value is absent", () => {
 	test("the mutation floor fails naming harness.mutationFloor", () => {
 		// The command a consumer runs, from inside the consumer.
-		const run = Bun.spawnSync(
-			["bun", join(import.meta.dir, "mutation-floor.ts")],
-			{ cwd: consumer({ rootFiles: {} }) },
-		);
+		const run = Bun.spawnSync(["bun", join(import.meta.dir, "mutation-floor.ts")], {
+			cwd: consumer({ rootFiles: {} }),
+		});
 		expect(run.exitCode).not.toBe(0);
 		expect(run.stderr.toString()).toContain("harness.mutationFloor");
 	});
 
 	test("the root sweep fails naming harness.rootFiles", () => {
-		expect(() => stray(consumer({ mutationFloor: {} }))).toThrow(
-			"harness.rootFiles",
-		);
+		expect(() => stray(consumer({ mutationFloor: {} }))).toThrow("harness.rootFiles");
 	});
 });

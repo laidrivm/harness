@@ -36,10 +36,7 @@ const BASE: Record<string, string | null> = {
  * A throwaway repository holding `BASE` with `files` laid over it — `null`
  * removes a file — all tracked, then `untracked` written beside them.
  */
-function fabricate(
-	files: Record<string, string | null>,
-	untracked: Record<string, string> = {},
-): string {
+function fabricate(files: Record<string, string | null>, untracked: Record<string, string> = {}): string {
 	const dir = mkdtempSync(join(tmpdir(), "review-config-"));
 	made.push(dir);
 	const git = (...args: string[]) => {
@@ -51,8 +48,7 @@ function fabricate(
 		writeFileSync(join(dir, path), text);
 	};
 	git("init", "-b", "main");
-	for (const [path, text] of Object.entries({ ...BASE, ...files }))
-		if (text !== null) write(path, text);
+	for (const [path, text] of Object.entries({ ...BASE, ...files })) if (text !== null) write(path, text);
 	git("add", "-A");
 	for (const [path, text] of Object.entries(untracked)) write(path, text);
 	return dir;
@@ -144,16 +140,8 @@ describe("a doc out of reach", () => {
 	// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach
 	test.each([
 		// Another doc keeps `core/*.md` live, so the rulebook is the one problem.
-		[
-			"the rulebook",
-			{ "core/rules.md": null, "core/x.md": "# X\n" },
-			"core/rules.md",
-		],
-		[
-			"a doc CLAUDE.md links",
-			{ "CLAUDE.md": "@core/rules.md\nSee [g](core/gone.md).\n" },
-			"core/gone.md",
-		],
+		["the rulebook", { "core/rules.md": null, "core/x.md": "# X\n" }, "core/rules.md"],
+		["a doc CLAUDE.md links", { "CLAUDE.md": "@core/rules.md\nSee [g](core/gone.md).\n" }, "core/gone.md"],
 		["CLAUDE.md", { "CLAUDE.md": null }, "CLAUDE.md"],
 	])("%s absent from the tree is named", (_name, files, named) => {
 		const problems = unreached(fabricate(files));
@@ -212,10 +200,7 @@ describe("a pattern that matches nothing", () => {
 
 	// spec: local-review-loop/a-pattern-that-matches-nothing
 	test("a pattern matching only an untracked file matches nothing", () => {
-		const dir = fabricate(
-			{ ".coderabbit.yaml": config(["core/*.md", "notes/*.md"]) },
-			{ "notes/a.md": "# Draft\n" },
-		);
+		const dir = fabricate({ ".coderabbit.yaml": config(["core/*.md", "notes/*.md"]) }, { "notes/a.md": "# Draft\n" });
 		const problems = unreached(dir);
 		expect(problems).toHaveLength(1);
 		expect(problems[0]).toContain("notes/*.md");

@@ -1,15 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-	after,
-	before,
-	cleanup,
-	failure,
-	run,
-	temp,
-	thrice,
-} from "./loop-guard.fixture.ts";
+import { after, before, cleanup, failure, run, temp, thrice } from "./loop-guard.fixture.ts";
 
 /**
  * When the loop guard refuses a call that failed the same way three times,
@@ -76,8 +68,7 @@ describe("what the guard cannot read or write lets the call through", () => {
 	test("a garbage count file lets the call through [29]", () => {
 		const tmp = temp();
 		for (const event of thrice()) run(tmp, event);
-		for (const name of readdirSync(join(tmp, "loop-guard")))
-			writeFileSync(join(tmp, "loop-guard", name), "garbage");
+		for (const name of readdirSync(join(tmp, "loop-guard"))) writeFileSync(join(tmp, "loop-guard", name), "garbage");
 		expect(run(tmp, before()).code).toBe(0);
 	});
 

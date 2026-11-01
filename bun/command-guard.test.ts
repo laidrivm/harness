@@ -1,11 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	cleanup,
-	detached,
-	event,
-	fabricate,
-	run,
-} from "./command-guard.fixture.ts";
+import { cleanup, detached, event, fabricate, run } from "./command-guard.fixture.ts";
 
 /**
  * What `command-guard.ts` refuses of a commit: one on main, wherever the line
@@ -19,10 +13,7 @@ afterAll(cleanup);
 
 describe("an event the guard cannot read", () => {
 	test("a payload with no command blocks", () => {
-		const { code, reason } = run(
-			{ tool_name: "Bash", tool_input: {} },
-			fabricate("main"),
-		);
+		const { code, reason } = run({ tool_name: "Bash", tool_input: {} }, fabricate("main"));
 		expect(code).toBe(2);
 		expect(reason).toContain("tool_input.command");
 	});
@@ -56,100 +47,68 @@ describe("committing while HEAD is on main", () => {
 	});
 
 	test("a commit reached through a compound command blocks", () => {
-		expect(
-			run(event('git add -A && git commit -m "fix"'), fabricate("main")).code,
-		).toBe(2);
+		expect(run(event('git add -A && git commit -m "fix"'), fabricate("main")).code).toBe(2);
 	});
 
 	test("a commit whose compound command starts with something else blocks", () => {
 		// The `if` field matches each subcommand, so the guard is reached; it
 		// must find the git command past the first one for that to matter.
-		expect(
-			run(event("bun test && git commit -m fix"), fabricate("main")).code,
-		).toBe(2);
+		expect(run(event("bun test && git commit -m fix"), fabricate("main")).code).toBe(2);
 	});
 
 	test("a commit after a semicolon blocks", () => {
-		expect(
-			run(event("git status; git commit -m fix"), fabricate("main")).code,
-		).toBe(2);
+		expect(run(event("git status; git commit -m fix"), fabricate("main")).code).toBe(2);
 	});
 
 	test("a commit on its own line blocks", () => {
-		expect(
-			run(event("bun test\ngit commit -m fix"), fabricate("main")).code,
-		).toBe(2);
+		expect(run(event("bun test\ngit commit -m fix"), fabricate("main")).code).toBe(2);
 	});
 
 	test("a commit behind a leading assignment blocks", () => {
-		expect(
-			run(event("GIT_TRACE=1 git commit -m fix"), fabricate("main")).code,
-		).toBe(2);
+		expect(run(event("GIT_TRACE=1 git commit -m fix"), fabricate("main")).code).toBe(2);
 	});
 
 	test("a commit behind a global option blocks", () => {
-		expect(
-			run(
-				event("git -c core.hooksPath=/dev/null commit -m fix"),
-				fabricate("main"),
-			).code,
-		).toBe(2);
+		expect(run(event("git -c core.hooksPath=/dev/null commit -m fix"), fabricate("main")).code).toBe(2);
 	});
 
 	test("the word commit inside an argument does not block", () => {
-		expect(
-			run(event('git log --grep="git commit"'), fabricate("main")).code,
-		).toBe(0);
+		expect(run(event('git log --grep="git commit"'), fabricate("main")).code).toBe(0);
 	});
 
 	test("a separator inside quotes does not start a new command", () => {
 		// Splitting here would leave the fragment `git commit -m x"`, and a
 		// read command would be blocked as a commit.
-		expect(
-			run(event('git log --grep="x; git commit -m x"'), fabricate("main")).code,
-		).toBe(0);
+		expect(run(event('git log --grep="x; git commit -m x"'), fabricate("main")).code).toBe(0);
 	});
 
 	test("a commit inside a command substitution blocks", () => {
-		expect(
-			run(event("echo $(git commit -m fix)"), fabricate("main")).code,
-		).toBe(2);
+		expect(run(event("echo $(git commit -m fix)"), fabricate("main")).code).toBe(2);
 	});
 
 	test("a commit inside backticks blocks", () => {
-		expect(run(event("echo `git commit -m fix`"), fabricate("main")).code).toBe(
-			2,
-		);
+		expect(run(event("echo `git commit -m fix`"), fabricate("main")).code).toBe(2);
 	});
 
 	test("a commit inside a substitution within double quotes blocks", () => {
 		// The shell substitutes inside double quotes, so quote tracking alone
 		// would hide this one.
-		expect(
-			run(event('echo "$(git commit -m fix)"'), fabricate("main")).code,
-		).toBe(2);
+		expect(run(event('echo "$(git commit -m fix)"'), fabricate("main")).code).toBe(2);
 	});
 
 	test("a commit aimed at another repository reads that repository", () => {
 		// `-C` names where the commit lands; the guard's own cwd is irrelevant.
 		const elsewhere = fabricate("main");
-		expect(
-			run(event(`git -C ${elsewhere} commit -m fix`), fabricate("feat/x")).code,
-		).toBe(2);
+		expect(run(event(`git -C ${elsewhere} commit -m fix`), fabricate("feat/x")).code).toBe(2);
 	});
 
 	test("a commit aimed at a feature branch elsewhere does not block", () => {
 		const elsewhere = fabricate("feat/x");
-		expect(
-			run(event(`git -C ${elsewhere} commit -m fix`), fabricate("main")).code,
-		).toBe(0);
+		expect(run(event(`git -C ${elsewhere} commit -m fix`), fabricate("main")).code).toBe(0);
 	});
 
 	test("a commit aimed at an unreadable target blocks", () => {
-		expect(
-			run(event("git -C /nonexistent/xyz commit -m fix"), fabricate("feat/x"))
-				.code,
-		).toBe(2);
+		expect(run(event("git -C /nonexistent/xyz commit -m fix"), fabricate("feat/x")).code).toBe(2);
 	});
 
 	test("a branch merely starting with main does not block", () => {
@@ -169,35 +128,24 @@ describe("the directory a commit lands in", () => {
 	test("the event's cwd decides, not the hook's own", () => {
 		const main = fabricate("main");
 		const feature = fabricate("feat/x");
-		expect(
-			run({ ...event("git commit -m fix"), cwd: main }, feature).code,
-		).toBe(2);
-		expect(
-			run({ ...event("git commit -m fix"), cwd: feature }, main).code,
-		).toBe(0);
+		expect(run({ ...event("git commit -m fix"), cwd: main }, feature).code).toBe(2);
+		expect(run({ ...event("git commit -m fix"), cwd: feature }, main).code).toBe(0);
 	});
 
 	test("a cd into a checkout on main blocks", () => {
 		const main = fabricate("main");
-		expect(
-			run(event(`cd ${main} && git commit -m fix`), fabricate("feat/x")).code,
-		).toBe(2);
+		expect(run(event(`cd ${main} && git commit -m fix`), fabricate("feat/x")).code).toBe(2);
 	});
 
 	test("a refusal from main names git -C as the way to commit elsewhere", () => {
 		const feature = fabricate("feat/x");
-		const { reason } = run(
-			event(`cd ${feature} && git commit -m fix`),
-			fabricate("main"),
-		);
+		const { reason } = run(event(`cd ${feature} && git commit -m fix`), fabricate("main"));
 		expect(reason).toContain("git -C <path>");
 	});
 
 	test("a cd between feature checkouts does not block", () => {
 		const other = fabricate("feat/y");
-		expect(
-			run(event(`cd ${other} && git commit -m fix`), fabricate("feat/x")).code,
-		).toBe(0);
+		expect(run(event(`cd ${other} && git commit -m fix`), fabricate("feat/x")).code).toBe(0);
 	});
 
 	test.each([
@@ -211,10 +159,7 @@ describe("the directory a commit lands in", () => {
 	});
 
 	test("a cd into nothing moves nowhere", () => {
-		expect(
-			run(event("cd /nonexistent/xyz; git commit -m fix"), fabricate("feat/x"))
-				.code,
-		).toBe(0);
+		expect(run(event("cd /nonexistent/xyz; git commit -m fix"), fabricate("feat/x")).code).toBe(0);
 	});
 
 	test("a relative -C resolves against the moved directory too", () => {
@@ -224,9 +169,7 @@ describe("the directory a commit lands in", () => {
 		const moved = fabricate();
 		Bun.spawnSync(["git", "init", "-q", "-b", "feat/x", "sub"], { cwd: start });
 		Bun.spawnSync(["git", "init", "-q", "-b", "main", "sub"], { cwd: moved });
-		expect(
-			run(event(`cd ${moved} && git -C sub commit -m fix`), start).code,
-		).toBe(2);
+		expect(run(event(`cd ${moved} && git -C sub commit -m fix`), start).code).toBe(2);
 	});
 
 	test("a second -C resolves against the first", () => {
@@ -236,10 +179,7 @@ describe("the directory a commit lands in", () => {
 	});
 
 	test("a cd the guard cannot resolve blocks", () => {
-		const { code, reason } = run(
-			event('cd "$SOMEWHERE" && git commit -m fix'),
-			fabricate("feat/x"),
-		);
+		const { code, reason } = run(event('cd "$SOMEWHERE" && git commit -m fix'), fabricate("feat/x"));
 		expect(code).toBe(2);
 		expect(reason).toContain("cannot resolve");
 	});

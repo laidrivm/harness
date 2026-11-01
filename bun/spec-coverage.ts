@@ -80,22 +80,15 @@ function cite(path: string, text: string) {
 
 		let next = index + 1;
 		for (; next < lines.length; next++) {
-			const comment = enclosed[next]
-				? null
-				: /^\s*\/\/(.*)$/.exec(lines[next] ?? "");
+			const comment = enclosed[next] ? null : /^\s*\/\/(.*)$/.exec(lines[next] ?? "");
 			const more = comment ? words(comment[1] ?? "") : [];
 			if (!more.length || !more.every((id) => IDENTIFIER.test(id))) break;
 			for (const id of more) found.push({ id, path, line: next + 1 });
 		}
 		// A line inside a block comment separates whatever its text looks like:
 		// only the first line of `/* note` starts with a comment marker.
-		while (
-			next < lines.length &&
-			(enclosed[next] || SEPARATOR.test(lines[next] ?? ""))
-		)
-			next++;
-		if (!CALL.test(lines[next] ?? ""))
-			wrong.push(`${at}: not directly above a test, it or describe call`);
+		while (next < lines.length && (enclosed[next] || SEPARATOR.test(lines[next] ?? ""))) next++;
+		if (!CALL.test(lines[next] ?? "")) wrong.push(`${at}: not directly above a test, it or describe call`);
 	});
 	return { found, wrong };
 }
@@ -161,9 +154,7 @@ export function check(cwd?: string) {
 		// delta repeats the headings it modifies verbatim, so the same criterion
 		// legitimately appears twice across the two sets — that is one criterion,
 		// not two, and only two requirements in one file are the real clash.
-		const clash = [...Map.groupBy(matched, (c) => c.source).values()].find(
-			(list) => list.length > 1,
-		);
+		const clash = [...Map.groupBy(matched, (c) => c.source).values()].find((list) => list.length > 1);
 		if (clash)
 			problems.push(
 				`${path}:${line}: ${id} is ambiguous, carried by ${clash
@@ -200,10 +191,7 @@ export function uncited(cwd?: string): number {
  */
 export function gauge(count: number, floor: number, why: string): string[] {
 	const problems: string[] = [];
-	if (!why.trim())
-		problems.push(
-			"the floor states no reason — write why in harness.uncitedFloor.why",
-		);
+	if (!why.trim()) problems.push("the floor states no reason — write why in harness.uncitedFloor.why");
 	if (count !== floor) {
 		const gap = `${count} uncited criteria against a floor of ${floor}`;
 		problems.push(

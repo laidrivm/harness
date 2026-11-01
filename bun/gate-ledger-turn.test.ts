@@ -1,26 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	appendFileSync,
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	realpathSync,
-	writeFileSync,
-} from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-	cleanup,
-	commit,
-	DONE,
-	end,
-	OPEN,
-	prompt,
-	repo,
-	runLines,
-	SILENT,
-	store,
-	TASKS,
-} from "./turn-gate.fixture.ts";
+import { cleanup, commit, DONE, end, OPEN, prompt, repo, runLines, SILENT, store, TASKS } from "./turn-gate.fixture.ts";
 
 /**
  * What the turn gate records in the gate ledger. Its own file beside
@@ -46,9 +27,7 @@ function run(half: "mark" | "stop", event: unknown, turn: Turn) {
 			HOME: turn.tmp,
 			XDG_STATE_HOME: turn.state,
 		},
-		stdin: Buffer.from(
-			typeof event === "string" ? event : JSON.stringify(event),
-		),
+		stdin: Buffer.from(typeof event === "string" ? event : JSON.stringify(event)),
 		stderr: "pipe",
 	});
 	return { code: call.exitCode, reason: call.stderr.toString() };

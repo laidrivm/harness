@@ -48,10 +48,7 @@ describe("moving the pin", () => {
 	});
 
 	test("a spec that occurs twice in the text fails naming it", () => {
-		const twice = manifest("\t").replace(
-			'"name": "consumer"',
-			`"name": "consumer",\n\t"note": "${spec(OLD)}"`,
-		);
+		const twice = manifest("\t").replace('"name": "consumer"', `"name": "consumer",\n\t"note": "${spec(OLD)}"`);
 		expect(() => movePin(twice, NEW)).toThrow(spec(OLD));
 	});
 
@@ -86,9 +83,7 @@ describe("a development-dependency pin", () => {
 	});
 
 	test("the same pin under both fields moves both", () => {
-		const after = JSON.parse(
-			movePin(both({ dependencies: spec(OLD), devDependencies: spec(OLD) }), NEW),
-		);
+		const after = JSON.parse(movePin(both({ dependencies: spec(OLD), devDependencies: spec(OLD) }), NEW));
 		expect(after.dependencies.harness).toBe(spec(NEW));
 		expect(after.devDependencies.harness).toBe(spec(NEW));
 	});

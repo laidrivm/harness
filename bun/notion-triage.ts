@@ -23,7 +23,12 @@ type At = (...cmd: string[]) => { ok: boolean; out: string; err: string };
 
 /** The triage's prompt: its task, the unattended line, the rule, the form, then the question and the comments as data. */
 export function triagePrompt(question: string, comments: Comment[], user: string): string {
-	const data = comments.map((c) => ({ id: c.id, author: c.created_by?.id, time: c.created_time, text: plain(c.rich_text) }));
+	const data = comments.map((c) => ({
+		id: c.id,
+		author: c.created_by?.id,
+		time: c.created_time,
+		text: plain(c.rich_text),
+	}));
 	return [
 		"Decide whether a question an unattended session asked is already settled in writing, and change nothing.",
 		"This session runs unattended.",
@@ -55,7 +60,13 @@ const squeeze = (text: string) => text.replace(/\s+/g, " ").trim();
  * step's branch, which the asking session wrote, and in either the quote,
  * whitespace normalised. `at` runs a command in the clone.
  */
-export function holds({ source, quote }: Answer, comments: Comment[], user: string, base: string, at: At): string | undefined {
+export function holds(
+	{ source, quote }: Answer,
+	comments: Comment[],
+	user: string,
+	base: string,
+	at: At,
+): string | undefined {
 	const words = squeeze(quote);
 	if (!words) return "the quote is empty";
 	if (ID.test(source)) {
@@ -63,7 +74,11 @@ export function holds({ source, quote }: Answer, comments: Comment[], user: stri
 		if (!found) return `${source} is no comment of the user's on this card`;
 		return squeeze(plain(found.rich_text)).includes(words) ? undefined : `the quote is not in comment ${source}`;
 	}
-	if (source.startsWith("/") || source.includes("#") || source.split("/").some((part) => [".", "..", ""].includes(part)))
+	if (
+		source.startsWith("/") ||
+		source.includes("#") ||
+		source.split("/").some((part) => [".", "..", ""].includes(part))
+	)
 		return `${source} is no path inside the repository`;
 	if (!source.endsWith(".md")) return `${source} is not a Markdown file`;
 	// Fetched again, by force: the clone is the session's, which can move its own `origin/<base>`.
@@ -81,7 +96,14 @@ export function holds({ source, quote }: Answer, comments: Comment[], user: stri
  */
 export function triage(
 	question: string,
-	{ at, under, limit, kill, base, user }: { at: At; under: string[]; limit: number; kill: Kill; base: string; user: string },
+	{
+		at,
+		under,
+		limit,
+		kill,
+		base,
+		user,
+	}: { at: At; under: string[]; limit: number; kill: Kill; base: string; user: string },
 ) {
 	return async (comments: Comment[]): Promise<Triaged> => {
 		const bound = Math.min(TRIAGE_LIMIT, limit);
@@ -96,6 +118,8 @@ export function triage(
 		const answer = ended(run.out);
 		if (typeof answer === "string") return { note: `triage: ${answer}` };
 		const why = holds(answer, comments, user, base, at);
-		return why ? { note: `triage: the source did not hold — ${why}` } : { answer, note: `triage: answered from ${answer.source}` };
+		return why
+			? { note: `triage: the source did not hold — ${why}` }
+			: { answer, note: `triage: answered from ${answer.source}` };
 	};
 }

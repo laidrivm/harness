@@ -48,7 +48,10 @@ async function run(h: ReturnType<typeof host>, log = true): Promise<string> {
 	return printed;
 }
 
-const card = (id: string, pointer = "openspec/changes/demo/") => ({ id, properties: { Pointer: { rich_text: [{ plain_text: pointer }] } } });
+const card = (id: string, pointer = "openspec/changes/demo/") => ({
+	id,
+	properties: { Pointer: { rich_text: [{ plain_text: pointer }] } },
+});
 const OPEN = "20261025T120000Z exit 1: board-loop: open — apply demo step 1: goal open: group 1 is not complete";
 const HALT = "20261025T120000Z exit 1: orchestrator: /run/secrets/claude_oauth_token is missing or holds no token";
 const MENTION = { type: "mention", mention: { type: "user", user: { id: USER } } };
@@ -68,10 +71,15 @@ describe("a step's card", () => {
 		const h = host(OPEN);
 		expect(await run(h)).toBe(`pause: notice posted on ${CARD}, Assign set`);
 		expect(state.seen).toEqual([QUERY, "POST /v1/comments", `PATCH /v1/pages/${CARD}`]);
-		expect(state.bodies[0]).toEqual({ filter: { property: "Pointer", rich_text: { equals: "openspec/changes/demo/" } } });
+		expect(state.bodies[0]).toEqual({
+			filter: { property: "Pointer", rich_text: { equals: "openspec/changes/demo/" } },
+		});
 		const body = state.bodies[1] as { parent: unknown; rich_text: unknown[] };
 		expect(body.parent).toEqual({ page_id: CARD });
-		expect(body.rich_text.slice(0, 2)).toEqual([{ type: "text", text: { content: "harness-pause" }, annotations: { code: true } }, MENTION]);
+		expect(body.rich_text.slice(0, 2)).toEqual([
+			{ type: "text", text: { content: "harness-pause" }, annotations: { code: true } },
+			MENTION,
+		]);
 		expect(posted(body)).toBe(
 			[
 				` The board loop paused the clone demo: ${OPEN}`,
@@ -90,7 +98,10 @@ describe("a step's card", () => {
 
 	test.each([
 		["a timeout", "20261025T120000Z exit 1: board-loop: timeout — apply demo step 2 ran past 60 minutes"],
-		["a process group that outlived the step", "20261025T120000Z exit 1: board-loop: refused — process group 42 outlived apply demo step 1 — see pgrep -g 42"],
+		[
+			"a process group that outlived the step",
+			"20261025T120000Z exit 1: board-loop: refused — process group 42 outlived apply demo step 1 — see pgrep -g 42",
+		],
 	])("%s names the step", async (_, line) => {
 		const state = notion([card(CARD)]);
 		expect(await run(host(line))).toBe(`pause: notice posted on ${CARD}, Assign set`);
@@ -138,7 +149,10 @@ describe("a card of its own", () => {
 
 	test.each([
 		["exit 2", OPEN.replace("exit 1", "exit 2")],
-		["a line not opening with board-loop: ", "20261025T120000Z exit 1: claude: board-loop: open — apply demo step 1: x"],
+		[
+			"a line not opening with board-loop: ",
+			"20261025T120000Z exit 1: claude: board-loop: open — apply demo step 1: x",
+		],
 		["an exit 1 with no step", "20261025T120000Z exit 1: board-loop: refused — tracked files differ from HEAD"],
 	])("%s reads no step, and queries nothing", async (_, line) => {
 		const state = notion([card(CARD)]);
@@ -177,8 +191,20 @@ describe("no notice", () => {
 	test.each([
 		["the query", OPEN, QUERY, "the board's query answered 500", [QUERY]],
 		["the creation", HALT, "POST /v1/pages", "the card's creation answered 500", ["POST /v1/pages"]],
-		["the post on a step's card", OPEN, "POST /v1/comments", "the comment's post answered 500", [QUERY, "POST /v1/comments"]],
-		["the post on a new card", HALT, "POST /v1/comments", `the comment's post answered 500 (new card ${FILED} filed)`, ["POST /v1/pages", "POST /v1/comments"]],
+		[
+			"the post on a step's card",
+			OPEN,
+			"POST /v1/comments",
+			"the comment's post answered 500",
+			[QUERY, "POST /v1/comments"],
+		],
+		[
+			"the post on a new card",
+			HALT,
+			"POST /v1/comments",
+			`the comment's post answered 500 (new card ${FILED} filed)`,
+			["POST /v1/pages", "POST /v1/comments"],
+		],
 	])("%s failing prints which and makes no call after it", async (_, line, failing, why, calls) => {
 		const state = notion([card(CARD)], { [failing]: 500 });
 		expect(await run(host(line))).toBe(`pause: no notice — ${why}`);
@@ -187,7 +213,9 @@ describe("no notice", () => {
 
 	test("the Assign write failing says the notice is posted", async () => {
 		notion([card(CARD)], { [`PATCH /v1/pages/${CARD}`]: 500 });
-		expect(await run(host(OPEN))).toBe(`pause: notice posted on ${CARD}, Assign not set — the Assign write answered 500`);
+		expect(await run(host(OPEN))).toBe(
+			`pause: notice posted on ${CARD}, Assign not set — the Assign write answered 500`,
+		);
 	});
 
 	test("the command prints its line and exits 0 when it posts nothing", () => {

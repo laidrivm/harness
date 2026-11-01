@@ -94,8 +94,10 @@ describe("the base", () => {
 		if (!unset) git(dir, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main");
 		return dir;
 	};
-	const base = (dir: string) => Bun.spawnSync(["bash", join(import.meta.dir, "diff-base.sh")], { cwd: dir }).stdout.toString();
-	const budget = (dir: string) => Bun.spawnSync(["bash", script], { cwd: dir, env: { ...process.env, PR_BODY: "" } }).stdout.toString();
+	const base = (dir: string) =>
+		Bun.spawnSync(["bash", join(import.meta.dir, "diff-base.sh")], { cwd: dir }).stdout.toString();
+	const budget = (dir: string) =>
+		Bun.spawnSync(["bash", script], { cwd: dir, env: { ...process.env, PR_BODY: "" } }).stdout.toString();
 
 	test("`diff-base.sh` prints `origin/main` where `origin/HEAD` points there [19]", () => {
 		expect(base(tracked())).toBe("origin/main\n");

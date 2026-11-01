@@ -10,14 +10,7 @@
  * here: a lifecycle hook belongs to the file it runs for, so each test file
  * registers `cleanup` itself.
  */
-import {
-	existsSync,
-	mkdtempSync,
-	readFileSync,
-	rmSync,
-	utimesSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -33,16 +26,7 @@ export function cleanup(): void {
 /** Runs git with the identity a commit needs, whatever the machine's config. */
 export function git(cwd: string, ...args: string[]): void {
 	const run = Bun.spawnSync(
-		[
-			"git",
-			"-c",
-			"user.email=t@e",
-			"-c",
-			"user.name=T",
-			"-c",
-			"commit.gpgsign=false",
-			...args,
-		],
+		["git", "-c", "user.email=t@e", "-c", "user.name=T", "-c", "commit.gpgsign=false", ...args],
 		{ cwd },
 	);
 	if (run.exitCode !== 0) throw new Error(run.stderr.toString());
@@ -150,9 +134,7 @@ export function run(
 	const call = Bun.spawnSync(["bun", guard], {
 		cwd,
 		env,
-		stdin: Buffer.from(
-			typeof payload === "string" ? payload : JSON.stringify(payload),
-		),
+		stdin: Buffer.from(typeof payload === "string" ? payload : JSON.stringify(payload)),
 		stderr: "pipe",
 	});
 	return {
@@ -168,7 +150,10 @@ export const event = (command: unknown, description = "") => ({
 });
 
 /** The guard's verdict on `command` from a feature branch, with the rule it recorded. */
-export function verdict(command: string, dir = fabricate("feat/x")): {
+export function verdict(
+	command: string,
+	dir = fabricate("feat/x"),
+): {
 	code: number;
 	reason: string;
 	rule?: string;

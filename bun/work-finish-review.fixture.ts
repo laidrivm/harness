@@ -26,7 +26,8 @@ export const DONE = run("completed", "success", "Finished");
 export const LIMITED = run("completed", "neutral", "Review rate limited");
 
 /** The check-run read of `cwd`'s `HEAD`, as the stub logs it. */
-export const runs = (cwd: string) => `api repos/o/demo/commits/${head(cwd)}/check-runs?filter=all&per_page=100 --paginate --jq .check_runs[]`;
+export const runs = (cwd: string) =>
+	`api repos/o/demo/commits/${head(cwd)}/check-runs?filter=all&per_page=100 --paginate --jq .check_runs[]`;
 export const times = (n: number, call: string) => Array<string>(n).fill(call);
 export const short = (cwd: string) => head(cwd).slice(0, 7);
 

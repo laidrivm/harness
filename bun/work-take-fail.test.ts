@@ -19,18 +19,30 @@ describe("take fails closed", () => {
 	// spec: work-take/no-ask-settings
 	test("no ask settings: no call made", async () => {
 		const run = await take({ config: home(false) });
-		expect([run.code, failed(run.out), run.seen, run.ran]).toEqual([1, "take: the ask settings read failed — no ask integration is configured", [], ""]);
+		expect([run.code, failed(run.out), run.seen, run.ran]).toEqual([
+			1,
+			"take: the ask settings read failed — no ask integration is configured",
+			[],
+			"",
+		]);
 	});
 
 	test("settings its group may read: the mode named, and no call", async () => {
 		const run = await take({ config: home(true, 0o640) });
-		expect([run.code, failed(run.out)?.startsWith("take: the ask settings read failed — notion-bot: "), run.seen]).toEqual([1, true, []]);
+		expect([
+			run.code,
+			failed(run.out)?.startsWith("take: the ask settings read failed — notion-bot: "),
+			run.seen,
+		]).toEqual([1, true, []]);
 		expect(failed(run.out)).toContain("has mode 0640");
 	});
 
 	// spec: work-take/a-page-the-integration-cannot-read
 	test("403 on the page read: the step and the status, and no change file", async () => {
-		const run = await take({ cwd: checkout(DEMO), stub: { page: page("openspec/changes/demo/"), fail: { [`GET /v1/pages/${CARD}`]: 403 } } });
+		const run = await take({
+			cwd: checkout(DEMO),
+			stub: { page: page("openspec/changes/demo/"), fail: { [`GET /v1/pages/${CARD}`]: 403 } },
+		});
 		expect([run.code, failed(run.out)]).toEqual([1, "take: the page read failed — the page read answered 403"]);
 		expect(run.out).not.toContain("demo proposal");
 		expect(run.ran).toBe("");
@@ -47,7 +59,10 @@ describe("take fails closed", () => {
 		["not a string", { object: "page_markdown", markdown: 7, truncated: false, unknown_block_ids: [] }],
 	])("a markdown answer whose markdown is %s, with no undefined printed", async (_, markdown) => {
 		const run = await take({ stub: { markdown } });
-		expect([run.code, failed(run.out)]).toEqual([1, "take: the markdown read failed — the markdown read gave no markdown"]);
+		expect([run.code, failed(run.out)]).toEqual([
+			1,
+			"take: the markdown read failed — the markdown read gave no markdown",
+		]);
 		expect(run.out).not.toContain("undefined");
 	});
 

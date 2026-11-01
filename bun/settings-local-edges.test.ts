@@ -10,28 +10,18 @@ import { join } from "node:path";
 import { run as check } from "./check.ts";
 import { consumer, policy } from "./settings.fixture.ts";
 import { machineLocal } from "./settings.ts";
+import { cleanup, gap, LOCAL, repo, report, run } from "./settings-local.fixture.ts";
 import { sweep } from "./settings-local.ts";
-import {
-	cleanup,
-	gap,
-	LOCAL,
-	report,
-	repo,
-	run,
-} from "./settings-local.fixture.ts";
 
 afterAll(cleanup);
 
 describe("a literal matcher, and the order honest", () => {
-	test.each([
-		"Bash(sort -t: -k2 -rn)",
-		'Bash(echo "exit=$?")',
-		"Bash(grep -E 'a.+b$' x)",
-	])("%s is decided by itself [16]", (entry) => {
-		expect(report({ allow: [entry] }, entry)).toEqual([
-			`decided: ${entry} — allow holds ${entry}`,
-		]);
-	});
+	test.each(["Bash(sort -t: -k2 -rn)", 'Bash(echo "exit=$?")', "Bash(grep -E 'a.+b$' x)"])(
+		"%s is decided by itself [16]",
+		(entry) => {
+			expect(report({ allow: [entry] }, entry)).toEqual([`decided: ${entry} — allow holds ${entry}`]);
+		},
+	);
 
 	test.each([
 		["Bash(ls a?c)", "Bash(ls abc)"],
@@ -50,18 +40,14 @@ describe("a literal matcher, and the order honest", () => {
 
 	test("an allow glob after a named server decides that server's tools", () => {
 		const entry = "mcp__github__get_issue";
-		expect(report({ allow: ["mcp__github__*"] }, entry)).toEqual([
-			`decided: ${entry} — allow holds mcp__github__*`,
-		]);
+		expect(report({ allow: ["mcp__github__*"] }, entry)).toEqual([`decided: ${entry} — allow holds mcp__github__*`]);
 	});
 
 	test("a path specifier that leaves by traversal is kept [17]", () => {
 		const swept = sweep(repo({}, ["Read(../outside/**)"]));
 		expect(swept).toEqual({
 			reported: [],
-			kept: [
-				"kept: Read(../outside/**) — reaches outside the repository",
-			],
+			kept: ["kept: Read(../outside/**) — reaches outside the repository"],
 		});
 	});
 
@@ -79,21 +65,17 @@ describe("a literal matcher, and the order honest", () => {
 	});
 
 	test("an entry with an absolute path that a tracked rule decides is decided, not kept [18]", () => {
-		expect(
-			report({ allow: ["Bash(mkdir *)"] }, "Bash(mkdir -p /tmp/x)"),
-		).toEqual(["decided: Bash(mkdir -p /tmp/x) — allow holds Bash(mkdir *)"]);
+		expect(report({ allow: ["Bash(mkdir *)"] }, "Bash(mkdir -p /tmp/x)")).toEqual([
+			"decided: Bash(mkdir -p /tmp/x) — allow holds Bash(mkdir *)",
+		]);
 	});
 });
 
 describe("what the sweep leaves alone", () => {
 	// spec: agent-permissions/nothing-left-to-promote-or-drop
 	test("neither file changes across a run that reports entries [24]", () => {
-		const dir = repo({ allow: ["Bash(git log *)"] }, [
-			"Bash(git log)",
-			"Bash(git push *)",
-		]);
-		const read = () =>
-			[".claude/settings.json", LOCAL].map((f) => readFileSync(join(dir, f)));
+		const dir = repo({ allow: ["Bash(git log *)"] }, ["Bash(git log)", "Bash(git push *)"]);
+		const read = () => [".claude/settings.json", LOCAL].map((f) => readFileSync(join(dir, f)));
 		const before = read();
 		expect(run(dir).code).toBe(1);
 		expect(read()).toEqual(before);
@@ -101,9 +83,9 @@ describe("what the sweep leaves alone", () => {
 
 	test("the harness's own tracked allow list names no machine-local entry", () => {
 		const root = join(import.meta.dir, "..");
-		const tracked = JSON.parse(
-			readFileSync(join(root, ".claude/settings.json"), "utf8"),
-		) as { permissions: { allow: string[] } };
+		const tracked = JSON.parse(readFileSync(join(root, ".claude/settings.json"), "utf8")) as {
+			permissions: { allow: string[] };
+		};
 		const local = tracked.permissions.allow.filter((e) => machineLocal(e, root));
 		expect(local).toEqual([]);
 	});

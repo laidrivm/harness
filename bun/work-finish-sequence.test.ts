@@ -71,16 +71,33 @@ describe("the sequence", () => {
 
 	test("a closed unmerged pull request alone: a new draft is opened", async () => {
 		const closed = pull(6, "CLOSED", false);
-		const run = await finish({ cwd: withBody(), args: OPENING, gh: { before: [closed], after: [closed, pull(7, "OPEN", true)] } });
-		expect(run.calls.filter((call) => call.startsWith("pr ")).map((call) => call.split(" -R")[0])).toEqual(["pr create --draft", "pr ready 7"]);
+		const run = await finish({
+			cwd: withBody(),
+			args: OPENING,
+			gh: { before: [closed], after: [closed, pull(7, "OPEN", true)] },
+		});
+		expect(run.calls.filter((call) => call.startsWith("pr ")).map((call) => call.split(" -R")[0])).toEqual([
+			"pr create --draft",
+			"pr ready 7",
+		]);
 		expect(run.last).toBe("finish: ready #7");
 	});
 
 	// spec: work-finish/no-card-no-question-check
 	test("no --card: a first finish pushes, opens the draft and marks it ready, reading nothing from Notion", async () => {
 		const cwd = withBody();
-		const run = await finish({ cwd, args: OPENING.filter((a) => a !== "--card" && a !== CARD), gh: { before: [], after: [pull(7, "OPEN", true)] } });
-		expect(run.calls).toEqual([READ, "push", `pr create --draft -R o/demo --base main --head ${BRANCH} --title Demo --body-file body.md`, READ, READY]);
+		const run = await finish({
+			cwd,
+			args: OPENING.filter((a) => a !== "--card" && a !== CARD),
+			gh: { before: [], after: [pull(7, "OPEN", true)] },
+		});
+		expect(run.calls).toEqual([
+			READ,
+			"push",
+			`pr create --draft -R o/demo --base main --head ${BRANCH} --title Demo --body-file body.md`,
+			READ,
+			READY,
+		]);
 		expect([run.code, run.last, run.remote, run.seen]).toEqual([0, "finish: ready #7", head(cwd), []]);
 		expect(run.out).toContain("finish: no --card, so no card's question was read\n");
 	});

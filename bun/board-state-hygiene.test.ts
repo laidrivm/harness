@@ -10,12 +10,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-	archived,
-	cleanup,
-	complete,
-	fabricate,
-} from "./board-state.fixture.ts";
+import { archived, cleanup, complete, fabricate } from "./board-state.fixture.ts";
 import { boardState } from "./board-state.ts";
 import { root } from "./root.ts";
 
@@ -32,16 +27,12 @@ const command = (cwd: string) =>
 describe("the output names no board", () => {
 	test("neither the board a slug sits on nor the two whose trees are elsewhere", () => {
 		const state = boardState(fabricate(complete("candidacy-gate")));
-		for (const board of ["D2ASS", "Harness", "mellon"])
-			expect(JSON.stringify(state)).not.toContain(board);
+		for (const board of ["D2ASS", "Harness", "mellon"]) expect(JSON.stringify(state)).not.toContain(board);
 	});
 
 	test("the command names the board its package.json names, and no other [15]", () => {
 		const tree = fabricate(complete("candidacy-gate"));
-		writeFileSync(
-			join(tree, "package.json"),
-			JSON.stringify({ harness: { board: "Harness" } }),
-		);
+		writeFileSync(join(tree, "package.json"), JSON.stringify({ harness: { board: "Harness" } }));
 		Bun.spawnSync(["git", "init", "-q"], { cwd: tree });
 		const out = command(tree);
 		expect(out).toContain('"Harness"');
@@ -60,26 +51,19 @@ describe("the derivation reaches no network", () => {
 	// collected takes its cases out of the run entirely, and bun reports the
 	// smaller number as a pass — so renaming the module would silence the
 	// cases that guard it instead of failing them.
-	const source = () =>
-		readFileSync(join(import.meta.dir, "board-state.ts"), "utf8");
+	const source = () => readFileSync(join(import.meta.dir, "board-state.ts"), "utf8");
 
 	// Bun's own transpiler rather than a pattern over the source: it reports a
 	// bare `import "node:net";`, a wrapped import list and a dynamic
 	// `import()` alike, and every one of those is a module a pattern anchored
 	// to one line would read as no import at all — which is the one direction
 	// this case must not miss.
-	const imports = (text: string) =>
-		new Bun.Transpiler({ loader: "ts" }).scan(text).imports.map((i) => i.path);
+	const imports = (text: string) => new Bun.Transpiler({ loader: "ts" }).scan(text).imports.map((i) => i.path);
 
 	test("the module imports the filesystem, the path join, the root, the config and nothing else", () => {
 		const imported = imports(source());
 		expect(imported.length).toBeGreaterThan(0);
-		expect(
-			imported.filter(
-				(from) =>
-					!["node:fs", "node:path", "./root.ts", "./config.ts"].includes(from),
-			),
-		).toEqual([]);
+		expect(imported.filter((from) => !["node:fs", "node:path", "./root.ts", "./config.ts"].includes(from))).toEqual([]);
 	});
 
 	// Allowing a module above allows whatever it allows, and the case above
@@ -98,21 +82,13 @@ describe("the derivation reaches no network", () => {
 		// Token by token rather than by parse: a mention in prose would fail this
 		// case wrongly, and the repair is to reword the comment. The direction
 		// that passes wrongly is the one a parser would be bought to prevent.
-		for (const reach of [
-			/\bfetch\s*\(/,
-			/XMLHttpRequest/,
-			/Bun\s*\.\s*connect/,
-			/notion/i,
-		])
+		for (const reach of [/\bfetch\s*\(/, /XMLHttpRequest/, /Bun\s*\.\s*connect/, /notion/i])
 			expect(source()).not.toMatch(reach);
 	});
 
 	test("a full run produces both halves of the output from the tree alone", () => {
 		const tree = fabricate({
-			...complete(
-				"score-calibration",
-				"schema: spec-driven\nafter: [outcome-calibration]\n",
-			),
+			...complete("score-calibration", "schema: spec-driven\nafter: [outcome-calibration]\n"),
 			...archived("2026-08-25", "outcome-calibration"),
 		});
 		expect(boardState(tree)).toEqual({
@@ -130,13 +106,7 @@ describe("the derivation reaches no network", () => {
 describe("what may not reach the output, this repository being public", () => {
 	test("no option identifier, board URL, view URL or bare UUID", () => {
 		const emitted = JSON.stringify(boardState(root));
-		for (const secret of [
-			"collectionPropertyOption://",
-			"collection://",
-			"view://",
-			"notion.so",
-			"notion.com",
-		])
+		for (const secret of ["collectionPropertyOption://", "collection://", "view://", "notion.so", "notion.com"])
 			expect(emitted).not.toContain(secret);
 		expect(emitted).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-/i);
 	});

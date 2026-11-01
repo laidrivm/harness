@@ -31,9 +31,7 @@ describe("a version naming a set rather than a version", () => {
 	])("%s is named, with the field it sits in", (_, spec) => {
 		const found = ranges(manifest({ dependencies: { qs: spec } }));
 
-		expect(found).toEqual([
-			`package.json: dependencies.qs is ${spec}, not one version`,
-		]);
+		expect(found).toEqual([`package.json: dependencies.qs is ${spec}, not one version`]);
 	});
 
 	test("is reached inside a nested override", () => {
@@ -44,9 +42,7 @@ describe("a version naming a set rather than a version", () => {
 
 		const found = ranges(manifest(fields));
 
-		expect(found).toEqual([
-			"package.json: overrides.ajv.fast-uri is ^3.1.6, not one version",
-		]);
+		expect(found).toEqual(["package.json: overrides.ajv.fast-uri is ^3.1.6, not one version"]);
 	});
 
 	test("is named once per version, not once per manifest", () => {
@@ -70,9 +66,7 @@ describe("a version naming a set rather than a version", () => {
 		// this file, and a range in it is still caught.
 		const found = ranges(manifest({ peerDependencies: { preact: "^10" } }));
 
-		expect(found).toEqual([
-			"package.json: peerDependencies.preact is ^10, not one version",
-		]);
+		expect(found).toEqual(["package.json: peerDependencies.preact is ^10, not one version"]);
 	});
 });
 
@@ -115,9 +109,7 @@ describe("a Git specifier", () => {
 	test("the harness by bare shorthand is named", () => {
 		// The one entry the shorthand cannot hide in: it is read by its key, and
 		// every value but the pin fails there.
-		const found = ranges(
-			manifest({ dependencies: { harness: "laidrivm/harness" } }),
-		);
+		const found = ranges(manifest({ dependencies: { harness: "laidrivm/harness" } }));
 
 		expect(found).toEqual([
 			"package.json: dependencies.harness is laidrivm/harness, not github:laidrivm/harness#<40-hex commit>",
@@ -133,19 +125,13 @@ describe("a Git specifier", () => {
 	])("another dependency %s is named as a range is", (_, spec) => {
 		const found = ranges(manifest({ dependencies: { lodash: spec } }));
 
-		expect(found).toEqual([
-			`package.json: dependencies.lodash is ${spec}, not one version`,
-		]);
+		expect(found).toEqual([`package.json: dependencies.lodash is ${spec}, not one version`]);
 	});
 
 	test("a hosted prefix other than github is named", () => {
-		const found = ranges(
-			manifest({ dependencies: { lodash: "gitlab:lodash/lodash" } }),
-		);
+		const found = ranges(manifest({ dependencies: { lodash: "gitlab:lodash/lodash" } }));
 
-		expect(found).toEqual([
-			"package.json: dependencies.lodash is gitlab:lodash/lodash, not one version",
-		]);
+		expect(found).toEqual(["package.json: dependencies.lodash is gitlab:lodash/lodash, not one version"]);
 	});
 
 	test("beside the pinned harness, only the other entry is named", () => {
@@ -176,15 +162,12 @@ describe("a Git specifier", () => {
 });
 
 describe("a value this scan has nothing to say about", () => {
-	test.each(["10.29.8", "1.2.3-beta.1", "1.2.3+build.5"])(
-		"the exact version %s passes",
-		(spec) => {
-			// A prerelease is still one version, and it carries the hyphen a span
-			// is written with — which is why the span is recognised by the digit
-			// after that hyphen rather than by the hyphen alone.
-			expect(ranges(manifest({ dependencies: { qs: spec } }))).toEqual([]);
-		},
-	);
+	test.each(["10.29.8", "1.2.3-beta.1", "1.2.3+build.5"])("the exact version %s passes", (spec) => {
+		// A prerelease is still one version, and it carries the hyphen a span
+		// is written with — which is why the span is recognised by the digit
+		// after that hyphen rather than by the hyphen alone.
+		expect(ranges(manifest({ dependencies: { qs: spec } }))).toEqual([]);
+	});
 
 	test("a command carrying an operator passes, being exempt", () => {
 		// Every shell operator this rejects in a version is ordinary in a script,
@@ -216,9 +199,7 @@ describe("a value this scan has nothing to say about", () => {
 		// check that cannot report on one.
 		const fields = { dependencies: { qs: null, preact: "^10.29.8" } };
 
-		expect(ranges(manifest(fields))).toEqual([
-			"package.json: dependencies.preact is ^10.29.8, not one version",
-		]);
+		expect(ranges(manifest(fields))).toEqual(["package.json: dependencies.preact is ^10.29.8, not one version"]);
 	});
 
 	test("a path carrying an x segment passes", () => {

@@ -34,10 +34,7 @@ const INTERPRETER = /^(python(\d[\d.]*t?)?|node|bun|deno|perl|ruby|php)$/;
 
 /** The words after the redirections, which name no program. */
 const args = (rest: string[]) =>
-	rest.filter(
-		(word, at) =>
-			!/^[0-9]*[<>]/.test(word) && !OPEN_REDIRECTION.test(rest[at - 1] ?? ""),
-	);
+	rest.filter((word, at) => !/^[0-9]*[<>]/.test(word) && !OPEN_REDIRECTION.test(rest[at - 1] ?? ""));
 
 const refuse = (name: string, id: Refusal["id"], what: string): Refusal => ({
 	id,
@@ -102,7 +99,11 @@ const reading = new Set<string>();
  * be a regular file the file rule passes.
  */
 function bunRun(operand: string, dirs: Set<string | null>, read: (line: string) => void): Refusal | undefined {
-	const none = refuse("bun run", "untracked-script", `\`${operand}\`, which no committed package.json names as a script`);
+	const none = refuse(
+		"bun run",
+		"untracked-script",
+		`\`${operand}\`, which no committed package.json names as a script`,
+	);
 	for (const from of dirs) {
 		if (from === null) return none;
 		const file = manifest(from);
@@ -145,29 +146,37 @@ export function interpreter(
 	read: (line: string) => void,
 ): Refusal | undefined {
 	const words = args(rest);
-	if (words.length === 1 && (words[0] === "--version" || words[0] === "--help"))
-		return undefined;
+	if (words.length === 1 && (words[0] === "--version" || words[0] === "--help")) return undefined;
 	let file = words[0];
 	if (SHELLS.has(name)) {
 		const shell = shellWords(rest);
 		file = rest[shell.operand];
-		if (shell.command || shell.stdin || shell.info || file === undefined || file === "-" || /^\/(dev|proc)\//.test(file))
+		if (
+			shell.command ||
+			shell.stdin ||
+			shell.info ||
+			file === undefined ||
+			file === "-" ||
+			/^\/(dev|proc)\//.test(file)
+		)
 			return undefined;
 	} else if (name === "source" || name === ".") {
 		if (!first || file === undefined) return undefined;
 	} else if (!INTERPRETER.test(name)) return undefined;
-	else if (file === undefined || file === "-")
-		return refuse(name, "stdin-code", "its program on standard input");
+	else if (file === undefined || file === "-") return refuse(name, "stdin-code", "its program on standard input");
 	else if (file.startsWith("-"))
 		return refuse(name, "inline-code", `the option \`${file}\` before any file, which may carry code inline`);
 	else if (name === "bun" && BUN_SUBCOMMANDS.has(file)) {
-		if (RUNS_CODE.has(file))
-			return refuse(`bun ${file}`, "inline-code", "code to run that no file in the tree holds");
+		if (RUNS_CODE.has(file)) return refuse(`bun ${file}`, "inline-code", "code to run that no file in the tree holds");
 		if (file !== "run") return undefined;
 		// an option may take the next word as its value or pick another package
 		const at = words.findIndex((word, index) => index > 0 && !word.startsWith("-"));
 		if (at > 1)
-			return refuse("bun run", "untracked-script", `the option \`${words[1]}\` before its script, which may change what runs`);
+			return refuse(
+				"bun run",
+				"untracked-script",
+				`the option \`${words[1]}\` before its script, which may change what runs`,
+			);
 		return at === 1 ? bunRun(words[1], dirs, read) : undefined;
 	}
 	return committed(file, dirs)

@@ -7,14 +7,7 @@
  * blocking from its first commit with no workflow edit.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	mkdirSync,
-	mkdtempSync,
-	rmSync,
-	symlinkSync,
-	unlinkSync,
-	writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { HEADING, stray, unbacked } from "./repo-layout.ts";
@@ -186,9 +179,7 @@ describe("the tree the sweep reads", () => {
 
 /** A layout section holding one row per argument. */
 const section = (...cells: string[]) =>
-	`# A readme\n\n${HEADING}\n\n| Directory | Holds |\n|---|---|\n${cells
-		.map((cell) => `| ${cell} |\n`)
-		.join("")}`;
+	`# A readme\n\n${HEADING}\n\n| Directory | Holds |\n|---|---|\n${cells.map((cell) => `| ${cell} |\n`).join("")}`;
 
 // spec: repo-layout/the-section-is-absent
 describe("a README with no layout section", () => {
@@ -212,9 +203,7 @@ describe("a layout section naming no directory", () => {
 describe("a directory the section names", () => {
 	test("passes where the repository tracks a file under it [17]", () => {
 		const dir = fabricate({ "src/app/a.ts": "" });
-		expect(unbacked(section("`src/app/` | the client"), listing(dir))).toEqual(
-			[],
-		);
+		expect(unbacked(section("`src/app/` | the client"), listing(dir))).toEqual([]);
 	});
 
 	test("fails where it tracks nothing, naming the directory [19]", () => {
@@ -232,9 +221,7 @@ describe("a directory the section names", () => {
 		const dir = fabricate({ "src/app/a.ts": "" });
 		mkdirSync(join(dir, "src/job"), { recursive: true });
 
-		expect(
-			unbacked(section("`src/job/` | the job"), listing(dir)),
-		).toHaveLength(1);
+		expect(unbacked(section("`src/job/` | the job"), listing(dir))).toHaveLength(1);
 	});
 
 	test("a row that stops naming a directory fails rather than dropping out", () => {
@@ -251,9 +238,7 @@ describe("a directory the section names", () => {
 		// `src/job/` must not be satisfied by `src/jobs-notes.md`, which shares
 		// its first seven characters and lives somewhere else entirely.
 		const dir = fabricate({ "src/jobs-notes.md": "" });
-		expect(
-			unbacked(section("`src/job/` | the job"), listing(dir)),
-		).toHaveLength(1);
+		expect(unbacked(section("`src/job/` | the job"), listing(dir))).toHaveLength(1);
 	});
 });
 
@@ -261,9 +246,7 @@ describe("a directory the section names", () => {
 describe("a directory reserved for later work", () => {
 	test("is not required to exist [18]", () => {
 		const dir = fabricate({ "src/app/a.ts": "" });
-		const reserved = section(
-			"`src/job/build/` | reserved for `snapshot-build`",
-		);
+		const reserved = section("`src/job/build/` | reserved for `snapshot-build`");
 
 		expect(unbacked(reserved, listing(dir))).toEqual([]);
 	});

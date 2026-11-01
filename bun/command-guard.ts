@@ -35,12 +35,7 @@
 
 import { existsSync } from "node:fs";
 import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
-import {
-	bunTestRetry,
-	bunxInstall,
-	shellWords,
-	unreadProgram,
-} from "./command-guard-exec.ts";
+import { bunTestRetry, bunxInstall, shellWords, unreadProgram } from "./command-guard-exec.ts";
 import { ghApiWrite, ghPublish } from "./command-guard-gh.ts";
 import { interpreter, type Refusal } from "./command-guard-interpreters.ts";
 import { commands } from "./command-parse.ts";
@@ -86,9 +81,7 @@ if (typeof command !== "string") {
  * spelling that commits there. `null` stands for a move only the shell could
  * resolve, and blocks.
  */
-const dirs = new Set<string | null>([
-	typeof payload?.cwd === "string" ? payload.cwd : process.cwd(),
-]);
+const dirs = new Set<string | null>([typeof payload?.cwd === "string" ? payload.cwd : process.cwd()]);
 
 /** The interpreters the line would be refused for; decided after the walk, never during it. */
 const refusals: Refusal[] = [];
@@ -161,9 +154,7 @@ function check(command: string): void {
 			if (refused) refusals.push(refused);
 			if (name === "cd" || name === "pushd" || name === "popd") {
 				// `popd` returns to a stack this reader does not keep; bare `cd` goes home.
-				const operand = rest.find(
-					(word) => word === "-" || !word.startsWith("-"),
-				);
+				const operand = rest.find((word) => word === "-" || !word.startsWith("-"));
 				for (const from of [...dirs]) {
 					const to = name === "popd" ? null : place(from, operand ?? "~");
 					// A `cd` into nothing fails and moves nowhere: `&&` stops there,
@@ -200,15 +191,13 @@ function check(command: string): void {
 					`command-guard: HEAD is on main and this project never commits there. Branch first, then commit on the branch. ${ELSEWHERE}`,
 				);
 			}
-			if (subcommand === "commit")
-				for (const target of targets) refuseStranded(target as string);
+			if (subcommand === "commit") for (const target of targets) refuseStranded(target as string);
 			if (subcommand === "push") checkPush(args, targets);
 		}
 	}
 }
 
-const onMain = (targets: (string | null)[]) =>
-	targets.some((target) => currentBranch(target) === "main");
+const onMain = (targets: (string | null)[]) => targets.some((target) => currentBranch(target) === "main");
 
 /** How to reach another checkout from one on main, which `dirs` refuses by `cd`. */
 const ELSEWHERE =
@@ -234,11 +223,7 @@ function checkPush(args: string[], targets: (string | null)[]): void {
 	// reject as ambiguous blocks too; over-refusing a command git does not
 	// accept costs nothing. The length guard keeps bare `--`, which ends the
 	// options and names nothing, from matching all four.
-	if (
-		switches.some(
-			(arg) => arg.length > 2 && REF_WIDE.some((opt) => opt.startsWith(arg)),
-		)
-	) {
+	if (switches.some((arg) => arg.length > 2 && REF_WIDE.some((opt) => opt.startsWith(arg)))) {
 		blockDestination();
 	}
 

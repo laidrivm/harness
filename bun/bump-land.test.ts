@@ -7,9 +7,9 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { movePin } from "./bump-pin.ts";
-import { land } from "./bump.ts";
 import { git } from "./bump.fixture.ts";
+import { land } from "./bump.ts";
+import { movePin } from "./bump-pin.ts";
 
 const OLD = "eddf1fdd56642c48a3b222034ec6268c9b55971f";
 const NEW = "9d321b61a74c70d4d3324d11e64fef488f2202a0";
@@ -70,9 +70,7 @@ describe("landing", () => {
 			`Bump harness ${OLD.slice(0, 7)}..${NEW.slice(0, 7)}|github-actions[bot]`,
 		);
 		expect(calls[0]).toEqual(["bun", "install", "--ignore-scripts"]);
-		expect(calls.map((argv) => argv.join(" "))).not.toContain(
-			"bun node_modules/harness/bun/check.ts",
-		);
+		expect(calls.map((argv) => argv.join(" "))).not.toContain("bun node_modules/harness/bun/check.ts");
 	});
 
 	test("an identity in the caller's environment does not change the bump's author", () => {
@@ -84,7 +82,13 @@ describe("landing", () => {
 			`import { land } from ${JSON.stringify(join(import.meta.dir, "bump.ts"))};\nland(${JSON.stringify(dir)}, ${JSON.stringify(NEW)}, ${JSON.stringify(reported(dir))}, { run: () => 0 });\n`,
 		);
 		const other = "someone-else";
-		const env = { ...process.env, GIT_AUTHOR_NAME: other, GIT_AUTHOR_EMAIL: other, GIT_COMMITTER_NAME: other, GIT_COMMITTER_EMAIL: other };
+		const env = {
+			...process.env,
+			GIT_AUTHOR_NAME: other,
+			GIT_AUTHOR_EMAIL: other,
+			GIT_COMMITTER_NAME: other,
+			GIT_COMMITTER_EMAIL: other,
+		};
 		expect(Bun.spawnSync(["bun", script], { env }).exitCode).toBe(0);
 		expect(git(origin, "log", "-1", "--format=%an|%cn", "main")).toBe("github-actions[bot]|github-actions[bot]");
 	});
@@ -112,21 +116,16 @@ describe("landing", () => {
 		expect(git(origin, "rev-parse", "main")).toBe(moved);
 	});
 
-	test.each(["install", "sync"])(
-		"a failing %s throws naming it, with no commit and no push",
-		(fail) => {
-			const { origin, dir } = consumer();
-			const before = git(origin, "rev-parse", "main");
-			const tree = reported(dir);
-			const run = (argv: string[]) =>
-				(fail === "install" ? argv[1] === "install" : argv[1]?.endsWith("sync.ts"))
-					? 1
-					: 0;
-			expect(() => land(dir, NEW, tree, { run })).toThrow(`at ${fail}`);
-			expect(git(dir, "rev-parse", "HEAD")).toBe(before);
-			expect(git(origin, "rev-parse", "main")).toBe(before);
-		},
-	);
+	test.each(["install", "sync"])("a failing %s throws naming it, with no commit and no push", (fail) => {
+		const { origin, dir } = consumer();
+		const before = git(origin, "rev-parse", "main");
+		const tree = reported(dir);
+		const run = (argv: string[]) =>
+			(fail === "install" ? argv[1] === "install" : argv[1]?.endsWith("sync.ts")) ? 1 : 0;
+		expect(() => land(dir, NEW, tree, { run })).toThrow(`at ${fail}`);
+		expect(git(dir, "rev-parse", "HEAD")).toBe(before);
+		expect(git(origin, "rev-parse", "main")).toBe(before);
+	});
 
 	test("a tree that is not a full object id is refused before any call", () => {
 		const { dir } = consumer();

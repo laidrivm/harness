@@ -27,13 +27,7 @@ export type Deps = { api: string; token?: string; run: Run };
  * a test run's leftovers would enter the tree, which the landing job never
  * produces, and every tree comparison would then fail.
  */
-const WRITES = [
-	"package.json",
-	"bun.lock",
-	"harness",
-	".claude/settings.json",
-	"bunfig.toml",
-];
+const WRITES = ["package.json", "bun.lock", "harness", ".claude/settings.json", "bunfig.toml"];
 
 /**
  * The two steps both jobs run. No lifecycle script runs, so the only package
@@ -49,8 +43,7 @@ async function get(deps: Deps, path: string): Promise<unknown> {
 			...(deps.token ? { authorization: `Bearer ${deps.token}` } : {}),
 		},
 	});
-	if (!response.ok)
-		throw new Error(`GitHub ${path}: ${response.status} ${response.statusText}`);
+	if (!response.ok) throw new Error(`GitHub ${path}: ${response.status} ${response.statusText}`);
 	return response.json();
 }
 
@@ -65,14 +58,11 @@ export const CHECK = "test";
 /** The harness's `main` head, when its latest `CHECK` run succeeded. */
 async function greenHead(deps: Deps): Promise<string | undefined> {
 	const { sha } = (await get(deps, "commits/main")) as { sha: string };
-	const { check_runs } = (await get(
-		deps,
-		`commits/${sha}/check-runs?check_name=${CHECK}&filter=latest`,
-	)) as { check_runs: { conclusion: string | null; app?: { slug?: string } }[] };
+	const { check_runs } = (await get(deps, `commits/${sha}/check-runs?check_name=${CHECK}&filter=latest`)) as {
+		check_runs: { conclusion: string | null; app?: { slug?: string } }[];
+	};
 	// The name alone could be any app's; the harness's run is GitHub Actions'.
-	const green = check_runs.some(
-		(run) => run.conclusion === "success" && run.app?.slug === "github-actions",
-	);
+	const green = check_runs.some((run) => run.conclusion === "success" && run.app?.slug === "github-actions");
 	return green ? sha : undefined;
 }
 
@@ -80,18 +70,15 @@ function git(cwd: string, args: string[], env?: Record<string, string>): string 
 	const run = Bun.spawnSync(["git", ...args], { cwd, env: env && { ...process.env, ...env } });
 	// Named by its subcommand, past any `-c key=value` before it.
 	const name = args.find((arg) => !arg.startsWith("-") && !arg.includes("="));
-	if (run.exitCode !== 0)
-		throw new Error(`git ${name}: ${run.stderr.toString().trim()}`);
+	if (run.exitCode !== 0) throw new Error(`git ${name}: ${run.stderr.toString().trim()}`);
 	return run.stdout.toString().trim();
 }
 
 /** A step of the bump to `head`: its command must exit 0, or the bump stops. */
-const stepper =
-	(root: string, head: string, run: Run) => (name: string, argv: string[]) => {
-		const code = run(argv, root);
-		if (code !== 0)
-			throw new Error(`the bump to ${head} failed at ${name}, exit ${code}`);
-	};
+const stepper = (root: string, head: string, run: Run) => (name: string, argv: string[]) => {
+	const code = run(argv, root);
+	if (code !== 0) throw new Error(`the bump to ${head} failed at ${name}, exit ${code}`);
+};
 
 /** Stages what the bump wrote and returns that tree's id. */
 function stage(root: string): string {
@@ -109,10 +96,7 @@ function stage(root: string): string {
  * exactly what the bump wrote: whatever the consumer's tests leave behind,
  * under any path, cannot enter it, and `land` reproduces it without them.
  */
-export async function verify(
-	root: string,
-	deps: Deps,
-): Promise<{ sha: string; tree: string }> {
+export async function verify(root: string, deps: Deps): Promise<{ sha: string; tree: string }> {
 	const tests = bumpTest(root);
 	const manifest = join(root, "package.json");
 	const text = readFileSync(manifest, "utf8");
@@ -135,14 +119,8 @@ export async function verify(
  * A `main` that moved since the checkout rejects the push, and the next day's
  * run starts from it.
  */
-export function land(
-	root: string,
-	sha: string,
-	tree: string,
-	deps: { run: Run },
-): void {
-	if (!/^[0-9a-f]{40}$/.test(tree))
-		throw new Error(`${tree} is not a full tree id`);
+export function land(root: string, sha: string, tree: string, deps: { run: Run }): void {
+	if (!/^[0-9a-f]{40}$/.test(tree)) throw new Error(`${tree} is not a full tree id`);
 	const manifest = join(root, "package.json");
 	const text = readFileSync(manifest, "utf8");
 	const old = pinOf(text);
@@ -151,10 +129,7 @@ export function land(
 	step("install", INSTALL);
 	step("sync", SYNC);
 	const reproduced = stage(root);
-	if (reproduced !== tree)
-		throw new Error(
-			`the bump to ${sha} reproduced tree ${reproduced}, not the checked ${tree}`,
-		);
+	if (reproduced !== tree) throw new Error(`the bump to ${sha} reproduced tree ${reproduced}, not the checked ${tree}`);
 	// By environment, not `-c user.*`: an inherited GIT_AUTHOR_* or GIT_COMMITTER_* outranks config.
 	const name = "github-actions[bot]";
 	const email = "41898282+github-actions[bot]@users.noreply.github.com";
@@ -167,9 +142,7 @@ export function land(
 	git(root, ["push", "origin", "HEAD:main"]);
 }
 
-const spawn: Run = (argv, cwd) =>
-	Bun.spawnSync(argv, { cwd, stdio: ["inherit", "inherit", "inherit"] })
-		.exitCode;
+const spawn: Run = (argv, cwd) => Bun.spawnSync(argv, { cwd, stdio: ["inherit", "inherit", "inherit"] }).exitCode;
 
 if (import.meta.main) {
 	const [command, sha, tree] = Bun.argv.slice(2);

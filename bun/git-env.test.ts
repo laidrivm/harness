@@ -7,15 +7,7 @@
  * Every decoy here has no remote, so a regression has nowhere to push.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-	chmodSync,
-	mkdirSync,
-	mkdtempSync,
-	readFileSync,
-	realpathSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { git } from "./turn-gate.fixture.ts";
@@ -184,11 +176,7 @@ describe("the suite under git's repository variables", () => {
 			GIT_DIR: join(dir, ".git"),
 			GIT_INDEX_FILE: join(dir, ".git", "index"),
 		});
-		expect([code === 0, err.includes("GIT_DIR"), err.includes("GIT_INDEX_FILE")]).toEqual([
-			false,
-			true,
-			true,
-		]);
+		expect([code === 0, err.includes("GIT_DIR"), err.includes("GIT_INDEX_FILE")]).toEqual([false, true, true]);
 	}, 90_000);
 
 	// spec: commit-gates/a-variable-set-but-empty
@@ -206,11 +194,7 @@ describe("the suite under git's repository variables", () => {
 	// spec: commit-gates/the-list-cannot-be-read
 	test("a PATH with no git refuses, naming the failed read [11]", () => {
 		const { code, err } = suite({ PATH: scratch("git-env-nopath-") });
-		expect([code === 0, err.includes("git rev-parse --local-env-vars"), RAN.test(err)]).toEqual([
-			false,
-			true,
-			false,
-		]);
+		expect([code === 0, err.includes("git rev-parse --local-env-vars"), RAN.test(err)]).toEqual([false, true, false]);
 	}, 90_000);
 
 	/** A `PATH` holding only a `git` that runs `body`. */
@@ -230,10 +214,6 @@ describe("the suite under git's repository variables", () => {
 	// spec: commit-gates/the-list-cannot-be-read
 	test("a read that prints no variable refuses rather than passing on an empty list", () => {
 		const { code, err } = suite({ PATH: stubGit("exit 0") });
-		expect([code === 0, err.includes("printed no variable"), RAN.test(err)]).toEqual([
-			false,
-			true,
-			false,
-		]);
+		expect([code === 0, err.includes("printed no variable"), RAN.test(err)]).toEqual([false, true, false]);
 	}, 90_000);
 });

@@ -35,9 +35,7 @@ const PROSE = [".md"];
  * track and so never matches.
  */
 const self = (root: string) =>
-	["no-suppressions.ts", "no-suppressions.test.ts"].map((name) =>
-		relative(root, join(import.meta.dir, name)),
-	);
+	["no-suppressions.ts", "no-suppressions.test.ts"].map((name) => relative(root, join(import.meta.dir, name)));
 
 /**
  * The root manifest, where `harness.suppressions` lives: every approval's key
@@ -61,12 +59,7 @@ const MANIFEST = "package.json";
  * `biome check --write` rewrote this very sentence when it spelled one out.
  */
 const approvedIn = (root: string): Record<string, number> =>
-	Object.fromEntries(
-		Object.entries(read(root, "suppressions")).map(([key, { count }]) => [
-			key,
-			count,
-		]),
-	);
+	Object.fromEntries(Object.entries(read(root, "suppressions")).map(([key, { count }]) => [key, count]));
 
 export type Finding = { path: string; line: number; marker: string };
 
@@ -80,10 +73,7 @@ export type Finding = { path: string; line: number; marker: string };
  * `cwd`, so from a subdirectory the check's own two paths still match and it
  * does not fail on itself.
  */
-export function scan(
-	cwd?: string,
-	approved?: Record<string, number>,
-): Finding[] {
+export function scan(cwd?: string, approved?: Record<string, number>): Finding[] {
 	const { root, files } = tracked(cwd);
 	const allowed = approved ?? approvedIn(root);
 	const own = self(root);

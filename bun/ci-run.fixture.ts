@@ -70,7 +70,10 @@ export function start() {
 		},
 	});
 	key = join(emptyDir("ci-run-key-"), "app.pem");
-	const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs1", format: "pem" } });
+	const { privateKey } = generateKeyPairSync("rsa", {
+		modulusLength: 2048,
+		privateKeyEncoding: { type: "pkcs1", format: "pem" },
+	});
 	writeFileSync(key, privateKey, { mode: 0o600 });
 	free = emptyDir("ci-run-flock-");
 	writeFileSync(join(free, "flock"), '#!/bin/sh\nshift 5\nexec "$@"\n', { mode: 0o755 });
@@ -139,7 +142,9 @@ export function host(origin = "https://github.com/o/r.git") {
 
 /** `git rev-parse`'s answer in `dir`, or "" when it fails. */
 export const rev = (dir: string, ...args: string[]) =>
-	Bun.spawnSync(["git", "-C", dir, "rev-parse", ...args]).stdout.toString().trim();
+	Bun.spawnSync(["git", "-C", dir, "rev-parse", ...args])
+		.stdout.toString()
+		.trim();
 
 /** What `claude --output-format json` prints for a structured answer. */
 export const answer = (outcome: string) =>
@@ -167,7 +172,11 @@ export const payload = (run: Record<string, unknown> = {}, top: Record<string, u
 	});
 
 /** Runs the handler on `body` with the App's settings, `flock` from `tools` first on PATH, then the stubs. */
-export async function deliver(h: Host, body: string, opts: { delivery?: string; env?: Record<string, string>; tools?: string } = {}) {
+export async function deliver(
+	h: Host,
+	body: string,
+	opts: { delivery?: string; env?: Record<string, string>; tools?: string } = {},
+) {
 	const delivery = opts.delivery ?? randomUUID();
 	const signature = `sha256=${createHmac("sha256", SECRET).update(body).digest("hex")}`;
 	const p = Bun.spawn(["bun", HANDLER, `workflow_run ${delivery} ${signature}`], {

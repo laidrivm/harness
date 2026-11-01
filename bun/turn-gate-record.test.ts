@@ -68,10 +68,7 @@ describe("which record discharges a turn", () => {
 	test("without one the turn is refused, naming the tip and the runner [22]", () => {
 		const { dir, marks, tip } = finished();
 		const reason = decide(end(dir, REPORTED), marks) ?? "";
-		expect([reason.includes(tip), reason.includes("pre-pr.ts")]).toEqual([
-			true,
-			true,
-		]);
+		expect([reason.includes(tip), reason.includes("pre-pr.ts")]).toEqual([true, true]);
 	});
 
 	test("the tip's record is found among other projects' and gates' [23]", () => {
@@ -197,7 +194,11 @@ describe("the hook reads the runner's records, not the message", () => {
 	test("the goal check's `goal met` line ends a turn with a passing run, and is refused once without one", () => {
 		const [met, ran, bare] = ["goal met: apply c step 1 at 1234567", finished(), finished()] as const;
 		ledger(run(ran.tip, real(ran.dir)));
-		expect([decide(end(ran.dir, met), ran.marks), ...twice(bare.dir, bare.marks, met)]).toEqual([undefined, "string", undefined]);
+		expect([decide(end(ran.dir, met), ran.marks), ...twice(bare.dir, bare.marks, met)]).toEqual([
+			undefined,
+			"string",
+			undefined,
+		]);
 	});
 
 	// spec: commit-gates/a-task-group-is-completed-and-the-turn-ends-silently
@@ -250,12 +251,7 @@ describe("the runner's path in the refusal", () => {
 		commit(dir, { [TASKS]: DONE });
 		const bin = join(dir, at);
 		mkdirSync(bin, { recursive: true });
-		for (const file of [
-			"turn-gate.ts",
-			"branch-state.ts",
-			"gate-ledger.ts",
-			"goal-rounds.ts",
-		])
+		for (const file of ["turn-gate.ts", "branch-state.ts", "gate-ledger.ts", "goal-rounds.ts"])
 			copyFileSync(join(import.meta.dir, file), join(bin, file));
 		const call = Bun.spawnSync(["bun", join(bin, "turn-gate.ts"), "stop"], {
 			cwd,
@@ -274,8 +270,6 @@ describe("the runner's path in the refusal", () => {
 	});
 
 	test("from an installed copy, it is under `node_modules/harness` [28]", () => {
-		expect(refusal("node_modules/harness/bun")).toContain(
-			" node_modules/harness/bun/pre-pr.ts",
-		);
+		expect(refusal("node_modules/harness/bun")).toContain(" node_modules/harness/bun/pre-pr.ts");
 	});
 });

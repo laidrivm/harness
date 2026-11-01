@@ -54,25 +54,19 @@ describe("what counts as one call failing the same way", () => {
 
 	// spec: loop-guard/a-different-error
 	test("errors differing in a word are two calls [11]", () => {
-		const fails = ["1 fail", "1 skip", "1 fail"].map((error) =>
-			failure({ error }),
-		);
+		const fails = ["1 fail", "1 skip", "1 fail"].map((error) => failure({ error }));
 		expect(after(fails).code).toBe(0);
 	});
 
 	// spec: loop-guard/only-the-description-differs
 	test("inputs differing only in `description` are one call [12]", () => {
-		const fails = ["a", "b", "c"].map((d) =>
-			failure(input({ description: d })),
-		);
+		const fails = ["a", "b", "c"].map((d) => failure(input({ description: d })));
 		expect(after(fails, before(input({ description: "d" }))).code).toBe(2);
 	});
 
 	// spec: loop-guard/a-different-input
 	test("inputs differing in `timeout` are two calls [13]", () => {
-		const fails = [1000, 2000, 1000].map((t) =>
-			failure(input({ timeout: t })),
-		);
+		const fails = [1000, 2000, 1000].map((t) => failure(input({ timeout: t })));
 		expect(after(fails, before(input({ timeout: 1000 }))).code).toBe(0);
 	});
 
@@ -117,9 +111,7 @@ describe("what counts as one call failing the same way", () => {
 			Bun.spawn(["bun", script], {
 				cwd: tmp,
 				env: env(tmp),
-				stdin: Buffer.from(
-					JSON.stringify(failure(input({ command: "x".repeat(n * 50) }))),
-				),
+				stdin: Buffer.from(JSON.stringify(failure(input({ command: "x".repeat(n * 50) })))),
 			}),
 		);
 		await Promise.all(calls.map((call) => call.exited));

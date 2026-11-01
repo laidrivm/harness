@@ -78,12 +78,10 @@ function mirror(from: string, to: string): void {
 	folder(to);
 	const names = readdirSync(from);
 	for (const name of names)
-		if (statSync(join(from, name)).isDirectory())
-			mirror(join(from, name), join(to, name));
+		if (statSync(join(from, name)).isDirectory()) mirror(join(from, name), join(to, name));
 		else copy(join(from, name), join(to, name));
 	for (const name of readdirSync(to))
-		if (!names.includes(name))
-			rmSync(join(to, name), { recursive: true, force: true });
+		if (!names.includes(name)) rmSync(join(to, name), { recursive: true, force: true });
 }
 
 /** One line git prints in `cwd`, or `null` where it cannot say. */
@@ -165,9 +163,7 @@ export function files(dir: string, id: string, project: string): void {
 
 /** Writes session `id`'s record into `project`. */
 export const write = (project: string, id: string, record: object) =>
-	replace(join(project, `${id}.meta.json`), (tmp) =>
-		writeFileSync(tmp, `${JSON.stringify(record)}\n`),
-	);
+	replace(join(project, `${id}.meta.json`), (tmp) => writeFileSync(tmp, `${JSON.stringify(record)}\n`));
 
 /** Archives the session `input` names, if it names one that exists. */
 function main(input: string): void {

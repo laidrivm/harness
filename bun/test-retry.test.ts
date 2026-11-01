@@ -72,7 +72,7 @@ describe("a retry on a test", () => {
 	// spec: flaky-tests/a-retry-on-a-test
 	test.each([
 		["{ retry: 2 } with a bun:test import [65]", 'test("x", () => {}, { retry: 2 });'],
-		["the shorthand { retry } [66]", "const retry = 2;\ntest(\"x\", () => {}, { retry });"],
+		["the shorthand { retry } [66]", 'const retry = 2;\ntest("x", () => {}, { retry });'],
 		["test.each(rows)(…) [80]", 'test.each([[1]])("x", () => {}, { retry: 1 });'],
 		["test.if(cond)(…) (plan review)", 'test.if(true)("x", () => {}, { retry: 1 });'],
 		["test.concurrent.failing(…) (plan review)", 'test.concurrent.failing("x", () => {}, { retry: 1 });'],
@@ -130,11 +130,23 @@ describe("a retry in a command the tree holds", () => {
 
 	// spec: flaky-tests/a-retry-in-a-workflow-or-a-hook
 	test.each([
-		["a simple-git-hooks value [83]", "package.json", JSON.stringify({ "simple-git-hooks": { "pre-push": "bun test --retry=1" } })],
+		[
+			"a simple-git-hooks value [83]",
+			"package.json",
+			JSON.stringify({ "simple-git-hooks": { "pre-push": "bun test --retry=1" } }),
+		],
 		["a workflow run: [84]", ".github/workflows/ci.yml", "jobs:\n  t:\n    steps:\n      - run: bun test --retry=1\n"],
-		["the second line of a run: | block (plan review)", ".github/workflows/ci.yml", "jobs:\n  t:\n    steps:\n      - run: |\n          bun install\n          bun test --retry=1\n"],
+		[
+			"the second line of a run: | block (plan review)",
+			".github/workflows/ci.yml",
+			"jobs:\n  t:\n    steps:\n      - run: |\n          bun install\n          bun test --retry=1\n",
+		],
 		["a .githooks/pre-push line [85]", ".githooks/pre-push", "#!/bin/sh\nbun test --retry=1\n"],
-		["a script's sh -c program (CodeRabbit on #199)", "package.json", JSON.stringify({ scripts: { test: "sh -c 'bun test --retry=1'" } })],
+		[
+			"a script's sh -c program (CodeRabbit on #199)",
+			"package.json",
+			JSON.stringify({ scripts: { test: "sh -c 'bun test --retry=1'" } }),
+		],
 		["a hook's eval (CodeRabbit on #199)", ".githooks/pre-push", "#!/bin/sh\neval bun test --retry=1\n"],
 	])("%s fails", (_, path, text) => {
 		expect(found({ [path]: text }).join("\n")).toContain(path);
@@ -155,7 +167,11 @@ describe("a retry in a command the tree holds", () => {
 	// spec: flaky-tests/running-each-test-many-times-in-a-script
 	test.each([
 		["a .githooks/pre-push comment (plan review)", ".githooks/pre-push", "#!/bin/sh\n# bun test --retry=1\nbun test\n"],
-		["a script with --rerun-each [86]", "package.json", JSON.stringify({ scripts: { flake: "bun test --rerun-each=5" } })],
+		[
+			"a script with --rerun-each [86]",
+			"package.json",
+			JSON.stringify({ scripts: { flake: "bun test --rerun-each=5" } }),
+		],
 	])("%s reports nothing", (_, path, text) => {
 		expect(found({ [path]: text })).toEqual([]);
 	});

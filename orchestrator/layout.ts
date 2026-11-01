@@ -49,7 +49,8 @@ const HOURLY = /^(?:0 )?0 \* \* \* \*$/;
 export function passScript(path: string, meta: Doc, schedules: Parsed[]): string[] {
 	const wrong: string[] = [];
 	if (meta.tag !== "pass") wrong.push(`${path}: tag is ${String(meta.tag)}, not pass`);
-	if (typeof meta.timeout !== "number" || meta.timeout < 5400) wrong.push(`${path}: timeout ${String(meta.timeout)} is under 5400`);
+	if (typeof meta.timeout !== "number" || meta.timeout < 5400)
+		wrong.push(`${path}: timeout ${String(meta.timeout)} is under 5400`);
 	// CE stores the limit and ignores it (windmill#10840), so a set one only reads as a guard.
 	if ("concurrent_limit" in meta) wrong.push(`${path}: sets concurrent_limit, which Windmill CE ignores`);
 	const own = schedules.filter((s) => s.doc.script_path === path);
@@ -65,13 +66,20 @@ export function passScript(path: string, meta: Doc, schedules: Parsed[]): string
 
 /** The script's last command is the `ssh` call, so its status is the job's. */
 export function endsOnSsh(path: string, text: string): string[] {
-	const last = text.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).at(-1) ?? "";
+	const last =
+		text
+			.split("\n")
+			.map((l) => l.trim())
+			.filter((l) => l && !l.startsWith("#"))
+			.at(-1) ?? "";
 	return /^ssh\s/.test(last) ? [] : [`${path}: ends on \`${last}\`, not the ssh call`];
 }
 
 /** A variable file carrying a value: `--skip-secrets` writes none. */
 export const variableValues = (files: Parsed[]) =>
-	files.filter((f) => f.doc.value !== undefined && f.doc.value !== null && f.doc.value !== "").map((f) => `${f.path}: carries a value`);
+	files
+		.filter((f) => f.doc.value !== undefined && f.doc.value !== null && f.doc.value !== "")
+		.map((f) => `${f.path}: carries a value`);
 
 type Service = {
 	image?: string;
@@ -93,7 +101,12 @@ const SECRETISH = /token|key|secret|password/i;
 export function compose(doc: Doc): string[] {
 	const wrong: string[] = [];
 	const services = (doc.services ?? {}) as Record<string, Service>;
-	const takers = Object.entries(services).filter(([, s]) => (env(s).WORKER_TAGS ?? "").split(",").map((t) => t.trim()).includes("pass"));
+	const takers = Object.entries(services).filter(([, s]) =>
+		(env(s).WORKER_TAGS ?? "")
+			.split(",")
+			.map((t) => t.trim())
+			.includes("pass"),
+	);
 	const pass = services.windmill_worker_pass;
 	if (!pass) wrong.push("no windmill_worker_pass service");
 	else {
@@ -103,16 +116,20 @@ export function compose(doc: Doc): string[] {
 	for (const [name] of takers) if (name !== "windmill_worker_pass") wrong.push(`${name}: takes the tag pass`);
 	// The tunnel's origin is http://engine:8080 (README step 1), and Windmill otherwise listens on 8000.
 	for (const [name, s] of Object.entries(services))
-		if (s.networks?.default?.aliases?.includes("engine") && env(s).PORT !== "8080") wrong.push(`${name}: serves engine on a port other than 8080`);
+		if (s.networks?.default?.aliases?.includes("engine") && env(s).PORT !== "8080")
+			wrong.push(`${name}: serves engine on a port other than 8080`);
 	for (const [name, s] of Object.entries(services))
 		for (const [k, v] of Object.entries(env(s)))
-			if (SECRETISH.test(k) && !v.startsWith("/run/secrets/")) wrong.push(`${name}: ${k} is a literal, not a secret file`);
+			if (SECRETISH.test(k) && !v.startsWith("/run/secrets/"))
+				wrong.push(`${name}: ${k} is a literal, not a secret file`);
 	return wrong;
 }
 
 /** A tracked file other than the README that starts Remote Control. `-{2}` keeps this file's own source from matching. */
 export const remoteControl = (path: string, text: string) =>
-	path !== "orchestrator/README.md" && /claude\s+remote-control|-{2}remote-control\b/.test(text) ? [`${path}: starts Remote Control`] : [];
+	path !== "orchestrator/README.md" && /claude\s+remote-control|-{2}remote-control\b/.test(text)
+		? [`${path}: starts Remote Control`]
+		: [];
 
 const PINNED = /^\s*(?:FROM\s|image:|ARG\s+\w+_(?:VERSION|SHA256)=)/;
 
@@ -124,7 +141,8 @@ export function pins(path: string, text: string): string[] {
 		if (!PINNED.test(line)) return;
 		const at = `${path}:${i + 1}`;
 		if (/^\s*(?:FROM\s|image:)/.test(line) && !line.includes("@sha256:")) wrong.push(`${at}: no @sha256: digest`);
-		if (!line.includes(NOTE) && !(lines[i - 1] ?? "").includes(NOTE)) wrong.push(`${at}: no note naming what moves the pin`);
+		if (!line.includes(NOTE) && !(lines[i - 1] ?? "").includes(NOTE))
+			wrong.push(`${at}: no note naming what moves the pin`);
 		const version = /^\s*ARG\s+\w+_VERSION=(\S*)/.exec(line)?.[1];
 		if (version !== undefined && !/^\d+\.\d+\.\d+$/.test(version)) wrong.push(`${at}: ${version} is not a full x.y.z`);
 	});
@@ -137,7 +155,8 @@ const TOKEN = /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-a
 /** A host address or a GitHub or Anthropic token in a tracked file. */
 export function leaks(path: string, text: string): string[] {
 	const wrong: string[] = [];
-	for (const [, ip] of text.matchAll(IPV4)) if (ip !== "127.0.0.1" && ip !== "0.0.0.0") wrong.push(`${path}: holds the address ${ip}`);
+	for (const [, ip] of text.matchAll(IPV4))
+		if (ip !== "127.0.0.1" && ip !== "0.0.0.0") wrong.push(`${path}: holds the address ${ip}`);
 	if (TOKEN.test(text)) wrong.push(`${path}: holds a token`);
 	return wrong;
 }

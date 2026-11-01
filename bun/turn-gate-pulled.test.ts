@@ -132,19 +132,16 @@ describe("a group the turn completed itself", () => {
 	test.each([
 		["a pull on `main` [5]", "main", pull],
 		["`origin/main` merged into `feat` [7]", "feat", mergeMain],
-	] as const)(
-		"beside a group brought in by %s, the refusal names only its own",
-		(_, branch, bring) => {
-			const dir = based(branch, { [TASKS]: OPEN, [OWN]: OPEN });
-			land(dir, { [TASKS]: DONE });
-			const marks = marked(dir);
-			git(dir, ...bring);
-			commit(dir, { [OWN]: DONE });
-			const reason = decide(end(dir, SILENT), marks);
-			expect(reason).toContain("openspec/changes/own/");
-			expect(reason).not.toContain("openspec/changes/c/");
-		},
-	);
+	] as const)("beside a group brought in by %s, the refusal names only its own", (_, branch, bring) => {
+		const dir = based(branch, { [TASKS]: OPEN, [OWN]: OPEN });
+		land(dir, { [TASKS]: DONE });
+		const marks = marked(dir);
+		git(dir, ...bring);
+		commit(dir, { [OWN]: DONE });
+		const reason = decide(end(dir, SILENT), marks);
+		expect(reason).toContain("openspec/changes/own/");
+		expect(reason).not.toContain("openspec/changes/c/");
+	});
 
 	test("a change the turn creates and completes beside a pulled one is the only one named", () => {
 		// `a/` sorts first, so its two `missing` answers precede the pulled

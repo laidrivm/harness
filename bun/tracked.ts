@@ -36,9 +36,7 @@ export function tracked(cwd?: string): Tracked {
 	// deleted from the work tree, a symlink, or a submodule's gitlink, which
 	// reads as a directory, and none of the three is a file to open. A caller
 	// ruling on paths alone takes `paths`, where all three still stand.
-	const files = paths.filter((path) =>
-		lstatSync(join(root, path), { throwIfNoEntry: false })?.isFile(),
-	);
+	const files = paths.filter((path) => lstatSync(join(root, path), { throwIfNoEntry: false })?.isFile());
 
 	return { root, paths, files };
 }

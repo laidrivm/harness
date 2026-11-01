@@ -61,8 +61,7 @@ const SYNTAX = {
  * division the scan would otherwise read as a regex literal, swallowing
  * whatever `/` came next along with it.
  */
-const contextual = (word: string, before: string) =>
-	word !== "of" || /^[A-Za-z_$\]}]/.test(before);
+const contextual = (word: string, before: string) => word !== "of" || /^[A-Za-z_$\]}]/.test(before);
 
 /**
  * `source` with its comments, strings and — where the language has them —
@@ -111,8 +110,7 @@ function walk(source: string, language: keyof typeof SYNTAX) {
 
 	const word = (at: number) => {
 		let end = at;
-		while (end < source.length && /[A-Za-z_$]/.test(source[end] as string))
-			end++;
+		while (end < source.length && /[A-Za-z_$]/.test(source[end] as string)) end++;
 		return source.slice(at, end);
 	};
 
@@ -185,8 +183,7 @@ function walk(source: string, language: keyof typeof SYNTAX) {
 		} else if (c === "/" && next === "*") {
 			const start = i;
 			i += 2;
-			while (i < source.length && !(source[i] === "*" && source[i + 1] === "/"))
-				i++;
+			while (i < source.length && !(source[i] === "*" && source[i + 1] === "/")) i++;
 			found.push({
 				from: start + 2,
 				to: Math.min(i, source.length),
@@ -237,17 +234,13 @@ function walk(source: string, language: keyof typeof SYNTAX) {
  * `source` with everything the scan erases replaced by spaces. The signature
  * every caller had before the scan also reported what it erased.
  */
-export const blank = (source: string, language: keyof typeof SYNTAX): string =>
-	walk(source, language).out.join("");
+export const blank = (source: string, language: keyof typeof SYNTAX): string => walk(source, language).out.join("");
 
 /**
  * `source` with only its comments' text replaced by spaces, strings and code
  * kept — for a pattern that must match inside a string but not in prose.
  */
-export function uncomment(
-	source: string,
-	language: keyof typeof SYNTAX,
-): string {
+export function uncomment(source: string, language: keyof typeof SYNTAX): string {
 	const out = source.split("");
 	for (const { from, to } of walk(source, language).found)
 		for (let k = from; k < to; k++) if (out[k] !== "\n") out[k] = " ";
@@ -263,10 +256,7 @@ export function uncomment(
  * is decided once — which is the hole the line-based scanner this replaces
  * left, and the reason two of them were being kept in step by hand.
  */
-export function comments(
-	source: string,
-	language: keyof typeof SYNTAX,
-): Comment[] {
+export function comments(source: string, language: keyof typeof SYNTAX): Comment[] {
 	// Counted forward from the previous span rather than over the whole prefix
 	// each time: the spans arrive in ascending order, so one pass covers them.
 	let at = 0;

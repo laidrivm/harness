@@ -35,7 +35,14 @@ describe("the arguments", () => {
 		["an empty --card, which is not no card", ["finish", "--card", ""]],
 	])("%s prints the usage and exits 2, calling nothing", async (_, args) => {
 		const run = await finish({ args });
-		expect([run.code, run.err.trim(), run.calls, run.seen, run.refusals, run.remote]).toEqual([2, USAGE.join("\n"), [], [], [], ""]);
+		expect([run.code, run.err.trim(), run.calls, run.seen, run.refusals, run.remote]).toEqual([
+			2,
+			USAGE.join("\n"),
+			[],
+			[],
+			[],
+			"",
+		]);
 	});
 
 	test.each([

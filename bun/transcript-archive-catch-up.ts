@@ -22,23 +22,17 @@ function same(source: string, copy: string): boolean {
 	const b = statSync(copy, { throwIfNoEntry: false });
 	if (!a || !b) return !a && !b;
 	if (a.isDirectory() !== b.isDirectory()) return false;
-	if (!a.isDirectory())
-		return a.size === b.size && Math.trunc(a.mtimeMs) === Math.trunc(b.mtimeMs);
+	if (!a.isDirectory()) return a.size === b.size && Math.trunc(a.mtimeMs) === Math.trunc(b.mtimeMs);
 	const names = readdirSync(source).sort();
 	const copied = readdirSync(copy).sort();
-	return (
-		names.join("/") === copied.join("/") &&
-		names.every((name) => same(join(source, name), join(copy, name)))
-	);
+	return names.join("/") === copied.join("/") && names.every((name) => same(join(source, name), join(copy, name)));
 }
 
 /** The record at `path` as an object, or `null` for none or one that does not parse. */
 function recorded(path: string): Record<string, unknown> | null {
 	try {
 		const value: unknown = JSON.parse(readFileSync(path, "utf8"));
-		return value && typeof value === "object" && !Array.isArray(value)
-			? (value as Record<string, unknown>)
-			: null;
+		return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 	} catch {
 		return null;
 	}
@@ -96,9 +90,7 @@ export function catchUp(): string {
 				}
 				try {
 					const before = recorded(join(project, `${id}.meta.json`));
-					const unchanged =
-						same(join(dir, name), join(project, name)) &&
-						same(join(dir, id), join(project, id));
+					const unchanged = same(join(dir, name), join(project, name)) && same(join(dir, id), join(project, id));
 					if (before && unchanged) {
 						count.skipped++;
 						continue;

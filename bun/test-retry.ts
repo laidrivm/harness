@@ -153,12 +153,14 @@ export function testRetry(root: string): string[] {
 			const json = (parsed(path, () => JSON.parse(read())) ?? {}) as Record<string, unknown>;
 			for (const field of ["scripts", "simple-git-hooks"])
 				for (const [key, value] of Object.entries((json[field] ?? {}) as Record<string, unknown>))
-					if (typeof value === "string" && retried(value)) problems.push(`${path}: ${field} ${key} runs bun with --retry`);
+					if (typeof value === "string" && retried(value))
+						problems.push(`${path}: ${field} ${key} runs bun with --retry`);
 		} else if (/^\.github\/workflows\/[^/]+\.ya?ml$/.test(path)) {
 			const jobs = (parsed(path, () => Bun.YAML.parse(read())) as Workflow | null)?.jobs ?? {};
 			for (const [job, body] of Object.entries(jobs))
 				for (const step of body?.steps ?? [])
-					if (typeof step?.run === "string" && retried(step.run)) problems.push(`${path}: job ${job} runs bun with --retry`);
+					if (typeof step?.run === "string" && retried(step.run))
+						problems.push(`${path}: job ${job} runs bun with --retry`);
 		} else if (path.startsWith(".githooks/") && retried(read())) {
 			problems.push(`${path}: runs bun with --retry`);
 		}

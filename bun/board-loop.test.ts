@@ -1,15 +1,14 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { realpathSync } from "node:fs";
-import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { advance, change, clone, lowered, records, run, TICKED } from "./board-loop.fixture.ts";
+import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 
 /** The install and the pick; who may start the runner sits in `board-loop-start.test.ts`, and the clone in it and `board-loop-clone.test.ts`. [n]: `/zombies` ideas. */
 
 afterAll(cleanup);
 
 /** The position of the first logged call that starts with `call`. */
-const at = (calls: string, call: string) =>
-	calls.split("\n").findIndex((line) => line.startsWith(call));
+const at = (calls: string, call: string) => calls.split("\n").findIndex((line) => line.startsWith(call));
 
 describe("the install", () => {
 	// spec: board-loop/the-install-fails
@@ -28,11 +27,7 @@ describe("the install", () => {
 		const { dir, origin } = clone();
 		advance(origin, { "bun.lock": "moved\n" });
 		const { calls } = run(dir);
-		const order = [
-			at(calls, "git merge --ff-only"),
-			at(calls, "bun install --frozen-lockfile"),
-			at(calls, "claude"),
-		];
+		const order = [at(calls, "git merge --ff-only"), at(calls, "bun install --frozen-lockfile"), at(calls, "claude")];
 		expect(order.every((n) => n >= 0)).toBe(true);
 		expect([...order].sort((a, b) => a - b)).toEqual(order);
 	});
@@ -82,7 +77,9 @@ describe("the pick", () => {
 		expect(pick).toContain("demo, other");
 		expect(pick).not.toContain("spent");
 		expect(pick).not.toContain("change nothing anywhere");
-		expect(pick).toContain("set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`");
+		expect(pick).toContain(
+			"set the `Status` of the card your `PICK:` line names to `applying` when it reads `proposed`",
+		);
 		expect(pick).toContain("write no other card or property");
 		expect(pick).toContain("Write nothing when that line names no change listed above.");
 	});
@@ -102,15 +99,24 @@ describe("the pick", () => {
 	test("a takeable change and an answer candidate each appear in their own list of the prompt only [11]", () => {
 		const { dir } = clone({ ...change("demo"), ...change("spent", TICKED) });
 		const lines = pickOf(dir).split("\n");
-		expect(lines.find((line) => line.startsWith("These changes are takeable:"))).toStartWith("These changes are takeable: demo.");
-		expect(lines.find((line) => line.startsWith("These changes are answer candidates:"))).toStartWith("These changes are answer candidates: spent.");
+		expect(lines.find((line) => line.startsWith("These changes are takeable:"))).toStartWith(
+			"These changes are takeable: demo.",
+		);
+		expect(lines.find((line) => line.startsWith("These changes are answer candidates:"))).toStartWith(
+			"These changes are answer candidates: spent.",
+		);
 	});
 
 	// spec: board-loop/a-takeable-card-waiting-on-the-user
 	test("the pick prompt passes over a takeable card whose question no answer follows", () => {
 		const { dir } = clone();
-		const takeable = pickOf(dir).split("\n").find((line) => line.startsWith("These changes are takeable:")) ?? "";
-		expect(takeable).toContain("Pass over a takeable change whose card's page-level discussion, read as below, holds a comment opening with `harness-question` and, after the last such comment, none by the user opening with neither `harness-question` nor `harness-answer`");
+		const takeable =
+			pickOf(dir)
+				.split("\n")
+				.find((line) => line.startsWith("These changes are takeable:")) ?? "";
+		expect(takeable).toContain(
+			"Pass over a takeable change whose card's page-level discussion, read as below, holds a comment opening with `harness-question` and, after the last such comment, none by the user opening with neither `harness-question` nor `harness-answer`",
+		);
 		expect(takeable).toEndWith("its question waits on the user.");
 	});
 
@@ -118,9 +124,17 @@ describe("the pick", () => {
 	test("the pick prompt reads Assign and the discussion, resolved or not, after the last question [15], puts answered cards first from applied [16] and claims them from applied [17]", () => {
 		const { dir } = clone();
 		const pick = pickOf(dir);
-		for (const part of ["`Assign`", "`notion-get-comments` with `include_resolved: true`", "never a comment on a block","holds a comment opening with `harness-question` and, after the last such comment, one by the user `Assign` names", "A card with no such question is no answer."])
+		for (const part of [
+			"`Assign`",
+			"`notion-get-comments` with `include_resolved: true`",
+			"never a comment on a block",
+			"holds a comment opening with `harness-question` and, after the last such comment, one by the user `Assign` names",
+			"A card with no such question is no answer.",
+		])
 			expect(pick).toContain(part);
-		expect(pick).toContain("Take an answered candidate's card first, from `applied` or `applying`, then the `applying` column, then `proposed`");
+		expect(pick).toContain(
+			"Take an answered candidate's card first, from `applied` or `applying`, then the `applying` column, then `proposed`",
+		);
 		expect(pick).toContain("or when it reads `applied` and names an answer candidate");
 	});
 
@@ -128,7 +142,9 @@ describe("the pick", () => {
 	test("the answer follows the last question, whoever posted it, and is read from the page-level discussion alone [41]", () => {
 		const { dir } = clone();
 		const pick = pickOf(dir);
-		expect(pick).toContain("after the last such comment, one by the user `Assign` names that opens with neither `harness-question` nor `harness-answer`. That last question counts whichever account posted it, a Notion integration included.");
+		expect(pick).toContain(
+			"after the last such comment, one by the user `Assign` names that opens with neither `harness-question` nor `harness-answer`. That last question counts whichever account posted it, a Notion integration included.",
+		);
 		expect(pick).toContain("`notion-get-comments` with `include_resolved: true`");
 		expect(pick).toContain("never a comment on a block");
 	});
@@ -168,7 +184,12 @@ describe("the pick", () => {
 
 	// spec: board-loop/a-pick-outside-the-list
 	test.each([
-		["a change neither takeable nor a candidate [19][22]", { ...change("demo"), ...change("spent", undefined, ["demo"]) }, "PICK: spent", "spent: after: demo is still open"],
+		[
+			"a change neither takeable nor a candidate [19][22]",
+			{ ...change("demo"), ...change("spent", undefined, ["demo"]) },
+			"PICK: spent",
+			"spent: after: demo is still open",
+		],
 		["a change with no directory [19]", change("demo"), "PICK: ghost", "ghost: no change of that name is takeable"],
 		["nothing at all [20]", change("demo"), "", "not one exact PICK: line"],
 		["no PICK: line [20]", change("demo"), "demo, I think", "not one exact PICK: line"],

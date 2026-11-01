@@ -13,8 +13,7 @@ import { basename, dirname, join } from "node:path";
 export const DAY = 86_400_000;
 
 /** `ms` before now, in whole seconds, so a copy's `mtimeMs` compares exactly. */
-export const ago = (ms: number) =>
-	new Date(Math.floor((Date.now() - ms) / 1000) * 1000);
+export const ago = (ms: number) => new Date(Math.floor((Date.now() - ms) / 1000) * 1000);
 
 const hook = `${import.meta.dir}/transcript-archive.ts`;
 const made: string[] = [];

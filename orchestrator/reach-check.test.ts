@@ -21,7 +21,14 @@ function check(files: Record<string, number>, key: number | null, as: Record<str
 		writeFileSync(path, "throwaway\n");
 		chmodSync(path, key);
 	}
-	const env = { PATH: process.env.PATH ?? "", REACH_SECRETS: secrets, REACH_KEY: path, REACH_AS_AGENT: "", REACH_AS_RUNNER: "", ...as };
+	const env = {
+		PATH: process.env.PATH ?? "",
+		REACH_SECRETS: secrets,
+		REACH_KEY: path,
+		REACH_AS_AGENT: "",
+		REACH_AS_RUNNER: "",
+		...as,
+	};
 	const r = Bun.spawnSync(["sh", join(import.meta.dir, "reach-check.sh")], { env });
 	return { code: r.exitCode, out: r.stdout.toString(), secrets, path };
 }
@@ -31,7 +38,10 @@ describe.skipIf(process.getuid?.() === 0)("reach-check.sh", () => {
 	// spec: orchestrator/each-secret-file-as-the-session-user orchestrator/the-runner-reads-the-key
 	test("every read refused exits 0", () => {
 		const r = check({ claude_oauth_token: 0o000, github_webhook_secret: 0o000 }, 0o000);
-		expect([r.code, r.out.trim()]).toEqual([0, "reach-check: no secret file is readable as agent, and the App's key not as runner"]);
+		expect([r.code, r.out.trim()]).toEqual([
+			0,
+			"reach-check: no secret file is readable as agent, and the App's key not as runner",
+		]);
 	});
 
 	test("a file agent can read exits 1, naming it and no other", () => {
@@ -43,7 +53,10 @@ describe.skipIf(process.getuid?.() === 0)("reach-check.sh", () => {
 	test("a key runner can read is named for both users", () => {
 		const r = check({ claude_oauth_token: 0o000 }, 0o444);
 		expect(r.code).toBe(1);
-		expect(r.out.trim().split("\n")).toEqual([`reach-check: agent reads ${r.path}`, `reach-check: runner reads ${r.path}`]);
+		expect(r.out.trim().split("\n")).toEqual([
+			`reach-check: agent reads ${r.path}`,
+			`reach-check: runner reads ${r.path}`,
+		]);
 	});
 
 	// A failed switch would read as every read refused.

@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { change, clone } from "./board-loop.fixture.ts";
 import { carry, publish } from "./board-loop-push.ts";
-import { clone, change } from "./board-loop.fixture.ts";
 import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
 import { Transient } from "./transient.ts";
 
@@ -21,7 +21,10 @@ function stand() {
 	git(push, "clone", "-q", origin, ".");
 	const bin = emptyDir("read-token-bin-");
 	const log = join(bin, "fetched");
-	writeFileSync(join(bin, "git"), `#!/bin/sh\ncase " $* " in *" fetch "*) echo "$GIT_CONFIG_VALUE_0" >> '${log}';; esac\nexec '${real}' "$@"\n`);
+	writeFileSync(
+		join(bin, "git"),
+		`#!/bin/sh\ncase " $* " in *" fetch "*) echo "$GIT_CONFIG_VALUE_0" >> '${log}';; esac\nexec '${real}' "$@"\n`,
+	);
 	chmodSync(join(bin, "git"), 0o755);
 	// The launcher's shape: the words, then the session's clone, which `carry` hands the command.
 	const under = ["sh", "-c", 'cd "$0" && exec "$@"', dir];
@@ -48,7 +51,12 @@ describe("carry's fetches", () => {
 		process.chdir(push);
 		process.env.PATH = `${bin}:${process.env.PATH}`;
 		try {
-			const read = { GH_TOKEN: "ghs_read", GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "http.https://github.com/.extraheader", GIT_CONFIG_VALUE_0: header("ghs_read") };
+			const read = {
+				GH_TOKEN: "ghs_read",
+				GIT_CONFIG_COUNT: "1",
+				GIT_CONFIG_KEY_0: "http.https://github.com/.extraheader",
+				GIT_CONFIG_VALUE_0: header("ghs_read"),
+			};
 			expect(carry(under, "feat/demo", "main", read)).toBeUndefined();
 			// Both fetches, the origin's and the bundle's, carried it.
 			expect(readFileSync(log, "utf8").split("\n").filter(Boolean)).toEqual([header("ghs_read"), header("ghs_read")]);
@@ -112,7 +120,14 @@ describe("publish with the key holder's mint", () => {
 		process.chdir(dir);
 		try {
 			const app = { id: "7", mint, owner: "o", repo: "r" };
-			const said = await publish("PR-TITLE: t\nPR-BODY: b", [goal], "feat/demo", "main", { session: "s", clone: "c" }, app);
+			const said = await publish(
+				"PR-TITLE: t\nPR-BODY: b",
+				[goal],
+				"feat/demo",
+				"main",
+				{ session: "s", clone: "c" },
+				app,
+			);
 			expect(said).toStartWith("the App's token could not be minted: ");
 			expect(readFileSync(asked, "utf8").trim()).toBe("o/r contents=write pull_requests=write workflows=write");
 		} finally {
@@ -144,7 +159,9 @@ describe("a transient failure of the push clone's own fetch or mint", () => {
 	});
 
 	test("an origin that is no repository makes carry return a plain string", async () => {
-		const got = await inPush(join(emptyDir("read-token-none-"), "gone"), ({ under }) => carry(under, "feat/demo", "main"));
+		const got = await inPush(join(emptyDir("read-token-none-"), "gone"), ({ under }) =>
+			carry(under, "feat/demo", "main"),
+		);
 		expect(typeof got).toBe("string");
 	});
 
@@ -153,7 +170,15 @@ describe("a transient failure of the push clone's own fetch or mint", () => {
 			const mint = join(bin, "mint");
 			writeFileSync(mint, "#!/bin/sh\nexit 75\n");
 			chmodSync(mint, 0o755);
-			return publish("", [], "feat/demo", "main", { session: "s", clone: "c" }, { id: "7", mint, owner: "o", repo: "r" }, under);
+			return publish(
+				"",
+				[],
+				"feat/demo",
+				"main",
+				{ session: "s", clone: "c" },
+				{ id: "7", mint, owner: "o", repo: "r" },
+				under,
+			);
 		});
 		expect(got).toBeInstanceOf(Transient);
 		expect((got as Transient).message).toStartWith("the App's read token could not be minted: ");

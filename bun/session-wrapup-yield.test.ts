@@ -89,7 +89,9 @@ test("takes <since> as the day before the previous heading and adds every open p
 });
 
 test("takes the gates line's start from the previous entry holding a gates line, so a baseline entry moves no window", () => {
-	expect(step()).toContain("`<gates-since>` from the date in the heading of the previous entry that holds a `gates` line");
+	expect(step()).toContain(
+		"`<gates-since>` from the date in the heading of the previous entry that holds a `gates` line",
+	);
 	expect(step()).toContain('--arg since "<gates-since>"');
 });
 

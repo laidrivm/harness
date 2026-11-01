@@ -38,8 +38,10 @@ function pinned(copy: Record<string, string> | null, core: Record<string, string
 		[CORE]: { out: [...listed(core).out, { name: "skills", type: "dir" }] },
 		[COPY]: copy === null ? NOT_FOUND : listed(copy),
 	};
-	for (const [name, text] of Object.entries(core)) table[`api repos/laidrivm/harness/contents/core/${name}?ref=${PIN}`] = { out: file(text) };
-	for (const [name, text] of Object.entries(copy ?? {})) table[`api repos/o/r/contents/harness/${name}?ref=${sha(1)}`] = { out: file(text) };
+	for (const [name, text] of Object.entries(core))
+		table[`api repos/laidrivm/harness/contents/core/${name}?ref=${PIN}`] = { out: file(text) };
+	for (const [name, text] of Object.entries(copy ?? {}))
+		table[`api repos/o/r/contents/harness/${name}?ref=${sha(1)}`] = { out: file(text) };
 	return table;
 }
 
@@ -70,7 +72,13 @@ describe("mergeability and freshness", () => {
 
 	// spec: pr-sweep/the-update-fails
 	test("a failed update reads failed, with no status, and exits 1 [20]", () => {
-		const r = one({}, { [compare("main", sha(1))]: { out: { behind_by: 1 } }, "pr update-branch 1 --repo o/r": { code: 1, err: "merge conflict" } });
+		const r = one(
+			{},
+			{
+				[compare("main", sha(1))]: { out: { behind_by: 1 } },
+				"pr update-branch 1 --repo o/r": { code: 1, err: "merge conflict" },
+			},
+		);
 		expect([r.lines[0].outcome, r.lines[0].reason, r.code]).toEqual(["failed", "merge conflict", 1]);
 	});
 
@@ -84,21 +92,35 @@ describe("drift", () => {
 	// spec: pr-sweep/a-copy-that-differs
 	test("a differing file is a drift hand-off, marked, however CI reads [38, 39]", () => {
 		for (const check of [run("test", "FAILURE"), run("test", "", null, "IN_PROGRESS")]) {
-			const r = one({ statusCheckRollup: [check] }, { ...FRESH, ...pinned({ "rules.md": "edited" }), [mark(1, "handed off: drift")]: {} });
-			expect(r.lines[0].handoffs).toEqual([{ kind: "drift", to: "agent", detail: [expect.stringContaining("harness/rules.md: differs")] }]);
+			const r = one(
+				{ statusCheckRollup: [check] },
+				{ ...FRESH, ...pinned({ "rules.md": "edited" }), [mark(1, "handed off: drift")]: {} },
+			);
+			expect(r.lines[0].handoffs).toEqual([
+				{ kind: "drift", to: "agent", detail: [expect.stringContaining("harness/rules.md: differs")] },
+			]);
 		}
 	});
 
 	test("three problems are one hand-off with three detail lines [8]", () => {
 		const core = { "a.md": "a", "rules.md": "rules" };
-		const r = one({}, { ...FRESH, ...pinned({ "rules.md": "edited", "z.md": "z" }, core), [mark(1, "handed off: drift")]: {} });
+		const r = one(
+			{},
+			{ ...FRESH, ...pinned({ "rules.md": "edited", "z.md": "z" }, core), [mark(1, "handed off: drift")]: {} },
+		);
 		expect(r.lines[0].handoffs[0].detail).toHaveLength(3);
 	});
 
 	// spec: pr-sweep/a-copy-that-is-missing
 	test("a 404 on harness/ names every file of the pinned core/ [25]", () => {
-		const r = one({}, { ...FRESH, ...pinned(null, { "a.md": "a", "rules.md": "rules" }), [mark(1, "handed off: drift")]: {} });
-		expect(r.lines[0].handoffs[0].detail).toEqual([expect.stringContaining("harness/a.md: missing"), expect.stringContaining("harness/rules.md: missing")]);
+		const r = one(
+			{},
+			{ ...FRESH, ...pinned(null, { "a.md": "a", "rules.md": "rules" }), [mark(1, "handed off: drift")]: {} },
+		);
+		expect(r.lines[0].handoffs[0].detail).toEqual([
+			expect.stringContaining("harness/a.md: missing"),
+			expect.stringContaining("harness/rules.md: missing"),
+		]);
 	});
 
 	// spec: pr-sweep/the-harness-itself
@@ -119,15 +141,32 @@ describe("drift", () => {
 
 	test.each([
 		["a non-404 listing failure", { [COPY]: { code: 1, err: "HTTP 500" } }],
-		["a pinned core/ with no rules.md", { [CORE]: listed({ "a.md": "a" }), [`api repos/laidrivm/harness/contents/core/a.md?ref=${PIN}`]: { out: file("a") } }],
-		["a failed file fetch", { [`api repos/laidrivm/harness/contents/core/rules.md?ref=${PIN}`]: { code: 1, err: "HTTP 500" } }],
+		[
+			"a pinned core/ with no rules.md",
+			{
+				[CORE]: listed({ "a.md": "a" }),
+				[`api repos/laidrivm/harness/contents/core/a.md?ref=${PIN}`]: { out: file("a") },
+			},
+		],
+		[
+			"a failed file fetch",
+			{ [`api repos/laidrivm/harness/contents/core/rules.md?ref=${PIN}`]: { code: 1, err: "HTTP 500" } },
+		],
 	])("%s reads failed, and the temporary directories are gone [26, 27, 30]", (_, over) => {
 		const r = one({}, { ...FRESH, ...pinned({ "rules.md": "rules" }), ...over });
 		expect([r.lines[0].outcome, r.left]).toEqual(["failed", []]);
 	});
 
 	test("a clean copy leaves no temporary directory behind [30]", () => {
-		const r = one({}, { ...FRESH, ...pinned({ "rules.md": "rules" }), [commit(1)]: { out: { parents: [{ sha: "p" }] } }, [mark(1, "handed off: description")]: {} });
+		const r = one(
+			{},
+			{
+				...FRESH,
+				...pinned({ "rules.md": "rules" }),
+				[commit(1)]: { out: { parents: [{ sha: "p" }] } },
+				[mark(1, "handed off: description")]: {},
+			},
+		);
 		expect([kinds(r), r.left]).toEqual([["description"], []]);
 	});
 });
@@ -159,7 +198,9 @@ describe("CI", () => {
 	test("a queued re-run with no startedAt after a pass is pending; on a tie pending wins, then failed (review of PR 182)", () => {
 		expect(ci([run("test", "SUCCESS"), run("test", "", null, "QUEUED")]).lines[0].outcome).toBe("waiting");
 		expect(ci([run("test", "SUCCESS"), run("test", "", undefined, "IN_PROGRESS")]).lines[0].outcome).toBe("waiting");
-		expect(kinds(ci([run("test", "SUCCESS"), run("test", "FAILURE")], { [mark(1, "handed off: ci")]: {} }))).toEqual(["ci"]);
+		expect(kinds(ci([run("test", "SUCCESS"), run("test", "FAILURE")], { [mark(1, "handed off: ci")]: {} }))).toEqual([
+			"ci",
+		]);
 	});
 
 	// spec: pr-sweep/a-failed-check
@@ -211,7 +252,16 @@ describe("the line and the mark", () => {
 	// spec: pr-sweep/the-line-s-shape
 	test("every fixed key is present, reason absent for marked, arrays always arrays, stdout only JSON [16, 17]", () => {
 		const r = one({ statusCheckRollup: [run("test", "FAILURE")] }, { ...green(1), [mark(1, "handed off: ci")]: {} });
-		expect(r.lines).toEqual([{ repo: "o/r", pr: 1, branch: "feat/demo-1", sha: sha(1), outcome: "marked", handoffs: [{ kind: "ci", to: "ciflow", detail: ["CI / test"] }] }]);
+		expect(r.lines).toEqual([
+			{
+				repo: "o/r",
+				pr: 1,
+				branch: "feat/demo-1",
+				sha: sha(1),
+				outcome: "marked",
+				handoffs: [{ kind: "ci", to: "ciflow", detail: ["CI / test"] }],
+			},
+		]);
 		expect(r.out.trim().split("\n")).toHaveLength(1);
 	});
 
