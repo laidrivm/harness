@@ -122,9 +122,10 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       a stored file keeps only the fields design decision 4 names
       (`the-same-results-written-in-another-checkout`); a
       stored file differing from `HEAD`'s, or untracked, fails naming it
-      (`a-push-whose-run-rewrote-a-stored-file`); a dirty test, a changed
-      `bunfig.toml`, a stored file without `files` and two naming one path
-      fail or force as design decision 4 says; the merge sums every
+      (`a-push-whose-run-rewrote-a-stored-file`); a dirty test, fixture or
+      `bunfig.toml` fails; a committed change to `bunfig.toml` forces every
+      module; a stored file without `files`, and two naming one path, fail;
+      the merge, read by `bun/mutation-floor.ts`, sums every
       stored file's survivors
       (`unchanged-modules-counted-from-their-stored-results`). Then write
       `bun/mutation-run.ts` with `--all`. Verify the

@@ -67,7 +67,7 @@ the same file for the same results.
 
 ### Requirement: A run mutates only what its stored results do not cover
 
-A run SHALL mutate exactly the modules that have no stored file, whose
+A run SHALL mutate exactly the modules with tests that have no stored file, whose
 source differs from the copy their stored file holds, or whose tests, the
 fixtures they import and the shared test configuration no longer match its
 fingerprint — a branch's changes, and any stale file a merge left. The last

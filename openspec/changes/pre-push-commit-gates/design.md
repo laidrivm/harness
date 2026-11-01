@@ -57,7 +57,8 @@ Under `.githooks/` because git runs only files named after a hook, so the
 script is inert there, and the list sits beside the hook it serves. The
 `gitleaks` range reads its base from `bun/diff-base.sh`, which prints
 `HARNESS_BASE` when it is set — the one copy of the rule, so the budget reads
-it too; `bun/pre-pr.ts` sets it to the base it was given, and CI to `HEAD^1`.
+it too; `bun/pre-pr.ts` sets it to the base it was given. CI's scan stays
+history-wide and reads no base.
 
 ### 2. Biome as d2ass has it, reformat first
 
@@ -131,8 +132,8 @@ them: the user's decision 2 judges a module by `bun/x*.test.ts` alone.
 After the runs the step fails on a stored file whose module is untracked or
 has no test file, on a module with a test file and no stored file, and on a
 stored file differing from `HEAD`'s, one with no `files` object, or two naming
-one source path, then merges every `mutation/*.json` into
-`reports/mutation/mutation.json`, deleting the old report first as
+one source path, then merges every stored file's `files` entries, mutants
+whole, into the one `files` map of `reports/mutation/mutation.json`, deleting the old report first as
 `mutation-floor` requires, and `bun/mutation-floor.ts` checks the total
 against `harness.mutationFloor`. Stored files rather than a cache outside
 git, because a clone, a worktree, the host and CI must all read the same
@@ -162,8 +163,8 @@ the host: 2 vCPU and 3.5 GiB beside parallel agents.
 `.github/workflows/lint.yml` follows d2ass's: `biome`, `typecheck`,
 `yaml-syntax`, `suppressions`, `actionlint` and `gitleaks`, the two
 containers pinned by d2ass's digests, which nothing updates.
-`.github/workflows/mutation.yml` runs the step and the floor on Node pinned
-as d2ass pins it: over current stored results it mutates nothing, and over
+`.github/workflows/mutation.yml` runs the step and the floor on Bun as
+`test.yml` pins it and Node as d2ass does: over current stored results it mutates nothing, and over
 stale ones it re-runs and fails. The user adds the check names to the ruleset.
 
 ## Risks / Trade-offs
