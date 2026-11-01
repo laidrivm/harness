@@ -32,12 +32,14 @@ One group, one pull request. The code changes are tasks 1.4 and 1.5
       last under `// spec: mutation-floor/a-floor-that-is-not-a-whole-number`
       — each expecting one problem naming its field, and see the absent `why`
       throw and the floors fail; then change `gauge`. Verify with `bun test
-      bun/mutation-floor` green
+      bun/mutation-floor` green; task 1.5 moves these shapes into
+      `bun/floor.test.ts`, leaving a case per field here
 - [x] 1.5 Lift both floors' `gauge` into `bun/floor.ts` (design.md, decision
       6): first add `bun/floor.test.ts` over the gap, the reason and the
-      whole number, and to `bun/spec-coverage-floor.test.ts` an absent `why`
-      and a string `count` — the last under `// spec:
-      spec-test-traceability/a-floor-that-is-not-a-whole-number` — and see
+      whole number — absent, a string, a fraction or negative, citing both
+      specs' *A floor that is not a whole number* — and to
+      `bun/spec-coverage-floor.test.ts` an absent `why`, a string `count`
+      under the same citation, and the full message above the floor, and see
       them fail; then write the module and bind it in `bun/mutation-floor.ts`
       and `bun/spec-coverage.ts`. Verify with `bun test bun/floor
       bun/mutation-floor bun/spec-coverage bun/check` green

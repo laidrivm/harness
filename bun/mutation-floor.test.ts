@@ -138,10 +138,10 @@ describe("the count against the floor", () => {
 		expect(gauge(0, 0, why)).toEqual([]);
 	});
 
-	test("the failure above the floor names both numbers", () => {
-		const [problem] = gauge(13, 12, why);
-		expect(problem).toContain("13");
-		expect(problem).toContain("12");
+	test("the failure above the floor names both numbers and the way down", () => {
+		expect(gauge(13, 12, why)).toEqual([
+			"13 surviving mutants against a floor of 12 — kill one, or raise the floor and say why",
+		]);
 	});
 
 	test("the failure below the floor names the value to write", () => {
@@ -163,20 +163,14 @@ describe("the count against the floor", () => {
 
 // spec: mutation-floor/the-floor-changed-with-no-reason-given
 describe("the floor changed with no reason given", () => {
+	// The other shapes of an unreadable reason are `floor.test.ts`'s; these
+	// pin the field this check names.
 	test("an empty reason fails naming the field", () => {
 		expect(gauge(12, 12, "")).toEqual(naming("why"));
 	});
 
-	test("a reason of whitespace alone fails naming the field", () => {
-		expect(gauge(12, 12, "   ")).toEqual(naming("why"));
-	});
-
 	test("an absent reason fails naming the field, rather than throwing", () => {
 		expect(gauge(12, 12, undefined)).toEqual(naming("why"));
-	});
-
-	test("a reason that is not text fails naming the field", () => {
-		expect(gauge(12, 12, ["measured"])).toEqual(naming("why"));
 	});
 });
 
@@ -184,13 +178,5 @@ describe("the floor changed with no reason given", () => {
 describe("a floor that is not a whole number", () => {
 	test("a floor written as a string fails naming the field", () => {
 		expect(gauge(12, "12", why)).toEqual(naming("surviving"));
-	});
-
-	test("an absent floor fails naming the field", () => {
-		expect(gauge(12, undefined, why)).toEqual(naming("surviving"));
-	});
-
-	test("a fractional floor fails naming the field", () => {
-		expect(gauge(12, 12.5, why)).toEqual(naming("surviving"));
 	});
 });

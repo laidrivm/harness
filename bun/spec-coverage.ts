@@ -3,14 +3,14 @@
  * comment directly above it; what a criterion is and where they are read from
  * is `spec-criteria.ts`'s.
  *
- * The check still ships as a test — CI already runs `bun test`, so it is
- * blocking with no workflow edit — and this file is only where it is written:
- * the shape `no-suppressions.ts` and `mutation-floor.ts` already have.
+ * The check and its floor run among the gates of `check.ts`, over the
+ * repository that installs the harness; this file is only where they are
+ * written, the shape `no-suppressions.ts` and `mutation-floor.ts` already have.
  */
 
 import { lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { gauge as owed } from "./floor.ts";
+import { type Floor, gauge as owed } from "./floor.ts";
 import { comments } from "./scan.ts";
 import { counted, validated } from "./spec-criteria.ts";
 import { tracked } from "./tracked.ts";
@@ -191,16 +191,13 @@ export function uncited(cwd?: string): number {
 	return criteria.filter((c) => !cited.has(c.id)).length;
 }
 
+const FLOOR: Floor = {
+	key: "uncitedFloor",
+	field: "count",
+	counted: "uncited criteria",
+	lower: "cite one",
+};
+
 /** What the uncited count owes `harness.uncitedFloor` — see `./floor.ts`. */
 export const gauge = (count: number, floor: unknown, why: unknown) =>
-	owed(
-		{
-			key: "uncitedFloor",
-			field: "count",
-			counted: "uncited criteria",
-			lower: "cite one",
-		},
-		count,
-		floor,
-		why,
-	);
+	owed(FLOOR, count, floor, why);

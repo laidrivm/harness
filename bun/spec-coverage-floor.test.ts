@@ -27,6 +27,12 @@ describe("the count of uncited criteria against its floor", () => {
 		expect(gauge(379, 380, reasoned).join("\n")).toContain("write 379");
 	});
 
+	test("the failure above the floor names both numbers and the way down", () => {
+		expect(gauge(381, 380, reasoned)).toEqual([
+			"381 uncited criteria against a floor of 380 — cite one, or raise the floor and say why",
+		]);
+	});
+
 	test("either failure reports the count and the floor, not only that it failed", () => {
 		for (const count of [381, 379]) {
 			const said = gauge(count, 380, reasoned).join("\n");

@@ -67,7 +67,13 @@ describe("the floor's reason", () => {
 	});
 });
 
+// spec: mutation-floor/a-floor-that-is-not-a-whole-number
+// spec: spec-test-traceability/a-floor-that-is-not-a-whole-number
 describe("a floor that is not a whole number", () => {
+	test("a negative floor fails naming the field", () => {
+		expect(gauge(at, 0, -1, why)).toEqual(naming("count"));
+	});
+
 	test("a floor written as a string fails naming the field, with no gap", () => {
 		expect(gauge(at, 7, "7", why)).toEqual(naming("count"));
 	});
