@@ -57,16 +57,16 @@ export const body = (markdown: string, truncated = false, unknown_block_ids: str
  * top-level blocks, page by page, and `board` the data source's title.
  * `assign`, when set, is the ids the page's `Assign` holds, which a `PATCH` replaces; `next`, for a call as `seen`
  * names it, what to merge into the stub after each of its answers in turn.
- */   
+ */
 export type Stub = {
-  page?: unknown;
-  markdown?: unknown;   
-  comments?: unknown[][];
-  blocks?: unknown[][]; 
-  board?: string;
-  fail?: Record<string, number>;
-  assign?: string[];    
-  next?: Record<string, Partial<Stub>[]>;   
+	page?: unknown;
+	markdown?: unknown;
+	comments?: unknown[][];
+	blocks?: unknown[][];
+	board?: string;
+	fail?: Record<string, number>;
+	assign?: string[];
+	next?: Record<string, Partial<Stub>[]>;
 };
 
 /** Serves Notion as `stub` says, and the calls it saw with the body each sent. */

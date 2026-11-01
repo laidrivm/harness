@@ -64,7 +64,7 @@ work-status/<slug>`. The event goes on the guard's stdin as
 
 ## 2. The probe after the pin bump
 
-- [ ] 2.1 Once the pin passes group 1's merge, in a harness session: a
+- [x] 2.1 Once the pin passes group 1's merge, in a harness session: a
       `notion-create-pages` call under the `Harness` data source with one
       page at `Status` `approved` refused by the hook with the reason above
       and a `status-guard` / `block` / `mcp-status` ledger line; the same
@@ -80,3 +80,20 @@ work-status/<slug>`. The event goes on the guard's stdin as
       `properties` through — is filed as a follow-up card on the `Harness`
       board; the probe makes no `notion-update-page` call. Record each on this change's card and in that
       pull request; the probe cards stay as created for the user to discard
+
+      Recorded 2026-11-01, pin `50765a4`. In a session started after the pin
+      bump (`41de8d03`), a `notion-create-pages` call under the `Harness` data
+      source with one page at `approved` was refused before it reached Notion:
+      ``status-guard: pages[0] is created at Status "approved"; create a card
+      at `idea`, written as the plain string "idea" — only the user moves it to
+      `approved`, and later moves go through `bun bun/work.ts status --card
+      <id> --to <status>`.``, with the ledger record `status-guard` / `block`
+      / `mcp-status` at 18:10:52Z. The same call from a session running since
+      before the change merged (`2214216e`) passed, created a card at
+      `approved` and wrote no ledger record, while that checkout's installed
+      `status-guard.ts` (installed 16:33) carried the create branch and its
+      `.claude/settings.json` the new matcher; the cause is not established
+      (design, *Risks*). The user
+      deleted the throwaway cards. The `idea`, no-`Status`, lower-case
+      `status` and string-`pages` calls were not run, so the two gaps they
+      probe stay open as the design's *Risks* list them.

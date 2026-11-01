@@ -39,10 +39,10 @@ what this design decided:
 
 5. `Status` is matched exactly: no case folding and no `userDefined:` prefix,
    which the connector's schema asks of `id` and `url` alone; a lower-case
-   `status` is 2.1's to probe (а).
+   `status` is 2.1's to probe (а) — not run there (tasks, 2.1).
 6. A string `properties` on `notion-update-page` still passes; if 2.1 shows
    the connector parses a string parameter, a card of its own closes it on
-   update (а).
+   update (а) — not run there (tasks, 2.1), so no card follows from it.
 7. Until the pin passes this change's merge the hook runs the old script, as
    every harness hook does (*Risks*, *Migration Plan*); no caveat goes into
    `core/feature-workflow.md` (а).
@@ -140,8 +140,8 @@ the ledger for the split.
   templates. Left open by clarification 11 until a card shows it.
 - [A lower-case `status` key] → the guard matches `Status` exactly, as
   today's does on update; whether the connector maps `status` to the
-  `Status` property is unverified. 2.1's live probe tries it once and
-  records the answer; a match there is a card, not this change.
+  `Status` property is unverified. 2.1's live probe was to try it once; it
+  was not run (tasks, 2.1), so it stays open until a card shows it.
 - [`notion-duplicate-page` copies a card with its status;
   `notion-move-pages` can bring a page into a board] → open until a failure
   shows them (clarification 11).
@@ -149,8 +149,10 @@ the ledger for the split.
   moved by `bun/work.ts status` until the user sets one; the reason names
   `idea` alone so a session does not choose it.
 - [A string `properties` on `notion-update-page`] → passes as today; whether
-  the connector parses a string parameter is unverified, and 2.1 probes it
-  on a create with `idea`, which is harmless either way.
+  the connector parses a string parameter is unverified; 2.1's probe of
+  that, a `notion-create-pages` call with `pages` as a JSON string at
+  `idea`, was not run (tasks, 2.1), nor were its `idea`, no-`Status` and
+  lower-case `status` calls.
 - [A non-board database with a `Status` property is gated in harness
   sessions too] → none is used there today (decision 1 accepts it).
 - [A batch flow that filed a card straight at `approved` from the user's
@@ -158,7 +160,14 @@ the ledger for the split.
   moves it (decision 2).
 - [The hook runs from the pin] → it holds a session only once the pin passes
   this change's merge; the live probe (group 2) follows that bump, as
-  `notion-status-gate`'s did.
+  `notion-status-gate`'s did. 2.1 adds that a session running before the
+  change merged may not hold the widened matcher even after the pin passes
+  it: one such session created a card at `approved` unrefused, with no
+  ledger record, while the installed script carried the create branch and
+  the settings file the new matcher; a session started afterwards refused
+  the same call. The result is unexplained: the hooks that session had
+  registered were not read, and `core/verification.md` now asks for a new
+  session before a hook registration change is probed.
 
 ## Conflict check
 
