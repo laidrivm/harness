@@ -1198,7 +1198,7 @@ such a card without comparing or listing it.
 
 `bun bun/work.ts status`, `take` and `finish --card` SHALL each release the
 card's `Assign` through one shared function: `status` after its `Status`
-write, `take` after its reads, `finish` after its comments read, whatever it
+write, `take` after its comments read, `finish` after its own, whatever it
 decides about the ready switch. The function SHALL read the card's page
 and, only when `Assign` holds the user, its comments. When no question
 waits, as *An open question waits on its card, assigned to the user* reads
@@ -1215,7 +1215,9 @@ answer held, or a line opening `assign: failed —` naming why, a page read
 listing 25 people and a failed restore included, and nothing otherwise. A
 failed release SHALL change nothing else the command prints or decides, its
 exit included, except a failed restore, which SHALL make the command exit 1,
-since a question then waits with no one on `Assign`.
+since a question then waits with no one on `Assign`, and a second comments
+read that failed, which `finish` reports as a failed comments read of its
+own (`work-finish`, *Finish releases `Assign` after its comments read*).
 
 #### Scenario: A move after the answer
 
