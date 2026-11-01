@@ -30,10 +30,11 @@ same results. The floor SHALL count the survivors across every stored file.
 A stored file whose module is no longer tracked, or no longer has a test
 file, SHALL fail the run, naming it, and so SHALL a module with a test file
 and no stored file: either way the count would leave out, or include, code
-nothing judged. A stored file SHALL record a fingerprint of the test and
-fixture files it was measured against, and SHALL hold nothing that depends on
-the machine or the checkout that wrote it — no absolute path, system or
-timing — so that every clone writes the same file for the same results.
+nothing judged. A stored file SHALL record a fingerprint of the test files
+and the fixtures they import that it was measured against, and SHALL hold
+nothing that depends on the machine or the checkout that wrote it — no
+absolute path, system, timing or test output — so that every clone writes
+the same file for the same results.
 
 #### Scenario: Unchanged modules counted from their stored results
 
@@ -64,14 +65,14 @@ timing — so that every clone writes the same file for the same results.
   change
 - **THEN** the stored file it writes is the one `HEAD` tracks
 
-### Requirement: A run mutates only what the branch changed
+### Requirement: A run mutates only what its stored results do not cover
 
-A run SHALL mutate the modules the branch changed against its base, the base
-the diff budget resolves, and no other. A changed module SHALL be re-run
-incrementally from its stored file, and whole when it has none. A module
-whose test and fixture files no longer match its stored fingerprint SHALL be
-re-run whole, because the command runner reports no tests, so the stored
-results cannot show a changed test. The baseline SHALL be the same run asked
+A run SHALL mutate exactly the modules whose source differs from the copy
+their stored file holds, or that have no stored file, re-run incrementally,
+or whole when there is none; a branch's changes are those, and so is a stale
+file a merge left behind. A module whose tests and the fixtures they import
+no longer match its stored fingerprint SHALL be re-run whole, because the
+command runner reports no tests. The baseline SHALL be the same run asked
 for every module.
 
 #### Scenario: A new module has no stored file
@@ -82,22 +83,23 @@ for every module.
 
 #### Scenario: The module's source changed
 
-- **WHEN** a branch changes `bun/command-parse.ts` and none of its tests
-- **THEN** the run mutates that module incrementally from
-  `mutation/command-parse.json` and no other module
+- **WHEN** `bun/command-parse.ts` differs from the source
+  `mutation/command-parse.json` holds, and its tests match the fingerprint
+- **THEN** the run mutates that module incrementally and no other module
 
 #### Scenario: A test file changed
 
-- **WHEN** a branch changes `bun/pre-pr-steps.test.ts` only, and the stored
-  files of the modules it matches record the earlier test state
+- **WHEN** only `bun/pre-pr-steps.test.ts` changed since the stored files
+  were written
 - **THEN** the run re-runs whole every module whose test filter matches that
   path — `bun/pre-pr.ts` and `bun/pre-pr-steps.ts` — and no other
 
-#### Scenario: A test change already measured
+#### Scenario: A fixture another module's tests import
 
-- **WHEN** a branch changed `bun/command-parse.test.ts`, and
-  `mutation/command-parse.json` records the changed test state
-- **THEN** the run re-runs that module incrementally, not whole
+- **WHEN** only `bun/command-guard.fixture.ts` changed, and
+  `bun/command-parse.test.ts` imports it
+- **THEN** the run re-runs `bun/command-parse.ts` whole among the modules
+  whose tests import it
 
 #### Scenario: A run asked for every module
 
