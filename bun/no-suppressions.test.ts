@@ -177,6 +177,14 @@ describe("an allowlist entry the check cannot read", () => {
 			"harness.suppressions is not an object of approvals",
 		]);
 	});
+
+	test("the script fails on an unreadable entry with nothing else to report", () => {
+		const manifest = holding({ [key]: { count: 0 } });
+		const dir = fabricate({}, { "package.json": manifest });
+		const run = Bun.spawnSync(["bun", script], { cwd: dir, stderr: "pipe" });
+		expect(run.stderr.toString()).toContain(field("why"));
+		expect(run.exitCode).toBe(1);
+	});
 });
 
 describe("the root manifest", () => {
