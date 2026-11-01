@@ -14,9 +14,9 @@ resolved, does not wait on the user for a fix already on the pull request.
 each a positive integer. Any other option, a positional argument, a missing
 value, a malformed value, a missing or repeated `--pr` or `--head`, or no
 `--comment` at all SHALL print the usage and exit 2 before any git or `gh`
-call; an id named twice counts once. Scenarios after this requirement's own
-that leave `--head` out stand for a call whose `--head` names the pull
-request's head.
+call; an id named twice counts once. Every scenario in this spec that leaves
+`--head` out, bar *A short or missing head*, stands for a call whose
+`--head` names the pull request's head.
 
 #### Scenario: A short or missing head
 
@@ -26,7 +26,7 @@ request's head.
 
 #### Scenario: No comment named
 
-- **WHEN** `resolve` runs with `--pr 7` alone
+- **WHEN** `resolve` runs with `--pr 7` and no `--comment`
 - **THEN** it prints the usage, exits 2, and makes no `gh` call
 
 #### Scenario: A comment id with a tail
