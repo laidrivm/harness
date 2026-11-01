@@ -14,17 +14,10 @@ See `proposal.md` for why. What shapes the approach:
   pushes and calls `gh pr ready` from inside the process.
   `bun/pull-requests.ts` reads `origin`'s owner and name and the branch's pull
   requests.
-- Read live on 31.10: #355's head `afccbcd` has no `CodeRabbit` commit status.
-  The read `gh api
-  "repos/OWNER/REPO/commits/<head sha>/check-runs?check_name=CodeRabbit&filter=all&per_page=100"
-  --paginate --jq '.check_runs[] | select(.app.slug == "coderabbitai") |
-  [.status, .conclusion, .output.title]'` printed
-  `["completed","success","Finished"]` and
-  `["completed","skipped","Review skipped"]`, and `bun/command-guard.ts`
-  exits 0 on it.
-- Read live on 31.10: #347's inline findings open
-  `**<picture>…major-16.svg…</picture> Major** · **Stability & Availability**
-  · **Quick win**` — severity, category, effort, in that order.
+- Read live on 31.10: #355's head `afccbcd` has no `CodeRabbit` status; its
+  `check-runs?check_name=CodeRabbit&filter=all` read, which the command guard
+  passes, gives `success`/`Finished` and `skipped`/`Review skipped`. #347's
+  findings open `**<picture>…</picture> Major** · **<category>** · **<effort>**`.
 
 ## The user's decisions
 
@@ -99,19 +92,13 @@ value*). GraphQL spells the bot `coderabbitai` (read on #347, 31.10), and a
 deleted author reads `null`, which is not the bot. Then it resolves the
 unresolved ones in the order given and stops at the first failure.
 
-Every `gh` call, the reads and the mutations, runs under `gh`'s own
-identity. `readPullRequests()` uses a minted read token when
-`HARNESS_GITHUB_APP_MINT` is set; `resolve` is not run where it is (see the
-board loop below). A cloud session's proxy refuses GraphQL, so there the
-thread read fails and `resolve` exits 1 having changed nothing — the safe
-side, and the README's *Cloud sessions* names it.
+Every `gh` call runs under `gh`'s own identity; `resolve` is not run where
+`HARNESS_GITHUB_APP_MINT` is set (the board loop, below). A cloud session's
+proxy refuses GraphQL, so there `resolve` exits 1 having changed nothing.
 
-- Alternative: resolve what it can and report the rest. Rejected: an id that
-  does not place is a wrong hand-off from the skill, and half the call done
-  hides that.
-- Alternative: roll back on a failed mutation. Rejected: there is nothing to
-  undo — a resolved thread of a fixed finding is the intended end state, and
-  a rerun skips it.
+- Rejected: resolving what places and reporting the rest — an unplaced id is
+  a wrong hand-off; and a rollback on a failed mutation — a rerun skips what
+  is resolved.
 - The head check is `--head` against the `headRefOid` the pull-request read
   already returns (`readPullRequests()`), so the match costs no extra call;
   a mismatch costs one more read after a 2-second wait (decision 10). The
@@ -194,23 +181,17 @@ opening `Review skipped`. Conclusion and title, never the summary's text,
 which already moved once. A head whose runs read anything else — skipped,
 rate limited, in progress, none — is no review.
 
-The skill reads the runs with its own `gh api` call; `bun/coderabbit-run.ts`,
-the module `finish-review-arrives` adds, is a module with no command line,
-and no second reader is written in `bun/`. Two statements of one rule drift
-silently, so a test holds them together (`core/rules.md`, *Pin a name one
-system looks up in another with a test*). While the module is not on
-`main`, it holds the skill's step 1, which names the `success` conclusion
-and the `Review skipped` title prefix, against the requirement's own words,
-"succeeded with a title not opening `Review skipped`", read from that
-change's delta or, once archived, `openspec/specs/work-finish/spec.md`; the
-delta names no slug, so the app's slug is not pinned. Once the module lands
-(#361), the test reads its exported `REVIEWED` — `REVIEWED.conclusion` and
-`REVIEWED.skippedTitle` — instead; the slug stays a literal inside its
-`own()`, exported as no constant, so it stays unpinned. Whichever of the two
-changes applies second makes that switch. The cited requirement
-sits in that change's delta until it archives, so this change archives
-after it (tasks.md, group 3) — no `after:` edge, which would hold the apply
-too, not only the archive.
+The skill reads the runs with its own `gh api` call; `bun/coderabbit-run.ts`
+has no command line, and no second reader is written in `bun/`. A test holds
+the two statements of the rule together (`core/rules.md`, *Pin a name one
+system looks up in another with a test*): the skill's `success` and `Review
+skipped` against the requirement's words "succeeded with a title not opening
+`Review skipped`" while the module is not on `main`, then against its
+`REVIEWED.conclusion` and `REVIEWED.skippedTitle` (#361); the app's slug, a
+literal in its `own()`, stays unpinned. Whichever change applies second
+makes the switch. The cited requirement sits in that change's delta until it
+archives, so this change archives after it (tasks.md, group 3) — no `after:`
+edge, which would hold the apply as well.
 
 Not done here, though `finish-review-arrives`' design expected this card to
 do it: a command line for `bun/coderabbit-run.ts` that both skills call.
@@ -247,9 +228,8 @@ it a `resolve` without the edit would make the rule false.
   `finish` alike, since both read one rule; the next live failure names it,
   as #319 did.
 - [A commit heads two pull requests and its check run belongs to the other]
-  → the head is counted as reviewed by the other's run. Accepted: a shared
-  head is rare, the reviews are still read per pull request, and
-  `session-wrapup`'s `/pull/<n>` check is not copied into the skill.
+  → counted as reviewed by the other's run. Accepted: rare, and the reviews
+  are still read per pull request.
 - [`resolve` is run before `finish` pushed] → unfilled, `<pushed sha>` is no
   40-hex id and `resolve` prints the usage; filled with a commit not yet
   pushed, it is not the pull request's head, and `resolve` refuses after its
