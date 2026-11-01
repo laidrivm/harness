@@ -118,7 +118,7 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	// Read before the wait too, so a question already waiting costs no wait (the user's answer 12 b, 2026-11-01).
 	const early = watched ? await question() : undefined;
 	if (early) return early;
-	// Before the question read and the ready switch, so the push's event is handled before the ready one; it gates nothing.
+	// Between the two question reads and before the ready switch, so the push's event is handled before the ready one; it gates nothing.
 	let unread = "";
 	const before = watched
 		? await reads(WAIT, () => {
@@ -207,7 +207,7 @@ async function reads(times: number, enough: () => boolean | null) {
 function said(got: State, short: string, made = 1) {
 	if (got.name === "rate limited") return `CodeRabbit rate limited on ${short}; no review asked for`;
 	if (got.name === "other") return `CodeRabbit ${got.conclusion} "${got.title}" on ${short}`;
-	if (got.name === "no run") return `no CodeRabbit run on ${short} after ${made} reads`;
+	if (got.name === "no run") return `no CodeRabbit run on ${short} after ${made} read${made === 1 ? "" : "s"}`;
 	if (got.name === "unread") return `CodeRabbit's runs on ${short} unread: ${got.why}`;
 	return `CodeRabbit ${got.name} ${short}`;
 }
