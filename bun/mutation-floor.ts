@@ -13,6 +13,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { read } from "./config.ts";
+import { gauge as owed } from "./floor.ts";
 import { root } from "./root.ts";
 
 /** Statuses meaning the tests let the mutant through. */
@@ -98,37 +99,19 @@ export function survivors(report: Report): number {
 	return count;
 }
 
-/**
- * What a count owes its floor. Both directions fail: a rise admits a mutant
- * nothing kills, and a floor left above reality stops being a measurement.
- *
- * The reason is demanded on every run rather than only on a rise, because
- * telling a rise from a drop needs the previously committed value, and reading
- * git history to decide whether to ask is more machinery than one field.
- *
- * `floor` and `why` are typed `unknown` because they come from a hand-edited
- * `package.json` unchecked: an absent reason or a floor written as `"12"` is
- * named here rather than thrown as a `TypeError` or compared as never equal.
- */
-export function gauge(count: number, floor: unknown, why: unknown): string[] {
-	const problems: string[] = [];
-	if (typeof why !== "string" || !why.trim())
-		problems.push(
-			"the floor states no reason — write why as text in harness.mutationFloor.why",
-		);
-	// `typeof` as well, since `Number.isInteger` does not narrow `unknown`.
-	if (typeof floor !== "number" || !Number.isInteger(floor))
-		problems.push("harness.mutationFloor.surviving is not a whole number");
-	else if (count !== floor) {
-		const gap = `${count} surviving mutants against a floor of ${floor}`;
-		problems.push(
-			count > floor
-				? `${gap} — kill one, or raise the floor and say why`
-				: `${gap} — write ${count} as the floor, so the gain is recorded`,
-		);
-	}
-	return problems;
-}
+/** What the survivor count owes `harness.mutationFloor` — see `./floor.ts`. */
+export const gauge = (count: number, floor: unknown, why: unknown) =>
+	owed(
+		{
+			key: "mutationFloor",
+			field: "surviving",
+			counted: "surviving mutants",
+			lower: "kill one",
+		},
+		count,
+		floor,
+		why,
+	);
 
 /**
  * Resolved from the repository root rather than the working directory, so the

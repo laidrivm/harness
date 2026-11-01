@@ -10,6 +10,7 @@
 
 import { lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { gauge as owed } from "./floor.ts";
 import { comments } from "./scan.ts";
 import { counted, validated } from "./spec-criteria.ts";
 import { tracked } from "./tracked.ts";
@@ -190,27 +191,16 @@ export function uncited(cwd?: string): number {
 	return criteria.filter((c) => !cited.has(c.id)).length;
 }
 
-/**
- * What a count owes its floor. Both directions fail: a rise admits a criterion
- * nothing asserts, and a floor left above reality stops being a measurement.
- *
- * The reason is demanded on every run rather than only on a rise, because
- * telling a rise from a drop needs the previously committed value, and reading
- * git history to decide whether to ask is more machinery than one field.
- */
-export function gauge(count: number, floor: number, why: string): string[] {
-	const problems: string[] = [];
-	if (!why.trim())
-		problems.push(
-			"the floor states no reason — write why in harness.uncitedFloor.why",
-		);
-	if (count !== floor) {
-		const gap = `${count} uncited criteria against a floor of ${floor}`;
-		problems.push(
-			count > floor
-				? `${gap} — cite one, or raise the floor and say why`
-				: `${gap} — write ${count} as the floor, so the gain is recorded`,
-		);
-	}
-	return problems;
-}
+/** What the uncited count owes `harness.uncitedFloor` — see `./floor.ts`. */
+export const gauge = (count: number, floor: unknown, why: unknown) =>
+	owed(
+		{
+			key: "uncitedFloor",
+			field: "count",
+			counted: "uncited criteria",
+			lower: "cite one",
+		},
+		count,
+		floor,
+		why,
+	);
