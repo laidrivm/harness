@@ -12,9 +12,9 @@ compares as `NaN`, which no number of occurrences exceeds — so the entry would
 approve every suppression of its marker in that file. An approval with no
 reason is a line of the diff a reviewer cannot weigh. A `harness.suppressions`
 that is some other value than an object of entries SHALL fail the check as
-such, beside the other problems; one that is absent or `null` fails as every
-absent `harness` key does, before any gate reports, since JSON spells an
-absent value as `null`.
+such, beside the other problems; one that is omitted or `null` fails as every
+missing `harness` key does, before any gate reports, since the manifest's
+reader treats the two alike as missing.
 
 #### Scenario: An allowlist entry the check cannot read
 
