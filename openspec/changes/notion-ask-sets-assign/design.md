@@ -70,6 +70,8 @@ scenario *A second question for a card*) and in the same bullet of
 5. (card, 2026-11-01 10:44, item 4 b) `status` clears `Assign` on any move
    when no question waits, `applying` and `applied` included, and the board
    loop's pick stops requiring `Assign` on a card that carries an answer.
+   Decision 9 supersedes that second half: the pick is unchanged, and only
+   the `status` half stands.
 6. (chat, 2026-11-01, «Да, добавь») `bun bun/work.ts take`, when a session
    picks the card up, and `bun bun/work.ts finish --card`, on every push,
    clear `Assign` by the same rule, through one helper all three commands
