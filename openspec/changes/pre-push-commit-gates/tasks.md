@@ -13,7 +13,7 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       `git ls-files '*.json' '*.jsonc' '*.js' '*.ts'`; `bun install`; confirm
       `.gitignore` still covers `node_modules`. Verify `bunx --no-install
       biome --version` prints 2.5.15
-- [ ] 1.2 In a scratch copy of the tree, run the reformat of 1.3 and list
+- [x] 1.2 In a scratch copy of the tree, run the reformat of 1.3 and list
       the tracked `.ts` files over 300 lines afterwards. If any, stop this
       group: split them on their own branches to the length they will have
       once formatted, in as many pull requests as the 800-line budget needs
@@ -21,7 +21,7 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       Verify the list is empty against the tree this group branches from.
       Measured 2026-11-01 on `ffa7bdf7`: 38 files over at width 80, 12 at
       120, the width the user's decision 7 sets
-- [ ] 1.3 `bunx --no-install biome format --write .`, then `bunx
+- [x] 1.3 `bunx --no-install biome format --write .`, then `bunx
       --no-install biome check --write --linter-enabled=false .` for import
       order alone, no hand edit in the same pull request; `bun test` passes;
       the body
