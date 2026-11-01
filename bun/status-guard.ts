@@ -18,7 +18,7 @@ import { blocker } from "./gate-ledger.ts";
 
 const event = await Bun.stdin.json().catch(() => null);
 const input = event?.tool_input;
-const refuse = (reason: string) => blocker("status-guard", event)("mcp-status", reason);
+const refuse = (reason: string): never => blocker("status-guard", event)("mcp-status", reason);
 const isObject = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object";
 // A client may send a nested parameter as a JSON string and the server may parse it; one that does not parse passes.
 const parsed = (value: unknown) => {
@@ -32,14 +32,15 @@ const parsed = (value: unknown) => {
 
 if (typeof event?.tool_name === "string" && event.tool_name.endsWith("__notion-create-pages")) {
 	const pages = parsed(input?.pages);
+	// The first page refused ends the run: `refuse` exits.
 	if (Array.isArray(pages))
-		pages.forEach((page, i) => {
+		for (const [i, page] of pages.entries()) {
 			const properties = isObject(page) ? parsed(page.properties) : undefined;
-			if (!isObject(properties) || !Object.hasOwn(properties, "Status")) return;
+			if (!isObject(properties) || !Object.hasOwn(properties, "Status")) continue;
 			const status = properties.Status;
 			// null passes: a page created with no status, where an update to null is still a move.
 			if (status !== "idea" && status !== null)
 				refuse(`status-guard: pages[${i}] is created at Status ${JSON.stringify(status)}; create a card at \`idea\`, written as the plain string "idea" — only the user moves it to \`approved\`, and later moves go through \`bun bun/work.ts status --card <id> --to <status>\`.`);
-		});
+		}
 } else if (isObject(input?.properties) && Object.hasOwn(input.properties, "Status"))
 	refuse("status-guard: a card's Status moves through `bun bun/work.ts status --card <id> --to <status>`, which checks origin/main's evidence and the WIP limit. Send any other property in a call without Status.");

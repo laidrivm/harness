@@ -132,6 +132,10 @@ describe("the status guard the harness keeps to itself", () => {
 			"claude_ai_Notion__notion-create-pages",
 		])
 			expect(matches(tool)).toBe(false);
+	});
+
+	// The literal on purpose: widening the consumer guard's matcher would send create calls through notion-guard.ts in every consumer.
+	test("leaves the consumer guard's NOTION_MATCHER on update-page alone", () => {
 		expect(NOTION_MATCHER).toBe("^mcp__.+__notion-update-page$");
 	});
 
