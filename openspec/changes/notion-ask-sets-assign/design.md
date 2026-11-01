@@ -41,7 +41,8 @@ scenario *A second question for a card*) and in the same bullet of
 
 - The runner's refusal (`board-loop`, *A question already waits*): see
   *The runner keeps its refusal*.
-- Any change to `waits()`, `finish` or `take`.
+- Any change to what `waits()` counts as an answer, or to `finish` and `take`
+  beyond the release.
 - Setting `Assign` on the four cards left unassigned on 2026-10-31: a one-off
   for the main session.
 
@@ -200,36 +201,40 @@ Decisions 4 to 6. `unassign()` in `bun/notion-unassign.ts` already reads the
 page, refuses at 25 people (the most a page read lists), and PATCHes
 `Assign` without the user, keeping everyone else. Its read and write are
 lifted into one function, `release(call, card, user)`, which `unassign()`
-calls after its card checks. `release()` also reads the user's absence back
-from the PATCH's answer, as the ask command reads the user's presence. A
-second function, `cleared(call, card, user)`, is what the three commands
-call: it reads the page, and only when `Assign` holds the user reads the
-comments with `discussion()`, decides with `waits()` (no integration id, as
-`finish` does today, so a triage's `harness-answer` keeps `Assign`, the side
-that keeps a question visible) and with the same test over `harness-pause`
-notices (one waits until a comment of the user's without a mark follows
-it), and calls `release()` when nothing waits. After the write it reads the
-comments once more and, when a question now waits, calls `assign()` to put
-the user back, so a question posted during the release keeps `Assign`. It
-returns
-`unassign()`'s line forms, or nothing when it wrote nothing.
+calls after its card checks and which returns the list it wrote;
+`unassign()`'s behaviour and lines stay as they are, so the runner's pass is
+unchanged. A second function, `cleared(call, card, user)`, is what the three
+commands call: it reads the page, and only when `Assign` holds the user
+reads the comments with `discussion()` and decides with `waits()`. `waits()`
+gains a `mark` argument, defaulting to `harness-question`, so the
+`harness-pause` test is the same function with the other mark, not a second
+copy (no integration id either way, as `finish` does today, so a triage's
+`harness-answer` keeps `Assign`, the side that keeps a question visible).
+When nothing waits it calls `release()` and reads the user's absence back
+from the PATCH's answer. It then reads the comments once more and, when a
+question or a pause notice now waits by the same test, or when that read
+fails, PATCHes the list `release()` wrote with the user added back, keeping
+everyone else, and reads the user back. It returns `{ line, restoreFailed }`:
+`unassign()`'s line forms plus `assign: restored the user on <card>`, or no
+line when it wrote nothing.
 
-`status` calls it after its `Status` write, `take` after its reads (its
-comments print as read before), `finish` after its own comments read,
-whatever it decided about ready. Its own page read, made just before the
-write, keeps the window for a question posted meanwhile to one round trip,
-where reusing the command's earlier page read would stretch it over
-`status`'s evidence checks. A failed release prints its line and changes no
-other outcome: the command's job is the move, the brief or the push.
+`status` calls it after its `Status` write and `take` after its reads (its
+comments print as read before). `finish` calls it after its own comments
+read and before the ready switch, and leaves the draft when the release put
+the user back. Its own page read, made just before the write, keeps the
+window for a question posted meanwhile to one round trip, where reusing the
+command's earlier page read would stretch it over `status`'s evidence
+checks; for `take` and `finish` the extra reads are accepted for one code
+path. A failed release prints its line and changes no other outcome, except
+`restoreFailed`, which makes the command exit 1: a question then waits with
+no one on `Assign`.
 
 The `harness-pause` test comes from the local review. The orchestrator's
 pause notice sets `Assign` on a card that holds no question, and a release
 by the question rule alone would hide the pause from the user. A pause the
 user ends by removing the stop file, with no comment, keeps `Assign` on the
 user until a comment of theirs or a hand clear: accepted, as the side that
-never hides a pause. The restore prints `assign: restored the user on
-<card>`, read back like the removal, and a failed restore is an `assign:
-failed —` line.
+never hides a pause.
 
 Rejected: the `Status` and `Assign` in one PATCH, which only `status` could
 use, and which takes the stale `Assign` its early page read gives; writing
@@ -273,7 +278,9 @@ answer twice goes with the pick change.
   while `Assign` holds the user; a failure prints a line and changes
   nothing else, so a Notion fault never blocks a move, a brief or a push.
 - [A 2xx post whose body does not parse.] → It counts as posted, so it is
-  never reported `not posted` and rerun.
+  never reported `not posted` and rerun: the client's `response.json()`
+  throws a plain `SyntaxError` there, which the command takes as a post
+  that held.
 - [A triage's `harness-answer` keeps `Assign` on the user.] → The narrow
   case of an earlier question the user answered, then a triaged one; the
   next answer or move after it clears it. Accepted: no integration id is in
@@ -281,7 +288,9 @@ answer twice goes with the pick change.
 - [The post reaches Notion but its answer does not (a timeout, a 5xx), and
   with the refusal gone a rerun posts the question twice.] → On no answer,
   the timeout or a 5xx (the client's `Transient` less its 429, which Notion
-  refused unprocessed), the command prints `question: may be
+  refused unprocessed; `Transient` gains the `status` it was raised for, no
+  status when no answer came, so the command reads the number, never the
+  message), the command prints `question: may be
   posted on <id> — <why>; read the card's comments before running it
   again`, exits 1, and writes no `Assign`; the prose says to read the card
   before any rerun.
