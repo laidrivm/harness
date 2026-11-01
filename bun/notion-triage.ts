@@ -44,10 +44,12 @@ export function ended(said: string): Answer | string {
 	const lines = said.replaceAll("\r", "").trimEnd().split("\n");
 	const at = (head: string) => lines.flatMap((line, i) => (line.startsWith(head) ? [i] : []));
 	const [s, q, a] = [at("ANSWER-SOURCE:"), at("ANSWER-QUOTE:"), at("ANSWER:")];
-	if (s.length === 1 && q.length === 1 && a.length === 1 && s[0] < q[0] && q[0] < a[0]) {
-		const text = [lines[a[0]].slice("ANSWER:".length), ...lines.slice(a[0] + 1)].join("\n").trim();
-		const quote = [lines[q[0]].slice("ANSWER-QUOTE:".length), ...lines.slice(q[0] + 1, a[0])].join("\n").trim();
-		if (text) return { source: lines[s[0]].slice("ANSWER-SOURCE:".length).trim(), quote, text };
+	const [si, qi, ai] = [s, q, a].map((found) => (found.length === 1 ? found[0] : undefined));
+	if (si !== undefined && qi !== undefined && ai !== undefined && si < qi && qi < ai) {
+		// Each slice opens on its head's line, so cutting the head off the joined text cuts it off that line.
+		const text = lines.slice(ai).join("\n").slice("ANSWER:".length).trim();
+		const quote = lines.slice(qi, ai).join("\n").slice("ANSWER-QUOTE:".length).trim();
+		if (text) return { source: (lines[si] ?? "").slice("ANSWER-SOURCE:".length).trim(), quote, text };
 	}
 	return !s.length && lines.at(-1)?.trim() === "ESCALATE" ? "escalated" : "ended with neither form";
 }

@@ -49,7 +49,8 @@ export const MAIN = "+refs/heads/main:refs/remotes/origin/main";
 
 /** Runs `command` in `cwd` under `env`, its standard output, or throws naming how it failed; `work-status.ts` runs git through it too. */
 export function output(command: string[], cwd?: string, env: Record<string, string | undefined> = process.env): string {
-	if (!Bun.which(command[0])) throw new Error(`no ${command[0]} on PATH`);
+	const [program] = command;
+	if (program === undefined || !Bun.which(program)) throw new Error(`no ${program} on PATH`);
 	// Bounded, so a stalled remote or a prompt nobody answers ends in a failure, not a hang.
 	const run = Bun.spawnSync(command, {
 		cwd,
@@ -101,10 +102,11 @@ export async function take(card: string, timeout = 30_000): Promise<{ lines: str
 		step = "the checkout read";
 		// Only git's terminator, not `trim()`: a checkout's path may end in a space (bun/root.ts).
 		const [top, commit] = output(["git", "rev-parse", "--show-toplevel", "HEAD"]).replace(/\n$/, "").split("\n");
+		if (top === undefined || commit === undefined) throw new Error("git rev-parse printed no commit");
 		lines.push(`## Checkout: ${top} at ${commit}`);
 
 		step = "the page read";
-		const page = await found.call(step, `/v1/pages/${card}`);
+		const page = await found.call<{ properties?: Record<string, Property> } | null>(step, `/v1/pages/${card}`);
 		const properties: Record<string, Property> = page?.properties ?? {};
 		lines.push(
 			"## Card",
@@ -114,7 +116,8 @@ export async function take(card: string, timeout = 30_000): Promise<{ lines: str
 		);
 
 		step = "the markdown read";
-		const body = await client(found.settings.token, timeout, MARKDOWN)(step, `/v1/pages/${card}/markdown`);
+		type Markdown = { markdown?: unknown; truncated?: unknown; unknown_block_ids?: unknown } | null;
+		const body = await client(found.settings.token, timeout, MARKDOWN)<Markdown>(step, `/v1/pages/${card}/markdown`);
 		if (typeof body?.markdown !== "string") throw new Error("the markdown read gave no markdown");
 		lines.push("## Body", body.markdown);
 		if (body.truncated === true) lines.push("the body is truncated: Notion left part of it out");

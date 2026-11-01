@@ -12,7 +12,7 @@
  */
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
-import { assign, type Call, client, comment, ID, plain, settings } from "./notion-bot.ts";
+import { assign, type Call, client, comment, ID, type Listed, type Page, plain, settings } from "./notion-bot.ts";
 import { where } from "./question-gate.ts";
 
 const MARK = "harness-pause";
@@ -26,14 +26,14 @@ const CUT = 1000;
  */
 export function step(line: string): string | undefined {
 	const read = /^\S+ exit (\d+): board-loop: (.*)$/.exec(line);
-	if (read?.[1] !== "1") return undefined;
+	if (read?.[1] !== "1" || read[2] === undefined) return undefined;
 	return /\bapply ([a-z0-9][a-z0-9-]*) step \d+\b/.exec(read[2])?.[1];
 }
 
 /** The one card on `board` whose `Pointer` names `slug`, or why there is none. */
 async function found(call: Call, board: string, slug: string): Promise<{ card: string } | { why: string }> {
 	const pointer = `openspec/changes/${slug}/`;
-	const listed = await call("the board's query", `/v1/data_sources/${board}/query`, "POST", {
+	const listed = await call<Listed>("the board's query", `/v1/data_sources/${board}/query`, "POST", {
 		filter: { property: "Pointer", rich_text: { equals: pointer } },
 	});
 	// Exactly, as the pick reads it: the filter's match is Notion's, not this check's.
@@ -54,8 +54,8 @@ const paragraph = (content: string) => ({
 /** The line the command prints for `<stop file> [<log>]`, its settings read from `path`. */
 export async function notice(args: string[], path = where("notion-bot.json"), timeout = 30_000): Promise<string> {
 	const not = (why: string) => `pause: no notice — ${why}`;
-	if (args.length < 1 || args.length > 2) return not("usage: notion-pause.ts <stop file> [<log>]");
-	const [stop, log] = args;
+	const [stop, log, ...extra] = args;
+	if (stop === undefined || extra.length) return not("usage: notion-pause.ts <stop file> [<log>]");
 	let bot: ReturnType<typeof settings>;
 	try {
 		bot = settings(path);
@@ -67,7 +67,7 @@ export async function notice(args: string[], path = where("notion-bot.json"), ti
 	if (!board) return not(`${path} names no \`board\``);
 	let line: string;
 	try {
-		line = readFileSync(stop, "utf8").split("\n")[0].slice(0, CUT);
+		line = (readFileSync(stop, "utf8").split("\n")[0] ?? "").slice(0, CUT);
 	} catch {
 		return not(`${stop} cannot be read`);
 	}
@@ -93,7 +93,7 @@ export async function notice(args: string[], path = where("notion-bot.json"), ti
 			return `pause: notice posted on ${at.card}, Assign set`;
 		}
 		// No `Pointer`, so the pick never takes it.
-		const page = await call("the card's creation", "/v1/pages", "POST", {
+		const page = await call<Page | null>("the card's creation", "/v1/pages", "POST", {
 			parent: { type: "data_source_id", data_source_id: board },
 			properties: {
 				Name: { title: [{ text: { content: `The loop paused ${clone}` } }] },

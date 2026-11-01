@@ -47,7 +47,7 @@ export function remoteRepository(url: string) {
 		.split("/");
 	const [owner, repo] = parts.slice(-2);
 	// A segment of dots alone would move the API call's path out of the repository's, or name none.
-	const name = (s?: string) => s !== undefined && /^[\w.-]+$/.test(s) && !/^\.+$/.test(s);
+	const name = (s?: string): s is string => s !== undefined && /^[\w.-]+$/.test(s) && !/^\.+$/.test(s);
 	return parts.length >= 2 && name(owner) && name(repo) ? { owner, repo } : undefined;
 }
 
