@@ -68,10 +68,10 @@ limit, gets no review on its own — stop waiting on it and report it.
   --no-renames --no-relative <base>...HEAD`),
   having read another diff or another tree, is reported. On the loop's first
   pass the push then goes on without the gate rather than blocking the
-  branch: the session writes no `CODE-REVIEW gate:` line only when no pass
-  returned a review, and a pass that does not return after one that did ends
-  the loop on the line the earlier passes left, which decides the push as
-  any gate line does — a dismissal an earlier pass proposed still reads
+  branch: the session writes a `CODE-REVIEW gate:` line whenever a pass
+  returned a review, and none only when no pass did, and a pass that does
+  not return after one that did ends the loop on the line the earlier
+  passes left, which decides the push as any gate line does — a dismissal an earlier pass proposed still reads
   `OPEN`. One finding on an unchanged file beside findings on changed ones —
   a caller the change breaks — is kept and verified like the rest, and an
   empty review proves nothing either way and passes. `/code-review` names no
