@@ -100,7 +100,6 @@ Until `bun install` has run, the hooks stand aside: the bootstrap lets only the 
 |---|---|
 | `coderabbit` | Dispose of every CodeRabbit finding on a PR |
 | `cloud-probe` | Report whether the harness installed and its gates run in a cloud session or routine |
-| `coderabbit-local` | Run CodeRabbit's CLI on the branch, then triage as above |
 | `feature-generator` | Expand `spec.md` into a dependency-ordered `features.md` |
 | `playwright-cli` | Vendored reference for driving a browser via the Playwright CLI |
 | `preflight` | Production pre-flight checklist for a branch |

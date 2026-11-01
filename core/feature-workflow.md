@@ -331,20 +331,26 @@ for them is already here.
   other eight are moved by hand. In the harness itself a session moves them
   — and makes a reconciliation's corrections, reporting one it refuses as a
   card left behind — with `bun bun/work.ts status --card <id> --to
-  <status>`, which refuses the moves the `work-status` capability lists, and
-  the connector's `Status` write is refused there. Elsewhere this bullet is the whole of what holds them until
-  roadmap stage 11 — which is why it is stated as an obligation rather than
-  as a convention. Which eleven, and so which eight, is fixed in the harness's
-  `openspec/specs/task-board/` and named nowhere else; a second copy here is
+  <status>`, which refuses the moves the `work-status` capability lists; the
+  connector's `Status` write is refused there, and so is creating a card
+  through its `notion-create-pages` at any `Status` but `idea` — its other
+  writes and the REST API are not. Elsewhere this bullet is the whole of what
+  holds them until roadmap stage 11 — which is why it is stated as an
+  obligation rather than as a convention. Which eleven, and so which eight,
+  is fixed in the harness's `openspec/specs/task-board/` and named nowhere else; a second copy here is
   the drift that spec was written after.
 
   Only the user moves a card to `approved`; an unattended session takes no
-  work from `idea` and never sets `approved`. Only the user moves a card to
-  `discarded`, and no session moves one out of it: a reconciliation leaves a
-  `discarded` card as it is, even when the tree still holds the change its
-  `Pointer` names. A session the user directs at an
-  `idea` card may move it to `exploring` directly — the instruction is the
-  approval.
+  work from `idea` and never sets `approved`. Taking no work from `idea`
+  concerns a card someone else filed: a card a session files for its own task
+  is created at `idea` and moved to its stage in the same turn, in the harness
+  with `bun bun/work.ts status`, and a move that command refuses — the WIP
+  limit's included — leaves the card at `idea`, is reported as a card left
+  behind, and starts none of the stage's work. Only the user moves a card to `discarded`, and no
+  session moves one out of it: a reconciliation leaves a `discarded` card as
+  it is, even when the tree still holds the change its `Pointer` names. A
+  session the user directs at an `idea` card may move it to `exploring`
+  directly — the instruction is the approval.
 
   The session reconciles its board at the `Board view` read it makes to choose
   work, and again at `session-wrapup` for the cards its own changes point at.

@@ -69,9 +69,13 @@ stop waiting on it and report it.
   name no file the branch's diff changes (the paths `changedPaths(<base>)` in
   the runner's `bun/pre-pr-steps.ts` reads: `git diff --name-only -z
   --no-renames --no-relative <base>...HEAD`),
-  having read another diff or another tree, is
-  reported and the push goes on without the gate rather than blocking the
-  branch. One finding on an unchanged file beside findings on changed ones —
+  having read another diff or another tree, is reported. On the loop's first
+  pass the push then goes on without the gate rather than blocking the
+  branch: the session writes a `CODE-REVIEW gate:` line whenever a pass
+  returned a review, and none only when no pass did, and a pass that does
+  not return after one that did ends the loop on the line the earlier
+  passes left, which decides the push as any gate line does — a dismissal an earlier pass proposed still reads
+  `OPEN`. One finding on an unchanged file beside findings on changed ones —
   a caller the change breaks — is kept and verified like the rest, and an
   empty review proves nothing either way and passes. `/code-review` names no
   severity, so the session grades each finding 🔵 Trivial, 🟡 Minor, 🟠 Major
@@ -95,7 +99,9 @@ stop waiting on it and report it.
   `CODE-REVIEW gate:` line itself, since the built-in skill prints none: it
   ends the disposition on `CODE-REVIEW gate: PASS|OPEN|BLOCKED — …`, `OPEN`
   over a proposed Major or Critical dismissal and `BLOCKED` over a Major or
-  above the third review left. The review reads `CLAUDE.md`
+  above the third review left; where the findings left fit more than one of
+  those lines, `BLOCKED` wins over `OPEN` and `OPEN` over `PASS`, and the
+  line names every finding behind it. The review reads `CLAUDE.md`
   and `core/rules.md`, not the docs the rulebook indexes, so a rule kept in
   one of those is read back by CodeRabbit on the pull request rather than by
   this review.
@@ -138,17 +144,6 @@ stop waiting on it and report it.
   one question on the card, which waits behind one already open there as
   `task-board` sets out; the run posts nothing in the pull request). A
   fourth round with only findings skipped with a reason is not capped.
-- `/coderabbit-local [base]` — CodeRabbit's CLI review of the working
-  branch, run when the user asks for CodeRabbit's take before a push. It is
-  available and in no sequence and no gate: `/code-review` replaced it as the
-  local review on 2026-10-27, having flagged 18 defects the CLI missed
-  against 1 over five measured pull requests, and the CLI draws on the
-  allowance CodeRabbit's review on the pull request needs. The CLI looks for
-  `.coderabbit.yaml` on its own only while no `--config` is given, and the
-  skill always gives one. So the skill passes the config explicitly, together
-  with the guideline files that the config's `code_guidelines` patterns match.
-  A CLI review that skips them is a differently aligned reviewer, not a
-  cheaper one.
 
 ## The pre-PR sequence
 

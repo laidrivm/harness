@@ -97,9 +97,11 @@ describe("the ready guard the harness keeps to itself", () => {
 	});
 });
 
-// The pinned copy, with no mark, in a group of its own: the harness keeps the status guard to itself (notion-status-gate).
+// The pinned copy, with no mark, in a group of its own under a matcher of its own: the harness keeps the status
+// guard to itself (notion-status-gate), and NOTION_MATCHER stays the consumer guard's (notion-create-status-gate).
+const STATUS_MATCHER = "^mcp__.+__notion-(update-page|create-pages)$";
 const STATUS_GUARD = {
-	matcher: NOTION_MATCHER,
+	matcher: STATUS_MATCHER,
 	hooks: [
 		{
 			type: "command",
@@ -110,11 +112,31 @@ const STATUS_GUARD = {
 
 describe("the status guard the harness keeps to itself", () => {
 	// spec: work-status/a-status-set-through-the-connector
-	test("is a PreToolUse group of its own under the update-page matcher, in the foreground with no if and no mark", () => {
+	test("is a PreToolUse group of its own under the update-page and create-pages matcher, in the foreground with no if and no mark", () => {
 		// The whole group: another matcher, an `if`, `async`, `asyncRewake`, `shell` or `args` would change whether it runs or blocks.
 		expect(hooks().PreToolUse).toContainEqual(STATUS_GUARD);
 		expect(STATUS_GUARD.hooks[0].command.endsWith(MARK)).toBe(false);
 		expect(HOOKS.filter((hook) => hook.command.includes("status-guard.ts"))).toEqual([]);
+	});
+
+	// spec: work-status/a-card-created-past-idea
+	test("its matcher takes both calls under any server name, and no other tool", () => {
+		const matches = (tool: string) => new RegExp(STATUS_MATCHER).test(tool);
+		for (const server of ["claude_ai_Notion", "notion"])
+			for (const call of ["notion-update-page", "notion-create-pages"]) expect(matches(`mcp__${server}__${call}`)).toBe(true);
+		for (const tool of [
+			"mcp__claude_ai_Notion__notion-create-comment",
+			"mcp__claude_ai_Notion__notion-update-page-x",
+			"mcp__claude_ai_Notion__notion-create-pages-x",
+			"mcp__claude_ai_Notion__notion-duplicate-page",
+			"claude_ai_Notion__notion-create-pages",
+		])
+			expect(matches(tool)).toBe(false);
+	});
+
+	// The literal on purpose: widening the consumer guard's matcher would send create calls through notion-guard.ts in every consumer.
+	test("leaves the consumer guard's NOTION_MATCHER on update-page alone", () => {
+		expect(NOTION_MATCHER).toBe("^mcp__.+__notion-update-page$");
 	});
 
 	// spec: work-status/a-consumer-s-settings

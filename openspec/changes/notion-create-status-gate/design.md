@@ -34,6 +34,21 @@ Answered on the card on 2026-10-31:
 4. The card text validator was discarded, so there is no shared `pages[]`
    module to plan for (the question fell away).
 
+Answered on the card on 2026-11-01, on the apply's local review, each keeping
+what this design decided:
+
+5. `Status` is matched exactly: no case folding and no `userDefined:` prefix,
+   which the connector's schema asks of `id` and `url` alone; a lower-case
+   `status` is 2.1's to probe (а).
+6. A string `properties` on `notion-update-page` still passes; if 2.1 shows
+   the connector parses a string parameter, a card of its own closes it on
+   update (а).
+7. Until the pin passes this change's merge the hook runs the old script, as
+   every harness hook does (*Risks*, *Migration Plan*); no caveat goes into
+   `core/feature-workflow.md` (а).
+8. The guard keeps parsing a string `pages` and `properties` as JSON, since a
+   string it passed unread would be the bypass this change closes (а).
+
 ## Goals / Non-Goals
 
 **Goals:** the requirement's two refusals, `notion-update-page`'s unchanged.
@@ -84,12 +99,14 @@ created with no status is what `idea`'s alternative means here, while an
 update to `null` is still a status move.
 
 The reason, on stderr: ``status-guard: pages[<i>] is created at Status
-<value as JSON>; create a card at `idea` — only the user moves it to
-`approved`, and later moves go through `bun bun/work.ts status --card <id>
---to <status>`.`` — the index counted from 0, as `pages` is written in the
-call. It names `idea` alone, not "or with no Status": `bun/work-status.ts`
-refuses to move a card whose `Status` reads no status, so a card created
-without one waits for the user.
+<value as JSON>; create a card at `idea`, written as the plain string
+"idea" — only the user moves it to `approved`, and later moves go through
+`bun bun/work.ts status --card <id> --to <status>`.`` — the index counted
+from 0, as `pages` is written in the call. It names `idea` alone, not "or
+with no Status": `bun/work-status.ts` refuses to move a card whose `Status`
+reads no status, so a card created without one waits for the user. It names
+the plain string, since a session that wrote `["idea"]` or another form of
+`idea` would otherwise read the refusal as asking for what it sent.
 
 ### A session's own card
 

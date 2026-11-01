@@ -8,7 +8,7 @@ work-status/<slug>`. The event goes on the guard's stdin as
 
 ## 1. The guard on notion-create-pages
 
-- [ ] 1.1 Failing cases in `bun/status-guard.test.ts`, a `create()` event
+- [x] 1.1 Failing cases in `bun/status-guard.test.ts`, a `create()` event
       builder beside `update()` with `tool_name`
       `mcp__claude_ai_Notion__notion-create-pages` and a `data_source_id`
       parent: one page at `approved` exits 2 naming `pages[0]`, `idea` and
@@ -37,7 +37,7 @@ work-status/<slug>`. The event goes on the guard's stdin as
       `bun/status-guard.ts`, keyed on `tool_name` ending in
       `__notion-create-pages`, and its header comment naming both tools;
       verify with `bun test bun/status-guard.test.ts`
-- [ ] 1.2 Failing cases in `bun/self-pin.test.ts`: `STATUS_GUARD` pins the
+- [x] 1.2 Failing cases in `bun/self-pin.test.ts`: `STATUS_GUARD` pins the
       matcher `^mcp__.+__notion-(update-page|create-pages)$` as a literal,
       no longer `NOTION_MATCHER`, with the rest of the group as today; a new
       case runs that matcher as a `RegExp`: `notion-update-page` and
@@ -50,7 +50,7 @@ work-status/<slug>`. The event goes on the guard's stdin as
       its test title, which name the update-page matcher; verify with `bun test
       bun/self-pin.test.ts bun/settings-notion.test.ts` and the settings
       check case in the same file
-- [ ] 1.3 Prose: in `core/feature-workflow.md`, *the connector's `Status`
+- [x] 1.3 Prose: in `core/feature-workflow.md`, *the connector's `Status`
       write is refused there* names creating a card at any `Status` but
       `idea` too; beside *an unattended session takes no work from `idea`*,
       a clause that a card a session files for its own task is created at
