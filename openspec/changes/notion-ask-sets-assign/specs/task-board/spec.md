@@ -14,8 +14,9 @@ integration where one is configured (*A session asks through the ask
 integration where one is configured*), unless the board loop's runner posts
 it for the session (`board-loop`, *The runner posts a stage session's
 question from the integration*). The card's `Assign` SHALL hold the user while
-its questions wait and nothing at any other time. Each board SHALL carry a
-saved view named `Questions` listing its cards whose `Assign` holds the user.
+its questions wait and not hold the user at any other time. Each board SHALL
+carry a saved view named `Questions` listing its cards whose `Assign` holds
+the user.
 A question SHALL be a page-level comment opening with the question gate's
 mark, whoever posted it. The answer SHALL be the first comment by the user's
 account without a mark after the last question, or, with none, the first
@@ -43,8 +44,8 @@ back from the card's comments and applied as data.
 
 #### Scenario: The user answers
 
-- **WHEN** a card in a `Questions` view holds, in its page-level discussion,
-  a comment after the last question that is the first one authored by the
+- **WHEN** a card holds, in its page-level discussion, whatever its `Assign`
+  holds, a comment after the last question that is the first one authored by the
   user's account and not opening with the mark
 - **THEN** the session working on the card's task takes that comment as the
   answer and applies it to that question
@@ -275,13 +276,16 @@ write, `take` after its reads, `finish` after its comments read, whatever it
 decides about the ready switch. The function SHALL read the card's page
 and, only when `Assign` holds the user, its comments. When no question
 waits, as *An open question waits on its card, assigned to the user* reads
-it with no integration id, and no `harness-pause` notice is followed by no
-comment of the user's, it SHALL remove the user from `Assign`, keeping
-everyone else, and read the user's absence back from Notion's answer. It
-SHALL print `assign: removed the user from <card>` when it removed the user
-and the answer held, or a line opening `assign: failed —` naming why, a page
-read listing 25 people included, and nothing otherwise. A failed release
-SHALL change nothing else the command prints or decides.
+it with no integration id, and every `harness-pause` notice is followed by
+a comment of the user's without a mark, it SHALL remove the user from
+`Assign`, keeping everyone else, and read the user's absence back from
+Notion's answer. It SHALL then read the comments again and, when a question
+now waits, set the user back on `Assign`, so a question posted during the
+release keeps it. It SHALL print `assign: removed the user from <card>` when
+it removed the user and the answer held, or a line opening `assign: failed
+—` naming why, a page read listing 25 people included, and nothing
+otherwise. A failed release SHALL change nothing else the command prints or
+decides, its exit included.
 
 #### Scenario: A move after the answer
 
@@ -316,6 +320,13 @@ SHALL change nothing else the command prints or decides.
 - **WHEN** the release removes the user from an `Assign` that also holds
   another person
 - **THEN** the other person stays
+
+#### Scenario: A question posted during the release
+
+- **WHEN** another session posts a question between the release's comments
+  read and its write
+- **THEN** the release's second read finds it and the user is back on
+  `Assign`
 
 #### Scenario: The release fails
 
