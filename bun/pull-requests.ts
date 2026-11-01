@@ -7,6 +7,8 @@
  * killed and fails, so no caller waits on a `gh` that neither answers nor
  * exits, and where `HARNESS_GITHUB_APP_MINT` names the key holder's mint, the
  * read alone holds a token it minted, so a private repository's are read.
+ * The `gh` spawn it reads through, killed at the same limit, is exported for
+ * every `gh` call the harness makes, GraphQL ones included (`work-resolve.ts`).
  */
 import { minted } from "./github-app-minted.ts";
 

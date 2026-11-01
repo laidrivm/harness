@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { REVIEWED, state } from "./coderabbit-run.ts";
 import { cleanup, event, fabricate, run } from "./command-guard.fixture.ts";
+import { flat } from "./prose.fixture.ts";
 
 /**
  * What `command-guard.ts` refuses of a `gh api` call that names no method: a
@@ -131,9 +132,6 @@ describe("gh api graphql", () => {
 		expect(run(event(line.replace("<head sha>", "198dbdc")), anywhere()).code).toBe(0);
 	});
 });
-
-/** `text` with every run of whitespace one space, so a line wrap matches nothing differently. */
-const flat = (text: string) => text.replace(/\s+/g, " ");
 
 describe("the skill's rule for a reviewed head", () => {
 	// spec: agent-autonomy/the-head-counted-by-its-check-run-alone

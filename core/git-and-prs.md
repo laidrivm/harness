@@ -113,8 +113,8 @@ entry, a hook or a CI check leaves this file the way it would leave
   has none. The bot resolves no thread itself: the thread of a finding
   `/coderabbit` fixed is resolved by the session with
   `bun bun/work.ts resolve`, once `finish` has pushed the fix (at once when
-  the fix was already on the head). A thread whose finding is dismissed is resolved by the user,
-  by hand on that thread.
+  the fix was already on the head). A thread whose finding is dismissed is
+  resolved by the user, by hand on that thread.
   `@coderabbitai resolve` resolves every one of the bot's threads, and it and
   `@coderabbitai approve`, which a PR's author may post, approve without a
   review of the head — so no agent posts either, nor any other comment as the

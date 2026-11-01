@@ -40,7 +40,7 @@ describe("the arguments", () => {
 		["no --head", ["resolve", "--pr", "7", "--comment", "1"]],
 		["--head 1a2b3c4", ["resolve", "--pr", "7", "--head", "1a2b3c4", "--comment", "1"]],
 		["an upper-case --head", ["resolve", "--pr", "7", "--head", A.toUpperCase(), "--comment", "1"]],
-		["--head PUSHED_SHA",["resolve", "--pr", "7", "--head", "PUSHED_SHA", "--comment", "1"]],
+		["--head PUSHED_SHA", ["resolve", "--pr", "7", "--head", "PUSHED_SHA", "--comment", "1"]],
 		["two --head", ["resolve", "--pr", "7", "--head", A, "--head", A, "--comment", "1"]],
 		["a positional", [...args("1"), "more"]],
 		["an unknown option", [...args("1"), "--force"]],
@@ -114,6 +114,12 @@ describe("the head", () => {
 		const run = await resolve({ gh: { pulls: [[open(7, B)]], pages: [page(thread("11"))] } });
 		refused(run, A, B);
 		expect([run.reads.length, run.threads]).toEqual([2, []]);
+	}, 10_000);
+
+	test("a pull request that closed during the wait refuses saying so, naming no stale head", async () => {
+		const run = await resolve({ gh: { pulls: [[open(7, B)], []], pages: [page(thread("11"))] } });
+		refused(run, "#7 is no longer an open pull request");
+		expect(run.lines.at(-1)).not.toContain(B);
 	}, 10_000);
 
 	test("a second read that fails refuses the same way, saying the read failed", async () => {

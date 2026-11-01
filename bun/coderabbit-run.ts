@@ -4,7 +4,7 @@
  * module reads the check runs*): precedence over all runs, so the order
  * GitHub lists them in decides nothing.
  */
-import { limit, positive } from "./pull-requests.ts";
+import { gh, positive } from "./pull-requests.ts";
 
 /** A check run as `commits/<sha>/check-runs` lists it, only the fields read here. */
 export type Run = {
@@ -67,7 +67,7 @@ export function plain() {
 export function objects(query: string, jq: string): Record<string, unknown>[] | { name: "unread"; why: string } {
 	let run: ReturnType<typeof Bun.spawnSync>;
 	try {
-		run = Bun.spawnSync(["gh", "api", query, "--paginate", "--jq", jq], { env: plain(), timeout: limit(), killSignal: "SIGKILL" });
+		run = gh(["api", query, "--paginate", "--jq", jq], plain());
 	} catch (error) {
 		return { name: "unread", why: `gh could not start: ${(error as Error).message}` };
 	}

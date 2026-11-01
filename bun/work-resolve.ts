@@ -9,6 +9,7 @@
  * mutation runs in this process under `gh`'s identity, as `finish`'s push
  * does, so the command guard, which refuses a raw one, is not changed.
  */
+import { exited, plain } from "./coderabbit-run.ts";
 import { gh, originRepository, readPullRequests } from "./pull-requests.ts";
 
 /** GraphQL's spelling of the bot's login, compared whole: a prefix would pass `coderabbitai-x`, which anyone can register. */
@@ -23,8 +24,9 @@ type Thread = { id?: unknown; isResolved?: unknown; comments?: { nodes?: { fullD
 
 /** `gh api graphql args`: whether it exited 0, its output, and the first line it said otherwise. */
 const graphql = (...args: string[]) => {
-	const run = gh(["api", "graphql", ...args]);
-	return { ok: run.exitCode === 0, out: run.stdout.toString(), said: run.stderr.toString().trim().split("\n")[0] || `gh exited ${run.exitCode}` };
+	// `plain()`: a forced TTY or colour would print JSON no parse here reads, and a resolve that succeeded would read as failed.
+	const run = gh(["api", "graphql", ...args], plain());
+	return { ok: run.exitCode === 0, out: run.stdout.toString(), said: run.stderr.toString().trim().split("\n")[0] || exited(run) };
 };
 
 /** Every review thread of `n`, across `--paginate --slurp`'s pages, or undefined for a read that failed. */
@@ -65,7 +67,8 @@ export async function resolve(pr: string, head: string, ids: string[]): Promise<
 		// A failed read is no proof of another head, so it says so rather than send the session to review `seen`.
 		if (!again) return refuse(`#${pr}'s head read ${seen}, not ${head}, and could not be read again; check \`gh auth status\``);
 		target = again.find((p) => String(p.number) === pr);
-		if (target?.headRefOid !== head) return refuse(`#${pr}'s head is ${String(target?.headRefOid ?? seen)}, not ${head}`);
+		if (!target) return refuse(`#${pr} is no longer an open pull request of ${branch}`);
+		if (target.headRefOid !== head) return refuse(`#${pr}'s head is ${String(target.headRefOid)}, not ${head}`);
 	}
 
 	const all = threads(repo.owner, repo.repo, pr);
