@@ -260,7 +260,9 @@ posted` before reading the card's comments.
   status
 - **THEN** the command writes no `Assign`, prints that the question may be
   posted and that the card's comments are to be read before running it
-  again, and exits non-zero
+  again, and exits non-zero; a session that then finds its question on the
+  card sets `Assign` to the user through the connector instead of running
+  the command again
 
 #### Scenario: No ask settings
 
@@ -282,8 +284,9 @@ it with no integration id, and every `harness-pause` notice is followed by
 a comment of the user's without a mark, it SHALL remove the user from
 `Assign`, keeping everyone else, and read the user's absence back from
 Notion's answer. It SHALL then read the comments again and, when a question
-now waits, add the user back to the list it wrote and read the user back,
-so a question posted during the release keeps it. It SHALL print `assign:
+or a pause notice now waits by the same test, or when that read fails, add
+the user back to the list it wrote and read the user back, so a question or
+notice posted during the release keeps it. It SHALL print `assign:
 removed the user from <card>` when it removed the user and the answer held,
 `assign: restored the user on <card>` when it set the user back and the
 answer held, or a line opening `assign: failed —` naming why, a page read
