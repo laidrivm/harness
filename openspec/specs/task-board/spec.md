@@ -625,8 +625,11 @@ does, never its slug, and a body opening with a summary in Russian of about
 500 characters: what changes, why, and how large it is, longer only for context
 the ranking needs, never a restated proposal. The body SHALL end
 with links on GitHub to the change's `proposal.md` once merged and to every
-pull request it opens, each added in the turn that pull request opens. At
-archive, the `proposal.md` link SHALL follow the file to its archived path.
+pull request it opens, each added in the turn that pull request opens:
+by `bun bun/work.ts finish --card` where that call opened the pull request or
+found it open (`work-finish`, *Finish records its pull request on the card*), and
+by the session otherwise. At archive, the `proposal.md` link SHALL follow the
+file to its archived path.
 
 #### Scenario: A card short of done
 
@@ -641,6 +644,12 @@ archive, the `proposal.md` link SHALL follow the file to its archived path.
   waits on, to be ranked
 - **THEN** the summary MAY pass 500 characters to hold it, and still restates
   no proposal
+
+#### Scenario: A pull request finish did not open
+
+- **WHEN** the user opens a pull request for a card by hand
+- **THEN** the first turn that learns it exists adds its link, since no
+  `finish --card` wrote it
 
 ### Requirement: A column is a queue the user orders
 
