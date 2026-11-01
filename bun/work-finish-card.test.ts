@@ -26,7 +26,7 @@ const ARCHIVE = "openspec/changes/archive/2026-11-02-foo/";
 const PULL = { number: 7, url: "https://github.com/o/demo/pull/7" };
 
 /** A checkout of `harness`, its board `Harness`, on `feature` past `main`, `base` and `head` its two trees. */
-const tree = (base: Record<string, string>, head: Record<string, string | null>) => checkout(head, { "package.json": MANIFEST, ...base });
+const tree = (base: Record<string, string>, head: Record<string, string | null>) => checkout(false, head, { "package.json": MANIFEST, ...base });
 const adding = () => tree({}, { [`${FOO}proposal.md`]: "# foo\n" });
 const archiving = () =>
 	tree({ [`${FOO}proposal.md`]: "# foo\n", [`${FOO}tasks.md`]: "- [x] 1\n" }, {
