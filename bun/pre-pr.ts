@@ -44,7 +44,7 @@ const commit = git("rev-parse", "--verify", "-q", "HEAD");
 const dirty = status();
 
 /** 0, 1, or 2 for every other status, a signal's `null` included. */
-const exit = (code: number | null) => (code === 0 || code === 1 ? code : 2);
+const exit = (code: number | null): 0 | 1 | 2 => (code === 0 || code === 1 ? code : 2);
 const shown = { stdout: "inherit", stderr: "inherit" } as const;
 // Resolved once, so the budget and the step list read one diff.
 const base =
@@ -60,7 +60,7 @@ const budget = exit(
 		...shown,
 	}).exitCode,
 );
-let checks = 2;
+let checks: 0 | 1 | 2 = 2;
 try {
 	checks = exit(Bun.spawnSync(["sh", "-c", bumpTest(top)], { cwd: top, ...shown }).exitCode);
 } catch (error) {
@@ -78,11 +78,11 @@ if (!commit || dirty || left || git("rev-parse", "--verify", "-q", "HEAD") !== c
 	if (left || dirty) console.log(left || dirty);
 } else {
 	const session = process.env.CLAUDE_CODE_SESSION_ID || undefined;
-	const codes = [budget, checks]; // in RUNNER_STEPS' order
+	const codes: Record<(typeof RUNNER_STEPS)[number], 0 | 1 | 2> = { "diff-budget": budget, "project-checks": checks };
+	const decisions = ["pass", "fail", "error"] as const;
 	// The turn gate matches the top level of the checkout the run read.
-	RUNNER_STEPS.forEach((rule, i) =>
-		recordCheckout("pre-pr", ["pass", "fail", "error"][codes[i]], rule, { session_id: session, cwd: top }, commit),
-	);
+	for (const rule of RUNNER_STEPS)
+		recordCheckout("pre-pr", decisions[codes[rule]], rule, { session_id: session, cwd: top }, commit);
 }
 
 // A detached HEAD, a failed read and no pull request all read as none open, which requires more steps, never fewer.

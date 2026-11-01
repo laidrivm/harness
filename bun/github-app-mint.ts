@@ -51,8 +51,11 @@ export async function main(args: string[], files = FILES): Promise<Result> {
 	const listed = readFileSync(files.repositories, "utf8")
 		.split("\n")
 		.map((line) => line.trim().toLowerCase());
+	const [owner, repo] = wanted.split("/");
 	// A whole name, two segments: a dot path or an extra segment would move the API call out of the repository.
 	if (
+		owner === undefined ||
+		repo === undefined ||
 		!/^[\w.-]+\/[\w.-]+$/.test(wanted) ||
 		wanted.split("/").some((part) => /^\.+$/.test(part)) ||
 		!listed.includes(wanted)
@@ -64,14 +67,19 @@ export async function main(args: string[], files = FILES): Promise<Result> {
 		for (const word of asked) {
 			const [name, level, extra] = word.split("=");
 			// Own keys alone: `constructor` or `__proto__` would read the prototype's.
-			if (extra !== undefined || !Object.hasOwn(ALLOWED, name) || !ALLOWED[name].includes(level))
+			if (
+				name === undefined ||
+				level === undefined ||
+				extra !== undefined ||
+				!Object.hasOwn(ALLOWED, name) ||
+				!ALLOWED[name]?.includes(level)
+			)
 				return refused(`${word} is outside the fixed set of permissions`);
 			permissions[name] = level as "read" | "write";
 		}
 		// None asked would mint every permission the App holds.
 		if (!asked.length) return refused("no permission was asked for");
 	}
-	const [owner, repo] = wanted.split("/");
 	try {
 		const app: App = {
 			id: readFileSync(files.id, "utf8").trim(),

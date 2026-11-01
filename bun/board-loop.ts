@@ -142,8 +142,8 @@ export async function pass(args: string[], limit = LIMIT, kill: Kill = process.k
 	if (picked.transient) return refuse(`the pick session ended on a Claude API error: ${picked.out.trim()}`, "retry");
 	if (picked.out.trim()) console.log(picked.out.trim());
 	// Untrusted text: one exact line, naming a change this pass computed as takeable or a candidate.
-	const lines = picked.out.split("\n").filter((line) => line.startsWith("PICK:"));
-	const slug = lines.length === 1 ? /^PICK: (\w[\w.-]*)$/.exec(lines[0].trimEnd())?.[1] : undefined;
+	const [pick, ...more] = picked.out.split("\n").filter((line) => line.startsWith("PICK:"));
+	const slug = pick !== undefined && !more.length ? /^PICK: (\w[\w.-]*)$/.exec(pick.trimEnd())?.[1] : undefined;
 	if (!slug) return refuse("the pick session returned not one exact PICK: line");
 	if (slug === "none") return end("idle", "the pick session found no takeable card on the board");
 	const chosen = steps.get(slug);

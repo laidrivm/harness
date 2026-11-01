@@ -8,7 +8,8 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { answered, LIMITED } from "./transient.ts";
 
-export type Kill = (pid: number, signal: NodeJS.Signals | 0) => void | Promise<void>;
+/** `process.kill` or the launcher's: awaited, its value unread, so `process.kill`'s `true` fits too. */
+export type Kill = (pid: number, signal: NodeJS.Signals | 0) => unknown;
 
 /**
  * Whether Claude Code's config trusts `dir`, keyed by its real path. The path

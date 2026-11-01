@@ -116,10 +116,17 @@ export function claim(dir: string, delivery: string) {
 }
 
 async function handle(args: string[]): Promise<[Verdict, string]> {
-	const values = args.length === 1 ? args[0].split(" ") : [];
-	if (values.length !== 3 || !values.every((value, i) => SHAPES[i].test(value)))
-		return ["refused", "the argument is not '<event> <delivery> <signature>' in their shapes"];
+	const [arg, ...extra] = args;
+	const values = arg !== undefined && !extra.length ? arg.split(" ") : [];
 	const [event, delivery, signature] = values;
+	if (
+		event === undefined ||
+		delivery === undefined ||
+		signature === undefined ||
+		values.length !== 3 ||
+		!values.every((value, i) => SHAPES[i]?.test(value))
+	)
+		return ["refused", "the argument is not '<event> <delivery> <signature>' in their shapes"];
 	const bytes = await body(Bun.stdin.stream());
 	if (bytes === undefined) return ["refused", `the body passes GitHub's cap of ${LIMIT} bytes`];
 	const path = join(process.env.PASS_SECRETS || "/run/secrets", "github_webhook_secret");
