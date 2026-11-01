@@ -27,9 +27,9 @@ otherwise.
 
 ### Requirement: A move clears `Assign` when no question waits
 
-When the card's `Assign` holds the user, the page read lists fewer than 25
-people there, and `--to` is neither `applying` nor `applied`, `status` SHALL, once every check has passed, read the card's
-comments and decide whether a question waits there as `finish` does, with no
+When the card's `Assign` holds the user and the page read lists fewer than
+25 people there, `status` SHALL, on any move and once every check has
+passed, read the card's comments and decide whether a question waits there as `finish` does, with no
 integration id. When none waits, the write SHALL remove the user from
 `Assign`, keeping everyone else, in the same PATCH as `Status`, and the line
 SHALL add `, Assign cleared` when Notion's answer holds `Assign.people` as a
@@ -68,10 +68,9 @@ comments read that fails SHALL refuse under `unread` and write nothing.
 
 #### Scenario: Into applying or applied
 
-- **WHEN** `--to` is `applying` or `applied`
-- **THEN** `status` reads no comments and writes `Status` alone, since the
-  board loop's pick takes an answer it has not yet carried from a card at
-  either status only while `Assign` holds the user
+- **WHEN** `--to` is `applying` or `applied` and no question waits
+- **THEN** `status` removes the user from `Assign` as on any other move,
+  since the board loop's pick no longer reads `Assign`
 
 #### Scenario: The user not on `Assign`
 

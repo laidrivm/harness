@@ -1,11 +1,10 @@
 # notion-ask-sets-assign — tasks
 
-Two groups, one pull request each, on `feat/notion-ask-sets-assign`. Each
-failing case is written first, its failure recorded, and cited as
+Three groups, one pull request each, on `feat/notion-ask-sets-assign-<n>`.
+Each failing case is written first, its failure recorded, and cited as
 `// spec: <capability>/<slug>`. The bracketed numbers are the proposal-stage
-`/zombies` ideas. Group 2 follows the design's proposal for `applying` and
-`applied` (*Clearing `Assign` on a move*), which card item 4 asks; another
-answer changes it before it is applied.
+`/zombies` ideas. Group 3 lands before group 2 is used on a board the loop
+reads, since a `status` clear before it would hide an answer from the pick.
 
 ## 1. The ask command sets `Assign` and posts while a question waits
 
@@ -64,9 +63,22 @@ answer changes it before it is applied.
       question at a time\|sets \`Assign\` itself" -- core bun README.md`
       prints nothing, and `bun bun/check.ts` passes
 
-## 2. `status` clears `Assign` when no question waits
+## 2. The pick takes an answer whatever `Assign` holds
 
-- [ ] 2.1 Let `bun/notion-bot.fixture.ts`'s stand-in apply a PATCH's
+- [ ] 2.1 Failing cases in `bun/board-loop-question.test.ts`, cited
+      `// spec: board-loop/<slug>`: the pick prompt's answer-candidate line
+      no longer conditions a candidate on `Assign` [27], and with the
+      integration's id the triage clause no longer says "whether or not its
+      `Assign` holds the user", since nothing there reads it [28]. Then
+      change `pickPrompt()` in `bun/board-loop-prompt.ts` and its header
+      comment, and `core/feature-workflow.md`'s answer-step paragraph ("since
+      a card the triage answered has no `Assign`" becomes "since a card's
+      `Assign` decides nothing"). Verify: `bun test bun/board-loop` passes,
+      the existing [76]–[79] case updated to the new wording
+
+## 3. `status` clears `Assign` when no question waits
+
+- [ ] 3.1 Let `bun/notion-bot.fixture.ts`'s stand-in apply a PATCH's
       `Assign` to `state.assign` and answer with it, unless a case's option
       keeps the old value, and let `bun/work-status.fixture.ts`'s `Run` pass
       `assign`, `pending` and that option through, its `assign` defaulting
@@ -80,23 +92,23 @@ answer changes it before it is applied.
       same way [14]. A pending question sends `Status` alone and prints the
       move alone [15], as does a card whose only comment after the question
       is a `harness-answer` [16]. `--to applying` [17] and `--to applied`
-      [24], an `Assign` without the user [18], and 25 people read on
-      `Assign` [26], send `Status` alone with no comments read. A PATCH answer still holding the user [19], or with
-      no `Assign` list [25], prints `Assign not cleared`, exit 1. A comments
+      [24] with no question pending clear it as any move does. An `Assign`
+      without the user [18], and 25 people read on `Assign` [26], send
+      `Status` alone with no comments read. A PATCH answer still holding the
+      user [19], or with no `Assign` list [25], prints `Assign not cleared`, exit 1. A comments
       read answered 500 refuses under `unread` with no PATCH [20]. A refusal
       under `user-only` or `wip-full` makes no comments read [21]. Verify:
       each new case fails against today's command, and the existing cases
       pass
-- [ ] 2.2 In `bun/work-status.ts`, after the checks and only when `Assign`
-      holds the user among fewer than 25 people and `to` is neither
-      `applying` nor `applied`, read
+- [ ] 3.2 In `bun/work-status.ts`, after the checks and only when `Assign`
+      holds the user among fewer than 25 people, read
       `waiting(found.call, card, found.settings.user)` inside the same `try`
       as the page read, and when none waits add `Assign` with the user
       filtered out, as `bun/notion-unassign.ts` filters it, to the PATCH;
       read both properties back from the answer. Update the module's
       header. Verify: `bun test bun/work-status` passes
-- [ ] 2.3 In `core/feature-workflow.md`'s *Ask the user* bullet, after "clear
+- [ ] 3.3 In `core/feature-workflow.md`'s *Ask the user* bullet, after "clear
       `Assign` once it is applied", say that in the harness `bun bun/work.ts
-      status` clears it with the card's next move when no question waits,
-      except a move into `applying` or `applied`; in `README.md`'s row for
+      status` clears it with the card's next move when no question waits;
+      in `README.md`'s row for
       `status`, name the clear. Verify: `bun bun/check.ts` passes
