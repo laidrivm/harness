@@ -111,13 +111,15 @@ problem naming each unreadable entry's key and field, so that entry approves
 nothing and its occurrences are reported as unapproved. `report` prints both
 from one read of the allowlist, for `bun/check.ts` and the script alike, and
 returns rather than throws, so `check.ts` still reports every other gate in
-the same run. `harness.suppressions: null` still throws from `read`, as an
-absent key does: `bun/config.ts`'s contract stays as decision 6 leaves it. A negative or
-fractional `count` is refused as well, and an allowlist that is not an object
-is named as such. `commit-gates` gains an ADDED requirement rather than a
-MODIFIED one, since `pre-push-commit-gates`
-modifies *Linter and type-checker suppressions fail CI* and two deltas of one
-requirement would collide at archive. The test file's repository fixture
+the same run. A negative or fractional `count` is refused as well, and an
+allowlist that is some other value than an object is named as such. The one
+exception, written into the requirement: `harness.suppressions: null` throws
+from `read` before any gate reports, as an absent key does, since JSON spells
+an absent value that way and `bun/config.ts`'s contract stays as decision 6
+leaves it. `commit-gates` gains an ADDED requirement rather than a MODIFIED
+one, since `pre-push-commit-gates` modifies *Linter and type-checker
+suppressions fail CI* and two deltas of one requirement would collide at
+archive. The test file's repository fixture
 moved to `bun/no-suppressions.fixture.ts` to keep it under its 300-line cap.
 That fixture's temp-directory bookkeeping — `made`, `cleanup`, `emptyDir` —
 is a move, not a new copy; the same bookkeeping sits in 32 files under

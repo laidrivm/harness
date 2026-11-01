@@ -36,8 +36,9 @@ mutates and where the results are stored.
   for the harness.
 - The check names an absent `why` and a `surviving` that is not a whole
   number as the field at fault, where it threw a `TypeError` or reported a gap
-  no edit closes, under a fifth scenario, *A floor that is not a whole
-  number* (design.md, decision 5).
+  no edit closes: the first under the existing *The floor changed with no
+  reason given*, the second under a fifth scenario, *A floor that is not a
+  whole number* (design.md, decision 5).
 - The uncited-criteria floor had the same `gauge` and faults: both now share
   one module, and `spec-test-traceability`'s floor requirement is rewritten in
   harness terms with the same fifth scenario (design.md, decision 6).

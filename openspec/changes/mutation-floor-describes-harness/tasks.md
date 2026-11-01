@@ -9,8 +9,9 @@ change behaviour.
 - [ ] 1.1 Confirm `pre-push-commit-gates` is archived on `main` and
       `package.json` declares `harness.mutationFloor`. Verify with
       `git ls-tree --full-tree --name-only origin/main openspec/changes/archive/`
-      naming a `*-pre-push-commit-gates` directory and `grep -n
-      '"mutationFloor"' package.json` naming the key; if either is missing,
+      naming a `*-pre-push-commit-gates` directory and `git show
+      origin/main:package.json | grep -n '"mutationFloor"'` naming the key —
+      `main`'s manifest, not the work tree's; if either is missing,
       stop and leave this change unarchived. Open at apply (2026-11-01):
       neither was on `main` yet, so this box waits for
       `pre-push-commit-gates`' archive
