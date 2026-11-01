@@ -193,9 +193,9 @@ describe("on the host, through the launcher", () => {
 		const clone = [h.clone, realpathSync(h.clone)];
 		const ran = calls(h);
 		expect(
-			ran.filter(([who, where, args]) => who === "runner" && clone.some((c) => where === c || args.includes(c))),
+			ran.filter(([who, where, args]) => who === "runner" && clone.some((c) => where === c || args?.includes(c))),
 		).toEqual([]);
-		const github = ran.filter(([, , args]) => args.includes("https://github.com/o/r.git"));
+		const github = ran.filter(([, , args]) => args?.includes("https://github.com/o/r.git"));
 		expect(github.length).toBeGreaterThan(0);
 		expect(github.filter(([who, where]) => who !== "runner" || where !== push)).toEqual([]);
 		expect([rev(h.clone, "--abbrev-ref", "HEAD"), readdirSync(h.logs)]).toEqual(["main", []]);
@@ -209,6 +209,18 @@ describe("on the host, through the launcher", () => {
 		const r = await deliver(h, payload(), { env, tools: `${free}:${tools}` });
 		expect(r.code).toBe(1);
 		expect(r.line).toMatch(/no passing pre-PR run record for [0-9a-f]{7}/);
+		expect(rev(h.bare, "refs/heads/feat/x")).toBe(SHA);
+	});
+
+	// The carry's fetch of `origin` meeting the network is a `Transient`; the line names its reason, not the error object.
+	test("a push clone whose origin cannot be reached pushes nothing and names why", async () => {
+		const h = host();
+		const { push, env } = onHost(h);
+		git(push, "remote", "set-url", "origin", "https://unreachable.invalid/o/r.git");
+		fix(h, recorded);
+		const r = await deliver(h, payload(), { env, tools: `${free}:${tools}` });
+		expect(r.code).toBe(1);
+		expect(r.line).toMatch(/; the push clone could not fetch origin; nothing was pushed$/);
 		expect(rev(h.bare, "refs/heads/feat/x")).toBe(SHA);
 	});
 

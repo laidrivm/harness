@@ -62,16 +62,16 @@ export function groups(text: string): Map<string, Boxes> {
 	let group: Boxes | undefined;
 	let fence: string | undefined;
 	for (const line of text.split("\n")) {
-		const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1][0];
+		const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1]?.[0];
 		if (marker && (!fence || marker === fence)) {
 			fence = fence ? undefined : marker;
 			continue;
 		}
 		if (fence) continue;
-		const heading = /^## (.+?)\s*$/.exec(line);
-		if (heading) {
+		const heading = /^## (.+?)\s*$/.exec(line)?.[1];
+		if (heading !== undefined) {
 			group = { ticked: 0, open: 0 };
-			found.set(heading[1], group);
+			found.set(heading, group);
 			continue;
 		}
 		const box = /^\s*[-*] \[([ xX])\]/.exec(line);
@@ -170,7 +170,8 @@ function completed(cwd: string, at: string, tip: string): string[] {
 		paths.flatMap((p) => sides.map((s) => `${s}:${p}`)),
 	);
 	return paths.flatMap((path, i) => {
-		const [atMark, onBase, atTip] = texts.slice(3 * i, 3 * i + 3);
+		// `blobs` answers every spec, "" for a missing one, so the defaults only satisfy the index type.
+		const [atMark = "", onBase = "", atTip = ""] = texts.slice(3 * i, 3 * i + 3);
 		const before = new Set([...complete(atMark), ...complete(onBase)]);
 		return complete(atTip)
 			.filter((heading) => !before.has(heading))
@@ -207,7 +208,7 @@ export function decide(event: Event, store: string, log: (decision: string) => v
 		return;
 	}
 	const [at, refused] = recorded.split(" ");
-	if (!/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(at)) return;
+	if (at === undefined || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(at)) return;
 	if (!git(cwd, "symbolic-ref", "-q", "HEAD")) return;
 	const end = tip(cwd, at);
 	const done = end ? completed(cwd, at, end) : [];

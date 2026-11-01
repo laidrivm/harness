@@ -134,9 +134,11 @@ function checks(rollup: Check[]) {
 /** Whether the head merges the base into the branch: two parents, the second already in the base. */
 function mergesBase(repo: string, pr: Pull): boolean {
 	const parents = api<{ parents: { sha: string }[] }>(`repos/${repo}/commits/${pr.headRefOid}`).parents;
+	const [, merged] = parents;
 	return (
 		parents.length === 2 &&
-		api<{ ahead_by: number }>(`repos/${repo}/compare/${pr.baseRefName}...${parents[1].sha}`).ahead_by === 0
+		merged !== undefined &&
+		api<{ ahead_by: number }>(`repos/${repo}/compare/${pr.baseRefName}...${merged.sha}`).ahead_by === 0
 	);
 }
 

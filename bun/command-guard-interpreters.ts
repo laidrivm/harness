@@ -177,7 +177,8 @@ export function interpreter(
 				"untracked-script",
 				`the option \`${words[1]}\` before its script, which may change what runs`,
 			);
-		return at === 1 ? bunRun(words[1], dirs, read) : undefined;
+		const script = words[at];
+		return at === 1 && script !== undefined ? bunRun(script, dirs, read) : undefined;
 	}
 	return committed(file, dirs)
 		? undefined

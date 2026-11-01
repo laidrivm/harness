@@ -60,7 +60,8 @@ export function pushed(clone: string, app: App, branch: string, fixed: string, b
 	if (launcher.length) {
 		// `base` is the clone's `origin/<branch>`, which `fetched` set there; the bundle holds what came after it.
 		const carried = carry(under(clone), branch, branch);
-		if (carried !== undefined) return carried;
+		// A `Transient` too is the run's failure here: the CI flow retries nothing, so it reads as its reason.
+		if (carried !== undefined) return typeof carried === "string" ? carried : carried.message;
 		if (sh("git", "rev-parse", "HEAD").out !== fixed || !sh("git", "merge-base", "--is-ancestor", base, "HEAD").ok)
 			return `the push clone's ${branch} is not ${fixed} on top of ${base}; nothing pushed`;
 		if (!ranUnder(under(clone), fixed)) return `no passing pre-PR run record for ${fixed.slice(0, 7)}; nothing pushed`;

@@ -37,6 +37,7 @@ const before = args.at(-1) === "--before-push";
 const [stage, change, step, ...rest] = before ? args.slice(0, -1) : args;
 const usage = "usage: goal-check.ts propose|archive <change> | apply <change> <step> [--before-push]";
 const shaped =
+	stage !== undefined &&
 	["propose", "apply", "archive"].includes(stage) &&
 	// A path segment, so it can neither climb out of `openspec/changes/` nor
 	// name another tree.

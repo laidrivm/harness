@@ -54,7 +54,8 @@ export function consider(slug: string, status: string, blocking: string[]): Step
 	if (typeof prs === "number") return { step, branch, answer: true, draft: prs };
 	if (typeof prs === "string") return prs;
 	// A squash-merged branch is never freed, and nor is a closed one.
-	if (prs.length) return `pull request #${prs[0].number} already used ${branch}`;
+	const [used] = prs;
+	if (used) return `pull request #${used.number} already used ${branch}`;
 	return answer ? { step, branch, answer } : { step, branch, answer, carried };
 }
 

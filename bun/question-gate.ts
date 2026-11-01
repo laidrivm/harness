@@ -180,9 +180,10 @@ function board(result: string): string | undefined {
 	} catch {
 		// Not the connector's JSON envelope: read the text as it is.
 	}
-	const path = text.split("<properties>")[0].split("<content>")[0];
+	const [before = ""] = text.split("<properties>");
+	const [path = ""] = before.split("<content>");
 	const ancestors = path.match(/<ancestor-path>([\s\S]*?)<\/ancestor-path>/);
-	return ancestors?.[1].match(/<parent-data-source [^>]*name="([^"]*)"/)?.[1];
+	return ancestors?.[1]?.match(/<parent-data-source [^>]*name="([^"]*)"/)?.[1];
 }
 
 /**

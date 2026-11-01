@@ -50,13 +50,13 @@ export const pushRef = (to: string, branch: string) =>
 export function named(said: string): { title: string; body: string } | string {
 	const lines = said.split("\n");
 	const at = (mark: string) => lines.flatMap((line, i) => (line.startsWith(mark) ? [i] : []));
-	const [titles, bodies] = [at("PR-TITLE:"), at("PR-BODY:")];
-	if (titles.length !== 1) return "the final message holds not one PR-TITLE: line";
-	if (bodies.length !== 1) return "the final message holds not one PR-BODY: line";
-	if (bodies[0] < titles[0]) return "PR-BODY: comes before PR-TITLE:";
+	const [[t, ...titles], [b, ...bodies]] = [at("PR-TITLE:"), at("PR-BODY:")];
+	if (t === undefined || titles.length) return "the final message holds not one PR-TITLE: line";
+	if (b === undefined || bodies.length) return "the final message holds not one PR-BODY: line";
+	if (b < t) return "PR-BODY: comes before PR-TITLE:";
 	// `trim` drops the CR a CRLF message leaves on the title.
-	const title = lines[titles[0]].slice("PR-TITLE:".length).trim();
-	const body = lines.slice(bodies[0]).join("\n").slice("PR-BODY:".length).trim();
+	const title = (lines[t] ?? "").slice("PR-TITLE:".length).trim();
+	const body = lines.slice(b).join("\n").slice("PR-BODY:".length).trim();
 	if (!title) return "the PR-TITLE: line is empty";
 	if (!body) return "nothing follows PR-BODY:";
 	return { title, body };

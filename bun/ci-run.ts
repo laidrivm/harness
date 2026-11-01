@@ -58,7 +58,9 @@ export async function flow(body: string, marker: string): Promise<Outcome> {
 		if (run.head_branch !== repo?.default_branch)
 			return ["ignored", `a scheduled run on ${run.head_branch}, not the default branch`];
 		// `HARNESS_CI_CLONES` names another directory, which only the tests do; no session is resumed.
-		row = { clone: join(process.env.HARNESS_CI_CLONES || "/home/agent/clones", name.split("/")[1]), session: "" };
+		const [, short] = name.split("/");
+		if (short === undefined) throw new Error(`the payload's repository ${name} is no <owner>/<name>`);
+		row = { clone: join(process.env.HARNESS_CI_CLONES || "/home/agent/clones", short), session: "" };
 	} else {
 		if (!/^(feat|spec)\//.test(run.head_branch))
 			return ["ignored", `branch ${run.head_branch} is neither feat/ nor spec/`];
@@ -265,6 +267,8 @@ if (import.meta.main) {
 	const [clone, marker, resumed] = process.argv.slice(2);
 	let outcome: Outcome;
 	try {
+		if (clone === undefined || marker === undefined || resumed === undefined)
+			throw new Error("usage: ci-run.ts <clone> <marker> <resumed session>");
 		outcome = await decide(await Bun.stdin.text(), clone, marker, resumed);
 	} catch (e) {
 		outcome = ["failed", e instanceof Error ? e.message : String(e)];

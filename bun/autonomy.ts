@@ -29,7 +29,7 @@ const FLAG = "disable-model-invocation";
 /** Whether a skill's text carries the flag; throws when its frontmatter is not YAML. */
 function flagged(text: string): boolean {
 	const block = FRONTMATTER.exec(text);
-	if (!block) return false;
+	if (block?.[1] === undefined) return false;
 	const meta: unknown = Bun.YAML.parse(block[1]);
 	// Present and not `false` is set: `"true"` and an empty value both count.
 	return typeof meta === "object" && meta !== null && FLAG in meta && (meta as Record<string, unknown>)[FLAG] !== false;
