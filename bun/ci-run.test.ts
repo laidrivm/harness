@@ -17,7 +17,6 @@ import {
 	free,
 	host,
 	ignored,
-	key,
 	payload,
 	real,
 	rev,
