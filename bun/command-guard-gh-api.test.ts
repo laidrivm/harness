@@ -1,6 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { REVIEWED, state } from "./coderabbit-run.ts";
 import { cleanup, event, fabricate, run } from "./command-guard.fixture.ts";
+import { flat } from "./prose.fixture.ts";
 
 /**
  * What `command-guard.ts` refuses of a `gh api` call that names no method: a
@@ -120,5 +122,25 @@ describe("gh api graphql", () => {
 		const line = skill.match(/`(gh api repos\/OWNER\/REPO\/commits\/[^`]+)`/)?.[1] ?? "";
 		expect(line).toContain("<head sha>/status");
 		expect(run(event(line.replace("<head sha>", "198dbdc")), anywhere()).code).toBe(0);
+	});
+
+	// spec: agent-permissions/reading-through-the-endpoint-still-works
+	test("the coderabbit skill's check-run read passes, its head filled in", () => {
+		const skill = readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8");
+		const line = skill.match(/`(gh api "repos\/OWNER\/REPO\/commits\/<head sha>\/check-runs[^`]+)`/)?.[1] ?? "";
+		expect(line).toContain("check_name=CodeRabbit&filter=all");
+		expect(run(event(line.replace("<head sha>", "198dbdc")), anywhere()).code).toBe(0);
+	});
+});
+
+describe("the skill's rule for a reviewed head", () => {
+	// spec: agent-autonomy/the-head-counted-by-its-check-run-alone
+	test("step 1 counts a run by the conclusion and title bun/coderabbit-run.ts holds", () => {
+		const step = flat(readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8").split("### 1. Fetch")[1]?.split("### 2.")[0] ?? "");
+		expect(step).toContain(`concluded \`${REVIEWED.conclusion}\` with a title not opening \`${REVIEWED.skippedTitle}\``);
+		// A queued run is not `in_progress` either, and the module reads a success beside one as no review yet.
+		expect(step).toContain("every one of them `completed`");
+		const checkRun = (status: string, conclusion: string | null, title: string) => ({ name: "CodeRabbit", app: { slug: "coderabbitai" }, status, conclusion, output: { title } });
+		expect(state([checkRun("completed", REVIEWED.conclusion, "Finished"), checkRun("queued", null, "")]).name).toBe("reviewing");
 	});
 });

@@ -8,9 +8,9 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { flat } from "./prose.fixture.ts";
 
 const PATH = join(import.meta.dir, "..", "core", "skills", "session-wrapup", "SKILL.md");
-const flat = (text: string) => text.replace(/\s+/g, " ");
 const skill = () => readFileSync(PATH, "utf8");
 /** Step 5, whitespace normalised so a wrapped phrase still matches. */
 const step = () => flat(skill().split("## 5. Pipeline yield")[1]?.split("\n## ")[0] ?? "");

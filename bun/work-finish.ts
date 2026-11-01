@@ -18,7 +18,7 @@ import { arrived, exited, interval, objects, own, plain, type Run, read, type St
 import { ran, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
-import { limit, originRepository, readPullRequests, readyOne } from "./pull-requests.ts";
+import { gh, originRepository, readPullRequests, readyOne } from "./pull-requests.ts";
 import { tracked } from "./tracked.ts";
 
 const git = (...args: string[]) => {
@@ -84,7 +84,7 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	let number = open?.number;
 	if (!open && opening) {
 		const args = ["--draft", "-R", full, "--base", "main", "--head", branch, "--title", opening.title, "--body-file", opening.body];
-		const create = Bun.spawnSync(["gh", "pr", "create", ...args], { timeout: limit(), killSignal: "SIGKILL" });
+		const create = gh(["pr", "create", ...args]);
 		const said = create.stderr.toString().trim().split("\n")[0];
 		if (create.exitCode !== 0) return failed(`gh pr create exited ${create.exitCode}${said ? `: ${said}` : ""}`);
 		const made = readPullRequests(branch, repo)?.filter((pr) => pr.state === "OPEN");
@@ -177,7 +177,7 @@ function request(repo: string, n: number, sha: string, runs: Run[]) {
 	const now = Array.isArray(fresh) ? state(fresh) : fresh;
 	if (now.name !== "skipped") return said(now, sha.slice(0, 7));
 	try {
-		const post = Bun.spawnSync(["gh", "pr", "comment", String(n), "-R", repo, "--body", REQUEST], { env: plain(), timeout: limit(), killSignal: "SIGKILL" });
+		const post = gh(["pr", "comment", String(n), "-R", repo, "--body", REQUEST], plain());
 		return post.exitCode === 0 ? `${skipped}; asked for a review` : `${skipped}; the request failed, ${exited(post)}`;
 	} catch (error) {
 		// The pull request is ready by now: a throw would lose the line that says so.
