@@ -86,7 +86,8 @@ describes is rewritten, the rule is a candidate for deletion.
   bury.
 - Write logic a second time only by lifting it into one module both callers
   import, switching the first caller in the same change — two copies kept in
-  step by hand drift, and the stale one fails silently.
+  step by hand drift, and the stale one fails silently; a copy that would fail
+  loudly is no exception.
 - A guard against malformed input must cover the whole value, not a prefix —
   anchor both ends or parse it.
 - Read a value a tool consumes from the structure that tool parses, and where it

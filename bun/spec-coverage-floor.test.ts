@@ -6,6 +6,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, fabricate, problems, spec } from "./spec-coverage.fixture.ts";
+import { naming } from "./floor.fixture.ts";
 import { gauge, uncited } from "./spec-coverage.ts";
 
 afterAll(cleanup);
@@ -59,18 +60,16 @@ describe("the floor carries a reason", () => {
 	});
 
 	test("an absent reason names harness.uncitedFloor.why, rather than throwing", () => {
-		expect(gauge(380, 380, undefined)).toEqual([
-			expect.stringContaining("harness.uncitedFloor.why"),
-		]);
+		expect(gauge(380, 380, undefined)).toEqual(naming("uncitedFloor", "why"));
 	});
 });
 
 // spec: spec-test-traceability/a-floor-that-is-not-a-whole-number
 describe("a floor that is not a whole number", () => {
 	test("a count written as a string names harness.uncitedFloor.count", () => {
-		expect(gauge(380, "380", "measured")).toEqual([
-			expect.stringContaining("harness.uncitedFloor.count"),
-		]);
+		expect(gauge(380, "380", "measured")).toEqual(
+			naming("uncitedFloor", "count"),
+		);
 	});
 });
 

@@ -43,7 +43,10 @@ mutates and where the results are stored.
   harness terms with the same fifth scenario (design.md, decision 6).
 - The suppression scan reads each `harness.suppressions` entry through the
   same checks, and an unreadable one approves nothing, where a non-numeric
-  `count` approved every occurrence; `commit-gates` gains the requirement (decision 7).
+  `count` approved every occurrence; `commit-gates` gains the requirement
+  (decision 7).
+- The cases share one named-field matcher, and the Code rule on writing
+  logic twice says a copy that would fail loudly is no exception (decision 8).
 
 ## Capabilities
 
