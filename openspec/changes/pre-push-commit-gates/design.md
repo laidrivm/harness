@@ -34,6 +34,11 @@ not. `bun/git-env.test.ts` and `bun/pre-pr.test.ts` pin the hook's lines.
 6. а (2026-11-01) — no guard against a hand-edited `mutation/<name>.json`:
    no such threat has been seen (clarification 11), the edit shows in the
    pull request's diff, and a human merges.
+7. б (2026-11-01) — `lineWidth: 120` in `biome.json`, the one departure
+   from d2ass's: the tree is written to about that width, so the reformat
+   leaves it near its 38.8 thousand lines and pushes 12 `.ts` files past the
+   300-line cap, against 47.8 thousand lines and 38 files at Biome's
+   default of 80. The 12 are split first, as task 1.2 says.
 
 ## Goals / Non-Goals
 
@@ -62,9 +67,10 @@ history-wide and reads no base.
 
 ### 2. Biome as d2ass has it, reformat first
 
-`biome.json` is d2ass's without its `src/model.ts` override: recommended
-rules plus `noImportCycles`, tabs, double quotes, organise imports, the git
-ignore file honoured. It excludes every tracked file another tool writes, so
+`biome.json` is d2ass's without its `src/model.ts` override and with a line
+width of 120 (the user's decision 7): recommended rules plus
+`noImportCycles`, tabs, double quotes, organise imports, the git ignore file
+honoured. It excludes every tracked file another tool writes, so
 that tool's next write cannot fail `biome ci`: `mutation/**` (Stryker),
 `skills-lock.json` (the skills CLI), `.claude/settings.json`
 (`bun/sync-settings.ts`), and the vendored `core/skills/playwright-cli/**`;
@@ -75,7 +81,7 @@ linter's safe fixes, which rewrite code (`bun/no-suppressions.ts` records
 one). The three linter errors are fixed by hand in the hook's group;
 warnings do not fail `biome ci`, and no rule is turned off.
 
-Width 80 lengthens files, so a file the reformat would push past the
+The reformat still lengthens some files, so a file it would push past the
 300-line cap is split first, on its own branch (task 1.2).
 
 ### 3. The type check as strict as d2ass's
