@@ -6,12 +6,15 @@ Each entry of `harness.suppressions` SHALL hold a `count` that is a whole
 number, zero or above, and a `why` holding at least one non-whitespace
 character. An entry that does not SHALL approve no suppression, and the check
 SHALL fail naming the entry's key and the field, beside every other problem
-it reports rather than in place of them. A `count` of `"2"` compares as never
-equal, and one that is not a number at all compares as `NaN`, which no number
-of occurrences exceeds — so the entry would approve every suppression of its
-marker in that file. An approval with no reason is a line of the diff a
-reviewer cannot weigh. A `harness.suppressions` that is not an object of
-entries SHALL fail the check as such.
+it reports rather than in place of them. A `count` of `"2"` approves two only
+because the comparison coerces it, and one that is not a number at all
+compares as `NaN`, which no number of occurrences exceeds — so the entry would
+approve every suppression of its marker in that file. An approval with no
+reason is a line of the diff a reviewer cannot weigh. A `harness.suppressions`
+that is some other value than an object of entries SHALL fail the check as
+such, beside the other problems; one that is absent or `null` fails as every
+absent `harness` key does, before any gate reports, since JSON spells an
+absent value as `null`.
 
 #### Scenario: An allowlist entry the check cannot read
 
