@@ -114,11 +114,13 @@ export async function cleared(call: Call, card: string, user: string): Promise<C
 	if (!back) return fault ? failed(fault) : { line: `assign: removed the user from ${card}`, restoreFailed: false };
 	// The release's own fault first, so a restore that fails as the release did names both.
 	const before = fault ? `${fault}; ` : "";
+	// `back` kept, so `finish` names an unread second read rather than a wait it never saw (CodeRabbit on #382).
+	const unrestored = (why: string): Cleared => ({ ...failed(`${before}${why}`, true), back });
 	try {
 		if (!holds(people(await write(call, card, [...without(listed, user), { id: user }])), user))
-			return failed(`${before}the restore did not hold the user`, true);
+			return unrestored("the restore did not hold the user");
 	} catch (error) {
-		return failed(`${before}the restore: ${(error as Error).message}`, true);
+		return unrestored(`the restore: ${(error as Error).message}`);
 	}
 	return { line: `assign: restored the user on ${card}`, back, restoreFailed: false };
 }
