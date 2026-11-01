@@ -8,7 +8,7 @@ cap.
 
 ## 1. Probe
 
-- [x] 1.1 The user grants the ask integration *Insert content*. On a
+- [ ] 1.1 The user grants the ask integration *Insert content*. On a
       throwaway card of the `Harness` board, through the integration under
       API version `2025-09-03`: read the top-level blocks, write `Pointer`,
       append a bulleted item `after` a named block, and read the item back,
@@ -21,8 +21,8 @@ cap.
       answered 200 and the item `[#383](…/pull/383) — apply` reads back
       directly after it, so *Insert content* is granted and `after` honoured.
       The `Pointer` write was not reached (the branch adds no file under
-      `openspec/changes/`); its shape is the `Status` write's, which the same
-      *Update content* takes
+      `openspec/changes/`), so this box stays open until a `Pointer` write
+      and its read-back are recorded here, with 3.3's
 
 ## 2. The record
 
@@ -62,8 +62,10 @@ cap.
 - [x] 3.1 Failing cases in `bun/work-finish-card.test.ts` through
       `finish()` of `bun/work-finish.fixture.ts`: a first finish on a
       branch adding a change writes both before the comments read; a second
-      writes neither; a refused write leaves the draft, exits 1 and makes no
-      `gh pr ready`; no `--card` makes no Notion call. Then add the call to
+      writes neither; a refused write is said in one line and `finish` goes
+      on to the question read and `gh pr ready` (task 4.1, the user's answer
+      1 c, over the first-planned exit 1 with no ready); no `--card` makes
+      no Notion call. Then add the call to
       `bun/work-finish.ts`, give the existing `--card` cases a stub that
       answers the new reads with a card already recorded, and change
       `bun/work-finish-sequence.test.ts`'s pinned Notion calls (today only
@@ -76,10 +78,13 @@ cap.
       whoever opened the pull request, since `finish` never writes it; the
       kinds read `proposal`, `apply`, `archive`; `README.md`'s `finish` row says it writes both, and needs
       the ask integration's *Update content* and *Insert content*
-- [x] 3.3 `bun bun/pre-pr.ts origin/main` green; the PR opens through
+- [ ] 3.3 `bun bun/pre-pr.ts origin/main` green; the PR opens through
       `bun bun/work.ts finish --card 40a39875c31b81f0b5f2c66f8e89de9e`, and
       the card's `Pointer` and `Ссылки` it writes are read back on the
-      board
+      board. Done but the `Pointer`: pre-PR green, #383 opened that way, its
+      `Ссылки` item read back; this branch adds no file under
+      `openspec/changes/`, so no `Pointer` was written — the first
+      `finish --card` on a branch adding a change, read back, closes it
 
 ## 4. The user's answers of 2026-11-01
 
