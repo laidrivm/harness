@@ -5,9 +5,9 @@
 The pre-push hook SHALL run, in addition to the type check and `bun test`:
 `biome ci`, the YAML syntax check, the suppression scan, and the mutation
 floor with the Stryker run that produces its report. That run SHALL mutate
-only the modules the pushed branch changed against its base, as
-`mutation-floor` sets out, while the floor SHALL count every module, the
-unchanged ones from their stored results: a run over every module on every
+only the modules whose stored results no longer match the tree, as
+`mutation-floor` sets out, while the floor SHALL count every mutated module,
+the unchanged ones from their stored results: a run over every module on every
 push would cost hours, and a floor over the changed modules alone would let a
 survivor elsewhere go uncounted. A non-zero exit from any
 of them SHALL block the push. The diff budget SHALL remain the single
@@ -67,10 +67,10 @@ where the verdict is binding.
 
 #### Scenario: A push that changed no module
 
-- **WHEN** a branch whose diff against its base touches no file under `bun/`
-  is pushed
+- **WHEN** a branch that changed no file under `bun/` is pushed over current
+  stored results
 - **THEN** the hook starts no Stryker run, and the floor is checked against
-  the stored results of every module
+  the stored results of every mutated module
 
 #### Scenario: A gate the runner's checks run too
 

@@ -32,9 +32,9 @@ design.md records them.
   type check, the YAML check, the suppression scan, `bun test`, `actionlint`
   and `gitleaks` behind `command -v`, and the mutation step.
 - **Behaviour change** to `commit-gates`: the Stryker run no longer covers a
-  fixed module on every push. It mutates only the `bun/` modules the branch
-  changed against its base, and the floor counts every module, the
-  unchanged ones from results stored in the tree.
+  fixed module on every push. It mutates only the `bun/` modules whose
+  stored results no longer match the tree — what the branch changed — and
+  the floor counts every mutated module, the rest from stored results.
 - Stryker's incremental results stored one file per module under
   `mutation/`, written by a baseline run by hand on the laptop and kept
   current by the push, which refuses while the run left them differing from

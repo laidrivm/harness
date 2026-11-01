@@ -63,9 +63,10 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       exits 0 (`a-tool-the-machine-does-not-have`); a stub `gitleaks` exiting
       1 fails the hook (`a-tool-the-machine-has-reporting-a-finding`) and is
       given `--log-opts=<base>..HEAD` with the base `bun/diff-base.sh`
-      prints (`a-secret-that-is-already-in-the-base-branch`), or with
-      `HARNESS_BASE` when it is set; `bun/pre-pr.ts` given `origin/main`
-      runs `harness.bumpTest` with `HARNESS_BASE=origin/main`
+      prints (`a-secret-that-is-already-in-the-base-branch`); in
+      `bun/diff-base.test.ts`, `HARNESS_BASE` set is what it prints; and
+      `bun/pre-pr.ts` given `origin/main` runs `harness.bumpTest` with
+      `HARNESS_BASE=origin/main`
 - [ ] 4.4 Write `.githooks/gates.sh` per design decision 1, without the
       mutation step; the hook calls it after the draft check and keeps
       `bash bun/diff-budget.sh || true` last; set `harness.bumpTest` to
@@ -84,53 +85,53 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 ## 5. The Stryker probe and the mutation step
 
 - [ ] 5.1 Add `@stryker-mutator/core` 10.0.0 to `devDependencies`, add
-      `reports` and `.stryker-tmp` to `.gitignore` before any run, and write
-      `stryker.config.json` per design decision 4. Verify `git status` shows
+      `reports` and `.stryker-tmp` to `.gitignore` before any run, `mutation/**`
+      to `harness.diffBudgetExclude`, and write `stryker.config.json` per
+      design decision 4. Verify `git status` shows
       no file under either after a run
 - [ ] 5.2 Probe on `bun/command-parse.ts`: run it with `--incremental` and
       its incremental file, then again with no change. Record on the card
       both run times, whether the file is byte-identical after the second,
       which fields depend on the machine, whether Stryker reads the file with
       those fields removed and a fingerprint key added, whether a changed
-      test file alone is re-run
-      without `--force`, how the
-      per-module values are passed, and whether `node -v` answers on the
-      host. If the second run is not near-instant, stop here, ask on the
+      test file alone is re-run without `--force`, whether a deliberate
+      mutant is judged against the sandbox's files rather than the
+      checkout's, how the per-module values are passed, and whether `node
+      -v` answers on the host (a card if not). If the second run is not
+      near-instant, stop here, ask on the
       card, and leave the pull request draft
 - [ ] 5.3 Failing cases in `bun/mutation-run.test.ts` over the pure parts:
       modules exclude tests and fixtures; a module no test file matches is
-      named and not run (`a-module-no-test-file-matches`); a changed source
-      runs incrementally (`the-module-s-source-changed`); a changed
-      `bun/pre-pr-steps.test.ts` forces `bun/pre-pr.ts` and
-      `bun/pre-pr-steps.ts` and nothing else (`a-test-file-changed`), and a
-      changed fixture, a deleted test and both paths of a renamed one force
-      the same way; a test state the stored fingerprint already records
-      runs incrementally (`a-test-change-already-measured`); a new module
-      with no stored file runs whole and fails until it is committed
-      (`a-new-module-has-no-stored-file`); a module with a test file and no
-      stored file fails naming it (`a-module-with-tests-and-no-stored-file`);
-      no
-      change under `bun/`, and a change to `bun/diff-budget.sh` alone, run
-      nothing; a base that cannot be resolved fails naming it rather than
-      reading as no change; a Stryker exit that is not 0 fails before the
-      merge; a changed module with no `node` on `PATH` fails naming Node;
+      named and not run (`a-module-no-test-file-matches`); a source that
+      differs from its stored copy runs incrementally
+      (`the-module-s-source-changed`); a changed `bun/pre-pr-steps.test.ts`
+      forces `bun/pre-pr.ts` and `bun/pre-pr-steps.ts` and nothing else
+      (`a-test-file-changed`), and a deleted or renamed test forces the same
+      way; a changed `bun/command-guard.fixture.ts` forces the modules whose
+      tests import it (`a-fixture-another-module-s-tests-import`); a test
+      state the fingerprint records runs incrementally; a new module runs
+      whole and fails until committed (`a-new-module-has-no-stored-file`); a
+      module with a test file and no stored file fails naming it
+      (`a-module-with-tests-and-no-stored-file`); current stored results, or
+      a change to `bun/diff-budget.sh` alone, run nothing; a Stryker exit that
+      is not 0 fails before the merge; a module to run with no `node` on
+      `PATH` fails naming Node;
       a stored file of an untracked module fails naming it
       (`a-stored-file-outliving-its-module`), and so does one whose module
       has no test file left (`a-stored-file-whose-module-lost-its-last-test`);
-      a stored file is written without `projectRoot`, `system`, `performance`
-      and `config` (`the-same-results-written-in-another-checkout`); a
+      a stored file keeps only the fields design decision 4 names
+      (`the-same-results-written-in-another-checkout`); a
       stored file differing from `HEAD`'s, or untracked, fails naming it
       (`a-push-whose-run-rewrote-a-stored-file`); the merge sums every
       stored file's survivors
       (`unchanged-modules-counted-from-their-stored-results`). Then write
-      `bun/mutation-run.ts` with `--all`, reading `HARNESS_BASE`. Verify the
+      `bun/mutation-run.ts` with `--all`. Verify the
       cases pass and a run on `bun/command-parse.ts` writes
       `mutation/command-parse.json`
 
 ## 6. The baseline
 
-- [ ] 6.1 Add `mutation/**` to `harness.diffBudgetExclude`. Failing cases
-      in `bun/no-suppressions.test.ts`: a tracked
+- [ ] 6.1 Failing cases in `bun/no-suppressions.test.ts`: a tracked
       `mutation/no-suppressions.json` carrying the three markers passes with
       an empty allowlist, and another file under `mutation/` carrying one
       fails (`the-stored-mutation-results-of-the-check-s-own-script`); then
@@ -156,6 +157,7 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 - [ ] 7.3 Add `.github/workflows/mutation.yml` per design decision 6.
       Verify the job passes on the pull request without mutating, and add its
       check name to the list for the ruleset
-- [ ] 7.4 `README.md`: `mutation/` in the map of where files live, and how
-      to refresh it by hand (`--all --force`). Verify the README map check in
-      `bun test` passes
+- [ ] 7.4 `README.md`: `mutation/`, `.githooks/gates.sh`, `biome.json`,
+      `tsconfig.json` and `stryker.config.json` in the map of where files
+      live, and how to refresh `mutation/` by hand (`--all --force`). No
+      test reads the map, so verify by reading it back against `git ls-files`
