@@ -14,7 +14,6 @@
 import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { read } from "./config.ts";
-import { unreadable } from "./floor.ts";
 import { tracked } from "./tracked.ts";
 
 const MARKERS = ["biome-ignore", "@ts-expect-error", "@ts-ignore"];
@@ -61,35 +60,13 @@ const MANIFEST = "package.json";
  * `suspicious/noTsIgnore` reads a comment as a directive wherever it sits, and
  * `biome check --write` rewrote this very sentence when it spelled one out.
  */
-export function allowlist(root: string): {
-	approved: Record<string, number>;
-	problems: string[];
-} {
-	const value: unknown = read(root, "suppressions");
-	// Named as a whole rather than read character by character or by index.
-	if (typeof value !== "object" || value === null || Array.isArray(value))
-		return {
-			approved: {},
-			problems: ["harness.suppressions is not an object of approvals"],
-		};
-	const approved: Record<string, number> = {};
-	const problems: string[] = [];
-	for (const [key, entry] of Object.entries(value)) {
-		const faults = unreadable(
-			`harness.suppressions[${JSON.stringify(key)}]`,
-			"count",
-			entry?.count,
-			entry?.why,
-		);
-		// An entry the check cannot read approves nothing: a count of `NaN`,
-		// which no length exceeds, would otherwise approve every occurrence.
-		// Its faults are returned rather than thrown, so `check.ts` still
-		// reports every other gate.
-		if (faults.length) problems.push(...faults);
-		else approved[key] = entry.count;
-	}
-	return { approved, problems };
-}
+const approvedIn = (root: string): Record<string, number> =>
+	Object.fromEntries(
+		Object.entries(read(root, "suppressions")).map(([key, { count }]) => [
+			key,
+			count,
+		]),
+	);
 
 export type Finding = { path: string; line: number; marker: string };
 
@@ -108,7 +85,7 @@ export function scan(
 	approved?: Record<string, number>,
 ): Finding[] {
 	const { root, files } = tracked(cwd);
-	const allowed = approved ?? allowlist(root).approved;
+	const allowed = approved ?? approvedIn(root);
 	const own = self(root);
 
 	const found: Finding[] = [];
@@ -135,26 +112,10 @@ export function scan(
 		.flatMap(([, list]) => list);
 }
 
-/**
- * What the gate reports for the repository at `root`: each allowlist entry it
- * cannot read, then each unapproved suppression — what `check.ts` and the
- * script both print, from one read of the allowlist.
- */
-export function report(root: string): string[] {
-	const { approved, problems } = allowlist(root);
-	return [
-		...problems,
-		...scan(root, approved).map(
-			({ path, line, marker }) => `${path}:${line}: ${marker}`,
-		),
-	];
-}
-
 if (import.meta.main) {
-	// Imported here, since resolving it runs git, which an importer of the scan
-	// alone need not.
-	const { root } = await import("./root.ts");
-	const problems = report(root);
-	for (const problem of problems) console.error(problem);
-	if (problems.length) process.exit(1);
+	const unapproved = scan();
+	for (const { path, line, marker } of unapproved) {
+		console.error(`${path}:${line}: ${marker}`);
+	}
+	if (unapproved.length) process.exit(1);
 }

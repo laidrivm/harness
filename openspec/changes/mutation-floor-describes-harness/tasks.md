@@ -1,6 +1,6 @@
 # mutation-floor-describes-harness — tasks
 
-One group, one pull request. The code changes are tasks 1.4 to 1.7
+One group, two pull requests: task 1.6 in the second. The code changes are tasks 1.4 to 1.7
 (design.md, decisions 5 to 8), whose failing cases come first where they
 change behaviour.
 
@@ -44,7 +44,7 @@ change behaviour.
       them fail; then write the module and bind it in `bun/mutation-floor.ts`
       and `bun/spec-coverage.ts`. Verify with `bun test bun/floor
       bun/mutation-floor bun/spec-coverage bun/check` green
-- [x] 1.6 Read `harness.suppressions` through `bun/floor.ts`'s field checks
+- [ ] 1.6 Read `harness.suppressions` through `bun/floor.ts`'s field checks
       (design.md, decision 7): first move the repository fixture of
       `bun/no-suppressions.test.ts` to `bun/no-suppressions.fixture.ts` and
       add cases under `// spec:
@@ -56,7 +56,8 @@ change behaviour.
       beside the findings through `report`, which `bun/check.ts` and the
       script call — a case in `bun/check.test.ts` pinning that `gates` reports
       them beside another gate's. Verify with `bun test bun/no-suppressions
-      bun/floor bun/check` green
+      bun/floor bun/check` green. In a second pull request: with it the
+      first passed the 800-line diff budget
 - [x] 1.7 Lift the named-field matcher into `bun/floor.fixture.ts` and import
       it in `bun/floor.test.ts`, `bun/mutation-floor.test.ts` and
       `bun/spec-coverage-floor.test.ts`; end the Code rule *Write logic a
