@@ -39,7 +39,7 @@ export function state(runs: Run[]): State {
 	const mine = own(runs);
 	const skipped = (run: Run) => run.conclusion === "skipped" || title(run).startsWith(REVIEWED.skippedTitle);
 	if (mine.some((run) => run.status !== "completed")) return { name: "reviewing" };
-	if (mine.some((run) => run.conclusion === REVIEWED.conclusion && !title(run).startsWith(REVIEWED.skippedTitle))) return { name: "reviewed" };
+	if (mine.some((run) => run.conclusion === REVIEWED.conclusion && !skipped(run))) return { name: "reviewed" };
 	if (mine.some((run) => run.conclusion === "neutral" && title(run) === "Review rate limited")) return { name: "rate limited" };
 	const other = mine.find((run) => !skipped(run));
 	if (other) return { name: "other", conclusion: String(other.conclusion), title: title(other) };
@@ -93,8 +93,16 @@ export const read = (repo: string, sha: string): Run[] | { name: "unread"; why: 
 	// `filter=all`: the default `latest` keeps one run per name, and which of a skip and a review is latest is CodeRabbit's order.
 	objects(`repos/${repo}/commits/${sha}/check-runs?filter=all&per_page=100`, ".check_runs[]");
 
-/** The earliest `started_at` of CodeRabbit's runs in `runs`, in ms, standing for when the commit arrived; `Infinity` for none. */
-export const arrived = (runs: Run[]) => Math.min(...own(runs).map((run) => Date.parse(String(run.started_at))).filter(Number.isFinite));
+/**
+ * The earliest `started_at` of CodeRabbit's runs in `runs`, in ms, standing for when the commit arrived.
+ * With none that parses, `-Infinity`: every exact request then counts, so the guard fails closed and asks nothing twice.
+ */
+export function arrived(runs: Run[]) {
+	const times = own(runs)
+		.map((run) => Date.parse(String(run.started_at)))
+		.filter(Number.isFinite);
+	return times.length ? Math.min(...times) : Number.NEGATIVE_INFINITY;
+}
 
 /** The poll interval in ms: `HARNESS_CODERABBIT_POLL_MS` when it is a positive whole number, 5 s otherwise. */
 export const interval = () => positive("HARNESS_CODERABBIT_POLL_MS", 5000);

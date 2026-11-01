@@ -234,6 +234,11 @@ describe("the request for a skipped head", () => {
 		expect(run.last).toEndWith("; asked for a review");
 	});
 
+	test("with no start time on the head's runs, an exact request still counts as asked", async () => {
+		const run = await watched([[{ ...SKIPPED, started_at: null }]], { comments: [asked("2026-10-31T09:55:25Z")] });
+		expect(run.last).toEndWith("; a review was already asked for");
+	});
+
 	test("with the head's runs out of time order, the earliest start is the one compared", async () => {
 		const later = { ...SKIPPED, started_at: "2026-10-31T09:55:30Z" };
 		const run = await watched([[later, SKIPPED]], { comments: [asked("2026-10-31T09:55:25Z")] });

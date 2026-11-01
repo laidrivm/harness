@@ -140,7 +140,7 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 }
 
 const REQUEST = "@coderabbitai review";
-/** The reads before the ready switch and after it, an interval apart: 60 s and 90 s at the default 5 s. */
+/** The reads before the ready switch and after it, an interval apart: 11 and 17 intervals, 55 s and 85 s at the default 5 s, plus each read's own time. */
 const [WAIT, READS] = [12, 18];
 
 /**
