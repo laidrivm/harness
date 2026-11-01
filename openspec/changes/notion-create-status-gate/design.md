@@ -84,12 +84,14 @@ created with no status is what `idea`'s alternative means here, while an
 update to `null` is still a status move.
 
 The reason, on stderr: ``status-guard: pages[<i>] is created at Status
-<value as JSON>; create a card at `idea` — only the user moves it to
-`approved`, and later moves go through `bun bun/work.ts status --card <id>
---to <status>`.`` — the index counted from 0, as `pages` is written in the
-call. It names `idea` alone, not "or with no Status": `bun/work-status.ts`
-refuses to move a card whose `Status` reads no status, so a card created
-without one waits for the user.
+<value as JSON>; create a card at `idea`, written as the plain string
+"idea" — only the user moves it to `approved`, and later moves go through
+`bun bun/work.ts status --card <id> --to <status>`.`` — the index counted
+from 0, as `pages` is written in the call. It names `idea` alone, not "or
+with no Status": `bun/work-status.ts` refuses to move a card whose `Status`
+reads no status, so a card created without one waits for the user. It names
+the plain string, since a session that wrote `["idea"]` or another form of
+`idea` would otherwise read the refusal as asking for what it sent.
 
 ### A session's own card
 

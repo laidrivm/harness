@@ -80,6 +80,7 @@ describe("a card created past idea is refused", () => {
 		["a leading space", create([at(" idea")]), 0],
 		["an empty string", create([at("")]), 0],
 		["a REST-shaped select", create([at({ select: { name: "approved" } })]), 0],
+		["idea in an array, named back as the plain string", create([at(["idea"])]), 0],
 		["another server name", create([at("approved")], {}, "mcp__notion__notion-create-pages"), 0],
 		["pages as a JSON string", create(JSON.stringify([at("approved")])), 0],
 		["properties as a JSON string", create([{ properties: JSON.stringify({ Status: "approved" }) }]), 0],
@@ -87,7 +88,7 @@ describe("a card created past idea is refused", () => {
 		const run = guard(event);
 		expect(run.code).toBe(2);
 		expect(run.err).toContain(`pages[${index}]`);
-		expect(run.err).toContain("`idea`");
+		expect(run.err).toContain('`idea`, written as the plain string "idea"');
 		expect(run.err).toContain("bun bun/work.ts status");
 		expect(run.err).not.toContain("no Status");
 		expect(run.ledger).toEqual([{ decision: "block", rule: "mcp-status" }]);
