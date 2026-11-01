@@ -114,9 +114,9 @@ returns rather than throws, so `check.ts` still reports every other gate in
 the same run. A negative or fractional `count` is refused as well, and an
 allowlist that is some other value than an object is named as such. The one
 exception, written into the requirement: `harness.suppressions: null` throws
-from `read` before any gate reports, as an absent key does, since JSON spells
-an absent value that way and `bun/config.ts`'s contract stays as decision 6
-leaves it. `commit-gates` gains an ADDED requirement rather than a MODIFIED
+from `read` before any gate reports, as an omitted key does: `bun/config.ts`
+treats `undefined` and `null` alike as missing, and its contract stays as
+decision 6 leaves it. `commit-gates` gains an ADDED requirement rather than a MODIFIED
 one, since `pre-push-commit-gates` modifies *Linter and type-checker
 suppressions fail CI* and two deltas of one requirement would collide at
 archive. The test file's repository fixture
