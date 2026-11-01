@@ -1119,7 +1119,7 @@ such a card without comparing or listing it.
 
 #### Scenario: The closing pull request merges
 
-- **WHEN** #350 merges and a card's `Pointer` reads `pr:350`
+- **WHEN** #350 merges into `main` and a card's `Pointer` reads `pr:350`
 - **THEN** the session that learns of the merge SHALL move the card to `done`
   in that turn (*A stage that completes moves its card in the same turn*),
   since no reconciliation derives a floor for it, and SHALL leave a card at

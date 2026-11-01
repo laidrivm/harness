@@ -90,8 +90,9 @@ For `--to proposed`, `applied` or `done`, `status` SHALL fetch `main` from
 `origin` and read the evidence from the `openspec/changes` tree of
 `origin/main` alone — never the checkout's files, `HEAD` or local `main`. A
 fetch or a tree read that fails SHALL refuse. A card whose `Pointer` names a
-pull request is proven by GitHub instead, and SHALL NOT fetch or read the
-tree (*A fix card's done is proven by its merged pull request*).
+pull request SHALL NOT fetch or read the tree: its `done` alone is proven, by
+GitHub, and `proposed` or `applied` refuses (*A fix card's done is proven by
+its merged pull request*).
 
 #### Scenario: A checkout behind origin
 
