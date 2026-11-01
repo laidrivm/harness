@@ -67,6 +67,16 @@ On the card's third question (CodeRabbit's Major on #358, thread
     couple of seconds later, since GitHub's API can lag a push, and only
     then refuses. Decision 5 widens by this one check.
 
+On the card's fourth question (the apply's local review, its items 12 and
+13), answered there on 1.11 at 12:32:
+
+11. **в** — `work.ts` keeps its own `^[1-9]\d*$`, the copy `pull-requests.ts`,
+    `goal-check.ts` and `on-event.ts` also hold; a separate card in stage 3
+    lifts every copy into one function once `finish-review-arrives` (#361)
+    has landed, which rewrites `limit()`.
+12. **а** — `--head` stays exactly 40 hex: GitHub hosts no SHA-256
+    repository, so a pull request's head is never 64.
+
 ## Decisions
 
 ### `resolve` places every id before it changes anything
