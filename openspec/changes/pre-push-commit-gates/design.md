@@ -31,6 +31,9 @@ not. `bun/git-env.test.ts` and `bun/pre-pr.test.ts` pin the hook's lines.
 5. а — the missing CI jobs (suppression scan, `gitleaks`, lint, type check)
    are part of this change; making them required in the ruleset is the
    user's step.
+6. а (2026-11-01) — no guard against a hand-edited `mutation/<name>.json`:
+   no such threat has been seen (clarification 11), the edit shows in the
+   pull request's diff, and a human merges.
 
 ## Goals / Non-Goals
 
