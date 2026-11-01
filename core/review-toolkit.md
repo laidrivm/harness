@@ -70,8 +70,8 @@ limit, gets no review on its own — stop waiting on it and report it.
   reported and the push goes on without the gate rather than blocking the
   branch: the session writes no `CODE-REVIEW gate:` line only when no pass
   returned a review, and a pass that does not return after one that did ends
-  the loop on the line the earlier passes left. One finding on an unchanged file beside findings on changed ones —
-  a caller the change breaks — is kept and verified like the rest, and an
+  the loop on the line the earlier passes left. One finding on an unchanged
+  file beside findings on changed ones — a caller the change breaks — is kept and verified like the rest, and an
   empty review proves nothing either way and passes. `/code-review` names no
   severity, so the session grades each finding 🔵 Trivial, 🟡 Minor, 🟠 Major
   or 🔴 Critical — the ladder `/coderabbit` reads — while verifying it,
