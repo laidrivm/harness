@@ -9,11 +9,11 @@ each page of the threads query, each mutation — and logs every call.
 
 ## 1. `work.ts resolve`
 
-- [ ] 1.1 The last Safety rule of `core/rules.md` takes the wording the user
+- [x] 1.1 The last Safety rule of `core/rules.md` takes the wording the user
       adopted (`design.md`, decision 9, *The Safety rule names `resolve`*),
       in the commit that adds the subcommand (1.2). Verify by reading the
       rule back against the design's quote
-- [ ] 1.2 Failing cases in `bun/work-resolve.test.ts` for the arguments: no
+- [x] 1.2 Failing cases in `bun/work-resolve.test.ts` for the arguments: no
       `--comment`; `--comment 123x`, `--comment ""`, `--comment -1`; `--pr 0`,
       no `--pr`, `--pr 7 --pr 8`; no `--head`, `--head 1a2b3c4`, `--head
       PUSHED_SHA`, two `--head`; a positional; an unknown option — each
@@ -23,7 +23,7 @@ each page of the threads query, each mutation — and logs every call.
       with `multiple: true` on every option and `--pr` and `--head` taken
       only once, the numbers anchored `^[1-9]\d*$` and the head
       `^[0-9a-f]{40}$`
-- [ ] 1.3 Failing cases for the pull request: a detached `HEAD` refuses before
+- [x] 1.3 Failing cases for the pull request: a detached `HEAD` refuses before
       any thread read; `--pr 8` on a branch whose open pull request is #7
       refuses naming #7; `--pr 9` on a branch open as #7 and #9 reads #9's
       threads; a failed pull-request read refuses naming `gh auth status`;
@@ -31,7 +31,7 @@ each page of the threads query, each mutation — and logs every call.
       refusal exits 1 with no mutation logged. Then write
       `bun/work-resolve.ts` reusing `originRepository()` and
       `readPullRequests()` from `bun/pull-requests.ts`
-- [ ] 1.3a Failing cases for the head, the stub answering each pull-request
+- [x] 1.3a Failing cases for the head, the stub answering each pull-request
       read in turn: `--head A` with #7's head `A` reads the pull requests
       once and goes on to the threads; a first read of `B` and a second of
       `A` goes on after exactly two reads, the second at least 2 seconds
@@ -39,21 +39,21 @@ each page of the threads query, each mutation — and logs every call.
       read no thread and log no mutation; a second read that fails refuses
       the same way. Then compare `--head` with `headRefOid` and add the one
       re-read after a 2-second wait (decision 10)
-- [ ] 1.4 Failing cases for placing the ids: no threads at all refuses the id
+- [x] 1.4 Failing cases for placing the ids: no threads at all refuses the id
       as unplaced; a reply's id inside the bot's thread refuses; one of two
       ids opening the user's thread refuses the whole call with no mutation;
       `coderabbitai-x` and a `null` author each refuse; a failed thread read
       refuses; an id opening the 101st thread, served as the second page of
       a `--paginate --slurp` read, is placed; `4433138725`, past 2³¹, is
       placed by its `fullDatabaseId` string. Then the read
-- [ ] 1.5 Failing cases for the resolves: one id, unresolved, makes one
+- [x] 1.5 Failing cases for the resolves: one id, unresolved, makes one
       `resolveReviewThread` call with its thread's id, prints `resolve: <id>
       resolved` and exits 0; a resolved and an unresolved one make one call,
       print a skip and a resolved line, exit 0; the same id named twice
       resolves once; an outdated unresolved thread is resolved; the second of
       three calls failing leaves the first resolved, names the second, does
       not attempt the third, exits 1. Then the mutation loop
-- [ ] 1.6 `README.md`: the command table gets the `resolve` row beside
+- [x] 1.6 `README.md`: the command table gets the `resolve` row beside
       `finish`, linking `openspec/specs/work-resolve/spec.md`, and *Cloud
       sessions* says `resolve` fails there, the proxy refusing GraphQL;
       `bun/work.ts`'s header comment names the subcommand. Verify with `bun
