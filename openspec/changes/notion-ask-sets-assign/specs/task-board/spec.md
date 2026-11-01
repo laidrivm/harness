@@ -175,11 +175,11 @@ card is answered* fires for an answer the loop carries.
 
 - **WHEN** a session carrying an answer ends with no pull request open for its
   step and no card filed
-- **THEN** a later pass takes the answer again while the card's `Assign`
-  holds the user, and continues the branch the session left (`board-loop`,
-  *A step branch a session left is continued*), once the clone holds nothing
-  that pass refuses (`board-loop`, *The runner is the user's script and
-  starts from a clean clone*)
+- **THEN** the answer stays in the card's comments, where the session that
+  resumes the card reads it; a pass of the board loop takes it again only
+  while the card's `Assign` holds the user, which the runner's pick and a
+  release both end, and then continues the branch the session left
+  (`board-loop`, *A step branch a session left is continued*)
 
 #### Scenario: The answer asks for a change of its own
 
@@ -282,13 +282,15 @@ it with no integration id, and every `harness-pause` notice is followed by
 a comment of the user's without a mark, it SHALL remove the user from
 `Assign`, keeping everyone else, and read the user's absence back from
 Notion's answer. It SHALL then read the comments again and, when a question
-now waits, set the user back on `Assign` and read the user back, so a
-question posted during the release keeps it. It SHALL print `assign: removed
-the user from <card>` when it removed the user and the answer held, `assign:
-restored the user on <card>` when it set the user back and the answer held,
-or a line opening `assign: failed —` naming why, a page read listing 25
-people and a failed restore included, and nothing otherwise. A failed release SHALL change nothing else the command prints or
-decides, its exit included.
+now waits, add the user back to the list it wrote and read the user back,
+so a question posted during the release keeps it. It SHALL print `assign:
+removed the user from <card>` when it removed the user and the answer held,
+`assign: restored the user on <card>` when it set the user back and the
+answer held, or a line opening `assign: failed —` naming why, a page read
+listing 25 people and a failed restore included, and nothing otherwise. A
+failed release SHALL change nothing else the command prints or decides, its
+exit included, except a failed restore, which SHALL make the command exit 1,
+since a question then waits with no one on `Assign`.
 
 #### Scenario: A move after the answer
 
@@ -337,3 +339,9 @@ decides, its exit included.
   holds the user
 - **THEN** the command prints the `assign: failed —` line, and its other
   lines and its exit are what they would have been without the release
+
+#### Scenario: The restore fails
+
+- **WHEN** the release's second read finds a question and the write that
+  puts the user back fails
+- **THEN** the command prints the `assign: failed —` line and exits 1
