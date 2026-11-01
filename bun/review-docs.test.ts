@@ -135,6 +135,9 @@ describe("the /coderabbit bullet", () => {
 		expect(text).toContain("CodeRabbit grades its own findings and a Major it raised stays a Major");
 		expect(text).toContain("Once a PR is open, say so and stop");
 		expect(text).not.toContain("/coderabbit-local");
+		// The boundary: the third round still gets fixes, the cap bites from the fourth.
+		expect(text).toContain("A pull request gets fixes for at most three rounds");
+		expect(text).toContain("A fourth round or later whose review carries a finding the run would apply gets none applied");
 	});
 });
 
