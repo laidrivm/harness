@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { clone, records, run, trusting } from "./board-loop.fixture.ts";
 
-/** Who may start the runner, and the clone it refuses before fetching. [n]: `/zombies` ideas. */
+/** Who may start the runner, and the trust and tracked-edit checks on its clone. [n]: `/zombies` ideas. */
 
 afterAll(cleanup);
 

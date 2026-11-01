@@ -5,7 +5,8 @@
  * noted for its step or refused, the default branch at `origin`'s tip, the
  * install, and the pinned goal check copied where no session reaches it.
  * Split from `board-loop.ts`, whose header says why each refusal stands; its
- * cases are in `board-loop-clone.test.ts` and `board-loop-start.test.ts`.
+ * cases run through the pass in the `board-loop*.test.ts` files, the start,
+ * the clone and the record in `board-loop-start`, `-clone` and `-record`.
  */
 import { cpSync, existsSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -104,5 +105,6 @@ export function prepare(args: string[]) {
 		process.on("exit", () => rmSync(judge, { recursive: true, force: true }));
 		cpSync(dirname(check), judge, { recursive: true });
 	}
+	// `noted` is final here, and `refuse` reads the same value: nothing writes it after this return.
 	return { top, bun, under, at, real, edited, noted, refuse, check, judge };
 }
