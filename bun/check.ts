@@ -15,7 +15,7 @@ import { dirname, join, normalize } from "node:path";
 import { read } from "./config.ts";
 import { oversize } from "./file-size.ts";
 import { ranges } from "./manifest-ranges.ts";
-import { scan } from "./no-suppressions.ts";
+import { allowlistProblems, scan } from "./no-suppressions.ts";
 import { stray } from "./repo-layout.ts";
 import { settings } from "./settings.ts";
 import { check as citations, gauge, uncited } from "./spec-coverage.ts";
@@ -137,6 +137,7 @@ export function gates(root: string): string[] {
 	const { count, why } = read(root, "uncitedFloor");
 	return [
 		...stray(root),
+		...allowlistProblems(root),
 		...scan(root).map(({ path, line, marker }) => `${path}:${line}: ${marker}`),
 		...oversize(root).map(
 			({ path, count, cap }) =>

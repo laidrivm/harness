@@ -42,8 +42,8 @@ mutates and where the results are stored.
   one module, and `spec-test-traceability`'s floor requirement is rewritten in
   harness terms with the same fifth scenario (design.md, decision 6).
 - The suppression scan reads each `harness.suppressions` entry through the
-  same checks before admitting anything, where a non-numeric `count` approved
-  every occurrence; `commit-gates` gains the requirement (decision 7).
+  same checks, and an unreadable one approves nothing, where a non-numeric
+  `count` approved every occurrence; `commit-gates` gains the requirement (decision 7).
 
 ## Capabilities
 
@@ -59,8 +59,8 @@ None.
 - `spec-test-traceability`: *The count of uncited criteria may not rise
   silently* describes the floor as `harness.uncitedFloor` declares it and the
   gate that runs it.
-- `commit-gates`: an ADDED requirement, *The suppression allowlist is read
-  whole before it admits anything*.
+- `commit-gates`: an ADDED requirement, *An allowlist entry the check cannot
+  read approves nothing*.
 
 ## Impact
 

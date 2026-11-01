@@ -49,9 +49,11 @@ One group, one pull request. The code changes are tasks 1.4 to 1.6
       add cases under `// spec:
       commit-gates/an-allowlist-entry-the-check-cannot-read` for a `count` of
       `"two"`, `-1` and `1.5` and a `why` absent or blank over a file with
-      two occurrences, and see them fail; then export `unreadable` and call it
-      in `approvedIn`. Verify with `bun test bun/no-suppressions bun/floor
-      bun/check` green
+      two occurrences, a readable entry beside an unreadable one, and an
+      allowlist that is not an object, and see them fail; then export
+      `unreadable`, call it in `approvedIn` and the new `allowlistProblems`,
+      and report the latter from `bun/check.ts` and the script. Verify with
+      `bun test bun/no-suppressions bun/floor bun/check` green
 
 The archive runs separately, once every box above is ticked (design.md,
 decision 2): in the commit that syncs the delta it copies that Purpose into

@@ -8,7 +8,7 @@ import {
 	fabricate,
 	manifest,
 } from "./no-suppressions.fixture.ts";
-import { type Finding, scan } from "./no-suppressions.ts";
+import { allowlistProblems, type Finding, scan } from "./no-suppressions.ts";
 
 const script = `${import.meta.dir}/no-suppressions.ts`;
 
@@ -140,8 +140,42 @@ describe("an allowlist entry the check cannot read", () => {
 		[{ count: 1.5, why: "x" }, "count"],
 		[{ count: 2 }, "why"],
 		[{ count: 2, why: " " }, "why"],
-	])("%j fails naming its %s", (value, name) => {
-		expect(() => scan(entry(value))).toThrow(field(name));
+		[null, "count"],
+	])("%j is named by its %s and approves nothing", (value, name) => {
+		const dir = entry(value);
+		expect(allowlistProblems(dir)).toContainEqual(
+			expect.stringContaining(field(name)),
+		);
+		expect(at(scan(dir))).toEqual([
+			"src/model.ts:1: biome-ignore",
+			"src/model.ts:2: biome-ignore",
+		]);
+	});
+
+	test("only the unreadable entry is named, and the readable one still approves", () => {
+		const dir = fabricate(
+			{
+				"src/model.ts": "// biome-ignore a\n",
+				"src/types.ts": "// biome-ignore b\n",
+			},
+			{
+				"package.json": allowlist({
+					[key]: { count: "two", why: "x" },
+					"src/types.ts biome-ignore": { count: 1, why: "x" },
+				}),
+			},
+		);
+		expect(allowlistProblems(dir)).toEqual([
+			`${field("count")} is not a whole number`,
+		]);
+		expect(at(scan(dir))).toEqual(["src/model.ts:1: biome-ignore"]);
+	});
+
+	test("an allowlist that is not an object is named as such", () => {
+		const dir = fabricate({}, { "package.json": allowlist([]) });
+		expect(allowlistProblems(dir)).toEqual([
+			"harness.suppressions is not an object of approvals",
+		]);
 	});
 });
 
