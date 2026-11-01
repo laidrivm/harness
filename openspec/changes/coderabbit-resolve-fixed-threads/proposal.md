@@ -34,30 +34,20 @@ change):
 
 ## What Changes
 
-- `bun bun/work.ts resolve --pr <n> --head <sha> --comment <id> [--comment
-  <id> …]`: a new subcommand that resolves, through GraphQL's
-  `resolveReviewThread` and under whatever identity `gh` holds, the threads
-  whose first comment is each named id — only on the open pull request of the
-  current branch, only while its head is `--head` (read once more a couple of
-  seconds later before refusing), only a thread a `coderabbitai` login
-  opened, skipping one already resolved. Any id it cannot
-  place refuses the whole call before it changes anything. The command guard
-  is not changed: the mutation runs inside the process, as `finish`'s push
-  does, and `Bash(bun bun/work.ts *)` already allows the call.
-- The `coderabbit` skill still writes nothing to GitHub itself. It ends a
-  run that applied fixes by naming the comment ids whose every finding it
-  fixed, as the `resolve` command to run once the fix is pushed; the session
-  pushes with `finish`, then runs it. A thread whose finding was skipped or
-  rejected stays the user's. `@coderabbitai resolve` and `approve` stay
+- `bun bun/work.ts resolve --pr <n> --head <sha> --comment <id> …`: resolves,
+  through `resolveReviewThread` under `gh`'s identity, the bot's unresolved
+  threads the named ids open, on the current branch's open pull request while
+  its head is `--head`, refusing the whole call over an id it cannot place.
+  The command guard is not changed: the mutation runs inside the process, as
+  `finish`'s push does.
+- The `coderabbit` skill still writes nothing to GitHub. It names the
+  `resolve` command for the threads it fixed whole; the session runs it once
+  the fix is on the head. `@coderabbitai resolve` and `approve` stay
   forbidden.
-- Step 1 reads the head commit, then its `CodeRabbit` check runs and commit
-  status, then the reviews; the head counts as reviewed by a review on it, by
-  the status `success`/`Review completed`, or by its check runs reading
-  `reviewed` under the one rule `finish-review-arrives` sets — a run of
-  CodeRabbit's app that succeeded with a title not opening `Review skipped`,
-  none still in progress — and its module `bun/coderabbit-run.ts` will hold.
-  The head counted with no review object gets the same disposition and
-  single re-fetch.
+- Step 1 reads the head, then its `CodeRabbit` check runs and status, then
+  the reviews; check runs count by the one rule `finish-review-arrives` sets
+  and `bun/coderabbit-run.ts` holds (`REVIEWED`). The head counted with no
+  review object gets the same disposition and re-fetch.
 - Step 2 reads each finding's severity word, with both markups shown as
   examples, never as a pattern; the gate-line legend names `success` and the
   check run.
@@ -67,14 +57,10 @@ change):
   granted a push is reworded to name `resolve` too, in the wording the user
   approved on 31.10 (`design.md`).
 
-Not in this change: a `bun/` reader of CodeRabbit's check runs —
-`finish-review-arrives` (card 40739875c31b811bb7d7e83e7dca89de) adds
-`bun/coderabbit-run.ts` for `finish`; the skill is prose and reads the runs
-with its own `gh api` call, pinned to that rule by a test; resolving from the board loop's runner after its push, since
-a session whose launcher pushes runs no `finish` and only names the command;
-whether the App's token can resolve a thread, and whether the
-last resolve alone brings the approval — both checked live in stage 2.5's
-probe (step 7).
+Not in this change: a second `bun/` reader of the check runs (the skill's own
+`gh api` read is pinned to `finish-review-arrives`' rule by a test); resolving
+from the board loop's runner; whether the App's token can resolve a thread
+and whether the last resolve brings the approval — stage 2.5's probe, step 7.
 
 ## Capabilities
 
