@@ -2,13 +2,13 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import {
-	allowlist,
 	cleanup,
 	emptyDir,
 	fabricate,
+	holding,
 	manifest,
 } from "./no-suppressions.fixture.ts";
-import { allowlistProblems, type Finding, scan } from "./no-suppressions.ts";
+import { allowlist, type Finding, scan } from "./no-suppressions.ts";
 
 const script = `${import.meta.dir}/no-suppressions.ts`;
 
@@ -131,7 +131,7 @@ describe("an allowlist entry the check cannot read", () => {
 	const entry = (value: unknown) =>
 		fabricate(
 			{ "src/model.ts": "// biome-ignore a\n// biome-ignore b\n" },
-			{ "package.json": allowlist({ [key]: value }) },
+			{ "package.json": holding({ [key]: value }) },
 		);
 
 	test.each([
@@ -143,7 +143,7 @@ describe("an allowlist entry the check cannot read", () => {
 		[null, "count"],
 	])("%j is named by its %s and approves nothing", (value, name) => {
 		const dir = entry(value);
-		expect(allowlistProblems(dir)).toContainEqual(
+		expect(allowlist(dir).problems).toContainEqual(
 			expect.stringContaining(field(name)),
 		);
 		expect(at(scan(dir))).toEqual([
@@ -159,21 +159,21 @@ describe("an allowlist entry the check cannot read", () => {
 				"src/types.ts": "// biome-ignore b\n",
 			},
 			{
-				"package.json": allowlist({
+				"package.json": holding({
 					[key]: { count: "two", why: "x" },
 					"src/types.ts biome-ignore": { count: 1, why: "x" },
 				}),
 			},
 		);
-		expect(allowlistProblems(dir)).toEqual([
+		expect(allowlist(dir).problems).toEqual([
 			`${field("count")} is not a whole number`,
 		]);
 		expect(at(scan(dir))).toEqual(["src/model.ts:1: biome-ignore"]);
 	});
 
 	test("an allowlist that is not an object is named as such", () => {
-		const dir = fabricate({}, { "package.json": allowlist([]) });
-		expect(allowlistProblems(dir)).toEqual([
+		const dir = fabricate({}, { "package.json": holding([]) });
+		expect(allowlist(dir).problems).toEqual([
 			"harness.suppressions is not an object of approvals",
 		]);
 	});

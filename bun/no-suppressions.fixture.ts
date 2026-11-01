@@ -58,12 +58,12 @@ export function fabricate(
 }
 
 /** A consumer manifest whose allowlist is `entries`, however malformed. */
-export const allowlist = (entries: unknown): string =>
+export const holding = (entries: unknown): string =>
 	JSON.stringify({ harness: { suppressions: entries } }, null, 2);
 
 /** A consumer manifest approving `counts`, keyed by `<path> <marker>`. */
 export function manifest(counts: Record<string, number>): string {
-	return allowlist(
+	return holding(
 		Object.fromEntries(
 			Object.entries(counts).map(([key, count]) => [key, { count, why: "x" }]),
 		),

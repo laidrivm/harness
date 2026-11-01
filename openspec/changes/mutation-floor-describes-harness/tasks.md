@@ -52,9 +52,11 @@ change behaviour.
       `"two"`, `-1` and `1.5` and a `why` absent or blank over a file with
       two occurrences, a readable entry beside an unreadable one, and an
       allowlist that is not an object, and see them fail; then export
-      `unreadable`, call it in `approvedIn` and the new `allowlistProblems`,
-      and report the latter from `bun/check.ts` and the script. Verify with
-      `bun test bun/no-suppressions bun/floor bun/check` green
+      `unreadable`, call it in the new `allowlist`, and print its problems
+      beside the findings through `report`, which `bun/check.ts` and the
+      script call — a case in `bun/check.test.ts` pinning that `gates` reports
+      them beside another gate's. Verify with `bun test bun/no-suppressions
+      bun/floor bun/check` green
 - [x] 1.7 Lift the named-field matcher into `bun/floor.fixture.ts` and import
       it in `bun/floor.test.ts`, `bun/mutation-floor.test.ts` and
       `bun/spec-coverage-floor.test.ts`; end the Code rule *Write logic a
