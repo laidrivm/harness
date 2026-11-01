@@ -29,7 +29,7 @@ Read in this order, so a review the bot posts before its check run or status is 
 The head commit is reviewed when any of three holds — a review with no findings submits no review object, only the status or the check run:
 
 - a review whose `user.login` is exactly `coderabbitai[bot]` has a `commit_id` equal to it;
-- the status reads `success` with the description `Review completed`, as the bot reported until 27.10. The same `success` with `Review skipped: draft pull request`, or any description but `Review completed`, is no review;
+- the status reads `success` with the description `Review completed`, the bot's older report. The same `success` with `Review skipped: draft pull request`, or any description but `Review completed`, is no review;
 - its check runs, every one of them `completed` (a `queued` run is no more done than an `in_progress` one), hold one that concluded `success` with a title not opening `Review skipped` — the rule `finish-review-arrives` sets in *CodeRabbit's state of a commit is read from its check runs*. Read the conclusion and the title, never the run's summary text. Runs that read anything else — skipped, rate limited, queued, in progress, none — are no review.
 
 If none holds, stop there and end on `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.`, naming the head commit's short SHA. Findings on an earlier commit belong to a snapshot the branch has moved past. Otherwise run the other three calls. A head counted with no review object on it is disposed of like any review: every review body and comment is read for findings on it, and the re-fetch below runs. It ends on `PASS` only while the bot's walkthrough, in the second call, reads «No actionable comments were generated» and names the head as its `Commit`; otherwise it ends on the no-review `OPEN` line naming the head.
@@ -70,7 +70,7 @@ Each finding opens with a line naming its severity, category and effort. Read it
 _🎯 Functional Correctness_ | _🟠 Major_ | _⚡ Quick win_
 ```
 
-The first is the bot's markup since late October 2026, severity first; the second the one before it.
+The first is the bot's current markup, severity first; the second its older one.
 
 Take every such line in a body, not the first. A body carrying two is two findings at two severities, and reading only the first silently downgrades the other — which is how a Major gets disposed of under a Minor's rules.
 
