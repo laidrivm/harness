@@ -74,6 +74,10 @@ None.
 
 ## Impact
 
+- `design.md` and `tasks.md`, which the references to the design above
+  name, follow in the plan pull request on
+  `spec/notion-ask-sets-assign-plan`, the artefacts together being over the
+  diff budget.
 - Changed: `bun/notion-ask.ts` (no comments read, the `Assign` write and its
   read-back, the header), `bun/notion-ask.test.ts`, `bun/board-loop-prompt.ts`
   (the ask line) and its tests,
