@@ -14,7 +14,6 @@ import { CARD, standIn, TOKEN } from "./notion-bot.fixture.ts";
 import { home } from "./work-take.fixture.ts";
 
 export { CARD };
-
 type Tree = Record<string, string | null>;
 
 /** A whole change `slug`, its `tasks.md` reading `tasks`. */
@@ -67,57 +66,33 @@ export type Run = {
 	config?: string;
 	/** A `gh` stub's answer and exit status; without one no `gh` is on `PATH`, so a read the case did not expect fails it. */
 	gh?: { answer: string; code?: number };
+	/** The card's `Assign`, none by default, so the release reads no comments; `next` is the stand-in's. */
+	assign?: string[];
+	next?: Record<string, object[]>;
 };
 
 /** `file`'s lines, or none where it was never written. */
 const lines = (file: string) => (existsSync(file) ? readFileSync(file, "utf8").split("\n").filter(Boolean) : []);
 
 /** `bun bun/work.ts …args` and what it did; it throws when a printed line holds the token. */
-export async function status({
-	args,
-	cwd = emptyDir(),
-	page = {},
-	cards = 0,
-	more = false,
-	fail = {},
-	env,
-	config = home(),
-	gh,
-}: Run) {
+export async function status({ args, cwd = emptyDir(), page = {}, cards = 0, more = false, fail = {}, env, config = home(), gh, assign = [], next = {} }: Run) {
 	const notion = standIn();
-	Object.assign(notion.state, page, { cards: Array.from({ length: cards }, (_, i) => ({ id: `c${i}` })), more, fail });
+	Object.assign(notion.state, page, { cards: Array.from({ length: cards }, (_, i) => ({ id: `c${i}` })), more, fail, assign, next });
 	const bin = emptyDir("work-status-bin-");
 	const log = join(bin, "git.log");
 	writeFileSync(join(bin, "git"), `#!/bin/sh\necho "$1" >> '${log}'\nexec '${Bun.which("git")}' "$@"\n`);
 	chmodSync(join(bin, "git"), 0o755);
 	symlinkSync(Bun.which("tar") ?? "/usr/bin/tar", join(bin, "tar"));
 	const ghLog = join(bin, "gh.log");
-	if (gh)
-		writeFileSync(
-			join(bin, "gh"),
-			`#!/bin/sh\nprintf '%s\\n' "$*" >> '${ghLog}'\nprintf '%s' '${gh.answer}'\nexit ${gh.code ?? 0}\n`,
-			{ mode: 0o755 },
-		);
+	if (gh) writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$*" >> '${ghLog}'\nprintf '%s' '${gh.answer}'\nexit ${gh.code ?? 0}\n`, { mode: 0o755 });
 	const [tmp, ledger] = [emptyDir("work-status-tmp-"), emptyDir("work-status-state-")];
 	const child = Bun.spawn([process.execPath, join(import.meta.dir, "work.ts"), ...args], {
 		cwd,
-		env: {
-			PATH: bin,
-			HOME: config,
-			XDG_CONFIG_HOME: config,
-			XDG_STATE_HOME: ledger,
-			TMPDIR: tmp,
-			HARNESS_NOTION_API_URL: notion.server.url.origin,
-			...env,
-		},
+		env: { PATH: bin, HOME: config, XDG_CONFIG_HOME: config, XDG_STATE_HOME: ledger, TMPDIR: tmp, HARNESS_NOTION_API_URL: notion.server.url.origin, ...env },
 		stdout: "pipe",
 		stderr: "pipe",
 	});
-	const [out, err, code] = await Promise.all([
-		new Response(child.stdout).text(),
-		new Response(child.stderr).text(),
-		child.exited,
-	]);
+	const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
 	notion.server.stop(true);
 	if ((out + err).includes(TOKEN)) throw new Error("the token was printed");
 	const last = out.trim().split("\n").at(-1) ?? "";
@@ -128,6 +103,7 @@ export async function status({
 		last,
 		seen: notion.state.seen,
 		bodies: notion.state.bodies,
+		assign: notion.state.assign,
 		refusals: records(ledger, "status"),
 		git: lines(log),
 		gh: lines(ghLog),

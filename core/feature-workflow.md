@@ -279,11 +279,15 @@ for them is already here.
   `archiving`.
 
   The same turn keeps the card's links and summary, which `task-board`'s
-  *A card can be ranked without opening the repository* fixes. The turn a
-  pull request opens adds its link under the card's `Ссылки` line, with its
-  number and kind (`proposal`, `step 2`, `archive`) — or, when the user
-  opened it, the first turn that learns it exists, at the latest the one told
-  it merged; the turn a proposal
+  *A card can be ranked without opening the repository* fixes. A pull
+  request's link goes under the card's `Ссылки` line, with its number and
+  kind (`proposal`, `apply`, `archive`): `bun bun/work.ts finish --card`
+  writes it on a run that opened the pull request or found it open, whose
+  output then says `linked` or `already linked`; where it says `the card's
+  record stopped`, a rerun of `finish --card` writes the rest; otherwise the
+  turn the pull request opens adds it — or, when the
+  user opened it, the first turn that learns it exists, at the latest the one
+  told it merged; the turn a proposal
   merges adds its `proposal.md` on the default branch; the archive re-points
   that link to the archived path. An edit to a proposal's *Why* or *What
   Changes* re-reads the card's summary in that turn. A card citing a commit
@@ -311,10 +315,15 @@ for them is already here.
   change directory, points at the one pull request that closes it as
   `pr:<N>`, or `<repo>: pr:<N>` on another repository's board, with nothing
   around it; the other pull requests the work took stay under `Ссылки`. A
-  card whose `Pointer` names a change keeps it. On a fix card the turn that
-  adds the closing pull request's `Ссылки` link writes the `Pointer` too:
-  the session that opened the pull request, or, when the user opened it, the
-  first turn that learns it exists. No reconciliation derives a floor for a
+  card whose `Pointer` names a change keeps it. `finish --card` writes the
+  `Pointer` to the one change directory its branch adds files to, where the
+  `Pointer` is empty or names that change before its archive, on the same
+  runs that write the link; otherwise the turn that adds the link writes the
+  `Pointer` by hand. A fix card's `pr:<N>` stays a hand step
+  whoever opened the pull request, since `finish` never writes it: the turn
+  that adds the closing pull request's `Ссылки` link writes it — the session
+  that opened the pull request, or, when the user opened it, the first turn
+  that learns it exists. No reconciliation derives a floor for a
   `pr:<N>` card, so the session that learns the pull request merged moves the
   card with `bun bun/work.ts status --card <id> --to done` in that turn,
   unless the card is `discarded`.
@@ -400,7 +409,10 @@ for them is already here.
   restarting at 1. Open the comment with the gate's mark,
   `` `harness-question` `` with a single backtick on each side of the word,
   set `Assign` where you posted through the connector, read the answer back
-  as data, and clear `Assign` once it is applied. A question
+  as data, post the items an answer left unanswered again as a new
+  question, numbered on, and clear `Assign` once it is applied; in the harness,
+  `bun bun/work.ts status`, `take` and `finish --card` clear it themselves
+  whenever no question and no pause notice waits. A question
   is any comment opening with the mark, whoever posted it, a Notion
   integration included, and the answer is the user's first comment opening
   with neither mark after the last one, or, with none, the first comment after it

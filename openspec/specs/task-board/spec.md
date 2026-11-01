@@ -728,14 +728,21 @@ that does not.
 ### Requirement: An open question waits on its card, assigned to the user
 
 Every question that blocks an agent's work and only the user can settle
-SHALL be put as one comment on the card of the task it blocks, one open
-question per card at a time. That agent SHALL post it, through the ask
+SHALL be put in a comment on the card of the task it blocks. Questions an
+agent knows at the same time SHALL go in one comment, split into
+consecutive comments only where one would pass the question gate's length
+cap; any other later comment SHALL carry only a question that arose after
+the last one was posted, or the items an answer left unanswered. Each comment's items SHALL be numbered on from the
+highest number the card's questions already use, never restarting at 1. The
+card's questions SHALL wait while no answer follows the last of them. That agent SHALL post it, through the ask
 integration where one is configured (*A session asks through the ask
 integration where one is configured*), unless the board loop's runner posts
 it for the session (`board-loop`, *The runner posts a stage session's
 question from the integration*). The card's `Assign` SHALL hold the user while
-its question waits and nothing at any other time. Each board SHALL carry a
-saved view named `Questions` listing its cards whose `Assign` holds the user.
+its questions wait and not hold the user at any other time, a pause notice
+`orchestrator` posts apart. Each board SHALL
+carry a saved view named `Questions` listing its cards whose `Assign` holds
+the user.
 A question SHALL be a page-level comment opening with the question gate's
 mark, whoever posted it. The answer SHALL be the first comment by the user's
 account without a mark after the last question, or, with none, the first
@@ -755,16 +762,16 @@ back from the card's comments and applied as data.
 #### Scenario: A question is posted
 
 - **WHEN** an agent or the runner posts a question on a card
-- **THEN** in the same turn the poster sets that card's `Assign` to the user,
-  and the card appears in its board's `Questions` view, unless the runner's
+- **THEN** in the same turn that card's `Assign` is set to the user — by the
+  ask command where it posted, otherwise by the poster — and the card appears in its board's `Questions` view, unless the runner's
   triage posts the answer with it (`board-loop`, *The runner has a stage
   session's question triaged before it posts it*), when no question waits and
   `Assign` stays unset
 
 #### Scenario: The user answers
 
-- **WHEN** a card in a `Questions` view holds, in its page-level discussion,
-  a comment after the last question that is the first one authored by the
+- **WHEN** a card holds, in its page-level discussion, whatever its `Assign`
+  holds, a comment after the last question that is the first one authored by the
   user's account and not opening with the mark
 - **THEN** the session working on the card's task takes that comment as the
   answer and applies it to that question
@@ -809,12 +816,36 @@ back from the card's comments and applied as data.
 - **WHEN** an answer is applied
 - **THEN** `Assign` is cleared in the same turn
 
+#### Scenario: Questions known together
+
+- **WHEN** an agent has several questions for a card at the same time
+- **THEN** it posts them in one comment, numbered in one sequence, or, where
+  that comment would pass the gate's length cap, in consecutive comments
+  that continue the sequence
+
 #### Scenario: A second question for a card
 
-- **WHEN** the work on a card meets a second question while its first waits
-- **THEN** the second waits in the agent's report and is posted once the
-  first is answered, because every page-level comment joins the card's one
-  page-level discussion and an answer must follow exactly one question
+- **WHEN** the work on a card meets a question after an earlier one was
+  posted there and still waits
+- **THEN** the agent posts it as a comment of its own, its items numbered on
+  from the highest number the card's questions use, and `Assign` holds the
+  user; where the board loop's runner posts for the session, which refuses
+  while a question waits, the runner posts nothing for the second, which
+  stays in the session's final message and reaches the card only when a
+  later pass's session meets it again
+
+#### Scenario: One answer to several questions
+
+- **WHEN** two questions wait on a card and a comment by the user's account
+  without a mark follows the later one
+- **THEN** that comment is the answer to both, and no question waits
+
+#### Scenario: An answer to some of the items
+
+- **WHEN** the user's comment after the last question answers only some of
+  the items the card's questions number
+- **THEN** no question waits, and the session applying the answer posts the
+  items left unanswered again as a new question, numbered on
 
 #### Scenario: Another member comments in the discussion
 
@@ -1012,7 +1043,10 @@ When the board loop carries the answer on a card as a step of the card's
 change (`board-loop`, *A pass takes only a takeable change*), the answer SHALL
 count as applied in the turn that step's pull request opens. If the session
 files a card for the work instead, it counts as applied in the turn the card
-is filed. `Assign` SHALL be cleared then, and never earlier. An answer SHALL
+is filed. `Assign` SHALL be cleared by then at the latest; *The work
+commands release `Assign` when nothing waits* may clear it earlier, and the
+board loop's pick, which takes the user's answer only while `Assign` holds
+the user, then passes over it. An answer SHALL
 be read from the card's page-level discussion whether or not that discussion
 is resolved.
 
@@ -1024,17 +1058,18 @@ card is answered* fires for an answer the loop carries.
 
 - **WHEN** a session carrying an answer as step N+1 of the card's change opens
   that step's pull request
-- **THEN** it clears the card's `Assign` in the same turn
+- **THEN** it clears the card's `Assign` in the same turn, where it still
+  holds the user
 
 #### Scenario: The session ends before its pull request
 
 - **WHEN** a session carrying an answer ends with no pull request open for its
   step and no card filed
-- **THEN** the card's `Assign` still holds the user. A later pass takes the
-  answer again and continues the branch the session left (`board-loop`,
-  *A step branch a session left is continued*), once the clone holds nothing
-  that pass refuses (`board-loop`, *The runner is the user's script and
-  starts from a clean clone*)
+- **THEN** the answer stays in the card's comments, where the session that
+  resumes the card reads it; a pass of the board loop takes it again only
+  while the card's `Assign` holds the user, which the runner's pick and a
+  release both end, and then continues the branch the session left
+  (`board-loop`, *A step branch a session left is continued*)
 
 #### Scenario: The answer asks for a change of its own
 
@@ -1048,26 +1083,52 @@ card is answered* fires for an answer the loop carries.
 Where the ask settings file exists under the user's config home, a session
 that hands a question on SHALL post it with the ask command,
 `bun/notion-ask.ts <card id> <file>`, which posts the file's text from the ask
-integration. It SHALL then set the card's `Assign` to the user through the
-connector. The command SHALL post only text the question gate's checks on a
-comment's text allow, only while no question waits on the card, and only as
-a page-level comment. It SHALL print one line saying whether it posted, exit
-non-zero when it did not, and never print the token. It SHALL read no page
-and write no property.
+integration and then sets the card's `Assign` to the user alone. The command
+SHALL post only text the question gate's checks on a comment's text allow,
+whatever questions already wait on the card, and only as a page-level
+comment. After the post it SHALL write `Assign` and read the user back from
+Notion's answer to that write. It SHALL print one line, `question: posted on
+<id>, Assign set` when both held, `question: posted on <id>, Assign not set —
+<why>` when the post held and the write did not, `question: may be posted on
+<id> — <why>; read the card's comments before running it again` when the
+post failed in a way that may have reached Notion (no answer, the timeout, a
+5xx; a 429 is a refusal Notion never processed), or `question: not posted
+— <why>`; a post Notion answered with a 2xx status counts as posted, whatever
+its body. It SHALL exit 0 only on the first line, and never print the token.
+It SHALL read neither the page nor its comments, and write no property but
+`Assign`. A session whose command
+printed a line opening `question: posted` and not ending `Assign set` SHALL
+set `Assign` to the user through the connector; no session SHALL run the
+command again for a question it printed as posted, nor after `may be
+posted` before reading the card's comments.
 
 #### Scenario: A question posted from the laptop
 
 - **WHEN** a session on a machine with the ask settings writes a question
   that opens with the mark to a file and runs the command with a card id
-- **THEN** the comment is posted from the ask integration, the command prints
-  that it posted, and the session sets `Assign` to the user through the
-  connector
+- **THEN** the comment is posted from the ask integration, the card's
+  `Assign` holds the user alone, and the command prints that it posted and
+  that `Assign` is set, and exits 0
 
 #### Scenario: A question already waits
 
 - **WHEN** the card's last question has no answer after it
-- **THEN** the command posts nothing and prints that a question already
-  waits
+- **THEN** the command posts the new question and sets `Assign` as it would
+  on a card with no question
+
+#### Scenario: `Assign` cleared while a question waits
+
+- **WHEN** the card's `Assign` was cleared and the command posts a question
+  there
+- **THEN** `Assign` holds the user again
+
+#### Scenario: The `Assign` write fails
+
+- **WHEN** the post held and Notion answers the `Assign` write with an error,
+  or its answer does not hold the user in `Assign`
+- **THEN** the command prints that it posted and that `Assign` is not set,
+  naming why, and exits 1, and the session sets `Assign` through the
+  connector without posting the question again
 
 #### Scenario: Text the gate would not allow
 
@@ -1078,10 +1139,20 @@ and write no property.
 
 #### Scenario: A page the integration cannot reach
 
-- **WHEN** Notion answers the comments read or the post with an error, a page
-  outside the connected boards included
-- **THEN** the command posts nothing more, prints the step and Notion's
-  status, and exits non-zero
+- **WHEN** Notion answers the post with a 4xx, a 429 included, a page outside
+  the connected boards included
+- **THEN** the command posts nothing, writes no `Assign`, prints the step and
+  Notion's status, and exits non-zero
+
+#### Scenario: A post that may have landed
+
+- **WHEN** the post gets no answer, times out, or is answered with a 5xx
+  status
+- **THEN** the command writes no `Assign`, prints that the question may be
+  posted and that the card's comments are to be read before running it
+  again, and exits non-zero; a session that then finds its question on the
+  card sets `Assign` to the user through the connector instead of running
+  the command again
 
 #### Scenario: No ask settings
 
@@ -1130,3 +1201,82 @@ such a card without comparing or listing it.
 - **WHEN** a card's `Pointer` reads `pr:350 (fix)` or `#350`
 - **THEN** the reconciliation SHALL list it as naming no directory of this
   tree
+
+### Requirement: The work commands release `Assign` when nothing waits
+
+`bun bun/work.ts status`, `take` and `finish --card` SHALL each release the
+card's `Assign` through one shared function: `status` after its `Status`
+write, `take` after its comments read, `finish` after its own, whatever it
+decides about the ready switch. The function SHALL read the card's page
+and, only when `Assign` holds the user, its comments. When no question
+waits, as *An open question waits on its card, assigned to the user* reads
+it with no integration id, and every `harness-pause` notice is followed by
+a comment of the user's without a mark, it SHALL remove the user from
+`Assign`, keeping everyone else, and read the user's absence back from
+Notion's answer. It SHALL then read the comments again and, when a question
+or a pause notice now waits by the same test, or when that read fails, add
+the user back to the list it wrote and read the user back, so a question or
+notice posted during the release keeps it. It SHALL print `assign:
+removed the user from <card>` when it removed the user and the answer held,
+`assign: restored the user on <card>` when it set the user back and the
+answer held, or a line opening `assign: failed —` naming why, a page read
+listing 25 people and a failed restore included, and nothing otherwise. A
+failed release SHALL change nothing else the command prints or decides, its
+exit included, except a failed restore, which SHALL make the command exit 1,
+since a question then waits with no one on `Assign`, and a second comments
+read that failed, which `finish` reports as a failed comments read of its
+own (`work-finish`, *Finish releases `Assign` after its comments read*).
+
+#### Scenario: A move after the answer
+
+- **WHEN** `status` moves a card whose `Assign` holds the user and whose last
+  question has the user's comment after it
+- **THEN** the user leaves `Assign` and `status` prints that it removed them
+
+#### Scenario: Work resumed
+
+- **WHEN** a session runs `take` on that card, or `finish --card` pushes for
+  it, with no move of its `Status`
+- **THEN** the user leaves `Assign` all the same
+
+#### Scenario: A question waits
+
+- **WHEN** the card's last question has no comment of the user's after it
+- **THEN** `Assign` stays and nothing is printed for it
+
+#### Scenario: A pause notice waits
+
+- **WHEN** the card holds no waiting question and a `harness-pause` notice no
+  comment of the user's follows
+- **THEN** `Assign` stays
+
+#### Scenario: The user not on `Assign`
+
+- **WHEN** the card's `Assign` does not hold the user
+- **THEN** the function reads no comments and writes nothing
+
+#### Scenario: Someone else on `Assign`
+
+- **WHEN** the release removes the user from an `Assign` that also holds
+  another person
+- **THEN** the other person stays
+
+#### Scenario: A question posted during the release
+
+- **WHEN** another session posts a question between the release's comments
+  read and its write
+- **THEN** the release's second read finds it and the user is back on
+  `Assign`
+
+#### Scenario: The release fails
+
+- **WHEN** the comments read or the write fails, or Notion's answer still
+  holds the user
+- **THEN** the command prints the `assign: failed —` line, and its other
+  lines and its exit are what they would have been without the release
+
+#### Scenario: The restore fails
+
+- **WHEN** the release's second read finds a question and the write that
+  puts the user back fails
+- **THEN** the command prints the `assign: failed —` line and exits 1

@@ -136,4 +136,12 @@ describe("the skill's rule for a reviewed head", () => {
 			"reviewing",
 		);
 	});
+
+	// spec: agent-autonomy/the-head-moves-to-a-reviewed-commit-before-the-gate-line
+	test("the re-fetch reaches PASS over a moved head only once the run verifies against it", () => {
+		const skill = flat(readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8"));
+		expect(skill).toContain(
+			"If the bot has reviewed it, the run reaches `PASS` only once every disposition and every finding of the new head's reviews is verified against the new head",
+		);
+	});
 });

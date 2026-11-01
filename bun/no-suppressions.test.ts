@@ -1,51 +1,21 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { type Finding, scan } from "./no-suppressions.ts";
+import { rmSync, symlinkSync } from "node:fs";
+import { join } from "node:path";
+import {
+	cleanup,
+	emptyDir,
+	fabricate,
+	holding,
+	manifest,
+} from "./no-suppressions.fixture.ts";
+import { allowlist, type Finding, scan } from "./no-suppressions.ts";
 
 const script = `${import.meta.dir}/no-suppressions.ts`;
-const made: string[] = [];
 
-afterAll(() => {
-	for (const dir of made) rmSync(dir, { recursive: true, force: true });
-});
+afterAll(cleanup);
 
-function write(dir: string, files: Record<string, string>): void {
-	for (const [path, text] of Object.entries(files)) {
-		const full = join(dir, path);
-		mkdirSync(dirname(full), { recursive: true });
-		writeFileSync(full, text);
-	}
-}
-
-/** A throwaway repository holding `tracked`, plus `untracked` left unadded. */
-function fabricate(tracked: Record<string, string>, untracked: Record<string, string> = {}): string {
-	const dir = mkdtempSync(join(tmpdir(), "no-suppressions-"));
-	made.push(dir);
-	const git = (...args: string[]) => {
-		const run = Bun.spawnSync(["git", ...args], { cwd: dir });
-		if (run.exitCode !== 0) throw new Error(run.stderr.toString());
-	};
-	git("init", "-b", "main");
-	write(dir, tracked);
-	git("add", "-A");
-	// Untracked, so the scan never reads it: the consumer's empty allowlist —
-	// unless the case tracks a manifest of its own, which this must not replace.
-	write(dir, {
-		...("package.json" in tracked ? {} : { "package.json": manifest({}) }),
-		...untracked,
-	});
-	return dir;
-}
-
-/** A consumer manifest approving `counts`, keyed by `<path> <marker>`. */
-function manifest(counts: Record<string, number>): string {
-	const suppressions = Object.fromEntries(Object.entries(counts).map(([key, count]) => [key, { count, why: "x" }]));
-	return JSON.stringify({ harness: { suppressions } }, null, 2);
-}
-
-const at = (found: Finding[]) => found.map(({ path, line, marker }) => `${path}:${line}: ${marker}`);
+const at = (found: Finding[]) =>
+	found.map(({ path, line, marker }) => `${path}:${line}: ${marker}`);
 
 describe("a suppression is added", () => {
 	test("one is reported with its file and line", () => {
@@ -60,7 +30,10 @@ describe("a suppression is added", () => {
 			"src/model.ts": `// @ts-ignore\n`,
 			"src/app/session.tsx": `const a = 1;\n// @ts-expect-error\n`,
 		});
-		expect(at(scan(dir)).sort()).toEqual(["src/app/session.tsx:2: @ts-expect-error", "src/model.ts:1: @ts-ignore"]);
+		expect(at(scan(dir)).sort()).toEqual([
+			"src/app/session.tsx:2: @ts-expect-error",
+			"src/model.ts:1: @ts-ignore",
+		]);
 	});
 
 	test("a .json file is read too", () => {
@@ -100,7 +73,10 @@ describe("what the check does not read", () => {
 	});
 
 	test("an untracked file passes", () => {
-		const dir = fabricate({ "src/model.ts": "const a = 1;\n" }, { "src/scratch.ts": `// @ts-ignore\n` });
+		const dir = fabricate(
+			{ "src/model.ts": "const a = 1;\n" },
+			{ "src/scratch.ts": `// @ts-ignore\n` },
+		);
 		expect(scan(dir)).toEqual([]);
 	});
 
@@ -127,7 +103,10 @@ describe("the allowlist", () => {
 		const dir = fabricate({
 			"src/model.ts": `// biome-ignore a\nconst a = 1;\n// biome-ignore b\n`,
 		});
-		expect(at(scan(dir, approved))).toEqual(["src/model.ts:1: biome-ignore", "src/model.ts:3: biome-ignore"]);
+		expect(at(scan(dir, approved))).toEqual([
+			"src/model.ts:1: biome-ignore",
+			"src/model.ts:3: biome-ignore",
+		]);
 	});
 
 	test("a marker swapped for another kind fails", () => {
@@ -140,6 +119,71 @@ describe("the allowlist", () => {
 			"src/types.ts": `// biome-ignore lint/style/x: y\n`,
 		});
 		expect(at(scan(dir, approved))).toEqual(["src/types.ts:1: biome-ignore"]);
+	});
+});
+
+// spec: commit-gates/an-allowlist-entry-the-check-cannot-read
+describe("an allowlist entry the check cannot read", () => {
+	const key = "src/model.ts biome-ignore";
+	const field = (name: string) => `harness.suppressions["${key}"].${name}`;
+	// Two occurrences, so a count read as NaN — which no length exceeds —
+	// would approve them both rather than fail.
+	const entry = (value: unknown) =>
+		fabricate(
+			{ "src/model.ts": "// biome-ignore a\n// biome-ignore b\n" },
+			{ "package.json": holding({ [key]: value }) },
+		);
+
+	test.each([
+		[{ count: "two", why: "x" }, "count"],
+		[{ count: -1, why: "x" }, "count"],
+		[{ count: 1.5, why: "x" }, "count"],
+		[{ count: 2 }, "why"],
+		[{ count: 2, why: " " }, "why"],
+		[null, "count"],
+	])("%j is named by its %s and approves nothing", (value, name) => {
+		const dir = entry(value);
+		expect(allowlist(dir).problems).toContainEqual(
+			expect.stringContaining(field(name)),
+		);
+		expect(at(scan(dir))).toEqual([
+			"src/model.ts:1: biome-ignore",
+			"src/model.ts:2: biome-ignore",
+		]);
+	});
+
+	test("only the unreadable entry is named, and the readable one still approves", () => {
+		const dir = fabricate(
+			{
+				"src/model.ts": "// biome-ignore a\n",
+				"src/types.ts": "// biome-ignore b\n",
+			},
+			{
+				"package.json": holding({
+					[key]: { count: "two", why: "x" },
+					"src/types.ts biome-ignore": { count: 1, why: "x" },
+				}),
+			},
+		);
+		expect(allowlist(dir).problems).toEqual([
+			`${field("count")} is not a whole number`,
+		]);
+		expect(at(scan(dir))).toEqual(["src/model.ts:1: biome-ignore"]);
+	});
+
+	test("an allowlist that is not an object is named as such", () => {
+		const dir = fabricate({}, { "package.json": holding([]) });
+		expect(allowlist(dir).problems).toEqual([
+			"harness.suppressions is not an object of approvals",
+		]);
+	});
+
+	test("the script fails on an unreadable entry with nothing else to report", () => {
+		const manifest = holding({ [key]: { count: 0 } });
+		const dir = fabricate({}, { "package.json": manifest });
+		const run = Bun.spawnSync(["bun", script], { cwd: dir, stderr: "pipe" });
+		expect(run.stderr.toString()).toContain(field("why"));
+		expect(run.exitCode).toBe(1);
 	});
 });
 
@@ -227,7 +271,9 @@ describe("a tree the check cannot read straight through", () => {
 			"src/model.ts": "// @ts-ignore\n",
 			"scripts/tool.ts": "const a = 1;\n",
 		});
-		expect(at(scan(join(dir, "scripts")))).toEqual(["src/model.ts:1: @ts-ignore"]);
+		expect(at(scan(join(dir, "scripts")))).toEqual([
+			"src/model.ts:1: @ts-ignore",
+		]);
 	});
 
 	test("a tracked symlink is skipped rather than followed", () => {
@@ -244,8 +290,7 @@ describe("a tree the check cannot read straight through", () => {
 	});
 
 	test("outside a repository the check throws rather than passing", () => {
-		const dir = mkdtempSync(join(tmpdir(), "no-suppressions-bare-"));
-		made.push(dir);
+		const dir = emptyDir("no-suppressions-bare-");
 		expect(() => scan(dir)).toThrow();
 	});
 });

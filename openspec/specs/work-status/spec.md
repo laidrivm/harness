@@ -234,10 +234,14 @@ that status is the one asked for, 1 otherwise.
 ### Requirement: The connector's Status write is refused in the harness
 
 In the harness's own sessions a `PreToolUse` hook on the connector's
-`notion-update-page`, under any server name, SHALL refuse a call whose
-`properties` carry `Status`, whatever its command, naming `bun bun/work.ts
-status`, and record it. Every other call, and an event it cannot read, SHALL
-pass. It SHALL be registered in the harness's `.claude/settings.json` alone.
+`notion-update-page` and `notion-create-pages`, under any server name, SHALL
+refuse a `notion-update-page` call whose `properties` carry `Status`,
+whatever its command, and a `notion-create-pages` call in which any page's
+`properties` carry `Status` with a value other than `"idea"` or `null`,
+whatever its parent, naming `idea` and `bun bun/work.ts status`, and record
+it. On `notion-create-pages` a page with no `Status` or a `null` one SHALL
+pass. Every other call, and an event it cannot read, SHALL pass. It SHALL
+be registered in the harness's `.claude/settings.json` alone.
 
 #### Scenario: A status set through the connector
 
@@ -248,6 +252,19 @@ pass. It SHALL be registered in the harness's `.claude/settings.json` alone.
 #### Scenario: Assign alone
 
 - **WHEN** the call's `properties` hold `Assign` and no `Status`
+- **THEN** the hook lets it through
+
+#### Scenario: A card created past idea
+
+- **WHEN** a session calls `notion-create-pages` with two pages, the first at
+  `Status` `idea` and the second at `approved`
+- **THEN** the call is refused, naming the second page, `idea` and `bun
+  bun/work.ts status`, and nothing is created
+
+#### Scenario: A card created at idea or with no status
+
+- **WHEN** a session calls `notion-create-pages` with pages whose `Status` is
+  `idea`, `null` or absent, under a data source or a page parent
 - **THEN** the hook lets it through
 
 #### Scenario: An event it cannot read
@@ -320,3 +337,21 @@ read that fails SHALL refuse.
 - **WHEN** the card reads `approved`, five cards are in the range, and pull
   request 350 is merged into `main`
 - **THEN** `status --to done` makes no count and writes the status
+
+### Requirement: Status releases `Assign` after its write
+
+After a `Status` write, on any move, `status` SHALL run the release that
+`task-board`'s *The work commands release `Assign` when nothing waits*
+fixes, and print its line after its own. A refusal SHALL release nothing.
+
+#### Scenario: A move releases
+
+- **WHEN** a move is written on a card whose `Assign` holds the user and
+  nothing waits on the card
+- **THEN** `status` prints the move, then `assign: removed the user from
+  <card>`, and exits as the move alone decides
+
+#### Scenario: A refused move
+
+- **WHEN** a check refuses the move
+- **THEN** `status` makes no release and reads no comments

@@ -2,7 +2,7 @@
  * What a count owes the floor a consumer declares under `harness.<key>` — the
  * one rule behind `harness.mutationFloor` and `harness.uncitedFloor`, so the
  * two cannot drift apart — and what makes a counted entry with a reason
- * readable.
+ * readable, which each approval of `harness.suppressions` is too.
  *
  * Both directions fail: a rise admits something nothing checks, and a floor
  * left above reality stops being a measurement. The reason is demanded on every
@@ -32,10 +32,11 @@ export type Floor = {
 const whole = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 0;
 
 /**
- * What is wrong with a `{ <field>: count, why }` entry at `path` in a
- * hand-edited `package.json` that `bun/config.ts` checks only for presence: an
- * absent reason or a count written as `"12"` is named here rather than thrown
- * as a `TypeError` or compared as never equal.
+ * What is wrong with a `{ <field>: count, why }` entry at `path` — a floor, or
+ * one approval of `harness.suppressions` — in a hand-edited `package.json`
+ * that `bun/config.ts` checks only for presence: an absent reason or a count
+ * written as `"12"` is named here rather than thrown as a `TypeError` or
+ * compared as never equal, or as `NaN`, which nothing exceeds.
  */
 export function unreadable(path: string, field: string, count: unknown, why: unknown): string[] {
 	return [

@@ -14,15 +14,7 @@ afterAll(cleanup);
 
 const to = (target: string) => ["status", "--card", CARD, "--to", target];
 /** Pull request 350 as the REST endpoint answers it, merged into `main` unless `fields` say otherwise. */
-const pr = (fields: object = {}) => ({
-	answer: JSON.stringify({
-		number: 350,
-		state: "closed",
-		merged_at: "2026-10-31T00:00:00Z",
-		base: { ref: "main" },
-		...fields,
-	}),
-});
+const pr = (fields: object = {}) => ({ answer: JSON.stringify({ number: 350, state: "closed", merged_at: "2026-10-31T00:00:00Z", base: { ref: "main" }, ...fields }) });
 /** A clone whose `origin/main` holds a change, so a pointer that falls through to the tree reads one; and the query its origin gives. */
 function checkout() {
 	const { dir, bare } = clone(change("demo"));
@@ -49,48 +41,29 @@ describe("a merged pull request proves done", () => {
 
 	// spec: work-status/a-proven-pull-request-at-a-full-limit
 	test("from approved, five cards and a proven pull request make no count [22]", async () => {
-		const run = await status({
-			args: to("done"),
-			cwd: checkout().dir,
-			page: { pointer: "pr:350" },
-			cards: 5,
-			gh: pr(),
-		});
-		expect([run.code, run.seen]).toEqual([0, [PAGE, PATCH]]);
+		const run = await status({ args: to("done"), cwd: checkout().dir, page: { pointer: "pr:350" }, cards: 5, gh: pr() });
+		expect([run.code, run.seen]).toEqual([0, [PAGE, PATCH, PAGE]]);
 	});
 });
 
 describe("a pull request that does not prove done", () => {
 	// spec: work-status/a-pull-request-still-open
 	test("an open one refuses naming it [13]", async () => {
-		const run = await status({
-			args: to("done"),
-			cwd: checkout().dir,
-			page: { pointer: "pr:350" },
-			gh: pr({ state: "open", merged_at: null }),
-		});
+		const run = await status({ args: to("done"), cwd: checkout().dir, page: { pointer: "pr:350" }, gh: pr({ state: "open", merged_at: null }) });
 		refused(run, "no-evidence");
 		expect([run.last.includes("350"), run.refusals[0].commit]).toEqual([true, undefined]);
 	});
 
 	// spec: work-status/a-pull-request-merged-into-another-branch
 	test("one merged into release refuses naming the base [14]", async () => {
-		const run = await status({
-			args: to("done"),
-			cwd: checkout().dir,
-			page: { pointer: "pr:350" },
-			gh: pr({ base: { ref: "release" } }),
-		});
+		const run = await status({ args: to("done"), cwd: checkout().dir, page: { pointer: "pr:350" }, gh: pr({ base: { ref: "release" } }) });
 		refused(run, "no-evidence");
 		expect(run.last).toContain("release");
 	});
 
 	// spec: work-status/a-pull-request-closed-without-merging
 	test("one closed unmerged refuses [17]", async () => {
-		refused(
-			await status({ args: to("done"), cwd: checkout().dir, page: { pointer: "pr:350" }, gh: pr({ merged_at: null }) }),
-			"no-evidence",
-		);
+		refused(await status({ args: to("done"), cwd: checkout().dir, page: { pointer: "pr:350" }, gh: pr({ merged_at: null }) }), "no-evidence");
 	});
 
 	// spec: work-status/applied-asked-of-a-pull-request

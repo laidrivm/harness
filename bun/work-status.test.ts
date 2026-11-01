@@ -58,18 +58,13 @@ describe("the WIP limit", () => {
 		refused(full, "wip-full");
 		expect([full.seen, full.last.includes("5")]).toEqual([[PAGE, QUERY], true]);
 		const room = await status({ args: to("exploring"), page: { status: from }, cards: 4 });
-		expect([room.code, room.seen, room.last]).toEqual([0, [PAGE, QUERY, PATCH], `status: ${CARD} ${from} → exploring`]);
+		expect([room.code, room.seen, room.last]).toEqual([0, [PAGE, QUERY, PATCH, PAGE], `status: ${CARD} ${from} → exploring`]);
 	});
 
 	// spec: work-status/a-move-within-the-range
 	test("from proposing to a proven proposed, five cards make no count", async () => {
-		const run = await status({
-			args: to("proposed"),
-			cwd: clone(change("demo")).dir,
-			page: { status: "proposing" },
-			cards: 5,
-		});
-		expect([run.code, run.seen]).toEqual([0, [PAGE, PATCH]]);
+		const run = await status({ args: to("proposed"), cwd: clone(change("demo")).dir, page: { status: "proposing" }, cards: 5 });
+		expect([run.code, run.seen]).toEqual([0, [PAGE, PATCH, PAGE]]);
 	});
 
 	// spec: work-status/a-card-behind-its-floor-at-a-full-limit
@@ -78,7 +73,7 @@ describe("the WIP limit", () => {
 		["done", archived("demo")],
 	])("from approved to a %s origin/main proves, five cards make no count", async (target, tree) => {
 		const run = await status({ args: to(target), cwd: clone(tree).dir, cards: 5 });
-		expect([run.code, run.seen, run.last]).toEqual([0, [PAGE, PATCH], `status: ${CARD} approved → ${target}`]);
+		expect([run.code, run.seen, run.last]).toEqual([0, [PAGE, PATCH, PAGE], `status: ${CARD} approved → ${target}`]);
 	});
 
 	test("HARNESS_WIP_LIMIT=2 with two cards refuses", async () => {
@@ -94,10 +89,7 @@ describe("the WIP limit", () => {
 
 	test("the query names the seven range statuses on the card's own board", async () => {
 		const run = await status({ args: to("exploring") });
-		expect(run.bodies[1]).toEqual({
-			filter: { or: RANGE.map((name) => ({ property: "Status", select: { equals: name } })) },
-			page_size: 100,
-		});
+		expect(run.bodies[1]).toEqual({ filter: { or: RANGE.map((name) => ({ property: "Status", select: { equals: name } })) }, page_size: 100 });
 	});
 
 	// spec: work-status/more-cards-than-one-page
@@ -116,7 +108,7 @@ describe("the reads and the write", () => {
 	// spec: work-status/explored-needs-no-evidence
 	test("exploring to explored writes and runs no git", async () => {
 		const run = await status({ args: to("explored"), page: { status: "exploring" } });
-		expect([run.code, run.seen, run.git]).toEqual([0, [PAGE, PATCH], []]);
+		expect([run.code, run.seen, run.git]).toEqual([0, [PAGE, PATCH, PAGE], []]);
 	});
 
 	// spec: work-status/notion-does-not-answer
@@ -133,12 +125,7 @@ describe("the reads and the write", () => {
 	// spec: work-status/a-move-written
 	test("a write sends the Status alone and prints Notion's answer", async () => {
 		const run = await status({ args: to("exploring") });
-		expect([run.code, run.bodies[2], run.last, run.refusals]).toEqual([
-			0,
-			{ properties: { Status: { select: { name: "exploring" } } } },
-			`status: ${CARD} approved → exploring`,
-			[],
-		]);
+		expect([run.code, run.bodies[2], run.last, run.refusals]).toEqual([0, { properties: { Status: { select: { name: "exploring" } } } }, `status: ${CARD} approved → exploring`, []]);
 	});
 
 	test("a write Notion answers with another status prints it and exits 1", async () => {
@@ -155,15 +142,10 @@ describe("the reads and the write", () => {
 	test.each([
 		["a checkout's subdirectory", "checkout"],
 		["a directory outside any checkout", "outside"],
-	])(
-		"a refusal's record from %s carries its id and the checkout as its project, whatever CLAUDE_PROJECT_DIR says",
-		async (_, where) => {
-			const top = where === "checkout" ? clone(change("demo")).dir : emptyDir("work-status-cwd-");
-			const env = { CLAUDE_PROJECT_DIR: emptyDir("work-status-elsewhere-") };
-			const run = await status({ args: to("approved"), cwd: where === "checkout" ? join(top, "openspec") : top, env });
-			expect(run.refusals.map(({ decision, rule, project }) => ({ decision, rule, project }))).toEqual([
-				{ decision: "block", rule: "user-only", project: realpathSync(top) },
-			]);
-		},
-	);
+	])("a refusal's record from %s carries its id and the checkout as its project, whatever CLAUDE_PROJECT_DIR says", async (_, where) => {
+		const top = where === "checkout" ? clone(change("demo")).dir : emptyDir("work-status-cwd-");
+		const env = { CLAUDE_PROJECT_DIR: emptyDir("work-status-elsewhere-") };
+		const run = await status({ args: to("approved"), cwd: where === "checkout" ? join(top, "openspec") : top, env });
+		expect(run.refusals.map(({ decision, rule, project }) => ({ decision, rule, project }))).toEqual([{ decision: "block", rule: "user-only", project: realpathSync(top) }]);
+	});
 });

@@ -42,7 +42,7 @@ describe("the sequence", () => {
 			READY,
 		]);
 		expect([run.code, run.last, run.remote, run.refusals]).toEqual([0, "finish: ready #7", head(cwd), []]);
-		expect(run.seen).toEqual(["GET /v1/comments"]);
+		expect(run.seen).toEqual([`GET /v1/pages/${CARD}`, `GET /v1/blocks/${CARD}/children`, "GET /v1/comments", `GET /v1/pages/${CARD}`]);
 	});
 
 	// spec: work-finish/a-draft-with-a-new-commit

@@ -7,7 +7,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { links, pin, workflows } from "./check.ts";
+import { gates, links, pin, workflows } from "./check.ts";
 
 const made: string[] = [];
 
@@ -47,6 +47,34 @@ function consumer({
 	for (const name of installed) write(`node_modules/harness/core/skills/${name}/SKILL.md`, `# ${name}\n`);
 	return dir;
 }
+
+// spec: commit-gates/an-allowlist-entry-the-check-cannot-read
+describe("the gates over a consumer", () => {
+	test("an unreadable approval is reported beside the other gates' problems", () => {
+		const harness = {
+			rootFiles: {},
+			// A key naming no marker, so this file carries none for the scan to
+			// find: the entry's fields are what is read.
+			suppressions: { "src/a.ts some-marker": { count: 1 } },
+			uncitedFloor: { count: 0 },
+		};
+		const said = gates(
+			consumer({
+				files: {
+					"package.json": JSON.stringify({ harness }),
+					// The size gate refuses a tree with no file it caps.
+					"src/index.ts": "export {};\n",
+				},
+			}),
+		);
+		expect(said).toContain(
+			'harness.suppressions["src/a.ts some-marker"].why gives no reason — write one as text',
+		);
+		expect(said).toContainEqual(
+			expect.stringContaining("harness.uncitedFloor.why"),
+		);
+	});
+});
 
 describe("a skill link", () => {
 	test("into the installed package, holding a SKILL.md, passes", () => {

@@ -116,7 +116,7 @@ each page of the threads query, each mutation — and logs every call.
 
 ## 3. Archive order
 
-- [ ] 3.1 Before `/opsx:archive`, confirm `finish-review-arrives` is under
+- [x] 3.1 Before `/opsx:archive`, confirm `finish-review-arrives` is under
       `openspec/changes/archive/`, so the `agent-autonomy` requirement's
       citation of *CodeRabbit's state of a commit is read from its check
       runs* resolves in `openspec/specs/work-finish/spec.md`; if it is not,
@@ -125,8 +125,11 @@ each page of the threads query, each mutation — and logs every call.
       In the archive commit, relink `README.md`'s `resolve` row from this
       change's delta to `openspec/specs/work-resolve/spec.md`, which exists
       only from then on (as `work-status`' row was).
-      Verify with `ls openspec/changes/archive | grep finish-review-arrives`
-- [ ] 3.2 In the archive pull request (the user folded card
+      Verify with `ls openspec/changes/archive | grep finish-review-arrives`.
+      Done on 1.11 with `finish-review-arrives` archived in #381, open and
+      green but not yet merged: the archive pull request merges after #381,
+      so the citation resolves on `main`; 2.1's pin already read `REVIEWED`
+- [x] 3.2 In the archive pull request (the user folded card
       40a39875c31b81159fe1f4e870d9fd3a, *Point session-wrapup at the one
       rule for a CodeRabbit-reviewed head*, into it on 1.11): point
       `core/skills/session-wrapup/SKILL.md`'s check-run read at the same
@@ -134,4 +137,7 @@ each page of the threads query, each mutation — and logs every call.
       `Review skipped`, never the summary's text — and pin it with a test as
       2.1 pins the `coderabbit` skill, against `REVIEWED` from
       `bun/coderabbit-run.ts` once #361 is on `main`. Verify with the pin
-      test failing first over today's wording
+      test failing first over today's wording. The `agent-rulebook`
+      requirement *The yield ledger counts first reviews without a
+      Major-or-above finding* gets a delta naming the same rule, its
+      scenarios no longer reading `Review completed` off a check run

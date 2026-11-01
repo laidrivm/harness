@@ -15,7 +15,7 @@ import { dirname, join, normalize } from "node:path";
 import { read } from "./config.ts";
 import { oversize } from "./file-size.ts";
 import { ranges } from "./manifest-ranges.ts";
-import { scan } from "./no-suppressions.ts";
+import { report as suppressions } from "./no-suppressions.ts";
 import { stray } from "./repo-layout.ts";
 import { settings } from "./settings.ts";
 import { check as citations, gauge, uncited } from "./spec-coverage.ts";
@@ -55,7 +55,8 @@ export function links(root: string): string[] {
 		}
 		const target = readlinkSync(join(root, path));
 		const resolved = normalize(join(dirname(path), target));
-		if (!resolved.startsWith(PACKAGE_SKILLS)) problems.push(`${path}: links to ${target}, outside ${PACKAGE_SKILLS}`);
+		if (!resolved.startsWith(PACKAGE_SKILLS))
+			problems.push(`${path}: links to ${target}, outside ${PACKAGE_SKILLS}`);
 		else if (!existsSync(join(root, resolved, "SKILL.md")))
 			problems.push(`${path}: links to ${target}, which holds no SKILL.md`);
 	}
@@ -72,7 +73,8 @@ type Workflow = { jobs?: Record<string, { uses?: string; steps?: Step[] }> };
  * Whether a `uses:` reference reaches into the harness repository. Lower-cased
  * first: GitHub reads an owner and a repository in any letter case.
  */
-const intoHarness = (uses?: string) => /^laidrivm\/harness[/@]/.test(uses?.toLowerCase() ?? "");
+const intoHarness = (uses?: string) =>
+	/^laidrivm\/harness[/@]/.test(uses?.toLowerCase() ?? "");
 
 /**
  * Every workflow that checks out the harness repository, calls a reusable
@@ -87,10 +89,15 @@ export function workflows(root: string): string[] {
 		const text = readFileSync(join(root, path), "utf8");
 		const jobs = (Bun.YAML.parse(text) as Workflow | null)?.jobs ?? {};
 		for (const [name, job] of Object.entries(jobs)) {
-			if (intoHarness(job?.uses)) problems.push(`${path}: job ${name} calls ${job?.uses}`);
+			if (intoHarness(job?.uses))
+				problems.push(`${path}: job ${name} calls ${job?.uses}`);
 			for (const step of job?.steps ?? []) {
-				if (intoHarness(step?.uses)) problems.push(`${path}: job ${name} runs ${step?.uses}`);
-				if (step?.uses?.startsWith("actions/checkout") && step.with?.repository?.toLowerCase() === HARNESS_REPO)
+				if (intoHarness(step?.uses))
+					problems.push(`${path}: job ${name} runs ${step?.uses}`);
+				if (
+					step?.uses?.startsWith("actions/checkout") &&
+					step.with?.repository?.toLowerCase() === HARNESS_REPO
+				)
 					problems.push(`${path}: job ${name} checks out ${HARNESS_REPO}`);
 			}
 		}
@@ -113,10 +120,16 @@ export function pin(root: string): string[] {
 			return;
 		}
 		if (value === null || typeof value !== "object") return;
-		for (const [inner, next] of Object.entries(value)) walk(next, inner, depth + 1);
+		for (const [inner, next] of Object.entries(value))
+			walk(next, inner, depth + 1);
 	};
 	walk(JSON.parse(text), "", -1);
-	return [...ranges(text), ...(named === 1 ? [] : [`package.json: names the harness ${named} times, not once`])];
+	return [
+		...ranges(text),
+		...(named === 1
+			? []
+			: [`package.json: names the harness ${named} times, not once`]),
+	];
 }
 
 /** The gates whose values the consumer's `harness` key holds. */
@@ -124,8 +137,11 @@ export function gates(root: string): string[] {
 	const { count, why } = read(root, "uncitedFloor");
 	return [
 		...stray(root),
-		...scan(root).map(({ path, line, marker }) => `${path}:${line}: ${marker}`),
-		...oversize(root).map(({ path, count, cap }) => `${path}: ${count} lines, over the cap of ${cap}`),
+		...suppressions(root),
+		...oversize(root).map(
+			({ path, count, cap }) =>
+				`${path}: ${count} lines, over the cap of ${cap}`,
+		),
 		...citations(root).problems,
 		...gauge(uncited(root), count, why),
 		...testRetry(root),

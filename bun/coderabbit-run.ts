@@ -24,8 +24,9 @@ export type State =
 /**
  * What counts as CodeRabbit's review of a commit: a run that ended in
  * `conclusion` with a title not opening `skippedTitle`, since a skip is also
- * reported as a success. Exported for the `coderabbit` skill's step 1, which
- * reads the commit status today and is to read this rule (#358).
+ * reported as a success. Exported for the prose that states the rule — the
+ * `coderabbit` skill's step 1 and `session-wrapup`'s first-review read — whose
+ * tests pin their wording to it.
  */
 export const REVIEWED = { conclusion: "success", skippedTitle: "Review skipped" } as const;
 

@@ -8,6 +8,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { REVIEWED } from "./coderabbit-run.ts";
 import { flat } from "./prose.fixture.ts";
 
 const PATH = join(import.meta.dir, "..", "core", "skills", "session-wrapup", "SKILL.md");
@@ -24,7 +25,7 @@ const READS = [
 	`gh pr list --state all --search "updated:>=<since>" --limit 1000 --json number`,
 	`gh pr list --state open --limit 1000 --json number`,
 	`gh api 'repos/{owner}/{repo}/pulls/<n>/commits' --paginate --jq '.[].sha'`,
-	`gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit" and .conclusion == "success") | [.started_at, .completed_at, .output.summary] | @tsv'`,
+	`gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?check_name=CodeRabbit&filter=all' --paginate --jq '.check_runs[] | select(.name == "CodeRabbit" and .app.slug == "coderabbitai" and .conclusion == "success") | [.started_at, .completed_at, .output.title, .output.summary] | @tsv'`,
 	`gh api 'repos/{owner}/{repo}/commits/<sha>/statuses' --paginate --jq '.[] | select(.context == "CodeRabbit" and (.state == "success" or .state == "pending")) | [.created_at, .state, .description] | @tsv'`,
 	`gh api 'repos/{owner}/{repo}/commits/<sha>/pulls' --jq '.[].number'`,
 	`gh api 'repos/{owner}/{repo}/pulls/<n>/reviews' --paginate --jq '.[] | select(.user.login == "coderabbitai[bot]" and .commit_id == "<sha>") | [.id, .body] | @tsv'`,
@@ -40,11 +41,13 @@ test("step 5 names each read verbatim, in order", () => {
 });
 
 // spec: agent-rulebook/a-major-on-the-first-reviewed-commit
-test("counts only the earliest commit with a success result reading Review completed", () => {
+test("counts only the earliest commit the bot reviewed, a check run by the rule bun/coderabbit-run.ts holds", () => {
 	const text = step();
 	expect(text).toContain("oldest first");
+	expect(text).toContain(`a check run of the bot's that concluded \`${REVIEWED.conclusion}\` with a title not opening \`${REVIEWED.skippedTitle}\``);
+	expect(text).toContain("never the summary's text, read only for that link");
 	// One phrase: a draft skip is a `success` status too, so the text must stay a condition.
-	expect(text).toContain("the earliest with a `success` result reading `Review completed`");
+	expect(text).toContain("a `success` status reading `Review completed`");
 	expect(text).toContain("`- first review: k of n without Major+");
 	expect(text).toContain("(Major+)");
 });

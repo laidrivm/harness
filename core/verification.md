@@ -29,9 +29,11 @@ What counts as evidence for a claim, and what a claim may rest on.
   and an unprompted call are indistinguishable from inside the session.
 - Read a permission outcome from the whole precedence chain — deny, then ask,
   then allow, across every scope — never from one grant or one entry.
-- Verify a permissions change only in a session started after it — a session
-  holds the permission set it loaded at startup, while a hook is re-read from
-  the settings file per tool call and is observable at once.
+- Verify a permissions change, or a change to a hook's registration, only in a
+  session started after it — a session holds the permission set it loaded at
+  startup, and an older one was seen (the `notion-create-pages` probe,
+  2026-11-01) to keep running the hooks it registered at startup although the
+  script and matcher on disk had changed; the cause is not established.
 - Probe a gate by refusing it, with an input the session has not already
   cleared — an approval and an absent prompt reach you as the same successful
   result, and an approval outlives the mode that granted it.

@@ -3,7 +3,8 @@
  * takes it — the checkout's `HEAD`, the card's properties, its body as the
  * markdown Notion renders, its page-level comments and whether a question
  * waits, the change its `Pointer` names, and `openspec list` — and writes
- * nothing (`openspec/specs/work-take/`, and
+ * nothing but the release of the card's `Assign` when nothing waits there,
+ * whose line follows the comments (`cleared()`; `openspec/specs/work-take/`, and
  * `openspec/changes/archive/2026-10-27-work-take/design.md`). Notion is read
  * through the ask integration; a read that fails ends the run on a line naming
  * its step, and no line it composes holds the token.
@@ -12,6 +13,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { integration } from "./notion-ask.ts";
 import { client, discussion, hex, oldest, plain, waits } from "./notion-bot.ts";
+import { cleared } from "./notion-release.ts";
 
 /** The markdown read's API version, for that call alone: the others stay on the one their cases ran against. */
 const MARKDOWN = "2026-03-11";
@@ -41,6 +43,9 @@ function text(property: Property | undefined): string {
 	}
 	return "";
 }
+
+/** The refspec `work-status.ts` and `work-finish-card.ts` fetch `origin/main` by, named so a single-branch clone or a narrowed fetch still moves it. */
+export const MAIN = "+refs/heads/main:refs/remotes/origin/main";
 
 /** Runs `command` in `cwd` under `env`, its standard output, or throws naming how it failed; `work-status.ts` runs git through it too. */
 export function output(command: string[], cwd?: string, env: Record<string, string | undefined> = process.env): string {
@@ -88,6 +93,7 @@ function change(pointer: string, top: string, commit: string): string[] {
 /** The lines `take` prints for `card`, and its exit code: 0, or 1 after a failed read. */
 export async function take(card: string, timeout = 30_000): Promise<{ lines: string[]; code: number }> {
 	const lines: string[] = [];
+	let code = 0;
 	let step = "the ask settings read";
 	try {
 		const found = integration(timeout);
@@ -122,14 +128,18 @@ export async function take(card: string, timeout = 30_000): Promise<{ lines: str
 		for (const comment of oldest(comments))
 			lines.push(`${comment.created_time} ${by(comment.created_by?.id)}: ${plain(comment.rich_text)}`);
 		lines.push(`question waiting: ${waits(comments, found.settings.user) ? "yes" : "no"}`);
+		// Its own reads, so a failure prints its line and ends nothing; only a failed restore changes the exit.
+		const freed = await cleared(found.call, card, found.settings.user);
+		if (freed.line) lines.push(freed.line);
+		code = freed.restoreFailed ? 1 : 0;
 
 		step = "the change read";
 		lines.push("## Change", ...change(text(properties.Pointer), top, commit));
 
 		step = "the open changes read";
-		// Telemetry off: take writes nothing, and openspec's telemetry keeps state and sends events.
+		// Telemetry off: take writes nothing but the release, and openspec's telemetry keeps state and sends events.
 		lines.push("## Open changes", output(["openspec", "list"], top, { ...process.env, OPENSPEC_TELEMETRY: "0" }));
-		return { lines, code: 0 };
+		return { lines, code };
 	} catch (error) {
 		return { lines: [...lines, `take: ${step} failed — ${(error as Error).message}`], code: 1 };
 	}

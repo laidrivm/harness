@@ -14,6 +14,7 @@
 import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { read } from "./config.ts";
+import { unreadable } from "./floor.ts";
 import { tracked } from "./tracked.ts";
 
 const MARKERS = ["biome-ignore", "@ts-expect-error", "@ts-ignore"];
@@ -35,7 +36,9 @@ const PROSE = [".md"];
  * track and so never matches.
  */
 const self = (root: string) =>
-	["no-suppressions.ts", "no-suppressions.test.ts"].map((name) => relative(root, join(import.meta.dir, name)));
+	["no-suppressions.ts", "no-suppressions.test.ts"].map((name) =>
+		relative(root, join(import.meta.dir, name)),
+	);
 
 /**
  * The root manifest, where `harness.suppressions` lives: every approval's key
@@ -48,9 +51,11 @@ const self = (root: string) =>
 const MANIFEST = "package.json";
 
 /**
- * Approved suppressions, from the consumer's `harness.suppressions`: keyed by
- * `<path> <marker>`, valued by how many occurrences of that marker are approved
- * there and why. The count is what stops a second suppression riding in on the
+ * The consumer's `harness.suppressions`, each entry keyed by `<path> <marker>`
+ * and holding how many occurrences of that marker are approved there and why.
+ * Returns the readable entries' counts as `approved`, and in `problems` one
+ * line per field an entry gets wrong, naming its key — such an entry approves
+ * nothing. The count is what stops a second suppression riding in on the
  * first one's approval; the marker in the key is what stops a suppression of
  * one kind being swapped for another on the first one's approval.
  *
@@ -58,8 +63,37 @@ const MANIFEST = "package.json";
  * `suspicious/noTsIgnore` reads a comment as a directive wherever it sits, and
  * `biome check --write` rewrote this very sentence when it spelled one out.
  */
-const approvedIn = (root: string): Record<string, number> =>
-	Object.fromEntries(Object.entries(read(root, "suppressions")).map(([key, { count }]) => [key, count]));
+export function allowlist(root: string): {
+	approved: Record<string, number>;
+	problems: string[];
+} {
+	const value: unknown = read(root, "suppressions");
+	// Named as a whole rather than read character by character or by index.
+	// `instanceof` narrows without a `null` test, which `read` makes dead by
+	// throwing on `null` first.
+	if (!(value instanceof Object) || Array.isArray(value))
+		return {
+			approved: {},
+			problems: ["harness.suppressions is not an object of approvals"],
+		};
+	const approved: Record<string, number> = {};
+	const problems: string[] = [];
+	for (const [key, entry] of Object.entries(value)) {
+		const faults = unreadable(
+			`harness.suppressions[${JSON.stringify(key)}]`,
+			"count",
+			entry?.count,
+			entry?.why,
+		);
+		// An entry the check cannot read approves nothing: a count of `NaN`,
+		// which no length exceeds, would otherwise approve every occurrence.
+		// Its faults are returned rather than thrown, so `check.ts` still
+		// reports every other gate.
+		if (faults.length) problems.push(...faults);
+		else approved[key] = entry.count;
+	}
+	return { approved, problems };
+}
 
 export type Finding = { path: string; line: number; marker: string };
 
@@ -73,9 +107,20 @@ export type Finding = { path: string; line: number; marker: string };
  * `cwd`, so from a subdirectory the check's own two paths still match and it
  * does not fail on itself.
  */
-export function scan(cwd?: string, approved?: Record<string, number>): Finding[] {
+export function scan(
+	cwd?: string,
+	approved?: Record<string, number>,
+): Finding[] {
 	const { root, files } = tracked(cwd);
-	const allowed = approved ?? approvedIn(root);
+	return sweep(root, files, approved ?? allowlist(root).approved);
+}
+
+/** The suppressions among `files` at `root` that `allowed` does not admit. */
+function sweep(
+	root: string,
+	files: string[],
+	allowed: Record<string, number>,
+): Finding[] {
 	const own = self(root);
 
 	const found: Finding[] = [];
@@ -102,10 +147,25 @@ export function scan(cwd?: string, approved?: Record<string, number>): Finding[]
 		.flatMap(([, list]) => list);
 }
 
+/**
+ * What the gate reports for the repository containing `cwd`: each allowlist
+ * entry it cannot read, then each unapproved suppression — what `check.ts` and
+ * the script both print, from one listing of the tree and one read of the
+ * allowlist, both at the repository root.
+ */
+export function report(cwd?: string): string[] {
+	const { root, files } = tracked(cwd);
+	const { approved, problems } = allowlist(root);
+	return [
+		...problems,
+		...sweep(root, files, approved).map(
+			({ path, line, marker }) => `${path}:${line}: ${marker}`,
+		),
+	];
+}
+
 if (import.meta.main) {
-	const unapproved = scan();
-	for (const { path, line, marker } of unapproved) {
-		console.error(`${path}:${line}: ${marker}`);
-	}
-	if (unapproved.length) process.exit(1);
+	const problems = report();
+	for (const problem of problems) console.error(problem);
+	if (problems.length) process.exit(1);
 }

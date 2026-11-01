@@ -15,7 +15,7 @@ afterAll(cleanup);
 const notion = standIn();
 afterAll(() => notion.server.stop(true));
 const pass = against(notion);
-const reset = () => Object.assign(notion.state, { pending: false, slug: "demo", fail: {}, assign: [USER, OTHER] });
+const reset = () => Object.assign(notion.state, { pending: false, slug: "demo", fail: {}, assign: [USER, OTHER], keep: false });
 /** The body of each `PATCH` the stand-in took, in order. */
 const wrote = () => notion.state.bodies.filter((_, i) => notion.state.seen[i].startsWith("PATCH"));
 
@@ -66,10 +66,7 @@ describe("an answer beside a draft pull request", () => {
 		expect(pick(r.calls)).not.toContain("CARD:");
 		expect(r.text).toContain("continuing feat/demo, which a session left\ncarrying apply demo step 1 on feat/demo");
 		const line = first(r.calls);
-		for (const part of [
-			"apply the answer on its card to the artefacts, code and tasks of step 1 on its branch",
-			"file an `idea` card for it, add nothing to the branch and still name the title and body of the pull request",
-		])
+		for (const part of ["apply the answer on its card to the artefacts, code and tasks of step 1 on its branch", "file an `idea` card for it, add nothing to the branch and still name the title and body of the pull request"])
 			expect(line).toContain(part);
 		expect(line).not.toContain("'");
 		expect(r.calls).toContain(READY);
@@ -101,22 +98,16 @@ describe("an answer beside a draft pull request", () => {
 
 	test.each([
 		["an Assign write that fails", { fail: { [`PATCH /v1/pages/${CARD}`]: 500 } }, "the Assign write answered 500", 1],
-		[
-			"an Assign a page read may truncate",
-			{ assign: Array(25).fill(OTHER) },
-			`${CARD} lists 25 people on Assign, the most a page read returns`,
-			0,
-		],
-	])(
-		"%s refuses the pass before the stage session, so the next pass reads the answer again",
-		async (_, card, why, writes) => {
-			Object.assign(notion.state, card);
-			const r = await pass(drafted(), { ...DRAFT, pick: PICKED }, configured()).finally(reset);
-			expect(wrote()).toHaveLength(writes);
-			expect(r.last).toBe(`board-loop: refused — assign: failed — ${why}`);
-			expect(r.calls).not.toContain("claude -p /goal");
-		},
-	);
+		["an Assign a page read may truncate", { assign: Array(25).fill(OTHER) }, `${CARD} lists 25 people on Assign, the most a page read returns`, 0],
+		// The user's answer 11 b: the read-back lives in release(), which unassign() shares.
+		["an Assign write whose answer still holds the user", { keep: true }, "the Assign write did not remove the user", 1],
+	])("%s refuses the pass before the stage session, so the next pass reads the answer again", async (_, card, why, writes) => {
+		Object.assign(notion.state, card);
+		const r = await pass(drafted(), { ...DRAFT, pick: PICKED }, configured()).finally(reset);
+		expect(wrote()).toHaveLength(writes);
+		expect(r.last).toBe(`board-loop: refused — assign: failed — ${why}`);
+		expect(r.calls).not.toContain("claude -p /goal");
+	});
 
 	// spec: board-loop/the-answer-raises-another-question
 	test("a new question keeps the draft, and sets Assign to the user again", async () => {
