@@ -127,6 +127,7 @@ describe("the /coderabbit bullet", () => {
 	});
 
 	// The local review's base, changed-file check and gate line have no meaning on a pull request.
+	// spec: agent-autonomy/the-third-round-still-gets-its-fixes
 	test("shares /code-review's finding-disposal terms alone, keeping its pull-request behaviour", () => {
 		const text = bullet(read("core/review-toolkit.md"), CODERABBIT) ?? "";
 		expect(text).toContain("on `/code-review`'s finding-disposal terms alone");
@@ -134,13 +135,15 @@ describe("the /coderabbit bullet", () => {
 		expect(text).toContain("CodeRabbit grades its own findings and a Major it raised stays a Major");
 		expect(text).toContain("Once a PR is open, say so and stop");
 		expect(text).not.toContain("/coderabbit-local");
+		// The boundary: the third round still gets fixes, the cap bites from the fourth.
+		expect(text).toContain("A pull request gets fixes for at most three rounds");
+		expect(text).toContain("A fourth round or later whose review carries a finding the run would apply gets none applied");
 	});
 });
 
 const LOCAL = "`/code-review` —";
 // The form code-review-replaces-cli probed (design.md decision 1): the range after the level is the diff read.
 const BASE_FORM = "`/code-review high <base>...HEAD` from the branch's own worktree";
-const CLI = "`/coderabbit-local [base]` —";
 const STEP_5 = "5. `/code-review`";
 const DOCS_PATH = "A documentation branch, as the runner classifies one";
 const toolkit = () => read("core/review-toolkit.md");
@@ -221,6 +224,7 @@ describe("the /code-review bullet is the local review", () => {
 		expect(text).toContain("names the grade beside each finding in its report");
 	});
 
+	// spec: local-review-loop/the-session-writes-the-gate-line
 	test("has the session write the `CODE-REVIEW gate:` line", () => {
 		const text = bullet(toolkit(), LOCAL) ?? "";
 		expect(text).toContain("the session writes the `CODE-REVIEW gate:` line");
@@ -228,23 +232,29 @@ describe("the /code-review bullet is the local review", () => {
 	});
 
 	// spec: local-review-loop/the-review-does-not-return
+	// spec: local-review-loop/a-later-pass-does-not-return
 	test("reports a review that does not return, or that read another diff, and pushes on", () => {
 		const text = bullet(toolkit(), LOCAL) ?? "";
 		expect(text).toContain("A review that does not return —");
 		expect(text).toContain("or whose findings name no file the branch's diff changes");
-		expect(text).toContain("is reported and the push goes on without the gate");
-	});
-
-	test("the /coderabbit-local bullet is in no sequence and no gate", () => {
-		const text = bullet(toolkit(), CLI) ?? "";
-		expect(text).toContain("in no sequence and no gate");
-		expect(text).toContain("the guideline files that the config's `code_guidelines` patterns match");
+		expect(text).toContain("is reported. On the loop's first pass the push then goes on without the gate");
+		expect(text).toContain("writes a `CODE-REVIEW gate:` line whenever a pass returned a review, and none only when no pass did");
+		expect(text).toContain("a pass that does not return after one that did ends the loop on the line the earlier passes left");
+		expect(text).toContain("`BLOCKED` wins over `OPEN` and `OPEN` over `PASS`");
+		// The scenario's outcome: an earlier pass's pending dismissal still holds the line at OPEN.
+		expect(text).toContain("which decides the push as any gate line does — a dismissal an earlier pass proposed still reads `OPEN`");
 	});
 
 	test("the doc holds no measurement", () => {
 		expect(flat(toolkit())).not.toContain("Review measurement");
 	});
 	// Its `Skill(code-review)` allow entry is pinned in pre-pr-steps.test.ts, beside every judgement step's.
+});
+
+describe("the toolkit after the CodeRabbit CLI", () => {
+	test.each(["coderabbit-local", "CodeRabbit's CLI"])("names no `%s` anywhere", (leftover) => {
+		expect(flat(toolkit())).not.toContain(leftover);
+	});
 });
 
 describe("an unattended pull request opens over the local review's gate", () => {

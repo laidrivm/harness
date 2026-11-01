@@ -57,9 +57,6 @@
 			"Bash(openspec new *)",
 			"Bash(openspec status *)",
 			"Bash(openspec validate *)",
-			"Bash(coderabbit --version)",
-			"Bash(coderabbit doctor *)",
-			"Bash(coderabbit review *)",
 			"Bash(actionlint *)",
 			"Bash(git log *)",
 			"Bash(git grep *)",
@@ -80,7 +77,6 @@
 			"Bash(mkdir *)",
 			"Bash(command -v *)",
 			"Skill(code-review)",
-			"Skill(coderabbit-local)",
 			"Skill(opsx:apply)",
 			"Skill(opsx:archive)",
 			"Skill(opsx:explore)",
@@ -141,7 +137,7 @@
 				]
 			},
 			{
-				"matcher": "^mcp__.+__notion-update-page$",
+				"matcher": "^mcp__.+__notion-(update-page|create-pages)$",
 				"hooks": [
 					{
 						"type": "command",
