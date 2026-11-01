@@ -1,11 +1,12 @@
 /**
- * A branch's pull requests, read through GitHub's REST endpoint with
- * `gh api`: the one copy of that read, which the goal check and the board
- * loop's runner both make, and no GraphQL, which a cloud session's proxy
- * refuses. A read that has not answered within its time limit is killed and
- * fails, so neither caller waits on a `gh` that neither answers nor exits.
- * Where `HARNESS_GITHUB_APP_MINT` names the key holder's mint, the read alone
- * holds a token it minted, so a private repository's pull requests are read.
+ * Pull requests read through GitHub's REST endpoint with `gh api`, and no
+ * GraphQL, which a cloud session's proxy refuses: a branch's, for every caller
+ * that asks what a branch's pull request is, and one by its number, for
+ * `work.ts status` on a card whose `Pointer` names it. Both go
+ * through one call: a read that has not answered within its time limit is
+ * killed and fails, so no caller waits on a `gh` that neither answers nor
+ * exits, and where `HARNESS_GITHUB_APP_MINT` names the key holder's mint, the
+ * read alone holds a token it minted, so a private repository's are read.
  */
 import { minted } from "./github-app-minted.ts";
 
@@ -43,7 +44,25 @@ export function remoteRepository(url: string) {
 export type Pull = { number: unknown; state: "OPEN" | "MERGED" | "CLOSED"; headRefOid: unknown; draft: boolean };
 
 type Repo = { id?: unknown } | null;
-type Listed = { number?: unknown; state?: unknown; merged_at?: unknown; draft?: unknown; head?: { sha?: unknown; repo?: Repo }; base?: { repo?: Repo } } | null;
+type Listed = { number?: unknown; state?: unknown; merged_at?: unknown; draft?: unknown; head?: { sha?: unknown; repo?: Repo }; base?: { ref?: unknown; repo?: Repo } } | null;
+
+/**
+ * `gh api query` for the repository `full`, its output parsed, or false for a
+ * non-zero or missing exit status. Throws where the mint, the spawn or the
+ * parse does, which each reader turns into a failed read.
+ */
+function api(full: string, query: string): unknown {
+	// A mint that fails throws, failing the read: never an unauthenticated read that misses a private repository's.
+	const mint = process.env.HARNESS_GITHUB_APP_MINT;
+	const env = mint ? { ...process.env, GH_TOKEN: minted(mint, full, ["pull_requests=read"]) } : process.env;
+	// SIGKILL: a `gh` that ignores the default SIGTERM holds `spawnSync` past
+	// the limit. A killed read exits with no status, so it fails here.
+	const run = Bun.spawnSync(["gh", "api", query], { env, timeout: limit(), killSignal: "SIGKILL" });
+	return run.exitCode === 0 && JSON.parse(run.stdout.toString());
+}
+
+/** `Pull`'s state for a REST answer: `merged_at` alone tells a merged pull request from a closed one, which both read `closed`. */
+const stateOf = (pr: Listed): Pull["state"] => (pr?.state === "open" ? "OPEN" : pr?.state === "closed" && pr.merged_at ? "MERGED" : "CLOSED");
 
 /** The owner and name `origin` names, the repository every read here is of, or undefined. Throws where git cannot start. */
 export function originRepository() {
@@ -67,13 +86,7 @@ export function readPullRequests(branch: string, repo?: { owner: string; repo: s
 		// shortcut: the head filter uses origin's owner, so an owner transfer origin has not caught up with finds nothing; upgrade by reading the owner from `gh api repos/<full>` if one happens.
 		// shortcut: one page of 100, the newest; page with --paginate if a branch ever holds more pull requests than that.
 		const query = `repos/${full}/pulls?head=${found.owner}:${encodeURIComponent(branch)}&state=all&per_page=100`;
-		// A mint that fails throws, failing the read: never an unauthenticated read that misses a private repository's.
-		const mint = process.env.HARNESS_GITHUB_APP_MINT;
-		const env = mint ? { ...process.env, GH_TOKEN: minted(mint, full, ["pull_requests=read"]) } : process.env;
-		// SIGKILL: a `gh` that ignores the default SIGTERM holds `spawnSync` past
-		// the limit. A killed read exits with no status, so it fails below.
-		const run = Bun.spawnSync(["gh", "api", query], { env, timeout: limit(), killSignal: "SIGKILL" });
-		const listed: unknown = run.exitCode === 0 && JSON.parse(run.stdout.toString());
+		const listed = api(full, query);
 		if (!Array.isArray(listed)) return undefined;
 		// `head` filters by owner alone: a fork in the same owner passes it, and a gone head reads `null`.
 		// Compared by id, not name: after a rename the API names the repository by its new name while origin may keep the old one.
@@ -83,12 +96,35 @@ export function readPullRequests(branch: string, repo?: { owner: string; repo: s
 		};
 		return (listed as Listed[]).filter(own).map((pr) => ({
 			number: pr?.number,
-			state: pr?.state === "open" ? "OPEN" : pr?.state === "closed" && pr.merged_at ? "MERGED" : "CLOSED",
+			state: stateOf(pr),
 			headRefOid: pr?.head?.sha,
 			draft: pr?.draft === true,
 		}));
 	} catch {
 		// A spawn that throws or output that is not JSON fails the read.
+		return undefined;
+	}
+}
+
+/**
+ * Pull request `n` of the repository `repo` names, or `origin` given none: its
+ * state and its base branch, or undefined for a read that failed — the
+ * reasons `readPullRequests` fails for, `n` not a positive whole number with
+ * no leading zero, or an answer that is not that pull request with a base
+ * branch, as an error body `gh` printed with exit 0 is not.
+ */
+export function readPullRequest(n: string, repo?: { owner: string; repo: string }): { state: Pull["state"]; base: string } | undefined {
+	// `n` goes into the API path, so only the digits the Pointer's pattern admits reach it, as the string, never `Number()`'s rounding.
+	if (!/^[1-9]\d*$/.test(n)) return undefined;
+	try {
+		const found = repo ?? originRepository();
+		if (!found) return undefined;
+		const pr = api(`${found.owner}/${found.repo}`, `repos/${found.owner}/${found.repo}/pulls/${n}`) as Listed;
+		const base = pr?.base?.ref;
+		if (typeof pr?.number !== "number" || String(pr.number) !== n || (pr.state !== "open" && pr.state !== "closed") || typeof base !== "string") return undefined;
+		return { state: stateOf(pr), base };
+	} catch {
+		// A git, a mint or a spawn that throws, or output that is not JSON, fails the read.
 		return undefined;
 	}
 }

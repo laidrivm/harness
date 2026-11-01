@@ -73,8 +73,10 @@ merged into `main` closes the card as well as a branch's.
 It takes the number as the digits the `Pointer` held, and returns
 `{ state, base }`, `state` in `Pull`'s `OPEN`/`MERGED`/`CLOSED` mapping and
 `base` the `base.ref` as read, or `undefined` for a failed read. An answer
-that is not an object whose `number` is that number and whose `state` is
-`open` or `closed` is a failed read, so an error body that `gh` printed with
+that is not an object whose `number` is that number, whose `state` is
+`open` or `closed` and whose `base.ref` is a string is a failed read (the
+last added at the local review, so no refusal names a base it did not read),
+so an error body that `gh` printed with
 exit 0 refuses under `unread`, never as a closed pull request. Two things
 lift into private functions both readers call, so the second read is no second
 copy (rule: *Write logic a second time only by lifting it*). One is the mint,

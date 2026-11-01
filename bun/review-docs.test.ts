@@ -109,6 +109,15 @@ describe("the /coderabbit bullet", () => {
 		expect(text).toContain("CODERABBIT gate: BLOCKED");
 	});
 
+	// The skill fixes the gate line's form, so the cap goes in the report line above it.
+	// spec: agent-autonomy/a-fourth-round-with-a-finding-to-apply-attended
+	test("names the cap in the line before the skill's own BLOCKED gate line", () => {
+		const text = bullet(read("core/review-toolkit.md"), CODERABBIT) ?? "";
+		expect(text).toContain("names the cap in the line before its gate line");
+		expect(text).toContain("`CODERABBIT gate: BLOCKED — N findings, M undispositioned.`");
+		expect(text).not.toContain("BLOCKED` naming the cap");
+	});
+
 	// spec: agent-autonomy/a-fourth-round-with-a-finding-to-apply-unattended
 	test("hands the cap on as a card, posting nothing in the pull request [12, 15]", () => {
 		const text = bullet(read("core/review-toolkit.md"), CODERABBIT) ?? "";

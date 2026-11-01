@@ -307,7 +307,17 @@ for them is already here.
   `<repo>: openspec/changes/<slug>/`: the repository's name, a colon and a
   space, then the path with nothing after it. A task number goes in the
   card's body, never after the path — `task-board`'s *A card for another
-  repository's change points across* fixes the form.
+  repository's change points across* fixes the form. A fix card, one with no
+  change directory, points at the one pull request that closes it as
+  `pr:<N>`, or `<repo>: pr:<N>` on another repository's board, with nothing
+  around it; the other pull requests the work took stay under `Ссылки`. A
+  card whose `Pointer` names a change keeps it. On a fix card the turn that
+  adds the closing pull request's `Ссылки` link writes the `Pointer` too:
+  the session that opened the pull request, or, when the user opened it, the
+  first turn that learns it exists. No reconciliation derives a floor for a
+  `pr:<N>` card, so the session that learns the pull request merged moves the
+  card with `bun bun/work.ts status --card <id> --to done` in that turn,
+  unless the card is `discarded`.
 
   Anchor an `update_content` edit on plain text. An `old_str` holding a
   `<mention-page>` tag matches nothing. A bullet added to the end of a section
@@ -340,8 +350,8 @@ for them is already here.
   work, and again at `session-wrapup` for the cards its own changes point at.
   Each time it runs the harness's `bun/board-state.ts` and corrects each card
   behind its floor whose `Pointer` is wholly a directory of this tree. It
-  skips a cross-repository pointer, and lists the cards whose pointer is
-  empty, decorated, or names a slug the tree lacks.
+  skips a cross-repository pointer and a `pr:<N>` one, and lists the cards
+  whose pointer is empty, decorated, or names a slug the tree lacks.
 
   A reconciliation that finds a card disagreeing with the tree **reports what
   it corrected**; it does not repair silently. A silent repair leaves nobody

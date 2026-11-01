@@ -1,7 +1,8 @@
 /**
- * What `work.ts status`'s two test files share: the command run as a session
+ * What `work.ts status`'s test files share: the command run as a session
  * runs it, against `standIn()` with the ask settings of `work-take.fixture.ts`,
- * a `git` that logs each call, its own `TMPDIR` and ledger; and a clone of a
+ * a `git` that logs each call, a `gh` stub where the case answers one, its own
+ * `TMPDIR` and ledger; and a clone of a
  * bare `origin` whose `main` a seed repository advances after the clone.
  */
 import { expect } from "bun:test";
@@ -50,7 +51,7 @@ export function clone(tree: Tree = {}, single = false) {
 	git(seed, "clone", "-q", ...(single ? ["--single-branch", "-b", "feature"] : []), bare, dir);
 	git(dir, "config", "user.email", "test@example.com");
 	git(dir, "config", "user.name", "Test");
-	return { seed, dir };
+	return { seed, dir, bare };
 }
 
 /** The card as the stand-in answers it, the board's card count, and the run's surroundings. */
@@ -63,10 +64,15 @@ export type Run = {
 	fail?: Record<string, number>;
 	env?: Record<string, string>;
 	config?: string;
+	/** A `gh` stub's answer and exit status; without one no `gh` is on `PATH`, so a read the case did not expect fails it. */
+	gh?: { answer: string; code?: number };
 };
 
+/** `file`'s lines, or none where it was never written. */
+const lines = (file: string) => (existsSync(file) ? readFileSync(file, "utf8").split("\n").filter(Boolean) : []);
+
 /** `bun bun/work.ts …args` and what it did; it throws when a printed line holds the token. */
-export async function status({ args, cwd = emptyDir(), page = {}, cards = 0, more = false, fail = {}, env, config = home() }: Run) {
+export async function status({ args, cwd = emptyDir(), page = {}, cards = 0, more = false, fail = {}, env, config = home(), gh }: Run) {
 	const notion = standIn();
 	Object.assign(notion.state, page, { cards: Array.from({ length: cards }, (_, i) => ({ id: `c${i}` })), more, fail });
 	const bin = emptyDir("work-status-bin-");
@@ -74,6 +80,8 @@ export async function status({ args, cwd = emptyDir(), page = {}, cards = 0, mor
 	writeFileSync(join(bin, "git"), `#!/bin/sh\necho "$1" >> '${log}'\nexec '${Bun.which("git")}' "$@"\n`);
 	chmodSync(join(bin, "git"), 0o755);
 	symlinkSync(Bun.which("tar") ?? "/usr/bin/tar", join(bin, "tar"));
+	const ghLog = join(bin, "gh.log");
+	if (gh) writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$*" >> '${ghLog}'\nprintf '%s' '${gh.answer}'\nexit ${gh.code ?? 0}\n`, { mode: 0o755 });
 	const [tmp, ledger] = [emptyDir("work-status-tmp-"), emptyDir("work-status-state-")];
 	const child = Bun.spawn([process.execPath, join(import.meta.dir, "work.ts"), ...args], {
 		cwd,
@@ -84,9 +92,8 @@ export async function status({ args, cwd = emptyDir(), page = {}, cards = 0, mor
 	const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
 	notion.server.stop(true);
 	if ((out + err).includes(TOKEN)) throw new Error("the token was printed");
-	const gitRan = existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean) : [];
 	const last = out.trim().split("\n").at(-1) ?? "";
-	return { out, err, code, last, seen: notion.state.seen, bodies: notion.state.bodies, refusals: records(ledger, "status"), git: gitRan, left: readdirSync(tmp) };
+	return { out, err, code, last, seen: notion.state.seen, bodies: notion.state.bodies, refusals: records(ledger, "status"), git: lines(log), gh: lines(ghLog), left: readdirSync(tmp) };
 }
 
 export const PAGE = `GET /v1/pages/${CARD}`;

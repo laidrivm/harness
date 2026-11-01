@@ -6,7 +6,7 @@ The cases are the proposal-stage `/zombies` ideas, bracketed by number.
 
 ## 1. A fix card's `done` by its merged pull request
 
-- [ ] 1.1 Failing cases in `bun/pull-requests.test.ts` for
+- [x] 1.1 Failing cases in `bun/pull-requests.test.ts` for
       `readPullRequest(n, repo?)`, over the file's `gh` stub: a pull request
       merged into `main` reads `{ state: "MERGED", base: "main" }`, its query
       `repos/o/r/pulls/350` [2]; an open draft reads `OPEN` [4]; an empty
@@ -20,7 +20,7 @@ The cases are the proposal-stage `/zombies` ideas, bracketed by number.
       to cover both reads (design, *The reader*). Verify: `bun test
       bun/pull-requests.test.ts` passes, with the existing `readPullRequests`
       cases unchanged
-- [ ] 1.2 Give `bun/work-status.fixture.ts`'s `Run` an optional `gh` answer
+- [x] 1.2 Give `bun/work-status.fixture.ts`'s `Run` an optional `gh` answer
       and exit status, written as a logging stub into the run's `bin`, with
       no `gh` on `PATH` without one. Then write failing cases in a new
       `bun/work-status-pr.test.ts`. `pr:350` merged into `main` writes `done`,
@@ -38,7 +38,7 @@ The cases are the proposal-stage `/zombies` ideas, bracketed by number.
       `Pointer` before the fetch in `bun/work-status.ts` (design, *The order in
       `evidence()`*). Verify: `bun test bun/work-status` passes, the tree
       cases unchanged
-- [ ] 1.3 Name the form where the `Pointer` is described. In
+- [x] 1.3 Name the form where the `Pointer` is described. In
       `core/feature-workflow.md`, the bullet that opens "A card's `Pointer` is
       a directory of this tree" gains the `pr:<N>` form, `<repo>: pr:<N>` on
       another repository's board. On a fix card with no change directory, the
