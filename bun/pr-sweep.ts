@@ -19,7 +19,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pinOf } from "./bump-pin.ts";
 import { configured, mint, slug } from "./github-app.ts";
-import { limit } from "./pull-requests.ts";
+import { gh as spawnGh } from "./pull-requests.ts";
 import { drift } from "./sync.ts";
 
 const NAME = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/;
@@ -55,7 +55,7 @@ type Verdict = { outcome: string; reason?: string; handoffs?: Handoff[]; mark?: 
 
 /** One `gh` call, killed at the limit `pull-requests.ts` applies; `err` is never empty on a failure. */
 function gh(...args: string[]) {
-	const p = Bun.spawnSync(["gh", ...args], { env: process.env, timeout: limit(), killSignal: "SIGKILL" });
+	const p = spawnGh(args);
 	const err = p.stderr.toString().trim() || `gh ${args.slice(0, 2).join(" ")} exited ${p.exitCode ?? "on a signal"}`;
 	return { ok: p.exitCode === 0, out: p.stdout.toString(), err };
 }
