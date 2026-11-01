@@ -21,7 +21,7 @@ ARG CLAUDE_SHA256=356733f185fa988e6bf3aa9a555269fdd167982a2e2a80d3c8a78037bb92ad
 ARG OPENSPEC_VERSION=1.14.0
 
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates curl git jq openssh-server sudo unzip util-linux \
+	&& apt-get install -y --no-install-recommends ca-certificates curl git jq openssh-server sudo util-linux \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" | tar -xz -C /tmp \
