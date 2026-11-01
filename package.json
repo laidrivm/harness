@@ -4,7 +4,9 @@
 	"private": true,
 	"devDependencies": {
 		"@biomejs/biome": "2.5.15",
-		"harness": "github:laidrivm/harness#50765a4e3775a7f155995f1303d95bbb51f2036b"
+		"@types/bun": "1.4.2",
+		"harness": "github:laidrivm/harness#50765a4e3775a7f155995f1303d95bbb51f2036b",
+		"typescript": "7.0.2"
 	},
 	"harness": {
 		"board": "Harness",
