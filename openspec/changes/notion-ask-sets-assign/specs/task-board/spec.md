@@ -154,8 +154,9 @@ change (`board-loop`, *A pass takes only a takeable change*), the answer SHALL
 count as applied in the turn that step's pull request opens. If the session
 files a card for the work instead, it counts as applied in the turn the card
 is filed. `Assign` SHALL be cleared by then at the latest; *The work
-commands release `Assign` when nothing waits* may clear it earlier, and
-nothing that decides whether an answer waits reads `Assign`. An answer SHALL
+commands release `Assign` when nothing waits* may clear it earlier, and the
+board loop's pick, which takes the answer only while `Assign` holds the
+user, then passes over it. An answer SHALL
 be read from the card's page-level discussion whether or not that discussion
 is resolved.
 
@@ -174,11 +175,11 @@ card is answered* fires for an answer the loop carries.
 
 - **WHEN** a session carrying an answer ends with no pull request open for its
   step and no card filed
-- **THEN** a later pass takes the answer again, whatever the card's `Assign`
-  holds, and continues the branch the session left (`board-loop`, *A step
-  branch a session left is continued*), once the clone holds nothing that
-  pass refuses (`board-loop`, *The runner is the user's script and starts
-  from a clean clone*)
+- **THEN** a later pass takes the answer again while the card's `Assign`
+  holds the user, and continues the branch the session left (`board-loop`,
+  *A step branch a session left is continued*), once the clone holds nothing
+  that pass refuses (`board-loop`, *The runner is the user's script and
+  starts from a clean clone*)
 
 #### Scenario: The answer asks for a change of its own
 
