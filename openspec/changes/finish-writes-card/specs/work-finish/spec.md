@@ -1,0 +1,80 @@
+# work-finish — delta
+
+## ADDED Requirements
+
+### Requirement: Finish records its pull request on the card
+
+`finish` given `--card`, once its pull request exists, opened by that call or
+already open, SHALL read which change directories the branch adds against
+its merge base with `origin/main`: directories under `openspec/changes/`
+other than `archive/`, and directories under `openspec/changes/archive/`.
+When it adds exactly one, `finish` SHALL write that directory's path, with a
+trailing slash, to the card's `Pointer` where the `Pointer` is empty or names
+the same slug's unarchived directory, and SHALL read it back. It SHALL leave
+alone a `Pointer` that already says it, and, saying so, a `Pointer` in any
+other form: `pr:<N>`, another change, another repository's. A branch adding
+no change directory or several SHALL write no `Pointer` and SHALL say so.
+
+`finish` SHALL then put the pull request on the card's `Ссылки` list as
+`[#N](<url>) — <kind>`, the kind `proposal` when the branch adds a
+directory outside `archive/`, else `archive` when it adds one inside it,
+else `apply`, unless a block of the card already links that pull
+request. A card with no `Ссылки` line SHALL get one at the end of its body.
+Both writes SHALL come after the push and before the question read; a write
+Notion refuses or does not answer SHALL leave the draft and exit 1, naming
+the step. Without `--card`, `finish` SHALL write nothing to Notion.
+
+#### Scenario: A proposal's first finish
+
+- **WHEN** a branch adds `openspec/changes/foo/`, the card's `Pointer` is
+  empty and its body has no `Ссылки` line, and `finish --card` opens #370
+- **THEN** the `Pointer` reads `openspec/changes/foo/`, the body ends with a
+  `Ссылки` line and `[#370](<url>) — proposal` under it, and `finish` goes on
+  to the question read
+
+#### Scenario: A second finish on the same pull request
+
+- **WHEN** `finish --card` runs again on that branch after a push
+- **THEN** it writes neither the `Pointer` nor a second link, and says the
+  `Pointer` already names the change
+
+#### Scenario: An archive branch
+
+- **WHEN** the branch moves `openspec/changes/foo/` to
+  `openspec/changes/archive/2026-11-02-foo/` and the `Pointer` reads
+  `openspec/changes/foo/`
+- **THEN** the `Pointer` reads `openspec/changes/archive/2026-11-02-foo/`
+  and the link's kind is `archive`
+
+#### Scenario: An apply branch
+
+- **WHEN** the branch adds no change directory and the `Pointer` reads
+  `openspec/changes/foo/`
+- **THEN** the `Pointer` stays, `finish` says the branch adds no change
+  directory, and the link's kind is `apply`
+
+#### Scenario: A fix card
+
+- **WHEN** the card's `Pointer` reads `pr:350` and the branch adds no change
+  directory
+- **THEN** the `Pointer` stays `pr:350`
+
+#### Scenario: A main that archived a change after the branch forked
+
+- **WHEN** `origin/main` archived `openspec/changes/bar/` after the branch's
+  merge base, and the branch adds only `openspec/changes/foo/`
+- **THEN** `finish` writes `openspec/changes/foo/`, not reading `bar` as
+  added
+
+#### Scenario: Several added directories
+
+- **WHEN** the branch adds `openspec/changes/foo/` and
+  `openspec/changes/bar/`
+- **THEN** the `Pointer` is left as it is, `finish` says the branch adds two
+  change directories, and the link's kind is `proposal`
+
+#### Scenario: A write Notion refuses
+
+- **WHEN** Notion answers the block append with 403
+- **THEN** the pull request stays a draft, `finish` names the step and the
+  status and exits 1, and a later `finish` adds only the missing link
