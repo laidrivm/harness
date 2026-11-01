@@ -39,6 +39,9 @@ function text(property: Property | undefined): string {
 	return "";
 }
 
+/** The refspec `work-status.ts` and `work-finish-card.ts` fetch `origin/main` by, named so a single-branch clone or a narrowed fetch still moves it. */
+export const MAIN = "+refs/heads/main:refs/remotes/origin/main";
+
 /** Runs `command` in `cwd` under `env`, its standard output, or throws naming how it failed; `work-status.ts` runs git through it too. */
 export function output(command: string[], cwd?: string, env: Record<string, string | undefined> = process.env): string {
 	if (!Bun.which(command[0])) throw new Error(`no ${command[0]} on PATH`);

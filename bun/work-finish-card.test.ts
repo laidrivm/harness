@@ -15,7 +15,11 @@ import { added, kind, recorded } from "./work-finish-card.ts";
 import { checkout, finish, linked, pull } from "./work-finish.fixture.ts";
 import { CARD, notion, page, type Stub, stopServers, TOKEN } from "./work-take.fixture.ts";
 
+const API = process.env.HARNESS_NOTION_API_URL;
 afterAll(() => {
+	// Restored, so a later file in the same process reaches no stopped stub.
+	if (API === undefined) delete process.env.HARNESS_NOTION_API_URL;
+	else process.env.HARNESS_NOTION_API_URL = API;
 	stopServers();
 	cleanup();
 });
@@ -101,6 +105,10 @@ describe("the change directories the branch adds files to", () => {
 		expect([dirs, kind(dirs)]).toEqual([[FOO], "proposal"]);
 	});
 
+	test("a path git would quote is read as it is", () => {
+		expect(added(tree({}, { "openspec/changes/fóo/proposal.md": "# fóo\n" }))).toEqual(["openspec/changes/fóo/"]);
+	});
+
 	test("an origin whose main cannot be fetched throws", () => {
 		const dir = adding();
 		git(dir, "remote", "set-url", "origin", join(emptyDir(), "gone.git"));
@@ -111,7 +119,8 @@ describe("the change directories the branch adds files to", () => {
 type Block = { id: string; type: string; [key: string]: unknown };
 const block = (id: string, type: string, text: string, href?: string): Block => ({ id, type, [type]: { rich_text: [{ plain_text: text, ...(href ? { href } : {}) }] } });
 const para = (id: string, text: string) => block(id, "paragraph", text);
-const item = (id: string, text: string) => block(id, "bulleted_list_item", text);
+const LIST = "bulleted_list_item";
+const item = (id: string, text: string) => block(id, LIST, text);
 const ITEM = (k: string) => ({
 	type: "bulleted_list_item",
 	bulleted_list_item: { rich_text: [{ type: "text", text: { content: "#7", link: { url: PULL.url } } }, { type: "text", text: { content: ` — ${k}` } }] },
@@ -170,6 +179,12 @@ describe("the Pointer", () => {
 		expect(run.sent(PAGE)).toEqual(POINTER(`harness: ${FOO}`));
 	});
 
+	test("a page on no board throws before any write", async () => {
+		const run = await record(adding(), { page: { ...page(), parent: { type: "page_id", page_id: "p" } } });
+		expect(run.said).toBe(`${CARD} is not a card on a board`);
+		expect(run.calls).toEqual([`GET /v1/pages/${CARD}`]);
+	});
+
 	// spec: work-finish/several-added-directories
 	test("two directories write nothing and say so", async () => {
 		const run = await record(tree({}, { [`${FOO}a.md`]: "a\n", "openspec/changes/bar/a.md": "a\n" }), {});
@@ -194,6 +209,8 @@ describe("the link", () => {
 		["after the anchor when no item follows", [para("a", "Ссылки"), para("p", "Позже")], "a"],
 		["under a heading_3", [block("a", "heading_3", "Ссылки"), item("i1", "#1")], "i1"],
 		["under a `Ссылки: ` paragraph", [para("a", "Ссылки: "), item("i1", "#1")], "i1"],
+		["past a blank paragraph inside the list", [para("a", "Ссылки"), para("b", " "), item("i1", "#1"), para("c", ""), para("p", "Позже")], "i1"],
+		["past a link to another pull request whose number starts the same", [para("a", "Ссылки"), block("i1", LIST, "#70", `${PULL.url}0`)], "i1"],
 	])("%s", async (_, blocks, after) => {
 		expect((await anchored([blocks])).append?.after).toBe(after);
 	});
@@ -213,8 +230,12 @@ describe("the link", () => {
 	});
 
 	// spec: work-finish/a-second-finish-on-the-same-pull-request
-	test("nothing is appended when a block already links the pull request", async () => {
-		const run = await anchored([[para("a", "Ссылки"), block("i1", "bulleted_list_item", "#7", PULL.url)]]);
+	test.each([
+		["an item's run", block("i1", LIST, "#7", PULL.url)],
+		["a run in another case, to the files tab", block("i1", LIST, "#7", `${PULL.url.replace("o/demo", "O/Demo")}/files`)],
+		["a bookmark", { id: "b", type: "bookmark", bookmark: { url: PULL.url, caption: [] } }],
+	])("nothing is appended when %s already links the pull request", async (_, linking) => {
+		const run = await anchored([[para("a", "Ссылки"), linking]]);
 		expect(run.calls).not.toContain(APPEND);
 		expect(run.said).toContain("finish: #7 is already linked on the card");
 	});

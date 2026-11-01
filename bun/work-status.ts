@@ -12,12 +12,13 @@ import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ARCHIVED, boardState, ORDER } from "./board-state.ts";
+import { across } from "./config.ts";
 import { recordCheckout } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { plain } from "./notion-bot.ts";
 import { readPullRequest } from "./pull-requests.ts";
 import { complete, groups } from "./turn-gate.ts";
-import { output, POINTER } from "./work-take.ts";
+import { MAIN, output, POINTER } from "./work-take.ts";
 
 /** The eleven statuses task-board defines, which `--to` names one of. */
 export const STATUSES = [...ORDER, "discarded"];
@@ -45,16 +46,6 @@ function git(cwd: string, ...args: string[]): string {
 		return output(["git", ...args], cwd, { ...process.env, GIT_TERMINAL_PROMPT: "0" }).replace(/\n$/, "");
 	} catch (error) {
 		throw new Refusal("unread", (error as Error).message);
-	}
-}
-
-/** The `name` of `top`'s `package.json`, or `undefined`. */
-export function named(top: string): string | undefined {
-	try {
-		const name = JSON.parse(readFileSync(join(top, "package.json"), "utf8"))?.name;
-		return typeof name === "string" && name ? name : undefined;
-	} catch {
-		return undefined;
 	}
 }
 
@@ -87,13 +78,11 @@ function merged(n: string, to: string): string | undefined {
  * The tree is extracted into a temporary directory removed on every path.
  */
 function evidence(top: string, pointer: string, to: string, seen: { commit?: string }): string | undefined {
-	const name = named(top);
 	// This repository's own change or fix as a card on another board points at it (task-board).
-	const path = name && pointer.startsWith(`${name}: `) ? pointer.slice(name.length + 2) : pointer;
+	const { path } = across(top, pointer);
 	const pr = PR.exec(path)?.[1];
 	if (pr) return merged(pr, to);
-	// The refspec named, so a single-branch clone or a narrowed fetch still moves origin/main.
-	git(top, "fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main");
+	git(top, "fetch", "-q", "origin", MAIN);
 	seen.commit = git(top, "rev-parse", "--verify", "-q", "refs/remotes/origin/main^{commit}");
 	const dir = mkdtempSync(join(tmpdir(), "work-status-"));
 	try {

@@ -67,11 +67,13 @@ archive; any other card text; a board property; consumers' sessions.
    `origin` is on GitHub.com, as `finish`'s `gh … -R <owner>/<repo>` calls
    already assume, and another host is out of scope.
    The card's top-level blocks are read (`GET /v1/blocks/{card}/children`,
-   every page); a block whose rich text carries that `href` means the link
-   is there. Else the first paragraph or heading whose plain text, trimmed
-   of whitespace and a trailing `:`, is `Ссылки` anchors it: the new
-   bulleted item goes `after` the last of the bulleted items directly
-   following it, or after the anchor when none does, in one `PATCH
+   every page); a block whose rich text carries that `href`, or a bookmark
+   or preview whose own `url` is it — in any case, or a page of it such as
+   `/files` — means the link is there. Else the first paragraph or heading
+   whose plain text, trimmed of whitespace and a trailing `:`, is `Ссылки`
+   anchors it: the new bulleted item goes `after` the last of the bulleted
+   items directly following it, blank paragraphs among them skipped, or
+   after the anchor when none does, in one `PATCH
    /v1/blocks/{card}/children`; a later section's bullets are not the
    run. No anchor: a bold `Ссылки` paragraph and the item are appended at
    the end. The cursor loop `discussion()` runs is lifted into

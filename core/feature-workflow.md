@@ -282,10 +282,11 @@ for them is already here.
   *A card can be ranked without opening the repository* fixes. A pull
   request's link goes under the card's `Ссылки` line, with its number and
   kind (`proposal`, `apply`, `archive`): `bun bun/work.ts finish --card`
-  writes it whenever it opened the pull request or found it open, and
-  otherwise the turn the pull request opens adds it — or, when the user
-  opened it, the first turn that learns it exists, at the latest the one told
-  it merged; the turn a proposal
+  writes it on a run that opened the pull request or found it open and
+  reached its question read, whose output then says `linked` or `already
+  linked`; otherwise the turn the pull request opens adds it — or, when the
+  user opened it, the first turn that learns it exists, at the latest the one
+  told it merged; the turn a proposal
   merges adds its `proposal.md` on the default branch; the archive re-points
   that link to the archived path. An edit to a proposal's *Why* or *What
   Changes* re-reads the card's summary in that turn. A card citing a commit
@@ -315,9 +316,9 @@ for them is already here.
   around it; the other pull requests the work took stay under `Ссылки`. A
   card whose `Pointer` names a change keeps it. `finish --card` writes the
   `Pointer` to the one change directory its branch adds files to, where the
-  `Pointer` is empty or names that change before its archive; for a pull
-  request no `finish --card` opened or found open, the turn that adds its
-  link writes the `Pointer` by hand. A fix card's `pr:<N>` stays a hand step
+  `Pointer` is empty or names that change before its archive, on the same
+  runs that write the link; otherwise the turn that adds the link writes the
+  `Pointer` by hand. A fix card's `pr:<N>` stays a hand step
   whoever opened the pull request, since `finish` never writes it: the turn
   that adds the closing pull request's `Ссылки` link writes it — the session
   that opened the pull request, or, when the user opened it, the first turn
