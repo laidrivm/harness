@@ -6,7 +6,7 @@ A check SHALL read a report in Stryker's JSON schema at `reports/mutation/mutati
 resolved from the repository root, count the mutants that survived, and
 compare that count against the floor declared as
 `harness.mutationFloor.surviving` in the `package.json` of the repository it
-runs in. A mutant counts as surviving when its status is `Survived` or
+runs in, failing and naming that field when it is not a whole number. A mutant counts as surviving when its status is `Survived` or
 `NoCoverage`: `Killed`, `Timeout`, `Ignored`, `CompileError` and
 `RuntimeError` all mean something other than "the tests let this through",
 and `NoCoverage` means no test ran against it at all. `NoCoverage` should not

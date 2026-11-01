@@ -12,9 +12,9 @@ after that one.
 
 ## Goals / Non-Goals
 
-**Non-Goals:** any change to `bun/mutation-floor.ts` or its tests, which
-already behave as the modified requirement says; the requirements
-`pre-push-commit-gates` adds to `mutation-floor`.
+**Non-Goals:** any change to `bun/mutation-floor.ts` or its tests beyond
+decision 5; the requirements `pre-push-commit-gates` adds to
+`mutation-floor`.
 
 ## Decisions
 
@@ -26,7 +26,8 @@ removed and re-added, and each scenario keeps its name: three cases in
 `a-survivor-newly-killed` and `the-floor-changed-with-no-reason-given`, so a
 rename would leave them citing slugs no spec defines. Only the text that names
 d2ass changes — the floor's place, the reason's place, the report's path,
-`src/model.ts` — and the rest stays word for word.
+`src/model.ts` — and the rest stays word for word, but for the sentence
+decision 5 adds.
 
 ### 2. The Purpose at archive
 
@@ -36,6 +37,19 @@ the requirement change on `main` in one commit rather than the Purpose
 describing the harness while the requirement still describes d2ass. The
 apply writes the text here (task 1.3), and the archive copies it: a task
 that archives cannot be ticked, since the archive moves `tasks.md`.
+
+The Purpose the archive copies, in place of the main spec's current one:
+
+> What the floor check counts and forbids, and what the harness mutates. The
+> check counts the mutants a Stryker report says survived and fails when that
+> count moves from the floor the repository declares, in either direction, or
+> when the floor states no reason — in the harness and in every repository
+> that installs it and runs the check. The harness mutates each tracked
+> `bun/<name>.ts` that is not a test or a fixture, alone, against the tests
+> under `bun/<name>`, and stores each module's results in the tree. It exists
+> because a test that asserts a value and one that merely executes the line
+> cover the same lines, so coverage cannot tell them apart and a surviving
+> mutant can.
 
 ### 3. The invoker named by its role
 
@@ -51,6 +65,18 @@ module runs no Stryker at all (`pre-push-commit-gates`, decision 4 and task
 7.2). So the requirement says the invoker produces the report and deletes the
 old one before writing it, rather than that it runs Stryker first.
 
+### 5. The check names a floor it cannot read
+
+`gauge` took `harness.mutationFloor.{surviving, why}` as typed, though
+`bun/config.ts` checks only that the object is present: an absent `why` threw
+a `TypeError` from `why.trim()`, and a `surviving` of `"12"` never equalled a
+count, so the check failed with a gap no edit could close. `gauge` now takes
+both as `unknown` and returns a problem naming the field — the existing
+"states no reason" one for a `why` that is not a non-blank string, and one
+naming `harness.mutationFloor.surviving` for a floor that is not a whole
+number, in place of the comparison. The requirement gains the one sentence on
+the whole number; the scenarios stay as they were.
+
 ## Risks / Trade-offs
 
 - [The requirement names `harness.mutationFloor` before the harness declares
@@ -59,7 +85,3 @@ old one before writing it, rather than that it runs Stryker first.
 - [`openspec validate --strict` warns on `after:`, a key OpenSpec does not
   know] → kept: `bun/board-state.ts` reads it to order the change, as for
   the archived changes that carry it; the plain `validate` passes.
-- [An absent `why` fails by a `TypeError` from `gauge` rather than the named
-  "states no reason" message, and no case covers it] → the scenario keeps
-  the absent reason the d2ass text covered ("no trailing comment"), since
-  the check does fail; naming it is a code change outside this one.

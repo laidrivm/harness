@@ -105,14 +105,22 @@ export function survivors(report: Report): number {
  * The reason is demanded on every run rather than only on a rise, because
  * telling a rise from a drop needs the previously committed value, and reading
  * git history to decide whether to ask is more machinery than one field.
+ *
+ * `floor` and `why` are typed `unknown` because they come from a hand-edited
+ * `package.json` unchecked: an absent reason or a floor written as `"12"` is
+ * named here rather than thrown as a `TypeError` or compared as never equal.
  */
-export function gauge(count: number, floor: number, why: string): string[] {
+export function gauge(count: number, floor: unknown, why: unknown): string[] {
 	const problems: string[] = [];
-	if (!why.trim())
+	if (typeof why !== "string" || !why.trim())
 		problems.push(
 			"the floor states no reason — write why in harness.mutationFloor.why",
 		);
-	if (count !== floor) {
+	if (!Number.isInteger(floor))
+		problems.push(
+			`harness.mutationFloor.surviving is ${JSON.stringify(floor) ?? "absent"}, not a whole number`,
+		);
+	else if (count !== floor) {
 		const gap = `${count} surviving mutants against a floor of ${floor}`;
 		problems.push(
 			count > floor

@@ -35,7 +35,9 @@ mutates and where the results are stored.
 - At archive, the main spec's Purpose, which no delta reaches, is rewritten
   for the harness.
 
-No code changes: the check already behaves as the modified requirement says.
+- The check names an absent `why` and a `surviving` that is not a whole
+  number as the field at fault, where it threw a `TypeError` or reported a gap
+  no edit closes (design.md, decision 5).
 
 ## Capabilities
 
@@ -53,8 +55,9 @@ None.
 
 - `openspec/specs/mutation-floor/spec.md` at archive: the requirement and the
   Purpose.
-- No code, test or configuration file. The cases in
-  `bun/mutation-floor.test.ts` already cite `a-branch-added-without-a-test`,
-  `a-survivor-newly-killed` and `the-floor-changed-with-no-reason-given`.
+- `bun/mutation-floor.ts`'s `gauge` and its cases in
+  `bun/mutation-floor.test.ts`, which already cite
+  `a-branch-added-without-a-test`, `a-survivor-newly-killed` and
+  `the-floor-changed-with-no-reason-given`. No configuration file.
 - Ordered after `pre-push-commit-gates`, whose ADDED requirements define the
   harness's modules and stored results this requirement's scenarios name.
