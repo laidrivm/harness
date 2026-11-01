@@ -61,7 +61,7 @@ each page of the threads query, each mutation — and logs every call.
 
 ## 2. The `coderabbit` skill and the docs
 
-- [ ] 2.1 Failing cases in `bun/command-guard-gh-api.test.ts`: the skill's
+- [x] 2.1 Failing cases in `bun/command-guard-gh-api.test.ts`: the skill's
       `check-runs?check_name=CodeRabbit` read, its `<head sha>` filled in,
       passes the guard; the existing `<head sha>/status` case keeps passing.
       A failing case pinning the skill to `finish-review-arrives`'s rule for
@@ -84,7 +84,7 @@ each page of the threads query, each mutation — and logs every call.
       ends `PASS` only while the walkthrough reads «No actionable comments
       were generated» naming the head as its `Commit`, else the no-review
       `OPEN` line; a head that moved before a fix re-reads all three signals
-- [ ] 2.2 Step 1's filters: a review or comment counts only when its
+- [x] 2.2 Step 1's filters: a review or comment counts only when its
       `user.login` is exactly `coderabbitai[bot]`; the fourth call reads `fullDatabaseId`
       for `databaseId`; a resolved thread is dropped as `already
       resolved`; an outdated thread that is not resolved is verified like
@@ -92,7 +92,7 @@ each page of the threads query, each mutation — and logs every call.
       (`**<picture>…</picture> Major**`, `_🟠 Major_`) as examples, not a
       pattern; take every severity in a body, as now. Step 6's legend names
       `success` and the check run on the no-review `OPEN` line
-- [ ] 2.3 The skill's report: right above the gate line, `bun bun/work.ts
+- [x] 2.3 The skill's report: right above the gate line, `bun bun/work.ts
       resolve --pr <n> --head <sha> --comment <id> …` (`bun
       node_modules/harness/bun/work.ts` in a consumer) naming the first
       comment's id of each unresolved thread of the bot's whose every
@@ -106,7 +106,7 @@ each page of the threads query, each mutation — and logs every call.
       rule's "no resolves" points at that
       command, `@coderabbitai resolve`/`approve` still named as forbidden.
       Grep the skill for "resolve" afterwards and read each hit
-- [ ] 2.4 `core/review-toolkit.md`: the head with no findings counts by its
+- [x] 2.4 `core/review-toolkit.md`: the head with no findings counts by its
       check run too, and the `Review skipped: draft pull request` code span
       is rejoined onto one line. `core/git-and-prs.md`'s approval bullet: the
       thread of a fixed finding is resolved by the session with `work.ts

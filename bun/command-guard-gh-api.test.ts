@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { cleanup, event, fabricate, run } from "./command-guard.fixture.ts";
 
 /**
@@ -120,5 +120,30 @@ describe("gh api graphql", () => {
 		const line = skill.match(/`(gh api repos\/OWNER\/REPO\/commits\/[^`]+)`/)?.[1] ?? "";
 		expect(line).toContain("<head sha>/status");
 		expect(run(event(line.replace("<head sha>", "198dbdc")), anywhere()).code).toBe(0);
+	});
+
+	// spec: agent-permissions/reading-through-the-endpoint-still-works
+	test("the coderabbit skill's check-run read passes, its head filled in", () => {
+		const skill = readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8");
+		const line = skill.match(/`(gh api "repos\/OWNER\/REPO\/commits\/<head sha>\/check-runs[^`]+)`/)?.[1] ?? "";
+		expect(line).toContain("check_name=CodeRabbit&filter=all");
+		expect(run(event(line.replace("<head sha>", "198dbdc")), anywhere()).code).toBe(0);
+	});
+});
+
+/** `text` with every run of whitespace one space, so a line wrap matches nothing differently. */
+const flat = (text: string) => text.replace(/\s+/g, " ");
+
+describe("the skill's rule for a reviewed head", () => {
+	// shortcut: pinned to the requirement's words while `bun/coderabbit-run.ts` is not on main; whichever of this change and finish-review-arrives (#361) applies second switches it to `REVIEWED.conclusion` and `REVIEWED.skippedTitle`.
+	// spec: agent-autonomy/the-head-counted-by-its-check-run-alone
+	test("step 1 counts a run by the conclusion and title finish-review-arrives' requirement names", () => {
+		const step = flat(readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8").split("### 1. Fetch")[1]?.split("### 2.")[0] ?? "");
+		expect(step).toContain("concluded `success` with a title not opening `Review skipped`");
+		const where = ["openspec/specs/work-finish/spec.md", "openspec/changes/finish-review-arrives/specs/work-finish/spec.md"]
+			.map((path) => `${import.meta.dir}/../${path}`)
+			.find((path) => existsSync(path) && readFileSync(path, "utf8").includes("CodeRabbit's state of a commit is read from its check runs"));
+		const requirement = flat(readFileSync(where ?? "", "utf8").split("### Requirement: CodeRabbit's state of a commit is read from its check runs")[1]?.split("####")[0] ?? "");
+		expect(requirement).toContain("succeeded with a title not opening `Review skipped`");
 	});
 });
