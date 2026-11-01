@@ -72,3 +72,20 @@ cap.
       `bun bun/work.ts finish --card 40a39875c31b81f0b5f2c66f8e89de9e`, and
       the card's `Pointer` and `Ссылки` it writes are read back on the
       board
+
+## 4. The user's answers of 2026-11-01
+
+- [x] 4.1 Answer 1 c: failing cases first — a `main` sharing no history
+      with the branch, as a shallow clone reads, throws the merge base's
+      step from `added()`; `recorded()` over a change it cannot tell writes
+      nothing and says so; `finish` over it, and over a 403 on the append,
+      says the line and marks the pull request ready. Then `recorded()`
+      returns the line, and `finish` turns any other throw of the record
+      into a line and goes on; design decisions 1 and 2, the delta and the
+      proposal say so
+- [x] 4.2 Answer 2 b: failing cases first — a delta spec alone added to a
+      change the base holds reads `apply`, `design.md` and `tasks.md` added
+      read `proposal`. Then `added()` returns the added paths, `changes()`
+      their directories and `kind()` reads the paths; design decision 5, the
+      delta and the proposal say so
+- [x] 4.3 Answers 3 a and 4 a: no change; design's risks record both

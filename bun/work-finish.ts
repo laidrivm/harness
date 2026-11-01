@@ -107,12 +107,12 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	// Looked up before the wait, so settings that are missing cost none.
 	const found = card ? integration() : undefined;
 	if (typeof found === "string") return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);
-	// Once, before either question read: a refused write leaves the draft, and a rerun writes what is missing.
+	// Once, before either question read. Auxiliary: a failure is said and the rest goes on, and a rerun writes what is missing (the user's answer 1 c, 2026-11-01).
 	if (card && found)
 		try {
 			lines.push(...(await recorded(found.call, card, top, { number: Number(number), url: `https://github.com/${full}/pull/${number}` })));
 		} catch (error) {
-			return done(`finish: draft #${number} — ${(error as Error).message}`, 1);
+			lines.push(`finish: the card's record stopped, a rerun writes the rest — ${(error as Error).message}`);
 		}
 	/** The card's question read: the line that ends `finish` when one waits or the read fails, else undefined. */
 	const question = async () => {

@@ -11,7 +11,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git, put } from "./diff-budget.fixture.ts";
 import { type Call, client, paged } from "./notion-bot.ts";
-import { added, kind, recorded } from "./work-finish-card.ts";
+import { added, changes, kind, recorded } from "./work-finish-card.ts";
 import { checkout, finish, linked, pull } from "./work-finish.fixture.ts";
 import { CARD, notion, page, type Stub, stopServers, TOKEN } from "./work-take.fixture.ts";
 
@@ -40,6 +40,15 @@ const archiving = () =>
 		[`${ARCHIVE}tasks.md`]: "- [x] 1\n",
 	});
 
+/** `dir` with `origin`'s `main` replaced by a commit sharing no history with `feature`, so no merge base is found. */
+function unrelated(dir: string): string {
+	git(dir, "checkout", "-q", "--orphan", "other");
+	git(dir, "commit", "-qm", "unrelated", "--allow-empty");
+	git(dir, "push", "-q", "-f", "origin", "other:main");
+	git(dir, "checkout", "-q", "feature");
+	return dir;
+}
+
 describe("paged", () => {
 	test("a second page of a path with no query is read behind `?start_cursor=`", async () => {
 		const paths: string[] = [];
@@ -60,30 +69,41 @@ describe("paged", () => {
 });
 
 describe("the change directories the branch adds files to", () => {
+	/** The change directories and the kind the branch at `top` gives. */
+	const read = (top: string) => {
+		const paths = added(top);
+		return [changes(paths), kind(paths)];
+	};
+
 	// spec: work-finish/a-proposals-first-finish
 	test("one change added", () => {
-		const dirs = added(adding());
-		expect([dirs, kind(dirs)]).toEqual([[FOO], "proposal"]);
+		expect(read(adding())).toEqual([[FOO], "proposal"]);
 	});
 
 	// spec: work-finish/an-archive-branch
 	test("an archive, with renames on in the repository's config, names only the archived directory", () => {
 		const dir = archiving();
 		git(dir, "config", "diff.renames", "true");
-		const dirs = added(dir);
-		expect([dirs, kind(dirs)]).toEqual([[ARCHIVE], "archive"]);
+		expect(read(dir)).toEqual([[ARCHIVE], "archive"]);
 	});
 
 	// spec: work-finish/an-apply-branch
 	test("none, with tasks.md edited and code added", () => {
-		const dirs = added(tree({ [`${FOO}tasks.md`]: "- [ ] 1\n" }, { [`${FOO}tasks.md`]: "- [x] 1\n", "bun/x.ts": "x\n" }));
-		expect([dirs, kind(dirs)]).toEqual([[], "apply"]);
+		expect(read(tree({ [`${FOO}tasks.md`]: "- [ ] 1\n" }, { [`${FOO}tasks.md`]: "- [x] 1\n", "bun/x.ts": "x\n" }))).toEqual([[], "apply"]);
+	});
+
+	// spec: work-finish/an-apply-branch-adding-a-delta-spec
+	test("a delta spec alone added to a change the base holds: that change, kind apply", () => {
+		const top = tree({ [`${FOO}proposal.md`]: "# foo\n" }, { [`${FOO}specs/x/spec.md`]: "# x\n", [`${FOO}notes.md`]: "n\n" });
+		expect(read(top)).toEqual([[FOO], "apply"]);
 	});
 
 	// spec: work-finish/several-added-directories
 	test("two", () => {
-		const dirs = added(tree({}, { [`${FOO}proposal.md`]: "# foo\n", "openspec/changes/bar/proposal.md": "# bar\n" }));
-		expect([dirs, kind(dirs)]).toEqual([["openspec/changes/bar/", FOO], "proposal"]);
+		expect(read(tree({}, { [`${FOO}proposal.md`]: "# foo\n", "openspec/changes/bar/proposal.md": "# bar\n" }))).toEqual([
+			["openspec/changes/bar/", FOO],
+			"proposal",
+		]);
 	});
 
 	// spec: work-finish/a-main-that-archived-a-change-after-the-branch-forked
@@ -96,17 +116,21 @@ describe("the change directories the branch adds files to", () => {
 		git(dir, "push", "-q", "origin", "main");
 		git(dir, "checkout", "-q", "feature");
 		git(dir, "merge", "-q", "--no-edit", "main");
-		expect(added(dir)).toEqual([FOO]);
+		expect(read(dir)[0]).toEqual([FOO]);
 	});
 
 	// spec: work-finish/a-proposals-second-half
-	test("a file added to a change the base holds names that change, kind proposal", () => {
-		const dirs = added(tree({ [`${FOO}proposal.md`]: "# foo\n" }, { [`${FOO}design.md`]: "d\n", [`${FOO}tasks.md`]: "- [ ] 1\n" }));
-		expect([dirs, kind(dirs)]).toEqual([[FOO], "proposal"]);
+	test("design.md and tasks.md added to a change the base holds name that change, kind proposal", () => {
+		expect(read(tree({ [`${FOO}proposal.md`]: "# foo\n" }, { [`${FOO}design.md`]: "d\n", [`${FOO}tasks.md`]: "- [ ] 1\n" }))).toEqual([[FOO], "proposal"]);
 	});
 
 	test("a path git would quote is read as it is", () => {
-		expect(added(tree({}, { "openspec/changes/fóo/proposal.md": "# fóo\n" }))).toEqual(["openspec/changes/fóo/"]);
+		expect(read(tree({}, { "openspec/changes/fóo/proposal.md": "# fóo\n" }))[0]).toEqual(["openspec/changes/fóo/"]);
+	});
+
+	// As a shallow clone reads: no common history with origin/main.
+	test("a main with no common history throws the merge base's step", () => {
+		expect(() => added(unrelated(adding()))).toThrow(/^the merge base with origin\/main failed: /);
 	});
 
 	test("an origin whose main cannot be fetched throws", () => {
@@ -177,6 +201,17 @@ describe("the Pointer", () => {
 	test("an empty one on another repository's board takes the prefix", async () => {
 		const run = await record(adding(), { board: "Mellon" });
 		expect(run.sent(PAGE)).toEqual(POINTER(`harness: ${FOO}`));
+	});
+
+	// spec: work-finish/a-branch-whose-change-cannot-be-told
+	test("a change the branch's history cannot tell writes nothing and says so", async () => {
+		const dir = adding();
+		git(dir, "remote", "set-url", "origin", join(emptyDir(), "gone.git"));
+		const run = await record(dir, {});
+		expect(run.said).toEqual([
+			expect.stringMatching(/^finish: could not tell the branch's change, so the card's Pointer and link are left — the fetch of origin\/main failed: /),
+		]);
+		expect(run.calls).toEqual([]);
 	});
 
 	test("a page on no board throws before any write", async () => {
@@ -270,10 +305,18 @@ describe("finish", () => {
 	});
 
 	// spec: work-finish/a-write-notion-refuses
-	test("a refused write leaves the draft, exits 1 and makes no ready", async () => {
+	test("a refused write is said, and finish goes on to the question read and the ready switch", async () => {
 		const run = await finish({ cwd: adding(), gh: DRAFT, stub: { blocks: [[]], fail: { [APPEND]: 403 } } });
-		expect([run.code, run.last]).toEqual([1, "finish: draft #7 — the link's append answered 403"]);
-		expect(run.calls).not.toContain(READY);
+		expect(run.out).toContain("finish: the card's record stopped, a rerun writes the rest — the link's append answered 403\n");
+		expect(run.seen.at(-1)).toBe("GET /v1/comments");
+		expect([run.code, run.last, run.calls.at(-1)]).toEqual([0, "finish: ready #7", READY]);
+	});
+
+	// spec: work-finish/a-branch-whose-change-cannot-be-told
+	test("a merge base that cannot be found is said, and finish still marks ready", async () => {
+		const run = await finish({ cwd: unrelated(adding()), gh: DRAFT });
+		expect(run.out).toMatch(/^finish: could not tell the branch's change, so the card's Pointer and link are left — the merge base with origin\/main failed: /m);
+		expect([run.code, run.last, run.seen]).toEqual([0, "finish: ready #7", ["GET /v1/comments"]]);
 	});
 
 	test("no --card makes no Notion call", async () => {

@@ -21,15 +21,20 @@ another repository's. A branch adding files to no change directory or to
 several SHALL write no `Pointer` and SHALL say so.
 
 `finish` SHALL then put the pull request on the card's `Ссылки` list as
-`[#N](<url>) — <kind>`, the kind `proposal` when one of those directories is
-outside `archive/`, else `archive` when one is inside it, else `apply`,
+`[#N](<url>) — <kind>`, the kind `proposal` when the branch adds a
+`proposal.md`, `design.md` or `tasks.md` to a directory outside `archive/`,
+else `archive` when it adds files to a directory inside it, else `apply`,
 unless a block of the card
 already links that pull request. The item SHALL go directly under the
 items already following the `Ссылки` line, and a card with no `Ссылки` line
 SHALL get one at the end of its body. Both writes SHALL come after the push
-and before the question read; an `origin/main` that cannot be fetched, or a
-write Notion refuses or does not answer, SHALL leave the draft and exit 1,
-naming the step. Without `--card`, `finish` SHALL write nothing to Notion.
+and before the question read. The record is auxiliary: an `origin/main` that
+cannot be fetched or a merge base that cannot be found SHALL write neither
+and say so in one line, and a read or write Notion refuses or does not answer
+SHALL stop the record and be said in one line naming the step; in each case
+`finish` SHALL go on to the question read and the ready switch, and a later
+`finish` writes only what is missing. Without `--card`, `finish` SHALL write
+nothing to Notion.
 
 #### Scenario: A proposal's first finish
 
@@ -61,6 +66,19 @@ naming the step. Without `--card`, `finish` SHALL write nothing to Notion.
   `openspec/changes/foo/`
 - **THEN** the `Pointer` stays, `finish` says the branch adds files to no
   change directory, and the link's kind is `apply`
+
+#### Scenario: An apply branch adding a delta spec
+
+- **WHEN** the branch adds `openspec/changes/foo/specs/x/spec.md` to a change
+  its base already holds, and no `proposal.md`, `design.md` or `tasks.md`
+- **THEN** the link's kind is `apply`
+
+#### Scenario: A branch whose change cannot be told
+
+- **WHEN** no merge base with `origin/main` is found, as in a shallow clone
+- **THEN** `finish` writes neither the `Pointer` nor the link, says it could
+  not tell the branch's change, and goes on to the question read and the
+  ready switch
 
 #### Scenario: A fix card
 
@@ -99,5 +117,6 @@ naming the step. Without `--card`, `finish` SHALL write nothing to Notion.
 #### Scenario: A write Notion refuses
 
 - **WHEN** Notion answers the block append with 403
-- **THEN** the pull request stays a draft, `finish` names the step and the
-  status and exits 1, and a later `finish` adds only the missing link
+- **THEN** `finish` names the step and the status in one line, goes on to
+  the question read and the ready switch, and a later `finish` adds only the
+  missing link
