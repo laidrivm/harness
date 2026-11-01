@@ -7,7 +7,7 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 
 ## 1. Biome, and the reformat alone
 
-- [ ] 1.1 Add `@biomejs/biome` 2.5.15 to `devDependencies`, `bun.lock` to
+- [x] 1.1 Add `@biomejs/biome` 2.5.15 to `devDependencies`, `bun.lock` to
       `harness.diffBudgetExclude`, and `biome.json` per design decision 2,
       its exclusions every tracked file another tool writes, listed from
       `git ls-files '*.json' '*.jsonc' '*.js' '*.ts'`; `bun install`; confirm
@@ -17,7 +17,9 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       the tracked `.ts` files over 300 lines afterwards. If any, stop this
       group: split them on their own branch to the length they will have
       once formatted, open that pull request, and resume after it merges.
-      Verify the list is empty against the tree this group branches from
+      Verify the list is empty against the tree this group branches from.
+      Measured 2026-11-01 on `ffa7bdf7`: 38 files over at width 80, 12 at
+      120; question 7 on the card holds the group
 - [ ] 1.3 `bunx --no-install biome format --write .`, then `bunx
       --no-install biome check --write --linter-enabled=false .` for import
       order alone, no hand edit in the same pull request; `bun test` passes;
