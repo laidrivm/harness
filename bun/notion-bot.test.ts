@@ -9,7 +9,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { named } from "./board-loop-push.ts";
-import { asked, settings } from "./notion-bot.ts";
+import { asked, settings, waits } from "./notion-bot.ts";
 import { MARK, REMEDY, where } from "./question-gate.ts";
 
 const dirs: string[] = [];
@@ -154,5 +154,24 @@ describe("the QUESTION: line", () => {
 		const read = asked(`QUESTION: ${CARD}\n${text}`);
 		if (rule === undefined) expect(read).toEqual({ card: CARD, text });
 		else expect(read).toBe(`the question fails the question gate (${rule}): ${REMEDY[rule]}`);
+	});
+});
+
+describe("waits() with another mark", () => {
+	const at = (author: string, minute: number, mark?: string) => ({
+		created_by: { id: author },
+		created_time: `2026-11-01T10:0${minute}:00Z`,
+		rich_text: [...(mark ? [{ plain_text: mark, annotations: { code: true } }] : []), { plain_text: " text" }],
+	});
+
+	// spec: task-board/a-pause-notice-waits
+	test("a harness-pause notice reads as a question does, under its own mark [36]", () => {
+		const notice = at(UUID, 1, "harness-pause");
+		expect([
+			waits([notice], USER, undefined, "harness-pause"),
+			waits([notice, at(UUID, 2)], USER, undefined, "harness-pause"),
+			waits([notice, at(UUID, 2, "harness-question")], USER, undefined, "harness-pause"),
+			waits([notice], USER),
+		]).toEqual([true, false, true, false]);
 	});
 });

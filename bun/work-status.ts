@@ -6,7 +6,9 @@
  * the evidence on `origin/main` for a merged status — on GitHub for a fix
  * card's pull request (`fix-card-done-by-pr`) — the WIP limit for an
  * unproven entry into the range. Each refusal writes nothing in Notion and is
- * one `status` record; a failed write records nothing.
+ * one `status` record; a failed write records nothing. After a write it
+ * releases the card's `Assign` when nothing waits there (`cleared()`), and
+ * prints that line after its own.
  */
 import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,6 +17,7 @@ import { ARCHIVED, boardState, ORDER } from "./board-state.ts";
 import { recordCheckout } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { plain } from "./notion-bot.ts";
+import { cleared } from "./notion-release.ts";
 import { readPullRequest } from "./pull-requests.ts";
 import { complete, groups } from "./turn-gate.ts";
 import { output, POINTER } from "./work-take.ts";
@@ -170,12 +173,15 @@ export async function status(card: string, to: string, timeout = 30_000): Promis
 	} catch (error) {
 		return refuse(error instanceof Refusal ? error.id : "unread", (error as Error).message);
 	}
+	let now: string | undefined;
 	try {
 		const written = await found.call("the Status write", `/v1/pages/${card}`, "PATCH", { properties: { Status: { select: { name: to } } } });
 		// Notion's answer, not `to`: the line is the read-back core/feature-workflow.md asks for.
-		const now = written?.properties?.Status?.select?.name;
-		return { lines: [`status: ${card} ${from} → ${now ?? "no status"}`], code: now === to ? 0 : 1 };
+		now = written?.properties?.Status?.select?.name;
 	} catch (error) {
 		return { lines: [`status: ${card} not written — ${(error as Error).message}`], code: 1 };
 	}
+	const freed = await cleared(found.call, card, found.settings.user);
+	const line = `status: ${card} ${from} → ${now ?? "no status"}`;
+	return { lines: freed.line ? [line, freed.line] : [line], code: now === to && !freed.restoreFailed ? 0 : 1 };
 }
