@@ -1,53 +1,38 @@
 /**
  * `work.ts finish` where the checkout tracks `.coderabbit.yaml`: the wait for
  * CodeRabbit's run before the ready switch, and the reads of `HEAD`'s state
- * after it, over `work-finish.fixture.ts` with a 1 ms poll interval.
+ * after it, over `work-finish.fixture.ts` with a 1 ms poll interval and the
+ * calls `work-finish-review.fixture.ts` names; the request for a skipped head
+ * is in `work-finish-review-ask.test.ts`.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, git } from "./diff-budget.fixture.ts";
-import { head } from "./goal-check.fixture.ts";
-import { BRANCH, CARD, checkout, finish, type Gh, pull } from "./work-finish.fixture.ts";
+import { BRANCH, CARD, checkout, finish } from "./work-finish.fixture.ts";
+import {
+	ASK,
+	COMMENTS,
+	DONE,
+	DRAFT,
+	LIMITED,
+	OPENING,
+	READ,
+	READY,
+	RUNNING,
+	run,
+	runs,
+	SKIPPED,
+	short,
+	times,
+	watched,
+} from "./work-finish-review.fixture.ts";
 import { home, question, stopServers } from "./work-take.fixture.ts";
 
 afterAll(() => {
 	stopServers();
 	cleanup();
 });
-
-const READ = `api repos/o/demo/pulls?head=o:${BRANCH}&state=all&per_page=100`;
-const READY = "pr ready 7 -R o/demo";
-const DRAFT = [pull(7, "OPEN", true)];
-const OPENING = ["finish", "--card", CARD, "--title", "Demo", "--body-file", "body.md"];
-
-/** One check run of CodeRabbit's app. */
-const run = (status: string, conclusion: string | null, title: string) => ({
-	name: "CodeRabbit",
-	status,
-	conclusion,
-	started_at: "2026-10-31T09:55:22Z",
-	output: { title },
-	app: { slug: "coderabbitai" },
-});
-const SKIPPED = run("completed", "skipped", "Review skipped");
-const RUNNING = run("in_progress", null, "Review in progress");
-const DONE = run("completed", "success", "Finished");
-const LIMITED = run("completed", "neutral", "Review rate limited");
-
-/** The check-run read of `cwd`'s `HEAD`, as the stub logs it. */
-const runs = (cwd: string) => `api repos/o/demo/commits/${head(cwd)}/check-runs?filter=all&per_page=100 --paginate --jq .check_runs[]`;
-const times = (n: number, call: string) => Array<string>(n).fill(call);
-const short = (cwd: string) => head(cwd).slice(0, 7);
-
-const COMMENTS = "api repos/o/demo/issues/7/comments?per_page=100 --paginate --jq .[] | {created_at, body}";
-const ASK = "pr comment 7 -R o/demo --body @coderabbitai review";
-
-/** `finish` on draft #7 in a checkout tracking `.coderabbit.yaml`, the check runs answering `answers` in turn, and the rest of the stub `more`. */
-async function watched(answers: (object[] | number)[], more: Gh = {}) {
-	const cwd = checkout(true);
-	return { cwd, ...(await finish({ cwd, gh: { before: DRAFT, runs: answers, ...more } })) };
-}
 
 describe("where CodeRabbit is configured", () => {
 	// spec: work-finish/a-repository-without-coderabbits-config
@@ -210,86 +195,5 @@ describe("the reads after the ready switch", () => {
 		const run = await watched([[SKIPPED], 1]);
 		expect(run.calls).toEqual([READ, "push", runs(run.cwd), READY, ...times(3, runs(run.cwd))]);
 		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit's runs on ${short(run.cwd)} unread: gh exited 1`]);
-	});
-});
-
-/** A `@coderabbitai review` comment as `--jq` prints it, posted at `at`. */
-const asked = (at: string, body = "@coderabbitai review") => ({ created_at: at, body });
-
-describe("the request for a skipped head", () => {
-	// spec: work-finish/a-first-request
-	test("skipped and no request posts exactly one and says it asked", async () => {
-		const run = await watched([[SKIPPED]], { comments: [{ created_at: "2026-10-31T09:56:00Z", body: "LGTM" }] });
-		expect(run.calls.filter((call) => call.startsWith("pr comment"))).toEqual([ASK]);
-		expect(run.calls.slice(-3)).toEqual([COMMENTS, runs(run.cwd), ASK]);
-		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; asked for a review`]);
-	});
-
-	// spec: work-finish/already-asked-for-this-head
-	test.each([
-		["at the head's earliest run's start", asked("2026-10-31T09:55:22Z")],
-		["padded with whitespace", asked("2026-10-31T10:30:00Z", "  @coderabbitai review\n")],
-		// The user's answer 11 b (2026-11-01).
-		["for a full review", asked("2026-10-31T10:30:00Z", "@coderabbitai full review")],
-	])("a request %s counts as asked", async (_, comment) => {
-		const run = await watched([[SKIPPED]], { comments: [comment] });
-		expect(run.calls.at(-1)).toBe(COMMENTS);
-		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; a review was already asked for`]);
-	});
-
-	// spec: work-finish/an-older-request
-	test.each([
-		["a second earlier", asked("2026-10-31T09:55:21Z")],
-		["asking more than the review", asked("2026-10-31T10:30:00Z", "@coderabbitai review please")],
-	])("a request %s does not count", async (_, comment) => {
-		const run = await watched([[SKIPPED]], { comments: [comment] });
-		expect(run.calls.at(-1)).toBe(ASK);
-		expect(run.last).toEndWith("; asked for a review");
-	});
-
-	test("with no start time on the head's runs, an exact request still counts as asked", async () => {
-		const run = await watched([[{ ...SKIPPED, started_at: null }]], { comments: [asked("2026-10-31T09:55:25Z")] });
-		expect(run.last).toEndWith("; a review was already asked for");
-	});
-
-	test("with the head's runs out of time order, the earliest start is the one compared", async () => {
-		const later = { ...SKIPPED, started_at: "2026-10-31T09:55:30Z" };
-		const run = await watched([[later, SKIPPED]], { comments: [asked("2026-10-31T09:55:25Z")] });
-		expect(run.last).toEndWith("; a review was already asked for");
-	});
-
-	// spec: work-finish/a-rate-limit-by-the-read-before-the-post
-	// spec: work-finish/the-read-before-the-post-fails
-	test("a read right before the post giving rate limited, or failing, posts nothing and says which", async () => {
-		const skips = times(19, "").map(() => [SKIPPED]);
-		const limited = await watched([...skips, [SKIPPED, LIMITED]]);
-		const failed = await watched([...skips, 1]);
-		for (const run of [limited, failed]) expect(run.calls.slice(-2)).toEqual([COMMENTS, runs(run.cwd)]);
-		expect([limited.code, limited.last]).toEqual([0, `finish: ready #7 — CodeRabbit rate limited on ${short(limited.cwd)}; no review asked for`]);
-		expect([failed.code, failed.last]).toEqual([0, `finish: ready #7 — CodeRabbit's runs on ${short(failed.cwd)} unread: gh exited 1`]);
-	});
-
-	// spec: work-finish/the-comments-cannot-be-read
-	test("a failed comment read posts nothing and names why", async () => {
-		const run = await watched([[SKIPPED]], { comments: 1 });
-		expect(run.calls.at(-1)).toBe(COMMENTS);
-		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; comments unread, nothing asked: gh exited 1`]);
-	});
-
-	// spec: work-finish/the-post-fails
-	test("a post gh refuses is made once and named", async () => {
-		const run = await watched([[SKIPPED]], { comment: 1 });
-		expect(run.calls.filter((call) => call === ASK)).toHaveLength(1);
-		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit skipped ${short(run.cwd)}; the request failed, gh exited 1`]);
-	});
-
-	test.each<[string, object[] | number]>([
-		["rate limited", [SKIPPED, LIMITED]],
-		["reviewing", [SKIPPED, RUNNING]],
-		["unread", 1],
-	])("%s reads no comments", async (_, after) => {
-		const run = await watched([[SKIPPED], after]);
-		expect(run.code).toBe(0);
-		expect(run.calls.filter((call) => call === COMMENTS || call.startsWith("pr comment"))).toEqual([]);
 	});
 });
