@@ -67,6 +67,8 @@ None.
   applied when its pull request opens* lets `Assign` clear earlier. *The
   work commands release `Assign` when nothing waits* is added.
 - `work-take`: *Take writes nothing and fails closed* allows that release.
+- `work-status` and `work-finish`: each gains the requirement that it runs
+  the release, and where its line goes.
 - `board-loop`: *A pass takes the first takeable card in the board's order*
   takes an answer candidate whatever its `Assign` holds.
 
