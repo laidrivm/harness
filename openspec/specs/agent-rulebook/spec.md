@@ -183,9 +183,12 @@ bot's that `work-finish` (*CodeRabbit's state of a commit is read from its
 check runs*) counts as a review — concluded `success` with a title not
 opening `Review skipped`, never read from the run's summary text — or with a
 `CodeRabbit` status reading `success` with the description
-`Review completed`. Its findings are the bot's
-reviews of that commit, by the bot's own severity label, or, for a finding
-that carries none, by the kind its heading implies, the pull request then
+`Review completed`. Unlike `work-finish`, which reads a commit with any run
+of the bot's still in progress as `reviewing`, the wrap-up counts that run
+whatever the bot's other runs on the commit read, since it asks whether a
+review completed, not whether the commit's state is settled. Its findings
+are the bot's reviews of that commit, by the bot's own severity label, or,
+for a finding that carries none, by the kind its heading implies, the pull request then
 marked as inferred.
 
 #### Scenario: A Major on the first reviewed commit
