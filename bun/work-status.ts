@@ -49,7 +49,7 @@ function git(cwd: string, ...args: string[]): string {
 }
 
 /** The `name` of `top`'s `package.json`, or `undefined`. */
-function named(top: string): string | undefined {
+export function named(top: string): string | undefined {
 	try {
 		const name = JSON.parse(readFileSync(join(top, "package.json"), "utf8"))?.name;
 		return typeof name === "string" && name ? name : undefined;

@@ -18,14 +18,14 @@ cap.
 
 ## 2. The record
 
-- [ ] 2.1 Lift `discussion()`'s cursor loop in `bun/notion-bot.ts` into
+- [x] 2.1 Lift `discussion()`'s cursor loop in `bun/notion-bot.ts` into
       one helper over a path and a step, joining the cursor with `?` or `&`
       as the path needs and naming the step in its no-new-cursor error, with
       a failing case first for a second page of a path that has no query;
       `discussion()` calls it, and
       `bun/notion-bot.test.ts` and `bun/notion-bot-rest.test.ts` pass
       unchanged
-- [ ] 2.2 Failing cases over the directories the branch adds files to, in
+- [x] 2.2 Failing cases over the directories the branch adds files to, in
       temporary repositories: one change added; one archived (removed from
       `openspec/changes/`, added under `archive/`, with `diff.renames` on in
       the repository's config); none, with `tasks.md` edited; two; a change
@@ -33,7 +33,7 @@ cap.
       a file added to a change the base already holds (that change, kind
       `proposal`); an `origin` whose `main` cannot be fetched, which throws.
       Then write them, and the kind, in `bun/work-finish-card.ts`
-- [ ] 2.3 Failing cases over `recorded()` against the Notion stub of
+- [x] 2.3 Failing cases over `recorded()` against the Notion stub of
       `bun/work-take.fixture.ts`, extended to answer the block read, the
       append and the `Pointer` write and log their bodies: an empty
       `Pointer` written and read back; one equal to the directory left
@@ -51,7 +51,7 @@ cap.
 
 ## 3. Finish
 
-- [ ] 3.1 Failing cases in `bun/work-finish-card.test.ts` through
+- [x] 3.1 Failing cases in `bun/work-finish-card.test.ts` through
       `finish()` of `bun/work-finish.fixture.ts`: a first finish on a
       branch adding a change writes both before the comments read; a second
       writes neither; a refused write leaves the draft, exits 1 and makes no
@@ -61,7 +61,7 @@ cap.
       `bun/work-finish-sequence.test.ts`'s pinned Notion calls (today only
       the comments read) to the page and block reads before it;
       both files then pass
-- [ ] 3.2 `core/feature-workflow.md`: the `Ссылки` and `Pointer` paragraphs
+- [x] 3.2 `core/feature-workflow.md`: the `Ссылки` and `Pointer` paragraphs
       say `finish --card` writes the pull request's link and the change's
       `Pointer`, and keep the hand step for a pull request it did not open
       or find open, and keep a fix card's `pr:<N>` `Pointer` a hand step

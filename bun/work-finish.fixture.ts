@@ -15,9 +15,9 @@ import { CARD, home, notion, type Stub, TOKEN } from "./work-take.fixture.ts";
 export { CARD };
 export const BRANCH = "feature";
 
-/** A checkout on `feature` one commit past `main`, with `main` on its bare `origin`. */
-export function checkout(): string {
-	const dir = repo({}, { "a.txt": "a\n" });
+/** A checkout on `feature` one commit past `main`, `head` and `base` their trees, with `main` on its bare `origin`. */
+export function checkout(head: Record<string, string | null> = { "a.txt": "a\n" }, base: Record<string, string> = {}): string {
+	const dir = repo(base, head);
 	const bare = join(emptyDir("work-finish-origin-"), "o", "demo.git");
 	mkdirSync(bare, { recursive: true });
 	git(bare, "init", "-q", "--bare");
@@ -29,6 +29,13 @@ export function checkout(): string {
 /** The commit `origin` holds on `feature`, or "" for none. */
 export const remote = (dir: string) =>
 	Bun.spawnSync(["git", "ls-remote", "origin", `refs/heads/${BRANCH}`], { cwd: dir }).stdout.toString().split("\t")[0];
+
+/** A bulleted item linking pull request `n` of `o/demo`, as the block read gives one. */
+export const linked = (n: number) => ({
+	id: `linked-${n}`,
+	type: "bulleted_list_item",
+	bulleted_list_item: { rich_text: [{ plain_text: `#${n}`, href: `https://github.com/o/demo/pull/${n}` }] },
+});
 
 /** A pull request of `o/demo` numbered `n`, as REST lists it, `draft` or not. */
 export const pull = (n: number, state: string, draft: boolean) => ({ ...pr("x", state), number: n, draft });
@@ -79,7 +86,8 @@ export async function finish({ args = ["finish", "--card", CARD], cwd = checkout
 	mkdirSync(hooks, { recursive: true });
 	writeFileSync(join(hooks, "pre-push"), `#!/bin/sh\nprintf 'push\\n' >> '${path.log}'\nexit ${hook}\n`);
 	chmodSync(join(hooks, "pre-push"), 0o755);
-	const api = notion(stub);
+	// A card that already links #7, unless the case serves blocks of its own.
+	const api = notion({ blocks: [[linked(7)]], ...stub });
 	const child = Bun.spawn([process.execPath, join(import.meta.dir, "work.ts"), ...args], {
 		cwd,
 		env: { PATH: path.dir, HOME: config, XDG_CONFIG_HOME: config, XDG_STATE_HOME: ledger, HARNESS_NOTION_API_URL: api.url, ...env },

@@ -30,6 +30,7 @@ export const question = (time: string) => said(BOT, time, { plain_text: "harness
 /** A card's page with every property set, `properties` replacing any of them. */
 export const page = (pointer = "", properties: Record<string, unknown> = {}) => ({
 	object: "page",
+	parent: { type: "data_source_id", data_source_id: "ds1" },
 	properties: {
 		Name: { type: "title", title: [{ plain_text: "Demo " }, { plain_text: "card" }] },
 		Status: { type: "status", status: { name: "proposing" } },
@@ -49,25 +50,35 @@ export const body = (markdown: string, truncated = false, unknown_block_ids: str
 	unknown_block_ids,
 });
 
-/** `fail` answers a call, as `seen` names it, with that status; a comments page past the first is named `#<cursor>`. */
-export type Stub = { page?: unknown; markdown?: unknown; comments?: unknown[][]; fail?: Record<string, number> };
+/**
+ * `fail` answers a call, as `seen` names it, with that status; a comments or
+ * blocks page past the first is named `#<cursor>`. `blocks` are the card's
+ * top-level blocks, page by page, and `board` the data source's title.
+ */
+export type Stub = { page?: unknown; markdown?: unknown; comments?: unknown[][]; blocks?: unknown[][]; board?: string; fail?: Record<string, number> };
 
-/** Serves Notion as `stub` says, and the calls it saw. */
+/** Serves Notion as `stub` says, and the calls it saw with the body each sent. */
 export function notion(stub: Stub = {}) {
-	const seen: { call: string; version: string | null; auth: string | null }[] = [];
+	const seen: { call: string; version: string | null; auth: string | null; body?: unknown }[] = [];
 	const server = Bun.serve({
 		port: 0,
-		fetch(req) {
+		async fetch(req) {
 			const url = new URL(req.url);
 			const cursor = url.searchParams.get("start_cursor");
 			const call = `${req.method} ${url.pathname}${cursor ? `#${cursor}` : ""}`;
-			seen.push({ call, version: req.headers.get("Notion-Version"), auth: req.headers.get("Authorization") });
+			const sent = req.method === "GET" ? undefined : await req.json();
+			seen.push({ call, version: req.headers.get("Notion-Version"), auth: req.headers.get("Authorization"), body: sent });
 			const status = stub.fail?.[call];
 			if (status) return Response.json({}, { status });
 			if (/^\/v1\/pages\/[^/]+\/markdown$/.test(url.pathname)) return Response.json(stub.markdown ?? body("# Card\n"));
-			if (/^\/v1\/pages\/[^/]+$/.test(url.pathname)) return Response.json(stub.page ?? page());
-			if (url.pathname !== "/v1/comments") return Response.json({}, { status: 404 });
-			const pages = stub.comments ?? [[]];
+			// A `Pointer` write answers the page as written, as Notion does.
+			const pointer = sent?.properties?.Pointer?.rich_text?.[0]?.text?.content;
+			if (/^\/v1\/pages\/[^/]+$/.test(url.pathname)) return Response.json(pointer === undefined ? (stub.page ?? page()) : page(pointer));
+			if (/^\/v1\/data_sources\/[^/]+$/.test(url.pathname)) return Response.json({ title: [{ plain_text: stub.board ?? "Harness" }] });
+			if (/^\/v1\/blocks\/[^/]+\/children$/.test(url.pathname) && req.method === "PATCH") return Response.json({ object: "list", results: sent.children });
+			const blocks = /^\/v1\/blocks\/[^/]+\/children$/.test(url.pathname);
+			if (!blocks && url.pathname !== "/v1/comments") return Response.json({}, { status: 404 });
+			const pages = (blocks ? stub.blocks : stub.comments) ?? [[]];
 			const at = Number(cursor ?? 0);
 			const more = at + 1 < pages.length;
 			return Response.json({ results: pages[at], has_more: more, next_cursor: more ? String(at + 1) : null });

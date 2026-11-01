@@ -2,7 +2,8 @@
  * `work.ts finish [--card <id>] [--title <text> --body-file <path>]`: ends an
  * agent's work on a branch in the order the draft rule sets — the refusals,
  * then the push while the pull request is a draft, the draft opened when none
- * is, and the ready switch unless a question waits on the card, when one is given
+ * is, the card's `Pointer` and link (`work-finish-card.ts`), and the ready
+ * switch unless a question waits on the card, when one is given
  * (`openspec/changes/archive/2026-10-28-work-finish/design.md`, *The
  * sequence and where each refusal sits*). Every refusal comes before the
  * push, changes nothing but the ledger, and is one `finish` record of
@@ -13,6 +14,7 @@ import { ready } from "./ci-run-draft.ts";
 import { ran, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
+import { recorded } from "./work-finish-card.ts";
 import { limit, originRepository, readPullRequests, readyOne } from "./pull-requests.ts";
 
 const git = (...args: string[]) => {
@@ -93,6 +95,11 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		// Last, after the push and its test run, so it sees a question posted meanwhile.
 		const found = integration();
 		if (typeof found === "string") return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);
+		try {
+			lines.push(...(await recorded(found.call, card, top, { number: Number(number), url: `https://github.com/${full}/pull/${number}` })));
+		} catch (error) {
+			return done(`finish: draft #${number} — ${(error as Error).message}`, 1);
+		}
 		try {
 			if (await waiting(found.call, card, found.settings.user)) return done(`finish: draft #${number} — a question waits on ${card}`, 0);
 		} catch (error) {
