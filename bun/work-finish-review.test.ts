@@ -89,7 +89,8 @@ describe("the wait before the ready switch", () => {
 		const create = `pr create --draft -R o/demo --base main --head ${BRANCH} --title Demo --body-file body.md`;
 		expect(run.calls).toEqual([READ, "push", create, READ, ...times(3, runs(cwd)), READY, ...times(2, runs(cwd))]);
 		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit reviewing ${short(cwd)}`]);
-		expect(run.seen).toEqual(["GET /v1/comments"]);
+		// Before the wait and again before the ready switch.
+		expect(run.seen).toEqual(["GET /v1/comments", "GET /v1/comments"]);
 	});
 
 	test("an in-progress run alone does not end the wait", async () => {
@@ -117,10 +118,17 @@ describe("the wait before the ready switch", () => {
 		expect(run.last).toBe(`finish: ready #7 — CodeRabbit reviewing ${short(cwd)}`);
 	});
 
-	test("every read before the switch failing says the last one's reason, and still marks ready", async () => {
-		const run = await watched([...times(12, "").map(() => 1), [SKIPPED, RUNNING]]);
-		expect(run.out).toContain(`finish: no completed CodeRabbit run on ${short(run.cwd)} after 12 reads; the last read failed: gh exited 1\n`);
+	// The user's answer 10 b (2026-11-01): three failed reads in a row end a wait.
+	test("three failed reads in a row end the wait before the switch, saying the last one's reason, and still mark ready", async () => {
+		const run = await watched([1, 1, 1, [SKIPPED, RUNNING]]);
+		expect(run.calls).toEqual([READ, "push", ...times(3, runs(run.cwd)), READY, runs(run.cwd)]);
+		expect(run.out).toContain(`finish: no completed CodeRabbit run on ${short(run.cwd)} after 3 reads; the last read failed: gh exited 1\n`);
 		expect(run.last).toBe(`finish: ready #7 — CodeRabbit reviewing ${short(run.cwd)}`);
+	});
+
+	test("a read that answers between failures starts the count again", async () => {
+		const run = await watched([1, 1, [], 1, 1, [SKIPPED], [RUNNING]]);
+		expect(run.calls).toEqual([READ, "push", ...times(6, runs(run.cwd)), READY, runs(run.cwd)]);
 	});
 
 	test("missing ask settings end the call before any wait", async () => {
@@ -150,10 +158,11 @@ describe("the wait before the ready switch", () => {
 	});
 
 	// spec: work-finish/a-question-waits
-	test("a question waiting leaves the draft, and the log ends on the pre-ready reads", async () => {
+	// The user's answer 12 b (2026-11-01): the question is read before the wait too.
+	test("a question already waiting leaves the draft with no wait and no check-run read", async () => {
 		const cwd = checkout(true);
 		const run = await finish({ cwd, gh: { before: DRAFT, runs: [[], [SKIPPED]] }, stub: { comments: [[question("2026-10-27T00:00:00.000Z")]] } });
-		expect(run.calls).toEqual([READ, "push", ...times(2, runs(cwd))]);
+		expect(run.calls).toEqual([READ, "push"]);
 		expect([run.code, run.last]).toEqual([0, `finish: draft #7 — a question waits on ${CARD}`]);
 	});
 });
@@ -196,8 +205,9 @@ describe("the reads after the ready switch", () => {
 	});
 
 	// spec: work-finish/unread
-	test("every read after the switch failing ends unread", async () => {
+	test("every read after the switch failing ends unread after three", async () => {
 		const run = await watched([[SKIPPED], 1]);
+		expect(run.calls).toEqual([READ, "push", runs(run.cwd), READY, ...times(3, runs(run.cwd))]);
 		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit's runs on ${short(run.cwd)} unread: gh exited 1`]);
 	});
 });
@@ -218,6 +228,8 @@ describe("the request for a skipped head", () => {
 	test.each([
 		["at the head's earliest run's start", asked("2026-10-31T09:55:22Z")],
 		["padded with whitespace", asked("2026-10-31T10:30:00Z", "  @coderabbitai review\n")],
+		// The user's answer 11 b (2026-11-01).
+		["for a full review", asked("2026-10-31T10:30:00Z", "@coderabbitai full review")],
 	])("a request %s counts as asked", async (_, comment) => {
 		const run = await watched([[SKIPPED]], { comments: [comment] });
 		expect(run.calls.at(-1)).toBe(COMMENTS);

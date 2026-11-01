@@ -101,47 +101,61 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		// After the push and the opening: a throw here would lose the line that names the open draft.
 		return done(`finish: draft #${number} — the checkout's tracked files could not be listed: ${(error as Error).message.trim().split("\n")[0]}`, 1);
 	}
-	// Looked up before the wait, so settings that are missing cost none; the question itself is still read last.
+	// Looked up before the wait, so settings that are missing cost none.
 	const found = card ? integration() : undefined;
 	if (typeof found === "string") return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);
-	// Before the question read and the ready switch, so the push's event is handled before the ready one; it gates nothing.
-	let unread = "";
-	const completed = !watched || (await reads(WAIT, () => {
-		const got = read(full, commit);
-		unread = Array.isArray(got) ? "" : `; the last read failed: ${got.why}`;
-		return Array.isArray(got) && own(got).some((run) => run.status === "completed");
-	}));
-	if (!completed) lines.push(`finish: no completed CodeRabbit run on ${short} after ${WAIT} reads${unread}`);
-
-	// No card, no question to read: a pin bump or a hotfix has none (`work-finish` spec, *No card: no question check*).
-	if (!card || !found) lines.push("finish: no --card, so no card's question was read");
-	else {
-		// Last, after the push and its test run, so it sees a question posted meanwhile.
+	/** The card's question read: the line that ends `finish` when one waits or the read fails, else undefined. */
+	const question = async () => {
+		if (!card || !found) return undefined;
 		try {
 			if (await waiting(found.call, card, found.settings.user)) return done(`finish: draft #${number} — a question waits on ${card}`, 0);
 		} catch (error) {
 			return done(`finish: draft #${number} — the card's comments could not be read: ${(error as Error).message}`, 1);
 		}
+		return undefined;
+	};
+	// Read before the wait too, so a question already waiting costs no wait (the user's answer 12 b, 2026-11-01).
+	const early = watched ? await question() : undefined;
+	if (early) return early;
+	// Before the question read and the ready switch, so the push's event is handled before the ready one; it gates nothing.
+	let unread = "";
+	const before = watched
+		? await reads(WAIT, () => {
+				const got = read(full, commit);
+				unread = Array.isArray(got) ? "" : `; the last read failed: ${got.why}`;
+				return Array.isArray(got) ? own(got).some((run) => run.status === "completed") : null;
+			})
+		: { done: true, made: 0 };
+	if (!before.done) lines.push(`finish: no completed CodeRabbit run on ${short} after ${before.made} reads${unread}`);
+
+	// No card, no question to read: a pin bump or a hotfix has none (`work-finish` spec, *No card: no question check*).
+	if (!card || !found) lines.push("finish: no --card, so no card's question was read");
+	else {
+		// Last, after the push and its test run, so it sees a question posted meanwhile.
+		const late = await question();
+		if (late) return late;
 	}
 	if (!ready(full, Number(number))) return done(`finish: draft #${number} — gh pr ready ${number} failed`, 1);
 	if (!watched) return done(`finish: ready #${number}`, 0);
 	// The last read that answered decides, so one failure at the end does not hide the skips before it.
 	let last: State = { name: "unread", why: "no read answered" };
 	let seen: Run[] = [];
-	await reads(READS, () => {
+	const after = await reads(READS, () => {
 		const got = read(full, commit);
 		if (Array.isArray(got)) [seen, last] = [got, state(got)];
 		else if (last.name === "unread") last = got;
-		return !["skipped", "no run", "unread"].includes(last.name);
+		return Array.isArray(got) ? !["skipped", "no run"].includes(last.name) : null;
 	});
 	// Exit 0 whatever the state: the ready switch went through, and the line is the signal.
-	const outcome = last.name === "skipped" ? request(full, Number(number), commit, seen) : said(last, short);
+	const outcome = last.name === "skipped" ? request(full, Number(number), commit, seen) : said(last, short, after.made);
 	return done(`finish: ready #${number} — ${outcome}`, 0);
 }
 
 const REQUEST = "@coderabbitai review";
 /** The reads before the ready switch and after it, an interval apart: 11 and 17 intervals, 55 s and 85 s at the default 5 s, plus each read's own time. */
 const [WAIT, READS] = [12, 18];
+/** The failed reads in a row that end a wait: a revoked token or a dead network fails every read. */
+const FAILS = 3;
 
 /**
  * Posts `@coderabbitai review` on #`n` as whoever `gh` holds, once per head:
@@ -155,7 +169,9 @@ function request(repo: string, n: number, sha: string, runs: Run[]) {
 	const comments = objects(`repos/${repo}/issues/${n}/comments?per_page=100`, ".[] | {created_at, body}");
 	if (!Array.isArray(comments)) return `${skipped}; comments unread, nothing asked: ${comments.why}`;
 	const since = arrived(runs);
-	if (comments.some((c) => String(c.body).trim() === REQUEST && Date.parse(String(c.created_at)) >= since)) return `${skipped}; a review was already asked for`;
+	// A full review asked for counts too (the user's answer 11 b, 2026-11-01).
+	const asked = [REQUEST, "@coderabbitai full review"];
+	if (comments.some((c) => asked.includes(String(c.body).trim()) && Date.parse(String(c.created_at)) >= since)) return `${skipped}; a review was already asked for`;
 	const fresh = read(repo, sha);
 	const now = Array.isArray(fresh) ? state(fresh) : fresh;
 	if (now.name !== "skipped") return said(now, sha.slice(0, 7));
@@ -168,20 +184,29 @@ function request(repo: string, n: number, sha: string, runs: Run[]) {
 	}
 }
 
-/** Calls `enough` up to `times` times, an interval apart, until it answers true; whether it did. */
-async function reads(times: number, enough: () => boolean) {
-	for (let i = 0; i < times; i++) {
-		if (i) await Bun.sleep(interval());
-		if (enough()) return true;
+/**
+ * Calls `enough` up to `times` times, an interval apart, until it answers true. `null` is a failed
+ * read, and `FAILS` of them in a row end the reads early (the user's answer 10 b, 2026-11-01).
+ * Whether it answered true, and how many reads it made.
+ */
+async function reads(times: number, enough: () => boolean | null) {
+	let failed = 0;
+	let made = 0;
+	while (made < times && failed < FAILS) {
+		if (made) await Bun.sleep(interval());
+		made++;
+		const got = enough();
+		if (got) return { done: true, made };
+		failed = got === null ? failed + 1 : 0;
 	}
-	return false;
+	return { done: false, made };
 }
 
-/** What `finish`'s last line says of the state `got` on the commit `short`. */
-function said(got: State, short: string) {
+/** What `finish`'s last line says of the state `got` on the commit `short`, after `made` reads. */
+function said(got: State, short: string, made = 1) {
 	if (got.name === "rate limited") return `CodeRabbit rate limited on ${short}; no review asked for`;
 	if (got.name === "other") return `CodeRabbit ${got.conclusion} "${got.title}" on ${short}`;
-	if (got.name === "no run") return `no CodeRabbit run on ${short} after ${READS} reads`;
+	if (got.name === "no run") return `no CodeRabbit run on ${short} after ${made} reads`;
 	if (got.name === "unread") return `CodeRabbit's runs on ${short} unread: ${got.why}`;
 	return `CodeRabbit ${got.name} ${short}`;
 }

@@ -239,9 +239,12 @@ once both are known, from the module this change ships.
 None: nothing parses `finish`'s output, and the answers of 2026-10-31
 settle the explore's questions.
 
-## The apply's local review, settled by the user (card items 6–9, 2026-11-01)
+## The apply's local reviews, settled by the user (card items 6–12, 2026-11-01)
 
 - 6 a: dismissed. A skip someone intended, such as `@coderabbitai ignore`, still gets the one request, which answer 2 already covers. The "already asked" line may lag a rate limit, but it posts nothing.
 - 7 b: a `tracked()` failure after the push ends on `finish: draft #N — the checkout's tracked files could not be listed: …`, exit 1. The reads do not take the App's minted token on the host; that gap goes to card `40a39875c31b817a9879f4b070abde5e`. A run stuck `in_progress` and the unprojected jq output stay as they are.
 - 8 a: dismissed. `.coderabbit.yaml` stays the condition until card `40b39875c31b814b8dade5be8635c7b7` replaces it with the reviewers the project names in `harness.reviewers`.
+- 10 b (third review): three failed reads in a row now end either wait. That replaces "a failed read does not end the reads" above, so a revoked token or a dead network costs three reads, not thirty. One failure between answers still does not end them.
+- 11 b: an earlier `@coderabbitai full review` counts as the request too.
+- 12 b: where the wait runs, the card's question is read before it as well, so a question already waiting costs no wait. The read before the ready switch stays, to catch a question posted meanwhile.
 - 9 b: in the archive pull request, not here. That covers the `!found` disjunct kept only for the type, the short sha computed three times, and the fixture's `runs: []` reading as a failed read.
