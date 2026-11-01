@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { flat } from "./prose.fixture.ts";
 import { root } from "./root.ts";
 import { tracked } from "./tracked.ts";
 
@@ -12,7 +13,6 @@ afterAll(() => {
 });
 
 const read = (path: string) => readFileSync(join(root, path), "utf8");
-const flat = (text: string) => text.replace(/\s+/g, " ");
 
 const WRITES = "Send, reply, comment or review under the user's name";
 const CODERABBIT = "`/coderabbit [pr]` —";

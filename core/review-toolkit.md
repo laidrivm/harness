@@ -16,11 +16,14 @@ Major or Critical dismissal is one exception: that one ends the turn by
 design, because settling it is the user's. `/coderabbit`'s `OPEN` over a head
 commit the bot has not reviewed yet is the other: there is nothing to act on
 until the review lands, and the next run picks it up. `/coderabbit` counts a
-head with no findings as reviewed once its `CodeRabbit` status is `success` with the
-description `Review completed`; a draft's `success` reads `Review skipped:
-draft pull request`, and marking the pull request ready starts the review of
-its head. A head whose status reads `Review skipped…`, or names a rate or usage
-limit, gets no review on its own — stop waiting on it and report it. Where
+head with no findings as reviewed once one of the bot's `CodeRabbit` check runs
+on it concluded `success` with a title not opening `Review skipped`, every one
+of them `completed`, or once its `CodeRabbit` status is `success` with the
+description `Review completed`, the bot's older report; a draft's `success`
+reads `Review skipped: draft pull request`, and marking the pull request ready
+starts the review of its head. A head whose status or check run reads
+`Review skipped…`, or names a rate or usage limit, gets no review on its own —
+stop waiting on it and report it. Where
 such a head is first seen is `finish`'s last line, which names CodeRabbit's
 state of the head it marked ready from the head's check runs: `skipped`,
 `rate limited`, or another. On a skipped head `finish` posts at most one

@@ -9,11 +9,11 @@ each page of the threads query, each mutation — and logs every call.
 
 ## 1. `work.ts resolve`
 
-- [ ] 1.1 The last Safety rule of `core/rules.md` takes the wording the user
+- [x] 1.1 The last Safety rule of `core/rules.md` takes the wording the user
       adopted (`design.md`, decision 9, *The Safety rule names `resolve`*),
       in the commit that adds the subcommand (1.2). Verify by reading the
       rule back against the design's quote
-- [ ] 1.2 Failing cases in `bun/work-resolve.test.ts` for the arguments: no
+- [x] 1.2 Failing cases in `bun/work-resolve.test.ts` for the arguments: no
       `--comment`; `--comment 123x`, `--comment ""`, `--comment -1`; `--pr 0`,
       no `--pr`, `--pr 7 --pr 8`; no `--head`, `--head 1a2b3c4`, `--head
       PUSHED_SHA`, two `--head`; a positional; an unknown option — each
@@ -23,7 +23,7 @@ each page of the threads query, each mutation — and logs every call.
       with `multiple: true` on every option and `--pr` and `--head` taken
       only once, the numbers anchored `^[1-9]\d*$` and the head
       `^[0-9a-f]{40}$`
-- [ ] 1.3 Failing cases for the pull request: a detached `HEAD` refuses before
+- [x] 1.3 Failing cases for the pull request: a detached `HEAD` refuses before
       any thread read; `--pr 8` on a branch whose open pull request is #7
       refuses naming #7; `--pr 9` on a branch open as #7 and #9 reads #9's
       threads; a failed pull-request read refuses naming `gh auth status`;
@@ -31,7 +31,7 @@ each page of the threads query, each mutation — and logs every call.
       refusal exits 1 with no mutation logged. Then write
       `bun/work-resolve.ts` reusing `originRepository()` and
       `readPullRequests()` from `bun/pull-requests.ts`
-- [ ] 1.3a Failing cases for the head, the stub answering each pull-request
+- [x] 1.3a Failing cases for the head, the stub answering each pull-request
       read in turn: `--head A` with #7's head `A` reads the pull requests
       once and goes on to the threads; a first read of `B` and a second of
       `A` goes on after exactly two reads, the second at least 2 seconds
@@ -39,21 +39,21 @@ each page of the threads query, each mutation — and logs every call.
       read no thread and log no mutation; a second read that fails refuses
       the same way. Then compare `--head` with `headRefOid` and add the one
       re-read after a 2-second wait (decision 10)
-- [ ] 1.4 Failing cases for placing the ids: no threads at all refuses the id
+- [x] 1.4 Failing cases for placing the ids: no threads at all refuses the id
       as unplaced; a reply's id inside the bot's thread refuses; one of two
       ids opening the user's thread refuses the whole call with no mutation;
       `coderabbitai-x` and a `null` author each refuse; a failed thread read
       refuses; an id opening the 101st thread, served as the second page of
       a `--paginate --slurp` read, is placed; `4433138725`, past 2³¹, is
       placed by its `fullDatabaseId` string. Then the read
-- [ ] 1.5 Failing cases for the resolves: one id, unresolved, makes one
+- [x] 1.5 Failing cases for the resolves: one id, unresolved, makes one
       `resolveReviewThread` call with its thread's id, prints `resolve: <id>
       resolved` and exits 0; a resolved and an unresolved one make one call,
       print a skip and a resolved line, exit 0; the same id named twice
       resolves once; an outdated unresolved thread is resolved; the second of
       three calls failing leaves the first resolved, names the second, does
       not attempt the third, exits 1. Then the mutation loop
-- [ ] 1.6 `README.md`: the command table gets the `resolve` row beside
+- [x] 1.6 `README.md`: the command table gets the `resolve` row beside
       `finish`, linking `openspec/specs/work-resolve/spec.md`, and *Cloud
       sessions* says `resolve` fails there, the proxy refusing GraphQL;
       `bun/work.ts`'s header comment names the subcommand. Verify with `bun
@@ -61,7 +61,7 @@ each page of the threads query, each mutation — and logs every call.
 
 ## 2. The `coderabbit` skill and the docs
 
-- [ ] 2.1 Failing cases in `bun/command-guard-gh-api.test.ts`: the skill's
+- [x] 2.1 Failing cases in `bun/command-guard-gh-api.test.ts`: the skill's
       `check-runs?check_name=CodeRabbit` read, its `<head sha>` filled in,
       passes the guard; the existing `<head sha>/status` case keeps passing.
       A failing case pinning the skill to `finish-review-arrives`'s rule for
@@ -84,7 +84,7 @@ each page of the threads query, each mutation — and logs every call.
       ends `PASS` only while the walkthrough reads «No actionable comments
       were generated» naming the head as its `Commit`, else the no-review
       `OPEN` line; a head that moved before a fix re-reads all three signals
-- [ ] 2.2 Step 1's filters: a review or comment counts only when its
+- [x] 2.2 Step 1's filters: a review or comment counts only when its
       `user.login` is exactly `coderabbitai[bot]`; the fourth call reads `fullDatabaseId`
       for `databaseId`; a resolved thread is dropped as `already
       resolved`; an outdated thread that is not resolved is verified like
@@ -92,7 +92,7 @@ each page of the threads query, each mutation — and logs every call.
       (`**<picture>…</picture> Major**`, `_🟠 Major_`) as examples, not a
       pattern; take every severity in a body, as now. Step 6's legend names
       `success` and the check run on the no-review `OPEN` line
-- [ ] 2.3 The skill's report: right above the gate line, `bun bun/work.ts
+- [x] 2.3 The skill's report: right above the gate line, `bun bun/work.ts
       resolve --pr <n> --head <sha> --comment <id> …` (`bun
       node_modules/harness/bun/work.ts` in a consumer) naming the first
       comment's id of each unresolved thread of the bot's whose every
@@ -106,7 +106,7 @@ each page of the threads query, each mutation — and logs every call.
       rule's "no resolves" points at that
       command, `@coderabbitai resolve`/`approve` still named as forbidden.
       Grep the skill for "resolve" afterwards and read each hit
-- [ ] 2.4 `core/review-toolkit.md`: the head with no findings counts by its
+- [x] 2.4 `core/review-toolkit.md`: the head with no findings counts by its
       check run too, and the `Review skipped: draft pull request` code span
       is rejoined onto one line. `core/git-and-prs.md`'s approval bullet: the
       thread of a fixed finding is resolved by the session with `work.ts
@@ -122,4 +122,16 @@ each page of the threads query, each mutation — and logs every call.
       runs* resolves in `openspec/specs/work-finish/spec.md`; if it is not,
       wait for it; and that 2.1's pin reads `REVIEWED` once #361 is on
       `main`, switching it here if `finish-review-arrives` applied second.
+      In the archive commit, relink `README.md`'s `resolve` row from this
+      change's delta to `openspec/specs/work-resolve/spec.md`, which exists
+      only from then on (as `work-status`' row was).
       Verify with `ls openspec/changes/archive | grep finish-review-arrives`
+- [ ] 3.2 In the archive pull request (the user folded card
+      40a39875c31b81159fe1f4e870d9fd3a, *Point session-wrapup at the one
+      rule for a CodeRabbit-reviewed head*, into it on 1.11): point
+      `core/skills/session-wrapup/SKILL.md`'s check-run read at the same
+      rule for "reviewed" — conclusion `success`, a title not opening
+      `Review skipped`, never the summary's text — and pin it with a test as
+      2.1 pins the `coderabbit` skill, against `REVIEWED` from
+      `bun/coderabbit-run.ts` once #361 is on `main`. Verify with the pin
+      test failing first over today's wording
