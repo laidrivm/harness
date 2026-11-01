@@ -6,8 +6,9 @@ A check SHALL read a report in Stryker's JSON schema at `reports/mutation/mutati
 resolved from the repository root, count the mutants that survived, and
 compare that count against the floor declared as
 `harness.mutationFloor.surviving` in the `package.json` of the repository it
-runs in, failing and naming that field when it is not a whole number. A mutant counts as surviving when its status is `Survived` or
-`NoCoverage`: `Killed`, `Timeout`, `Ignored`, `CompileError` and
+runs in, failing and naming that field when it is not a whole number. A
+mutant counts as surviving when its status is `Survived` or `NoCoverage`:
+`Killed`, `Timeout`, `Ignored`, `CompileError` and
 `RuntimeError` all mean something other than "the tests let this through",
 and `NoCoverage` means no test ran against it at all. `NoCoverage` should not
 arise under the command runner, which performs no coverage analysis, and is
@@ -74,3 +75,9 @@ history for a guarantee the diff already gives.
 
 - **WHEN** `harness.mutationFloor.why` is absent, empty or whitespace
 - **THEN** the check fails, whichever direction the number moved
+
+#### Scenario: A floor that is not a whole number
+
+- **WHEN** `harness.mutationFloor.surviving` is absent, a string or a fraction
+- **THEN** the check fails naming `harness.mutationFloor.surviving`, and
+  reports no gap against it

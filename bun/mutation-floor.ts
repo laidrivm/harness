@@ -114,12 +114,11 @@ export function gauge(count: number, floor: unknown, why: unknown): string[] {
 	const problems: string[] = [];
 	if (typeof why !== "string" || !why.trim())
 		problems.push(
-			"the floor states no reason — write why in harness.mutationFloor.why",
+			"the floor states no reason — write why as text in harness.mutationFloor.why",
 		);
-	if (!Number.isInteger(floor))
-		problems.push(
-			`harness.mutationFloor.surviving is ${JSON.stringify(floor) ?? "absent"}, not a whole number`,
-		);
+	// `typeof` as well, since `Number.isInteger` does not narrow `unknown`.
+	if (typeof floor !== "number" || !Number.isInteger(floor))
+		problems.push("harness.mutationFloor.surviving is not a whole number");
 	else if (count !== floor) {
 		const gap = `${count} surviving mutants against a floor of ${floor}`;
 		problems.push(

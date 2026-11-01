@@ -75,7 +75,13 @@ both as `unknown` and returns a problem naming the field — the existing
 "states no reason" one for a `why` that is not a non-blank string, and one
 naming `harness.mutationFloor.surviving` for a floor that is not a whole
 number, in place of the comparison. The requirement gains the one sentence on
-the whole number; the scenarios stay as they were.
+the whole number and the scenario *A floor that is not a whole number*, which
+the new cases cite; the four scenarios it had keep their text.
+
+`bun/spec-coverage.ts` carries a second `gauge`, for `harness.uncitedFloor`,
+with the same two faults. It is left as it is here: lifting both into one
+module adds a module the mutation step of `pre-push-commit-gates` must store
+results for, while that change's apply is open (the card's question).
 
 ## Risks / Trade-offs
 

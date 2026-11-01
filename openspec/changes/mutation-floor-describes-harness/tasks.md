@@ -27,10 +27,12 @@ decision 5), whose failing cases come first.
       names neither `src/model.ts` nor a floor constant
 - [x] 1.4 Make `gauge` name the field for an absent `why` and a `surviving`
       that is not a whole number (design.md, decision 5): first add cases to
-      `bun/mutation-floor.test.ts` for an absent `why`, an empty `why`, and a
-      `surviving` written as a string or absent, each expecting one problem
-      naming its field, and see the absent `why` throw and the floors fail;
-      then change `gauge`. Verify with `bun test bun/mutation-floor` green
+      `bun/mutation-floor.test.ts` for an absent, empty, blank or non-text
+      `why`, and a `surviving` that is a string, absent or a fraction — the
+      last under `// spec: mutation-floor/a-floor-that-is-not-a-whole-number`
+      — each expecting one problem naming its field, and see the absent `why`
+      throw and the floors fail; then change `gauge`. Verify with `bun test
+      bun/mutation-floor` green
 
 The archive runs separately, once every box above is ticked (design.md,
 decision 2): in the commit that syncs the delta it copies that Purpose into
