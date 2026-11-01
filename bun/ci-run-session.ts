@@ -1,7 +1,8 @@
 /**
  * The CI flow's session: the failed logs of the event's attempt written where
  * the session reads them, and a session run in the clone with its outcome read
- * against a schema. Split from `ci-run.ts`, which runs it, for its length.
+ * against a schema. Split from `ci-run.ts`, which runs it, for its length; its
+ * cases run through the flow in `ci-run-session.test.ts`.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

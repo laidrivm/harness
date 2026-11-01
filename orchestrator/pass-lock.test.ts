@@ -7,7 +7,7 @@ import { clone, host, IDLE, lock, release, running, skip, starts, stop, tick, UR
 
 afterAll(cleanup);
 
-describe.skipIf(skip)(`pass.sh${skip ? " — skipped: flock is not on PATH; CI's ubuntu-latest runs these" : ""}`, () => {
+describe.skipIf(skip)(`pass.sh's lock${skip ? " — skipped: flock is not on PATH; CI's ubuntu-latest runs these" : ""}`, () => {
 	describe("the lock", () => {
 		// spec: orchestrator/a-tick-while-a-pass-runs
 		test("a tick while a pass of the same clone runs says the lock is held, exits 0 and writes no stop file [5]", async () => {

@@ -49,4 +49,3 @@ export function settings(path: string): Settings | undefined {
 		throw new Error(`notion-bot: ${path}: \`board\` is not 32 hex digits, alone or as a UUID`);
 	return { token, user, board };
 }
-

@@ -1,5 +1,6 @@
 /**
- * The board loop's Notion integration: the settings file the runner reads, the
+ * The board loop's Notion integration: the settings file the runner reads,
+ * re-exported from `notion-bot-settings.ts`, the
  * `QUESTION:` line it reads from a stage session's final message, and the five
  * REST calls that post the question from the integration and set `Assign`
  * (`openspec/changes/archive/2026-10-22-notion-bot-questions/design.md`). The ask command makes
