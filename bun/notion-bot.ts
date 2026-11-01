@@ -142,21 +142,24 @@ export async function waiting(call: Call, card: string, user: string, self?: str
 }
 
 /** Every page of the card's page-level comments, following `next_cursor`. */
-export async function discussion(call: Call, card: string): Promise<Comment[]> {
-	const comments: Comment[] = [];
+export const discussion = (call: Call, card: string): Promise<Comment[]> => paged<Comment>(call, "the comments read", `/v1/comments?block_id=${card}`);
+
+/** Every page of the list `path` answers, read under `step`, the cursor joined to `path` as its query needs. */
+export async function paged<T = unknown>(call: Call, step: string, path: string): Promise<T[]> {
+	const results: T[] = [];
 	const read = new Set<string>();
 	let cursor: string | undefined;
 	do {
-		const at = cursor ? `&start_cursor=${encodeURIComponent(cursor)}` : "";
-		const listed = await call("the comments read", `/v1/comments?block_id=${card}${at}`);
-		comments.push(...(Array.isArray(listed?.results) ? listed.results : []));
+		const at = cursor ? `${path.includes("?") ? "&" : "?"}start_cursor=${encodeURIComponent(cursor)}` : "";
+		const listed = await call(step, `${path}${at}`);
+		results.push(...(Array.isArray(listed?.results) ? listed.results : []));
 		// More pages behind no cursor would end the read short; behind one already read, never end it.
 		if (listed?.has_more && (typeof listed.next_cursor !== "string" || !listed.next_cursor || read.has(listed.next_cursor)))
-			throw new Error("the comments read gave no new cursor");
+			throw new Error(`${step} gave no new cursor`);
 		cursor = listed?.has_more ? listed.next_cursor : undefined;
 		if (cursor) read.add(cursor);
 	} while (cursor);
-	return comments;
+	return results;
 }
 
 /**

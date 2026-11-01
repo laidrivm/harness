@@ -59,3 +59,29 @@ export function bumpTest(root: string): string {
 		throw new Error("package.json: harness.bumpTest is blank");
 	return value;
 }
+
+/** The `name` of `top`'s `package.json`, or `undefined`. */
+export function named(top: string): string | undefined {
+	try {
+		const name = JSON.parse(
+			readFileSync(join(top, "package.json"), "utf8"),
+		)?.name;
+		return typeof name === "string" && name ? name : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * A card's `pointer` split into this repository's cross-repository prefix,
+ * its name, a colon and a space (task-board, *A card for another repository's
+ * change points across*), and the path after it; no prefix where it has none.
+ */
+export function across(
+	top: string,
+	pointer: string,
+): { prefix: string; path: string } {
+	const name = named(top);
+	const prefix = name && pointer.startsWith(`${name}: `) ? `${name}: ` : "";
+	return { prefix, path: pointer.slice(prefix.length) };
+}
