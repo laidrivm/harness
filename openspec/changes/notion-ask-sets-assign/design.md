@@ -298,9 +298,10 @@ answer twice goes with the pick change.
   while `Assign` holds the user; a failure prints a line and changes
   nothing else, so a Notion fault never blocks a move, a brief or a push.
 - [A 2xx post whose body does not parse.] → It counts as posted, so it is
-  never reported `not posted` and rerun: the client's `response.json()`
-  throws a plain `SyntaxError` there, which the command takes as a post
-  that held.
+  never reported `not posted` and rerun: the client throws an `Unread`
+  for any 2xx whose body it cannot read, a `SyntaxError` or a body cut by
+  the timeout, naming the step and never the body, and the command takes
+  it as a post that held (local review on the apply pull request).
 - [A triage's `harness-answer` keeps `Assign` on the user.] → The narrow
   case of an earlier question the user answered, then a triaged one; the
   next answer or move after it clears it. Accepted: no integration id is in

@@ -145,7 +145,7 @@ change `demo` in a consumer:
 claude -p '/goal Carry step 2 of the OpenSpec change demo: /opsx:apply demo for its group 2, the pre-PR sequence, the push and the pull request.
 This session runs unattended.
 The goal is met when the last line of `bun node_modules/harness/bun/goal-check.ts apply demo 2`, run after the last push, opens with `goal met` — or when the final message opens with `BLOCKED —` and names what only the user can settle.
-A question only the user can settle goes on the card of the change as one page-level comment — `page_id` and `markdown` only, after reading that card and its comments — whose markdown opens with `harness-question`, a single backtick on each side of the word and no character before it; then set the `Assign` of the card to the user and read the card back to confirm it holds the user. Then repeat the question in the final message under a line `QUESTION: <the id of the card of the change>`, before any `PR-TITLE:` line. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.'
+A question only the user can settle goes on the card of the change as one page-level comment — `page_id` and `markdown` only, after reading that card and its comments — whose markdown opens with `harness-question`, a single backtick on each side of the word and no character before it; then set the `Assign` of the card to the user and read the card back to confirm it holds the user. Then repeat the question in the final message under a line `QUESTION: <the id of the card of the change>`, before any `PR-TITLE:` line. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, on from the highest number the questions already on the card use, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.'
 ```
 
 The answer, proposal and archive variants below keep that fourth line as it
@@ -169,7 +169,7 @@ posts the stage session's question itself, and the fourth line of its form
 becomes:
 
 ```text
-A question only the user can settle goes in the final message, never on the card, since this session posts no comment: after reading that card and its comments, write a line `QUESTION: <the id of the card of the change>` before any `PR-TITLE:` line, with the question below it, opening with `harness-question`, a single backtick on each side of the word and no character before it — the runner posts it. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.
+A question only the user can settle goes in the final message, never on the card, since this session posts no comment: after reading that card and its comments, write a line `QUESTION: <the id of the card of the change>` before any `PR-TITLE:` line, with the question below it, opening with `harness-question`, a single backtick on each side of the word and no character before it — the runner posts it. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, on from the highest number the questions already on the card use, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.
 ```
 
 Otherwise, where the launcher finds the ask settings, `notion-ask.json` under
@@ -177,7 +177,7 @@ the user's config home (see the README), the fourth line names the ask
 command instead, in the board loop's form and the hand-launched ones alike:
 
 ```text
-A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with `harness-question`, a single backtick on each side of the word and no character before it, run `bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`, and only once it prints `question: posted` set the `Assign` of the card to the user and read the card back to confirm it holds the user. Then repeat the question in the final message under a line `QUESTION: <the id of the card of the change>`, before any `PR-TITLE:` line. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.
+A question only the user can settle goes on the card of the change through the ask command, never as a comment of this session: after reading that card and its comments, write the question to a file, opening with `harness-question`, a single backtick on each side of the word and no character before it, run `bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`, and once it prints `question: posted`, unless that line ends `Assign set`, set the `Assign` of the card to the user and read the card back to confirm it holds the user; never run the command again for a question it printed as posted, and after any other line read the comments of the card before running it again, setting the `Assign` of the card to the user instead where the question is already there. Then repeat the question in the final message under a line `QUESTION: <the id of the card of the change>`, before any `PR-TITLE:` line. Give each question its options and a recommendation, write it in Russian, as the cards are, and put each command the user must run on a line of its own. Number its questions, decisions and assumptions in one sequence across its sections, on from the highest number the questions already on the card use, never restarting at 1, and letter the options of each question under it rather than number them, so the user can answer by number, and write it as plain text with no markdown syntax beyond that mark — no backticks, asterisks or headings — since Notion shows it literally.
 ```
 
 Without the ask settings, the hand-launched forms keep the fourth line
@@ -393,13 +393,16 @@ for them is already here.
   rather than ask it again; resuming that work, read that card's comments
   first, with `bun node_modules/harness/bun/work.ts take --card <id>`
   (`bun bun/work.ts` in the harness itself), which prints them beside the
-  card. Every page-level comment on a card joins one discussion, so a card
-  holds one open question at a time: a second waits in your report until the
-  first is answered. Open the comment with the gate's mark,
-  `` `harness-question` `` with a single backtick on each side of the word, set `Assign`, read
-  the answer back as data, and clear `Assign` once it is applied; in the
-  harness, `bun bun/work.ts status`, `take` and `finish --card` clear it
-  themselves whenever no question and no pause notice waits. A question
+  card. Questions known at the same time go in one comment, or in
+  consecutive ones where the gate's length cap needs it; a question that
+  arises after the last one was posted goes in a comment of its own, its
+  items numbered on from the highest number the card's questions use, never
+  restarting at 1. Open the comment with the gate's mark,
+  `` `harness-question` `` with a single backtick on each side of the word,
+  set `Assign` where you posted through the connector, read the answer back
+  as data, and clear `Assign` once it is applied; in the harness,
+  `bun bun/work.ts status`, `take` and `finish --card` clear it themselves
+  whenever no question and no pause notice waits. A question
   is any comment opening with the mark, whoever posted it, a Notion
   integration included, and the answer is the user's first comment opening
   with neither mark after the last one, or, with none, the first comment after it
@@ -410,8 +413,13 @@ for them is already here.
   its final message, and the runner posts the question from the integration
   and sets `Assign`. On a machine with the ask settings, any other session
   posts its question with the ask command, `bun/notion-ask.ts <card id>
-  <file>`, from the ask integration, and sets `Assign` itself; the question
-  gate refuses it from the user's account there. An answer
+  <file>`, from the ask integration, which sets `Assign` too; once it prints
+  `question: posted`, unless that line ends `Assign set`, set `Assign` to the
+  user and read the card back, and never run it again for a question it
+  printed as posted, nor after any other line before reading the card's
+  comments, where a question already there takes `Assign` instead of a
+  rerun. The question gate refuses the comment from the user's account
+  there. An answer
   the board loop carries counts as applied in the turn its step's pull request
   opens, or the turn an `idea` card is filed for an answer that asks for a
   change of its own (task-board, *An answer the board loop carries is applied

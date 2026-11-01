@@ -7,7 +7,7 @@ Each failing case is written first, its failure recorded, and cited as
 
 ## 1. The ask command sets `Assign` and posts while a question waits
 
-- [ ] 1.1 Failing cases in `bun/notion-ask.test.ts`, its stub given a PATCH
+- [x] 1.1 Failing cases in `bun/notion-ask.test.ts`, its stub given a PATCH
       answer (status and body) of the case's own. On a card with no
       comments the calls are exactly `POST /v1/comments` then
       `PATCH /v1/pages/<card>`, with no comments read [1]. The PATCH carries
@@ -32,7 +32,7 @@ Each failing case is written first, its failure recorded, and cited as
       `bun/transient.test.ts`, a `Transient` from a 503 carries `status`
       503 and one from a timeout none [32]. Verify: each new case fails
       against today's code, and the suites fail only on them
-- [ ] 1.2 Give `Transient` in `bun/transient.ts` the `status` the client
+- [x] 1.2 Give `Transient` in `bun/transient.ts` the `status` the client
       raised it for. In `bun/notion-ask.ts`, drop the `waiting()` read and
       its refusal, call `assign()` after `comment()` and check the answer's
       `properties.Assign.people` for the user's id, compared as `hex()`
@@ -42,7 +42,7 @@ Each failing case is written first, its failure recorded, and cited as
       Rewrite the header to say what the command reads and writes now
       (design, *The write*). Verify: `bun test bun/notion-ask.test.ts`
       passes
-- [ ] 1.3 Change the ask line in `bun/board-loop-prompt.ts` and the doc's ask
+- [x] 1.3 Change the ask line in `bun/board-loop-prompt.ts` and the doc's ask
       launch form in `core/feature-workflow.md` alike: "and once it prints
       `question: posted`, unless that line ends `Assign set`, set the `Assign`
       of the card to the user and read the card back to confirm it holds the
@@ -55,7 +55,7 @@ Each failing case is written first, its failure recorded, and cited as
       [12]. Verify: `bun test bun/board-loop-question.test.ts
       bun/question-gate-ask.test.ts` passes, the doc and the prompt still
       equal
-- [ ] 1.4 In `core/feature-workflow.md`'s *Ask the user* bullet, replace "a
+- [x] 1.4 In `core/feature-workflow.md`'s *Ask the user* bullet, replace "a
       card holds one open question at a time: a second waits in your report
       until the first is answered" with the grouping and numbering rule
       (questions known together in one comment, or consecutive ones where
