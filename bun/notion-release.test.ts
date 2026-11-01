@@ -82,6 +82,12 @@ describe("something waits: nothing written", () => {
 		const run = await release({ assign: [OTHER] });
 		expect([run.line, run.seen]).toEqual([undefined, [PAGE]]);
 	});
+
+	// spec: task-board/the-user-not-on-assign
+	test("25 people without the user: no line, since nothing would be written (local review)", async () => {
+		const run = await release({ assign: Array.from({ length: 25 }, (_, i) => `${i}`.padStart(32, "0")) });
+		expect([run.line, run.seen]).toEqual([undefined, [PAGE]]);
+	});
 });
 
 describe("the release fails", () => {
@@ -100,12 +106,18 @@ describe("the release fails", () => {
 describe("something arrives during the release", () => {
 	// spec: task-board/a-question-posted-during-the-release
 	test.each([
-		["a question [29]", { [COMMENTS]: { comments: [question(3)] } }],
-		["a pause notice [33]", { [COMMENTS]: { comments: [pause(3)] } }],
-		["a second comments read answered 500 [34]", { [PATCH]: { fail: { [COMMENTS]: 500 } } }],
-	])("%s: the user back beside the other person", async (_, next) => {
-		const run = await release({ next });
-		expect([run.line, run.restoreFailed, run.assign]).toEqual([RESTORED, false, [OTHER, USER]]);
+		["a question [29]", {}, { [COMMENTS]: { comments: [question(3)] } }, "waits"],
+		["a pause notice [33]", {}, { [COMMENTS]: { comments: [pause(3)] } }, "waits"],
+		["a second comments read answered 500 [34]", {}, { [PATCH]: { fail: { [COMMENTS]: 500 } } }, "unread"],
+		[
+			"a question, the write answering no Assign list (local review)",
+			{ unlisted: true },
+			{ [COMMENTS]: { comments: [question(3)] }, [PATCH]: { unlisted: false } },
+			"waits",
+		],
+	])("%s: the user back beside the other person", async (_, c, next, back) => {
+		const run = await release({ ...c, next });
+		expect([run.line, run.back, run.restoreFailed, run.assign]).toEqual([RESTORED, back, false, [OTHER, USER]]);
 		expect(run.seen).toEqual([PAGE, COMMENTS, PATCH, COMMENTS, PATCH]);
 	});
 

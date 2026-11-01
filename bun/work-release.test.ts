@@ -107,6 +107,12 @@ describe("finish --card", () => {
 		expect(run.out).toContain(`assign: restored the user on ${CARD}\n`);
 	});
 
+	// spec: work-finish/a-question-arrives-during-the-release
+	test("the release's second read failing: the user back, the draft left, exit 1 (local review)", async () => {
+		const run = await finish({ gh: DRAFT, stub: { assign: [UUID], next: { [PATCH]: [{ fail: { [COMMENTS]: 500 } }] } } });
+		expect([run.code, run.last, run.calls]).toEqual([1, "finish: draft #7 — the card's comments could not be read after the release", [READ, "push"]]);
+	});
+
 	// spec: task-board/the-release-fails
 	test("a failed release leaves the other lines and the exit [28]", async () => {
 		const run = await finish({ gh: DRAFT, stub: { assign: [UUID], fail: { [PATCH]: 500 } } });

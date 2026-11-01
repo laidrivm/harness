@@ -9,8 +9,6 @@ import { type Call, discussion, hex, waits } from "./notion-bot.ts";
 
 /** How a line opens when a call failed or `Assign` was too long to read whole: the user may still be on `Assign`. */
 export const UNASSIGN_FAILED = "assign: failed —";
-/** How `cleared()`'s line opens when it put the user back: `finish` then keeps the draft. */
-export const RESTORED = "assign: restored the user on";
 
 type Person = { id: unknown };
 /** An `Assign` as a PATCH's answer or a page read holds it: untrusted, so read where it is used. */
@@ -26,18 +24,19 @@ const write = (call: Call, card: string, kept: { id: unknown }[]) =>
 
 /**
  * Reads `card`'s `Assign` and, once `go` agrees with the list read, writes it
- * back without `user`, keeping everyone else. Returns the list it wrote and
- * Notion's answer, or nothing when `go` declined; throws naming the step, or
- * at 25 people, the most a page read lists.
+ * back without `user`, keeping everyone else. Returns Notion's answer, or
+ * nothing when `go` declined; throws naming the step, or at 25 people, the
+ * most a page read lists. `go` is asked first, so a card it declines never
+ * reads as failed for its length.
  */
 export async function release(call: Call, card: string, user: string, go: (listed: Person[]) => Promise<boolean> = async () => true) {
 	const listed = people(await call("the page read", `/v1/pages/${card}`)) ?? [];
+	if (!(await go(listed))) return undefined;
 	// shortcut: a page read lists 25 references of a property at most, so a longer `Assign` is left whole rather than written back cut; page through `/v1/pages/<id>/properties/<property>` if a card ever needs it.
 	if (listed.length >= 25) throw new Error(`${card} lists 25 people on Assign, the most a page read returns`);
-	if (!(await go(listed))) return undefined;
-	const kept = listed.filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
-	return { kept, answer: await write(call, card, kept) };
+	return { answer: await write(call, card, without(listed, user)) };
 }
+const without = (listed: Person[], user: string) => listed.filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
 
 /** Whether a question or a `harness-pause` notice waits on `card` for `user`, read with no integration id. */
 async function open(call: Call, card: string, user: string) {
@@ -45,36 +44,48 @@ async function open(call: Call, card: string, user: string) {
 	return waits(comments, user) || waits(comments, user, undefined, "harness-pause");
 }
 
+/** What `cleared()` did: the line to print, none when it wrote nothing; why it put the user back, if it did; and whether a restore failed. */
+export type Cleared = { line?: string; back?: "waits" | "unread"; restoreFailed: boolean };
+
 /**
  * Removes `user` from `card`'s `Assign` when it holds them and nothing waits,
  * then reads the comments again and puts the user back when something now
- * waits or that read failed. Returns the line to print, none when it wrote
- * nothing, and whether a restore failed, which leaves a question with no one
- * on `Assign`.
+ * waits or that read failed. The second read follows any write that may have
+ * landed, its answer read back or not, so a question posted meanwhile keeps
+ * the user whatever the write answered. A failed restore leaves a question
+ * with no one on `Assign`.
  */
-export async function cleared(call: Call, card: string, user: string): Promise<{ line?: string; restoreFailed: boolean }> {
-	const failed = (why: string, restoreFailed = false) => ({ line: `${UNASSIGN_FAILED} ${why}`, restoreFailed });
-	let done: Awaited<ReturnType<typeof release>>;
+export async function cleared(call: Call, card: string, user: string): Promise<Cleared> {
+	const failed = (why: string, restoreFailed = false): Cleared => ({ line: `${UNASSIGN_FAILED} ${why}`, restoreFailed });
+	let listed: Person[] = [];
+	let past = false;
+	let fault: string | undefined;
 	try {
-		done = await release(call, card, user, async (listed) => holds(listed, user) && !(await open(call, card, user)));
+		const done = await release(call, card, user, async (read) => {
+			listed = read;
+			past = holds(read, user) && !(await open(call, card, user));
+			return past;
+		});
+		if (!done) return { restoreFailed: false };
+		const now = people(done.answer);
+		if (!now || holds(now, user)) fault = "the Assign write did not remove the user";
 	} catch (error) {
-		return failed((error as Error).message);
+		// Before the write, nothing changed; at it, the write may have landed.
+		if (!past || listed.length >= 25) return failed((error as Error).message);
+		fault = (error as Error).message;
 	}
-	if (!done) return { restoreFailed: false };
-	const now = people(done.answer);
-	if (!now || holds(now, user)) return failed("the Assign write did not remove the user");
-	let again: boolean;
+	let back: Cleared["back"];
 	try {
-		again = await open(call, card, user);
+		back = (await open(call, card, user)) ? "waits" : undefined;
 	} catch {
 		// Unread is the side that keeps a question visible.
-		again = true;
+		back = "unread";
 	}
-	if (!again) return { line: `assign: removed the user from ${card}`, restoreFailed: false };
+	if (!back) return fault ? failed(fault) : { line: `assign: removed the user from ${card}`, restoreFailed: false };
 	try {
-		if (!holds(people(await write(call, card, [...done.kept, { id: user }])), user)) return failed("the restore did not hold the user", true);
+		if (!holds(people(await write(call, card, [...without(listed, user), { id: user }])), user)) return failed("the restore did not hold the user", true);
 	} catch (error) {
 		return failed(`the restore: ${(error as Error).message}`, true);
 	}
-	return { line: `${RESTORED} ${card}`, restoreFailed: false };
+	return { line: `assign: restored the user on ${card}`, back, restoreFailed: false };
 }

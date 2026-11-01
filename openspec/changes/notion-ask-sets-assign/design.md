@@ -206,8 +206,9 @@ sessions do not.
 Decisions 4 to 6. `unassign()` in `bun/notion-unassign.ts` already reads the
 page, refuses at 25 people (the most a page read lists), and PATCHes
 `Assign` without the user, keeping everyone else. Its read and write are
-lifted into one function, `release(call, card, user)`, which `unassign()`
-calls after its card checks and which returns the list it wrote;
+lifted into one function, `release(call, card, user, go)`, which `unassign()`
+calls after its card checks and which returns the write's answer, asking
+`go` with the list it read before the cap and the write;
 `unassign()`'s behaviour and lines stay as they are, so the runner's pass is
 unchanged. A second function, `cleared(call, card, user)`, is what the three
 commands call: it reads the page, and only when `Assign` holds the user
@@ -217,12 +218,15 @@ gains a `mark` argument, defaulting to `harness-question`, so the
 copy (no integration id either way, as `finish` does today, so a triage's
 `harness-answer` keeps `Assign`, the side that keeps a question visible).
 When nothing waits it calls `release()` and reads the user's absence back
-from the PATCH's answer. It then reads the comments once more and, when a
+from the PATCH's answer. It then reads the comments once more, after any
+write that may have landed, its answer read back or not, and, when a
 question or a pause notice now waits by the same test, or when that read
-fails, PATCHes the list `release()` wrote with the user added back, keeping
-everyone else, and reads the user back. It returns `{ line, restoreFailed }`:
-`unassign()`'s line forms plus `assign: restored the user on <card>`, or no
-line when it wrote nothing.
+fails, PATCHes the list it read with the user kept, and reads the user back.
+It returns `{ line, back, restoreFailed }`: `unassign()`'s line forms plus
+`assign: restored the user on <card>`, or no line when it wrote nothing;
+`back` says whether it put the user back for something waiting or for an
+unread second read, which `finish` reports as its own failed comments read
+(local review on the apply pull request).
 
 `status` calls it after its `Status` write and `take` after its reads (its
 comments print as read before). `finish` calls it after its own comments

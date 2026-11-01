@@ -23,6 +23,12 @@ export const FILED = "12345678-9abc-def0-1234-56789abcdef0";
 /** Someone on a card's `Assign` beside the user. */
 export const OTHER = "99998888777766665555444433332222";
 
+/** Merges into `target` the next of `next[call]`, after that call's answer: how a stand-in changes during a run. `work-take.fixture.ts`'s stub runs it too. */
+export function advance(target: object, next: Record<string, object[]> | undefined, call: string) {
+	const then = next?.[call]?.shift();
+	if (then) Object.assign(target, then);
+}
+
 /** The question the stand-in's comments read finds while `state.pending`. */
 export const ASKED = { id: "c1", created_by: { id: BOT }, created_time: "2026-10-24T00:00:00Z", rich_text: [{ plain_text: `${MARK} Ship?` }] };
 
@@ -93,8 +99,7 @@ export function standIn() {
 			state.seen.push(call);
 			state.bodies.push(req.method === "GET" ? undefined : await req.json());
 			const answered = respond(req, url, call);
-			const then = state.next[call]?.shift();
-			if (then) Object.assign(state, then);
+			advance(state, state.next, call);
 			return answered;
 		},
 	});

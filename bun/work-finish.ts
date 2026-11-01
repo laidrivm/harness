@@ -21,7 +21,7 @@ import { arrived, exited, interval, objects, own, plain, type Run, read, type St
 import { ran, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
-import { cleared, RESTORED } from "./notion-release.ts";
+import { cleared } from "./notion-release.ts";
 import { limit, originRepository, readPullRequests, readyOne } from "./pull-requests.ts";
 import { tracked } from "./tracked.ts";
 
@@ -142,9 +142,9 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		// After the last comments read and before the ready switch.
 		const freed = await cleared(found.call, card, found.settings.user);
 		if (freed.line) lines.push(freed.line);
-		// Put back, or meant to be: a question arrived during the release, so the draft stays.
-		if (freed.restoreFailed || freed.line?.startsWith(RESTORED))
-			return done(`finish: draft #${number} — a question waits on ${card}`, freed.restoreFailed ? 1 : 0);
+		// Put back, or meant to be: something arrived during the release, or its read failed, so the draft stays.
+		if (freed.back === "unread") return done(`finish: draft #${number} — the card's comments could not be read after the release`, 1);
+		if (freed.back || freed.restoreFailed) return done(`finish: draft #${number} — a question waits on ${card}`, freed.restoreFailed ? 1 : 0);
 	}
 	if (!ready(full, Number(number))) return done(`finish: draft #${number} — gh pr ready ${number} failed`, 1);
 	if (!watched) return done(`finish: ready #${number}`, 0);

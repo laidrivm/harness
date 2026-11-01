@@ -10,6 +10,7 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, 
 import { join } from "node:path";
 import type { Server } from "bun";
 import { emptyDir, repo } from "./diff-budget.fixture.ts";
+import { advance } from "./notion-bot.fixture.ts";
 
 export const TOKEN = "ntn_secret0value";
 export const USER = "0123456789abcdef0123456789abcdef";
@@ -95,8 +96,7 @@ export function notion(stub: Stub = {}) {
 			const call = `${req.method} ${url.pathname}${cursor ? `#${cursor}` : ""}`;
 			seen.push({ call, version: req.headers.get("Notion-Version"), auth: req.headers.get("Authorization") });
 			const answered = await respond(req, url, call, cursor);
-			const then = stub.next?.[call]?.shift();
-			if (then) Object.assign(stub, then);
+			advance(stub, stub.next, call);
 			return answered;
 		},
 	});
