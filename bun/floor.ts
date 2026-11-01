@@ -24,9 +24,10 @@ export type Floor = {
 };
 
 /**
- * A count no occurrence can be compared against: not a number, a fraction, or
- * below zero, where no count can equal it and a gain would be reported that is
- * not one. A type guard, since `Number.isInteger` does not narrow `unknown`.
+ * True for a count a measurement can be compared against: a whole number, zero
+ * or above. A fraction or a negative one no count can equal, and a gain would
+ * be reported that is not one. A type guard, since `Number.isInteger` does not
+ * narrow `unknown`.
  */
 const whole = (n: unknown): n is number =>
 	typeof n === "number" && Number.isInteger(n) && n >= 0;

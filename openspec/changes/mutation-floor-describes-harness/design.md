@@ -106,10 +106,13 @@ which no length exceeds, so the entry approved every suppression of its marker
 in that file, and `why` was never read. The user chose, on the card's
 question 2 (2026-11-01), to close it in this change. `bun/floor.ts` exports
 `unreadable(path, field, count, why)`, the floors' field checks, and the scan
-runs every entry through it: an unreadable entry approves nothing, so its
-occurrences are reported as unapproved, and `allowlistProblems` names each
-such entry's key and field. They are returned rather than thrown, so
-`bun/check.ts` still reports every other gate in the same run. A negative or
+runs every entry through it: `allowlist` returns the readable approvals and a
+problem naming each unreadable entry's key and field, so that entry approves
+nothing and its occurrences are reported as unapproved. `report` prints both
+from one read of the allowlist, for `bun/check.ts` and the script alike, and
+returns rather than throws, so `check.ts` still reports every other gate in
+the same run. `harness.suppressions: null` still throws from `read`, as an
+absent key does: `bun/config.ts`'s contract stays as decision 6 leaves it. A negative or
 fractional `count` is refused as well, and an allowlist that is not an object
 is named as such. `commit-gates` gains an ADDED requirement rather than a
 MODIFIED one, since `pre-push-commit-gates`
