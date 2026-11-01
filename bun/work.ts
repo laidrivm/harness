@@ -12,10 +12,14 @@
  *   card; with no card, it reads none.
  * - `status --card <id> --to <status>` (`work-status.ts`): moves the card's
  *   `Status` once the evidence and the WIP limit allow it.
+ * - `resolve --pr <n> --head <sha> --comment <id> …` (`work-resolve.ts`):
+ *   resolves the review bot's threads those comments open, on the branch's
+ *   open pull request while its head is `<sha>`.
  */
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import { ID } from "./notion-bot.ts";
 import { finish } from "./work-finish.ts";
+import { resolve } from "./work-resolve.ts";
 import { status, STATUSES } from "./work-status.ts";
 import { take } from "./work-take.ts";
 
@@ -23,7 +27,11 @@ export const USAGE = [
 	"usage: work.ts take --card <id>",
 	"       work.ts finish [--card <id>] [--title <text> --body-file <path>]",
 	"       work.ts status --card <id> --to <status>",
+	"       work.ts resolve --pr <n> --head <sha> --comment <id> [--comment <id> …]",
 ];
+
+/** A positive whole number with no leading zero, as a string: a pull request's or a comment's id. */
+const NUMBER = /^[1-9]\d*$/;
 
 /** The options `args` sets under `options`, or `undefined` when strict parsing refuses them. */
 function values(args: string[], options: ParseArgsConfig["options"]) {
@@ -51,6 +59,14 @@ export async function work(args: string[]): Promise<{ lines: string[]; code: num
 	if (subcommand === "status") {
 		const { card, to } = (values(rest, { card: { type: "string" }, to: { type: "string" } }) ?? {}) as Record<string, string | undefined>;
 		if (typeof card === "string" && ID.test(card) && typeof to === "string" && STATUSES.includes(to)) return status(card, to);
+	}
+	if (subcommand === "resolve") {
+		// `multiple` on all three, so a repeated `--pr` or `--head` is refused rather than the last one kept.
+		const many = { type: "string", multiple: true } as const;
+		const set = values(rest, { pr: many, head: many, comment: many }) as Record<string, string[] | undefined> | undefined;
+		const { pr = [], head = [], comment = [] } = set ?? {};
+		if (set && pr.length === 1 && NUMBER.test(pr[0]) && head.length === 1 && /^[0-9a-f]{40}$/.test(head[0]) && comment.length && comment.every((id) => NUMBER.test(id)))
+			return resolve(pr[0], head[0], [...new Set(comment)]);
 	}
 	return { lines: USAGE, code: 2 };
 }
