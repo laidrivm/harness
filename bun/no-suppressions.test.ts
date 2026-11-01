@@ -1,60 +1,18 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { rmSync, symlinkSync } from "node:fs";
+import { join } from "node:path";
 import {
-	mkdirSync,
-	mkdtempSync,
-	rmSync,
-	symlinkSync,
-	writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+	allowlist,
+	cleanup,
+	emptyDir,
+	fabricate,
+	manifest,
+} from "./no-suppressions.fixture.ts";
 import { type Finding, scan } from "./no-suppressions.ts";
 
 const script = `${import.meta.dir}/no-suppressions.ts`;
-const made: string[] = [];
 
-afterAll(() => {
-	for (const dir of made) rmSync(dir, { recursive: true, force: true });
-});
-
-function write(dir: string, files: Record<string, string>): void {
-	for (const [path, text] of Object.entries(files)) {
-		const full = join(dir, path);
-		mkdirSync(dirname(full), { recursive: true });
-		writeFileSync(full, text);
-	}
-}
-
-/** A throwaway repository holding `tracked`, plus `untracked` left unadded. */
-function fabricate(
-	tracked: Record<string, string>,
-	untracked: Record<string, string> = {},
-): string {
-	const dir = mkdtempSync(join(tmpdir(), "no-suppressions-"));
-	made.push(dir);
-	const git = (...args: string[]) => {
-		const run = Bun.spawnSync(["git", ...args], { cwd: dir });
-		if (run.exitCode !== 0) throw new Error(run.stderr.toString());
-	};
-	git("init", "-b", "main");
-	write(dir, tracked);
-	git("add", "-A");
-	// Untracked, so the scan never reads it: the consumer's empty allowlist —
-	// unless the case tracks a manifest of its own, which this must not replace.
-	write(dir, {
-		...("package.json" in tracked ? {} : { "package.json": manifest({}) }),
-		...untracked,
-	});
-	return dir;
-}
-
-/** A consumer manifest approving `counts`, keyed by `<path> <marker>`. */
-function manifest(counts: Record<string, number>): string {
-	const suppressions = Object.fromEntries(
-		Object.entries(counts).map(([key, count]) => [key, { count, why: "x" }]),
-	);
-	return JSON.stringify({ harness: { suppressions } }, null, 2);
-}
+afterAll(cleanup);
 
 const at = (found: Finding[]) =>
 	found.map(({ path, line, marker }) => `${path}:${line}: ${marker}`);
@@ -164,6 +122,29 @@ describe("the allowlist", () => {
 	});
 });
 
+// spec: commit-gates/an-allowlist-entry-the-check-cannot-read
+describe("an allowlist entry the check cannot read", () => {
+	const key = "src/model.ts biome-ignore";
+	const field = (name: string) => `harness.suppressions["${key}"].${name}`;
+	// Two occurrences, so a count read as NaN — which no length exceeds —
+	// would approve them both rather than fail.
+	const entry = (value: unknown) =>
+		fabricate(
+			{ "src/model.ts": "// biome-ignore a\n// biome-ignore b\n" },
+			{ "package.json": allowlist({ [key]: value }) },
+		);
+
+	test.each([
+		[{ count: "two", why: "x" }, "count"],
+		[{ count: -1, why: "x" }, "count"],
+		[{ count: 1.5, why: "x" }, "count"],
+		[{ count: 2 }, "why"],
+		[{ count: 2, why: " " }, "why"],
+	])("%j fails naming its %s", (value, name) => {
+		expect(() => scan(entry(value))).toThrow(field(name));
+	});
+});
+
 describe("the root manifest", () => {
 	// spec: commit-gates/the-allowlist-names-the-markers-it-approves
 	test("its approval keys are not counted as suppressions", () => {
@@ -267,8 +248,7 @@ describe("a tree the check cannot read straight through", () => {
 	});
 
 	test("outside a repository the check throws rather than passing", () => {
-		const dir = mkdtempSync(join(tmpdir(), "no-suppressions-bare-"));
-		made.push(dir);
+		const dir = emptyDir("no-suppressions-bare-");
 		expect(() => scan(dir)).toThrow();
 	});
 });

@@ -1,7 +1,7 @@
 # mutation-floor-describes-harness — tasks
 
-One group, one pull request. The code changes are tasks 1.4 and 1.5
-(design.md, decisions 5 and 6), whose failing cases come first.
+One group, one pull request. The code changes are tasks 1.4 to 1.6
+(design.md, decisions 5 to 7), whose failing cases come first.
 
 ## 1. The spec describes the harness
 
@@ -43,10 +43,19 @@ One group, one pull request. The code changes are tasks 1.4 and 1.5
       them fail; then write the module and bind it in `bun/mutation-floor.ts`
       and `bun/spec-coverage.ts`. Verify with `bun test bun/floor
       bun/mutation-floor bun/spec-coverage bun/check` green
+- [x] 1.6 Read `harness.suppressions` through `bun/floor.ts`'s field checks
+      (design.md, decision 7): first move the repository fixture of
+      `bun/no-suppressions.test.ts` to `bun/no-suppressions.fixture.ts` and
+      add cases under `// spec:
+      commit-gates/an-allowlist-entry-the-check-cannot-read` for a `count` of
+      `"two"`, `-1` and `1.5` and a `why` absent or blank over a file with
+      two occurrences, and see them fail; then export `unreadable` and call it
+      in `approvedIn`. Verify with `bun test bun/no-suppressions bun/floor
+      bun/check` green
 
 The archive runs separately, once every box above is ticked (design.md,
 decision 2): in the commit that syncs the delta it copies that Purpose into
 `openspec/specs/mutation-floor/spec.md`, then checks that `grep -n
 "src/model\|FLOOR" openspec/specs/mutation-floor/spec.md` prints nothing and
-`openspec validate mutation-floor --type spec` and `openspec validate
-spec-test-traceability --type spec` pass.
+`openspec validate <name> --type spec` passes for `mutation-floor`,
+`spec-test-traceability` and `commit-gates`.

@@ -41,6 +41,9 @@ mutates and where the results are stored.
 - The uncited-criteria floor had the same `gauge` and faults: both now share
   one module, and `spec-test-traceability`'s floor requirement is rewritten in
   harness terms with the same fifth scenario (design.md, decision 6).
+- The suppression scan reads each `harness.suppressions` entry through the
+  same checks before admitting anything, where a non-numeric `count` approved
+  every occurrence; `commit-gates` gains the requirement (decision 7).
 
 ## Capabilities
 
@@ -56,6 +59,8 @@ None.
 - `spec-test-traceability`: *The count of uncited criteria may not rise
   silently* describes the floor as `harness.uncitedFloor` declares it and the
   gate that runs it.
+- `commit-gates`: an ADDED requirement, *The suppression allowlist is read
+  whole before it admits anything*.
 
 ## Impact
 
@@ -67,6 +72,9 @@ None.
   `bun/mutation-floor.ts` and `bun/spec-coverage.ts` binds it, and their
   cases, which already cite `a-branch-added-without-a-test`,
   `a-survivor-newly-killed` and `the-floor-changed-with-no-reason-given`, gain
-  the new ones. No configuration file.
+  the new ones. `bun/no-suppressions.ts` calls its field checks, its cases
+  gain the unreadable entries, and their repository fixture moves to
+  `bun/no-suppressions.fixture.ts`. `openspec/specs/commit-gates/spec.md` at
+  archive. No configuration file.
 - Ordered after `pre-push-commit-gates`, whose ADDED requirements define the
   harness's modules and stored results this requirement's scenarios name.
