@@ -5,6 +5,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { naming } from "./floor.fixture.ts";
 import { cleanup, fabricate, problems, spec } from "./spec-coverage.fixture.ts";
 import { gauge, uncited } from "./spec-coverage.ts";
 
@@ -25,6 +26,12 @@ describe("the count of uncited criteria against its floor", () => {
 
 	test("a count one below the floor fails, naming the value to write", () => {
 		expect(gauge(379, 380, reasoned).join("\n")).toContain("write 379");
+	});
+
+	test("the failure above the floor names both numbers and the way down", () => {
+		expect(gauge(381, 380, reasoned)).toEqual([
+			"381 uncited criteria against a floor of 380 — cite one, or raise the floor and say why",
+		]);
 	});
 
 	test("either failure reports the count and the floor, not only that it failed", () => {
@@ -50,6 +57,17 @@ describe("the floor carries a reason", () => {
 		for (const count of [379, 380, 381]) {
 			expect(gauge(count, 380, "").join("\n")).toContain("reason");
 		}
+	});
+
+	test("an absent reason names harness.uncitedFloor.why, rather than throwing", () => {
+		expect(gauge(380, 380, undefined)).toEqual(naming("uncitedFloor", "why"));
+	});
+});
+
+// spec: spec-test-traceability/a-floor-that-is-not-a-whole-number
+describe("a floor that is not a whole number", () => {
+	test("a count written as a string names harness.uncitedFloor.count", () => {
+		expect(gauge(380, "380", "measured")).toEqual(naming("uncitedFloor", "count"));
 	});
 });
 

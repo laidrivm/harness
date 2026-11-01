@@ -33,6 +33,13 @@ describe("a question on a machine with the ask settings", () => {
 		const answer = JSON.parse(out).hookSpecificOutput.decision;
 		expect([code, answer.behavior]).toEqual([0, "deny"]);
 		expect(answer.message).toContain("notion-ask.ts");
+		// [12]: the step the session takes after the command, as the launch forms word it.
+		for (const part of [
+			"unless that line ends `Assign set`",
+			"never run the command again for a question it printed as posted",
+			"instead where the question is already there",
+		])
+			expect(answer.message).toContain(part);
 		expect(ledger).toEqual([expect.objectContaining({ decision: "refused", rule: "ask" })]);
 	});
 

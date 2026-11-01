@@ -6,6 +6,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { naming } from "./floor.fixture.ts";
 import { cleanup, fabricate, report } from "./mutation-floor.fixture.ts";
 import { gauge, loadReport, survivors } from "./mutation-floor.ts";
 
@@ -118,10 +119,10 @@ describe("the count against the floor", () => {
 		expect(gauge(0, 0, why)).toEqual([]);
 	});
 
-	test("the failure above the floor names both numbers", () => {
-		const [problem] = gauge(13, 12, why);
-		expect(problem).toContain("13");
-		expect(problem).toContain("12");
+	test("the failure above the floor names both numbers and the way down", () => {
+		expect(gauge(13, 12, why)).toEqual([
+			"13 surviving mutants against a floor of 12 — kill one, or raise the floor and say why",
+		]);
 	});
 
 	test("the failure below the floor names the value to write", () => {
@@ -143,11 +144,25 @@ describe("the count against the floor", () => {
 
 // spec: mutation-floor/the-floor-changed-with-no-reason-given
 describe("the floor changed with no reason given", () => {
-	test("an empty reason fails", () => {
-		expect(gauge(12, 12, "")).not.toEqual([]);
+	// The other shapes of an unreadable reason are `floor.test.ts`'s; these
+	// pin the field this check names.
+	test("an empty reason fails naming the field", () => {
+		expect(gauge(12, 12, "")).toEqual(naming("mutationFloor", "why"));
 	});
 
-	test("a reason of whitespace alone fails", () => {
-		expect(gauge(12, 12, "   ")).not.toEqual([]);
+	test("a reason of whitespace alone fails, on a rise too", () => {
+		expect(gauge(12, 12, "   ")).toEqual(naming("mutationFloor", "why"));
+		expect(gauge(13, 12, "   ")[0]).toContain("harness.mutationFloor.why");
+	});
+
+	test("an absent reason fails naming the field, rather than throwing", () => {
+		expect(gauge(12, 12, undefined)).toEqual(naming("mutationFloor", "why"));
+	});
+});
+
+// spec: mutation-floor/a-floor-that-is-not-a-whole-number
+describe("a floor that is not a whole number", () => {
+	test("a floor written as a string fails naming the field", () => {
+		expect(gauge(12, "12", why)).toEqual(naming("mutationFloor", "surviving"));
 	});
 });

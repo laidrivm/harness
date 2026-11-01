@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { client } from "./notion-bot.ts";
 import { answered, network, TEMPFAIL, Transient } from "./transient.ts";
 
 /** What a failure is: `retry-on-transient` *A `Transient` error, classified where the status is known*. */
@@ -48,4 +49,31 @@ describe("git's stderr", () => {
 test("a Transient is an Error, and the exit status is EX_TEMPFAIL", () => {
 	expect(new Transient("x")).toBeInstanceOf(Error);
 	expect(TEMPFAIL).toBe(75);
+});
+
+describe("the status a Transient carries", () => {
+	// spec: task-board/a-post-that-may-have-landed
+	test("one from a 503 carries 503, one from a timeout none [32]", async () => {
+		const server = Bun.serve({
+			port: 0,
+			fetch: (req) =>
+				new URL(req.url).pathname === "/slow" ? new Promise<Response>(() => {}) : new Response("{}", { status: 503 }),
+		});
+		const before = process.env.HARNESS_NOTION_API_URL;
+		process.env.HARNESS_NOTION_API_URL = server.url.origin;
+		const caught = (path: string) =>
+			client("t", 100)("the step", path).then(
+				() => undefined,
+				(error: unknown) => error,
+			);
+		try {
+			const [refused, late] = await Promise.all([caught("/fail"), caught("/slow")]);
+			expect([refused instanceof Transient, (refused as Transient).status]).toEqual([true, 503]);
+			expect([late instanceof Transient, (late as Transient).status]).toEqual([true, undefined]);
+		} finally {
+			if (before === undefined) delete process.env.HARNESS_NOTION_API_URL;
+			else process.env.HARNESS_NOTION_API_URL = before;
+			server.stop(true);
+		}
+	});
 });

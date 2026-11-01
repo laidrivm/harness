@@ -34,8 +34,20 @@ mutates and where the results are stored.
   their slugs.
 - At archive, the main spec's Purpose, which no delta reaches, is rewritten
   for the harness.
-
-No code changes: the check already behaves as the modified requirement says.
+- The check names an absent `why` and a `surviving` that is not a whole
+  number as the field at fault, where it threw a `TypeError` or reported a gap
+  no edit closes: the first under the existing *The floor changed with no
+  reason given*, the second under a fifth scenario, *A floor that is not a
+  whole number* (design.md, decision 5).
+- The uncited-criteria floor had the same `gauge` and faults: both now share
+  one module, and `spec-test-traceability`'s floor requirement is rewritten in
+  harness terms with the same fifth scenario (design.md, decision 6).
+- The suppression scan reads each `harness.suppressions` entry through the
+  same checks, and an unreadable one approves nothing, where a non-numeric
+  `count` approved every occurrence; `commit-gates` gains the requirement
+  (decision 7).
+- The cases share one named-field matcher, and the Code rule on writing
+  logic twice says a copy that would fail loudly is no exception (decision 8).
 
 ## Capabilities
 
@@ -48,13 +60,25 @@ None.
 - `mutation-floor`: *The count of surviving mutants may not rise silently*
   describes the floor as `harness.mutationFloor` declares it, the report path
   the check reads, and the harness's mutated modules.
+- `spec-test-traceability`: *The count of uncited criteria may not rise
+  silently* describes the floor as `harness.uncitedFloor` declares it and the
+  gate that runs it.
+- `commit-gates`: an ADDED requirement, *An allowlist entry the check cannot
+  read approves nothing*.
 
 ## Impact
 
 - `openspec/specs/mutation-floor/spec.md` at archive: the requirement and the
   Purpose.
-- No code, test or configuration file. The cases in
-  `bun/mutation-floor.test.ts` already cite `a-branch-added-without-a-test`,
-  `a-survivor-newly-killed` and `the-floor-changed-with-no-reason-given`.
+- `openspec/specs/spec-test-traceability/spec.md` at archive: the floor
+  requirement.
+- A new `bun/floor.ts` with `bun/floor.test.ts`; `gauge` in
+  `bun/mutation-floor.ts` and `bun/spec-coverage.ts` binds it, and their
+  cases, which already cite `a-branch-added-without-a-test`,
+  `a-survivor-newly-killed` and `the-floor-changed-with-no-reason-given`, gain
+  the new ones. `bun/no-suppressions.ts` calls its field checks, its cases
+  gain the unreadable entries, and their repository fixture moves to
+  `bun/no-suppressions.fixture.ts`. `openspec/specs/commit-gates/spec.md` at
+  archive. No configuration file.
 - Ordered after `pre-push-commit-gates`, whose ADDED requirements define the
   harness's modules and stored results this requirement's scenarios name.

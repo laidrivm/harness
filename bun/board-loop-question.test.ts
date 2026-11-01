@@ -32,6 +32,8 @@ const FORM = [
 	"in Russian",
 	"on a line of its own",
 	"Number its questions, decisions and assumptions in one sequence across its sections",
+	// A later question numbers on from the card's earlier ones (CodeRabbit on #380).
+	"on from the highest number the questions already on the card use, never restarting at 1",
 	"letter the options of each question",
 	"plain text with no markdown syntax",
 ];
@@ -100,8 +102,11 @@ describe("the runner posts the question", () => {
 		for (const part of [
 			"`bun node_modules/harness/bun/notion-ask.ts <the id of the card of the change> <that file>`",
 			MARK,
-			"only once it prints `question: posted`",
+			"once it prints `question: posted`, unless that line ends `Assign set`, set the `Assign` of the card to the user",
 			READ_BACK,
+			// [11]: no rerun for a posted question, and the comments read before any other.
+			"never run the command again for a question it printed as posted",
+			"after any other line read the comments of the card before running it again, setting the `Assign` of the card to the user instead where the question is already there",
 			...FORM,
 		])
 			expect(lines[3]).toContain(part);
