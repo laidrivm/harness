@@ -29,7 +29,8 @@ rather than the full loop. The review SHALL read the branch's diff against
 the base the runner measured from, in the tree the branch is checked out in;
 a review with findings none of which names a file that diff changes did not
 review that diff, and SHALL count, on any pass, as a review that does not
-return. A finding
+return, whose findings the agent reports and neither fixes, dismisses nor
+counts toward the gate line. A finding
 that names an unchanged file beside findings on changed ones — a caller the
 change breaks — SHALL be kept and verified like any other. Since `/code-review` names no
 severity, the agent SHALL grade each of its findings 🔵 Trivial, 🟡 Minor,
