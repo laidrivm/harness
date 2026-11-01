@@ -10,9 +10,10 @@ thread of the bot's whose every finding — the first comment's and each
 reply's carrying its own severity line — it fixed or found already fixed. The
 session SHALL run it once each fix is on the pull request's head: after its
 own `finish` pushed the run's fixes, or at once when the run applied none —
-and only while the pull request's head, read right before, is the commit the
-run verified against or the one that push made; on any other head it SHALL
-run `/coderabbit` again instead. No
+with `--head` naming the commit that push made, which the run names as the
+placeholder `<pushed sha>`, or the one the run verified against; when
+`resolve` refuses over another head, it SHALL run `/coderabbit` again
+instead. No
 agent SHALL resolve the thread of a skipped or rejected finding, nor post
 `@coderabbitai resolve` or `@coderabbitai approve`.
 
@@ -20,8 +21,9 @@ agent SHALL resolve the thread of a skipped or rejected finding, nor post
 
 - **WHEN** `/coderabbit` fixes the findings of inline comments 11 and 12 and
   skips the one of comment 13
-- **THEN** its report names `bun bun/work.ts resolve --pr <n> --comment 11
-  --comment 12`, and the session runs it after `finish` pushed the fix,
+- **THEN** its report names `bun bun/work.ts resolve --pr <n> --head
+  '<pushed sha>' --comment 11 --comment 12`, and the session runs it after
+  `finish` pushed the fix, the pushed commit filled in,
   leaving 13's thread open for the user
 
 #### Scenario: One comment, two findings, one fixed
@@ -53,8 +55,9 @@ agent SHALL resolve the thread of a skipped or rejected finding, nor post
 #### Scenario: The head moved before the resolve
 
 - **WHEN** the run found a finding already fixed on commit `A`, and the
-  pull request's head reads `B` when the session is about to run `resolve`
-- **THEN** it runs no `resolve` and runs `/coderabbit` again over `B`
+  pull request's head is `B` when the session runs `resolve --head A`
+- **THEN** `resolve` refuses and resolves nothing, and the session runs
+  `/coderabbit` again over `B`
 
 #### Scenario: A fix outside the diff
 

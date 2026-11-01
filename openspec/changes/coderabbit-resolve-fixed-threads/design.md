@@ -48,7 +48,8 @@ Standing from the card:
 4. OpenSpec, not a fix: the skill's contract ("Never post … no resolves"),
    `core/git-and-prs.md` and `work.ts`'s behaviour change.
 5. The command resolves only threads of the current branch's pull request
-   that `coderabbitai` opened, skips a resolved one, and checks nothing else.
+   that `coderabbitai` opened, skips a resolved one, and checks nothing else
+   — widened by decision 10 to one check more.
 6. The `coderabbit` skill is not vendored (`skills-lock.json`); it is edited
    here.
 7. Assumption: the App, with `pull_requests: write`, can call
@@ -62,6 +63,16 @@ On the card's second question (31.10), answered there at 19:24:
 
 9. **а** — the Safety rule's wording below, *The Safety rule names
    `resolve`*, is adopted as proposed.
+
+On the card's third question (CodeRabbit's Major on #358, thread
+4433212228), answered there on 1.11 at 10:42:
+
+10. **а**, with the user's addition — `resolve --head <sha>` refuses before
+    the first mutation when the pull request's head differs, but «при
+    несовпадении resolve один раз перечитывает голову через пару секунд и
+    только потом отказывает»: on a mismatch it reads the head once more a
+    couple of seconds later, since GitHub's API can lag a push, and only
+    then refuses. Decision 5 widens by this one check.
 
 ## Decisions
 
@@ -101,8 +112,13 @@ side, and the README's *Cloud sessions* names it.
 - Alternative: roll back on a failed mutation. Rejected: there is nothing to
   undo — a resolved thread of a fixed finding is the intended end state, and
   a rerun skips it.
-- No check that the local `HEAD` is the pull request's head: decision 5 sets
-  the checks, and the order (decision 2) is the skill's and the session's.
+- The head check is `--head` against the `headRefOid` the pull-request read
+  already returns (`readPullRequests()`), so the match costs no extra call;
+  a mismatch costs one more read after a 2-second wait (decision 10). The
+  local `HEAD` is not compared: the session names the commit, the pushed one
+  or the one the run verified. The check narrows the window to the thread
+  read and the mutations, it does not close it — an atomic check-and-resolve
+  GitHub does not offer.
 
 Output, one line per id and the last saying the outcome:
 `resolve: <id> resolved`, `resolve: <id> already resolved, skipped`,
@@ -113,7 +129,11 @@ on the usage. The gate ledger records nothing: `resolve` is no gate.
 ### The skill names the ids; it resolves nothing itself
 
 A run prints, right above its gate line, the one command `bun bun/work.ts
-resolve --pr <n> --comment <id> …`. The unit is the thread, since a resolve
+resolve --pr <n> --head <sha> --comment <id> …`. `--head` names the commit
+the run verified against when it applied no fix; when it applied one, it is
+the literal `<pushed sha>`, which the session fills in after `finish` and
+which `resolve` refuses as malformed if run unfilled. The unit is the
+thread, since a resolve
 closes the whole thread: it names the first comment's id of each unresolved
 thread of the bot's whose every finding — the first comment's and each
 reply's with a severity line of its own — it fixed or verified as already
@@ -123,8 +143,10 @@ first comments. A finding from a review body has no thread and is never
 named. The skill keeps a comment only when its `user.login` is exactly
 `coderabbitai[bot]`, the REST spelling of the login `resolve` checks, so no
 id it names is refused for its author. The session runs the command once
-every fix is on the head: after its own `finish` pushed, or at once when the
-run applied none. The *Never post to the PR* rule stays, rewording "no
+every fix is on the head: after its own `finish` pushed, `<pushed sha>`
+filled in, or at once when the run applied none. When
+`resolve` refuses over another head, the session runs `/coderabbit` again.
+The *Never post to the PR* rule stays, rewording "no
 resolves" to point at the command.
 
 Step 1 today drops a thread that is resolved *or outdated*, listing it as
@@ -181,9 +203,11 @@ system looks up in another with a test*). While the module is not on
 and the `Review skipped` title prefix, against the requirement's own words,
 "succeeded with a title not opening `Review skipped`", read from that
 change's delta or, once archived, `openspec/specs/work-finish/spec.md`; the
-delta names no slug, so the app's slug is pinned only later. Once the module
-lands, the test reads its constants — conclusion, title prefix and slug —
-instead, and whichever of the two changes applies second makes that switch. The cited requirement
+delta names no slug, so the app's slug is not pinned. Once the module lands
+(#361), the test reads its exported `REVIEWED` — `REVIEWED.conclusion` and
+`REVIEWED.skippedTitle` — instead; the slug stays a literal inside its
+`own()`, exported as no constant, so it stays unpinned. Whichever of the two
+changes applies second makes that switch. The cited requirement
 sits in that change's delta until it archives, so this change archives
 after it (tasks.md, group 3) — no `after:` edge, which would hold the apply
 too, not only the archive.
@@ -226,7 +250,7 @@ it a `resolve` without the edit would make the rule false.
   → the head is counted as reviewed by the other's run. Accepted: a shared
   head is rare, the reviews are still read per pull request, and
   `session-wrapup`'s `/pull/<n>` check is not copied into the skill.
-- [`resolve` is run before `finish` pushed] → the bot may approve a head
-  without the fix. The command cannot see whether the fix is pushed
-  (decision 5); the skill names the command for after the push, and
-  `local-review-loop` holds the order.
+- [`resolve` is run before `finish` pushed] → unfilled, `<pushed sha>` is no
+  40-hex id and `resolve` prints the usage; filled with a commit not yet
+  pushed, it is not the pull request's head, and `resolve` refuses after its
+  re-read (decision 10).
