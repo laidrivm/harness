@@ -160,15 +160,11 @@ the host: 2 vCPU and 3.5 GiB beside parallel agents.
 ### 6. CI jobs
 
 `.github/workflows/lint.yml` follows d2ass's: `biome`, `typecheck`,
-`yaml-syntax`, `suppressions`, `actionlint` and `gitleaks`, each installing
-with `bun install --frozen-lockfile` where it runs a package tool, the two
-containers pinned by the digests d2ass uses, with a comment saying nothing
-updates them. `.github/workflows/mutation.yml` runs the mutation step and
-the floor with base `HEAD^1`, on Node pinned as d2ass pins it: with current
-stored results it mutates nothing, and on a branch pushed without the hook
-it re-runs the changed modules and fails on the stale files. `test.yml` is
-unchanged but for its comment that the harness's own pin is the one dev
-dependency. The user then adds the new check names to the ruleset.
+`yaml-syntax`, `suppressions`, `actionlint` and `gitleaks`, the two
+containers pinned by d2ass's digests, which nothing updates.
+`.github/workflows/mutation.yml` runs the step and the floor on Node pinned
+as d2ass pins it: over current stored results it mutates nothing, and over
+stale ones it re-runs and fails. The user adds the check names to the ruleset.
 
 ## Risks / Trade-offs
 
@@ -189,8 +185,6 @@ dependency. The user then adds the new check names to the ruleset.
   card; a `files` list is a change of its own. Of the new configuration
   files a consumer's install carries, bun reads only `tsconfig.json`, which
   sets nothing it applies at run time.
-- [Lockfile lines count toward the diff budget] → group 1 adds `bun.lock`
-  to `harness.diffBudgetExclude`, as d2ass does; `/warm` reads the lockfile.
 - [A Stryker incremental file that is not byte-stable across identical runs
   even when trimmed] → the probe checks it; if it is not, the step writes a
   stored file only when its mutants' results changed.
