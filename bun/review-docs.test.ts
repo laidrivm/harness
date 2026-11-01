@@ -235,21 +235,23 @@ describe("the /code-review bullet is the local review", () => {
 		expect(text).toContain("A review that does not return —");
 		expect(text).toContain("or whose findings name no file the branch's diff changes");
 		expect(text).toContain("is reported. On the loop's first pass the push then goes on without the gate");
-		expect(text).toContain("writes no `CODE-REVIEW gate:` line only when no pass returned a review");
+		expect(text).toContain("writes a `CODE-REVIEW gate:` line whenever a pass returned a review, and none only when no pass did");
 		expect(text).toContain("a pass that does not return after one that did ends the loop on the line the earlier passes left");
 		expect(text).toContain("`BLOCKED` wins over `OPEN` and `OPEN` over `PASS`");
 		// The scenario's outcome: an earlier pass's pending dismissal still holds the line at OPEN.
 		expect(text).toContain("which decides the push as any gate line does — a dismissal an earlier pass proposed still reads `OPEN`");
 	});
 
-	test("the doc names no /coderabbit-local", () => {
-		expect(flat(toolkit())).not.toContain("/coderabbit-local");
-	});
-
 	test("the doc holds no measurement", () => {
 		expect(flat(toolkit())).not.toContain("Review measurement");
 	});
 	// Its `Skill(code-review)` allow entry is pinned in pre-pr-steps.test.ts, beside every judgement step's.
+});
+
+describe("the toolkit after the CodeRabbit CLI", () => {
+	test.each(["coderabbit-local", "CodeRabbit's CLI"])("names no `%s` anywhere", (leftover) => {
+		expect(flat(toolkit())).not.toContain(leftover);
+	});
 });
 
 describe("an unattended pull request opens over the local review's gate", () => {

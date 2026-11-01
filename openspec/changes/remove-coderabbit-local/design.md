@@ -118,10 +118,11 @@ CLI.
    `core/autonomy.md` opens an unattended pull request over `BLOCKED` only
    when a Major the third pass left is all it names, and over `OPEN` only
    over a proposed dismissal. So a `BLOCKED` line that also names a proposed
-   dismissal, or one written after a failed pass left a Major undecided
-   before any third review, holds the pull request back. That is kept on
-   purpose: each case leaves the user a Major to settle, and no exception
-   is widened here.
+   dismissal holds the pull request back. That is kept on purpose: it leaves
+   the user a Major to settle, and no exception is widened here. A failed
+   pass leaves no Major undecided before the third review, since each
+   verified Major is fixed or proposed for dismissal in its own pass, so
+   `BLOCKED` stays the third review's (the apply's local review).
 
 6. **`agent-autonomy`'s three-round cap is a different requirement from the
    one resolve-threads owns.** Explore item 2 sits in *A pull request gets
