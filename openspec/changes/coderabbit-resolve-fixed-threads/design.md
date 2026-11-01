@@ -92,8 +92,9 @@ value*). GraphQL spells the bot `coderabbitai` (read on #347, 31.10), and a
 deleted author reads `null`, which is not the bot. Then it resolves the
 unresolved ones in the order given and stops at the first failure.
 
-Every `gh` call runs under `gh`'s own identity; `resolve` is not run where
-`HARNESS_GITHUB_APP_MINT` is set (the board loop, below). A cloud session's
+Every `gh` call runs under `gh`'s own identity; `resolve` refuses where
+`HARNESS_GITHUB_APP_MINT` is set, since `readPullRequests()` would read as
+the App there (the board loop, below). A cloud session's
 proxy refuses GraphQL, so there `resolve` exits 1 having changed nothing.
 
 - Rejected: resolving what places and reporting the rest — an unplaced id is
@@ -118,7 +119,7 @@ on the usage. The gate ledger records nothing: `resolve` is no gate.
 A run prints, right above its gate line, the one command `bun bun/work.ts
 resolve --pr <n> --head <sha> --comment <id> …`. `--head` names the commit
 the run verified against when it applied no fix; when it applied one, it is
-the literal `<pushed sha>`, which the session fills in after `finish` and
+the literal `PUSHED_SHA`, which the session fills from `git rev-parse HEAD` after `finish` and
 which `resolve` refuses as malformed if run unfilled. The unit is the
 thread, since a resolve
 closes the whole thread: it names the first comment's id of each unresolved
@@ -130,7 +131,7 @@ first comments. A finding from a review body has no thread and is never
 named. The skill keeps a comment only when its `user.login` is exactly
 `coderabbitai[bot]`, the REST spelling of the login `resolve` checks, so no
 id it names is refused for its author. The session runs the command once
-every fix is on the head: after its own `finish` pushed, `<pushed sha>`
+every fix is on the head: after its own `finish` pushed, `PUSHED_SHA`
 filled in, or at once when the run applied none. When
 `resolve` refuses over another head, the session runs `/coderabbit` again.
 The *Never post to the PR* rule stays, rewording "no
@@ -221,7 +222,7 @@ it a `resolve` without the edit would make the rule false.
 - [A commit heads two pull requests and its check run belongs to the other]
   → counted as reviewed by the other's run. Accepted: rare, and the reviews
   are still read per pull request.
-- [`resolve` is run before `finish` pushed] → unfilled, `<pushed sha>` is no
+- [`resolve` is run before `finish` pushed] → unfilled, `PUSHED_SHA` is no
   40-hex id and `resolve` prints the usage; filled with a commit not yet
   pushed, it is not the pull request's head, and `resolve` refuses after its
   re-read (decision 10).
