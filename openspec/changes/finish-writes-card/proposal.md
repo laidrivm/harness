@@ -29,14 +29,16 @@ as soon as it opens, draft included*).
   another repository's is left alone with a line saying so. None or several
   write nothing and say so.
 - The pull request goes on the card's `Ссылки` list as
-  `[#N](<url>) — <kind>`, `proposal` when one of those directories is
-  outside `archive/`, `archive` when one is inside it, `apply` otherwise,
+  `[#N](<url>) — <kind>`, `proposal` when the branch adds a `proposal.md`,
+  `design.md` or `tasks.md` outside `archive/`, `archive` when it adds to a
+  directory inside it, `apply` otherwise,
   unless a block of the card already links that pull request; a card with
   no `Ссылки` line gets one at the end of its body.
-- Both writes come after the push and before the question read. An
-  `origin/main` that cannot be fetched, or a write that fails, leaves the
-  draft and exits 1, naming the step; a rerun of `finish` writes only what
-  is still missing.
+- Both writes come after the push and before the question read, and are
+  auxiliary: an `origin/main` that cannot be fetched, a merge base that
+  cannot be found (a shallow clone) or a Notion call that fails is said in
+  one line naming the step, and `finish` goes on to the question read and
+  the ready switch; a rerun of `finish` writes only what is still missing.
 - `core/feature-workflow.md` says `finish --card` writes the `Pointer` and
   the pull request's link, and keeps the hand step for a pull request
   no `finish --card` opened or found open — the user's, or a consumer's, whose
