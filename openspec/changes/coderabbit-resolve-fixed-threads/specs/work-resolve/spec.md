@@ -10,10 +10,18 @@ resolved, does not wait on the user for a fix already on the pull request.
 
 ### Requirement: Resolve reads its arguments strictly
 
-`bun bun/work.ts resolve` SHALL take `--pr <n>`, a positive integer, and one or
-more `--comment <id>`, each a positive integer. Any other option, a positional
-argument, a missing value, a value that is not wholly digits, a repeated
-`--pr` or no `--comment` at all SHALL print the usage and exit 2 before any git or `gh` call.
+`bun bun/work.ts resolve` SHALL take `--pr <n>`, a positive integer,
+`--head <sha>`, a full 40-hex commit id, and one or more `--comment <id>`,
+each a positive integer. Any other option, a positional argument, a missing
+value, a malformed value, a repeated `--pr` or `--head`, or no `--comment` at
+all SHALL print the usage and exit 2 before any git or `gh` call. Scenarios
+that leave `--head` out stand for a call whose `--head` names the pull
+request's head.
+
+#### Scenario: A short head
+
+- **WHEN** `resolve` runs with `--pr 7 --head 1a2b3c4 --comment 1`
+- **THEN** it prints the usage and exits 2
 
 #### Scenario: No comment named
 
@@ -57,6 +65,30 @@ the pull request it names is not one of the branch's open ones.
 
 - **WHEN** `resolve` runs with `HEAD` detached
 - **THEN** it refuses and exits 1 before reading any thread
+
+### Requirement: Resolve acts only over the head it was given
+
+Before reading any thread, `resolve` SHALL compare `--head` with the pull
+request's head as GitHub reports it. When they differ it SHALL read the pull
+request once more, a couple of seconds later, since GitHub's API can lag a
+push; when they still differ, or that read fails, it SHALL refuse naming
+both commits, exit 1 and resolve nothing.
+
+#### Scenario: The head matches
+
+- **WHEN** `resolve --pr 7 --head A --comment 1` runs and #7's head is `A`
+- **THEN** it reads the pull request once and goes on to the threads
+
+#### Scenario: The API catches up
+
+- **WHEN** the first read of #7 reports head `B`, and the read a couple of
+  seconds later reports `A`, the `--head` given
+- **THEN** it goes on to the threads after those two reads
+
+#### Scenario: Another head
+
+- **WHEN** both reads of #7 report head `B` and `--head` names `A`
+- **THEN** it refuses naming `A` and `B`, exits 1, and reads no thread
 
 ### Requirement: Resolve resolves only the bot's threads and refuses the whole call over one it cannot place
 

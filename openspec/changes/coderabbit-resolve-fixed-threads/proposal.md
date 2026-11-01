@@ -17,8 +17,8 @@ coderabbit skill read the head's status before the reviews*,
 change):
 
 - Since 27.10 CodeRabbit reports a finished review as a `CodeRabbit` check
-  run, `completed`/`success` with the summary `Result: Success - Review
-  completed`, and leaves the head's commit status empty (#318, #319, #321;
+  run, `completed` with the conclusion `success` and the title `Finished`,
+  and leaves the head's commit status empty (#318, #319, #321;
   #355's head reads the same on 31.10). Step 1 counts the head only by the
   status, so a head with no findings reads as unreviewed: the agent on #319
   stopped on `OPEN — no CodeRabbit review` over a finished review.
@@ -34,11 +34,13 @@ change):
 
 ## What Changes
 
-- `bun bun/work.ts resolve --pr <n> --comment <id> [--comment <id> …]`: a new
-  subcommand that resolves, through GraphQL's `resolveReviewThread` and under
-  whatever identity `gh` holds, the threads whose first comment is each named
-  id — only on the open pull request of the current branch, only a thread a
-  `coderabbitai` login opened, skipping one already resolved. Any id it cannot
+- `bun bun/work.ts resolve --pr <n> --head <sha> --comment <id> [--comment
+  <id> …]`: a new subcommand that resolves, through GraphQL's
+  `resolveReviewThread` and under whatever identity `gh` holds, the threads
+  whose first comment is each named id — only on the open pull request of the
+  current branch, only while its head is `--head` (read once more a couple of
+  seconds later before refusing), only a thread a `coderabbitai` login
+  opened, skipping one already resolved. Any id it cannot
   place refuses the whole call before it changes anything. The command guard
   is not changed: the mutation runs inside the process, as `finish`'s push
   does, and `Bash(bun bun/work.ts *)` already allows the call.

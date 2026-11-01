@@ -15,12 +15,14 @@ each page of the threads query, each mutation — and logs every call.
       rule back against the design's quote
 - [ ] 1.2 Failing cases in `bun/work-resolve.test.ts` for the arguments: no
       `--comment`; `--comment 123x`, `--comment ""`, `--comment -1`; `--pr 0`,
-      no `--pr`, `--pr 7 --pr 8`; a positional; an unknown option — each
-      prints the usage, exits 2 and logs no `gh` call. `--pr 7 --comment 1
-      --comment 2` reaches the command with both ids. Then add the `resolve`
-      branch and usage line to `bun/work.ts`, `parseArgs` with `multiple:
-      true` on both options and `--pr` taken only once, each value anchored
-      `^[1-9]\d*$`
+      no `--pr`, `--pr 7 --pr 8`; no `--head`, `--head 1a2b3c4`, `--head
+      '<pushed sha>'`, two `--head`; a positional; an unknown option — each
+      prints the usage, exits 2 and logs no `gh` call. `--pr 7 --head <40
+      hex> --comment 1 --comment 2` reaches the command with both ids. Then
+      add the `resolve` branch and usage line to `bun/work.ts`, `parseArgs`
+      with `multiple: true` on every option and `--pr` and `--head` taken
+      only once, the numbers anchored `^[1-9]\d*$` and the head
+      `^[0-9a-f]{40}$`
 - [ ] 1.3 Failing cases for the pull request: a detached `HEAD` refuses before
       any thread read; `--pr 8` on a branch whose open pull request is #7
       refuses naming #7; `--pr 9` on a branch open as #7 and #9 reads #9's
@@ -28,6 +30,14 @@ each page of the threads query, each mutation — and logs every call.
       each refusal exits 1 with no mutation logged. Then write
       `bun/work-resolve.ts` reusing `originRepository()` and
       `readPullRequests()` from `bun/pull-requests.ts`
+- [ ] 1.3a Failing cases for the head, the stub answering each pull-request
+      read in turn: `--head A` with #7's head `A` reads the pull requests
+      once and goes on to the threads; a first read of `B` and a second of
+      `A` goes on after exactly two reads, the second at least 2 seconds
+      after the first; two reads of `B` refuse naming `A` and `B`, exit 1,
+      read no thread and log no mutation; a second read that fails refuses
+      the same way. Then compare `--head` with `headRefOid` and add the one
+      re-read after a 2-second wait (decision 10)
 - [ ] 1.4 Failing cases for placing the ids: no threads at all refuses the id
       as unplaced; a reply's id inside the bot's thread refuses; one of two
       ids opening the user's thread refuses the whole call with no mutation;
@@ -60,9 +70,9 @@ each page of the threads query, each mutation — and logs every call.
       check runs*, read from that change's delta (or
       `openspec/specs/work-finish/spec.md` once archived), still says
       "succeeded with a title not opening `Review skipped`"; once the module
-      is on `main`, the case reads its constants — conclusion, title prefix
-      and app slug — instead, and whichever change applies second makes that
-      switch. Then rewrite step 1 of
+      is on `main` (#361), the case reads `REVIEWED.conclusion` and
+      `REVIEWED.skippedTitle` from it instead, and whichever change applies
+      second makes that switch. Then rewrite step 1 of
       `core/skills/coderabbit/SKILL.md`: head, then the check runs
       (`check_name=CodeRabbit&filter=all`, paginated) and the status, then
       the reviews; reviewed by a review on the head, the status
@@ -82,14 +92,16 @@ each page of the threads query, each mutation — and logs every call.
       pattern; take every severity in a body, as now. Step 6's legend names
       `success` and the check run on the no-review `OPEN` line
 - [ ] 2.3 The skill's report: right above the gate line, `bun bun/work.ts
-      resolve --pr <n> --comment <id> …` naming the first comment's id of
-      each unresolved thread of the bot's whose every finding, its replies'
-      included, it fixed or found fixed — never a reply's id, never a thread
-      holding a skipped or rejected one; run after the session's own
-      `finish` pushed, or at once when the run applied no fix, and only
-      while the head read right before is the verified or the pushed
-      commit, else `/coderabbit` again; a session
-      whose launcher pushes names it in its final message and runs nothing. The *Never post to the PR* rule's "no resolves" points at that
+      resolve --pr <n> --head <sha> --comment <id> …` naming the first
+      comment's id of each unresolved thread of the bot's whose every
+      finding, its replies' included, it fixed or found fixed — never a
+      reply's id, never a thread holding a skipped or rejected one; `--head`
+      is the verified commit when the run applied no fix, run at once, and
+      the literal `<pushed sha>` when it applied one, filled in and run after
+      the session's own `finish` pushed; a refusal over another head runs
+      `/coderabbit` again; a session whose launcher pushes names the command
+      in its final message and runs nothing. The *Never post to the PR*
+      rule's "no resolves" points at that
       command, `@coderabbitai resolve`/`approve` still named as forbidden.
       Grep the skill for "resolve" afterwards and read each hit
 - [ ] 2.4 `core/review-toolkit.md`: the head with no findings counts by its
