@@ -63,7 +63,9 @@ cap.
 - [ ] 3.2 `core/feature-workflow.md`: the `Ссылки` and `Pointer` paragraphs
       say `finish --card` writes the pull request's link and the change's
       `Pointer`, and keep the hand step for a pull request it did not open
-      or update; the kinds read `proposal`, `apply`, `archive`; `README.md`'s `finish` row says it writes both, and needs
+      or update, and keep a fix card's `pr:<N>` `Pointer` a hand step
+      whoever opened the pull request, since `finish` never writes it; the
+      kinds read `proposal`, `apply`, `archive`; `README.md`'s `finish` row says it writes both, and needs
       the ask integration's *Update content* and *Insert content*
 - [ ] 3.3 `bun bun/pre-pr.ts origin/main` green; the PR opens through
       `bun bun/work.ts finish --card 40a39875c31b81f0b5f2c66f8e89de9e`, and
