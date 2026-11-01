@@ -39,12 +39,11 @@ second question no longer waits for the first one's answer.
   `notion-unassign`'s write, which keeps everyone else (the user's widenings
   in chat, and item 4 b). The prose "clear `Assign` once it is applied"
   stays for the boards these commands do not run on.
-- The board loop's pick takes a card carrying an answer whatever its
-  `Assign` holds, and task-board clears `Assign` "by then at the latest"
-  rather than "never earlier" than the answer step's pull request (item 4
-  b). Nothing then marks an answer as carried, so the old board loop may
-  carry one twice; the user accepted that (item 5 c), since roadmap stage
-  2.5 switches that loop off and stage 7 deletes it.
+- The board loop's pick is unchanged and still takes an answer only while
+  `Assign` holds the user (item 7 a). task-board clears `Assign` "by then at
+  the latest" rather than "never earlier" than the answer step's pull
+  request, so a release can hide an answer from the old loop; its hourly
+  schedule is already off.
 - The board loop's runner keeps its refusal (`board-loop`, *A question
   already waits*): it guards a retried pass against posting twice.
 - The prose step "set `Assign` after `question: posted`" becomes "unless the
@@ -72,18 +71,12 @@ None.
 - `work-take`: *Take writes nothing and fails closed* allows that release.
 - `work-status` and `work-finish`: each gains the requirement that it runs
   the release, and where its line goes.
-- `board-loop`: *A pass takes the first takeable card in the board's order*
-  takes an answer candidate whatever its `Assign` holds.
 
 ## Impact
 
-- `design.md` and `tasks.md`, which the references to the design above
-  name, follow in the plan pull request on
-  `spec/notion-ask-sets-assign-plan`, the five artefacts together being
-  over the diff budget.
 - Changed: `bun/notion-ask.ts` (no comments read, the `Assign` write and its
   read-back, the header), `bun/notion-ask.test.ts`, `bun/board-loop-prompt.ts`
-  (the ask line and the pick's answer line) and its tests,
+  (the ask line) and its tests,
   `bun/question-gate.ts`'s `ask` message, `bun/notion-unassign.ts` (the
   lifted write), `bun/work-status.ts`, `bun/work-take.ts`,
   `bun/work-finish.ts` and their tests, `core/feature-workflow.md`,
