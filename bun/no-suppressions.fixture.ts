@@ -36,10 +36,7 @@ function write(dir: string, files: Record<string, string>): void {
 }
 
 /** A throwaway repository holding `tracked`, plus `untracked` left unadded. */
-export function fabricate(
-	tracked: Record<string, string>,
-	untracked: Record<string, string> = {},
-): string {
+export function fabricate(tracked: Record<string, string>, untracked: Record<string, string> = {}): string {
 	const dir = emptyDir("no-suppressions-");
 	const git = (...args: string[]) => {
 		const run = Bun.spawnSync(["git", ...args], { cwd: dir });
@@ -58,14 +55,9 @@ export function fabricate(
 }
 
 /** A consumer manifest whose allowlist is `entries`, however malformed. */
-export const holding = (entries: unknown): string =>
-	JSON.stringify({ harness: { suppressions: entries } }, null, 2);
+export const holding = (entries: unknown): string => JSON.stringify({ harness: { suppressions: entries } }, null, 2);
 
 /** A consumer manifest approving `counts`, keyed by `<path> <marker>`. */
 export function manifest(counts: Record<string, number>): string {
-	return holding(
-		Object.fromEntries(
-			Object.entries(counts).map(([key, count]) => [key, { count, why: "x" }]),
-		),
-	);
+	return holding(Object.fromEntries(Object.entries(counts).map(([key, count]) => [key, { count, why: "x" }])));
 }

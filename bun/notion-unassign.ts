@@ -25,7 +25,12 @@ export function pickedCard(said: string): { card: string } | string {
  * or `Assign` is too long to read whole; no call is retried. Not `assign()`,
  * which sets the user alone: this write keeps everyone else.
  */
-export async function unassign({ token, user }: Settings, card: string, { board, slug }: { board: string; slug: string }, timeout = 30_000): Promise<string> {
+export async function unassign(
+	{ token, user }: Settings,
+	card: string,
+	{ board, slug }: { board: string; slug: string },
+	timeout = 30_000,
+): Promise<string> {
 	const call = client(token, timeout);
 	try {
 		const why = await carded(call, card, board, slug);

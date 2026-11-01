@@ -1,21 +1,14 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
-import {
-	cleanup,
-	emptyDir,
-	fabricate,
-	holding,
-	manifest,
-} from "./no-suppressions.fixture.ts";
+import { cleanup, emptyDir, fabricate, holding, manifest } from "./no-suppressions.fixture.ts";
 import { allowlist, type Finding, scan } from "./no-suppressions.ts";
 
 const script = `${import.meta.dir}/no-suppressions.ts`;
 
 afterAll(cleanup);
 
-const at = (found: Finding[]) =>
-	found.map(({ path, line, marker }) => `${path}:${line}: ${marker}`);
+const at = (found: Finding[]) => found.map(({ path, line, marker }) => `${path}:${line}: ${marker}`);
 
 describe("a suppression is added", () => {
 	test("one is reported with its file and line", () => {
@@ -30,10 +23,7 @@ describe("a suppression is added", () => {
 			"src/model.ts": `// @ts-ignore\n`,
 			"src/app/session.tsx": `const a = 1;\n// @ts-expect-error\n`,
 		});
-		expect(at(scan(dir)).sort()).toEqual([
-			"src/app/session.tsx:2: @ts-expect-error",
-			"src/model.ts:1: @ts-ignore",
-		]);
+		expect(at(scan(dir)).sort()).toEqual(["src/app/session.tsx:2: @ts-expect-error", "src/model.ts:1: @ts-ignore"]);
 	});
 
 	test("a .json file is read too", () => {
@@ -73,10 +63,7 @@ describe("what the check does not read", () => {
 	});
 
 	test("an untracked file passes", () => {
-		const dir = fabricate(
-			{ "src/model.ts": "const a = 1;\n" },
-			{ "src/scratch.ts": `// @ts-ignore\n` },
-		);
+		const dir = fabricate({ "src/model.ts": "const a = 1;\n" }, { "src/scratch.ts": `// @ts-ignore\n` });
 		expect(scan(dir)).toEqual([]);
 	});
 
@@ -103,10 +90,7 @@ describe("the allowlist", () => {
 		const dir = fabricate({
 			"src/model.ts": `// biome-ignore a\nconst a = 1;\n// biome-ignore b\n`,
 		});
-		expect(at(scan(dir, approved))).toEqual([
-			"src/model.ts:1: biome-ignore",
-			"src/model.ts:3: biome-ignore",
-		]);
+		expect(at(scan(dir, approved))).toEqual(["src/model.ts:1: biome-ignore", "src/model.ts:3: biome-ignore"]);
 	});
 
 	test("a marker swapped for another kind fails", () => {
@@ -143,13 +127,8 @@ describe("an allowlist entry the check cannot read", () => {
 		[null, "count"],
 	])("%j is named by its %s and approves nothing", (value, name) => {
 		const dir = entry(value);
-		expect(allowlist(dir).problems).toContainEqual(
-			expect.stringContaining(field(name)),
-		);
-		expect(at(scan(dir))).toEqual([
-			"src/model.ts:1: biome-ignore",
-			"src/model.ts:2: biome-ignore",
-		]);
+		expect(allowlist(dir).problems).toContainEqual(expect.stringContaining(field(name)));
+		expect(at(scan(dir))).toEqual(["src/model.ts:1: biome-ignore", "src/model.ts:2: biome-ignore"]);
 	});
 
 	test("only the unreadable entry is named, and the readable one still approves", () => {
@@ -165,17 +144,13 @@ describe("an allowlist entry the check cannot read", () => {
 				}),
 			},
 		);
-		expect(allowlist(dir).problems).toEqual([
-			`${field("count")} is not a whole number`,
-		]);
+		expect(allowlist(dir).problems).toEqual([`${field("count")} is not a whole number`]);
 		expect(at(scan(dir))).toEqual(["src/model.ts:1: biome-ignore"]);
 	});
 
 	test("an allowlist that is not an object is named as such", () => {
 		const dir = fabricate({}, { "package.json": holding([]) });
-		expect(allowlist(dir).problems).toEqual([
-			"harness.suppressions is not an object of approvals",
-		]);
+		expect(allowlist(dir).problems).toEqual(["harness.suppressions is not an object of approvals"]);
 	});
 
 	test("the script fails on an unreadable entry with nothing else to report", () => {
@@ -271,9 +246,7 @@ describe("a tree the check cannot read straight through", () => {
 			"src/model.ts": "// @ts-ignore\n",
 			"scripts/tool.ts": "const a = 1;\n",
 		});
-		expect(at(scan(join(dir, "scripts")))).toEqual([
-			"src/model.ts:1: @ts-ignore",
-		]);
+		expect(at(scan(join(dir, "scripts")))).toEqual(["src/model.ts:1: @ts-ignore"]);
 	});
 
 	test("a tracked symlink is skipped rather than followed", () => {

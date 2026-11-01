@@ -64,7 +64,9 @@ describe("the card", () => {
 	test("the checkout's HEAD first, the five properties, the body byte for byte", async () => {
 		const markdown = "# Plan\n\n- one\n- two\n\n```ts\nconst a = 1;\n```\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n";
 		const cwd = checkout();
-		const assign = { Assign: { type: "people", people: [{ object: "user", id: "01234567-89ab-cdef-0123-456789abcdef" }] } };
+		const assign = {
+			Assign: { type: "people", people: [{ object: "user", id: "01234567-89ab-cdef-0123-456789abcdef" }] },
+		};
 		const run = await take({ cwd, stub: { page: page("openspec/changes/demo/", assign), markdown: body(markdown) } });
 		expect(run.code).toBe(0);
 		const lines = run.out.split("\n");

@@ -47,7 +47,10 @@ describe("status", () => {
 	// spec: task-board/the-release-fails
 	test("a failed release leaves the move's line and exit [28]", async () => {
 		const run = await status({ args: to("exploring"), assign: [USER], fail: { [COMMENTS]: 500 } });
-		expect([run.code, run.out.trim().split("\n")]).toEqual([0, [`status: ${CARD} approved → exploring`, "assign: failed — the comments read answered 500"]]);
+		expect([run.code, run.out.trim().split("\n")]).toEqual([
+			0,
+			[`status: ${CARD} approved → exploring`, "assign: failed — the comments read answered 500"],
+		]);
 	});
 
 	// spec: task-board/the-restore-fails
@@ -61,7 +64,10 @@ describe("status", () => {
 describe("take", () => {
 	// spec: task-board/work-resumed
 	test("an answered question: the release's line after the comments, the other person kept", async () => {
-		const stub = { comments: [[question("2026-10-20T09:00:00Z"), said(USER, "2026-10-20T10:00:00Z", { plain_text: "Yes." })]], assign: [UUID, ELSE] };
+		const stub = {
+			comments: [[question("2026-10-20T09:00:00Z"), said(USER, "2026-10-20T10:00:00Z", { plain_text: "Yes." })]],
+			assign: [UUID, ELSE],
+		};
 		const run = await take({ stub });
 		expect(run.code).toBe(0);
 		expect(run.out).toContain(`question waiting: no\n${REMOVED}\n## Change`);
@@ -71,7 +77,11 @@ describe("take", () => {
 	// spec: work-take/only-reads task-board/a-question-waits
 	test("a waiting question with the user on Assign: every call a GET, no line", async () => {
 		const run = await take({ stub: { comments: [[question("2026-10-20T09:00:00Z")]], assign: [UUID] } });
-		expect([run.code, run.seen.every((s) => s.call.startsWith("GET ")), run.out.includes("assign:")]).toEqual([0, true, false]);
+		expect([run.code, run.seen.every((s) => s.call.startsWith("GET ")), run.out.includes("assign:")]).toEqual([
+			0,
+			true,
+			false,
+		]);
 	});
 
 	// spec: task-board/the-release-fails
@@ -83,7 +93,9 @@ describe("take", () => {
 
 	// spec: task-board/the-restore-fails
 	test("a failed restore exits 1 [38]", async () => {
-		const run = await take({ stub: { assign: [UUID], next: { [PATCH]: [{ comments: later(), fail: { [PATCH]: 500 } }] } } });
+		const run = await take({
+			stub: { assign: [UUID], next: { [PATCH]: [{ comments: later(), fail: { [PATCH]: 500 } }] } },
+		});
 		expect([run.code, run.out.includes("assign: failed — the restore")]).toEqual([1, true]);
 	});
 });
@@ -103,13 +115,20 @@ describe("finish --card", () => {
 	// spec: work-finish/a-question-arrives-during-the-release
 	test("a question during the release: the user back, and the draft left [37]", async () => {
 		const run = await finish({ gh: DRAFT, stub: { assign: [UUID], next: { [PATCH]: [{ comments: later() }] } } });
-		expect([run.code, run.last, run.calls]).toEqual([0, `finish: draft #7 — a question or a pause notice waits on ${CARD}`, [READ, "push"]]);
+		expect([run.code, run.last, run.calls]).toEqual([
+			0,
+			`finish: draft #7 — a question or a pause notice waits on ${CARD}`,
+			[READ, "push"],
+		]);
 		expect(run.out).toContain(`assign: restored the user on ${CARD}\n`);
 	});
 
 	// spec: work-finish/a-question-arrives-during-the-release
 	test("a question that only the release's first read finds: no write, and the draft left (local review)", async () => {
-		const run = await finish({ gh: DRAFT, stub: { assign: [UUID], next: { "GET /v1/comments": [{ comments: later() }] } } });
+		const run = await finish({
+			gh: DRAFT,
+			stub: { assign: [UUID], next: { "GET /v1/comments": [{ comments: later() }] } },
+		});
 		expect([run.code, run.last, run.calls, run.out.includes("assign:")]).toEqual([
 			0,
 			`finish: draft #7 — a question or a pause notice waits on ${CARD}`,
@@ -120,8 +139,15 @@ describe("finish --card", () => {
 
 	// spec: work-finish/a-question-arrives-during-the-release
 	test("the release's second read failing: the user back, the draft left, exit 1 (local review)", async () => {
-		const run = await finish({ gh: DRAFT, stub: { assign: [UUID], next: { [PATCH]: [{ fail: { [COMMENTS]: 500 } }] } } });
-		expect([run.code, run.last, run.calls]).toEqual([1, "finish: draft #7 — the card's comments could not be read after the release", [READ, "push"]]);
+		const run = await finish({
+			gh: DRAFT,
+			stub: { assign: [UUID], next: { [PATCH]: [{ fail: { [COMMENTS]: 500 } }] } },
+		});
+		expect([run.code, run.last, run.calls]).toEqual([
+			1,
+			"finish: draft #7 — the card's comments could not be read after the release",
+			[READ, "push"],
+		]);
 	});
 
 	// spec: task-board/the-release-fails
@@ -133,7 +159,10 @@ describe("finish --card", () => {
 
 	// spec: task-board/the-restore-fails
 	test("a failed restore exits 1 and leaves the draft [38]", async () => {
-		const run = await finish({ gh: DRAFT, stub: { assign: [UUID], next: { [PATCH]: [{ comments: later(), fail: { [PATCH]: 500 } }] } } });
+		const run = await finish({
+			gh: DRAFT,
+			stub: { assign: [UUID], next: { [PATCH]: [{ comments: later(), fail: { [PATCH]: 500 } }] } },
+		});
 		expect([run.code, run.calls]).toEqual([1, [READ, "push"]]);
 		expect(run.out).toContain("assign: failed — the restore");
 	});

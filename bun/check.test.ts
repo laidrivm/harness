@@ -67,12 +67,8 @@ describe("the gates over a consumer", () => {
 				},
 			}),
 		);
-		expect(said).toContain(
-			'harness.suppressions["src/a.ts some-marker"].why gives no reason — write one as text',
-		);
-		expect(said).toContainEqual(
-			expect.stringContaining("harness.uncitedFloor.why"),
-		);
+		expect(said).toContain('harness.suppressions["src/a.ts some-marker"].why gives no reason — write one as text');
+		expect(said).toContainEqual(expect.stringContaining("harness.uncitedFloor.why"));
 	});
 });
 

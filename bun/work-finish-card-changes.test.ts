@@ -9,8 +9,8 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { cleanup, emptyDir, git, put } from "./diff-budget.fixture.ts";
 import { type Call, paged } from "./notion-bot.ts";
-import { added, changes, kind } from "./work-finish-card.ts";
 import { ARCHIVE, adding, archiving, FOO, tree, unrelated } from "./work-finish-card.fixture.ts";
+import { added, changes, kind } from "./work-finish-card.ts";
 
 afterAll(cleanup);
 
@@ -19,7 +19,9 @@ describe("paged", () => {
 		const paths: string[] = [];
 		const call = (async (_step: string, path: string) => {
 			paths.push(path);
-			return paths.length === 1 ? { results: [1], has_more: true, next_cursor: "c 1" } : { results: [2], has_more: false };
+			return paths.length === 1
+				? { results: [1], has_more: true, next_cursor: "c 1" }
+				: { results: [2], has_more: false };
 		}) as Call;
 		expect(await paged(call, "the block read", "/v1/blocks/x/children")).toEqual([1, 2]);
 		expect(paths).toEqual(["/v1/blocks/x/children", "/v1/blocks/x/children?start_cursor=c%201"]);
@@ -27,9 +29,12 @@ describe("paged", () => {
 
 	test("more pages behind no cursor name the step", async () => {
 		const call = (async () => ({ results: [], has_more: true, next_cursor: null })) as Call;
-		expect(await paged(call, "the block read", "/v1/blocks/x/children").then(() => "", (e: Error) => e.message)).toBe(
-			"the block read gave no new cursor",
-		);
+		expect(
+			await paged(call, "the block read", "/v1/blocks/x/children").then(
+				() => "",
+				(e: Error) => e.message,
+			),
+		).toBe("the block read gave no new cursor");
 	});
 });
 
@@ -54,28 +59,35 @@ describe("the change directories the branch adds files to", () => {
 
 	// spec: work-finish/an-apply-branch
 	test("none, with tasks.md edited and code added", () => {
-		expect(read(tree({ [`${FOO}tasks.md`]: "- [ ] 1\n" }, { [`${FOO}tasks.md`]: "- [x] 1\n", "bun/x.ts": "x\n" }))).toEqual([[], "apply"]);
+		expect(
+			read(tree({ [`${FOO}tasks.md`]: "- [ ] 1\n" }, { [`${FOO}tasks.md`]: "- [x] 1\n", "bun/x.ts": "x\n" })),
+		).toEqual([[], "apply"]);
 	});
 
 	// spec: work-finish/an-apply-branch-adding-a-delta-spec
 	test("a delta spec alone added to a change the base holds: that change, kind apply", () => {
-		const top = tree({ [`${FOO}proposal.md`]: "# foo\n" }, { [`${FOO}specs/x/spec.md`]: "# x\n", [`${FOO}notes.md`]: "n\n" });
+		const top = tree(
+			{ [`${FOO}proposal.md`]: "# foo\n" },
+			{ [`${FOO}specs/x/spec.md`]: "# x\n", [`${FOO}notes.md`]: "n\n" },
+		);
 		expect(read(top)).toEqual([[FOO], "apply"]);
 	});
 
 	// spec: work-finish/several-added-directories
 	test("two", () => {
-		expect(read(tree({}, { [`${FOO}proposal.md`]: "# foo\n", "openspec/changes/bar/proposal.md": "# bar\n" }))).toEqual([
-			["openspec/changes/bar/", FOO],
-			"proposal",
-		]);
+		expect(read(tree({}, { [`${FOO}proposal.md`]: "# foo\n", "openspec/changes/bar/proposal.md": "# bar\n" }))).toEqual(
+			[["openspec/changes/bar/", FOO], "proposal"],
+		);
 	});
 
 	// spec: work-finish/a-main-that-archived-a-change-after-the-branch-forked
 	test("a change archived on main after the fork, main merged in, is not read as added", () => {
 		const dir = tree({ "openspec/changes/bar/proposal.md": "# bar\n" }, { [`${FOO}proposal.md`]: "# foo\n" });
 		git(dir, "checkout", "-q", "main");
-		put(dir, { "openspec/changes/bar/proposal.md": null, "openspec/changes/archive/2026-11-01-bar/proposal.md": "# bar\n" });
+		put(dir, {
+			"openspec/changes/bar/proposal.md": null,
+			"openspec/changes/archive/2026-11-01-bar/proposal.md": "# bar\n",
+		});
 		git(dir, "add", "-A");
 		git(dir, "commit", "-qm", "archive bar");
 		git(dir, "push", "-q", "origin", "main");
@@ -86,7 +98,9 @@ describe("the change directories the branch adds files to", () => {
 
 	// spec: work-finish/a-proposals-second-half
 	test("design.md and tasks.md added to a change the base holds name that change, kind proposal", () => {
-		expect(read(tree({ [`${FOO}proposal.md`]: "# foo\n" }, { [`${FOO}design.md`]: "d\n", [`${FOO}tasks.md`]: "- [ ] 1\n" }))).toEqual([[FOO], "proposal"]);
+		expect(
+			read(tree({ [`${FOO}proposal.md`]: "# foo\n" }, { [`${FOO}design.md`]: "d\n", [`${FOO}tasks.md`]: "- [ ] 1\n" })),
+		).toEqual([[FOO], "proposal"]);
 	});
 
 	test("a path git would quote is read as it is", () => {

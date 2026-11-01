@@ -20,7 +20,11 @@ export const BRANCH = "feature";
  * trees, with `main` on its bare `origin`; `coderabbit` commits a
  * `.coderabbit.yaml` in it.
  */
-export function checkout(coderabbit = false, head: Record<string, string | null> = { "a.txt": "a\n" }, base: Record<string, string> = {}): string {
+export function checkout(
+	coderabbit = false,
+	head: Record<string, string | null> = { "a.txt": "a\n" },
+	base: Record<string, string> = {},
+): string {
 	const dir = repo(base, { ...head, ...(coderabbit ? { ".coderabbit.yaml": "reviews: {}\n" } : {}) });
 	const bare = join(emptyDir("work-finish-origin-"), "o", "demo.git");
 	mkdirSync(bare, { recursive: true });

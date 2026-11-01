@@ -21,7 +21,9 @@ const people = (page: Paged): Person[] | undefined => {
 };
 const holds = (listed: Person[] | undefined, user: string) => listed?.some((p) => hex(p?.id) === hex(user)) ?? false;
 const write = (call: Call, card: string, kept: { id: unknown }[]) =>
-	call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: kept } } }) as Promise<Paged>;
+	call("the Assign write", `/v1/pages/${card}`, "PATCH", {
+		properties: { Assign: { people: kept } },
+	}) as Promise<Paged>;
 
 /**
  * Reads `card`'s `Assign` and, once `go` agrees with the list read, writes it
@@ -33,7 +35,12 @@ const write = (call: Call, card: string, kept: { id: unknown }[]) =>
  * `go` is asked first, so a card it declines never reads as failed for its
  * length.
  */
-export async function release(call: Call, card: string, user: string, go: (listed: Person[]) => Promise<boolean> = async () => true) {
+export async function release(
+	call: Call,
+	card: string,
+	user: string,
+	go: (listed: Person[]) => Promise<boolean> = async () => true,
+) {
 	const listed = people(await call("the page read", `/v1/pages/${card}`)) ?? [];
 	if (!(await go(listed))) return false;
 	// shortcut: a page read lists 25 references of a property at most, so a longer `Assign` is left whole rather than written back cut; page through `/v1/pages/<id>/properties/<property>` if a card ever needs it.
@@ -47,7 +54,8 @@ export async function release(call: Call, card: string, user: string, go: (liste
 	if (!now || holds(now, user)) throw new AtWrite("the Assign write did not remove the user");
 	return true;
 }
-const without = (listed: Person[], user: string) => listed.filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
+const without = (listed: Person[], user: string) =>
+	listed.filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));
 
 /** A `release()` failure at or after its write, which may have landed, unlike one before it. */
 export class AtWrite extends Error {}
@@ -75,7 +83,10 @@ export type Cleared = { line?: string; back?: "waits" | "unread"; restoreFailed:
  * with no one on `Assign`.
  */
 export async function cleared(call: Call, card: string, user: string): Promise<Cleared> {
-	const failed = (why: string, restoreFailed = false): Cleared => ({ line: `${UNASSIGN_FAILED} ${why}`, restoreFailed });
+	const failed = (why: string, restoreFailed = false): Cleared => ({
+		line: `${UNASSIGN_FAILED} ${why}`,
+		restoreFailed,
+	});
 	let listed: Person[] = [];
 	let waiting = false;
 	let fault: string | undefined;

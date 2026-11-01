@@ -36,9 +36,7 @@ const PROSE = [".md"];
  * track and so never matches.
  */
 const self = (root: string) =>
-	["no-suppressions.ts", "no-suppressions.test.ts"].map((name) =>
-		relative(root, join(import.meta.dir, name)),
-	);
+	["no-suppressions.ts", "no-suppressions.test.ts"].map((name) => relative(root, join(import.meta.dir, name)));
 
 /**
  * The root manifest, where `harness.suppressions` lives: every approval's key
@@ -79,12 +77,7 @@ export function allowlist(root: string): {
 	const approved: Record<string, number> = {};
 	const problems: string[] = [];
 	for (const [key, entry] of Object.entries(value)) {
-		const faults = unreadable(
-			`harness.suppressions[${JSON.stringify(key)}]`,
-			"count",
-			entry?.count,
-			entry?.why,
-		);
+		const faults = unreadable(`harness.suppressions[${JSON.stringify(key)}]`, "count", entry?.count, entry?.why);
 		// An entry the check cannot read approves nothing: a count of `NaN`,
 		// which no length exceeds, would otherwise approve every occurrence.
 		// Its faults are returned rather than thrown, so `check.ts` still
@@ -107,20 +100,13 @@ export type Finding = { path: string; line: number; marker: string };
  * `cwd`, so from a subdirectory the check's own two paths still match and it
  * does not fail on itself.
  */
-export function scan(
-	cwd?: string,
-	approved?: Record<string, number>,
-): Finding[] {
+export function scan(cwd?: string, approved?: Record<string, number>): Finding[] {
 	const { root, files } = tracked(cwd);
 	return sweep(root, files, approved ?? allowlist(root).approved);
 }
 
 /** The suppressions among `files` at `root` that `allowed` does not admit. */
-function sweep(
-	root: string,
-	files: string[],
-	allowed: Record<string, number>,
-): Finding[] {
+function sweep(root: string, files: string[], allowed: Record<string, number>): Finding[] {
 	const own = self(root);
 
 	const found: Finding[] = [];
@@ -156,12 +142,7 @@ function sweep(
 export function report(cwd?: string): string[] {
 	const { root, files } = tracked(cwd);
 	const { approved, problems } = allowlist(root);
-	return [
-		...problems,
-		...sweep(root, files, approved).map(
-			({ path, line, marker }) => `${path}:${line}: ${marker}`,
-		),
-	];
+	return [...problems, ...sweep(root, files, approved).map(({ path, line, marker }) => `${path}:${line}: ${marker}`)];
 }
 
 if (import.meta.main) {

@@ -76,7 +76,13 @@ describe("the wait before the ready switch", () => {
 		expect(run.calls).toEqual([READ, "push", create, READ, ...times(3, runs(cwd)), READY, ...times(2, runs(cwd))]);
 		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — CodeRabbit reviewing ${short(cwd)}`]);
 		// The card's record once, the question before the wait and again before the ready switch, then the release's page read.
-		expect(run.seen).toEqual([`GET /v1/pages/${CARD}`, `GET /v1/blocks/${CARD}/children`, "GET /v1/comments", "GET /v1/comments", `GET /v1/pages/${CARD}`]);
+		expect(run.seen).toEqual([
+			`GET /v1/pages/${CARD}`,
+			`GET /v1/blocks/${CARD}/children`,
+			"GET /v1/comments",
+			"GET /v1/comments",
+			`GET /v1/pages/${CARD}`,
+		]);
 	});
 
 	test("an in-progress run alone does not end the wait", async () => {

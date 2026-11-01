@@ -44,7 +44,9 @@ test("step 5 names each read verbatim, in order", () => {
 test("counts only the earliest commit the bot reviewed, a check run by the rule bun/coderabbit-run.ts holds", () => {
 	const text = step();
 	expect(text).toContain("oldest first");
-	expect(text).toContain(`a check run of the bot's that concluded \`${REVIEWED.conclusion}\` with a title not opening \`${REVIEWED.skippedTitle}\``);
+	expect(text).toContain(
+		`a check run of the bot's that concluded \`${REVIEWED.conclusion}\` with a title not opening \`${REVIEWED.skippedTitle}\``,
+	);
 	expect(text).toContain("never the summary's text, read only for that link");
 	// One phrase: a draft skip is a `success` status too, so the text must stay a condition.
 	expect(text).toContain("a `success` status reading `Review completed`");

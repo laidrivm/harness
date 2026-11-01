@@ -14,15 +14,19 @@ export const ARCHIVE = "openspec/changes/archive/2026-11-02-foo/";
 export const PULL = { number: 7, url: "https://github.com/o/demo/pull/7" };
 
 /** A checkout of `harness`, its board `Harness`, on `feature` past `main`, `base` and `head` its two trees. */
-export const tree = (base: Record<string, string>, head: Record<string, string | null>) => checkout(false, head, { "package.json": MANIFEST, ...base });
+export const tree = (base: Record<string, string>, head: Record<string, string | null>) =>
+	checkout(false, head, { "package.json": MANIFEST, ...base });
 export const adding = () => tree({}, { [`${FOO}proposal.md`]: "# foo\n" });
 export const archiving = () =>
-	tree({ [`${FOO}proposal.md`]: "# foo\n", [`${FOO}tasks.md`]: "- [x] 1\n" }, {
-		[`${FOO}proposal.md`]: null,
-		[`${FOO}tasks.md`]: null,
-		[`${ARCHIVE}proposal.md`]: "# foo\n",
-		[`${ARCHIVE}tasks.md`]: "- [x] 1\n",
-	});
+	tree(
+		{ [`${FOO}proposal.md`]: "# foo\n", [`${FOO}tasks.md`]: "- [x] 1\n" },
+		{
+			[`${FOO}proposal.md`]: null,
+			[`${FOO}tasks.md`]: null,
+			[`${ARCHIVE}proposal.md`]: "# foo\n",
+			[`${ARCHIVE}tasks.md`]: "- [x] 1\n",
+		},
+	);
 
 /** `dir` with `origin`'s `main` replaced by a commit sharing no history with `feature`, so no merge base is found. */
 export function unrelated(dir: string): string {

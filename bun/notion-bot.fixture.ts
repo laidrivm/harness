@@ -30,7 +30,12 @@ export function advance(target: object, next: Record<string, object[]> | undefin
 }
 
 /** The question the stand-in's comments read finds while `state.pending`. */
-export const ASKED = { id: "c1", created_by: { id: BOT }, created_time: "2026-10-24T00:00:00Z", rich_text: [{ plain_text: `${MARK} Ship?` }] };
+export const ASKED = {
+	id: "c1",
+	created_by: { id: BOT },
+	created_time: "2026-10-24T00:00:00Z",
+	rich_text: [{ plain_text: `${MARK} Ship?` }],
+};
 
 /**
  * A stand-in Notion API: `state.seen`, every call it took, and `state.bodies`,
@@ -71,8 +76,10 @@ export function standIn() {
 	type Sent = { properties?: { Status?: { select?: { name: string } }; Assign?: { people?: { id: string }[] } } };
 	const respond = (req: Request, url: URL, call: string) => {
 		if (state.fail[call]) return Response.json({}, { status: state.fail[call] });
-		if (url.pathname === "/v1/users/me") return Response.json({ object: "user", type: "bot", id: BOT }, { status: state.me });
-		if (req.method === "POST" && url.pathname.endsWith("/query")) return Response.json({ results: state.cards, has_more: state.more });
+		if (url.pathname === "/v1/users/me")
+			return Response.json({ object: "user", type: "bot", id: BOT }, { status: state.me });
+		if (req.method === "POST" && url.pathname.endsWith("/query"))
+			return Response.json({ results: state.cards, has_more: state.more });
 		if (req.method === "POST" && url.pathname === "/v1/pages") return Response.json({ object: "page", id: FILED });
 		const sent = state.bodies.at(-1) as Sent | undefined;
 		if (req.method === "PATCH") state.status = state.answer ?? sent?.properties?.Status?.select?.name ?? state.status;
@@ -83,12 +90,19 @@ export function standIn() {
 				parent: state.parent,
 				properties: {
 					Pointer: { rich_text: [{ plain_text: state.pointer ?? `openspec/changes/${state.slug}/` }] },
-					...(req.method === "PATCH" && state.unlisted ? {} : { Assign: { people: state.assign.map((id) => ({ id })) } }),
+					...(req.method === "PATCH" && state.unlisted
+						? {}
+						: { Assign: { people: state.assign.map((id) => ({ id })) } }),
 					Status: { type: "select", select: { name: state.status } },
 				},
 			});
 		if (url.pathname.startsWith("/v1/data_sources/")) return Response.json({ title: [{ plain_text: "Demo" }] });
-		if (req.method === "GET") return Response.json({ results: state.comments ?? (state.pending ? [ASKED] : []), has_more: false, next_cursor: null });
+		if (req.method === "GET")
+			return Response.json({
+				results: state.comments ?? (state.pending ? [ASKED] : []),
+				has_more: false,
+				next_cursor: null,
+			});
 		return Response.json({});
 	};
 	const server = Bun.serve({
@@ -108,8 +122,7 @@ export function standIn() {
 
 /** One pass with the settings in `home`, or none, against `notion`, its logs cleared first. */
 export const against =
-	(notion: ReturnType<typeof standIn>) =>
-	(dir: string, s: Stubs, home?: string, entry?: string) => {
+	(notion: ReturnType<typeof standIn>) => (dir: string, s: Stubs, home?: string, entry?: string) => {
 		notion.state.seen.length = 0;
 		notion.state.bodies.length = 0;
 		return runAsync(dir, s, { home, entry, env: { HARNESS_NOTION_API_URL: notion.server.url.origin } });
