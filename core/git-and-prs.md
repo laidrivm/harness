@@ -84,7 +84,7 @@ entry, a hook or a CI check leaves this file the way it would leave
   the PR is a draft, opens it as a draft when none is open, and marks it ready
   unless a question waits on the card — where the checkout tracks
   `.coderabbit.yaml`, only once CodeRabbit's run on the head has completed or
-  12 reads have found none, and its last line then names CodeRabbit's state
+  12 reads (or three failed ones in a row) have found none, and its last line then names CodeRabbit's state
   of the head; in the harness's
   own sessions a hook refuses a hand-run `gh pr create`, and `gh pr ready`
   without `--undo`. An agent that then works on an existing PR marks it draft

@@ -5,8 +5,9 @@
  * is, and the ready switch unless a question waits on the card, when one is given
  * (`openspec/changes/archive/2026-10-28-work-finish/design.md`, *The
  * sequence and where each refusal sits*). Where the checkout tracks
- * `.coderabbit.yaml`, it waits for CodeRabbit's run on `HEAD` before the
- * question read and names CodeRabbit's state of `HEAD` after the ready switch
+ * `.coderabbit.yaml`, it reads the card's question, then waits for
+ * CodeRabbit's run on `HEAD` and reads the question again, and names
+ * CodeRabbit's state of `HEAD` after the ready switch
  * (`finish-review-arrives`'s design). Every refusal comes before the
  * push, changes nothing but the ledger, and is one `finish` record of
  * `HEAD`; a failure after the push leaves the draft and records nothing.

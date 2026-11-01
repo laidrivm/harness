@@ -70,12 +70,12 @@ After the push or its skip and the draft's opening, `finish` reads `HEAD`'s
 runs until one is completed, at most 12 reads an interval apart. Completed,
 not merely present, so that a run still in progress for the push's event
 cannot end the wait while that event is being handled. A failed read counts
-as none and the reads go on. It runs before the card's question read, which
-stays last before `ready()` so that it sees a question posted meanwhile, as
-the archived `work-finish` design set; a question that then waits has cost
-up to 60 s, the price of keeping that order. A wait that ends with none
-prints `finish: no completed CodeRabbit run on <short> after 12 reads` and
-goes on: the wait narrows a race, it gates nothing.
+as none and the reads go on, until three fail in a row (answer 10 b). The
+card's question is read before the wait too (answer 12 b), so a question
+already waiting costs no wait. It is read again last before `ready()` to see
+a question posted meanwhile, as the archived `work-finish` design set. A wait
+that ends with none prints `finish: no completed CodeRabbit run on <short>
+after <n> reads` and goes on: the wait narrows a race, it gates nothing.
 
 With no push in this call, an earlier push's run is usually there and the
 first read returns; a branch pushed before its draft opened has none until
@@ -89,7 +89,7 @@ not an earlier skip still in progress.
 
 After `ready()`, `finish` reads `HEAD`'s state every poll interval until it
 is neither `skipped`, no run nor unread, at most 18 reads an interval apart.
-A failed read does not end the reads, and the last read that answered
+One failed read does not end the reads, but three in a row do (answer 10 b). The last read that answered
 decides the line, so one failure at the end cannot drop the request. The
 review
 starts 25–35 s after the switch when it comes (#338, #342). The last line is
@@ -247,4 +247,4 @@ settle the explore's questions.
 - 10 b (third review): three failed reads in a row now end either wait. That replaces "a failed read does not end the reads" above, so a revoked token or a dead network costs three reads, not thirty. One failure between answers still does not end them.
 - 11 b: an earlier `@coderabbitai full review` counts as the request too.
 - 12 b: where the wait runs, the card's question is read before it as well, so a question already waiting costs no wait. The read before the ready switch stays, to catch a question posted meanwhile.
-- 9 b: in the archive pull request, not here. That covers the `!found` disjunct kept only for the type, the short sha computed three times, and the fixture's `runs: []` reading as a failed read.
+- 9 b: in the archive pull request, not here. That covers the `!found` disjunct kept only for the type, the short sha computed three times, and the fixture's `runs: []` reading as a failed read. Before the archive, `/opsx:update` also brings the delta spec into line with 10 b and 11 b, and with the 55 s and 85 s figures.
