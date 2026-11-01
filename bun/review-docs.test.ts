@@ -234,10 +234,13 @@ describe("the /code-review bullet is the local review", () => {
 		const text = bullet(toolkit(), LOCAL) ?? "";
 		expect(text).toContain("A review that does not return —");
 		expect(text).toContain("or whose findings name no file the branch's diff changes");
-		expect(text).toContain("is reported and the push goes on without the gate");
+		expect(text).toContain("is reported. On the loop's first pass the push then goes on without the gate");
 		expect(text).toContain("writes no `CODE-REVIEW gate:` line only when no pass returned a review");
 		expect(text).toContain("a pass that does not return after one that did ends the loop on the line the earlier passes left");
 		expect(text).toContain("`BLOCKED` wins over `OPEN` and `OPEN` over `PASS`");
+		// The scenario's outcome: an earlier pass's pending dismissal still holds the line at OPEN.
+		expect(text).toContain("the gate line reads `OPEN` until they settle it");
+		expect(text).toContain("one a pass left before a later pass did not return");
 	});
 
 	test("the doc holds no measurement", () => {
