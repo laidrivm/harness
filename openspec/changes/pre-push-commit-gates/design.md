@@ -68,14 +68,11 @@ that tool's next write cannot fail `biome ci`: `mutation/**` (Stryker),
 `skills-lock.json` (the skills CLI), `.claude/settings.json`
 (`bun/sync-settings.ts`), and the vendored `core/skills/playwright-cli/**`;
 group 1 lists the rest from `git ls-files` before the reformat. The reformat
-is `biome format --write` and then `biome check --write
---linter-enabled=false`, which applies import order alone — `biome check
---write` would also apply the linter's safe fixes, which rewrite code and
-comments (`bun/no-suppressions.ts` records one), and the pull request
-claims no hand edit and no semantic one. The three linter errors are fixed
-by hand in the hook's group.
-Warnings (`noTemplateCurlyInString` on shell strings) do not fail `biome
-ci` and stay warnings; no rule is turned off (`core/rules.md`).
+is `biome format --write`, then `biome check --write --linter-enabled=false`
+for import order alone: plain `biome check --write` also applies the
+linter's safe fixes, which rewrite code (`bun/no-suppressions.ts` records
+one). The three linter errors are fixed by hand in the hook's group;
+warnings do not fail `biome ci`, and no rule is turned off.
 
 Width 80 lengthens files, so a file the reformat would push past the
 300-line cap is split first, on its own branch (task 1.2).
@@ -141,11 +138,9 @@ results. They are excluded from the diff budget (`mutation/**` in
 
 The stored copy of `bun/no-suppressions.ts` carries its three markers. The
 scan exempts that one file by path, beside its own script and test and for
-the same reason (`commit-gates` delta). Approving it in `harness.suppressions`
-was the alternative: it would pin a count every edit to the script moves, and
-falsify the requirement's scenario that the tree passes with an empty
-allowlist. Exempting all of `mutation/` was rejected too: a marker in any
-other module's source is one the scan must still see there.
+the same reason (`commit-gates` delta) — an approval would pin a count every
+edit to the script moves, and exempting all of `mutation/` would hide a
+marker in any other module's source.
 
 Stryker needs Node on `PATH` (d2ass's `mutation.yml` records why); the step
 fails naming Node when a module changed and none is found.
