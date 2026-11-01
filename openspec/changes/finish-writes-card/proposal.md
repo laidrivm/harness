@@ -18,19 +18,19 @@ as soon as it opens, draft included*).
 
 - `finish --card`, once the pull request exists — opened by this call or
   already open, draft or not yet ready — reads which change directories the
-  branch adds against its merge base with `origin/main`: under
-  `openspec/changes/` outside `archive/`, and under `openspec/changes/archive/`.
-- Exactly one added directory is the card's: `finish` writes it to the
+  branch adds files to against its merge base with `origin/main`: under
+  `openspec/changes/` outside `archive/`, and under `openspec/changes/archive/`
+  — a new change, a `-plan` branch's design and tasks, an archive.
+- Exactly one such directory is the card's: `finish` writes it to the
   card's `Pointer` when the `Pointer` is empty or names the same slug before
   its archive, and reads it back; on a card of another repository's board
   it writes the cross-repository form `harness: <path>`. A `Pointer` that
   already says it is left alone; a `pr:<N>` pointer, another change's or
   another repository's is left alone with a line saying so. None or several
-  added directories write nothing and say so.
+  write nothing and say so.
 - The pull request goes on the card's `Ссылки` list as
-  `[#N](<url>) — <kind>`, `proposal` when the branch adds a file to a
-  change outside `archive/` (a new change, or a `-plan` branch's design and
-  tasks), `archive` when it adds an archived directory, `apply` otherwise,
+  `[#N](<url>) — <kind>`, `proposal` when one of those directories is
+  outside `archive/`, `archive` when one is inside it, `apply` otherwise,
   unless a block of the card already links that pull request; a card with
   no `Ссылки` line gets one at the end of its body.
 - Both writes come after the push and before the question read. An
@@ -63,7 +63,7 @@ None.
 
 ## Impact
 
-- New: `bun/work-finish-card.ts`, which derives the added directories and
+- New: `bun/work-finish-card.ts`, which derives the change directories and
   makes both writes, and its test `bun/work-finish-card.test.ts`.
 - Changed: `bun/work-finish.ts` (one call), `bun/notion-bot.ts` (the
   cursor loop `discussion()` runs, lifted so the block read shares it),
