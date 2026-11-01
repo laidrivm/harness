@@ -32,6 +32,8 @@ const FORM = [
 	"in Russian",
 	"on a line of its own",
 	"Number its questions, decisions and assumptions in one sequence across its sections",
+	// A later question numbers on from the card's earlier ones (CodeRabbit on #380).
+	"on from the highest number the questions already on the card use, never restarting at 1",
 	"letter the options of each question",
 	"plain text with no markdown syntax",
 ];
