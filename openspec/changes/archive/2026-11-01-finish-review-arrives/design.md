@@ -119,7 +119,7 @@ waits are 12 and 18 reads, so a test sets the interval to 1 ms and gets the
 same reads in the same order whatever the runner's speed, and the lines
 name reads rather than seconds, so they stay true under the knob. Each read
 is killed at `limit()`, so a `gh` that hangs on every read stretches a wait
-past 60 s; that is the cost. Alternative rejected: deadlines on the clock,
+past 55 s; that is the cost. Alternative rejected: deadlines on the clock,
 which a 1 ms interval makes shorter than one spawn of the test's stub.
 
 ### Only where CodeRabbit is configured
@@ -228,7 +228,7 @@ once both are known, from the module this change ships.
 ## Risks / Trade-offs
 
 - [Every `finish` is slower, by about 35 s when the review comes and up to
-  150 s at the default interval when it does not, longer when `gh` hangs] → the alternative is an agent waiting an hour on a
+  140 s at the default interval when it does not, longer when `gh` hangs] → the alternative is an agent waiting an hour on a
   review that never comes, which is what the card records.
 - [A post under the user's account] → one line, at most once per head per
   pull request, only on `skipped`, and only in a repository that tracks
@@ -247,4 +247,13 @@ settle the explore's questions.
 - 10 b (third review): three failed reads in a row now end either wait. That replaces "a failed read does not end the reads" above, so a revoked token or a dead network costs three reads, not thirty. One failure between answers still does not end them.
 - 11 b: an earlier `@coderabbitai full review` counts as the request too.
 - 12 b: where the wait runs, the card's question is read before it as well, so a question already waiting costs no wait. The read before the ready switch stays, to catch a question posted meanwhile.
-- 9 b: in the archive pull request, not here. That covers the `!found` disjunct kept only for the type, the short sha computed three times, and the fixture's `runs: []` reading as a failed read. Before the archive, `/opsx:update` also brings the delta spec into line with 10 b and 11 b, and with the 55 s and 85 s figures.
+- 9 b: done in the archive pull request. `finish` carries the card inside `found`, so `!found` alone says whether a question is read; the short hash is computed once and handed to `request()`; the fixture reads `runs: []` as a read of no runs, which the 12-reads case now passes. `/opsx:update` brought the delta spec into line with 10 b and 11 b and with the 55 s and 85 s figures.
+
+## Left as they are (#361's last local review, merged by the user, 2026-11-01)
+
+Four findings on #361's last head were not fixed when the user merged it, and stay as they are:
+
+- The `other` state takes the first non-skip run in list order, so with two such runs the line names whichever GitHub lists first.
+- The earlier-request match is case-sensitive and reads only issue comments, so `@CodeRabbitAI review`, or the line in a review's body, does not count as asked and one more request is posted.
+- A request posted before `HEAD`'s first CodeRabbit run started does not count, even when it was posted after the push, so a quick hand request can be followed by `finish`'s own.
+- The no-run line after three failed reads does not mention the failures: after the switch it reads `no CodeRabbit run on <short> after <n> reads` when an answer came before them.

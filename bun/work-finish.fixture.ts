@@ -66,7 +66,8 @@ function bin(gh: Gh) {
 		writeFileSync(join(dir, name), typeof value === "number" ? "" : value.map((item) => `${JSON.stringify(item)}\n`).join(""));
 		writeFileSync(join(dir, `${name}.code`), `${typeof value === "number" ? value : 0}\n`);
 	};
-	const runs = gh.runs ?? [[]];
+	// No answers, or none listed, is a read of no runs, never a failed read.
+	const runs = gh.runs?.length ? gh.runs : [[]];
 	runs.forEach((value, i) => answer(`runs${i}`, value));
 	answer("comments", gh.comments ?? []);
 	writeFileSync(join(dir, "n"), "0\n");

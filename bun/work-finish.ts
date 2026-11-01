@@ -51,6 +51,7 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		return done(`finish: refused — ${why}`, 1);
 	};
 	if (!commit || !top) return refuse("unread-checkout", "no commit in a git checkout here");
+	const short = commit.slice(0, 7);
 	// `!== ""`: a status git cannot read (undefined) is no clean tree. Untracked files are left out.
 	if (git("status", "--porcelain", "--untracked-files=no") !== "") return refuse("dirty", "tracked files differ from HEAD; commit them first");
 	const branch = git("symbolic-ref", "--short", "-q", "HEAD");
@@ -73,12 +74,12 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	const full = `${repo.owner}/${repo.repo}`;
 	const failed = (what: string) => done(open ? `finish: draft #${open.number} — ${what}` : `finish: failed — ${what}`, 1);
 	// Git runs the pre-push hook, and with it the whole suite, even for a push of nothing.
-	if (git("ls-remote", "origin", `refs/heads/${branch}`)?.split("\t")[0] === commit) lines.push(`finish: origin holds ${commit.slice(0, 7)} on ${branch}, no push`);
+	if (git("ls-remote", "origin", `refs/heads/${branch}`)?.split("\t")[0] === commit) lines.push(`finish: origin holds ${short} on ${branch}, no push`);
 	else {
 		// Inherited, so the hook's test run shows; never --force, never --no-verify.
 		const push = Bun.spawnSync(["git", "push", "-u", "origin", "HEAD"], { stdout: "inherit", stderr: "inherit" });
 		if (push.exitCode !== 0) return failed(`the push failed, exit ${push.exitCode}`);
-		lines.push(`finish: pushed ${commit.slice(0, 7)} to ${branch}`);
+		lines.push(`finish: pushed ${short} to ${branch}`);
 	}
 
 	let number = open?.number;
@@ -93,7 +94,6 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		lines.push(`finish: opened draft #${number}`);
 	}
 
-	const short = commit.slice(0, 7);
 	// Tracked at the top, not present: a gitignored copy is in the author's checkout and absent in a clone.
 	let watched: boolean;
 	try {
@@ -103,13 +103,13 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		return done(`finish: draft #${number} — the checkout's tracked files could not be listed: ${(error as Error).message.trim().split("\n")[0]}`, 1);
 	}
 	// Looked up before the wait, so settings that are missing cost none.
-	const found = card ? integration() : undefined;
+	const found = card ? asking(card) : undefined;
 	if (typeof found === "string") return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);
 	/** The card's question read: the line that ends `finish` when one waits or the read fails, else undefined. */
 	const question = async () => {
-		if (!card || !found) return undefined;
+		if (!found) return undefined;
 		try {
-			if (await waiting(found.call, card, found.settings.user)) return done(`finish: draft #${number} — a question waits on ${card}`, 0);
+			if (await waiting(found.call, found.card, found.settings.user)) return done(`finish: draft #${number} — a question waits on ${found.card}`, 0);
 		} catch (error) {
 			return done(`finish: draft #${number} — the card's comments could not be read: ${(error as Error).message}`, 1);
 		}
@@ -130,7 +130,7 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	if (!before.done) lines.push(`finish: no completed CodeRabbit run on ${short} after ${before.made} reads${unread}`);
 
 	// No card, no question to read: a pin bump or a hotfix has none (`work-finish` spec, *No card: no question check*).
-	if (!card || !found) lines.push("finish: no --card, so no card's question was read");
+	if (!found) lines.push("finish: no --card, so no card's question was read");
 	else {
 		// Last, after the push and its test run, so it sees a question posted meanwhile.
 		const late = await question();
@@ -148,8 +148,14 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		return Array.isArray(got) ? !["skipped", "no run"].includes(last.name) : null;
 	});
 	// Exit 0 whatever the state: the ready switch went through, and the line is the signal.
-	const outcome = last.name === "skipped" ? request(full, Number(number), commit, seen) : said(last, short, after.made);
+	const outcome = last.name === "skipped" ? request(full, Number(number), commit, short, seen) : said(last, short, after.made);
 	return done(`finish: ready #${number} — ${outcome}`, 0);
+}
+
+/** `card` with the ask settings its question is read through, or why they cannot be read: one value, so one check says whether a question is read. */
+function asking(card: string) {
+	const got = integration();
+	return typeof got === "string" ? got : { card, ...got };
 }
 
 const REQUEST = "@coderabbitai review";
@@ -163,10 +169,10 @@ const FAILS = 3;
  * not when such a comment came at or after `HEAD`'s first CodeRabbit run in
  * `runs`, and only when one more read of `sha`, right before the post, still
  * gives `skipped` (`core/git-and-prs.md` names the one comment as the user's
- * standing permission, answer 4 b). What the last line says of it.
+ * standing permission, answer 4 b). What the last line says of it, naming `sha` as `short`.
  */
-function request(repo: string, n: number, sha: string, runs: Run[]) {
-	const skipped = `CodeRabbit skipped ${sha.slice(0, 7)}`;
+function request(repo: string, n: number, sha: string, short: string, runs: Run[]) {
+	const skipped = `CodeRabbit skipped ${short}`;
 	const comments = objects(`repos/${repo}/issues/${n}/comments?per_page=100`, ".[] | {created_at, body}");
 	if (!Array.isArray(comments)) return `${skipped}; comments unread, nothing asked: ${comments.why}`;
 	const since = arrived(runs);
@@ -175,7 +181,7 @@ function request(repo: string, n: number, sha: string, runs: Run[]) {
 	if (comments.some((c) => asked.includes(String(c.body).trim()) && Date.parse(String(c.created_at)) >= since)) return `${skipped}; a review was already asked for`;
 	const fresh = read(repo, sha);
 	const now = Array.isArray(fresh) ? state(fresh) : fresh;
-	if (now.name !== "skipped") return said(now, sha.slice(0, 7));
+	if (now.name !== "skipped") return said(now, short);
 	try {
 		const post = gh(["pr", "comment", String(n), "-R", repo, "--body", REQUEST], plain());
 		return post.exitCode === 0 ? `${skipped}; asked for a review` : `${skipped}; the request failed, ${exited(post)}`;

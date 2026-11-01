@@ -44,11 +44,12 @@ that fails SHALL name the state unread.
 ### Requirement: Finish lets CodeRabbit see the push before the ready switch
 
 Where the checkout tracks `.coderabbit.yaml`, `finish` SHALL, after the push
-or its skip and the draft's opening, and before it reads the card's
+or its skip and the draft's opening, and before its last read of the card's
 question, read CodeRabbit's state of `HEAD` until a read finds a completed
-run, at most 12 reads an interval apart (60 s at the default 5 s). A wait
-that ends without one SHALL say so and go on to the question read and the
-ready switch. Without that file,
+run, at most 12 reads an interval apart (11 intervals, 55 s at the default
+5 s), three failed reads in a row ending them early. A wait that ends
+without one SHALL say so and go on to the question read and the ready
+switch. Without that file,
 tracked at the checkout's top, `finish` SHALL read no check run and wait for
 none.
 
@@ -64,6 +65,13 @@ none.
 - **WHEN** no completed CodeRabbit run appears on `HEAD` in 12 reads
 - **THEN** `finish` says that no run came, and still reads the question and
   marks the pull request ready
+
+#### Scenario: Three failed reads before the switch
+
+- **WHEN** the first three reads of `HEAD`'s check runs fail
+- **THEN** `finish` reads no more, says that no run came with the last
+  read's reason, and still reads the question and marks the pull request
+  ready
 
 #### Scenario: A repository without CodeRabbit's config
 
@@ -95,8 +103,9 @@ none.
 
 Where the checkout tracks `.coderabbit.yaml`, `finish` SHALL, after the
 ready switch, read CodeRabbit's state of `HEAD` until it is neither
-`skipped`, no run nor unread, at most 18 reads an interval apart (90 s at
-the default), and end on one line naming the pull request ready, the state
+`skipped`, no run nor unread, at most 18 reads an interval apart (17
+intervals, 85 s at the default), three failed reads in a row ending them
+early, and end on one line naming the pull request ready, the state
 the last read that answered gave, unread only when none answered, and
 `HEAD`'s short hash. Every state SHALL exit 0, since the ready switch went
 through; the line is the signal.
@@ -126,7 +135,7 @@ through; the line is the signal.
 #### Scenario: Unread
 
 - **WHEN** every read of `HEAD`'s check runs after the switch fails
-- **THEN** the last line says CodeRabbit's state is unread, no review is
+- **THEN** `finish` stops after three reads, the last line says CodeRabbit's state is unread, no review is
   asked for, and `finish` exits 0
 
 #### Scenario: One failed read among others
@@ -140,7 +149,7 @@ through; the line is the signal.
 When the reads end on `skipped` and one more read right before the post
 gives `skipped` too, `finish` SHALL post exactly `@coderabbitai review` as
 the identity `gh` holds, unless the pull request holds a comment whose
-trimmed body is that line, posted at or after the start of `HEAD`'s first
+trimmed body is that line or `@coderabbitai full review`, posted at or after the start of `HEAD`'s first
 CodeRabbit run; at most one per call. A failed comment read, or a failed
 read right before the post, SHALL post nothing; the last line SHALL say
 which of these happened.
@@ -155,8 +164,9 @@ which of these happened.
 
 #### Scenario: Already asked for this head
 
-- **WHEN** `HEAD`'s state stays `skipped` and such a comment was posted in
-  the second `HEAD`'s first CodeRabbit run started, or later
+- **WHEN** `HEAD`'s state stays `skipped` and such a comment, or
+  `@coderabbitai full review`, was posted in the second `HEAD`'s first
+  CodeRabbit run started, or later
 - **THEN** `finish` posts nothing and its last line says a review was
   already asked for
 

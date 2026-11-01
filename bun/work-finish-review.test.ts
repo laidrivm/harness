@@ -86,7 +86,7 @@ describe("the wait before the ready switch", () => {
 
 	// spec: work-finish/no-run-within-the-wait
 	test("no completed run in 12 reads says so and still marks ready", async () => {
-		const run = await watched([[]]);
+		const run = await watched([]);
 		expect(run.calls).toEqual([READ, "push", ...times(12, runs(run.cwd)), READY, ...times(18, runs(run.cwd))]);
 		expect(run.out).toContain(`finish: no completed CodeRabbit run on ${short(run.cwd)} after 12 reads\n`);
 		expect([run.code, run.last]).toEqual([0, `finish: ready #7 — no CodeRabbit run on ${short(run.cwd)} after 18 reads`]);
@@ -104,6 +104,7 @@ describe("the wait before the ready switch", () => {
 	});
 
 	// The user's answer 10 b (2026-11-01): three failed reads in a row end a wait.
+	// spec: work-finish/three-failed-reads-before-the-switch
 	test("three failed reads in a row end the wait before the switch, saying the last one's reason, and still mark ready", async () => {
 		const run = await watched([1, 1, 1, [SKIPPED, RUNNING]]);
 		expect(run.calls).toEqual([READ, "push", ...times(3, runs(run.cwd)), READY, runs(run.cwd)]);
