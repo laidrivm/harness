@@ -13,6 +13,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { read } from "./config.ts";
+import { type Floor, gauge as owed } from "./floor.ts";
 import { root } from "./root.ts";
 
 /** Statuses meaning the tests let the mutant through. */
@@ -98,30 +99,16 @@ export function survivors(report: Report): number {
 	return count;
 }
 
-/**
- * What a count owes its floor. Both directions fail: a rise admits a mutant
- * nothing kills, and a floor left above reality stops being a measurement.
- *
- * The reason is demanded on every run rather than only on a rise, because
- * telling a rise from a drop needs the previously committed value, and reading
- * git history to decide whether to ask is more machinery than one field.
- */
-export function gauge(count: number, floor: number, why: string): string[] {
-	const problems: string[] = [];
-	if (!why.trim())
-		problems.push(
-			"the floor states no reason — write why in harness.mutationFloor.why",
-		);
-	if (count !== floor) {
-		const gap = `${count} surviving mutants against a floor of ${floor}`;
-		problems.push(
-			count > floor
-				? `${gap} — kill one, or raise the floor and say why`
-				: `${gap} — write ${count} as the floor, so the gain is recorded`,
-		);
-	}
-	return problems;
-}
+const FLOOR: Floor = {
+	key: "mutationFloor",
+	field: "surviving",
+	counted: "surviving mutants",
+	lower: "kill one",
+};
+
+/** What the survivor count owes `harness.mutationFloor` — see `./floor.ts`. */
+export const gauge = (count: number, floor: unknown, why: unknown) =>
+	owed(FLOOR, count, floor, why);
 
 /**
  * Resolved from the repository root rather than the working directory, so the
