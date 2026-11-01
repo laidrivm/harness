@@ -23,9 +23,12 @@ its head. A head whose status reads `Review skipped…`, or names a rate or usag
 limit, gets no review on its own — stop waiting on it and report it. Where
 such a head is first seen is `finish`'s last line, which names CodeRabbit's
 state of the head it marked ready from the head's check runs: `skipped`,
-`rate limited`, or another. On a skipped head `finish` asks once with
-`@coderabbitai review` and says so; a rate-limited one is reported, never
-retried, since a retry spends the same limit.
+`rate limited`, or another. On a skipped head `finish` posts at most one
+`@coderabbitai review`. It does so only when the pull request's comments hold
+no `@coderabbitai review` or `@coderabbitai full review` since the head's
+first run, and a fresh read of the runs still says skipped. Its line says
+which it did. A rate-limited head is reported and never retried, since a
+retry spends the same limit.
 
 ## The skills
 
