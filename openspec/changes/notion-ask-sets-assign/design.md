@@ -96,6 +96,10 @@ scenario *A second question for a card*) and in the same bullet of
 11. (card, 2026-11-01 12:52, item 9 a, on CodeRabbit's Major) The runner
     keeps taking one `QUESTION:` block within the length cap: the old loop's
     schedule is off, and the ask command splits a long set.
+12. (card, 2026-11-01 14:03, item 10 a, on CodeRabbit's Major on #374)
+    Concurrent `Assign` writes stay as they are, with no lock and no
+    conditional write: only the user is ever assigned, which extends
+    decision 10.
 
 The user left two details to this proposal: *Numbering*, which the user
 settled as decision 3, and *What answers several questions*. Decision 4 met
