@@ -31,14 +31,16 @@ second question no longer waits for the first one's answer.
   numbering; no code checks it (answer 3 a).
 - What answers several questions stays the rule `waits()` already applies: the
   questions wait while no comment by the user without a mark follows the
-  last question (design, *What answers several questions*). `finish`, `take`
-  and the board loop change nothing.
+  last question (design, *What answers several questions*). `finish` and
+  `take` change nothing.
 - `bun bun/work.ts status` removes the user from the card's `Assign` in the
-  same write as `Status` when no question waits there, and leaves it when
-  one waits, or when the move is into `applying` or `applied`, where the
-  board loop's pick looks for an answer not yet carried (the user's widening
-  in chat; the exception is card item 4, open). The prose "clear `Assign` once
-  it is applied" stays for the boards `status` does not move.
+  same write as `Status` on any move when no question waits there, and
+  leaves it when one waits (the user's widening in chat, and item 4 b). The
+  prose "clear `Assign` once it is applied" stays for the boards `status`
+  does not move.
+- The board loop's pick takes a card carrying an answer whatever its
+  `Assign` holds, and task-board clears `Assign` "by then at the latest"
+  rather than "never earlier" than the answer step's pull request (item 4 b).
 - The board loop's runner keeps its refusal (`board-loop`, *A question
   already waits*): it guards a retried pass against posting twice.
 - The prose step "set `Assign` after `question: posted`" becomes "unless the
@@ -60,9 +62,12 @@ None.
   allows several questions per card, grouped and numbered across the card; its
   scenario *A second question for a card* changes. *A session asks through the
   ask integration where one is configured* moves the `Assign` write into the
-  command and drops its refusal.
+  command and drops its refusal. *An answer the board loop carries is
+  applied when its pull request opens* lets `Assign` clear earlier.
 - `work-status`: a move clears `Assign` when no question waits, and the
   move's line says so.
+- `board-loop`: *A pass takes the first takeable card in the board's order*
+  takes an answer candidate whatever its `Assign` holds.
 
 ## Impact
 
@@ -70,7 +75,8 @@ None.
   read-back, the header), `bun/notion-ask.test.ts`, `bun/board-loop-prompt.ts`
   and `bun/board-loop-question.test.ts`, `bun/question-gate.ts`'s `ask`
   message, `core/feature-workflow.md`, `README.md`'s rows for the two
-  commands, `bun/work-status.ts` and its tests.
+  commands, `bun/work-status.ts` and its tests, and the pick prompt's answer
+  line in `bun/board-loop-prompt.ts` with its tests.
 - Notion: one PATCH of the card per post, under the ask integration's
   *Update content*; one comments read per `status` move; no schema change.
 - Not in this change: the four cards left unassigned on 2026-10-31, which

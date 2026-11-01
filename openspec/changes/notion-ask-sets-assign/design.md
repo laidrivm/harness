@@ -41,16 +41,16 @@ scenario *A second question for a card*) and in the same bullet of
 
 - The runner's refusal (`board-loop`, *A question already waits*): see
   *The runner keeps its refusal*.
-- Any change to `waits()`, `finish`, `take` or the board loop's answer pick.
+- Any change to `waits()`, `finish` or `take`.
 - Setting `Assign` on the four cards left unassigned on 2026-10-31: a one-off
   for the main session.
 
 ## Decisions
 
-### The user's decisions (card and chat, 2026-10-31)
+### The user's decisions (card and chat, 2026-10-31 and 2026-11-01)
 
-1. (card, 20:21) `notion-ask` posts a question even when another one already waits on the
-   card; the refusal "a question already waits" goes. Numbering is
+1. (card, 20:21) `notion-ask` posts a question even when another one already
+   waits on the card; the refusal "a question already waits" goes. Numbering is
    continuous across the card's questions: a new question continues the
    numbers of the previous ones. `notion-ask` sets `Assign` to the user on
    every post, and sets it again if it was cleared. The rule stays that
@@ -66,11 +66,14 @@ scenario *A second question for a card*) and in the same bullet of
    `Assign` when it moves the card and no question waits there, by the rule
    `waits()` applies, and leaves it when one waits. Cards moved to
    `proposing` kept `Assign` on the user with no question open.
+5. (card, 2026-11-01 10:44, item 4 b) `status` clears `Assign` on any move
+   when no question waits, `applying` and `applied` included, and the board
+   loop's pick stops requiring `Assign` on a card that carries an answer.
 
 The user left two details to this proposal: *Numbering*, which the user
-settled as decision 3, and *What answers several questions*. Decision 4
-meets an existing requirement on one move, asked on the card as item 4
-(*Clearing `Assign` on a move*).
+settled as decision 3, and *What answers several questions*. Decision 4 met
+an existing requirement, which decision 5 settled (*Clearing `Assign` on a
+move*).
 
 ### The write: `assign()`, then the user read back from its answer
 
@@ -169,12 +172,11 @@ sessions do not.
 
 ### Clearing `Assign` on a move
 
-Decision 4. The page `status` already reads gives `Assign`. Only when it
-holds the user and `--to` is neither `applying` nor `applied` (below), once
-every check has passed, `status` reads the card's comments with
-`waiting(call, card, user)`, as `finish` does; any other move reads no
-comments, so a failed read cannot refuse a move whose write it would not
-change. When no question waits, the `Status` PATCH also carries `Assign`
+Decisions 4 and 5. The page `status` already reads gives `Assign`. Only when
+it holds the user, once every check has passed, `status` reads the card's
+comments with `waiting(call, card, user)`, as `finish` does, whatever `--to`
+names; any other move reads no comments, so a failed read cannot refuse a
+move whose write it would not change. When no question waits, the `Status` PATCH also carries `Assign`
 with the user removed and everyone else kept, as `notion-unassign` already
 removes the user alone, and like it writes nothing to `Assign` when the page
 read lists 25 people, the most a read returns, since writing back a cut-off
@@ -195,26 +197,28 @@ did not name and which misses moves with no pull request (`exploring`,
 `explored`); a second PATCH after the `Status` write, which can leave the
 two split.
 
-One move meets an existing requirement. task-board's *An answer the board
-loop carries is applied when its pull request opens* clears `Assign` when
-that step's pull request opens "and never earlier", and the board loop's
-pick takes an answer candidate, a card at `applied` or `applying`
-(`board-loop`, *A pass takes only a takeable change*), only while its
-`Assign` holds the user, and moves an `applied` one to `applying` before
-the step. In a consumer it does so through the connector, so `status` is
-not on that path; in the harness the status guard refuses the connector's
-`Status` write and names `status`, so a pick there can make that move
-through it, and a session can move a card whose answer waits to `applied`
-when its last group lands. Proposed: a move into `applying` or `applied`
-leaves `Assign` as it is, and every other move clears it when no question
-waits; the user's own case, `proposing`, is cleared. Card item 4 asked this
-with `applying` alone; the local review found `applied`, and the correction
-waits in the report until item 4 is answered, since the ask command still
-refuses a second question there. Rejected for now: clearing on those moves
-too and dropping the pick's `Assign` condition, which widens the change
-into `board-loop`; or accepting that a step which fails before its pull
-request loses its answer to the next pass. The tasks follow the proposal;
-another answer changes them before apply.
+### The pick stops reading `Assign`
+
+Decision 5. Before it, two requirements read `Assign` as the marker of an
+answer not yet carried: task-board's *An answer the board loop carries is
+applied when its pull request opens* cleared it when that step's pull
+request opened "and never earlier", and `board-loop`'s pick took an answer
+candidate, a card at `applied` or `applying`, only while its `Assign` held
+the user. A `status` move before the step would have cleared that marker
+and hidden the answer from the next pass. So the marker goes: the pick takes
+a candidate on the answer in the comments alone, as it already did for a
+`harness-answer` by the integration, and task-board's requirement clears
+`Assign` "by then at the latest".
+
+Nothing else needs the marker. Which changes are answer candidates is
+decided from the tree and the pull requests (`bun/board-loop-takeable.ts`):
+every group ticked with no pull request on the next step's branch, or a
+draft open on a step's branch. Once the answer step's pull request opens,
+the change is no longer a candidate, so an answer already carried is never
+taken twice. Rejected (card item 4): a move into `applying` (4 a), or into
+`applying` and `applied`, leaving `Assign`, which keeps the marker but
+leaves `Assign` on the user after a carried answer's moves; accepting that
+a step which fails before its pull request loses its answer (4 c).
 
 ## Risks / Trade-offs
 
@@ -230,9 +234,10 @@ another answer changes them before apply.
 - [Numbering drifts when a session miscounts.] → The user sees it and answers
   by the numbers as written; decision 3 keeps the check out.
 - [`status` clears `Assign` on a card whose answer has not been applied yet,
-  when a session moves it before applying the answer.] → Outside `applied`
-  and `applying` no reader of `Assign` tells an applied answer from an
-  unapplied one; the session reads the answer from the comments, which stay.
+  when a session moves it before applying the answer.] → No reader of
+  `Assign` tells an applied answer from an unapplied one any more (*The
+  pick stops reading `Assign`*); the answer stays in the comments. The card
+  leaves the `Questions` view, which lists waiting questions, not answers.
 - [A question posted between `status`'s comments read and its PATCH has its
   `Assign` cleared at once.] → The window is one round trip, and needs two
   sessions on one card at the same moment. The poster's line said `Assign

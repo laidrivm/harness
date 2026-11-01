@@ -143,6 +143,46 @@ back from the card's comments and applied as data.
 - **WHEN** an unattended run is refused a call that would have prompted
 - **THEN** it reports the refusal, and no question is posted for it
 
+### Requirement: An answer the board loop carries is applied when its pull request opens
+
+When the board loop carries the answer on a card as a step of the card's
+change (`board-loop`, *A pass takes only a takeable change*), the answer SHALL
+count as applied in the turn that step's pull request opens. If the session
+files a card for the work instead, it counts as applied in the turn the card
+is filed. `Assign` SHALL be cleared by then at the latest; `work-status`'s
+*A move clears `Assign` when no question waits* may clear it earlier, and
+nothing that decides whether an answer waits reads `Assign`. An answer SHALL
+be read from the card's page-level discussion whether or not that discussion
+is resolved.
+
+This requirement stands beside *An open question waits on its card, assigned
+to the user*, and fixes when that requirement's scenario *The question on a
+card is answered* fires for an answer the loop carries.
+
+#### Scenario: The answer's step opens its pull request
+
+- **WHEN** a session carrying an answer as step N+1 of the card's change opens
+  that step's pull request
+- **THEN** it clears the card's `Assign` in the same turn, where it still
+  holds the user
+
+#### Scenario: The session ends before its pull request
+
+- **WHEN** a session carrying an answer ends with no pull request open for its
+  step and no card filed
+- **THEN** a later pass takes the answer again, whatever the card's `Assign`
+  holds, and continues the branch the session left (`board-loop`, *A step
+  branch a session left is continued*), once the clone holds nothing that
+  pass refuses (`board-loop`, *The runner is the user's script and starts
+  from a clean clone*)
+
+#### Scenario: The answer asks for a change of its own
+
+- **WHEN** the answer chooses a separate change, or its work would not fit one
+  step under `change-slicing`
+- **THEN** the session files an `idea` card for that work, adds no group to
+  `tasks.md`, and clears `Assign`
+
 ### Requirement: A session asks through the ask integration where one is configured
 
 Where the ask settings file exists under the user's config home, a session
