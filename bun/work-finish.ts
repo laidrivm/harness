@@ -8,7 +8,10 @@
  * `.coderabbit.yaml`, it reads the card's question, then waits for
  * CodeRabbit's run on `HEAD` and reads the question again, and names
  * CodeRabbit's state of `HEAD` after the ready switch
- * (`finish-review-arrives`'s design). Every refusal comes before the
+ * (`finish-review-arrives`'s design). With a card, after its last comments
+ * read and before the ready switch, it releases the card's `Assign` when
+ * nothing waits there (`cleared()`), and keeps the draft when the release put
+ * the user back. Every refusal comes before the
  * push, changes nothing but the ledger, and is one `finish` record of
  * `HEAD`; a failure after the push leaves the draft and records nothing.
  */
@@ -18,6 +21,7 @@ import { arrived, exited, interval, objects, own, plain, type Run, read, type St
 import { ran, recordCheckout, RUNNER_STEPS } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
+import { cleared } from "./notion-release.ts";
 import { gh, originRepository, readPullRequests, readyOne } from "./pull-requests.ts";
 import { tracked } from "./tracked.ts";
 
@@ -135,6 +139,13 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		// Last, after the push and its test run, so it sees a question posted meanwhile.
 		const late = await question();
 		if (late) return late;
+		// After the last comments read and before the ready switch.
+		const freed = await cleared(found.call, card, found.settings.user);
+		if (freed.line) lines.push(freed.line);
+		// Put back, or meant to be: something arrived during the release, or its read failed, so the draft stays.
+		if (freed.back === "unread") return done(`finish: draft #${number} — the card's comments could not be read after the release`, 1);
+		if (freed.back || freed.restoreFailed)
+			return done(`finish: draft #${number} — a question or a pause notice waits on ${card}`, freed.restoreFailed ? 1 : 0);
 	}
 	if (!ready(full, Number(number))) return done(`finish: draft #${number} — gh pr ready ${number} failed`, 1);
 	if (!watched) return done(`finish: ready #${number}`, 0);

@@ -5,8 +5,9 @@
  * REST calls that post the question from the integration and set `Assign`
  * (`openspec/changes/archive/2026-10-22-notion-bot-questions/design.md`). The ask command makes
  * two of those calls with its own settings; the pause notice, the comment and
- * the `Assign` write with the runner's, and `notion-unassign.ts` steps 1 and 2
- * and its own `Assign` write. The token reaches `fetch` only as a
+ * the `Assign` write with the runner's, and `notion-unassign.ts` steps 1 and 2,
+ * its `Assign` write being `release()` in `notion-release.ts`, which the work
+ * commands share. The token reaches `fetch` only as a
  * header, and no line this module prints or throws holds it.
  */
 import { ID, type Settings } from "./notion-bot-settings.ts";
@@ -68,16 +69,20 @@ const answered = opens("harness-answer");
 export const oldest = (comments: Comment[]) => comments.toSorted((a, b) => String(a.created_time).localeCompare(String(b.created_time)));
 
 /**
- * Whether the last question has no answer after it: no comment by `user` that
- * opens with neither mark, and no `harness-answer` by `self`, the
- * integration's own id, when one was read.
+ * Whether the last comment opening with `mark`, a question by default, has no
+ * answer after it: no comment by `user` that opens with neither mark nor
+ * `mark`, and no `harness-answer` by `self`, the integration's own id, when
+ * one was read.
  */
-export function waits(comments: Comment[], user: string, self?: string): boolean {
+export function waits(comments: Comment[], user: string, self?: string, mark = "harness-question"): boolean {
 	const ordered = oldest(comments);
-	const last = ordered.findLastIndex(marked);
+	const asks = opens(mark);
+	const last = ordered.findLastIndex(asks);
 	return (
 		last !== -1 &&
-		!ordered.slice(last + 1).some((c) => (!marked(c) && !answered(c) && by(c, user)) || (self !== undefined && answered(c) && by(c, self)))
+		!ordered
+			.slice(last + 1)
+			.some((c) => (!asks(c) && !marked(c) && !answered(c) && by(c, user)) || (self !== undefined && answered(c) && by(c, self)))
 	);
 }
 

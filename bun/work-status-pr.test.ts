@@ -42,7 +42,7 @@ describe("a merged pull request proves done", () => {
 	// spec: work-status/a-proven-pull-request-at-a-full-limit
 	test("from approved, five cards and a proven pull request make no count [22]", async () => {
 		const run = await status({ args: to("done"), cwd: checkout().dir, page: { pointer: "pr:350" }, cards: 5, gh: pr() });
-		expect([run.code, run.seen]).toEqual([0, [PAGE, PATCH]]);
+		expect([run.code, run.seen]).toEqual([0, [PAGE, PATCH, PAGE]]);
 	});
 });
 
