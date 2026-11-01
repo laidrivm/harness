@@ -149,8 +149,10 @@ the ledger for the split.
   moved by `bun/work.ts status` until the user sets one; the reason names
   `idea` alone so a session does not choose it.
 - [A string `properties` on `notion-update-page`] → passes as today; whether
-  the connector parses a string parameter is unverified; 2.1's probe of it
-  on a create with `idea` was not run (tasks, 2.1).
+  the connector parses a string parameter is unverified; 2.1's probe of
+  that, a `notion-create-pages` call with `pages` as a JSON string at
+  `idea`, was not run (tasks, 2.1), nor were its `idea`, no-`Status` and
+  lower-case `status` calls.
 - [A non-board database with a `Status` property is gated in harness
   sessions too] → none is used there today (decision 1 accepts it).
 - [A batch flow that filed a card straight at `approved` from the user's
