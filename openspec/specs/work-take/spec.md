@@ -63,8 +63,9 @@ SHALL say so after it.
 
 `take` SHALL print every page-level comment of the card, oldest first, each
 with its time, its author — the user, or the author's id — and its text, and
-then one line saying whether a question waits on the user, decided as the
-ask command decides it. It SHALL read every page of the comments.
+then one line saying whether a question waits on the user, decided as
+`task-board`'s *An open question waits on its card, assigned to the user*
+reads it with no integration id. It SHALL read every page of the comments.
 
 #### Scenario: A question with no answer
 
@@ -130,10 +131,13 @@ the checkout, unchanged.
 ### Requirement: Take writes nothing and fails closed
 
 `take` SHALL write nothing — no Notion call but a read, no git ref, no ledger
-record, no file. It SHALL read Notion through the ask integration's settings.
-No settings, or a read that fails — Notion, git or `openspec` — SHALL exit 1
-with a line naming the step, and no line `take` composes itself SHALL hold
-the token; the body and the comments print as Notion holds them.
+record, no file — but the release of `Assign` that `task-board`'s *The work
+commands release `Assign` when nothing waits* fixes. It SHALL read Notion
+through the ask integration's settings. No settings, or a read of its own
+that fails — Notion, git or `openspec`, the release's reads apart — SHALL
+exit 1 with a line naming the step, and no
+line `take` composes itself SHALL hold the token; the body and the comments
+print as Notion holds them.
 
 #### Scenario: No ask settings
 
@@ -149,6 +153,7 @@ the token; the body and the comments print as Notion holds them.
 
 #### Scenario: Only reads
 
-- **WHEN** `take` runs to its end
+- **WHEN** `take` runs to its end on a card whose `Assign` does not hold the
+  user, or whose question or pause notice waits
 - **THEN** every call it made to Notion is a `GET`, and the ledger and the
   checkout are as they were

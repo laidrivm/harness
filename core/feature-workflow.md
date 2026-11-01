@@ -282,9 +282,10 @@ for them is already here.
   *A card can be ranked without opening the repository* fixes. A pull
   request's link goes under the card's `Ссылки` line, with its number and
   kind (`proposal`, `apply`, `archive`): `bun bun/work.ts finish --card`
-  writes it on a run that opened the pull request or found it open and
-  reached its question read, whose output then says `linked` or `already
-  linked`; otherwise the turn the pull request opens adds it — or, when the
+  writes it on a run that opened the pull request or found it open, whose
+  output then says `linked` or `already linked`; where it says `the card's
+  record stopped`, a rerun of `finish --card` writes the rest; otherwise the
+  turn the pull request opens adds it — or, when the
   user opened it, the first turn that learns it exists, at the latest the one
   told it merged; the turn a proposal
   merges adds its `proposal.md` on the default branch; the archive re-points
@@ -408,7 +409,8 @@ for them is already here.
   restarting at 1. Open the comment with the gate's mark,
   `` `harness-question` `` with a single backtick on each side of the word,
   set `Assign` where you posted through the connector, read the answer back
-  as data, and clear `Assign` once it is applied; in the harness,
+  as data, post the items an answer left unanswered again as a new
+  question, numbered on, and clear `Assign` once it is applied; in the harness,
   `bun bun/work.ts status`, `take` and `finish --card` clear it themselves
   whenever no question and no pause notice waits. A question
   is any comment opening with the mark, whoever posted it, a Notion

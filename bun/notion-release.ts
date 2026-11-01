@@ -2,7 +2,8 @@
  * The release of a card's `Assign` that `bun/work.ts status`, `take` and
  * `finish --card` run (task-board, *The work commands release `Assign` when
  * nothing waits*), and the page read, cap and write it shares with the
- * runner's `unassign()` (`openspec/changes/notion-ask-sets-assign/design.md`,
+ * runner's `unassign()`
+ * (`openspec/changes/archive/2026-11-01-notion-ask-sets-assign/design.md`,
  * *Releasing `Assign`*). No call is retried, and no line holds the token.
  */
 import { type Call, discussion, hex, waits } from "./notion-bot.ts";
