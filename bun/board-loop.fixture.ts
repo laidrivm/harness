@@ -6,77 +6,23 @@
  * that each append their name and arguments to one log, so no case reaches
  * GitHub or a registry or starts a session.
  */
-import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { emptyDir, git } from "./diff-budget.fixture.ts";
+import { chmodSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { emptyDir } from "./diff-budget.fixture.ts";
 import { records as ledger } from "./goal-check.fixture.ts";
 
+export { advance, change, clone, commit, ONE, THREE, TICKED } from "./board-loop-tree.fixture.ts";
 export { out } from "./goal-check.fixture.ts";
 
 const runner = join(import.meta.dir, "board-loop.ts");
 const REAL_GIT = Bun.which("git") ?? "git";
 
-export const ONE = "## 1. Only\n\n- [ ] 1.1 a\n";
-export const THREE =
-	"## 1. First\n\n- [x] 1.1 a\n\n## 2. Second\n\n- [ ] 2.1 b\n\n## 3. Third\n\n- [ ] 3.1 c\n";
-export const TICKED = "## 1. Only\n\n- [x] 1.1 a\n";
 /** The stage session's final message unless a case gives one. */
 export const SAID = "Done.\nPR-TITLE: Carry demo\nPR-BODY:\nThe body.";
 
 /** One pull request of the fixture's `o/demo`, as the REST endpoint lists it, for the stub `gh` to print. */
 export const listed = (number: number, state: string, merged = false, draft = false) =>
 	JSON.stringify([{ number, state, draft, merged_at: merged ? "2026-10-20T00:00:00Z" : null, head: { sha: "abc", repo: { id: 1, full_name: "o/demo" } }, base: { repo: { id: 1 } } }]);
-
-type Tree = Record<string, string>;
-
-/** A complete change directory: `proposed`, as `board-state.ts` reads one. */
-export const change = (slug: string, tasks = ONE, after: string[] = []): Tree => {
-	const dir = `openspec/changes/${slug}`;
-	return {
-		[`${dir}/proposal.md`]: `# ${slug}\n`,
-		[`${dir}/design.md`]: `# ${slug}\n`,
-		[`${dir}/tasks.md`]: tasks,
-		[`${dir}/specs/demo/spec.md`]: "# demo\n",
-		[`${dir}/.openspec.yaml`]: after.length
-			? `after:\n${after.map((s) => `  - ${s}\n`).join("")}`
-			: "",
-	};
-};
-
-/** Writes `tree` into `dir` and commits it. */
-export function commit(dir: string, tree: Tree = { "note.txt": `${Math.random()}\n` }) {
-	for (const [path, text] of Object.entries(tree)) {
-		mkdirSync(dirname(join(dir, path)), { recursive: true });
-		writeFileSync(join(dir, path), text);
-	}
-	git(dir, "add", "-A");
-	git(dir, "-c", "user.email=test@example.com", "-c", "user.name=Test", "commit", "-qm", "c");
-}
-
-/**
- * A bare `origin` whose `main` holds `tree`, and a clone of it on `main`. Its
- * `package.json` names the board `Demo` unless `tree` holds one of its own.
- */
-export function clone(tree: Tree = change("demo")) {
-	// Its path ends in `o/demo`, the repository the pull request read names.
-	const origin = join(emptyDir("board-loop-origin-"), "o", "demo");
-	mkdirSync(origin, { recursive: true });
-	git(origin, "init", "-q", "--bare", "-b", "main");
-	const dir = emptyDir("board-loop-clone-");
-	git(dir, "init", "-q", "-b", "main");
-	git(dir, "remote", "add", "origin", origin);
-	commit(dir, { "package.json": '{"harness":{"board":"Demo"}}\n', ...tree });
-	git(dir, "push", "-q", "origin", "main");
-	return { dir, origin };
-}
-
-/** Moves `origin`'s `main` on by one commit made in another checkout. */
-export function advance(origin: string, tree?: Tree) {
-	const other = emptyDir("board-loop-other-");
-	git(other, "clone", "-q", origin, ".");
-	commit(other, tree);
-	git(other, "push", "-q", "origin", "main");
-}
 
 export type Stubs = {
 	/** What `gh api` prints for the branch's pull requests, or `null` for no `gh` on `PATH`. */
