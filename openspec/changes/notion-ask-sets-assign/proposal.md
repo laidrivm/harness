@@ -90,7 +90,8 @@ None.
   `README.md`'s rows for the commands.
 - Notion: one PATCH of the card per post, under the ask integration's
   *Update content*; for `status`, `take` and `finish`, a page read and,
-  only while `Assign` holds the user, a comments read and one PATCH; no
+  only while `Assign` holds the user, a comments read, one PATCH, a second
+  comments read, and a second PATCH when a question arrived meanwhile; no
   schema change.
 - Not in this change: the four cards left unassigned on 2026-10-31, which
   the main session sets by hand; a check of the numbering in code.
