@@ -41,7 +41,23 @@ The requirement names "the mutation step the pre-push hook and the CI job
 run" rather than `bun/mutation-run.ts`: `pre-push-commit-gates` defines that
 step, and this requirement is about the check, which consumers run too.
 
+### 4. The invoker writes the report
+
+In the harness the check's input is not one Stryker run's report but the
+mutation step's merge of every stored result, and a push that changed no
+module runs no Stryker at all (`pre-push-commit-gates`, decision 4 and task
+7.2). So the requirement says the invoker produces the report and deletes the
+old one before writing it, rather than that it runs Stryker first.
+
 ## Risks / Trade-offs
 
 - [The requirement names `harness.mutationFloor` before the harness declares
-  it] → ordered `after: pre-push-commit-gates`, whose task 7.1 declares it.
+  it] → ordered `after: pre-push-commit-gates`, whose task 7.1 declares it,
+  and task 1.1 stops the archive while the key is missing.
+- [`openspec validate --strict` warns on `after:`, a key OpenSpec does not
+  know] → kept: `bun/board-state.ts` reads it to order the change, as for
+  the archived changes that carry it; the plain `validate` passes.
+- [An absent `why` fails by a `TypeError` from `gauge` rather than the named
+  "states no reason" message, and no case covers it] → the scenario keeps
+  the absent reason the d2ass text covered ("no trailing comment"), since
+  the check does fail; naming it is a code change outside this one.

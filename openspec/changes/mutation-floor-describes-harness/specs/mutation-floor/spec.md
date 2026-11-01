@@ -2,7 +2,7 @@
 
 ### Requirement: The count of surviving mutants may not rise silently
 
-A check SHALL read Stryker's JSON report at `reports/mutation/mutation.json`,
+A check SHALL read a report in Stryker's JSON schema at `reports/mutation/mutation.json`,
 resolved from the repository root, count the mutants that survived, and
 compare that count against the floor declared as
 `harness.mutationFloor.surviving` in the `package.json` of the repository it
@@ -25,13 +25,15 @@ without enabling the reporter that writes it — a configuration setting only th
 filename produces no report, and the check then fails on an absent file at
 every run.
 
-The check SHALL run no tool. Whoever invokes it runs Stryker first, as a
-separate command — in the harness, the mutation step the pre-push hook and
-the CI job run before the check — so a Stryker that crashed is a non-zero
-exit the shell already surfaces, and the check never has to tell its own
-verdict apart from the tool's failure. For the same reason the invoker, not the
-check, SHALL delete the previous report before the run: a reader cannot tell a
-stale file from a fresh one, and an absent report already fails.
+The check SHALL run no tool. Whoever invokes it produces the report first, as
+a separate command — in the harness, the mutation step the pre-push hook and
+the CI job run before the check, which runs Stryker on the modules its stored
+results do not cover, or on none, and writes the report as the merge of every
+stored result — so a Stryker that crashed is a non-zero exit the shell
+already surfaces, and the check never has to tell its own verdict apart from
+the tool's failure. For the same reason the invoker, not the check, SHALL
+delete the previous report before writing it: a reader cannot tell a stale
+file from a fresh one, and an absent report already fails.
 
 A mutant whose status appears in neither list above SHALL fail the check,
 naming the status. Counting the known survivors and ignoring the rest would
@@ -70,5 +72,5 @@ history for a guarantee the diff already gives.
 
 #### Scenario: The floor changed with no reason given
 
-- **WHEN** `harness.mutationFloor.why` is empty or whitespace
+- **WHEN** `harness.mutationFloor.why` is absent, empty or whitespace
 - **THEN** the check fails, whichever direction the number moved
