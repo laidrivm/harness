@@ -93,17 +93,20 @@ function bin(gh: Gh) {
 	return { dir, log, calls: () => (existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean) : []) };
 }
 
-/** `hook` is the exit code of the checkout's pre-push hook, which logs `push` beside the `gh` calls; git runs it even for a push of nothing. */
-export type Finish = { args?: string[]; cwd?: string; gh?: Gh; stub?: Stub; state?: string; config?: string; hook?: number; env?: Record<string, string> };
+/**
+ * `hook` is the exit code of the checkout's pre-push hook, which logs `push` beside the `gh` calls; git runs it even for a push of nothing.
+ * `during` is a shell line the hook runs first, in the checkout's top, for a case that breaks the checkout after the push.
+ */
+export type Finish = { args?: string[]; cwd?: string; gh?: Gh; stub?: Stub; state?: string; config?: string; hook?: number; during?: string; env?: Record<string, string> };
 
 /** `bun bun/work.ts finish --card CARD`, or `args`, and what it did. */
-export async function finish({ args = ["finish", "--card", CARD], cwd = checkout(), gh = {}, stub, state, config = home(), hook = 0, env }: Finish = {}) {
+export async function finish({ args = ["finish", "--card", CARD], cwd = checkout(), gh = {}, stub, state, config = home(), hook = 0, during = "", env }: Finish = {}) {
 	const ledger = state ?? stateWith(runRecord(cwd));
 	const path = bin(gh);
 	// The checkout's top: a case may run from a subdirectory.
 	const hooks = join(gitOut(cwd, "rev-parse", "--show-toplevel"), ".git", "hooks");
 	mkdirSync(hooks, { recursive: true });
-	writeFileSync(join(hooks, "pre-push"), `#!/bin/sh\nprintf 'push\\n' >> '${path.log}'\nexit ${hook}\n`);
+	writeFileSync(join(hooks, "pre-push"), `#!/bin/sh\n${during}\nprintf 'push\\n' >> '${path.log}'\nexit ${hook}\n`);
 	chmodSync(join(hooks, "pre-push"), 0o755);
 	const api = notion(stub);
 	const child = Bun.spawn([process.execPath, join(import.meta.dir, "work.ts"), ...args], {

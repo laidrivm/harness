@@ -94,7 +94,13 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 
 	const short = commit.slice(0, 7);
 	// Tracked at the top, not present: a gitignored copy is in the author's checkout and absent in a clone.
-	const watched = tracked(top).paths.includes(".coderabbit.yaml");
+	let watched: boolean;
+	try {
+		watched = tracked(top).paths.includes(".coderabbit.yaml");
+	} catch (error) {
+		// After the push and the opening: a throw here would lose the line that names the open draft.
+		return done(`finish: draft #${number} — the checkout's tracked files could not be listed: ${(error as Error).message.trim().split("\n")[0]}`, 1);
+	}
 	// Looked up before the wait, so settings that are missing cost none; the question itself is still read last.
 	const found = card ? integration() : undefined;
 	if (typeof found === "string") return done(`finish: draft #${number} — ${found}, so whether a question waits is unread`, 1);

@@ -60,6 +60,14 @@ describe("where CodeRabbit is configured", () => {
 		for (const { calls, code, last } of [bare, run]) expect({ calls, code, last }).toEqual({ calls: [READ, "push", READY], code: 0, last: "finish: ready #7" });
 	});
 
+	test("a checkout whose tracked files cannot be listed after the push ends on the open draft, exit 1", async () => {
+		// The hook runs after `finish` read a clean tree; a broken index makes `git ls-files` fail.
+		const run = await finish({ cwd: checkout(true), gh: { before: DRAFT }, during: "printf x > .git/index" });
+		expect(run.calls).toEqual([READ, "push"]);
+		expect(run.code).toBe(1);
+		expect(run.last).toStartWith("finish: draft #7 — the checkout's tracked files could not be listed: ");
+	});
+
 	// spec: work-finish/run-from-a-subdirectory
 	test("run from a subdirectory of a checkout tracking it at the top, finish reads the check runs", async () => {
 		const top = checkout(true);
