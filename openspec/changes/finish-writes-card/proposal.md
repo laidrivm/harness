@@ -39,7 +39,7 @@ as soon as it opens, draft included*).
   is still missing.
 - `core/feature-workflow.md` says `finish --card` writes the `Pointer` and
   the pull request's link, and keeps the hand step for a pull request
-  `finish` did not open or update — the user's, or a consumer's, whose
+  no `finish --card` opened or found open — the user's, or a consumer's, whose
   sessions run no `finish` until roadmap stage 11. The `README.md` row for
   `finish` says it.
 
@@ -59,7 +59,7 @@ None.
 - `work-finish`: `finish --card` writes the card's `Pointer` and its pull
   request's `Ссылки` link.
 - `task-board`: the pull-request link is written by `finish --card` where it
-  opened or updated the pull request, and by the session otherwise.
+  opened the pull request or found it open, and by the session otherwise.
 
 ## Impact
 

@@ -92,6 +92,9 @@ archive; any other card text; a board property; consumers' sessions.
 - [*Insert content* not granted, or `after` not taken under API version
   `2025-09-03`] → task 1 probes both on a test card before any code; a 403
   is named by step, and the draft stays.
+- [Blocks after the `Ссылки` list stay after it] → Notion's REST surface
+  moves no block, and recreating them would drop their ids, comments and
+  children; the item lands in the list, where a reader of the links looks.
 - [A rich-text link Notion stores in another form, so the `href` check
   misses it] → the probe reads back the item it wrote; a duplicate link is
   visible and harmless.
@@ -105,7 +108,7 @@ archive; any other card text; a board property; consumers' sessions.
 The user grants the ask integration *Insert content*; apply probes, then
 lands the module and the call. `core/feature-workflow.md`'s hand steps for
 the `Pointer` and the pull request's link stay, narrowed to a pull request
-`finish` did not open or update: consumers' sessions run no `finish` until
+no `finish --card` opened or found open: consumers' sessions run no `finish` until
 roadmap stage 11 ships it, and the user opens pull requests by hand.
 Rollback: revert the call; the cards keep what was written.
 

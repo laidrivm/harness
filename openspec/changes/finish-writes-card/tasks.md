@@ -63,7 +63,7 @@ cap.
 - [ ] 3.2 `core/feature-workflow.md`: the `Ссылки` and `Pointer` paragraphs
       say `finish --card` writes the pull request's link and the change's
       `Pointer`, and keep the hand step for a pull request it did not open
-      or update, and keep a fix card's `pr:<N>` `Pointer` a hand step
+      or find open, and keep a fix card's `pr:<N>` `Pointer` a hand step
       whoever opened the pull request, since `finish` never writes it; the
       kinds read `proposal`, `apply`, `archive`; `README.md`'s `finish` row says it writes both, and needs
       the ask integration's *Update content* and *Insert content*

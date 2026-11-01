@@ -10,8 +10,8 @@ does, never its slug, and a body opening with a summary in Russian of about
 the ranking needs, never a restated proposal. The body SHALL end
 with links on GitHub to the change's `proposal.md` once merged and to every
 pull request it opens, each added in the turn that pull request opens:
-by `bun bun/work.ts finish --card` where that call opened or updated the pull
-request (`work-finish`, *Finish records its pull request on the card*), and
+by `bun bun/work.ts finish --card` where that call opened the pull request or
+found it open (`work-finish`, *Finish records its pull request on the card*), and
 by the session otherwise. At archive, the `proposal.md` link SHALL follow the
 file to its archived path.
 
