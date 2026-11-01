@@ -331,8 +331,8 @@ nothing; the last line SHALL say which of these happened.
 #### Scenario: Already asked for this head
 
 - **WHEN** `HEAD`'s state stays `skipped` and such a comment, or
-  `@coderabbitai full review`, was posted in the second `HEAD`'s first
-  CodeRabbit run started, or later
+  `@coderabbitai full review`, was posted when `HEAD`'s first CodeRabbit
+  run started, or later
 - **THEN** `finish` posts nothing and its last line says a review was
   already asked for
 
