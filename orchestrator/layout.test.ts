@@ -5,7 +5,11 @@ import { cleanup, emptyDir, git } from "../bun/diff-budget.fixture.ts";
 import { composed, image, mine, read, root, schedules, scripts, wm, yaml } from "./layout.fixture.ts";
 import { atLeast, compose, endsOnSsh, leaks, NOTE, passScript, pins, remoteControl, variableValues, windmillImages } from "./layout.ts";
 
-/** What `orchestrator/` may hold: each check over fabricated input, then over the tree. [n]: `/zombies` ideas. */
+/**
+ * What `orchestrator/` may hold: each check over fabricated input, then over the tree
+ * (`layout.fixture.ts`); the runner image and the host README are in `layout-runner.test.ts`.
+ * [n]: `/zombies` ideas.
+ */
 
 afterAll(cleanup);
 // Built from parts, so this file holds none of what it looks for.

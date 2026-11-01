@@ -1,6 +1,7 @@
 /**
  * The runner's five REST calls against a `Bun.serve` stub reached through
- * `HARNESS_NOTION_API_URL`: what each sends, and where each stops the rest.
+ * `HARNESS_NOTION_API_URL` (`notion-bot-rest.fixture.ts`): what each sends,
+ * and where each stops the rest.
  * [n]: the proposal-stage `/zombies` list of #184.
  */
 import { afterAll, describe, expect, test } from "bun:test";

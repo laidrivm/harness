@@ -89,8 +89,7 @@ export function notion(stub: Stub = {}): Seen[] {
 	return seen;
 }
 
-
-/** The line `post` prints, which never holds the token [30]; `self`, the integration's own id as read. */
+/** The line `post` prints, which never holds the token ([30] of #184's `/zombies` list); `self`, the integration's own id as read. */
 export async function line(carried = CARRIED, timeout?: number, self?: string): Promise<string> {
 	const printed = await post({ token: TOKEN, user: USER, self }, { card: CARD, text: TEXT }, carried, timeout);
 	expect(printed).not.toContain(TOKEN);
