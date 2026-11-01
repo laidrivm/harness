@@ -344,7 +344,8 @@ with `--head` naming the commit that push made, which the run names as the
 placeholder `PUSHED_SHA` and the session fills from `git rev-parse HEAD`, or
 the full id of the one the run verified against; when
 `resolve` refuses over another head, it SHALL run `/coderabbit` again
-instead. No
+instead. A session whose launcher pushes for it runs no `finish` and so no
+`resolve`: it SHALL name the command in its final message instead. No
 agent SHALL resolve the thread of a skipped or rejected finding, nor post
 `@coderabbitai resolve` or `@coderabbitai approve`.
 
