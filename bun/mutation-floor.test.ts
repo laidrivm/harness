@@ -6,6 +6,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { naming } from "./floor.fixture.ts";
 import { cleanup, fabricate, report } from "./mutation-floor.fixture.ts";
 import { gauge, loadReport, survivors } from "./mutation-floor.ts";
 
@@ -115,11 +116,6 @@ describe("loading the report", () => {
 /** A reason the floor carries, which every case not about reasons gives. */
 const why = "measured";
 
-/** What `gauge` returns for a floor whose one fault is `field`. */
-const naming = (field: string) => [
-	expect.stringContaining(`harness.mutationFloor.${field}`),
-];
-
 describe("the count against the floor", () => {
 	test("a count equal to the floor passes", () => {
 		expect(gauge(12, 12, why)).toEqual([]);
@@ -166,22 +162,22 @@ describe("the floor changed with no reason given", () => {
 	// The other shapes of an unreadable reason are `floor.test.ts`'s; these
 	// pin the field this check names.
 	test("an empty reason fails naming the field", () => {
-		expect(gauge(12, 12, "")).toEqual(naming("why"));
+		expect(gauge(12, 12, "")).toEqual(naming("mutationFloor", "why"));
 	});
 
 	test("a reason of whitespace alone fails, on a rise too", () => {
-		expect(gauge(12, 12, "   ")).toEqual(naming("why"));
+		expect(gauge(12, 12, "   ")).toEqual(naming("mutationFloor", "why"));
 		expect(gauge(13, 12, "   ")[0]).toContain("harness.mutationFloor.why");
 	});
 
 	test("an absent reason fails naming the field, rather than throwing", () => {
-		expect(gauge(12, 12, undefined)).toEqual(naming("why"));
+		expect(gauge(12, 12, undefined)).toEqual(naming("mutationFloor", "why"));
 	});
 });
 
 // spec: mutation-floor/a-floor-that-is-not-a-whole-number
 describe("a floor that is not a whole number", () => {
 	test("a floor written as a string fails naming the field", () => {
-		expect(gauge(12, "12", why)).toEqual(naming("surviving"));
+		expect(gauge(12, "12", why)).toEqual(naming("mutationFloor", "surviving"));
 	});
 });

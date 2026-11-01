@@ -117,6 +117,20 @@ modifies *Linter and type-checker suppressions fail CI* and two deltas of one
 requirement would collide at archive. The test file's repository fixture
 moved to `bun/no-suppressions.fixture.ts` to keep it under its 300-line cap.
 
+### 8. One matcher for a named field, and the rule it settled
+
+The cases expecting "one problem naming `harness.<key>.<field>`" carried the
+matcher three times — a helper in `bun/floor.test.ts` and in
+`bun/mutation-floor.test.ts`, inline in `bun/spec-coverage-floor.test.ts`.
+The apply proposed keeping the copies, since a change of message format would
+fail all three loudly. The user chose, on the card's question 3 (2026-11-01),
+to lift it into `bun/floor.fixture.ts`, which all three import: the Code rule
+*Write logic a second time only by lifting it into one module* admits no
+exception for copies that would fail loudly — its dash clause explains the
+rule, it does not exempt from it. On the user's approval the rule in
+`core/rules.md` now ends "a copy that would fail loudly is no exception", in
+this change.
+
 ## Risks / Trade-offs
 
 - [The requirement names `harness.mutationFloor` before the harness declares

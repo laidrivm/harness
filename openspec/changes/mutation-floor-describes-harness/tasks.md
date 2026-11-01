@@ -1,7 +1,8 @@
 # mutation-floor-describes-harness — tasks
 
-One group, one pull request. The code changes are tasks 1.4 to 1.6
-(design.md, decisions 5 to 7), whose failing cases come first.
+One group, one pull request. The code changes are tasks 1.4 to 1.7
+(design.md, decisions 5 to 8), whose failing cases come first where they
+change behaviour.
 
 ## 1. The spec describes the harness
 
@@ -54,6 +55,13 @@ One group, one pull request. The code changes are tasks 1.4 to 1.6
       `unreadable`, call it in `approvedIn` and the new `allowlistProblems`,
       and report the latter from `bun/check.ts` and the script. Verify with
       `bun test bun/no-suppressions bun/floor bun/check` green
+- [x] 1.7 Lift the named-field matcher into `bun/floor.fixture.ts` and import
+      it in `bun/floor.test.ts`, `bun/mutation-floor.test.ts` and
+      `bun/spec-coverage-floor.test.ts`; end the Code rule *Write logic a
+      second time…* in `core/rules.md` with "a copy that would fail loudly is
+      no exception" (design.md, decision 8). Verify with `grep -n
+      "stringContaining" bun/floor.test.ts bun/mutation-floor.test.ts
+      bun/spec-coverage-floor.test.ts` printing nothing and `bun test` green
 
 The archive runs separately, once every box above is ticked (design.md,
 decision 2): in the commit that syncs the delta it copies that Purpose into
