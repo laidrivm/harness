@@ -25,8 +25,9 @@ import { cleanup } from "./diff-budget.fixture.ts";
  * The CI flow's decision on a pull request, run through the event handler as
  * the engine runs it, against a stand-in for GitHub's API
  * (`ci-run.fixture.ts`); the session's own cases are in
- * `ci-run-session.test.ts`, the scheduled routes and the host's in
- * `ci-run-routes.test.ts`. [n]: `ci-run-agent`'s `/zombies` items.
+ * `ci-run-session.test.ts`, and the scheduled and flaky routes, a later
+ * attempt's run among them, and the host's in `ci-run-routes.test.ts`. [n]:
+ * `ci-run-agent`'s `/zombies` items.
  */
 
 afterAll(cleanup);
