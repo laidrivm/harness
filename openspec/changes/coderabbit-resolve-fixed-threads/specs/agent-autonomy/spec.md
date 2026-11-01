@@ -17,8 +17,8 @@ that one read, with no sleep and no second read. A run that finds the head
 reviewed, by any of the three, SHALL dispose of the findings of every review
 on it on the finding-disposal terms `local-review-loop` sets in *A verified
 finding is fixed without asking*, *Dismissing a Major or above is the user's
-call*, *Minor findings are reported once, at the end* and *A justification
-survives only when it is a convention*, SHALL read
+call*, *Minor findings are reported once, at the end* and *A skipped
+convention becomes a rule, a one-off does not*, SHALL read
 the head again before applying a fix and before naming a `resolve` command,
 and SHALL re-fetch once before its gate line to reconcile against the bot's
 count, without sleeping or looping; that re-fetch reads the head again, and

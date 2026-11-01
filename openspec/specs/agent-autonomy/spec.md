@@ -274,15 +274,20 @@ review whose author's login starts with `coderabbitai`, never one by the
 App's `laidrivm-harness-agent[bot]` — and the run SHALL count the rounds from
 the pull request's reviews. A run working the fourth round or
 a later one, whose review carries a finding the run would apply, SHALL apply
-none. It SHALL end on a `CODERABBIT gate: BLOCKED` line that names the cap,
-and SHALL report each finding left.
+none. It SHALL report each finding left, name the cap in the report's line
+before its gate line, and end on the skill's own `CODERABBIT gate: BLOCKED —
+N findings, M undispositioned.` line, unchanged, since the `coderabbit`
+skill fixes that line's form and the cap is no part of it.
 
 #### Scenario: The third round still gets its fixes
 
 - **WHEN** CodeRabbit's reviews on a pull request name three distinct commits,
   and the head commit's review carries a verified finding
-- **THEN** the run applies it on the terms `local-review-loop` sets, as in
-  any earlier round
+- **THEN** the run applies it on the finding-disposal terms
+  `local-review-loop` sets in *A verified finding is fixed without asking*
+  and *Dismissing a Major or above is the user's call*, as in any earlier
+  round, and not on the local review's base, changed-file check or grading,
+  since CodeRabbit grades its own findings
 
 #### Scenario: A fourth round with a finding to apply, attended
 
@@ -290,14 +295,16 @@ and SHALL report each finding left.
   CodeRabbit reviews name four distinct commits, and the head commit's review
   carries a verified finding the run would apply
 - **THEN** it applies nothing, reports each finding left with its severity,
-  file and line, and ends on `CODERABBIT gate: BLOCKED` naming the cap
+  file and line, names the cap in the line before its gate line, and ends on
+  `CODERABBIT gate: BLOCKED — N findings, M undispositioned.`
 
 #### Scenario: A fourth round with a finding to apply, unattended
 
 - **WHEN** an unattended session reaches the same state
 - **THEN** it applies nothing, hands the findings left on as one question on
-  the card, posts nothing in the pull request, and ends on
-  `CODERABBIT gate: BLOCKED` naming the cap
+  the card, posts nothing in the pull request, names the cap in the line
+  before its gate line, and ends on `CODERABBIT gate: BLOCKED — N findings,
+  M undispositioned.`
 
 #### Scenario: A fourth round with nothing to apply
 

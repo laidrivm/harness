@@ -222,4 +222,6 @@ not age with the code.
   throwaway script, committed or not; the guard refuses only the program text
   it cannot read, so a committed script carrying the act reads to both checks
   as an ordinary call and walks past. `bun bun/work.ts finish` is the one
-  script the allow list grants a push, a pull request and a ready.
+  script the allow list grants a push, a pull request and a ready, and the
+  one `@coderabbitai review` it posts on a head CodeRabbit skipped, and
+  `bun bun/work.ts resolve` the one it grants a review thread's resolve.

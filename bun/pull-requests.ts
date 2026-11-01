@@ -7,14 +7,21 @@
  * killed and fails, so no caller waits on a `gh` that neither answers nor
  * exits, and where `HARNESS_GITHUB_APP_MINT` names the key holder's mint, the
  * read alone holds a token it minted, so a private repository's are read.
+ * The `gh` spawn it reads through, killed at the same limit, is exported for
+ * every `gh` call the harness makes, GraphQL ones included (`work-resolve.ts`).
  */
 import { minted } from "./github-app-minted.ts";
 
+/** The setting `name` when it is a positive whole number, `fallback` otherwise. */
+export function positive(name: string, fallback: number): number {
+	const env = process.env[name] ?? "";
+	// Never 0: `spawnSync` reads a timeout of 0 as no limit at all. A digit string past 2^53 is no whole number `Number` can hold.
+	return /^[1-9]\d*$/.test(env) && Number.isSafeInteger(Number(env)) ? Number(env) : fallback;
+}
+
 /** The limit in ms: `HARNESS_GH_TIMEOUT_MS` when it is a positive whole number, 30 s otherwise. */
 export function limit(): number {
-	const env = process.env.HARNESS_GH_TIMEOUT_MS ?? "";
-	// Never 0: `spawnSync` reads a timeout of 0 as no limit at all.
-	return /^[1-9]\d*$/.test(env) ? Number(env) : 30_000;
+	return positive("HARNESS_GH_TIMEOUT_MS", 30_000);
 }
 
 /** A remote URL's authority and path, in the URL form or git's scp form `user@host:path`; a local path has neither. */
@@ -55,11 +62,17 @@ function api(full: string, query: string): unknown {
 	// A mint that fails throws, failing the read: never an unauthenticated read that misses a private repository's.
 	const mint = process.env.HARNESS_GITHUB_APP_MINT;
 	const env = mint ? { ...process.env, GH_TOKEN: minted(mint, full, ["pull_requests=read"]) } : process.env;
-	// SIGKILL: a `gh` that ignores the default SIGTERM holds `spawnSync` past
-	// the limit. A killed read exits with no status, so it fails here.
-	const run = Bun.spawnSync(["gh", "api", query], { env, timeout: limit(), killSignal: "SIGKILL" });
+	const run = gh(["api", query], env);
 	return run.exitCode === 0 && JSON.parse(run.stdout.toString());
 }
+
+/**
+ * `gh args`, killed at `limit()`. SIGKILL: a `gh` that ignores the default
+ * SIGTERM holds `spawnSync` past the limit. A killed call exits with no
+ * status, so a caller reading the exit code fails it.
+ */
+export const gh = (args: string[], env: Record<string, string | undefined> = process.env) =>
+	Bun.spawnSync(["gh", ...args], { env, timeout: limit(), killSignal: "SIGKILL" });
 
 /** `Pull`'s state for a REST answer: `merged_at` alone tells a merged pull request from a closed one, which both read `closed`. */
 const stateOf = (pr: Listed): Pull["state"] => (pr?.state === "open" ? "OPEN" : pr?.state === "closed" && pr.merged_at ? "MERGED" : "CLOSED");

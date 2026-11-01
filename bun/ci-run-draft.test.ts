@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { draftWhile } from "./ci-run-draft.ts";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 
-/** A work that throws, against a `gh` that refuses `pr ready` or takes it; the flow's own cases are in `ci-run.test.ts`. */
+/** A work that throws, against a `gh` that refuses `pr ready` or takes it; the flow's own cases are in `ci-run.test.ts`, `ci-run-session.test.ts` and `ci-run-routes.test.ts`. */
 
 const path = process.env.PATH;
 let refusing = "";
