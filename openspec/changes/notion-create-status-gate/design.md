@@ -34,6 +34,21 @@ Answered on the card on 2026-10-31:
 4. The card text validator was discarded, so there is no shared `pages[]`
    module to plan for (the question fell away).
 
+Answered on the card on 2026-11-01, on the apply's local review, each keeping
+what this design decided:
+
+5. `Status` is matched exactly: no case folding and no `userDefined:` prefix,
+   which the connector's schema asks of `id` and `url` alone; a lower-case
+   `status` is 2.1's to probe (а).
+6. A string `properties` on `notion-update-page` still passes; if 2.1 shows
+   the connector parses a string parameter, a card of its own closes it on
+   update (а).
+7. Until the pin passes this change's merge the hook runs the old script, as
+   every harness hook does (*Risks*, *Migration Plan*); no caveat goes into
+   `core/feature-workflow.md` (а).
+8. The guard keeps parsing a string `pages` and `properties` as JSON, since a
+   string it passed unread would be the bypass this change closes (а).
+
 ## Goals / Non-Goals
 
 **Goals:** the requirement's two refusals, `notion-update-page`'s unchanged.
