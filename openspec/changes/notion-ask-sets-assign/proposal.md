@@ -31,16 +31,17 @@ second question no longer waits for the first one's answer.
   numbering; no code checks it (answer 3 a).
 - What answers several questions stays the rule `waits()` already applies: the
   questions wait while no comment by the user without a mark follows the
-  last question (design, *What answers several questions*). `finish` and
-  `take` change nothing.
-- `bun bun/work.ts status` removes the user from the card's `Assign` in the
-  same write as `Status` on any move when no question waits there, and
-  leaves it when one waits (the user's widening in chat, and item 4 b). The
-  prose "clear `Assign` once it is applied" stays for the boards `status`
-  does not move.
+  last question (design, *What answers several questions*).
+- `bun bun/work.ts status` (on any move), `take` and `finish --card` (on
+  every push) remove the user from the card's `Assign` when no question and
+  no pause notice waits there, through one function lifted from
+  `notion-unassign`'s write, which keeps everyone else (the user's widenings
+  in chat, and item 4 b). The prose "clear `Assign` once it is applied"
+  stays for the boards these commands do not run on.
 - The board loop's pick takes a card carrying an answer whatever its
   `Assign` holds, and task-board clears `Assign` "by then at the latest"
-  rather than "never earlier" than the answer step's pull request (item 4 b).
+  rather than "never earlier" than the answer step's pull request (item 4
+  b). What then marks an answer as carried is card item 5, open.
 - The board loop's runner keeps its refusal (`board-loop`, *A question
   already waits*): it guards a retried pass against posting twice.
 - The prose step "set `Assign` after `question: posted`" becomes "unless the
@@ -63,9 +64,9 @@ None.
   scenario *A second question for a card* changes. *A session asks through the
   ask integration where one is configured* moves the `Assign` write into the
   command and drops its refusal. *An answer the board loop carries is
-  applied when its pull request opens* lets `Assign` clear earlier.
-- `work-status`: a move clears `Assign` when no question waits, and the
-  move's line says so.
+  applied when its pull request opens* lets `Assign` clear earlier. *The
+  work commands release `Assign` when nothing waits* is added.
+- `work-take`: *Take writes nothing and fails closed* allows that release.
 - `board-loop`: *A pass takes the first takeable card in the board's order*
   takes an answer candidate whatever its `Assign` holds.
 
@@ -75,15 +76,16 @@ None.
   name, follow in the plan pull request on
   `spec/notion-ask-sets-assign-plan`, the five artefacts together being
   over the diff budget.
-
 - Changed: `bun/notion-ask.ts` (no comments read, the `Assign` write and its
   read-back, the header), `bun/notion-ask.test.ts`, `bun/board-loop-prompt.ts`
-  and `bun/board-loop-question.test.ts`, `bun/question-gate.ts`'s `ask`
-  message, `core/feature-workflow.md`, `README.md`'s rows for the two
-  commands, `bun/work-status.ts` and its tests, and the pick prompt's answer
-  line in `bun/board-loop-prompt.ts` with its tests.
+  (the ask line and the pick's answer line) and its tests,
+  `bun/question-gate.ts`'s `ask` message, `bun/notion-unassign.ts` (the
+  lifted write), `bun/work-status.ts`, `bun/work-take.ts`,
+  `bun/work-finish.ts` and their tests, `core/feature-workflow.md`,
+  `README.md`'s rows for the commands.
 - Notion: one PATCH of the card per post, under the ask integration's
-  *Update content*; one comments read per `status` move; no schema change.
+  *Update content*; for `status`, `take` and `finish`, a page read and,
+  only while `Assign` holds the user, a comments read and one PATCH; no
+  schema change.
 - Not in this change: the four cards left unassigned on 2026-10-31, which
-  the main session sets by hand; a check of the numbering in code; clearing
-  `Assign` anywhere but `status`.
+  the main session sets by hand; a check of the numbering in code.
