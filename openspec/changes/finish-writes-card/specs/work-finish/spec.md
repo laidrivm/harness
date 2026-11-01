@@ -6,23 +6,29 @@
 
 `finish` given `--card`, once its pull request exists, opened by that call or
 already open, SHALL read which change directories the branch adds against
-its merge base with `origin/main`: directories under `openspec/changes/`
-other than `archive/`, and directories under `openspec/changes/archive/`.
-When it adds exactly one, `finish` SHALL write that directory's path, with a
-trailing slash, to the card's `Pointer` where the `Pointer` is empty or names
-the same slug's unarchived directory, and SHALL read it back. It SHALL leave
-alone a `Pointer` that already says it, and, saying so, a `Pointer` in any
-other form: `pr:<N>`, another change, another repository's. A branch adding
-no change directory or several SHALL write no `Pointer` and SHALL say so.
+its merge base with `origin/main`, fetched first: directories under
+`openspec/changes/` other than `archive/`, and directories under
+`openspec/changes/archive/`. When it adds exactly one, `finish` SHALL write
+that directory's path, with a trailing slash, to the card's `Pointer` where
+the `Pointer` is empty or names the same slug's unarchived directory, and
+SHALL read it back. A card on a board other than the one the repository
+names takes the cross-repository form, the repository's name, a colon and a
+space before the path, and a `Pointer` already in that form for this
+repository keeps it. It SHALL leave alone a `Pointer` that already says it,
+and, saying so, a `Pointer` in any other form: `pr:<N>`, another change,
+another repository's. A branch adding no change directory or several SHALL
+write no `Pointer` and SHALL say so.
 
 `finish` SHALL then put the pull request on the card's `Ссылки` list as
-`[#N](<url>) — <kind>`, the kind `proposal` when the branch adds a
-directory outside `archive/`, else `archive` when it adds one inside it,
-else `apply`, unless a block of the card already links that pull
-request. A card with no `Ссылки` line SHALL get one at the end of its body.
-Both writes SHALL come after the push and before the question read; a write
-Notion refuses or does not answer SHALL leave the draft and exit 1, naming
-the step. Without `--card`, `finish` SHALL write nothing to Notion.
+`[#N](<url>) — <kind>`, the kind `proposal` when the branch adds a file
+under `openspec/changes/` outside `archive/`, else `archive` when it adds a
+directory inside `archive/`, else `apply`, unless a block of the card
+already links that pull request. The item SHALL go directly under the
+items already following the `Ссылки` line, and a card with no `Ссылки` line
+SHALL get one at the end of its body. Both writes SHALL come after the push
+and before the question read; an `origin/main` that cannot be fetched, or a
+write Notion refuses or does not answer, SHALL leave the draft and exit 1,
+naming the step. Without `--card`, `finish` SHALL write nothing to Notion.
 
 #### Scenario: A proposal's first finish
 
@@ -65,6 +71,19 @@ the step. Without `--card`, `finish` SHALL write nothing to Notion.
   merge base, and the branch adds only `openspec/changes/foo/`
 - **THEN** `finish` writes `openspec/changes/foo/`, not reading `bar` as
   added
+
+#### Scenario: A proposal's second half
+
+- **WHEN** a `-plan` branch adds `design.md` and `tasks.md` to
+  `openspec/changes/foo/`, which its base already holds
+- **THEN** the `Pointer` is left as it is, and the link's kind is
+  `proposal`
+
+#### Scenario: A card on another repository's board
+
+- **WHEN** the card's `Pointer` is empty, it sits on a board the repository
+  does not name, and the branch adds `openspec/changes/foo/` in `harness`
+- **THEN** the `Pointer` reads `harness: openspec/changes/foo/`
 
 #### Scenario: Several added directories
 

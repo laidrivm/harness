@@ -22,18 +22,21 @@ as soon as it opens, draft included*).
   `openspec/changes/` outside `archive/`, and under `openspec/changes/archive/`.
 - Exactly one added directory is the card's: `finish` writes it to the
   card's `Pointer` when the `Pointer` is empty or names the same slug before
-  its archive, and reads it back. A `Pointer` that already says it is left
-  alone; a `pr:<N>` pointer, another change's or another repository's is
-  left alone with a line saying so. None or several added directories write
-  nothing and say so.
+  its archive, and reads it back; on a card of another repository's board
+  it writes the cross-repository form `harness: <path>`. A `Pointer` that
+  already says it is left alone; a `pr:<N>` pointer, another change's or
+  another repository's is left alone with a line saying so. None or several
+  added directories write nothing and say so.
 - The pull request goes on the card's `Ссылки` list as
-  `[#N](<url>) — <kind>`, `proposal` when the branch adds a change
-  directory, `archive` when it adds an archived one, `apply` otherwise,
+  `[#N](<url>) — <kind>`, `proposal` when the branch adds a file to a
+  change outside `archive/` (a new change, or a `-plan` branch's design and
+  tasks), `archive` when it adds an archived directory, `apply` otherwise,
   unless a block of the card already links that pull request; a card with
   no `Ссылки` line gets one at the end of its body.
-- Both writes come after the push and before the question read. A write
-  that fails leaves the draft and exits 1, naming the step; a rerun of
-  `finish` writes only what is still missing.
+- Both writes come after the push and before the question read. An
+  `origin/main` that cannot be fetched, or a write that fails, leaves the
+  draft and exits 1, naming the step; a rerun of `finish` writes only what
+  is still missing.
 - `core/feature-workflow.md` says `finish --card` writes the `Pointer` and
   the pull request's link, and keeps the hand step for a pull request
   `finish` did not open or update — the user's, or a consumer's, whose
@@ -64,8 +67,9 @@ None.
   makes both writes, and its test `bun/work-finish-card.test.ts`.
 - Changed: `bun/work-finish.ts` (one call), `bun/notion-bot.ts` (the
   cursor loop `discussion()` runs, lifted so the block read shares it),
-  `bun/work-finish.fixture.ts` (the Notion stub answers the page, block and
-  property calls), `core/feature-workflow.md`, `README.md`.
+  `bun/work-take.fixture.ts` (its Notion stub answers the block, data
+  source and property calls), `bun/work-finish-sequence.test.ts` (its
+  pinned Notion calls), `core/feature-workflow.md`, `README.md`.
 - Notion: the ask integration writes `Pointer` with the *Update content* it
   holds for `Status`, and appends blocks, which needs *Insert content*, not
   yet granted to it; the user grants it before apply's probe. This widens

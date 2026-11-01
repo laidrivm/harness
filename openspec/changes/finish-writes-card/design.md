@@ -33,40 +33,57 @@ archive; any other card text; a board property; consumers' sessions.
    `finish: draft #N — <step> …`, exit 1, as it does for the comments read.
    Rejected: inlining in `bun/work-finish.ts`, which three changes edit at
    once; adding to `bun/notion-bot.ts`, which has 21 lines of headroom.
-2. **Added directories from trees, at the merge base.** `git merge-base
-   origin/main HEAD`, then `git ls-tree -d --name-only --full-tree` of
-   `openspec/changes/` and `openspec/changes/archive/` at both commits;
-   added is in `HEAD` and not at the base, `archive` itself excluded.
-   Rejected: `git diff --diff-filter=A`, which counts a file added to a
-   change that already exists (a design added by a `-plan` branch) as a new
-   directory; the tip of `origin/main`, where a change archived on main
-   after the fork reads as one the branch adds. No `origin/main` read gives
-   no directories, and the line says so.
-3. **When the `Pointer` is written.** Exactly one added directory `d`; the
-   page read's `Pointer` is empty, or is `openspec/changes/<slug>/` where `d`
-   is `openspec/changes/archive/<date>-<slug>/`. Equal to `d`: nothing,
+2. **Added directories from trees, at the merge base.** `origin/main` is
+   fetched with `work-status.ts`'s named refspec, so a single-branch clone
+   has it; then `git merge-base origin/main HEAD`, and `git ls-tree -d
+   --name-only --full-tree` of `openspec/changes/` and
+   `openspec/changes/archive/` at both commits; added is in `HEAD` and not at
+   the base, `archive` itself excluded. A fetch or merge base that fails
+   throws its step, so the draft stays and nothing is written under a wrong
+   kind. Rejected: `git diff --diff-filter=A` for the directories, which
+   counts a file added to a change that already exists (a `-plan` branch's
+   design) as a new directory; the tip of `origin/main`, where a change
+   archived on main after the fork reads as one the branch adds.
+3. **When the `Pointer` is written.** Exactly one added directory `d`. The
+   page read's `Pointer`, with this repository's `<package name>: ` prefix
+   stripped as `work-status.ts` strips it, is empty, or is
+   `openspec/changes/<slug>/` where `d` is
+   `openspec/changes/archive/<date>-<slug>/`: `d` is written, under the
+   prefix the `Pointer` had. An empty `Pointer` on a card whose board's
+   title is not the `harness.board` of `package.json` (one data source read,
+   as `carded()` makes) takes the prefix, which *A card for another
+   repository's change points across* requires. Equal to `d`: nothing,
    said. Any other value is left with a line naming it — the card's
    `Pointer` names a change (`core/feature-workflow.md`: a card whose
    `Pointer` names a change keeps it), and `pr:<N>` is a fix card's. The
-   write is the `Status` write's shape, `{ Pointer: { rich_text: [{ text: {
-   content: d } }] } }`, and Notion's answer is the read-back.
+   write is the `Status` write's shape, `{ properties: { Pointer: {
+   rich_text: [{ text: { content } }] } } }`, and Notion's answer is the
+   read-back.
 4. **The link.** The pull request's URL is
    `https://github.com/<owner>/<repo>/pull/<N>` from `originRepository()`.
    The card's top-level blocks are read (`GET /v1/blocks/{card}/children`,
    every page); a block whose rich text carries that `href` means the link
-   is there. Else the paragraph whose plain text, trimmed of `:`, is
-   `Ссылки` anchors it: the new bulleted item goes `after` the last
-   bulleted item following it, or after the paragraph when none does, in
-   one `PATCH /v1/blocks/{card}/children`. No such paragraph: a bold
-   `Ссылки` paragraph and the item are appended at the end. The cursor loop
-   `discussion()` runs is lifted into `bun/notion-bot.ts` as one helper
-   both reads call. Rejected: the markdown read work-take uses, which gives
+   is there. Else the first paragraph or heading whose plain text, trimmed
+   of whitespace and a trailing `:`, is `Ссылки` anchors it: the new
+   bulleted item goes `after` the last of the bulleted items directly
+   following it, or after the anchor when none does, in one `PATCH
+   /v1/blocks/{card}/children`; a later section's bullets are not the
+   run. No anchor: a bold `Ссылки` paragraph and the item are appended at
+   the end. The cursor loop `discussion()` runs is lifted into
+   `bun/notion-bot.ts` as one helper both reads call, joining the cursor
+   with `?` or `&` as the path needs and naming its caller's step in the
+   no-new-cursor error. Rejected: the markdown read work-take uses, which gives
    no block id to anchor on; one paragraph rewritten under *Update content*,
    which drops the list form and still needs *Insert content* on a card
    with no `Ссылки`.
-5. **Kind.** `proposal` when any added directory is outside `archive/`,
-   else `archive` when one is inside it, else `apply` — the three the card
-   names; a fix's pull request reads `apply`.
+5. **Kind.** `proposal` when the branch adds a file, renames off, under
+   `openspec/changes/` outside `archive/` — a new change or a `-plan`
+   branch's design and tasks; else `archive` when it adds a directory
+   inside `archive/`; else `apply` — the three the card names, a fix's pull
+   request reading `apply`. An apply step edits `tasks.md` and adds no file
+   there. The `step 2` of `core/feature-workflow.md` becomes `apply`, so
+   prose and code name one convention; a step's number stays in the
+   pull request's title.
 6. **Order.** Pointer first, then the link: a refused append leaves the
    `Pointer`, which is what `work.ts status` needs past `proposing`.
 
