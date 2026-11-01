@@ -140,8 +140,8 @@ the ledger for the split.
   templates. Left open by clarification 11 until a card shows it.
 - [A lower-case `status` key] → the guard matches `Status` exactly, as
   today's does on update; whether the connector maps `status` to the
-  `Status` property is unverified. 2.1's live probe tries it once and
-  records the answer; a match there is a card, not this change.
+  `Status` property is unverified. 2.1's live probe was to try it once; it
+  was not run (tasks, 2.1), so it stays open until a card shows it.
 - [`notion-duplicate-page` copies a card with its status;
   `notion-move-pages` can bring a page into a board] → open until a failure
   shows them (clarification 11).
@@ -149,8 +149,8 @@ the ledger for the split.
   moved by `bun/work.ts status` until the user sets one; the reason names
   `idea` alone so a session does not choose it.
 - [A string `properties` on `notion-update-page`] → passes as today; whether
-  the connector parses a string parameter is unverified, and 2.1 probes it
-  on a create with `idea`, which is harmless either way.
+  the connector parses a string parameter is unverified; 2.1's probe of it
+  on a create with `idea` was not run (tasks, 2.1).
 - [A non-board database with a `Status` property is gated in harness
   sessions too] → none is used there today (decision 1 accepts it).
 - [A batch flow that filed a card straight at `approved` from the user's
@@ -159,6 +159,10 @@ the ledger for the split.
 - [The hook runs from the pin] → it holds a session only once the pin passes
   this change's merge; the live probe (group 2) follows that bump, as
   `notion-status-gate`'s did.
+- [A session started before the pin bump keeps the hook registration it read
+  at start] → the widened matcher holds only in a session started after it
+  lands; 2.1 saw a session from before the bump create a card at `approved`
+  unrefused, and a new one refused the same call.
 
 ## Conflict check
 
