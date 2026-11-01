@@ -1,7 +1,8 @@
 /**
  * What a count owes the floor a consumer declares under `harness.<key>` — the
  * one rule behind `harness.mutationFloor` and `harness.uncitedFloor`, so the
- * two cannot drift apart.
+ * two cannot drift apart — and what makes a counted entry with a reason
+ * readable, which each approval of `harness.suppressions` is too.
  *
  * Both directions fail: a rise admits something nothing checks, and a floor
  * left above reality stops being a measurement. The reason is demanded on every
@@ -23,27 +24,43 @@ export type Floor = {
 };
 
 /**
- * `floor` and `why` are `unknown` because they come from a hand-edited
- * `package.json` that `bun/config.ts` checks only for presence: an absent
- * reason or a floor written as `"12"` is named here rather than thrown as a
- * `TypeError` or compared as never equal.
+ * A count no occurrence can be compared against: not a number, a fraction, or
+ * below zero, where no count can equal it and a gain would be reported that is
+ * not one. A type guard, since `Number.isInteger` does not narrow `unknown`.
  */
+const whole = (n: unknown): n is number =>
+	typeof n === "number" && Number.isInteger(n) && n >= 0;
+
+/**
+ * What is wrong with a `{ <field>: count, why }` entry at `path` — a floor, or
+ * one approval of `harness.suppressions` — in a hand-edited `package.json`
+ * that `bun/config.ts` checks only for presence: an absent reason or a count
+ * written as `"12"` is named here rather than thrown as a `TypeError` or
+ * compared as never equal, or as `NaN`, which nothing exceeds.
+ */
+export function unreadable(
+	path: string,
+	field: string,
+	count: unknown,
+	why: unknown,
+): string[] {
+	return [
+		...(typeof why === "string" && why.trim()
+			? []
+			: [`${path}.why gives no reason — write one as text`]),
+		...(whole(count) ? [] : [`${path}.${field} is not a whole number`]),
+	];
+}
+
+/** The gap between `count` and the floor, after what `unreadable` names. */
 export function gauge(
 	at: Floor,
 	count: number,
 	floor: unknown,
 	why: unknown,
 ): string[] {
-	const problems: string[] = [];
-	if (typeof why !== "string" || !why.trim())
-		problems.push(
-			`the floor states no reason — write why as text in harness.${at.key}.why`,
-		);
-	// `typeof` as well, since `Number.isInteger` does not narrow `unknown`; a
-	// negative floor no count can equal would report a gain that is not one.
-	if (typeof floor !== "number" || !Number.isInteger(floor) || floor < 0)
-		problems.push(`harness.${at.key}.${at.field} is not a whole number`);
-	else if (count !== floor) {
+	const problems = unreadable(`harness.${at.key}`, at.field, floor, why);
+	if (whole(floor) && count !== floor) {
 		const gap = `${count} ${at.counted} against a floor of ${floor}`;
 		problems.push(
 			count > floor

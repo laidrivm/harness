@@ -12,7 +12,7 @@ after that one.
 
 ## Goals / Non-Goals
 
-**Non-Goals:** any change to the floor checks beyond decisions 5 and 6; the
+**Non-Goals:** any change to the floor checks beyond decisions 5 to 7; the
 requirements `pre-push-commit-gates` adds to `mutation-floor`; checking the
 shape of every `harness` key in `bun/config.ts`.
 
@@ -98,6 +98,23 @@ terms as `mutation-floor`'s does, its scenario names kept and *A floor that is
 not a whole number* added, which a case in `bun/spec-coverage-floor.test.ts`
 cites.
 
+### 7. The suppression allowlist read through the same checks
+
+`bun/no-suppressions.ts` read each `harness.suppressions` entry's `count`
+unchecked and compared `occurrences > count`: a `count` of `"two"` is `NaN`,
+which no length exceeds, so the entry approved every suppression of its marker
+in that file, and `why` was never read. The user chose, on the card's
+question 2 (2026-11-01), to close it in this change. `bun/floor.ts` exports
+`unreadable(path, field, count, why)`, the floors' field checks, and the scan
+runs every entry through it before scanning, throwing one message naming each
+entry's key and field — thrown rather than listed, as `read` throws on an
+absent key, since an allowlist it cannot read is input the scan cannot read.
+A negative or fractional `count` is refused as well. `commit-gates` gains an
+ADDED requirement rather than a MODIFIED one, since `pre-push-commit-gates`
+modifies *Linter and type-checker suppressions fail CI* and two deltas of one
+requirement would collide at archive. The test file's repository fixture
+moved to `bun/no-suppressions.fixture.ts` to keep it under its 300-line cap.
+
 ## Risks / Trade-offs
 
 - [The requirement names `harness.mutationFloor` before the harness declares
@@ -110,6 +127,9 @@ cites.
   none is owed: the uncited floor runs among `bun/check.ts`'s gates, which
   the consumers run over themselves and the harness does not, so task 1.1
   checks only `mutationFloor`, the floor the harness runs over its own tree.
+- [A consumer whose allowlist entry has no `why`, which the scan never read,
+  now fails] → intended: the refusal names the entry and the field, so the fix
+  is one line of its `package.json`.
 - [`bun/floor.ts` is a new module, and `pre-push-commit-gates` stores one
   result file per module under `mutation/`] → that step is not on `main` yet,
   so this change adds no `mutation/floor.json`; its apply mutates the module

@@ -14,6 +14,7 @@
 import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { read } from "./config.ts";
+import { unreadable } from "./floor.ts";
 import { tracked } from "./tracked.ts";
 
 const MARKERS = ["biome-ignore", "@ts-expect-error", "@ts-ignore"];
@@ -60,13 +61,22 @@ const MANIFEST = "package.json";
  * `suspicious/noTsIgnore` reads a comment as a directive wherever it sits, and
  * `biome check --write` rewrote this very sentence when it spelled one out.
  */
-const approvedIn = (root: string): Record<string, number> =>
-	Object.fromEntries(
-		Object.entries(read(root, "suppressions")).map(([key, { count }]) => [
-			key,
-			count,
-		]),
+function approvedIn(root: string): Record<string, number> {
+	const entries = Object.entries(read(root, "suppressions"));
+	// Thrown, as `read` throws on an absent key: an entry the check cannot read
+	// is input it cannot read, and a count of `NaN` would approve every
+	// occurrence, since no length exceeds it.
+	const problems = entries.flatMap(([key, entry]) =>
+		unreadable(
+			`harness.suppressions[${JSON.stringify(key)}]`,
+			"count",
+			entry?.count,
+			entry?.why,
+		),
 	);
+	if (problems.length) throw new Error(problems.join("; "));
+	return Object.fromEntries(entries.map(([key, { count }]) => [key, count]));
+}
 
 export type Finding = { path: string; line: number; marker: string };
 
