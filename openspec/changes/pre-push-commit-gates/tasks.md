@@ -63,8 +63,8 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       exits 0 (`a-tool-the-machine-does-not-have`); a stub `gitleaks` exiting
       1 fails the hook (`a-tool-the-machine-has-reporting-a-finding`) and is
       given `--log-opts=<base>..HEAD` with the base `bun/diff-base.sh`
-      prints (`a-secret-that-is-already-in-the-base-branch`); in
-      `bun/diff-base.test.ts`, `HARNESS_BASE` set is what it prints; and
+      prints (`a-secret-that-is-already-in-the-base-branch`), which is
+      `HARNESS_BASE` when it is set; and
       `bun/pre-pr.ts` given `origin/main` runs `harness.bumpTest` with
       `HARNESS_BASE=origin/main`
 - [ ] 4.4 Write `.githooks/gates.sh` per design decision 1, without the
