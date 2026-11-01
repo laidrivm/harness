@@ -61,22 +61,52 @@ const MANIFEST = "package.json";
  * `suspicious/noTsIgnore` reads a comment as a directive wherever it sits, and
  * `biome check --write` rewrote this very sentence when it spelled one out.
  */
-function approvedIn(root: string): Record<string, number> {
-	const entries = Object.entries(read(root, "suppressions"));
-	// Thrown, as `read` throws on an absent key: an entry the check cannot read
-	// is input it cannot read, and a count of `NaN` would approve every
-	// occurrence, since no length exceeds it.
-	const problems = entries.flatMap(([key, entry]) =>
-		unreadable(
+const approvedIn = (root: string): Record<string, number> =>
+	Object.fromEntries(
+		allowlist(root).map(({ key, count, problems }) => [
+			key,
+			// An entry the check cannot read approves nothing: a count of `NaN`,
+			// which no length exceeds, would otherwise approve every occurrence.
+			problems.length ? 0 : (count as number),
+		]),
+	);
+
+type Entry = { key: string; count: unknown; problems: string[] };
+
+/**
+ * Each entry of the allowlist at `root`, with what `unreadable` finds in it.
+ * A value that is not an object of entries is one entry under no key, so the
+ * shape is named rather than read character by character.
+ */
+function allowlist(root: string): Entry[] {
+	const value: unknown = read(root, "suppressions");
+	if (typeof value !== "object" || value === null || Array.isArray(value))
+		return [
+			{
+				key: "",
+				count: 0,
+				problems: ["harness.suppressions is not an object of approvals"],
+			},
+		];
+	return Object.entries(value).map(([key, entry]) => ({
+		key,
+		count: entry?.count,
+		problems: unreadable(
 			`harness.suppressions[${JSON.stringify(key)}]`,
 			"count",
 			entry?.count,
 			entry?.why,
 		),
-	);
-	if (problems.length) throw new Error(problems.join("; "));
-	return Object.fromEntries(entries.map(([key, { count }]) => [key, count]));
+	}));
 }
+
+/**
+ * What makes the allowlist at `root` unreadable, returned rather than thrown so
+ * `check.ts` still reports every other gate; its occurrences are reported by
+ * `scan` as unapproved.
+ */
+export const allowlistProblems = (root: string): string[] =>
+	allowlist(root).flatMap(({ problems }) => problems);
 
 export type Finding = { path: string; line: number; marker: string };
 
@@ -123,9 +153,10 @@ export function scan(
 }
 
 if (import.meta.main) {
-	const unapproved = scan();
-	for (const { path, line, marker } of unapproved) {
-		console.error(`${path}:${line}: ${marker}`);
-	}
-	if (unapproved.length) process.exit(1);
+	const problems = [
+		...allowlistProblems(tracked().root),
+		...scan().map(({ path, line, marker }) => `${path}:${line}: ${marker}`),
+	];
+	for (const problem of problems) console.error(problem);
+	if (problems.length) process.exit(1);
 }

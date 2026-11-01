@@ -169,6 +169,11 @@ describe("the floor changed with no reason given", () => {
 		expect(gauge(12, 12, "")).toEqual(naming("why"));
 	});
 
+	test("a reason of whitespace alone fails, on a rise too", () => {
+		expect(gauge(12, 12, "   ")).toEqual(naming("why"));
+		expect(gauge(13, 12, "   ")[0]).toContain("harness.mutationFloor.why");
+	});
+
 	test("an absent reason fails naming the field, rather than throwing", () => {
 		expect(gauge(12, 12, undefined)).toEqual(naming("why"));
 	});

@@ -57,8 +57,8 @@ export function fabricate(
 	return dir;
 }
 
-/** A consumer manifest whose allowlist holds `entries` as they are given. */
-export const allowlist = (entries: Record<string, unknown>): string =>
+/** A consumer manifest whose allowlist is `entries`, however malformed. */
+export const allowlist = (entries: unknown): string =>
 	JSON.stringify({ harness: { suppressions: entries } }, null, 2);
 
 /** A consumer manifest approving `counts`, keyed by `<path> <marker>`. */

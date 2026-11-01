@@ -71,10 +71,10 @@ old one before writing it, rather than that it runs Stryker first.
 `bun/config.ts` checks only that the object is present: an absent `why` threw
 a `TypeError` from `why.trim()`, and a `surviving` of `"12"` never equalled a
 count, so the check failed with a gap no edit could close. `gauge` now takes
-both as `unknown` and returns a problem naming the field — the existing
-"states no reason" one for a `why` that is not a non-blank string, and one
-naming `harness.mutationFloor.surviving` for a floor that is not a whole
-number, in place of the comparison. The requirement gains the one sentence on
+both as `unknown` and returns a problem naming the field — `harness.<key>.why
+gives no reason` for a `why` that is not a non-blank string, and
+`harness.<key>.<field> is not a whole number` for a floor that is not a whole
+number zero or above, in place of the comparison. The requirement gains the one sentence on
 the whole number and the scenario *A floor that is not a whole number*, which
 the new cases cite; the four scenarios it had keep their text.
 
@@ -106,11 +106,13 @@ which no length exceeds, so the entry approved every suppression of its marker
 in that file, and `why` was never read. The user chose, on the card's
 question 2 (2026-11-01), to close it in this change. `bun/floor.ts` exports
 `unreadable(path, field, count, why)`, the floors' field checks, and the scan
-runs every entry through it before scanning, throwing one message naming each
-entry's key and field — thrown rather than listed, as `read` throws on an
-absent key, since an allowlist it cannot read is input the scan cannot read.
-A negative or fractional `count` is refused as well. `commit-gates` gains an
-ADDED requirement rather than a MODIFIED one, since `pre-push-commit-gates`
+runs every entry through it: an unreadable entry approves nothing, so its
+occurrences are reported as unapproved, and `allowlistProblems` names each
+such entry's key and field. They are returned rather than thrown, so
+`bun/check.ts` still reports every other gate in the same run. A negative or
+fractional `count` is refused as well, and an allowlist that is not an object
+is named as such. `commit-gates` gains an ADDED requirement rather than a
+MODIFIED one, since `pre-push-commit-gates`
 modifies *Linter and type-checker suppressions fail CI* and two deltas of one
 requirement would collide at archive. The test file's repository fixture
 moved to `bun/no-suppressions.fixture.ts` to keep it under its 300-line cap.
