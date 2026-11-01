@@ -39,7 +39,8 @@ describe("the arguments", () => {
 		["--pr 7 --pr 8", ["resolve", "--pr", "7", "--pr", "8", "--head", A, "--comment", "1"]],
 		["no --head", ["resolve", "--pr", "7", "--comment", "1"]],
 		["--head 1a2b3c4", ["resolve", "--pr", "7", "--head", "1a2b3c4", "--comment", "1"]],
-		["--head PUSHED_SHA", ["resolve", "--pr", "7", "--head", "PUSHED_SHA", "--comment", "1"]],
+		["an upper-case --head", ["resolve", "--pr", "7", "--head", A.toUpperCase(), "--comment", "1"]],
+		["--head PUSHED_SHA",["resolve", "--pr", "7", "--head", "PUSHED_SHA", "--comment", "1"]],
 		["two --head", ["resolve", "--pr", "7", "--head", A, "--head", A, "--comment", "1"]],
 		["a positional", [...args("1"), "more"]],
 		["an unknown option", [...args("1"), "--force"]],
@@ -77,6 +78,10 @@ describe("the pull request", () => {
 		const run = await resolve({ args: ["resolve", "--pr", "9", "--head", A, "--comment", "11"], gh: { pulls: [[open(7, B), open(9)]], pages: [page(thread("11"))] } });
 		expect([run.code, run.lines]).toEqual([0, ["resolve: 11 resolved"]]);
 		expect(run.threads[0].gh).toContain("n=9");
+	});
+
+	test("a branch with no open pull request refuses, saying it has none", async () => {
+		refused(await resolve({ gh: { pulls: [[]] } }), "#7", "it has none");
 	});
 
 	test("a failed pull-request read refuses naming gh auth status", async () => {
@@ -144,8 +149,16 @@ describe("placing the ids", () => {
 		refused(await resolve({ gh: { ...PR7, pages: [page(thread("11", { login }))] } }), "11");
 	});
 
+	test("two unplaced ids are both named in the one refusal", async () => {
+		refused(await resolve({ args: args("11", "12", "13"), gh: { ...PR7, pages: [page(thread("12"))] } }), "11, 13");
+	});
+
 	test("a failed thread read refuses", async () => {
 		refused(await resolve({ gh: { ...PR7, threadsCode: 1 } }), "#7");
+	});
+
+	test("a page with no pull request in it refuses as a failed read", async () => {
+		refused(await resolve({ gh: { ...PR7, pages: [{ data: { repository: { pullRequest: null } } }] } }), "cannot read the review threads of #7");
 	});
 
 	// spec: work-resolve/threads-past-the-first-page
