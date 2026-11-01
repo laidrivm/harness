@@ -33,7 +33,9 @@ d2ass changes — the floor's place, the reason's place, the report's path,
 No delta reaches a spec's Purpose. The archive rewrites it by hand, as
 `code-review-replaces-cli` did for `local-review-loop`, so the Purpose and
 the requirement change on `main` in one commit rather than the Purpose
-describing the harness while the requirement still describes d2ass.
+describing the harness while the requirement still describes d2ass. The
+apply writes the text here (task 1.3), and the archive copies it: a task
+that archives cannot be ticked, since the archive moves `tasks.md`.
 
 ### 3. The invoker named by its role
 
