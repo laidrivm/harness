@@ -14,26 +14,14 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { LIMIT as HOUR } from "./board-loop.ts";
-import { session } from "./board-loop-session.ts";
-import { fetched, git, pushed, under } from "./ci-run-clone.ts";
+import { fetched, git, pushed } from "./ci-run-clone.ts";
 import { draftWhile } from "./ci-run-draft.ts";
+import { answered, logged, logOf, type Run } from "./ci-run-session.ts";
 import { type App, configured, credentials, identity, mint, repository, request, slug } from "./github-app.ts";
 import { lookup } from "./pr-sessions.ts";
 
 export type Outcome = ["handled" | "ignored" | "failed", string];
 
-type Run = {
-	id: number;
-	conclusion: string | null;
-	run_attempt: number;
-	head_sha: string;
-	head_branch: string;
-	event: string;
-	name?: string;
-	html_url: string;
-	head_repository?: { full_name?: string };
-};
 type Payload = { action?: string; workflow_run?: Run; repository?: { full_name?: string; default_branch?: string } };
 type Pull = { number: number; user?: { login?: string }; head?: { sha?: string } };
 type Comment = { user?: { login?: string }; body?: string };
@@ -41,13 +29,6 @@ type Comment = { user?: { login?: string }; body?: string };
 const ATTEMPT = "`harness-ci-attempt`";
 const LIMIT = "`harness-ci-limit`";
 const ATTEMPTS = 3;
-const OUTCOMES = ["fixed", "blocked", "flaky"];
-const SCHEMA = JSON.stringify({
-	type: "object",
-	required: ["outcome", "summary"],
-	additionalProperties: false,
-	properties: { outcome: { enum: OUTCOMES }, summary: { type: "string" } },
-});
 
 /** The file `pass.sh` locks for the repository, keyed as it keys it, so a pass and a flow never share a clone. */
 export const lockOf = (owner: string, repo: string) =>
@@ -252,39 +233,6 @@ async function fresh(clone: string, app: App, run: Run, said: string, ask: (log:
 	rmSync(log, { force: true });
 	if (!outcome) return ["failed", `${said}; the session gave no answer that matches the schema`];
 	return ["handled", `${said}; the session answered ${outcome}`];
-}
-
-/** The event's attempt's log file, never the run's latest: a re-run started since would hand over another attempt's logs. */
-const logOf = (run: Run) => join(process.env.HARNESS_CI_LOGS || "/home/agent/ci-logs", `${run.id}-${run.run_attempt}.log`);
-
-/** Writes the event's attempt's failed logs to `log` with the runner's `gh`; false when `gh` fails. */
-function logged(app: App, run: Run, log: string) {
-	const repo = `${app.owner}/${app.repo}`;
-	const view = Bun.spawnSync(["gh", "run", "view", String(run.id), "-R", repo, "--attempt", String(run.run_attempt), "--log-failed"], {
-		env: process.env,
-	});
-	if (view.exitCode !== 0) return false;
-	mkdirSync(dirname(log), { recursive: true });
-	// Readable by the session user's group, which the host gives the directory.
-	writeFileSync(log, view.stdout, { mode: 0o640 });
-	return true;
-}
-
-/** Runs a session in the clone and reads its outcome, or undefined for no answer that matches the schema. */
-async function answered(clone: string, prompt: string, as: Record<string, string>, extra: string[]) {
-	// `session()` starts `claude` where the runner is. Moved only now, not spawned in the clone, so
-	// `bun` itself never read a `bunfig.toml` a session can write; on the host the launcher enters it.
-	if (!under(clone).length) process.chdir(clone);
-	try {
-		// `session()` asks for JSON output itself; the structured answer is in the whole object it printed.
-		const flags = [...extra, "--json-schema", SCHEMA];
-		const ended = await session(prompt, HOUR, process.kill, true, as, flags, under(clone));
-		const answer = JSON.parse(ended.printed).structured_output as { outcome?: unknown; summary?: unknown } | undefined;
-		return !ended.late && typeof answer?.summary === "string" ? OUTCOMES.find((o) => o === answer?.outcome) : undefined;
-	} catch {
-		// A session that cannot start reads as no answer, so the clone is still put back.
-		return undefined;
-	}
 }
 
 // Run by `flow()` under the lock; the verdict is its last line.

@@ -3,7 +3,7 @@ import { realpathSync } from "node:fs";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { advance, change, clone, lowered, records, run, TICKED } from "./board-loop.fixture.ts";
 
-/** The install and the pick; who may start the runner and the clone sit in `board-loop-clone.test.ts`. [n]: `/zombies` ideas. */
+/** The install and the pick; who may start the runner sits in `board-loop-start.test.ts`, and the clone in it and `board-loop-clone.test.ts`. [n]: `/zombies` ideas. */
 
 afterAll(cleanup);
 

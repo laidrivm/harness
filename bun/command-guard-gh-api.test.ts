@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { REVIEWED, state } from "./coderabbit-run.ts";
 import { cleanup, event, fabricate, run } from "./command-guard.fixture.ts";
 
 /**
@@ -135,18 +136,13 @@ describe("gh api graphql", () => {
 const flat = (text: string) => text.replace(/\s+/g, " ");
 
 describe("the skill's rule for a reviewed head", () => {
-	// shortcut: pinned to the requirement's words while `bun/coderabbit-run.ts` is not on main; whichever of this change and finish-review-arrives (#361) applies second switches it to `REVIEWED.conclusion` and `REVIEWED.skippedTitle`.
 	// spec: agent-autonomy/the-head-counted-by-its-check-run-alone
-	test("step 1 counts a run by the conclusion and title finish-review-arrives' requirement names", () => {
+	test("step 1 counts a run by the conclusion and title bun/coderabbit-run.ts holds", () => {
 		const step = flat(readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8").split("### 1. Fetch")[1]?.split("### 2.")[0] ?? "");
-		expect(step).toContain("concluded `success` with a title not opening `Review skipped`");
-		// A queued run is not `in_progress` either: the requirement's "while one is not completed" holds both.
+		expect(step).toContain(`concluded \`${REVIEWED.conclusion}\` with a title not opening \`${REVIEWED.skippedTitle}\``);
+		// A queued run is not `in_progress` either, and the module reads a success beside one as no review yet.
 		expect(step).toContain("every one of them `completed`");
-		const where = ["openspec/specs/work-finish/spec.md", "openspec/changes/finish-review-arrives/specs/work-finish/spec.md"]
-			.map((path) => `${import.meta.dir}/../${path}`)
-			.find((path) => existsSync(path) && readFileSync(path, "utf8").includes("CodeRabbit's state of a commit is read from its check runs"));
-		const requirement = flat(readFileSync(where ?? "", "utf8").split("### Requirement: CodeRabbit's state of a commit is read from its check runs")[1]?.split("####")[0] ?? "");
-		expect(requirement).toContain("succeeded with a title not opening `Review skipped`");
-		expect(requirement).toContain("`reviewing` while one is not completed");
+		const checkRun = (status: string, conclusion: string | null, title: string) => ({ name: "CodeRabbit", app: { slug: "coderabbitai" }, status, conclusion, output: { title } });
+		expect(state([checkRun("completed", REVIEWED.conclusion, "Finished"), checkRun("queued", null, "")]).name).toBe("reviewing");
 	});
 });
