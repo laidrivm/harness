@@ -4,9 +4,8 @@
 
 How the agent runs `/code-review high` over a branch before pushing, while no
 pull request is open on it — how many passes it gets, what it fixes without
-asking, what it may not dismiss without asking, when it stops, where a skipped
-finding's justification goes, and which guidelines CodeRabbit's CLI reads when
-a session runs `/coderabbit-local` by hand. It also pins the PR bot's config:
+asking, what it may not dismiss without asking, when it stops, and where a
+skipped finding's justification goes. It also pins the PR bot's config:
 the docs it reads, its approval as the pull request's one approval, and its
 never pausing. It exists because the bot's PR
 review arrives after the branch is shared, so every defect it would catch lands
@@ -28,13 +27,23 @@ documentation branch, as `pre-pr-runner` (*The runner names the steps the
 branch requires from its diff*) classifies one, SHALL get one review pass
 rather than the full loop. The review SHALL read the branch's diff against
 the base the runner measured from, in the tree the branch is checked out in;
-a review with findings none of which names a file that diff changes read
-another diff, and SHALL count as a review that does not return. A finding
+a review with findings none of which names a file that diff changes did not
+review that diff, and SHALL count, on any pass, as a review that does not
+return, whose findings the agent reports and neither fixes, dismisses nor
+counts toward the gate line. A finding
 that names an unchanged file beside findings on changed ones — a caller the
 change breaks — SHALL be kept and verified like any other. Since `/code-review` names no
 severity, the agent SHALL grade each of its findings 🔵 Trivial, 🟡 Minor,
 🟠 Major or 🔴 Critical while verifying it, dispose of it on that grade, and
-name the grade beside the finding in its report.
+name the grade beside the finding in its report. Since `/code-review` prints
+no gate line either, the agent SHALL end the loop on a `CODE-REVIEW gate:`
+line it writes itself, reading `PASS`, `OPEN` or `BLOCKED` as *Dismissing a
+Major or above is the user's call* sets, whenever a pass of the loop returned
+a review. Where findings in more than one of those states remain, `BLOCKED`
+SHALL win over `OPEN` and `OPEN` over `PASS`, and the line SHALL name every
+finding behind it. It SHALL write none only when no pass returned one. A pass that does
+not return after one that did ends the loop, and the line reads on what the
+passes that returned left.
 
 #### Scenario: A code branch reaches the end of the sequence
 
@@ -69,9 +78,23 @@ name the grade beside the finding in its report.
 
 - **WHEN** `/code-review` ends without a review — a usage limit, an error,
   a refused call — or it reports findings and none names a file the
-  branch's diff changes
-- **THEN** the agent reports why
+  branch's diff changes, on the loop's first pass
+- **THEN** the agent reports why and writes no `CODE-REVIEW gate:` line
 - **AND** pushes without the gate rather than blocking the branch
+
+#### Scenario: The session writes the gate line
+
+- **WHEN** a pass of the loop returned a review over the branch's diff, and
+  the loop ends
+- **THEN** the agent ends it on a `CODE-REVIEW gate: PASS`, `OPEN` or
+  `BLOCKED` line it writes itself, since the built-in skill prints none
+
+#### Scenario: A later pass does not return
+
+- **WHEN** the first pass proposed dismissing a 🟠 Major, and the second
+  pass ends without a review
+- **THEN** the loop ends, and the gate line the agent writes reads `OPEN`
+  over that dismissal, since a pending dismissal always holds the gate
 
 #### Scenario: A finding the review gives no severity
 
@@ -99,10 +122,10 @@ label on the finding. Every applied fix MUST appear in the final report.
 
 Surviving verification is what the override is scoped by, and a 🟡 Minor or
 🔵 Trivial the agent reads and judges not worth fixing has not survived it: the
-judgement that a finding is taste, a convention the bot does not know, or
-dearer than the defect is a verification outcome, not an exemption from one.
-Such a finding is skipped with its reason under *Minor findings are reported
-once, at the end*, and that call is the agent's alone.
+judgement that a finding is taste, a convention the reviewer does not know,
+or dearer than the defect is a verification outcome, not an exemption from
+one. Such a finding is skipped with its reason under *Minor findings are
+reported once, at the end*, and that call is the agent's alone.
 
 #### Scenario: A verified Major finding
 
@@ -121,17 +144,17 @@ once, at the end*, and that call is the agent's alone.
 
 - **WHEN** verification shows the finding does not hold against the current
   code
-- **THEN** the agent states concretely what the bot missed and puts the
+- **THEN** the agent states concretely what the review missed and puts the
   dismissal to the user rather than closing it
 
 ### Requirement: Dismissing a Major or above is the user's call
 
 Rejecting a 🟠 Major or 🔴 Critical finding as wrong, or skipping it as not
-worth fixing, SHALL be put to the user with what the bot missed, and the run's
-gate line SHALL read `OPEN` until they settle it. A pending fix SHALL NOT hold
-the gate; a pending dismissal always does. The asymmetry is deliberate: a fix
-applied wrongly to an unpushed branch is reverted in one command, while a
-finding dismissed wrongly reaches the merge.
+worth fixing, SHALL be put to the user with what the review missed, and the
+run's gate line SHALL read `OPEN` until they settle it. A pending fix SHALL
+NOT hold the gate; a pending dismissal always does. The asymmetry is
+deliberate: a fix applied wrongly to an unpushed branch is reverted in one
+command, while a finding dismissed wrongly reaches the merge.
 
 🟡 Minor and 🔵 Trivial keep their existing treatment — the agent skips them on
 its own reasoning, and the report carries the reason.
@@ -145,7 +168,7 @@ something to settle, and an undecided finding gives them nothing to settle yet.
 #### Scenario: A Major the agent believes is wrong
 
 - **WHEN** verification shows a 🟠 Major does not hold, and the agent has a
-  concrete statement of what the bot missed
+  concrete statement of what the review missed
 - **THEN** the report names it as a proposed dismissal, and the gate line reads
   `OPEN` with the dismissal counted, not the fixes
 
@@ -157,7 +180,7 @@ something to settle, and an undecided finding gives them nothing to settle yet.
 #### Scenario: A skipped Minor
 
 - **WHEN** a 🟡 Minor is skipped because it is taste, or a settled convention
-  the bot does not know
+  the reviewer does not know
 - **THEN** the reason goes in the report and the user is not asked
 
 #### Scenario: The user accepts a dismissal
@@ -194,8 +217,8 @@ single list when the loop ends, each marked fixed or skipped with a reason.
 #### Scenario: A skipped Minor
 
 - **WHEN** a Minor finding is skipped
-- **THEN** the report gives the reason — taste, a settled convention the bot
-  does not know, or a fix costing more than the defect is worth
+- **THEN** the report gives the reason — taste, a settled convention the
+  reviewer does not know, or a fix costing more than the defect is worth
 
 ### Requirement: The loop terminates
 
@@ -214,27 +237,6 @@ rather than start a fourth pass.
 - **WHEN** a 🟠 Major finding is still reported after the third review
 - **THEN** the agent reports it and stops, leaving the decision to push to
   the user
-
-### Requirement: A justification survives only when it is a convention
-
-Where a skipped Minor reflects a settled convention of this project, the
-agent SHALL capture it as a rule in the rulebook's "Rules" list or in a doc
-the rulebook indexes. `core/rules.md` §*The loop* decides which of the two,
-because the repository's `.coderabbit.yaml` names both under
-`knowledge_base.code_guidelines.filePatterns`, so the next review reads
-either. A one-off SHALL NOT become a rule.
-
-#### Scenario: A convention the bot does not know
-
-- **WHEN** a Minor finding is skipped because the project has a settled
-  convention the bot keeps re-raising
-- **THEN** the convention is captured as a one-line rule meeting the
-  rulebook's rule quality bar
-
-#### Scenario: A one-off skip
-
-- **WHEN** a Minor finding is skipped for a reason specific to this branch
-- **THEN** the reason stays in the report and no rule is added
 
 ### Requirement: The review bot reads the rulebook and the docs it indexes
 
@@ -265,35 +267,6 @@ never pass.
   non-empty `filePatterns` list of non-blank strings
 - **THEN** the test fails, saying which, rather than passing over an empty
   list
-
-### Requirement: The CLI review passes the guidelines the PR bot reads
-
-The prescribed invocation of `/coderabbit-local` SHALL pass `--config` with
-`.coderabbit.yaml`, `CLAUDE.md` and every tracked file that a pattern under
-the config's `knowledge_base.code_guidelines.filePatterns` matches. It SHALL
-pass each file once and leave out any the repository lacks, so the CLI review
-reads the guidelines the PR bot reads. A pattern SHALL match as the bot
-matches it: a `*` never crosses a `/`.
-
-#### Scenario: The config names guideline files
-
-- **WHEN** the review runs in a repository whose `.coderabbit.yaml` names
-  `core/*.md`
-- **THEN** the invocation passes `.coderabbit.yaml`, `CLAUDE.md` and each
-  tracked markdown file directly under `core/`
-- **AND** it passes no file under `core/skills/`
-
-#### Scenario: A repository with no config
-
-- **WHEN** the repository has no `.coderabbit.yaml`
-- **THEN** the invocation passes `CLAUDE.md` and no guideline file, adding
-  `AGENTS.md` or `.cursorrules` once each where the repository has them
-
-#### Scenario: A file two sources name
-
-- **WHEN** a configured pattern matches `CLAUDE.md`, which the invocation
-  already names
-- **THEN** `CLAUDE.md` is passed once
 
 ### Requirement: The review bot's approval is the pull request's one approval
 
@@ -332,3 +305,28 @@ it from the config the bot parses.
   `reviews.auto_review.auto_pause_after_reviewed_commits` unset, whose
   default is five, or sets it to anything but `0`
 - **THEN** the test fails
+
+### Requirement: A skipped convention becomes a rule, a one-off does not
+
+Where a skipped Minor reflects a settled convention of this project, the
+agent SHALL capture it as a rule in the rulebook's "Rules" list or in a doc
+the rulebook indexes. `core/rules.md` §*The loop* decides which of the two,
+because the pattern the repository's `.coderabbit.yaml` names under
+`knowledge_base.code_guidelines.filePatterns`, `core/*.md`, matches
+`core/rules.md` and every doc beside it, so CodeRabbit's review on the pull
+request reads either. `/code-review` reads `CLAUDE.md` and
+`core/rules.md`, not the docs the rulebook indexes, so a rule kept in one of
+those docs is read back on the pull request rather than by the local review.
+A one-off SHALL NOT become a rule.
+
+#### Scenario: A convention the reviewer does not know
+
+- **WHEN** a Minor finding is skipped because the project has a settled
+  convention the reviewer keeps re-raising
+- **THEN** the convention is captured as a one-line rule meeting the
+  rulebook's rule quality bar
+
+#### Scenario: A one-off skip
+
+- **WHEN** a Minor finding is skipped for a reason specific to this branch
+- **THEN** the reason stays in the report and no rule is added
