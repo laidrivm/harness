@@ -5,10 +5,11 @@
 ### Requirement: Finish records its pull request on the card
 
 `finish` given `--card`, once its pull request exists, opened by that call or
-already open, SHALL read which change directories the branch adds against
-its merge base with `origin/main`, fetched first: directories under
-`openspec/changes/` other than `archive/`, and directories under
-`openspec/changes/archive/`. When it adds exactly one, `finish` SHALL write
+already open, SHALL read which change directories the branch adds files to
+against its merge base with `origin/main`, fetched first, renames read as a
+deletion and an addition: directories under `openspec/changes/` other than
+`archive/`, and directories under `openspec/changes/archive/`. When there is
+exactly one, `finish` SHALL write
 that directory's path, with a trailing slash, to the card's `Pointer` where
 the `Pointer` is empty or names the same slug's unarchived directory, and
 SHALL read it back. A card on a board other than the one the repository
@@ -16,13 +17,13 @@ names takes the cross-repository form, the repository's name, a colon and a
 space before the path, and a `Pointer` already in that form for this
 repository keeps it. It SHALL leave alone a `Pointer` that already says it,
 and, saying so, a `Pointer` in any other form: `pr:<N>`, another change,
-another repository's. A branch adding no change directory or several SHALL
-write no `Pointer` and SHALL say so.
+another repository's. A branch adding files to no change directory or to
+several SHALL write no `Pointer` and SHALL say so.
 
 `finish` SHALL then put the pull request on the card's `Ссылки` list as
-`[#N](<url>) — <kind>`, the kind `proposal` when the branch adds a file
-under `openspec/changes/` outside `archive/`, else `archive` when it adds a
-directory inside `archive/`, else `apply`, unless a block of the card
+`[#N](<url>) — <kind>`, the kind `proposal` when one of those directories is
+outside `archive/`, else `archive` when one is inside it, else `apply`,
+unless a block of the card
 already links that pull request. The item SHALL go directly under the
 items already following the `Ссылки` line, and a card with no `Ссылки` line
 SHALL get one at the end of its body. Both writes SHALL come after the push
@@ -54,15 +55,16 @@ naming the step. Without `--card`, `finish` SHALL write nothing to Notion.
 
 #### Scenario: An apply branch
 
-- **WHEN** the branch adds no change directory and the `Pointer` reads
+- **WHEN** the branch edits `openspec/changes/foo/tasks.md` and code, adds
+  no file under `openspec/changes/`, and the `Pointer` reads
   `openspec/changes/foo/`
-- **THEN** the `Pointer` stays, `finish` says the branch adds no change
-  directory, and the link's kind is `apply`
+- **THEN** the `Pointer` stays, `finish` says the branch adds files to no
+  change directory, and the link's kind is `apply`
 
 #### Scenario: A fix card
 
-- **WHEN** the card's `Pointer` reads `pr:350` and the branch adds no change
-  directory
+- **WHEN** the card's `Pointer` reads `pr:350` and the branch adds no file
+  under `openspec/changes/`
 - **THEN** the `Pointer` stays `pr:350`
 
 #### Scenario: A main that archived a change after the branch forked
@@ -75,9 +77,10 @@ naming the step. Without `--card`, `finish` SHALL write nothing to Notion.
 #### Scenario: A proposal's second half
 
 - **WHEN** a `-plan` branch adds `design.md` and `tasks.md` to
-  `openspec/changes/foo/`, which its base already holds
-- **THEN** the `Pointer` is left as it is, and the link's kind is
-  `proposal`
+  `openspec/changes/foo/`, which its base already holds, and the card's
+  `Pointer` is empty
+- **THEN** the `Pointer` reads `openspec/changes/foo/`, and the link's kind
+  is `proposal`
 
 #### Scenario: A card on another repository's board
 
@@ -89,8 +92,8 @@ naming the step. Without `--card`, `finish` SHALL write nothing to Notion.
 
 - **WHEN** the branch adds `openspec/changes/foo/` and
   `openspec/changes/bar/`
-- **THEN** the `Pointer` is left as it is, `finish` says the branch adds two
-  change directories, and the link's kind is `proposal`
+- **THEN** the `Pointer` is left as it is, `finish` says the branch adds
+  files to two change directories, and the link's kind is `proposal`
 
 #### Scenario: A write Notion refuses
 

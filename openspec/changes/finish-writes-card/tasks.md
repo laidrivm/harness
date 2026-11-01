@@ -25,11 +25,12 @@ cap.
       `discussion()` calls it, and
       `bun/notion-bot.test.ts` and `bun/notion-bot-rest.test.ts` pass
       unchanged
-- [ ] 2.2 Failing cases over the added directories, in temporary
-      repositories: one change added; one archived (removed from
-      `openspec/changes/`, added under `archive/`); none; two; a change
+- [ ] 2.2 Failing cases over the directories the branch adds files to, in
+      temporary repositories: one change added; one archived (removed from
+      `openspec/changes/`, added under `archive/`, with `diff.renames` on in
+      the repository's config); none, with `tasks.md` edited; two; a change
       archived on `main` after the fork with `main` merged into the branch;
-      a file added to a change the base already holds (no directory, kind
+      a file added to a change the base already holds (that change, kind
       `proposal`); an `origin` whose `main` cannot be fetched, which throws.
       Then write them, and the kind, in `bun/work-finish-card.ts`
 - [ ] 2.3 Failing cases over `recorded()` against the Notion stub of

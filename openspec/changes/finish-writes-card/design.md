@@ -18,7 +18,7 @@ after it is rare but occurs (an explore section appended later).
 ## Goals / Non-Goals
 
 **Goals:** `finish --card` leaves the card's `Pointer` naming the change its
-branch adds, and the pull request linked under `Ссылки`, on every call, so a
+branch adds files to, and the pull request linked under `Ссылки`, on every call, so a
 rerun after any failure finishes the job.
 
 **Non-Goals:** a fix card's `pr:<N>`; the `proposal.md` link and its move at
@@ -33,18 +33,21 @@ archive; any other card text; a board property; consumers' sessions.
    `finish: draft #N — <step> …`, exit 1, as it does for the comments read.
    Rejected: inlining in `bun/work-finish.ts`, which three changes edit at
    once; adding to `bun/notion-bot.ts`, which has 21 lines of headroom.
-2. **Added directories from trees, at the merge base.** `origin/main` is
-   fetched with `work-status.ts`'s named refspec, so a single-branch clone
-   has it; then `git merge-base origin/main HEAD`, and `git ls-tree -d
-   --name-only --full-tree` of `openspec/changes/` and
-   `openspec/changes/archive/` at both commits; added is in `HEAD` and not at
-   the base, `archive` itself excluded. A fetch or merge base that fails
-   throws its step, so the draft stays and nothing is written under a wrong
-   kind. Rejected: `git diff --diff-filter=A` for the directories, which
-   counts a file added to a change that already exists (a `-plan` branch's
-   design) as a new directory; the tip of `origin/main`, where a change
+2. **The changes the branch adds files to, at the merge base.**
+   `origin/main` is fetched with `work-status.ts`'s named refspec, so a
+   single-branch clone has it; then `git merge-base origin/main HEAD`, and
+   `git diff --name-only --diff-filter=A --no-renames <base> HEAD --
+   openspec/changes/`; each path gives its change directory,
+   `openspec/changes/<slug>/` or `openspec/changes/archive/<dir>/`. A new
+   change and a `-plan` branch's design and tasks both name the change, so
+   a card whose `Pointer` was left empty by its first half still gets it;
+   an archive names only its archived directory, since the old one's files
+   are deleted, not added. A fetch or merge base that fails throws its
+   step, so the draft stays and nothing is written under a wrong kind.
+   Rejected: directories new at `HEAD` alone (`git ls-tree`), which leave a
+   `-plan` branch naming nothing; the tip of `origin/main`, where a change
    archived on main after the fork reads as one the branch adds.
-3. **When the `Pointer` is written.** Exactly one added directory `d`. The
+3. **When the `Pointer` is written.** Exactly one such directory `d`. The
    page read's `Pointer`, with this repository's `<package name>: ` prefix
    stripped as `work-status.ts` strips it, is empty, or is
    `openspec/changes/<slug>/` where `d` is
@@ -76,10 +79,9 @@ archive; any other card text; a board property; consumers' sessions.
    no block id to anchor on; one paragraph rewritten under *Update content*,
    which drops the list form and still needs *Insert content* on a card
    with no `Ссылки`.
-5. **Kind.** `proposal` when the branch adds a file, renames off, under
-   `openspec/changes/` outside `archive/` — a new change or a `-plan`
-   branch's design and tasks; else `archive` when it adds a directory
-   inside `archive/`; else `apply` — the three the card names, a fix's pull
+5. **Kind.** From the same list: `proposal` when a directory outside
+   `archive/` is in it — a new change or a `-plan` branch's design and
+   tasks; else `archive` when one inside `archive/` is; else `apply` — the three the card names, a fix's pull
    request reading `apply`. An apply step edits `tasks.md` and adds no file
    there. The `step 2` of `core/feature-workflow.md` becomes `apply`, so
    prose and code name one convention; a step's number stays in the
