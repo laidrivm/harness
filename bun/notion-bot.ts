@@ -103,11 +103,22 @@ export function client(token: string, timeout = 30_000, version = VERSION) {
 			// The name alone: a message may quote the request.
 			throw new Transient(`${step} failed: ${(error as Error).name}`);
 		}
-		if (!response.ok) throw new (transientStatus(response.status) ? Transient : Error)(`${step} answered ${response.status}`);
-		return response.json();
+		if (!response.ok) {
+			const why = `${step} answered ${response.status}`;
+			throw transientStatus(response.status) ? new Transient(why, response.status) : new Error(why);
+		}
+		try {
+			return await response.json();
+		} catch (error) {
+			// The name alone, never the body, which is untrusted text.
+			throw new Unread(`${step} answered ${response.status} with a body that could not be read: ${(error as Error).name}`);
+		}
 	};
 }
 export type Call = ReturnType<typeof client>;
+
+/** A call Notion answered with a 2xx whose body could not be read, as JSON or at all: the call held. */
+export class Unread extends Error {}
 
 /** Sets the card's `Assign` to `user` alone. */
 export const assign = (call: Call, card: string, user: string) =>
