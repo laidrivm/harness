@@ -1,207 +1,41 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { createHmac, generateKeyPairSync, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { lockOf } from "./ci-run.ts";
+import {
+	ATTEMPT,
+	BLOCKED,
+	BOT,
+	type Comment,
+	type Host,
+	LIMIT,
+	SHA,
+	answer,
+	api,
+	bound,
+	deliver,
+	free,
+	host,
+	ignored,
+	key,
+	payload,
+	real,
+	rev,
+	start,
+	stop,
+} from "./ci-run.fixture.ts";
 import { cleanup, emptyDir, ended, git } from "./diff-budget.fixture.ts";
-import { append } from "./pr-sessions.ts";
 
 /**
  * The CI flow's decision on a pull request, run through the event handler as
- * the engine runs it, against a stand-in for GitHub's API. [n]:
- * `ci-run-agent`'s `/zombies` items.
+ * the engine runs it, against a stand-in for GitHub's API
+ * (`ci-run.fixture.ts`); the session's own cases are in
+ * `ci-run-session.test.ts`. [n]: `ci-run-agent`'s `/zombies` items.
  */
 
 afterAll(cleanup);
-
-const HANDLER = join(import.meta.dir, "on-event.ts");
-const SECRET = "s3cret-of-the-webhook";
-/** The commit `feat/x` and `spec/x` point at on the host's origin, set by `host()`. */
-let SHA = "";
-const BOT = "loop-app[bot]";
-const ATTEMPT = "`harness-ci-attempt`";
-const LIMIT = "`harness-ci-limit`";
-const BLOCKED = "the session answered blocked, nothing pushed";
-
-type Comment = { user: { login: string }; body: string };
-
-/** What the stand-in answers, and what it was asked to post. */
-let api: {
-	latest: Record<string, unknown>;
-	pulls: { number: number; user: { login: string }; head: { sha: string } }[];
-	comments: Comment[];
-	posted: string[];
-	permissions: unknown;
-	failPost: boolean;
-};
-let server: ReturnType<typeof Bun.serve>;
-let key = "";
-/** A `flock` that takes no lock and runs its command, one that reports its bound reached, and the real one alone. */
-let free = "";
-let bound = "";
-let real = "";
-/** A `claude` and a `gh` that record what they were given, in the session's `HOME`. */
-let stubs = "";
-
-beforeAll(() => {
-	server = Bun.serve({
-		port: 0,
-		async fetch(req) {
-			const { pathname, searchParams } = new URL(req.url);
-			const body = req.method === "POST" ? await req.json() : undefined;
-			if (pathname === "/app") return Response.json({ slug: "loop-app" });
-			if (pathname === `/users/${encodeURIComponent(BOT)}`) return Response.json({ id: 42 });
-			if (pathname === "/repos/o/r/installation") return Response.json({ id: 9 });
-			if (pathname === "/app/installations/9/access_tokens") {
-				api.permissions = body.permissions;
-				return Response.json({ token: "installation-token" });
-			}
-			if (pathname === "/repos/o/r/actions/runs/5") return Response.json(api.latest);
-			if (pathname === "/repos/o/r/pulls") return Response.json(api.pulls);
-			if (pathname === "/repos/o/r/issues/7/comments") {
-				if (req.method === "GET") {
-					const [page, per] = [Number(searchParams.get("page") ?? 1), Number(searchParams.get("per_page") ?? 30)];
-					return Response.json(api.comments.slice((page - 1) * per, page * per));
-				}
-				if (api.failPost) return new Response("down", { status: 500 });
-				// The next read sees it, as GitHub's does.
-				api.comments.push({ user: { login: BOT }, body: body.body });
-				api.posted.push(body.body);
-				return Response.json({});
-			}
-			return new Response("unknown", { status: 404 });
-		},
-	});
-	key = join(emptyDir("ci-run-key-"), "app.pem");
-	const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs1", format: "pem" } });
-	writeFileSync(key, privateKey, { mode: 0o600 });
-	free = emptyDir("ci-run-flock-");
-	writeFileSync(join(free, "flock"), '#!/bin/sh\nshift 5\nexec "$@"\n', { mode: 0o755 });
-	bound = emptyDir("ci-run-bound-");
-	writeFileSync(join(bound, "flock"), "#!/bin/sh\nexit 75\n", { mode: 0o755 });
-	// Only `flock` from its directory: the real `gh` or `claude` beside it must never run here.
-	real = emptyDir("ci-run-real-");
-	const flock = Bun.which("flock");
-	if (flock) symlinkSync(flock, join(real, "flock"));
-	stubs = emptyDir("ci-run-stubs-");
-	writeFileSync(
-		join(stubs, "claude"),
-		'#!/bin/sh\nprintf \'%s\\n\' "$@" > "$HOME/claude-argv"\nenv > "$HOME/claude-env"\npwd -P > "$HOME/claude-pwd"\n' +
-			'[ -f "$HOME/claude-act" ] && . "$HOME/claude-act"\ncat "$HOME/claude-out" 2>/dev/null\nexit 0\n',
-		{ mode: 0o755 },
-	);
-	writeFileSync(
-		join(stubs, "gh"),
-		'#!/bin/sh\necho "$*" >> "$HOME/gh-calls"\n[ "$1 $2" = "pr ready" ] && [ -f "$HOME/gh-refuse" ] && exit 1\n' +
-			'[ "$1 $2" = "run view" ] && echo "the failed job\'s log"\nexit 0\n',
-		{ mode: 0o755 },
-	);
-});
-afterAll(() => server.stop(true));
-
-/**
- * A host with a secret, the App's settings, a clone of o/r on `main`, and the
- * table's line for `feat/x`. GitHub's URL for o/r reaches a bare repository
- * whose `feat/x` and `spec/x` are the clone's commit, `SHA`.
- */
-function host(origin = "https://github.com/o/r.git") {
-	const root = emptyDir("ci-run-");
-	const home = join(root, "home");
-	mkdirSync(home);
-	const secrets = join(root, "secrets");
-	mkdirSync(secrets);
-	writeFileSync(join(secrets, "github_webhook_secret"), SECRET);
-	const bare = join(root, "origin.git");
-	git(root, "init", "-q", "--bare", bare);
-	const clone = join(root, "clone");
-	mkdirSync(clone);
-	git(clone, "init", "-q", "-b", "main");
-	git(clone, "config", "user.name", "t");
-	git(clone, "config", "user.email", "t@t");
-	writeFileSync(join(clone, "a.txt"), "a\n");
-	git(clone, "add", "a.txt");
-	git(clone, "commit", "-qm", "a");
-	git(clone, "remote", "add", "origin", origin);
-	git(clone, "config", `url.${bare}.insteadOf`, "https://github.com/o/r.git");
-	git(clone, "push", "-q", bare, "HEAD:refs/heads/main", "HEAD:refs/heads/feat/x", "HEAD:refs/heads/spec/x");
-	SHA = rev(clone, "HEAD");
-	const session = randomUUID();
-	for (const branch of ["feat/x", "spec/x"])
-		append({ repo: "o/r", branch, session, clone }, join(home, "orchestrator", "pr-sessions.jsonl"));
-	writeFileSync(join(home, "claude-out"), answer("blocked"));
-	api = {
-		latest: { run_attempt: 1, conclusion: "failure" },
-		pulls: [{ number: 7, user: { login: BOT }, head: { sha: SHA } }],
-		comments: [],
-		posted: [],
-		permissions: undefined,
-		failPost: false,
-	};
-	return { root, home, secrets, clone, bare, session, logs: join(root, "ci-logs") };
-}
-
-/** `git rev-parse`'s answer in `dir`, or "" when it fails. */
-const rev = (dir: string, ...args: string[]) =>
-	Bun.spawnSync(["git", "-C", dir, "rev-parse", ...args]).stdout.toString().trim();
-
-/** What `claude --output-format json` prints for a structured answer. */
-const answer = (outcome: string) =>
-	JSON.stringify({ type: "result", structured_output: { outcome, summary: "what the session did" } });
-
-type Host = ReturnType<typeof host>;
-
-/** A `workflow_run` delivery: a failed run of o/r on `feat/x`, with `run` merged over it. */
-const payload = (run: Record<string, unknown> = {}, top: Record<string, unknown> = {}) =>
-	JSON.stringify({
-		action: "completed",
-		repository: { full_name: "o/r", default_branch: "main" },
-		workflow_run: {
-			id: 5,
-			conclusion: "failure",
-			run_attempt: 1,
-			head_sha: SHA,
-			head_branch: "feat/x",
-			event: "pull_request",
-			html_url: "https://github.com/o/r/actions/runs/5",
-			head_repository: { full_name: "o/r" },
-			...run,
-		},
-		...top,
-	});
-
-/** Runs the handler on `body` with the App's settings, `flock` from `tools` first on PATH, then the stubs. */
-async function deliver(h: Host, body: string, opts: { delivery?: string; env?: Record<string, string>; tools?: string } = {}) {
-	const delivery = opts.delivery ?? randomUUID();
-	const signature = `sha256=${createHmac("sha256", SECRET).update(body).digest("hex")}`;
-	const p = Bun.spawn(["bun", HANDLER, `workflow_run ${delivery} ${signature}`], {
-		stdin: new Blob([body]),
-		stdout: "pipe",
-		stderr: "pipe",
-		env: {
-			PATH: `${opts.tools ?? free}:${stubs}:${process.env.PATH}`,
-			HOME: h.home,
-			PASS_SECRETS: h.secrets,
-			HARNESS_CI_LOGS: h.logs,
-			GITHUB_API_URL: server.url.origin,
-			HARNESS_GITHUB_APP_ID: "1",
-			HARNESS_GITHUB_APP_KEY: key,
-			...opts.env,
-		},
-	});
-	const [out, code] = await Promise.all([new Response(p.stdout).text(), p.exited]);
-	const marker = join(h.home, "orchestrator", "deliveries", delivery);
-	let held: string | undefined;
-	try {
-		held = readFileSync(marker, "utf8");
-	} catch {}
-	return { line: out.trim(), code, delivery, held };
-}
-
-const ignored = (r: { line: string; code: number }, reason: RegExp) => {
-	expect(r.line).toMatch(/^event: ignored — /);
-	expect(r.line).toMatch(reason);
-	expect(r.code).toBe(0);
-};
+beforeAll(start);
+afterAll(stop);
 
 describe("the filter, from the payload alone", () => {
 	// spec: orchestrator/a-run-that-did-not-fail
@@ -439,155 +273,6 @@ describe("the repository's lock", () => {
 		]);
 		expect([a.line, b.line].filter((l) => l.startsWith("event: handled"))).toHaveLength(1);
 		expect(api.posted).toHaveLength(1);
-	});
-});
-
-describe("the session after the comment", () => {
-	/** What the stub session does in the clone, as shell, before it prints its answer. */
-	const act = (h: Host, script: string, outcome?: string) => {
-		writeFileSync(join(h.home, "claude-act"), script);
-		if (outcome) writeFileSync(join(h.home, "claude-out"), answer(outcome));
-	};
-	const commit = "echo b > b.txt && git add b.txt && git commit -qm b\n";
-	const on = (h: Host) => rev(h.clone, "--abbrev-ref", "HEAD");
-	const pushed = (h: Host) => rev(h.bare, "refs/heads/feat/x");
-	const log = (h: Host) => join(h.logs, "5-1.log");
-	const seen = (h: Host, file: string) => readFileSync(join(h.home, file), "utf8");
-
-	// spec: orchestrator/a-failed-run-on-a-steps-pull-request
-	test("resumes the table's session in the clone, the event's attempt's logs in the file its prompt names [30, 41]", async () => {
-		const h = host();
-		act(h, `cp "${log(h)}" "$HOME/seen-log"\ngit rev-parse HEAD > "$HOME/seen-head"\n`);
-		const r = await deliver(h, payload());
-		expect([r.code, r.line]).toEqual([0, `event: handled — attempt 1/3 posted on #7; ${BLOCKED}`]);
-		const argv = seen(h, "claude-argv");
-		for (const flag of ["-r", h.session, "--json-schema", "--output-format", "json", "--permission-mode", "auto", "--permission-prompts", "none"])
-			expect(argv.split("\n")).toContain(flag);
-		expect(argv).toContain(log(h));
-		expect(argv).toContain("1/3");
-		expect(seen(h, "claude-pwd").trim()).toBe(realpathSync(h.clone));
-		expect([seen(h, "seen-log"), seen(h, "seen-head").trim()]).toEqual(["the failed job's log\n", SHA]);
-	});
-
-	// spec: orchestrator/a-fix
-	test("fixed with a new commit on the branch: pushed as the App, not forced; the clone back and the log gone [52]", async () => {
-		const h = host();
-		act(h, commit, "fixed");
-		const r = await deliver(h, payload());
-		expect(r.code).toBe(0);
-		expect(r.line).toMatch(/^event: handled — attempt 1\/3 posted on #7; pushed feat\/x at [0-9a-f]{40}$/);
-		expect(rev(h.bare, "refs/heads/feat/x^")).toBe(SHA);
-		expect([on(h), existsSync(log(h))]).toEqual(["main", false]);
-	});
-
-	// spec: orchestrator/a-rewritten-branch
-	test.each([
-		["no new commit [46]", "", /no commit after/],
-		["an amended head [47]", "git commit --amend -qm b\n", /no longer holds/],
-		["another branch [48]", `git switch -qc other && ${commit}`, /on other, not feat\/x/],
-	])("fixed with %s pushes nothing, exits 1 naming which, and cleans up [52]", async (_, script, reason) => {
-		const h = host();
-		act(h, script, "fixed");
-		const r = await deliver(h, payload());
-		expect(r.code).toBe(1);
-		expect(r.line).toMatch(reason);
-		expect([pushed(h), on(h), existsSync(log(h))]).toEqual([SHA, "main", false]);
-	});
-
-	test("a refused push is neither forced nor retried, exit 1 [49]", async () => {
-		const h = host();
-		writeFileSync(join(h.bare, "hooks", "pre-receive"), `#!/bin/sh\necho x >> "${h.root}/receives"\nexit 1\n`, { mode: 0o755 });
-		act(h, commit, "fixed");
-		const r = await deliver(h, payload());
-		expect([r.code, readFileSync(join(h.root, "receives"), "utf8")]).toEqual([1, "x\n"]);
-		expect(r.line).toMatch(/refused the push of feat\/x/);
-		expect(pushed(h)).toBe(SHA);
-	});
-
-	// spec: orchestrator/blocked-or-no-answer
-	test.each([
-		["an outcome outside the schema", answer("done")],
-		["no answer at all", ""],
-	])("%s: nothing pushed, exit 1 after the cleanup [50, 52]", async (_, out) => {
-		const h = host();
-		act(h, commit);
-		writeFileSync(join(h.home, "claude-out"), out);
-		const r = await deliver(h, payload());
-		expect(r.code).toBe(1);
-		expect(r.line).toMatch(/no answer that matches the schema/);
-		expect([pushed(h), on(h), existsSync(log(h))]).toEqual([SHA, "main", false]);
-	});
-
-	// spec: orchestrator/a-session-that-left-changes-uncommitted
-	test.each([
-		["a tracked change", "fixed", `${commit}echo c >> a.txt\n`],
-		["an untracked file", "blocked", "echo c > c.txt\n"],
-	])("%s left behind (%s): nothing pushed, the clone left as it is, the log kept, exit 1 naming it [66]", async (_, outcome, script) => {
-		const h = host();
-		act(h, script, outcome);
-		const r = await deliver(h, payload());
-		expect(r.code).toBe(1);
-		expect(r.line).toContain(h.clone);
-		expect([pushed(h), on(h), existsSync(log(h))]).toEqual([SHA, "feat/x", true]);
-	});
-
-	// spec: orchestrator/the-fourth-failure
-	test("past the limit the session gets the limit prompt, and a fixed answer pushes nothing [32]", async () => {
-		const h = host();
-		api.comments = [1, 2, 3].map((n) => ({ user: { login: BOT }, body: `${ATTEMPT} ${n}/3 — run at ${String(n).repeat(40)}` }));
-		act(h, commit, "fixed");
-		const r = await deliver(h, payload());
-		expect(r.line).toBe("event: handled — #7 used its 3 attempts: limit posted; the session answered fixed, nothing pushed");
-		expect(seen(h, "claude-argv")).toContain("three");
-		expect(pushed(h)).toBe(SHA);
-	});
-
-	// spec: orchestrator/no-token-in-the-session
-	test("the session's environment holds no token, App setting or webhook secret [53]", async () => {
-		const h = host();
-		await deliver(h, payload());
-		const env = seen(h, "claude-env");
-		for (const name of ["GH_TOKEN", "GIT_CONFIG_COUNT", "HARNESS_GITHUB_APP_ID", "HARNESS_GITHUB_APP_KEY", "PASS_SECRETS"])
-			expect(env).not.toContain(`${name}=`);
-		expect(env).not.toContain(SECRET);
-		expect(env).not.toContain("installation-token");
-		// Its commits are the App's bot's, as a stage session's are.
-		expect(env).toContain(`GIT_AUTHOR_NAME=${BOT}`);
-	});
-
-	test("gh only reads the event's attempt's failed logs: no rerun, cancel or delete [54]", async () => {
-		const h = host();
-		act(h, commit, "fixed");
-		await deliver(h, payload());
-		// Beside the draft toggle, which the next cases pin.
-		expect(seen(h, "gh-calls").replace(/^pr ready .*\n/gm, "")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
-	});
-
-	const [UNDO, RUN, READY] = ["pr ready 7 -R o/r --undo", "run view 5 -R o/r --attempt 1 --log-failed", "pr ready 7 -R o/r"];
-	// spec: orchestrator/the-ci-flow-works-on-a-draft
-	test.each([
-		["fixed and pushed: ready right after the push", commit, "fixed", [UNDO, RUN, "pushed", READY]],
-		["fixed with no new commit: ready, as no push will come", "", "fixed", [UNDO, RUN, READY]],
-		["flaky: ready, as no push will come", "", "flaky", [UNDO, RUN, READY]],
-		["blocked, a question on the card: left draft", "", "blocked", [UNDO, RUN]],
-	])("%s; draft before the session", async (_, script, outcome, calls) => {
-		const h = host();
-		writeFileSync(join(h.bare, "hooks", "post-receive"), `#!/bin/sh\necho pushed >> "${h.home}/gh-calls"\n`, { mode: 0o755 });
-		act(h, `cp "$HOME/gh-calls" "$HOME/gh-at-session"\n${script}`, outcome);
-		await deliver(h, payload());
-		expect(seen(h, "gh-at-session")).toBe(`${UNDO}\n${RUN}\n`);
-		expect(seen(h, "gh-calls").trim().split("\n")).toEqual(calls);
-	});
-
-	// spec: orchestrator/a-ready-github-refuses
-	test("a pull request gh cannot mark ready after the push: exit 1 naming it, the push kept", async () => {
-		const h = host();
-		writeFileSync(join(h.home, "gh-refuse"), "");
-		act(h, commit, "fixed");
-		const r = await deliver(h, payload());
-		expect(r.code).toBe(1);
-		expect(r.line).toMatch(/; pushed feat\/x at [0-9a-f]{40}; #7 could not be marked ready$/);
-		expect(rev(h.bare, "refs/heads/feat/x^")).toBe(SHA);
 	});
 });
 
