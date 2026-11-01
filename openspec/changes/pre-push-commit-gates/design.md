@@ -100,9 +100,10 @@ A module runs when its tracked source differs from the copy its stored file
 holds (`files[path].source`), incrementally, or whole when it has no stored
 file. That is what the branch changed, read without a base, so no rename,
 merge or skipped hook leaves a stale file counted. It runs with `--force`
-when its tests and the fixtures they import (one level of `import`, so
-`bun/command-guard.fixture.ts` reaches `bun/command-parse`) hash differently
-(`git ls-files -s`) from the fingerprint its stored file records: the
+when its tests, the fixtures they import (one level of `import`, so
+`bun/command-guard.fixture.ts` reaches `bun/command-parse`), `bunfig.toml`
+and its preload hash differently (`HEAD`'s blob ids, the step refusing while
+any of them is dirty) from the fingerprint its stored file records: the
 command runner reports no tests, so Stryker cannot see a test change (the
 probe confirms this, and `--force` goes if it is wrong); a test change that
 leaves every result as it was still rewrites the fingerprint. A change to a
@@ -111,7 +112,8 @@ module; `--all --force` by hand refreshes everything. Deriving importers was
 the alternative, rejected as machinery for a rare case.
 
 The stored file keeps only what the incremental run reads — the schema
-version and, per mutant, its id, mutator, location, replacement and status —
+version, each file's `source`, and per mutant its id, mutator, location,
+replacement and status —
 plus the fingerprint: `projectRoot`, `system`, `performance`, `config` and
 any test output a mutant carries (`statusReason`) depend on the machine, so
 a re-run anywhere writes the same bytes for the same results and no home
@@ -128,7 +130,8 @@ them: the user's decision 2 judges a module by `bun/x*.test.ts` alone.
 
 After the runs the step fails on a stored file whose module is untracked or
 has no test file, on a module with a test file and no stored file, and on a
-stored file differing from `HEAD`'s, then merges every `mutation/*.json` into
+stored file differing from `HEAD`'s, one with no `files` object, or two naming
+one source path, then merges every `mutation/*.json` into
 `reports/mutation/mutation.json`, deleting the old report first as
 `mutation-floor` requires, and `bun/mutation-floor.ts` checks the total
 against `harness.mutationFloor`. Stored files rather than a cache outside
