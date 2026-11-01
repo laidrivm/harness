@@ -154,7 +154,7 @@ Run `/mcp` and confirm the server lists `notion-get-comments`,
 tools otherwise, such as the open-source `@notionhq/notion-mcp-server`, lets a
 card write walk past the guards: do not run the loop on it. `/exit`.
 
-A host that ran the CodeRabbit CLI's `auth login` before the image dropped the CLI revokes that login in CodeRabbit and deletes the CLI's config, `~/.coderabbit` in `agent`'s home, as `/home/agent/.coderabbit`.
+A host that ran the CodeRabbit CLI's `auth login` before the image dropped the CLI revokes that login in CodeRabbit and deletes the CLI's config in `agent`'s home with `docker compose exec -u agent runner rm -rf /home/agent/.coderabbit`.
 
 The hosted Notion server above is signed in as the user, so a session must
 never comment through it: the runner posts every question itself, from the
