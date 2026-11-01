@@ -27,16 +27,16 @@ export type Asked = { card: string; text: string };
  */
 export function asked(said: string): Asked | string | undefined {
 	const lines = said.split("\n");
-	const at = lines.flatMap((line, i) => (line.startsWith("QUESTION:") ? [i] : []));
-	if (!at.length) return undefined;
-	if (at.length > 1) return "the final message holds more than one QUESTION: line";
+	const [at, ...more] = lines.flatMap((line, i) => (line.startsWith("QUESTION:") ? [{ i, line }] : []));
+	if (!at) return undefined;
+	if (more.length) return "the final message holds more than one QUESTION: line";
 	const body = lines.findIndex((line) => line.startsWith("PR-BODY:"));
-	if (body !== -1 && body < at[0]) return "the QUESTION: line comes after PR-BODY:";
+	if (body !== -1 && body < at.i) return "the QUESTION: line comes after PR-BODY:";
 	const title = lines.findIndex((line) => line.startsWith("PR-TITLE:"));
-	if (title !== -1 && title < at[0]) return "the QUESTION: line comes after PR-TITLE:";
-	const card = lines[at[0]].slice("QUESTION:".length).trim();
+	if (title !== -1 && title < at.i) return "the QUESTION: line comes after PR-TITLE:";
+	const card = at.line.slice("QUESTION:".length).trim();
 	if (!ID.test(card)) return "the QUESTION: line names no card id";
-	const below = lines.slice(at[0] + 1);
+	const below = lines.slice(at.i + 1);
 	const end = below.findIndex((line) => line.startsWith("PR-TITLE:"));
 	const text = (end === -1 ? below : below.slice(0, end)).join("\n").trim();
 	return failed(text) ?? { card, text };
@@ -51,6 +51,13 @@ export function failed(text: string): string | undefined {
 type Run = { plain_text?: unknown; annotations?: { code?: unknown } };
 /** A comment as the API returns it: untrusted, so every field is checked where it is read. */
 export type Comment = { id?: unknown; created_by?: { id?: unknown }; created_time?: unknown; rich_text?: Run[] };
+
+type Property = { rich_text?: unknown; title?: unknown; select?: { name?: unknown }; people?: unknown } | undefined;
+/** A card page, a page of a list and a board's data source as the API returns them: untrusted, each field checked where read. */
+export type Page = { id?: unknown; parent?: Parent; properties?: Record<string, Property> };
+type Parent = { type?: unknown; data_source_id?: unknown };
+export type Listed = { results?: unknown; has_more?: unknown; next_cursor?: unknown } | null;
+export type Board = { title?: unknown } | null;
 
 export const plain = (runs: unknown) =>
 	Array.isArray(runs)
@@ -102,7 +109,8 @@ export function waits(comments: Comment[], user: string, self?: string, mark = "
  */
 export function client(token: string, timeout = 30_000, version = VERSION) {
 	const base = process.env.HARNESS_NOTION_API_URL || "https://api.notion.com";
-	return async (step: string, path: string, method = "GET", body?: unknown) => {
+	// `T` names the fields a caller reads, each typed `unknown` or optional, since Notion's body is untrusted JSON.
+	return async <T = unknown>(step: string, path: string, method = "GET", body?: unknown): Promise<T> => {
 		// Parsed outside the catch: a malformed HARNESS_NOTION_API_URL is a plain Error, so a rejected fetch is only the network.
 		const url = new URL(`${base}${path}`);
 		let response: Response;
@@ -122,7 +130,7 @@ export function client(token: string, timeout = 30_000, version = VERSION) {
 			throw transientStatus(response.status) ? new Transient(why, response.status) : new Error(why);
 		}
 		try {
-			return await response.json();
+			return (await response.json()) as T;
 		} catch (error) {
 			// The name alone, never the body, which is untrusted text.
 			throw new Unread(
@@ -138,11 +146,13 @@ export class Unread extends Error {}
 
 /** Sets the card's `Assign` to `user` alone. */
 export const assign = (call: Call, card: string, user: string) =>
-	call("the Assign write", `/v1/pages/${card}`, "PATCH", { properties: { Assign: { people: [{ id: user }] } } });
+	call<Page | null>("the Assign write", `/v1/pages/${card}`, "PATCH", {
+		properties: { Assign: { people: [{ id: user }] } },
+	});
 
 /** The integration's own id, read with `token`; throws naming the step, as `client` does. */
 export async function own(token: string, timeout = 30_000): Promise<string> {
-	const me = await client(token, timeout)("the integration's id read", "/v1/users/me");
+	const me = await client(token, timeout)<{ id?: unknown } | null>("the integration's id read", "/v1/users/me");
 	if (typeof me?.id !== "string" || !ID.test(me.id)) throw new Error("the integration's id read gave no Notion id");
 	return me.id;
 }
@@ -163,16 +173,16 @@ export async function paged<T = unknown>(call: Call, step: string, path: string)
 	let cursor: string | undefined;
 	do {
 		const at = cursor ? `${path.includes("?") ? "&" : "?"}start_cursor=${encodeURIComponent(cursor)}` : "";
-		const listed = await call(step, `${path}${at}`);
+		const listed = await call<Listed>(step, `${path}${at}`);
 		results.push(...(Array.isArray(listed?.results) ? listed.results : []));
-		// More pages behind no cursor would end the read short; behind one already read, never end it.
-		if (
-			listed?.has_more &&
-			(typeof listed.next_cursor !== "string" || !listed.next_cursor || read.has(listed.next_cursor))
-		)
-			throw new Error(`${step} gave no new cursor`);
-		cursor = listed?.has_more ? listed.next_cursor : undefined;
-		if (cursor) read.add(cursor);
+		cursor = undefined;
+		if (listed?.has_more) {
+			const next = listed.next_cursor;
+			// More pages behind no cursor would end the read short; behind one already read, never end it.
+			if (typeof next !== "string" || !next || read.has(next)) throw new Error(`${step} gave no new cursor`);
+			cursor = next;
+			read.add(next);
+		}
 	} while (cursor);
 	return results;
 }
@@ -205,11 +215,11 @@ export type Triaged = { answer?: { source: string; quote: string; text: string }
 
 /** REST steps 1 and 2: why `card` is not the carried change's card on `board`, or `undefined`. */
 export async function carded(call: Call, card: string, board: string, slug: string): Promise<string | undefined> {
-	const page = await call("the page read", `/v1/pages/${card}`);
+	const page = await call<Page | null>("the page read", `/v1/pages/${card}`);
 	if (page?.parent?.type !== "data_source_id") return `${card} is not a card on a board`;
 	if (plain(page.properties?.Pointer?.rich_text) !== `openspec/changes/${slug}/`)
 		return `${card} is not the card of ${slug}`;
-	const source = await call("the board read", `/v1/data_sources/${page.parent.data_source_id}`);
+	const source = await call<Board>("the board read", `/v1/data_sources/${page.parent.data_source_id}`);
 	if (plain(source?.title) !== board) return `${card} is not on the board ${board}`;
 }
 

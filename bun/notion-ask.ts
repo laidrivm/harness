@@ -49,8 +49,8 @@ export function integration(
 /** The line the command prints, and whether the post and the `Assign` write both held. */
 export async function ask(args: string[], timeout = 30_000): Promise<{ line: string; ok: boolean }> {
 	const not = (why: string) => ({ line: `question: not posted — ${why}`, ok: false });
-	if (args.length !== 2) return not("usage: notion-ask.ts <card id> <file>");
-	const [card, file] = args;
+	const [card, file, ...extra] = args;
+	if (card === undefined || file === undefined || extra.length) return not("usage: notion-ask.ts <card id> <file>");
 	const found = integration(timeout);
 	if (typeof found === "string") return not(found);
 	if (!ID.test(card)) return not(`${card} is not a card id`);

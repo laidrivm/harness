@@ -123,8 +123,10 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		const said = create.stderr.toString().trim().split("\n")[0];
 		if (create.exitCode !== 0) return failed(`gh pr create exited ${create.exitCode}${said ? `: ${said}` : ""}`);
 		const made = readPullRequests(branch, repo)?.filter((pr) => pr.state === "OPEN");
-		if (made?.length !== 1) return failed(`the pull request opened for ${branch} could not be read back`);
-		number = made[0].number;
+		const [pull] = made ?? [];
+		if (made?.length !== 1 || pull === undefined)
+			return failed(`the pull request opened for ${branch} could not be read back`);
+		number = pull.number;
 		lines.push(`finish: opened draft #${number}`);
 	}
 
@@ -187,7 +189,7 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		const late = await question();
 		if (late) return late;
 		// After the last comments read and before the ready switch.
-		const freed = await cleared(found.call, card, found.settings.user);
+		const freed = await cleared(found.call, found.card, found.settings.user);
 		if (freed.line) lines.push(freed.line);
 		// Put back, or meant to be: something arrived during the release, or its read failed, so the draft stays.
 		if (freed.back === "unread")
@@ -201,7 +203,8 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	if (!ready(full, Number(number))) return done(`finish: draft #${number} — gh pr ready ${number} failed`, 1);
 	if (!watched) return done(`finish: ready #${number}`, 0);
 	// The last read that answered decides, so one failure at the end does not hide the skips before it.
-	let last: State = { name: "unread", why: "no read answered" };
+	// Widened by `as`: the callback below reassigns it, which narrowing from the initialiser does not see.
+	let last = { name: "unread", why: "no read answered" } as State;
 	let seen: Run[] = [];
 	const after = await reads(READS, () => {
 		const got = read(full, commit);

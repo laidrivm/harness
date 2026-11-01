@@ -12,9 +12,9 @@ export { UNASSIGN_FAILED };
 
 /** The card a pick session's final message names in its one `CARD:` line, or why it names none. Untrusted, as `PICK:` is. */
 export function pickedCard(said: string): { card: string } | string {
-	const lines = said.split("\n").filter((line) => line.startsWith("CARD:"));
-	if (lines.length !== 1) return "the pick session returned not one CARD: line";
-	const card = lines[0].slice("CARD:".length).trim();
+	const [line, ...more] = said.split("\n").filter((line) => line.startsWith("CARD:"));
+	if (line === undefined || more.length) return "the pick session returned not one CARD: line";
+	const card = line.slice("CARD:".length).trim();
 	return ID.test(card) ? { card } : "the CARD: line names no card id";
 }
 

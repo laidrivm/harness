@@ -17,7 +17,7 @@ import { ARCHIVED, boardState, ORDER } from "./board-state.ts";
 import { across } from "./config.ts";
 import { recordCheckout } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
-import { plain } from "./notion-bot.ts";
+import { type Listed, type Page, plain } from "./notion-bot.ts";
 import { cleared } from "./notion-release.ts";
 import { readPullRequest } from "./pull-requests.ts";
 import { complete, groups } from "./turn-gate.ts";
@@ -144,20 +144,22 @@ export async function status(card: string, to: string, timeout = 30_000): Promis
 	if (typeof found === "string") return refuse("unread", found);
 	let from: string;
 	try {
-		const page = await found.call("the page read", `/v1/pages/${card}`);
+		const page = await found.call<Page | null>("the page read", `/v1/pages/${card}`);
 		const board = page?.parent?.type === "data_source_id" ? page.parent.data_source_id : undefined;
 		if (typeof board !== "string") throw new Refusal("unread", `${card} is not a card on a board`);
-		from = page.properties?.Status?.select?.name;
-		if (!STATUSES.includes(from)) throw new Refusal("unread", `${card}'s Status reads no status`);
+		const name = page?.properties?.Status?.select?.name;
+		if (typeof name !== "string" || !STATUSES.includes(name))
+			throw new Refusal("unread", `${card}'s Status reads no status`);
+		from = name;
 		if (from === "discarded") throw new Refusal("user-only", `${card} is discarded, and only the user moves it out`);
 		if (MERGED.includes(to)) {
 			seen.top = git(process.cwd(), "rev-parse", "--show-toplevel");
-			const why = evidence(seen.top, plain(page.properties?.Pointer?.rich_text), to, seen);
+			const why = evidence(seen.top, plain(page?.properties?.Pointer?.rich_text), to, seen);
 			if (why) throw new Refusal("no-evidence", why);
 		} else if (!RANGE.includes(from) && RANGE.includes(to)) {
 			const limit = process.env.HARNESS_WIP_LIMIT ?? "5";
 			if (!/^\d+$/.test(limit)) throw new Refusal("wip-limit", `HARNESS_WIP_LIMIT is "${limit}", not a whole number`);
-			const listed = await found.call("the board's query", `/v1/data_sources/${board}/query`, "POST", {
+			const listed = await found.call<Listed>("the board's query", `/v1/data_sources/${board}/query`, "POST", {
 				filter: { or: RANGE.map((name) => ({ property: "Status", select: { equals: name } })) },
 				page_size: 100,
 			});
@@ -171,9 +173,9 @@ export async function status(card: string, to: string, timeout = 30_000): Promis
 	} catch (error) {
 		return refuse(error instanceof Refusal ? error.id : "unread", (error as Error).message);
 	}
-	let now: string | undefined;
+	let now: unknown;
 	try {
-		const written = await found.call("the Status write", `/v1/pages/${card}`, "PATCH", {
+		const written = await found.call<Page | null>("the Status write", `/v1/pages/${card}`, "PATCH", {
 			properties: { Status: { select: { name: to } } },
 		});
 		// Notion's answer, not `to`: the line is the read-back core/feature-workflow.md asks for.

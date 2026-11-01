@@ -34,7 +34,7 @@ export const USAGE = [
 const NUMBER = /^[1-9]\d*$/;
 
 /** The options `args` sets under `options`, or `undefined` when strict parsing refuses them. */
-function values(args: string[], options: ParseArgsConfig["options"]) {
+function values<Options extends ParseArgsConfig["options"]>(args: string[], options: Options) {
 	try {
 		return parseArgs({ args, options, strict: true, allowPositionals: false }).values;
 	} catch {
@@ -72,16 +72,20 @@ export async function work(args: string[]): Promise<{ lines: string[]; code: num
 			| Record<string, string[] | undefined>
 			| undefined;
 		const { pr = [], head = [], comment = [] } = set ?? {};
+		const [number, ...prs] = pr;
+		const [sha, ...heads] = head;
 		if (
 			set &&
-			pr.length === 1 &&
-			NUMBER.test(pr[0]) &&
-			head.length === 1 &&
-			/^[0-9a-f]{40}$/.test(head[0]) &&
+			number !== undefined &&
+			!prs.length &&
+			NUMBER.test(number) &&
+			sha !== undefined &&
+			!heads.length &&
+			/^[0-9a-f]{40}$/.test(sha) &&
 			comment.length &&
 			comment.every((id) => NUMBER.test(id))
 		)
-			return resolve(pr[0], head[0], [...new Set(comment)]);
+			return resolve(number, sha, [...new Set(comment)]);
 	}
 	return { lines: USAGE, code: 2 };
 }

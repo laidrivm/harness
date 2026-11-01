@@ -21,9 +21,9 @@ const people = (page: Paged): Person[] | undefined => {
 };
 const holds = (listed: Person[] | undefined, user: string) => listed?.some((p) => hex(p?.id) === hex(user)) ?? false;
 const write = (call: Call, card: string, kept: { id: unknown }[]) =>
-	call("the Assign write", `/v1/pages/${card}`, "PATCH", {
+	call<Paged>("the Assign write", `/v1/pages/${card}`, "PATCH", {
 		properties: { Assign: { people: kept } },
-	}) as Promise<Paged>;
+	});
 
 /**
  * Reads `card`'s `Assign` and, once `go` agrees with the list read, writes it
@@ -41,7 +41,7 @@ export async function release(
 	user: string,
 	go: (listed: Person[]) => Promise<boolean> = async () => true,
 ) {
-	const listed = people(await call("the page read", `/v1/pages/${card}`)) ?? [];
+	const listed = people(await call<Paged>("the page read", `/v1/pages/${card}`)) ?? [];
 	if (!(await go(listed))) return false;
 	// shortcut: a page read lists 25 references of a property at most, so a longer `Assign` is left whole rather than written back cut; page through `/v1/pages/<id>/properties/<property>` if a card ever needs it.
 	if (listed.length >= 25) throw new Error(`${card} lists 25 people on Assign, the most a page read returns`);

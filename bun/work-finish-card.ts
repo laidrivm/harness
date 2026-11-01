@@ -8,7 +8,7 @@
  */
 import { ARCHIVED, board } from "./board-state.ts";
 import { across, named } from "./config.ts";
-import { type Call, paged, plain } from "./notion-bot.ts";
+import { type Board, type Call, paged, plain } from "./notion-bot.ts";
 import { MAIN, output } from "./work-take.ts";
 
 const git = (top: string, step: string, ...args: string[]) => {
@@ -61,7 +61,9 @@ export function kind(paths: string[]): string {
 	return changes(paths).some((dir) => dir.startsWith("openspec/changes/archive/")) ? "archive" : "apply";
 }
 
-type Page = { parent?: { data_source_id?: unknown }; properties?: { Pointer?: { rich_text?: unknown } } } | undefined;
+type Page =
+	| { parent?: { type?: unknown; data_source_id?: unknown }; properties?: { Pointer?: { rich_text?: unknown } } }
+	| undefined;
 type Block = { id?: unknown; type?: unknown; [type: string]: unknown };
 const content = (block: Block) => block[String(block.type)] as { rich_text?: unknown; url?: unknown } | undefined;
 const runs = (block: Block) => content(block)?.rich_text;
@@ -86,9 +88,9 @@ const anchor = (block: Block) =>
 
 /** Writes the Pointer `dirs` give the card `page` read, read back, and returns the line saying so, or why nothing is written. */
 async function pointer(call: Call, card: string, top: string, dirs: string[], page: Page): Promise<string> {
-	if (dirs.length !== 1)
-		return `finish: the branch adds files to ${dirs.length ? `${dirs.length} change directories` : "no change directory"}, so the Pointer is left`;
 	const [dir] = dirs;
+	if (dir === undefined || dirs.length !== 1)
+		return `finish: the branch adds files to ${dirs.length ? `${dirs.length} change directories` : "no change directory"}, so the Pointer is left`;
 	const raw = plain(page?.properties?.Pointer?.rich_text);
 	const { prefix, path } = across(top, raw);
 	if (path === dir) return `finish: the Pointer already names ${dir}`;
@@ -97,7 +99,7 @@ async function pointer(call: Call, card: string, top: string, dirs: string[], pa
 		return `finish: the Pointer reads "${raw}", not ${dir}, so it is left`;
 	let to = `${prefix}${dir}`;
 	if (!path) {
-		const source = await call("the board read", `/v1/data_sources/${page?.parent?.data_source_id}`);
+		const source = await call<Board>("the board read", `/v1/data_sources/${page?.parent?.data_source_id}`);
 		if (plain(source?.title) !== board(top)) {
 			// A card for this repository's change on another board points across (task-board).
 			const name = named(top);
@@ -105,7 +107,7 @@ async function pointer(call: Call, card: string, top: string, dirs: string[], pa
 			to = `${name}: ${dir}`;
 		}
 	}
-	const written = await call("the Pointer write", `/v1/pages/${card}`, "PATCH", {
+	const written = await call<Page>("the Pointer write", `/v1/pages/${card}`, "PATCH", {
 		properties: { Pointer: { rich_text: [{ text: { content: to } }] } },
 	});
 	// Notion's answer, not `to`: the read-back.
@@ -131,7 +133,7 @@ export async function recorded(
 		];
 	}
 	const dirs = changes(paths);
-	const page = await call("the page read", `/v1/pages/${card}`);
+	const page = await call<Page>("the page read", `/v1/pages/${card}`);
 	if (page?.parent?.type !== "data_source_id") throw new Error(`${card} is not a card on a board`);
 	// The Pointer first: a refused append still leaves what `work.ts status` needs past proposing.
 	const lines = [await pointer(call, card, top, dirs, page)];
@@ -158,10 +160,12 @@ export async function recorded(
 		body = { children: [heading, item] };
 	} else {
 		// The run of items under the anchor, blank paragraphs inside it skipped; a later section's bullets are not it.
-		let last = at;
-		for (let i = at + 1; i < blocks.length && (blocks[i].type === LIST || blank(blocks[i])); i++)
-			if (blocks[i].type === LIST) last = i;
-		body = { after: blocks[last].id, children: [item] };
+		let last = blocks[at];
+		for (const block of blocks.slice(at + 1)) {
+			if (block.type === LIST) last = block;
+			else if (!blank(block)) break;
+		}
+		body = { after: last?.id, children: [item] };
 	}
 	await call("the link's append", `/v1/blocks/${card}/children`, "PATCH", body);
 	return [...lines, `finish: #${pull.number} linked under Ссылки as ${k}`];
