@@ -14,7 +14,8 @@ integration where one is configured (*A session asks through the ask
 integration where one is configured*), unless the board loop's runner posts
 it for the session (`board-loop`, *The runner posts a stage session's
 question from the integration*). The card's `Assign` SHALL hold the user while
-its questions wait and not hold the user at any other time. Each board SHALL
+its questions wait and not hold the user at any other time, a pause notice
+`orchestrator` posts apart. Each board SHALL
 carry a saved view named `Questions` listing its cards whose `Assign` holds
 the user.
 A question SHALL be a page-level comment opening with the question gate's
@@ -280,11 +281,12 @@ it with no integration id, and every `harness-pause` notice is followed by
 a comment of the user's without a mark, it SHALL remove the user from
 `Assign`, keeping everyone else, and read the user's absence back from
 Notion's answer. It SHALL then read the comments again and, when a question
-now waits, set the user back on `Assign`, so a question posted during the
-release keeps it. It SHALL print `assign: removed the user from <card>` when
-it removed the user and the answer held, or a line opening `assign: failed
-—` naming why, a page read listing 25 people included, and nothing
-otherwise. A failed release SHALL change nothing else the command prints or
+now waits, set the user back on `Assign` and read the user back, so a
+question posted during the release keeps it. It SHALL print `assign: removed
+the user from <card>` when it removed the user and the answer held, `assign:
+restored the user on <card>` when it set the user back and the answer held,
+or a line opening `assign: failed —` naming why, a page read listing 25
+people and a failed restore included, and nothing otherwise. A failed release SHALL change nothing else the command prints or
 decides, its exit included.
 
 #### Scenario: A move after the answer

@@ -2,8 +2,8 @@
 
 ### Requirement: Finish releases `Assign` after its comments read
 
-With `--card`, after it has read whether a question waits on the card,
-`finish` SHALL run the release that `task-board`'s *The work commands
+With `--card`, after a comments read that succeeded, `finish` SHALL run the
+release that `task-board`'s *The work commands
 release `Assign` when nothing waits* fixes, and print its line, whether it
 then marks the pull request ready or leaves the draft. With no `--card` it
 SHALL release nothing.
