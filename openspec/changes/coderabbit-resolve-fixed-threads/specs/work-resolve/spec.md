@@ -13,14 +13,16 @@ resolved, does not wait on the user for a fix already on the pull request.
 `bun bun/work.ts resolve` SHALL take `--pr <n>`, a positive integer,
 `--head <sha>`, a full 40-hex commit id, and one or more `--comment <id>`,
 each a positive integer. Any other option, a positional argument, a missing
-value, a malformed value, a repeated `--pr` or `--head`, or no `--comment` at
-all SHALL print the usage and exit 2 before any git or `gh` call. Scenarios
+value, a malformed value, a missing or repeated `--pr` or `--head`, or no
+`--comment` at all SHALL print the usage and exit 2 before any git or `gh`
+call; an id named twice counts once. Scenarios after this requirement's own
 that leave `--head` out stand for a call whose `--head` names the pull
 request's head.
 
-#### Scenario: A short head
+#### Scenario: A short or missing head
 
-- **WHEN** `resolve` runs with `--pr 7 --head 1a2b3c4 --comment 1`
+- **WHEN** `resolve` runs with `--pr 7 --head 1a2b3c4 --comment 1`, or with
+  `--pr 7 --comment 1`
 - **THEN** it prints the usage and exits 2
 
 #### Scenario: No comment named
@@ -45,9 +47,11 @@ request's head.
 
 ### Requirement: Resolve acts only on the current branch's open pull request
 
-`resolve` SHALL refuse and exit 1, resolving nothing, when `HEAD` names no
-branch, when the branch's pull requests on `origin` cannot be read, or when
-the pull request it names is not one of the branch's open ones.
+`resolve` SHALL refuse and exit 1, resolving nothing, when
+`HARNESS_GITHUB_APP_MINT` is set, which would read as the App and resolve as
+`gh`'s identity, when `HEAD` names no branch, when the branch's pull requests
+on `origin` cannot be read, or when the pull request it names is not one of
+the branch's open ones.
 
 #### Scenario: Another branch's pull request
 

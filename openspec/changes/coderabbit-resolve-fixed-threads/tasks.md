@@ -16,7 +16,7 @@ each page of the threads query, each mutation — and logs every call.
 - [ ] 1.2 Failing cases in `bun/work-resolve.test.ts` for the arguments: no
       `--comment`; `--comment 123x`, `--comment ""`, `--comment -1`; `--pr 0`,
       no `--pr`, `--pr 7 --pr 8`; no `--head`, `--head 1a2b3c4`, `--head
-      '<pushed sha>'`, two `--head`; a positional; an unknown option — each
+      PUSHED_SHA`, two `--head`; a positional; an unknown option — each
       prints the usage, exits 2 and logs no `gh` call. `--pr 7 --head <40
       hex> --comment 1 --comment 2` reaches the command with both ids. Then
       add the `resolve` branch and usage line to `bun/work.ts`, `parseArgs`
@@ -27,7 +27,8 @@ each page of the threads query, each mutation — and logs every call.
       any thread read; `--pr 8` on a branch whose open pull request is #7
       refuses naming #7; `--pr 9` on a branch open as #7 and #9 reads #9's
       threads; a failed pull-request read refuses naming `gh auth status`;
-      each refusal exits 1 with no mutation logged. Then write
+      `HARNESS_GITHUB_APP_MINT` set refuses before any `gh` call; each
+      refusal exits 1 with no mutation logged. Then write
       `bun/work-resolve.ts` reusing `originRepository()` and
       `readPullRequests()` from `bun/pull-requests.ts`
 - [ ] 1.3a Failing cases for the head, the stub answering each pull-request
@@ -83,8 +84,8 @@ each page of the threads query, each mutation — and logs every call.
       ends `PASS` only while the walkthrough reads «No actionable comments
       were generated» naming the head as its `Commit`, else the no-review
       `OPEN` line; a head that moved before a fix re-reads all three signals
-- [ ] 2.2 Step 1's filters: a comment counts only when its `user.login` is
-      exactly `coderabbitai[bot]`; the fourth call reads `fullDatabaseId`
+- [ ] 2.2 Step 1's filters: a review or comment counts only when its
+      `user.login` is exactly `coderabbitai[bot]`; the fourth call reads `fullDatabaseId`
       for `databaseId`; a resolved thread is dropped as `already
       resolved`; an outdated thread that is not resolved is verified like
       any finding. Step 2: read each finding's severity word, the two markups
@@ -92,12 +93,13 @@ each page of the threads query, each mutation — and logs every call.
       pattern; take every severity in a body, as now. Step 6's legend names
       `success` and the check run on the no-review `OPEN` line
 - [ ] 2.3 The skill's report: right above the gate line, `bun bun/work.ts
-      resolve --pr <n> --head <sha> --comment <id> …` naming the first
+      resolve --pr <n> --head <sha> --comment <id> …` (`bun
+      node_modules/harness/bun/work.ts` in a consumer) naming the first
       comment's id of each unresolved thread of the bot's whose every
       finding, its replies' included, it fixed or found fixed — never a
       reply's id, never a thread holding a skipped or rejected one; `--head`
       is the verified commit when the run applied no fix, run at once, and
-      the literal `<pushed sha>` when it applied one, filled in and run after
+      the literal `PUSHED_SHA` when it applied one, filled from `git rev-parse HEAD` and run after
       the session's own `finish` pushed; a refusal over another head runs
       `/coderabbit` again; a session whose launcher pushes names the command
       in its final message and runs nothing. The *Never post to the PR*
@@ -118,5 +120,6 @@ each page of the threads query, each mutation — and logs every call.
       `openspec/changes/archive/`, so the `agent-autonomy` requirement's
       citation of *CodeRabbit's state of a commit is read from its check
       runs* resolves in `openspec/specs/work-finish/spec.md`; if it is not,
-      wait for it. Verify with `ls openspec/changes/archive | grep
-      finish-review-arrives`
+      wait for it; and that 2.1's pin reads `REVIEWED` once #361 is on
+      `main`, switching it here if `finish-review-arrives` applied second.
+      Verify with `ls openspec/changes/archive | grep finish-review-arrives`

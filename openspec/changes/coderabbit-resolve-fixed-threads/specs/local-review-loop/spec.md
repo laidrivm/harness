@@ -5,13 +5,15 @@
 ### Requirement: The thread of a fixed finding is resolved once the fix is on the pull request
 
 The `coderabbit` skill SHALL write nothing to GitHub. A run SHALL name, as one
-`bun bun/work.ts resolve` command, the first comment's id of each unresolved
+`bun bun/work.ts resolve` command (`bun node_modules/harness/bun/work.ts` in a
+consumer), the first comment's id of each unresolved
 thread of the bot's whose every finding — the first comment's and each
 reply's carrying its own severity line — it fixed or found already fixed. The
 session SHALL run it once each fix is on the pull request's head: after its
 own `finish` pushed the run's fixes, or at once when the run applied none —
 with `--head` naming the commit that push made, which the run names as the
-placeholder `<pushed sha>`, or the one the run verified against; when
+placeholder `PUSHED_SHA` and the session fills from `git rev-parse HEAD`, or
+the full id of the one the run verified against; when
 `resolve` refuses over another head, it SHALL run `/coderabbit` again
 instead. No
 agent SHALL resolve the thread of a skipped or rejected finding, nor post
@@ -22,7 +24,7 @@ agent SHALL resolve the thread of a skipped or rejected finding, nor post
 - **WHEN** `/coderabbit` fixes the findings of inline comments 11 and 12 and
   skips the one of comment 13
 - **THEN** its report names `bun bun/work.ts resolve --pr <n> --head
-  '<pushed sha>' --comment 11 --comment 12`, and the session runs it after
+  PUSHED_SHA --comment 11 --comment 12`, and the session runs it after
   `finish` pushed the fix, the pushed commit filled in,
   leaving 13's thread open for the user
 
