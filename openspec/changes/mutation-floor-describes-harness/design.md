@@ -119,6 +119,11 @@ MODIFIED one, since `pre-push-commit-gates`
 modifies *Linter and type-checker suppressions fail CI* and two deltas of one
 requirement would collide at archive. The test file's repository fixture
 moved to `bun/no-suppressions.fixture.ts` to keep it under its 300-line cap.
+That fixture's temp-directory bookkeeping — `made`, `cleanup`, `emptyDir` —
+is a move, not a new copy; the same bookkeeping sits in 32 files under
+`bun/`, and the user chose, on the card's question 4 (2026-11-01), to lift it
+into one module under its own card, `40b39875c31b81028677e7918e463db0`, after
+the Biome reformat.
 
 ### 8. One matcher for a named field, and the rule it settled
 
