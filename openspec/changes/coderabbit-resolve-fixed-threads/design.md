@@ -147,30 +147,22 @@ the head, its id is named; otherwise it is dispositioned as usual.
 
 ### The board loop is out of scope
 
-A session whose launcher pushes runs no `finish` and holds no App token
-(`bun/github-app.ts`), so it runs no `resolve` and names the command in its
-final message, as it names the pull request's title and body. Resolving
-after the runner's push — under the App's token, decision 7 — is the runner's
-and is left to stage 2.5's probe, step 7, which checks that token can.
+A session whose launcher pushes runs no `finish` and holds no App token, so
+it only names the command in its final message. Resolving after the runner's
+push, under the App's token (decision 7), is left to stage 2.5's probe.
 
 ### Step 1 reads the head's state before the reviews, and the check run too
 
 Order: `headRefOid`, then the head's `CodeRabbit` check run and its commit
 status, then the reviews, then the other calls. A review the bot posts
 before its status or check run is then always in the read that follows them.
-That it does post first is read, not assumed: on #347's three reviewed heads
-and #353's one (31.10), each review's `submitted_at` comes 2–8 seconds before
-the check run's `completed_at` (`01:14:16`/`01:14:23`, `09:11:37`/`09:11:43`,
-`10:13:40`/`10:13:48`, `23:03:29`/`23:03:31`). Four samples are no contract,
-so a head counted by its check runs or status alone, with no review object
-on it, reaches `PASS` only on a signal that says there are no findings: the
-bot's walkthrough reading «No actionable comments were generated» while its
-`Commit` names the head, the signal `session-wrapup` already reads (on #355,
-31.10: «No actionable comments were generated in the recent review.» beside
-`Commit**: [afccbcd]`). Without
-it the run ends on the no-review `OPEN` line, and the next run reads again.
-The status is kept beside the check run: it is how the bot reported until
-27.10, and a draft's `Review skipped: draft pull request` is read there.
+On #347's three heads and #353's one (31.10) each review's `submitted_at`
+came 2–8 seconds before the check run's `completed_at`. Four samples are no
+contract, so a head with no review object reaches `PASS` only while the
+bot's walkthrough reads «No actionable comments were generated» naming the
+head as its `Commit` — the signal `session-wrapup` reads, seen on #355 —
+and otherwise ends on the no-review `OPEN` line. The status is kept: it is
+how the bot reported until 27.10.
 
 The check runs count by one rule for "reviewed", `finish-review-arrives`'s
 (*CodeRabbit's state of a commit is read from its check runs*, main
@@ -200,10 +192,9 @@ check-run read stays a third, unpinned statement of the rule, left to a card.
 
 ### Severity is a word read, not a pattern matched
 
-Step 2 says: read the severity word of each finding — after its icon, as in
-`**<picture>…</picture> Major**`, or in its category line, as in `_🟠 Major_`
-— these are examples, not a pattern, as `session-wrapup` already words it.
-The order of category and severity on the line is not relied on.
+Step 2 reads each finding's severity word, both markups given as examples,
+not a pattern, as `session-wrapup` words it; the order on the line is not
+relied on.
 
 ### The Safety rule names `resolve` (user's decision 9)
 
