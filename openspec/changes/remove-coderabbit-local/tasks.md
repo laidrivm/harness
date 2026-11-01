@@ -5,7 +5,7 @@ boards, not here: the goal check reads only this tree.
 
 ## 1. The skill and its permissions go
 
-- [ ] 1.1 In `bun/review-docs.test.ts`, delete the `CLI` constant and the
+- [x] 1.1 In `bun/review-docs.test.ts`, delete the `CLI` constant and the
       case *the /coderabbit-local bullet is in no sequence and no gate*; add
       `// spec: local-review-loop/the-session-writes-the-gate-line` above the
       case *has the session write the `CODE-REVIEW gate:` line*; and to the
@@ -20,11 +20,11 @@ boards, not here: the goal check reads only this tree.
       its pull-request behaviour*, which pins what that scenario now says.
       Verify with `bun test bun/review-docs.test.ts` that each new assertion
       fails on its own, and record it
-- [ ] 1.2 Edit `core/review-toolkit.md` with the editing tool: delete the
+- [x] 1.2 Edit `core/review-toolkit.md` with the editing tool: delete the
       `/coderabbit-local [base]` bullet, and make the `/code-review` bullet
       say the three things 1.1 pins, beside «the push goes on without the
       gate». Verify with `bun test bun/review-docs.test.ts` green
-- [ ] 1.3 `git rm -r core/skills/coderabbit-local` and `git rm
+- [x] 1.3 `git rm -r core/skills/coderabbit-local` and `git rm
       .claude/skills/coderabbit-local`; delete `README.md`'s `coderabbit-local`
       table row; delete `Skill(coderabbit-local)`, `Bash(coderabbit
       --version)`, `Bash(coderabbit doctor *)` and `Bash(coderabbit review *)`
@@ -36,7 +36,7 @@ boards, not here: the goal check reads only this tree.
 
 ## 2. No CLI in the runner image
 
-- [ ] 2.1 In `orchestrator/runner/Dockerfile`, drop `coderabbit` from the
+- [x] 2.1 In `orchestrator/runner/Dockerfile`, drop `coderabbit` from the
       header comment's tool list, the `CODERABBIT_VERSION` pin with its
       «moved by hand» note, and the `RUN` that installs the CLI; in
       `orchestrator/README.md`, drop the `coderabbit auth login` step — the
@@ -53,7 +53,7 @@ boards, not here: the goal check reads only this tree.
 
 ## 3. Verify
 
-- [ ] 3.1 Grep the tree case-insensitively for `coderabbit-local`,
+- [x] 3.1 Grep the tree case-insensitively for `coderabbit-local`,
       `coderabbit doctor`, `coderabbit review --`, `coderabbit review \*`,
       `coderabbit auth`, `CODERABBIT_VERSION` and `CodeRabbit's CLI` — not
       a bare `coderabbit review`, which matches prose about the bot's
