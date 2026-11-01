@@ -1,5 +1,5 @@
 # The runner the engine reaches over SSH: git, gh, bun, claude, openspec,
-# coderabbit, flock, jq and sshd, and the users runner, agent and the key holder
+# flock, jq and sshd, and the users runner, agent and the key holder
 # (design.md, *The pass runs in a runner container*; runner-isolation, *Three
 # users*). Built with orchestrator/ as context.
 #
@@ -19,8 +19,6 @@ ARG CLAUDE_VERSION=2.1.308
 ARG CLAUDE_SHA256=356733f185fa988e6bf3aa9a555269fdd167982a2e2a80d3c8a78037bb92ad58
 # moved by hand — nothing updates this pin
 ARG OPENSPEC_VERSION=1.14.0
-# moved by hand — nothing updates this pin
-ARG CODERABBIT_VERSION=0.9.1
 
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends ca-certificates curl git jq openssh-server sudo unzip util-linux \
@@ -33,9 +31,6 @@ RUN curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_$
 RUN curl -fsSLo /usr/local/bin/claude "https://downloads.claude.ai/claude-code-releases/${CLAUDE_VERSION}/linux-x64/claude" \
 	&& echo "${CLAUDE_SHA256}  /usr/local/bin/claude" | sha256sum -c - \
 	&& chmod 0755 /usr/local/bin/claude
-
-RUN curl -fsSL https://cli.coderabbit.ai/install.sh \
-	| CODERABBIT_VERSION="${CODERABBIT_VERSION}" CODERABBIT_INSTALL_DIR=/usr/local/bin CR_CLI_SKIP_LOGIN=1 sh
 
 # openspec's bin runs under `node`, which here is bun.
 RUN [ -e /usr/local/bin/node ] || ln -s bun /usr/local/bin/node; \
