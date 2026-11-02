@@ -1,8 +1,8 @@
 /**
  * `bun bun/work.ts take` run as a session runs it, over `work-take.fixture.ts`:
  * the usage, the card, its comments, the change it points at and the open
- * changes, and that it writes nothing. Its failures are in
- * `work-take-fail.test.ts`.
+ * changes, and that it writes nothing. Its failures: `work-take-fail.test.ts`;
+ * its last line and `--after`: `work-take-after.test.ts`.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup, git } from "./diff-budget.fixture.ts";
@@ -13,6 +13,7 @@ import {
 	body,
 	CARD,
 	checkout,
+	cid,
 	files,
 	LISTING,
 	page,
@@ -156,13 +157,13 @@ describe("the card", () => {
 });
 
 describe("the comments", () => {
-	const answer = () => said(USER, "2026-10-20T10:00:00Z", { plain_text: "Yes, ship." });
+	const answer = () => said(cid(2), USER, "2026-10-20T10:00:00Z", { plain_text: "Yes, ship." });
 
 	// spec: work-take/a-question-with-no-answer
 	test("out of order, printed oldest first with each time; an unanswered question waits", async () => {
-		const early = said(USER, "2026-10-20T08:00:00Z", { plain_text: "Early." });
-		const later = said(BOT, "2026-10-20T11:00:00Z", { plain_text: "Later." });
-		const run = await take({ stub: { comments: [[later, question("2026-10-20T09:00:00Z"), early]] } });
+		const early = said(cid(3), USER, "2026-10-20T08:00:00Z", { plain_text: "Early." });
+		const later = said(cid(4), BOT, "2026-10-20T11:00:00Z", { plain_text: "Later." });
+		const run = await take({ stub: { comments: [[later, question(cid(1), "2026-10-20T09:00:00Z"), early]] } });
 		expect(run.out).toContain(
 			[
 				"## Comments",
@@ -176,7 +177,7 @@ describe("the comments", () => {
 
 	// spec: work-take/an-answered-question
 	test("the user's answer after it: no question waits", async () => {
-		const run = await take({ stub: { comments: [[question("2026-10-20T09:00:00Z"), answer()]] } });
+		const run = await take({ stub: { comments: [[question(cid(1), "2026-10-20T09:00:00Z"), answer()]] } });
 		expect(run.out).toContain("2026-10-20T10:00:00Z user: Yes, ship.\nquestion waiting: no\n");
 	});
 
@@ -186,39 +187,64 @@ describe("the comments", () => {
 
 	// spec: work-take/comments-over-more-than-one-page
 	test("two pages joined by next_cursor print all their comments", async () => {
-		const run = await take({ stub: { comments: [[question("2026-10-20T09:00:00Z")], [answer()]] } });
+		const run = await take({ stub: { comments: [[question(cid(1), "2026-10-20T09:00:00Z")], [answer()]] } });
 		expect(run.out).toContain("harness-question Ship?\n2026-10-20T10:00:00Z user: Yes, ship.\nquestion waiting: no\n");
 		expect(run.seen.map((s) => s.call)).toContain("GET /v1/comments#1");
 	});
 });
 
 const DEMO = {
-	"openspec/changes/demo/proposal.md": "# demo proposal\n",
+	"openspec/changes/demo/proposal.md": "# demo proposal\n\nWhy.\n",
 	"openspec/changes/demo/design.md": "# demo design\n",
-	"openspec/changes/demo/tasks.md": "- [ ] 1.1 a\n",
+	"openspec/changes/demo/tasks.md": "- [ ] 1.1 a\n- [ ] 1.2 b\n",
 	"openspec/changes/demo/specs/task-board/spec.md": "## ADDED Requirements\n",
 };
+const DESIGN = "openspec/changes/demo/design.md";
+const TASKS = "openspec/changes/demo/tasks.md";
+/** What `take` prints in a checkout of `tree` for a card pointing at `openspec/changes/demo/`. */
+const changed = async (tree: Record<string, string>) =>
+	(await take({ cwd: checkout(tree), stub: { page: page("openspec/changes/demo/") } })).out;
 
 describe("the change", () => {
 	// spec: work-take/a-change-in-the-checkout
-	test("all four kinds of file, each under its path, and the capability's name", async () => {
-		const run = await take({ cwd: checkout(DEMO), stub: { page: page("openspec/changes/demo/") } });
-		for (const [path, text] of Object.entries(DEMO)) expect(run.out).toContain(`### ${path}\n${text}`);
-		expect(run.out).toContain("capabilities: task-board\n## Open changes");
+	test("all four kinds of file, each its path and line count and no line of its text, and the capability [1]", async () => {
+		const out = await changed(DEMO);
+		expect(out).toContain(
+			[
+				"## Change",
+				"openspec/changes/demo/proposal.md: 3 lines",
+				`${DESIGN}: 1 line`,
+				`${TASKS}: 2 lines`,
+				"openspec/changes/demo/specs/task-board/spec.md: 1 line",
+				"capabilities: task-board",
+				"## Open changes",
+			].join("\n"),
+		);
+		for (const text of ["demo proposal", "Why.", "demo design", "1.1 a", "ADDED Requirements"])
+			expect(out).not.toContain(text);
 	});
 
 	test("two deltas print both and name their capabilities sorted", async () => {
-		const tree = { ...DEMO, "openspec/changes/demo/specs/agent-rulebook/spec.md": "## MODIFIED Requirements\n" };
-		const run = await take({ cwd: checkout(tree), stub: { page: page("openspec/changes/demo/") } });
-		expect(run.out).toContain("### openspec/changes/demo/specs/agent-rulebook/spec.md\n## MODIFIED Requirements\n");
-		expect(run.out).toContain("capabilities: agent-rulebook, task-board\n");
+		const delta = "openspec/changes/demo/specs/agent-rulebook/spec.md";
+		const out = await changed({ ...DEMO, [delta]: "## MODIFIED\n" });
+		expect(out).toContain(`\n${delta}: 1 line\n`);
+		expect(out).toContain("capabilities: agent-rulebook, task-board\n");
 	});
 
-	test("a change with no design.md prints the rest", async () => {
-		const { "openspec/changes/demo/design.md": _, ...rest } = DEMO;
-		const run = await take({ cwd: checkout(rest), stub: { page: page("openspec/changes/demo/") } });
-		expect(run.out).not.toContain("design.md");
-		expect(run.out).toContain("### openspec/changes/demo/tasks.md\n- [ ] 1.1 a\n");
+	// spec: work-take/a-last-line-with-no-newline
+	test.each([
+		["three lines, the last with no newline [2]", TASKS, "x\ny\nz", "3 lines"],
+		["a blank last line [3]", TASKS, "a\n\n", "2 lines"],
+		["an empty file [4]", DESIGN, "", "0 lines"],
+	])("%s", async (_, path, text, count) => {
+		expect(await changed({ ...DEMO, [path]: text })).toContain(`\n${path}: ${count}\n`);
+	});
+
+	test("a change with no design.md prints the rest [5]", async () => {
+		const { [DESIGN]: _, ...rest } = DEMO;
+		const out = await changed(rest);
+		expect(out).not.toContain("design.md");
+		expect(out).toContain(`\n${TASKS}: 2 lines\n`);
 	});
 
 	// spec: work-take/a-change-the-checkout-lacks
@@ -251,9 +277,9 @@ describe("the change", () => {
 
 describe("the open changes and the writes", () => {
 	// spec: work-take/open-changes
-	test("openspec list's output ends the run unchanged", async () => {
+	test("openspec list's output unchanged, followed only by the last comment's line [6]", async () => {
 		const run = await take();
-		expect(run.out).toEndWith(`## Open changes\n${LISTING}\n`);
+		expect(run.out).toEndWith(`## Open changes\n${LISTING}\nlast comment: none\n`);
 		expect(run.ran).toBe("OPENSPEC_TELEMETRY=0 list\n");
 	});
 
@@ -262,7 +288,7 @@ describe("the open changes and the writes", () => {
 		const cwd = checkout(DEMO);
 		const run = await take({
 			cwd,
-			stub: { page: page("openspec/changes/demo/"), comments: [[question("2026-10-20T09:00:00Z")]] },
+			stub: { page: page("openspec/changes/demo/"), comments: [[question(cid(1), "2026-10-20T09:00:00Z")]] },
 		});
 		expect(run.code).toBe(0);
 		expect(run.seen.every((s) => s.call.startsWith("GET "))).toBe(true);

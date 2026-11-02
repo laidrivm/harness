@@ -27,7 +27,7 @@ import {
 	times,
 	watched,
 } from "./work-finish-review.fixture.ts";
-import { home, question, stopServers } from "./work-take.fixture.ts";
+import { cid, home, question, stopServers } from "./work-take.fixture.ts";
 
 afterAll(() => {
 	stopServers();
@@ -166,7 +166,7 @@ describe("the wait before the ready switch", () => {
 		const run = await finish({
 			cwd,
 			gh: { before: DRAFT, runs: [[], [SKIPPED]] },
-			stub: { comments: [[question("2026-10-27T00:00:00.000Z")]] },
+			stub: { comments: [[question(cid(1), "2026-10-27T00:00:00.000Z")]] },
 		});
 		expect(run.calls).toEqual([READ, "push"]);
 		expect([run.code, run.last]).toEqual([0, `finish: draft #7 — a question waits on ${CARD}`]);

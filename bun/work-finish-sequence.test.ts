@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { cleanup, git } from "./diff-budget.fixture.ts";
 import { head } from "./goal-check.fixture.ts";
 import { BRANCH, CARD, checkout, finish, pull } from "./work-finish.fixture.ts";
-import { home, question, stopServers } from "./work-take.fixture.ts";
+import { cid, home, question, stopServers } from "./work-take.fixture.ts";
 
 afterAll(() => {
 	stopServers();
@@ -116,7 +116,7 @@ describe("the sequence", () => {
 	// spec: work-finish/a-question-waits
 	test("a question waiting on the card leaves the draft, names the card and exits 0", async () => {
 		const cwd = checkout();
-		const run = await finish({ cwd, gh: DRAFT, stub: { comments: [[question("2026-10-27T00:00:00.000Z")]] } });
+		const run = await finish({ cwd, gh: DRAFT, stub: { comments: [[question(cid(1), "2026-10-27T00:00:00.000Z")]] } });
 		expect(run.calls).toEqual([READ, "push"]);
 		expect([run.code, run.last, run.remote]).toEqual([0, `finish: draft #7 — a question waits on ${CARD}`, head(cwd)]);
 	});

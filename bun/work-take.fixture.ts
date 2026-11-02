@@ -1,5 +1,5 @@
 /**
- * What `work.ts take`'s two test files share: the command run as a session
+ * What `work.ts take`'s test files share: the command run as a session
  * runs it, in a checkout of the case's own, with a config home, a Notion stub
  * reached through `HARNESS_NOTION_API_URL` and a `PATH` holding git and,
  * where the case wants one, an `openspec` stub. The stub records each call's
@@ -38,14 +38,24 @@ export const stopServers = () => {
 	servers.length = 0;
 };
 
+/** 32 hex digits in a UUID's dashed form. */
+export const dashed = (id: string) =>
+	`${id.slice(0, 8)}-${id.slice(8, 12)}-${id.slice(12, 16)}-${id.slice(16, 20)}-${id.slice(20)}`;
+/** The `n`th comment's id, distinct for each `n`: an even one in a UUID's form, as Notion gives it, an odd one as 32 hex digits. */
+export const cid = (n: number) => {
+	const id = n.toString(16).padStart(32, "c");
+	return n % 2 ? id : dashed(id);
+};
+
 type Run = { plain_text: string; annotations?: { code: boolean } };
-export const said = (author: string, time: string, ...runs: Run[]) => ({
+export const said = (id: string, author: string, time: string, ...runs: Run[]) => ({
+	id,
 	created_by: { id: author },
 	created_time: time,
 	rich_text: runs,
 });
-export const question = (time: string) =>
-	said(BOT, time, { plain_text: "harness-question", annotations: { code: true } }, { plain_text: " Ship?" });
+export const question = (id: string, time: string) =>
+	said(id, BOT, time, { plain_text: "harness-question", annotations: { code: true } }, { plain_text: " Ship?" });
 
 /** A card's page with every property set, `properties` replacing any of them; `Assign` holds no one, so the release reads no comments. */
 export const page = (pointer = "", properties: Record<string, unknown> = {}) => ({

@@ -10,7 +10,7 @@ import { cleanup } from "./diff-budget.fixture.ts";
 import { ASKED, OTHER, USER } from "./notion-bot.fixture.ts";
 import { finish, pull } from "./work-finish.fixture.ts";
 import { CARD, change, clone, PAGE, PATCH, refused, status } from "./work-status.fixture.ts";
-import { question, said, stopServers, take } from "./work-take.fixture.ts";
+import { cid, question, said, stopServers, take } from "./work-take.fixture.ts";
 
 afterAll(() => {
 	stopServers();
@@ -23,7 +23,7 @@ const REMOVED = `assign: removed the user from ${CARD}`;
 const UUID = "01234567-89ab-cdef-0123-456789abcdef";
 const ELSE = "99999999-8888-7777-6666-555555555555";
 const to = (target: string) => ["status", "--card", CARD, "--to", target];
-const later = () => [[question("2026-10-20T11:00:00Z")]];
+const later = () => [[question(cid(1), "2026-10-20T11:00:00Z")]];
 
 describe("status", () => {
 	// spec: work-status/a-move-releases task-board/a-move-after-the-answer
@@ -65,7 +65,9 @@ describe("take", () => {
 	// spec: task-board/work-resumed
 	test("an answered question: the release's line after the comments, the other person kept", async () => {
 		const stub = {
-			comments: [[question("2026-10-20T09:00:00Z"), said(USER, "2026-10-20T10:00:00Z", { plain_text: "Yes." })]],
+			comments: [
+				[question(cid(1), "2026-10-20T09:00:00Z"), said(cid(2), USER, "2026-10-20T10:00:00Z", { plain_text: "Yes." })],
+			],
 			assign: [UUID, ELSE],
 		};
 		const run = await take({ stub });
@@ -76,7 +78,7 @@ describe("take", () => {
 
 	// spec: work-take/only-reads task-board/a-question-waits
 	test("a waiting question with the user on Assign: every call a GET, no line", async () => {
-		const run = await take({ stub: { comments: [[question("2026-10-20T09:00:00Z")]], assign: [UUID] } });
+		const run = await take({ stub: { comments: [[question(cid(1), "2026-10-20T09:00:00Z")]], assign: [UUID] } });
 		expect([run.code, run.seen.every((s) => s.call.startsWith("GET ")), run.out.includes("assign:")]).toEqual([
 			0,
 			true,

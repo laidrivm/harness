@@ -1,18 +1,22 @@
 /**
- * `work.ts take --card <id>`: prints a card's context for the session that
- * takes it — the checkout's `HEAD`, the card's properties, its body as the
- * markdown Notion renders, its page-level comments and whether a question
- * waits, the change its `Pointer` names, and `openspec list` — and writes
- * nothing but the release of the card's `Assign` when nothing waits there,
- * whose line follows the comments (`cleared()`; `openspec/specs/work-take/`, and
+ * `work.ts take --card <id> [--after <comment id>]`: prints a card's context
+ * for the session that takes it — the checkout's `HEAD`, the card's
+ * properties, its body as the markdown Notion renders, its page-level comments
+ * and whether a question waits, the paths and line counts of the change its
+ * `Pointer` names, `openspec list`, and last the id of the card's newest
+ * comment. With `--after` that id, the re-read prints only `Status`, `Assign`
+ * and what came after it. It writes nothing but the release of the card's
+ * `Assign` when nothing waits there, whose line follows the comments
+ * (`cleared()`; `openspec/specs/work-take/`, and
  * `openspec/changes/archive/2026-10-27-work-take/design.md`). Notion is read
  * through the ask integration; a read that fails ends the run on a line naming
  * its step, and no line it composes holds the token.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { count } from "./file-size.ts";
 import { integration } from "./notion-ask.ts";
-import { client, discussion, hex, oldest, plain, waits } from "./notion-bot.ts";
+import { type Comment, client, discussion, hex, oldest, plain, waits } from "./notion-bot.ts";
 import { cleared } from "./notion-release.ts";
 
 /** The markdown read's API version, for that call alone: the others stay on the one their cases ran against. */
@@ -87,54 +91,81 @@ function change(pointer: string, top: string, commit: string): string[] {
 	];
 	const lines = paths
 		.filter((path) => existsSync(join(dir, path)))
-		.flatMap((path) => [`### ${pointer}${path}`, readFileSync(join(dir, path), "utf8")]);
+		.map((path) => {
+			const lines = count(readFileSync(join(dir, path), "utf8"));
+			return `${pointer}${path}: ${lines} line${lines === 1 ? "" : "s"}`;
+		});
 	return [...lines, `capabilities: ${capabilities.join(", ") || "none"}`];
 }
 
-/** The lines `take` prints for `card`, and its exit code: 0, or 1 after a failed read. */
-export async function take(card: string, timeout = 30_000): Promise<{ lines: string[]; code: number }> {
+/** The line ending every read that got the comments, naming the newest of `ordered` as Notion gave its id. */
+const newest = (ordered: Comment[]) => {
+	const id = ordered.at(-1)?.id;
+	return `last comment: ${typeof id === "string" ? id : "none"}`;
+};
+
+/**
+ * The lines `take` prints for `card`, and its exit code: 0, or 1 after a failed
+ * read. With `after`, a comment's id, it is the re-read: `Status`, `Assign` and
+ * the comments after that one, with no checkout, body, change or open changes.
+ */
+export async function take(card: string, after?: string, timeout = 30_000): Promise<{ lines: string[]; code: number }> {
 	const lines: string[] = [];
+	const full = after === undefined;
 	let code = 0;
 	let step = "the ask settings read";
 	try {
 		const found = integration(timeout);
 		if (typeof found === "string") throw new Error(found);
-		step = "the checkout read";
-		// Only git's terminator, not `trim()`: a checkout's path may end in a space (bun/root.ts).
-		const [top, commit] = output(["git", "rev-parse", "--show-toplevel", "HEAD"]).replace(/\n$/, "").split("\n");
-		if (top === undefined || commit === undefined) throw new Error("git rev-parse printed no commit");
-		lines.push(`## Checkout: ${top} at ${commit}`);
+		let top = "";
+		let commit = "";
+		if (full) {
+			step = "the checkout read";
+			// Only git's terminator, not `trim()`: a checkout's path may end in a space (bun/root.ts).
+			const read = output(["git", "rev-parse", "--show-toplevel", "HEAD"]).replace(/\n$/, "").split("\n");
+			if (read[0] === undefined || read[1] === undefined) throw new Error("git rev-parse printed no commit");
+			[top, commit] = [read[0], read[1]];
+			lines.push(`## Checkout: ${top} at ${commit}`);
+		}
 
 		step = "the page read";
 		const page = await found.call<{ properties?: Record<string, Property> } | null>(step, `/v1/pages/${card}`);
 		const properties: Record<string, Property> = page?.properties ?? {};
 		lines.push(
 			"## Card",
-			...["Name", "Status", "Pointer", "Labels", "Assign"].map((name) =>
+			...(full ? ["Name", "Status", "Pointer", "Labels", "Assign"] : ["Status", "Assign"]).map((name) =>
 				`${name}: ${text(properties[name])}`.trimEnd(),
 			),
 		);
 
-		step = "the markdown read";
-		type Markdown = { markdown?: unknown; truncated?: unknown; unknown_block_ids?: unknown } | null;
-		const body = await client(found.settings.token, timeout, MARKDOWN)<Markdown>(step, `/v1/pages/${card}/markdown`);
-		if (typeof body?.markdown !== "string") throw new Error("the markdown read gave no markdown");
-		lines.push("## Body", body.markdown);
-		if (body.truncated === true) lines.push("the body is truncated: Notion left part of it out");
-		const missing = list(body.unknown_block_ids).length;
-		if (missing) lines.push(`Notion left ${missing} block${missing === 1 ? "" : "s"} out of the body`);
+		if (full) {
+			step = "the markdown read";
+			type Markdown = { markdown?: unknown; truncated?: unknown; unknown_block_ids?: unknown } | null;
+			const body = await client(found.settings.token, timeout, MARKDOWN)<Markdown>(step, `/v1/pages/${card}/markdown`);
+			if (typeof body?.markdown !== "string") throw new Error("the markdown read gave no markdown");
+			lines.push("## Body", body.markdown);
+			if (body.truncated === true) lines.push("the body is truncated: Notion left part of it out");
+			const missing = list(body.unknown_block_ids).length;
+			if (missing) lines.push(`Notion left ${missing} block${missing === 1 ? "" : "s"} out of the body`);
+		}
 
 		step = "the comments read";
-		const comments = await discussion(found.call, card);
+		const comments = oldest(await discussion(found.call, card));
 		const by = (id: unknown) => (hex(id) === hex(found.settings.user) ? "user" : hex(id));
 		lines.push("## Comments");
-		for (const comment of oldest(comments))
+		// Found by position, not time: Notion rounds `created_time` to the minute, and `oldest()` keeps ties in its order.
+		const at = full ? -1 : comments.findIndex((comment) => hex(comment.id) === hex(after));
+		if (!full && at === -1) lines.push(`the comment ${after} is not on the card: every comment follows`);
+		const shown = comments.slice(at + 1);
+		if (!full && at !== -1 && !shown.length) lines.push(`no comment follows ${after}`);
+		for (const comment of shown)
 			lines.push(`${comment.created_time} ${by(comment.created_by?.id)}: ${plain(comment.rich_text)}`);
 		lines.push(`question waiting: ${waits(comments, found.settings.user) ? "yes" : "no"}`);
 		// Its own reads, so a failure prints its line and ends nothing; only a failed restore changes the exit.
 		const freed = await cleared(found.call, card, found.settings.user);
 		if (freed.line) lines.push(freed.line);
 		code = freed.restoreFailed ? 1 : 0;
+		if (!full) return { lines: [...lines, newest(comments)], code };
 
 		step = "the change read";
 		lines.push("## Change", ...change(text(properties.Pointer), top, commit));
@@ -142,7 +173,7 @@ export async function take(card: string, timeout = 30_000): Promise<{ lines: str
 		step = "the open changes read";
 		// Telemetry off: take writes nothing but the release, and openspec's telemetry keeps state and sends events.
 		lines.push("## Open changes", output(["openspec", "list"], top, { ...process.env, OPENSPEC_TELEMETRY: "0" }));
-		return { lines, code };
+		return { lines: [...lines, newest(comments)], code };
 	} catch (error) {
 		return { lines: [...lines, `take: ${step} failed — ${(error as Error).message}`], code: 1 };
 	}

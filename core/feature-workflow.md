@@ -401,8 +401,11 @@ for them is already here.
   comments first, and wait on a question already open there, naming its card,
   rather than ask it again; resuming that work, read that card's comments
   first, with `bun node_modules/harness/bun/work.ts take --card <id>`
-  (`bun bun/work.ts` in the harness itself), which prints them beside the
-  card. Questions known at the same time go in one comment, or in
+  (`bun bun/work.ts` in the harness itself), which prints the card, the
+  paths of its change and the comments, ending with `last comment: <id>`;
+  re-read it with `--after <that id>`, which prints only what came after
+  that comment, and after `last comment: none` with a plain `take`.
+  Questions known at the same time go in one comment, or in
   consecutive ones where the gate's length cap needs it; a question that
   arises after the last one was posted goes in a comment of its own, its
   items numbered on from the highest number the card's questions use, never
