@@ -94,12 +94,12 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 
 ## 5. The Stryker probe and the mutation step
 
-- [ ] 5.1 Add `@stryker-mutator/core` 10.0.0 to `devDependencies`, add
+- [x] 5.1 Add `@stryker-mutator/core` 10.0.0 to `devDependencies`, add
       `reports` and `.stryker-tmp` to `.gitignore` before any run, `mutation/**`
       to `harness.diffBudgetExclude`, and write `stryker.config.json` per
       design decision 4. Verify `git status` shows
       no file under either after a run
-- [ ] 5.2 Probe on `bun/command-parse.ts`: run it with `--incremental` and
+- [x] 5.2 Probe on `bun/command-parse.ts`: run it with `--incremental` and
       its incremental file, then again with no change. Record on the card
       both run times, whether the file is byte-identical after the second,
       which fields depend on the machine, whether Stryker reads the file with
@@ -109,7 +109,30 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       checkout's, how the per-module values are passed, and whether `node
       -v` answers on the host (a card if not). If the second run is not
       near-instant, stop here, ask on the
-      card, and leave the pull request draft
+      card, and leave the pull request draft.
+      Measured 2026-11-02 on the laptop (12 cores, 11 runners), on
+      `caee33e4`: the first run 5 min 28 s (330 s wall), 391 mutants, 258
+      killed, 13 timed out, 120 survived; the second, unchanged, 4 s, all 391
+      reused. Not byte-identical: the reused mutants gain `coveredBy: []` and
+      `static: false`, and the first run writes mutants in the order they
+      finished, the second in id order; trimmed and sorted by id, the two
+      are identical. Machine- or run-bound: `projectRoot`, `config` (with the
+      configuration file's path), `framework`, `testFiles`, and per mutant
+      `statusReason` (test output naming absolute sandbox paths),
+      `killedBy`, `coveredBy`, `static` and `testsCompleted`; the incremental
+      file holds no `system` or `performance`. Cut to the schema version,
+      each file's `source` and per mutant its id, mutator, location,
+      replacement and status, with `language` dropped and a `fingerprint` key
+      added, Stryker read it and reused all 391 in 4 s, the file falling
+      from 4.8 MB to 159 kB. A changed test file alone was not re-run without
+      `--force` (all 391 reused). The sandbox is what is judged: 258 mutants
+      killed, their test output naming `.stryker-tmp/sandbox-*/bun/`. No flag
+      takes `commandRunner.command`, so the per-module values go in one
+      configuration file under `.stryker-tmp`. `tsconfigFile` must name an
+      absent file, as in d2ass: without it the run fails on
+      `ts.parseConfigFileTextToJson is not a function`. `node -v` on the host
+      is not read: this probe ran on the laptop, where the command guard
+      refuses `node -v`
 - [ ] 5.3 Failing cases in `bun/mutation-run.test.ts` over the pure parts:
       modules exclude tests and fixtures; a module no test file matches is
       named and not run (`a-module-no-test-file-matches`); a source that

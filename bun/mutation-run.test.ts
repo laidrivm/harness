@@ -154,6 +154,11 @@ describe("what a run mutates", () => {
 		}
 	});
 
+	test("a preload given as one string is fingerprinted too", () => {
+		const t = commit(base, "bunfig.toml", '[test]\npreload = "./bun/guard.ts"\n');
+		expect(Object.keys(fingerprint("bun/board.ts", t))).toContain("bun/guard.ts");
+	});
+
 	// spec: mutation-floor/a-new-module-has-no-stored-file
 	test("a new module runs whole", () => {
 		const t = commit(commit(current(), "bun/new.ts", "export const n = 1;\n"), "bun/new.test.ts", "x\n");
@@ -200,9 +205,10 @@ describe("what fails the run before it mutates", () => {
 	test("a stored file without files, and two naming one path", () => {
 		const t = current();
 		const board = t.stored["mutation/board.json"] ?? "";
-		expect(plan({ ...t, stored: { ...t.stored, "mutation/board.json": "{}" } }).problems).toEqual([
-			"mutation/board.json carries no files",
-		]);
+		for (const text of ["{}", "not JSON"])
+			expect(plan({ ...t, stored: { ...t.stored, "mutation/board.json": text } }).problems).toEqual([
+				"mutation/board.json carries no files",
+			]);
 		expect(plan({ ...t, stored: { ...t.stored, "mutation/old.json": board } }).problems).toContain(
 			"mutation/board.json and mutation/old.json both hold bun/board.ts",
 		);
