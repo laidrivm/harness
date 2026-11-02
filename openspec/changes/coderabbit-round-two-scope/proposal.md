@@ -58,7 +58,8 @@ None.
 - `agent-autonomy`: adds *From the second round, CodeRabbit's Minors outside
   living docs go to a tail card* beside *A pull request gets CodeRabbit's
   fixes for at most three rounds*, and *The coderabbit skill honours a
-  project's deferral*.
+  project's deferral*. It modifies the cap's scenario *The third round still
+  gets its fixes*, so that a deferred Minor is not applied there.
 - `local-review-loop`: adds *The review bot reads a change's artefacts for
   contradictions* to the config contract beside the approval and pause
   requirements.
@@ -66,7 +67,7 @@ None.
 ## Impact
 
 - Changed: `core/review-toolkit.md` (the `/coderabbit` bullet),
-  `core/skills/coderabbit/SKILL.md` (step 5, step 3's Minor line, and the
+  `core/skills/coderabbit/SKILL.md` (step 5, step 3's opening paragraph and Minor line, and the
   rule «Severity budgets attention, not belief»), `.coderabbit.yaml` and its
   header, `bun/review-config.test.ts`, `bun/review-docs.test.ts`, and the
   `local-review-loop` spec's Purpose, which lists what the config pins.
