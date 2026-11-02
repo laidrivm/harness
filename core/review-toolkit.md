@@ -179,8 +179,10 @@ each runs, from the branch's diff against the base the budget measured and
 from its pull request's state, as `pre-pr-runner` (*The runner names the
 steps the branch requires from its diff*) sets out. Once a pull request is
 open, draft or not, it names the project checks alone: that is the least a
-push into it requires, and step 5 says what still runs before one. The steps
-below say why each one exists.
+push into it requires, and step 5 says what still runs before one.
+`bun bun/pre-pr.ts --steps [<base>]` prints that line alone, running no step
+and recording nothing, so the list can be read before the last commit. The
+steps below say why each one exists.
 
 1. The diff budget first, looked at with `bash bun/diff-budget.sh` (`bash
    node_modules/harness/bun/diff-budget.sh` where the harness is installed),
@@ -188,9 +190,11 @@ below say why each one exists.
    node_modules/harness/bun/pre-pr.ts`), once, after the sequence's last
    commit, since its records name the commit it read. It runs the diff budget,
    then the project checks — the command under `harness.bumpTest` — and
-   records each; give the call a 600000 ms timeout or run it in the
-   background, since the full test run takes minutes. The pre-push hook and
-   CI measure the budget without recording. The budget goes first because
+   records each. Run it in the foreground with a 600000 ms timeout, since the
+   full test run takes minutes, and never with `&`; a call the tool moves to
+   the background at that limit is waited for in the same turn, never started
+   again. The pre-push hook and CI measure the budget without recording; the
+   hook skips its other gates for a commit the runner passed here. The budget goes first because
    over budget says the reviewable unit was cut too wide rather than that the
    code is wrong — and re-cutting it changes the diff every gate below reads.
    It reports how many lines the reviewer must read, and names its own

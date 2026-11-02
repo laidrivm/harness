@@ -46,8 +46,10 @@ bash bun/diff-budget.sh || true
 non-deletion record, takes the top level from `root` in `bun/root.ts` (`ran()`
 compares the record's project exactly), reads the ledger once and hands its
 text to each `ran()` call, and exits 0 with the skip line when there is at
-least one sha, no record's remote ref lies under `refs/tags/` — a lightweight
-tag's sha is its commit's, so the sha alone cannot tell it — and each sha has
+least one sha, no record's remote ref lies under `refs/tags/`, a deletion's
+included — a lightweight tag's sha is its commit's, so the sha alone cannot
+tell it, and a push that deletes a tag beside a proven branch still touches
+one — and each sha has
 a `pass` and no `fail` or `error` (decision 3); otherwise it prints the reason
 line and exits 1. A torn ledger line counts as no record, as it does for every
 `ran()` reader: the ledger is never rotated, so refusing the skip over one torn
@@ -57,7 +59,8 @@ broken reader costs time, never a check. Under `set -e`, a gate failing on the
 right of `||` still fails the hook.
 
 The records are parsed in one place: a small module (`bun/push-refs.ts`)
-splits standard input into `{ sha, ref }` for each non-deletion record, and
+splits standard input into `{ sha, ref, deletion }` for each record, a
+deletion kept and flagged so its remote ref still reaches the tag check, and
 `bun/push-draft.ts` switches to it in the same change, so the draft check and
 the skip never read different shas from one input.
 
