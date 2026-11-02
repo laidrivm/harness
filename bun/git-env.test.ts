@@ -7,9 +7,19 @@
  * Every decoy here has no remote, so a regression has nowhere to push.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	realpathSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { git } from "./turn-gate.fixture.ts";
 
 const ROOT = join(import.meta.dir, "..");
@@ -54,36 +64,50 @@ function decoyEnv(dir: string): Record<string, string> {
 	};
 }
 
+/** The tools `gates.sh` runs only where they are installed. */
+const OPTIONAL = ["actionlint", "gitleaks"];
+
 /**
- * Runs the hook from an empty directory with a stub `bun` first on `PATH`
- * that records its environment, and returns one environment per call the
- * stub received. The stub also writes a config key as a fixture would: with
- * no inherited `GIT_DIR` the ceiling stops git finding any repository, so the
- * write fails harmlessly; with one, it lands in the decoy. `bash
- * bun/diff-budget.sh` finds no script there, and the hook's `|| true` absorbs it.
+ * Runs the hook from a directory holding only `.githooks/gates.sh` and
+ * `bun/diff-base.sh`, with stubs first on `PATH` for every program the two
+ * start — `bun`, `bunx`, and of `OPTIONAL` those `tools` names, exiting as
+ * given — and the real `OPTIONAL` tools off it. Returns one call per stub
+ * run: its name and arguments, then its environment. Each stub also writes a
+ * config key as a fixture would: with no inherited `GIT_DIR` the ceiling stops
+ * git finding any repository, so the write fails harmlessly; with one, it
+ * lands in the decoy. `bash bun/diff-budget.sh` finds no script there, and the
+ * hook's `|| true` absorbs it.
  */
-function hook(env: Record<string, string>): { code: number; calls: string[][] } {
+function hook(env: Record<string, string>, tools: Record<string, number> = {}): { code: number; calls: string[][] } {
 	const dir = scratch("git-env-hook-");
 	const stub = join(dir, "stub");
 	mkdirSync(stub);
 	const record = join(dir, "record");
 	writeFileSync(record, "");
-	writeFileSync(
-		join(stub, "bun"),
-		[
-			"#!/bin/sh",
-			'env >> "$RECORD"',
-			'echo --- >> "$RECORD"',
-			`GIT_CEILING_DIRECTORIES=${dir} git config probe.written yes 2>/dev/null || true`,
-			"",
-		].join("\n"),
-	);
-	chmodSync(join(stub, "bun"), 0o755);
+	for (const [name, code] of Object.entries({ bun: 0, bunx: 0, ...tools })) {
+		writeFileSync(
+			join(stub, name),
+			[
+				"#!/bin/sh",
+				`echo "${name} $*" >> "$RECORD"`,
+				'env >> "$RECORD"',
+				'echo --- >> "$RECORD"',
+				`GIT_CEILING_DIRECTORIES=${dir} git config probe.written yes 2>/dev/null || true`,
+				`exit ${code}`,
+				"",
+			].join("\n"),
+		);
+		chmodSync(join(stub, name), 0o755);
+	}
 	const work = join(dir, "work");
-	mkdirSync(work);
+	for (const path of [".githooks/gates.sh", "bun/diff-base.sh"]) {
+		mkdirSync(dirname(join(work, path)), { recursive: true });
+		if (existsSync(join(ROOT, path))) copyFileSync(join(ROOT, path), join(work, path));
+	}
+	const path = (process.env.PATH ?? "").split(":").filter((d) => !OPTIONAL.some((t) => existsSync(join(d, t))));
 	const run = Bun.spawnSync(["bash", HOOK], {
 		cwd: work,
-		env: { ...process.env, PATH: `${stub}:${process.env.PATH}`, RECORD: record, ...env },
+		env: { ...process.env, PATH: [stub, ...path].join(":"), RECORD: record, ...env },
 		timeout: 20_000,
 	});
 	const calls = readFileSync(record, "utf8")
@@ -93,18 +117,49 @@ function hook(env: Record<string, string>): { code: number; calls: string[][] } 
 	return { code: run.exitCode ?? -1, calls };
 }
 
+/** The first line of each call: the stub's name and its arguments, less the space a call with none leaves. */
+const started = (calls: string[][]) => calls.map(([line = ""]) => line.trimEnd());
+
 /** The names among `names` that some recorded call still carried. */
 function carried(calls: string[][], names: string[]): string[] {
 	return names.filter((name) => calls.some((lines) => lines.some((l) => l.startsWith(`${name}=`))));
 }
 
-/** The hook's `bun` calls: the draft check, then the suite. */
-const BUNS = 2;
+/** What the hook starts with no optional tool installed: the draft check, then `gates.sh`'s gates in order. */
+const GATES = [
+	"bun bun/push-draft.ts",
+	"bun bun/check-yaml.ts",
+	"bun bun/no-suppressions.ts",
+	"bunx --no-install biome ci .",
+	"bunx --no-install tsc --noEmit",
+	"bun test",
+];
+const BUNS = GATES.length;
 
 describe("the pre-push hook", () => {
-	test("with no repository variable set it runs the draft check and the suite and exits 0 [1]", () => {
+	// spec: commit-gates/a-tool-the-machine-does-not-have
+	test("with no repository variable set and no optional tool it runs the draft check and the gates and exits 0 [1]", () => {
 		const { code, calls } = hook({});
-		expect([code, calls.length]).toEqual([0, BUNS]);
+		expect([code, started(calls)]).toEqual([0, GATES]);
+	});
+
+	// spec: commit-gates/a-tool-the-machine-has-reporting-a-finding
+	test("a gitleaks that reports a finding fails the hook before the suite", () => {
+		const { code, calls } = hook({}, { gitleaks: 1 });
+		expect([code === 0, started(calls).includes("bun test")]).toEqual([false, false]);
+	});
+
+	// spec: commit-gates/a-secret-that-is-already-in-the-base-branch
+	test.each([
+		["no HARNESS_BASE", {}, "main"],
+		["HARNESS_BASE set", { HARNESS_BASE: "origin/feat/x" }, "origin/feat/x"],
+	])("with %s, gitleaks scans from the base diff-base.sh prints to HEAD", (_, env, base) => {
+		const { code, calls } = hook(env, { gitleaks: 0, actionlint: 0 });
+		const scan = started(calls).filter((line) => line.startsWith("gitleaks ") || line.startsWith("actionlint"));
+		expect([code, scan]).toEqual([
+			0,
+			["actionlint", `gitleaks git . --log-opts=${base}..HEAD -v --redact --no-banner`],
+		]);
 	});
 
 	// spec: commit-gates/a-push-from-a-worktree
