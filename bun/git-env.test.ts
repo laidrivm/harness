@@ -144,11 +144,14 @@ describe("the pre-push hook", () => {
 		expect([code, started(calls)]).toEqual([0, GATES]);
 	});
 
-	// spec: commit-gates/a-tool-the-machine-has-reporting-a-finding
-	test("a gitleaks that reports a finding fails the hook before the suite", () => {
-		const { code, calls } = hook({}, { gitleaks: 1 });
-		expect([code === 0, started(calls).includes("bun test")]).toEqual([false, false]);
-	});
+	// spec: commit-gates/a-tool-the-machine-has-reporting-a-finding commit-gates/a-gate-the-runner-s-checks-run-too
+	test.each(["gitleaks", "actionlint", "bunx"])(
+		"a %s that reports a finding fails the hook before the suite",
+		(tool) => {
+			const { code, calls } = hook({}, { [tool]: 1 });
+			expect([code === 0, started(calls).includes("bun test")]).toEqual([false, false]);
+		},
+	);
 
 	// spec: commit-gates/a-secret-that-is-already-in-the-base-branch
 	test.each([
