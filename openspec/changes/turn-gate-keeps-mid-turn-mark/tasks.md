@@ -15,14 +15,14 @@ the file's other cases do: `started()`, `commit`, `prompt` for a prompt and
       `decide` refuses naming "1. Group" (`a-turn-the-user-interrupted`); the
       boundary is consumed — `started()`, `decide` lets the turn end, `mark`,
       commit `DONE`, `mark` again, then `decide` refuses
-      (`the-prompt-after-a-turn-the-hook-let-end`). Each fails on today's code,
-      which rewrites the mark on every prompt
-- [ ] 1.2 Cases that pass today and must keep passing: a message queued into a
+      (`the-prompt-after-a-turn-the-hook-let-end`); a message queued into a
       refused turn — commit `DONE`, `decide` refuses, `mark`, then `decide` is
-      `undefined` and the mark file still ends in ` refused`
-      (`a-message-queued-into-a-refused-turn`); a stop with nothing to judge —
-      `started()`, `decide` with `HEAD` at the mark, `mark` after a commit of
-      an unrelated file, and the mark file reads the new `HEAD`. Amend "a new
+      `undefined` and the mark file still carries the `refused` suffix
+      (`a-message-queued-into-a-refused-turn`). Each fails on today's code,
+      which rewrites the mark, dropping the suffix, on every prompt
+- [ ] 1.2 Cases that pass today and must keep passing: a stop with nothing to
+      judge — `started()`, `decide` with `HEAD` at the mark, `mark` after a
+      commit of an unrelated file, and the mark file reads the new `HEAD`. Amend "a new
       mark can be refused again" so the refused turn ends once more (a second
       `decide`) before its `mark`, as the spec's refused turn does
 - [ ] 1.3 A failing case in `bun/turn-gate-ceiling.test.ts`: `counted(0)`, a
@@ -34,8 +34,11 @@ the file's other cases do: `started()`, `commit`, `prompt` for a prompt and
       (`design.md`, decision 5)
 - [ ] 1.4 Then `bun/turn-gate.ts`: `decide` writes `<mark>.stopped` before
       every return that lets the turn end once it has the mark's path, and
-      never on a refusal; the ceiling branch writes it too; `mark` writes
-      `HEAD` only when the mark file is absent or `<mark>.stopped` exists,
+      never on a refusal; the ceiling branch writes it too, and so does the
+      `import.meta.main` block's fail-open `catch` for a stop whose mark path
+      is known — an exception there ends the turn as any other leave does
+      (`design.md`, decision 2); `mark` writes `HEAD` only when the mark file
+      is absent or `<mark>.stopped` exists,
       removes `<mark>.stopped` when it does, and calls `resetRounds` on every
       prompt as now. Every write best-effort and silent. Rewrite the header
       comment's `mark` paragraph and its once-per-mark paragraph to say when

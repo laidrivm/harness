@@ -63,8 +63,9 @@ Alternatives:
 ### 2. Every stop the half does not refuse writes it
 
 A pass, a release by the once-per-mark bound, a turn with nothing to judge, an
-input the half cannot read once it has the mark's path, and the end at the
-round ceiling all let the turn end, so all write `<mark>.stopped`. A refusal
+input the half cannot read once it has the mark's path — an exception the
+script's fail-open `catch` takes included — and the end at the round ceiling
+all let the turn end, so all write `<mark>.stopped`. A refusal
 does not: the turn continues. The ceiling is included because the session ends
 there, and the prompt that resumes it must take a fresh mark (`stage-goal`'s
 *Resuming after the ceiling*). Writing it is best-effort and silent, as the
@@ -134,5 +135,8 @@ design does not.
 
 ## Migration Plan
 
-None beyond the upgrade note above. Rollback is a revert; leftover `.stopped`
-files are ignored by the old code and cleared with `$TMPDIR`.
+None beyond the upgrade note above. Rollback is a revert, followed by removing
+`$TMPDIR/turn-gate/*.stopped`. The old code ignores those files, but it keeps
+rewriting the marks beside them, so a `.stopped` left from before the rollback
+no longer marks a turn's end; were this change installed again, a message
+queued mid-turn would consume it and move the mark past that turn's commits.
