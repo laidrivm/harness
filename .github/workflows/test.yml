@@ -30,6 +30,6 @@ jobs:
         with:
           bun-version: 1.4.2
       # No install: the suite needs none. The devDependencies are the
-      # harness's own pin, which only its sessions' hooks run, and the tools
-      # the pre-push gates run (Biome, TypeScript and bun's types).
+      # harness's own pin, which only its sessions' hooks run, and Biome,
+      # TypeScript and bun's types, run by hand until a gate runs them.
       - run: bun test

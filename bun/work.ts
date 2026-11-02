@@ -51,27 +51,23 @@ export async function work(args: string[]): Promise<{ lines: string[]; code: num
 	}
 	if (subcommand === "finish") {
 		const set = values(rest, { card: { type: "string" }, title: { type: "string" }, "body-file": { type: "string" } });
-		const { card, title, "body-file": body } = (set ?? {}) as Record<string, string | undefined>;
+		const [card, title, body] = [set?.card, set?.title, set?.["body-file"]];
 		// Both or neither, and neither blank: `gh` would open a pull request with no title, or read no body.
 		const opening =
 			title === undefined && body === undefined ? undefined : title?.trim() && body ? { title, body } : null;
 		if ((card === undefined || ID.test(card)) && set && opening !== null) return finish(card, opening);
 	}
 	if (subcommand === "status") {
-		const { card, to } = (values(rest, { card: { type: "string" }, to: { type: "string" } }) ?? {}) as Record<
-			string,
-			string | undefined
-		>;
+		const set = values(rest, { card: { type: "string" }, to: { type: "string" } });
+		const [card, to] = [set?.card, set?.to];
 		if (typeof card === "string" && ID.test(card) && typeof to === "string" && STATUSES.includes(to))
 			return status(card, to);
 	}
 	if (subcommand === "resolve") {
 		// `multiple` on all three, so a repeated `--pr` or `--head` is refused rather than the last one kept.
 		const many = { type: "string", multiple: true } as const;
-		const set = values(rest, { pr: many, head: many, comment: many }) as
-			| Record<string, string[] | undefined>
-			| undefined;
-		const { pr = [], head = [], comment = [] } = set ?? {};
+		const set = values(rest, { pr: many, head: many, comment: many });
+		const [pr = [], head = [], comment = []] = [set?.pr, set?.head, set?.comment];
 		const [number, ...prs] = pr;
 		const [sha, ...heads] = head;
 		if (

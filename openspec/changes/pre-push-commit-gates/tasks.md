@@ -31,12 +31,15 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 
 ## 2. The type check: dependencies, configuration, source fixes
 
-- [ ] 2.1 Add `typescript` 7.0.2 and `@types/bun` 1.4.2 to
+- [x] 2.1 Add `typescript` 7.0.2 and `@types/bun` 1.4.2 to
       `devDependencies` and `tsconfig.json` per design decision 3, and
       correct `test.yml`'s comment that the harness's pin is the one dev
       dependency. Verify `bunx --no-install tsc --noEmit` runs and record
-      its error count here
-- [ ] 2.2 Fix the errors in `bun/` sources other than tests and fixtures,
+      its error count here. Measured 2026-11-01 on `6d228422`: 228 errors,
+      121 in `bun/` sources, 107 in `bun/` tests and fixtures and
+      `orchestrator/`; groups 2 and 3 land in one pull request by the
+      user's choice of 2026-11-01
+- [x] 2.2 Fix the errors in `bun/` sources other than tests and fixtures,
       a failing test first for each fix that changes behaviour (the first:
       `bun/ci-run-clone.ts:59`). Verify `tsc --noEmit` reports no error in
       those files and `bun test` passes; if the diff nears 800 lines, close
@@ -44,7 +47,7 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 
 ## 3. The type check: tests, fixtures and `orchestrator/`
 
-- [ ] 3.1 Fix the remaining errors in `bun/` tests and fixtures and in
+- [x] 3.1 Fix the remaining errors in `bun/` tests and fixtures and in
       `orchestrator/`, splitting into as many pull requests as the budget
       needs, each closing at a whole file. Verify `bunx --no-install tsc
       --noEmit` exits 0 on the last and `bun test` passes

@@ -8,7 +8,7 @@
  */
 import { ARCHIVED, board } from "./board-state.ts";
 import { across, named } from "./config.ts";
-import { type Board, type Call, paged, plain } from "./notion-bot.ts";
+import { type Board, type Call, type Page as Card, paged, plain } from "./notion-bot.ts";
 import { MAIN, output } from "./work-take.ts";
 
 const git = (top: string, step: string, ...args: string[]) => {
@@ -61,9 +61,7 @@ export function kind(paths: string[]): string {
 	return changes(paths).some((dir) => dir.startsWith("openspec/changes/archive/")) ? "archive" : "apply";
 }
 
-type Page =
-	| { parent?: { type?: unknown; data_source_id?: unknown }; properties?: { Pointer?: { rich_text?: unknown } } }
-	| undefined;
+type Page = Card | null | undefined;
 type Block = { id?: unknown; type?: unknown; [type: string]: unknown };
 const content = (block: Block) => block[String(block.type)] as { rich_text?: unknown; url?: unknown } | undefined;
 const runs = (block: Block) => content(block)?.rich_text;
