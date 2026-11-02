@@ -215,6 +215,7 @@ function storedFiles(top: string): Record<string, string> {
 function fail(problems: string[]): void {
 	if (!problems.length) return;
 	for (const problem of problems) console.error(problem);
+	rmSync(REPORT, { force: true }); // a Stryker run's own report covers one module, and no floor may count it
 	process.exit(1);
 }
 

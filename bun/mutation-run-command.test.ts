@@ -108,10 +108,10 @@ describe("the command", () => {
 		expect([code, err.includes("Node")]).toEqual([1, true]);
 	});
 
-	test("a Stryker exit that is not 0 fails before the merge, leaving no report", () => {
+	test("a Stryker exit that is not 0 fails before the merge, leaving not even the run's own report", () => {
 		const dir = repository();
-		write(dir, { [REPORT]: "{}" });
-		const { code, err } = cli(dir, path({ node: "exit 0", bunx: "exit 3" }));
+		const bunx = `/bin/mkdir -p reports/mutation && echo '{}' > ${REPORT}; exit 3`;
+		const { code, err } = cli(dir, path({ node: "exit 0", bunx }));
 		expect([code, err.includes("Stryker exited 3 on bun/a.ts"), existsSync(join(dir, REPORT))]).toEqual([
 			1,
 			true,
