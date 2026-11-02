@@ -1,8 +1,17 @@
 # CodeRabbit config for the harness. It points the review bot at the rulebook
-# and the docs beside it, turns on the bot's approval and keeps it reviewing.
+# and the docs beside it, turns on the bot's approval and keeps it reviewing,
+# and has it read a change's artefacts for contradictions rather than wording.
 # bun/review-config.test.ts pins each, and openspec/specs/local-review-loop
 # holds the contract.
 reviews:
+  path_instructions:
+    # Filtering the path out instead would lose the contradictions there too,
+    # and leave a proposal pull request nothing to review.
+    - path: "openspec/changes/**"
+      instructions: >-
+        A working artefact of an OpenSpec change, headed for the archive.
+        Flag contradictions with a spec, the code or another artefact.
+        Do not flag wording, duplication or style.
   auto_approvals:
     # The bot's approval is the one the main ruleset requires: it comes only
     # on a reviewed head with every required thread resolved.
