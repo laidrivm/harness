@@ -52,7 +52,8 @@ their first CodeRabbit review. A first-round Minor still undisposed when a
 second commit has been reviewed, for example after a merge of `origin/main`,
 is therefore still read as a first-round one. A finding that a later full
 review posts again, on the same path and asking the same, keeps the round
-of its first posting and is disposed of once. The three-round cap still decides whether the run applies
+of its first posting; each copy counts in the arithmetic, as the skill
+counts every finding fetched, and their one fix is applied once. The three-round cap still decides whether the run applies
 anything. A Minor already on the tail card, whose thread is still open in a
 later run, is listed again as deferred and not written again. A fourth
 round holding only deferrals needs no sentence of its own: a deferral is a
@@ -67,8 +68,10 @@ the round table shows a saving.
 ### The tail card
 
 There is one card per pull request, named `CodeRabbit Minors deferred from
-#<N>`, filed on the repository's board at `idea` by the first run that
-defers. A later run looks the name up on the board before filing, so a
+<owner>/<repo>#<N>`, filed at `idea` on the board of the repository that
+would ship the fix by the first run that defers. The name carries the
+repository because a consumer's `harness/*.md` Minor goes to the harness's
+board, where two repositories' pull requests can share a number. A later run looks the name up on the board before filing, so a
 session with no memory of the earlier rounds adds to the same card. Each
 entry gives the finding's path, line, severity and what it asks. The card
 is filed whether the session is attended or not, since a deferral asks the

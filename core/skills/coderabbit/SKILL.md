@@ -66,7 +66,7 @@ A reply (`in_reply_to_id` set) is discussion of a finding, not a finding, and sa
 Each finding opens with a line naming its severity, category and effort. Read its severity word yourself — `Trivial`, `Minor`, `Major` or `Critical` — wherever on the line it sits. These are examples of the markup, not a pattern to match, and the order on the line is not relied on:
 
 ```
-**<picture>…</picture> Major** · **🎯 Functional Correctness** · **⚡ Quick win**
+**<picture><img … alt=""></picture> Major** · **Functional Correctness** · **Quick win**
 _🎯 Functional Correctness_ | _🟠 Major_ | _⚡ Quick win_
 ```
 
@@ -85,7 +85,8 @@ Also pull out of the body, when present:
 ### 3. Sort
 
 Severity budgets how much scrutiny a finding earns — it never decides whether
-the finding is right. A correct, cheap Minor gets fixed; a wrong Major gets
+the finding is right. A correct, cheap Minor gets fixed, unless a deferral
+the project's policy makes (step 5) sends it to a card; a wrong Major gets
 rejected.
 
 - 🔵 Trivial → **skipped** by default, one line each with the reason. No
@@ -94,7 +95,8 @@ rejected.
   has a settled convention the bot does not know, or when the fix costs more
   than the defect is worth. Fix when it is correct and the change is small and
   self-contained — "it is only Minor" is not a reason to leave a real defect in
-  the branch. Report which you chose and why; `below severity threshold` is not
+  the branch, and a deferral the project's policy makes (step 5) is the one
+  exception. Report which you chose and why; `below severity threshold` is not
   a reason on its own.
 - 🟠 Major, 🔴 Critical → **verify** each one against current code.
 - `--all` → give 🔵 Trivial the same reading 🟡 Minor gets.
@@ -151,6 +153,8 @@ Right before applying any fix, here or under the override below, and before nami
 
 **The project overrides this.** If the repo's own review policy (`CLAUDE.md`, `docs/`, a gate the project defines) prescribes applying verified findings without asking, follow the project, not this skill: apply them before showing the plan, list them under `### Applied (N)`, and keep no approval gate on fixes at any severity. Where the project puts the approval on the dismissal instead, a 🟠 Major or 🔴 Critical you propose to reject or skip goes to the user with what the bot missed, and the gate stays OPEN until they settle it (unattended: card — hand it on with what the bot missed). Name the rule you followed in one line under the heading.
 
+**A project's policy may defer.** Whether or not it also applies fixes without asking, the repo's own review policy may defer a finding to a card by its severity, path and round. Apply nothing for such a finding: list it under Skipped as `deferred to <card>`, counted in the arithmetic. A 🟠 Major or 🔴 Critical deferred this way is a dismissal, and is put to the user with what the bot missed.
+
 ### 6. The resolve command and the gate line
 
 Right above the gate line, name the threads whose findings are settled, as one command, `bun bun/work.ts resolve --pr <n> --head <sha> --comment <id> …` (`bun node_modules/harness/bun/work.ts` where the harness is installed). The bot approves only once each of its threads is resolved, and resolves none itself; this skill still writes nothing to GitHub — the session runs the command.
@@ -179,7 +183,8 @@ It exists so a driving agent, PR template or hook can check the step ran and clo
 - **Skipped is a list, not a count.** One line per skipped finding with its path and reason, even for Trivial.
 - **Number every finding sequentially across the whole report** — Applied, then Fixing, then Not fixing, then Skipped, never restarting per section. The last number equals the total in the heading, and "apply 3 and 7" means exactly two findings. Keep the same numbers when you report what changed after approval.
 - **Severity budgets attention, not belief.** A Minor is skipped because you
-  read it and judged the change not worth making, never because of its label.
+  read it and judged the change not worth making, or for a deferral the
+  project's policy makes (step 5), never because of its label.
 - **A skip reason that cites a file, a convention or a decision quotes it from that file as read in this pass** — a reason recalled rather than read is no reason, and the finding is fixed or re-read instead.
 - **An empty inline list is not a clean review.** A whole review can be out-of-grid: zero inline comments, both findings parked in the review body's collapsed `Outside diff range comments` section. Read every review body before concluding the bot found nothing.
 - **Verify before believing.** A Major finding still gets read against current code; the bot reviews a snapshot, the branch has moved.
