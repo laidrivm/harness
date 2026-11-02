@@ -16,7 +16,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { count } from "./file-size.ts";
 import { integration } from "./notion-ask.ts";
-import { type Comment, client, discussion, hex, oldest, plain, waits } from "./notion-bot.ts";
+import { type Comment, client, discussion, hex, ID, oldest, plain, waits } from "./notion-bot.ts";
 import { cleared } from "./notion-release.ts";
 
 /** The markdown read's API version, for that call alone: the others stay on the one their cases ran against. */
@@ -106,9 +106,9 @@ function head(): [string, string] {
 	return [top, commit];
 }
 
-/** The line ending every read that got the comments: the newest of `ordered` carrying an id, as Notion gave it. */
+/** The line ending every read that got the comments: the newest of `ordered` whose id `--after` accepts, as Notion gave it. */
 const newest = (ordered: Comment[]) => {
-	const id = ordered.findLast((comment) => typeof comment.id === "string")?.id;
+	const id = ordered.findLast((comment) => typeof comment.id === "string" && ID.test(comment.id))?.id;
 	return `last comment: ${typeof id === "string" ? id : "none"}`;
 };
 

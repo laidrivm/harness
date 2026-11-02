@@ -26,7 +26,8 @@ The bracketed numbers are the proposal-stage `/zombies` ideas.
       last [7]; comments over two pages name the second page's last [8]; no
       comments end with `last comment: none` [9]; a comments read that fails
       prints no such line [10]. Verify: each fails against today's code
-- [x] 1.4 Write failing cases for `--after` in `bun/work-take.test.ts` and,
+- [x] 1.4 Write failing cases for `--after` in `bun/work-take-after.test.ts`
+      (as 1.3's, since `bun/work-take.test.ts` reaches its 300-line cap) and,
       for its failures, `bun/work-take-fail.test.ts`. Arguments: `--after`
       with no value, `--after=`, 31 and 33 hex digits, and a UUID with a
       digit too many print the usage and exit 2, calling nothing; a 32-hex
