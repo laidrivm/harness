@@ -148,6 +148,19 @@ describe("the command", () => {
 		expect(calls.map((call) => call.endsWith("--force"))).toEqual([true, false]);
 	});
 
+	test("a forced run that fails before any result leaves no copy of the old results to resume", () => {
+		const dir = repository();
+		cli(dir, path({ node: "exit 0", bunx: stryker }));
+		git(dir, "add", "mutation");
+		git(dir, "commit", "-qm", "results");
+		write(dir, { "bun/a.test.ts": "2\n" });
+		git(dir, "commit", "-qam", "a changed test");
+		expect(cli(dir, path({ node: "exit 0", bunx: 'echo "$@" > calls; exit 1' })).code).toBe(1);
+		write(dir, { calls: "" });
+		cli(dir, path({ node: "exit 0", bunx: stryker }));
+		expect(readFileSync(join(dir, "calls"), "utf8").trim().endsWith("--force")).toBe(true);
+	});
+
 	test("a named module with no test file fails, and a named run writes no report", () => {
 		const dir = repository({ "bun/b.ts": "1\n" });
 		const bin = path({ node: "exit 0", bunx: stryker });

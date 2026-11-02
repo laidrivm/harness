@@ -118,7 +118,10 @@ after it: the probe found no flag that takes the command. Its
 `.stryker-tmp`, named by the fingerprint, trimmed into the stored file once the
 run finishes: on an interrupt Stryker saves its partial results over the file
 it reads, so the stored file stays whole, and the next run against the same
-tests resumes from the copy, without `--force`. Modules named on its command
+tests resumes from the copy, without `--force`. A forced run starts from no
+copy: Stryker writes none before its first result, and a seeded copy of the old
+results that outlived a failed start would be resumed as if measured against
+the new tests. Modules named on its command
 line narrow a run to them, so one module can be measured alone, and such a run
 writes no report, the other modules being unchecked. The module's own source
 counts as dirty beside its tests, since its results would otherwise describe
