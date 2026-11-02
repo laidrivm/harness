@@ -1,8 +1,5 @@
-/**
- * `bun/mutation-run.ts` as the gates run it, in a throwaway repository, with
- * `node` and Stryker's `bunx` stubbed on a `PATH` of their own. Apart from
- * `mutation-run.test.ts`, which covers the plan, to keep both under the cap.
- */
+/** `bun/mutation-run.ts` run in a throwaway repository, `node` and Stryker's `bunx` stubbed; the plan's cases are
+ * in `mutation-run.test.ts`, to keep both under the cap. */
 import { afterAll, describe, expect, test } from "bun:test";
 import {
 	chmodSync,
@@ -87,7 +84,6 @@ const results = JSON.stringify({
 	projectRoot: "/somewhere",
 	files: {
 		"bun/a.ts": {
-			language: "typescript",
 			source: "1\n",
 			mutants: [{ id: "0", mutatorName: "M", location: {}, replacement: "2", status: "Survived", static: false }],
 		},
@@ -151,13 +147,20 @@ describe("the command", () => {
 		expect(calls.map((call) => call.endsWith("--force"))).toEqual([true, false]);
 	});
 
-	test("a forced run that fails before any result leaves no copy of the old results to resume", () => {
+	test("a forced run never resumes from a copy of the old results that a failed start left", () => {
 		const dir = repository();
+		const [failing, passing] = [
+			path({ node: "exit 0", bunx: 'echo "$@" > calls; exit 1' }),
+			path({ node: "exit 0", bunx: stryker }),
+		];
+		const forcedLast = () => readFileSync(join(dir, "calls"), "utf8").trim().endsWith("--force");
 		forced(dir);
-		expect(cli(dir, path({ node: "exit 0", bunx: 'echo "$@" > calls; exit 1' })).code).toBe(1);
-		write(dir, { calls: "" });
-		cli(dir, path({ node: "exit 0", bunx: stryker }));
-		expect(readFileSync(join(dir, "calls"), "utf8").trim().endsWith("--force")).toBe(true);
+		cli(dir, failing);
+		cli(dir, passing);
+		expect(forcedLast()).toBe(true);
+		cli(dir, failing, "--all");
+		cli(dir, passing, "--all", "--force");
+		expect(forcedLast()).toBe(true);
 	});
 
 	test("a named module with no test file fails, and a named run writes no report", () => {

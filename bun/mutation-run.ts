@@ -227,15 +227,12 @@ function stryker(top: string, { module, force }: Run, print: Record<string, stri
 	const { $schema: _, ...shared } = JSON.parse(readFileSync(join(top, "stryker.config.json"), "utf8"));
 	const tmp = join(top, ".stryker-tmp");
 	const name = stem(module).slice("bun/".length);
-	const [config, work] = [
-		join(tmp, `${name}.config.json`),
-		join(tmp, `${name}-${Bun.hash(JSON.stringify(print))}.json`),
-	];
+	const config = join(tmp, `${name}.config.json`);
+	// A forced run's copy apart, and never seeded: a seeded copy outliving a failed start would be resumed as results.
+	const work = join(tmp, `${name}-${Bun.hash(JSON.stringify(print))}${force ? "-forced" : ""}.json`);
 	const stored = join(top, storedPath(module));
 	mkdirSync(tmp, { recursive: true });
 	const resumed = existsSync(work);
-	// Not when forced: Stryker writes no partial file before its first result, so a seeded copy of the old
-	// results would outlive a failed start and be resumed, without `--force`, as if measured against `print`.
 	if (!resumed && !force && existsSync(stored)) writeFileSync(work, readFileSync(stored));
 	const own = { mutate: [module], commandRunner: { command: `bun test ${stem(module)}` }, incrementalFile: work };
 	writeFileSync(config, JSON.stringify({ ...shared, ...own }));
