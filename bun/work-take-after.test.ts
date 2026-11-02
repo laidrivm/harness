@@ -60,13 +60,21 @@ describe("the last line", () => {
 		expect(last((await take()).out)).toBe("last comment: none");
 	});
 
-	test("newest comments with no id or one --after refuses: the newest it accepts; none when no comment has one (local review)", async () => {
-		const { id: _, ...bare } = reply(2, 10);
+	/** A comment with no id. */
+	const bare = () => {
+		const { id: _, ...rest } = reply(2, 10);
+		return rest;
+	};
+
+	test("newest comments with no id or one --after refuses: the newest it accepts (local review)", async () => {
 		const braced = said(`{${cid(3)}}`, USER, at(11), { plain_text: "Braced." });
-		expect(last((await take({ stub: { comments: [[question(cid(1), at(9)), bare, braced]] } })).out)).toBe(
+		expect(last((await take({ stub: { comments: [[question(cid(1), at(9)), bare(), braced]] } })).out)).toBe(
 			`last comment: ${cid(1)}`,
 		);
-		expect(last((await take({ stub: { comments: [[bare]] } })).out)).toBe("last comment: none");
+	});
+
+	test("no comment with an id --after accepts: none (local review)", async () => {
+		expect(last((await take({ stub: { comments: [[bare()]] } })).out)).toBe("last comment: none");
 	});
 });
 
