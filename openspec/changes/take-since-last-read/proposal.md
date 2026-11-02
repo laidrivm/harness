@@ -30,7 +30,8 @@ would be told there is nothing new on a card it never read.
   `pre-push-commit-gates` card's first `take` drops from about 54 KB to
   about 11 KB.
 - `take` ends with one line naming the id of the card's last comment, or
-  saying it has none (user, 02.11, answer 2 a).
+  saying it has none (user, 02.11, answer 2 a). With none, there is no id
+  to pass: the re-read is a full `take` without `--after`.
 - `take --card <id> --after <comment id>` prints the card's `Status` and
   `Assign`, the comments after that one, whether a question waits, and the
   line releasing `Assign` where `take` releases it today, then the last
@@ -55,8 +56,11 @@ None.
 ### Modified Capabilities
 
 - `work-take`: *Take reads its arguments strictly* accepts `--after`; *Take
-  prints the change the card points at* prints paths and line counts; *Take
-  prints the open changes* no longer ends the output. Adds *Take ends with
+  prints the card as Notion holds it* and *Take prints every comment and
+  whether a question waits* hold for a run without `--after`; *Take prints
+  the change the card points at* prints paths and line counts, and it and
+  *Take prints the open changes* hold without `--after`, the open changes no
+  longer ending the output. Adds *Take ends with
   the card's last comment* and *A re-read prints only what came after a
   comment*.
 

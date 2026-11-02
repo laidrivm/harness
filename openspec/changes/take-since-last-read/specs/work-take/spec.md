@@ -29,10 +29,65 @@ before any Notion, git or `openspec` call.
   digit too many, or with `--after` and no value
 - **THEN** it prints the usage, exits 2, and calls nothing
 
+### Requirement: Take prints the card as Notion holds it
+
+Without `--after`, `take` SHALL print, in this order, the checkout's `HEAD`
+commit, then the card's `Name`, `Status`, `Pointer`, `Labels` and `Assign`,
+then the card's body as the markdown Notion renders for the page, unchanged,
+Notion's own `<unknown>` tags for blocks it does not render included. When
+Notion's answer marks that markdown truncated, or lists the ids of blocks it
+left out, `take` SHALL say so after it.
+
+#### Scenario: A card
+
+- **WHEN** `take` runs on a card in `proposing` whose body holds a heading
+  and a list
+- **THEN** it prints the commit, the five properties with `Status` reading
+  `proposing`, and the body's markdown as Notion returned it
+
+#### Scenario: A truncated body
+
+- **WHEN** Notion marks the page's markdown as truncated
+- **THEN** `take` prints the markdown it was given and a line saying the body
+  is truncated
+
+#### Scenario: Blocks Notion left out
+
+- **WHEN** Notion's answer lists the ids of two blocks it left out and does
+  not mark the markdown truncated
+- **THEN** `take` prints the markdown and a line saying two blocks are
+  missing from it
+
+### Requirement: Take prints every comment and whether a question waits
+
+Without `--after`, `take` SHALL print every page-level comment of the card,
+oldest first, each with its time, its author — the user, or the author's id —
+and its text, and then one line saying whether a question waits on the user,
+decided as `task-board`'s *An open question waits on its card, assigned to
+the user* reads it with no integration id. It SHALL read every page of the
+comments.
+
+#### Scenario: A question with no answer
+
+- **WHEN** no comment by the user follows the card's last comment opening
+  with the question mark, though another author's may
+- **THEN** `take` prints the comments and `question waiting: yes`
+
+#### Scenario: An answered question
+
+- **WHEN** the user's comment follows the card's last question
+- **THEN** `take` prints the comments, the answer marked as the user's, and
+  `question waiting: no`
+
+#### Scenario: Comments over more than one page
+
+- **WHEN** Notion returns the card's comments on two pages
+- **THEN** `take` prints the comments of both
+
 ### Requirement: Take prints the change the card points at
 
 When the card's `Pointer` is exactly `openspec/changes/<slug>/`, the slug
-lower-case and not `archive`, `take` SHALL print, for each of that change's
+lower-case and not `archive`, `take` without `--after` SHALL print, for each of that change's
 `proposal.md`, `design.md` and `tasks.md` the checkout holds, skipping one it
 lacks, and for every delta spec, one line holding the file's path from the
 checkout's root and its number of lines, never its contents, and the names
@@ -74,8 +129,8 @@ of the capabilities the deltas touch, never their live specs. Any other
 
 ### Requirement: Take prints the open changes
 
-After the card's change, `take` SHALL print the output of `openspec list` in
-the checkout, unchanged.
+After the card's change, `take` without `--after` SHALL print the output of
+`openspec list` in the checkout, unchanged.
 
 #### Scenario: Open changes
 
@@ -135,8 +190,9 @@ the last comment line. It SHALL read no body, run neither git nor
 
 - **WHEN** `take --after` names an id that none of the card's comments
   carries
-- **THEN** `take` prints a line saying that comment is not on the card,
-  every comment of the card, and exits 0
+- **THEN** `take` prints a line saying that comment is not on the card and
+  every comment of the card, and the missing comment alone does not fail
+  the run: it exits 0 unless the release's restore fails, which still exits 1
 
 #### Scenario: The id in the other form
 
