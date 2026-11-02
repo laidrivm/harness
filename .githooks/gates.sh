@@ -15,4 +15,5 @@ if command -v gitleaks >/dev/null; then
 	base=$(bash bun/diff-base.sh)
 	gitleaks git . --log-opts="$base..HEAD" -v --redact --no-banner
 fi
-bun test
+# Without the runner's base: the suite's cases read `diff-base.sh` with none set.
+env -u HARNESS_BASE bun test

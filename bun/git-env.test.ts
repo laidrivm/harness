@@ -107,7 +107,8 @@ function hook(env: Record<string, string>, tools: Record<string, number> = {}): 
 	const path = (process.env.PATH ?? "").split(":").filter((d) => !OPTIONAL.some((t) => existsSync(join(d, t))));
 	const run = Bun.spawnSync(["bash", HOOK], {
 		cwd: work,
-		env: { ...process.env, PATH: [stub, ...path].join(":"), RECORD: record, ...env },
+		// Not the runner's base, should the suite run under one: `env` alone sets it.
+		env: { ...process.env, HARNESS_BASE: undefined, PATH: [stub, ...path].join(":"), RECORD: record, ...env },
 		timeout: 20_000,
 	});
 	const calls = readFileSync(record, "utf8")
@@ -156,9 +157,13 @@ describe("the pre-push hook", () => {
 	])("with %s, gitleaks scans from the base diff-base.sh prints to HEAD", (_, env, base) => {
 		const { code, calls } = hook(env, { gitleaks: 0, actionlint: 0 });
 		const scan = started(calls).filter((line) => line.startsWith("gitleaks ") || line.startsWith("actionlint"));
-		expect([code, scan]).toEqual([
+		// The suite runs without it: its cases read `diff-base.sh` with no base set.
+		const suite = calls.filter(([line]) => line?.trimEnd() === "bun test");
+		expect([code, scan, suite.length, carried(suite, ["HARNESS_BASE"])]).toEqual([
 			0,
 			["actionlint", `gitleaks git . --log-opts=${base}..HEAD -v --redact --no-banner`],
+			1,
+			[],
 		]);
 	});
 
