@@ -157,9 +157,10 @@ describe("on the host, through the launcher", () => {
 			'#!/bin/sh\necho "$*" >> "$HOME/as-agent-calls"\ncd "$1" || exit 1\nshift\nexport AS_AGENT=agent\nexec "$@"\n',
 			{ mode: 0o755 },
 		);
+		// `FAIL_ORIGIN_FETCH_IN` names a directory whose `git fetch -q origin` fails as the network does, every other call real.
 		writeFileSync(
 			join(tools, "git"),
-			`#!/bin/sh\nprintf '%s|%s|%s\\n' "\${AS_AGENT:-runner}" "$(pwd -P)" "$*" >> "$HOME/git-calls"\nexec ${Bun.which("git")} "$@"\n`,
+			`#!/bin/sh\nprintf '%s|%s|%s\\n' "\${AS_AGENT:-runner}" "$(pwd -P)" "$*" >> "$HOME/git-calls"\nif [ -n "\${FAIL_ORIGIN_FETCH_IN:-}" ] && [ "$(pwd -P)" = "$FAIL_ORIGIN_FETCH_IN" ] && [ "$*" = "fetch -q origin" ]; then\necho 'fatal: unable to access: Connection refused' >&2\nexit 128\nfi\nexec ${Bun.which("git")} "$@"\n`,
 			{ mode: 0o755 },
 		);
 	});
@@ -225,9 +226,8 @@ describe("on the host, through the launcher", () => {
 	test("a push clone whose origin cannot be reached pushes nothing and names why", async () => {
 		const h = host();
 		const { push, env } = onHost(h);
-		git(push, "remote", "set-url", "origin", "https://unreachable.invalid/o/r.git");
 		fix(h, recorded);
-		const r = await deliver(h, payload(), { env, tools: `${free}:${tools}` });
+		const r = await deliver(h, payload(), { env: { ...env, FAIL_ORIGIN_FETCH_IN: push }, tools: `${free}:${tools}` });
 		expect(r.code).toBe(1);
 		expect(r.line).toMatch(/; the push clone could not fetch origin; nothing was pushed$/);
 		expect(rev(h.bare, "refs/heads/feat/x")).toBe(SHA);
