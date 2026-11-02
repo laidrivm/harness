@@ -1,0 +1,12 @@
+{
+	"$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+	"testRunner": "command",
+	"thresholds": {
+		"break": null
+	},
+	"reporters": ["clear-text", "progress"],
+	"incremental": true,
+	"tempDirName": ".stryker-tmp",
+	"tsconfigFile": "tsconfig.stryker-none.json",
+	"ignorePatterns": [".claude", "mutation"]
+}
