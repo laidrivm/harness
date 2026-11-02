@@ -79,6 +79,6 @@ One group, one pull request on `feat/push-skips-proven-gates-1`, under the
       a row for `bun/push-proven.ts` linking `commit-gates`. Verify by
       reading both back and by `grep -n background core/review-toolkit.md`
       naming no runner line
-- [ ] 1.7 Run `bun bun/pre-pr.ts origin/main` on the group's last commit,
+- [x] 1.7 Run `bun bun/pre-pr.ts origin/main` on the group's last commit,
       then push with `work.ts finish`. Verify the push prints the skip line
       for that commit and runs no gate
