@@ -7,13 +7,15 @@ failing case is written first, its failure recorded, and cited as
 
 ## 1. The round-two rule and the skill's deferral
 
-- [ ] 1.1 Write failing cases in `bun/review-docs.test.ts`, reading the
+- [x] 1.1 Write failing cases in `bun/review-docs.test.ts`, reading the
       `/coderabbit` bullet as the cap cases do. The bullet starts the rule
       at "the second round" and dates a Minor's round by "the review that
       posted it" [1]. It names, as the living docs whose Minors are pushed,
       `openspec/specs/**`, `CLAUDE.md` and `core/**`,
       and it says the cap still decides whether the run applies anything
-      [2]. It names the card `CodeRabbit Minors deferred from #<N>` and the
+      [2]. It names the card `CodeRabbit Minors deferred from
+      <owner>/<repo>#<N>`, counts each copy of a reposted Minor while
+      applying its fix once, and names the
       Skipped form `deferred to <card>`, and says a Minor the card already
       holds is not written again [3]. It says the `resolve` command leaves a
       deferred Minor's thread to the user [4]. The fourth round needs no new
@@ -29,7 +31,7 @@ failing case is written first, its failure recorded, and cited as
       deferral as the exception, and the Minor line still says "`below
       severity threshold` is not a reason on its own" [9]. Verify: each new
       case fails against today's prose
-- [ ] 1.2 In `core/review-toolkit.md`'s `/coderabbit` bullet, after the
+- [x] 1.2 In `core/review-toolkit.md`'s `/coderabbit` bullet, after the
       three-round cap, add the rule, the Minor's round, the Minor already on
       the card, and the deferred thread left to the user, marked
       `(unattended: agent — name the thread in the report and go on)`
@@ -42,7 +44,7 @@ failing case is written first, its failure recorded, and cited as
 
 ## 2. `path_instructions` for a change's artefacts
 
-- [ ] 2.1 Write failing cases in `bun/review-config.test.ts` over the
+- [x] 2.1 Write failing cases in `bun/review-config.test.ts` over the
       repository's config, read through `parsed()` and `at()` as the
       approval cases read it. The first finds the
       `reviews.path_instructions` entry whose `path` is exactly
@@ -55,7 +57,7 @@ failing case is written first, its failure recorded, and cited as
       fails, and a failure names the phrase that is gone [12] [13]. No
       fabricated config is needed, since the pin reads one file and no
       helper is added. Verify: each case fails against today's config
-- [ ] 2.2 Add the entry to `.coderabbit.yaml` (design, *`path_instructions`,
+- [x] 2.2 Add the entry to `.coderabbit.yaml` (design, *`path_instructions`,
       not `path_filters`*), and give its header and the test file's header a
       clause on what the entry is for. Add the instructions given to a
       change's artefacts to the list of what the config pins in the

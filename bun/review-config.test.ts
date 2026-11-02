@@ -3,12 +3,15 @@
  * doc the rulebook indexes outside every configured guideline pattern, a
  * pattern that matches no tracked file, or a config the check cannot read.
  * Each reads, to the review bot, as a rulebook with nothing in it. Also fails
- * when the config turns the bot's approval off or its draft reviews on.
+ * when the config turns the bot's approval off or its draft reviews on, or
+ * when the instructions that keep the bot to contradictions in a change's
+ * artefacts are gone.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { flat } from "./prose.fixture.ts";
 import { at, parsed, unreached } from "./review-config.ts";
 import { root } from "./root.ts";
 
@@ -77,6 +80,34 @@ describe("the bot's approval", () => {
 		if (typeof read === "string") throw new Error(read);
 		const key = "reviews.auto_review.auto_pause_after_reviewed_commits";
 		expect(at(read.config, key)).toBe(0);
+	});
+});
+
+describe("the instructions for a change's artefacts", () => {
+	const PATH = "openspec/changes/**";
+
+	/** The `reviews.path_instructions` entry whose `path` is exactly `PATH`, from the config the bot parses. */
+	function entry(): Record<string, unknown> | undefined {
+		const read = parsed(root);
+		if (typeof read === "string") throw new Error(read);
+		const list = at(read.config, "reviews.path_instructions");
+		if (!Array.isArray(list)) return undefined;
+		return list.find((item) => item?.path === PATH);
+	}
+
+	// spec: local-review-loop/the-entry-is-missing
+	test("an entry names the change directory, not its archive alone [10, 11]", () => {
+		expect(entry()).toBeDefined();
+	});
+
+	// spec: local-review-loop/the-instructions-lose-their-scope
+	test.each([
+		"archive",
+		"contradictions with a spec, the code or another artefact",
+		"Do not flag wording, duplication or style",
+	])("its instructions keep `%s` [12, 13]", (phrase) => {
+		const text = entry()?.instructions;
+		expect(typeof text === "string" ? flat(text) : "").toContain(phrase);
 	});
 });
 
