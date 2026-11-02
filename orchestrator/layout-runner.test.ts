@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
-import { composed, read, root, yaml } from "./layout.fixture.ts";
+import { composed, instructions, read, root, yaml } from "./layout.fixture.ts";
 
 /** The runner image and the host README, read from the tree. [n]: `/zombies` ideas. */
 
@@ -91,24 +91,23 @@ describe("the runner image", () => {
 		expect(r.stdout.toString().split("\n")).toEqual(["/home/agent/clones", "harness", "owner/repo", "*", ""]);
 	});
 
-	/** The Dockerfile's instructions, each continuation joined onto one line. */
-	const instructions = () => read(dockerfile).replaceAll("\\\n", " ").split("\n");
+	const lines = () => instructions(dockerfile);
 
 	test("apt installs tmux and the libstdc++6 Node needs", () => {
-		const apt = instructions().find((l) => l.includes("apt-get install")) ?? "";
+		const apt = lines().find((l) => l.startsWith("RUN ") && l.includes("apt-get install")) ?? "";
 		for (const name of ["tmux", "libstdc++6"]) expect(apt.split(/\s+/)).toContain(name);
 	});
 
 	// spec: orchestrator/node-is-bun
 	test("node is the one binary from a node:24 stage, never a link to bun", () => {
-		const lines = instructions();
-		expect(lines.some((l) => /^FROM node:24\.\d+\.\d+-\S+ AS node$/.test(l))).toBe(true);
-		expect(lines).toContain("COPY --from=node /usr/local/bin/node /usr/local/bin/node");
-		expect(lines.filter((l) => /\bln\b[^\n]*\bbun\b[^\n]*\bnode\b/.test(l))).toEqual([]);
+		const all = lines();
+		expect(all.some((l) => /^FROM node:24\.\d+\.\d+-\S+ AS node$/.test(l))).toBe(true);
+		expect(all).toContain("COPY --from=node /usr/local/bin/node /usr/local/bin/node");
+		expect(all.filter((l) => /\bln\b[^\n]*\bbun\b[^\n]*\bnode\b/.test(l))).toEqual([]);
 	});
 
 	// spec: orchestrator/a-linter-pin-that-drifts-from-ci-s
-	test("the actionlint and gitleaks stages are the images, tags and digests lint.yml runs, and their binaries are copied in", () => {
+	test("the actionlint and gitleaks stages are the images, tags and digests lint.yml runs, and their binaries, and the shellcheck CI's actionlint calls, are copied in", () => {
 		type Job = { steps?: { uses?: string }[] };
 		const jobs = (yaml(".github/workflows/lint.yml").jobs ?? {}) as Record<string, Job>;
 		const ci = Object.values(jobs)
@@ -116,7 +115,7 @@ describe("the runner image", () => {
 			.map((s) => s.uses ?? "")
 			.filter((u) => u.startsWith("docker://"))
 			.map((u) => u.slice("docker://".length));
-		const froms = instructions().flatMap((l) => /^FROM (\S+)/.exec(l)?.[1] ?? []);
+		const froms = lines().flatMap((l) => /^FROM (\S+)/.exec(l)?.[1] ?? []);
 		const name = (ref: string) => ref.split(/[:@]/)[0];
 		for (const tool of ["actionlint", "gitleaks"]) {
 			const theirs = ci.find((ref) => name(ref)?.endsWith(`/${tool}`));
@@ -125,15 +124,23 @@ describe("the runner image", () => {
 			// Both values, so the failure names the pin to move.
 			expect(`Dockerfile ${ours}`).toBe(`Dockerfile ${theirs}`);
 		}
-		const lines = instructions();
-		expect(lines).toContain("COPY --from=actionlint /usr/local/bin/actionlint /usr/local/bin/actionlint");
-		expect(lines).toContain("COPY --from=gitleaks /usr/bin/gitleaks /usr/local/bin/gitleaks");
+		const all = lines();
+		expect(all).toContain("COPY --from=actionlint /usr/local/bin/actionlint /usr/local/bin/actionlint");
+		// actionlint skips shellcheck's pass over `run:` scripts when it finds none on PATH.
+		expect(all).toContain("COPY --from=actionlint /usr/local/bin/shellcheck /usr/local/bin/shellcheck");
+		expect(all).toContain("COPY --from=gitleaks /usr/bin/gitleaks /usr/local/bin/gitleaks");
 	});
 
 	// spec: orchestrator/a-tool-that-does-not-run
 	test("one RUN prints the version of node, actionlint, gitleaks and claude, so a binary that cannot run fails the build", () => {
-		const versions = ["node --version", "actionlint -version", "gitleaks version", "claude --version"];
-		expect(instructions().filter((l) => l.startsWith("RUN ") && versions.every((v) => l.includes(v)))).toHaveLength(1);
+		const versions = [
+			"node --version",
+			"actionlint -version",
+			"shellcheck --version",
+			"gitleaks version",
+			"claude --version",
+		];
+		expect(lines().filter((l) => l.startsWith("RUN ") && versions.every((v) => l.includes(v)))).toHaveLength(1);
 	});
 
 	test("the engine's ssh call names the clone and the repository the job runs [38]", () => {

@@ -5,6 +5,7 @@ import { PASSED } from "../bun/board-loop-session.ts";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 import { FILES } from "../bun/github-app-mint.ts";
 import { RUNNER_ASKS } from "../bun/question-gate.ts";
+import { instructions } from "./layout.fixture.ts";
 
 /** The host's three users (`runner-isolation` group 5, task 5.1): the image, its sudoers, the launcher and the key holder's files. */
 
@@ -18,6 +19,7 @@ const uidOf = (user: string) =>
 	/--uid (\d+)/.exec(
 		dockerfile.split("\n").find((l) => l.includes("useradd") && new RegExp(`\\s${user}(\\s|$)`).test(l)) ?? "",
 	)?.[1];
+const HELPER = "credential.https://github.com.helper";
 const rules = sudoers.split("\n").filter((l) => !l.startsWith("#") && l.includes("NOPASSWD"));
 
 describe("the image's users", () => {
@@ -74,24 +76,19 @@ describe("the image's users", () => {
 		expect(dockerfile).toContain("COPY --chmod=0755 runner/gh /usr/local/bin/gh");
 		// setup-git would write the real gh's path.
 		expect(dockerfile).not.toContain("gh auth setup-git");
-		// The helper as git reads it: the image's `RUN` that writes it, run against a scratch system config.
-		const run = dockerfile
-			.replaceAll("\\\n", " ")
-			.split("\n")
-			.find((l) => l.startsWith("RUN ") && l.includes("git config --system"));
+		// The helper as git reads it: the image's `RUN` that writes it, run against a scratch system config
+		// under dash, the image's /bin/sh, and sh.
+		const run = instructions("orchestrator/runner/Dockerfile").find(
+			(l) => l.startsWith("RUN ") && l.includes("git config --system"),
+		);
 		expect(run).toBeDefined();
-		const config = join(emptyDir("orchestrator-gitconfig-"), "gitconfig");
-		const env = { PATH: process.env.PATH ?? "", GIT_CONFIG_SYSTEM: config, GIT_CONFIG_NOSYSTEM: "" };
-		expect(Bun.spawnSync(["sh", "-c", run?.slice(4) ?? "false"], { env }).exitCode).toBe(0);
-		const helpers = Bun.spawnSync([
-			"git",
-			"config",
-			"--file",
-			config,
-			"--get-all",
-			"credential.https://github.com.helper",
-		]);
-		expect(helpers.stdout.toString()).toBe("\n!/usr/local/bin/gh auth git-credential\n");
+		for (const shell of ["dash", "sh"]) {
+			const config = join(emptyDir("orchestrator-gitconfig-"), "gitconfig");
+			const env = { PATH: process.env.PATH ?? "", GIT_CONFIG_SYSTEM: config, GIT_CONFIG_NOSYSTEM: "" };
+			expect(Bun.spawnSync([shell, "-c", run?.slice(4) ?? "false"], { env }).exitCode).toBe(0);
+			const helpers = Bun.spawnSync(["git", "config", "--file", config, "--get-all", HELPER]);
+			expect(`${shell}: ${helpers.stdout}`).toBe(`${shell}: \n!/usr/local/bin/gh auth git-credential\n`);
+		}
 	});
 
 	test("the image installs jq and the empty hooks directory pass.sh resets to, and writes no gh login into runner's home", () => {

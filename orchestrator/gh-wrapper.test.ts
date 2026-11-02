@@ -17,11 +17,11 @@ const me = userInfo().username;
 
 type Run = { code: number; err: string; mintArgs?: string[]; ghArgs?: string[]; ghToken?: string; ghStdin?: string };
 
-/** The wrapper with `args`, as the session user unless `user` names another, with `env` added and the mint exiting `mintCode`. */
+/** The wrapper with `args`, as the session user unless `user` names another, with `env` added and the mint exiting `mintCode` or printing `minted`. */
 function run(
 	shell: string,
 	args: string[],
-	opts: { env?: Record<string, string>; user?: string; mintCode?: number } = {},
+	opts: { env?: Record<string, string>; user?: string; mintCode?: number; minted?: string } = {},
 ): Run {
 	const dir = emptyDir("orchestrator-gh-");
 	const mint = join(dir, "mint");
@@ -29,7 +29,7 @@ function run(
 	// The mint drains its stdin as a bun start may, so a wrapper that hands it git's stdin starves gh of it.
 	writeFileSync(
 		mint,
-		`#!/bin/sh\ncat >/dev/null\nprintf '%s\\n' "$@" >"${dir}/mint.args"\n[ ${opts.mintCode ?? 0} = 0 ] || { echo "mint: refused" >&2; exit ${opts.mintCode}; }\necho minted-token\n`,
+		`#!/bin/sh\ncat >/dev/null\nprintf '%s\\n' "$@" >"${dir}/mint.args"\n[ ${opts.mintCode ?? 0} = 0 ] || { echo "mint: refused" >&2; exit ${opts.mintCode}; }\nprintf '${opts.minted ?? "minted-token\\n"}'\n`,
 		{ mode: 0o755 },
 	);
 	writeFileSync(
@@ -86,6 +86,11 @@ for (const shell of ["sh", "dash"])
 			expect(r.ghArgs?.join(" ")).not.toContain("minted-token");
 		});
 
+		test("an argument holding a space, and an empty one, reach gh as single words", () => {
+			const args = ["pr", "create", "--title", "two words", "--body", ""];
+			expect(run(shell, args).ghArgs).toEqual(args);
+		});
+
 		test("an empty GH_TOKEN mints as an unset one does", () => {
 			const r = run(shell, ["pr", "list"], { env: { GH_TOKEN: "" } });
 			expect(r.mintArgs).toEqual(["laidrivm/harness", ...PAIRS]);
@@ -119,6 +124,12 @@ for (const shell of ["sh", "dash"])
 				expect([r.code, r.ghArgs]).toEqual([status, undefined]);
 				expect(r.err).toContain("mint: refused");
 			});
+
+		test("a mint exiting 0 with no token exits the wrapper 1, naming it, and gh never runs", () => {
+			const r = run(shell, ["pr", "list"], { minted: "" });
+			expect([r.code, r.ghArgs]).toEqual([1, undefined]);
+			expect(r.err).toContain("the mint printed no token");
+		});
 	});
 
 // spec: orchestrator/a-permission-the-mint-does-not-hold

@@ -22,7 +22,15 @@ fi
 # derive it from origin when the session takes D2ASS or mellon.
 # shortcut: git asks the helper on store and erase as well as get, so a push
 # mints twice; skip the mint for those when the probe shows the cost.
+# shortcut: the mint runs inside the caller's gh limit and outlives a caller's
+# kill, bounded only by its own request timeouts; bound it here when the
+# probe shows a slow mint.
 # Unquoted: the mint is words. Its stdin is git's credential request, gh's.
 token=$($mint laidrivm/harness contents=write pull_requests=write checks=read actions=read statuses=read workflows=write </dev/null) || exit
+# An empty answer would run gh unauthenticated, reading a private repository as empty, as minted() refuses.
+if [ -z "$token" ]; then
+	echo "gh: the mint printed no token" >&2
+	exit 1
+fi
 export GH_TOKEN="$token"
 exec "$real" "$@"
