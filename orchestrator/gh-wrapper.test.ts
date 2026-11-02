@@ -125,6 +125,7 @@ for (const shell of ["sh", "dash"])
 				expect(r.err).toContain("mint: refused");
 			});
 
+		// spec: orchestrator/the-mint-answers-with-no-token
 		test("a mint exiting 0 with no token exits the wrapper 1, naming it, and gh never runs", () => {
 			const r = run(shell, ["pr", "list"], { minted: "" });
 			expect([r.code, r.ghArgs]).toEqual([1, undefined]);

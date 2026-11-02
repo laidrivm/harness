@@ -70,9 +70,14 @@ credential helper SHALL be this wrapper. No token SHALL be written to disk.
 
 #### Scenario: The mint fails
 
-- **WHEN** the key holder mints nothing
+- **WHEN** the key holder's mint exits non-zero
 - **THEN** the wrapper exits with the mint's status and the real `gh` does
   not run
+
+#### Scenario: The mint answers with no token
+
+- **WHEN** the key holder's mint exits 0 and prints no token
+- **THEN** the wrapper exits 1, naming it, and the real `gh` does not run
 
 #### Scenario: git reaches GitHub
 
