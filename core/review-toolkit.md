@@ -195,8 +195,9 @@ below say why each one exists.
    full test run takes minutes, and never with `&`; a call the tool moves to
    the background at that limit is waited for in the same turn, never started
    again. The pre-push hook and CI measure the budget without recording; the
-   hook skips its other gates for a commit the runner passed here. The budget goes first because
-   over budget says the reviewable unit was cut too wide rather than that the
+   hook skips its other gates only where `commit-gates` (*The pre-push hook
+   skips the gates a passing run record proved*) says. The budget goes first
+   because over budget says the reviewable unit was cut too wide rather than that the
    code is wrong — and re-cutting it changes the diff every gate below reads.
    It reports how many lines the reviewer must read, and names its own
    thresholds and, where it has one, the remedy in the gate line, so a reader
