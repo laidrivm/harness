@@ -121,10 +121,8 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       test alone is not re-run without `--force`. The sandbox is judged: the
       killed mutants' output names `.stryker-tmp/sandbox-*`. No flag takes the
       command, so a configuration file under `.stryker-tmp` carries the
-      per-module values. `node -v` on the host is not read: the probe ran on
-      the laptop, whose command guard refuses `node -v`. It stays open until
-      group 7: read it on the host against Stryker 10.0.0's `node >=22.0.0`,
-      and file a card if it falls short
+      per-module values. The host's `node -v` (Stryker needs `>=22.0.0`) is
+      left to group 7, a card if short: the laptop's command guard refuses it
 - [x] 5.3 Failing cases in `bun/mutation-run.test.ts` over the pure parts:
       modules exclude tests and fixtures; a module no test file matches is
       named and not run (`a-module-no-test-file-matches`); a source that
