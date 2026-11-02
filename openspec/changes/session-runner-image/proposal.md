@@ -18,7 +18,10 @@ the session user may read no secret file, and sudoers holds two rules. The
 explore of 2026-11-02 on card *Build the runner image for the persistent
 session…*, with the card *Mint the session's GitHub App token per call…*
 merged into it, chose one change for both, since both edit the Dockerfile,
-sudoers and one requirement set, and the stage page plans one pull request.
+sudoers and one requirement set, and the stage page plans steps 3 and 4
+together. It ships in two implementation pull requests, each under the
+800-line budget (tasks.md, groups 1–2 and group 3), and the host takes it
+once both have merged.
 
 ## What Changes
 
