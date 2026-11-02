@@ -35,14 +35,14 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
 
 ## 2. The image's tools
 
-- [ ] 2.1 Write the failing cases in `orchestrator/layout-runner.test.ts`:
+- [x] 2.1 Write the failing cases in `orchestrator/layout-runner.test.ts`:
       apt installs `tmux` and `libstdc++6`; a `FROM node:24.` stage and a
       `COPY --from` of its `node`, and no line linking `node` to bun; the
       `actionlint` and `gitleaks` `FROM` lines carry exactly the image, tag
       and digest `lint.yml`'s `uses: docker://…` lines name, read from
       `lint.yml`, failing with both values; one `RUN` prints the versions
       of `node`, `actionlint`, `gitleaks` and `claude`. Verify they fail
-- [ ] 2.2 Edit the Dockerfile per design *The image's tools and their pins*:
+- [x] 2.2 Edit the Dockerfile per design *The image's tools and their pins*:
       re-read Claude Code's latest release and its linux-x64 checksum from
       that release's `manifest.json`, Node 24's current patch and its
       digest, each pin with its note; drop the symlink line. Verify `bun test
