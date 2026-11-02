@@ -43,7 +43,7 @@ export const dashed = (id: string) =>
 	`${id.slice(0, 8)}-${id.slice(8, 12)}-${id.slice(12, 16)}-${id.slice(16, 20)}-${id.slice(20)}`;
 /** The `n`th comment's id, distinct for each `n`: an even one in a UUID's form, as Notion gives it, an odd one as 32 hex digits. */
 export const cid = (n: number) => {
-	const id = n.toString(16).padStart(32, "c");
+	const id = `c${n.toString(16).padStart(31, "0")}`;
 	return n % 2 ? id : dashed(id);
 };
 

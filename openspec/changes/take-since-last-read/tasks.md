@@ -58,7 +58,7 @@ The bracketed numbers are the proposal-stage `/zombies` ideas.
       `USAGE` and the header comment; update `work-take.ts`'s header comment
       to match. Verify: `bun test bun/work-take.test.ts
       bun/work-take-fail.test.ts` passes, and `bun bun/check.ts` passes
-- [ ] 1.6 In `core/feature-workflow.md`, where a session resuming work reads
+- [x] 1.6 In `core/feature-workflow.md`, where a session resuming work reads
       the card's comments with `take`, say that the first read prints the
       card and the paths of its change, ending with the last comment's id,
       and a re-read passes `--after <that id>` and prints only what came

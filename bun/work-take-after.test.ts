@@ -12,6 +12,7 @@ import {
 	cid,
 	dashed,
 	files,
+	LISTING,
 	question,
 	type Stub,
 	said,
@@ -39,7 +40,7 @@ describe("the last line", () => {
 	// spec: work-take/comments-on-the-card
 	test("three comments: the third's id, after openspec list's listing [6]", async () => {
 		const run = await take({ stub: { comments: [[reply(3, 11), question(cid(1), at(9)), reply(2, 10)]] } });
-		expect(run.out).toEndWith(`## Open changes\nChanges:\n  demo     0/1 tasks\n\nlast comment: ${cid(3)}\n`);
+		expect(run.out).toEndWith(`## Open changes\n${LISTING}last comment: ${cid(3)}\n`);
 	});
 
 	// spec: work-take/two-comments-in-one-minute
@@ -59,11 +60,12 @@ describe("the last line", () => {
 		expect(last((await take()).out)).toBe("last comment: none");
 	});
 
-	test("a newest comment with no id: none, not undefined (local review)", async () => {
+	test("a newest comment with no id: the newest that has one; none when no comment has one (local review)", async () => {
 		const { id: _, ...bare } = reply(2, 10);
 		expect(last((await take({ stub: { comments: [[question(cid(1), at(9)), bare]] } })).out)).toBe(
-			"last comment: none",
+			`last comment: ${cid(1)}`,
 		);
+		expect(last((await take({ stub: { comments: [[bare]] } })).out)).toBe("last comment: none");
 	});
 });
 
