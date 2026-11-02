@@ -647,9 +647,9 @@ file to its archived path.
 
 #### Scenario: A pull request finish did not open
 
-- **WHEN** the user opens a pull request for a card by hand
-- **THEN** the first turn that learns it exists adds its link, since no
-  `finish --card` wrote it
+- **WHEN** the user opens a pull request for a card by hand, and no
+  `finish --card` runs while it is open
+- **THEN** the first turn that learns it exists adds its link
 
 ### Requirement: A column is a queue the user orders
 
