@@ -92,15 +92,23 @@ function change(pointer: string, top: string, commit: string): string[] {
 	const lines = paths
 		.filter((path) => existsSync(join(dir, path)))
 		.map((path) => {
-			const lines = count(readFileSync(join(dir, path), "utf8"));
-			return `${pointer}${path}: ${lines} line${lines === 1 ? "" : "s"}`;
+			const n = count(readFileSync(join(dir, path), "utf8"));
+			return `${pointer}${path}: ${n} line${n === 1 ? "" : "s"}`;
 		});
 	return [...lines, `capabilities: ${capabilities.join(", ") || "none"}`];
 }
 
-/** The line ending every read that got the comments, naming the newest of `ordered` as Notion gave its id. */
+/** The checkout's root and its `HEAD` commit. */
+function head(): [string, string] {
+	// Only git's terminator, not `trim()`: a checkout's path may end in a space (bun/root.ts).
+	const [top, commit] = output(["git", "rev-parse", "--show-toplevel", "HEAD"]).replace(/\n$/, "").split("\n");
+	if (top === undefined || commit === undefined) throw new Error("git rev-parse printed no commit");
+	return [top, commit];
+}
+
+/** The line ending every read that got the comments: the newest of `ordered` carrying an id, as Notion gave it. */
 const newest = (ordered: Comment[]) => {
-	const id = ordered.at(-1)?.id;
+	const id = ordered.findLast((comment) => typeof comment.id === "string")?.id;
 	return `last comment: ${typeof id === "string" ? id : "none"}`;
 };
 
@@ -117,16 +125,9 @@ export async function take(card: string, after?: string, timeout = 30_000): Prom
 	try {
 		const found = integration(timeout);
 		if (typeof found === "string") throw new Error(found);
-		let top = "";
-		let commit = "";
-		if (full) {
-			step = "the checkout read";
-			// Only git's terminator, not `trim()`: a checkout's path may end in a space (bun/root.ts).
-			const read = output(["git", "rev-parse", "--show-toplevel", "HEAD"]).replace(/\n$/, "").split("\n");
-			if (read[0] === undefined || read[1] === undefined) throw new Error("git rev-parse printed no commit");
-			[top, commit] = [read[0], read[1]];
-			lines.push(`## Checkout: ${top} at ${commit}`);
-		}
+		if (full) step = "the checkout read";
+		const checkout = full ? head() : undefined;
+		if (checkout) lines.push(`## Checkout: ${checkout[0]} at ${checkout[1]}`);
 
 		step = "the page read";
 		const page = await found.call<{ properties?: Record<string, Property> } | null>(step, `/v1/pages/${card}`);
@@ -165,15 +166,19 @@ export async function take(card: string, after?: string, timeout = 30_000): Prom
 		const freed = await cleared(found.call, card, found.settings.user);
 		if (freed.line) lines.push(freed.line);
 		code = freed.restoreFailed ? 1 : 0;
-		if (!full) return { lines: [...lines, newest(comments)], code };
+		const last = newest(comments);
+		if (!checkout) return { lines: [...lines, last], code };
+		const [top, commit] = checkout;
 
 		step = "the change read";
 		lines.push("## Change", ...change(text(properties.Pointer), top, commit));
 
 		step = "the open changes read";
 		// Telemetry off: take writes nothing but the release, and openspec's telemetry keeps state and sends events.
-		lines.push("## Open changes", output(["openspec", "list"], top, { ...process.env, OPENSPEC_TELEMETRY: "0" }));
-		return { lines: [...lines, newest(comments)], code };
+		const listed = output(["openspec", "list"], top, { ...process.env, OPENSPEC_TELEMETRY: "0" });
+		// Its own terminator off, so the last comment's line follows the listing with no blank line between.
+		lines.push("## Open changes", listed.replace(/\n$/, ""), last);
+		return { lines, code };
 	} catch (error) {
 		return { lines: [...lines, `take: ${step} failed — ${(error as Error).message}`], code: 1 };
 	}
