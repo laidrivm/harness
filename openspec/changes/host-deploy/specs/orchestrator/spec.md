@@ -8,7 +8,10 @@ deployed and with the commit it last rolled back. When the head is neither and
 its latest `test` check run from `github-actions` has concluded `success`, the
 run SHALL fast-forward the host's checkout to that head and rebuild the
 images, and SHALL record the head as deployed only once the session is up on
-them. It SHALL deploy no other commit. While the Windmill deploy token's file
+them. It SHALL move the host's checkout and images to no other commit; the
+session's clone, which the runner's start script pulls when the session
+restarts, MAY be at a newer head of `origin/main` than the one deployed.
+While the Windmill deploy token's file
 does not exist, the run SHALL skip the Windmill push and say so.
 
 #### Scenario: Main has not moved
@@ -161,7 +164,8 @@ When a step after the fast-forward fails, the deploy SHALL write the failure
 file in agent's home, naming the failed step and the commit and replacing an
 older one, SHALL write each clone's stop file that does not exist yet, until
 stage 7 removes them, and SHALL NOT record the commit as deployed. A fetch or
-check read that fails SHALL write neither. The managed `SessionStart` hook
+check read that fails SHALL write neither, nor SHALL a run that the service's
+start timeout kills, which leaves the timeout on the journal. The managed `SessionStart` hook
 SHALL print the failure file, when it exists, with a line asking the session
 to report it to the user in chat.
 

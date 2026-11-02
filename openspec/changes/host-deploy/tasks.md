@@ -87,9 +87,11 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       -d runner`, `rolled-back` written, the failure file, exit 1),
       `orchestrator/a-rolled-back-head`,
       `orchestrator/the-deploy-token-is-absent`; extend
-      `orchestrator/the-build-fails` with the failure file and
-      `orchestrator/a-green-head` with the tag before the build and the wait
-      before the record. Record that they fail
+      `orchestrator/the-build-fails` with the failure file, and change the
+      order `orchestrator/a-green-head` asserts in `deploy.test.ts` from 1.1's
+      (`up`, prune, engine wait, push, record) to the tag before the build,
+      then `up`, the wait for `main`, engine wait, push, record, the failure
+      file's removal, prune. Record that they fail
 - [ ] 3.2 In `deploy.sh`, per design.md: skip a head equal to `rolled-back`;
       tag the running runner's image as `orchestrator-runner:previous` before
       the build; after the build, exit 0 without the fresh-session mark; with
@@ -99,6 +101,7 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       record, the failure file's removal, then the prune. Update the header
       comment. Make 3.1 pass
 - [ ] 3.3 Add `orchestrator/host/harness-deploy.service` (`Type=oneshot`,
+      `ExecStart=/root/harness/orchestrator/deploy.sh`,
       `StateDirectory=harness-deploy`, `TimeoutStartSec=3h`,
       `WorkingDirectory=/root/harness/orchestrator`) and
       `orchestrator/host/harness-deploy.timer` (`OnBootSec=5min`,
