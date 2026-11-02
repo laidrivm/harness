@@ -13,7 +13,7 @@ refs=$(cat)
 # gates run. After the unset, so no `gh` it starts inherits git's variables.
 printf '%s\n' "$refs" | bun bun/push-draft.ts "$@"
 # The gates `commit-gates` lists, the suite last among them; `harness.bumpTest`
-# names the same command. Skipped when the ledger proves every commit pushed;
-# any other exit of the reader, bun missing included, runs them.
+# names the same command. Skipped when the ledger proves every ref's tip
+# pushed; any other exit of the reader runs them.
 printf '%s\n' "$refs" | bun bun/push-proven.ts || bash .githooks/gates.sh
 bash bun/diff-budget.sh || true
