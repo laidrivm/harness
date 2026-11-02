@@ -144,7 +144,8 @@ const GATES = [
 	"bun bun/push-draft.ts",
 	"bun bun/check-yaml.ts",
 	"bun bun/no-suppressions.ts",
-	"bunx --no-install biome ci .",
+	// Errors alone and no colour codes: Biome's warnings filled every run's output (#394).
+	"bunx --no-install biome ci --colors=off --diagnostic-level=error .",
 	"bunx --no-install tsc --noEmit",
 	"bun test",
 ];
@@ -179,7 +180,7 @@ describe("the pre-push hook", () => {
 		const suite = calls.filter(([line]) => line?.trimEnd() === "bun test");
 		expect([code, scan, suite.length, carried(suite, ["HARNESS_BASE"])]).toEqual([
 			0,
-			["actionlint", `gitleaks git . --log-opts=${base}..HEAD -v --redact --no-banner`],
+			["actionlint", `gitleaks git . --log-opts=${base}..HEAD -v --redact --no-banner --log-level=warn`],
 			1,
 			[],
 		]);
