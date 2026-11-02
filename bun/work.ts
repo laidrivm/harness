@@ -5,7 +5,9 @@
  * `util.parseArgs`, one module per subcommand. Any argument it refuses prints
  * the usage and exits 2 before the subcommand runs.
  *
- * - `take --card <id>` (`work-take.ts`): prints the card's context.
+ * - `take --card <id> [--after <comment id>]` (`work-take.ts`): prints the
+ *   card's context, ending with its newest comment's id; with `--after` that
+ *   id, only what came after it.
  * - `finish [--card <id>] [--title <text> --body-file <path>]`
  *   (`work-finish.ts`): pushes the branch, opens its pull request as a draft
  *   when none is open, and marks it ready unless a question waits on the
@@ -24,7 +26,7 @@ import { STATUSES, status } from "./work-status.ts";
 import { take } from "./work-take.ts";
 
 export const USAGE = [
-	"usage: work.ts take --card <id>",
+	"usage: work.ts take --card <id> [--after <comment id>]",
 	"       work.ts finish [--card <id>] [--title <text> --body-file <path>]",
 	"       work.ts status --card <id> --to <status>",
 	"       work.ts resolve --pr <n> --head <sha> --comment <id> [--comment <id> …]",
@@ -46,8 +48,9 @@ function values<Options extends ParseArgsConfig["options"]>(args: string[], opti
 export async function work(args: string[]): Promise<{ lines: string[]; code: number }> {
 	const [subcommand, ...rest] = args;
 	if (subcommand === "take") {
-		const card = values(rest, { card: { type: "string" } })?.card;
-		if (typeof card === "string" && ID.test(card)) return take(card);
+		const set = values(rest, { card: { type: "string" }, after: { type: "string" } });
+		const [card, after] = [set?.card, set?.after];
+		if (typeof card === "string" && ID.test(card) && (after === undefined || ID.test(after))) return take(card, after);
 	}
 	if (subcommand === "finish") {
 		const set = values(rest, { card: { type: "string" }, title: { type: "string" }, "body-file": { type: "string" } });

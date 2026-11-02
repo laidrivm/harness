@@ -1,17 +1,17 @@
 # take-since-last-read — tasks
 
-One group, one pull request, on `feat/take-since-last-read-1`: the change
+One group, one pull request, on `feat/take-since-last-read`: the change
 is about 300 lines of diff, under the 800-line budget. Each failing case is
 written first, its failure recorded, and cited as `// spec: work-take/<slug>`.
 The bracketed numbers are the proposal-stage `/zombies` ideas.
 
 ## 1. Paths for the change, the last comment, and `--after`
 
-- [ ] 1.1 Give `said()` in `bun/work-take.fixture.ts` an `id` argument and
+- [x] 1.1 Give `said()` in `bun/work-take.fixture.ts` an `id` argument and
       every comment the fixtures build a distinct id, half of them dashed
       UUIDs, so a case can name one. Verify: `bun test bun/work-take*.test.ts`
       still passes unchanged
-- [ ] 1.2 Write failing cases in `bun/work-take.test.ts`'s *the change*
+- [x] 1.2 Write failing cases in `bun/work-take.test.ts`'s *the change*
       block, replacing the ones that expect a file's text: each of the four
       kinds of file prints `<path>: <n> lines` and no line of its text, the
       capability still named [1]; a `tasks.md` of three lines, the last with
@@ -19,14 +19,14 @@ The bracketed numbers are the proposal-stage `/zombies` ideas.
       [3]; an empty `design.md` reads `0 lines` [4]; a missing `design.md`
       prints no line for it [5]. Verify: each new case fails against today's
       code
-- [ ] 1.3 Write failing cases for the last line: a full `take` ends with
+- [x] 1.3 Write failing cases for the last line: a full `take` ends with
       `last comment: <id>` of the third of three comments, after `openspec
       list`'s listing, and the *open changes* case's `toEndWith` names it
       [6]; two comments with one `created_time` name the one Notion returned
       last [7]; comments over two pages name the second page's last [8]; no
       comments end with `last comment: none` [9]; a comments read that fails
       prints no such line [10]. Verify: each fails against today's code
-- [ ] 1.4 Write failing cases for `--after` in `bun/work-take.test.ts` and,
+- [x] 1.4 Write failing cases for `--after` in `bun/work-take.test.ts` and,
       for its failures, `bun/work-take-fail.test.ts`. Arguments: `--after`
       with no value, `--after=`, 31 and 33 hex digits, and a UUID with a
       digit too many print the usage and exit 2, calling nothing; a 32-hex
@@ -50,7 +50,7 @@ The bracketed numbers are the proposal-stage `/zombies` ideas.
       exits 0 [22]. Failures: 403 on the page read and 500 on the comments'
       second page each exit 1 on the step's line, with no last-comment line
       and no token [23]. Verify: each fails against today's code
-- [ ] 1.5 In `bun/work-take.ts`, make `change()` print each file's path and
+- [x] 1.5 In `bun/work-take.ts`, make `change()` print each file's path and
       line count (design, *Paths with line counts*); end the full read with
       the last comment line; add the re-read path (design, *A cursor by
       comment id, not by time*, *The last line*, *What a re-read reads*). In

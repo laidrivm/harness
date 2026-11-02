@@ -5,7 +5,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
-import { bin, CARD, checkout, home, page, question, said, stopServers, take, USER } from "./work-take.fixture.ts";
+import { bin, CARD, checkout, cid, home, page, question, said, stopServers, take, USER } from "./work-take.fixture.ts";
 
 afterAll(() => {
 	stopServers();
@@ -67,10 +67,33 @@ describe("take fails closed", () => {
 	});
 
 	test("a comments read that fails on its second page", async () => {
-		const comments = [[question("2026-10-20T09:00:00Z")], [said(USER, "2026-10-20T10:00:00Z", { plain_text: "Yes." })]];
+		const comments = [
+			[question(cid(1), "2026-10-20T09:00:00Z")],
+			[said(cid(2), USER, "2026-10-20T10:00:00Z", { plain_text: "Yes." })],
+		];
 		const run = await take({ stub: { comments, fail: { "GET /v1/comments#1": 500 } } });
 		expect([run.code, failed(run.out)]).toEqual([1, "take: the comments read failed — the comments read answered 500"]);
 		expect(run.out).not.toContain("question waiting");
+		// [10]: no last comment line either.
+		expect(run.out).not.toContain("last comment");
+	});
+
+	test.each([
+		[
+			"403 on the page read",
+			{ [`GET /v1/pages/${CARD}`]: 403 },
+			"take: the page read failed — the page read answered 403",
+		],
+		[
+			"500 on the comments' second page",
+			{ "GET /v1/comments#1": 500 },
+			"take: the comments read failed — the comments read answered 500",
+		],
+	])("a re-read's %s: exit 1 on the step's line, no last comment line [23]", async (_, fail, line) => {
+		const comments = [[question(cid(1), "2026-10-20T09:00:00Z")], [said(cid(2), USER, "2026-10-20T10:00:00Z")]];
+		const run = await take({ args: ["take", "--card", CARD, "--after", cid(1)], stub: { comments, fail } });
+		expect([run.code, failed(run.out)]).toEqual([1, line]);
+		expect(run.out).not.toContain("last comment");
 	});
 
 	test("a working directory outside git: no Notion call", async () => {

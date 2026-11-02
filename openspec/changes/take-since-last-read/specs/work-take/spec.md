@@ -200,7 +200,7 @@ the last comment line. It SHALL read no body, run neither git nor
   as 32 hex digits
 - **THEN** `take` prints the comments after that comment
 
-#### Scenario: Comments over more than one page
+#### Scenario: The comment and the answer on different pages
 
 - **WHEN** the comment `--after` names is on Notion's first page and the
   answer on its second
