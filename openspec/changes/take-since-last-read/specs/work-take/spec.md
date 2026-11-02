@@ -144,9 +144,9 @@ After the card's change, `take` without `--after` SHALL print the output of
 
 `take` SHALL end its output, after a run that read the comments and failed in
 no later read, with one line `last comment: <id>`, the id of the newest of
-the card's page-level comments as Notion returns it, or `last comment: none`
-when the card has none. With `--after`, the newest comment is the card's, not
-the newest printed.
+the card's page-level comments whose id `--after` accepts, as Notion returns
+it, or `last comment: none` when no comment of the card carries such an id.
+With `--after`, the newest comment is the card's, not the newest printed.
 
 #### Scenario: Comments on the card
 
