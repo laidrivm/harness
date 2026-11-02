@@ -3,7 +3,7 @@
  * resolves its report from.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, report } from "./mutation-floor.fixture.ts";
 
@@ -59,17 +59,25 @@ describe("the command line entry point", () => {
 
 describe("the check resolves its report from the repository root", () => {
 	test("run from a subdirectory it names the same file", () => {
+		// A repository of our own, not this checkout: Stryker's sandbox is a
+		// plain directory inside the real checkout, so git resolves past it.
+		// `realpathSync` because macOS reaches the temporary directory through
+		// the `/private` symlink and git prints the resolved path.
+		const repo = realpathSync(emptyDir("mutation-floor-root-"));
+		Bun.spawnSync(["git", "init", "-q"], { cwd: repo });
+		const sub = join(repo, "sub");
+		mkdirSync(sub);
 		const run = Bun.spawnSync(
 			[
 				"bun",
 				"-e",
 				`console.log((await import(${JSON.stringify(join(import.meta.dir, "mutation-floor.ts"))})).REPORT)`,
 			],
-			{ cwd: import.meta.dir },
+			{ cwd: sub },
 		);
 		// Derived here rather than taken from `./root.ts`, which is what the
 		// code under test resolves through: an expectation reading that module
 		// would move with a defect in it and report the same pass.
-		expect(run.stdout.toString().trim()).toBe(join(import.meta.dir, "..", "reports", "mutation", "mutation.json"));
+		expect(run.stdout.toString().trim()).toBe(join(repo, "reports", "mutation", "mutation.json"));
 	});
 });
