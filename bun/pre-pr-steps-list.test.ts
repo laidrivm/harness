@@ -3,7 +3,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, git, lines, repo } from "./diff-budget.fixture.ts";
 import { checks, records, run } from "./pre-pr.fixture.ts";
-import { CODE_REVIEW, PROJECT_CHECKS, TRIAGE, ZOMBIES } from "./pre-pr-steps.ts";
+import { CODE_REVIEW, PROJECT_CHECKS, TRIAGE, WARM, ZOMBIES } from "./pre-pr-steps.ts";
 
 /**
  * `pre-pr.ts --steps`: the runner's last line alone, from the same base and
@@ -17,6 +17,7 @@ afterAll(cleanup);
 const DOCS = `PRE-PR steps: ${[PROJECT_CHECKS, TRIAGE, CODE_REVIEW].join(", ")}`;
 const CODE = `PRE-PR steps: ${[PROJECT_CHECKS, ZOMBIES, TRIAGE, CODE_REVIEW].join(", ")}`;
 const ALONE = `PRE-PR steps: ${PROJECT_CHECKS}`;
+const EVERY = `PRE-PR steps: ${[PROJECT_CHECKS, ZOMBIES, WARM, TRIAGE, CODE_REVIEW].join(", ")}`;
 
 /**
  * A code branch, `B` a branch at its head, and the file its project checks
@@ -57,6 +58,11 @@ describe("--steps", () => {
 	test("on a clean tree the ledger gains no line, where a full run gains two", () => {
 		const { dir } = code();
 		expect([records(run(dir, {}, ["--steps"]).state), records(run(dir).state).length]).toEqual([[], 2]);
+	});
+
+	test("a base it cannot resolve names every step and still exits 0", () => {
+		const result = run(code().dir, {}, ["--steps", "nope"]);
+		expect([result.code, result.out]).toEqual([0, `${EVERY}\n`]);
 	});
 
 	test("a dirty tree still prints the list and exits 0", () => {

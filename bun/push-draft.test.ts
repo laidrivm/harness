@@ -70,8 +70,11 @@ function push(c: Case) {
 
 describe("what the check reads", () => {
 	// spec: commit-gates/a-push-with-nothing-to-update
-	test("empty standard input makes no gh call and passes", () => {
-		expect(push({ stdin: "" })).toMatchObject({ code: 0, calls: [], ledger: [] });
+	test.each([
+		["empty standard input", ""],
+		["one blank line, as the hook hands on an empty read", "\n"],
+	])("%s makes no gh call and passes", (_, stdin) => {
+		expect(push({ stdin })).toMatchObject({ code: 0, calls: [], ledger: [] });
 	});
 
 	// spec: commit-gates/a-push-under-another-name
