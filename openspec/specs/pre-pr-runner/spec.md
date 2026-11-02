@@ -290,8 +290,8 @@ checks once, after it.
 
 - **WHEN** the runner runs with `--steps` on a code branch with no pull
   request open
-- **THEN** it prints `PRE-PR steps: ` and the code branch's steps, runs no
-  step, and exits 0
+- **THEN** it prints `PRE-PR steps:`, a space and the code branch's steps,
+  runs no step, and exits 0
 
 #### Scenario: The list against a base
 
