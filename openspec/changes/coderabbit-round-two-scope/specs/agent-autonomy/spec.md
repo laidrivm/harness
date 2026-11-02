@@ -2,19 +2,21 @@
 
 ### Requirement: From the second round, CodeRabbit's Minors outside living docs go to a tail card
 
-`core/review-toolkit.md` SHALL have `/coderabbit` apply only 🟠 Major and
-above and the living docs' 🟡 Minors when they come from a review in a pull
-request's second round or a later one. The round is the position of the
-commit that review names, as *A pull request gets CodeRabbit's fixes for at
-most three rounds* counts commits. Every other such Minor SHALL be deferred
-to the pull request's tail card and not applied.
+`core/review-toolkit.md` SHALL have `/coderabbit` defer to the pull
+request's tail card, unapplied, each 🟡 Minor outside the living docs that a
+review in the pull request's second round or a later one posted. That
+review's round is the position of the commit it names, as *A pull request
+gets CodeRabbit's fixes for at most three rounds* counts commits. Every other
+finding SHALL be disposed of as before, and that cap SHALL still decide
+whether the run applies anything.
 
 #### Scenario: A Minor in a change's artefact in the first round
 
-- **WHEN** the review of the first commit CodeRabbit reviewed on a pull
-  request carries a verified 🟡 Minor in `openspec/changes/<name>/tasks.md`
-- **THEN** the run applies it, as it applies any verified finding, even when
-  a later commit has been reviewed by the time the run starts
+- **WHEN** CodeRabbit's reviews name two distinct commits, and the first
+  commit's review carries a 🟡 Minor in `openspec/changes/<name>/tasks.md`
+  that the run judges correct and cheap
+- **THEN** the run fixes it, as in the first round, although the second
+  commit has been reviewed by the time the run starts
 
 #### Scenario: A Minor in a change's artefact or in code from the second round
 
@@ -29,9 +31,7 @@ to the pull request's tail card and not applied.
 
 - **WHEN** a review in the second round or a later one carries a 🟡 Minor
   under `openspec/specs/**`, in a change's delta spec under
-  `openspec/changes/<name>/specs/**`, in `CLAUDE.md`, in a file the
-  repository's `.coderabbit.yaml` names under `code_guidelines`, or, in the
-  harness, under `core/**`
+  `openspec/changes/<name>/specs/**`, in `CLAUDE.md`, or under `core/**`
 - **THEN** the run reads it and fixes it or skips it with its reason, as in
   the first round
 
@@ -64,13 +64,12 @@ to the pull request's tail card and not applied.
 
 ### Requirement: The coderabbit skill honours a project's deferral
 
-`core/skills/coderabbit/SKILL.md` step 5 SHALL let a project's review policy
-defer a finding to a card by its severity, path and round. The skill SHALL
-list a deferred finding under Skipped as `deferred to <card>` and count it in
-the arithmetic. Step 3's Minor line and its rules *Severity budgets
-attention, not belief* and *`below severity threshold` is not a reason on its
-own* SHALL read such a deferral as the project's reason, never as a skip by
-label.
+`core/skills/coderabbit/SKILL.md` step 5 SHALL let any project's review
+policy defer a finding to a card by its severity, path and round. The skill
+SHALL list a deferred finding under Skipped as `deferred to <card>` and count
+it in the arithmetic. Step 3 and the rule *Severity budgets attention, not
+belief* SHALL read such a deferral as the project's reason, never as a skip
+by label.
 
 #### Scenario: A policy defers a Minor
 

@@ -9,7 +9,9 @@ on, raised only Minors, and all four were prose under `openspec/`: two in a
 change's artefacts, two in synced specs. Most of the other rounds were driven
 by Majors on wording in a change's `design.md` and `tasks.md`: #329 had ten
 Majors in five rounds, and #347 had a Major in `tasks.md` three rounds
-running. Each round costs CodeRabbit quota (two reviews an hour), a fresh
+running. The Minor rule below defers the two change-artefact rounds at most;
+the Majors are what `path_instructions` is for. Each round costs CodeRabbit
+quota (two reviews an hour), a fresh
 review request and threads to close. A rule to defer Minors from the second
 round on is so far kept only in agents' briefs. The `coderabbit` skill
 contradicts it: «Severity budgets attention, not belief» and «`below
@@ -20,19 +22,20 @@ severity threshold` is not a reason on its own» forbid a skip by label.
 - From a pull request's second round on, `/coderabbit` applies Major and
   above, and the Minors in the living docs. The living docs are
   `openspec/specs/**` and `core/**` (the user's answer 1 b on the card), and
-  three more: a change's delta specs, which become living specs at sync;
-  `CLAUDE.md`; and the files `.coderabbit.yaml` names under
-  `code_guidelines`, where a consumer's rulebook sits. Every other Minor (a
-  change's proposal, design and tasks, code, anything else) is deferred to
-  one tail card for the pull request and is not applied. A finding's round
-  is that of the commit its review names. The first round keeps fixing every
-  verified finding. The rule goes in `core/review-toolkit.md`'s
-  `/coderabbit` bullet, beside the three-round cap.
-- `core/skills/coderabbit/SKILL.md` step 5 gains one sentence: a project's
-  policy may defer a finding to a card by its severity, path and round. The
-  finding is listed under Skipped as `deferred to <card>` and counts in the
-  arithmetic. Step 3's Minor line and the two rules above are worded so that
-  a deferral the project's policy makes is a reason, not a label.
+  two more: a change's delta specs, which become living specs at sync, and
+  `CLAUDE.md`. Every other Minor (a change's proposal, design and tasks,
+  code, anything else) is deferred to one tail card for the pull request
+  and is not applied. A Minor's round is that of the commit named by the
+  review that posted it, and the three-round cap still decides whether a run
+  applies anything. The first round keeps fixing every verified finding.
+  The rule goes in `core/review-toolkit.md`'s `/coderabbit` bullet, beside
+  the three-round cap.
+- `core/skills/coderabbit/SKILL.md` step 5 gains one sentence, outside the
+  override paragraph's condition: a project's policy may defer a finding to
+  a card by its severity, path and round. The finding is listed under
+  Skipped as `deferred to <card>` and counts in the arithmetic. Step 3 and
+  the rules above are worded so that a deferral the project's policy makes is
+  a reason, not a label.
 - `.coderabbit.yaml` gains `reviews.path_instructions` for
   `openspec/changes/**`. The text says such a file is a working artefact
   headed for the archive, asks for contradictions with a spec, the code or
