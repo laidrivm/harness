@@ -68,6 +68,15 @@ describe("the scheduled and flaky routes", () => {
 		expect(seen(h, "gh-calls")).toBe("run view 5 -R o/r --attempt 1 --log-failed\n");
 	});
 
+	test.each([["o/r/x"], ["o/"]])("a scheduled run of %p, no <owner>/<name>, starts no session", async (name) => {
+		const h = host();
+		const run = { event: "schedule", head_branch: "main", name: "nightly", head_repository: { full_name: name } };
+		const top = { repository: { full_name: name, default_branch: "main" } };
+		const r = await deliver(h, payload(run, top), { env: clones(h) });
+		expect(r.line).toContain(`the payload's repository ${name} is no <owner>/<name>`);
+		expect(existsSync(join(h.home, "claude-argv"))).toBe(false);
+	});
+
 	test.each([
 		["a commit", commit],
 		["a changed file", "echo c >> a.txt\n"],
