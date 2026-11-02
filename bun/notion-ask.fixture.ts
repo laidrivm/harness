@@ -12,7 +12,7 @@ import type { Server } from "bun";
 import { MARK } from "./question-gate.ts";
 
 const made: string[] = [];
-const servers: Server[] = [];
+const servers: Server<undefined>[] = [];
 /** Stops every stub and removes every directory the cases made. */
 export function cleanup() {
 	for (const server of servers) server.stop(true);

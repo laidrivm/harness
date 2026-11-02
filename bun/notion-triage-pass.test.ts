@@ -21,12 +21,13 @@ const PAGE = { parent: { type: "data_source_id", data_source_id: "ds1" }, proper
 
 type Card = { after?: unknown[]; pageAfter?: unknown; answerStatus?: number };
 let card: Card = {};
-const seen: { call: string; body?: { rich_text?: { text: { content: string } }[] } }[] = [];
+type Sent = { rich_text?: { text: { content: string } }[] };
+const seen: { call: string; body?: Sent }[] = [];
 const notion = Bun.serve({
 	port: 0,
 	async fetch(req) {
 		const url = new URL(req.url);
-		const body = req.method === "GET" ? undefined : await req.json();
+		const body = req.method === "GET" ? undefined : ((await req.json()) as Sent);
 		seen.push({ call: `${req.method} ${url.pathname}`, body });
 		const reads = (path: string) => seen.filter((s) => s.call === `GET ${path}`).length;
 		if (url.pathname === "/v1/users/me") return Response.json({ id: BOT });

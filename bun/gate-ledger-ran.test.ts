@@ -77,11 +77,11 @@ describe("passed(): a pass of every runner step for the commit here", () => {
 	});
 
 	// spec: pre-pr-runner/another-step-s-record
-	test.each(RUNNER_STEPS)("%s's pass alone is none", (rule) => {
+	test.each([...RUNNER_STEPS])("%s's pass alone is none", (rule) => {
 		expect(passed(C, TOP, runner(rule))).toBe(false);
 	});
 
-	test.each(RUNNER_STEPS)("a fail of %s beside the other's pass is none", (rule) => {
+	test.each([...RUNNER_STEPS])("a fail of %s beside the other's pass is none", (rule) => {
 		const ledger = RUNNER_STEPS.map((r) => runner(r, r === rule ? "fail" : "pass")).join("\n");
 		expect(passed(C, TOP, ledger)).toBe(false);
 	});

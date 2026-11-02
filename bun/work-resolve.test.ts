@@ -80,7 +80,7 @@ describe("the pull request", () => {
 			gh: { pulls: [[open(7, B), open(9)]], pages: [page(thread("11"))] },
 		});
 		expect([run.code, run.lines]).toEqual([0, ["resolve: 11 resolved"]]);
-		expect(run.threads[0].args).toContain("n=9");
+		expect(run.threads[0]?.args).toContain("n=9");
 	});
 
 	test("a branch with no open pull request refuses, saying it has none", async () => {
@@ -109,7 +109,7 @@ describe("the head", () => {
 	test("B then A goes on after two reads, the second 2 s after the first", async () => {
 		const run = await resolve({ gh: { pulls: [[open(7, B)], [open(7)]], pages: [page(thread("11"))] } });
 		expect([run.code, run.reads.length, run.threads.length]).toEqual([0, 2, 1]);
-		expect(run.reads[1].at - run.reads[0].at).toBeGreaterThanOrEqual(2000);
+		expect((run.reads[1]?.at ?? 0) - (run.reads[0]?.at ?? 0)).toBeGreaterThanOrEqual(2000);
 	}, 10_000);
 
 	// spec: work-resolve/another-head
@@ -135,7 +135,7 @@ describe("the head", () => {
 describe("placing the ids", () => {
 	test("the threads read sends the owner and name as strings, the number typed", async () => {
 		const run = await resolve({ gh: { ...PR7, pages: [page(thread("11"))] } });
-		expect(run.threads[0].args).toEqual(expect.arrayContaining(["-f", "o=o", "-f", "r=demo", "-F", "n=7"]));
+		expect(run.threads[0]?.args).toEqual(expect.arrayContaining(["-f", "o=o", "-f", "r=demo", "-F", "n=7"]));
 	});
 
 	test("a thread with no id of its own refuses", async () => {
@@ -193,7 +193,7 @@ describe("placing the ids", () => {
 		const first = page(...Array.from({ length: 100 }, (_, i) => thread(String(i + 1))));
 		const run = await resolve({ args: args("101"), gh: { ...PR7, pages: [first, page(thread("101"))] } });
 		expect([run.code, run.lines, run.mutations]).toEqual([0, ["resolve: 101 resolved"], ["T_101"]]);
-		expect(run.threads[0].args).toEqual(expect.arrayContaining(["--paginate", "--slurp"]));
+		expect(run.threads[0]?.args).toEqual(expect.arrayContaining(["--paginate", "--slurp"]));
 	});
 
 	test("4433138725, past 2^31, is placed by its fullDatabaseId string", async () => {

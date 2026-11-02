@@ -77,7 +77,7 @@ export const copyOf = (m: Machine, id: string, project = "-work-p") =>
 export function spawned(m: Machine, input: unknown, vars: object = {}) {
 	const text = typeof input === "string" ? input : JSON.stringify(input);
 	return [
-		["sh", "-c", 'umask 022; exec bun "$0" "$@"', hook],
+		["sh", "-c", 'umask 022; exec bun "$0" "$@"', hook] as string[],
 		{
 			cwd: m.cwd,
 			env: {

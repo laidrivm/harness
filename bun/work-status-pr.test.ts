@@ -70,7 +70,7 @@ describe("a pull request that does not prove done", () => {
 			gh: pr({ state: "open", merged_at: null }),
 		});
 		refused(run, "no-evidence");
-		expect([run.last.includes("350"), run.refusals[0].commit]).toEqual([true, undefined]);
+		expect([run.last.includes("350"), run.refusals[0]?.commit]).toEqual([true, undefined]);
 	});
 
 	// spec: work-status/a-pull-request-merged-into-another-branch

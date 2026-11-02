@@ -21,7 +21,7 @@ describe("one record and one line per pass", () => {
 	test("a record names the clone and no commit", () => {
 		const { dir } = clone();
 		const [loop] = records(run(dir).state);
-		expect([loop.project, "commit" in loop]).toEqual([realpathSync(dir), false]);
+		expect([loop?.project, loop !== undefined && "commit" in loop]).toEqual([realpathSync(dir), false]);
 	});
 
 	const gone = (origin: string) => rmSync(origin, { recursive: true });

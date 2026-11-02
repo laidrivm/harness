@@ -45,7 +45,9 @@ export function start() {
 		port: 0,
 		async fetch(req) {
 			const { pathname, searchParams } = new URL(req.url);
-			const body = req.method === "POST" ? await req.json() : undefined;
+			// What the flow under test posts: the token request's permissions, or a comment's body.
+			const body: { permissions?: unknown; body?: string } =
+				req.method === "POST" ? ((await req.json()) as { permissions?: unknown; body?: string }) : {};
 			if (pathname === "/app") return Response.json({ slug: "loop-app" });
 			if (pathname === `/users/${encodeURIComponent(BOT)}`) return Response.json({ id: 42 });
 			if (pathname === "/repos/o/r/installation") return Response.json({ id: 9 });
@@ -62,8 +64,8 @@ export function start() {
 				}
 				if (api.failPost) return new Response("down", { status: 500 });
 				// The next read sees it, as GitHub's does.
-				api.comments.push({ user: { login: BOT }, body: body.body });
-				api.posted.push(body.body);
+				api.comments.push({ user: { login: BOT }, body: body.body ?? "" });
+				api.posted.push(body.body ?? "");
 				return Response.json({});
 			}
 			return new Response("unknown", { status: 404 });

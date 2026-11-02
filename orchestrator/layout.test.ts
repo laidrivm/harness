@@ -75,7 +75,7 @@ describe("the engine's workspace", () => {
 		]);
 		const body = mine.filter((p) => p.startsWith(wm) && p.endsWith(".sh"));
 		expect(body.length).toBe(1);
-		expect(endsOnSsh(body[0], read(body[0]))).toEqual([]);
+		expect(endsOnSsh(body[0] ?? "", read(body[0] ?? ""))).toEqual([]);
 	});
 
 	// spec: orchestrator/a-variable-with-its-value
@@ -179,15 +179,15 @@ describe("the engine's webhook call", () => {
 		expect(read("orchestrator/runner/Dockerfile")).toContain("COPY --from=bun . /opt/orchestrator/bun/");
 		const runner = (composed().services as Record<string, { build?: { additional_contexts?: Record<string, string> } }>)
 			.runner;
-		expect(runner.build?.additional_contexts?.bun).toBe("../bun");
+		expect(runner?.build?.additional_contexts?.bun).toBe("../bun");
 	});
 
 	test("the runner mounts the webhook secret and the event key, and the default worker the pinned host key", () => {
 		const services = composed().services as Record<string, { secrets?: string[] }>;
-		for (const s of ["github_webhook_secret", "runner_event_pubkey"]) expect(services.runner.secrets).toContain(s);
-		expect(services.windmill_worker.secrets).toContain("runner_known_hosts");
+		for (const s of ["github_webhook_secret", "runner_event_pubkey"]) expect(services.runner?.secrets).toContain(s);
+		expect(services.windmill_worker?.secrets).toContain("runner_known_hosts");
 		const files = composed().secrets as Record<string, { file: string }>;
-		for (const s of ["github_webhook_secret", "runner_event_pubkey"]) expect(files[s].file).toBe(`./secrets/${s}`);
+		for (const s of ["github_webhook_secret", "runner_event_pubkey"]) expect(files[s]?.file).toBe(`./secrets/${s}`);
 	});
 
 	test("the entrypoint appends a second restricted line that hands on-event.ts the engine's words as one argument", () => {
@@ -196,7 +196,7 @@ describe("the engine's webhook call", () => {
 			.filter((l) => l.includes("on-event.ts"));
 		expect(lines).toHaveLength(1);
 		expect(lines[0]).toContain(">>/home/runner/.ssh/authorized_keys");
-		const command = (/command="(.*)" %s/.exec(lines[0])?.[1] ?? "").replaceAll('\\\\"', '"');
+		const command = (/command="(.*)" %s/.exec(lines[0] ?? "")?.[1] ?? "").replaceAll('\\\\"', '"');
 		expect(command).toStartWith("exec bun /opt/orchestrator/bun/on-event.ts ");
 		const dir = emptyDir("orchestrator-event-");
 		const stub = join(dir, "on-event");

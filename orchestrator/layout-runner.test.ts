@@ -45,8 +45,8 @@ describe("the runner image", () => {
 		expect(call).toContain("-o StrictHostKeyChecking=yes -o UserKnownHostsFile=/run/secrets/runner_known_hosts");
 		expect(call).not.toContain("StrictHostKeyChecking=no");
 		const services = composed().services as Record<string, { secrets?: string[] }>;
-		expect(services.windmill_worker_pass.secrets).toContain("runner_known_hosts");
-		expect(services.runner.secrets).toContain("runner_host_key");
+		expect(services.windmill_worker_pass?.secrets).toContain("runner_known_hosts");
+		expect(services.runner?.secrets).toContain("runner_host_key");
 		expect(read(dockerfile)).not.toContain("ssh-keygen -A");
 	});
 
@@ -55,7 +55,7 @@ describe("the runner image", () => {
 			services: Record<string, { secrets?: string[] }>;
 			secrets: Record<string, unknown>;
 		};
-		expect(compose.services.runner.secrets).not.toContain("gh_token");
+		expect(compose.services.runner?.secrets).not.toContain("gh_token");
 		expect(Object.keys(compose.secrets)).not.toContain("gh_token");
 		expect(read("orchestrator/README.md")).not.toContain("gh_token");
 	});

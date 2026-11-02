@@ -110,7 +110,7 @@ test("tells the session to read the severity word, both markup forms as examples
 });
 
 test("allowed-tools holds the two gh reads", () => {
-	const allowed = /^allowed-tools: "(.*)"$/m.exec(skill())?.[1].split(", ") ?? [];
+	const allowed = /^allowed-tools: "(.*)"$/m.exec(skill())?.[1]?.split(", ") ?? [];
 	expect(allowed).toContain("Bash(gh api:*)");
 	expect(allowed).toContain("Bash(gh pr list:*)");
 });

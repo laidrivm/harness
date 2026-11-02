@@ -7,7 +7,7 @@ import { expect } from "bun:test";
 import type { Server } from "bun";
 import { post } from "./notion-bot.ts";
 
-const servers: Server[] = [];
+const servers: Server<undefined>[] = [];
 /** Stops every stub `notion()` started. */
 export const stopServers = () => {
 	for (const server of servers) server.stop(true);
@@ -97,4 +97,4 @@ export async function line(carried = CARRIED, timeout?: number, self?: string): 
 }
 
 export const POSTED = `question: posted on ${CARD}, Assign set`;
-export const calls = (seen: Seen[]) => seen.map((s) => s.call.split(" ")[0] + " " + s.call.split(" ")[1].split("?")[0]);
+export const calls = (seen: Seen[]) => seen.map((s) => s.call.replace(/\?.*/, ""));

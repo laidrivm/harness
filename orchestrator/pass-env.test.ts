@@ -48,7 +48,7 @@ describe.skipIf(skip)(
 			writeFileSync(join(h.home, ".config/gh/hosts.yml"), "github.com:\n  oauth_token: stored\n");
 			const dir = passEnv(tick(h, "repo").out).GH_CONFIG_DIR;
 			expect(dir).toStartWith(`${h.state}/`);
-			expect(existsSync(dir)).toBe(false);
+			expect(existsSync(dir ?? "")).toBe(false);
 		});
 
 		// spec: orchestrator/the-tokens-stay-out-of-process-arguments

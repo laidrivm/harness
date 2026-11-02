@@ -41,7 +41,7 @@ describe.skipIf(skip)(
 			const h = host("repo", 1);
 			const n = notifier();
 			const r = tick(h, "repo", n.extra);
-			const [log] = readdirSync(join(h.state, "passes"));
+			const [log = ""] = readdirSync(join(h.state, "passes"));
 			expect([r.code, r.last]).toEqual([1, OPEN]);
 			expect(n.calls()).toEqual([
 				["--word", stop(h, "repo"), join(h.state, "passes", log), readFileSync(stop(h, "repo"), "utf8").trim()],

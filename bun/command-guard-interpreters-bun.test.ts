@@ -8,8 +8,8 @@ describe("the bun subcommands", () => {
 		const help = Bun.spawnSync(["bun", "--help"]).stdout.toString();
 		const block = help.slice(help.indexOf("Commands:"), help.indexOf("Learn more"));
 		const listed = new Set([
-			...[...block.matchAll(/^ {2}([a-z]+)\s/gm)].map((m) => m[1]),
-			...[...block.matchAll(/\(bun ([a-z]+)\)/g)].map((m) => m[1]),
+			...[...block.matchAll(/^ {2}([a-z]+)\s/gm)].map((m) => m[1] ?? ""),
+			...[...block.matchAll(/\(bun ([a-z]+)\)/g)].map((m) => m[1] ?? ""),
 		]);
 		expect([...BUN_SUBCOMMANDS].sort()).toEqual([...listed].sort());
 	});

@@ -27,7 +27,12 @@ export const BOT = "ffffeeee-dddd-cccc-bbbb-aaaa99998888";
 export const CARD = "aaaabbbbccccddddeeeeffff00001111";
 export const LISTING = "Changes:\n  demo     0/1 tasks\n";
 
-const servers: Server[] = [];
+/** What the work commands send the stand-in: an `Assign` or `Pointer` write, or a link's append. */
+type Sent = {
+	properties?: { Assign?: { people?: unknown }; Pointer?: { rich_text?: { text?: { content?: string } }[] } };
+	children?: unknown;
+};
+const servers: Server<undefined>[] = [];
 export const stopServers = () => {
 	for (const server of servers) server.stop(true);
 	servers.length = 0;
@@ -98,13 +103,7 @@ export function notion(stub: Stub = {}) {
 			},
 		};
 	};
-	const respond = (
-		req: Request,
-		url: URL,
-		call: string,
-		cursor: string | null,
-		sent: Awaited<ReturnType<Request["json"]>>,
-	) => {
+	const respond = (req: Request, url: URL, call: string, cursor: string | null, sent: Sent | undefined) => {
 		const status = stub.fail?.[call];
 		if (status) return Response.json({}, { status });
 		if (/^\/v1\/pages\/[^/]+\/markdown$/.test(url.pathname)) return Response.json(stub.markdown ?? body("# Card\n"));
@@ -118,7 +117,7 @@ export function notion(stub: Stub = {}) {
 		if (/^\/v1\/data_sources\/[^/]+$/.test(url.pathname))
 			return Response.json({ title: [{ plain_text: stub.board ?? "Harness" }] });
 		const blocks = /^\/v1\/blocks\/[^/]+\/children$/.test(url.pathname);
-		if (blocks && req.method === "PATCH") return Response.json({ object: "list", results: sent.children });
+		if (blocks && req.method === "PATCH") return Response.json({ object: "list", results: sent?.children });
 		if (!blocks && url.pathname !== "/v1/comments") return Response.json({}, { status: 404 });
 		const pages = (blocks ? stub.blocks : stub.comments) ?? [[]];
 		const at = Number(cursor ?? 0);
@@ -132,7 +131,7 @@ export function notion(stub: Stub = {}) {
 			const cursor = url.searchParams.get("start_cursor");
 			const call = `${req.method} ${url.pathname}${cursor ? `#${cursor}` : ""}`;
 			// Read once: the PATCH of `Assign` and the `Pointer` write both need it.
-			const sent = req.method === "GET" ? undefined : await req.json();
+			const sent = req.method === "GET" ? undefined : ((await req.json()) as Sent);
 			seen.push({
 				call,
 				version: req.headers.get("Notion-Version"),

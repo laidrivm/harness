@@ -18,7 +18,7 @@ const pass = against(notion);
 const reset = () =>
 	Object.assign(notion.state, { pending: false, slug: "demo", fail: {}, assign: [USER, OTHER], keep: false });
 /** The body of each `PATCH` the stand-in took, in order. */
-const wrote = () => notion.state.bodies.filter((_, i) => notion.state.seen[i].startsWith("PATCH"));
+const wrote = () => notion.state.bodies.filter((_, i) => notion.state.seen[i]?.startsWith("PATCH"));
 
 const ASKED = `QUESTION: ${CARD}\n${MARK} Ship it as one group?\n${SAID.slice("Done.\n".length)}`;
 const CREATE = "gh pr create --base main --head feat/demo --title Carry demo --body-file -";

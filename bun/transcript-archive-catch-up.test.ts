@@ -243,7 +243,7 @@ describe("the wrap-up", () => {
 	// spec: transcript-archive/a-wrap-up-after-a-killed-session
 	test("names both spellings of the catch-up in step 3 and in allowed-tools [36]", () => {
 		const step = skill.split("## 3. Workflow state")[1]?.split("\n## ")[0] ?? "";
-		const allowed = /^allowed-tools: "(.*)"$/m.exec(skill)?.[1].split(", ") ?? [];
+		const allowed = /^allowed-tools: "(.*)"$/m.exec(skill)?.[1]?.split(", ") ?? [];
 		for (const command of commands) {
 			expect(step).toContain(`\`${command}\``);
 			expect(allowed).toContain(`Bash(${command})`);

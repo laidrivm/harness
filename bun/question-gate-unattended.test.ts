@@ -240,6 +240,6 @@ describe("the text checks, lifted", () => {
 		[`${MARK} ${"q".repeat(1500 - MARK.length - 1)}`, undefined],
 		[42, "unmarked"],
 	])("%p reads %p", (text, rule) => {
-		expect(fault(text)).toBe(rule);
+		expect<string | undefined>(fault(text)).toBe(rule);
 	});
 });

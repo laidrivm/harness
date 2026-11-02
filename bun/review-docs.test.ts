@@ -21,7 +21,9 @@ const CODERABBIT = "`/coderabbit [pr]` —";
 function bullet(doc: string, opening: string): string | undefined {
 	const items = doc.split(/^- /m).slice(1);
 	// Up to the first line that is no bullet's continuation: blank, or a heading.
-	const found = items.map((item) => item.split(/\n(?:\s*\n|#)/)[0]).find((item) => flat(item).startsWith(opening));
+	const found = items
+		.map((item) => item.split(/\n(?:\s*\n|#)/)[0] ?? item)
+		.find((item) => flat(item).startsWith(opening));
 	return found === undefined ? undefined : flat(found);
 }
 

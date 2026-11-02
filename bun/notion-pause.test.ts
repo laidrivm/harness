@@ -113,7 +113,7 @@ describe("a card of its own", () => {
 	/** The reason the new card's body gives, its last paragraph. */
 	const reason = (body: unknown) => {
 		const children = (body as { children: { paragraph: { rich_text: { text: { content: string } }[] } }[] }).children;
-		return children.at(-1)?.paragraph.rich_text[0].text.content;
+		return children.at(-1)?.paragraph.rich_text[0]?.text.content;
 	};
 
 	// spec: orchestrator/a-host-that-cannot-start-the-pass

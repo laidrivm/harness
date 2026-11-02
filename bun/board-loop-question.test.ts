@@ -90,7 +90,7 @@ describe("the runner posts the question", () => {
 		const lines = stage((await pass(dir, {}, configured())).calls);
 		expect(lines).toHaveLength(5);
 		for (const part of ["`QUESTION: ", MARK, "posts no comment", ...FORM]) expect(lines[3]).toContain(part);
-		expect(forms()).toContain(lines[3]);
+		expect(forms()).toContain(lines[3] ?? "");
 	});
 
 	// spec: stage-goal/a-stage-launched-where-the-ask-integration-is-configured
@@ -110,7 +110,7 @@ describe("the runner posts the question", () => {
 			...FORM,
 		])
 			expect(lines[3]).toContain(part);
-		expect(forms()).toContain(lines[3]);
+		expect(forms()).toContain(lines[3] ?? "");
 		for (const s of ["pick", "stage"]) expect(r.env(s)?.[RUNNER_ASKS.name]).toBeUndefined();
 		expect(r.calls).not.toContain("--disallowedTools");
 	});
@@ -264,7 +264,7 @@ describe("the triage's answer in the pick", () => {
 	// spec: task-board/the-user-after-the-triage
 	test("settings: an answer step's first line names which comment is the answer, by both ids, with no apostrophe [85]", async () => {
 		const { dir } = clone(change("demo", TICKED));
-		const first = stage((await pass(dir, {}, configured())).calls)[0];
+		const first = stage((await pass(dir, {}, configured())).calls)[0] ?? "";
 		for (const part of [
 			`the first comment by the user, whose id is ${USER}, opening with neither`,
 			`or else the \`harness-answer\` by ${BOT}`,

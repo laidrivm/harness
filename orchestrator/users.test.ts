@@ -43,7 +43,7 @@ describe("the image's users", () => {
 
 	// The two lists are one set of names looked up in two systems (`rules.md` Code); sudo drops any other.
 	test("the launcher's env_keep is the session allowlist, LC_* included, and the commit identity and question gate's signal the runner adds", () => {
-		const kept = /^Defaults!\/opt\/orchestrator\/as-agent env_keep = "([^"]*)"$/m.exec(sudoers)?.[1].split(" ");
+		const kept = /^Defaults!\/opt\/orchestrator\/as-agent env_keep = "([^"]*)"$/m.exec(sudoers)?.[1]?.split(" ");
 		const added = [
 			"GIT_AUTHOR_NAME",
 			"GIT_AUTHOR_EMAIL",
@@ -142,7 +142,7 @@ describe("the host's wiring", () => {
 			| { type?: string; source?: string; target?: string; read_only?: boolean; bind?: { create_host_path?: boolean } };
 		const services = (Bun.YAML.parse(read("compose.yaml")) as { services: Record<string, { volumes?: Mount[] }> })
 			.services;
-		const binds = services.runner.volumes?.filter((m) => typeof m !== "string") ?? [];
+		const binds = services.runner?.volumes?.filter((m) => typeof m !== "string") ?? [];
 		for (const [source, target] of [
 			["./app", dirname(FILES.id)],
 			["./app-key", dirname(FILES.key)],

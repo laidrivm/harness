@@ -100,7 +100,7 @@ export function tick(
 		env: { ...env(h), ...extra },
 	});
 	const out = p.stdout.toString();
-	const first = out.split("\n")[0];
+	const first = out.split("\n")[0] ?? "";
 	return { code: p.exitCode, out, ran: first.startsWith("{") ? JSON.parse(first) : undefined };
 }
 export const stopped = (h: Stand, clone = "repo") =>
