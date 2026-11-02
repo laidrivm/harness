@@ -46,8 +46,12 @@ bash bun/diff-budget.sh || true
 non-deletion record, takes the top level from `root` in `bun/root.ts` (`ran()`
 compares the record's project exactly), reads the ledger once and hands its
 text to each `ran()` call, and exits 0 with the skip line when there is at
-least one sha and each has a `pass` and no `fail` or `error` (decision 3);
-otherwise it prints the reason line and exits 1. Any other exit, bun missing
+least one sha, no record's remote ref lies under `refs/tags/` — a lightweight
+tag's sha is its commit's, so the sha alone cannot tell it — and each sha has
+a `pass` and no `fail` or `error` (decision 3); otherwise it prints the reason
+line and exits 1. A torn ledger line counts as no record, as it does for every
+`ran()` reader: the ledger is never rotated, so refusing the skip over one torn
+line anywhere in it would refuse it for good. Any other exit, bun missing
 or `root.ts` throwing outside a repository included, also runs the gates, so a
 broken reader costs time, never a check. Under `set -e`, a gate failing on the
 right of `||` still fails the hook.
@@ -140,12 +144,17 @@ the user chose. The order lives in proposal.md and in task 1.1.
   wait for that notification in the same turn and never to start the runner
   with `&` or a second time. Not measured on a 600 s run.
 - [The main spec's *The pre-push hook runs the gates named here* says the
-  hook "does not consume the ref-update records"; the draft-check requirement
-  already contradicts it, and this change adds a second reader] → it cannot
-  be MODIFIED here without clashing with `pre-push-commit-gates`' delta of the
-  same requirement, which archives after this change and would write the
-  sentence back. The rewording, to say its gates consume none, is handed to
-  `pre-push-commit-gates`' delta in this pull request's body.
+  hook SHALL run its gates and "does not consume the ref-update records"; the
+  draft-check requirement already contradicts the second, and this change
+  adds a skip and a second reader] → that requirement cannot be MODIFIED here
+  without clashing with `pre-push-commit-gates`' delta of it, which archives
+  after this change and would write the text back. The added requirement
+  names itself the one exception to it, so the two read together, and the
+  rewording is handed to `pre-push-commit-gates`' delta in this pull
+  request's body: its opening as "Unless the hook skips the gates a passing
+  run record proved (*The pre-push hook skips the gates a passing run record
+  proved*), the pre-push hook SHALL run…", and "Its gates do not consume the
+  ref-update records".
 - [`pre-pr.ts` trims its top level with `trimEnd()`, `root.ts` strips only
   git's newline] → a checkout whose path ends in a space gets no match and
   runs the gates: slower, never unchecked.

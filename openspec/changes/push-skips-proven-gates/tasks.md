@@ -28,14 +28,15 @@ One group, one pull request on `feat/push-skips-proven-gates-1`, under the
       (`another-step-s-pass-at-the-commit`); a pass and a fail of the sha,
       in either order, exit 1, and so does a pass and an error
       (`a-pass-and-a-later-failure-of-one-commit`); two records, one proven,
-      exit 1
-      (`two-refs-one-unproven`); two proven records exit 0 with a skip line
+      exit 1 (`two-refs-one-unproven`); two proven records exit 0 with a skip line
       naming both, and a proven sha beside a deletion exits 0; a top level
       git cannot read exits 1; a proven sha other than `HEAD` exits 0
       (`a-push-of-a-commit-other-than-head`); only a deletion, empty input
-      and one blank line exit 1 (`a-push-that-only-deletes`); an annotated tag's sha
-      exits 1 (`a-tag`); a record naming another top level exits 1
-      (`another-checkout-of-the-same-commit`); a proven `HEAD` with a
+      and one blank line exit 1 (`a-push-that-only-deletes`); an annotated
+      tag, and a lightweight one whose sha is a proven commit, exit 1
+      (`a-tag`); a proven sha beside a torn ledger line exits 0
+      (`a-torn-line-beside-a-pass`); a record naming another top level
+      exits 1 (`another-checkout-of-the-same-commit`); a proven `HEAD` with a
       tracked file edited exits 0 (`a-dirty-tree-over-a-proven-head`); an
       absent ledger and a directory in its place exit 1
       (`a-ledger-the-hook-cannot-read`). Then write `bun/push-proven.ts`
