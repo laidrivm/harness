@@ -16,7 +16,8 @@ checkout's top level. Both SHALL run whatever the first one's outcome. Each
 step's output SHALL pass through unchanged. The runner SHALL NOT read, rewrite
 or summarise it, and SHALL exit with the worse step's status: 2 for error, then
 1, then 0. The steps own their thresholds and wording, and the runner owns only
-the fact that they ran.
+the fact that they ran. A call given `--steps` is no run and runs neither
+(*The runner names the steps without running them when asked*).
 
 #### Scenario: A branch within budget
 
@@ -62,7 +63,8 @@ Each record names the gate `pre-pr`, that step's id (`diff-budget` or
 `project-checks`), that step's outcome, and the commit `HEAD` named when the
 run began. The outcome SHALL come from the step's exit status, never from its
 printed text. A passing run record of commit `C` SHALL mean a `pass` record of
-`C` for every step. One step's record SHALL NOT stand in for another's.
+`C` for every step. One step's record SHALL NOT stand in for another's. A call
+given `--steps` is no run and appends nothing.
 
 #### Scenario: A passing run
 
@@ -274,3 +276,30 @@ another's once the runner records more than the diff budget (user,
 - **WHEN** the ledger holds a passing `pre-pr` record of `C` for the diff
   budget
 - **THEN** a reader asking for the diff budget at `C` finds it
+
+### Requirement: The runner names the steps without running them when asked
+
+Given `--steps` anywhere among its arguments, the runner SHALL print the line
+*The runner names the steps the branch requires from its diff* sets out, from
+the same base and pull request state, and nothing else: it SHALL run neither
+the diff budget nor the project checks, SHALL write no record, and SHALL exit
+0. An agent reads the list before its last commit this way, and runs the
+checks once, after it.
+
+#### Scenario: The list alone
+
+- **WHEN** the runner runs with `--steps` on a code branch with no pull
+  request open
+- **THEN** it prints `PRE-PR steps: ` and the code branch's steps, runs no
+  step, and exits 0
+
+#### Scenario: The list against a base
+
+- **WHEN** the runner runs with `--steps` and a base `B`, in either order
+- **THEN** the steps are those the diff against `B` requires
+
+#### Scenario: The list writes no record
+
+- **WHEN** the runner runs with `--steps` on a clean tree
+- **THEN** the ledger gains no `pre-pr` record, so the turn gate, the goal
+  check and `work.ts finish` find no run of the commit from it
