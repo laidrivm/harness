@@ -219,24 +219,22 @@ function fail(problems: string[]): void {
 }
 
 /**
- * Stryker on one module, its values in a configuration file (no flag takes the command), its results in a copy of
- * the stored file named by `print`: an interrupt saves partial results over that copy, leaving the stored file whole,
- * and the next run against the same tests resumes from it. Trims a finished copy into the stored file.
+ * Stryker on one module, its values in a configuration file (no flag takes the command), its results in a fresh copy
+ * of the stored file, so the partial results an interrupt saves over that copy never reach the stored file. A run
+ * resumes by module, never from a leftover copy: one could hold results the stored file has since replaced.
  */
 function stryker(top: string, { module, force }: Run, print: Record<string, string>): number {
 	const { $schema: _, ...shared } = JSON.parse(readFileSync(join(top, "stryker.config.json"), "utf8"));
 	const tmp = join(top, ".stryker-tmp");
 	const name = stem(module).slice("bun/".length);
-	const config = join(tmp, `${name}.config.json`);
-	// A forced run's copy apart, and never seeded: a seeded copy outliving a failed start would be resumed as results.
-	const work = join(tmp, `${name}-${Bun.hash(JSON.stringify(print))}${force ? "-forced" : ""}.json`);
+	const [config, work] = [join(tmp, `${name}.config.json`), join(tmp, `${name}.incremental.json`)];
 	const stored = join(top, storedPath(module));
 	mkdirSync(tmp, { recursive: true });
-	const resumed = existsSync(work);
-	if (!resumed && !force && existsSync(stored)) writeFileSync(work, readFileSync(stored));
+	rmSync(work, { force: true });
+	if (!force && existsSync(stored)) writeFileSync(work, readFileSync(stored));
 	const own = { mutate: [module], commandRunner: { command: `bun test ${stem(module)}` }, incrementalFile: work };
 	writeFileSync(config, JSON.stringify({ ...shared, ...own }));
-	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force && !resumed ? ["--force"] : [])];
+	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force ? ["--force"] : [])];
 	const run = Bun.spawnSync(args, { cwd: top, stdio: ["inherit", "inherit", "inherit"] });
 	rmSync(config, { force: true });
 	if (run.exitCode !== 0) return run.exitCode;
