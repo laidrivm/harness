@@ -98,12 +98,11 @@ first. The gate joins the hook once the last fix lands.
 ### 4. Stryker per module, incremental, results in the tree
 
 `stryker.config.json` holds what every run shares: the command runner,
-`thresholds.break: null`, `incremental: true`,
-`tempDirName: .stryker-tmp`, `tsconfigFile` naming an absent file, and
-`ignorePatterns` covering `/.claude/worktrees`, `/.claude/skills` (symlinks,
-whose copy fails), the host's `orchestrator/secrets` and `orchestrator/app-key`,
-and `mutation` — not `.claude/settings.json`, which a test
-reads. No `json` reporter: the merge below writes the floor's report. The
+`thresholds.break: null`, `incremental: true`, `tempDirName: .stryker-tmp`,
+`tsconfigFile` naming an absent file, and `ignorePatterns` covering
+`/.claude/worktrees`, `/.claude/skills` (symlinks, whose copy fails), the
+host's secrets under `orchestrator/` and `mutation` — not
+`.claude/settings.json`, which a test reads. No `json` reporter: the merge below writes the floor's report. The
 absent `tsconfigFile` is d2ass's answer to Stryker's preprocessor calling an
 API TypeScript 7.0.2 lacks. `bun/mutation-run.ts` writes the per-module values
 — `mutate: bun/<name>.ts`, the command `bun test bun/<name>` — to a
