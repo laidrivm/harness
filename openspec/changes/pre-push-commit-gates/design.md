@@ -102,7 +102,8 @@ first. The gate joins the hook once the last fix lands.
 `tsconfigFile` naming an absent file, and `ignorePatterns` covering
 `/.claude/worktrees`, `/.claude/skills` (symlinks, whose copy fails), the
 host's secrets under `orchestrator/` and `mutation` — not
-`.claude/settings.json`, which a test reads. No `json` reporter: the merge below writes the floor's report. The
+`.claude/settings.json`, which a test reads. `json` stays among the reporters, as
+`mutation-floor` asks; the merge below replaces a run's one-module report, and a failed step deletes it. The
 absent `tsconfigFile` is d2ass's answer to Stryker's preprocessor calling an
 API TypeScript 7.0.2 lacks. `bun/mutation-run.ts` writes the per-module values
 — `mutate: bun/<name>.ts`, the command `bun test bun/<name>` — to a

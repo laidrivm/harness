@@ -4,7 +4,7 @@
 	"thresholds": {
 		"break": null
 	},
-	"reporters": ["clear-text", "progress"],
+	"reporters": ["clear-text", "progress", "json"],
 	"incremental": true,
 	"tempDirName": ".stryker-tmp",
 	"tsconfigFile": "tsconfig.stryker-none.json",
