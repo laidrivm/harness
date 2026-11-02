@@ -411,8 +411,8 @@ several SHALL write no `Pointer` and SHALL say so.
 `[#N](<url>) — <kind>`, the kind `proposal` when the branch adds a
 `proposal.md`, `design.md` or `tasks.md` to a directory outside `archive/`,
 else `archive` when it adds files to a directory inside it, else `apply`,
-unless a block of the card
-already links that pull request. The item SHALL go directly under the
+unless a top-level block of the card already links that pull request; a
+nested block is not read. The item SHALL go directly under the
 items already following the `Ссылки` line, and a card with no `Ссылки` line
 SHALL get one at the end of its body. Both writes SHALL come after the push
 and before the question read. The record is auxiliary: an `origin/main` that
@@ -420,8 +420,8 @@ cannot be fetched or a merge base that cannot be found SHALL write neither
 and say so in one line, and a read or write Notion refuses or does not answer
 SHALL stop the record and be said in one line naming the step; in each case
 `finish` SHALL go on to the question read and the ready switch, and a later
-`finish` writes only what is missing. Without `--card`, `finish` SHALL write
-nothing to Notion.
+`finish`, its pull request a draft again, writes only what is missing.
+Without `--card`, `finish` SHALL write nothing to Notion.
 
 #### Scenario: A proposal's first finish
 
@@ -496,8 +496,8 @@ nothing to Notion.
 
 #### Scenario: Several added directories
 
-- **WHEN** the branch adds `openspec/changes/foo/` and
-  `openspec/changes/bar/`
+- **WHEN** the branch adds `openspec/changes/foo/proposal.md` and
+  `openspec/changes/bar/proposal.md`
 - **THEN** the `Pointer` is left as it is, `finish` says the branch adds
   files to two change directories, and the link's kind is `proposal`
 
@@ -505,5 +505,5 @@ nothing to Notion.
 
 - **WHEN** Notion answers the block append with 403
 - **THEN** `finish` names the step and the status in one line, goes on to
-  the question read and the ready switch, and a later `finish` adds only the
-  missing link
+  the question read and the ready switch, and a later `finish`, its pull
+  request a draft again, adds only the missing link
