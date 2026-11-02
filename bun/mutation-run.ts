@@ -10,7 +10,7 @@
  * every module with tests, each incrementally, so an interrupted baseline
  * resumes; `--force` re-runs each one whole; named modules narrow the run.
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import { REPORT } from "./mutation-floor.ts";
 import { root } from "./root.ts";
@@ -236,7 +236,7 @@ function stryker(top: string, { module, force }: Run, print: Record<string, stri
 	const resumed = existsSync(work);
 	// Not when forced: Stryker writes no partial file before its first result, so a seeded copy of the old
 	// results would outlive a failed start and be resumed, without `--force`, as if measured against `print`.
-	if (!resumed && !force && existsSync(stored)) copyFileSync(stored, work);
+	if (!resumed && !force && existsSync(stored)) writeFileSync(work, readFileSync(stored));
 	const own = { mutate: [module], commandRunner: { command: `bun test ${stem(module)}` }, incrementalFile: work };
 	writeFileSync(config, JSON.stringify({ ...shared, ...own }));
 	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force && !resumed ? ["--force"] : [])];
@@ -244,7 +244,9 @@ function stryker(top: string, { module, force }: Run, print: Record<string, stri
 	rmSync(config, { force: true });
 	if (run.exitCode !== 0) return run.exitCode;
 	mkdirSync(dirname(stored), { recursive: true });
-	writeFileSync(stored, `${JSON.stringify(trim(JSON.parse(readFileSync(work, "utf8")), print), null, "\t")}\n`);
+	// Through a rename, so a kill mid-write leaves the old stored file rather than a truncated one.
+	writeFileSync(`${work}.out`, `${JSON.stringify(trim(JSON.parse(readFileSync(work, "utf8")), print), null, "\t")}\n`);
+	renameSync(`${work}.out`, stored);
 	rmSync(work);
 	return 0;
 }
