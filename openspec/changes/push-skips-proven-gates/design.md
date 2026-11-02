@@ -43,13 +43,19 @@ bash bun/diff-budget.sh || true
 ```
 
 `bun/push-proven.ts` (about 20 lines) takes the local sha of every
-non-deletion record, reads the top level with `git rev-parse --show-toplevel`
-as `work-finish.ts` does (`ran()` compares the record's project exactly), and
-exits 0 with the skip line when there is at least one sha and `ran()` finds a
-pass for each; otherwise it prints the reason line and exits 1. Any other
-exit, bun missing included, also runs the gates, so a broken reader costs
-time, never a check. Under `set -e`, a gate failing on the right of `||`
-still fails the hook.
+non-deletion record, takes the top level from `root` in `bun/root.ts` (`ran()`
+compares the record's project exactly), reads the ledger once and hands its
+text to each `ran()` call, and exits 0 with the skip line when there is at
+least one sha and each has a `pass` and no `fail` or `error` (decision 3);
+otherwise it prints the reason line and exits 1. Any other exit, bun missing
+or `root.ts` throwing outside a repository included, also runs the gates, so a
+broken reader costs time, never a check. Under `set -e`, a gate failing on the
+right of `||` still fails the hook.
+
+The records are parsed in one place: a small module (`bun/push-refs.ts`)
+splits standard input into `{ sha, ref }` for each non-deletion record, and
+`bun/push-draft.ts` switches to it in the same change, so the draft check and
+the skip never read different shas from one input.
 
 The lines read, for example:
 
@@ -75,14 +81,23 @@ not pushed. A push of a sha other than `HEAD` is judged by that sha's record,
 which is more exact than today's gates, which judge the working tree. The
 gates, when they run, still judge the working tree, as *The pre-push hook
 runs the gates named here* says; that requirement's paragraph saying the hook
-consumes no ref-update records describes its gates and is left to
-`pre-push-commit-gates` to word.
+consumes no ref-update records describes its gates (Risks).
 
-### 3. A pass followed by a failure still skips
+The record proves the gates of the commit's own tree: a commit that narrows
+`harness.bumpTest`, or an older tip recorded before `gates.sh` gained a step,
+is proven by what it holds. That is what the hook's gates would judge too had
+the commit been checked out, and the narrowing is in the diff CI and the
+reviewer read.
 
-`ran()` takes any passing line, as `finish` does; a flaky suite that passed
-once is rerun by CI on the pull request. Requiring the latest record to pass
-would make the hook stricter than `finish`, which pushed nothing more.
+### 3. Any failure of the commit runs the gates
+
+A `fail` or `error` record of `project-checks` for the sha in this checkout
+runs the gates, whatever passed before or after. A pass and a failure of one
+commit is either a flake or a gate whose tool one shell had and another did
+not — `gitleaks` behind `command -v` — and the second must not be pushed
+past. This is stricter than `finish`, which takes any pass; it fails toward
+running, and costs one more run only where a failure was seen. Three `ran()`
+calls over the one ledger text decide it, with no new reader.
 
 ### 4. The base is not recorded
 
@@ -98,7 +113,9 @@ the same way: CI scans the whole history. The mutation step reads no base.
 state exactly as a full run does, prints the last line and exits 0, before
 the budget, the checks and the record. A separate `main` in
 `bun/pre-pr-steps.ts` would copy both reads, and two copies drift. The flag
-comes first, so `pre-pr.ts origin/main` keeps its meaning.
+is taken out of the arguments wherever it stands, before the base and the
+budget's arguments are read, so `pre-pr.ts origin/main --steps` is the list
+too and never a full run with the flag passed on to the budget.
 
 ### 6. No `after:`
 
@@ -116,6 +133,22 @@ the user chose. The order lives in proposal.md and in task 1.1.
 - [The stub `bun` in `bun/git-env.test.ts` exits 0, so every existing case
   would skip the gates] → the stub exits 1 for `bun/push-proven.ts`, and one
   new case has it exit 0 and asserts no gate starts.
+- [A run outlasts the 600000 ms timeout — #392's took 610 s, and `gates.sh`
+  adds to it] → the user's answer keeps the foreground call with that
+  timeout. The Bash tool moves a call that reaches its limit to the
+  background and notifies on exit rather than killing it, so step 1 says to
+  wait for that notification in the same turn and never to start the runner
+  with `&` or a second time. Not measured on a 600 s run.
+- [The main spec's *The pre-push hook runs the gates named here* says the
+  hook "does not consume the ref-update records"; the draft-check requirement
+  already contradicts it, and this change adds a second reader] → it cannot
+  be MODIFIED here without clashing with `pre-push-commit-gates`' delta of the
+  same requirement, which archives after this change and would write the
+  sentence back. The rewording, to say its gates consume none, is handed to
+  `pre-push-commit-gates`' delta in this pull request's body.
+- [`pre-pr.ts` trims its top level with `trimEnd()`, `root.ts` strips only
+  git's newline] → a checkout whose path ends in a space gets no match and
+  runs the gates: slower, never unchecked.
 - [Reading a ledger that is never rotated] → about 0.5 MB and 1800 lines on
   the laptop today; one parse plus bun's start, estimated well under a second
   and not measured. `gate-ledger.ts`'s `ponytail:` note already names
