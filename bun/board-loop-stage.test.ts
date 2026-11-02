@@ -222,8 +222,9 @@ describe("a step branch a session left", () => {
 		` A session left the branch ${b}: switch to it with \`git switch ${b}\` rather than create it, merge \`origin/main\` into it before any other work, and carry on from what its commits hold.`;
 	const local =
 		(...names: string[]) =>
-		(dir: string) =>
-			names.forEach((name) => git(dir, "branch", name));
+		(dir: string) => {
+			for (const name of names) git(dir, "branch", name);
+		};
 	const pushed = (name: string) => (dir: string) => git(dir, "push", "-q", "origin", `main:refs/heads/${name}`);
 
 	// spec: board-loop/no-branch-left board-loop/a-local-branch-a-session-left board-loop/a-branch-pushed-without-a-pull-request board-loop/an-answer-step-s-branch
