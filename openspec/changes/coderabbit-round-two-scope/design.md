@@ -103,7 +103,9 @@ One entry, `path: "openspec/changes/**"`, with instructions along these
 lines: "A working artefact of an OpenSpec change, headed for the archive.
 Flag contradictions with a spec, the code or another artefact. Do not flag
 wording, duplication or style." The test asserts the path and three
-phrases, with whitespace normalised: `archive`, `contradictions with a spec,
+phrases, with whitespace normalised: `A working artefact of an OpenSpec
+change, headed for the archive`, so a sentence that merely names the archive
+fails it, `contradictions with a spec,
 the code or another artefact`, and `Do not flag wording, duplication or
 style`. The entry covers the whole of `openspec/changes/**`, delta specs
 included, as the user decided on 2026-11-02. The entry is meant to drop wording findings at every severity, the Majors that
