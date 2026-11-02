@@ -4,8 +4,8 @@
 
 The pre-push hook SHALL skip its judged gates when every commit the push
 lands — each ref-update record's local sha but a deletion's — has a pre-PR
-runner record of `project-checks` that passed, made in this checkout, and
-SHALL print one line naming those commits. Otherwise it SHALL run them and
+runner record of `project-checks` that passed, made in this checkout, and none
+that failed or erred, and SHALL print one line naming those commits. Otherwise it SHALL run them and
 print why. The draft check and the diff budget SHALL run either way. A record
 read fails toward running the gates: no sha, an unreadable ledger or a torn
 line skips nothing.
@@ -31,6 +31,13 @@ line skips nothing.
   `C`
 - **THEN** the hook runs its gates
 
+#### Scenario: A pass and a later failure of one commit
+
+- **WHEN** the ledger holds a passing and a failing `project-checks` record of
+  `C` in this checkout, in either order, and a push lands `C`
+- **THEN** the hook runs its gates, since a failure seen before the push is
+  one the push does not go past
+
 #### Scenario: Two refs, one unproven
 
 - **WHEN** a push lands `C` and `D`, and only `C` has a passing
@@ -47,6 +54,7 @@ line skips nothing.
 #### Scenario: A push that only deletes
 
 - **WHEN** every ref-update record of a push is a deletion, or there is none
+  and the input is empty or one blank line
 - **THEN** the hook runs its gates
 
 #### Scenario: A tag
@@ -101,7 +109,7 @@ the hook's ref-update records, from one read the hook hands to both.
 #### Scenario: A push into a draft
 
 - **WHEN** a push updates `feat/x` and its open pull request is a draft
-- **THEN** the draft check passes and the hook goes on to its gates
+- **THEN** the draft check passes and the hook goes on past it
 
 #### Scenario: A pull request state the hook cannot read
 

@@ -55,14 +55,17 @@ None.
   proved (added), and the draft check is no longer the one reader of the
   ref-update records (modified).
 - `pre-pr-runner`: the runner names the steps without running them when
-  asked (added).
+  asked (added), and a call so made is no run of the steps or of their
+  records (modified).
 - `gate-ledger`: the pre-push hook is a reader of the runner's
   `project-checks` record, held to the same match as every other reader.
 
 ## Impact
 
-- New: `bun/push-proven.ts` and `bun/push-proven.test.ts`.
-- Changed: `.githooks/pre-push`; `bun/pre-pr.ts` (`--steps`);
+- New: `bun/push-proven.ts`, `bun/push-refs.ts` (the ref-update records'
+  one parser) and their tests.
+- Changed: `.githooks/pre-push`; `bun/push-draft.ts`, onto `push-refs.ts`;
+  `bun/pre-pr.ts` (`--steps`);
   `bun/git-env.test.ts` and `bun/pre-pr.test.ts`, which pin the hook;
   `bun/pre-pr-steps-run.test.ts` or a sibling for `--steps`;
   `core/review-toolkit.md` step 1; `README.md`'s map of `bun/`.
