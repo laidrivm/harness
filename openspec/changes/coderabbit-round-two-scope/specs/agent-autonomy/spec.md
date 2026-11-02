@@ -47,7 +47,7 @@ run applies anything.
 - **WHEN** a session with no memory of the earlier rounds defers a Minor in
   the third round, and the board already holds the pull request's tail card
 - **THEN** it adds the finding to that card, found by its name, `CodeRabbit
-  Minors deferred from #<N>`, and files no second card
+  Minors deferred from <owner>/<repo>#<N>`, and files no second card
 
 #### Scenario: A Minor deferred in an earlier round
 
@@ -67,8 +67,8 @@ run applies anything.
 
 - **WHEN** a later full review posts again, on the same path and asking the
   same, a Minor a first-round review posted
-- **THEN** both copies keep the first round, and the run disposes of them as
-  one finding of that round
+- **THEN** both copies keep the first round, each copy counts in the run's
+  arithmetic, and their one fix is applied once
 
 ### Requirement: The coderabbit skill honours a project's deferral
 

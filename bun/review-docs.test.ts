@@ -145,6 +145,89 @@ describe("the /coderabbit bullet", () => {
 	});
 });
 
+describe("the /coderabbit bullet's round-two rule", () => {
+	const text = () => bullet(read("core/review-toolkit.md"), CODERABBIT) ?? "";
+
+	// spec: agent-autonomy/a-minor-in-a-change-s-artefact-in-the-first-round
+	// spec: agent-autonomy/a-minor-in-a-change-s-artefact-or-in-code-from-the-second-round
+	test("starts at the second round and dates a Minor by the review that posted it [1]", () => {
+		expect(text()).toContain("From the second round on, a 🟡 Minor outside the living docs");
+		expect(text()).toContain("is deferred, not applied");
+		expect(text()).toContain("the review that posted it");
+		expect(text()).toContain("commits ordered by their first CodeRabbit review");
+		expect(text()).toContain("never the count when the run starts");
+	});
+
+	// spec: agent-autonomy/a-minor-in-the-living-docs-from-the-second-round
+	// spec: agent-autonomy/a-major-in-a-change-s-artefact-from-the-second-round
+	test("names the living docs and leaves the cap deciding whether anything is applied [2]", () => {
+		expect(text()).toContain("the living docs — `openspec/specs/**`, `CLAUDE.md` and `core/**` —");
+		expect(text()).toContain("the three-round cap still decides whether the run applies anything");
+	});
+
+	// spec: agent-autonomy/a-later-round-defers-again
+	// spec: agent-autonomy/a-minor-deferred-in-an-earlier-round
+	test("names the tail card and the Skipped form, and writes no Minor twice [3]", () => {
+		expect(text()).toContain("`CodeRabbit Minors deferred from <owner>/<repo>#<N>`");
+		expect(text()).toContain("on the board of the repository that would ship the fix");
+		expect(text()).toContain("the harness's, for a consumer's `harness/*.md`");
+		expect(text()).toContain("`deferred to <card>`");
+		expect(text()).toContain("a Minor the card already holds is not written again");
+	});
+
+	// spec: agent-autonomy/a-first-round-minor-posted-again-later
+	test("counts each copy of a reposted Minor and applies its fix once", () => {
+		expect(text()).toContain("keeps its first round, each copy counts in the arithmetic");
+		expect(text()).toContain("their one fix is applied once");
+	});
+
+	// spec: agent-autonomy/the-thread-of-a-deferred-minor
+	test("leaves a deferred Minor's thread to the user [4]", () => {
+		expect(text()).toContain("The `resolve` command leaves a deferred Minor's thread to the user");
+		expect(text()).toContain("(unattended: agent — name the thread in the report and go on)");
+	});
+});
+
+describe("the coderabbit skill honours a project's deferral", () => {
+	const skill = () => read("core/skills/coderabbit/SKILL.md");
+	const DEFERS = "**A project's policy may defer.**";
+	const DEFERRAL = "a deferral the project's policy makes";
+
+	// spec: agent-autonomy/a-policy-defers-a-minor
+	test("step 5 defers by severity, path and round, outside the override's condition [6, 7]", () => {
+		const doc = skill();
+		const text = block(doc, DEFERS) ?? "";
+		expect(text).toContain("by its severity, path and round");
+		expect(text).toContain("under Skipped as `deferred to <card>`");
+		expect(text).toContain("counted in the arithmetic");
+		expect(block(doc, "**The project overrides this.**") ?? "").not.toContain("by its severity, path and round");
+		const at = doc.indexOf(DEFERS);
+		expect(at).toBeGreaterThan(doc.indexOf("### 5."));
+		expect(at).toBeLessThan(doc.indexOf("### 6."));
+	});
+
+	// spec: agent-autonomy/a-policy-defers-a-major
+	test("a Major or above deferred by a policy is a dismissal put to the user", () => {
+		const text = block(skill(), DEFERS) ?? "";
+		expect(text).toContain("A 🟠 Major or 🔴 Critical deferred this way is a dismissal: it goes to the user");
+		expect(text).toContain("`CODERABBIT gate: OPEN — N findings, M dismissals awaiting the user.`, never `PASS`");
+		expect(text).toContain("until they settle it (unattended: card —");
+	});
+
+	// spec: agent-autonomy/a-policy-defers-a-minor
+	test("the rule on severity names the project's deferral [8]", () => {
+		expect(bullet(skill(), "**Severity budgets attention, not belief.**") ?? "").toContain(DEFERRAL);
+	});
+
+	// spec: agent-autonomy/no-policy-defers
+	test("step 3's opening and its Minor line name the deferral as the exception [9]", () => {
+		expect(block(skill(), "Severity budgets how much scrutiny") ?? "").toContain(DEFERRAL);
+		const minor = bullet(skill(), "🟡 Minor →") ?? "";
+		expect(minor).toContain(DEFERRAL);
+		expect(minor).toContain("`below severity threshold` is not a reason on its own");
+	});
+});
+
 const LOCAL = "`/code-review` —";
 // The form code-review-replaces-cli probed (design.md decision 1): the range after the level is the diff read.
 const BASE_FORM = "`/code-review high <base>...HEAD` from the branch's own worktree";
