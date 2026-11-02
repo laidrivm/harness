@@ -47,8 +47,9 @@ export function read<K extends keyof Config>(root: string, key: K): Config[K] {
 }
 
 /**
- * The project's unit-test command, `harness.bumpTest`, which a bump and the
- * pre-PR runner run as `sh -c <value>`. Throws naming the key when it is
+ * The project's checks command, `harness.bumpTest` — its unit tests at the
+ * least, and here every gate `.githooks/gates.sh` runs — which a bump and
+ * the pre-PR runner run as `sh -c <value>`. Throws naming the key when it is
  * absent or blank: `sh -c ""` exits 0, a pass with no test run at all.
  */
 export function bumpTest(root: string): string {
