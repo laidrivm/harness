@@ -58,7 +58,7 @@ export async function flow(body: string, marker: string): Promise<Outcome> {
 		if (run.head_branch !== repo?.default_branch)
 			return ["ignored", `a scheduled run on ${run.head_branch}, not the default branch`];
 		// `HARNESS_CI_CLONES` names another directory, which only the tests do; no session is resumed.
-		const [, short] = name.split("/");
+		const short = /^[^/]+\/([^/]+)$/.exec(name)?.[1];
 		if (short === undefined) throw new Error(`the payload's repository ${name} is no <owner>/<name>`);
 		row = { clone: join(process.env.HARNESS_CI_CLONES || "/home/agent/clones", short), session: "" };
 	} else {

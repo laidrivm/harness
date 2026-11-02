@@ -6,14 +6,14 @@
  * (`openspec/changes/archive/2026-11-01-notion-ask-sets-assign/design.md`,
  * *Releasing `Assign`*). No call is retried, and no line holds the token.
  */
-import { type Call, discussion, hex, waits } from "./notion-bot.ts";
+import { type Call, discussion, hex, type Page, waits } from "./notion-bot.ts";
 
 /** How a line opens when a call failed or `Assign` was too long to read whole: the user may still be on `Assign`. */
 export const UNASSIGN_FAILED = "assign: failed —";
 
 type Person = { id: unknown };
-/** An `Assign` as a PATCH's answer or a page read holds it: untrusted, so read where it is used. */
-type Paged = { properties?: { Assign?: { people?: unknown } } } | undefined;
+/** A PATCH's answer or a page read, its `Assign` read where it is used. */
+type Paged = Page | null | undefined;
 
 const people = (page: Paged): Person[] | undefined => {
 	const listed = page?.properties?.Assign?.people;

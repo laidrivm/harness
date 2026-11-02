@@ -57,7 +57,7 @@ export async function main(args: string[], files = FILES): Promise<Result> {
 		owner === undefined ||
 		repo === undefined ||
 		!/^[\w.-]+\/[\w.-]+$/.test(wanted) ||
-		wanted.split("/").some((part) => /^\.+$/.test(part)) ||
+		[owner, repo].some((part) => /^\.+$/.test(part)) ||
 		!listed.includes(wanted)
 	)
 		return refused(`${named || "no repository"} is no repository the list names`);
