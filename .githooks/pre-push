@@ -8,7 +8,8 @@ set -euo pipefail
 # (bunfig.toml) sees the variables and refuses.
 unset $(git rev-parse --local-env-vars)
 # A push into an open pull request that is not a draft is refused before the
-# suite runs. After the unset, so no `gh` it starts inherits git's variables.
+# gates run. After the unset, so no `gh` it starts inherits git's variables.
 bun bun/push-draft.ts "$@"
-bun test
+# The gates `commit-gates` lists, the suite last among them; `harness.bumpTest` names the same line.
+bash .githooks/gates.sh
 bash bun/diff-budget.sh || true

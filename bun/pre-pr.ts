@@ -62,7 +62,9 @@ const budget = exit(
 );
 let checks: 0 | 1 | 2 = 2;
 try {
-	checks = exit(Bun.spawnSync(["sh", "-c", bumpTest(top)], { cwd: top, ...shown }).exitCode);
+	// `HARNESS_BASE`, so a gate reading `diff-base.sh` measures from the base the budget measured.
+	const env = { ...process.env, HARNESS_BASE: base };
+	checks = exit(Bun.spawnSync(["sh", "-c", bumpTest(top)], { cwd: top, env, ...shown }).exitCode);
 } catch (error) {
 	// An absent or blank key, or a manifest that is no JSON: no command, so no pass.
 	console.error(`PRE-PR: project checks not run: ${(error as Error).message}`);

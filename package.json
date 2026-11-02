@@ -10,12 +10,13 @@
 	},
 	"harness": {
 		"board": "Harness",
-		"bumpTest": "bun test",
+		"bumpTest": "bash .githooks/gates.sh",
 		"diffBudgetExclude": [
 			".claude/commands/opsx/**",
 			"bun.lock",
 			"core/skills/playwright-cli/**",
 			"skills-lock.json"
-		]
+		],
+		"suppressions": {}
 	}
 }
