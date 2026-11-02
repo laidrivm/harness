@@ -66,7 +66,7 @@ A reply (`in_reply_to_id` set) is discussion of a finding, not a finding, and sa
 Each finding opens with a line naming its severity, category and effort. Read its severity word yourself — `Trivial`, `Minor`, `Major` or `Critical` — wherever on the line it sits. These are examples of the markup, not a pattern to match, and the order on the line is not relied on:
 
 ```
-**<picture><img … alt=""></picture> Major** · **Functional Correctness** · **Quick win**
+**<picture>…</picture> Major** · **Functional Correctness** · **Quick win**
 _🎯 Functional Correctness_ | _🟠 Major_ | _⚡ Quick win_
 ```
 
@@ -153,7 +153,7 @@ Right before applying any fix, here or under the override below, and before nami
 
 **The project overrides this.** If the repo's own review policy (`CLAUDE.md`, `docs/`, a gate the project defines) prescribes applying verified findings without asking, follow the project, not this skill: apply them before showing the plan, list them under `### Applied (N)`, and keep no approval gate on fixes at any severity. Where the project puts the approval on the dismissal instead, a 🟠 Major or 🔴 Critical you propose to reject or skip goes to the user with what the bot missed, and the gate stays OPEN until they settle it (unattended: card — hand it on with what the bot missed). Name the rule you followed in one line under the heading.
 
-**A project's policy may defer.** Whether or not it also applies fixes without asking, the repo's own review policy may defer a finding to a card by its severity, path and round. Apply nothing for such a finding: list it under Skipped as `deferred to <card>`, counted in the arithmetic. A 🟠 Major or 🔴 Critical deferred this way is a dismissal: it goes to the user, and the gate stays OPEN until they settle it (unattended: card — hand it on with the policy that defers it).
+**A project's policy may defer.** Whether or not it also applies fixes without asking, the repo's own review policy may defer a finding to a card by its severity, path and round. Apply nothing for such a finding: list it under Skipped as `deferred to <card>`, counted in the arithmetic. A 🟠 Major or 🔴 Critical deferred this way is a dismissal: it goes to the user, and the run ends on `CODERABBIT gate: OPEN — N findings, M dismissals awaiting the user.`, never `PASS`, until they settle it (unattended: card — hand it on with the policy that defers it).
 
 ### 6. The resolve command and the gate line
 
@@ -170,7 +170,7 @@ Every output ends with a machine-readable last line, exactly one of:
 - `CODERABBIT gate: PASS — N findings, N dispositioned.` (every finding fixed, skipped or rejected — nothing left to do)
 - `CODERABBIT gate: OPEN — no CodeRabbit review of <short sha> yet.` (step 1 found no review of the head commit, no `CodeRabbit` status reading `success` with `Review completed`, and no `CodeRabbit` check run of the bot's concluded `success` with a title not opening `Review skipped` while every one of them is `completed` — a success beside a `queued` or `in_progress` run is no review yet — and read nothing more; or the head was counted with no review object while the walkthrough names another commit)
 - `CODERABBIT gate: OPEN — N findings, M fixes awaiting approval.` (the plan in step 5, before the user answers)
-- `CODERABBIT gate: OPEN — N findings, M dismissals awaiting the user.` (fixes already applied under a project policy; what waits is a Major+ you propose to reject or skip)
+- `CODERABBIT gate: OPEN — N findings, M dismissals awaiting the user.` (fixes already applied under a project policy, or none to apply; what waits is a Major+ you propose to reject or skip, or one a project's policy defers)
 - `CODERABBIT gate: BLOCKED — N findings, M undispositioned.` (the arithmetic didn't close, or the user declined a fix that is still a real defect — name them)
 
 It exists so a driving agent, PR template or hook can check the step ran and closed without re-parsing the report.
