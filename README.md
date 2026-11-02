@@ -126,7 +126,7 @@ git diff            # see what changed upstream
 ## Working on the harness
 
 - The repository is its own consumer: it pins itself under `devDependencies`, so a session runs its gates from `node_modules/harness/`, and an edit to `bun/` holds no session until it merges and the pin moves past it. Three hooks are its own and reach no consumer: the skill recorder, the ready guard and the status guard ([harness-updates](openspec/specs/harness-updates/spec.md)).
-- Run `bun install` first, then `git config core.hooksPath .githooks` once per clone, so a push runs `bun test` and the diff budget ([git and PRs](core/git-and-prs.md)).
+- Run `bun install` first, then `git config core.hooksPath .githooks` once per clone. A push then runs the gates [commit-gates](openspec/specs/commit-gates/spec.md) lists, through `.githooks/gates.sh` (Biome and the type check need the install), and the diff budget ([git and PRs](core/git-and-prs.md)).
 - Move the pin by hand: set its line in `package.json` to a `main` commit whose `test` run passed, run `bun install`, and open a pull request carrying `package.json` and `bun.lock`.
 - `.claude/commands/opsx/` is OpenSpec's output: regenerate it with `openspec update`, never edit it here.
 

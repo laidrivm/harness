@@ -41,6 +41,12 @@ describe("the project checks", () => {
 		]);
 	});
 
+	// The gates' secret scan reads its range from `diff-base.sh`, which prints `HARNESS_BASE` when it is set.
+	test("they run with HARNESS_BASE set to the base the runner was given", () => {
+		const result = run(within("printf 'base=%s\\n' \"$HARNESS_BASE\""), {}, ["origin/main"]);
+		expect(result.out).toContain("base=origin/main\n");
+	});
+
 	// spec: pre-pr-runner/failing-project-checks
 	test("their output passes through unchanged, after the budget's line [4]", () => {
 		const dir = within("printf 'checks said %s\\n' hi; printf 'to stderr\\n' >&2; exit 1");

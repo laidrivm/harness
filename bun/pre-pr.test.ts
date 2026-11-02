@@ -164,17 +164,31 @@ describe("when no record is written", () => {
 		expect(said.length).toBe(1);
 	});
 
-	// spec: commit-gates/a-push-into-a-ready-pull-request
-	test("the hook runs the draft check before bun test, after dropping git's variables", () => {
-		const commands = readFileSync(join(import.meta.dir, "..", ".githooks/pre-push"), "utf8")
+	const commands = () =>
+		readFileSync(join(import.meta.dir, "..", ".githooks/pre-push"), "utf8")
 			.split("\n")
 			.filter((line) => line.trim() && !line.startsWith("#"));
-		const [unset = -1, draft = -1, suite = -1] = [
+
+	// spec: commit-gates/a-push-into-a-ready-pull-request
+	test("the hook runs the draft check before the gates, after dropping git's variables, and the budget last", () => {
+		const hook = commands();
+		const [unset = -1, draft = -1, gates = -1] = [
 			"unset $(git rev-parse --local-env-vars)",
 			'bun bun/push-draft.ts "$@"',
-			"bun test",
-		].map((c) => commands.indexOf(c));
-		expect([unset >= 0, unset < draft, draft < suite]).toEqual([true, true, true]);
+			"bash .githooks/gates.sh",
+		].map((c) => hook.indexOf(c));
+		expect([unset >= 0, unset < draft, draft < gates, hook.at(-1)]).toEqual([
+			true,
+			true,
+			true,
+			"bash bun/diff-budget.sh || true",
+		]);
+	});
+
+	// spec: commit-gates/a-gate-the-runner-s-checks-run-too
+	test("harness.bumpTest is the command the hook runs for its gates", () => {
+		const manifest = JSON.parse(readFileSync(join(import.meta.dir, "..", "package.json"), "utf8"));
+		expect(commands()).toContain(manifest.harness.bumpTest);
 	});
 
 	// spec: pre-pr-runner/a-push

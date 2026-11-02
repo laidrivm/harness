@@ -4,6 +4,12 @@
 # so the budget and the runner's step list read the same diff.
 set -uo pipefail
 
+# The base the pre-PR runner was given, which it sets for the gates it runs.
+if [ -n "${HARNESS_BASE:-}" ]; then
+	echo "$HARNESS_BASE"
+	exit 0
+fi
+
 # The remote-tracking ref is kept whole: `origin/main` resolves wherever
 # `main` does and also where the local branch was never checked out.
 # Not `rev-parse --abbrev-ref origin/HEAD` — with no origin/HEAD it echoes

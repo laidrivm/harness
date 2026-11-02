@@ -88,7 +88,7 @@ function bin(gh: Gh) {
 	};
 	// No answers, or none listed, is a read of no runs, never a failed read.
 	const runs = gh.runs?.length ? gh.runs : [[]];
-	runs.forEach((value, i) => answer(`runs${i}`, value));
+	for (const [i, value] of runs.entries()) answer(`runs${i}`, value);
 	answer("comments", gh.comments ?? []);
 	writeFileSync(join(dir, "n"), "0\n");
 	const print = (name: string) =>

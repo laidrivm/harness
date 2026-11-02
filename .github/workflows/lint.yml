@@ -1,0 +1,103 @@
+name: Lint
+
+# The gates `.githooks/gates.sh` runs before a push, run again here where a
+# push that skipped the hook cannot skip them, each as its own check. The
+# suite is `test.yml`'s.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  biome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - run: bunx --no-install biome ci .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - run: bunx --no-install tsc --noEmit
+
+  # These two read the tree with bun alone, so they install nothing.
+  yaml-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - run: bun bun/check-yaml.ts
+
+  suppressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - run: bun bun/no-suppressions.ts
+
+  # The two containers are pinned by the digests d2ass's lint.yml carries.
+  # Nothing updates them here — no dependabot runs in this repository — so
+  # they are bumped by hand, to the ones d2ass's have moved to.
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+        with:
+          args: -color
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # `gitleaks git` reads history through `git log -p`, and the default
+          # shallow clone hides every commit but the last — a secret added and
+          # then deleted on the branch would pass. The hook scans the push's
+          # range alone; this is the history-wide scan `commit-gates` keeps.
+          fetch-depth: 0
+      - uses: docker://zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+        # The workspace belongs to the runner's user, not the container's, and
+        # git refuses a repository it does not own: without this the scan read
+        # "dubious ownership" and reported 0 commits scanned, no leaks.
+        env:
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: safe.directory
+          GIT_CONFIG_VALUE_0: /github/workspace
+        with:
+          # `git` rather than `dir`: it reads tracked content only, where `dir`
+          # also walks gitignored files that exist for one author and in no
+          # clone. `--log-opts=HEAD`: the pull request's history, not `--all`,
+          # which with `fetch-depth: 0` takes in every other branch. `-v` names
+          # the file and line, and `--redact` keeps the secret itself out of a
+          # build log this public repository shows to anyone.
+          args: git . --log-opts=HEAD -v --redact --no-banner

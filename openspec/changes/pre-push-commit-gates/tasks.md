@@ -54,12 +54,16 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 
 ## 4. The gates script, the hook and the CI jobs
 
-- [ ] 4.1 Fix Biome's three linter errors by hand, a failing test first
+- [x] 4.1 Fix Biome's three linter errors by hand, a failing test first
       where the fix changes behaviour. Verify `bunx --no-install biome ci .`
-      exits 0
-- [ ] 4.2 Add `"suppressions": {}` under `harness` in `package.json`.
+      exits 0. Six on `f549ac7c`, none changing behaviour: two `forEach`
+      callbacks returning a value, an assignment in an expression, an
+      unsafe optional chain, and the import cycle between
+      `transcript-archive.ts` and its catch-up, broken by moving the copy,
+      lock, record and prune both share into `transcript-archive-store.ts`
+- [x] 4.2 Add `"suppressions": {}` under `harness` in `package.json`.
       Verify `bun bun/no-suppressions.ts` exits 0
-- [ ] 4.3 Failing cases in `bun/pre-pr.test.ts`: the hook runs the draft
+- [x] 4.3 Failing cases in `bun/pre-pr.test.ts`: the hook runs the draft
       check after dropping git's variables and before `.githooks/gates.sh`;
       `harness.bumpTest` is the command the hook runs for its gates
       (`a-gate-the-runner-s-checks-run-too`). Failing cases in
@@ -73,16 +77,16 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       `HARNESS_BASE` when it is set; and
       `bun/pre-pr.ts` given `origin/main` runs `harness.bumpTest` with
       `HARNESS_BASE=origin/main`
-- [ ] 4.4 Write `.githooks/gates.sh` per design decision 1, without the
+- [x] 4.4 Write `.githooks/gates.sh` per design decision 1, without the
       mutation step; the hook calls it after the draft check and keeps
       `bash bun/diff-budget.sh || true` last; set `harness.bumpTest` to
       `bash .githooks/gates.sh`. Verify 4.3's cases pass and `bun
       bun/pre-pr.ts origin/main` records `pass` for the project checks
-- [ ] 4.5 Add `.github/workflows/lint.yml` per design decision 6, the two
+- [x] 4.5 Add `.github/workflows/lint.yml` per design decision 6, the two
       container digests copied from d2ass's `lint.yml` with the comment that
       nothing updates them. Verify `bun bun/check-yaml.ts` exits 0 and every
       job passes on the pull request
-- [ ] 4.6 `README.md`, *Working on the harness*: a push runs the gates
+- [x] 4.6 `README.md`, *Working on the harness*: a push runs the gates
       `commit-gates` lists, through `.githooks/gates.sh`, and needs `bun
       install` first. Verify the line links the spec. In the pull request
       body, list for the user the check names to make required in the

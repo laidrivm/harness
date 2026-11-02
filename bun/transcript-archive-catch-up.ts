@@ -9,7 +9,7 @@ import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { stateDir } from "./gate-ledger.ts";
-import { files, folder, lock, old, prune, write } from "./transcript-archive.ts";
+import { files, folder, lock, old, prune, write } from "./transcript-archive-store.ts";
 
 /**
  * Whether `copy` holds what `source` holds, file for file by size and
