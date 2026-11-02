@@ -31,8 +31,9 @@ failing case is written first, its failure recorded, and cited as
       case fails against today's prose
 - [ ] 1.2 In `core/review-toolkit.md`'s `/coderabbit` bullet, after the
       three-round cap, add the rule, the Minor's round, the Minor already on
-      the card, and the deferred thread left to the user (design, *Where the
-      line falls*, *The tail card*). In the skill, add the step 5 sentence
+      the card, and the deferred thread left to the user, marked
+      `(unattended: agent — name the thread in the report and go on)`
+      (design, *Where the line falls*, *The tail card*). In the skill, add the step 5 sentence
       after the override paragraph, the clause to *Severity budgets
       attention, not belief*, and the deferral as the exception in step 3's
       opening paragraph and its Minor line (design, *The skill's sentence*).
@@ -48,8 +49,9 @@ failing case is written first, its failure recorded, and cited as
       `openspec/changes/**`, so a missing list [10] and an `archive/**` path
       [11] both fail it. A `test.each` then checks the entry's
       `instructions`, with whitespace normalised so a wrapped block scalar
-      still matches, for `archive`, `contradictions`, `Do not flag wording,
-      duplication or style` and `becomes a living spec`, one case per
+      still matches, for `archive`, `contradictions with a spec, the code or
+      another artefact`, `Do not flag wording, duplication or style` and
+      `becomes a living spec at sync: review it as one`, one case per
       phrase. The negation is pinned whole, so an entry that asks for wording
       fails, and a failure names the phrase that is gone [12] [13]. No
       fabricated config is needed, since the pin reads one file and no

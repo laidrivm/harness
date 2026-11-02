@@ -40,8 +40,8 @@ The two other living paths extend it. A delta spec becomes `openspec/specs/**`
 text at sync, so a Minor deferred there only moves to the archive pull
 request. `CLAUDE.md` is loaded by every session. A consumer's `harness/*.md`
 is a copy that sync writes, and a rule is edited in the harness, never in the
-copy (`README.md`, step 4). So a Minor there is deferred, and the card is
-where it waits for the harness. Naming the pushed side leaves no path
+copy (`README.md`, step 4). So a Minor there is deferred, to a card on the
+harness's board, the repository that would ship the fix. Naming the pushed side leaves no path
 unclassified. `core/**` takes in `core/skills/**`, which consumers install.
 The synced specs an archive pull request writes are living specs, so their
 Minors are still pushed, as on #390 and #392.
@@ -51,8 +51,8 @@ posted it, never the count when the run starts. Commits are ordered by
 their first CodeRabbit review. A first-round Minor still undisposed when a
 second commit has been reviewed, for example after a merge of `origin/main`,
 is therefore still read as a first-round one. A finding that a later full
-review posts again counts as that review's, since the run cannot tell it
-from a new one. The three-round cap still decides whether the run applies
+review posts again, on the same path and asking the same, keeps the round
+of its first posting and is disposed of once. The three-round cap still decides whether the run applies
 anything. A Minor already on the tail card, whose thread is still open in a
 later run, is listed again as deferred and not written again. A fourth
 round holding only deferrals needs no sentence of its own: a deferral is a
@@ -101,8 +101,10 @@ lines: "A working artefact of an OpenSpec change, headed for the archive.
 Flag contradictions with a spec, the code or another artefact. Do not flag
 wording, duplication or style. A delta spec under the change's `specs/`
 becomes a living spec at sync: review it as one." The test asserts the path
-and four phrases, with whitespace normalised: `archive`, `contradictions`,
-`Do not flag wording, duplication or style`, and `becomes a living spec`.
+and four phrases, with whitespace normalised: `archive`, `contradictions
+with a spec, the code or another artefact`, `Do not flag wording,
+duplication or style`, and `becomes a living spec at sync: review it as
+one`.
 The path stays the one the user chose. The exception for delta specs goes in
 the text, since a glob cannot exclude a subdirectory from one entry. The
 entry is meant to drop wording findings at every severity, the Majors that
