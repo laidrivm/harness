@@ -2,7 +2,8 @@
 /**
  * The pre-push hook's skip, `bun bun/push-proven.ts || bash .githooks/gates.sh`:
  * exits 0 with a line saying the gates were skipped when the push updates no
- * tag and every commit it lands has a passing pre-PR record of
+ * tag and every commit it lands — each record's local sha, a ref's tip, never
+ * the commits below it — has a passing pre-PR record of
  * `project-checks` made in this checkout and none that failed or erred;
  * otherwise prints why the gates run and exits 1. A lightweight tag's sha is
  * its commit's, so a tag is told by its remote ref, a deleted one included.

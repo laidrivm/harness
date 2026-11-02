@@ -181,8 +181,9 @@ steps the branch requires from its diff*) sets out. Once a pull request is
 open, draft or not, it names the project checks alone: that is the least a
 push into it requires, and step 5 says what still runs before one.
 `bun bun/pre-pr.ts --steps [<base>]` prints that line alone, running no step
-and recording nothing, so the list can be read before the last commit. The
-steps below say why each one exists.
+and recording nothing, so the list can be read without the checks; like a
+full run's, it reads the committed diff, never uncommitted edits. The steps
+below say why each one exists.
 
 1. The diff budget first, looked at with `bash bun/diff-budget.sh` (`bash
    node_modules/harness/bun/diff-budget.sh` where the harness is installed),

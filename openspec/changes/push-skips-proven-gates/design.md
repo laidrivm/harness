@@ -53,9 +53,10 @@ one — and each sha has
 a `pass` and no `fail` or `error` (decision 3); otherwise it prints the reason
 line and exits 1. A torn ledger line counts as no record, as it does for every
 `ran()` reader: the ledger is never rotated, so refusing the skip over one torn
-line anywhere in it would refuse it for good. Any other exit, bun missing
-or `root.ts` throwing outside a repository included, also runs the gates, so a
-broken reader costs time, never a check. Under `set -e`, a gate failing on the
+line anywhere in it would refuse it for good. Any other exit, `root.ts`
+throwing outside a repository included, also runs the gates, so a broken
+reader costs time, never a check; bun missing fails the draft check first,
+which stops the push. Under `set -e`, a gate failing on the
 right of `||` still fails the hook.
 
 The records are parsed in one place: a small module (`bun/push-refs.ts`)
