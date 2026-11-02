@@ -309,7 +309,8 @@ gate that writes that step's evidence, the commit, and the checkout's top
 level as its project, and by the step's rule and the decision when the reader
 names them. A skill-call record SHALL NOT count as the pre-PR runner's, a
 runner record SHALL NOT count as a skill call, and a record of one skill
-SHALL NOT count as another's.
+SHALL NOT count as another's. The pre-push hook is such a reader of the
+runner's passing `project-checks` record, and reads it without writing one.
 
 #### Scenario: A skill record at the tip
 
@@ -335,3 +336,9 @@ SHALL NOT count as another's.
   and no runner or skill record of `C`
 - **THEN** a reader asking for a skill call or a runner record at `C` finds
   none
+
+#### Scenario: A push of a commit the runner passed
+
+- **WHEN** the ledger holds a passing `project-checks` runner record of `C`
+  in this checkout and the pre-push hook reads it for a push landing `C`
+- **THEN** the hook finds it, and the ledger gains no record from the read
