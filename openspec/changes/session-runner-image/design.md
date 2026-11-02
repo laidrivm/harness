@@ -110,8 +110,9 @@ edit.
   `sudo -n -u keyholder /opt/orchestrator/mint laidrivm/harness contents=write pull_requests=write checks=read actions=read statuses=read workflows=write`
   (decision 39 б; every pair is in the mint's fixed set). A non-zero mint
   exits the wrapper with that status, gh unrun; the mint's stderr passes
-  through. Otherwise `GH_TOKEN=<token> exec` the real gh: the token is in
-  that process's environment and nowhere else.
+  through. A mint that exits 0 with no token exits the wrapper 1, as
+  `minted()` refuses one (local review). Otherwise `GH_TOKEN=<token> exec`
+  the real gh: the token is in that process's environment and nowhere else.
 
 shortcut: the repository is fixed to `laidrivm/harness`, the one board of
 stage 2.5; derive it from `origin` when the session takes D2ASS or mellon.
@@ -160,8 +161,11 @@ Node is the one binary, `COPY --from=node /usr/local/bin/node`; apt adds
 `libstdc++6` for it, and `tmux`. The `node → bun` symlink line goes. Node 24,
 not 22: the laptop runs 24, and 22's support ends in April 2027. `bunx` then
 runs `#!/usr/bin/env node` packages under Node, as on the laptop and in CI.
-`actionlint` and `gitleaks` are `COPY --from` each image's binary. One
-`RUN` at the end prints `node --version`, `actionlint -version`, `gitleaks
+`actionlint` and `gitleaks` are `COPY --from` each image's binary, and the
+`shellcheck` the actionlint image ships with it, which CI's actionlint runs
+over `run:` scripts and skips when absent (local review). One `RUN` after
+the tools' copies, ahead of the `bun/` copy so it stays cached, prints
+`node --version`, `actionlint -version`, `shellcheck --version`, `gitleaks
 version` and `claude --version`, so a binary that cannot run fails the build.
 
 ### The commit identity: on the host only
