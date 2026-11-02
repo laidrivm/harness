@@ -86,9 +86,18 @@ jobs:
           # range alone; this is the history-wide scan `commit-gates` keeps.
           fetch-depth: 0
       - uses: docker://zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+        # The workspace belongs to the runner's user, not the container's, and
+        # git refuses a repository it does not own: without this the scan read
+        # "dubious ownership" and reported 0 commits scanned, no leaks.
+        env:
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: safe.directory
+          GIT_CONFIG_VALUE_0: /github/workspace
         with:
           # `git` rather than `dir`: it reads tracked content only, where `dir`
           # also walks gitignored files that exist for one author and in no
-          # clone. `-v` names the file and line, and `--redact` keeps the secret
-          # itself out of a build log this public repository shows to anyone.
-          args: git . -v --redact --no-banner
+          # clone. `--log-opts=HEAD`: the pull request's history, not `--all`,
+          # which with `fetch-depth: 0` takes in every other branch. `-v` names
+          # the file and line, and `--redact` keeps the secret itself out of a
+          # build log this public repository shows to anyone.
+          args: git . --log-opts=HEAD -v --redact --no-banner
