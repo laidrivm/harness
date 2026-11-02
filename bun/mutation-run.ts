@@ -245,7 +245,9 @@ function stryker(top: string, { module, force }: Run, print: Record<string, stri
 	const stored = join(top, storedPath(module));
 	mkdirSync(tmp, { recursive: true });
 	const resumed = existsSync(work);
-	if (!resumed && existsSync(stored)) copyFileSync(stored, work);
+	// Not when forced: Stryker writes no partial file before its first result, so a seeded copy of the old
+	// results would outlive a failed start and be resumed, without `--force`, as if measured against `print`.
+	if (!resumed && !force && existsSync(stored)) copyFileSync(stored, work);
 	const own = { mutate: [module], commandRunner: { command: `bun test ${stem(module)}` }, incrementalFile: work };
 	writeFileSync(config, JSON.stringify({ ...shared, ...own }));
 	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force && !resumed ? ["--force"] : [])];
