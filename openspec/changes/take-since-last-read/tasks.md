@@ -42,7 +42,8 @@ The bracketed numbers are the proposal-stage `/zombies` ideas.
       cursor on the last comment prints the nothing-follows line and the
       same id [18]; a question before the cursor with no answer after it
       prints `question waiting: yes` [19]; an id no comment carries prints
-      the not-on-the-card line, every comment, and exits 0 [20]; a card with
+      the not-on-the-card line, every comment, and exits 0, or 1 when the
+      release's restore fails [20]; a card with
       no comments prints that line and `last comment: none` [21]. Reads: the
       calls are `GET`s of the page and its comments, no markdown call, the
       `openspec` stub records no run, and a working directory outside git
@@ -61,7 +62,8 @@ The bracketed numbers are the proposal-stage `/zombies` ideas.
       the card's comments with `take`, say that the first read prints the
       card and the paths of its change, ending with the last comment's id,
       and a re-read passes `--after <that id>` and prints only what came
-      after it. In `README.md`'s row for `take`, name `--after` and that
+      after it, while after `last comment: none` the re-read is a plain
+      `take`. In `README.md`'s row for `take`, name `--after` and that
       the change prints as paths. Grep the tree outside
       `openspec/changes/archive/` for `work.ts take` and `take --card` and
       update any other instruction to re-read a card. Verify: the grep shows
