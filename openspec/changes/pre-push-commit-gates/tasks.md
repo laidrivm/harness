@@ -174,7 +174,8 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       Against the probe's first run on the same source, mutants 146 to 149
       moved from `Timeout` to one `Survived` and three `Killed`: a whole
       re-run can rewrite a stored file, and move the survivor count, with no
-      change to the code. Asked on the card (question 8); the stored file is
+      change to the code. Asked on the card (question 8), answered а: change
+      nothing now, the baseline measures the spread first (6.2); the stored file is
       not committed here, the baseline being group 6's
 
 ## 6. The baseline
@@ -185,7 +186,11 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       fails (`the-stored-mutation-results-of-the-check-s-own-script`); then
       exempt that path beside `self()`. Verify `bun bun/no-suppressions.ts`
       exits 0 with the stored file present
-- [ ] 6.2 On the laptop, `bun bun/mutation-run.ts --all`, committing each
+- [ ] 6.2 First, by the user's decision 8, run a few modules whole twice
+      (`bun bun/mutation-run.ts --force bun/<name>.ts`, the second over the
+      first's stored file) and record on the card how many mutants change
+      status between the two, so the timeout setting is decided on that
+      measurement. Then, on the laptop, `bun bun/mutation-run.ts --all`, committing each
       module's stored file as it finishes; open one pull request per batch,
       each listing its modules, every module whose dry run failed and why,
       and the stored files' total size. Verify the last batch leaves every
