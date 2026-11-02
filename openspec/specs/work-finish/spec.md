@@ -419,7 +419,8 @@ and before the question read. The record is auxiliary: an `origin/main` that
 cannot be fetched or a merge base that cannot be found SHALL write neither
 and say so in one line, and a read or write Notion refuses or does not answer
 SHALL stop the record and be said in one line naming the step; in each case
-`finish` SHALL go on to the question read and the ready switch, and a later
+`finish` SHALL go on as when the record succeeds, to the question read and
+then to the ready switch unless a waiting question holds it, and a later
 `finish`, its pull request a draft again, writes only what is missing.
 Without `--card`, `finish` SHALL write nothing to Notion.
 
