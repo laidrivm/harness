@@ -136,7 +136,8 @@ The pre-push hook SHALL run, in addition to the type check and `bun test`:
 floor with the Stryker run that produces its report. A non-zero exit from any
 of them SHALL block the push. The diff budget SHALL remain the single
 exception, absorbed as `change-slicing` requires, because it measures rather
-than judges.
+than judges. Whether the judged gates run at all is the one exception
+*The pre-push hook skips the gates a passing run record proved* sets out.
 
 No specification under `openspec/specs/` other than this one SHALL enumerate
 what the hook runs. The list was previously spread across four of them, two of
@@ -168,9 +169,10 @@ baseline is written, and a working-tree scan reads the gitignored files that
 exist for one author and in no clone.
 
 `HEAD` is the supported push shape, and the hook SHALL NOT be read as covering
-more. It does not consume the ref-update records git writes to a pre-push
-hook's standard input, so a push of some ref other than the checked-out one
-leaves its commits unscanned here. That is the same gap as a machine without
+more. Its gates do not read the ref-update records git writes to a pre-push
+hook's standard input — only the draft check and the gates' skip do — so a
+push of some ref other than the checked-out one leaves its commits unscanned
+here. That is the same gap as a machine without
 `gitleaks`, and it closes the same way: CI keeps the history-wide scan, where a
 failure stops one pull request rather than everybody's pushes, and that is
 where the verdict is binding.
