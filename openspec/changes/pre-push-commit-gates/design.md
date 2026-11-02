@@ -204,7 +204,11 @@ stale ones it re-runs and fails. The user adds the check names to the ruleset.
   sets nothing it applies at run time.
 - [A Stryker incremental file that is not byte-stable across identical runs
   even when trimmed] → the probe checks it; if it is not, the step writes a
-  stored file only when its mutants' results changed.
+  stored file only when its mutants' results changed. Trimmed and sorted by
+  id, a file whose results were reused is byte-stable; a whole re-run is not,
+  since a slow mutant's status depends on the load (four of 391 moved
+  between `Timeout` and another status across two runs), which the card's
+  question 8 puts to the user before the baseline.
 
 ## Migration Plan
 
