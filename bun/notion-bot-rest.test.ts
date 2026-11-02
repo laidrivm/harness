@@ -60,7 +60,9 @@ describe("a question posted", () => {
 	test("a user to mention follows the mark run as a mention run, and the text after it", async () => {
 		const seen = notion();
 		await comment(client(TOKEN), CARD, "`harness-pause` Paused.", "harness-pause", USER);
-		const [mark, ...rest] = (seen[0]?.body as { rich_text: unknown[] }).rich_text;
+		const [first] = seen;
+		if (!first) throw new Error("the stub saw no call");
+		const [mark, ...rest] = (first.body as { rich_text: unknown[] }).rich_text;
 		expect(mark).toEqual({ type: "text", text: { content: "harness-pause" }, annotations: { code: true } });
 		expect(rest).toEqual([
 			{ type: "mention", mention: { type: "user", user: { id: USER } } },

@@ -67,11 +67,11 @@ function settingsText(text: string | undefined): string {
 			return kept.length ? [{ ...group, hooks: kept }] : [];
 		});
 	}
-	for (const hook of HOOKS)
-		(hooks[hook.event] ??= []).push({
-			...(hook.matcher === undefined ? {} : { matcher: hook.matcher }),
-			hooks: [registration(hook)],
-		});
+	for (const hook of HOOKS) {
+		const groups = hooks[hook.event] ?? [];
+		groups.push({ ...(hook.matcher === undefined ? {} : { matcher: hook.matcher }), hooks: [registration(hook)] });
+		hooks[hook.event] = groups;
+	}
 	// An event whose only hooks were a previous version's, and which the
 	// harness no longer registers, would otherwise be left as an empty list.
 	for (const [event, groups] of Object.entries(hooks)) if (groups.length === 0) delete hooks[event];
