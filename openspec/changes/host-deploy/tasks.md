@@ -1,4 +1,11 @@
-## 1. The deploy script
+Each numbered group below is one pull request, within the 800-line diff
+budget. Group 2 lands after card *Build the runner image for the persistent
+session…* (`40c39875c31b8116879bec24abbba0ba`), which owns the Dockerfile's
+tmux and the start script; group 3 after group 2. Tasks 1.1–1.4 are the first
+plan's (2026-10-24), on `main`; their code stays, and what of it stage 7
+removes is in design.md, *What stage 7 removes*.
+
+## 1. The deploy script (first plan, on `main`)
 
 - [x] 1.1 Write `orchestrator/deploy.test.ts` first: it runs
       `orchestrator/deploy.sh` with stub `git`, `docker` and `curl` on `PATH`
@@ -44,90 +51,94 @@
       `orchestrator/the-runner-is-recreated-under-the-locks` (the stub `up`
       checks, from another process, that the gate and the lock are still
       held)
-Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25 (design.md,
-*A failed run's flow stays outside the gate*).
 
-## 2. The units, the push configuration and the layout
+Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
 
-- [ ] 2.1 Add `orchestrator/host/harness-deploy.service` (`Type=oneshot`,
+## 2. The fresh-session mark in the image
+
+- [ ] 2.1 Write `orchestrator/layout-deploy.test.ts` first. Cases, each citing
+      its scenario: `orchestrator/the-container-s-managed-settings` (the
+      Dockerfile copies `runner/managed-settings.json` to
+      `/etc/claude-code/managed-settings.json`; `SessionStart`'s matcher is
+      `startup|clear`; `UserPromptSubmit` is set);
+      `orchestrator/the-user-s-first-message` (runs the two hook commands
+      read from the JSON under `sh` with `HOME` in a temp dir: the mark
+      exists after `SessionStart`, not after `UserPromptSubmit`);
+      `orchestrator/the-session-starts-after-a-failed-deploy` (with
+      `~/.harness-deploy-failed` present the output carries the ask line and
+      the file's line; absent, it prints nothing). Record that they fail
+- [ ] 2.2 Confirm the Linux managed-settings path and the `SessionStart`
+      matcher values against the Claude Code docs; write
+      `orchestrator/runner/managed-settings.json` per design.md, *The
+      fresh-session mark*, and its `COPY` line in the Dockerfile. Make 2.1
+      pass
+
+## 3. The deploy for the session, its units and the README
+
+- [ ] 3.1 `wc -l` `deploy.test.ts` and `deploy.fixture.ts`; new cases go in
+      a new `orchestrator/deploy-session.test.ts` on the same fixture, whose
+      stub `docker` gains the container's image and id, `tag`, `restart` and
+      `exec … tmux has-session`, answered from fixture files, and a stub
+      `sleep` on `PATH`, so the two-minute wait runs at once. Write first,
+      each citing its scenario: `orchestrator/a-session-at-work`,
+      `orchestrator/a-fresh-session`, `orchestrator/an-unchanged-image`,
+      `orchestrator/the-session-comes-back`,
+      `orchestrator/the-session-does-not-come-back` (the tag goes back, `up
+      -d runner`, `rolled-back` written, the failure file, exit 1),
+      `orchestrator/a-rolled-back-head`,
+      `orchestrator/the-deploy-token-is-absent`; extend
+      `orchestrator/the-build-fails` with the failure file and
+      `orchestrator/a-green-head` with the tag before the build and the wait
+      before the record. Record that they fail
+- [ ] 3.2 In `deploy.sh`, per design.md: skip a head equal to `rolled-back`;
+      tag the running runner's image as `orchestrator-runner:previous` before
+      the build; after the build, exit 0 without the fresh-session mark; with
+      it, `up -d`, then `restart runner` when the container id is unchanged;
+      the wait for `main`; the rollback; the failure file in `failed()`; the
+      push and the engine wait skipped while the token file is absent; the
+      record, the failure file's removal, then the prune. Update the header
+      comment. Make 3.1 pass
+- [ ] 3.3 Add `orchestrator/host/harness-deploy.service` (`Type=oneshot`,
       `StateDirectory=harness-deploy`, `TimeoutStartSec=3h`,
       `WorkingDirectory=/root/harness/orchestrator`) and
       `orchestrator/host/harness-deploy.timer` (`OnBootSec=5min`,
-      `OnUnitInactiveSec=5min`, `[Install] WantedBy=timers.target`, without
-      which `systemctl enable` has nothing to enable). Cases in
-      `orchestrator/layout.test.ts` read both and pin those fields
-- [ ] 2.2 Drop `includeSchedules: true` from
-      `orchestrator/windmill/wmill.yaml`; a case citing
-      `orchestrator/the-tree-s-push-configuration` asserts it is unset
-- [ ] 2.3 A case citing `orchestrator/the-compose-file` asserts no service and
-      no secret in `compose.yaml` names `windmill_deploy_token`
-- [ ] 2.4 Run the build's own scans over every file this group writes
+      `OnUnitInactiveSec=5min`, `[Install] WantedBy=timers.target`); a case
+      in `layout-deploy.test.ts` citing `orchestrator/the-deploy-s-units`
+- [ ] 3.4 `orchestrator/README.md`: a step after 11, *Deploys from main*:
+      what the deploy moves and when (a fresh session), the two `systemctl`
+      commands, the failure file, how to retry a rolled-back head, how to
+      stop deploys, and that hooks move only with the pin
+- [ ] 3.5 Run the build's own scans over every file this group writes
       (`bun test` covers layout, spec coverage and board-state hygiene)
 
-## 3. The kick
+## 4. On the host
 
-- [ ] 3.1 Write `orchestrator/event-kick.test.ts` first: it runs
-      `event.ts`'s `main` with a stub `ssh` on `PATH` that logs its arguments
-      and exits with a code per call, and a fake engine (`Bun.serve`) for the
-      two key variables. Cases, each citing its scenario:
-      `orchestrator/main-s-test-passes` (two `ssh` calls, the second to
-      `root@host.docker.internal` with `f/orchestrator/host_deploy_key` and
-      `UserKnownHostsFile=/run/secrets/runner_known_hosts`),
-      `orchestrator/a-delivery-that-is-no-green-main-run` (`ping`, a
-      `failure`, a `feat/` branch, a `pull_request` run: one `ssh` call),
-      `orchestrator/a-refused-delivery` (handler exits 2: the job throws, one
-      `ssh` call). Record that they fail
-- [ ] 3.2 In `event.ts`, after the handler's exit 0, parse the body and run
-      the kick per design.md, *The kick*; keep the handler call and its throw
-      as they are, and the decision in one small exported function the test
-      reads. Update the header comment and `event.script.yaml`'s description.
-      Make 3.1 pass
-- [ ] 3.3 `compose.yaml`: `extra_hosts: ["host.docker.internal:host-gateway"]`
-      on `windmill_worker` alone; a case in `layout.test.ts` citing
-      `orchestrator/the-worker-reaches-the-host`
-- [ ] 3.4 A case in `layout.test.ts` citing
-      `orchestrator/a-kick-during-a-deploy`: the service is `Type=oneshot`,
-      the timer's `OnUnitInactiveSec` is set, and the README's
-      `authorized_keys` line forces
-      `systemctl start --no-block harness-deploy.service` under `restrict`
-      and `from=`
-
-## 4. The README and the live check
-
-- [ ] 4.1 `orchestrator/README.md`: a step after 11, *Deploys from main*,
-      naming what the deploy moves and what stays the user's (secrets, host
-      keys, the App's key, the schedule, removing a stop file), the deploy
-      token's file and mode, the kick key's `authorized_keys` line and
-      variable, the host's line in `runner_known_hosts`, and the two
-      `systemctl` commands; step 6 notes that the schedule moves only by the
-      hand push; step 10 names this repository and that its *Workflow runs*
-      deliveries also start the deploy. A layout case pins the new step's
-      `authorized_keys` line (3.4)
-- [ ] 4.2 **User act.** On the host, as root, in `orchestrator/`: create a
-      Windmill token for the deploy and write it to
-      `secrets/windmill_deploy_token` with `umask 077`; check that
-      `/home/runner/orchestrator/locks/` holds `<owner>+<repo>.lock` (lower
-      case) for every repository the loop serves, creating any missing with
-      `docker compose exec -u runner runner touch` (design.md, *Migration
-      Plan*); run `./deploy.sh` once by hand and confirm in Windmill that the pass
-      schedule is still enabled and the scripts carry the head
-      (`orchestrator/the-schedule-is-enabled-on-the-engine`)
-- [ ] 4.3 **User act.** The kick key, on the host as root in `orchestrator/`
-      with `umask 077`: `ssh-keygen -t ed25519 -N '' -C deploy-kick -f
-      secrets/deploy_kick_key`; append the `authorized_keys` line of step
-      4.1 to `/root/.ssh/authorized_keys` with its public half and the subnet
-      `docker network inspect orchestrator_default` prints; store
-      `base64 -w 0 secrets/deploy_kick_key` as the secret variable
-      `f/orchestrator/host_deploy_key`, then `rm secrets/deploy_kick_key*`;
-      append `host.docker.internal` and the first two fields of
-      `/etc/ssh/ssh_host_ed25519_key.pub` as one line to
-      `secrets/runner_known_hosts`
-- [ ] 4.4 **User act.** `systemctl link` both units from
-      `/root/harness/orchestrator/host/`, then
-      `systemctl enable --now harness-deploy.timer`; on GitHub, add this
-      repository's webhook per README step 10 (*Workflow runs* alone, the
-      host's `github_webhook_secret`). After the next merge to `main`, read in
-      Windmill's Runs the event job that kicked, and
-      `journalctl -u harness-deploy` for the deploy of that head
-- [ ] 4.5 **User decision.** Confirm the `main` ruleset's bypass list names no
+- [ ] 4.1 **User act.** Once group 3 is merged and the image of group 2 runs
+      (built by hand, stage page step 3): as root, `systemctl link` both
+      units from `/root/harness/orchestrator/host/`, then
+      `systemctl enable --now harness-deploy.timer`. Never before group 3:
+      the deploy on `main` brings the stack up without waiting for a fresh
+      session
+- [ ] 4.2 **User act.** After the next merge, `/clear` the session from
+      Remote Control and watch: within a tick the session restarts, Remote
+      Control reconnects, and `journalctl -u harness-deploy` shows the head
+      deployed. Note on the card whether `SessionStart` fired on that
+      `/clear` and whether the first message cleared the mark, the three
+      points design.md lists as unverified
+- [ ] 4.3 **User decision.** Confirm the `main` ruleset's bypass list names no
       App and no bot, since every merge now runs on the host as root
+
+## Moved out of this change
+
+- Stage 6: the webhook kick (`ssh` with a forced command running
+  `systemctl start --no-block`, its key, `host.docker.internal` on the
+  worker, `event.ts`), the Windmill push with `windmill_deploy_token`,
+  `includeSchedules` dropped from `wmill.yaml`, the token's absence from
+  `compose.yaml`, a stop-file check in the forced command — the first plan's
+  group 3 and tasks 2.2, 2.3, 4.2 and 4.3.
+- Stage 9: the write-path probe without a session (mint, a branch in a
+  sandbox repository, a sandbox Notion card), the full rollback with a stop
+  file and an escalation card, the session that finishes its work and then
+  updates, the stage metric.
+- After stage 9: an agent on the host that repairs a failed deploy
+  (answer 13).
