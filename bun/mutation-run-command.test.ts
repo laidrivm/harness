@@ -64,10 +64,20 @@ function path(stubs: Record<string, string>): string {
 	return bin;
 }
 
-const cli = (cwd: string, bin: string) => {
-	const run = Bun.spawnSync(["bun", script], { cwd, env: { PATH: bin, HOME: cwd }, stdout: "pipe", stderr: "pipe" });
+const cli = (cwd: string, bin: string, ...args: string[]) => {
+	const run = Bun.spawnSync(["bun", script, ...args], { cwd, env: { PATH: bin, HOME: cwd }, stderr: "pipe" });
 	return { code: run.exitCode, err: run.stderr.toString() };
 };
+
+/** `dir` with its results committed, then a changed test committed over them, so the next run is forced. */
+function forced(dir: string): string {
+	cli(dir, path({ node: "exit 0", bunx: stryker }));
+	git(dir, "add", "mutation");
+	git(dir, "commit", "-qm", "results");
+	write(dir, { "bun/a.test.ts": "2\n" });
+	git(dir, "commit", "-qam", "a changed test");
+	return readFileSync(join(dir, "mutation/a.json"), "utf8");
+}
 
 const REPORT = "reports/mutation/mutation.json";
 
@@ -99,17 +109,18 @@ const stryker = [
 describe("the command", () => {
 	test("a module to run with no node on PATH fails naming Node", () => {
 		const { code, err } = cli(repository(), path({ bunx: "exit 0" }));
-		expect(code).toBe(1);
-		expect(err).toContain("Node");
+		expect([code, err.includes("Node")]).toEqual([1, true]);
 	});
 
 	test("a Stryker exit that is not 0 fails before the merge, leaving no report", () => {
 		const dir = repository();
 		write(dir, { [REPORT]: "{}" });
 		const { code, err } = cli(dir, path({ node: "exit 0", bunx: "exit 3" }));
-		expect(code).toBe(1);
-		expect(err).toContain("Stryker exited 3 on bun/a.ts");
-		expect(existsSync(join(dir, REPORT))).toBe(false);
+		expect([code, err.includes("Stryker exited 3 on bun/a.ts"), existsSync(join(dir, REPORT))]).toEqual([
+			1,
+			true,
+			false,
+		]);
 	});
 
 	// spec: mutation-floor/a-new-module-has-no-stored-file
@@ -119,11 +130,8 @@ describe("the command", () => {
 		const first = cli(dir, path({ node: "exit 0", bunx: stryker }));
 		expect(first.code).toBe(1);
 		expect(first.err).toContain("mutation/a.json differs from HEAD's");
-		expect(Object.keys(JSON.parse(readFileSync(join(dir, "mutation/a.json"), "utf8")))).toEqual([
-			"schemaVersion",
-			"files",
-			"fingerprint",
-		]);
+		const kept = Object.keys(JSON.parse(readFileSync(join(dir, "mutation/a.json"), "utf8")));
+		expect(kept).toEqual(["schemaVersion", "files", "fingerprint"]);
 		git(dir, "add", "mutation");
 		git(dir, "commit", "-qm", "results");
 		expect(cli(dir, path({ node: "exit 0", bunx: "exit 3" })).code).toBe(0);
@@ -133,12 +141,7 @@ describe("the command", () => {
 	// spec: mutation-floor/a-run-asked-for-every-module
 	test("an interrupted run leaves the stored file whole and resumes, without --force, from its partial copy", () => {
 		const dir = repository();
-		cli(dir, path({ node: "exit 0", bunx: stryker }));
-		git(dir, "add", "mutation");
-		git(dir, "commit", "-qm", "results");
-		const stored = readFileSync(join(dir, "mutation/a.json"), "utf8");
-		write(dir, { "bun/a.test.ts": "2\n" });
-		git(dir, "commit", "-qam", "a changed test");
+		const stored = forced(dir);
 		write(dir, { "fail-once": "", calls: "" });
 		const bin = path({ node: "exit 0", bunx: stryker });
 		expect(cli(dir, bin).err).toContain("Stryker exited 1 on bun/a.ts");
@@ -150,11 +153,7 @@ describe("the command", () => {
 
 	test("a forced run that fails before any result leaves no copy of the old results to resume", () => {
 		const dir = repository();
-		cli(dir, path({ node: "exit 0", bunx: stryker }));
-		git(dir, "add", "mutation");
-		git(dir, "commit", "-qm", "results");
-		write(dir, { "bun/a.test.ts": "2\n" });
-		git(dir, "commit", "-qam", "a changed test");
+		forced(dir);
 		expect(cli(dir, path({ node: "exit 0", bunx: 'echo "$@" > calls; exit 1' })).code).toBe(1);
 		write(dir, { calls: "" });
 		cli(dir, path({ node: "exit 0", bunx: stryker }));
@@ -164,37 +163,26 @@ describe("the command", () => {
 	test("a named module with no test file fails, and a named run writes no report", () => {
 		const dir = repository({ "bun/b.ts": "1\n" });
 		const bin = path({ node: "exit 0", bunx: stryker });
-		const run = (arg: string) => Bun.spawnSync(["bun", script, arg], { cwd: dir, env: { PATH: bin }, stderr: "pipe" });
-		expect(run("bun/b.ts").stderr.toString()).toContain("bun/b.ts has no test file to judge its mutants");
-		expect(run("bun/a.ts").exitCode).toBe(1);
+		expect(cli(dir, bin, "bun/b.ts").err).toContain("bun/b.ts has no test file to judge its mutants");
+		expect(cli(dir, bin, "bun/a.ts").code).toBe(1);
 		git(dir, "add", "-A");
 		git(dir, "commit", "-qm", "results");
-		expect(run("bun/a.ts").exitCode).toBe(0);
+		expect(cli(dir, bin, "bun/a.ts").code).toBe(0);
 		expect(existsSync(join(dir, REPORT))).toBe(false);
 	});
 
-	test("a stored file differing from HEAD's, or untracked, is named", () => {
-		const dir = repository({ "mutation/a.json": "{}\n" });
-		write(dir, { "mutation/a.json": "{ }\n", "mutation/b.json": "{}\n" });
-		expect(unsaved(dir)).toEqual(["mutation/a.json", "mutation/b.json"]);
-	});
-
-	test("a staged rename under mutation/ names both sides", () => {
-		const dir = repository({ "mutation/a.json": "{}\n" });
-		git(dir, "mv", "mutation/a.json", "mutation/c.json");
-		expect(unsaved(dir)).toEqual(["mutation/a.json", "mutation/c.json"]);
+	test("a stored file differing from HEAD's, untracked, or renamed is named", () => {
+		const dir = repository({ "mutation/a.json": "{}\n", "mutation/b.json": "{}\n" });
+		write(dir, { "mutation/a.json": "{ }\n", "mutation/new.json": "{}\n" });
+		git(dir, "mv", "mutation/b.json", "mutation/c.json");
+		expect(unsaved(dir)).toEqual(["mutation/a.json", "mutation/b.json", "mutation/c.json", "mutation/new.json"]);
 	});
 
 	test.each([
 		["--every", "unknown option --every"],
 		["bun/a.test.ts", "bun/a.test.ts is not a tracked module"],
 	])("%s fails before anything runs", (arg, message) => {
-		const run = Bun.spawnSync(["bun", script, arg], {
-			cwd: repository(),
-			env: { PATH: path({ node: "exit 0", bunx: "exit 3" }) },
-			stderr: "pipe",
-		});
-		expect(run.exitCode).toBe(1);
-		expect(run.stderr.toString()).toContain(message);
+		const { code, err } = cli(repository(), path({ node: "exit 0", bunx: "exit 3" }), arg);
+		expect([code, err.includes(message)]).toEqual([1, true]);
 	});
 });

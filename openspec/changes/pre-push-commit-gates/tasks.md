@@ -110,29 +110,19 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       -v` answers on the host (a card if not). If the second run is not
       near-instant, stop here, ask on the
       card, and leave the pull request draft.
-      Measured 2026-11-02 on the laptop (12 cores, 11 runners), on
-      `caee33e4`: the first run 5 min 28 s (330 s wall), 391 mutants, 258
-      killed, 13 timed out, 120 survived; the second, unchanged, 4 s, all 391
-      reused. Not byte-identical: the reused mutants gain `coveredBy: []` and
-      `static: false`, and the first run writes mutants in the order they
-      finished, the second in id order; trimmed and sorted by id, the two
-      are identical. Machine- or run-bound: `projectRoot`, `config` (with the
-      configuration file's path), `framework`, `testFiles`, and per mutant
-      `statusReason` (test output naming absolute sandbox paths),
-      `killedBy`, `coveredBy`, `static` and `testsCompleted`; the incremental
-      file holds no `system` or `performance`. Cut to the schema version,
-      each file's `source` and per mutant its id, mutator, location,
-      replacement and status, with `language` dropped and a `fingerprint` key
-      added, Stryker read it and reused all 391 in 4 s, the file falling
-      from 4.8 MB to 159 kB. A changed test file alone was not re-run without
-      `--force` (all 391 reused). The sandbox is what is judged: 258 mutants
-      killed, their test output naming `.stryker-tmp/sandbox-*/bun/`. No flag
-      takes `commandRunner.command`, so the per-module values go in one
-      configuration file under `.stryker-tmp`. `tsconfigFile` must name an
-      absent file, as in d2ass: without it the run fails on
-      `ts.parseConfigFileTextToJson is not a function`. `node -v` on the host
-      is not read: this probe ran on the laptop, where the command guard
-      refuses `node -v`
+      Measured 2026-11-02 on the laptop, 12 cores: the first run 5 min 28 s,
+      391 mutants (258 killed, 13 timed out, 120 survived); the second,
+      unchanged, 4 s, all reused. Not byte-identical (reused mutants gain
+      `coveredBy` and `static`, and the order changes); trimmed and sorted by
+      id, identical. Machine- or run-bound: `projectRoot`, `config`,
+      `framework`, `testFiles`, and per mutant `statusReason`, `killedBy`,
+      `coveredBy`, `static`, `testsCompleted`. Trimmed, with a `fingerprint`
+      added, it was read and all 391 reused (4.8 MB down to 159 kB). A changed
+      test alone is not re-run without `--force`. The sandbox is judged: the
+      killed mutants' output names `.stryker-tmp/sandbox-*`. No flag takes the
+      command, so a configuration file under `.stryker-tmp` carries the
+      per-module values. `node -v` on the host is not read: the probe ran on
+      the laptop, whose command guard refuses `node -v`
 - [x] 5.3 Failing cases in `bun/mutation-run.test.ts` over the pure parts:
       modules exclude tests and fixtures; a module no test file matches is
       named and not run (`a-module-no-test-file-matches`); a source that
@@ -164,19 +154,10 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       `bun/mutation-run.ts` with `--all`. Verify the
       cases pass and a run on `bun/command-parse.ts` writes
       `mutation/command-parse.json`.
-      The cases were moved in part to `bun/mutation-run-command.test.ts`,
-      which runs the command with `node` and `bunx` stubbed, to keep both
-      files under the cap. `bun bun/mutation-run.ts bun/command-parse.ts` on
-      2026-11-02, over the probe's untrimmed file and so with `--force`:
-      5 min 14 s, 261 killed, 9 timed out, 121 survived, a 124.6 kB stored
-      file, and the run failed naming it as not committed; run again, it
-      mutated nothing in under a second and left the file byte-identical.
-      Against the probe's first run on the same source, mutants 146 to 149
-      moved from `Timeout` to one `Survived` and three `Killed`: a whole
-      re-run can rewrite a stored file, and move the survivor count, with no
-      change to the code. Asked on the card (question 8), answered а: change
-      nothing now, the baseline measures the spread first (6.2); the stored file is
-      not committed here, the baseline being group 6's
+      Measured 2026-11-02: a forced run, 5 min 14 s, wrote a 124.6 kB file and
+      failed naming it as not committed; run again, it mutated nothing and left
+      it byte-identical. Mutants 146 to 149 moved out of `Timeout` against the
+      probe's run (decision 8, 6.2). The stored file is the baseline's
 
 ## 6. The baseline
 
@@ -186,11 +167,9 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       fails (`the-stored-mutation-results-of-the-check-s-own-script`); then
       exempt that path beside `self()`. Verify `bun bun/no-suppressions.ts`
       exits 0 with the stored file present
-- [ ] 6.2 First, by the user's decision 8, run a few modules whole twice
-      (`bun bun/mutation-run.ts --force bun/<name>.ts`, the second over the
-      first's stored file) and record on the card how many mutants change
-      status between the two, so the timeout setting is decided on that
-      measurement. Then, on the laptop, `bun bun/mutation-run.ts --all`, committing each
+- [ ] 6.2 First, by the user's decision 8, run a few modules twice with
+      `--force` and record on the card how many mutants change status, for
+      the timeout setting. Then, on the laptop, `bun bun/mutation-run.ts --all`, committing each
       module's stored file as it finishes; open one pull request per batch,
       each listing its modules, every module whose dry run failed and why,
       and the stored files' total size. Verify the last batch leaves every

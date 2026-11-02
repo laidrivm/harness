@@ -23,17 +23,15 @@ export type Stored = {
 	fingerprint: Record<string, string>;
 };
 
-/** What a plan reads of a checkout. */
+/**
+ * What a plan reads of a checkout: every tracked path, `HEAD`'s blob id of each, the working-tree text of each
+ * `bun/*.ts` and `bunfig.toml` and of each `mutation/<name>.json`, and the paths `git status` lists.
+ */
 export type Tree = {
-	/** Every tracked path, root-relative. */
 	tracked: string[];
-	/** `HEAD`'s blob id of each path it holds. */
 	blobs: Record<string, string>;
-	/** The working-tree text of each tracked `bun/*.ts` and of `bunfig.toml`. */
 	text: Record<string, string>;
-	/** The working-tree text of each `mutation/<name>.json`, tracked or not. */
 	stored: Record<string, string>;
-	/** Paths whose index or working-tree copy differs from `HEAD`'s, untracked ones included. */
 	dirty: string[];
 };
 
@@ -141,10 +139,8 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 type Report = { schemaVersion: string; files: Record<string, { source: string; mutants: Mutant[] }> };
 
 /**
- * Stryker's incremental file cut to what its next incremental run reads, as
- * the probe of 2026-11-02 measured, plus `print`. Everything else depends on
- * the machine, the checkout or the order mutants finished in — `projectRoot`,
- * `config`, test output — so a re-run anywhere writes the same bytes.
+ * Stryker's incremental file cut to what its next run reads, as the probe measured, plus `print`. The rest depends
+ * on the machine or the order mutants finished in, so a re-run anywhere writes the same bytes.
  */
 export function trim(report: Report, print: Record<string, string>): Stored {
 	const files: Stored["files"] = {};
@@ -178,10 +174,7 @@ const git = (cwd: string, ...args: string[]) => {
 	return run.stdout.toString();
 };
 
-/**
- * The paths `git status` lists under `pathspec`. With `-z` a rename or a copy
- * is `XY <path>` followed by its source as an entry of its own, both listed.
- */
+/** The paths `git status -z` lists under `pathspec`; a rename's or copy's source follows as an entry of its own. */
 function changed(cwd: string, ...pathspec: string[]): string[] {
 	const entries = git(cwd, "status", "--porcelain", "-z", "--untracked-files=all", "--", ...pathspec).split("\0");
 	const paths: string[] = [];
@@ -226,13 +219,9 @@ function fail(problems: string[]): void {
 }
 
 /**
- * Stryker on one module, its per-module values in a configuration file of
- * their own — no flag takes the command — and its results in a working copy
- * of the stored file under `.stryker-tmp`, named by `print`. On an interrupt
- * Stryker saves its partial results over the file it reads, so the stored
- * file stays whole, and the next run against the same tests resumes from the
- * partial copy rather than from the start, `--force` or not. Trims a finished
- * run's copy into the stored file.
+ * Stryker on one module, its values in a configuration file (no flag takes the command), its results in a copy of
+ * the stored file named by `print`: an interrupt saves partial results over that copy, leaving the stored file whole,
+ * and the next run against the same tests resumes from it. Trims a finished copy into the stored file.
  */
 function stryker(top: string, { module, force }: Run, print: Record<string, string>): number {
 	const { $schema: _, ...shared } = JSON.parse(readFileSync(join(top, "stryker.config.json"), "utf8"));

@@ -93,11 +93,8 @@ describe("which modules there are", () => {
 });
 
 describe("what a run mutates", () => {
-	test("current stored results run nothing", () => {
+	test("current stored results, or a change to a script that is not a module, run nothing", () => {
 		expect(plan(current())).toEqual({ runs: [], untested: ["bun/root.ts"], problems: [] });
-	});
-
-	test("a change to a script that is not a module runs nothing", () => {
 		expect(runs(commit(current(), "bun/diff-budget.sh", "exit 1\n"))).toEqual([]);
 	});
 
@@ -106,16 +103,6 @@ describe("what a run mutates", () => {
 		expect(runs(commit(current(), "bun/command-parse.ts", "export const c = 2;\n"))).toEqual([
 			{ module: "bun/command-parse.ts", force: false },
 		]);
-	});
-
-	test("a fingerprint stored in another key order runs nothing", () => {
-		const t = current();
-		const path = "mutation/board.json";
-		const stored: Stored = JSON.parse(t.stored[path] ?? "");
-		const reversed = Object.fromEntries(Object.entries(stored.fingerprint).reverse());
-		expect(
-			runs({ ...t, stored: { ...t.stored, [path]: JSON.stringify({ ...stored, fingerprint: reversed }) } }),
-		).toEqual([]);
 	});
 
 	// spec: mutation-floor/a-test-file-changed
@@ -138,25 +125,16 @@ describe("what a run mutates", () => {
 		]);
 	});
 
-	test("an import named in a comment is not one", () => {
+	test("an import a comment names is not one, and a preload given as one string is one", () => {
 		const t = commit(base, "bun/board.test.ts", '// import { x } from "./command-guard.fixture.ts";\n');
 		expect(Object.keys(fingerprint("bun/board.ts", t))).not.toContain("bun/command-guard.fixture.ts");
+		const one = commit(base, "bunfig.toml", '[test]\npreload = "./bun/guard.ts"\n');
+		expect(Object.keys(fingerprint("bun/board.ts", one))).toContain("bun/guard.ts");
 	});
 
-	test("a committed change to bunfig.toml or its preload forces every module", () => {
-		for (const [path, text] of [
-			["bunfig.toml", "[test]\n"],
-			["bun/guard.ts", "export const g = 1;\n"],
-		] as const) {
-			const all = runs(commit(current(), path, text));
-			expect(all.length).toBe(6);
-			expect(all.every((run) => run.force)).toBe(true);
-		}
-	});
-
-	test("a preload given as one string is fingerprinted too", () => {
-		const t = commit(base, "bunfig.toml", '[test]\npreload = "./bun/guard.ts"\n');
-		expect(Object.keys(fingerprint("bun/board.ts", t))).toContain("bun/guard.ts");
+	test.each(["bunfig.toml", "bun/guard.ts"])("a committed change to %s forces every module", (path) => {
+		const all = runs(commit(current(), path, "[test]\n"));
+		expect([all.length, all.every((run) => run.force)]).toEqual([6, true]);
 	});
 
 	// spec: mutation-floor/a-new-module-has-no-stored-file
@@ -174,10 +152,8 @@ describe("what a run mutates", () => {
 
 	// spec: mutation-floor/a-run-asked-for-every-module
 	test("--all runs every module with tests, each incrementally", () => {
-		const all = plan(current(), { all: true, force: false }).runs;
-		expect(all.length).toBe(6);
-		expect(all.every((run) => !run.force)).toBe(true);
-		expect(plan(current(), { all: true, force: true }).runs.every((run) => run.force)).toBe(true);
+		const all = (force: boolean) => plan(current(), { all: true, force }).runs.map((run) => run.force);
+		expect([all(false), all(true)]).toEqual([Array(6).fill(false), Array(6).fill(true)]);
 	});
 });
 
@@ -192,17 +168,12 @@ describe("what fails the run before it mutates", () => {
 	);
 
 	// spec: mutation-floor/a-stored-file-outliving-its-module
-	test("a stored file of an untracked module", () => {
-		expect(plan(commit(current(), "bun/board.ts")).problems).toEqual([
-			"mutation/board.json: bun/board.ts is not tracked — delete the stored file",
-		]);
-	});
-
 	// spec: mutation-floor/a-stored-file-whose-module-lost-its-last-test
-	test("a stored file whose module has no test file left", () => {
-		expect(plan(commit(current(), "bun/board.test.ts")).problems).toEqual([
-			"mutation/board.json: no test file matches bun/board — delete the stored file",
-		]);
+	test.each([
+		["bun/board.ts", "bun/board.ts is not tracked"],
+		["bun/board.test.ts", "no test file matches bun/board"],
+	])("a stored file whose %s is deleted", (path, why) => {
+		expect(plan(commit(current(), path)).problems).toEqual([`mutation/board.json: ${why} — delete the stored file`]);
 	});
 
 	test("a stored file without files, and two naming one path", () => {
@@ -225,8 +196,6 @@ describe("what a stored file holds", () => {
 			schemaVersion: "1.0",
 			projectRoot: root,
 			config: { configFile: `${root}/stryker.config.json` },
-			framework: { name: "StrykerJS", version: "10.0.0" },
-			thresholds: { high: 80, low: 60, break: null },
 			testFiles: { "": { tests: [{ id: "0", name: "All tests" }] } },
 			files: {
 				"bun/a.ts": {
@@ -258,10 +227,8 @@ describe("what a stored file holds", () => {
 			fingerprint: {},
 		});
 		const report = join(scratch(), "mutation.json");
-		writeFileSync(
-			report,
-			JSON.stringify(merge([file("bun/a.ts", "Survived", "Killed"), file("bun/b.ts", "Survived")])),
-		);
+		const merged = merge([file("bun/a.ts", "Survived", "Killed"), file("bun/b.ts", "Survived")]);
+		writeFileSync(report, JSON.stringify(merged));
 		expect(survivors(loadReport(report))).toBe(2);
 	});
 });

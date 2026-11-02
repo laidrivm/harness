@@ -39,10 +39,9 @@ not. `bun/git-env.test.ts` and `bun/pre-pr.test.ts` pin the hook's lines.
    leaves it near its 38.8 thousand lines and pushes 12 `.ts` files past the
    300-line cap, against 47.8 thousand lines and 38 files at Biome's
    default of 80. The 12 are split first, as task 1.2 says.
-8. а (2026-11-02, question 8 on the card) — a slow mutant's status moving
-   between whole runs changes nothing yet: the baseline first runs a few
-   modules whole twice and measures the spread, and the timeout setting is
-   decided on that measurement.
+8. а (2026-11-02) — a slow mutant's status moving between whole runs changes
+   nothing yet: the baseline first measures the spread on a few modules, and
+   the timeout setting is decided on it.
 
 ## Goals / Non-Goals
 
@@ -101,31 +100,19 @@ first. The gate joins the hook once the last fix lands.
 `stryker.config.json` holds what every run shares: the command runner,
 `thresholds.break: null`, `incremental: true`,
 `tempDirName: .stryker-tmp`, `tsconfigFile` naming an absent file, and
-`ignorePatterns` covering `/.claude/worktrees` (which the sandbox would
-otherwise copy), `/.claude/skills` (directory symlinks, whose copy fails
-`ENOTSUP`) and `mutation` — not all of `.claude`, whose tracked
-`settings.json` `bun/pre-pr-steps.test.ts` reads. No `json`
-reporter: a run's own report covers one module, and the merge below writes the
-one the floor reads. The absent `tsconfigFile` is d2ass's answer to the same
-fault, measured again by the probe: Stryker's tsconfig preprocessor calls
-`ts.parseConfigFileTextToJson`, which TypeScript 7.0.2 does not expose, and it
-skips itself when the file it is pointed at is not there. `bun/mutation-run.ts` supplies
-the per-module values — `mutate: bun/<name>.ts`, the command
-`bun test bun/<name>` — in a
-configuration file it writes under `.stryker-tmp` for that run and deletes
-after it: the probe found no flag that takes the command. Its
-`incrementalFile` is a working copy of `mutation/<name>.json` under
-`.stryker-tmp`, named by the fingerprint, trimmed into the stored file once the
-run finishes: on an interrupt Stryker saves its partial results over the file
-it reads, so the stored file stays whole, and the next run against the same
-tests resumes from the copy, without `--force`. A forced run starts from no
-copy: Stryker writes none before its first result, and a seeded copy of the old
-results that outlived a failed start would be resumed as if measured against
-the new tests. Modules named on its command
-line narrow a run to them, so one module can be measured alone, and such a run
-writes no report, the other modules being unchecked. The module's own source
-counts as dirty beside its tests, since its results would otherwise describe
-a source `HEAD` does not hold.
+`ignorePatterns` covering `/.claude/worktrees`, `/.claude/skills` (symlinks,
+whose copy fails) and `mutation` — not `.claude/settings.json`, which a test
+reads. No `json` reporter: the merge below writes the floor's report. The
+absent `tsconfigFile` is d2ass's answer to Stryker's preprocessor calling an
+API TypeScript 7.0.2 lacks. `bun/mutation-run.ts` writes the per-module values
+— `mutate: bun/<name>.ts`, the command `bun test bun/<name>` — to a
+configuration file under `.stryker-tmp`, no flag taking the command. Stryker's
+`incrementalFile` is a copy of `mutation/<name>.json` there, named by the
+fingerprint and trimmed into the stored file once the run finishes: an
+interrupt saves partial results over that copy, so the next run against the
+same tests resumes from it. A forced run starts from no copy, since one seeded
+with old results would outlive a failed start. Named modules narrow a run,
+which then writes no report. A dirty module fails like a dirty test.
 
 A module runs when its tracked source differs from the copy its stored file
 holds (`files[path].source`), incrementally, or whole when it has no stored
@@ -148,9 +135,8 @@ replacement and status —
 plus the fingerprint: `projectRoot`, `system`, `performance`, `config` and
 any test output a mutant carries (`statusReason`) depend on the machine, so
 a re-run anywhere writes the same bytes for the same results and no home
-directory lands in the tree. The mutants are sorted by id, since a full run
-writes them in the order they finished. The probe confirms Stryker reads it so
-trimmed (tasks.md, 5.2, has its numbers).
+directory lands in the tree; mutants sorted by id, a run writing them as they
+finish. The probe confirms Stryker reads it so trimmed.
 
 Stryker's sandbox sits inside the checkout, so a test that finds the
 repository through git reads the checkout's files, not the mutated ones: the
@@ -221,11 +207,9 @@ stale ones it re-runs and fails. The user adds the check names to the ruleset.
   sets nothing it applies at run time.
 - [A Stryker incremental file that is not byte-stable across identical runs
   even when trimmed] → the probe checks it; if it is not, the step writes a
-  stored file only when its mutants' results changed. Trimmed and sorted by
-  id, a file whose results were reused is byte-stable; a whole re-run is not,
-  since a slow mutant's status depends on the load (four of 391 moved
-  between `Timeout` and another status across two runs); by the user's
-  decision 8 the baseline measures that spread first.
+  stored file only when its mutants' results changed. Reused results are
+  byte-stable; a whole re-run is not, a slow mutant's status depending on the
+  load (decision 8).
 
 ## Migration Plan
 
