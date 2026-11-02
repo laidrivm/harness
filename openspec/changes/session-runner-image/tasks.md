@@ -49,7 +49,7 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
       orchestrator/` passes and `docker build -f orchestrator/runner/Dockerfile
       --build-context bun=bun orchestrator` succeeds where Docker runs, or
       say in the pull request that it was not run
-- [ ] 2.3 Open the first pull request through `finish`, its body naming the
+- [x] 2.3 Open the first pull request through `finish`, its body naming the
       seam with group 3; once it merges, nothing on the host changes until
       group 4
 
