@@ -22,9 +22,9 @@ severity threshold` is not a reason on its own» forbid a skip by label.
 - From a pull request's second round on, `/coderabbit` applies Major and
   above, and the Minors in the living docs. The living docs are
   `openspec/specs/**` and `core/**` (the user's answer 1 b on the card), and
-  two more: a change's delta specs, which become living specs at sync, and
-  `CLAUDE.md`. Every other Minor (a change's proposal, design and tasks,
-  code, anything else) is deferred to one tail card for the pull request
+  `CLAUDE.md`, which every session loads (the user's decision of
+  2026-11-02). Every other Minor (anything under `openspec/changes/**`,
+  delta specs included, code, anything else) is deferred to one tail card for the pull request
   and is not applied. A Minor's round is that of the commit named by the
   review that posted it, and the three-round cap still decides whether a run
   applies anything. The first round keeps fixing every verified finding.
@@ -40,7 +40,7 @@ severity threshold` is not a reason on its own» forbid a skip by label.
   `openspec/changes/**`. The text says such a file is a working artefact
   headed for the archive, asks for contradictions with a spec, the code or
   another artefact, and tells the bot not to flag wording, duplication or
-  style (answer 2 b). It excepts a delta spec, which is reviewed as a spec.
+  style (answer 2 b), delta specs included.
   `path_filters` stays unset: filtering the path out would have lost the
   Majors on #342, #346 and #347 and left a proposal pull request unreviewed.
 - Tests pin the round-two rule's wording in the toolkit, the skill's

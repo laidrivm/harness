@@ -31,8 +31,7 @@ run applies anything.
 #### Scenario: A Minor in the living docs from the second round
 
 - **WHEN** a review in the second round or a later one carries a 🟡 Minor
-  under `openspec/specs/**`, in a change's delta spec under
-  `openspec/changes/<name>/specs/**`, in `CLAUDE.md`, or under `core/**`
+  under `openspec/specs/**`, in `CLAUDE.md`, or under `core/**`
 - **THEN** the run reads it and fixes it or skips it with its reason, as in
   the first round
 
