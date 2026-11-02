@@ -60,7 +60,12 @@ retry spends the same limit.
   runs in: the level is named because `/code-review` with none reuses the
   last one typed, and the range because with no target the skill diffs
   against an upstream or the local `main`, which in a worktree trails
-  `origin/main`, while a bare ref reads as a branch to review. Pass it
+  `origin/main`, while a bare ref reads as a branch to review. The skill
+  runs as a fresh subagent in the author's worktree and does not see the
+  author's conversation, so it needs no subagent wrapper: the forked
+  execution the Skill tool reports is no fork of the conversation
+  ([skills](https://code.claude.com/docs/en/skills.md), *Run skills in a
+  subagent*). Pass it
   nothing else: its arguments that post write under the user's name on a
   pull request that has none yet, and the one that fixes applies findings
   before they are verified. It runs only while no pull request is open on the branch, a
@@ -152,6 +157,26 @@ retry spends the same limit.
   one question on the card, which waits behind one already open there as
   `task-board` sets out; the run posts nothing in the pull request). A
   fourth round with only findings skipped with a reason is not capped.
+  From the second round on, a 🟡 Minor outside the living docs —
+  `openspec/specs/**`, `CLAUDE.md` and `core/**` — is deferred, not
+  applied: anything under `openspec/changes/**`, code, and every other path.
+  A Minor's round is that of the commit named by the review that posted it,
+  commits ordered by their first CodeRabbit review, never the count when the
+  run starts; a Minor a later review posts again, on the same path and
+  asking the same, keeps its first round, each copy counts in the
+  arithmetic, and their one fix is applied once. Major and above, and the
+  living docs' Minors, are disposed of as in the first round, and the
+  three-round cap still decides whether the run applies anything. The run
+  writes each deferred Minor, with its path, line, severity and what it
+  asks, on the pull request's tail card, `CodeRabbit Minors deferred from
+  <owner>/<repo>#<N>`, filed at `idea` on the board of the repository that
+  would ship the fix — the harness's, for a consumer's `harness/*.md` —
+  once the name is looked up there, so a later session adds to the same
+  card; a Minor the card already holds is not written again. It lists each
+  under Skipped as `deferred to <card>`. The `resolve` command leaves a
+  deferred Minor's thread to the user, so the report names the thread for
+  the user to resolve by hand (unattended: agent — name the thread in the
+  report and go on).
 
 ## The pre-PR sequence
 
