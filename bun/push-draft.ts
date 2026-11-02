@@ -10,6 +10,7 @@
  */
 import { recordCheckout } from "./gate-ledger.ts";
 import { readPullRequests, readyOne, remoteHost, remoteRepository } from "./pull-requests.ts";
+import { pushRefs } from "./push-refs.ts";
 
 const url = process.argv[3] ?? "";
 // `ssh.github.com` is GitHub's SSH over port 443.
@@ -23,13 +24,12 @@ function refuse(id: string, reason: string, sha: string): never {
 	process.exit(1);
 }
 
-// Each record: <local ref> <local sha> <remote ref> <remote sha>. Empty when there is nothing to push.
+// Empty when there is nothing to push.
 // shortcut: one read per record, in turn; list the open pull requests once if `git push --all` grows slow.
-for (const line of (await Bun.stdin.text()).split("\n")) {
-	const [, sha = "", ref = ""] = line.split(" ");
+for (const { sha, ref, deletion } of pushRefs(await Bun.stdin.text())) {
 	const branch = ref.startsWith("refs/heads/") ? ref.slice("refs/heads/".length) : "";
-	// An all-zero local sha is a deletion, which lands nothing for review.
-	if (!repo || !branch || /^0+$/.test(sha)) continue;
+	// A deletion lands nothing for review.
+	if (!repo || !branch || deletion) continue;
 	const pulls = readPullRequests(branch, repo);
 	if (!pulls)
 		refuse(

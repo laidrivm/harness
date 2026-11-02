@@ -170,17 +170,14 @@ describe("when no record is written", () => {
 			.filter((line) => line.trim() && !line.startsWith("#"));
 
 	// spec: commit-gates/a-push-into-a-ready-pull-request
-	test("the hook runs the draft check before the gates, after dropping git's variables, and the budget last", () => {
-		const hook = commands();
-		const [unset = -1, draft = -1, gates = -1] = [
+	// spec: commit-gates/a-head-the-runner-passed
+	test("the hook reads the records once after dropping git's variables, then the draft check, the skip or the gates, and the budget last", () => {
+		expect(commands()).toEqual([
+			"set -euo pipefail",
 			"unset $(git rev-parse --local-env-vars)",
-			'bun bun/push-draft.ts "$@"',
-			"bash .githooks/gates.sh",
-		].map((c) => hook.indexOf(c));
-		expect([unset >= 0, unset < draft, draft < gates, hook.at(-1)]).toEqual([
-			true,
-			true,
-			true,
+			"refs=$(cat)",
+			`printf '%s\\n' "$refs" | bun bun/push-draft.ts "$@"`,
+			`printf '%s\\n' "$refs" | bun bun/push-proven.ts || bash .githooks/gates.sh`,
 			"bash bun/diff-budget.sh || true",
 		]);
 	});
@@ -188,7 +185,7 @@ describe("when no record is written", () => {
 	// spec: commit-gates/a-gate-the-runner-s-checks-run-too
 	test("harness.bumpTest is the command the hook runs for its gates", () => {
 		const manifest = JSON.parse(readFileSync(join(import.meta.dir, "..", "package.json"), "utf8"));
-		expect(commands()).toContain(manifest.harness.bumpTest);
+		expect(commands().some((c) => c.endsWith(` || ${manifest.harness.bumpTest}`))).toBe(true);
 	});
 
 	// spec: pre-pr-runner/a-push

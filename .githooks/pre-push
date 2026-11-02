@@ -7,9 +7,13 @@ set -euo pipefail
 # then write into the shared .git. If this read fails, the suite's preload
 # (bunfig.toml) sees the variables and refuses.
 unset $(git rev-parse --local-env-vars)
+# Git's ref-update records, read once and handed to both readers below.
+refs=$(cat)
 # A push into an open pull request that is not a draft is refused before the
 # gates run. After the unset, so no `gh` it starts inherits git's variables.
-bun bun/push-draft.ts "$@"
-# The gates `commit-gates` lists, the suite last among them; `harness.bumpTest` names the same line.
-bash .githooks/gates.sh
+printf '%s\n' "$refs" | bun bun/push-draft.ts "$@"
+# The gates `commit-gates` lists, the suite last among them; `harness.bumpTest`
+# names the same command. Skipped when the ledger proves every commit pushed;
+# any other exit of the reader, bun missing included, runs them.
+printf '%s\n' "$refs" | bun bun/push-proven.ts || bash .githooks/gates.sh
 bash bun/diff-budget.sh || true

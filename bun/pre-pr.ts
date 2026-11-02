@@ -7,6 +7,7 @@
  * that the steps passed; no gate line is. The steps that need judgement stay
  * with the agent; its last line names the ones the branch still requires
  * (`pre-pr-steps.ts`), from the diff against the base the budget measured.
+ * Given `--steps`, it prints that line alone, runs no step and records nothing.
  *
  * Both steps always run, and their output passes through untouched: the
  * runner reads only each exit status, and exits with the worse. The records
@@ -46,16 +47,32 @@ const dirty = status();
 /** 0, 1, or 2 for every other status, a signal's `null` included. */
 const exit = (code: number | null): 0 | 1 | 2 => (code === 0 || code === 1 ? code : 2);
 const shown = { stdout: "inherit", stderr: "inherit" } as const;
+// `--steps` is taken out wherever it stands, so it never reaches the budget as an argument.
+const listOnly = process.argv.includes("--steps");
+const [given, ...passOn] = process.argv.slice(2).filter((arg) => arg !== "--steps");
 // Resolved once, so the budget and the step list read one diff.
 const base =
-	process.argv[2] ||
+	given ||
 	Bun.spawnSync(["bash", join(import.meta.dir, "diff-base.sh")], { cwd: top })
 		.stdout.toString()
 		.trim();
 
+/** The last line: the steps the branch requires. A detached HEAD, a failed read and no pull request all read as none open, which requires more steps, never fewer. */
+function stepsLine(): string {
+	const branch = git("symbolic-ref", "--quiet", "--short", "HEAD");
+	const open = branch !== "" && (readPullRequests(branch)?.some((pr) => pr.state === "OPEN") ?? false);
+	return `PRE-PR steps: ${required(base ? changedPaths(base) : undefined, open).join(", ")}`;
+}
+
+// The list alone: no step runs, so no record is written.
+if (listOnly) {
+	console.log(stepsLine());
+	process.exit(0);
+}
+
 const budget = exit(
 	// From the top level: the budget's `.` pathspec would otherwise count only the subdirectory.
-	Bun.spawnSync(["bash", join(import.meta.dir, "diff-budget.sh"), base, ...process.argv.slice(3)], {
+	Bun.spawnSync(["bash", join(import.meta.dir, "diff-budget.sh"), base, ...passOn], {
 		cwd: top,
 		...shown,
 	}).exitCode,
@@ -87,9 +104,6 @@ if (!commit || dirty || left || git("rev-parse", "--verify", "-q", "HEAD") !== c
 		recordCheckout("pre-pr", decisions[codes[rule]], rule, { session_id: session, cwd: top }, commit);
 }
 
-// A detached HEAD, a failed read and no pull request all read as none open, which requires more steps, never fewer.
-const branch = git("symbolic-ref", "--quiet", "--short", "HEAD");
-const open = branch !== "" && (readPullRequests(branch)?.some((pr) => pr.state === "OPEN") ?? false);
 // Last, so it is read after every step's output.
-console.log(`PRE-PR steps: ${required(base ? changedPaths(base) : undefined, open).join(", ")}`);
+console.log(stepsLine());
 process.exit(Math.max(budget, checks));

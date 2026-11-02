@@ -74,35 +74,37 @@ const OPTIONAL = ["actionlint", "gitleaks"];
  * `bun/diff-base.sh`, with stubs first on `PATH` for every program the two
  * start — `bun`, `bunx`, and of `OPTIONAL` those `tools` names, exiting with
  * the code given, or 1 where a pattern given matches the arguments — and the
- * real `OPTIONAL` tools off it. Returns one call per stub
- * run: its name and arguments, then its environment. Each stub also writes a
+ * real `OPTIONAL` tools off it. `bun` exits 1 for `bun/push-proven.ts` unless
+ * `tools` says otherwise, so the gates run. Returns one call per stub
+ * run: its name and arguments, each line of its standard input after
+ * `stdin: `, then its environment. Each stub also writes a
  * config key as a fixture would: with no inherited `GIT_DIR` the ceiling stops
  * git finding any repository, so the write fails harmlessly; with one, it
- * lands in the decoy. `bash bun/diff-budget.sh` finds no script there, and the
- * hook's `|| true` absorbs it.
+ * lands in the decoy. `bun/diff-budget.sh` is such a stub too, exiting 0.
  */
 function hook(
 	env: Record<string, string>,
 	tools: Record<string, number | string> = {},
+	stdin = "",
 ): { code: number; calls: string[][] } {
 	const dir = scratch("git-env-hook-");
 	const stub = join(dir, "stub");
 	mkdirSync(stub);
 	const record = join(dir, "record");
 	writeFileSync(record, "");
-	for (const [name, code] of Object.entries({ bun: 0, bunx: 0, ...tools })) {
-		writeFileSync(
-			join(stub, name),
-			[
-				"#!/bin/sh",
-				`echo "${name} $*" >> "$RECORD"`,
-				'env >> "$RECORD"',
-				'echo --- >> "$RECORD"',
-				`GIT_CEILING_DIRECTORIES=${dir} git config probe.written yes 2>/dev/null || true`,
-				typeof code === "number" ? `exit ${code}` : `case "$*" in ${code}) exit 1 ;; esac`,
-				"",
-			].join("\n"),
-		);
+	const body = (name: string, code: number | string) =>
+		[
+			"#!/bin/sh",
+			`echo "${name} $*" >> "$RECORD"`,
+			`sed 's/^/stdin: /' >> "$RECORD"`,
+			'env >> "$RECORD"',
+			'echo --- >> "$RECORD"',
+			`GIT_CEILING_DIRECTORIES=${dir} git config probe.written yes 2>/dev/null || true`,
+			typeof code === "number" ? `exit ${code}` : `case "$*" in ${code}) exit 1 ;; esac`,
+			"",
+		].join("\n");
+	for (const [name, code] of Object.entries({ bun: "*push-proven*", bunx: 0, ...tools })) {
+		writeFileSync(join(stub, name), body(name, code));
 		chmodSync(join(stub, name), 0o755);
 	}
 	const work = join(dir, "work");
@@ -110,6 +112,7 @@ function hook(
 		mkdirSync(dirname(join(work, path)), { recursive: true });
 		if (existsSync(join(ROOT, path))) copyFileSync(join(ROOT, path), join(work, path));
 	}
+	writeFileSync(join(work, "bun", "diff-budget.sh"), body("diff-budget.sh", 0));
 	// A directory holding a real optional tool is replaced by links to its other programs, so `bash` and `git` stay.
 	const path = (process.env.PATH ?? "").split(":").map((d, i) => {
 		if (!OPTIONAL.some((t) => existsSync(join(d, t)))) return d;
@@ -120,6 +123,7 @@ function hook(
 	});
 	const run = Bun.spawnSync(["bash", HOOK], {
 		cwd: work,
+		stdin: Buffer.from(stdin),
 		// Not the runner's base, should the suite run under one: `env` alone sets it.
 		env: { ...process.env, HARNESS_BASE: undefined, PATH: [stub, ...path].join(":"), RECORD: record, ...env },
 		timeout: 20_000,
@@ -139,15 +143,17 @@ function carried(calls: string[][], names: string[]): string[] {
 	return names.filter((name) => calls.some((lines) => lines.some((l) => l.startsWith(`${name}=`))));
 }
 
-/** What the hook starts with no optional tool installed: the draft check, then `gates.sh`'s gates in order. */
+/** What the hook starts with no optional tool installed and no skip: the checks, `gates.sh`'s gates in order, the budget. */
 const GATES = [
 	"bun bun/push-draft.ts",
+	"bun bun/push-proven.ts",
 	"bun bun/check-yaml.ts",
 	"bun bun/no-suppressions.ts",
 	// Errors alone and no colour codes: Biome's warnings filled every run's output (#394).
 	"bunx --no-install biome ci --colors=off --diagnostic-level=error .",
 	"bunx --no-install tsc --noEmit",
 	"bun test",
+	"diff-budget.sh",
 ];
 const BUNS = GATES.length;
 
@@ -156,6 +162,30 @@ describe("the pre-push hook", () => {
 	test("with no repository variable set and no optional tool it runs the draft check and the gates and exits 0 [1]", () => {
 		const { code, calls } = hook({});
 		expect([code, started(calls)]).toEqual([0, GATES]);
+	});
+
+	// spec: commit-gates/a-head-the-runner-passed
+	test("a skip starts no gate, and the draft check and the budget still run", () => {
+		const { code, calls } = hook({}, { bun: 0 });
+		expect([code, started(calls)]).toEqual([0, ["bun bun/push-draft.ts", "bun bun/push-proven.ts", "diff-budget.sh"]]);
+	});
+
+	// spec: commit-gates/a-head-the-runner-did-not-pass
+	test("no skip and a gate that fails fail the hook", () => {
+		const { code, calls } = hook({}, { bun: "*push-proven*|*check-yaml*" });
+		expect([code === 0, started(calls).includes("bun bun/check-yaml.ts"), started(calls).includes("bun test")]).toEqual(
+			[false, true, false],
+		);
+	});
+
+	// spec: commit-gates/a-push-into-a-draft
+	test("the draft check and the skip read the same records on standard input", () => {
+		const records = `refs/heads/x ${"a".repeat(40)} refs/heads/x ${"b".repeat(40)}\nrefs/heads/y ${"c".repeat(40)} refs/heads/y ${"d".repeat(40)}`;
+		const { calls } = hook({}, {}, `${records}\n`);
+		const read = (first: string) =>
+			calls.find(([line]) => line?.startsWith(first))?.filter((l) => l.startsWith("stdin: "));
+		const expected = records.split("\n").map((l) => `stdin: ${l}`);
+		expect([read("bun bun/push-draft.ts"), read("bun bun/push-proven.ts")]).toEqual([expected, expected]);
 	});
 
 	// spec: commit-gates/a-tool-the-machine-has-reporting-a-finding commit-gates/a-gate-the-runner-s-checks-run-too

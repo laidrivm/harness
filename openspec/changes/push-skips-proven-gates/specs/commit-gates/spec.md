@@ -3,10 +3,10 @@
 ### Requirement: The pre-push hook skips the gates a passing run record proved
 
 The one exception to *The pre-push hook runs the gates named here*: the hook
-SHALL skip its judged gates when the push updates no tag and every commit it
-lands — each ref-update record's local sha but a deletion's — has a pre-PR
-runner record of `project-checks` that passed, made in this checkout, and none
-that failed or erred, and SHALL print one line naming those commits.
+SHALL skip its judged gates when the push updates or deletes no tag and every
+commit it lands — each ref-update record's local sha but a deletion's — has a
+pre-PR runner record of `project-checks` that passed, made in this checkout,
+and none that failed or erred, and SHALL print one line naming those commits.
 Otherwise it SHALL run them and print why. The draft check and the diff
 budget SHALL run either way. No sha, or an unreadable ledger, skips nothing; a
 torn line is no record.
@@ -61,7 +61,7 @@ torn line is no record.
 #### Scenario: A tag
 
 - **WHEN** a push updates a ref under `refs/tags/`, annotated or lightweight,
-  whose commit has a passing record
+  whose commit has a passing record, or deletes one beside a proven branch
 - **THEN** the hook runs its gates, whatever the tag's sha
 
 #### Scenario: A torn line beside a pass

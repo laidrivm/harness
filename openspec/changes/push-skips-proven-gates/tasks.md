@@ -6,17 +6,18 @@ One group, one pull request on `feat/push-skips-proven-gates-1`, under the
 
 ## 1. The hook's skip, the step list alone, the foreground runner
 
-- [ ] 1.1 Precondition: `git ls-tree --full-tree --name-only origin/main
+- [x] 1.1 Precondition: `git ls-tree --full-tree --name-only origin/main
       .githooks/gates.sh` lists the file and `harness.bumpTest` in
       `origin/main`'s `package.json` is `bash .githooks/gates.sh` — the group
       of `pre-push-commit-gates` that adds the gates script has merged. If
       not, stop and leave the card where it is. Verify by the two reads
-- [ ] 1.2 Failing cases in `bun/push-refs.test.ts`: a record's local sha and
-      remote ref are read; an all-zero sha, an empty input and one blank line
+- [x] 1.2 Failing cases in `bun/push-refs.test.ts`: a record's local sha and
+      remote ref are read; an all-zero sha is kept, flagged as a deletion,
+      its remote ref read; an empty input and one blank line
       yield none. Then write `bun/push-refs.ts` and switch
       `bun/push-draft.ts` to it (design decision 1). Verify the cases and
       `bun/push-draft.test.ts` pass
-- [ ] 1.3 Failing cases in `bun/push-proven.test.ts`, each running the script
+- [x] 1.3 Failing cases in `bun/push-proven.test.ts`, each running the script
       in a scratch repository with `XDG_STATE_HOME` set to a scratch ledger
       and the ref-update records on standard input: a passing
       `project-checks` record of the pushed sha here exits 0 and prints the
@@ -33,8 +34,8 @@ One group, one pull request on `feat/push-skips-proven-gates-1`, under the
       git cannot read exits 1; a proven sha other than `HEAD` exits 0
       (`a-push-of-a-commit-other-than-head`); only a deletion, empty input
       and one blank line exit 1 (`a-push-that-only-deletes`); an annotated
-      tag, and a lightweight one whose sha is a proven commit, exit 1
-      (`a-tag`); a proven sha beside a torn ledger line exits 0
+      tag, a lightweight one whose sha is a proven commit, and a proven
+      branch beside a tag deletion exit 1 (`a-tag`); a proven sha beside a torn ledger line exits 0
       (`a-torn-line-beside-a-pass`); a record naming another top level
       exits 1 (`another-checkout-of-the-same-commit`); a proven `HEAD` with a
       tracked file edited exits 0 (`a-dirty-tree-over-a-proven-head`); an
@@ -42,7 +43,7 @@ One group, one pull request on `feat/push-skips-proven-gates-1`, under the
       (`a-ledger-the-hook-cannot-read`). Then write `bun/push-proven.ts`
       per design decision 1, reading the ledger once through `ran()` and
       writing nothing. Verify the cases pass
-- [ ] 1.4 Failing cases for the hook: in `bun/pre-pr.test.ts`, the
+- [x] 1.4 Failing cases for the hook: in `bun/pre-pr.test.ts`, the
       order unset, `refs=$(cat)`, the draft check fed `$refs`, the
       skip-or-gates line, the budget last, and the existing pin that the
       hook's text holds no `pre-pr` still passing; in `bun/git-env.test.ts`,
@@ -56,7 +57,7 @@ One group, one pull request on `feat/push-skips-proven-gates-1`, under the
       input (`commit-gates/a-push-into-a-draft`). Then edit
       `.githooks/pre-push` per design decision 1, its comments free of
       `pre-pr`. Verify the cases pass and `bun test` passes
-- [ ] 1.5 Failing cases beside `bun/pre-pr-steps-run.test.ts`: `--steps` on a
+- [x] 1.5 Failing cases beside `bun/pre-pr-steps-run.test.ts`: `--steps` on a
       code branch prints the one `PRE-PR steps:` line with the code branch's
       steps, runs neither the budget nor `harness.bumpTest` (a stub that
       writes a file shows it never started), and exits 0
@@ -68,7 +69,7 @@ One group, one pull request on `feat/push-skips-proven-gates-1`, under the
       exits 0; with the pull request open the list is the project checks
       alone. Then add `--steps` to `bun/pre-pr.ts` per design decision 5.
       Verify the cases pass
-- [ ] 1.6 `core/review-toolkit.md`, step 1 of the pre-PR sequence: drop "or
+- [x] 1.6 `core/review-toolkit.md`, step 1 of the pre-PR sequence: drop "or
       run it in the background", saying the runner runs in the foreground
       with a 600000 ms timeout, never with `&`, and that a call the tool
       moves to the background at its limit is waited for in the same turn,
