@@ -39,8 +39,10 @@ failing case is written first, its failure recorded, and cited as
       after the override paragraph, the clause to *Severity budgets
       attention, not belief*, and the deferral as the exception in step 3's
       opening paragraph and its Minor line (design, *The skill's sentence*).
-      Verify: `bun test bun/review-docs.test.ts` passes, and `bun
-      bun/check.ts` passes
+      Verify: `bun test bun/review-docs.test.ts` passes, and `bash
+      .githooks/gates.sh` passes, the harness's `harness.bumpTest`, since
+      `bun bun/check.ts` is a consumer's check and needs the
+      `harness.uncitedFloor` this repository does not set
 
 ## 2. `path_instructions` for a change's artefacts
 
@@ -51,7 +53,8 @@ failing case is written first, its failure recorded, and cited as
       `openspec/changes/**`, so a missing list [10] and an `archive/**` path
       [11] both fail it. A `test.each` then checks the entry's
       `instructions`, with whitespace normalised so a wrapped block scalar
-      still matches, for `archive`, `contradictions with a spec, the code or
+      still matches, for `A working artefact of an OpenSpec change, headed
+      for the archive`, `contradictions with a spec, the code or
       another artefact` and `Do not flag wording, duplication or style`,
       one case per phrase. The negation is pinned whole, so an entry that asks for wording
       fails, and a failure names the phrase that is gone [12] [13]. No
@@ -62,5 +65,5 @@ failing case is written first, its failure recorded, and cited as
       clause on what the entry is for. Add the instructions given to a
       change's artefacts to the list of what the config pins in the
       `local-review-loop` spec's Purpose. Verify: `bun test
-      bun/review-config.test.ts` passes, `bun bun/check.ts` passes, and
+      bun/review-config.test.ts` passes, `bash .githooks/gates.sh` passes, and
       `openspec validate --strict --specs` passes

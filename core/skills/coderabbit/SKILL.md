@@ -153,7 +153,7 @@ Right before applying any fix, here or under the override below, and before nami
 
 **The project overrides this.** If the repo's own review policy (`CLAUDE.md`, `docs/`, a gate the project defines) prescribes applying verified findings without asking, follow the project, not this skill: apply them before showing the plan, list them under `### Applied (N)`, and keep no approval gate on fixes at any severity. Where the project puts the approval on the dismissal instead, a 🟠 Major or 🔴 Critical you propose to reject or skip goes to the user with what the bot missed, and the gate stays OPEN until they settle it (unattended: card — hand it on with what the bot missed). Name the rule you followed in one line under the heading.
 
-**A project's policy may defer.** Whether or not it also applies fixes without asking, the repo's own review policy may defer a finding to a card by its severity, path and round. Apply nothing for such a finding: list it under Skipped as `deferred to <card>`, counted in the arithmetic. A 🟠 Major or 🔴 Critical deferred this way is a dismissal, and is put to the user with what the bot missed.
+**A project's policy may defer.** Whether or not it also applies fixes without asking, the repo's own review policy may defer a finding to a card by its severity, path and round. Apply nothing for such a finding: list it under Skipped as `deferred to <card>`, counted in the arithmetic. A 🟠 Major or 🔴 Critical deferred this way is a dismissal: it goes to the user, and the gate stays OPEN until they settle it (unattended: card — hand it on with the policy that defers it).
 
 ### 6. The resolve command and the gate line
 

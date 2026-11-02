@@ -102,7 +102,7 @@ describe("the instructions for a change's artefacts", () => {
 
 	// spec: local-review-loop/the-instructions-lose-their-scope
 	test.each([
-		"archive",
+		"A working artefact of an OpenSpec change, headed for the archive",
 		"contradictions with a spec, the code or another artefact",
 		"Do not flag wording, duplication or style",
 	])("its instructions keep `%s` [12, 13]", (phrase) => {

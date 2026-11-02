@@ -208,9 +208,9 @@ describe("the coderabbit skill honours a project's deferral", () => {
 
 	// spec: agent-autonomy/a-policy-defers-a-major
 	test("a Major or above deferred by a policy is a dismissal put to the user", () => {
-		expect(block(skill(), DEFERS) ?? "").toContain(
-			"A 🟠 Major or 🔴 Critical deferred this way is a dismissal, and is put to the user",
-		);
+		const text = block(skill(), DEFERS) ?? "";
+		expect(text).toContain("A 🟠 Major or 🔴 Critical deferred this way is a dismissal: it goes to the user");
+		expect(text).toContain("the gate stays OPEN until they settle it (unattended: card —");
 	});
 
 	// spec: agent-autonomy/a-policy-defers-a-minor
