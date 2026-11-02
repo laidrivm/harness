@@ -164,9 +164,11 @@ describe("the pre-push hook", () => {
 		["actionlint", { actionlint: 1 }],
 		["biome ci", { bunx: "*biome*" }],
 		["tsc", { bunx: "*tsc*" }],
-	])("a %s that reports a finding fails the hook before the suite", (_, tools) => {
+	])("a %s that reports a finding fails the hook before the suite", (tool, tools) => {
 		const { code, calls } = hook({}, tools);
-		expect([code === 0, started(calls).includes("bun test")]).toEqual([false, false]);
+		// The named tool ran: an earlier gate stopping the script would pass the other two checks too.
+		const ran = started(calls).some((line) => line.split(" ").includes(tool.split(" ")[0] ?? tool));
+		expect([code === 0, ran, started(calls).includes("bun test")]).toEqual([false, true, false]);
 	});
 
 	// spec: commit-gates/a-secret-that-is-already-in-the-base-branch

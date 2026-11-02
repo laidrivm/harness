@@ -119,7 +119,11 @@ export function prune(root: string): number {
 }
 
 /** Whether `path` was last modified longer ago than the archive keeps a session. */
-export const old = (path: string) => Date.now() - statSync(path).mtimeMs > KEEP;
+export const old = (path: string) => {
+	// Gone since prune listed it, renamed or dropped by a concurrent export: not old, so the pass goes on.
+	const stat = statSync(path, { throwIfNoEntry: false });
+	return stat !== undefined && Date.now() - stat.mtimeMs > KEEP;
+};
 
 /** Copies session `id`'s `<id>/` and transcript from `dir` into `project`. */
 export function files(dir: string, id: string, project: string): void {
