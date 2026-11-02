@@ -8,7 +8,7 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
 
 ## 1. The token per call
 
-- [ ] 1.1 Write the failing cases in a new `orchestrator/gh-wrapper.test.ts`,
+- [x] 1.1 Write the failing cases in a new `orchestrator/gh-wrapper.test.ts`,
       running `orchestrator/runner/gh` with `GH_WRAPPER_REAL`,
       `GH_WRAPPER_MINT` and `GH_WRAPPER_USER` pointing at stubs that record
       their arguments and environment: no `GH_TOKEN` as the session user →
@@ -20,7 +20,7 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
       exiting 2 and 75 → the wrapper exits 2 and 75 and gh never runs; every
       pair the wrapper asks is in the mint's `ALLOWED`. Verify each fails
       for the missing wrapper
-- [ ] 1.2 Add the failing cases to `orchestrator/users.test.ts`: sudoers
+- [x] 1.2 Add the failing cases to `orchestrator/users.test.ts`: sudoers
       holds exactly three rules, the third
       `agent ALL=(keyholder) NOPASSWD: /opt/orchestrator/mint`; the
       Dockerfile installs the release's gh at `/usr/local/libexec/gh/gh`,
@@ -28,7 +28,7 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
       `credential.https://github.com.helper` to
       `!/usr/local/bin/gh auth git-credential` with `git config --system`,
       and runs no `gh auth setup-git`. Verify they fail
-- [ ] 1.3 Write `orchestrator/runner/gh` per design *The gh wrapper*, with
+- [x] 1.3 Write `orchestrator/runner/gh` per design *The gh wrapper*, with
       its two `shortcut:` comments; export `ALLOWED` from
       `bun/github-app-mint.ts`; edit the Dockerfile and `sudoers` and its
       header comment (three rules). Verify `bun test orchestrator/` passes

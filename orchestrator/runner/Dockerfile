@@ -25,7 +25,7 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" | tar -xz -C /tmp \
-	&& install -m 0755 "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh \
+	&& install -D -m 0755 "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/libexec/gh/gh \
 	&& rm -rf /tmp/gh_*
 
 RUN curl -fsSLo /usr/local/bin/claude "https://downloads.claude.ai/claude-code-releases/${CLAUDE_VERSION}/linux-x64/claude" \
@@ -36,10 +36,12 @@ RUN curl -fsSLo /usr/local/bin/claude "https://downloads.claude.ai/claude-code-r
 RUN [ -e /usr/local/bin/node ] || ln -s bun /usr/local/bin/node; \
 	BUN_INSTALL=/usr/local bun add -g "@fission-ai/openspec@${OPENSPEC_VERSION}"
 
-# setup-git writes the credential helper to the building user's config; moved
-# to the system config so runner's git takes GH_TOKEN as well. The token here
-# only satisfies gh's login check and is never stored.
-RUN GH_TOKEN=unused gh auth setup-git && mv /root/.gitconfig /etc/gitconfig
+# git's credential helper is the gh wrapper, so the session user's git mints
+# per call as its gh does, and runner's git takes GH_TOKEN as before: the two
+# lines gh's setup-git writes, naming the wrapper where setup-git would
+# write the real gh's path (session-runner-image design).
+RUN git config --system credential.https://github.com.helper '' \
+	&& git config --system --add credential.https://github.com.helper '!/usr/local/bin/gh auth git-credential'
 
 # The uids are fixed: the host README makes the secret files owned by runner's,
 # and the App's key by the key holder's. runner is not in agent's group
@@ -65,6 +67,7 @@ COPY --chmod=0440 runner/sudoers /etc/sudoers.d/orchestrator
 COPY --chmod=0755 as-agent /opt/orchestrator/as-agent
 COPY --chmod=0755 mint /opt/orchestrator/mint
 COPY --chmod=0755 reach-check.sh /opt/orchestrator/reach-check.sh
+COPY --chmod=0755 runner/gh /usr/local/bin/gh
 # The event handler's code, root-owned, from compose's named context `bun`
 # (ci-run-agent design, *The engine's contract*): it reads the webhook secret,
 # so it never runs from a clone agent can write.

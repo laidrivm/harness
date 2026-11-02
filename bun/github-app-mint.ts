@@ -21,9 +21,10 @@ import { TEMPFAIL, Transient } from "./transient.ts";
 /**
  * The levels each permission may be asked at, and no others: `runner-isolation`'s `design.md` *The key
  * holder*, plus `workflows` (write alone, the one level GitHub has), which a push touching
- * `.github/workflows/` needs (user, 2026-10-25).
+ * `.github/workflows/` needs (user, 2026-10-25). Exported for the gh wrapper's test, since a pair
+ * the wrapper asks outside it is refused only at run time, on the host.
  */
-const ALLOWED: Record<string, string[]> = {
+export const ALLOWED: Record<string, string[]> = {
 	contents: ["read", "write"],
 	pull_requests: ["read", "write"],
 	statuses: ["read", "write"],

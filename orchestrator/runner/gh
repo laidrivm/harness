@@ -1,0 +1,28 @@
+#!/bin/sh
+# gh on the image's PATH, at /usr/local/bin/gh, with the release's gh at
+# /usr/local/libexec/gh/gh (session-runner-image design, *The gh wrapper*).
+# For the session user with no GH_TOKEN it mints an installation token for
+# this call (decision 40 б) and runs the real gh with it in that process's
+# environment alone; git's credential helper in /etc/gitconfig names this
+# file, so git takes the same path. A set GH_TOKEN, and any other user, run
+# the real gh unchanged. A mint that fails exits with its status, gh unrun.
+#
+# GH_WRAPPER_REAL, GH_WRAPPER_MINT and GH_WRAPPER_USER exist for its test,
+# as reach-check.sh's REACH_*: agent can only run a command as itself or
+# skip the mint, and runner already holds the sudo rule.
+real=${GH_WRAPPER_REAL:-/usr/local/libexec/gh/gh}
+mint=${GH_WRAPPER_MINT:-sudo -n -u keyholder /opt/orchestrator/mint}
+user=${GH_WRAPPER_USER:-agent}
+
+if [ -n "${GH_TOKEN:-}" ] || [ "$(id -un)" != "$user" ]; then
+	exec "$real" "$@"
+fi
+# Decision 39 б's permissions, each in the mint's fixed set (gh-wrapper.test.ts).
+# shortcut: the repository is fixed to laidrivm/harness, stage 2.5's one board;
+# derive it from origin when the session takes D2ASS or mellon.
+# shortcut: git asks the helper on store and erase as well as get, so a push
+# mints twice; skip the mint for those when the probe shows the cost.
+# Unquoted: the mint is words. Its stdin is git's credential request, gh's.
+token=$($mint laidrivm/harness contents=write pull_requests=write checks=read actions=read statuses=read workflows=write </dev/null) || exit
+export GH_TOKEN="$token"
+exec "$real" "$@"
