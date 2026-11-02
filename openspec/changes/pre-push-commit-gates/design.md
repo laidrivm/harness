@@ -39,6 +39,10 @@ not. `bun/git-env.test.ts` and `bun/pre-pr.test.ts` pin the hook's lines.
    leaves it near its 38.8 thousand lines and pushes 12 `.ts` files past the
    300-line cap, against 47.8 thousand lines and 38 files at Biome's
    default of 80. The 12 are split first, as task 1.2 says.
+8. а (2026-11-02, question 8 on the card) — a slow mutant's status moving
+   between whole runs changes nothing yet: the baseline first runs a few
+   modules whole twice and measures the spread, and the timeout setting is
+   decided on that measurement.
 
 ## Goals / Non-Goals
 
@@ -207,8 +211,8 @@ stale ones it re-runs and fails. The user adds the check names to the ruleset.
   stored file only when its mutants' results changed. Trimmed and sorted by
   id, a file whose results were reused is byte-stable; a whole re-run is not,
   since a slow mutant's status depends on the load (four of 391 moved
-  between `Timeout` and another status across two runs), which the card's
-  question 8 puts to the user before the baseline.
+  between `Timeout` and another status across two runs); by the user's
+  decision 8 the baseline measures that spread first.
 
 ## Migration Plan
 
