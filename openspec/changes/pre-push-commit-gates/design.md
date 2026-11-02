@@ -95,13 +95,20 @@ first. The gate joins the hook once the last fix lands.
 ### 4. Stryker per module, incremental, results in the tree
 
 `stryker.config.json` holds what every run shares: the command runner,
-`thresholds.break: null`, `json` among the reporters, `incremental: true`,
-`tempDirName: .stryker-tmp`, and `ignorePatterns` covering `.claude` (the
-worktrees, which the sandbox would otherwise copy) and `mutation`. `bun/mutation-run.ts` supplies
+`thresholds.break: null`, `incremental: true`,
+`tempDirName: .stryker-tmp`, `tsconfigFile` naming an absent file, and
+`ignorePatterns` covering `.claude` (the
+worktrees, which the sandbox would otherwise copy) and `mutation`. No `json`
+reporter: a run's own report covers one module, and the merge below writes the
+one the floor reads. The absent `tsconfigFile` is d2ass's answer to the same
+fault, measured again by the probe: Stryker's tsconfig preprocessor calls
+`ts.parseConfigFileTextToJson`, which TypeScript 7.0.2 does not expose, and it
+skips itself when the file it is pointed at is not there. `bun/mutation-run.ts` supplies
 the per-module values — `mutate: bun/<name>.ts`, the command
-`bun test bun/<name>`, `incrementalFile: mutation/<name>.json` — as flags
-where Stryker takes them, otherwise through a configuration file written
-under `.stryker-tmp`; the probe settles which.
+`bun test bun/<name>`, `incrementalFile: mutation/<name>.json` — in a
+configuration file it writes under `.stryker-tmp` for that run and deletes
+after it: the probe found no flag that takes the command. Modules named on its
+command line narrow a run to them, so one module can be measured alone.
 
 A module runs when its tracked source differs from the copy its stored file
 holds (`files[path].source`), incrementally, or whole when it has no stored
@@ -124,7 +131,9 @@ replacement and status —
 plus the fingerprint: `projectRoot`, `system`, `performance`, `config` and
 any test output a mutant carries (`statusReason`) depend on the machine, so
 a re-run anywhere writes the same bytes for the same results and no home
-directory lands in the tree. The probe confirms Stryker reads it so trimmed.
+directory lands in the tree. The mutants are sorted by id, since a full run
+writes them in the order they finished. The probe confirms Stryker reads it so
+trimmed (tasks.md, 5.2, has its numbers).
 
 Stryker's sandbox sits inside the checkout, so a test that finds the
 repository through git reads the checkout's files, not the mutated ones: the
@@ -135,10 +144,11 @@ The fourteen modules no test file names by prefix (`bun/check-yaml.ts`,
 `bun/root.ts` and twelve more today) are not mutated, and the run names
 them: the user's decision 2 judges a module by `bun/x*.test.ts` alone.
 
-After the runs the step fails on a stored file whose module is untracked or
-has no test file, on a module with a test file and no stored file, and on a
-stored file differing from `HEAD`'s, one with no `files` object, or two naming
-one source path, then merges every stored file's `files` entries, mutants
+Before any run the step fails on a stored file whose module is untracked or
+has no test file, one with no `files` object, or two naming one source path,
+since no run could change those; a module with a test file and no stored file
+runs whole. After the runs it fails on a stored file differing from `HEAD`'s,
+or untracked, so the one it just wrote fails until committed, then merges every stored file's `files` entries, mutants
 whole, into the one `files` map of `reports/mutation/mutation.json`, deleting the old report first as
 `mutation-floor` requires, and `bun/mutation-floor.ts` checks the total
 against `harness.mutationFloor`. Stored files rather than a cache outside

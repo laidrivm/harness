@@ -125,4 +125,23 @@ describe("the command", () => {
 		write(dir, { "mutation/a.json": "{ }\n", "mutation/b.json": "{}\n" });
 		expect(unsaved(dir)).toEqual(["mutation/a.json", "mutation/b.json"]);
 	});
+
+	test("a staged rename under mutation/ names both sides", () => {
+		const dir = repository({ "mutation/a.json": "{}\n" });
+		git(dir, "mv", "mutation/a.json", "mutation/c.json");
+		expect(unsaved(dir)).toEqual(["mutation/a.json", "mutation/c.json"]);
+	});
+
+	test.each([
+		["--every", "unknown option --every"],
+		["bun/a.test.ts", "bun/a.test.ts is not a tracked module"],
+	])("%s fails before anything runs", (arg, message) => {
+		const run = Bun.spawnSync(["bun", script, arg], {
+			cwd: repository(),
+			env: { PATH: path({ node: "exit 0", bunx: "exit 3" }) },
+			stderr: "pipe",
+		});
+		expect(run.exitCode).toBe(1);
+		expect(run.stderr.toString()).toContain(message);
+	});
 });
