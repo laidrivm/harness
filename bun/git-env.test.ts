@@ -13,9 +13,11 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readdirSync,
 	readFileSync,
 	realpathSync,
 	rmSync,
+	symlinkSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -70,15 +72,19 @@ const OPTIONAL = ["actionlint", "gitleaks"];
 /**
  * Runs the hook from a directory holding only `.githooks/gates.sh` and
  * `bun/diff-base.sh`, with stubs first on `PATH` for every program the two
- * start — `bun`, `bunx`, and of `OPTIONAL` those `tools` names, exiting as
- * given — and the real `OPTIONAL` tools off it. Returns one call per stub
+ * start — `bun`, `bunx`, and of `OPTIONAL` those `tools` names, exiting with
+ * the code given, or 1 where a pattern given matches the arguments — and the
+ * real `OPTIONAL` tools off it. Returns one call per stub
  * run: its name and arguments, then its environment. Each stub also writes a
  * config key as a fixture would: with no inherited `GIT_DIR` the ceiling stops
  * git finding any repository, so the write fails harmlessly; with one, it
  * lands in the decoy. `bash bun/diff-budget.sh` finds no script there, and the
  * hook's `|| true` absorbs it.
  */
-function hook(env: Record<string, string>, tools: Record<string, number> = {}): { code: number; calls: string[][] } {
+function hook(
+	env: Record<string, string>,
+	tools: Record<string, number | string> = {},
+): { code: number; calls: string[][] } {
 	const dir = scratch("git-env-hook-");
 	const stub = join(dir, "stub");
 	mkdirSync(stub);
@@ -93,7 +99,7 @@ function hook(env: Record<string, string>, tools: Record<string, number> = {}): 
 				'env >> "$RECORD"',
 				'echo --- >> "$RECORD"',
 				`GIT_CEILING_DIRECTORIES=${dir} git config probe.written yes 2>/dev/null || true`,
-				`exit ${code}`,
+				typeof code === "number" ? `exit ${code}` : `case "$*" in ${code}) exit 1 ;; esac`,
 				"",
 			].join("\n"),
 		);
@@ -104,7 +110,14 @@ function hook(env: Record<string, string>, tools: Record<string, number> = {}): 
 		mkdirSync(dirname(join(work, path)), { recursive: true });
 		if (existsSync(join(ROOT, path))) copyFileSync(join(ROOT, path), join(work, path));
 	}
-	const path = (process.env.PATH ?? "").split(":").filter((d) => !OPTIONAL.some((t) => existsSync(join(d, t))));
+	// A directory holding a real optional tool is replaced by links to its other programs, so `bash` and `git` stay.
+	const path = (process.env.PATH ?? "").split(":").map((d, i) => {
+		if (!OPTIONAL.some((t) => existsSync(join(d, t)))) return d;
+		const shadow = join(dir, `path-${i}`);
+		mkdirSync(shadow);
+		for (const name of readdirSync(d)) if (!OPTIONAL.includes(name)) symlinkSync(join(d, name), join(shadow, name));
+		return shadow;
+	});
 	const run = Bun.spawnSync(["bash", HOOK], {
 		cwd: work,
 		// Not the runner's base, should the suite run under one: `env` alone sets it.
@@ -145,13 +158,15 @@ describe("the pre-push hook", () => {
 	});
 
 	// spec: commit-gates/a-tool-the-machine-has-reporting-a-finding commit-gates/a-gate-the-runner-s-checks-run-too
-	test.each(["gitleaks", "actionlint", "bunx"])(
-		"a %s that reports a finding fails the hook before the suite",
-		(tool) => {
-			const { code, calls } = hook({}, { [tool]: 1 });
-			expect([code === 0, started(calls).includes("bun test")]).toEqual([false, false]);
-		},
-	);
+	test.each([
+		["gitleaks", { gitleaks: 1 }],
+		["actionlint", { actionlint: 1 }],
+		["biome ci", { bunx: "*biome*" }],
+		["tsc", { bunx: "*tsc*" }],
+	])("a %s that reports a finding fails the hook before the suite", (_, tools) => {
+		const { code, calls } = hook({}, tools);
+		expect([code === 0, started(calls).includes("bun test")]).toEqual([false, false]);
+	});
 
 	// spec: commit-gates/a-secret-that-is-already-in-the-base-branch
 	test.each([
