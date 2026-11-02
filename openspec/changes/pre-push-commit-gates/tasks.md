@@ -133,7 +133,7 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       `ts.parseConfigFileTextToJson is not a function`. `node -v` on the host
       is not read: this probe ran on the laptop, where the command guard
       refuses `node -v`
-- [ ] 5.3 Failing cases in `bun/mutation-run.test.ts` over the pure parts:
+- [x] 5.3 Failing cases in `bun/mutation-run.test.ts` over the pure parts:
       modules exclude tests and fixtures; a module no test file matches is
       named and not run (`a-module-no-test-file-matches`); a source that
       differs from its stored copy runs incrementally
@@ -163,7 +163,19 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       (`unchanged-modules-counted-from-their-stored-results`). Then write
       `bun/mutation-run.ts` with `--all`. Verify the
       cases pass and a run on `bun/command-parse.ts` writes
-      `mutation/command-parse.json`
+      `mutation/command-parse.json`.
+      The cases were moved in part to `bun/mutation-run-command.test.ts`,
+      which runs the command with `node` and `bunx` stubbed, to keep both
+      files under the cap. `bun bun/mutation-run.ts bun/command-parse.ts` on
+      2026-11-02, over the probe's untrimmed file and so with `--force`:
+      5 min 14 s, 261 killed, 9 timed out, 121 survived, a 124.6 kB stored
+      file, and the run failed naming it as not committed; run again, it
+      mutated nothing in under a second and left the file byte-identical.
+      Against the probe's first run on the same source, mutants 146 to 149
+      moved from `Timeout` to one `Survived` and three `Killed`: a whole
+      re-run can rewrite a stored file, and move the survivor count, with no
+      change to the code. Asked on the card (question 8); the stored file is
+      not committed here, the baseline being group 6's
 
 ## 6. The baseline
 
