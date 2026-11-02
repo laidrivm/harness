@@ -50,14 +50,20 @@ RUN curl -fsSLo /usr/local/bin/claude "https://downloads.claude.ai/claude-code-r
 # node is the one every `env node` finds, openspec's bin among them.
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=actionlint /usr/local/bin/actionlint /usr/local/bin/actionlint
+# CI's actionlint runs shellcheck over `run:` scripts, and skips it when absent.
+COPY --from=actionlint /usr/local/bin/shellcheck /usr/local/bin/shellcheck
 COPY --from=gitleaks /usr/bin/gitleaks /usr/local/bin/gitleaks
 
 RUN BUN_INSTALL=/usr/local bun add -g "@fission-ai/openspec@${OPENSPEC_VERSION}"
 
+# A binary that cannot run here, a missing library or a wrong architecture, fails the build.
+RUN node --version && actionlint -version && shellcheck --version && gitleaks version && claude --version
+
 # git's credential helper is the gh wrapper, so the session user's git mints
-# per call as its gh does, and runner's git takes GH_TOKEN as before: the two
-# lines gh's setup-git writes, naming the wrapper where setup-git would
-# write the real gh's path (session-runner-image design).
+# per call as its gh does, and runner's git takes GH_TOKEN as before: the
+# github.com lines gh's setup-git writes, naming the wrapper where setup-git
+# would write the real gh's path (session-runner-image design). gist.github.com
+# gets no helper: nothing here reaches a gist over git.
 RUN git config --system credential.https://github.com.helper '' \
 	&& git config --system --add credential.https://github.com.helper '!/usr/local/bin/gh auth git-credential'
 
@@ -90,9 +96,6 @@ COPY --chmod=0755 runner/gh /usr/local/bin/gh
 # (ci-run-agent design, *The engine's contract*): it reads the webhook secret,
 # so it never runs from a clone agent can write.
 COPY --from=bun . /opt/orchestrator/bun/
-
-# A binary that cannot run here, a missing library or a wrong architecture, fails the build.
-RUN node --version && actionlint -version && gitleaks version && claude --version
 
 ENTRYPOINT ["/opt/orchestrator/entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D", "-e"]
