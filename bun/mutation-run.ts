@@ -14,6 +14,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync,
 import { dirname, join, posix } from "node:path";
 import { REPORT } from "./mutation-floor.ts";
 import { root } from "./root.ts";
+import { tracked as sweep } from "./tracked.ts";
 
 export type Mutant = { id: string; mutatorName: string; location: unknown; replacement?: string; status: string };
 export type Stored = {
@@ -197,7 +198,7 @@ function changed(cwd: string, ...pathspec: string[]): string[] {
 export const unsaved = (cwd: string) => changed(cwd, "mutation").sort();
 
 function load(top: string): Tree {
-	const tracked = git(top, "ls-files", "-z").split("\0").filter(Boolean);
+	const { paths: tracked } = sweep(top);
 	const blobs: Record<string, string> = {};
 	for (const entry of git(top, "ls-tree", "-r", "-z", "--full-tree", "HEAD").split("\0").filter(Boolean)) {
 		const [meta = "", path = ""] = entry.split("\t");
