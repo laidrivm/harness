@@ -8,5 +8,11 @@
 	"incremental": true,
 	"tempDirName": ".stryker-tmp",
 	"tsconfigFile": "tsconfig.stryker-none.json",
-	"ignorePatterns": ["/.claude/worktrees", "/.claude/skills", "mutation"]
+	"ignorePatterns": [
+		"/.claude/worktrees",
+		"/.claude/skills",
+		"/orchestrator/secrets",
+		"/orchestrator/app-key",
+		"mutation"
+	]
 }
