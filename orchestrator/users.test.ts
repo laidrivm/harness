@@ -32,10 +32,12 @@ describe("the image's users", () => {
 		expect(dockerfile).not.toMatch(/useradd[^\n]*(--groups|-G)[^\n]*\bagent\b/);
 	});
 
-	test("sudoers holds exactly the two rules Three users names, and the image installs it read-only for root", () => {
+	// spec: orchestrator/the-runner-asks-the-key-holder
+	test("sudoers holds exactly Three users' two rules and the session user's mint, and the image installs it read-only for root", () => {
 		expect(rules).toEqual([
 			"runner ALL=(agent) NOPASSWD: /opt/orchestrator/as-agent",
 			"runner ALL=(keyholder) NOPASSWD: /opt/orchestrator/mint",
+			"agent ALL=(keyholder) NOPASSWD: /opt/orchestrator/mint",
 		]);
 		expect(dockerfile).toContain("COPY --chmod=0440 runner/sudoers /etc/sudoers.d/orchestrator");
 		expect(dockerfile.split("\n").filter((l) => l.includes("NOPASSWD"))).toEqual([]);
@@ -64,6 +66,32 @@ describe("the image's users", () => {
 		expect(dirname(FILES.id)).toBe(dirname(FILES.repositories));
 		expect(dockerfile).toContain(`install -d -m 0755 ${dirname(FILES.id)}`);
 		expect(dockerfile).toContain(`install -d -o keyholder -g keyholder -m 0700 ${dirname(FILES.key)}`);
+	});
+
+	// spec: orchestrator/git-reaches-github
+	test("the image installs the release's gh beside the wrapper's path, the wrapper 0755 in its place, and git's helper naming the wrapper", () => {
+		expect(dockerfile).toMatch(/install -D -m 0755 "[^"\n]*\/bin\/gh" \/usr\/local\/libexec\/gh\/gh\b/);
+		expect(dockerfile).toContain("COPY --chmod=0755 runner/gh /usr/local/bin/gh");
+		// setup-git would write the real gh's path.
+		expect(dockerfile).not.toContain("gh auth setup-git");
+		// The helper as git reads it: the image's `RUN` that writes it, run against a scratch system config.
+		const run = dockerfile
+			.replaceAll("\\\n", " ")
+			.split("\n")
+			.find((l) => l.startsWith("RUN ") && l.includes("git config --system"));
+		expect(run).toBeDefined();
+		const config = join(emptyDir("orchestrator-gitconfig-"), "gitconfig");
+		const env = { PATH: process.env.PATH ?? "", GIT_CONFIG_SYSTEM: config, GIT_CONFIG_NOSYSTEM: "" };
+		expect(Bun.spawnSync(["sh", "-c", run?.slice(4) ?? "false"], { env }).exitCode).toBe(0);
+		const helpers = Bun.spawnSync([
+			"git",
+			"config",
+			"--file",
+			config,
+			"--get-all",
+			"credential.https://github.com.helper",
+		]);
+		expect(helpers.stdout.toString()).toBe("\n!/usr/local/bin/gh auth git-credential\n");
 	});
 
 	test("the image installs jq and the empty hooks directory pass.sh resets to, and writes no gh login into runner's home", () => {
