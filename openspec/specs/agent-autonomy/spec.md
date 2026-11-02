@@ -337,7 +337,7 @@ SHALL write neither where it would hold the pull request back.
 
 `core/review-toolkit.md` SHALL cap `/coderabbit` on a pull request at three
 rounds that apply fixes. A round is CodeRabbit's review of one commit — a
-review whose author's login starts with `coderabbitai`, never one by the
+review whose author's login is exactly `coderabbitai[bot]`, never one by the
 App's `laidrivm-harness-agent[bot]` — and the run SHALL count the rounds from
 the pull request's reviews. A run working the fourth round or
 a later one, whose review carries a finding the run would apply, SHALL apply

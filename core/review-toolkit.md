@@ -145,8 +145,9 @@ retry spends the same limit.
   what the pull request holds — a second review, and a collapsed out-of-grid
   section, are each counted separately. A pull request gets fixes for at most
   three rounds, a round being CodeRabbit's review of one commit: count the
-  distinct commits that the pull request's reviews by a `coderabbitai` login
-  name, never the App's `laidrivm-harness-agent[bot]`, so a session with no
+  distinct commits named by the pull request's reviews whose login is
+  exactly `coderabbitai[bot]`, the reviews the skill keeps, never the App's
+  `laidrivm-harness-agent[bot]`, so a session with no
   memory of the earlier rounds reaches the same count. A fourth round or later
   whose review carries a finding the run would apply gets none applied: the
   run reports each finding left with its severity, file and line, names the
