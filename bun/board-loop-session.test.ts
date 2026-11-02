@@ -241,7 +241,7 @@ describe("the stage session's id", () => {
 		const { dir } = clone();
 		const r = run(dir);
 		const ids = [...r.calls.matchAll(/--session-id (\S+)/g)].map((m) => m[1]);
-		const [row] = readFileSync(join(r.home, "orchestrator", "pr-sessions.jsonl"), "utf8")
+		const [row = "{}"] = readFileSync(join(r.home, "orchestrator", "pr-sessions.jsonl"), "utf8")
 			.split("\n")
 			.filter(Boolean);
 		expect(ids).toEqual([JSON.parse(row).session]);

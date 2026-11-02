@@ -69,7 +69,7 @@ describe("the mint", () => {
 			out: "ghs_minted\n",
 			err: "",
 		});
-		expect(JSON.parse(seen[1].body)).toEqual({
+		expect(JSON.parse(seen[1]?.body ?? "")).toEqual({
 			repositories: ["demo"],
 			permissions: { contents: "write", pull_requests: "read" },
 		});
@@ -78,7 +78,7 @@ describe("the mint", () => {
 	test("workflows at write, the board loop's push of a workflow file, is in the set", async () => {
 		seen = [];
 		expect((await main(["o/demo", "workflows=write"], files())).code).toBe(0);
-		expect(JSON.parse(seen[1].body).permissions).toEqual({ workflows: "write" });
+		expect(JSON.parse(seen[1]?.body ?? "").permissions).toEqual({ workflows: "write" });
 	});
 
 	test("--slug prints the App's slug", async () => {

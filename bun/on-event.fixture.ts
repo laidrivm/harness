@@ -44,10 +44,10 @@ export async function run(h: Host, args: string[], body?: string | Uint8Array, e
 		env: { PATH: process.env.PATH ?? "", HOME: h.home, PASS_SECRETS: h.secrets, ...extra },
 	});
 	const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
-	const lines = out.split("\n").filter(Boolean);
-	expect(lines).toHaveLength(1);
-	expect(lines[0]).toMatch(/^event: (handled|ignored|duplicate|refused|failed) — \S/);
-	return { line: lines[0], code, all: out + err };
+	const [line = "", ...more] = out.split("\n").filter(Boolean);
+	expect(more).toHaveLength(0);
+	expect(line).toMatch(/^event: (handled|ignored|duplicate|refused|failed) — \S/);
+	return { line, code, all: out + err };
 }
 
 export const ping = (h: Host, body = PING, delivery = DELIVERY, signature = sign(body)) =>

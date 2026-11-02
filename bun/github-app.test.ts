@@ -59,7 +59,7 @@ afterAll(() => {
 
 /** A JWT's three parts, the first two decoded. */
 const parts = (token: string) => {
-	const [head, body, signature] = token.split(".");
+	const [head = "", body = "", signature = ""] = token.split(".");
 	const decode = (part: string) => JSON.parse(Buffer.from(part, "base64url").toString());
 	return { head: decode(head), body: decode(body), data: `${head}.${body}`, signature };
 };
@@ -84,7 +84,7 @@ describe("the calls", () => {
 			GIT_COMMITTER_EMAIL: "42+demo-app[bot]@users.noreply.github.com",
 		});
 		expect(seen.map((r) => `${r.method} ${r.path}`)).toEqual(["GET /app", "GET /users/demo-app[bot]"]);
-		expect(seen[0].auth).toStartWith("Bearer ");
+		expect(seen[0]?.auth).toStartWith("Bearer ");
 	});
 
 	// spec: board-loop/an-app-configured
@@ -95,14 +95,14 @@ describe("the calls", () => {
 			"GET /repos/o/demo/installation",
 			"POST /app/installations/99/access_tokens",
 		]);
-		expect(parts(seen[0].auth?.replace("Bearer ", "") ?? "").body.iss).toBe("7");
+		expect(parts(seen[0]?.auth?.replace("Bearer ", "") ?? "").body.iss).toBe("7");
 	});
 
 	// spec: board-loop/an-app-configured
 	test("the token names one repository and exactly contents, pull_requests and workflows at write [41]", async () => {
 		seen = [];
 		expect(await mint(app, BOARD)).toBe("ghs_minted");
-		expect(JSON.parse(seen[1].body)).toEqual({
+		expect(JSON.parse(seen[1]?.body ?? "")).toEqual({
 			repositories: ["demo"],
 			permissions: { contents: "write", pull_requests: "write", workflows: "write" },
 		});

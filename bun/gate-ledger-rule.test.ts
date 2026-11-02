@@ -47,8 +47,11 @@ describe("a rule given to ran()", () => {
 describe("the goal check asks for every runner step", () => {
 	// spec: stage-goal/the-project-checks-failed
 	test.each([
-		["checks `fail` [22]", (dir: string) => stateWith(runRecord(dir)[0], runRecord(dir, "fail")[1])],
-		["no checks record [23]", (dir: string) => stateWith(runRecord(dir)[0])],
+		[
+			"checks `fail` [22]",
+			(dir: string) => stateWith(...runRecord(dir).slice(0, 1), ...runRecord(dir, "fail").slice(1)),
+		],
+		["no checks record [23]", (dir: string) => stateWith(...runRecord(dir).slice(0, 1))],
 	])("budget `pass` with %s is open, naming the missing passing record", (_, state) => {
 		const dir = tasks(TWO);
 		const r = run(dir, ["apply", "demo", "2"], { state: state(dir) });

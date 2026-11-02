@@ -183,7 +183,7 @@ describe("a card reconciled against its floor", () => {
 	test("a discarded card is left, its change directory existing", () => {
 		const floor = boardState(fabricate(complete("bot-notion-writes"))).status["bot-notion-writes"];
 		expect(floor).toBe("proposed");
-		expect(corrected("discarded", floor)).toBeUndefined();
+		expect(corrected("discarded", floor ?? "proposed")).toBeUndefined();
 		expect(corrected("discarded", "done")).toBeUndefined();
 	});
 

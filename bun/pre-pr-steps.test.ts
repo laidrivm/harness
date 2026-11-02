@@ -50,11 +50,11 @@ describe("a branch with no pull request open", () => {
 	});
 
 	test.each([["README.MD [8]"], ["openspec-notes.txt [9]"], ["notes.md.ts [10]"]])("%s is code", (path) => {
-		expect(required([path.split(" ")[0]], false)).toEqual(CODE);
+		expect(required(path.split(" ", 1), false)).toEqual(CODE);
 	});
 
 	test.each([["package.json.bak [11]"], ["bun.lockb [12]"]])("%s brings no `warm`", (path) => {
-		expect(required([path.split(" ")[0]], false)).toEqual(CODE);
+		expect(required(path.split(" ", 1), false)).toEqual(CODE);
 	});
 
 	// spec: pre-pr-runner/a-lockfile-alone

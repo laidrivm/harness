@@ -66,7 +66,7 @@ describe("the pick", () => {
 	});
 
 	/** The pick session's prompt, the log up to the stage session. */
-	const pickOf = (dir: string) => run(dir).calls.split("\nclaude -p /goal")[0];
+	const pickOf = (dir: string) => run(dir).calls.split("\nclaude -p /goal")[0] ?? "";
 
 	// spec: board-loop/a-picked-card-is-claimed
 	test("the pick prompt names the board by its harness.board value and lists the takeable slugs [21], and claims the picked card alone [1]", () => {

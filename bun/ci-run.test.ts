@@ -93,7 +93,7 @@ describe("the re-read under the lock", () => {
 	// spec: orchestrator/a-pull-request-on-the-loops-branch-that-the-app-did-not-open
 	test("a pull request someone else opened is ignored, printing its number [65]", async () => {
 		const h = host();
-		api.pulls[0].user.login = "laidrivm";
+		api.pulls = api.pulls.map((pull) => ({ ...pull, user: { login: "laidrivm" } }));
 		ignored(await deliver(h, payload()), /#7/);
 		expect(api.posted).toEqual([]);
 	});
@@ -101,7 +101,7 @@ describe("the re-read under the lock", () => {
 	// spec: orchestrator/a-stale-run
 	test("a head that moved past the run's is stale", async () => {
 		const h = host();
-		api.pulls[0].head.sha = "b".repeat(40);
+		api.pulls = api.pulls.map((pull) => ({ ...pull, head: { sha: "b".repeat(40) } }));
 		ignored(await deliver(h, payload()), /stale/);
 		expect(api.posted).toEqual([]);
 	});
@@ -234,7 +234,7 @@ describe("the repository's lock", () => {
 			for (const [origin, owner, repo] of [
 				["https://github.com/Laid-Drivm/Harness.git", "Laid-Drivm", "Harness"],
 				["git@github.com:laid/drivm-harness.git", "laid", "drivm-harness"],
-			])
+			] as const)
 				expect(lockOf(owner, repo)).toBe(`/state/locks/${keyOf(origin)}.lock`);
 			expect(lockOf("Laid-Drivm", "Harness")).not.toBe(lockOf("laid", "drivm-harness"));
 		} finally {

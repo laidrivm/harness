@@ -41,14 +41,14 @@ describe("a question posted", () => {
 		expect(await ask(url, home(), [CARD, asked()])).toEqual({ line: SET, code: 0 });
 		expect(calls(seen)).toEqual(["POST /v1/comments", ASSIGN]);
 		for (const s of seen) expect([s.version, s.auth]).toEqual(["2025-09-03", `Bearer ${TOKEN}`]);
-		expect(seen[0].body).toEqual({
+		expect(seen[0]?.body).toEqual({
 			parent: { page_id: CARD },
 			rich_text: [
 				{ type: "text", text: { content: "harness-question" }, annotations: { code: true } },
 				{ type: "text", text: { content: " Ship the hook as one group?" } },
 			],
 		});
-		expect(seen[1].body).toEqual({ properties: { Assign: { people: [{ id: USER }] } } });
+		expect(seen[1]?.body).toEqual({ properties: { Assign: { people: [{ id: USER }] } } });
 	});
 
 	// spec: task-board/a-question-posted-from-the-laptop
@@ -244,10 +244,12 @@ describe("the ask settings, as work.ts reads them", () => {
 		if (typeof found === "string") throw new Error(found);
 		expect(found.settings).toEqual({ token: TOKEN, user: USER });
 		await found.call("the comments read", `/v1/comments?block_id=${CARD}`);
+		const [first] = seen;
+		if (!first) throw new Error("the stub saw no call");
 		expect(seen.at(-1)).toEqual({
 			call: "GET /v1/comments",
-			auth: seen[0].auth,
-			version: seen[0].version,
+			auth: first.auth,
+			version: first.version,
 			body: undefined,
 		});
 	});

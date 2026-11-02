@@ -36,6 +36,6 @@ export const ASK = "pr comment 7 -R o/demo --body @coderabbitai review";
 
 /** `finish` on draft #7 in a checkout tracking `.coderabbit.yaml`, the check runs answering `answers` in turn, and the rest of the stub `more`. */
 export async function watched(answers: (object[] | number)[], more: Gh = {}) {
-	const cwd = checkout(true);
-	return { cwd, ...(await finish({ cwd, gh: { before: DRAFT, runs: answers, ...more } })) };
+	// `finish` hands back the `cwd` it ran in.
+	return finish({ cwd: checkout(true), gh: { before: DRAFT, runs: answers, ...more } });
 }

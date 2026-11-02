@@ -54,7 +54,7 @@ describe("state", () => {
 		["a success titled Review skipped", [run("completed", "success", "Review skipped: draft pull request")], "skipped"],
 		["a success with no output at all", [{ ...DONE, output: null }], "reviewed"],
 	])("%s gives %p", (_, runs, name) => {
-		expect(state(runs).name).toBe(name);
+		expect<string>(state(runs).name).toBe(name);
 	});
 
 	test("a neutral run with another title gives that conclusion and title", () => {

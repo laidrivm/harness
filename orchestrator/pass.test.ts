@@ -116,7 +116,7 @@ describe.skipIf(skip)(`pass.sh${skip ? " — skipped: flock is not on PATH; CI's
 				const logs = readdirSync(join(h.state, "passes"));
 				expect(logs).toHaveLength(1);
 				expect(logs[0]).toMatch(/^\d{8}T\d{6}Z-repo\.log$/);
-				expect(readFileSync(join(h.state, "passes", logs[0]), "utf8")).toBe(r.out);
+				expect(readFileSync(join(h.state, "passes", logs[0] ?? ""), "utf8")).toBe(r.out);
 				expect(passEnv(r.out).HOME).toBe(h.home);
 				expect(r.last).toBe(status === 0 ? IDLE : OPEN);
 			},

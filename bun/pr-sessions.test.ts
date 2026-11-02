@@ -60,7 +60,7 @@ describe("an append", () => {
 		append(step("o/r", "feat/x", "s"), file);
 		const lines = readFileSync(file, "utf8").split("\n").filter(Boolean);
 		expect(lines.length).toBe(1);
-		const row = JSON.parse(lines[0]);
+		const row = JSON.parse(lines[0] ?? "");
 		expect(Object.keys(row)).toEqual(["repo", "branch", "session", "clone", "at"]);
 		expect(new Date(row.at).toISOString()).toBe(row.at);
 		// The runner's alone: on the host no session user may read which session carries which pull request.

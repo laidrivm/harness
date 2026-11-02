@@ -59,7 +59,15 @@ describe("the record of a run", () => {
 		const dir = repo({}, { "a.ts": lines(3) });
 		const { state } = run(dir);
 		const [record] = records(state);
-		expect(Object.keys(record).sort()).toEqual(["at", "commit", "decision", "gate", "project", "rule", "session"]);
+		expect(Object.keys(record ?? {}).sort()).toEqual([
+			"at",
+			"commit",
+			"decision",
+			"gate",
+			"project",
+			"rule",
+			"session",
+		]);
 		expect(readFileSync(ledger(state), "utf8")).not.toContain("DIFF gate");
 	});
 
@@ -161,7 +169,7 @@ describe("when no record is written", () => {
 		const commands = readFileSync(join(import.meta.dir, "..", ".githooks/pre-push"), "utf8")
 			.split("\n")
 			.filter((line) => line.trim() && !line.startsWith("#"));
-		const [unset, draft, suite] = [
+		const [unset = -1, draft = -1, suite = -1] = [
 			"unset $(git rev-parse --local-env-vars)",
 			'bun bun/push-draft.ts "$@"',
 			"bun test",

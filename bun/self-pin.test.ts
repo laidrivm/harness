@@ -115,7 +115,7 @@ describe("the status guard the harness keeps to itself", () => {
 	test("is a PreToolUse group of its own under the update-page and create-pages matcher, in the foreground with no if and no mark", () => {
 		// The whole group: another matcher, an `if`, `async`, `asyncRewake`, `shell` or `args` would change whether it runs or blocks.
 		expect(hooks().PreToolUse).toContainEqual(STATUS_GUARD);
-		expect(STATUS_GUARD.hooks[0].command.endsWith(MARK)).toBe(false);
+		expect(STATUS_GUARD.hooks[0]?.command.endsWith(MARK)).toBe(false);
 		expect(HOOKS.filter((hook) => hook.command.includes("status-guard.ts"))).toEqual([]);
 	});
 

@@ -38,7 +38,7 @@ describe("the tree is origin/main's", () => {
 		commit(dir, archived("demo", "2026-10-27", true));
 		const run = await status({ args: to("done"), cwd: dir });
 		refused(run, "no-evidence");
-		expect([run.refusals[0].commit, run.refusals[0].project, run.left]).toEqual([head(seed), realpathSync(dir), []]);
+		expect([run.refusals[0]?.commit, run.refusals[0]?.project, run.left]).toEqual([head(seed), realpathSync(dir), []]);
 	});
 
 	// spec: work-status/the-fetch-fails

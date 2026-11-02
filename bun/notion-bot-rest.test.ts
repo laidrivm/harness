@@ -47,20 +47,20 @@ describe("a question posted", () => {
 	test("the comment is a code-annotated mark run, then the text; the PATCH sets Assign alone [20]", async () => {
 		const seen = notion();
 		await line();
-		expect(seen[3].body).toEqual({
+		expect(seen[3]?.body).toEqual({
 			parent: { page_id: CARD },
 			rich_text: [
 				{ type: "text", text: { content: "harness-question" }, annotations: { code: true } },
 				{ type: "text", text: { content: " Ship the hook as one group?" } },
 			],
 		});
-		expect(seen[4].body).toEqual({ properties: { Assign: { people: [{ id: USER }] } } });
+		expect(seen[4]?.body).toEqual({ properties: { Assign: { people: [{ id: USER }] } } });
 	});
 
 	test("a user to mention follows the mark run as a mention run, and the text after it", async () => {
 		const seen = notion();
 		await comment(client(TOKEN), CARD, "`harness-pause` Paused.", "harness-pause", USER);
-		const [mark, ...rest] = (seen[0].body as { rich_text: unknown[] }).rich_text;
+		const [mark, ...rest] = (seen[0]?.body as { rich_text: unknown[] }).rich_text;
 		expect(mark).toEqual({ type: "text", text: { content: "harness-pause" }, annotations: { code: true } });
 		expect(rest).toEqual([
 			{ type: "mention", mention: { type: "user", user: { id: USER } } },

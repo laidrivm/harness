@@ -133,7 +133,8 @@ describe("the records of a run", () => {
 	// spec: pre-pr-runner/a-run-stopped-before-its-records
 	test("checks that kill the runner leave no record, the budget's included [12]", () => {
 		const result = run(within("kill $PPID"));
-		expect([result.code, records(result.state)]).toEqual([null, []]);
+		// `exitCode` is typed a number, but a killed run's is null.
+		expect<unknown[]>([result.code, records(result.state)]).toEqual([null, []]);
 	});
 
 	// spec: pre-pr-runner/a-record-of-one-step-only

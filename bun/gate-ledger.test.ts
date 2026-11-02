@@ -136,10 +136,12 @@ describe("the project a record names", () => {
 	// spec: gate-ledger/two-projects gate-ledger/two-checkouts-sharing-a-name
 	test("two checkouts sharing a basename record different projects", () => {
 		const state = dir();
-		const [clone, fork] = [dir(), dir()].map((parent) => {
+		const app = () => {
+			const parent = dir();
 			mkdirSync(join(parent, "app"));
 			return join(parent, "app");
-		});
+		};
+		const [clone, fork] = [app(), app()];
 		for (const root of [clone, fork]) write(envOf({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: root }));
 		expect(records(state).map((r) => r.project)).toEqual([clone, fork].map((root) => realpathSync(root)));
 	});
