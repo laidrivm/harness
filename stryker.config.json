@@ -8,5 +8,5 @@
 	"incremental": true,
 	"tempDirName": ".stryker-tmp",
 	"tsconfigFile": "tsconfig.stryker-none.json",
-	"ignorePatterns": [".claude", "mutation"]
+	"ignorePatterns": ["/.claude/worktrees", "/.claude/skills", "mutation"]
 }

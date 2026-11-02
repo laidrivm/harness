@@ -84,6 +84,18 @@ const results = JSON.stringify({
 	},
 });
 
+/**
+ * A stub of Stryker's `bunx`: writes `results` to the configuration's
+ * incremental file, records its arguments in `calls`, and exits 1 once if
+ * `fail-once` is there. Programs by path: the stub's `PATH` holds git and bun alone.
+ */
+const stryker = [
+	`f=$(/usr/bin/sed -n 's/.*"incrementalFile":"\\([^"]*\\)".*/\\1/p' "$4")`,
+	`printf '%s' '${results}' > "$f"`,
+	`echo "$@" >> calls`,
+	"if [ -f fail-once ]; then /bin/rm fail-once; exit 1; fi",
+].join("\n");
+
 describe("the command", () => {
 	test("a module to run with no node on PATH fails naming Node", () => {
 		const { code, err } = cli(repository(), path({ bunx: "exit 0" }));
@@ -104,8 +116,6 @@ describe("the command", () => {
 	// spec: mutation-floor/a-push-whose-run-rewrote-a-stored-file
 	test("a written stored file fails until committed, and then passes without mutating", () => {
 		const dir = repository();
-		// `/bin/mkdir` by path: the stub's `PATH` holds git and bun alone.
-		const stryker = `/bin/mkdir -p mutation && printf '%s' '${results}' > mutation/a.json`;
 		const first = cli(dir, path({ node: "exit 0", bunx: stryker }));
 		expect(first.code).toBe(1);
 		expect(first.err).toContain("mutation/a.json differs from HEAD's");
@@ -118,6 +128,36 @@ describe("the command", () => {
 		git(dir, "commit", "-qm", "results");
 		expect(cli(dir, path({ node: "exit 0", bunx: "exit 3" })).code).toBe(0);
 		expect(JSON.parse(readFileSync(join(dir, REPORT), "utf8")).files["bun/a.ts"].mutants).toHaveLength(1);
+	});
+
+	// spec: mutation-floor/a-run-asked-for-every-module
+	test("an interrupted run leaves the stored file whole and resumes, without --force, from its partial copy", () => {
+		const dir = repository();
+		cli(dir, path({ node: "exit 0", bunx: stryker }));
+		git(dir, "add", "mutation");
+		git(dir, "commit", "-qm", "results");
+		const stored = readFileSync(join(dir, "mutation/a.json"), "utf8");
+		write(dir, { "bun/a.test.ts": "2\n" });
+		git(dir, "commit", "-qam", "a changed test");
+		write(dir, { "fail-once": "", calls: "" });
+		const bin = path({ node: "exit 0", bunx: stryker });
+		expect(cli(dir, bin).err).toContain("Stryker exited 1 on bun/a.ts");
+		expect(readFileSync(join(dir, "mutation/a.json"), "utf8")).toBe(stored);
+		expect(cli(dir, bin).err).toContain("mutation/a.json differs from HEAD's");
+		const calls = readFileSync(join(dir, "calls"), "utf8").trim().split("\n");
+		expect(calls.map((call) => call.endsWith("--force"))).toEqual([true, false]);
+	});
+
+	test("a named module with no test file fails, and a named run writes no report", () => {
+		const dir = repository({ "bun/b.ts": "1\n" });
+		const bin = path({ node: "exit 0", bunx: stryker });
+		const run = (arg: string) => Bun.spawnSync(["bun", script, arg], { cwd: dir, env: { PATH: bin }, stderr: "pipe" });
+		expect(run("bun/b.ts").stderr.toString()).toContain("bun/b.ts has no test file to judge its mutants");
+		expect(run("bun/a.ts").exitCode).toBe(1);
+		git(dir, "add", "-A");
+		git(dir, "commit", "-qm", "results");
+		expect(run("bun/a.ts").exitCode).toBe(0);
+		expect(existsSync(join(dir, REPORT))).toBe(false);
 	});
 
 	test("a stored file differing from HEAD's, or untracked, is named", () => {

@@ -10,8 +10,9 @@
  * every module with tests, each incrementally, so an interrupted baseline
  * resumes; `--force` re-runs each one whole; named modules narrow the run.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, posix } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, posix } from "node:path";
+import { REPORT } from "./mutation-floor.ts";
 import { root } from "./root.ts";
 
 export type Mutant = { id: string; mutatorName: string; location: unknown; replacement?: string; status: string };
@@ -117,9 +118,10 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 			continue;
 		}
 		const print = fingerprint(module, tree);
-		const dirty = Object.keys(print).filter((path) => tree.dirty.includes(path));
+		// The module too: its results would otherwise describe a source `HEAD` does not hold.
+		const dirty = [module, ...Object.keys(print)].filter((path) => tree.dirty.includes(path));
 		if (dirty.length) {
-			problems.push(`${module}: commit ${dirty.join(", ")} first — results are measured against HEAD's tests`);
+			problems.push(`${module}: commit ${dirty.join(", ")} first — results are measured against HEAD's copy`);
 			continue;
 		}
 		const path = storedPath(module);
@@ -204,11 +206,16 @@ function load(top: string): Tree {
 	const text: Record<string, string> = {};
 	for (const path of tracked.filter((p) => p === "bunfig.toml" || /^bun\/[^/]+\.ts$/.test(p)))
 		if (existsSync(join(top, path))) text[path] = readFileSync(join(top, path), "utf8");
+	return { tracked, blobs, text, stored: storedFiles(top), dirty: changed(top) };
+}
+
+/** The text of each `mutation/<name>.json` under `top`, by its path. */
+function storedFiles(top: string): Record<string, string> {
 	const dir = join(top, "mutation");
 	const stored: Record<string, string> = {};
 	for (const name of existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith(".json")) : [])
 		stored[`mutation/${name}`] = readFileSync(join(dir, name), "utf8");
-	return { tracked, blobs, text, stored, dirty: changed(top) };
+	return stored;
 }
 
 function fail(problems: string[]): void {
@@ -217,51 +224,71 @@ function fail(problems: string[]): void {
 	process.exit(1);
 }
 
-/** Stryker on one module, its per-module values in a configuration file of their own — no flag takes the command. */
-function stryker(top: string, { module, force }: Run): number {
+/**
+ * Stryker on one module, its per-module values in a configuration file of
+ * their own — no flag takes the command — and its results in a working copy
+ * of the stored file under `.stryker-tmp`, named by `print`. On an interrupt
+ * Stryker saves its partial results over the file it reads, so the stored
+ * file stays whole, and the next run against the same tests resumes from the
+ * partial copy rather than from the start, `--force` or not. Trims a finished
+ * run's copy into the stored file.
+ */
+function stryker(top: string, { module, force }: Run, print: Record<string, string>): number {
 	const { $schema: _, ...shared } = JSON.parse(readFileSync(join(top, "stryker.config.json"), "utf8"));
-	const config = join(top, ".stryker-tmp", `${stem(module).slice("bun/".length)}.config.json`);
-	mkdirSync(join(top, ".stryker-tmp"), { recursive: true });
-	const own = {
-		mutate: [module],
-		commandRunner: { command: `bun test ${stem(module)}` },
-		incrementalFile: storedPath(module),
-	};
+	const tmp = join(top, ".stryker-tmp");
+	const name = stem(module).slice("bun/".length);
+	const [config, work] = [
+		join(tmp, `${name}.config.json`),
+		join(tmp, `${name}-${Bun.hash(JSON.stringify(print))}.json`),
+	];
+	const stored = join(top, storedPath(module));
+	mkdirSync(tmp, { recursive: true });
+	const resumed = existsSync(work);
+	if (!resumed && existsSync(stored)) copyFileSync(stored, work);
+	const own = { mutate: [module], commandRunner: { command: `bun test ${stem(module)}` }, incrementalFile: work };
 	writeFileSync(config, JSON.stringify({ ...shared, ...own }));
-	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force ? ["--force"] : [])];
+	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force && !resumed ? ["--force"] : [])];
 	const run = Bun.spawnSync(args, { cwd: top, stdio: ["inherit", "inherit", "inherit"] });
 	rmSync(config, { force: true });
-	return run.exitCode;
+	if (run.exitCode !== 0) return run.exitCode;
+	mkdirSync(dirname(stored), { recursive: true });
+	writeFileSync(stored, `${JSON.stringify(trim(JSON.parse(readFileSync(work, "utf8")), print), null, "\t")}\n`);
+	rmSync(work);
+	return 0;
 }
 
 if (import.meta.main) {
+	// First, so a run that stops anywhere leaves no report for the floor to count.
+	rmSync(REPORT, { force: true });
 	const args = process.argv.slice(2);
 	const flags = { all: args.includes("--all"), force: args.includes("--force") };
 	const named = args.filter((arg) => !arg.startsWith("--"));
 	fail(
 		args.filter((arg) => arg.startsWith("--") && !["--all", "--force"].includes(arg)).map((a) => `unknown option ${a}`),
 	);
-	const report = join(root, "reports", "mutation", "mutation.json");
-	// First, so a run that stops anywhere leaves no report for the floor to count.
-	rmSync(report, { force: true });
 	const tree = load(root);
 	const { runs, untested, problems } = plan(tree, flags);
 	for (const module of untested) console.log(`not mutated, no test file matches it: ${module}`);
 	const known = modules(tree.tracked);
-	fail([...problems, ...named.filter((m) => !known.includes(m)).map((m) => `${m} is not a tracked module`)]);
+	fail([
+		...problems,
+		...named.filter((m) => !known.includes(m)).map((m) => `${m} is not a tracked module`),
+		...named.filter((m) => untested.includes(m)).map((m) => `${m} has no test file to judge its mutants`),
+	]);
 	const chosen = named.length ? runs.filter((run) => named.includes(run.module)) : runs;
 	if (chosen.length && !Bun.which("node")) fail(["Stryker needs Node on PATH, and none was found"]);
 	for (const run of chosen) {
-		const code = stryker(root, run);
+		const code = stryker(root, run, fingerprint(run.module, tree));
 		if (code !== 0) fail([`Stryker exited ${code} on ${run.module}`]);
-		const path = join(root, storedPath(run.module));
-		const written = trim(JSON.parse(readFileSync(path, "utf8")), fingerprint(run.module, tree));
-		writeFileSync(path, `${JSON.stringify(written, null, "\t")}\n`);
 	}
 	fail(
 		unsaved(root).map((path) => `${path} differs from HEAD's — commit it, and the same run passes without mutating`),
 	);
-	const stored = Object.values(load(root).stored).map((text) => JSON.parse(text));
-	mkdirSync(join(root, "reports", "mutation"), { recursive: true });
-	writeFileSync(report, JSON.stringify(merge(stored)));
+	// A narrowed run left the other modules unchecked, so a report from it would be a count nobody verified.
+	if (named.length) {
+		console.log("named modules measured; no report written — run without names for the one the floor reads");
+		process.exit(0);
+	}
+	mkdirSync(dirname(REPORT), { recursive: true });
+	writeFileSync(REPORT, JSON.stringify(merge(Object.values(storedFiles(root)).map((text) => JSON.parse(text)))));
 }

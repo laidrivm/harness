@@ -182,11 +182,14 @@ describe("what a run mutates", () => {
 });
 
 describe("what fails the run before it mutates", () => {
-	test.each(["bun/board.test.ts", "bun/command-guard.fixture.ts", "bunfig.toml"])("a dirty %s", (path) => {
-		const { problems } = plan({ ...current(), dirty: [path] });
-		expect(problems.length).toBeGreaterThan(0);
-		expect(problems.every((problem) => problem.includes(path))).toBe(true);
-	});
+	test.each(["bun/board.ts", "bun/board.test.ts", "bun/command-guard.fixture.ts", "bunfig.toml"])(
+		"a dirty %s",
+		(path) => {
+			const { problems } = plan({ ...current(), dirty: [path] });
+			expect(problems.length).toBeGreaterThan(0);
+			expect(problems.every((problem) => problem.includes(path))).toBe(true);
+		},
+	);
 
 	// spec: mutation-floor/a-stored-file-outliving-its-module
 	test("a stored file of an untracked module", () => {

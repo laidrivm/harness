@@ -101,18 +101,28 @@ first. The gate joins the hook once the last fix lands.
 `stryker.config.json` holds what every run shares: the command runner,
 `thresholds.break: null`, `incremental: true`,
 `tempDirName: .stryker-tmp`, `tsconfigFile` naming an absent file, and
-`ignorePatterns` covering `.claude` (the
-worktrees, which the sandbox would otherwise copy) and `mutation`. No `json`
+`ignorePatterns` covering `/.claude/worktrees` (which the sandbox would
+otherwise copy), `/.claude/skills` (directory symlinks, whose copy fails
+`ENOTSUP`) and `mutation` — not all of `.claude`, whose tracked
+`settings.json` `bun/pre-pr-steps.test.ts` reads. No `json`
 reporter: a run's own report covers one module, and the merge below writes the
 one the floor reads. The absent `tsconfigFile` is d2ass's answer to the same
 fault, measured again by the probe: Stryker's tsconfig preprocessor calls
 `ts.parseConfigFileTextToJson`, which TypeScript 7.0.2 does not expose, and it
 skips itself when the file it is pointed at is not there. `bun/mutation-run.ts` supplies
 the per-module values — `mutate: bun/<name>.ts`, the command
-`bun test bun/<name>`, `incrementalFile: mutation/<name>.json` — in a
+`bun test bun/<name>` — in a
 configuration file it writes under `.stryker-tmp` for that run and deletes
-after it: the probe found no flag that takes the command. Modules named on its
-command line narrow a run to them, so one module can be measured alone.
+after it: the probe found no flag that takes the command. Its
+`incrementalFile` is a working copy of `mutation/<name>.json` under
+`.stryker-tmp`, named by the fingerprint, trimmed into the stored file once the
+run finishes: on an interrupt Stryker saves its partial results over the file
+it reads, so the stored file stays whole, and the next run against the same
+tests resumes from the copy, without `--force`. Modules named on its command
+line narrow a run to them, so one module can be measured alone, and such a run
+writes no report, the other modules being unchecked. The module's own source
+counts as dirty beside its tests, since its results would otherwise describe
+a source `HEAD` does not hold.
 
 A module runs when its tracked source differs from the copy its stored file
 holds (`files[path].source`), incrementally, or whole when it has no stored
