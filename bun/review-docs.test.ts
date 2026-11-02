@@ -152,7 +152,9 @@ describe("the /coderabbit bullet's round-two rule", () => {
 	// spec: agent-autonomy/a-minor-in-a-change-s-artefact-or-in-code-from-the-second-round
 	test("starts at the second round and dates a Minor by the review that posted it [1]", () => {
 		expect(text()).toContain("From the second round on, a 🟡 Minor outside the living docs");
+		expect(text()).toContain("is deferred, not applied");
 		expect(text()).toContain("the review that posted it");
+		expect(text()).toContain("commits ordered by their first CodeRabbit review");
 		expect(text()).toContain("never the count when the run starts");
 	});
 
@@ -167,6 +169,8 @@ describe("the /coderabbit bullet's round-two rule", () => {
 	// spec: agent-autonomy/a-minor-deferred-in-an-earlier-round
 	test("names the tail card and the Skipped form, and writes no Minor twice [3]", () => {
 		expect(text()).toContain("`CodeRabbit Minors deferred from <owner>/<repo>#<N>`");
+		expect(text()).toContain("on the board of the repository that would ship the fix");
+		expect(text()).toContain("the harness's, for a consumer's `harness/*.md`");
 		expect(text()).toContain("`deferred to <card>`");
 		expect(text()).toContain("a Minor the card already holds is not written again");
 	});
@@ -200,6 +204,13 @@ describe("the coderabbit skill honours a project's deferral", () => {
 		const at = doc.indexOf(DEFERS);
 		expect(at).toBeGreaterThan(doc.indexOf("### 5."));
 		expect(at).toBeLessThan(doc.indexOf("### 6."));
+	});
+
+	// spec: agent-autonomy/a-policy-defers-a-major
+	test("a Major or above deferred by a policy is a dismissal put to the user", () => {
+		expect(block(skill(), DEFERS) ?? "").toContain(
+			"A 🟠 Major or 🔴 Critical deferred this way is a dismissal, and is put to the user",
+		);
 	});
 
 	// spec: agent-autonomy/a-policy-defers-a-minor
