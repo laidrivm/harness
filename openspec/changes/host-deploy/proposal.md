@@ -21,8 +21,8 @@ deploy acts.
 ## What Changes
 
 - A root timer on the host, every five minutes, runs `orchestrator/deploy.sh`.
-  When `origin/main`'s head is not the commit last deployed and its `test`
-  check has passed, the script fast-forwards `/root/harness`, tags the image
+  When `origin/main`'s head is neither the commit last deployed nor the one
+  last rolled back, and its `test` check has passed, the script fast-forwards `/root/harness`, tags the image
   the runner runs now as the previous one, and builds the images, as on
   `main` today. The webhook kick of answer 12а moves to stage 6.
 - The script then acts only while the session is fresh: after the user's

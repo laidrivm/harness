@@ -47,11 +47,14 @@ the harness pin; another repository's host.
 
 ### The timer alone starts the deploy — a revision of answer 12а
 
-`orchestrator/host/harness-deploy.service` is `Type=oneshot` and runs
-`/root/harness/orchestrator/deploy.sh` as root, with
+`orchestrator/host/harness-deploy.service` is `Type=oneshot` with
+`ExecStart=/root/harness/orchestrator/deploy.sh`, run as root, with
 `WorkingDirectory=/root/harness/orchestrator`,
 `StateDirectory=harness-deploy` and `TimeoutStartSec=3h`, which bounds a hung
-build; a run it kills records nothing, and the next tick starts again.
+build. A run the timeout kills is the one failure after the fast-forward that
+writes no failure file: the script is gone before it could. It records
+nothing either, the journal names the timeout, and the next tick starts again
+from the first step.
 `orchestrator/host/harness-deploy.timer` starts it with `OnBootSec=5min` and
 `OnUnitInactiveSec=5min`, `[Install] WantedBy=timers.target`. systemd runs one
 instance of a unit, so two ticks never deploy at once.
@@ -182,7 +185,8 @@ each clone's stop file. It gains one write before those: the failure file
 `~/.harness-deploy-failed` in agent's home, through the volume's mount point,
 owned as that home is, so the session can remove it. One line,
 `<time> deploy: <step> failed at <sha>`, replacing an older one. Every step
-after the fast-forward calls it, the rollback included, so a failed build is
+after the fast-forward calls it, the rollback included (a run the service's
+timeout kills cannot, *The timer alone starts the deploy*), so a failed build is
 reported at the next `/clear` as a rolled-back runner is. A fetch or a check
 read that fails writes nothing, as on `main`: the host is still on a working
 commit.
