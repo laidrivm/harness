@@ -17,23 +17,27 @@ severity threshold` is not a reason on its own» forbid a skip by label.
 
 ## What Changes
 
-- From CodeRabbit's second round on, a pull request's `/coderabbit` run
-  applies Major and above, and the Minors under `openspec/specs/**` or
-  `core/**`. Every other Minor (a change's artefacts under
-  `openspec/changes/**`, code, anything else) is deferred to one tail card
-  for the pull request and is not applied. The first round keeps fixing
-  every verified finding. The rule goes in `core/review-toolkit.md`'s
-  `/coderabbit` bullet, beside the three-round cap (the user's answer 1 b on
-  the card).
+- From a pull request's second round on, `/coderabbit` applies Major and
+  above, and the Minors in the living docs. The living docs are
+  `openspec/specs/**` and `core/**` (the user's answer 1 b on the card), and
+  three more: a change's delta specs, which become living specs at sync;
+  `CLAUDE.md`; and the files `.coderabbit.yaml` names under
+  `code_guidelines`, where a consumer's rulebook sits. Every other Minor (a
+  change's proposal, design and tasks, code, anything else) is deferred to
+  one tail card for the pull request and is not applied. A finding's round
+  is that of the commit its review names. The first round keeps fixing every
+  verified finding. The rule goes in `core/review-toolkit.md`'s
+  `/coderabbit` bullet, beside the three-round cap.
 - `core/skills/coderabbit/SKILL.md` step 5 gains one sentence: a project's
   policy may defer a finding to a card by its severity, path and round. The
   finding is listed under Skipped as `deferred to <card>` and counts in the
-  arithmetic. The two rules above are worded so a deferral the project's
-  policy makes is a reason, not a label.
+  arithmetic. Step 3's Minor line and the two rules above are worded so that
+  a deferral the project's policy makes is a reason, not a label.
 - `.coderabbit.yaml` gains `reviews.path_instructions` for
   `openspec/changes/**`. The text says such a file is a working artefact
-  headed for the archive, and asks for contradictions with a spec, the code
-  or another artefact, not for wording, duplication or style (answer 2 b).
+  headed for the archive, asks for contradictions with a spec, the code or
+  another artefact, and tells the bot not to flag wording, duplication or
+  style (answer 2 b). It excepts a delta spec, which is reviewed as a spec.
   `path_filters` stays unset: filtering the path out would have lost the
   Majors on #342, #346 and #347 and left a proposal pull request unreviewed.
 - Tests pin the round-two rule's wording in the toolkit, the skill's

@@ -3,11 +3,12 @@
 ### Requirement: The review bot reads a change's artefacts for contradictions
 
 The harness's `.coderabbit.yaml` SHALL carry under `reviews.path_instructions`
-an entry whose `path` is `openspec/changes/**` and whose `instructions` call
-the file a working artefact headed for the archive, and ask for
-contradictions with a spec, the code or another artefact, not for wording,
-duplication or style. A test SHALL pin the entry, reading it from the config the bot parses, and SHALL
-fail when it cannot.
+an entry whose `path` is `openspec/changes/**`. Its `instructions` SHALL call
+the file a working artefact headed for the archive, ask for contradictions
+with a spec, the code or another artefact, and tell the bot not to flag
+wording, duplication or style. They SHALL except a delta spec under a
+change's `specs/`, which becomes a living spec at sync. A test SHALL pin the
+entry, reading it from the config the bot parses.
 
 #### Scenario: The entry is missing
 
@@ -19,6 +20,6 @@ fail when it cannot.
 #### Scenario: The instructions lose their scope
 
 - **WHEN** the entry's `instructions` no longer ask for contradictions with a
-  spec, the code or another artefact, or no longer exclude wording,
-  duplication and style
+  spec, the code or another artefact, no longer tell the bot not to flag
+  wording, duplication or style, or no longer except a delta spec
 - **THEN** the test fails, naming the phrase that is gone
