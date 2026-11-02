@@ -8,7 +8,7 @@ cap.
 
 ## 1. Probe
 
-- [ ] 1.1 The user grants the ask integration *Insert content*. On a
+- [x] 1.1 The user grants the ask integration *Insert content*. On a
       throwaway card of the `Harness` board, through the integration under
       API version `2025-09-03`: read the top-level blocks, write `Pointer`,
       append a bulleted item `after` a named block, and read the item back,
@@ -21,8 +21,15 @@ cap.
       answered 200 and the item `[#383](…/pull/383) — apply` reads back
       directly after it, so *Insert content* is granted and `after` honoured.
       The `Pointer` write was not reached (the branch adds no file under
-      `openspec/changes/`), so this box stays open until a `Pointer` write
-      and its read-back are recorded here, with 3.3's
+      `openspec/changes/`), so the box stayed open for a `Pointer` write.
+      Closed by #392's own `finish --card`, 2026-11-02, on a branch adding
+      only `openspec/changes/archive/2026-11-01-finish-writes-card/`: it
+      said `finish: Pointer set to
+      openspec/changes/archive/2026-11-01-finish-writes-card/` and
+      `finish: #392 linked under Ссылки as archive`, and the card read back
+      on the board gives that `Pointer`, re-pointed from
+      `openspec/changes/finish-writes-card/`, and `[#392](…/pull/392) —
+      archive` once, directly after the `#383` item
 
 ## 2. The record
 
@@ -78,13 +85,15 @@ cap.
       whoever opened the pull request, since `finish` never writes it; the
       kinds read `proposal`, `apply`, `archive`; `README.md`'s `finish` row says it writes both, and needs
       the ask integration's *Update content* and *Insert content*
-- [ ] 3.3 `bun bun/pre-pr.ts origin/main` green; the PR opens through
+- [x] 3.3 `bun bun/pre-pr.ts origin/main` green; the PR opens through
       `bun bun/work.ts finish --card 40a39875c31b81f0b5f2c66f8e89de9e`, and
       the card's `Pointer` and `Ссылки` it writes are read back on the
       board. Done but the `Pointer`: pre-PR green, #383 opened that way, its
       `Ссылки` item read back; this branch adds no file under
       `openspec/changes/`, so no `Pointer` was written — the first
-      `finish --card` on a branch adding a change, read back, closes it
+      `finish --card` on a branch adding a change, read back, closes it:
+      #392's, pre-PR green and opened that way, its `Pointer` and `Ссылки`
+      item read back as 1.1 records
 
 ## 4. The user's answers of 2026-11-01
 
