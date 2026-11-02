@@ -29,16 +29,16 @@ The rule names what is pushed and defers the rest. Major and above are
 pushed anywhere, and so are Minors in the living docs:
 
 - `openspec/specs/**`;
-- a change's delta specs, `openspec/changes/<name>/specs/**`;
 - `CLAUDE.md`;
 - `core/**`.
 
-Every other Minor is deferred: a change's proposal, design and tasks, code,
-`README.md`, `.coderabbit.yaml`, and a consumer's own docs. The user's
-answer named `openspec/specs/**`, `core/`, the change's artefacts and code.
-The two other living paths extend it. A delta spec becomes `openspec/specs/**`
-text at sync, so a Minor deferred there only moves to the archive pull
-request. `CLAUDE.md` is loaded by every session. A consumer's `harness/*.md`
+Every other Minor is deferred: everything under `openspec/changes/**`, a
+change's delta specs included, code, `README.md`, `.coderabbit.yaml`, and a
+consumer's own docs. The user's answer named `openspec/specs/**`, `core/`,
+the change's artefacts and code, and the user added `CLAUDE.md` on 2026-11-02,
+since every session loads it. A delta spec stays on the deferred side by the
+same decision: a Minor deferred there may come back on the archive pull
+request, once the text is synced into `openspec/specs/**`. A consumer's `harness/*.md`
 is a copy that sync writes, and a rule is edited in the harness, never in the
 copy (`README.md`, step 4). So a Minor there is deferred, to a card on the
 harness's board, the repository that would ship the fix. Naming the pushed side leaves no path
@@ -99,15 +99,11 @@ reads at the step.
 One entry, `path: "openspec/changes/**"`, with instructions along these
 lines: "A working artefact of an OpenSpec change, headed for the archive.
 Flag contradictions with a spec, the code or another artefact. Do not flag
-wording, duplication or style. A delta spec under the change's `specs/`
-becomes a living spec at sync: review it as one." The test asserts the path
-and four phrases, with whitespace normalised: `archive`, `contradictions
-with a spec, the code or another artefact`, `Do not flag wording,
-duplication or style`, and `becomes a living spec at sync: review it as
-one`.
-The path stays the one the user chose. The exception for delta specs goes in
-the text, since a glob cannot exclude a subdirectory from one entry. The
-entry is meant to drop wording findings at every severity, the Majors that
+wording, duplication or style." The test asserts the path and three
+phrases, with whitespace normalised: `archive`, `contradictions with a spec,
+the code or another artefact`, and `Do not flag wording, duplication or
+style`. The entry covers the whole of `openspec/changes/**`, delta specs
+included, as the user decided on 2026-11-02. The entry is meant to drop wording findings at every severity, the Majors that
 drove #329 and #347's last round included; what it keeps is the
 contradictions. Rejected: `path_filters: ["!openspec/changes/**"]`. It would
 have lost every finding there, contradictions included: the `started_at`

@@ -11,7 +11,7 @@ failing case is written first, its failure recorded, and cited as
       `/coderabbit` bullet as the cap cases do. The bullet starts the rule
       at "the second round" and dates a Minor's round by "the review that
       posted it" [1]. It names, as the living docs whose Minors are pushed,
-      `openspec/specs/**`, a change's `specs/**`, `CLAUDE.md` and `core/**`,
+      `openspec/specs/**`, `CLAUDE.md` and `core/**`,
       and it says the cap still decides whether the run applies anything
       [2]. It names the card `CodeRabbit Minors deferred from #<N>` and the
       Skipped form `deferred to <card>`, and says a Minor the card already
@@ -50,9 +50,8 @@ failing case is written first, its failure recorded, and cited as
       [11] both fail it. A `test.each` then checks the entry's
       `instructions`, with whitespace normalised so a wrapped block scalar
       still matches, for `archive`, `contradictions with a spec, the code or
-      another artefact`, `Do not flag wording, duplication or style` and
-      `becomes a living spec at sync: review it as one`, one case per
-      phrase. The negation is pinned whole, so an entry that asks for wording
+      another artefact` and `Do not flag wording, duplication or style`,
+      one case per phrase. The negation is pinned whole, so an entry that asks for wording
       fails, and a failure names the phrase that is gone [12] [13]. No
       fabricated config is needed, since the pin reads one file and no
       helper is added. Verify: each case fails against today's config
