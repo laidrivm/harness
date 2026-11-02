@@ -31,28 +31,32 @@ pushed anywhere, and so are Minors in the living docs:
 - `openspec/specs/**`;
 - a change's delta specs, `openspec/changes/<name>/specs/**`;
 - `CLAUDE.md`;
-- the files `.coderabbit.yaml` names under `code_guidelines`;
-- in the harness, `core/**`.
+- `core/**`.
 
 Every other Minor is deferred: a change's proposal, design and tasks, code,
-`README.md`, `.coderabbit.yaml`. The user's answer named `openspec/specs/**`,
-`core/`, the change's artefacts and code. The other living paths extend it
-for two reasons. A delta spec becomes `openspec/specs/**` text at sync, so a
-Minor deferred there only moves to the archive pull request. And a
-consumer's rulebook sits at `harness/*.md`, which its `.coderabbit.yaml`
-names under `code_guidelines` (`README.md`, step 4), not under its own
-`core/**`. Naming the pushed side leaves no path unclassified. `core/**`
-takes in `core/skills/**`, which consumers install. The synced specs an
-archive pull request writes are living specs, so their Minors are still
-pushed, as on #390 and #392.
+`README.md`, `.coderabbit.yaml`, and a consumer's own docs. The user's
+answer named `openspec/specs/**`, `core/`, the change's artefacts and code.
+The two other living paths extend it. A delta spec becomes `openspec/specs/**`
+text at sync, so a Minor deferred there only moves to the archive pull
+request. `CLAUDE.md` is loaded by every session. A consumer's `harness/*.md`
+is a copy that sync writes, and a rule is edited in the harness, never in the
+copy (`README.md`, step 4). So a Minor there is deferred, and the card is
+where it waits for the harness. Naming the pushed side leaves no path
+unclassified. `core/**` takes in `core/skills/**`, which consumers install.
+The synced specs an archive pull request writes are living specs, so their
+Minors are still pushed, as on #390 and #392.
 
-A finding's round is the position of the commit its review names, never the
-count when the run starts. A first-round Minor that is still undisposed when
-a second commit has been reviewed, for example after a merge of `origin/main`,
-is therefore still applied. A Minor already on the tail card, whose thread
-is still open in a later run, is listed again as deferred and not written
-again. A fourth round holding only deferrals needs no sentence of its own:
-a deferral is a skip with a reason, which the cap already leaves alone.
+A Minor's round is the position of the commit named by the review that
+posted it, never the count when the run starts. Commits are ordered by
+their first CodeRabbit review. A first-round Minor still undisposed when a
+second commit has been reviewed, for example after a merge of `origin/main`,
+is therefore still read as a first-round one. A finding that a later full
+review posts again counts as that review's, since the run cannot tell it
+from a new one. The three-round cap still decides whether the run applies
+anything. A Minor already on the tail card, whose thread is still open in a
+later run, is listed again as deferred and not written again. A fourth
+round holding only deferrals needs no sentence of its own: a deferral is a
+skip with a reason, which the cap already leaves alone.
 
 Rejected: deferring every Minor from the second round (option c on the
 card), which the user declined for now. Rejected: deferring only code
@@ -74,12 +78,16 @@ where the name alone already finds it.
 
 ### The skill's sentence
 
-Step 5's override paragraph gains one sentence: a project's review policy may
-defer a finding to a card by its severity, path and round, and such a
+Step 5 gains one sentence of its own, after the override paragraph and not
+inside its condition, so it holds whether or not the project's policy also
+applies fixes without asking. It says that a project's review policy may
+defer a finding to a card by its severity, path and round, and that such a
 finding is listed under Skipped as `deferred to <card>` and counted in the
 arithmetic. The rule *Severity budgets attention, not belief* gains a clause
 that a skip may also be a deferral the project's policy makes. Step 3's
-Minor line says such a deferral is a reason. Under the skill's own default,
+opening paragraph and its Minor line both have such a deferral as the
+exception to "a correct, cheap Minor gets fixed" and to "'it is only Minor'
+is not a reason". Under the skill's own default,
 `below severity threshold` stays no reason. A Major deferred by a policy is a
 dismissal, and the skill already puts that to the user. Rejected: a
 harness-only exception in the toolkit with the skill unchanged. The skill
@@ -92,14 +100,18 @@ One entry, `path: "openspec/changes/**"`, with instructions along these
 lines: "A working artefact of an OpenSpec change, headed for the archive.
 Flag contradictions with a spec, the code or another artefact. Do not flag
 wording, duplication or style. A delta spec under the change's `specs/`
-becomes a living spec at sync: review it as one." The test asserts the
-path and three phrases: `contradictions`, `Do not flag wording, duplication
-or style`, and `becomes a living spec`. The path stays the one the user
-chose; the exception for delta specs goes in the text, since a glob cannot
-exclude a subdirectory from one entry.
-Rejected: `path_filters: ["!openspec/changes/**"]`. It would have lost the
-`started_at` Major on #342 and the `tasks.md` Majors on #346 and #347, and
-left a proposal pull request with nothing to review. Rejected:
+becomes a living spec at sync: review it as one." The test asserts the path
+and four phrases, with whitespace normalised: `archive`, `contradictions`,
+`Do not flag wording, duplication or style`, and `becomes a living spec`.
+The path stays the one the user chose. The exception for delta specs goes in
+the text, since a glob cannot exclude a subdirectory from one entry. The
+entry is meant to drop wording findings at every severity, the Majors that
+drove #329 and #347's last round included; what it keeps is the
+contradictions. Rejected: `path_filters: ["!openspec/changes/**"]`. It would
+have lost every finding there, contradictions included: the `started_at`
+Major on #342, which the instruction keeps, as well as the other Majors on
+#342, #346 and #347. It would also have left a proposal pull request with
+nothing to review. Rejected:
 `openspec/changes/archive/**` alone, where the seven pull requests had no
 finding at all.
 
