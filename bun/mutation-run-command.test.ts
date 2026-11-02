@@ -135,7 +135,7 @@ describe("the command", () => {
 	});
 
 	// spec: mutation-floor/a-run-asked-for-every-module
-	test("an interrupted run leaves the stored file whole and resumes, without --force, from its partial copy", () => {
+	test("an interrupted run leaves the stored file whole, and the next starts the module again", () => {
 		const dir = repository();
 		const stored = forced(dir);
 		write(dir, { "fail-once": "", calls: "" });
@@ -144,7 +144,7 @@ describe("the command", () => {
 		expect(readFileSync(join(dir, "mutation/a.json"), "utf8")).toBe(stored);
 		expect(cli(dir, bin).err).toContain("mutation/a.json differs from HEAD's");
 		const calls = readFileSync(join(dir, "calls"), "utf8").trim().split("\n");
-		expect(calls.map((call) => call.endsWith("--force"))).toEqual([true, false]);
+		expect(calls.map((call) => call.endsWith("--force"))).toEqual([true, true]);
 	});
 
 	test("a forced run never resumes from a copy of the old results that a failed start left", () => {

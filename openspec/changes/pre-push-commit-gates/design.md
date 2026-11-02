@@ -107,11 +107,10 @@ absent `tsconfigFile` is d2ass's answer to Stryker's preprocessor calling an
 API TypeScript 7.0.2 lacks. `bun/mutation-run.ts` writes the per-module values
 — `mutate: bun/<name>.ts`, the command `bun test bun/<name>` — to a
 configuration file under `.stryker-tmp`, no flag taking the command. Stryker's
-`incrementalFile` is a copy of `mutation/<name>.json` there, named by the
-fingerprint and trimmed into the stored file once the run finishes: an
-interrupt saves partial results over that copy, so the next run against the
-same tests resumes from it. A forced run keeps a copy of its own, never seeded:
-one seeded with old results would outlive a failed start. Named modules narrow a run,
+`incrementalFile` is a fresh copy of `mutation/<name>.json` there (none when
+forced), trimmed into the stored file once the run finishes, so the partial
+results an interrupt saves never reach the stored file. A run resumes by
+module, never from a leftover copy, which could hold replaced results. Named modules narrow a run,
 which then writes no report. A dirty module fails like a dirty test.
 
 A module runs when its tracked source differs from the copy its stored file
