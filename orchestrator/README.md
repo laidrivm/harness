@@ -98,7 +98,8 @@ docker compose up -d --build
 ```
 
 The runner refuses to start without `runner_ssh_pubkey`, `runner_host_key` or
-`runner_event_pubkey`. Open the hostname from step 1, pass Access, and set
+`runner_event_pubkey`, and compose refuses every command without
+`orchestrator/.env`: write it first, as step 12 says. Open the hostname from step 1, pass Access, and set
 Windmill's admin login. In the workspace, create the secret variable
 `f/orchestrator/runner_ssh_key` and paste `engine_key` base64-encoded on one
 line, the output of `base64 -w 0 secrets/engine_key`. Then
@@ -369,3 +370,76 @@ may do that.
    Otherwise move the pin as the root README says, then remove the stop file
    that refusal wrote (step 7).
 5. Enable the pass schedule in Windmill (step 6).
+
+## 12. The persistent session
+
+The runner starts one Claude Code session as `agent`, in tmux session `main`,
+before sshd: `/opt/orchestrator/session.sh` pulls and installs in
+`/home/agent/harness`, starts `claude --remote-control harness` as a new
+conversation, and starts it again 5 s after it exits. Its `gh` and git mint a
+token from the App for each call; it holds none.
+
+1. The commit identity, the App's bot. On a host that already runs the stack,
+   do this before pulling the change that needs it, since every
+   `docker compose` command after it refuses without the file; a new host
+   does it before step 4. The App's slug ends the address of its public page,
+   `https://github.com/apps/<slug>`, and a running stack's mint prints it for
+   a repository `app/repositories` names; the bot's numeric id comes from
+   GitHub:
+
+   ```sh
+   docker compose exec -u runner runner sudo -n -u keyholder /opt/orchestrator/mint <owner>/<repo> --slug
+   gh api 'users/<slug>[bot]' --jq .id
+   ```
+
+   As root, in `orchestrator/`, write `.env`, which git ignores, pasting the
+   four lines below with the two values in place and ending with Ctrl-D:
+
+   ```sh
+   umask 077
+   cat > .env
+   ```
+
+   ```text
+   GIT_AUTHOR_NAME=<slug>[bot]
+   GIT_AUTHOR_EMAIL=<id>+<slug>[bot]@users.noreply.github.com
+   GIT_COMMITTER_NAME=<slug>[bot]
+   GIT_COMMITTER_EMAIL=<id>+<slug>[bot]@users.noreply.github.com
+   ```
+
+   Then `git pull`, `docker compose build runner` and
+   `docker compose up -d runner`.
+
+2. The one login, as `agent`, with the claude.ai account: its URL opens on
+   any device. Remote Control needs this full login, not the token of step 2:
+
+   ```sh
+   docker compose exec -it -u agent runner claude auth login
+   ```
+
+   It lands at `/home/agent/.claude/.credentials.json`, mode 0600, which
+   `runner` cannot read. The loop's next start picks it up.
+
+3. Attach to `main` to watch the session or answer a prompt in its pane,
+   and detach with Ctrl-b d, which leaves it running:
+
+   ```sh
+   docker compose exec -it -u agent runner tmux attach -t main
+   ```
+
+4. The ask integration's settings, from which the session posts its
+   questions (root README, `bun/notion-ask.ts`). The integration needs the
+   capability *Read user information without email*, since the ask command
+   reads the user back from its write. As root in `orchestrator/`, paste
+   `{"token": "<the ask integration's token>", "user": "<the user's Notion id>"}`
+   and end it with Ctrl-D:
+
+   ```sh
+   docker compose exec -T -u agent runner sh -c 'umask 077; mkdir -p ~/.config/harness; cat > ~/.config/harness/notion-ask.json'
+   ```
+
+   The file lands at `/home/agent/.config/harness/notion-ask.json`, mode
+   0600, in `agent`'s home, which `runner` cannot enter.
+
+Step 11's reach check is unchanged: as `agent` it still fails to read every
+file under `/run/secrets` and the App's key.

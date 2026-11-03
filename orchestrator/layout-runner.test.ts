@@ -143,6 +143,24 @@ describe("the runner image", () => {
 		expect(lines().filter((l) => l.startsWith("RUN ") && versions.every((v) => l.includes(v)))).toHaveLength(1);
 	});
 
+	// spec: orchestrator/the-container-restarts
+	test("the entrypoint starts main as agent with the start script after the authorized_keys lines and before exec, and the image carries the script", () => {
+		const all = read(entry).split("\n");
+		const start = all.indexOf("runuser -u agent -- tmux new-session -d -s main /opt/orchestrator/session.sh");
+		const keys = all.findLastIndex((l) => l.includes("authorized_keys"));
+		expect(keys).toBeGreaterThan(-1);
+		expect(start).toBeGreaterThan(keys);
+		expect(start).toBeLessThan(all.indexOf('exec "$@"'));
+		expect(lines()).toContain("COPY --chmod=0755 runner/session.sh /opt/orchestrator/session.sh");
+	});
+
+	// spec: orchestrator/no-identity-on-the-host
+	test("the runner's environment takes the four commit identity names from orchestrator/.env, refusing when one is unset", () => {
+		const runner = (composed().services as Record<string, { environment?: Record<string, string> }>).runner;
+		for (const name of ["GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"])
+			expect(runner?.environment?.[name]).toMatch(new RegExp(`^\\$\\{${name}:\\?.+\\}$`));
+	});
+
 	test("the engine's ssh call names the clone and the repository the job runs [38]", () => {
 		const call = read("orchestrator/windmill/f/orchestrator/pass.sh").trim().split("\n").at(-1) ?? "";
 		expect(call).toMatch(

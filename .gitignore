@@ -7,4 +7,5 @@ reports
 orchestrator/secrets
 orchestrator/app
 orchestrator/app-key
+orchestrator/.env
 orchestrator/windmill/wmill-lock.yaml
