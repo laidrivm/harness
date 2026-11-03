@@ -89,8 +89,8 @@ describe("the image's users", () => {
 			writeFileSync(join(copy, "sub", "github-app-mint.ts"), "");
 			chmodSync(join(copy, "sub", "github-app-mint.ts"), file);
 			chmodSync(join(copy, "sub"), dir);
-			const script = (run ?? "RUN false").slice(4).replaceAll("/opt/orchestrator/bun", copy);
-			const codes = ["dash", "sh"].map((shell) => Bun.spawnSync([shell, "-c", script]).exitCode);
+			const script = (run ?? "RUN false").slice(4).replaceAll("/opt/orchestrator/bun", '"$1"');
+			const codes = ["dash", "sh"].map((shell) => Bun.spawnSync([shell, "-c", script, shell, copy]).exitCode);
 			chmodSync(join(copy, "sub"), 0o755);
 			return codes;
 		};
