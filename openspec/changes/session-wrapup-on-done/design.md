@@ -8,7 +8,8 @@ lines: the move, then the release's line when there is one. `bun/work.ts`
 prints them to standard output. In the harness no other path writes `done`:
 the status hook refuses the connector's `Status` write.
 
-`session-wrapup` (`core/skills/session-wrapup/SKILL.md`) has no
+`session-wrapup` (`core/skills/session-wrapup/SKILL.md`, which Claude Code
+finds through the `.claude/skills/session-wrapup` link) has no
 `disable-model-invocation`, so the model can start it through the Skill tool
 (`agent-autonomy`, *An unattended session runs `/session-wrapup` without
 waiting on the user*). The harness's allow list names `Skill(triage)`,
@@ -17,6 +18,11 @@ the yield entry to the tracked `docs/context/pipeline-yield-<yyyy-mm>.md`, and
 `core/git-and-prs.md` says to commit it "to the branch in hand, never a branch
 of their own".
 
+The command guard refuses a commit on `main`, on a detached `HEAD`, and on a
+branch `origin/main` already carries (`merged-branch`). `status --to done`
+writes only once `origin/main` proves the merge, so when the line fires the
+branch in hand is one of those three.
+
 On the VPS the persistent session runs in `$HOME/harness`, a clone on `main`
 (`session-runner-image`); its subagents work in worktrees. Before each start
 `orchestrator/runner/session.sh` runs `git pull --ff-only`, and a failed pull
@@ -24,8 +30,9 @@ starts claude on the old tree.
 
 ## Goals / Non-Goals
 
-**Goals:** a session that writes `done` is told to wrap up and to offer
-`/clear`; the wrap-up it starts on the VPS leaves the clone's `main` clean.
+**Goals:** the session the user talks to is told to wrap up and to offer
+`/clear` once a card is done; the wrap-up leaves every checkout's tree as it
+found it, so the VPS clone's pull is never stopped by it.
 
 **Non-Goals:**
 
@@ -38,66 +45,80 @@ starts claude on the old tree.
 - Consumers: they move a status through the connector and never see the line;
   stage 2.5 does not need it.
 - The context-window threshold (card 40c39875c31b8105837eed7d739a8086).
+- The save point (step 4) keeps writing `docs/context/<topic>-<yyyy-mm>.md`:
+  an untracked file stops a pull only when the same path arrives, and the
+  step runs only for long exploratory sessions. On a branch the guard refuses
+  a commit on it stays uncommitted, and the report names it.
 
 ## Decisions
 
 ### 1. One printed line, no hook
 
-The trigger is the last line `status` prints after a read-back of `done`:
+The trigger is the last line `status` prints after it moved a card that read
+another status to a read-back of `done`:
 
 ```text
-next: run /session-wrapup unless it is already running, then tell the user «можно /clear»
+next: run /session-wrapup unless it is already running, then tell the user «можно /clear»; a subagent passes this line to its caller instead
 ```
 
 `status` is the only writer of `done` here and its output is already in the
 model's context, so a `PostToolUse` hook on Bash would see the same event and
-repeat the same text with more code. "Unless it is already running" because
-step 3 of the wrap-up may itself run `status --to done` while reconciling the
-board, and must not start a second round. `/clear` is a built-in command, not
-a skill: only the user can type it, so the line asks the session to say so.
+repeat the same text with more code.
+
+- "Unless it is already running": step 3 of the wrap-up may itself run
+  `status --to done` while reconciling the board, and must not start a second
+  round.
+- No line for a card already at `done`: a retried command or a reconcile would
+  otherwise start a wrap-up that already ran, appending a duplicate entry.
+- "A subagent passes this line to its caller": on the VPS a worktree subagent
+  may archive and move the card; a wrap-up over its short conversation would
+  debrief the wrong session and leave the one the user clears untouched. The
+  caller, holding the line, runs the wrap-up.
+- `/clear` is a built-in command, not a skill: only the user can type it, so
+  the line asks the session to say so.
 
 The line is in English beside `status:` and `assign:`, as `core/rules.md`
-keeps repository artefacts in British English; the card wrote it in Russian.
-«можно /clear» stays as the card has it — it is the phrase the user waits for
-in chat, and the session replies in Russian anyway.
+keeps repository artefacts in British English by default; the card wrote it
+in Russian. «можно /clear» stays as the card has it — it is the phrase the
+user waits for in chat, and the session replies in Russian anyway. That one
+quoted phrase is the deliberate exception, and the constant's comment says so.
 
-It is printed when the read-back reads `done`, after the release's line and
-whatever exit code the release leaves: a failed restore of `Assign` leaves the
-card done all the same, and the debrief is still due. A read-back other than
-`done` already exits 1 and prints none.
+It is printed after the release's line and whatever exit code the release
+leaves: a failed restore of `Assign` leaves the card done all the same, and
+the debrief is still due. A read-back other than `done` already exits 1 and
+prints none.
 
-Alternatives: a `PostToolUse` hook (above); a rule in prose only — which is
-the stop-gap this replaces (decision 5).
-
-### 2. `Skill(session-wrapup)` in the allow list, pinned where it is defined
+### 2. `Skill(session-wrapup)` in the allow list, pinned where it is looked up
 
 The user's answer to question 1 (03.11, «а»). Without the entry each `done`
 on the VPS waits on a permission prompt in the Claude app. The skill writes
 only its save point and its yield entry, and its `allowed-tools` bound the
 rest; the status hook still refuses a connector `Status` write.
 
-`status` names a skill that `.claude/settings.json` and `core/skills/` must
-match, and a mismatch reads as a prompt or a silent no-op, so a case in
-`bun/work-status.test.ts` reads the name from the printed line and checks the
-skill's `SKILL.md` and the allow entry (`core/rules.md`, *Pin a name one
-system looks up in another*).
+`status` names a skill that the allow list and Claude Code's skill directory
+must match, and a mismatch reads as a prompt or a silent no-op, so a case in
+`bun/work-status.test.ts` reads the name from the printed line and checks
+`.claude/skills/<name>/SKILL.md` — the path Claude Code resolves, not the
+`core/skills/` copy behind the link — and the allow entry (`core/rules.md`,
+*Pin a name one system looks up in another*).
 
-### 3. The yield entry goes outside the tree on `main` — the pipeline-yield seam
+### 3. The yield ledger leaves the tree — the pipeline-yield seam
 
-On `main` the guard refuses the commit `core/git-and-prs.md` asks for, so the
-entry can never be committed from there, and the dirty file stops the next
-`git pull --ff-only` once the laptop's entry for the same month merges. Three
-fixes were weighed:
+When the line fires, the branch in hand is `main`, detached or merged (see
+Context): the guard refuses the commit `core/git-and-prs.md` asks for, so an
+in-tree entry can never be committed from there, and on the VPS clone the
+dirty file stops the next `git pull --ff-only` once the laptop's entry for
+the same month merges. Three fixes were weighed:
 
 - **Write outside the clone** (chosen). The entry goes to
   `<state>/harness/pipeline-yield-<yyyy-mm>.md`, `<state>` as step 5 already
   takes it for the gates line — `$XDG_STATE_HOME` when absolute, else
-  `$HOME/.local/state` — beside `gates.jsonl`. The gates line reads that
-  machine's ledger, so dating it from the previous entry of a ledger on the
-  same machine is more exact than a repository file both machines append to.
-  The VPS rules card keeps its manual-steps log in the home directory for the
-  same reason. Cost: a host's entries do not reach the repository; they are
-  read on the host.
+  `$HOME/.local/state` — beside `gates.jsonl`, on every branch. The gates line
+  reads that machine's ledger, so dating it from the previous entry of a
+  ledger on the same machine is more exact than a repository file both
+  machines append to. The VPS rules card keeps its manual-steps log in the
+  home directory for the same reason. Cost: the tracked ledger stops growing;
+  each machine's entries are read on that machine.
 - **Write through a pull request.** A branch, a pull request, CI, a
   CodeRabbit review and a merge per wrap-up, for a ledger line — and
   `core/git-and-prs.md` already rules out a branch of the artefacts' own.
@@ -108,48 +129,55 @@ fixes were weighed:
   next pull; a new month's file is untracked, which `--autostash` leaves, and
   the pull refuses to overwrite it. A reset discards the entry outright.
 
-Not a question for the user: the second option reverses a settled rule, the
-third loses the entry, and the first matches a choice already made for the
-VPS log. Carrying host entries into the repository later, if the monthly
-count needs them, is a change of its own.
+**Question 2 on the card** asks the user between this and a narrower form:
+outside the tree only where the guard refuses the commit — `main`, detached or
+merged — and in `docs/context/` on a branch that can still take it. The
+narrower form keeps the tracked ledger for a wrap-up typed mid-work, but needs
+the guard's merged-branch check exposed to the skill (an entry point on
+`bun/branch-state.ts`), and gives each machine two ledgers whose windows must
+be dated across both, or the second re-counts what the first counted. Since
+the line fires only after a merge, the tree would rarely be the target. This
+design is written at the recommended answer, the wider form; the narrower one
+changes decision 4 and tasks 1.3–1.4.
 
-### 4. Decided by the branch, not by the host
+### 4. One ledger per machine, seeded from the tree
 
-The condition is the one the guard refuses a commit on: `git branch
---show-current` printing `main`, or nothing for a detached `HEAD`. It holds on
-the laptop's `main` checkout too, where the entry was equally uncommittable,
-and needs no host flag. The skill's `allowed-tools` gain `Bash(git branch
---show-current)` and `Edit(~/.local/state/harness/pipeline-yield-*.md)` — an
-`Edit` rule covers the Write that creates a new month's file (to confirm
+Every read of "the previous entry" in step 5 — `<gates-since>`, `<since>`, and
+the earlier `first review` lines a pull request is skipped by — reads the
+state ledger. While it holds no entry yet, they read the latest entry in
+`docs/context/pipeline-yield-*.md`, so a machine's first entry does not count
+every gate record it ever wrote. After that the windows never overlap on one
+machine; a pull request measured on the laptop can be measured again on the
+host, and each ledger's count stays honest on its own.
+
+A detached `HEAD` has no branch for the entry's `## <yyyy-mm-dd> — <branch>`
+heading; it names the detached commit as `git status` prints it.
+
+The skill's `allowed-tools` gain `Edit(~/.local/state/harness/pipeline-yield-*.md)`
+— an `Edit` rule covers the Write that creates a new month's file (to confirm
 against Claude Code's permission docs on apply). With `$XDG_STATE_HOME` set
-elsewhere the write asks once; the VPS sets none.
+elsewhere the write asks once; the VPS sets none. `core/review-toolkit.md`,
+which points readers at `docs/context/pipeline-yield-*.md`, points at the
+ledger step 5 names instead.
 
-`first review` reads "an earlier `first review` line" from the ledger it
-appends to as well, so the two ledgers measure independently: a pull request
-measured on the laptop can be measured again on the host. Each ledger's count
-stays honest on its own.
-
-### 5. Rule 4 of the VPS rules leaves its prose home
+### 5. Rule 4 of the VPS rules shrinks to a pointer
 
 Card 40c39875c31b81f0b1d1cbea945696bc adds `orchestrator/runner/CLAUDE.md`
 with rule 4 — "When a card reaches done, run `/session-wrapup`, then write
-«можно /clear»" — as the stop-gap for this mechanism. Once the line lands,
-the rule is mechanised and leaves, as `agent-rulebook`'s *A mechanised
-prohibition leaves its prose home* asks of a prohibition; what may stay is a pointer
-saying the `status` line carries it. That file is not on `main` as this is
-written, so the task is conditional on where it stands at apply.
+«можно /clear»" — as the stop-gap for this mechanism, and its explore says
+the rule leaves or shrinks to a pointer once the line lands. The line is
+advisory, not a gate, so the rule shrinks rather than goes: one line telling
+the session to act on the `next:` line `status` prints, without restating
+its steps. That file is not on `main` as this is written, so the task is
+conditional on where it stands at apply.
 
 ## Risks / Trade-offs
 
-- [The session ignores the line] → the same risk as the prose rule it
-  replaces, with the text now at the moment it applies; the metric's
-  manual-steps log would show missed wrap-ups as `/clear` steps the user asked
-  for.
-- [A host's entries stay on the host] → read there; a change of its own
-  carries them if the monthly count needs both machines.
-- [A save point written on `main`] → step 4 still writes
-  `docs/context/<topic>-<yyyy-mm>.md`, an untracked file that stops a pull
-  only if the same path arrives from elsewhere; left as is.
+- [The session ignores the line] → the shortened rule 4 points at it, and the
+  metric's manual-steps log shows missed wrap-ups as `/clear` steps the user
+  asked for.
+- [A machine's entries stay on that machine] → read there; a change of its
+  own carries them if the monthly count needs both machines.
 - [`$XDG_STATE_HOME` set to another path] → the ledger write prompts once
   instead of running; noted in the skill.
 
