@@ -77,37 +77,54 @@ describe("the image's users", () => {
 		]);
 	});
 
-	test("the image's build fails when its copy of bun/ holds a mode the key holder cannot read, or one it could write", () => {
+	test("the image's build fails when its copy of bun/ or the managed CLAUDE.md holds a mode agent or the key holder cannot read, or one they could write", () => {
 		const run = instructions("orchestrator/runner/Dockerfile").find(
 			(l) => l.startsWith("RUN ") && l.includes("find /opt/orchestrator/bun "),
 		);
 		expect(run).toBeDefined();
-		const built = (file: number, dir: number) => {
-			const copy = emptyDir("orchestrator-bun-modes-");
-			chmodSync(copy, 0o755);
-			mkdirSync(join(copy, "sub"));
-			writeFileSync(join(copy, "sub", "github-app-mint.ts"), "");
-			chmodSync(join(copy, "sub", "github-app-mint.ts"), file);
-			chmodSync(join(copy, "sub"), dir);
-			const script = (run ?? "RUN false").slice(4).replaceAll("/opt/orchestrator/bun", '"$1"');
-			const codes = ["dash", "sh"].map((shell) => Bun.spawnSync([shell, "-c", script, shell, copy]).exitCode);
-			chmodSync(join(copy, "sub"), 0o755);
-			return codes;
+		const script = (run ?? "RUN false")
+			.slice(4)
+			.replaceAll("/opt/orchestrator/bun", '"$1"')
+			.replaceAll("/etc/claude-code", '"$2"');
+		const tree = (file: number, dir: number) => {
+			const top = emptyDir("orchestrator-modes-");
+			chmodSync(top, 0o755);
+			mkdirSync(join(top, "sub"));
+			writeFileSync(join(top, "sub", "CLAUDE.md"), "");
+			chmodSync(join(top, "sub", "CLAUDE.md"), file);
+			chmodSync(join(top, "sub"), dir);
+			return top;
 		};
-		expect(built(0o644, 0o755)).toEqual([0, 0]);
-		expect(built(0o755, 0o755)).toEqual([0, 0]);
+		const built = (bun: string, managed: string) =>
+			["dash", "sh"].map((shell) => Bun.spawnSync([shell, "-c", script, shell, bun, managed]).exitCode);
+		const good = tree(0o644, 0o755);
+		expect(built(good, good)).toEqual([0, 0]);
+		expect(built(tree(0o755, 0o755), tree(0o755, 0o755))).toEqual([0, 0]);
 		for (const [file, dir] of [
 			[0o600, 0o755],
 			[0o664, 0o755],
 			[0o646, 0o755],
 			[0o644, 0o744],
-		] as const)
-			expect([file.toString(8), dir.toString(8), ...built(file, dir)]).toEqual([
+		] as const) {
+			const bad = tree(file, dir);
+			expect([file.toString(8), dir.toString(8), ...built(bad, good), ...built(good, bad)]).toEqual([
 				file.toString(8),
 				dir.toString(8),
 				1,
 				1,
+				1,
+				1,
 			]);
+		}
+		// The image #412 built: the COPY made /etc/claude-code with the file's 0644; BSD find reports it on stderr only.
+		const broken = tree(0o644, 0o755);
+		chmodSync(broken, 0o644);
+		try {
+			expect(built(good, broken)).toEqual([1, 1]);
+		} finally {
+			chmodSync(broken, 0o755);
+		}
+		expect(built(good, join(good, "absent"))).toEqual([1, 1]);
 	});
 
 	// spec: orchestrator/git-reaches-github
