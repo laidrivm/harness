@@ -14,14 +14,14 @@ an agent's call that redirects Claude Code's configuration (seen 03.11 on
       in a throwaway `CLAUDE_CONFIG_DIR` (the user, in a terminal of their
       own). Record in design.md, *Risks*, whether it errors, warns or says
       nothing, and whether a session still starts
-- [ ] 1.2 The laptop's entry (D6, question 4). With the user's own
+- [ ] 1.2 The laptop's entry (D6, answer 4 а). With the user's own
       configuration, start `claude` once in a harness worktree that carries
       the new settings, then once in a folder outside it. After each, read
       the `HEAD` of `~/.claude/plugins/marketplaces/ponytail` and the
       installed version under `~/.claude/plugins/cache/ponytail/ponytail/`
       (the user, in a terminal of their own). Record whether the copy
-      changes between folders. A copy that changes stops the apply until
-      question 4 is settled again
+      changes between folders. If it does, tell the user to switch to D6's
+      option б before the settings land
 - [ ] 1.3 A pin move. Starting from a registered copy at `v5.3.3`, change
       the project's `ref` to `v5.3.2` and start `claude` in that folder. Note
       whether the copy follows it (in the runner container, as `agent`,

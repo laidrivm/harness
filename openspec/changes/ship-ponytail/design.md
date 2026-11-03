@@ -169,7 +169,14 @@ harness's and consumers' folders the session sees the project's entry: the
 tag, and no auto-update. Elsewhere it sees the user's. Both entries name one
 registered copy under `~/.claude/plugins/marketplaces/ponytail`. Whether
 Claude Code re-fetches that copy when the effective source changes between
-folders is unverified (task 1.2). Which way to go is card question 4.
+folders is unverified (task 1.2).
+
+Decided (user, 03.11, answer 4 а): the user's own entry stays as it is. The
+pin applies in the harness's and consumers' folders, and the user's
+auto-update applies everywhere else. If task 1.2 shows the copy changing
+version between folders, the user switches to option б: their own entry
+takes the same `ref` and `autoUpdate: false`, and they move it by hand
+whenever the harness moves the tag.
 
 ## Risks / Trade-offs
 
@@ -182,7 +189,7 @@ folders is unverified (task 1.2). Which way to go is card question 4.
 - [A pass misses ponytail on its first turn before the first registration]
   → accepted, D5.
 - [The laptop's copy is re-fetched between folders] → task 1.2 checks it
-  before the settings land. The fallback is question 4's option б.
+  before the settings land. The fallback is D6's option б.
 - [Plugin hooks run in every consumer session] → ponytail's ledger
   (`userConfig.ledger`, default `true`) writes a line per turn under
   `~/.config/ponytail/band/`. The file stays local, and its webhook is
@@ -216,7 +223,3 @@ folders is unverified (task 1.2). Which way to go is card question 4.
 - **The entrypoint's tmux line** is pinned by the test of the requirement
   *the-container-restarts*. The new line goes before it and leaves it
   unedited.
-
-## Open Questions
-
-- Question 4 on the card, D6: the laptop's entry and `autoUpdate`.

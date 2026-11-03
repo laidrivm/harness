@@ -57,8 +57,8 @@ None.
   its next sync.
 - The user's laptop: in the harness's and consumers' folders, the project's
   `ponytail` marketplace entry replaces the user's own whole, its
-  `autoUpdate: true` included (design.md, *The laptop's entry*; card
-  question 4).
+  `autoUpdate: true` included. The user keeps their entry as it is (design.md,
+  D6; answer 4 а).
 - Docs: `README.md`.
 - Dependencies: none added to a manifest. ponytail is a plugin pinned by tag,
   outside any manifest. The note beside the pin says what moves it.
