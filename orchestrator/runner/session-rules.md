@@ -17,8 +17,7 @@ wherever the two differ.
    host has 2 vCPU and 3.5 GiB.
 3. Run tests, fixes, pushes and reviews in subagents, one fresh worktree
    subagent per pull request; the main session dispatches and reports.
-4. When a card reaches done, run `/session-wrapup`, then write «можно /clear»
-   in chat — only the user can clear the session.
+4. Act on the `next:` line `bun bun/work.ts status` prints.
 5. Ask the user every question on the card, through the ask command
    `bun/notion-ask.ts`, never only in chat; a one-line pointer to the card in
    chat is fine.

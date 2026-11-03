@@ -5,11 +5,13 @@
  * `work-status-tree.test.ts`'s.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
+import { ASKED, USER } from "./notion-bot.fixture.ts";
 import { USAGE } from "./work.ts";
 import { archived, CARD, change, clone, PAGE, PATCH, refused, status } from "./work-status.fixture.ts";
+import { NEXT } from "./work-status.ts";
 import { home } from "./work-take.fixture.ts";
 
 afterAll(cleanup);
@@ -82,7 +84,11 @@ describe("the WIP limit", () => {
 		["done", archived("demo")],
 	])("from approved to a %s origin/main proves, five cards make no count", async (target, tree) => {
 		const run = await status({ args: to(target), cwd: clone(tree).dir, cards: 5 });
-		expect([run.code, run.seen, run.last]).toEqual([0, [PAGE, PATCH, PAGE], `status: ${CARD} approved → ${target}`]);
+		expect([run.code, run.seen, run.out.split("\n")[0]]).toEqual([
+			0,
+			[PAGE, PATCH, PAGE],
+			`status: ${CARD} approved → ${target}`,
+		]);
 	});
 
 	test("HARNESS_WIP_LIMIT=2 with two cards refuses", async () => {
@@ -170,4 +176,99 @@ describe("the reads and the write", () => {
 			]);
 		},
 	);
+});
+
+describe("the next step", () => {
+	const lines = (run: Awaited<ReturnType<typeof status>>) => run.out.trim().split("\n");
+	const nexts = (run: Awaited<ReturnType<typeof status>>) => lines(run).filter((line) => line.startsWith("next:"));
+	const COMMENTS = "GET /v1/comments";
+
+	// spec: work-status/a-card-moved-to-done
+	test("a card at archiving moved to done prints the move, the release, then the next line", async () => {
+		const run = await status({
+			args: to("done"),
+			cwd: clone(archived("demo")).dir,
+			page: { status: "archiving" },
+			assign: [USER],
+		});
+		expect([run.code, lines(run)]).toEqual([
+			0,
+			[`status: ${CARD} archiving → done`, `assign: removed the user from ${CARD}`, NEXT],
+		]);
+	});
+
+	// spec: work-status/a-failed-restore-after-done
+	test("a failed restore after done still prints the next line last, and exits 1", async () => {
+		const next = { [COMMENTS]: [{ comments: [ASKED] }], [PATCH]: [{}, { fail: { [PATCH]: 500 } }] };
+		const run = await status({
+			args: to("done"),
+			cwd: clone(archived("demo")).dir,
+			page: { status: "archiving" },
+			assign: [USER],
+			next,
+		});
+		expect([run.code, lines(run).at(-2)?.startsWith("assign: failed — "), run.last]).toEqual([1, true, NEXT]);
+	});
+
+	// spec: work-status/a-card-moved-to-done
+	test("a fix card moved to done by its merged pull request prints the next line last (/zombies)", async () => {
+		const gh = {
+			answer: JSON.stringify({
+				number: 350,
+				state: "closed",
+				merged_at: "2026-10-31T00:00:00Z",
+				base: { ref: "main" },
+			}),
+		};
+		const run = await status({ args: to("done"), cwd: clone(change("demo")).dir, page: { pointer: "pr:350" }, gh });
+		expect([run.code, run.last]).toEqual([0, NEXT]);
+	});
+
+	// The requirement's "a failed write", which no scenario names.
+	test("a done write answering 500 prints no next line (/zombies)", async () => {
+		const run = await status({ args: to("done"), cwd: clone(archived("demo")).dir, fail: { [PATCH]: 500 } });
+		expect([run.code, lines(run)]).toEqual([1, [expect.stringContaining(`status: ${CARD} not written — `)]]);
+	});
+
+	// spec: work-status/a-move-to-another-status
+	test("a move to applied prints no next line", async () => {
+		const run = await status({ args: to("applied"), cwd: clone(change("demo")).dir, page: { status: "applying" } });
+		expect([run.code, nexts(run)]).toEqual([0, []]);
+	});
+
+	// spec: work-status/a-refused-done
+	test("a done refused for want of evidence prints the refusal alone", async () => {
+		const run = await status({ args: to("done"), cwd: clone(change("demo")).dir, page: { status: "archiving" } });
+		refused(run, "no-evidence");
+		expect(lines(run).length).toBe(1);
+	});
+
+	// spec: work-status/notion-answers-another-status
+	test("a done write Notion answers with archiving prints no next line, and exits 1", async () => {
+		const run = await status({
+			args: to("done"),
+			cwd: clone(archived("demo")).dir,
+			page: { status: "archiving", answer: "archiving" },
+		});
+		expect([run.code, nexts(run)]).toEqual([1, []]);
+	});
+
+	// spec: work-status/a-card-already-done
+	test("a card already at done written to done again prints no next line", async () => {
+		const run = await status({ args: to("done"), cwd: clone(archived("demo")).dir, page: { status: "done" } });
+		expect([run.code, run.last, nexts(run)]).toEqual([0, `status: ${CARD} done → done`, []]);
+	});
+
+	// spec: work-status/the-skill-the-line-names
+	test("the skill the line names is one Claude Code finds, and the harness allows it", () => {
+		const name = /\/([\w:-]+)/.exec(NEXT)?.[1] ?? "";
+		const root = join(import.meta.dir, "..");
+		const skill = readFileSync(join(root, ".claude", "skills", name, "SKILL.md"), "utf8");
+		const allow = JSON.parse(readFileSync(join(root, ".claude", "settings.json"), "utf8")).permissions.allow;
+		expect([name, skill.match(/^name:\s*(\S+)\s*$/m)?.[1], allow.includes(`Skill(${name})`)]).toEqual([
+			"session-wrapup",
+			name,
+			true,
+		]);
+	});
 });
