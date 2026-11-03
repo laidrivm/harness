@@ -186,6 +186,9 @@ Rules about how work is carried out here. They do not age with the code.
   same commit.
 - Before citing a script's exit code as a check, confirm the script runs that
   check when invoked — a module with no entry point exits 0 and proves nothing.
+- Resume a subagent only for work on its own open pull request, and hand
+  anything else to a fresh one — a resumed agent carries its whole context
+  into every call.
 - When a third consecutive fix toward one roadmap goal exposes a failure at a
   different seam, or the goal's section keeps closing cards while its outcome
   stays where it was, stop fixing and bring the user an architecture review
