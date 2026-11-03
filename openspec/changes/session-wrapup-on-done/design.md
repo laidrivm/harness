@@ -117,10 +117,12 @@ the dirty file stops the next `git pull --ff-only` once the laptop's entry for
 the same month merges. Three fixes were weighed:
 
 - **Write outside the clone** (chosen). The entry goes to
-  `~/.local/state/harness/pipeline-yield/<repo>-<yyyy-mm>.md` on every
-  branch, whatever its state. `<repo>` is the last segment of `git remote
-  get-url origin` without `.git` (`harness`, `dota2`, `mellon`), or `<top>`'s
-  basename where there is no `origin`: one machine runs several projects, and
+  `~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md` on every
+  branch, whatever its state. `<repo>` is the `<owner>/<name>` that `git
+  remote get-url origin` ends in, without `.git` (`laidrivm/harness`,
+  `laidrivm/dota2`), or `local/` and `<top>`'s basename where there is no
+  `origin` — two directories, so no owner and name can run together into
+  another's: one machine runs several projects, and
   a ledger they shared would date one project's windows from another's entry
   and skip its pull request numbers. The path is fixed rather than
   `$XDG_STATE_HOME`-relative, so the one `allowed-tools` rule always matches
@@ -229,10 +231,14 @@ once, as README's *Consuming* says (decision 4). A dirty
 `docs/context/pipeline-yield-*.md` already in a clone on `main` — the VPS's,
 or the laptop's main checkout — goes when the pull brings the deletion: an
 unmodified copy is removed by the pull, a modified one stops it, and the user
-discards it (`git checkout -- docs/context`) or copies its entries into
-`~/.local/state/harness/pipeline-yield/<repo>-<yyyy-mm>.md` first.
+discards that file alone (`git checkout -- 'docs/context/pipeline-yield-*.md'`,
+which leaves a save point beside it as it is) or copies its entries into
+`~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md` first.
 
-Rollback: in the revert's own pull request, append each machine's
+Rollback: the revert restores the old contract, under which the ledger is
+tracked, so its pull request is the one place host entries return to git — an
+exception to decision 3 that only undoing this change makes. In it, append
+each machine's
 state-ledger entries for the harness, in date order, to the restored
 `docs/context/pipeline-yield-<yyyy-mm>.md`, so the reverted skill's previous
 entry is the latest one written and its windows neither skip nor re-count

@@ -31,8 +31,8 @@ month arrives from the laptop.
 - `.claude/settings.json` allows `Skill(session-wrapup)`, so the model starts
   it without a permission prompt (the user's answer to question 1, 03.11: «а»).
 - `session-wrapup` step 5 appends the yield entry outside the tree, to
-  `~/.local/state/harness/pipeline-yield/<repo>-<yyyy-mm>.md`, one file per
-  repository, on every branch and machine: when the line fires the branch in
+  `~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md`, one directory
+  per `origin` owner and name, on every branch and machine: when the line fires the branch in
   hand is usually `main`, detached or merged, and the command guard refuses a
   commit on all three. The skill's `allowed-tools` gain that path and the
   `origin` read that names `<repo>`. The user's answer to
