@@ -116,7 +116,8 @@ which then writes no report. A dirty module fails like a dirty test. A run of
 more than one module first dry-runs each, `dryRunOnly` in its configuration
 and nothing stored, and fails naming every module whose dry run failed before
 it mutates any; a run of one skips that, its own run starting with the same
-dry run.
+dry run. A run of several so pays each dry run twice, about 25 minutes over
+`--all`, for a stop that names every failing module at once.
 
 A module runs when its tracked source differs from the copy its stored file
 holds (`files[path].source`), incrementally, or whole when it has no stored
