@@ -160,6 +160,20 @@ describe("the runner image", () => {
 		expect(read("orchestrator/runner/session-rules.md").match(/^\d+\. /gm)).toHaveLength(11);
 	});
 
+	// An octal --chmod reaches the directories its COPY creates: one made by the COPY would be 0644, which agent cannot enter.
+	test("the image makes /etc/claude-code 0755 before the COPY writes the managed CLAUDE.md into it", () => {
+		const all = lines();
+		const made = all.findIndex(
+			(l) =>
+				l.startsWith("RUN ") &&
+				l
+					.split("&&")
+					.some((c) => c.trim().startsWith("install -d -m 0755 ") && c.split(/\s+/).includes("/etc/claude-code")),
+		);
+		expect(made).toBeGreaterThan(-1);
+		expect(made).toBeLessThan(all.indexOf("COPY --chmod=0644 runner/session-rules.md /etc/claude-code/CLAUDE.md"));
+	});
+
 	// spec: orchestrator/no-identity-on-the-host
 	test("the runner's environment takes the four commit identity names from orchestrator/.env, refusing when one is unset", () => {
 		const runner = (composed().services as Record<string, { environment?: Record<string, string> }>).runner;
