@@ -8,8 +8,8 @@
  * unproven entry into the range. Each refusal writes nothing in Notion and is
  * one `status` record; a failed write records nothing. After a write it
  * releases the card's `Assign` when nothing waits there (`cleared()`), and
- * prints that line after its own. A card that reads `done` back from another
- * status gets `NEXT` last, the session's cue to wrap up.
+ * prints that line after its own. A `--to done` that reads `done` back from
+ * another status gets `NEXT` last, the session's cue to wrap up.
  */
 import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -195,6 +195,6 @@ export async function status(card: string, to: string, timeout = 30_000): Promis
 	const line = `status: ${card} ${from} → ${now ?? "no status"}`;
 	const lines = freed.line ? [line, freed.line] : [line];
 	// Whatever the release's exit: a failed restore leaves the card done, and the debrief still due.
-	if (now === "done" && from !== "done") lines.push(NEXT);
+	if (to === "done" && now === "done" && from !== "done") lines.push(NEXT);
 	return { lines, code: now === to && !freed.restoreFailed ? 0 : 1 };
 }
