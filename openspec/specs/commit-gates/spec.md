@@ -275,7 +275,7 @@ refuse.
 
 A `Stop` hook registered in the tracked `.claude/settings.json` SHALL refuse
 to end a turn when all of the following hold: the turn left at least one commit
-on the branch that was not there when control arrived, a task group in a change
+on the branch that was not there at the mark, a task group in a change
 outside `openspec/changes/archive/` has at least one box and no unticked one
 left and was complete neither in the task lists as committed at the mark nor
 in those `origin/main` holds when the turn ends, and the gate ledger holds no
@@ -334,8 +334,16 @@ a commit made after the run is one the run never read. Nor SHALL a record
 whose outcome is `fail`, or one step's record without the other's: a step that
 failed, or did not run, is no evidence that the tip is ready.
 
-Whether the turn left commits SHALL be decided against a mark of `HEAD` taken
-when control arrived, written by a `UserPromptSubmit` hook. A turn that commits
+Whether the turn left commits SHALL be decided against a mark of `HEAD`
+written by a `UserPromptSubmit` hook on the session's first prompt, and
+afterwards on the first prompt after a turn this hook let end. A prompt that
+arrives while a turn runs — a message queued mid-turn, which Claude Code hands
+to the model inside the same turn — SHALL leave the mark as it is, its refusal
+included, and so SHALL a prompt after a turn that ended without this hook
+running. A mark moved by such a prompt let the turn it arrived in end
+unjudged: on 2026-11-02 a turn that committed a completed group and answered a
+message queued during its last command ended with no refusal and no record. A
+turn that commits
 and then returns `HEAD` to the mark SHALL be treated as having left none,
 unless the branch's remote-tracking ref holds a commit the mark does not: the
 gate exists so that work reaching a branch is reported, and work withdrawn
@@ -344,13 +352,14 @@ locally has reached the remote branch, whatever `HEAD` says afterwards. A tip
 read from that ref is decided like any other, so a fetch on `main`, whose
 remote-tracking ref is `origin/main`, completes no group. The mark SHALL be keyed by the session it
 belongs to, since two sessions in one repository otherwise share one mark and
-answer each other's question. It SHALL live no longer than the turn that
-follows it: a record of what the sequence has already reported would be a
-second source of truth about work the repository already describes, and one
-that can disagree with it.
+answer each other's question. It SHALL be replaced on the first prompt after
+the next turn this hook lets end: a record of what the sequence has already
+reported would be a second source of truth about work the repository already
+describes, and one that can disagree with it.
 
 The hook SHALL refuse at most once per mark. A refused turn is continued rather
-than restarted, so no new mark is written, and the second refusal a repeated
+than restarted, so no new mark is written — nor by a prompt that arrives in
+it — and the second refusal a repeated
 condition would produce is suppressed by that. This bounds the cost of a
 condition the model cannot satisfy — a blocker only the user can settle, or a
 step that keeps failing — to one turn, without depending on any field of the
@@ -386,9 +395,15 @@ ends with no passing run at the commit it ends on.
 
 Nor SHALL it claim to reach every turn. A turn that ends by a path which does
 not invoke this hook — an interruption, or a failure that ends the turn
-without it — is not gated, and the obligation falls back to the prose rule for
-those. An interrupted headless turn was measured firing `SessionEnd` and no
-`Stop`; that is an observation, not a behaviour this requirement asserts.
+without it — is not gated as it ends. Because the next prompt leaves the mark
+where it was, its commits are judged with the next turn's when that turn ends
+in the same session: a refusal it earns names its groups, and a mark it
+already spent its refusal on lets the next turn end unrefused. A session not
+continued after it leaves those commits to the prose rule and the pre-push
+hook. A turn another `Stop` hook continues after this one let it end counts as
+ended, so a prompt that arrives in the continuation moves the mark. An
+interrupted headless turn was measured firing `SessionEnd` and no `Stop`; that
+is an observation, not a behaviour this requirement asserts.
 
 Every consumer SHALL register both halves in its tracked
 `.claude/settings.json` with the text the harness supplies, character for
@@ -516,6 +531,41 @@ from its pin* requires.
 - **WHEN** a turn already refused under this requirement ends again with the
   same mark and the condition still met
 - **THEN** the turn ends, because the hook refuses at most once per mark
+
+#### Scenario: A message queued mid-turn
+
+- **WHEN** a turn commits the last task of a group, a message the user queued
+  while it ran reaches the model inside the same turn, and the turn ends with
+  no runner record for the tip
+- **THEN** the hook blocks, because the message left the mark where the turn
+  started
+
+#### Scenario: A message queued into a refused turn
+
+- **WHEN** a turn the hook refused is continued, a queued message reaches it,
+  and it ends again with still no runner record
+- **THEN** the turn ends, because the mark kept its refusal
+
+#### Scenario: A turn the user interrupted
+
+- **WHEN** a turn commits the last task of a group and the user interrupts it,
+  so the hook does not run, and the session's next turn ends with no runner
+  record for its tip
+- **THEN** the hook blocks that turn, and the reason names the group the
+  interrupted turn completed
+
+#### Scenario: The prompt after a turn the hook let end
+
+- **WHEN** the hook lets a turn end, and the next prompt arrives
+- **THEN** the mark is taken afresh at `HEAD`, and the next turn is judged by
+  its own commits alone
+
+#### Scenario: The prompt after the round ceiling
+
+- **WHEN** the session ended at the round ceiling (`stage-goal`) and a prompt
+  resumes it
+- **THEN** the mark is taken afresh at `HEAD`, because the ceiling's end is
+  one this hook made
 
 #### Scenario: Two sessions in one repository
 
