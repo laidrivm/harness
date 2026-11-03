@@ -32,11 +32,13 @@ month arrives from the laptop.
   it without a permission prompt (the user's answer to question 1, 03.11: «а»).
 - `session-wrapup` step 5 appends the yield entry outside the tree, to
   `<state>/harness/pipeline-yield-<yyyy-mm>.md` beside the gate ledger, on
-  every branch: when the line fires the branch in hand is `main`, detached or
-  merged, and the command guard refuses a commit on all three. The skill's
-  `allowed-tools` gain that one path. Question 2 on the card asks whether the
-  tree should still take the entry on a branch that can commit it
-  (`design.md`, decision 3).
+  every branch and machine: when the line fires the branch in hand is `main`,
+  detached or merged, and the command guard refuses a commit on all three.
+  The skill's `allowed-tools` gain that one path. The user's answer to
+  question 2 (03.11, «а») widened it: wrap-up ledgers no longer reach git.
+- **BREAKING** for readers of the tracked ledger: the change deletes
+  `docs/context/pipeline-yield-2026-10.md`, and README's *Consuming* tells
+  each consumer to delete its own once, after the bump that carries this.
 - `core/git-and-prs.md`'s rule on committing wrap-up artefacts and
   `core/review-toolkit.md`'s pointer to the ledger follow it.
 - The prose stop-gap the VPS rules card adds as rule 4 of
@@ -66,8 +68,9 @@ None.
   `bun/work-status-tree.test.ts` and `bun/work-status-pr.test.ts` that pin
   the last line, `.claude/settings.json`,
   `core/skills/session-wrapup/SKILL.md`, `bun/session-wrapup-yield.test.ts`,
-  `core/git-and-prs.md`, `core/review-toolkit.md`;
-  `orchestrator/runner/CLAUDE.md` if it is on `main`.
+  `core/git-and-prs.md`, `core/review-toolkit.md`, `README.md`; deleted:
+  `docs/context/pipeline-yield-2026-10.md`; `orchestrator/runner/CLAUDE.md`
+  if it is on `main`.
 - Consumers get the skill's change through the package: their entries land in
   each user's state directory, not their tree. The
   `status` line is the harness's own: consumers move a status through the

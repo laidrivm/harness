@@ -49,6 +49,8 @@ found it, so the VPS clone's pull is never stopped by it.
   an untracked file stops a pull only when the same path arrives, and the
   step runs only for long exploratory sessions. On a branch the guard refuses
   a commit on it stays uncommitted, and the report names it.
+- Deleting consumers' ledgers from here: each consumer does it once, in its
+  own pull request (decision 4).
 
 ## Decisions
 
@@ -129,26 +131,45 @@ the same month merges. Three fixes were weighed:
   next pull; a new month's file is untracked, which `--autostash` leaves, and
   the pull refuses to overwrite it. A reset discards the entry outright.
 
-**Question 2 on the card** asks the user between this and a narrower form:
-outside the tree only where the guard refuses the commit — `main`, detached or
-merged — and in `docs/context/` on a branch that can still take it. The
-narrower form keeps the tracked ledger for a wrap-up typed mid-work, but needs
-the guard's merged-branch check exposed to the skill (an entry point on
-`bun/branch-state.ts`), and gives each machine two ledgers whose windows must
-be dated across both, or the second re-counts what the first counted. Since
-the line fires only after a merge, the tree would rarely be the target. This
-design is written at the recommended answer, the wider form; the narrower one
-changes decision 4 and tasks 1.3–1.4.
+Question 2 on the card put this against a narrower form: outside the tree
+only where the guard refuses the commit, and in `docs/context/` on a branch
+that can still take it. The user chose this one (03.11, «а») and widened it:
+the harness moves to it whole, on the VPS and the laptop; wrap-up ledgers no
+longer reach git, and the tracked ones leave this repository and the
+consumers.
 
-### 4. One ledger per machine, seeded from the tree
+### 4. One ledger per machine, and the tracked ones deleted
 
 Every read of "the previous entry" in step 5 — `<gates-since>`, `<since>`, and
 the earlier `first review` lines a pull request is skipped by — reads the
-state ledger. While it holds no entry yet, they read the latest entry in
-`docs/context/pipeline-yield-*.md`, so a machine's first entry does not count
-every gate record it ever wrote. After that the windows never overlap on one
-machine; a pull request measured on the laptop can be measured again on the
-host, and each ledger's count stays honest on its own.
+state ledger alone, so the windows never overlap on one machine. A pull
+request measured on the laptop can be measured again on the host, and each
+ledger's count stays honest on its own.
+
+No seed: a machine's first entry takes the rules step 5 already has for the
+first entry ever — the `gates` line counts every record the gate ledger
+holds, and `first review` starts today. Reading the tree's last entry instead
+would stop working the moment those files are deleted, and the one-off long
+`gates` line is that machine's history, which no remaining ledger counted.
+
+The change deletes `docs/context/pipeline-yield-2026-10.md`, the one tracked
+ledger here. Nothing executable reads it: no check, test, hook or
+`bun/settings.ts` entry names `docs/context/` or `pipeline-yield`. Its
+readers are prose — the skill's step 5, `core/git-and-prs.md`'s rule on
+committing wrap-up artefacts, `core/review-toolkit.md`'s pointer to the
+counts — and each moves to the state ledger. Its 2026-10-28 first-review
+baseline stays in the archived `first-review-yield` change's `design.md`,
+*Baseline*. Archived changes that cite the file are history and keep their
+text. The save point (step 4) keeps writing `docs/context/<topic>-<yyyy-mm>.md`
+— it is not a ledger, and the user's answer named only the ledgers.
+
+Consumers carry their own copies (`dota2` holds `pipeline-yield-2026-07` to
+`-10`, `mellon` holds `-10`, read through GitHub on 03.11). A pin bump syncs
+the skill and docs but deletes nothing in a consumer's tree, and an automatic
+delete of a consumer's tracked files is more than a one-off needs, so
+README's *Consuming* gains a one-time step: after the bump that carries this
+change, delete the tracked `docs/context/pipeline-yield-*.md` in a pull
+request of the consumer's own. This change edits no other repository.
 
 A detached `HEAD` has no branch for the entry's `## <yyyy-mm-dd> — <branch>`
 heading; it names the detached commit as `git status` prints it.
@@ -178,12 +199,23 @@ conditional on where it stands at apply.
   asked for.
 - [A machine's entries stay on that machine] → read there; a change of its
   own carries them if the monthly count needs both machines.
+- [The state directory is lost — a new laptop, or the VPS's `agent_home`
+  volume recreated] → the ledger goes with it, as `gates.jsonl` already does;
+  the user chose a ledger outside git knowing it.
+- [A consumer skips the one-time delete] → its tracked ledgers stay as
+  frozen history; nothing writes to them after its bump.
 - [`$XDG_STATE_HOME` set to another path] → the ledger write prompts once
   instead of running; noted in the skill.
 
 ## Migration Plan
 
-None: the line appears on the next `status --to done` after merge; consumers
-take the skill change with their next pin bump. A dirty
-`docs/context/pipeline-yield-*.md` already in a clone on `main` is the user's
-to move or discard — this change writes no cleanup.
+The line appears on the next `status --to done` after merge, and the
+harness's tracked ledger is deleted in the same pull request. Consumers take
+the skill change with their next pin bump, then delete their tracked ledgers
+once, as README's *Consuming* says (decision 4). A dirty
+`docs/context/pipeline-yield-*.md` already in a clone on `main` — the VPS's,
+or the laptop's main checkout — goes when the pull brings the deletion: an
+unmodified copy is removed by the pull, a modified one stops it, and the user
+discards it (`git checkout -- docs/context`) or copies its entries under
+`<state>/harness/` first. Rollback is a revert; entries written to the state
+ledger meanwhile stay there.

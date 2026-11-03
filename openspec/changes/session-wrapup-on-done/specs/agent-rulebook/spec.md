@@ -4,17 +4,17 @@
 
 The session wrap-up SHALL append its yield entry to
 `<state>/harness/pipeline-yield-<yyyy-mm>.md`, `<state>` the directory the
-gate ledger is written under, on every branch, and SHALL change no file of
-the tree for it. The previous entry it dates its windows from, and the
-earlier `first review` lines it skips measured pull requests by, SHALL be
-read from that ledger, or from `docs/context/pipeline-yield-*.md` while that
-ledger holds no entry yet.
+gate ledger is written under, on every branch and every machine, and SHALL
+write, commit or read no `docs/context/pipeline-yield-*.md`. The previous
+entry it dates its windows from, and the earlier `first review` lines it
+skips measured pull requests by, SHALL be read from that ledger alone. The
+harness SHALL track no `docs/context/pipeline-yield-*.md`.
 
 #### Scenario: A wrap-up on main
 
 - **WHEN** a wrap-up runs in a clone whose branch is `main`
 - **THEN** its yield entry is appended under `<state>/harness/`, and `git
-  status` shows no change under `docs/context/pipeline-yield-*`
+  status` shows no change under `docs/context/`
 
 #### Scenario: A wrap-up on a feature branch
 
@@ -24,13 +24,18 @@ ledger holds no entry yet.
 
 #### Scenario: The first entry on a machine
 
-- **WHEN** `<state>/harness/` holds no `pipeline-yield-*.md` and the tree's
-  `docs/context/` holds entries
-- **THEN** `<gates-since>` and `<since>` are dated from the latest of those
-  entries, and the new entry is written under `<state>/harness/`
+- **WHEN** `<state>/harness/` holds no `pipeline-yield-*.md`
+- **THEN** the `gates` line counts every record of the gate ledger and the
+  `first review` line starts today, as for the first entry ever, and the
+  tree is not read for an earlier entry
 
 #### Scenario: A wrap-up on a detached HEAD
 
 - **WHEN** the checkout has no branch
 - **THEN** the entry's heading names the detached commit as `git status`
   prints it, never an empty branch
+
+#### Scenario: No ledger in the harness tree
+
+- **WHEN** the harness's tracked files are listed
+- **THEN** none matches `docs/context/pipeline-yield-*.md`
