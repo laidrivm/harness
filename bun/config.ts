@@ -64,6 +64,9 @@ export function bumpTest(root: string): string {
 	return value;
 }
 
+/** The name CodeRabbit's app gives its check run: the one reviewer `harness.reviewers` may name, and the run `coderabbit-run.ts` reads. */
+export const CODERABBIT = "CodeRabbit";
+
 /**
  * `harness.reviewers` of `root`'s `package.json`: `[]` with no file, no key or
  * `null`, so no reviewer is waited for. Throws naming the file when it does not
@@ -76,7 +79,7 @@ export function reviewers(root: string): string[] {
 	if (value === undefined || value === null) return [];
 	if (!Array.isArray(value) || !value.every((name) => typeof name === "string"))
 		throw new Error(`package.json: harness.reviewers is ${JSON.stringify(value)}, not a list of check-run names`);
-	const unknown = value.filter((name) => name !== "CodeRabbit");
+	const unknown = value.filter((name) => name !== CODERABBIT);
 	if (unknown.length)
 		throw new Error(
 			`package.json: harness.reviewers names ${unknown.map((name) => JSON.stringify(name)).join(", ")}; CodeRabbit is the only one understood`,
