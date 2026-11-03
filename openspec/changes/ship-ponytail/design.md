@@ -89,8 +89,10 @@ harness everywhere.
   built-in marketplace. A mismatch loads nothing, and the check passes. The
   Code rule on pinning a looked-up name asks for a test that reads the name
   where it is defined. No offline test can read either source: one is on
-  GitHub, the other inside the Claude Code binary. Task 4.2's `claude plugin
-  list` on the VPS is the check that reads them, and README names the gap.
+  GitHub, the other inside the Claude Code binary. Task 4.2 reads them on
+  the VPS: `claude plugin list` for ponytail, and `claude plugin details`
+  with `/plugin` for the built-in id, which `claude plugin list` omits.
+  README names the gap.
 
 ### D3. The pin is a tag, and nothing moves it but a hand edit
 

@@ -10,9 +10,11 @@ an agent's call that redirects Claude Code's configuration (seen 03.11 on
 
 - [ ] 1.1 A plugin id under `builtin` that no build ships. In a scratch
       directory, give `.claude/settings.json` the entry
-      `"no-such-plugin@builtin": true`, then run `claude plugin list` there,
-      in a throwaway `CLAUDE_CONFIG_DIR` (the user, in a terminal of their
-      own). Record in design.md, *Risks*, whether it errors, warns or says
+      `"no-such-plugin@builtin": true`. In a throwaway `CLAUDE_CONFIG_DIR`
+      (the user, in a terminal of their own), run `claude plugin details
+      no-such-plugin@builtin` there, then start `claude` there and open
+      `/plugin`. `claude plugin list` omits built-in plugins, so it cannot
+      show this. Record in design.md, *Risks*, whether it errors, warns or says
       nothing, and whether a session still starts
 - [ ] 1.2 The laptop's entry (D6, answer 4 а). With the user's own
       configuration, start `claude` once in a harness worktree that carries
@@ -118,5 +120,8 @@ an agent's call that redirects Claude Code's configuration (seen 03.11 on
       context, the session and a subagent it starts each quote
       `level: ultra`. `/home/agent/.config/ponytail/config.json`
       is owned by `agent`. `claude plugin list`, as `agent` in
-      `/home/agent/harness`, shows `ponytail@ponytail` at 5.3.3 and
-      `cc-plugin-you-should-know@builtin`. Record the result on the card
+      `/home/agent/harness`, shows `ponytail@ponytail` at 5.3.3. That
+      command omits built-in plugins (seen on 2.1.316), so `claude plugin
+      details cc-plugin-you-should-know@builtin` must resolve the id, and
+      `/plugin` → Installed → Built-in, in the session, must show it
+      enabled. Record the result on the card
