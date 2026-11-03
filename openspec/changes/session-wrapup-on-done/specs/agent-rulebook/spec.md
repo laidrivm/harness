@@ -7,14 +7,15 @@ refuses a commit — the session wrap-up SHALL append its yield entry to
 `<state>/harness/pipeline-yield-<yyyy-mm>.md`, `<state>` the directory the
 gate ledger is written under, and SHALL change no file of the tree for it. On
 any other branch it SHALL append to `docs/context/pipeline-yield-<yyyy-mm>.md`
-as before. The previous entry it reads dates from SHALL be one in the ledger
-it appends to.
+as before. The previous entry it reads dates from, and the earlier `first
+review` lines it skips measured pull requests by, SHALL be in the ledger it
+appends to.
 
 #### Scenario: A wrap-up on main
 
 - **WHEN** a wrap-up runs in a clone whose branch is `main`
 - **THEN** its yield entry is appended under `<state>/harness/`, and `git
-  status` shows the tree as it was before the wrap-up
+  status` shows no change under `docs/context/pipeline-yield-*`
 
 #### Scenario: A wrap-up on a detached HEAD
 
