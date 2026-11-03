@@ -231,6 +231,12 @@ describe("the next step", () => {
 	});
 
 	// spec: work-status/a-move-to-another-status
+	test("a move to archiving that Notion answers done prints no next line (local review)", async () => {
+		const run = await status({ args: to("archiving"), page: { status: "applied", answer: "done" } });
+		expect([run.code, nexts(run)]).toEqual([1, []]);
+	});
+
+	// spec: work-status/a-move-to-another-status
 	test("a move to applied prints no next line", async () => {
 		const run = await status({ args: to("applied"), cwd: clone(change("demo")).dir, page: { status: "applying" } });
 		expect([run.code, nexts(run)]).toEqual([0, []]);
