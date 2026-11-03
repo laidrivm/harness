@@ -42,15 +42,44 @@ mint card merged into it, is the plan this design records.
 
 ## Decisions
 
-### Every start is a new conversation (user, 02.11, answer 1 a)
+### Every start continues the last conversation (user, 03.11, reversing answer 1 a)
 
-The loop never passes `--continue`. A crash, `/exit`, `docker compose
-restart runner` and a deploy all give a clean session; the card's state is
-in Notion and GitHub, and the session reads it back with `work.ts take`. The
-stage's criterion «survives `restart runner`» reads as «`main` is back and
-Remote Control reconnects to it», not «the same conversation». Continuing
-would let a deploy resume a conversation the user had cleared, and would
-need host-deploy's fresh-session mark to fire on a resumed session too.
+The loop starts `claude --continue --remote-control harness`, so a crash,
+`/exit`, `docker compose restart runner`, a reboot of the VPS and a deploy all
+come back to the conversation the user was in, not a new entry in the Claude
+app's Recents, which a live restart on 03.11 gave. The user reversed answer
+1 a on the card: «давай тогда вернём --continue — было бы удобно, чтобы после
+внешнего перезапуска контейнера (например, перезагрузка VPS) продолжала
+работать та же сессия. Если что, её размер контролится через compact и
+clear.» (user, 03.11). The size of the conversation is the user's, through
+`/compact` and `/clear`.
+
+Answer 1 a had kept every start new: the card's state is in Notion and
+GitHub, so nothing is lost, and continuing would let a deploy resume a
+conversation the user had cleared and would need host-deploy's fresh-session
+mark to fire on a resumed session too. The last two are now host-deploy's to
+reconsider (*Seams*).
+
+Where the directory has no conversation, the first start in `/home/agent`
+and the first after the clone, Claude Code 2.1.316 prints «No conversation
+found to continue» and exits 1 (probed on the laptop through a pty, the trust
+prompt accepted; `claude -p --continue` instead starts a new one). The loop
+would then restart every 5 s, pulling and so minting each time. So the
+script starts a new conversation only when the directory has none, read from
+where Claude Code keeps them: a `*.jsonl` transcript under
+`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/` in a directory named by the
+real path, `pwd -P`, with every character but a letter or a digit replaced
+by `-` (both seen on the laptop: a `claude -p` started in `/tmp/…` wrote its
+transcript under `-private-tmp-…`). Claude Code is a binary the harness
+cannot import, so the test pins the name against that observation, and the
+probe's restart against the real one. It never
+falls back on `claude`'s exit status: a continued session that crashes exits
+non-zero too, and must come back to the same conversation, not a new one.
+
+shortcut: a directory holding only transcripts `--continue` skips (sessions
+started with `claude -p`, the Agent SDK or `/loop`) passes the check and
+restarts every 5 s; the session's clone has none, since the pass works in its
+own clones. Read the transcripts' first lines when it is seen.
 
 ### The start script, `orchestrator/runner/session.sh`
 
@@ -66,7 +95,9 @@ Copied to `/opt/orchestrator/session.sh`, root's, 0755. Its loop:
    A failed `cd` never exits: ending the script ends `main`, which nothing
    restarts but the container (local review).
 2. `claude --remote-control` with the fixed name `harness`, in the form the
-   pinned release takes (verified at apply with `claude --help`).
+   pinned release takes (verified at apply with `claude --help`), with
+   `--continue` where the directory has a conversation (*Every start
+   continues the last conversation*).
 3. `sleep 5`, and again from 1.
 
 It exports `GIT_TERMINAL_PROMPT=0`, so a failed credential fails the pull
@@ -210,8 +241,29 @@ still holds no token, so *No token in the session* holds as written.
   `managed-settings.json` and its `COPY`, the fresh-session mark, the timer,
   the rollback and the failure file. This change hands it: `main` as agent on
   the default socket; `restart runner` and a recreate start `main` again
-  through the entrypoint; pull and install before every start; no
-  `--continue`, so `SessionStart` fires with `startup` and sets the mark.
+  through the entrypoint; pull and install before every start. Since 03.11
+  each start passes `--continue`, which host-deploy's design, written for
+  answer 1 a, does not assume; its apply reconsiders, without this change
+  editing its artefacts:
+  - A continued start fires `SessionStart` with `resume`, not `startup`, so
+    its `startup|clear` matcher no longer sets the mark on a restart. The
+    mark is a file in agent's home and outlives the restart, so a session
+    that was fresh before a deploy's restart stays fresh after it, and a busy
+    one that crashed stays busy, which is right; but design *A session
+    restarted by the start script's loop after `claude` exits is fresh by the
+    same hook* and the rolled-back session that «sits fresh» no longer hold.
+  - After `/clear`, the mark means «a new conversation with no prompt yet».
+    Whether that conversation leaves a transcript before its first prompt is
+    not verified: if it does not, a deploy's restart continues the
+    conversation from before the `/clear`, the one the user cleared. A
+    `SessionStart` hook that records the session's id, read back as `claude
+    --resume <id>`, would close it; that hook is host-deploy's managed
+    settings to weigh, not this change's.
+  - A continued conversation keeps the system prompt recorded on its first
+    request until it is compacted (Claude Code's CLI reference, *System
+    prompt flags in resumed conversations*), so a deploy's restart may not bring the new
+    image's prompt in at once; what of the hooks and skills it brings is not
+    verified.
 - **Ponytail ultra** (card `3f639875c31b8142b793e3be4527a6a6`) adds
   `PONYTAIL_DEFAULT_MODE` to the same `environment:` block; whichever lands
   second appends to it.
@@ -248,7 +300,8 @@ By the user on the host, after both pull requests merge: write
 `docker compose up -d runner`, log in once, then stage step 6 makes the
 clone. The probe card `40c39875c31b814e8902ef481aad54e2` checks the versions,
 `tmux has-session -t main` as agent, a killed `claude` back within 5 s, the
-session back after `restart runner` with Remote Control reconnected, a broken
+session back after `restart runner` with Remote Control reconnected to the
+same conversation, no new entry in the app's Recents, a broken
 pull not stopping the start, `gh pr list -R laidrivm/harness` and `git
 ls-remote origin` as agent at once and after more than an hour, no `GH_TOKEN`
 and no `~/.config/gh/hosts.yml` in the session, a mint's time, a push touching
@@ -258,6 +311,7 @@ and no `~/.config/gh/hosts.yml` in the session, a mint's time, a push touching
 ## Settled on the card
 
 - One change for both cards (user, 02.11, on merging the mint card).
-- Answer 1 a (user, 02.11): a new conversation on every start.
+- Answer 1 a (user, 02.11): a new conversation on every start; reversed by
+  the user on 03.11: every start continues the last conversation.
 - Decision 39 б: the six permissions above. Decision 40 б: a mint per call,
   through a gh wrapper and git's credential helper.

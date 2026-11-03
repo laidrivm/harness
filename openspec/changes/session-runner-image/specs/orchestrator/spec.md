@@ -6,15 +6,25 @@ The container's start SHALL start, before sshd, a detached tmux session
 `main` as the session user running the start script. The script SHALL loop:
 in the session's clone, `git pull --ff-only` and then
 `bun install --frozen-lockfile`, each failure printing a line that names it;
-then `claude` with Remote Control under a fixed name, always a new
-conversation; and, once `claude` exits, a 5-second pause before the next
-round.
+then `claude` with Remote Control under a fixed name, continuing the
+directory's last conversation, or a new one where the directory has none;
+and, once `claude` exits, a 5-second pause before the next round.
 
 #### Scenario: Claude Code exits
 
 - **WHEN** `claude` in `main` exits, by a crash or `/exit`
 - **THEN** after 5 seconds the script pulls, installs and starts `claude`
-  again, as a new conversation, never `--continue` (user, 02.11, answer 1 a)
+  again with `--continue`, in the same conversation (user, 03.11, reversing
+  answer 1 a)
+
+#### Scenario: Nothing to continue
+
+- **WHEN** Claude Code keeps no conversation for the directory `claude`
+  starts in, the first start in the session user's home or the first after
+  the clone
+- **THEN** the script starts `claude` without `--continue`, as a new
+  conversation, and a conversation that exists is never replaced by a new
+  one because `claude` exited non-zero
 
 #### Scenario: The pull fails
 
@@ -39,7 +49,7 @@ round.
 
 - **WHEN** the runner container restarts or is recreated
 - **THEN** `main` exists again as the session user, and its `claude` runs
-  with Remote Control
+  with Remote Control in the conversation it ran before
 
 ### Requirement: The session's gh mints a token for each call
 

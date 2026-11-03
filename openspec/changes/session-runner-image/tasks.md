@@ -86,6 +86,19 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
       check unchanged. Verify `bun test orchestrator/` passes and the README
       holds no slug, id or email
 - [x] 3.5 Open the second pull request through `finish`
+- [x] 3.6 Continue the last conversation (user, 03.11, reversing answer 1 a;
+      3.1's «never `--continue`» no longer holds): probe what 2.1.316's
+      `claude --continue` does in a directory with no conversation; write
+      the failing cases in `orchestrator/session.test.ts` — a clone with a
+      transcript → `claude --continue --remote-control harness`, also after
+      a crash; a clone with none, or only `HOME` with one → a new
+      conversation; no clone and a transcript for `HOME` → continued in
+      `HOME`; a `HOME` behind a symlink and a `CLAUDE_CONFIG_DIR` each find
+      the transcript. Verify they fail; edit `session.sh` per design *Every start
+      continues the last conversation*, the README's step 12 and the delta
+      spec; name what host-deploy's apply reconsiders in *Seams*. Verify
+      `bun test orchestrator/` passes; open a fix pull request through
+      `finish`
 
 ## 4. On the host, and the probe
 

@@ -34,8 +34,9 @@ once both have merged.
   `git pull --ff-only` and `bun install --frozen-lockfile` in the session's
   clone, starts `claude --remote-control` whether they failed or not (on the
   old tree when the pull failed), pauses 5 s after `claude` exits, and
-  repeats. Every start is a new conversation, never `--continue` (user,
-  02.11, answer 1 a).
+  repeats. Every start continues the directory's last conversation with
+  `--continue`, or starts a new one where it has none (user, 03.11,
+  reversing answer 1 a).
 - `gh` on the image's `PATH` becomes a wrapper. For `agent`, with no
   `GH_TOKEN` set, it asks the key holder's mint for a token for
   `laidrivm/harness` with the permissions of decision 39 б and runs the real
