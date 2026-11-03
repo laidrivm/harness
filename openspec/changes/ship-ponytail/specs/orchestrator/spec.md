@@ -4,7 +4,8 @@
 
 On every container start, before it starts the persistent session, the
 runner's entrypoint SHALL write the session user's ponytail config file with
-`defaultMode` `ultra`, as the session user. The launcher a pass's session
+`defaultMode` `ultra`, as the session user. A failed write SHALL NOT stop the
+entrypoint. The launcher a pass's session
 runs under SHALL give `claude` the session user's home and no
 `XDG_CONFIG_HOME`, so the pass reads the same file. Nothing the harness ships
 to a laptop or a consumer SHALL set ponytail's level.
@@ -29,6 +30,14 @@ to a laptop or a consumer SHALL set ponytail's level.
 - **THEN** the line writing the config file starts with `runuser -u agent --`,
   so a symlink planted in the session user's volume cannot turn it into a
   root write
+
+#### Scenario: A failed write leaves the runner starting
+
+- **WHEN** the config file cannot be written, because the session user's
+  volume holds a file where its directory belongs or a directory it cannot
+  write
+- **THEN** the entrypoint prints a line naming ponytail's level and goes on
+  to start the session and sshd
 
 #### Scenario: A pass's session reads the same file
 
