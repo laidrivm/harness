@@ -16,12 +16,15 @@ const script = join(import.meta.dir, "runner/session.sh");
 /** The script under `shell`, with a clone in `HOME` unless `clone` is false, and git, bun or claude failing when asked. */
 function run(
 	shell: string,
-	opts: { clone?: boolean; failGit?: boolean; failBun?: boolean; failClaude?: boolean } = {},
+	opts: { clone?: boolean | "worktree"; failGit?: boolean; failBun?: boolean; failClaude?: boolean } = {},
 ) {
 	const home = emptyDir("orchestrator-session-");
 	const bin = join(home, "bin");
 	mkdirSync(bin);
-	if (opts.clone !== false) mkdirSync(join(home, "harness", ".git"), { recursive: true });
+	if (opts.clone === "worktree") {
+		mkdirSync(join(home, "harness"));
+		writeFileSync(join(home, "harness", ".git"), "gitdir: /elsewhere\n");
+	} else if (opts.clone !== false) mkdirSync(join(home, "harness", ".git"), { recursive: true });
 	const log = join(home, "calls.log");
 	const stub = (name: string, body = "") =>
 		writeFileSync(join(bin, name), `#!/bin/sh\necho "${name} $* @$(pwd)" >>"${log}"\n${body}`, { mode: 0o755 });
@@ -35,7 +38,7 @@ function run(
 	// Records the two variables, ends the loop on its second start, and otherwise exits as asked.
 	stub(
 		"claude",
-		`echo "env GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset} DISABLE_AUTOUPDATER=\${DISABLE_AUTOUPDATER-unset}" >>"${log}"\n[ "$(grep -c '^claude ' "${log}")" -lt 2 ] || kill "$PPID"\n${opts.failClaude ? "exit 1\n" : ""}`,
+		`echo "env GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset} DISABLE_AUTOUPDATER=\${DISABLE_AUTOUPDATER-unset} LANG=\${LANG-unset}" >>"${log}"\n[ "$(grep -c '^claude ' "${log}")" -lt 2 ] || kill "$PPID"\n${opts.failClaude ? "exit 1\n" : ""}`,
 	);
 	const r = Bun.spawnSync([shell, script], {
 		env: { PATH: `${bin}:${process.env.PATH ?? ""}`, HOME: home },
@@ -49,12 +52,15 @@ function run(
 	return { calls: calls.map((c) => c.replace(` @${home}`, " @~")), out: r.stdout.toString() + r.stderr.toString() };
 }
 
+// Built from parts, so remoteControl()'s scan of the tree does not read this file as a starter.
+const START = `claude ${"-".repeat(2)}remote-control harness`;
+
 const round = [
 	"git pull --ff-only @~/harness",
 	"git sees GIT_TERMINAL_PROMPT=0",
 	"bun install --frozen-lockfile @~/harness",
-	"claude --remote-control harness @~/harness",
-	"env GIT_TERMINAL_PROMPT=0 DISABLE_AUTOUPDATER=1",
+	`${START} @~/harness`,
+	"env GIT_TERMINAL_PROMPT=0 DISABLE_AUTOUPDATER=1 LANG=C.UTF-8",
 ];
 
 for (const shell of ["sh", "dash"])
@@ -89,6 +95,10 @@ for (const shell of ["sh", "dash"])
 		test("with no clone, neither git nor bun runs, and claude starts in HOME", () => {
 			const { calls } = run(shell, { clone: false });
 			expect(calls.filter((c) => /^(?:git|bun) /.test(c))).toEqual([]);
-			expect(calls[0]).toBe("claude --remote-control harness @~");
+			expect(calls[0]).toBe(`${START} @~`);
+		});
+
+		test("a clone whose .git is a file, as a worktree's is, is pulled and installed", () => {
+			expect(run(shell, { clone: "worktree" }).calls.slice(0, 4)).toEqual(round.slice(0, 4));
 		});
 	});

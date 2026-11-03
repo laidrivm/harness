@@ -14,14 +14,17 @@
 export GIT_TERMINAL_PROMPT=0
 # The image pins claude; an update would land in ~/.local and outlive the pin.
 export DISABLE_AUTOUPDATER=1
+# The container sets no locale; the pass's sessions get the same one.
+export LANG=C.UTF-8
 
+# No exit on a failed cd: ending this script ends `main`, which nothing restarts but the container.
 while :; do
-	if [ -d "$HOME/harness/.git" ]; then
-		cd "$HOME/harness" || exit 1
+	# -e: a worktree's or a separate gitdir's .git is a file.
+	if [ -e "$HOME/harness/.git" ] && cd "$HOME/harness"; then
 		git pull --ff-only || echo "session: git pull failed; starting claude anyway" >&2
 		bun install --frozen-lockfile || echo "session: bun install failed; starting claude anyway" >&2
 	else
-		cd "$HOME" || exit 1
+		cd "$HOME"
 	fi
 	claude --remote-control harness
 	sleep 5

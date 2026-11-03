@@ -383,12 +383,17 @@ token from the App for each call; it holds none.
    do this before pulling the change that needs it, since every
    `docker compose` command after it refuses without the file; a new host
    does it before step 4. The App's slug ends the address of its public page,
-   `https://github.com/apps/<slug>`, and a running stack's mint prints it for
-   a repository `app/repositories` names; the bot's numeric id comes from
-   GitHub:
+   `https://github.com/apps/<slug>`, and a running stack's mint prints it on
+   the host for a repository `app/repositories` names:
 
    ```sh
    docker compose exec -u runner runner sudo -n -u keyholder /opt/orchestrator/mint <owner>/<repo> --slug
+   ```
+
+   The bot's numeric id comes from GitHub, on the laptop, whose gh is logged
+   in:
+
+   ```sh
    gh api 'users/<slug>[bot]' --jq .id
    ```
 
@@ -411,20 +416,24 @@ token from the App for each call; it holds none.
    `docker compose up -d runner`.
 
 2. The one login, as `agent`, with the claude.ai account: its URL opens on
-   any device. Remote Control needs this full login, not the token of step 2:
+   any device. Remote Control needs this full login, not the setup token of
+   step 2, *The token*. The variable keeps claude's auto-updater from
+   installing past the image's pin into agent's home, as `session.sh` does:
 
    ```sh
-   docker compose exec -it -u agent runner claude auth login
+   docker compose exec -it -u agent -e DISABLE_AUTOUPDATER=1 runner claude auth login
    ```
 
    It lands at `/home/agent/.claude/.credentials.json`, mode 0600, which
    `runner` cannot read. The loop's next start picks it up.
 
 3. Attach to `main` to watch the session or answer a prompt in its pane,
-   and detach with Ctrl-b d, which leaves it running:
+   and detach with Ctrl-b d, which leaves it running. `-u` draws claude's
+   Unicode, which tmux otherwise replaces, since the container sets no
+   UTF-8 locale:
 
    ```sh
-   docker compose exec -it -u agent runner tmux attach -t main
+   docker compose exec -it -u agent runner tmux -u attach -t main
    ```
 
 4. The ask integration's settings, from which the session posts its
