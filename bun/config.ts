@@ -5,9 +5,11 @@
  * project's own, and this package is shared.
  *
  * A key that is absent fails, naming it. A default would make a forgotten value
- * read as a decision, and nothing downstream could tell the two apart.
+ * read as a decision, and nothing downstream could tell the two apart. The one
+ * exception is `reviewers`: its absence means no external reviewer, since the
+ * harness also runs without one (the user's answer 2 b, 2026-11-03).
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export type Config = {
@@ -25,20 +27,24 @@ export type Config = {
 	bumpTest: string;
 	/** The name of the board whose cards this tree decides — never its address. */
 	board: string;
+	/** The check-run names of the reviewers `work.ts finish` waits for; `CodeRabbit` the only one understood. */
+	reviewers: string[];
 };
+
+/** `file` parsed, or a throw naming it: the parser's own message names a position and no file. */
+function manifest(file: string): { harness?: Partial<Config> } | null {
+	const text = readFileSync(file, "utf8");
+	try {
+		return JSON.parse(text);
+	} catch (error) {
+		throw new Error(`${file} is not JSON — ${String(error)}`);
+	}
+}
 
 /** `key` from the `"harness"` object of `root`'s `package.json`. */
 export function read<K extends keyof Config>(root: string, key: K): Config[K] {
 	const file = join(root, "package.json");
-	const text = readFileSync(file, "utf8");
-	let manifest: { harness?: Partial<Config> };
-	try {
-		manifest = JSON.parse(text);
-	} catch (error) {
-		// The parser's own message names a position and no file.
-		throw new Error(`${file} is not JSON — ${String(error)}`);
-	}
-	const value = manifest.harness?.[key];
+	const value = manifest(file)?.harness?.[key];
 	// `null` too: JSON can only spell an absent value that way, and the gate
 	// would otherwise read a field of it and throw something nobody can act on.
 	if (value === undefined || value === null)
@@ -55,6 +61,26 @@ export function read<K extends keyof Config>(root: string, key: K): Config[K] {
 export function bumpTest(root: string): string {
 	const value = read(root, "bumpTest");
 	if (typeof value !== "string" || value.trim() === "") throw new Error("package.json: harness.bumpTest is blank");
+	return value;
+}
+
+/**
+ * `harness.reviewers` of `root`'s `package.json`: `[]` with no file, no key or
+ * `null`, so no reviewer is waited for. Throws naming the file when it does not
+ * parse, `harness.reviewers` when the value is not a list of names, and the
+ * name `finish` cannot read the state of otherwise.
+ */
+export function reviewers(root: string): string[] {
+	const file = join(root, "package.json");
+	const value: unknown = existsSync(file) ? manifest(file)?.harness?.reviewers : undefined;
+	if (value === undefined || value === null) return [];
+	if (!Array.isArray(value) || !value.every((name) => typeof name === "string"))
+		throw new Error(`package.json: harness.reviewers is ${JSON.stringify(value)}, not a list of check-run names`);
+	const unknown = value.filter((name) => name !== "CodeRabbit");
+	if (unknown.length)
+		throw new Error(
+			`package.json: harness.reviewers names ${unknown.join(", ")}; CodeRabbit is the only one understood`,
+		);
 	return value;
 }
 

@@ -96,13 +96,13 @@ export const read = (repo: string, sha: string): Run[] | { name: "unread"; why: 
 	objects(`repos/${repo}/commits/${sha}/check-runs?filter=all&per_page=100`, ".check_runs[]");
 
 /**
- * The earliest `started_at` of CodeRabbit's runs in `runs`, in ms, standing for when the commit arrived.
- * With none that parses, `-Infinity`: every exact request then counts, so the guard fails closed and asks nothing twice.
+ * When the commit arrived, in ms: the earlier of `committed`, its committer date, and the earliest `started_at`
+ * of CodeRabbit's runs in `runs`, of whichever parse. The earlier, so a run that starts after a request can
+ * only count more requests, never fewer (`finish-named-reviewers`'s design, decision 4). With neither,
+ * `-Infinity`: every exact request then counts, so the guard fails closed and asks nothing twice.
  */
-export function arrived(runs: Run[]) {
-	const times = own(runs)
-		.map((run) => Date.parse(String(run.started_at)))
-		.filter(Number.isFinite);
+export function arrived(runs: Run[], committed: number) {
+	const times = [committed, ...own(runs).map((run) => Date.parse(String(run.started_at)))].filter(Number.isFinite);
 	return times.length ? Math.min(...times) : Number.NEGATIVE_INFINITY;
 }
 

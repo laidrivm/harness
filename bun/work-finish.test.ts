@@ -6,7 +6,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, emptyDir, git } from "./diff-budget.fixture.ts";
+import { cleanup, emptyDir, git, MANIFEST } from "./diff-budget.fixture.ts";
 import { head, records, runRecord, stateWith } from "./goal-check.fixture.ts";
 import { USAGE } from "./work.ts";
 import { CARD, checkout, finish, pull } from "./work-finish.fixture.ts";
@@ -135,6 +135,24 @@ describe("the refusals before the push", () => {
 		const run = await finish({ args: ["finish", "--card", CARD, "--title", "t", "--body-file", "nowhere.md"] });
 		refused(run, "unread-body");
 		expect(run.last).toContain("nowhere.md");
+	});
+
+	/** A checkout whose committed `package.json` is `text`. */
+	const manifest = (text: string) => checkout(false, { "a.txt": "a\n", "package.json": text });
+	const naming = (reviewers: unknown) =>
+		manifest(JSON.stringify({ harness: { ...JSON.parse(MANIFEST).harness, reviewers } }));
+
+	// spec: work-finish/a-reviewer-finish-does-not-know
+	// spec: work-finish/a-value-that-is-not-a-list
+	// spec: work-finish/a-package-file-that-is-not-json
+	test.each([
+		["a reviewer finish does not know names it", () => naming(["CodeRabbit", "Copilot"]), "Copilot"],
+		["a value that is not a list names harness.reviewers", () => naming("CodeRabbit"), "harness.reviewers"],
+		["a package.json that is not JSON names the file", () => manifest("{"), "package.json is not JSON"],
+	])("%s", async (_, make, named) => {
+		const run = await finish({ cwd: make(), gh: DRAFT });
+		refused(run, "reviewers");
+		expect(run.last).toContain(named);
 	});
 
 	test("the record names the checkout finish read, whatever CLAUDE_PROJECT_DIR says", async () => {

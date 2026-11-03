@@ -8,7 +8,7 @@
  */
 import { chmodSync, existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { emptyDir, git, repo } from "./diff-budget.fixture.ts";
+import { emptyDir, git, MANIFEST, repo } from "./diff-budget.fixture.ts";
 import { out as gitOut, pr, records, runRecord, stateWith } from "./goal-check.fixture.ts";
 import { CARD, home, notion, type Stub, TOKEN } from "./work-take.fixture.ts";
 
@@ -18,14 +18,16 @@ export const BRANCH = "feature";
 /**
  * A checkout on `feature` one commit past `main`, `head` and `base` their
  * trees, with `main` on its bare `origin`; `coderabbit` commits a
- * `.coderabbit.yaml` in it.
+ * `package.json` whose `harness.reviewers` names `CodeRabbit`, and no
+ * `.coderabbit.yaml`.
  */
 export function checkout(
 	coderabbit = false,
 	head: Record<string, string | null> = { "a.txt": "a\n" },
 	base: Record<string, string> = {},
 ): string {
-	const dir = repo(base, { ...head, ...(coderabbit ? { ".coderabbit.yaml": "reviews: {}\n" } : {}) });
+	const named = { harness: { ...JSON.parse(MANIFEST).harness, reviewers: ["CodeRabbit"] } };
+	const dir = repo(base, { ...head, ...(coderabbit ? { "package.json": JSON.stringify(named) } : {}) });
 	const bare = join(emptyDir("work-finish-origin-"), "o", "demo.git");
 	mkdirSync(bare, { recursive: true });
 	git(bare, "init", "-q", "--bare");
