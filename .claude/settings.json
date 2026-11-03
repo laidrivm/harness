@@ -84,6 +84,7 @@
 			"Skill(opsx:sync)",
 			"Skill(opsx:update)",
 			"Skill(playwright-cli)",
+			"Skill(session-wrapup)",
 			"Skill(triage)",
 			"Skill(warm)",
 			"Skill(zombies)",

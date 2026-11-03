@@ -71,6 +71,8 @@ jobs:
           TREE: ${{ needs.verify.outputs.tree }}
 ```
 
+8. Once, after the bump that moves `session-wrapup`'s yield ledger out of the tree, delete the tracked `docs/context/pipeline-yield-*.md` in a pull request of the project's own; nothing writes to them after that bump, and a pin bump deletes nothing in the project's tree.
+
 ## Hooks and commands
 
 Until `bun install` has run, the hooks stand aside: the bootstrap lets only the install through, and in a cloud session the `SessionStart` hook runs that install itself. Each guard and gate records what it decides in the gate ledger, `gates.jsonl` under the user's state directory ([gate-ledger](openspec/specs/gate-ledger/spec.md)).
@@ -104,7 +106,7 @@ Until `bun install` has run, the hooks stand aside: the bootstrap lets only the 
 | `feature-generator` | Expand `spec.md` into a dependency-ordered `features.md` |
 | `playwright-cli` | Vendored reference for driving a browser via the Playwright CLI |
 | `preflight` | Production pre-flight checklist for a branch |
-| `session-wrapup` | End-of-session debrief, capture pass and pipeline yield |
+| `session-wrapup` | End-of-session debrief, capture pass and pipeline yield, its ledger kept outside the tree at `~/.local/state/harness/pipeline-yield/<owner>/<name>/` |
 | `spec-generator` | Turn a vague product idea into a structured product spec |
 | `triage` | Group a diff into feature areas with risk tiers |
 | `warm` | Vet the dependencies a branch adds |

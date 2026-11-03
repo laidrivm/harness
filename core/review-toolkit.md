@@ -46,8 +46,8 @@ retry spends the same limit.
   findings, every one about shape and none a defect, and three branches it
   read returned nothing at all. Worse, it read an enumeration the `CLAUDE.md`
   scan rule forbids and accepted it, which `/coderabbit` then caught — so the
-  step was not merely quiet but agreeing. `docs/context/pipeline-yield-*.md`
-  holds the counts. Run it when a diff feels overbuilt; nothing waits on it.
+  step was not merely quiet but agreeing. The yield ledger `session-wrapup`
+  step 5 keeps holds the counts. Run it when a diff feels overbuilt; nothing waits on it.
 - `/triage [base]` — risk-ordered map of the branch diff. Invoke it yourself.
   It returns no findings by design, so acting on it means reading the files it
   ranks High and Medium, reporting the defects they hold, and grepping every

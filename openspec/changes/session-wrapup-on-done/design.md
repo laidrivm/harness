@@ -190,8 +190,10 @@ heading; it names the detached commit as `git status` prints it.
 
 The skill's `allowed-tools` gain `Edit(~/.local/state/harness/pipeline-yield/**)`
 and `Bash(git remote get-url origin)` — an `Edit` rule covers the Write that
-creates a new month's file (to confirm against Claude Code's permission docs
-on apply). `core/review-toolkit.md`,
+creates a new month's file: Claude Code's permission docs (*Read and Edit*,
+read on apply, 03.11) say "`Edit` rules apply to all built-in tools that edit
+files", a `~/` path is home-relative, and `**` matches across directories.
+`core/review-toolkit.md`,
 which points readers at `docs/context/pipeline-yield-*.md`, points at the
 ledger step 5 names instead.
 

@@ -138,8 +138,10 @@ entry, a hook or a CI check leaves this file the way it would leave
   yours to decide; a branch that moved under the pass makes the pass's fixes
   duplicates of what is already there; and a tree that has held more than one
   branch this session may not be on the one the last command left it on.
-- Commit a session's wrap-up artefacts — the pipeline-yield ledger, a save
-  point — to the branch in hand, never a branch of their own.
+- Commit a session's save point to the branch in hand, never a branch of its
+  own; on a branch the command guard refuses a commit on, leave it
+  uncommitted and name it in the report. The pipeline-yield ledger never
+  enters git: `session-wrapup` step 5 keeps it outside the tree.
 - Send, reply, comment or review under the user's name only through a call the
   user approved at its prompt, or as the one `@coderabbitai review` `finish`
   posts on a head CodeRabbit skipped, which the user granted standing
