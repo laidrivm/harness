@@ -122,11 +122,13 @@ export function mark(event: Event, store: string): void {
 	const file = markFile(store, event);
 	if (!file || typeof event.cwd !== "string") return;
 	mkdirSync(store, { recursive: true });
-	if (!existsSync(file) || existsSync(`${file}.stopped`)) {
-		writeFileSync(file, git(event.cwd, "rev-parse", "-q", "--verify", "HEAD") ?? "");
-		rmSync(`${file}.stopped`, { force: true });
-	}
 	resetRounds(file);
+	if (!existsSync(file) || existsSync(`${file}.stopped`)) {
+		// Consumed before the write: a failure between them keeps the old mark,
+		// which judges more, never less.
+		rmSync(`${file}.stopped`, { force: true });
+		writeFileSync(file, git(event.cwd, "rev-parse", "-q", "--verify", "HEAD") ?? "");
+	}
 }
 
 /**
@@ -278,13 +280,14 @@ if (import.meta.main) {
 		else if (ceiling) {
 			record("goal", "ceiling", "rounds", event);
 			console.log(JSON.stringify({ continue: false, stopReason: ceiling }));
-			if (file) stopped(file);
 		} else reason = decide(event, store, (decision) => record("turn-gate", decision, "pre-pr-sequence", event));
 	} catch {
 		// Fail-open, as the header says: an event this script cannot read
-		// ends the turn rather than holding it, so it is a stop like any other.
-		if (stopping && file) stopped(file);
+		// ends the turn rather than holding it.
 	}
+	// Every stop not refused ends the turn, the ceiling's and the `catch`'s
+	// too; `decide` writes its own for in-process callers.
+	if (stopping && file && !reason) stopped(file);
 	if (reason) {
 		process.stderr.write(`${reason}\n`);
 		process.exit(2);
