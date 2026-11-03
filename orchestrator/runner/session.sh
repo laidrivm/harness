@@ -30,10 +30,10 @@ while :; do
 	# --continue exits 1 with "No conversation found to continue" where the directory has none
 	# (probed on 2.1.316), which would restart every 5 s; any other failure must not start a new one.
 	# Claude Code keeps a directory's transcripts under its real path (pwd -P, not $PWD) with every
-	# other character a dash (both seen on the laptop, 2.1.316).
+	# other character a dash (both seen on the laptop, 2.1.316); sed, since GNU tr counts bytes.
 	# shortcut: a directory holding only `claude -p` transcripts, which --continue skips, still
 	# restarts every 5 s; read the transcripts when that is seen.
-	set -- "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/$(pwd -P | tr -c 'A-Za-z0-9\n' -)"/*.jsonl
+	set -- "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/$(pwd -P | sed 's/[^A-Za-z0-9]/-/g')"/*.jsonl
 	if [ -e "$1" ]; then
 		claude --continue --remote-control harness
 	else
