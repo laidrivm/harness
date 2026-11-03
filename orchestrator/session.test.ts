@@ -1,0 +1,81 @@
+import { afterAll, describe, expect, test } from "bun:test";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
+
+/**
+ * The persistent session's start script (`session-runner-image` design, *The start script*), run
+ * under sh and dash with a temporary `HOME` and stubs for git, bun, claude and sleep that log each
+ * call; the second `claude` ends the loop by killing the script.
+ */
+
+afterAll(cleanup);
+
+const script = join(import.meta.dir, "runner/session.sh");
+
+/** The script under `shell`, with a clone in `HOME` unless `clone` is false, and git or bun failing when asked. */
+function run(shell: string, opts: { clone?: boolean; failGit?: boolean; failBun?: boolean } = {}) {
+	const home = emptyDir("orchestrator-session-");
+	const bin = join(home, "bin");
+	mkdirSync(bin);
+	if (opts.clone !== false) mkdirSync(join(home, "harness", ".git"), { recursive: true });
+	const log = join(home, "calls.log");
+	const stub = (name: string, body = "") =>
+		writeFileSync(join(bin, name), `#!/bin/sh\necho "${name} $* @$(pwd)" >>"${log}"\n${body}`, { mode: 0o755 });
+	stub("git", opts.failGit ? "exit 1\n" : "");
+	stub("bun", opts.failBun ? "exit 1\n" : "");
+	stub("sleep");
+	// Records the two variables, and ends the loop on its second start.
+	stub(
+		"claude",
+		`echo "env GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset} DISABLE_AUTOUPDATER=\${DISABLE_AUTOUPDATER-unset}" >>"${log}"\n[ "$(grep -c '^claude ' "${log}")" -lt 2 ] || kill "$PPID"\n`,
+	);
+	const r = Bun.spawnSync([shell, script], {
+		env: { PATH: `${bin}:${process.env.PATH ?? ""}`, HOME: home },
+		timeout: 10_000,
+	});
+	let calls: string[] = [];
+	try {
+		calls = readFileSync(log, "utf8").split("\n").slice(0, -1);
+	} catch {}
+	// Each call with its directory named relative to HOME.
+	return { calls: calls.map((c) => c.replace(` @${home}`, " @~")), out: r.stdout.toString() + r.stderr.toString() };
+}
+
+const round = [
+	"git pull --ff-only @~/harness",
+	"bun install --frozen-lockfile @~/harness",
+	"claude --remote-control harness @~/harness",
+	"env GIT_TERMINAL_PROMPT=0 DISABLE_AUTOUPDATER=1",
+];
+
+for (const shell of ["sh", "dash"])
+	describe(`the start script under ${shell}`, () => {
+		// spec: orchestrator/claude-code-exits
+		test("with a clone, pulls, installs and starts claude with Remote Control named harness, then sleeps 5 and does it again, never --continue", () => {
+			const { calls } = run(shell);
+			expect(calls).toEqual([...round, "sleep 5 @~/harness", ...round]);
+			expect(calls.join("\n")).not.toContain("--continue");
+		});
+
+		// spec: orchestrator/the-pull-fails
+		test("a failing pull prints its line, and claude still starts", () => {
+			const { calls, out } = run(shell, { failGit: true });
+			expect(out).toContain("session: git pull failed; starting claude anyway");
+			expect(calls.slice(0, 3)).toEqual(round.slice(0, 3));
+		});
+
+		// spec: orchestrator/the-install-fails
+		test("a failing install prints its line, and claude still starts", () => {
+			const { calls, out } = run(shell, { failBun: true });
+			expect(out).toContain("session: bun install failed; starting claude anyway");
+			expect(calls.slice(0, 3)).toEqual(round.slice(0, 3));
+		});
+
+		// spec: orchestrator/no-clone-yet
+		test("with no clone, neither git nor bun runs, and claude starts in HOME", () => {
+			const { calls } = run(shell, { clone: false });
+			expect(calls.filter((c) => /^(?:git|bun) /.test(c))).toEqual([]);
+			expect(calls[0]).toBe("claude --remote-control harness @~");
+		});
+	});

@@ -17,6 +17,15 @@
 # with the engine's words as its one argument and the body on stdin
 # (ci-run-agent design, *The engine's contract*).
 #
+# Before sshd, it starts the persistent session: tmux session `main` as agent,
+# on agent's default socket, running the start script (session-runner-image
+# design, *The entrypoint starts main before sshd*). runuser without -l keeps
+# the container's environment, so the commit identity reaches the session; a
+# tmux that cannot start fails the entrypoint, and the restart policy retries.
+#
+# shortcut: PID 1 stays sshd, so a tmux server that dies is not restarted
+# until the container is; upgrade to a supervisor when that is seen.
+#
 # PUBKEY_FILE, HOSTKEY_FILE and EVENT_PUBKEY_FILE exist for the layout test; on
 # the host they are the secret files.
 set -eu
@@ -38,5 +47,7 @@ printf 'restrict,command="set -f; PASS_CLONES=/home/agent/clones PASS_AS_AGENT=\
 printf 'restrict,command="exec bun /opt/orchestrator/bun/on-event.ts \\"$SSH_ORIGINAL_COMMAND\\"" %s\n' "$(head -n 1 "$event")" >>/home/runner/.ssh/authorized_keys
 chown runner:runner /home/runner/.ssh/authorized_keys
 chmod 0600 /home/runner/.ssh/authorized_keys
+
+runuser -u agent -- tmux new-session -d -s main /opt/orchestrator/session.sh
 
 exec "$@"

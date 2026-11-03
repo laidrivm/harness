@@ -72,6 +72,14 @@ services:
       additional_contexts:
         bun: ../bun
     restart: unless-stopped
+    # The persistent session commits as the App's bot. The values live in the
+    # untracked orchestrator/.env alone (README, *The persistent session*), so
+    # compose refuses to start the stack without them.
+    environment:
+      GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME:?set it in orchestrator/.env}
+      GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL:?set it in orchestrator/.env}
+      GIT_COMMITTER_NAME: ${GIT_COMMITTER_NAME:?set it in orchestrator/.env}
+      GIT_COMMITTER_EMAIL: ${GIT_COMMITTER_EMAIL:?set it in orchestrator/.env}
     secrets: [claude_oauth_token, runner_ssh_pubkey, runner_host_key, runner_event_pubkey, github_webhook_secret]
     volumes:
       - agent_home:/home/agent

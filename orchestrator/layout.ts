@@ -125,9 +125,12 @@ export function compose(doc: Doc): string[] {
 	return wrong;
 }
 
-/** A tracked file other than the README that starts Remote Control. `-{2}` keeps this file's own source from matching. */
+/** The two files that may start Remote Control: the persistent session's start script, and the README that documents it. */
+const STARTERS = ["orchestrator/README.md", "orchestrator/runner/session.sh"];
+
+/** A tracked file other than the two starters that starts Remote Control. `-{2}` keeps this file's own source from matching. */
 export const remoteControl = (path: string, text: string) =>
-	path !== "orchestrator/README.md" && /claude\s+remote-control|-{2}remote-control\b/.test(text)
+	!STARTERS.includes(path) && /claude\s+remote-control|-{2}remote-control\b/.test(text)
 		? [`${path}: starts Remote Control`]
 		: [];
 
@@ -152,11 +155,15 @@ export function pins(path: string, text: string): string[] {
 const IPV4 = /\b(\d{1,3}(?:\.\d{1,3}){3})\b/g;
 const TOKEN = /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-ant-[A-Za-z0-9_-]{20,})/;
 
-/** A host address or a GitHub or Anthropic token in a tracked file. */
+/** A GitHub bot's noreply address, with or without its id; the README's `<slug>[bot]` placeholder does not match. */
+const BOT_EMAIL = /[A-Za-z0-9-]\[bot\]@users\.noreply\.github\.com/;
+
+/** A host address, a GitHub or Anthropic token, or a GitHub bot's address in a tracked file. */
 export function leaks(path: string, text: string): string[] {
 	const wrong: string[] = [];
 	for (const [, ip] of text.matchAll(IPV4))
 		if (ip !== "127.0.0.1" && ip !== "0.0.0.0") wrong.push(`${path}: holds the address ${ip}`);
 	if (TOKEN.test(text)) wrong.push(`${path}: holds a token`);
+	if (BOT_EMAIL.test(text)) wrong.push(`${path}: holds a GitHub bot's address`);
 	return wrong;
 }

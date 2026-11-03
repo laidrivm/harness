@@ -27,6 +27,7 @@ afterAll(cleanup);
 const RC = ["claude", "remote-control"].join(" ");
 const ADDRESS = [10, 1, 2, 3].join(".");
 const GH = ["ghp", "a".repeat(36)].join("_");
+const BOT = ["12345+some-app[bot]", "users.noreply.github.com"].join("@");
 
 describe("the engine's workspace", () => {
 	test("no script under orchestrator/windmill/ fails rather than passing empty [27]", () => {
@@ -118,13 +119,16 @@ describe("compose", () => {
 });
 
 describe("every file under orchestrator/", () => {
-	test("a tracked file other than the README that starts Remote Control fails, naming the file", () => {
+	test("a tracked file other than the README and the start script that starts Remote Control fails, naming the file", () => {
 		// spec: orchestrator/a-tracked-file-that-starts-remote-control
 		expect(remoteControl("orchestrator/run.sh", `exec ${RC}\n`)).toEqual([
 			"orchestrator/run.sh: starts Remote Control",
 		]);
 		expect(remoteControl("orchestrator/run.sh", `claude ${"-".repeat(2)}remote-control\n`)).toHaveLength(1);
 		expect(remoteControl("orchestrator/README.md", `${RC}\n`)).toEqual([]);
+		expect(remoteControl("orchestrator/runner/session.sh", `claude ${"-".repeat(2)}remote-control harness\n`)).toEqual(
+			[],
+		);
 		expect(mine.flatMap((p) => remoteControl(p, read(p)))).toEqual([]);
 	});
 
@@ -155,6 +159,20 @@ describe("every file under orchestrator/", () => {
 		expect(leaks("a", `host ${ADDRESS}\nbind 127.0.0.1 0.0.0.0\n`)).toEqual([`a: holds the address ${ADDRESS}`]);
 		expect(leaks("a", `GH_TOKEN=${GH}\n`)).toEqual(["a: holds a token"]);
 		expect(mine.flatMap((p) => leaks(p, read(p)))).toEqual([]);
+	});
+
+	// spec: orchestrator/a-bot-email-in-a-tracked-file
+	test("a GitHub bot's noreply address fails, naming the file, and the README's placeholders pass", () => {
+		expect(leaks("a", `email ${BOT}\n`)).toEqual(["a: holds a GitHub bot's address"]);
+		expect(leaks("a", `email ${BOT.replace(/^\d+\+/, "")}\n`)).toEqual(["a: holds a GitHub bot's address"]);
+		expect(leaks("a", "<id>+<slug>[bot]@users.noreply.github.com\n")).toEqual([]);
+		expect(read("orchestrator/README.md")).toContain("<id>+<slug>[bot]@users.noreply.github.com");
+	});
+
+	test("orchestrator/.env is ignored", () => {
+		const ignored = Bun.spawnSync(["git", "check-ignore", "-q", "orchestrator/.env"], { cwd: root }).exitCode === 0;
+		expect(ignored).toBe(true);
+		expect(read(".gitignore").split("\n")).toContain("orchestrator/.env");
 	});
 
 	// spec: orchestrator/the-secrets-directory

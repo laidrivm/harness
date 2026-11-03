@@ -87,6 +87,7 @@ COPY --chmod=0755 pass.sh /opt/orchestrator/pass.sh
 COPY --chmod=0755 stop.sh /opt/orchestrator/stop.sh
 COPY --chmod=0644 clone-name.sh /opt/orchestrator/clone-name.sh
 COPY --chmod=0755 runner/entrypoint.sh /opt/orchestrator/entrypoint.sh
+COPY --chmod=0755 runner/session.sh /opt/orchestrator/session.sh
 COPY --chmod=0440 runner/sudoers /etc/sudoers.d/orchestrator
 COPY --chmod=0755 as-agent /opt/orchestrator/as-agent
 COPY --chmod=0755 mint /opt/orchestrator/mint

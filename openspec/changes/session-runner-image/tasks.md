@@ -55,7 +55,7 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
 
 ## 3. The session
 
-- [ ] 3.1 Write the failing cases in a new `orchestrator/session.test.ts`,
+- [x] 3.1 Write the failing cases in a new `orchestrator/session.test.ts`,
       running `orchestrator/runner/session.sh` with a temporary `HOME` and
       stubs for `git`, `bun`, `claude` and `sleep` on `PATH`, the second
       `claude` ending the loop: a clone → pull, then install, then `claude`
@@ -64,7 +64,7 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
       install each print their line and `claude` still starts; no clone →
       neither git nor bun runs and `claude` starts in `HOME`; `claude` sees
       `GIT_TERMINAL_PROMPT=0` and `DISABLE_AUTOUPDATER=1`. Verify they fail
-- [ ] 3.2 Add the failing cases in `orchestrator/layout.test.ts` and
+- [x] 3.2 Add the failing cases in `orchestrator/layout.test.ts` and
       `layout-runner.test.ts`: `remoteControl()` passes the README and
       `orchestrator/runner/session.sh` and fails `orchestrator/run.sh`; the
       entrypoint runs `runuser -u agent -- tmux new-session -d -s main
@@ -74,12 +74,12 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
       `GIT_AUTHOR_*` and `GIT_COMMITTER_*` names to `${NAME:?…}`; git ignores
       `orchestrator/.env`; `leaks()` fails a file holding a GitHub bot
       noreply address and passes the README's placeholders. Verify they fail
-- [ ] 3.3 Write `session.sh` per design *The start script*, then edit the
+- [x] 3.3 Write `session.sh` per design *The start script*, then edit the
       entrypoint (its header comment too), `layout.ts`, the Dockerfile,
       `compose.yaml` and `.gitignore`. Verify `bun test orchestrator/`
       passes and `claude --help` at the pinned release names the
       `--remote-control` form `session.sh` uses
-- [ ] 3.4 In `orchestrator/README.md`, a section for the persistent
+- [x] 3.4 In `orchestrator/README.md`, a section for the persistent
       session: writing `orchestrator/.env` with `umask 077` from the
       placeholders, the one login as agent, attaching to `main`, and
       `notion-ask.json` in agent's home with `umask 077`; step 11's reach
