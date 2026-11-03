@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 
@@ -13,14 +13,45 @@ afterAll(cleanup);
 
 const script = join(import.meta.dir, "runner/session.sh");
 
-/** The script under `shell`, with a clone in `HOME` unless `clone` is false, and git, bun or claude failing when asked. */
+/**
+ * The script under `shell`, with a clone in `HOME` unless `clone` is false, git, bun or claude
+ * failing when asked, and a conversation Claude Code keeps for the clone unless `conversation`
+ * names `HOME` instead or is false. `linkHome` reaches `HOME` through a symlink; `configDir` keeps
+ * Claude Code's files under `CLAUDE_CONFIG_DIR` rather than `~/.claude`.
+ */
 function run(
 	shell: string,
-	opts: { clone?: boolean | "worktree"; failGit?: boolean; failBun?: boolean; failClaude?: boolean } = {},
+	opts: {
+		clone?: boolean | "worktree";
+		conversation?: "clone" | "home" | false;
+		linkHome?: boolean;
+		configDir?: boolean;
+		failGit?: boolean;
+		failBun?: boolean;
+		failClaude?: boolean;
+	} = {},
 ) {
-	const home = emptyDir("orchestrator-session-");
+	let home = emptyDir("orchestrator-session-");
+	if (opts.linkHome) {
+		const link = join(emptyDir("orchestrator-session-link-"), "home");
+		symlinkSync(home, link);
+		home = link;
+	}
 	const bin = join(home, "bin");
 	mkdirSync(bin);
+	const config = opts.configDir ? join(home, "config") : join(home, ".claude");
+	// Claude Code names a directory's project by its real path with every other character a dash
+	// (seen in the laptop's ~/.claude/projects, 2.1.316); the harness has no copy of it to import.
+	const projects = (dir: string) =>
+		join(config, "projects", join(realpathSync(home), dir).replace(/[^A-Za-z0-9]/g, "-"));
+	// A project directory holds more than transcripts; only a transcript is a conversation.
+	mkdirSync(join(projects("harness"), "memory"), { recursive: true });
+	const conversation = opts.conversation ?? "clone";
+	if (conversation) {
+		const dir = projects(conversation === "home" ? "" : "harness");
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, "0b7e3c1a.jsonl"), "{}\n");
+	}
 	if (opts.clone === "worktree") {
 		mkdirSync(join(home, "harness"));
 		writeFileSync(join(home, "harness", ".git"), "gitdir: /elsewhere\n");
@@ -41,7 +72,7 @@ function run(
 		`echo "env GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset} DISABLE_AUTOUPDATER=\${DISABLE_AUTOUPDATER-unset} LANG=\${LANG-unset}" >>"${log}"\n[ "$(grep -c '^claude ' "${log}")" -lt 2 ] || kill "$PPID"\n${opts.failClaude ? "exit 1\n" : ""}`,
 	);
 	const r = Bun.spawnSync([shell, script], {
-		env: { PATH: `${bin}:${process.env.PATH ?? ""}`, HOME: home },
+		env: { PATH: `${bin}:${process.env.PATH ?? ""}`, HOME: home, ...(opts.configDir && { CLAUDE_CONFIG_DIR: config }) },
 		timeout: 10_000,
 	});
 	let calls: string[] = [];
@@ -54,27 +85,57 @@ function run(
 
 // Built from parts, so remoteControl()'s scan of the tree does not read this file as a starter.
 const START = `claude ${"-".repeat(2)}remote-control harness`;
+const CONTINUE = `claude --continue ${"-".repeat(2)}remote-control harness`;
 
-const round = [
+/** One round in the clone, `claude` started as `start`. */
+const roundWith = (start: string) => [
 	"git pull --ff-only @~/harness",
 	"git sees GIT_TERMINAL_PROMPT=0",
 	"bun install --frozen-lockfile @~/harness",
-	`${START} @~/harness`,
+	`${start} @~/harness`,
 	"env GIT_TERMINAL_PROMPT=0 DISABLE_AUTOUPDATER=1 LANG=C.UTF-8",
 ];
+const round = roundWith(CONTINUE);
 
 for (const shell of ["sh", "dash"])
 	describe(`the start script under ${shell}`, () => {
 		// spec: orchestrator/claude-code-exits
-		test("with a clone, pulls, installs and starts claude with Remote Control named harness, then sleeps 5 and does it again, never --continue", () => {
-			const { calls } = run(shell);
-			expect(calls).toEqual([...round, "sleep 5 @~/harness", ...round]);
-			expect(calls.join("\n")).not.toContain("--continue");
+		test("with a clone, pulls, installs and continues the clone's conversation with Remote Control named harness, then sleeps 5 and does it again", () => {
+			expect(run(shell).calls).toEqual([...round, "sleep 5 @~/harness", ...round]);
 		});
 
 		// spec: orchestrator/claude-code-exits
-		test("a claude that crashes, exiting non-zero, is followed by the pause and a second round", () => {
+		test("a claude that crashes, exiting non-zero, is followed by the pause and a round that continues the same conversation", () => {
 			expect(run(shell, { failClaude: true }).calls).toEqual([...round, "sleep 5 @~/harness", ...round]);
+		});
+
+		// spec: orchestrator/nothing-to-continue
+		test("a clone with no conversation, its project directory holding no transcript, starts claude as a new conversation", () => {
+			const fresh = roundWith(START);
+			expect(run(shell, { conversation: false }).calls).toEqual([...fresh, "sleep 5 @~/harness", ...fresh]);
+		});
+
+		// spec: orchestrator/nothing-to-continue
+		test("a conversation in HOME is not continued in the clone: the first start after the clone, and the next, are new", () => {
+			const fresh = roundWith(START);
+			expect(run(shell, { conversation: "home" }).calls).toEqual([...fresh, "sleep 5 @~/harness", ...fresh]);
+		});
+
+		// spec: orchestrator/nothing-to-continue
+		test("with no clone, a conversation in HOME is continued there", () => {
+			expect(run(shell, { clone: false, conversation: "home" }).calls[0]).toBe(`${CONTINUE} @~`);
+		});
+
+		// spec: orchestrator/claude-code-exits
+		test("a HOME reached through a symlink still finds the conversation Claude Code keeps under the real path", () => {
+			expect(run(shell, { linkHome: true }).calls.filter((c) => c.startsWith("claude "))).toEqual(
+				Array(2).fill(`${CONTINUE} @~/harness`),
+			);
+		});
+
+		// spec: orchestrator/claude-code-exits
+		test("with CLAUDE_CONFIG_DIR set, the conversation is read from there", () => {
+			expect(run(shell, { configDir: true }).calls[3]).toBe(`${CONTINUE} @~/harness`);
 		});
 
 		// spec: orchestrator/the-pull-fails
@@ -92,7 +153,7 @@ for (const shell of ["sh", "dash"])
 		});
 
 		// spec: orchestrator/no-clone-yet
-		test("with no clone, neither git nor bun runs, and claude starts in HOME", () => {
+		test("with no clone, neither git nor bun runs, and claude starts in HOME as a new conversation", () => {
 			const { calls } = run(shell, { clone: false });
 			expect(calls.filter((c) => /^(?:git|bun) /.test(c))).toEqual([]);
 			expect(calls[0]).toBe(`${START} @~`);

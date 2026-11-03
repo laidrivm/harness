@@ -1,8 +1,9 @@
 #!/bin/sh
 # The persistent session, which the entrypoint starts as agent in tmux session
 # `main` (session-runner-image design, *The start script*): pull and install in
-# the clone, start claude with Remote Control as a new conversation, never
-# --continue (user, 02.11, answer 1 a), pause 5 s once it exits, and again.
+# the clone, start claude with Remote Control continuing the directory's last
+# conversation, or a new one where it has none (user, 03.11, reversing answer
+# 1 a), pause 5 s once it exits, and again.
 # A failed pull or install prints its line and starts claude all the same, on
 # the tree and the dependencies the clone already holds. With no clone yet,
 # claude starts in HOME, so the user can log in first.
@@ -26,6 +27,17 @@ while :; do
 	else
 		cd "$HOME"
 	fi
-	claude --remote-control harness
+	# --continue exits 1 with "No conversation found to continue" where the directory has none
+	# (probed on 2.1.316), which would restart every 5 s; any other failure must not start a new one.
+	# Claude Code keeps a directory's transcripts under its real path (pwd -P, not $PWD) with every
+	# other character a dash (both seen on the laptop, 2.1.316).
+	# shortcut: a directory holding only `claude -p` transcripts, which --continue skips, still
+	# restarts every 5 s; read the transcripts when that is seen.
+	set -- "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/$(pwd -P | tr -c 'A-Za-z0-9\n' -)"/*.jsonl
+	if [ -e "$1" ]; then
+		claude --continue --remote-control harness
+	else
+		claude --remote-control harness
+	fi
 	sleep 5
 done

@@ -376,8 +376,11 @@ may do that.
 
 The runner starts one Claude Code session as `agent`, in tmux session `main`,
 before sshd: `/opt/orchestrator/session.sh` pulls and installs in
-`/home/agent/harness`, starts `claude --remote-control harness` as a new
-conversation, and starts it again 5 s after it exits. Its `gh` and git mint a
+`/home/agent/harness`, starts `claude --continue --remote-control harness`,
+and starts it again 5 s after it exits, so a crash, a restart of the
+container or a reboot of the VPS comes back to the same conversation; keep
+its size down with `/compact` and `/clear`. Where the directory has no
+conversation yet, the start is a new one. Its `gh` and git mint a
 token from the App for each call; it holds none. No step here makes that
 clone, which the roadmap's stage 2.5 sets up in its step 6: until it exists,
 the session starts in `/home/agent` and pulls nothing, and the first start
