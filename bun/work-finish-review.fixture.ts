@@ -1,6 +1,6 @@
 /**
- * The calls and check runs the `work.ts finish` cases where the checkout
- * tracks `.coderabbit.yaml` share, over `work-finish.fixture.ts`. `afterAll`
+ * The calls and check runs the `work.ts finish` cases where the checkout's
+ * `harness.reviewers` names `CodeRabbit` share, over `work-finish.fixture.ts`. `afterAll`
  * is not registered here: each test file registers its own.
  */
 import { head } from "./goal-check.fixture.ts";
@@ -34,7 +34,7 @@ export const short = (cwd: string) => head(cwd).slice(0, 7);
 export const COMMENTS = "api repos/o/demo/issues/7/comments?per_page=100 --paginate --jq .[] | {created_at, body}";
 export const ASK = "pr comment 7 -R o/demo --body @coderabbitai review";
 
-/** `finish` on draft #7 in a checkout tracking `.coderabbit.yaml`, the check runs answering `answers` in turn, and the rest of the stub `more`. */
+/** `finish` on draft #7 in a checkout naming `CodeRabbit` under `harness.reviewers`, the check runs answering `answers` in turn, and the rest of the stub `more`. */
 export async function watched(answers: (object[] | number)[], more: Gh = {}) {
 	// `finish` hands back the `cwd` it ran in.
 	return finish({ cwd: checkout(true), gh: { before: DRAFT, runs: answers, ...more } });

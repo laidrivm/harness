@@ -1,12 +1,13 @@
 /**
  * What a gate does when the consumer's `package.json` leaves its value out:
- * fail, naming the key — never run on a default nobody chose.
+ * fail, naming the key — never run on a default nobody chose; `reviewers`
+ * alone reads its absence as none.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { bumpTest, read } from "./config.ts";
+import { bumpTest, read, reviewers } from "./config.ts";
 import { stray } from "./repo-layout.ts";
 
 const made: string[] = [];
@@ -54,6 +55,46 @@ describe("reading a value", () => {
 	test("a harness object without the key names that key", () => {
 		const dir = consumer({ rootFiles: {} });
 		expect(() => read(dir, "suppressions")).toThrow("harness.suppressions");
+	});
+});
+
+describe("the reviewers finish waits for", () => {
+	/** A directory with no `package.json` at all. */
+	const bare = () => {
+		const dir = mkdtempSync(join(tmpdir(), "harness-config-"));
+		made.push(dir);
+		return dir;
+	};
+
+	// spec: work-finish/a-project-naming-no-reviewer
+	test("no file, no harness object, no key, null and an empty list each name none", () => {
+		for (const dir of [bare(), consumer(), consumer({}), consumer({ reviewers: null }), consumer({ reviewers: [] })])
+			expect(reviewers(dir)).toEqual([]);
+	});
+
+	test("a list naming CodeRabbit is returned as written", () => {
+		expect(reviewers(consumer({ reviewers: ["CodeRabbit"] }))).toEqual(["CodeRabbit"]);
+	});
+
+	// spec: work-finish/a-package-file-that-is-not-json
+	test("a file that is not JSON throws naming the file", () => {
+		const dir = bare();
+		writeFileSync(join(dir, "package.json"), "{");
+		expect(() => reviewers(dir)).toThrow(join(dir, "package.json"));
+	});
+
+	// spec: work-finish/a-value-that-is-not-a-list
+	test.each([
+		["a string", "CodeRabbit"],
+		["a list holding a number", [1]],
+		["an object", { CodeRabbit: true }],
+	])("%s throws naming harness.reviewers", (_, value) => {
+		expect(() => reviewers(consumer({ reviewers: value }))).toThrow("harness.reviewers");
+	});
+
+	// spec: work-finish/a-reviewer-finish-does-not-know
+	test("a name other than CodeRabbit throws naming it", () => {
+		expect(() => reviewers(consumer({ reviewers: ["CodeRabbit", "Copilot"] }))).toThrow("Copilot");
 	});
 });
 

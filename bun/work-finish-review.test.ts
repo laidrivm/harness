@@ -1,5 +1,5 @@
 /**
- * `work.ts finish` where the checkout tracks `.coderabbit.yaml`: the wait for
+ * `work.ts finish` where `harness.reviewers` names `CodeRabbit`: the wait for
  * CodeRabbit's run before the ready switch, and the reads of `HEAD`'s state
  * after it, over `work-finish.fixture.ts` with a 1 ms poll interval and the
  * calls `work-finish-review.fixture.ts` names; the request for a skipped head
@@ -8,7 +8,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, git } from "./diff-budget.fixture.ts";
+import { cleanup, git, MANIFEST } from "./diff-budget.fixture.ts";
 import { BRANCH, CARD, checkout, finish } from "./work-finish.fixture.ts";
 import {
 	ASK,
@@ -34,28 +34,37 @@ afterAll(() => {
 	cleanup();
 });
 
-describe("where CodeRabbit is configured", () => {
-	// spec: work-finish/a-repository-without-coderabbits-config
-	test("no tracked .coderabbit.yaml, and a gitignored untracked one, read no check run and end on the ready line", async () => {
-		const bare = await finish({ gh: { before: DRAFT } });
-		const ignored = checkout();
-		writeFileSync(join(ignored, ".coderabbit.yaml"), "reviews: {}\n");
-		writeFileSync(join(ignored, ".git", "info", "exclude"), ".coderabbit.yaml\n");
-		const run = await finish({ cwd: ignored, gh: { before: DRAFT } });
-		for (const { calls, code, last } of [bare, run])
-			expect({ calls, code, last }).toEqual({ calls: [READ, "push", READY], code: 0, last: "finish: ready #7" });
+describe("where the project names its reviewers", () => {
+	// spec: work-finish/a-project-naming-no-reviewer
+	test("no harness.reviewers, and an empty list, in a checkout tracking .coderabbit.yaml read no check run and say so", async () => {
+		const yaml = { "a.txt": "a\n", ".coderabbit.yaml": "reviews: {}\n" };
+		const none = checkout(false, yaml);
+		const empty = checkout(false, {
+			...yaml,
+			"package.json": JSON.stringify({ harness: { ...JSON.parse(MANIFEST).harness, reviewers: [] } }),
+		});
+		for (const cwd of [none, empty]) {
+			const run = await finish({ cwd, gh: { before: DRAFT, runs: [[SKIPPED]] } });
+			expect({ calls: run.calls, code: run.code, last: run.last }).toEqual({
+				calls: [READ, "push", READY],
+				code: 0,
+				last: "finish: ready #7",
+			});
+			expect(run.out).toContain("finish: harness.reviewers names no reviewer, so none was waited for\n");
+		}
 	});
 
-	test("a checkout whose tracked files cannot be listed after the push ends on the open draft, exit 1", async () => {
-		// The hook runs after `finish` read a clean tree; a broken index makes `git ls-files` fail.
-		const run = await finish({ cwd: checkout(true), gh: { before: DRAFT }, during: "printf x > .git/index" });
-		expect(run.calls).toEqual([READ, "push"]);
-		expect(run.code).toBe(1);
-		expect(run.last).toStartWith("finish: draft #7 — the checkout's tracked files could not be listed: ");
+	// spec: work-finish/a-repository-without-coderabbits-config
+	test("CodeRabbit named with no .coderabbit.yaml reads the check runs before and after the ready switch", async () => {
+		const cwd = checkout(true);
+		const run = await finish({ cwd, gh: { before: DRAFT, runs: [[SKIPPED], [RUNNING]] } });
+		expect(run.calls).toEqual([READ, "push", runs(cwd), READY, runs(cwd)]);
+		expect(run.out).not.toContain("names no reviewer");
+		expect(run.last).toBe(`finish: ready #7 — CodeRabbit reviewing ${short(cwd)}`);
 	});
 
 	// spec: work-finish/run-from-a-subdirectory
-	test("run from a subdirectory of a checkout tracking it at the top, finish reads the check runs", async () => {
+	test("run from a subdirectory of a checkout naming CodeRabbit at the top, finish reads the check runs", async () => {
 		const top = checkout(true);
 		const sub = join(top, "sub");
 		mkdirSync(sub);
@@ -92,13 +101,23 @@ describe("the wait before the ready switch", () => {
 	});
 
 	// spec: work-finish/no-run-within-the-wait
-	test("no completed run in 12 reads says so and still marks ready", async () => {
+	// spec: work-finish/still-no-run-when-the-reads-end
+	test("no completed run in 12 reads says so, still marks ready, and no run in 18 more goes on to the request", async () => {
 		const run = await watched([]);
-		expect(run.calls).toEqual([READ, "push", ...times(12, runs(run.cwd)), READY, ...times(18, runs(run.cwd))]);
+		expect(run.calls).toEqual([
+			READ,
+			"push",
+			...times(12, runs(run.cwd)),
+			READY,
+			...times(18, runs(run.cwd)),
+			COMMENTS,
+			runs(run.cwd),
+			ASK,
+		]);
 		expect(run.out).toContain(`finish: no completed CodeRabbit run on ${short(run.cwd)} after 12 reads\n`);
 		expect([run.code, run.last]).toEqual([
 			0,
-			`finish: ready #7 — no CodeRabbit run on ${short(run.cwd)} after 18 reads`,
+			`finish: ready #7 — no CodeRabbit run on ${short(run.cwd)} after 18 reads; asked for a review`,
 		]);
 	});
 
