@@ -163,6 +163,28 @@ describe("the command", () => {
 		expect(forcedLast()).toBe(true);
 	});
 
+	test("of several modules, every one whose dry run fails is named before any is mutated or stored", () => {
+		const dir = repository({ "bun/b.ts": "1\n", "bun/b.test.ts": "1\n", "bun/c.ts": "1\n", "bun/c.test.ts": "1\n" });
+		// The `stryker` stub's results written on every call, so a dry run that stored them would leave `mutation/`.
+		const bunx = [
+			...stryker.split("\n").slice(0, 2),
+			`if ! /usr/bin/grep -q '"dryRunOnly":true' "$4"; then echo run >> calls; exit 0; fi`,
+			"echo dry >> calls",
+			`if /usr/bin/grep -q -e '"bun/a.ts"' -e '"bun/c.ts"' "$4"; then exit 1; fi`,
+		].join("\n");
+		const { code, err } = cli(dir, path({ node: "exit 0", bunx }));
+		const named = ["bun/a.ts", "bun/b.ts", "bun/c.ts"].map((m) => err.includes(`dry run exited 1 on ${m}`));
+		expect([code, ...named]).toEqual([1, true, false, true]);
+		const calls = readFileSync(join(dir, "calls"), "utf8");
+		expect([calls, existsSync(join(dir, "mutation"))]).toEqual(["dry\ndry\ndry\n", false]);
+	});
+
+	test("one module is not dry-run apart, its own run starting with one", () => {
+		const dir = repository();
+		cli(dir, path({ node: "exit 0", bunx: `/usr/bin/grep -c '"dryRunOnly":true' "$4" >> calls; exit 3` }));
+		expect(readFileSync(join(dir, "calls"), "utf8")).toBe("0\n");
+	});
+
 	test("a named module with no test file fails, and a named run writes no report", () => {
 		const dir = repository({ "bun/b.ts": "1\n" });
 		const bin = path({ node: "exit 0", bunx: stryker });
