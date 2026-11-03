@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
-import { copyFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	cleanup,
@@ -154,6 +154,14 @@ describe("the hook reads the runner's records, not the message", () => {
 		const { dir, marks, tip } = finished();
 		ledger(run(tip, real(dir)));
 		expect(decide(end(dir, SILENT), marks)).toBeUndefined();
+	});
+
+	// spec: commit-gates/the-prompt-after-a-turn-the-hook-let-end
+	test("a passing run of the tip leaves the boundary beside the mark", () => {
+		const { dir, marks, tip } = finished();
+		ledger(run(tip, real(dir)));
+		decide(end(dir, SILENT), marks);
+		expect(existsSync(join(marks, "s1.stopped"))).toBe(true);
 	});
 
 	// spec: commit-gates/a-bare-marker-with-nothing-after-it

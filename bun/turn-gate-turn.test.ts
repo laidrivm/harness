@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { readdirSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, commit, DONE, end, git, OPEN, prompt, repo, SILENT, store, TASKS } from "./turn-gate.fixture.ts";
 import { decide, mark } from "./turn-gate.ts";
@@ -104,11 +104,95 @@ describe("the mark", () => {
 
 	test("a new mark can be refused again", () => {
 		const { dir, marks } = started();
-		commit(dir, { [TASKS]: DONE.replace("[x] 1.2", "[ ] 1.2") });
-		decide(end(dir, SILENT), marks);
-		mark(prompt(dir), marks);
 		commit(dir, { [TASKS]: DONE });
 		expect(decide(end(dir, SILENT), marks)).toBeDefined();
+		decide(end(dir, SILENT), marks);
+		mark(prompt(dir), marks);
+		commit(dir, { [TASKS]: `${DONE}\n## 2. More\n\n- [x] 2.1 c\n` });
+		expect(decide(end(dir, SILENT), marks)).toContain("2. More");
+	});
+
+	// spec: commit-gates/a-message-queued-mid-turn
+	test("a message queued mid-turn leaves the mark where the turn started", () => {
+		const { dir, marks } = started();
+		commit(dir, { [TASKS]: DONE });
+		mark(prompt(dir), marks);
+		expect(decide(end(dir, SILENT), marks)).toContain("1. Group");
+	});
+
+	// spec: commit-gates/a-turn-the-user-interrupted
+	test("the turn after an interrupted one is judged on the interrupted turn's group", () => {
+		// No `decide` between: an interrupt ends the turn without `Stop`.
+		const { dir, marks } = started();
+		commit(dir, { [TASKS]: DONE });
+		mark(prompt(dir), marks);
+		commit(dir, { "a.txt": "1" });
+		expect(decide(end(dir, SILENT), marks)).toContain("1. Group");
+	});
+
+	// spec: commit-gates/the-prompt-after-a-turn-the-hook-let-end
+	test("the boundary a stop leaves is consumed by the prompt after it", () => {
+		const { dir, marks } = started();
+		expect(decide(end(dir, SILENT), marks)).toBeUndefined();
+		mark(prompt(dir), marks);
+		commit(dir, { [TASKS]: DONE });
+		mark(prompt(dir), marks);
+		expect(decide(end(dir, SILENT), marks)).toBeDefined();
+	});
+
+	// spec: commit-gates/the-prompt-after-a-turn-the-hook-let-end
+	test("a stop with nothing to judge lets the next prompt take a fresh mark", () => {
+		const { dir, marks } = started();
+		decide(end(dir, SILENT), marks);
+		commit(dir, { "a.txt": "1" });
+		mark(prompt(dir), marks);
+		expect(readFileSync(join(marks, "s1"), "utf8")).toBe(git(dir, "rev-parse", "HEAD"));
+	});
+
+	// spec: commit-gates/the-prompt-after-a-turn-the-hook-let-end
+	test("a refused stop leaves no boundary, the released one after it does", () => {
+		const { dir, marks } = started();
+		commit(dir, { [TASKS]: DONE });
+		decide(end(dir, SILENT), marks);
+		expect(existsSync(join(marks, "s1.stopped"))).toBe(false);
+		decide(end(dir, SILENT), marks);
+		expect(existsSync(join(marks, "s1.stopped"))).toBe(true);
+	});
+
+	// spec: commit-gates/two-sessions-in-one-repository
+	test("one session's stop leaves no boundary for another's prompt", () => {
+		const { dir, marks } = started("s2");
+		commit(dir, { [TASKS]: DONE });
+		mark(prompt(dir, "s1"), marks);
+		expect(decide(end(dir, SILENT, "s1"), marks)).toBeUndefined();
+		mark(prompt(dir, "s2"), marks);
+		expect(decide(end(dir, SILENT, "s2"), marks)).toBeDefined();
+	});
+
+	test("a boundary that cannot be written ends the turn and keeps the mark", () => {
+		const { dir, marks } = started();
+		const at = readFileSync(join(marks, "s1"), "utf8");
+		chmodSync(marks, 0o555);
+		try {
+			expect(decide(end(dir, SILENT), marks)).toBeUndefined();
+		} finally {
+			chmodSync(marks, 0o755);
+		}
+		commit(dir, { "a.txt": "1" });
+		mark(prompt(dir), marks);
+		expect(readFileSync(join(marks, "s1"), "utf8")).toBe(at);
+	});
+
+	// spec: commit-gates/a-message-queued-into-a-refused-turn
+	test("a message queued into a refused turn keeps the mark's refusal", () => {
+		const { dir, marks } = started();
+		commit(dir, { [TASKS]: DONE });
+		decide(end(dir, SILENT), marks);
+		mark(prompt(dir), marks);
+		expect({
+			second: decide(end(dir, SILENT), marks),
+			mark: readFileSync(join(marks, "s1"), "utf8"),
+		}).toEqual({ second: undefined, mark: expect.stringMatching(/ refused$/) });
 	});
 
 	// spec: commit-gates/two-sessions-in-one-repository

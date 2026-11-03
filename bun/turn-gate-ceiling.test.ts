@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "
 import { join } from "node:path";
 import { TURN_STOP } from "./bootstrap.ts";
 import { CEILING, countRound, resetRounds } from "./goal-rounds.ts";
-import { cleanup, commit, DONE, end, OPEN, prompt, repo, SILENT, store, TASKS } from "./turn-gate.fixture.ts";
+import { cleanup, commit, DONE, end, git, OPEN, prompt, repo, SILENT, store, TASKS } from "./turn-gate.fixture.ts";
 
 /**
  * The round ceiling: the turn gate's `Stop` half ends a goal run at its
@@ -151,6 +151,21 @@ describe("the stop under the ceiling", () => {
 		run("mark", prompt(dir), dir, tmp);
 		rounds(join(tmp, "turn-gate", "s1"), CEILING - 2);
 		expect(run("stop", stop(dir), dir, tmp)).toEqual({ code: 0, out: "", err: "" });
+	});
+
+	// spec: commit-gates/the-prompt-after-the-round-ceiling
+	test("the prompt after the ceiling's end takes a fresh mark", () => {
+		const { dir, tmp } = counted(0);
+		const file = join(tmp, "turn-gate", "s1");
+		const at = readFileSync(file, "utf8");
+		commit(dir, { "a.txt": "1" });
+		run("mark", prompt(dir), dir, tmp);
+		expect(readFileSync(file, "utf8")).toBe(at);
+		// That prompt started the count again.
+		rounds(file, CEILING - 1);
+		expect(ended(run("stop", stop(dir), dir, tmp).out)).toMatchObject({ continue: false });
+		run("mark", prompt(dir), dir, tmp);
+		expect(readFileSync(file, "utf8")).toBe(git(dir, "rev-parse", "HEAD"));
 	});
 
 	// spec: stage-goal/two-sessions

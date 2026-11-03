@@ -3,8 +3,12 @@
  * The pre-PR sequence's turn gate: both ends of one contract, so the mark's
  * format lives in one place.
  *
- * `bun turn-gate.ts mark` is the `UserPromptSubmit` half. It records `HEAD`
- * as control arrives, keyed by session.
+ * `bun turn-gate.ts mark` is the `UserPromptSubmit` half. It records `HEAD`,
+ * keyed by session, on the session's first prompt and on the first after a
+ * turn the `Stop` half let end, which leaves `<mark>.stopped` for it. Any
+ * other prompt keeps the mark: a message queued mid-turn reaches this hook
+ * inside the running turn, and a turn the user interrupted ends without
+ * `Stop`, so moving the mark then would let that turn's commits go unjudged.
  *
  * `bun turn-gate.ts stop` is the `Stop` half. It refuses, by exiting 2 with
  * the reason on stderr, to end a turn that left commits on the branch and
@@ -15,7 +19,8 @@
  * a `BLOCKED`.
  *
  * It refuses at most once per mark. A refused turn is continued, not
- * restarted, so no new mark is written. That bounds a condition the model
+ * restarted, and a refusal leaves no `.stopped`, so no new mark is written —
+ * nor by a message queued into that turn. That bounds a condition the model
  * cannot satisfy to one turn, and the bound reads no event field.
  *
  * The round ceiling does read one. Before it decides, the `stop` half counts
@@ -41,7 +46,7 @@
  * from a test records nothing.
  */
 
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { BASE } from "./branch-state.ts";
@@ -99,12 +104,28 @@ function git(cwd: string, ...args: string[]): string | undefined {
 	return run.exitCode === 0 ? run.stdout.toString().trim() : undefined;
 }
 
-/** Records `HEAD` for the session; outside a repository, an empty mark. */
+/** Marks the turn's end for `mark`: the `Stop` half let it end. Best-effort. */
+function stopped(file: string): void {
+	try {
+		writeFileSync(`${file}.stopped`, "");
+	} catch {
+		// No boundary, so the next prompt keeps the mark.
+	}
+}
+
+/**
+ * Records `HEAD` for the session — outside a repository, an empty mark — on
+ * its first prompt or the first after a turn the `Stop` half let end. A
+ * prompt mid-turn or after an interrupt keeps the mark, its refusal included.
+ */
 export function mark(event: Event, store: string): void {
 	const file = markFile(store, event);
 	if (!file || typeof event.cwd !== "string") return;
 	mkdirSync(store, { recursive: true });
-	writeFileSync(file, git(event.cwd, "rev-parse", "-q", "--verify", "HEAD") ?? "");
+	if (!existsSync(file) || existsSync(`${file}.stopped`)) {
+		writeFileSync(file, git(event.cwd, "rev-parse", "-q", "--verify", "HEAD") ?? "");
+		rmSync(`${file}.stopped`, { force: true });
+	}
 	resetRounds(file);
 }
 
@@ -195,12 +216,17 @@ function runner(cwd: string): string {
  * The refusal for this turn, or nothing when it may end. A turn that completed
  * a group is handed to `log` as `passed` when the ledger holds a passing run
  * of the tip; `released` when the once-per-mark bound alone lets it end; or
- * `refused`.
+ * `refused`. Every answer but a refusal ends the turn, so leaves `stopped`.
  */
 export function decide(event: Event, store: string, log: (decision: string) => void = () => {}): string | undefined {
 	const file = markFile(store, event);
-	const { cwd } = event;
-	if (!file || typeof cwd !== "string") return;
+	if (!file) return;
+	const reason = typeof event.cwd === "string" ? judge(file, event.cwd, log) : undefined;
+	if (!reason) stopped(file);
+	return reason;
+}
+
+function judge(file: string, cwd: string, log: (decision: string) => void): string | undefined {
 	let recorded: string;
 	try {
 		recorded = readFileSync(file, "utf8");
@@ -237,23 +263,27 @@ export function decide(event: Event, store: string, log: (decision: string) => v
 }
 
 if (import.meta.main) {
-	// ponytail: one mark file per session accumulates in the OS temp dir,
-	// which the OS clears; prune here if that ever stops being true.
+	// ponytail: a mark, its `.rounds` and its `.stopped` per session accumulate
+	// in the OS temp dir, which the OS clears; prune here if that ever stops being true.
 	const store = join(tmpdir(), "turn-gate");
+	const stopping = process.argv[2] !== "mark";
+	let file: string | undefined;
 	let reason: string | undefined;
 	try {
 		const event = JSON.parse(await Bun.stdin.text());
-		const file = markFile(store, event);
+		file = markFile(store, event);
 		// Before `decide`: a session that is ending gains nothing from a refusal.
-		const ceiling = process.argv[2] !== "mark" && file ? countRound(event, file) : undefined;
-		if (process.argv[2] === "mark") mark(event, store);
+		const ceiling = stopping && file ? countRound(event, file) : undefined;
+		if (!stopping) mark(event, store);
 		else if (ceiling) {
 			record("goal", "ceiling", "rounds", event);
 			console.log(JSON.stringify({ continue: false, stopReason: ceiling }));
+			if (file) stopped(file);
 		} else reason = decide(event, store, (decision) => record("turn-gate", decision, "pre-pr-sequence", event));
 	} catch {
 		// Fail-open, as the header says: an event this script cannot read
-		// ends the turn rather than holding it.
+		// ends the turn rather than holding it, so it is a stop like any other.
+		if (stopping && file) stopped(file);
 	}
 	if (reason) {
 		process.stderr.write(`${reason}\n`);
