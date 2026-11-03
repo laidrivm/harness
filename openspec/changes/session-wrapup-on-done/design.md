@@ -21,7 +21,10 @@ of their own".
 The command guard refuses a commit on `main`, on a detached `HEAD`, and on a
 branch `origin/main` already carries (`merged-branch`). `status --to done`
 writes only once `origin/main` proves the merge, so when the line fires the
-branch in hand is one of those three.
+branch in hand is usually one of those three. Not always: `status` reads the
+card's evidence from `origin/main`, never the checkout's branch, so a session
+on an unrelated, unmerged branch can write `done` too. The ledger's place
+must not depend on which (decision 3).
 
 On the VPS the persistent session runs in `$HOME/harness`, a clone on `main`
 (`session-runner-image`); its subagents work in worktrees. Before each start
@@ -31,8 +34,9 @@ starts claude on the old tree.
 ## Goals / Non-Goals
 
 **Goals:** the session the user talks to is told to wrap up and to offer
-`/clear` once a card is done; the wrap-up leaves every checkout's tree as it
-found it, so the VPS clone's pull is never stopped by it.
+`/clear` once a card is done; the wrap-up's yield ledger changes no file of
+any checkout's tree, so the VPS clone's pull is never stopped by it. The save
+point is out of that promise (Non-Goals).
 
 **Non-Goals:**
 
@@ -106,19 +110,25 @@ must match, and a mismatch reads as a prompt or a silent no-op, so a case in
 
 ### 3. The yield ledger leaves the tree — the pipeline-yield seam
 
-When the line fires, the branch in hand is `main`, detached or merged (see
-Context): the guard refuses the commit `core/git-and-prs.md` asks for, so an
-in-tree entry can never be committed from there, and on the VPS clone the
-dirty file stops the next `git pull --ff-only` once the laptop's entry for
+When the line fires, the branch in hand is usually `main`, detached or merged
+(see Context): the guard refuses the commit `core/git-and-prs.md` asks for,
+so an in-tree entry can never be committed from there, and on the VPS clone
+the dirty file stops the next `git pull --ff-only` once the laptop's entry for
 the same month merges. Three fixes were weighed:
 
 - **Write outside the clone** (chosen). The entry goes to
-  `<state>/harness/pipeline-yield-<yyyy-mm>.md`, `<state>` as step 5 already
-  takes it for the gates line — `$XDG_STATE_HOME` when absolute, else
-  `$HOME/.local/state` — beside `gates.jsonl`, on every branch. The gates line
-  reads that machine's ledger, so dating it from the previous entry of a
-  ledger on the same machine is more exact than a repository file both
-  machines append to. The VPS rules card keeps its manual-steps log in the
+  `~/.local/state/harness/pipeline-yield/<repo>-<yyyy-mm>.md` on every
+  branch, whatever its state. `<repo>` is the last segment of `git remote
+  get-url origin` without `.git` (`harness`, `dota2`, `mellon`), or `<top>`'s
+  basename where there is no `origin`: one machine runs several projects, and
+  a ledger they shared would date one project's windows from another's entry
+  and skip its pull request numbers. The path is fixed rather than
+  `$XDG_STATE_HOME`-relative, so the one `allowed-tools` rule always matches
+  it and an unattended wrap-up never stops at a prompt and ends without its
+  entry; the gates line still reads `gates.jsonl` where `bun/gate-ledger.ts`
+  writes it. The gates line reads that machine's ledger, so dating it from
+  the previous entry of a ledger on the same machine is more exact than a
+  repository file both machines append to. The VPS rules card keeps its manual-steps log in the
   home directory for the same reason. Cost: the tracked ledger stops growing;
   each machine's entries are read on that machine.
 - **Write through a pull request.** A branch, a pull request, CI, a
@@ -141,14 +151,16 @@ consumers.
 ### 4. One ledger per machine, and the tracked ones deleted
 
 Every read of "the previous entry" in step 5 — `<gates-since>`, `<since>`, and
-the earlier `first review` lines a pull request is skipped by — reads the
-state ledger alone, so the windows never overlap on one machine. A pull
+the earlier `first review` lines a pull request is skipped by — reads
+`<repo>`'s files in the state ledger alone, so the windows never overlap on
+one machine. A pull
 request measured on the laptop can be measured again on the host, and each
 ledger's count stays honest on its own.
 
 No seed: a machine's first entry takes the rules step 5 already has for the
 first entry ever — the `gates` line counts every record the gate ledger
-holds, and `first review` starts today. Reading the tree's last entry instead
+holds for this project and its subdirectories, as its query already filters,
+and `first review` starts today. Reading the tree's last entry instead
 would stop working the moment those files are deleted, and the one-off long
 `gates` line is that machine's history, which no remaining ledger counted.
 
@@ -174,10 +186,10 @@ request of the consumer's own. This change edits no other repository.
 A detached `HEAD` has no branch for the entry's `## <yyyy-mm-dd> — <branch>`
 heading; it names the detached commit as `git status` prints it.
 
-The skill's `allowed-tools` gain `Edit(~/.local/state/harness/pipeline-yield-*.md)`
-— an `Edit` rule covers the Write that creates a new month's file (to confirm
-against Claude Code's permission docs on apply). With `$XDG_STATE_HOME` set
-elsewhere the write asks once; the VPS sets none. `core/review-toolkit.md`,
+The skill's `allowed-tools` gain `Edit(~/.local/state/harness/pipeline-yield/**)`
+and `Bash(git remote get-url origin)` — an `Edit` rule covers the Write that
+creates a new month's file (to confirm against Claude Code's permission docs
+on apply). `core/review-toolkit.md`,
 which points readers at `docs/context/pipeline-yield-*.md`, points at the
 ledger step 5 names instead.
 
@@ -204,8 +216,9 @@ conditional on where it stands at apply.
   the user chose a ledger outside git knowing it.
 - [A consumer skips the one-time delete] → its tracked ledgers stay as
   frozen history; nothing writes to them after its bump.
-- [`$XDG_STATE_HOME` set to another path] → the ledger write prompts once
-  instead of running; noted in the skill.
+- [Two clones of one repository with different `origin` names] → their
+  entries split across two files; the name comes from `origin` so a worktree
+  and its main checkout, which share it, share one file.
 
 ## Migration Plan
 
@@ -216,6 +229,11 @@ once, as README's *Consuming* says (decision 4). A dirty
 `docs/context/pipeline-yield-*.md` already in a clone on `main` — the VPS's,
 or the laptop's main checkout — goes when the pull brings the deletion: an
 unmodified copy is removed by the pull, a modified one stops it, and the user
-discards it (`git checkout -- docs/context`) or copies its entries under
-`<state>/harness/` first. Rollback is a revert; entries written to the state
-ledger meanwhile stay there.
+discards it (`git checkout -- docs/context`) or copies its entries into
+`~/.local/state/harness/pipeline-yield/<repo>-<yyyy-mm>.md` first.
+
+Rollback: in the revert's own pull request, append each machine's
+state-ledger entries for the harness, in date order, to the restored
+`docs/context/pipeline-yield-<yyyy-mm>.md`, so the reverted skill's previous
+entry is the latest one written and its windows neither skip nor re-count
+what the state ledger counted.

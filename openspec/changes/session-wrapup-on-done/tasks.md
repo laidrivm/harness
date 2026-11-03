@@ -44,23 +44,25 @@ whole harness; `design.md`, decisions 3–4).
       bun/work-release.test.ts`
 - [ ] 1.3 Failing cases in `bun/session-wrapup-yield.test.ts`, over step 5's
       flattened text as the file reads it: step 5 appends to
-      `<state>/harness/pipeline-yield-<yyyy-mm>.md` and the whole skill names
-      no `pipeline-yield` path under `docs/context/` (`a-wrap-up-on-main`,
-      `a-wrap-up-on-a-feature-branch`); `<gates-since>`, `<since>` and the
-      measured `first review` lines are read from that ledger alone, and its
-      first entry takes the first-entry-ever rules
-      (`the-first-entry-on-a-machine`); the heading names the detached commit
-      as `git status` prints it when there is no branch
-      (`a-wrap-up-on-a-detached-head`); the frontmatter's `allowed-tools`
-      holds `Edit(~/.local/state/harness/pipeline-yield-*.md)`. And one case
+      `~/.local/state/harness/pipeline-yield/<repo>-<yyyy-mm>.md`, names
+      `git remote get-url origin` as where `<repo>` comes from, and the whole
+      skill names no `pipeline-yield` path under `docs/context/`
+      (`a-wrap-up-on-main`, `a-wrap-up-on-a-feature-branch`);
+      `<gates-since>`, `<since>` and the measured `first review` lines are
+      read from `<repo>`'s files alone (`two-repositories-on-one-machine`),
+      and its first entry takes the first-entry-ever rules with the gates
+      query's project filter unchanged (`the-first-entry-on-a-machine`); the
+      heading names the detached commit as `git status` prints it when there
+      is no branch (`a-wrap-up-on-a-detached-head`); the frontmatter's
+      `allowed-tools` holds `Edit(~/.local/state/harness/pipeline-yield/**)`
+      and `Bash(git remote get-url origin)`. And one case
       over the repository: `git ls-files` for
       `:(top)docs/context/pipeline-yield-*.md` exits 0 and lists nothing
       (`no-ledger-in-the-harness-tree`). Each fails today
 - [ ] 1.4 Then `core/skills/session-wrapup/SKILL.md`: step 5's append
-      paragraph targets the state ledger as `design.md` decisions 3–4 set
-      out, and says that with `$XDG_STATE_HOME` set elsewhere the write asks;
-      the three reads of the previous entry name the state ledger alone; the
-      heading's detached form; the `allowed-tools` entry; the Rules section's
+      paragraph targets `<repo>`'s file as `design.md` decisions 3–4 set out;
+      the three reads of the previous entry name that file's ledger alone; the
+      heading's detached form; the two `allowed-tools` entries; the Rules section's
       list of the files the skill may touch names the state ledger and drops
       the tree's. Confirm against Claude Code's permission docs that an
       `Edit` rule covers the Write that creates a new month's file, and record
