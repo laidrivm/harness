@@ -23,22 +23,25 @@ month arrives from the laptop.
 
 ## What Changes
 
-- `status`, after a write whose read-back is `done`, prints one last line:
-  `next: run /session-wrapup unless it is already running, then tell the user
-  «можно /clear»`. A refusal, a failed write, or a write of any other status
-  prints no such line.
+- `status`, after it moves a card to a read-back of `done`, prints one last
+  line: `next: run /session-wrapup unless it is already running, then tell
+  the user «можно /clear»; a subagent passes this line to its caller
+  instead`. A refusal, a failed write, a card already at `done`, or a write
+  of any other status prints no such line.
 - `.claude/settings.json` allows `Skill(session-wrapup)`, so the model starts
   it without a permission prompt (the user's answer to question 1, 03.11: «а»).
 - `session-wrapup` step 5 appends the yield entry outside the tree, to
-  `<state>/harness/pipeline-yield-<yyyy-mm>.md` beside the gate ledger, when the
-  checkout is on `main` or a detached `HEAD` — the two the command guard
-  refuses a commit on — and to `docs/context/` as now on any other branch. The
-  skill's `allowed-tools` gain the branch read and that one path.
-- `core/git-and-prs.md`'s rule on committing wrap-up artefacts names the
-  exception.
+  `<state>/harness/pipeline-yield-<yyyy-mm>.md` beside the gate ledger, on
+  every branch: when the line fires the branch in hand is `main`, detached or
+  merged, and the command guard refuses a commit on all three. The skill's
+  `allowed-tools` gain that one path. Question 2 on the card asks whether the
+  tree should still take the entry on a branch that can commit it
+  (`design.md`, decision 3).
+- `core/git-and-prs.md`'s rule on committing wrap-up artefacts and
+  `core/review-toolkit.md`'s pointer to the ledger follow it.
 - The prose stop-gap the VPS rules card adds as rule 4 of
   `orchestrator/runner/CLAUDE.md` (card 40c39875c31b81f0b1d1cbea945696bc)
-  leaves, or shrinks to a pointer, once the line lands.
+  shrinks to a pointer at the line once the line lands.
 
 Not in this change: a card a person moves to `done` on the board, which no
 session sees; the context-window threshold, which has its own card
@@ -55,17 +58,17 @@ None.
 
 - `work-status`: a written `done` names the wrap-up as the next step, and the
   harness allows the skill the line names.
-- `agent-rulebook`: the yield ledger leaves a checkout the guard keeps from
-  committing clean.
+- `agent-rulebook`: the yield ledger is kept outside the tree.
 
 ## Impact
 
-- Changed: `bun/work-status.ts`, `bun/work-status.test.ts`, the `done` cases
-  of `bun/work-status-tree.test.ts` and `bun/work-status-pr.test.ts` that pin
+- Changed: `bun/work-status.ts`, the `done` cases of `bun/work-status.test.ts`,
+  `bun/work-status-tree.test.ts` and `bun/work-status-pr.test.ts` that pin
   the last line, `.claude/settings.json`,
   `core/skills/session-wrapup/SKILL.md`, `bun/session-wrapup-yield.test.ts`,
-  `core/git-and-prs.md`; `orchestrator/runner/CLAUDE.md` if it is on `main`.
-- Consumers get the skill's change through the package; on a consumer's own
-  `main` the entry lands in its user's state directory, not its tree. The
+  `core/git-and-prs.md`, `core/review-toolkit.md`;
+  `orchestrator/runner/CLAUDE.md` if it is on `main`.
+- Consumers get the skill's change through the package: their entries land in
+  each user's state directory, not their tree. The
   `status` line is the harness's own: consumers move a status through the
   connector and never see it.

@@ -1,15 +1,14 @@
 ## ADDED Requirements
 
-### Requirement: The yield ledger stays out of a checkout that cannot commit it
+### Requirement: The yield ledger is kept outside the tree
 
-When the checkout is on `main` or a detached `HEAD` — where the command guard
-refuses a commit — the session wrap-up SHALL append its yield entry to
+The session wrap-up SHALL append its yield entry to
 `<state>/harness/pipeline-yield-<yyyy-mm>.md`, `<state>` the directory the
-gate ledger is written under, and SHALL change no file of the tree for it. On
-any other branch it SHALL append to `docs/context/pipeline-yield-<yyyy-mm>.md`
-as before. The previous entry it reads dates from, and the earlier `first
-review` lines it skips measured pull requests by, SHALL be in the ledger it
-appends to.
+gate ledger is written under, on every branch, and SHALL change no file of
+the tree for it. The previous entry it dates its windows from, and the
+earlier `first review` lines it skips measured pull requests by, SHALL be
+read from that ledger, or from `docs/context/pipeline-yield-*.md` while that
+ledger holds no entry yet.
 
 #### Scenario: A wrap-up on main
 
@@ -17,20 +16,21 @@ appends to.
 - **THEN** its yield entry is appended under `<state>/harness/`, and `git
   status` shows no change under `docs/context/pipeline-yield-*`
 
-#### Scenario: A wrap-up on a detached HEAD
-
-- **WHEN** `git branch --show-current` prints nothing
-- **THEN** the entry goes under `<state>/harness/` as on `main`
-
 #### Scenario: A wrap-up on a feature branch
 
-- **WHEN** a wrap-up runs on `feat/foo`
-- **THEN** its entry is appended to `docs/context/pipeline-yield-<yyyy-mm>.md`
-  in the tree, to be committed to that branch
+- **WHEN** a wrap-up runs on `feat/foo`, merged or not
+- **THEN** its entry goes under `<state>/harness/` as on `main`, and nothing
+  is committed for it
 
-#### Scenario: The previous entry on a host
+#### Scenario: The first entry on a machine
 
-- **WHEN** a wrap-up on `main` reads the date of the previous entry holding a
-  `gates` line
-- **THEN** it reads it from `<state>/harness/pipeline-yield-*.md`, never from
-  `docs/context/`
+- **WHEN** `<state>/harness/` holds no `pipeline-yield-*.md` and the tree's
+  `docs/context/` holds entries
+- **THEN** `<gates-since>` and `<since>` are dated from the latest of those
+  entries, and the new entry is written under `<state>/harness/`
+
+#### Scenario: A wrap-up on a detached HEAD
+
+- **WHEN** the checkout has no branch
+- **THEN** the entry's heading names the detached commit as `git status`
+  prints it, never an empty branch
