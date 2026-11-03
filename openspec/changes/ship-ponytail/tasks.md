@@ -19,9 +19,12 @@ an agent's call that redirects Claude Code's configuration (seen 03.11 on
       the new settings, then once in a folder outside it. After each, read
       the `HEAD` of `~/.claude/plugins/marketplaces/ponytail` and the
       installed version under `~/.claude/plugins/cache/ponytail/ponytail/`
-      (the user, in a terminal of their own). Record whether the copy
-      changes between folders. If it does, tell the user to switch to D6's
-      option б before the settings land
+      (the user, in a terminal of their own). Compare both with the pin:
+      after the harness start, the copy's `HEAD` must be the commit of tag
+      `v5.3.3` (design.md, D3) and the installed version must be 5.3.3.
+      Record both reads. A copy that changes between folders, or a harness
+      start that reads anything but the pin, means telling the user to
+      switch to D6's option б before the settings land
 - [ ] 1.3 A pin move. In a scratch folder with a throwaway
       `CLAUDE_CONFIG_DIR`, starting from a registered copy at `v5.3.3`,
       change the project's `ref` to `v5.3.2` and start `claude` in that
@@ -104,11 +107,16 @@ an agent's call that redirects Claude Code's configuration (seen 03.11 on
 
 - [ ] 4.1 `bun bun/pre-pr.ts` passes
 - [ ] 4.2 After the image is rebuilt on the VPS, before the harness clone
-      is trusted, confirm the pane shows no ponytail line. Trust it as
-      README step 12 says, before the loop is switched on (D5), then check
-      four things. The `main` pane prints
-      `PONYTAIL MODE ACTIVE — level: ultra` at SessionStart. A subagent it
-      starts gets the same level. `/home/agent/.config/ponytail/config.json`
+      is trusted, confirm that `claude plugin list`, as `agent` in
+      `/home/agent/harness`, shows no ponytail. Trust the clone as README
+      step 12 says, before the loop is switched on (D5), then check four
+      things. ponytail's SessionStart hook passes its rules to the model as
+      hidden context and prints nothing in the pane, so read the level
+      from its state. After `main` starts,
+      `/home/agent/.claude/ponytail-modes/<sha256 of /home/agent/harness>`
+      reads `ultra`. Asked to quote the `PONYTAIL MODE ACTIVE` line of its
+      context, the session and a subagent it starts each quote
+      `level: ultra`. `/home/agent/.config/ponytail/config.json`
       is owned by `agent`. `claude plugin list`, as `agent` in
       `/home/agent/harness`, shows `ponytail@ponytail` at 5.3.3 and
       `cc-plugin-you-should-know@builtin`. Record the result on the card

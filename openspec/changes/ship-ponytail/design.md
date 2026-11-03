@@ -110,8 +110,9 @@ default to `false`, so the pin does not rest on a default.
   then the VPS has two refs on one copy. `/home/agent/harness` names the new
   tag, a consumer's clone still names the old one, and both share agent's
   single `~/.claude/plugins/marketplaces/ponytail`. A session may therefore
-  run the version the other ref named. The gap lasts one bump, a day at
-  most. Probe 1.3 shows whether the copy follows `ref` at all, and the pin
+  run the version the other ref named. The gap ends when a consumer's bump
+  lands. A bump that fails its checks leaves the old pin, so the gap can
+  last longer than a day. Probe 1.3 shows whether the copy follows `ref` at all, and the pin
   move's procedure is written after it.
 - An author can move a tag. The commit in the note lets a reader see that
   the tag moved. No test can check it without the network.
