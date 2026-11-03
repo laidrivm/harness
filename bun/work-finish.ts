@@ -20,7 +20,7 @@
 import { statSync } from "node:fs";
 import { ready } from "./ci-run-draft.ts";
 import { arrived, exited, interval, objects, own, plain, type Run, read, type State, state } from "./coderabbit-run.ts";
-import { reviewers } from "./config.ts";
+import { CODERABBIT, reviewers } from "./config.ts";
 import { RUNNER_STEPS, ran, recordCheckout } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
@@ -76,7 +76,7 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	// Before the push, so a typo or a name `finish` cannot read costs no push, opening or wait.
 	let watched: boolean;
 	try {
-		watched = reviewers(top).includes("CodeRabbit");
+		watched = reviewers(top).includes(CODERABBIT);
 	} catch (error) {
 		return refuse("reviewers", (error as Error).message);
 	}

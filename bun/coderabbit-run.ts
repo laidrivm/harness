@@ -4,6 +4,7 @@
  * module reads the check runs*): precedence over all runs, so the order
  * GitHub lists them in decides nothing.
  */
+import { CODERABBIT } from "./config.ts";
 import { gh, positive } from "./pull-requests.ts";
 
 /** A check run as `commits/<sha>/check-runs` lists it, only the fields read here. */
@@ -33,7 +34,7 @@ export const REVIEWED = { conclusion: "success", skippedTitle: "Review skipped" 
 const title = (run: Run) => String(run.output?.title ?? "");
 
 /** The runs CodeRabbit's own app posted: another app's run named `CodeRabbit` stands in for nothing. */
-export const own = (runs: Run[]) => runs.filter((run) => run.name === "CodeRabbit" && run.app?.slug === "coderabbitai");
+export const own = (runs: Run[]) => runs.filter((run) => run.name === CODERABBIT && run.app?.slug === "coderabbitai");
 
 /** The state `runs` give, by the spec's precedence. */
 export function state(runs: Run[]): State {
