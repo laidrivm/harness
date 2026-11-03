@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { PASSED } from "../bun/board-loop-session.ts";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
@@ -68,6 +68,46 @@ describe("the image's users", () => {
 		expect(dirname(FILES.id)).toBe(dirname(FILES.repositories));
 		expect(dockerfile).toContain(`install -d -m 0755 ${dirname(FILES.id)}`);
 		expect(dockerfile).toContain(`install -d -o keyholder -g keyholder -m 0700 ${dirname(FILES.key)}`);
+	});
+
+	test("the image's one copy of bun/ sets its modes, root-writable and readable by all, never the checkout's", () => {
+		const lines = instructions("orchestrator/runner/Dockerfile");
+		expect(lines.filter((l) => /^copy\b.*--from=bun\b/i.test(l))).toEqual([
+			"COPY --from=bun --chmod=u=rwX,go=rX . /opt/orchestrator/bun/",
+		]);
+	});
+
+	test("the image's build fails when its copy of bun/ holds a mode the key holder cannot read, or one it could write", () => {
+		const run = instructions("orchestrator/runner/Dockerfile").find(
+			(l) => l.startsWith("RUN ") && l.includes("find /opt/orchestrator/bun "),
+		);
+		expect(run).toBeDefined();
+		const built = (file: number, dir: number) => {
+			const copy = emptyDir("orchestrator-bun-modes-");
+			chmodSync(copy, 0o755);
+			mkdirSync(join(copy, "sub"));
+			writeFileSync(join(copy, "sub", "github-app-mint.ts"), "");
+			chmodSync(join(copy, "sub", "github-app-mint.ts"), file);
+			chmodSync(join(copy, "sub"), dir);
+			const script = (run ?? "RUN false").slice(4).replaceAll("/opt/orchestrator/bun", copy);
+			const codes = ["dash", "sh"].map((shell) => Bun.spawnSync([shell, "-c", script]).exitCode);
+			chmodSync(join(copy, "sub"), 0o755);
+			return codes;
+		};
+		expect(built(0o644, 0o755)).toEqual([0, 0]);
+		expect(built(0o755, 0o755)).toEqual([0, 0]);
+		for (const [file, dir] of [
+			[0o600, 0o755],
+			[0o664, 0o755],
+			[0o646, 0o755],
+			[0o644, 0o744],
+		] as const)
+			expect([file.toString(8), dir.toString(8), ...built(file, dir)]).toEqual([
+				file.toString(8),
+				dir.toString(8),
+				1,
+				1,
+			]);
 	});
 
 	// spec: orchestrator/git-reaches-github

@@ -193,8 +193,8 @@ describe("the engine's webhook call", () => {
 	const entry = "orchestrator/runner/entrypoint.sh";
 	const ev = `${wm}f/orchestrator/event`;
 
-	test("the image holds a root-owned copy of bun/, from a named context compose points at the repository's bun/", () => {
-		expect(read("orchestrator/runner/Dockerfile")).toContain("COPY --from=bun . /opt/orchestrator/bun/");
+	// The image's copy of it, and its modes, are pinned in users.test.ts.
+	test("compose's named context `bun` is the repository's bun/", () => {
 		const runner = (composed().services as Record<string, { build?: { additional_contexts?: Record<string, string> } }>)
 			.runner;
 		expect(runner?.build?.additional_contexts?.bun).toBe("../bun");
