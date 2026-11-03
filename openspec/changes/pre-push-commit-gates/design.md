@@ -112,7 +112,12 @@ configuration file under `.stryker-tmp`, no flag taking the command. Stryker's
 forced), trimmed into the stored file once the run finishes, so the partial
 results an interrupt saves never reach the stored file. A run resumes by
 module, never from a leftover copy, which could hold replaced results. Named modules narrow a run,
-which then writes no report. A dirty module fails like a dirty test.
+which then writes no report. A dirty module fails like a dirty test. A run of
+more than one module first dry-runs each, `dryRunOnly` in its configuration
+and nothing stored, and fails naming every module whose dry run failed before
+it mutates any; a run of one skips that, its own run starting with the same
+dry run. A run of several so pays each dry run twice, about 25 minutes over
+`--all`, for a stop that names every failing module at once.
 
 A module runs when its tracked source differs from the copy its stored file
 holds (`files[path].source`), incrementally, or whole when it has no stored
@@ -193,9 +198,9 @@ stale ones it re-runs and fails. The user adds the check names to the ruleset.
   commands over its files.
 - [The baseline takes hours] → resumable per module, run by hand in batches.
 - [Tests that read the repository through git behave differently inside
-  Stryker's sandbox] → the probe and the baseline show it per module; a
-  module whose dry run fails is reported on the card, never skipped
-  silently.
+  Stryker's sandbox] → the probe showed it per module, and the baseline's
+  dry runs (decision 4) name every such module before any is mutated; each
+  is reported on the card, never skipped silently.
 - [The host has no Node] → a push and a runner pass there that changed a
   module would both fail naming Node; the probe reads `node -v` on the host,
   and if it is absent, installing it is a card that lands before group 7.
