@@ -7,7 +7,7 @@ the file's other cases do: `started()`, `commit`, `prompt` for a prompt and
 
 ## 1. The mark moves only after a turn the `Stop` half let end
 
-- [ ] 1.1 Failing cases in `bun/turn-gate-turn.test.ts`, describe "the mark":
+- [x] 1.1 Failing cases in `bun/turn-gate-turn.test.ts`, describe "the mark":
       a message queued mid-turn — `started()`, commit `DONE`, `mark` again with
       no `decide` between, then `decide` refuses naming "1. Group"
       (`a-message-queued-mid-turn`); a turn the user interrupted — the same
@@ -20,19 +20,19 @@ the file's other cases do: `started()`, `commit`, `prompt` for a prompt and
       `undefined` and the mark file still carries the `refused` suffix
       (`a-message-queued-into-a-refused-turn`). Each fails on today's code,
       which rewrites the mark, dropping the suffix, on every prompt
-- [ ] 1.2 Cases that pass today and must keep passing: a stop with nothing to
+- [x] 1.2 Cases that pass today and must keep passing: a stop with nothing to
       judge — `started()`, `decide` with `HEAD` at the mark, `mark` after a
       commit of an unrelated file, and the mark file reads the new `HEAD`. Amend "a new
       mark can be refused again" so the refused turn ends once more (a second
       `decide`) before its `mark`, as the spec's refused turn does
-- [ ] 1.3 A failing case in `bun/turn-gate-ceiling.test.ts`: `counted(0)`, a
+- [x] 1.3 A failing case in `bun/turn-gate-ceiling.test.ts`: `counted(0)`, a
       commit of an unrelated file, and `run("mark")` leaves the mark at the old
       `HEAD`; then `rounds(…, CEILING - 1)` (that prompt restarted the count),
       `run("stop")` ends the session at the ceiling, and `run("mark")` writes
       the new `HEAD` (`the-prompt-after-the-round-ceiling`). Case [41], a mark
       after eighteen restarting the count, keeps passing unchanged
       (`design.md`, decision 5)
-- [ ] 1.4 Then `bun/turn-gate.ts`: `decide` writes `<mark>.stopped` before
+- [x] 1.4 Then `bun/turn-gate.ts`: `decide` writes `<mark>.stopped` before
       every return that lets the turn end once it has the mark's path, and
       never on a refusal; the ceiling branch writes it too, and so does the
       `import.meta.main` block's fail-open `catch` for a stop whose mark path

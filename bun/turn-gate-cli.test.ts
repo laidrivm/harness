@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	cleanup,
@@ -134,6 +134,14 @@ describe("what ends the turn because it cannot be read", () => {
 	test("an event that is not JSON ends the turn", () => {
 		const { dir, tmp } = finished();
 		expect(run("stop", "not json", dir, tmp).code).toBe(0);
+	});
+
+	// spec: commit-gates/the-prompt-after-a-turn-the-hook-let-end
+	test("a stop the fail-open `catch` ends leaves the boundary beside the mark", () => {
+		// git cannot be spawned in a directory that does not exist: `decide` throws.
+		const { dir, tmp } = finished();
+		const code = run("stop", end(join(dir, "gone"), SILENT), dir, tmp).code;
+		expect({ code, stopped: existsSync(join(tmp, "turn-gate", "s1.stopped")) }).toEqual({ code: 0, stopped: true });
 	});
 
 	test("an event that is not JSON lets the prompt through", () => {
