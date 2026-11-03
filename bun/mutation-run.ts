@@ -233,7 +233,14 @@ function stryker(top: string, { module, force }: Run, print: Record<string, stri
 	mkdirSync(tmp, { recursive: true });
 	rmSync(work, { force: true });
 	if (!force && existsSync(stored)) writeFileSync(work, readFileSync(stored));
-	const own = { mutate: [module], commandRunner: { command: `bun test ${stem(module)}` }, incrementalFile: work };
+	const own = {
+		mutate: [module],
+		commandRunner: { command: `bun test ${stem(module)}` },
+		incrementalFile: work,
+		// Stryker's 5 stopped `bun/board-loop.ts`: its suite waits out real timers and took 313–330 s on a laptop at
+		// load 2–4, in the sandbox as outside it; `bun/work.ts`'s, the next slowest, 161 s. 15 is 2.7 times the worst.
+		dryRunTimeoutMinutes: 15,
+	};
 	writeFileSync(config, JSON.stringify({ ...shared, ...own }));
 	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force ? ["--force"] : [])];
 	const run = Bun.spawnSync(args, { cwd: top, stdio: ["inherit", "inherit", "inherit"] });
