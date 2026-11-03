@@ -13,8 +13,11 @@ afterAll(cleanup);
 
 const script = join(import.meta.dir, "runner/session.sh");
 
-/** The script under `shell`, with a clone in `HOME` unless `clone` is false, and git or bun failing when asked. */
-function run(shell: string, opts: { clone?: boolean; failGit?: boolean; failBun?: boolean } = {}) {
+/** The script under `shell`, with a clone in `HOME` unless `clone` is false, and git, bun or claude failing when asked. */
+function run(
+	shell: string,
+	opts: { clone?: boolean; failGit?: boolean; failBun?: boolean; failClaude?: boolean } = {},
+) {
 	const home = emptyDir("orchestrator-session-");
 	const bin = join(home, "bin");
 	mkdirSync(bin);
@@ -22,13 +25,17 @@ function run(shell: string, opts: { clone?: boolean; failGit?: boolean; failBun?
 	const log = join(home, "calls.log");
 	const stub = (name: string, body = "") =>
 		writeFileSync(join(bin, name), `#!/bin/sh\necho "${name} $* @$(pwd)" >>"${log}"\n${body}`, { mode: 0o755 });
-	stub("git", opts.failGit ? "exit 1\n" : "");
+	// git records the variable that keeps a failed credential from waiting on a prompt.
+	stub(
+		"git",
+		`echo "git sees GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset}" >>"${log}"\n${opts.failGit ? "exit 1\n" : ""}`,
+	);
 	stub("bun", opts.failBun ? "exit 1\n" : "");
 	stub("sleep");
-	// Records the two variables, and ends the loop on its second start.
+	// Records the two variables, ends the loop on its second start, and otherwise exits as asked.
 	stub(
 		"claude",
-		`echo "env GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset} DISABLE_AUTOUPDATER=\${DISABLE_AUTOUPDATER-unset}" >>"${log}"\n[ "$(grep -c '^claude ' "${log}")" -lt 2 ] || kill "$PPID"\n`,
+		`echo "env GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset} DISABLE_AUTOUPDATER=\${DISABLE_AUTOUPDATER-unset}" >>"${log}"\n[ "$(grep -c '^claude ' "${log}")" -lt 2 ] || kill "$PPID"\n${opts.failClaude ? "exit 1\n" : ""}`,
 	);
 	const r = Bun.spawnSync([shell, script], {
 		env: { PATH: `${bin}:${process.env.PATH ?? ""}`, HOME: home },
@@ -44,6 +51,7 @@ function run(shell: string, opts: { clone?: boolean; failGit?: boolean; failBun?
 
 const round = [
 	"git pull --ff-only @~/harness",
+	"git sees GIT_TERMINAL_PROMPT=0",
 	"bun install --frozen-lockfile @~/harness",
 	"claude --remote-control harness @~/harness",
 	"env GIT_TERMINAL_PROMPT=0 DISABLE_AUTOUPDATER=1",
@@ -58,18 +66,23 @@ for (const shell of ["sh", "dash"])
 			expect(calls.join("\n")).not.toContain("--continue");
 		});
 
+		// spec: orchestrator/claude-code-exits
+		test("a claude that crashes, exiting non-zero, is followed by the pause and a second round", () => {
+			expect(run(shell, { failClaude: true }).calls).toEqual([...round, "sleep 5 @~/harness", ...round]);
+		});
+
 		// spec: orchestrator/the-pull-fails
 		test("a failing pull prints its line, and claude still starts", () => {
 			const { calls, out } = run(shell, { failGit: true });
 			expect(out).toContain("session: git pull failed; starting claude anyway");
-			expect(calls.slice(0, 3)).toEqual(round.slice(0, 3));
+			expect(calls.slice(0, 4)).toEqual(round.slice(0, 4));
 		});
 
 		// spec: orchestrator/the-install-fails
 		test("a failing install prints its line, and claude still starts", () => {
 			const { calls, out } = run(shell, { failBun: true });
 			expect(out).toContain("session: bun install failed; starting claude anyway");
-			expect(calls.slice(0, 3)).toEqual(round.slice(0, 3));
+			expect(calls.slice(0, 4)).toEqual(round.slice(0, 4));
 		});
 
 		// spec: orchestrator/no-clone-yet
