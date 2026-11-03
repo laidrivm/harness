@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { rmSync, symlinkSync } from "node:fs";
+import { realpathSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir, fabricate, holding, manifest } from "./no-suppressions.fixture.ts";
 import { allowlist, type Finding, scan } from "./no-suppressions.ts";
@@ -69,10 +69,21 @@ describe("what the check does not read", () => {
 
 	test("the check's own script and test pass", () => {
 		// Read where they actually sit, which is the only place the exemption
-		// names: both spell every marker out, so a miss here reports both.
-		const paths = scan(import.meta.dir, {}).map(({ path }) => path);
-		expect(paths).not.toContain("bun/no-suppressions.ts");
-		expect(paths).not.toContain("bun/no-suppressions.test.ts");
+		// names: both spell every marker out, so a miss here reports both. A
+		// repository of our own whose work tree is the one above them, tracking
+		// those two alone: in Stryker's sandbox, a plain directory inside the
+		// real checkout, git would resolve past them to the real copies.
+		// `realpathSync` because git prints the resolved path.
+		const tree = realpathSync(join(import.meta.dir, ".."));
+		const env = { ...process.env, GIT_DIR: join(emptyDir("no-suppressions-self-"), ".git"), GIT_WORK_TREE: tree };
+		for (const args of [
+			["init", "-q"],
+			["add", "bun/no-suppressions.ts", "bun/no-suppressions.test.ts"],
+		])
+			expect(Bun.spawnSync(["git", ...args], { cwd: tree, env }).exitCode).toBe(0);
+		const run = Bun.spawnSync(["bun", script], { cwd: tree, env, stderr: "pipe" });
+		expect(run.stderr.toString()).toBe("");
+		expect(run.exitCode).toBe(0);
 	});
 });
 

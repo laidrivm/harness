@@ -222,9 +222,10 @@ function fail(problems: string[]): void {
 /**
  * Stryker on one module, its values in a configuration file (no flag takes the command), its results in a fresh copy
  * of the stored file, so the partial results an interrupt saves over that copy never reach the stored file. A run
- * resumes by module, never from a leftover copy: one could hold results the stored file has since replaced.
+ * resumes by module, never from a leftover copy: one could hold results the stored file has since replaced. A `dry`
+ * run stops after Stryker's initial test run and stores nothing.
  */
-function stryker(top: string, { module, force }: Run, print: Record<string, string>): number {
+function stryker(top: string, { module, force }: Run, print: Record<string, string>, dry = false): number {
 	const { $schema: _, ...shared } = JSON.parse(readFileSync(join(top, "stryker.config.json"), "utf8"));
 	const tmp = join(top, ".stryker-tmp");
 	const name = stem(module).slice("bun/".length);
@@ -240,12 +241,13 @@ function stryker(top: string, { module, force }: Run, print: Record<string, stri
 		// Stryker's 5 stopped `bun/board-loop.ts`: its suite waits out real timers and took 313–330 s on a laptop at
 		// load 2–4, in the sandbox as outside it; `bun/work.ts`'s, the next slowest, 161 s. 15 is 2.7 times the worst.
 		dryRunTimeoutMinutes: 15,
+		dryRunOnly: dry,
 	};
 	writeFileSync(config, JSON.stringify({ ...shared, ...own }));
 	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force ? ["--force"] : [])];
 	const run = Bun.spawnSync(args, { cwd: top, stdio: ["inherit", "inherit", "inherit"] });
 	rmSync(config, { force: true });
-	if (run.exitCode !== 0) return run.exitCode;
+	if (run.exitCode !== 0 || dry) return run.exitCode;
 	mkdirSync(dirname(stored), { recursive: true });
 	// Through a rename, so a kill mid-write leaves the old stored file rather than a truncated one.
 	writeFileSync(`${work}.out`, `${JSON.stringify(trim(JSON.parse(readFileSync(work, "utf8")), print), null, "\t")}\n`);
@@ -274,6 +276,9 @@ if (import.meta.main) {
 	]);
 	const chosen = named.length ? runs.filter((run) => named.includes(run.module)) : runs;
 	if (chosen.length && !Bun.which("node")) fail(["Stryker needs Node on PATH, and none was found"]);
+	// Only for several: one module's own run starts with the same dry run, so a sweep would only repeat it.
+	const dry = (chosen.length > 1 ? chosen : []).map((run) => ({ ...run, code: stryker(root, run, {}, true) }));
+	fail(dry.filter(({ code }) => code !== 0).map(({ module, code }) => `Stryker's dry run exited ${code} on ${module}`));
 	for (const run of chosen) {
 		const code = stryker(root, run, fingerprint(run.module, tree));
 		if (code !== 0) fail([`Stryker exited ${code} on ${run.module}`]);
