@@ -80,7 +80,7 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
 
 ## 4. The harness's key and the docs
 
-- [ ] 4.1 `package.json`: `"reviewers": ["CodeRabbit"]` under `"harness"`.
+- [x] 4.1 `package.json`: `"reviewers": ["CodeRabbit"]` under `"harness"`.
       Verify `finish` on this branch's own pull request ends on CodeRabbit's
       state of the head, not on `finish: ready #<n>` alone
 - [x] 4.2 `README.md`: *Consuming* step 3 names `harness.reviewers` as the key
