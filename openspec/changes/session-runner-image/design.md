@@ -56,20 +56,25 @@ need host-deploy's fresh-session mark to fire on a resumed session too.
 
 Copied to `/opt/orchestrator/session.sh`, root's, 0755. Its loop:
 
-1. With `$HOME/harness/.git` present, `cd` there and run
+1. With `$HOME/harness/.git` present, a directory or a worktree's file,
+   `cd` there and run
    `git pull --ff-only`, then `bun install --frozen-lockfile`, both always;
    each failure prints `session: <step> failed; starting claude anyway`.
    A failed pull leaves the old tree; a failed install after a good pull
    leaves the dependencies the last good install wrote. With no clone, `cd
    "$HOME"`, so the user can log in before stage step 6 makes the clone.
+   A failed `cd` never exits: ending the script ends `main`, which nothing
+   restarts but the container (local review).
 2. `claude --remote-control` with the fixed name `harness`, in the form the
    pinned release takes (verified at apply with `claude --help`).
 3. `sleep 5`, and again from 1.
 
 It exports `GIT_TERMINAL_PROMPT=0`, so a failed credential fails the pull
 instead of waiting on a prompt nobody sees, and `DISABLE_AUTOUPDATER=1`, so
-the pin cannot drift into `~/.local` (the pass's wrapper sets the same). It
-sets no `CLAUDE_CODE_OAUTH_TOKEN`: Remote Control needs the full login.
+the pin cannot drift into `~/.local` (the pass's wrapper sets the same), and
+`LANG=C.UTF-8`, the pass's locale, since the container sets none (local
+review). It sets no `CLAUDE_CODE_OAUTH_TOKEN`: Remote Control needs the full
+login.
 
 The clone path is `$HOME/harness` rather than a variable, so the test runs it
 with a temporary `HOME` and stubs `git`, `bun`, `claude` and `sleep` on
@@ -228,8 +233,13 @@ still holds no token, so *No token in the session* holds as written.
 - [The release that first supports Remote Control, and the name flag's form,
   not checked] → `claude --help` at apply, the probe at stage step 7.
 - [Whether `claude` with no login waits in the pane or exits] → the README
-  logs in with `docker compose exec -it -u agent runner claude auth login`;
-  the loop's next start picks the login up either way.
+  logs in with `docker compose exec -it -u agent -e DISABLE_AUTOUPDATER=1
+  runner claude auth login`; the loop's next start picks the login up either
+  way.
+- [A `claude` that exits at once, with no login or a refused Remote Control,
+  makes the loop pull, and so mint, every 5 s, near GitHub's secondary limits
+  on token creation] → the probe watches the pane; a backoff when it is seen
+  (local review).
 
 ## Migration Plan
 
