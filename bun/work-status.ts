@@ -36,7 +36,8 @@ const PR = /^pr:([1-9]\d*)$/;
 /**
  * The last line after a card moves to `done`. «можно /clear» stays in Russian
  * on purpose: it is the user's own phrase, the one they wait for in chat
- * (`openspec/changes/session-wrapup-on-done/design.md`, decision 1).
+ * (`openspec/changes/archive/2026-11-03-session-wrapup-on-done/design.md`,
+ * decision 1).
  */
 export const NEXT =
 	"next: run /session-wrapup unless it is already running, then tell the user «можно /clear»; a subagent passes this line to its caller instead";

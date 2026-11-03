@@ -59,7 +59,9 @@ whole harness; `design.md`, decisions 3–4).
       and `Bash(git remote get-url origin)`. And one case
       over the repository: `git ls-files` for
       `:(top)docs/context/pipeline-yield-*.md` exits 0 and lists nothing
-      (`no-ledger-in-the-harness-tree`). Each fails today
+      (`no-ledger-in-the-harness-tree`; read through `bun/tracked.ts`, the
+      tree's one listing `tracked.test.ts` holds every file to). Each fails
+      today
 - [x] 1.4 Then `core/skills/session-wrapup/SKILL.md`: step 5's append
       paragraph targets `<repo>`'s file as `design.md` decisions 3–4 set out;
       the three reads of the previous entry name that file's ledger alone; the
@@ -98,5 +100,5 @@ whole harness; `design.md`, decisions 3–4).
       leave a comment on that card saying rule 4 shrinks to that pointer
       once this change merges. Verify by reading the file back, or the
       card's comments
-- [ ] 1.7 Run the whole `bun test` and `bun bun/pre-pr.ts`, and confirm
+- [x] 1.7 Run the whole `bun test` and `bun bun/pre-pr.ts`, and confirm
       `openspec validate session-wrapup-on-done --strict` passes
