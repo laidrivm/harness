@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { REVIEWED } from "./coderabbit-run.ts";
 import { flat } from "./prose.fixture.ts";
+import { tracked } from "./tracked.ts";
 
 const PATH = join(import.meta.dir, "..", "core", "skills", "session-wrapup", "SKILL.md");
 const skill = () => readFileSync(PATH, "utf8");
@@ -160,10 +161,10 @@ test("allowed-tools holds the state ledger's Edit and origin's read", () => {
 
 // spec: agent-rulebook/no-ledger-in-the-harness-tree
 test("the harness tracks no docs/context/pipeline-yield-*.md", () => {
-	const listed = Bun.spawnSync(["git", "ls-files", ":(top)docs/context/pipeline-yield-*.md"], {
-		cwd: import.meta.dir,
-	});
-	expect([listed.exitCode, listed.stdout.toString()]).toEqual([0, ""]);
+	// The tree's one listing (`tracked-file-sweep`), never a `git ls-files` of the case's own.
+	expect(
+		tracked(import.meta.dir).paths.filter((path) => /^docs\/context\/pipeline-yield-[^/]*\.md$/.test(path)),
+	).toEqual([]);
 });
 
 test("the example block holds a first review line, and the description names the count", () => {
