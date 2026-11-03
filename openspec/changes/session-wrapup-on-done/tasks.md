@@ -44,8 +44,9 @@ whole harness; `design.md`, decisions 3–4).
       bun/work-release.test.ts`
 - [ ] 1.3 Failing cases in `bun/session-wrapup-yield.test.ts`, over step 5's
       flattened text as the file reads it: step 5 appends to
-      `~/.local/state/harness/pipeline-yield/<repo>-<yyyy-mm>.md`, names
-      `git remote get-url origin` as where `<repo>` comes from, and the whole
+      `~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md`, names
+      `git remote get-url origin`'s `<owner>/<name>` as `<repo>` and
+      `local/<basename>` of `<top>` without an `origin`, and the whole
       skill names no `pipeline-yield` path under `docs/context/`
       (`a-wrap-up-on-main`, `a-wrap-up-on-a-feature-branch`);
       `<gates-since>`, `<since>` and the measured `first review` lines are

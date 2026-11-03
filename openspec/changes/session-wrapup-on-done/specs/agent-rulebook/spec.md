@@ -3,8 +3,10 @@
 ### Requirement: The yield ledger is kept outside the tree
 
 The session wrap-up SHALL append its yield entry to
-`~/.local/state/harness/pipeline-yield/<repo>-<yyyy-mm>.md`, `<repo>` the
-name of the repository `origin` names, on every branch and every machine, and
+`~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md`, `<repo>` the
+`<owner>/<name>` that `origin`'s URL ends in, or `local/<basename>` of the
+repository's top-level directory where there is no `origin`, on every branch
+and every machine, and
 SHALL write, commit or read no `docs/context/pipeline-yield-*.md`. The
 previous entry it dates its windows from, and the earlier `first review`
 lines it skips measured pull requests by, SHALL be read from
@@ -27,8 +29,9 @@ lines it skips measured pull requests by, SHALL be read from
 #### Scenario: Two repositories on one machine
 
 - **WHEN** a wrap-up in `mellon` follows one in `harness` on the same machine
-- **THEN** it appends to `mellon-<yyyy-mm>.md`, and dates its windows and
-  skips measured pull requests by `mellon`'s entries alone
+- **THEN** it appends to `laidrivm/mellon/<yyyy-mm>.md`, and dates its windows
+  and skips measured pull requests by `mellon`'s entries alone, as a
+  `mellon` of another owner would keep its own directory
 
 #### Scenario: The first entry on a machine
 
