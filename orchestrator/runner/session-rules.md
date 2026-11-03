@@ -6,7 +6,9 @@ loads. Its name is not `CLAUDE.md`, so a session working in the repository
 does not load it as a directory's memory. A session cannot edit the installed
 copy: change it by a pull request here. It holds only what `core/` and the
 mechanisms do not, and binds the attended session the user drives and its
-subagents; a session that runs unattended (`core/autonomy.md`) skips it.
+subagents. A session that runs unattended (`core/autonomy.md`), such as the
+board loop's `claude -p`, loads this file too, but follows `core/autonomy.md`
+wherever the two differ.
 
 1. Reply to the user in Russian; repo artefacts stay in British English.
 2. Run at most two subagents that run tests at once — `bun test`, the pre-PR
