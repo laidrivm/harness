@@ -31,7 +31,8 @@ function run(
 		failClaude?: boolean;
 	} = {},
 ) {
-	let home = emptyDir("orchestrator-session-");
+	// The é makes every case a path Claude Code names by its characters, not its bytes.
+	let home = emptyDir("orchestrator-séssion-");
 	if (opts.linkHome) {
 		const link = join(emptyDir("orchestrator-session-link-"), "home");
 		symlinkSync(home, link);

@@ -70,8 +70,10 @@ script starts a new conversation only when the directory has none, read from
 where Claude Code keeps them: a `*.jsonl` transcript under
 `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/` in a directory named by the
 real path, `pwd -P`, with every character but a letter or a digit replaced
-by `-` (both seen on the laptop: a `claude -p` started in `/tmp/…` wrote its
-transcript under `-private-tmp-…`). Claude Code is a binary the harness
+by `-`, one per character rather than per byte (seen on the laptop: a
+`claude -p` started in `/tmp/…` wrote its transcript under `-private-tmp-…`,
+and one in `scn-é` under `scn--`). The script replaces with `sed`, since GNU
+`tr` counts bytes (CodeRabbit). Claude Code is a binary the harness
 cannot import, so the test pins the name against that observation, and the
 probe's restart against the real one. It never
 falls back on `claude`'s exit status: a continued session that crashes exits
