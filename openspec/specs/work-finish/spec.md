@@ -210,14 +210,14 @@ that fails SHALL name the state unread.
 
 ### Requirement: Finish lets CodeRabbit see the push before the ready switch
 
-Where the checkout tracks `.coderabbit.yaml`, `finish` SHALL, after the push
+Where `harness.reviewers` names `CodeRabbit`, `finish` SHALL, after the push
 or its skip and the draft's opening, read the card's question and, when none
 waits, read CodeRabbit's state of `HEAD` until a read finds a completed run,
 at most 12 reads an interval apart (11 intervals, 55 s at the default 5 s),
 three failed reads in a row ending them early, then read the question again
 before the ready switch. A wait that ends without one SHALL say so and go on
-to the question read and the ready switch. Without that file, tracked at the
-checkout's top, `finish` SHALL read no check run and wait for none.
+to the question read and the ready switch. Where it does not, `finish` SHALL
+read no check run and wait for none.
 
 #### Scenario: The draft's skip arrives
 
@@ -241,14 +241,15 @@ checkout's top, `finish` SHALL read no check run and wait for none.
 
 #### Scenario: A repository without CodeRabbit's config
 
-- **WHEN** the checkout does not track `.coderabbit.yaml`
-- **THEN** `finish` reads no check run, waits for none, and ends on
-  `finish: ready #7` as before
+- **WHEN** the checkout tracks no `.coderabbit.yaml` and its `package.json`
+  has `"reviewers": ["CodeRabbit"]` under `"harness"`
+- **THEN** `finish` waits for CodeRabbit's run before the ready switch and
+  reads its state of `HEAD` after it, as it would with the file
 
 #### Scenario: Run from a subdirectory
 
-- **WHEN** `finish` runs from a subdirectory of a checkout that tracks
-  `.coderabbit.yaml` at its top
+- **WHEN** `finish` runs from a subdirectory of a checkout whose top's
+  `package.json` names `CodeRabbit` under `harness.reviewers`
 - **THEN** it reads the check runs and waits as it would from the top
 
 #### Scenario: A branch pushed before its draft
@@ -267,7 +268,7 @@ checkout's top, `finish` SHALL read no check run and wait for none.
 
 ### Requirement: Finish ends on CodeRabbit's state of the head
 
-Where the checkout tracks `.coderabbit.yaml`, `finish` SHALL, after the
+Where `harness.reviewers` names `CodeRabbit`, `finish` SHALL, after the
 ready switch, read CodeRabbit's state of `HEAD` until it is neither
 `skipped`, no run nor unread, at most 18 reads an interval apart (17
 intervals, 85 s at the default), three failed reads in a row ending them
@@ -293,6 +294,11 @@ through; the line is the signal.
 - **WHEN** `HEAD`'s state is `skipped` for all 18 reads
 - **THEN** `finish` goes on to the review request
 
+#### Scenario: Still no run when the reads end
+
+- **WHEN** `HEAD` holds no CodeRabbit run for all 18 reads
+- **THEN** `finish` goes on to the review request
+
 #### Scenario: A last read that fails after skips
 
 - **WHEN** 17 reads give `skipped` and the 18th fails
@@ -312,34 +318,59 @@ through; the line is the signal.
 
 ### Requirement: Finish asks once for the review of a skipped head
 
-When the reads end on `skipped` and one more read right before the post
-gives `skipped` too, `finish` SHALL post exactly `@coderabbitai review` as
+When the reads end on `skipped` or no run and one more read right before the
+post gives either too, `finish` SHALL post exactly `@coderabbitai review` as
 the identity `gh` holds, unless the pull request holds a comment whose
 trimmed body is that line or `@coderabbitai full review`, posted at or
-after the start of `HEAD`'s first CodeRabbit run; at most one per call. A
-failed comment read, or a failed read right before the post, SHALL post
-nothing; the last line SHALL say which of these happened.
+after `HEAD`'s cutoff: the earlier of `HEAD`'s committer date and the start
+of its first CodeRabbit run, so a run that starts after a request leaves
+that request counted; at most one per call. A failed comment read, or a
+failed read right before the post, SHALL post nothing; the last line SHALL
+say which of these happened.
 
 #### Scenario: A first request
 
 - **WHEN** `HEAD`'s state stays `skipped` and the pull request holds no
-  `@coderabbitai review` comment from the start of `HEAD`'s first
-  CodeRabbit run on
+  `@coderabbitai review` or `@coderabbitai full review` comment from
+  `HEAD`'s cutoff on
 - **THEN** `finish` posts one comment whose body is exactly
   `@coderabbitai review`, and its last line says it asked
+
+#### Scenario: A first request for a head with no run
+
+- **WHEN** `HEAD` holds no CodeRabbit run through the reads and the read
+  before the post, and the pull request holds no `@coderabbitai review` or
+  `@coderabbitai full review` comment from `HEAD`'s committer date on
+- **THEN** `finish` posts one comment whose body is exactly
+  `@coderabbitai review`, and its last line says no CodeRabbit run came on
+  `HEAD` after 18 reads and that it asked
 
 #### Scenario: Already asked for this head
 
 - **WHEN** `HEAD`'s state stays `skipped` and such a comment, or
-  `@coderabbitai full review`, was posted when `HEAD`'s first CodeRabbit
-  run started, or later
+  `@coderabbitai full review`, was posted at `HEAD`'s cutoff, or later
 - **THEN** `finish` posts nothing and its last line says a review was
   already asked for
+
+#### Scenario: Already asked for a head with no run
+
+- **WHEN** `HEAD` holds no CodeRabbit run and such a comment was posted at
+  or after `HEAD`'s committer date — by an earlier `finish` on this head, or
+  for an earlier head while `HEAD` waited unpushed
+- **THEN** `finish` posts nothing and its last line says a review was
+  already asked for
+
+#### Scenario: A run that starts after the request
+
+- **WHEN** `finish` asked for the review of a head with no run, CodeRabbit
+  then skipped that head, and `finish` runs again on it with the pull
+  request a draft again
+- **THEN** the earlier request counts and `finish` posts nothing
 
 #### Scenario: An older request
 
 - **WHEN** the pull request's only `@coderabbitai review` comment was posted
-  before `HEAD`'s first CodeRabbit run started
+  before `HEAD`'s cutoff
 - **THEN** `finish` posts one
 
 #### Scenario: A rate limit by the read before the post
@@ -508,3 +539,36 @@ Without `--card`, `finish` SHALL write nothing to Notion.
 - **THEN** `finish` names the step and the status in one line, goes on to
   the question read and the ready switch, and a later `finish`, its pull
   request a draft again, adds only the missing link
+
+### Requirement: Finish waits only for the reviewers the project names
+
+`finish` SHALL read, before the push, the list under `harness.reviewers` in
+the `package.json` at the checkout's top: the check-run names of the
+reviewers it waits for. With no such key, no such file, or an empty list, it
+SHALL say no reviewer is named, read no check run, wait for none and ask for
+no review. A file that does not parse, a value that is not a list of
+strings, or a name other than `CodeRabbit` SHALL be refused before the push,
+naming the value.
+
+#### Scenario: A project naming no reviewer
+
+- **WHEN** the checkout's `package.json` has no `harness.reviewers`, or has
+  `[]`, and the checkout tracks `.coderabbit.yaml`
+- **THEN** `finish` prints that no reviewer is named, reads no check run,
+  waits for none, asks for no review, and ends on `finish: ready #7`
+
+#### Scenario: A package file that is not JSON
+
+- **WHEN** the checkout's `package.json` is not JSON
+- **THEN** `finish` refuses before the push, naming the file
+
+#### Scenario: A reviewer finish does not know
+
+- **WHEN** `harness.reviewers` is `["CodeRabbit", "Copilot"]`
+- **THEN** `finish` names `Copilot`, exits 1, and pushes, opens and marks
+  nothing
+
+#### Scenario: A value that is not a list
+
+- **WHEN** `harness.reviewers` is `"CodeRabbit"`
+- **THEN** `finish` refuses before the push, naming `harness.reviewers`
