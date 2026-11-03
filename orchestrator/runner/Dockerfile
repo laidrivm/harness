@@ -95,8 +95,14 @@ COPY --chmod=0755 reach-check.sh /opt/orchestrator/reach-check.sh
 COPY --chmod=0755 runner/gh /usr/local/bin/gh
 # The event handler's code, root-owned, from compose's named context `bun`
 # (ci-run-agent design, *The engine's contract*): it reads the webhook secret,
-# so it never runs from a clone agent can write.
-COPY --from=bun . /opt/orchestrator/bun/
+# so it never runs from a clone agent can write. The modes are set, never the
+# checkout's: one pulled under umask 077 left the mint, run as the key holder,
+# unable to read it. The symbolic form needs Dockerfile 1.14, and `X` after `=`
+# BuildKit 0.21 (Docker 28.1); an octal one, which reaches the directories too,
+# would make every file executable or every directory untraversable.
+COPY --from=bun --chmod=u=rwX,go=rX . /opt/orchestrator/bun/
+# A builder that took the flag and set other modes fails here, not at the mint.
+RUN test -z "$(find /opt/orchestrator/bun ! -perm -o=r -o -perm -g=w -o -perm -o=w -o -type d ! -perm -o=x)"
 
 ENTRYPOINT ["/opt/orchestrator/entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D", "-e"]

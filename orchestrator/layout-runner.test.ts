@@ -184,6 +184,13 @@ describe("the host README", () => {
 			expect(text).toContain(part);
 	});
 
+	// A shell's umask outlives its step: a later `git pull` would write the checkout the image copies under it.
+	test("sets a umask only inside the `sh -c` it scopes, never in the user's shell", () => {
+		const set = instructions(readme).filter((l) => /\bumask\s+\d/.test(l));
+		expect(set.filter((l) => !/ sh -c '[^']*\bumask \d+;[^']*'$/.test(l))).toEqual([]);
+		expect(set.length).toBeGreaterThan(0);
+	});
+
 	test("gives stop.sh's one invocation", () => {
 		expect(read(readme)).toContain("docker compose exec -u runner runner /opt/orchestrator/stop.sh");
 	});

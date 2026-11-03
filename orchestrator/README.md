@@ -7,7 +7,8 @@ for the host's own values; this file names no address and no account.
 
 ## Host requirements
 
-- A Linux VPS with Docker and the compose plugin, at least 2 vCPU, 3.5 GiB
+- A Linux VPS with Docker 28.1 or later, whose builder reads the runner's
+  `COPY --chmod=u=rwX,go=rX`, and the compose plugin, at least 2 vCPU, 3.5 GiB
   of RAM and 20 GB of free disk (the runner image is about 6 GB).
 - SSH as root by key only.
 - A Cloudflare zone for the hostname Windmill's UI sits on.
@@ -38,8 +39,7 @@ On the host, as root, in `orchestrator/`. Each command on its own line; the
 no shell history.
 
 ```sh
-umask 077
-mkdir secrets
+mkdir -m 0700 secrets
 cd secrets
 cat > claude_oauth_token
 cat > tunnel_token
@@ -285,8 +285,9 @@ engine's code:
 
 MCP refuses a token without `mcp:*`, so it is not used: chat control goes
 through `wmill` and Windmill's REST API on that token. Keep both values on
-the laptop in files only the user can read, written with `read -rs` and
-`umask 077`: the token in `~/.config/harness/windmill-chat.token`, and the
+the laptop in files only the user can read, each made empty first with
+`install -m 0600 /dev/null <file>` and written with `read -rs`, never under a
+`umask` the shell keeps: the token in `~/.config/harness/windmill-chat.token`, and the
 service token as one `CF-Access-Client-Id: …,CF-Access-Client-Secret: …` line
 in `~/.config/harness/windmill-access.headers`.
 
@@ -401,10 +402,13 @@ after it is cloned runs in it.
    ```
 
    As root, in `orchestrator/`, write `.env`, which git ignores, pasting the
-   four lines below with the two values in place and ending with Ctrl-D:
+   four lines below with the two values in place and ending with Ctrl-D. The
+   first line makes the file 0600 before it holds anything; a `umask` would
+   stay set in the shell and reach the `git pull` below, whose files the image
+   copies:
 
    ```sh
-   umask 077
+   install -m 0600 /dev/null .env
    cat > .env
    ```
 

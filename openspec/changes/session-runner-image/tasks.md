@@ -80,7 +80,9 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
       passes and `claude --help` at the pinned release names the
       `--remote-control` form `session.sh` uses
 - [x] 3.4 In `orchestrator/README.md`, a section for the persistent
-      session: writing `orchestrator/.env` with `umask 077` from the
+      session: writing `orchestrator/.env` 0600, under no `umask` the
+      shell keeps (a later `git pull` would write the image's copy of `bun/`
+      under it), from the
       placeholders, the one login as agent, attaching to `main`, and
       `notion-ask.json` in agent's home with `umask 077`; step 11's reach
       check unchanged. Verify `bun test orchestrator/` passes and the README
