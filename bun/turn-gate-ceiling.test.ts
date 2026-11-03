@@ -78,12 +78,16 @@ describe("the count", () => {
 		expect(countRound(again(), mark)).toBeUndefined();
 	});
 
-	test("an unwritable counter decides as without a ceiling [52]", () => {
-		const mark = marked();
-		rounds(mark, CEILING - 1);
-		chmodSync(`${mark}.rounds`, 0o444);
-		expect(countRound(again(), mark)).toBeUndefined();
-	});
+	// Root writes a mode-444 file, so the case would never reach the failed write it is about.
+	test.skipIf(process.getuid?.() === 0)(
+		"an unwritable counter decides as without a ceiling [52] (skipped as root, which writes it anyway)",
+		() => {
+			const mark = marked();
+			rounds(mark, CEILING - 1);
+			chmodSync(`${mark}.rounds`, 0o444);
+			expect(countRound(again(), mark)).toBeUndefined();
+		},
+	);
 });
 
 /**
