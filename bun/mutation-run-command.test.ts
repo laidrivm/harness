@@ -90,17 +90,25 @@ const results = JSON.stringify({
 	},
 });
 
-/**
- * A stub of Stryker's `bunx`: writes `results` to the configuration's
- * incremental file, records its arguments in `calls`, and exits 1 once if
- * `fail-once` is there. Programs by path: the stub's `PATH` holds git and bun alone.
- */
-const stryker = [
+/** Writes `results` to the configuration's incremental file. Programs by path: the stub's `PATH` holds git and bun alone. */
+const writes = [
 	`f=$(/usr/bin/sed -n 's/.*"incrementalFile":"\\([^"]*\\)".*/\\1/p' "$4")`,
 	`printf '%s' '${results}' > "$f"`,
-	`echo "$@" >> calls`,
-	"if [ -f fail-once ]; then /bin/rm fail-once; exit 1; fi",
-].join("\n");
+];
+
+/** A stub of Stryker's `bunx`: `writes`, records its arguments in `calls`, and exits 1 once if `fail-once` is there. */
+const stryker = [...writes, `echo "$@" >> calls`, "if [ -f fail-once ]; then /bin/rm fail-once; exit 1; fi"].join("\n");
+
+/** A `bunx` that `writes` on every call, records `dry` or `run` in `calls`, and fails the dry runs of `failing`. */
+const sweeping = (...failing: string[]) =>
+	[
+		...writes,
+		`if ! /usr/bin/grep -q '"dryRunOnly":true' "$4"; then echo run >> calls; exit 0; fi`,
+		"echo dry >> calls",
+		...failing.map((module) => `if /usr/bin/grep -q '"${module}"' "$4"; then exit 1; fi`),
+	].join("\n");
+
+const three = { "bun/b.ts": "1\n", "bun/b.test.ts": "1\n", "bun/c.ts": "1\n", "bun/c.test.ts": "1\n" };
 
 describe("the command", () => {
 	test("a module to run with no node on PATH fails naming Node", () => {
@@ -164,19 +172,25 @@ describe("the command", () => {
 	});
 
 	test("of several modules, every one whose dry run fails is named before any is mutated or stored", () => {
-		const dir = repository({ "bun/b.ts": "1\n", "bun/b.test.ts": "1\n", "bun/c.ts": "1\n", "bun/c.test.ts": "1\n" });
-		// The `stryker` stub's results written on every call, so a dry run that stored them would leave `mutation/`.
-		const bunx = [
-			...stryker.split("\n").slice(0, 2),
-			`if ! /usr/bin/grep -q '"dryRunOnly":true' "$4"; then echo run >> calls; exit 0; fi`,
-			"echo dry >> calls",
-			`if /usr/bin/grep -q -e '"bun/a.ts"' -e '"bun/c.ts"' "$4"; then exit 1; fi`,
-		].join("\n");
-		const { code, err } = cli(dir, path({ node: "exit 0", bunx }));
+		const dir = repository(three);
+		// Results are written on every call, so a dry run that stored them would leave `mutation/`.
+		const { code, err } = cli(dir, path({ node: "exit 0", bunx: sweeping("bun/a.ts", "bun/c.ts") }));
 		const named = ["bun/a.ts", "bun/b.ts", "bun/c.ts"].map((m) => err.includes(`dry run exited 1 on ${m}`));
 		expect([code, ...named]).toEqual([1, true, false, true]);
 		const calls = readFileSync(join(dir, "calls"), "utf8");
 		expect([calls, existsSync(join(dir, "mutation"))]).toEqual(["dry\ndry\ndry\n", false]);
+	});
+
+	test("of several modules whose dry runs all pass, each is then mutated and stored", () => {
+		const dir = repository(three);
+		cli(dir, path({ node: "exit 0", bunx: sweeping() }));
+		const stored = ["a", "b", "c"].map((name) => existsSync(join(dir, `mutation/${name}.json`)));
+		expect([readFileSync(join(dir, "calls"), "utf8"), ...stored]).toEqual([
+			"dry\ndry\ndry\nrun\nrun\nrun\n",
+			true,
+			true,
+			true,
+		]);
 	});
 
 	test("one module is not dry-run apart, its own run starting with one", () => {

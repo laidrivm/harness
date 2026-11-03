@@ -81,7 +81,8 @@ describe("what the check does not read", () => {
 			["add", "bun/no-suppressions.ts", "bun/no-suppressions.test.ts"],
 		])
 			expect(Bun.spawnSync(["git", ...args], { cwd: tree, env }).exitCode).toBe(0);
-		const run = Bun.spawnSync(["bun", script], { cwd: tree, env, stderr: "pipe" });
+		// From `bun/`, a subdirectory, so the exemption is still matched from the root git names.
+		const run = Bun.spawnSync(["bun", script], { cwd: import.meta.dir, env, stderr: "pipe" });
 		expect(run.stderr.toString()).toBe("");
 		expect(run.exitCode).toBe(0);
 	});

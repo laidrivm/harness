@@ -223,7 +223,7 @@ function fail(problems: string[]): void {
  * Stryker on one module, its values in a configuration file (no flag takes the command), its results in a fresh copy
  * of the stored file, so the partial results an interrupt saves over that copy never reach the stored file. A run
  * resumes by module, never from a leftover copy: one could hold results the stored file has since replaced. A `dry`
- * run stops after Stryker's initial test run and stores nothing.
+ * run stops after Stryker's initial test run, which writes no incremental file, so it neither copies nor stores one.
  */
 function stryker(top: string, { module, force }: Run, print: Record<string, string>, dry = false): number {
 	const { $schema: _, ...shared } = JSON.parse(readFileSync(join(top, "stryker.config.json"), "utf8"));
@@ -233,7 +233,7 @@ function stryker(top: string, { module, force }: Run, print: Record<string, stri
 	const stored = join(top, storedPath(module));
 	mkdirSync(tmp, { recursive: true });
 	rmSync(work, { force: true });
-	if (!force && existsSync(stored)) writeFileSync(work, readFileSync(stored));
+	if (!force && !dry && existsSync(stored)) writeFileSync(work, readFileSync(stored));
 	const own = {
 		mutate: [module],
 		commandRunner: { command: `bun test ${stem(module)}` },
