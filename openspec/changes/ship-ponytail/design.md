@@ -77,8 +77,20 @@ harness everywhere.
   marketplaces are the consumer's own. The entry is compared whole, because
   any field the consumer chose would decide which commit reaches a session.
 - **Sync.** `syncSettings` sets each `PLUGINS` id to `true` and the `ponytail`
-  entry to `MARKETPLACE`, and keeps every other key of both objects. Two
-  short assignments in `settingsText` beside `attribution`. No helper.
+  entry to `MARKETPLACE`, and keeps every other key of both objects. The
+  assignments sit in `settingsText` beside `attribution`. Spreading an array
+  or a string would mangle the consumer's own entries without a word. So
+  when either key is present and is not a plain object, sync throws naming
+  the key, as it does for a `hooks` list that is not a list. Because both
+  texts are computed before either is written, neither file changes.
+- **The names the settings look up.** `ponytail@ponytail`, the `ponytail`
+  key and `cc-plugin-you-should-know@builtin` must match names defined
+  outside the repository: ponytail's `marketplace.json` and Claude Code's
+  built-in marketplace. A mismatch loads nothing, and the check passes. The
+  Code rule on pinning a looked-up name asks for a test that reads the name
+  where it is defined. No offline test can read either source: one is on
+  GitHub, the other inside the Claude Code binary. Task 4.2's `claude plugin
+  list` on the VPS is the check that reads them, and README names the gap.
 
 ### D3. The pin is a tag, and nothing moves it but a hand edit
 
@@ -94,7 +106,13 @@ default to `false`, so the pin does not rest on a default.
   (Safety rule on pins outside a manifest). A test reads the line before
   `ref` and pins the note.
 - Moving the pin means a PR that edits `MARKETPLACE` and the harness's own
-  settings file. Consumers take it on their next bump, through sync.
+  settings file. Consumers take it on their next bump, through sync. Until
+  then the VPS has two refs on one copy. `/home/agent/harness` names the new
+  tag, a consumer's clone still names the old one, and both share agent's
+  single `~/.claude/plugins/marketplaces/ponytail`. A session may therefore
+  run the version the other ref named. The gap lasts one bump, a day at
+  most. Probe 1.3 shows whether the copy follows `ref` at all, and the pin
+  move's procedure is written after it.
 - An author can move a tag. The commit in the note lets a reader see that
   the tag moved. No test can check it without the network.
 - `DISABLE_AUTOUPDATER=1`, which `session.sh` exports, also stops plugin
@@ -107,7 +125,7 @@ default to `false`, so the pin does not rest on a default.
 Before the tmux line, the entrypoint runs one line as `agent`:
 
 ```sh
-runuser -u agent -- sh -c 'mkdir -p "$HOME/.config/ponytail" && printf "%s\n" "{\"defaultMode\":\"ultra\"}" >"$HOME/.config/ponytail/config.json"'
+runuser -u agent -- sh -c 'mkdir -p "$HOME/.config/ponytail" && printf "%s\n" "{\"defaultMode\":\"ultra\"}" >"$HOME/.config/ponytail/config.json"' || echo "entrypoint: ponytail's level was not written" >&2
 ```
 
 - **The main session.** The session and the line both start through
@@ -119,12 +137,19 @@ runuser -u agent -- sh -c 'mkdir -p "$HOME/.config/ponytail" && printf "%s\n" "{
   answer 2).
 - **Laptop and consumers.** Nothing reaches them: sync writes no level.
 
-The file is written on every start. A level that someone switches on the VPS
-by hand, through `/ponytail`, which persists `defaultMode`, therefore returns
-to ultra at the next restart. That is the intent. The write runs as `agent`,
-not root, so a symlink `agent` plants in its volume can only redirect a write
-`agent` could make anyway. If the write fails, the entrypoint fails under
-`set -e`, and the restart policy retries, as with tmux.
+The file is written on every start. In 5.3.3 a plain `/ponytail lite`
+changes only that project's flag file. `/ponytail default <mode>`
+(`ponytail-mode-tracker.js`) rewrites this shared file, and every pass until
+the next restart then runs at that level. That is a person's explicit
+override on the host, and the next restart returns everything to ultra.
+
+The write runs as `agent`, not root, so a symlink `agent` plants in its
+volume can only redirect a write `agent` could make anyway. A failed write
+prints a line and the entrypoint goes on. A write that failed under `set -e`
+would stop sshd, and its cause lives in the volume: `agent` could make it
+unwritable, and the restart policy would loop on it, taking every pass and
+webhook down over a style plugin's level. With the line the session runs at
+ponytail's default, and task 4.2 checks the level.
 
 The shape `{"defaultMode": "ultra"}` is read from 5.3.3's `getDefaultMode`,
 which parses the file and normalises `defaultMode`. The other fields the
@@ -146,16 +171,24 @@ not depend on the session's script.
   `agent` runs claude in, that folder must be trusted once by hand (the
   orchestrator README, step 5, does this for a pass's clone). Until it is,
   the harness's marketplace entry does not apply and the session runs
-  without ponytail, which task 4.2 checks. Once it is trusted, the marketplace registers into agent's `~/.claude/plugins` on
-  the volume, and the relative-path plugin loads from that copy.
+  without ponytail. Task 3.3 adds the trust step to the host README, and
+  task 4.2 checks the result. Once the folder is trusted, the marketplace
+  registers into agent's `~/.claude/plugins` on the volume, and the
+  relative-path plugin loads from that copy. Whether that first start shows
+  an install or `userConfig` dialog in the pane nobody watches is unverified.
+  Probe 1.4 checks it before the image change lands.
 - **A pass's clone** is trusted already: `bun/board-loop-clone.ts` refuses an
   untrusted one (`not a trusted workspace`). So `extraKnownMarketplaces`
   applies there too. In `-p` the install runs in the background. A pass that
   runs before the marketplace was ever cloned can miss ponytail on its first
   turn. `CLAUDE_CODE_SYNC_PLUGIN_INSTALL=1` would close that gap, but it
-  would cross the same four seams as D4's rejected variable. The main
-  session starts before sshd and registers the marketplace first, and the
-  loop is off in stage 2.5. The gap is accepted and named in README.
+  would cross the same four seams as D4's rejected variable. Nothing orders
+  the main session's first registration before a pass: `tmux new-session -d`
+  returns at once. Several passes starting the first install together could
+  race on one copy. The loop is off in stage 2.5, and task 4.2 confirms the
+  registration through the main session before the loop is switched on.
+  Once the copy exists, no pass installs it again. The gap is accepted and
+  named in README.
 - **A consumer's fresh clone on the laptop** registers the marketplace when
   its owner accepts the trust dialog. you-should-know sits in the built-in
   marketplace and needs no entry.
@@ -194,6 +227,12 @@ whenever the harness moves the tag.
   (`userConfig.ledger`, default `true`) writes a line per turn under
   `~/.config/ponytail/band/`. The file stays local, and its webhook is
   empty. README names it.
+- [The ledger grows on the VPS's volume with nothing rotating it] → about
+  one short CSV row per turn, tens of megabytes a year at the loop's
+  rate. Accepted until the volume's size is seen to matter. Turning
+  `userConfig.ledger` off on the host is then one `claude plugin configure`
+  as `agent`.
+- [A pin move leaves the VPS's clones on two refs for a bump] → D3.
 
 ## Migration Plan
 

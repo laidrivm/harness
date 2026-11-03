@@ -50,8 +50,9 @@ value: the allow list, hooks the harness did not write (including ones that
 call its scripts), permission entries that are neither `Bash(` nor `mcp__`
 ask entries, plugins and marketplaces other than the harness's, other
 settings keys and other TOML tables. When it cannot show
-that its `bunfig.toml` edit preserved the rest of the file, it SHALL write
-neither file and fail.
+that its `bunfig.toml` edit preserved the rest of the file, or when
+`enabledPlugins` or `extraKnownMarketplaces` is present and not an object, it
+SHALL write neither file and fail.
 
 #### Scenario: The project's own settings survive a sync
 
@@ -66,6 +67,13 @@ neither file and fail.
 - **WHEN** a consumer's settings enable `some-tool@acme`, turn
   `other-tool@acme` off, and register the `acme` marketplace
 - **THEN** after a sync each of them parses to the value it had before
+
+#### Scenario: A plugin key sync cannot read
+
+- **WHEN** a consumer's `enabledPlugins` or `extraKnownMarketplaces` is an
+  array, a string or `null`
+- **THEN** the sync fails naming the key, and neither `bunfig.toml` nor the
+  settings file has changed
 
 #### Scenario: An install section the rewrite would damage is left untouched
 
