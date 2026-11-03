@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, commit, DONE, end, git, OPEN, prompt, repo, SILENT, store, TASKS } from "./turn-gate.fixture.ts";
 import { decide, mark } from "./turn-gate.ts";
@@ -181,6 +181,25 @@ describe("the mark", () => {
 		commit(dir, { "a.txt": "1" });
 		mark(prompt(dir), marks);
 		expect(readFileSync(join(marks, "s1"), "utf8")).toBe(at);
+	});
+
+	test("a mark taken outside a repository is retaken once there is a commit", () => {
+		const dir = store(); // no repository yet
+		const marks = store();
+		mark(prompt(dir), marks);
+		git(dir, "init", "-b", "feat");
+		commit(dir, { "a.txt": "1" });
+		mark(prompt(dir), marks);
+		expect(readFileSync(join(marks, "s1"), "utf8")).toBe(git(dir, "rev-parse", "HEAD"));
+	});
+
+	test("a mark that cannot be rewritten leaves the boundary for the next prompt", () => {
+		const { dir, marks } = started();
+		decide(end(dir, SILENT), marks);
+		rmSync(join(marks, "s1"));
+		mkdirSync(join(marks, "s1")); // a write to it fails
+		expect(() => mark(prompt(dir), marks)).toThrow();
+		expect(existsSync(join(marks, "s1.stopped"))).toBe(true);
 	});
 
 	// spec: commit-gates/a-message-queued-into-a-refused-turn

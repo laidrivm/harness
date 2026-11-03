@@ -123,12 +123,25 @@ export function mark(event: Event, store: string): void {
 	if (!file || typeof event.cwd !== "string") return;
 	mkdirSync(store, { recursive: true });
 	resetRounds(file);
-	if (!existsSync(file) || existsSync(`${file}.stopped`)) {
-		// Consumed before the write: a failure between them keeps the old mark,
-		// which judges more, never less.
-		rmSync(`${file}.stopped`, { force: true });
+	// A mark naming no commit — outside a repository — is retaken until one exists.
+	if (!marked(file) || existsSync(`${file}.stopped`)) {
 		writeFileSync(file, git(event.cwd, "rev-parse", "-q", "--verify", "HEAD") ?? "");
+		// Consumed after the write: a failed write leaves it for the next prompt.
+		rmSync(`${file}.stopped`, { force: true });
 	}
+}
+
+/** The mark's commit and its ` refused` flag, or nothing when it names no commit. */
+function marked(file: string): { at: string; refused: boolean } | undefined {
+	let recorded: string;
+	try {
+		recorded = readFileSync(file, "utf8");
+	} catch {
+		return;
+	}
+	const [at, refused] = recorded.split(" ");
+	if (at === undefined || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(at)) return;
+	return { at, refused: Boolean(refused) };
 }
 
 /**
@@ -229,14 +242,9 @@ export function decide(event: Event, store: string, log: (decision: string) => v
 }
 
 function judge(file: string, cwd: string, log: (decision: string) => void): string | undefined {
-	let recorded: string;
-	try {
-		recorded = readFileSync(file, "utf8");
-	} catch {
-		return;
-	}
-	const [at, refused] = recorded.split(" ");
-	if (at === undefined || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(at)) return;
+	const found = marked(file);
+	if (!found) return;
+	const { at, refused } = found;
 	if (!git(cwd, "symbolic-ref", "-q", "HEAD")) return;
 	const end = tip(cwd, at);
 	const done = end ? completed(cwd, at, end) : [];
