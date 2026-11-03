@@ -169,19 +169,23 @@ describe("the mark", () => {
 		expect(decide(end(dir, SILENT, "s2"), marks)).toBeDefined();
 	});
 
-	test("a boundary that cannot be written ends the turn and keeps the mark", () => {
-		const { dir, marks } = started();
-		const at = readFileSync(join(marks, "s1"), "utf8");
-		chmodSync(marks, 0o555);
-		try {
-			expect(decide(end(dir, SILENT), marks)).toBeUndefined();
-		} finally {
-			chmodSync(marks, 0o755);
-		}
-		commit(dir, { "a.txt": "1" });
-		mark(prompt(dir), marks);
-		expect(readFileSync(join(marks, "s1"), "utf8")).toBe(at);
-	});
+	// Root writes into a mode-555 directory, so the case would never reach the failed write it is about.
+	test.skipIf(process.getuid?.() === 0)(
+		"a boundary that cannot be written ends the turn and keeps the mark (skipped as root, which writes it anyway)",
+		() => {
+			const { dir, marks } = started();
+			const at = readFileSync(join(marks, "s1"), "utf8");
+			chmodSync(marks, 0o555);
+			try {
+				expect(decide(end(dir, SILENT), marks)).toBeUndefined();
+			} finally {
+				chmodSync(marks, 0o755);
+			}
+			commit(dir, { "a.txt": "1" });
+			mark(prompt(dir), marks);
+			expect(readFileSync(join(marks, "s1"), "utf8")).toBe(at);
+		},
+	);
 
 	test("a mark taken outside a repository is retaken once there is a commit", () => {
 		const dir = store(); // no repository yet
