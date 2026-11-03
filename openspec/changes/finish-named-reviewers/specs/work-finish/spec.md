@@ -151,24 +151,25 @@ When the reads end on `skipped` or no run and one more read right before the
 post gives either too, `finish` SHALL post exactly `@coderabbitai review` as
 the identity `gh` holds, unless the pull request holds a comment whose
 trimmed body is that line or `@coderabbitai full review`, posted at or
-after the start of `HEAD`'s first CodeRabbit run or, with none, at or after
-`HEAD`'s committer date; at most one per call. A failed comment read, or a
+after `HEAD`'s cutoff: the earlier of `HEAD`'s committer date and the start
+of its first CodeRabbit run, so a run that starts after a request leaves
+that request counted; at most one per call. A failed comment read, or a
 failed read right before the post, SHALL post nothing; the last line SHALL
 say which of these happened.
 
 #### Scenario: A first request
 
 - **WHEN** `HEAD`'s state stays `skipped` and the pull request holds no
-  `@coderabbitai review` comment from the start of `HEAD`'s first
-  CodeRabbit run on
+  `@coderabbitai review` or `@coderabbitai full review` comment from
+  `HEAD`'s cutoff on
 - **THEN** `finish` posts one comment whose body is exactly
   `@coderabbitai review`, and its last line says it asked
 
 #### Scenario: A first request for a head with no run
 
 - **WHEN** `HEAD` holds no CodeRabbit run through the reads and the read
-  before the post, and the pull request holds no `@coderabbitai review`
-  comment from `HEAD`'s committer date on
+  before the post, and the pull request holds no `@coderabbitai review` or
+  `@coderabbitai full review` comment from `HEAD`'s committer date on
 - **THEN** `finish` posts one comment whose body is exactly
   `@coderabbitai review`, and its last line says no CodeRabbit run came on
   `HEAD` after 18 reads and that it asked
@@ -176,8 +177,7 @@ say which of these happened.
 #### Scenario: Already asked for this head
 
 - **WHEN** `HEAD`'s state stays `skipped` and such a comment, or
-  `@coderabbitai full review`, was posted when `HEAD`'s first CodeRabbit
-  run started, or later
+  `@coderabbitai full review`, was posted at `HEAD`'s cutoff, or later
 - **THEN** `finish` posts nothing and its last line says a review was
   already asked for
 
@@ -189,11 +189,17 @@ say which of these happened.
 - **THEN** `finish` posts nothing and its last line says a review was
   already asked for
 
+#### Scenario: A run that starts after the request
+
+- **WHEN** `finish` asked for the review of a head with no run, CodeRabbit
+  then skipped that head, and `finish` runs again on it with the pull
+  request a draft again
+- **THEN** the earlier request counts and `finish` posts nothing
+
 #### Scenario: An older request
 
 - **WHEN** the pull request's only `@coderabbitai review` comment was posted
-  before `HEAD`'s first CodeRabbit run started, or, with none, before
-  `HEAD`'s committer date
+  before `HEAD`'s cutoff
 - **THEN** `finish` posts one
 
 #### Scenario: A rate limit by the read before the post

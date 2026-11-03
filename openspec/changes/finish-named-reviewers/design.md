@@ -79,19 +79,31 @@ when none was.
 
 The reads after the ready switch end on `skipped` or no run; both go to
 `request()`, which now takes the state it ended on. The read right before the
-post must still give `skipped` or no run — a run that appeared in between
-ends on its own state with nothing posted, as today. The line keeps its
+post must still give `skipped` or no run — a skipped run that appeared in
+between still reaches the post, and a run in any other state ends on that
+state with nothing posted, as today. The line keeps its
 shape, its prefix naming the state: `no CodeRabbit run on <short> after 18
 reads; asked for a review`, or `; a review was already asked for`, or `; the
 request failed, …`. The read budget stays 18: a review usually starts 25–35 s
 after the ready switch, and on `d7e9422` none came for 17 minutes.
 
-### 4. With no run, "once per head" counts from the committer date
+### 4. "Once per head" counts from the earlier of the committer date and the first run
 
-`arrived(runs, committed)` returns the earliest start of the head's CodeRabbit
-runs, else `committed`: `HEAD`'s committer date, read locally with
-`git show -s --format=%ct HEAD`, in ms; a date that does not parse gives
-`-Infinity`, so every exact request counts and nothing is posted twice.
+`arrived(runs, committed)` returns the earlier of `committed` — `HEAD`'s
+committer date, read locally with `git show -s --format=%ct HEAD`, in ms —
+and the earliest start of the head's CodeRabbit runs, of whichever parse;
+with neither, `-Infinity`, so every exact request counts and nothing is
+posted twice.
+
+The earlier of the two, not the run's start when there is one: a request
+posted on a head with no run, followed by a skipped run, would otherwise fall
+before the new cutoff, and a rerun on the same head, its pull request a draft
+again, would post a second time. With the minimum, a run that starts later
+can only move the cutoff earlier, which counts more requests, never fewer;
+and a committer date ahead of GitHub's clock is capped by the run's start.
+The cost: on a skipped head too, a request for an earlier head posted
+between `HEAD`'s commit and its first run now counts as one for `HEAD`, the
+fail-closed case below.
 
 The committer date, not the author date: a rebase, an amend or a cherry-pick
 makes a new head and resets the committer date, while the author date stays
@@ -106,10 +118,13 @@ nothing and says a review was already asked for (card point 3).
 
 The harness's `package.json` gets `"reviewers": ["CodeRabbit"]` in the same
 change. A consumer's harness ignores keys it does not read (`config.ts` reads
-named keys, `bump-pin.ts` only the dependency), so d2ass and mellon can add
-the key before their daily bump crosses this change; without it they stop
-waiting, silently but for the line of decision 2. `README.md` (*Consuming*,
-steps 3 and 7) and `core/git-and-prs.md` say so.
+named keys, `bump-pin.ts` only the dependency), so a consumer can add the key
+before its daily bump crosses this change; without it, it stops waiting,
+silently but for the line of decision 2. d2ass adds it. mellon adds it only
+once the probe of the first risk below finds CodeRabbit's check run on its
+head; on a commit status alone it leaves the key out. `README.md`
+(*Consuming*, steps 3 and 7) and `core/git-and-prs.md` say a consumer whose
+CodeRabbit posts a check run adds it.
 
 ## Risks / Trade-offs
 
@@ -122,10 +137,11 @@ steps 3 and 7) and `core/git-and-prs.md` say so.
   request covers the case whatever its cause; a cause that also ignores the
   request shows as `asked for a review` with no review, which the `coderabbit`
   skill's step 1 already reports.
-- [The committer date comes from the committing machine's clock] → a clock
-  ahead of GitHub's by more than the gap between the commit and a request makes
-  that request read as older, and a rerun posts a second one; one extra comment
-  at most per rerun, and only on a head with no run.
+- [The committer date comes from the committing machine's clock] → on a head
+  with no run, a clock ahead of GitHub's by more than the gap between the
+  commit and a request makes that request read as older, and a rerun posts a
+  second one; one extra comment at most per rerun. Once a run starts, its
+  start caps the cutoff (decision 4).
 - [A late-pushed old commit gets no request] → the line says a review was
   already asked for; the user asks by hand, as before this change.
 - [A forgotten key silently stops the wait] → the user's chosen trade-off
@@ -139,5 +155,6 @@ steps 3 and 7) and `core/git-and-prs.md` say so.
 
 One pull request carries the code, the tests, the harness's own key and the
 docs; the harness's own sessions run `finish` from the tree, so the key and
-the code take effect together. Rollback is a revert. Consumers: add the key,
-then let the bump land.
+the code take effect together. Rollback is a revert. Consumers: d2ass adds
+the key, then lets the bump land; mellon runs the probe first and adds the key
+only on a check run (decision 5).
