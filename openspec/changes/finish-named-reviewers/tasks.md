@@ -49,8 +49,9 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
 ## 3. The request on a head with no run
 
 - [ ] 3.1 Failing cases in `bun/coderabbit-run.test.ts`: `arrived(runs,
-      committed)` gives the earliest CodeRabbit start where one parses, else
-      `committed`, and `-Infinity` when `committed` is `NaN`
+      committed)` gives the earlier of `committed` and the earliest CodeRabbit
+      start, of whichever parse — `committed` with no run, the start when it
+      is the earlier — and `-Infinity` when neither parses
 - [ ] 3.2 Failing cases in `bun/work-finish-review-ask.test.ts`, the head's
       committer date read with `git show -s --format=%cI HEAD` in the case or
       set through `GIT_COMMITTER_DATE` in the fixture: no run through the reads
@@ -60,9 +61,15 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
       (`a-first-request-for-a-head-with-no-run`); a request at the committer
       date, and one later, post nothing and say a review was already asked
       for (`already-asked-for-a-head-with-no-run`); a request a second before
-      it posts one (`an-older-request`); no run through the reads and the
-      read before the post giving `reviewing` posts nothing and ends on
-      reviewing. In `bun/work-finish-review.test.ts`, the case "no completed
+      it posts one (`an-older-request`); a `@coderabbitai full review` after
+      the committer date counts as asked; a request after the committer date
+      and before a skipped run's later start counts as asked
+      (`a-run-that-starts-after-the-request`); no run through the reads and
+      the read before the post giving `skipped` posts, giving `reviewing`
+      posts nothing and ends on reviewing. The existing skipped-head cases
+      keep passing: the fixture's commit is dated after `SKIPPED`'s start, so
+      their cutoff stays the run's start. In
+      `bun/work-finish-review.test.ts`, the case "no completed
       run in 12 reads" ends on the request (`still-no-run-when-the-reads-end`)
 - [ ] 3.3 Then `bun/coderabbit-run.ts` (`arrived` takes `committed`) and
       `bun/work-finish.ts`: the reads after the switch end on `skipped` or no
@@ -77,8 +84,8 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
       Verify `finish` on this branch's own pull request ends on CodeRabbit's
       state of the head, not on `finish: ready #<n>` alone
 - [ ] 4.2 `README.md`: *Consuming* step 3 names `harness.reviewers` as the key
-      whose absence means no reviewer; step 7 says a consumer reviewed by
-      CodeRabbit adds `"reviewers": ["CodeRabbit"]` before its bump crosses
+      whose absence means no reviewer; step 7 says a consumer whose
+      CodeRabbit posts a check run adds `"reviewers": ["CodeRabbit"]` before its bump crosses
       this change, or `finish` silently stops waiting; the `finish` row of the
       command table takes its condition from the key and names the request on
       a head with no run. `core/git-and-prs.md`: the `finish` paragraph's
@@ -92,10 +99,10 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
 
 ## 5. Consumers
 
-- [ ] 5.1 A card on d2ass's board and one on mellon's: add
-      `"reviewers": ["CodeRabbit"]` under `"harness"` before the daily bump
-      crosses this change. mellon's card carries the probe of
-      `design.md`'s first risk: read CodeRabbit's check runs and commit
-      statuses on the head of mellon's next pull request, and on a status
-      only, leave the key out and file a harness card for reading statuses.
-      Verify both cards read back with that text
+- [ ] 5.1 A card on d2ass's board: add `"reviewers": ["CodeRabbit"]` under
+      `"harness"` before the daily bump crosses this change. A card on
+      mellon's: first the probe of `design.md`'s first risk — read
+      CodeRabbit's check runs and commit statuses on the head of mellon's
+      next pull request — then add the key only on a check run; on a status
+      only, leave the key out and file a harness card for reading statuses
+      (`design.md`, decision 5). Verify both cards read back with that text
