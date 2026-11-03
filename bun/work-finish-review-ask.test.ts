@@ -12,6 +12,8 @@ import {
 	COMMENTS,
 	DRAFT,
 	LIMITED,
+	READ,
+	READY,
 	RUNNING,
 	runs,
 	SKIPPED,
@@ -174,6 +176,20 @@ describe("the request for a head with no run", () => {
 		const run = await finish({ cwd, gh: { before: DRAFT, runs: [[late]], comments: [asked(iso(c + 5000))] } });
 		expect(run.calls.at(-1)).toBe(COMMENTS);
 		expect(run.last).toBe(`finish: ready #7 — CodeRabbit skipped ${short(cwd)}; a review was already asked for`);
+	});
+
+	test("no run, then three failed reads, goes on to the request, and a failed read before the post posts nothing", async () => {
+		const run = await watched([[SKIPPED], [], [], 1]);
+		expect(run.calls).toEqual([
+			READ,
+			"push",
+			runs(run.cwd),
+			READY,
+			...times(5, runs(run.cwd)),
+			COMMENTS,
+			runs(run.cwd),
+		]);
+		expect(run.last).toBe(`finish: ready #7 — CodeRabbit's runs on ${short(run.cwd)} unread: gh exited 1`);
 	});
 
 	test.each<[string, object[], string]>([

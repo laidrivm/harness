@@ -96,6 +96,10 @@ describe("the reviewers finish waits for", () => {
 	test("a name other than CodeRabbit throws naming it", () => {
 		expect(() => reviewers(consumer({ reviewers: ["CodeRabbit", "Copilot"] }))).toThrow("Copilot");
 	});
+
+	test("an empty name is refused and shown quoted", () => {
+		expect(() => reviewers(consumer({ reviewers: [""] }))).toThrow('names ""');
+	});
 });
 
 describe("a gate whose value is absent", () => {

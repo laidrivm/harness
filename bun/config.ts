@@ -79,7 +79,7 @@ export function reviewers(root: string): string[] {
 	const unknown = value.filter((name) => name !== "CodeRabbit");
 	if (unknown.length)
 		throw new Error(
-			`package.json: harness.reviewers names ${unknown.join(", ")}; CodeRabbit is the only one understood`,
+			`package.json: harness.reviewers names ${unknown.map((name) => JSON.stringify(name)).join(", ")}; CodeRabbit is the only one understood`,
 		);
 	return value;
 }
