@@ -93,6 +93,9 @@ COPY --chmod=0755 as-agent /opt/orchestrator/as-agent
 COPY --chmod=0755 mint /opt/orchestrator/mint
 COPY --chmod=0755 reach-check.sh /opt/orchestrator/reach-check.sh
 COPY --chmod=0755 runner/gh /usr/local/bin/gh
+# The VPS session's rules, as Claude Code's managed memory: root's, so no
+# session edits them, and outside agent's home volume, so each build reaches it.
+COPY --chmod=0644 runner/session-rules.md /etc/claude-code/CLAUDE.md
 # The event handler's code, root-owned, from compose's named context `bun`
 # (ci-run-agent design, *The engine's contract*): it reads the webhook secret,
 # so it never runs from a clone agent can write.

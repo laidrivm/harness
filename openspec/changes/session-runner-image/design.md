@@ -36,7 +36,8 @@ mint card merged into it, is the plan this design records.
 - The deploy timer, the fresh-session mark, managed settings, the rollback
   and the failure file: host-deploy (below, *Seams*).
 - The Ponytail plugin and its variable, Notion's settings file, the clone's
-  setup and the agent's `~/.claude/CLAUDE.md`: stage page steps 5, 6 and 9.
+  setup and the session's rules (`orchestrator/runner/session-rules.md`,
+  installed as `/etc/claude-code/CLAUDE.md`): stage page steps 5, 6 and 9.
 - Restoring decision 6's token isolation: a card after the roadmap.
 - Removing the old path: stage 7.
 

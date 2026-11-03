@@ -154,6 +154,12 @@ describe("the runner image", () => {
 		expect(lines()).toContain("COPY --chmod=0755 runner/session.sh /opt/orchestrator/session.sh");
 	});
 
+	// /etc/claude-code/CLAUDE.md is Claude Code's managed memory on Linux; a file under /home/agent, a volume, would never update.
+	test("the image copies the session's rules to the managed CLAUDE.md at mode 0644", () => {
+		expect(lines()).toContain("COPY --chmod=0644 runner/session-rules.md /etc/claude-code/CLAUDE.md");
+		expect(read("orchestrator/runner/session-rules.md").match(/^\d+\. /gm)).toHaveLength(11);
+	});
+
 	// spec: orchestrator/no-identity-on-the-host
 	test("the runner's environment takes the four commit identity names from orchestrator/.env, refusing when one is unset", () => {
 		const runner = (composed().services as Record<string, { environment?: Record<string, string> }>).runner;
