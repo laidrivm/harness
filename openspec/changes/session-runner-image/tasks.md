@@ -85,7 +85,7 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
       `notion-ask.json` in agent's home with `umask 077`; step 11's reach
       check unchanged. Verify `bun test orchestrator/` passes and the README
       holds no slug, id or email
-- [ ] 3.5 Open the second pull request through `finish`
+- [x] 3.5 Open the second pull request through `finish`
 
 ## 4. On the host, and the probe
 

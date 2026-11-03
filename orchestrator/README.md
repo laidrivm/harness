@@ -377,7 +377,10 @@ The runner starts one Claude Code session as `agent`, in tmux session `main`,
 before sshd: `/opt/orchestrator/session.sh` pulls and installs in
 `/home/agent/harness`, starts `claude --remote-control harness` as a new
 conversation, and starts it again 5 s after it exits. Its `gh` and git mint a
-token from the App for each call; it holds none.
+token from the App for each call; it holds none. No step here makes that
+clone, which the roadmap's stage 2.5 sets up in its step 6: until it exists,
+the session starts in `/home/agent` and pulls nothing, and the first start
+after it is cloned runs in it.
 
 1. The commit identity, the App's bot. On a host that already runs the stack,
    do this before pulling the change that needs it, since every
