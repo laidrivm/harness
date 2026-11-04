@@ -122,7 +122,8 @@ test("step 5 appends to the state ledger of origin's <owner>/<name>, and the ski
 	const text = step();
 	expect(text).toContain("`~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md`");
 	expect(text).toContain("`<repo>` as the `<owner>/<name>` that `git remote get-url origin` ends in, without `.git`");
-	expect(text).toContain("or `local/<basename>` of `<top>` where there is no `origin`");
+	// The whole path, never its basename: two origin-less repositories may share one (CodeRabbit).
+	expect(text).toContain("or `local` followed by `<top>` itself (`local/home/me/app`) where there is no `origin`");
 	expect(text).toContain("on every branch and machine");
 	expect(text).toContain("Append the same lines to `<repo>`'s file for this month");
 	expect(skill()).not.toMatch(/docs\/context\/pipeline-yield/);
@@ -149,7 +150,8 @@ test("a machine's first entry takes the first-entry-ever rules, the gates query'
 // spec: agent-rulebook/a-wrap-up-on-a-detached-head
 test("the heading names the detached commit as git status prints it", () => {
 	expect(step()).toContain(
-		"on a detached `HEAD`, `<branch>` is the detached commit as `git status` prints it, never empty",
+		// Never `git status`, which can name a tag, a remote branch or the commit it detached from (CodeRabbit).
+		"on a detached `HEAD`, `<branch>` is the commit `git rev-parse --short HEAD` prints, never empty",
 	);
 });
 
@@ -157,6 +159,7 @@ test("allowed-tools holds the state ledger's Edit and origin's read", () => {
 	const allowed = /^allowed-tools: "(.*)"$/m.exec(skill())?.[1]?.split(", ") ?? [];
 	expect(allowed).toContain("Edit(~/.local/state/harness/pipeline-yield/**)");
 	expect(allowed).toContain("Bash(git remote get-url origin)");
+	expect(allowed).toContain("Bash(git rev-parse:*)");
 });
 
 // spec: agent-rulebook/no-ledger-in-the-harness-tree

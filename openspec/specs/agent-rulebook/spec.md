@@ -236,8 +236,8 @@ marked as inferred.
 
 The session wrap-up SHALL append its yield entry to
 `~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md`, `<repo>` the
-`<owner>/<name>` that `origin`'s URL ends in, or `local/<basename>` of the
-repository's top-level directory where there is no `origin`, on every branch
+`<owner>/<name>` that `origin`'s URL ends in, or `local` followed by the
+repository's top-level directory's whole path where there is no `origin`, on every branch
 and every machine, and
 SHALL write, commit or read no `docs/context/pipeline-yield-*.md`. The
 previous entry it dates its windows from, and the earlier `first review`
@@ -275,8 +275,8 @@ lines it skips measured pull requests by, SHALL be read from
 #### Scenario: A wrap-up on a detached HEAD
 
 - **WHEN** the checkout has no branch
-- **THEN** the entry's heading names the detached commit as `git status`
-  prints it, never an empty branch
+- **THEN** the entry's heading names the commit `git rev-parse --short HEAD`
+  prints, never an empty branch
 
 #### Scenario: No ledger in the harness tree
 

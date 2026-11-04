@@ -1,7 +1,7 @@
 ---
 name: session-wrapup
 description: End-of-session ritual — confidence check on what was built, fix & capture pass for uncaptured lessons, OpenSpec workflow state with the next command and the session's board cards reconciled, an optional save-point doc for long exploratory sessions, and a pipeline-yield entry recording what each review skill actually found, what the harness's gates decided, what the session's lessons became and how many pull requests' first CodeRabbit review raised no Major-or-above finding.
-allowed-tools: "Read, Edit(docs/context/**), Edit(~/.local/state/harness/pipeline-yield/**), Glob, Grep, Bash(git remote get-url origin), Bash(git log:*), Bash(git status:*), Bash(git diff:*), Bash(gh api:*), Bash(gh pr list:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(bun bun/board-state.ts), Bash(bun node_modules/harness/bun/board-state.ts), Bash(bun bun/transcript-archive.ts --catch-up), Bash(bun node_modules/harness/bun/transcript-archive.ts --catch-up), mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page"
+allowed-tools: "Read, Edit(docs/context/**), Edit(~/.local/state/harness/pipeline-yield/**), Glob, Grep, Bash(git remote get-url origin), Bash(git rev-parse:*), Bash(git log:*), Bash(git status:*), Bash(git diff:*), Bash(gh api:*), Bash(gh pr list:*), Bash(ls:*), Bash(date:*), Bash(mkdir:*), Bash(bun bun/board-state.ts), Bash(bun node_modules/harness/bun/board-state.ts), Bash(bun bun/transcript-archive.ts --catch-up), Bash(bun node_modules/harness/bun/transcript-archive.ts --catch-up), mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page"
 ---
 
 # Session Wrap-up
@@ -55,7 +55,7 @@ Which review skills ran this session, and what each one actually produced. One l
 
 Then one line naming the review skills that **didn't** run, so the gap is visible rather than assumed.
 
-The ledger these lines go to is this machine's, outside the tree: `~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md`, on every branch and machine — `main`, a feature branch merged or not, a detached `HEAD` — and never committed. Take `<top>` from `git rev-parse --show-toplevel`, and `<repo>` as the `<owner>/<name>` that `git remote get-url origin` ends in, without `.git` (`laidrivm/harness`), or `local/<basename>` of `<top>` where there is no `origin`. Wherever this step reads the previous entry — for `<gates-since>`, for `<since>` and for the earlier `first review` lines — it reads `<repo>`'s files there alone. When `<repo>`'s directory holds no file yet, the entry is this machine's first: take the rules for the first entry ever, and read no earlier entry from the tree.
+The ledger these lines go to is this machine's, outside the tree: `~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md`, on every branch and machine — `main`, a feature branch merged or not, a detached `HEAD` — and never committed. Take `<top>` from `git rev-parse --show-toplevel`, and `<repo>` as the `<owner>/<name>` that `git remote get-url origin` ends in, without `.git` (`laidrivm/harness`), or `local` followed by `<top>` itself (`local/home/me/app`) where there is no `origin`. Wherever this step reads the previous entry — for `<gates-since>`, for `<since>` and for the earlier `first review` lines — it reads `<repo>`'s files there alone. When `<repo>`'s directory holds no file yet, the entry is this machine's first: take the rules for the first entry ever, and read no earlier entry from the tree.
 
 Then one `gates` line: what the harness's own gates decided in this project since the previous yield entry, counted per gate, decision and id. Take `<gates-since>` from the date in the heading of the previous entry that holds a `gates` line. When none does, `<gates-since>` is empty. Take `<state>` as `$XDG_STATE_HOME` when it is an absolute path, and `$HOME/.local/state` otherwise — the choice `bun/gate-ledger.ts` makes when it writes. Then run:
 
@@ -85,7 +85,7 @@ Write `- first review: k of n without Major+ — #a, #b (Major+), #c (unmeasured
 
 A skill that ran and found nothing is the point of this step, not a boring result — record it as `0 findings`. Over a month of sessions this is what shows which step of the pipeline has never once caught anything, so the pipeline gets shortened on evidence instead of by feel. Count only findings the skill itself reported; don't reclassify them.
 
-Append the same lines to `<repo>`'s file for this month under a `## <yyyy-mm-dd> — <branch>` heading — on a detached `HEAD`, `<branch>` is the detached commit as `git status` prints it, never empty (get the date with `date +%F` and the month with `date +%Y-%m` — a new month starts a new file; create the directory with `mkdir -p` and the file with a `# Pipeline yield` heading if it doesn't exist). Append only — never rewrite or prune earlier sessions; the value is in the accumulation.
+Append the same lines to `<repo>`'s file for this month under a `## <yyyy-mm-dd> — <branch>` heading — on a detached `HEAD`, `<branch>` is the commit `git rev-parse --short HEAD` prints, never empty (get the date with `date +%F` and the month with `date +%Y-%m` — a new month starts a new file; create the directory with `mkdir -p` and the file with a `# Pipeline yield` heading if it doesn't exist). Append only — never rewrite or prune earlier sessions; the value is in the accumulation.
 
 Example:
 
