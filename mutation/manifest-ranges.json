@@ -1,0 +1,1487 @@
+{
+	"schemaVersion": "1.0",
+	"files": {
+		"bun/manifest-ranges.ts": {
+			"source": "/**\n * Every version in `package.json` names one version and not a set of them.\n *\n * `bunfig.toml`'s `[install] exact = true` states the policy and its reason —\n * a malicious release ships as a patch or minor bump, which a caret adopts\n * unread — but it governs only what `bun add` writes. A range typed into the\n * file by hand, or into `overrides`, which `bun add` never touches, passes\n * every gate this repository has. This is the gate it passes.\n *\n * A module of its own rather than the test that exercises it, the shape\n * `repo-layout.ts` and `file-size.ts` already have: what it answers is a\n * question about a manifest that does not exist yet, so it is a rule, and a\n * rule written inside its own test is one the fabricated inputs exist to\n * justify rather than to guard.\n */\n\n/**\n * The top-level fields holding something other than version specs, which is\n * the whole of what this scan exempts: shell commands, and the consumer's\n * `harness` values, whose reasons are prose a range pattern would misread.\n * Everything else is walked, `overrides` and any field added later alike — a\n * scan scoped by a list of the collections it covers is one a new collection\n * is silently outside of, and a dependency field nobody thought to add to\n * that list is exactly where an unread range would sit.\n */\nconst EXEMPT = new Set([\"scripts\", \"simple-git-hooks\", \"harness\"]);\n\n/**\n * Every way a spec names more than the one version it appears to: a widening\n * operator or comparator, a disjunction, a wildcard, a partial version — `6`\n * is every 6 and `6.16` every 6.16, which is the form that reads least like a\n * range and is the widest of them — and a hyphen span.\n *\n * Written as what a range is rather than as what a version is, because the\n * scan walks every field and most of them hold neither: `\"module\"`, `\"d2ass\"`\n * and `\"./index.x.ts\"` all have to pass, and a pattern asking what a version\n * looks like has to tell them apart from one. The cost is that a date would\n * read as a span; no field here holds one, and the report names the field.\n */\nconst RANGE = /^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i;\n\n/**\n * A spec naming a Git repository, which names whatever its reference points at\n * when it is installed — a set, pinned or not, as a range is.\n *\n * ponytail: two forms pass. The bare `owner/repo` shorthand, which bun and npm\n * both read as GitHub, has the shape of a path without a `#`, and this scan\n * reads every field — a module path under `harness` must pass. An HTTPS\n * tarball URL has the shape of `homepage` or `repository.url`. A complete check\n * would read `bun.lock`, where every dependency's source is written out whole.\n */\nconst GIT = /^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i;\n\n/**\n * The one Git spec admitted, and for the `harness` entry alone: a full commit\n * hash, which `bun.lock` records and nothing can move under it.\n */\nconst HARNESS_PIN = /^github:laidrivm\\/harness#[0-9a-f]{40}$/;\n\n/** Every version in `manifest` that names a set, and an empty list when none. */\nexport function ranges(manifest: string): string[] {\n\tconst found: string[] = [];\n\n\tconst walk = (value: unknown, path: string, key: string) => {\n\t\tif (typeof value === \"string\") {\n\t\t\t// The key, not the path's tail: `my.harness` is a package of its own.\n\t\t\tif (key === \"harness\" && path !== key) {\n\t\t\t\tif (!HARNESS_PIN.test(value))\n\t\t\t\t\tfound.push(`package.json: ${path} is ${value}, not github:laidrivm/harness#<40-hex commit>`);\n\t\t\t} else if (RANGE.test(value) || GIT.test(value)) found.push(`package.json: ${path} is ${value}, not one version`);\n\t\t\treturn;\n\t\t}\n\t\t// `null` first: it is an object to `typeof`, and `Object.entries` throws\n\t\t// on it rather than returning nothing.\n\t\tif (value === null || typeof value !== \"object\") return;\n\t\tfor (const [name, inner] of Object.entries(value)) walk(inner, `${path}.${name}`, name);\n\t};\n\n\tconst parsed = JSON.parse(manifest) as Record<string, unknown>;\n\tfor (const [key, value] of Object.entries(parsed)) if (!EXEMPT.has(key)) walk(value, key, key);\n\n\treturn found;\n}\n",
+			"mutants": [
+				{
+					"id": "0",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 66,
+							"line": 26
+						},
+						"start": {
+							"column": 24,
+							"line": 26
+						}
+					},
+					"replacement": "[]",
+					"status": "Killed"
+				},
+				{
+					"id": "1",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 26
+						},
+						"start": {
+							"column": 25,
+							"line": 26
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed"
+				},
+				{
+					"id": "2",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 54,
+							"line": 26
+						},
+						"start": {
+							"column": 36,
+							"line": 26
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "3",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 65,
+							"line": 26
+						},
+						"start": {
+							"column": 56,
+							"line": 26
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed"
+				},
+				{
+					"id": "4",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "5",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[^\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "6",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "7",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "8",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[^x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "9",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "10",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "11",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "12",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\D+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "13",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "14",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "15",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\D+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "16",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "17",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "18",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "19",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\D+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "20",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "21",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "22",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\D+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "23",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[^x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "24",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|\\d[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "25",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\D[\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "26",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "27",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[^\\d.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "28",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\D.]*\\s*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "29",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s-\\s*\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "30",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\S*-\\s*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "31",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s\\d/i",
+					"status": "Survived"
+				},
+				{
+					"id": "32",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\S*\\d/i",
+					"status": "Killed"
+				},
+				{
+					"id": "33",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 92,
+							"line": 40
+						},
+						"start": {
+							"column": 15,
+							"line": 40
+						}
+					},
+					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\D/i",
+					"status": "Killed"
+				},
+				{
+					"id": "34",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Survived"
+				},
+				{
+					"id": "35",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Survived"
+				},
+				{
+					"id": "36",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z])?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Survived"
+				},
+				{
+					"id": "37",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[^a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Survived"
+				},
+				{
+					"id": "38",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Survived"
+				},
+				{
+					"id": "39",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Survived"
+				},
+				{
+					"id": "40",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Survived"
+				},
+				{
+					"id": "41",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Survived"
+				},
+				{
+					"id": "42",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Survived"
+				},
+				{
+					"id": "43",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[^a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Killed"
+				},
+				{
+					"id": "44",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]\\/[\\w.-]+#/i",
+					"status": "Killed"
+				},
+				{
+					"id": "45",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][^\\w.-]*\\/[\\w.-]+#/i",
+					"status": "Killed"
+				},
+				{
+					"id": "46",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\W.-]*\\/[\\w.-]+#/i",
+					"status": "Killed"
+				},
+				{
+					"id": "47",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]#/i",
+					"status": "Killed"
+				},
+				{
+					"id": "48",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[^\\w.-]+#/i",
+					"status": "Killed"
+				},
+				{
+					"id": "49",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 52
+						},
+						"start": {
+							"column": 13,
+							"line": 52
+						}
+					},
+					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\W.-]+#/i",
+					"status": "Killed"
+				},
+				{
+					"id": "50",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 62,
+							"line": 58
+						},
+						"start": {
+							"column": 21,
+							"line": 58
+						}
+					},
+					"replacement": "/github:laidrivm\\/harness#[0-9a-f]{40}$/",
+					"status": "Survived"
+				},
+				{
+					"id": "51",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 62,
+							"line": 58
+						},
+						"start": {
+							"column": 21,
+							"line": 58
+						}
+					},
+					"replacement": "/^github:laidrivm\\/harness#[0-9a-f]{40}/",
+					"status": "Killed"
+				},
+				{
+					"id": "52",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 62,
+							"line": 58
+						},
+						"start": {
+							"column": 21,
+							"line": 58
+						}
+					},
+					"replacement": "/^github:laidrivm\\/harness#[0-9a-f]$/",
+					"status": "Killed"
+				},
+				{
+					"id": "53",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 62,
+							"line": 58
+						},
+						"start": {
+							"column": 21,
+							"line": 58
+						}
+					},
+					"replacement": "/^github:laidrivm\\/harness#[^0-9a-f]{40}$/",
+					"status": "Killed"
+				},
+				{
+					"id": "54",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 83
+						},
+						"start": {
+							"column": 52,
+							"line": 61
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "55",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 28,
+							"line": 62
+						},
+						"start": {
+							"column": 26,
+							"line": 62
+						}
+					},
+					"replacement": "[\"Stryker was here\"]",
+					"status": "Killed"
+				},
+				{
+					"id": "56",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 77
+						},
+						"start": {
+							"column": 62,
+							"line": 64
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "57",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 32,
+							"line": 65
+						},
+						"start": {
+							"column": 7,
+							"line": 65
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "58",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 32,
+							"line": 65
+						},
+						"start": {
+							"column": 7,
+							"line": 65
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "59",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 32,
+							"line": 65
+						},
+						"start": {
+							"column": 7,
+							"line": 65
+						}
+					},
+					"replacement": "typeof value !== \"string\"",
+					"status": "Killed"
+				},
+				{
+					"id": "60",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 32,
+							"line": 65
+						},
+						"start": {
+							"column": 24,
+							"line": 65
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed"
+				},
+				{
+					"id": "61",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 4,
+							"line": 72
+						},
+						"start": {
+							"column": 34,
+							"line": 65
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "62",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 41,
+							"line": 67
+						},
+						"start": {
+							"column": 8,
+							"line": 67
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "63",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 41,
+							"line": 67
+						},
+						"start": {
+							"column": 8,
+							"line": 67
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "64",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 41,
+							"line": 67
+						},
+						"start": {
+							"column": 8,
+							"line": 67
+						}
+					},
+					"replacement": "key === \"harness\" || path !== key",
+					"status": "Killed"
+				},
+				{
+					"id": "65",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 25,
+							"line": 67
+						},
+						"start": {
+							"column": 8,
+							"line": 67
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "66",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 25,
+							"line": 67
+						},
+						"start": {
+							"column": 8,
+							"line": 67
+						}
+					},
+					"replacement": "key !== \"harness\"",
+					"status": "Killed"
+				},
+				{
+					"id": "67",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 25,
+							"line": 67
+						},
+						"start": {
+							"column": 16,
+							"line": 67
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed"
+				},
+				{
+					"id": "68",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 41,
+							"line": 67
+						},
+						"start": {
+							"column": 29,
+							"line": 67
+						}
+					},
+					"replacement": "true",
+					"status": "Survived"
+				},
+				{
+					"id": "69",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 41,
+							"line": 67
+						},
+						"start": {
+							"column": 29,
+							"line": 67
+						}
+					},
+					"replacement": "path === key",
+					"status": "Killed"
+				},
+				{
+					"id": "70",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 5,
+							"line": 70
+						},
+						"start": {
+							"column": 43,
+							"line": 67
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "71",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 33,
+							"line": 68
+						},
+						"start": {
+							"column": 9,
+							"line": 68
+						}
+					},
+					"replacement": "HARNESS_PIN.test(value)",
+					"status": "Killed"
+				},
+				{
+					"id": "72",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 33,
+							"line": 68
+						},
+						"start": {
+							"column": 9,
+							"line": 68
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "73",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 33,
+							"line": 68
+						},
+						"start": {
+							"column": 9,
+							"line": 68
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "75",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 97,
+							"line": 69
+						},
+						"start": {
+							"column": 17,
+							"line": 69
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "76",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 51,
+							"line": 70
+						},
+						"start": {
+							"column": 15,
+							"line": 70
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "77",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 51,
+							"line": 70
+						},
+						"start": {
+							"column": 15,
+							"line": 70
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "78",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 51,
+							"line": 70
+						},
+						"start": {
+							"column": 15,
+							"line": 70
+						}
+					},
+					"replacement": "RANGE.test(value) && GIT.test(value)",
+					"status": "Killed"
+				},
+				{
+					"id": "80",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 116,
+							"line": 70
+						},
+						"start": {
+							"column": 64,
+							"line": 70
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "81",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 50,
+							"line": 75
+						},
+						"start": {
+							"column": 7,
+							"line": 75
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "82",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 50,
+							"line": 75
+						},
+						"start": {
+							"column": 7,
+							"line": 75
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "83",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 50,
+							"line": 75
+						},
+						"start": {
+							"column": 7,
+							"line": 75
+						}
+					},
+					"replacement": "value === null && typeof value !== \"object\"",
+					"status": "Killed"
+				},
+				{
+					"id": "84",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 21,
+							"line": 75
+						},
+						"start": {
+							"column": 7,
+							"line": 75
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "85",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 21,
+							"line": 75
+						},
+						"start": {
+							"column": 7,
+							"line": 75
+						}
+					},
+					"replacement": "value !== null",
+					"status": "Killed"
+				},
+				{
+					"id": "86",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 50,
+							"line": 75
+						},
+						"start": {
+							"column": 25,
+							"line": 75
+						}
+					},
+					"replacement": "false",
+					"status": "Survived"
+				},
+				{
+					"id": "87",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 50,
+							"line": 75
+						},
+						"start": {
+							"column": 25,
+							"line": 75
+						}
+					},
+					"replacement": "typeof value === \"object\"",
+					"status": "Killed"
+				},
+				{
+					"id": "88",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 50,
+							"line": 75
+						},
+						"start": {
+							"column": 42,
+							"line": 75
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed"
+				},
+				{
+					"id": "90",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 83,
+							"line": 76
+						},
+						"start": {
+							"column": 66,
+							"line": 76
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "91",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 80
+						},
+						"start": {
+							"column": 57,
+							"line": 80
+						}
+					},
+					"replacement": "EXEMPT.has(key)",
+					"status": "Killed"
+				},
+				{
+					"id": "92",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 80
+						},
+						"start": {
+							"column": 57,
+							"line": 80
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "93",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 80
+						},
+						"start": {
+							"column": 57,
+							"line": 80
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "94",
+					"mutatorName": "CallExpression",
+					"location": {
+						"end": {
+							"column": 97,
+							"line": 80
+						},
+						"start": {
+							"column": 75,
+							"line": 80
+						}
+					},
+					"replacement": ";",
+					"status": "Killed"
+				}
+			]
+		}
+	},
+	"fingerprint": {
+		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/manifest-ranges.test.ts": "106d8cc2d1127240ddd11bff5f995ac6be703cb2",
+		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6"
+	}
+}

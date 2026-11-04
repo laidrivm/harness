@@ -1,0 +1,591 @@
+{
+	"schemaVersion": "1.0",
+	"files": {
+		"bun/notion-guard.ts": {
+			"source": "#!/usr/bin/env bun\n/**\n * The Notion page-update guard, a `PreToolUse` hook on the connector's\n * `notion-update-page` under any server name. It refuses, by exiting 2 with\n * the reason on stderr, a call that carries `properties` with any command\n * other than `update_properties`: the connector applies the other command,\n * drops the properties without an error, and reports success.\n *\n * An empty `properties` object goes through, since it loses nothing. Anything\n * else beside another command is refused, a non-object included: the\n * connector would reject that anyway, and this reason says more than its error.\n *\n * Whatever it cannot read — an event that is not JSON, or one with no\n * `tool_input` — lets the call through. This is fail-open on purpose, unlike\n * the command guard: it catches one known way to lose a write, and a guard\n * refusing every update when the event's shape changed would stop the board\n * workflow outright. No hook can read the page afterwards, so re-reading a\n * card before reporting it moved stays the session's to do.\n *\n * A refusal is recorded in the gate ledger as `notion-properties-dropped`. The\n * ledger swallows its own errors, so one it cannot write changes no decision.\n */\nimport { blocker } from \"./gate-ledger.ts\";\n\ntype Input = { command?: unknown; properties?: unknown };\n\n/** Why the call would lose its properties, or `undefined` to let it through. */\nfunction refusal({ command, properties }: Input): string | undefined {\n\tif (command === \"update_properties\" || properties == null) return;\n\tif (typeof properties === \"object\" && Object.keys(properties).length === 0) return;\n\tconst under = command === undefined ? \"with no command\" : `under ${JSON.stringify(command)}`;\n\treturn (\n\t\t`notion-guard: \\`properties\\` ${under} would be dropped without an ` +\n\t\t\"error — the connector applies them only under `update_properties`. \" +\n\t\t\"Send the properties in their own `update_properties` call, and the \" +\n\t\t\"rest of the update in another.\"\n\t);\n}\n\nif (import.meta.main) {\n\tlet event: { tool_input?: Input } | null = null;\n\tlet reason: string | undefined;\n\ttry {\n\t\tevent = JSON.parse(await Bun.stdin.text());\n\t\treason = refusal(event?.tool_input ?? {});\n\t} catch {\n\t\t// Fail-open, as the header says: an event this script cannot read\n\t\t// lets the call through.\n\t}\n\tif (reason) blocker(\"notion-guard\", event)(\"notion-properties-dropped\", reason);\n}\n",
+			"mutants": [
+				{
+					"id": "0",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 38
+						},
+						"start": {
+							"column": 70,
+							"line": 28
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "1",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 59,
+							"line": 29
+						},
+						"start": {
+							"column": 6,
+							"line": 29
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "2",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 59,
+							"line": 29
+						},
+						"start": {
+							"column": 6,
+							"line": 29
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "3",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 59,
+							"line": 29
+						},
+						"start": {
+							"column": 6,
+							"line": 29
+						}
+					},
+					"replacement": "command === \"update_properties\" && properties == null",
+					"status": "Timeout"
+				},
+				{
+					"id": "4",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 29
+						},
+						"start": {
+							"column": 6,
+							"line": 29
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "5",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 29
+						},
+						"start": {
+							"column": 6,
+							"line": 29
+						}
+					},
+					"replacement": "command !== \"update_properties\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "6",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 29
+						},
+						"start": {
+							"column": 18,
+							"line": 29
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "7",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 59,
+							"line": 29
+						},
+						"start": {
+							"column": 41,
+							"line": 29
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "8",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 59,
+							"line": 29
+						},
+						"start": {
+							"column": 41,
+							"line": 29
+						}
+					},
+					"replacement": "properties != null",
+					"status": "Timeout"
+				},
+				{
+					"id": "9",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 30
+						},
+						"start": {
+							"column": 6,
+							"line": 30
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "10",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 30
+						},
+						"start": {
+							"column": 6,
+							"line": 30
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "11",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 30
+						},
+						"start": {
+							"column": 6,
+							"line": 30
+						}
+					},
+					"replacement": "typeof properties === \"object\" || Object.keys(properties).length === 0",
+					"status": "Timeout"
+				},
+				{
+					"id": "12",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 36,
+							"line": 30
+						},
+						"start": {
+							"column": 6,
+							"line": 30
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "13",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 36,
+							"line": 30
+						},
+						"start": {
+							"column": 6,
+							"line": 30
+						}
+					},
+					"replacement": "typeof properties !== \"object\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "14",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 36,
+							"line": 30
+						},
+						"start": {
+							"column": 28,
+							"line": 30
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "15",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 30
+						},
+						"start": {
+							"column": 40,
+							"line": 30
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "16",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 30
+						},
+						"start": {
+							"column": 40,
+							"line": 30
+						}
+					},
+					"replacement": "Object.keys(properties).length !== 0",
+					"status": "Timeout"
+				},
+				{
+					"id": "17",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 31
+						},
+						"start": {
+							"column": 16,
+							"line": 31
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "18",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 31
+						},
+						"start": {
+							"column": 16,
+							"line": 31
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "19",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 31
+						},
+						"start": {
+							"column": 16,
+							"line": 31
+						}
+					},
+					"replacement": "command !== undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "20",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 57,
+							"line": 31
+						},
+						"start": {
+							"column": 40,
+							"line": 31
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "21",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 94,
+							"line": 31
+						},
+						"start": {
+							"column": 60,
+							"line": 31
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "22",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 71,
+							"line": 33
+						},
+						"start": {
+							"column": 3,
+							"line": 33
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "23",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 72,
+							"line": 34
+						},
+						"start": {
+							"column": 3,
+							"line": 34
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "24",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 72,
+							"line": 35
+						},
+						"start": {
+							"column": 3,
+							"line": 35
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "25",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 35,
+							"line": 36
+						},
+						"start": {
+							"column": 3,
+							"line": 36
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "26",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 21,
+							"line": 40
+						},
+						"start": {
+							"column": 5,
+							"line": 40
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "27",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 21,
+							"line": 40
+						},
+						"start": {
+							"column": 5,
+							"line": 40
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "28",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 51
+						},
+						"start": {
+							"column": 23,
+							"line": 40
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "29",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 46
+						},
+						"start": {
+							"column": 6,
+							"line": 43
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "30",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 43,
+							"line": 45
+						},
+						"start": {
+							"column": 20,
+							"line": 45
+						}
+					},
+					"replacement": "event?.tool_input && {}",
+					"status": "Timeout"
+				},
+				{
+					"id": "31",
+					"mutatorName": "OptionalChaining",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 45
+						},
+						"start": {
+							"column": 20,
+							"line": 45
+						}
+					},
+					"replacement": "event.tool_input",
+					"status": "Timeout"
+				},
+				{
+					"id": "32",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 50
+						},
+						"start": {
+							"column": 6,
+							"line": 50
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "33",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 50
+						},
+						"start": {
+							"column": 6,
+							"line": 50
+						}
+					},
+					"replacement": "false",
+					"status": "Survived"
+				},
+				{
+					"id": "35",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 36,
+							"line": 50
+						},
+						"start": {
+							"column": 22,
+							"line": 50
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "36",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 72,
+							"line": 50
+						},
+						"start": {
+							"column": 45,
+							"line": 50
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				}
+			]
+		}
+	},
+	"fingerprint": {
+		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/notion-guard.test.ts": "6515e70b8002276c1c47771a01a7e03fd5341fdb",
+		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6"
+	}
+}

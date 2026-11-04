@@ -1,0 +1,4870 @@
+{
+	"schemaVersion": "1.0",
+	"files": {
+		"bun/turn-gate.ts": {
+			"source": "#!/usr/bin/env bun\n/**\n * The pre-PR sequence's turn gate: both ends of one contract, so the mark's\n * format lives in one place.\n *\n * `bun turn-gate.ts mark` is the `UserPromptSubmit` half. It records `HEAD`,\n * keyed by session, on the session's first prompt and on the first after a\n * turn the `Stop` half let end, which leaves `<mark>.stopped` for it. Any\n * other prompt keeps the mark: a message queued mid-turn reaches this hook\n * inside the running turn, and a turn the user interrupted ends without\n * `Stop`, so moving the mark then would let that turn's commits go unjudged.\n *\n * `bun turn-gate.ts stop` is the `Stop` half. It refuses, by exiting 2 with\n * the reason on stderr, to end a turn that left commits on the branch and\n * completed a task group of an active change — one complete neither at the\n * mark nor on `origin/main` as the turn ends — unless the gate ledger holds a\n * passing run of the tip in this checkout: a `pass` of every runner step\n * (`passed()`). It reads no text: not the final message, not a gate line, not\n * a `BLOCKED`.\n *\n * It refuses at most once per mark. A refused turn is continued, not\n * restarted, and a refusal leaves no `.stopped`, so no new mark is written —\n * nor by a message queued into that turn. That bounds a condition the model\n * cannot satisfy to one turn, and the bound reads no event field.\n *\n * The round ceiling does read one. Before it decides, the `stop` half counts\n * the stops a goal continued (`stop_hook_active` true) since the mark. At the\n * ceiling `goal-rounds.ts` fixes, it ends the session instead, printing\n * `continue: false` and exiting 0, and records `goal`/`rounds`/`ceiling`. A\n * refusal would only hand the goal another round. `commit-gates`' \"SHALL NOT\n * depend on a loop-protection field\" is about the refusal, so the ceiling may.\n *\n * Whatever it cannot read — no mark, no repository, a detached `HEAD`, an\n * event that is not JSON — ends the turn. This is fail-open on purpose,\n * unlike the command guard. A hook that refuses when its partner did not run\n * turns a partial installation into a session that cannot end a turn. The\n * ledger is the exception: one it cannot read holds no record, and the\n * once-per-mark bound limits that to one refusal.\n *\n * A passing run proves that the deterministic steps passed at the tip, and\n * nothing more. The judgement steps are not its business: their records are\n * `work.ts finish`'s, and their gate lines a report for the model and the human.\n *\n * Run as the hook, it records each refusal, pass and release of a turn that\n * completed a group in the gate ledger (`gate-ledger.ts`); `decide` called\n * from a test records nothing.\n */\n\nimport { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { join, relative } from \"node:path\";\nimport { BASE } from \"./branch-state.ts\";\nimport { passed, record } from \"./gate-ledger.ts\";\nimport { countRound, resetRounds } from \"./goal-rounds.ts\";\n\ntype Event = { session_id?: unknown; cwd?: unknown };\n\ntype Boxes = { ticked: number; open: number };\n\n/**\n * Every `## ` group of a task list with its boxes counted. A box inside a\n * fenced code block is an example, not a task. Exported for the goal check,\n * which reads a step's group by its place in this order.\n */\nexport function groups(text: string): Map<string, Boxes> {\n\tconst found = new Map<string, Boxes>();\n\tlet group: Boxes | undefined;\n\tlet fence: string | undefined;\n\tfor (const line of text.split(\"\\n\")) {\n\t\tconst marker = /^\\s*(`{3,}|~{3,})/.exec(line)?.[1]?.[0];\n\t\tif (marker && (!fence || marker === fence)) {\n\t\t\tfence = fence ? undefined : marker;\n\t\t\tcontinue;\n\t\t}\n\t\tif (fence) continue;\n\t\tconst heading = /^## (.+?)\\s*$/.exec(line)?.[1];\n\t\tif (heading !== undefined) {\n\t\t\tgroup = { ticked: 0, open: 0 };\n\t\t\tfound.set(heading, group);\n\t\t\tcontinue;\n\t\t}\n\t\tconst box = /^\\s*[-*] \\[([ xX])\\]/.exec(line);\n\t\tif (box && group) box[1] === \" \" ? group.open++ : group.ticked++;\n\t}\n\treturn found;\n}\n\n/**\n * Headings of the groups with at least one box and no unticked one — a group\n * with no boxes at all has no evidence that one was ticked.\n */\nexport function complete(text: string): string[] {\n\treturn [...groups(text)].filter(([, b]) => b.ticked > 0 && b.open === 0).map(([heading]) => heading);\n}\n\n/** Where a session's mark lives, or nothing for an id unsafe as a file name. */\nfunction markFile(store: string, event: Event): string | undefined {\n\tconst id = event.session_id;\n\treturn typeof id === \"string\" && /^[\\w-]+$/.test(id) ? join(store, id) : undefined;\n}\n\nfunction git(cwd: string, ...args: string[]): string | undefined {\n\tconst run = Bun.spawnSync([\"git\", ...args], { cwd });\n\treturn run.exitCode === 0 ? run.stdout.toString().trim() : undefined;\n}\n\n/** Marks the turn's end for `mark`: the `Stop` half let it end. Best-effort. */\nfunction stopped(file: string): void {\n\ttry {\n\t\twriteFileSync(`${file}.stopped`, \"\");\n\t} catch {\n\t\t// No boundary, so the next prompt keeps the mark.\n\t}\n}\n\n/**\n * Records `HEAD` for the session — outside a repository, an empty mark — on\n * its first prompt or the first after a turn the `Stop` half let end. A\n * prompt mid-turn or after an interrupt keeps the mark, its refusal included.\n */\nexport function mark(event: Event, store: string): void {\n\tconst file = markFile(store, event);\n\tif (!file || typeof event.cwd !== \"string\") return;\n\tmkdirSync(store, { recursive: true });\n\tresetRounds(file);\n\t// A mark naming no commit — outside a repository — is retaken until one exists.\n\tif (!marked(file) || existsSync(`${file}.stopped`)) {\n\t\twriteFileSync(file, git(event.cwd, \"rev-parse\", \"-q\", \"--verify\", \"HEAD\") ?? \"\");\n\t\t// Consumed after the write: a failed write leaves it for the next prompt.\n\t\trmSync(`${file}.stopped`, { force: true });\n\t}\n}\n\n/** The mark's commit and its ` refused` flag, or nothing when it names no commit. */\nfunction marked(file: string): { at: string; refused: boolean } | undefined {\n\tlet recorded: string;\n\ttry {\n\t\trecorded = readFileSync(file, \"utf8\");\n\t} catch {\n\t\treturn;\n\t}\n\tconst [at, refused] = recorded.split(\" \");\n\tif (at === undefined || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(at)) return;\n\treturn { at, refused: Boolean(refused) };\n}\n\n/**\n * The commit the turn's work is read from, or nothing when it left none.\n * `HEAD` back at the mark still counts as work when the remote-tracking ref\n * holds a commit the mark does not: it reached the remote branch.\n */\nfunction tip(cwd: string, at: string): string | undefined {\n\tconst head = git(cwd, \"rev-parse\", \"HEAD\");\n\tif (head !== at) return head;\n\tconst pushed = git(cwd, \"rev-list\", \"--max-count=1\", `${at}..@{upstream}`);\n\treturn pushed ? git(cwd, \"rev-parse\", \"@{upstream}\") : undefined;\n}\n\n/** Task lists of the active changes at a commit; `archive/` retires a change. */\nconst ACTIVE = /^openspec\\/changes\\/(?!archive\\/)[^/]+\\/tasks\\.md$/;\n\n/**\n * Each `<rev>:<path>` as one `git cat-file --batch` answers it, in order; one\n * the revision lacks reads as empty. A launch per file cost 208 ms on a tree\n * of 13 changes, against 14 ms for the batch. Each answer is framed by the\n * byte size in its header, so a file's own text is never read as a header.\n */\nfunction blobs(cwd: string, specs: string[]): string[] {\n\tconst out = Bun.spawnSync([\"git\", \"cat-file\", \"--batch\"], {\n\t\tcwd,\n\t\tstdin: Buffer.from(specs.map((spec) => `${spec}\\n`).join(\"\")),\n\t}).stdout;\n\tconst texts: string[] = [];\n\tlet at = 0;\n\tfor (const _ of specs) {\n\t\tconst eol = out.indexOf(10, at);\n\t\tconst size = /^\\S+ blob (\\d+)$/.exec(eol < 0 ? \"\" : out.subarray(at, eol).toString())?.[1];\n\t\tat = eol + 1;\n\t\tif (size === undefined) {\n\t\t\ttexts.push(\"\"); // `missing`, or no answer at all\n\t\t\tcontinue;\n\t\t}\n\t\ttexts.push(out.subarray(at, at + Number(size)).toString());\n\t\tat += Number(size) + 1;\n\t}\n\treturn texts;\n}\n\n/**\n * Groups complete at `tip` that were complete neither at the mark nor on\n * `BASE` as the turn ends, as `<heading> in <change dir>`. Every side is read\n * from git, never from a record beside the mark. A group `BASE` holds complete\n * came in by a pull, a fetch or a merge of `main`, and a missing `BASE` reads\n * as empty, excluding nothing. A group absent at the mark was not complete\n * there, so the turn that wrote and ticked it qualifies.\n */\nfunction completed(cwd: string, at: string, tip: string): string[] {\n\tconst paths =\n\t\t// `--full-tree`: without it a session in a subdirectory lists nothing.\n\t\t(git(cwd, \"ls-tree\", \"--full-tree\", \"-r\", \"--name-only\", tip, \"--\", \"openspec/changes\") ?? \"\")\n\t\t\t.split(\"\\n\")\n\t\t\t.filter((path) => ACTIVE.test(path));\n\tconst sides = [at, BASE, tip];\n\tconst texts = blobs(\n\t\tcwd,\n\t\tpaths.flatMap((p) => sides.map((s) => `${s}:${p}`)),\n\t);\n\treturn paths.flatMap((path, i) => {\n\t\t// `blobs` answers every spec, \"\" for a missing one, so the defaults only satisfy the index type.\n\t\tconst [atMark = \"\", onBase = \"\", atTip = \"\"] = texts.slice(3 * i, 3 * i + 3);\n\t\tconst before = new Set([...complete(atMark), ...complete(onBase)]);\n\t\treturn complete(atTip)\n\t\t\t.filter((heading) => !before.has(heading))\n\t\t\t.map((heading) => `\"${heading}\" in ${path.replace(/tasks\\.md$/, \"\")}`);\n\t});\n}\n\n/** The runner's path as a command run from `cwd` reaches it. */\nfunction runner(cwd: string): string {\n\tconst path = join(import.meta.dir, \"pre-pr.ts\");\n\ttry {\n\t\t// Real paths on both sides: a temp directory reached through a symlink\n\t\t// would otherwise climb out to the root and back.\n\t\treturn relative(realpathSync(cwd), path);\n\t} catch {\n\t\treturn path;\n\t}\n}\n\n/**\n * The refusal for this turn, or nothing when it may end. A turn that completed\n * a group is handed to `log` as `passed` when the ledger holds a passing run\n * of the tip; `released` when the once-per-mark bound alone lets it end; or\n * `refused`. Every answer but a refusal ends the turn, so leaves `stopped`.\n */\nexport function decide(event: Event, store: string, log: (decision: string) => void = () => {}): string | undefined {\n\tconst file = markFile(store, event);\n\tif (!file) return;\n\tconst reason = typeof event.cwd === \"string\" ? judge(file, event.cwd, log) : undefined;\n\tif (!reason) stopped(file);\n\treturn reason;\n}\n\nfunction judge(file: string, cwd: string, log: (decision: string) => void): string | undefined {\n\tconst found = marked(file);\n\tif (!found) return;\n\tconst { at, refused } = found;\n\tif (!git(cwd, \"symbolic-ref\", \"-q\", \"HEAD\")) return;\n\tconst end = tip(cwd, at);\n\tconst done = end ? completed(cwd, at, end) : [];\n\tif (done.length === 0 || !end) return;\n\tif (passed(end, git(cwd, \"rev-parse\", \"--show-toplevel\"))) {\n\t\tlog(\"passed\");\n\t\treturn;\n\t}\n\tif (refused) {\n\t\tlog(\"released\");\n\t\treturn;\n\t}\n\twriteFileSync(file, `${at} refused`);\n\tlog(\"refused\");\n\treturn (\n\t\t`This turn committed and completed ${done.join(\", \")}, but the gate ` +\n\t\t`ledger holds no passing pre-PR run of ${end} in this checkout. Run ` +\n\t\t`\\`bun ${runner(cwd)}\\` with \\`HEAD\\` at that commit — it records only ` +\n\t\t\"the commit it reads — and fix what fails. This refusal is not repeated \" +\n\t\t\"for this turn: if only the user can settle what stops it, the next \" +\n\t\t\"stop ends it. End that stop on the whole final message you meant to \" +\n\t\t\"end on, unchanged: a launcher reads the continued turn's last message, \" +\n\t\t\"so each line it reads (`BLOCKED —`, `QUESTION:`, `PR-TITLE:`) stays \" +\n\t\t\"where it was.\"\n\t);\n}\n\nif (import.meta.main) {\n\t// ponytail: a mark, its `.rounds` and its `.stopped` per session accumulate\n\t// in the OS temp dir, which the OS clears; prune here if that ever stops being true.\n\tconst store = join(tmpdir(), \"turn-gate\");\n\tconst stopping = process.argv[2] !== \"mark\";\n\tlet file: string | undefined;\n\tlet reason: string | undefined;\n\ttry {\n\t\tconst event = JSON.parse(await Bun.stdin.text());\n\t\tfile = markFile(store, event);\n\t\t// Before `decide`: a session that is ending gains nothing from a refusal.\n\t\tconst ceiling = stopping && file ? countRound(event, file) : undefined;\n\t\tif (!stopping) mark(event, store);\n\t\telse if (ceiling) {\n\t\t\trecord(\"goal\", \"ceiling\", \"rounds\", event);\n\t\t\tconsole.log(JSON.stringify({ continue: false, stopReason: ceiling }));\n\t\t} else reason = decide(event, store, (decision) => record(\"turn-gate\", decision, \"pre-pr-sequence\", event));\n\t} catch {\n\t\t// Fail-open, as the header says: an event this script cannot read\n\t\t// ends the turn rather than holding it.\n\t}\n\t// Every stop not refused ends the turn, the ceiling's and the `catch`'s\n\t// too; `decide` writes its own for in-process callers.\n\tif (stopping && file && !reason) stopped(file);\n\tif (reason) {\n\t\tprocess.stderr.write(`${reason}\\n`);\n\t\tprocess.exit(2);\n\t}\n}\n",
+			"mutants": [
+				{
+					"id": "0",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 86
+						},
+						"start": {
+							"column": 58,
+							"line": 65
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "1",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 36,
+							"line": 69
+						},
+						"start": {
+							"column": 32,
+							"line": 69
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "2",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 84
+						},
+						"start": {
+							"column": 39,
+							"line": 69
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "3",
+					"mutatorName": "OptionalChaining",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 70
+						},
+						"start": {
+							"column": 18,
+							"line": 70
+						}
+					},
+					"replacement": "/^\\s*(`{3,}|~{3,})/.exec(line)?.[1][0]",
+					"status": "Timeout"
+				},
+				{
+					"id": "4",
+					"mutatorName": "OptionalChaining",
+					"location": {
+						"end": {
+							"column": 53,
+							"line": 70
+						},
+						"start": {
+							"column": 18,
+							"line": 70
+						}
+					},
+					"replacement": "/^\\s*(`{3,}|~{3,})/.exec(line)[1]",
+					"status": "Timeout"
+				},
+				{
+					"id": "5",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 70
+						},
+						"start": {
+							"column": 18,
+							"line": 70
+						}
+					},
+					"replacement": "/\\s*(`{3,}|~{3,})/",
+					"status": "Timeout"
+				},
+				{
+					"id": "6",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 70
+						},
+						"start": {
+							"column": 18,
+							"line": 70
+						}
+					},
+					"replacement": "/^\\s(`{3,}|~{3,})/",
+					"status": "Timeout"
+				},
+				{
+					"id": "7",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 70
+						},
+						"start": {
+							"column": 18,
+							"line": 70
+						}
+					},
+					"replacement": "/^\\S*(`{3,}|~{3,})/",
+					"status": "Timeout"
+				},
+				{
+					"id": "8",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 70
+						},
+						"start": {
+							"column": 18,
+							"line": 70
+						}
+					},
+					"replacement": "/^\\s*(`|~{3,})/",
+					"status": "Timeout"
+				},
+				{
+					"id": "9",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 70
+						},
+						"start": {
+							"column": 18,
+							"line": 70
+						}
+					},
+					"replacement": "/^\\s*(`{3,}|~)/",
+					"status": "Timeout"
+				},
+				{
+					"id": "10",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 71
+						},
+						"start": {
+							"column": 7,
+							"line": 71
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "11",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 71
+						},
+						"start": {
+							"column": 7,
+							"line": 71
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "12",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 71
+						},
+						"start": {
+							"column": 7,
+							"line": 71
+						}
+					},
+					"replacement": "marker || !fence || marker === fence",
+					"status": "Timeout"
+				},
+				{
+					"id": "13",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 71
+						},
+						"start": {
+							"column": 18,
+							"line": 71
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "14",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 71
+						},
+						"start": {
+							"column": 18,
+							"line": 71
+						}
+					},
+					"replacement": "!fence && marker === fence",
+					"status": "Timeout"
+				},
+				{
+					"id": "15",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 24,
+							"line": 71
+						},
+						"start": {
+							"column": 18,
+							"line": 71
+						}
+					},
+					"replacement": "fence",
+					"status": "Timeout"
+				},
+				{
+					"id": "16",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 71
+						},
+						"start": {
+							"column": 28,
+							"line": 71
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "17",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 71
+						},
+						"start": {
+							"column": 28,
+							"line": 71
+						}
+					},
+					"replacement": "marker !== fence",
+					"status": "Timeout"
+				},
+				{
+					"id": "18",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 4,
+							"line": 74
+						},
+						"start": {
+							"column": 47,
+							"line": 71
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "19",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 75
+						},
+						"start": {
+							"column": 7,
+							"line": 75
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "20",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 75
+						},
+						"start": {
+							"column": 7,
+							"line": 75
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "21",
+					"mutatorName": "OptionalChaining",
+					"location": {
+						"end": {
+							"column": 50,
+							"line": 76
+						},
+						"start": {
+							"column": 19,
+							"line": 76
+						}
+					},
+					"replacement": "/^## (.+?)\\s*$/.exec(line)[1]",
+					"status": "Timeout"
+				},
+				{
+					"id": "22",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 76
+						},
+						"start": {
+							"column": 19,
+							"line": 76
+						}
+					},
+					"replacement": "/## (.+?)\\s*$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "23",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 76
+						},
+						"start": {
+							"column": 19,
+							"line": 76
+						}
+					},
+					"replacement": "/^## (.+?)\\s*/",
+					"status": "Timeout"
+				},
+				{
+					"id": "24",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 76
+						},
+						"start": {
+							"column": 19,
+							"line": 76
+						}
+					},
+					"replacement": "/^## (.)\\s*$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "25",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 76
+						},
+						"start": {
+							"column": 19,
+							"line": 76
+						}
+					},
+					"replacement": "/^## (.+?)\\s$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "26",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 76
+						},
+						"start": {
+							"column": 19,
+							"line": 76
+						}
+					},
+					"replacement": "/^## (.+?)\\S*$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "27",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 28,
+							"line": 77
+						},
+						"start": {
+							"column": 7,
+							"line": 77
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "28",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 28,
+							"line": 77
+						},
+						"start": {
+							"column": 7,
+							"line": 77
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "29",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 28,
+							"line": 77
+						},
+						"start": {
+							"column": 7,
+							"line": 77
+						}
+					},
+					"replacement": "heading === undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "30",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 4,
+							"line": 81
+						},
+						"start": {
+							"column": 30,
+							"line": 77
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "31",
+					"mutatorName": "ObjectLiteral",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 78
+						},
+						"start": {
+							"column": 12,
+							"line": 78
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "32",
+					"mutatorName": "CallExpression",
+					"location": {
+						"end": {
+							"column": 30,
+							"line": 79
+						},
+						"start": {
+							"column": 4,
+							"line": 79
+						}
+					},
+					"replacement": ";",
+					"status": "Timeout"
+				},
+				{
+					"id": "33",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 82
+						},
+						"start": {
+							"column": 15,
+							"line": 82
+						}
+					},
+					"replacement": "/\\s*[-*] \\[([ xX])\\]/",
+					"status": "Timeout"
+				},
+				{
+					"id": "34",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 82
+						},
+						"start": {
+							"column": 15,
+							"line": 82
+						}
+					},
+					"replacement": "/^\\s[-*] \\[([ xX])\\]/",
+					"status": "Timeout"
+				},
+				{
+					"id": "35",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 82
+						},
+						"start": {
+							"column": 15,
+							"line": 82
+						}
+					},
+					"replacement": "/^\\S*[-*] \\[([ xX])\\]/",
+					"status": "Timeout"
+				},
+				{
+					"id": "36",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 82
+						},
+						"start": {
+							"column": 15,
+							"line": 82
+						}
+					},
+					"replacement": "/^\\s*[^-*] \\[([ xX])\\]/",
+					"status": "Timeout"
+				},
+				{
+					"id": "37",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 82
+						},
+						"start": {
+							"column": 15,
+							"line": 82
+						}
+					},
+					"replacement": "/^\\s*[-*] \\[([^ xX])\\]/",
+					"status": "Timeout"
+				},
+				{
+					"id": "38",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 19,
+							"line": 83
+						},
+						"start": {
+							"column": 7,
+							"line": 83
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "39",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 19,
+							"line": 83
+						},
+						"start": {
+							"column": 7,
+							"line": 83
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "40",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 19,
+							"line": 83
+						},
+						"start": {
+							"column": 7,
+							"line": 83
+						}
+					},
+					"replacement": "box || group",
+					"status": "Timeout"
+				},
+				{
+					"id": "41",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 35,
+							"line": 83
+						},
+						"start": {
+							"column": 21,
+							"line": 83
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "42",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 35,
+							"line": 83
+						},
+						"start": {
+							"column": 21,
+							"line": 83
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "43",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 35,
+							"line": 83
+						},
+						"start": {
+							"column": 21,
+							"line": 83
+						}
+					},
+					"replacement": "box[1] !== \" \"",
+					"status": "Timeout"
+				},
+				{
+					"id": "44",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 35,
+							"line": 83
+						},
+						"start": {
+							"column": 32,
+							"line": 83
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "45",
+					"mutatorName": "UpdateOperator",
+					"location": {
+						"end": {
+							"column": 50,
+							"line": 83
+						},
+						"start": {
+							"column": 38,
+							"line": 83
+						}
+					},
+					"replacement": "group.open--",
+					"status": "Timeout"
+				},
+				{
+					"id": "46",
+					"mutatorName": "UpdateOperator",
+					"location": {
+						"end": {
+							"column": 67,
+							"line": 83
+						},
+						"start": {
+							"column": 53,
+							"line": 83
+						}
+					},
+					"replacement": "group.ticked--",
+					"status": "Timeout"
+				},
+				{
+					"id": "47",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 94
+						},
+						"start": {
+							"column": 50,
+							"line": 92
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "48",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 74,
+							"line": 93
+						},
+						"start": {
+							"column": 9,
+							"line": 93
+						}
+					},
+					"replacement": "[...groups(text)]",
+					"status": "Timeout"
+				},
+				{
+					"id": "49",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 26,
+							"line": 93
+						},
+						"start": {
+							"column": 9,
+							"line": 93
+						}
+					},
+					"replacement": "[]",
+					"status": "Timeout"
+				},
+				{
+					"id": "50",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 93
+						},
+						"start": {
+							"column": 34,
+							"line": 93
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "51",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 93
+						},
+						"start": {
+							"column": 45,
+							"line": 93
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "52",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 93
+						},
+						"start": {
+							"column": 45,
+							"line": 93
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "53",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 93
+						},
+						"start": {
+							"column": 45,
+							"line": 93
+						}
+					},
+					"replacement": "b.ticked > 0 || b.open === 0",
+					"status": "Timeout"
+				},
+				{
+					"id": "54",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 57,
+							"line": 93
+						},
+						"start": {
+							"column": 45,
+							"line": 93
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "55",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 57,
+							"line": 93
+						},
+						"start": {
+							"column": 45,
+							"line": 93
+						}
+					},
+					"replacement": "b.ticked >= 0",
+					"status": "Timeout"
+				},
+				{
+					"id": "56",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 57,
+							"line": 93
+						},
+						"start": {
+							"column": 45,
+							"line": 93
+						}
+					},
+					"replacement": "b.ticked <= 0",
+					"status": "Timeout"
+				},
+				{
+					"id": "57",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 93
+						},
+						"start": {
+							"column": 61,
+							"line": 93
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "58",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 93
+						},
+						"start": {
+							"column": 61,
+							"line": 93
+						}
+					},
+					"replacement": "b.open !== 0",
+					"status": "Timeout"
+				},
+				{
+					"id": "59",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 101,
+							"line": 93
+						},
+						"start": {
+							"column": 79,
+							"line": 93
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "60",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 100
+						},
+						"start": {
+							"column": 68,
+							"line": 97
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "61",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 54,
+							"line": 99
+						},
+						"start": {
+							"column": 9,
+							"line": 99
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "62",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 54,
+							"line": 99
+						},
+						"start": {
+							"column": 9,
+							"line": 99
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "63",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 54,
+							"line": 99
+						},
+						"start": {
+							"column": 9,
+							"line": 99
+						}
+					},
+					"replacement": "typeof id === \"string\" || /^[\\w-]+$/.test(id)",
+					"status": "Timeout"
+				},
+				{
+					"id": "64",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 31,
+							"line": 99
+						},
+						"start": {
+							"column": 9,
+							"line": 99
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "65",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 31,
+							"line": 99
+						},
+						"start": {
+							"column": 9,
+							"line": 99
+						}
+					},
+					"replacement": "typeof id !== \"string\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "66",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 31,
+							"line": 99
+						},
+						"start": {
+							"column": 23,
+							"line": 99
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "67",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 99
+						},
+						"start": {
+							"column": 35,
+							"line": 99
+						}
+					},
+					"replacement": "/[\\w-]+$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "68",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 99
+						},
+						"start": {
+							"column": 35,
+							"line": 99
+						}
+					},
+					"replacement": "/^[\\w-]+/",
+					"status": "Timeout"
+				},
+				{
+					"id": "69",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 99
+						},
+						"start": {
+							"column": 35,
+							"line": 99
+						}
+					},
+					"replacement": "/^[\\w-]$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "70",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 99
+						},
+						"start": {
+							"column": 35,
+							"line": 99
+						}
+					},
+					"replacement": "/^[^\\w-]+$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "71",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 99
+						},
+						"start": {
+							"column": 35,
+							"line": 99
+						}
+					},
+					"replacement": "/^[\\W-]+$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "72",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 105
+						},
+						"start": {
+							"column": 66,
+							"line": 102
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "73",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 103
+						},
+						"start": {
+							"column": 28,
+							"line": 103
+						}
+					},
+					"replacement": "[]",
+					"status": "Timeout"
+				},
+				{
+					"id": "74",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 103
+						},
+						"start": {
+							"column": 29,
+							"line": 103
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "75",
+					"mutatorName": "ObjectLiteral",
+					"location": {
+						"end": {
+							"column": 53,
+							"line": 103
+						},
+						"start": {
+							"column": 46,
+							"line": 103
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "76",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 27,
+							"line": 104
+						},
+						"start": {
+							"column": 9,
+							"line": 104
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "77",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 27,
+							"line": 104
+						},
+						"start": {
+							"column": 9,
+							"line": 104
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "78",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 27,
+							"line": 104
+						},
+						"start": {
+							"column": 9,
+							"line": 104
+						}
+					},
+					"replacement": "run.exitCode !== 0",
+					"status": "Timeout"
+				},
+				{
+					"id": "79",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 104
+						},
+						"start": {
+							"column": 30,
+							"line": 104
+						}
+					},
+					"replacement": "run.stdout.toString()",
+					"status": "Timeout"
+				},
+				{
+					"id": "80",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 114
+						},
+						"start": {
+							"column": 38,
+							"line": 108
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "81",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 111
+						},
+						"start": {
+							"column": 6,
+							"line": 109
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "83",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 110
+						},
+						"start": {
+							"column": 17,
+							"line": 110
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "84",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 38,
+							"line": 110
+						},
+						"start": {
+							"column": 36,
+							"line": 110
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "85",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 132
+						},
+						"start": {
+							"column": 57,
+							"line": 121
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "86",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 123
+						},
+						"start": {
+							"column": 6,
+							"line": 123
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "87",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 123
+						},
+						"start": {
+							"column": 6,
+							"line": 123
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "88",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 123
+						},
+						"start": {
+							"column": 6,
+							"line": 123
+						}
+					},
+					"replacement": "!file && typeof event.cwd !== \"string\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "89",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 11,
+							"line": 123
+						},
+						"start": {
+							"column": 6,
+							"line": 123
+						}
+					},
+					"replacement": "file",
+					"status": "Timeout"
+				},
+				{
+					"id": "90",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 123
+						},
+						"start": {
+							"column": 15,
+							"line": 123
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "91",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 123
+						},
+						"start": {
+							"column": 15,
+							"line": 123
+						}
+					},
+					"replacement": "typeof event.cwd === \"string\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "92",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 123
+						},
+						"start": {
+							"column": 36,
+							"line": 123
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "94",
+					"mutatorName": "ObjectLiteral",
+					"location": {
+						"end": {
+							"column": 38,
+							"line": 124
+						},
+						"start": {
+							"column": 19,
+							"line": 124
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "95",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 36,
+							"line": 124
+						},
+						"start": {
+							"column": 32,
+							"line": 124
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "96",
+					"mutatorName": "CallExpression",
+					"location": {
+						"end": {
+							"column": 20,
+							"line": 125
+						},
+						"start": {
+							"column": 2,
+							"line": 125
+						}
+					},
+					"replacement": ";",
+					"status": "Timeout"
+				},
+				{
+					"id": "97",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 52,
+							"line": 127
+						},
+						"start": {
+							"column": 6,
+							"line": 127
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "98",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 52,
+							"line": 127
+						},
+						"start": {
+							"column": 6,
+							"line": 127
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "99",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 52,
+							"line": 127
+						},
+						"start": {
+							"column": 6,
+							"line": 127
+						}
+					},
+					"replacement": "!marked(file) && existsSync(`${file}.stopped`)",
+					"status": "Timeout"
+				},
+				{
+					"id": "100",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 19,
+							"line": 127
+						},
+						"start": {
+							"column": 6,
+							"line": 127
+						}
+					},
+					"replacement": "marked(file)",
+					"status": "Timeout"
+				},
+				{
+					"id": "101",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 51,
+							"line": 127
+						},
+						"start": {
+							"column": 34,
+							"line": 127
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "102",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 131
+						},
+						"start": {
+							"column": 54,
+							"line": 127
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "104",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 82,
+							"line": 128
+						},
+						"start": {
+							"column": 23,
+							"line": 128
+						}
+					},
+					"replacement": "git(event.cwd, \"rev-parse\", \"-q\", \"--verify\", \"HEAD\") && \"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "105",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 49,
+							"line": 128
+						},
+						"start": {
+							"column": 38,
+							"line": 128
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "106",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 55,
+							"line": 128
+						},
+						"start": {
+							"column": 51,
+							"line": 128
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "107",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 67,
+							"line": 128
+						},
+						"start": {
+							"column": 57,
+							"line": 128
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "108",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 75,
+							"line": 128
+						},
+						"start": {
+							"column": 69,
+							"line": 128
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "109",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 82,
+							"line": 128
+						},
+						"start": {
+							"column": 80,
+							"line": 128
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "111",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 27,
+							"line": 130
+						},
+						"start": {
+							"column": 10,
+							"line": 130
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "112",
+					"mutatorName": "ObjectLiteral",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 130
+						},
+						"start": {
+							"column": 29,
+							"line": 130
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "113",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 42,
+							"line": 130
+						},
+						"start": {
+							"column": 38,
+							"line": 130
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "114",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 145
+						},
+						"start": {
+							"column": 77,
+							"line": 135
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "115",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 139
+						},
+						"start": {
+							"column": 6,
+							"line": 137
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "116",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 39,
+							"line": 138
+						},
+						"start": {
+							"column": 33,
+							"line": 138
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "117",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 141
+						},
+						"start": {
+							"column": 10,
+							"line": 139
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "118",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 42,
+							"line": 142
+						},
+						"start": {
+							"column": 39,
+							"line": 142
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "119",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 67,
+							"line": 143
+						},
+						"start": {
+							"column": 6,
+							"line": 143
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "120",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 67,
+							"line": 143
+						},
+						"start": {
+							"column": 6,
+							"line": 143
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "121",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 67,
+							"line": 143
+						},
+						"start": {
+							"column": 6,
+							"line": 143
+						}
+					},
+					"replacement": "at === undefined && !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(at)",
+					"status": "Timeout"
+				},
+				{
+					"id": "122",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 22,
+							"line": 143
+						},
+						"start": {
+							"column": 6,
+							"line": 143
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "123",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 22,
+							"line": 143
+						},
+						"start": {
+							"column": 6,
+							"line": 143
+						}
+					},
+					"replacement": "at !== undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "124",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 67,
+							"line": 143
+						},
+						"start": {
+							"column": 26,
+							"line": 143
+						}
+					},
+					"replacement": "/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(at)",
+					"status": "Timeout"
+				},
+				{
+					"id": "125",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 143
+						},
+						"start": {
+							"column": 27,
+							"line": 143
+						}
+					},
+					"replacement": "/[0-9a-f]{40}([0-9a-f]{24})?$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "126",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 143
+						},
+						"start": {
+							"column": 27,
+							"line": 143
+						}
+					},
+					"replacement": "/^[0-9a-f]{40}([0-9a-f]{24})?/",
+					"status": "Timeout"
+				},
+				{
+					"id": "127",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 143
+						},
+						"start": {
+							"column": 27,
+							"line": 143
+						}
+					},
+					"replacement": "/^[0-9a-f]([0-9a-f]{24})?$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "128",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 143
+						},
+						"start": {
+							"column": 27,
+							"line": 143
+						}
+					},
+					"replacement": "/^[^0-9a-f]{40}([0-9a-f]{24})?$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "129",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 143
+						},
+						"start": {
+							"column": 27,
+							"line": 143
+						}
+					},
+					"replacement": "/^[0-9a-f]{40}([0-9a-f]{24})$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "130",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 143
+						},
+						"start": {
+							"column": 27,
+							"line": 143
+						}
+					},
+					"replacement": "/^[0-9a-f]{40}([0-9a-f])?$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "131",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 143
+						},
+						"start": {
+							"column": 27,
+							"line": 143
+						}
+					},
+					"replacement": "/^[0-9a-f]{40}([^0-9a-f]{24})?$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "132",
+					"mutatorName": "ObjectLiteral",
+					"location": {
+						"end": {
+							"column": 42,
+							"line": 144
+						},
+						"start": {
+							"column": 9,
+							"line": 144
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "133",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 157
+						},
+						"start": {
+							"column": 59,
+							"line": 152
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "134",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 35,
+							"line": 153
+						},
+						"start": {
+							"column": 24,
+							"line": 153
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "135",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 43,
+							"line": 153
+						},
+						"start": {
+							"column": 37,
+							"line": 153
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "136",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 154
+						},
+						"start": {
+							"column": 6,
+							"line": 154
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "137",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 154
+						},
+						"start": {
+							"column": 6,
+							"line": 154
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "138",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 154
+						},
+						"start": {
+							"column": 6,
+							"line": 154
+						}
+					},
+					"replacement": "head === at",
+					"status": "Timeout"
+				},
+				{
+					"id": "139",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 36,
+							"line": 155
+						},
+						"start": {
+							"column": 26,
+							"line": 155
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "140",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 53,
+							"line": 155
+						},
+						"start": {
+							"column": 38,
+							"line": 155
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "141",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 75,
+							"line": 155
+						},
+						"start": {
+							"column": 55,
+							"line": 155
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "142",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 38,
+							"line": 156
+						},
+						"start": {
+							"column": 27,
+							"line": 156
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "143",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 53,
+							"line": 156
+						},
+						"start": {
+							"column": 40,
+							"line": 156
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "144",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 160
+						},
+						"start": {
+							"column": 16,
+							"line": 160
+						}
+					},
+					"replacement": "/openspec\\/changes\\/(?!archive\\/)[^/]+\\/tasks\\.md$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "145",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 160
+						},
+						"start": {
+							"column": 16,
+							"line": 160
+						}
+					},
+					"replacement": "/^openspec\\/changes\\/(?!archive\\/)[^/]+\\/tasks\\.md/",
+					"status": "Timeout"
+				},
+				{
+					"id": "146",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 160
+						},
+						"start": {
+							"column": 16,
+							"line": 160
+						}
+					},
+					"replacement": "/^openspec\\/changes\\/(?=archive\\/)[^/]+\\/tasks\\.md$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "147",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 160
+						},
+						"start": {
+							"column": 16,
+							"line": 160
+						}
+					},
+					"replacement": "/^openspec\\/changes\\/(?!archive\\/)[^/]\\/tasks\\.md$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "148",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 160
+						},
+						"start": {
+							"column": 16,
+							"line": 160
+						}
+					},
+					"replacement": "/^openspec\\/changes\\/(?!archive\\/)[/]+\\/tasks\\.md$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "149",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 187
+						},
+						"start": {
+							"column": 56,
+							"line": 168
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "150",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 169
+						},
+						"start": {
+							"column": 28,
+							"line": 169
+						}
+					},
+					"replacement": "[]",
+					"status": "Timeout"
+				},
+				{
+					"id": "151",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 169
+						},
+						"start": {
+							"column": 29,
+							"line": 169
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "152",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 46,
+							"line": 169
+						},
+						"start": {
+							"column": 36,
+							"line": 169
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "153",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 57,
+							"line": 169
+						},
+						"start": {
+							"column": 48,
+							"line": 169
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "154",
+					"mutatorName": "ObjectLiteral",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 172
+						},
+						"start": {
+							"column": 60,
+							"line": 169
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "155",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 53,
+							"line": 171
+						},
+						"start": {
+							"column": 32,
+							"line": 171
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "156",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 53,
+							"line": 171
+						},
+						"start": {
+							"column": 42,
+							"line": 171
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "157",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 62,
+							"line": 171
+						},
+						"start": {
+							"column": 60,
+							"line": 171
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "158",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 28,
+							"line": 173
+						},
+						"start": {
+							"column": 26,
+							"line": 173
+						}
+					},
+					"replacement": "[\"Stryker was here\"]",
+					"status": "Timeout"
+				},
+				{
+					"id": "159",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 185
+						},
+						"start": {
+							"column": 25,
+							"line": 175
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "160",
+					"mutatorName": "OptionalChaining",
+					"location": {
+						"end": {
+							"column": 93,
+							"line": 177
+						},
+						"start": {
+							"column": 16,
+							"line": 177
+						}
+					},
+					"replacement": "/^\\S+ blob (\\d+)$/.exec(eol < 0 ? \"\" : out.subarray(at, eol).toString())[1]",
+					"status": "Timeout"
+				},
+				{
+					"id": "161",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 177
+						},
+						"start": {
+							"column": 16,
+							"line": 177
+						}
+					},
+					"replacement": "/\\S+ blob (\\d+)$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "162",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 177
+						},
+						"start": {
+							"column": 16,
+							"line": 177
+						}
+					},
+					"replacement": "/^\\S+ blob (\\d+)/",
+					"status": "Timeout"
+				},
+				{
+					"id": "163",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 177
+						},
+						"start": {
+							"column": 16,
+							"line": 177
+						}
+					},
+					"replacement": "/^\\S blob (\\d+)$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "164",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 177
+						},
+						"start": {
+							"column": 16,
+							"line": 177
+						}
+					},
+					"replacement": "/^\\s+ blob (\\d+)$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "165",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 177
+						},
+						"start": {
+							"column": 16,
+							"line": 177
+						}
+					},
+					"replacement": "/^\\S+ blob (\\d)$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "166",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 177
+						},
+						"start": {
+							"column": 16,
+							"line": 177
+						}
+					},
+					"replacement": "/^\\S+ blob (\\D+)$/",
+					"status": "Timeout"
+				},
+				{
+					"id": "167",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 47,
+							"line": 177
+						},
+						"start": {
+							"column": 40,
+							"line": 177
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "168",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 47,
+							"line": 177
+						},
+						"start": {
+							"column": 40,
+							"line": 177
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "169",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 47,
+							"line": 177
+						},
+						"start": {
+							"column": 40,
+							"line": 177
+						}
+					},
+					"replacement": "eol <= 0",
+					"status": "Timeout"
+				},
+				{
+					"id": "170",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 47,
+							"line": 177
+						},
+						"start": {
+							"column": 40,
+							"line": 177
+						}
+					},
+					"replacement": "eol >= 0",
+					"status": "Timeout"
+				},
+				{
+					"id": "171",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 52,
+							"line": 177
+						},
+						"start": {
+							"column": 50,
+							"line": 177
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "172",
+					"mutatorName": "ArithmeticOperator",
+					"location": {
+						"end": {
+							"column": 15,
+							"line": 178
+						},
+						"start": {
+							"column": 8,
+							"line": 178
+						}
+					},
+					"replacement": "eol - 1",
+					"status": "Timeout"
+				},
+				{
+					"id": "173",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 25,
+							"line": 179
+						},
+						"start": {
+							"column": 7,
+							"line": 179
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "174",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 25,
+							"line": 179
+						},
+						"start": {
+							"column": 7,
+							"line": 179
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "175",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 25,
+							"line": 179
+						},
+						"start": {
+							"column": 7,
+							"line": 179
+						}
+					},
+					"replacement": "size !== undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "176",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 4,
+							"line": 182
+						},
+						"start": {
+							"column": 27,
+							"line": 179
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "178",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 180
+						},
+						"start": {
+							"column": 15,
+							"line": 180
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "180",
+					"mutatorName": "ArithmeticOperator",
+					"location": {
+						"end": {
+							"column": 48,
+							"line": 183
+						},
+						"start": {
+							"column": 31,
+							"line": 183
+						}
+					},
+					"replacement": "at - Number(size)",
+					"status": "Timeout"
+				},
+				{
+					"id": "181",
+					"mutatorName": "AssignmentOperator",
+					"location": {
+						"end": {
+							"column": 25,
+							"line": 184
+						},
+						"start": {
+							"column": 3,
+							"line": 184
+						}
+					},
+					"replacement": "at -= Number(size) + 1",
+					"status": "Timeout"
+				},
+				{
+					"id": "182",
+					"mutatorName": "ArithmeticOperator",
+					"location": {
+						"end": {
+							"column": 25,
+							"line": 184
+						},
+						"start": {
+							"column": 9,
+							"line": 184
+						}
+					},
+					"replacement": "Number(size) - 1",
+					"status": "Timeout"
+				},
+				{
+					"id": "183",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 216
+						},
+						"start": {
+							"column": 68,
+							"line": 197
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "184",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 40,
+							"line": 202
+						},
+						"start": {
+							"column": 3,
+							"line": 200
+						}
+					},
+					"replacement": "(git(cwd, \"ls-tree\", \"--full-tree\", \"-r\", \"--name-only\", tip, \"--\", \"openspec/changes\") ?? \"\").split(\"\\n\")",
+					"status": "Timeout"
+				},
+				{
+					"id": "185",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 96,
+							"line": 200
+						},
+						"start": {
+							"column": 4,
+							"line": 200
+						}
+					},
+					"replacement": "git(cwd, \"ls-tree\", \"--full-tree\", \"-r\", \"--name-only\", tip, \"--\", \"openspec/changes\") && \"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "186",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 22,
+							"line": 200
+						},
+						"start": {
+							"column": 13,
+							"line": 200
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "187",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 200
+						},
+						"start": {
+							"column": 24,
+							"line": 200
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "188",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 43,
+							"line": 200
+						},
+						"start": {
+							"column": 39,
+							"line": 200
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "189",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 200
+						},
+						"start": {
+							"column": 45,
+							"line": 200
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "190",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 69,
+							"line": 200
+						},
+						"start": {
+							"column": 65,
+							"line": 200
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "191",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 89,
+							"line": 200
+						},
+						"start": {
+							"column": 71,
+							"line": 200
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "192",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 96,
+							"line": 200
+						},
+						"start": {
+							"column": 94,
+							"line": 200
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "193",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 15,
+							"line": 201
+						},
+						"start": {
+							"column": 11,
+							"line": 201
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "194",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 39,
+							"line": 202
+						},
+						"start": {
+							"column": 12,
+							"line": 202
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "195",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 31,
+							"line": 203
+						},
+						"start": {
+							"column": 16,
+							"line": 203
+						}
+					},
+					"replacement": "[]",
+					"status": "Timeout"
+				},
+				{
+					"id": "196",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 53,
+							"line": 206
+						},
+						"start": {
+							"column": 17,
+							"line": 206
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "197",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 52,
+							"line": 206
+						},
+						"start": {
+							"column": 34,
+							"line": 206
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "198",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 52,
+							"line": 206
+						},
+						"start": {
+							"column": 41,
+							"line": 206
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "199",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 215
+						},
+						"start": {
+							"column": 36,
+							"line": 208
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "200",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 21,
+							"line": 210
+						},
+						"start": {
+							"column": 19,
+							"line": 210
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "201",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 210
+						},
+						"start": {
+							"column": 32,
+							"line": 210
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "202",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 46,
+							"line": 210
+						},
+						"start": {
+							"column": 44,
+							"line": 210
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "203",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 79,
+							"line": 210
+						},
+						"start": {
+							"column": 50,
+							"line": 210
+						}
+					},
+					"replacement": "texts",
+					"status": "Timeout"
+				},
+				{
+					"id": "204",
+					"mutatorName": "ArithmeticOperator",
+					"location": {
+						"end": {
+							"column": 67,
+							"line": 210
+						},
+						"start": {
+							"column": 62,
+							"line": 210
+						}
+					},
+					"replacement": "3 / i",
+					"status": "Timeout"
+				},
+				{
+					"id": "205",
+					"mutatorName": "ArithmeticOperator",
+					"location": {
+						"end": {
+							"column": 78,
+							"line": 210
+						},
+						"start": {
+							"column": 69,
+							"line": 210
+						}
+					},
+					"replacement": "3 * i - 3",
+					"status": "Timeout"
+				},
+				{
+					"id": "206",
+					"mutatorName": "ArithmeticOperator",
+					"location": {
+						"end": {
+							"column": 74,
+							"line": 210
+						},
+						"start": {
+							"column": 69,
+							"line": 210
+						}
+					},
+					"replacement": "3 / i",
+					"status": "Timeout"
+				},
+				{
+					"id": "207",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 211
+						},
+						"start": {
+							"column": 26,
+							"line": 211
+						}
+					},
+					"replacement": "[]",
+					"status": "Timeout"
+				},
+				{
+					"id": "208",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 46,
+							"line": 213
+						},
+						"start": {
+							"column": 10,
+							"line": 212
+						}
+					},
+					"replacement": "complete(atTip)",
+					"status": "Timeout"
+				},
+				{
+					"id": "209",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 213
+						},
+						"start": {
+							"column": 12,
+							"line": 213
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "210",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 213
+						},
+						"start": {
+							"column": 25,
+							"line": 213
+						}
+					},
+					"replacement": "before.has(heading)",
+					"status": "Timeout"
+				},
+				{
+					"id": "211",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 214
+						},
+						"start": {
+							"column": 9,
+							"line": 214
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "212",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 214
+						},
+						"start": {
+							"column": 22,
+							"line": 214
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "213",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 66,
+							"line": 214
+						},
+						"start": {
+							"column": 54,
+							"line": 214
+						}
+					},
+					"replacement": "/tasks\\.md/",
+					"status": "Timeout"
+				},
+				{
+					"id": "214",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 70,
+							"line": 214
+						},
+						"start": {
+							"column": 68,
+							"line": 214
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "215",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 228
+						},
+						"start": {
+							"column": 38,
+							"line": 219
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "216",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 48,
+							"line": 220
+						},
+						"start": {
+							"column": 37,
+							"line": 220
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "217",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 225
+						},
+						"start": {
+							"column": 6,
+							"line": 221
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "218",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 227
+						},
+						"start": {
+							"column": 10,
+							"line": 225
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "219",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 242
+						},
+						"start": {
+							"column": 117,
+							"line": 236
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "220",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 11,
+							"line": 238
+						},
+						"start": {
+							"column": 6,
+							"line": 238
+						}
+					},
+					"replacement": "file",
+					"status": "Timeout"
+				},
+				{
+					"id": "221",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 11,
+							"line": 238
+						},
+						"start": {
+							"column": 6,
+							"line": 238
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "222",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 11,
+							"line": 238
+						},
+						"start": {
+							"column": 6,
+							"line": 238
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "223",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 46,
+							"line": 239
+						},
+						"start": {
+							"column": 17,
+							"line": 239
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "224",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 46,
+							"line": 239
+						},
+						"start": {
+							"column": 17,
+							"line": 239
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "225",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 46,
+							"line": 239
+						},
+						"start": {
+							"column": 17,
+							"line": 239
+						}
+					},
+					"replacement": "typeof event.cwd !== \"string\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "226",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 46,
+							"line": 239
+						},
+						"start": {
+							"column": 38,
+							"line": 239
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "227",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 13,
+							"line": 240
+						},
+						"start": {
+							"column": 6,
+							"line": 240
+						}
+					},
+					"replacement": "reason",
+					"status": "Timeout"
+				},
+				{
+					"id": "228",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 13,
+							"line": 240
+						},
+						"start": {
+							"column": 6,
+							"line": 240
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "229",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 13,
+							"line": 240
+						},
+						"start": {
+							"column": 6,
+							"line": 240
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "230",
+					"mutatorName": "CallExpression",
+					"location": {
+						"end": {
+							"column": 29,
+							"line": 240
+						},
+						"start": {
+							"column": 15,
+							"line": 240
+						}
+					},
+					"replacement": ";",
+					"status": "Timeout"
+				},
+				{
+					"id": "231",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 273
+						},
+						"start": {
+							"column": 96,
+							"line": 244
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "232",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 246
+						},
+						"start": {
+							"column": 6,
+							"line": 246
+						}
+					},
+					"replacement": "found",
+					"status": "Timeout"
+				},
+				{
+					"id": "233",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 246
+						},
+						"start": {
+							"column": 6,
+							"line": 246
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "234",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 246
+						},
+						"start": {
+							"column": 6,
+							"line": 246
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "235",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 248
+						},
+						"start": {
+							"column": 6,
+							"line": 248
+						}
+					},
+					"replacement": "git(cwd, \"symbolic-ref\", \"-q\", \"HEAD\")",
+					"status": "Timeout"
+				},
+				{
+					"id": "236",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 248
+						},
+						"start": {
+							"column": 6,
+							"line": 248
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "237",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 248
+						},
+						"start": {
+							"column": 6,
+							"line": 248
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "238",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 30,
+							"line": 248
+						},
+						"start": {
+							"column": 16,
+							"line": 248
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "239",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 36,
+							"line": 248
+						},
+						"start": {
+							"column": 32,
+							"line": 248
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "240",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 248
+						},
+						"start": {
+							"column": 38,
+							"line": 248
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "241",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 49,
+							"line": 250
+						},
+						"start": {
+							"column": 47,
+							"line": 250
+						}
+					},
+					"replacement": "[\"Stryker was here\"]",
+					"status": "Timeout"
+				},
+				{
+					"id": "242",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 31,
+							"line": 251
+						},
+						"start": {
+							"column": 6,
+							"line": 251
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "243",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 31,
+							"line": 251
+						},
+						"start": {
+							"column": 6,
+							"line": 251
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "244",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 31,
+							"line": 251
+						},
+						"start": {
+							"column": 6,
+							"line": 251
+						}
+					},
+					"replacement": "done.length === 0 && !end",
+					"status": "Timeout"
+				},
+				{
+					"id": "245",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 23,
+							"line": 251
+						},
+						"start": {
+							"column": 6,
+							"line": 251
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "246",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 23,
+							"line": 251
+						},
+						"start": {
+							"column": 6,
+							"line": 251
+						}
+					},
+					"replacement": "done.length !== 0",
+					"status": "Timeout"
+				},
+				{
+					"id": "247",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 31,
+							"line": 251
+						},
+						"start": {
+							"column": 27,
+							"line": 251
+						}
+					},
+					"replacement": "end",
+					"status": "Timeout"
+				},
+				{
+					"id": "248",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 59,
+							"line": 252
+						},
+						"start": {
+							"column": 6,
+							"line": 252
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "249",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 59,
+							"line": 252
+						},
+						"start": {
+							"column": 6,
+							"line": 252
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "250",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 38,
+							"line": 252
+						},
+						"start": {
+							"column": 27,
+							"line": 252
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "251",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 57,
+							"line": 252
+						},
+						"start": {
+							"column": 40,
+							"line": 252
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "252",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 255
+						},
+						"start": {
+							"column": 61,
+							"line": 252
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "254",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 15,
+							"line": 253
+						},
+						"start": {
+							"column": 7,
+							"line": 253
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "255",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 13,
+							"line": 256
+						},
+						"start": {
+							"column": 6,
+							"line": 256
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "256",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 13,
+							"line": 256
+						},
+						"start": {
+							"column": 6,
+							"line": 256
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "257",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 259
+						},
+						"start": {
+							"column": 15,
+							"line": 256
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "259",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 257
+						},
+						"start": {
+							"column": 7,
+							"line": 257
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "261",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 260
+						},
+						"start": {
+							"column": 22,
+							"line": 260
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "263",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 15,
+							"line": 261
+						},
+						"start": {
+							"column": 6,
+							"line": 261
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "264",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 72,
+							"line": 263
+						},
+						"start": {
+							"column": 3,
+							"line": 263
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "265",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 54,
+							"line": 263
+						},
+						"start": {
+							"column": 50,
+							"line": 263
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "266",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 72,
+							"line": 264
+						},
+						"start": {
+							"column": 3,
+							"line": 264
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "267",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 75,
+							"line": 265
+						},
+						"start": {
+							"column": 3,
+							"line": 265
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "268",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 266
+						},
+						"start": {
+							"column": 3,
+							"line": 266
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "269",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 72,
+							"line": 267
+						},
+						"start": {
+							"column": 3,
+							"line": 267
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "270",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 268
+						},
+						"start": {
+							"column": 3,
+							"line": 268
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "271",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 269
+						},
+						"start": {
+							"column": 3,
+							"line": 269
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "272",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 270
+						},
+						"start": {
+							"column": 3,
+							"line": 270
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "273",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 18,
+							"line": 271
+						},
+						"start": {
+							"column": 3,
+							"line": 271
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "274",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 21,
+							"line": 275
+						},
+						"start": {
+							"column": 5,
+							"line": 275
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "275",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 21,
+							"line": 275
+						},
+						"start": {
+							"column": 5,
+							"line": 275
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "276",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 303
+						},
+						"start": {
+							"column": 23,
+							"line": 275
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "277",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 42,
+							"line": 278
+						},
+						"start": {
+							"column": 31,
+							"line": 278
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "278",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 279
+						},
+						"start": {
+							"column": 19,
+							"line": 279
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "279",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 279
+						},
+						"start": {
+							"column": 19,
+							"line": 279
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "280",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 279
+						},
+						"start": {
+							"column": 19,
+							"line": 279
+						}
+					},
+					"replacement": "process.argv[2] === \"mark\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "281",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 279
+						},
+						"start": {
+							"column": 39,
+							"line": 279
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "282",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 292
+						},
+						"start": {
+							"column": 6,
+							"line": 282
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "283",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 35,
+							"line": 286
+						},
+						"start": {
+							"column": 19,
+							"line": 286
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "284",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 35,
+							"line": 286
+						},
+						"start": {
+							"column": 19,
+							"line": 286
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "285",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 35,
+							"line": 286
+						},
+						"start": {
+							"column": 19,
+							"line": 286
+						}
+					},
+					"replacement": "stopping || file",
+					"status": "Timeout"
+				},
+				{
+					"id": "286",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 16,
+							"line": 287
+						},
+						"start": {
+							"column": 7,
+							"line": 287
+						}
+					},
+					"replacement": "stopping",
+					"status": "Timeout"
+				},
+				{
+					"id": "287",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 16,
+							"line": 287
+						},
+						"start": {
+							"column": 7,
+							"line": 287
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "288",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 16,
+							"line": 287
+						},
+						"start": {
+							"column": 7,
+							"line": 287
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "289",
+					"mutatorName": "CallExpression",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 287
+						},
+						"start": {
+							"column": 18,
+							"line": 287
+						}
+					},
+					"replacement": ";",
+					"status": "Timeout"
+				},
+				{
+					"id": "290",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 19,
+							"line": 288
+						},
+						"start": {
+							"column": 12,
+							"line": 288
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "291",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 19,
+							"line": 288
+						},
+						"start": {
+							"column": 12,
+							"line": 288
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "292",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 4,
+							"line": 291
+						},
+						"start": {
+							"column": 21,
+							"line": 288
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "294",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 289
+						},
+						"start": {
+							"column": 11,
+							"line": 289
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "295",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 28,
+							"line": 289
+						},
+						"start": {
+							"column": 19,
+							"line": 289
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "296",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 38,
+							"line": 289
+						},
+						"start": {
+							"column": 30,
+							"line": 289
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "298",
+					"mutatorName": "ObjectLiteral",
+					"location": {
+						"end": {
+							"column": 71,
+							"line": 290
+						},
+						"start": {
+							"column": 31,
+							"line": 290
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "299",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 48,
+							"line": 290
+						},
+						"start": {
+							"column": 43,
+							"line": 290
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "300",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 109,
+							"line": 291
+						},
+						"start": {
+							"column": 40,
+							"line": 291
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Timeout"
+				},
+				{
+					"id": "301",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 72,
+							"line": 291
+						},
+						"start": {
+							"column": 61,
+							"line": 291
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "302",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 101,
+							"line": 291
+						},
+						"start": {
+							"column": 84,
+							"line": 291
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Timeout"
+				},
+				{
+					"id": "303",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 33,
+							"line": 298
+						},
+						"start": {
+							"column": 6,
+							"line": 298
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "304",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 33,
+							"line": 298
+						},
+						"start": {
+							"column": 6,
+							"line": 298
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "305",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 33,
+							"line": 298
+						},
+						"start": {
+							"column": 6,
+							"line": 298
+						}
+					},
+					"replacement": "stopping && file || !reason",
+					"status": "Timeout"
+				},
+				{
+					"id": "306",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 22,
+							"line": 298
+						},
+						"start": {
+							"column": 6,
+							"line": 298
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "307",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 22,
+							"line": 298
+						},
+						"start": {
+							"column": 6,
+							"line": 298
+						}
+					},
+					"replacement": "stopping || file",
+					"status": "Timeout"
+				},
+				{
+					"id": "308",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 33,
+							"line": 298
+						},
+						"start": {
+							"column": 26,
+							"line": 298
+						}
+					},
+					"replacement": "reason",
+					"status": "Timeout"
+				},
+				{
+					"id": "309",
+					"mutatorName": "CallExpression",
+					"location": {
+						"end": {
+							"column": 49,
+							"line": 298
+						},
+						"start": {
+							"column": 35,
+							"line": 298
+						}
+					},
+					"replacement": ";",
+					"status": "Timeout"
+				},
+				{
+					"id": "310",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 299
+						},
+						"start": {
+							"column": 6,
+							"line": 299
+						}
+					},
+					"replacement": "true",
+					"status": "Timeout"
+				},
+				{
+					"id": "311",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 299
+						},
+						"start": {
+							"column": 6,
+							"line": 299
+						}
+					},
+					"replacement": "false",
+					"status": "Timeout"
+				},
+				{
+					"id": "312",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 302
+						},
+						"start": {
+							"column": 14,
+							"line": 299
+						}
+					},
+					"replacement": "{}",
+					"status": "Timeout"
+				},
+				{
+					"id": "314",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 300
+						},
+						"start": {
+							"column": 24,
+							"line": 300
+						}
+					},
+					"replacement": "``",
+					"status": "Timeout"
+				},
+				{
+					"id": "315",
+					"mutatorName": "CallExpression",
+					"location": {
+						"end": {
+							"column": 19,
+							"line": 301
+						},
+						"start": {
+							"column": 3,
+							"line": 301
+						}
+					},
+					"replacement": ";",
+					"status": "Timeout"
+				}
+			]
+		}
+	},
+	"fingerprint": {
+		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/turn-gate-batch.test.ts": "5209b4af950b9e631e5f9bf36e8ed4907249f8a0",
+		"bun/turn-gate-ceiling.test.ts": "970aa7dc1a949011068b3c0274a362513a4c0cdf",
+		"bun/turn-gate-cli.test.ts": "6490fab50f1a5b460d6e92851dd3f1d7cec89944",
+		"bun/turn-gate-pulled.test.ts": "479a73ef6f4ebe5e3d7602b6737b52e77e4ddb8a",
+		"bun/turn-gate-record.test.ts": "9cecf1fd7da4140e1505df58296e1fada0b25152",
+		"bun/turn-gate-turn.test.ts": "d96c22b5aa70269e7383891de7c1f77696e8b062",
+		"bun/turn-gate.fixture.ts": "9cf6e8e853c728e573d26591acfc8e98839ec55b",
+		"bun/turn-gate.test.ts": "ec1762877d95beb0df5b4a050d578f33e1b3ea19",
+		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6"
+	}
+}

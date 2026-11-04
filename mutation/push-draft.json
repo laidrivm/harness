@@ -1,0 +1,577 @@
+{
+	"schemaVersion": "1.0",
+	"files": {
+		"bun/push-draft.ts": {
+			"source": "/**\n * The pre-push hook's draft check, `bun bun/push-draft.ts \"$@\"`: refuses a\n * push that updates a branch on github.com while that branch has an open pull\n * request of the same repository that is not a draft — `readPullRequests()`\n * leaves a fork's out — and one whose pull requests cannot be read —\n * an unread state is never a draft. The branch comes from each ref-update\n * record's remote ref, never the local one: `git push origin feat/x:release`\n * updates `release`. A deletion, a tag and any other host pass unread, and no\n * git is spawned: inside a hook git's own environment is set.\n */\nimport { recordCheckout } from \"./gate-ledger.ts\";\nimport { readPullRequests, readyOne, remoteHost, remoteRepository } from \"./pull-requests.ts\";\nimport { pushRefs } from \"./push-refs.ts\";\n\nconst url = process.argv[3] ?? \"\";\n// `ssh.github.com` is GitHub's SSH over port 443.\n// shortcut: an `~/.ssh/config` alias for github.com passes unread; resolve it with `ssh -G <host>` if one is seen.\nconst repo = [\"github.com\", \"ssh.github.com\"].includes(remoteHost(url) ?? \"\") ? remoteRepository(url) : undefined;\n\n/** Writes the reason, records it with the sha the push would land, and stops the push. */\nfunction refuse(id: string, reason: string, sha: string): never {\n\tprocess.stderr.write(`push-draft: ${reason}\\n`);\n\trecordCheckout(\"push-draft\", \"block\", id, { cwd: process.cwd() }, sha);\n\tprocess.exit(1);\n}\n\n// Empty when there is nothing to push.\n// shortcut: one read per record, in turn; list the open pull requests once if `git push --all` grows slow.\nfor (const { sha, ref, deletion } of pushRefs(await Bun.stdin.text())) {\n\tconst branch = ref.startsWith(\"refs/heads/\") ? ref.slice(\"refs/heads/\".length) : \"\";\n\t// A deletion lands nothing for review.\n\tif (!repo || !branch || deletion) continue;\n\tconst pulls = readPullRequests(branch, repo);\n\tif (!pulls)\n\t\trefuse(\n\t\t\t\"unread\",\n\t\t\t`cannot read ${repo.owner}/${repo.repo}'s pull requests for ${branch} — gh missing, not logged in, timed out or answering no list; check \\`gh auth status\\``,\n\t\t\tsha,\n\t\t);\n\tconst ready = readyOne(pulls);\n\tif (ready)\n\t\trefuse(\n\t\t\t\"ready\",\n\t\t\t`#${ready.number} on ${branch} is not a draft, so a push into it is refused; run \\`gh pr ready ${ready.number} --undo -R ${repo.owner}/${repo.repo}\\` first, then push`,\n\t\t\tsha,\n\t\t);\n}\n",
+			"mutants": [
+				{
+					"id": "0",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 15
+						},
+						"start": {
+							"column": 13,
+							"line": 15
+						}
+					},
+					"replacement": "process.argv[3] && \"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "1",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 15
+						},
+						"start": {
+							"column": 32,
+							"line": 15
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Survived"
+				},
+				{
+					"id": "2",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 46,
+							"line": 18
+						},
+						"start": {
+							"column": 14,
+							"line": 18
+						}
+					},
+					"replacement": "[]",
+					"status": "Survived"
+				},
+				{
+					"id": "3",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 27,
+							"line": 18
+						},
+						"start": {
+							"column": 15,
+							"line": 18
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "4",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 18
+						},
+						"start": {
+							"column": 29,
+							"line": 18
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "5",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 77,
+							"line": 18
+						},
+						"start": {
+							"column": 56,
+							"line": 18
+						}
+					},
+					"replacement": "remoteHost(url) && \"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "6",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 77,
+							"line": 18
+						},
+						"start": {
+							"column": 75,
+							"line": 18
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Survived"
+				},
+				{
+					"id": "7",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 25
+						},
+						"start": {
+							"column": 65,
+							"line": 21
+						}
+					},
+					"replacement": "{}",
+					"status": "Survived"
+				},
+				{
+					"id": "9",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 48,
+							"line": 22
+						},
+						"start": {
+							"column": 23,
+							"line": 22
+						}
+					},
+					"replacement": "``",
+					"status": "Survived"
+				},
+				{
+					"id": "11",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 29,
+							"line": 23
+						},
+						"start": {
+							"column": 17,
+							"line": 23
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "12",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 38,
+							"line": 23
+						},
+						"start": {
+							"column": 31,
+							"line": 23
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "13",
+					"mutatorName": "ObjectLiteral",
+					"location": {
+						"end": {
+							"column": 66,
+							"line": 23
+						},
+						"start": {
+							"column": 44,
+							"line": 23
+						}
+					},
+					"replacement": "{}",
+					"status": "Survived"
+				},
+				{
+					"id": "14",
+					"mutatorName": "CallExpression",
+					"location": {
+						"end": {
+							"column": 18,
+							"line": 24
+						},
+						"start": {
+							"column": 2,
+							"line": 24
+						}
+					},
+					"replacement": ";",
+					"status": "Survived"
+				},
+				{
+					"id": "15",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 47
+						},
+						"start": {
+							"column": 72,
+							"line": 29
+						}
+					},
+					"replacement": "{}",
+					"status": "Survived"
+				},
+				{
+					"id": "16",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 46,
+							"line": 30
+						},
+						"start": {
+							"column": 17,
+							"line": 30
+						}
+					},
+					"replacement": "ref.endsWith(\"refs/heads/\")",
+					"status": "Survived"
+				},
+				{
+					"id": "17",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 30
+						},
+						"start": {
+							"column": 32,
+							"line": 30
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "18",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 80,
+							"line": 30
+						},
+						"start": {
+							"column": 49,
+							"line": 30
+						}
+					},
+					"replacement": "ref",
+					"status": "Survived"
+				},
+				{
+					"id": "19",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 72,
+							"line": 30
+						},
+						"start": {
+							"column": 59,
+							"line": 30
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "20",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 85,
+							"line": 30
+						},
+						"start": {
+							"column": 83,
+							"line": 30
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Survived"
+				},
+				{
+					"id": "21",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 32
+						},
+						"start": {
+							"column": 6,
+							"line": 32
+						}
+					},
+					"replacement": "true",
+					"status": "Survived"
+				},
+				{
+					"id": "22",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 32
+						},
+						"start": {
+							"column": 6,
+							"line": 32
+						}
+					},
+					"replacement": "false",
+					"status": "Survived"
+				},
+				{
+					"id": "23",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 32
+						},
+						"start": {
+							"column": 6,
+							"line": 32
+						}
+					},
+					"replacement": "(!repo || !branch) && deletion",
+					"status": "Survived"
+				},
+				{
+					"id": "24",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 22,
+							"line": 32
+						},
+						"start": {
+							"column": 6,
+							"line": 32
+						}
+					},
+					"replacement": "false",
+					"status": "Survived"
+				},
+				{
+					"id": "25",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 22,
+							"line": 32
+						},
+						"start": {
+							"column": 6,
+							"line": 32
+						}
+					},
+					"replacement": "!repo && !branch",
+					"status": "Survived"
+				},
+				{
+					"id": "26",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 11,
+							"line": 32
+						},
+						"start": {
+							"column": 6,
+							"line": 32
+						}
+					},
+					"replacement": "repo",
+					"status": "Survived"
+				},
+				{
+					"id": "27",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 22,
+							"line": 32
+						},
+						"start": {
+							"column": 15,
+							"line": 32
+						}
+					},
+					"replacement": "branch",
+					"status": "Survived"
+				},
+				{
+					"id": "28",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 34
+						},
+						"start": {
+							"column": 6,
+							"line": 34
+						}
+					},
+					"replacement": "pulls",
+					"status": "Survived"
+				},
+				{
+					"id": "29",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 34
+						},
+						"start": {
+							"column": 6,
+							"line": 34
+						}
+					},
+					"replacement": "true",
+					"status": "Survived"
+				},
+				{
+					"id": "30",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 34
+						},
+						"start": {
+							"column": 6,
+							"line": 34
+						}
+					},
+					"replacement": "false",
+					"status": "Survived"
+				},
+				{
+					"id": "32",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 12,
+							"line": 36
+						},
+						"start": {
+							"column": 4,
+							"line": 36
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "33",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 160,
+							"line": 37
+						},
+						"start": {
+							"column": 4,
+							"line": 37
+						}
+					},
+					"replacement": "``",
+					"status": "Survived"
+				},
+				{
+					"id": "34",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 11,
+							"line": 41
+						},
+						"start": {
+							"column": 6,
+							"line": 41
+						}
+					},
+					"replacement": "true",
+					"status": "Survived"
+				},
+				{
+					"id": "35",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 11,
+							"line": 41
+						},
+						"start": {
+							"column": 6,
+							"line": 41
+						}
+					},
+					"replacement": "false",
+					"status": "Survived"
+				},
+				{
+					"id": "37",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 11,
+							"line": 43
+						},
+						"start": {
+							"column": 4,
+							"line": 43
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "38",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 171,
+							"line": 44
+						},
+						"start": {
+							"column": 4,
+							"line": 44
+						}
+					},
+					"replacement": "``",
+					"status": "Survived"
+				}
+			]
+		}
+	},
+	"fingerprint": {
+		"bun/diff-budget.fixture.ts": "a51ac572bdc585134c3a16ebb17c58581b20dcb2",
+		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/pre-pr.fixture.ts": "ba0b18d3cc9352ac9c9ab992ce41ba7e79327416",
+		"bun/push-draft.test.ts": "a946554d25aaf106f26b62f51d61c4866125e3aa",
+		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6"
+	}
+}
