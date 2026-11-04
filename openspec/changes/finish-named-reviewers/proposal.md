@@ -28,9 +28,11 @@ check-run name*, 40b39875c31b814b8dade5be8635c7b7).
   value that is not a list of strings, makes `finish` refuse before the push,
   naming the value. The state reading stays CodeRabbit's (`bun/coderabbit-run.ts`,
   `REVIEWED`); no other bot's run is generalised to.
-- When the 18 reads after the ready switch end on no run, `finish` posts the
-  same one `@coderabbitai review` it posts on `skipped`, once per head (the
-  user's answer 1 a, 2026-11-03). "Once per head" counts from the earlier of
+- When the 18 reads after the ready switch end on no run, `finish` reads once
+  more right before the post and, only if that read still gives `skipped` or
+  no run, posts the same one `@coderabbitai review` it posts on `skipped`,
+  once per head (the user's answer 1 a, 2026-11-03); a read giving any other
+  state ends on that state and posts nothing. "Once per head" counts from the earlier of
   the head commit's committer date and the start of its first CodeRabbit run:
   a request at or after it counts as made, so a rerun does not post twice even
   when a run starts after the request, and an old commit pushed late behind an

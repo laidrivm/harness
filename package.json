@@ -19,6 +19,9 @@
 			"mutation/**",
 			"skills-lock.json"
 		],
+		"reviewers": [
+			"CodeRabbit"
+		],
 		"suppressions": {}
 	}
 }

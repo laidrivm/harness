@@ -78,7 +78,7 @@ RUN useradd --create-home --uid 1500 --user-group --shell /bin/bash runner \
 	&& chmod 0750 /home/agent /home/runner \
 	&& install -d -o agent -g agent -m 0750 /home/agent/clones \
 	&& install -d -o keyholder -g keyholder -m 0700 /var/lib/orchestrator-key \
-	&& install -d -m 0755 /etc/orchestrator/app /opt/orchestrator/hooks \
+	&& install -d -m 0755 /etc/orchestrator/app /opt/orchestrator/hooks /etc/claude-code \
 	&& mkdir -p /run/sshd \
 	&& rm -f /etc/ssh/ssh_host_* \
 	&& printf 'PasswordAuthentication no\nAllowUsers runner\nHostKey /etc/ssh/ssh_host_ed25519_key\n' >/etc/ssh/sshd_config.d/runner.conf
@@ -95,6 +95,8 @@ COPY --chmod=0755 reach-check.sh /opt/orchestrator/reach-check.sh
 COPY --chmod=0755 runner/gh /usr/local/bin/gh
 # The VPS session's rules, as Claude Code's managed memory: root's, so no
 # session edits them, and outside agent's home volume, so each build reaches it.
+# Its directory is made with the users above: an octal --chmod reaches the
+# directories its COPY creates, and a 0644 one is closed to agent.
 COPY --chmod=0644 runner/session-rules.md /etc/claude-code/CLAUDE.md
 # The event handler's code, root-owned, from compose's named context `bun`
 # (ci-run-agent design, *The engine's contract*): it reads the webhook secret,
@@ -104,8 +106,10 @@ COPY --chmod=0644 runner/session-rules.md /etc/claude-code/CLAUDE.md
 # BuildKit 0.21 (Docker 28.1); an octal one, which reaches the directories too,
 # would make every file executable or every directory untraversable.
 COPY --from=bun --chmod=u=rwX,go=rX . /opt/orchestrator/bun/
-# A builder that took the flag and set other modes fails here, not at the mint.
-RUN test -z "$(find /opt/orchestrator/bun ! -perm -o=r -o -perm -g=w -o -perm -o=w -o -type d ! -perm -o=x)"
+# A builder that took the flag and set other modes fails here, not at the mint;
+# so does a managed CLAUDE.md agent cannot read, rather than a session without its rules.
+# find's errors are kept: a missing path, or one BSD find cannot enter, prints only on stderr.
+RUN test -z "$(find /opt/orchestrator/bun /etc/claude-code ! -perm -o=r -o -perm -g=w -o -perm -o=w -o -type d ! -perm -o=x 2>&1)"
 
 ENTRYPOINT ["/opt/orchestrator/entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D", "-e"]

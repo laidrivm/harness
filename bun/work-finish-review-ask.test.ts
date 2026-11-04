@@ -5,7 +5,22 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { cleanup } from "./diff-budget.fixture.ts";
-import { ASK, COMMENTS, LIMITED, RUNNING, runs, SKIPPED, short, times, watched } from "./work-finish-review.fixture.ts";
+import { out } from "./goal-check.fixture.ts";
+import { checkout, finish } from "./work-finish.fixture.ts";
+import {
+	ASK,
+	COMMENTS,
+	DRAFT,
+	LIMITED,
+	READ,
+	READY,
+	RUNNING,
+	runs,
+	SKIPPED,
+	short,
+	times,
+	watched,
+} from "./work-finish-review.fixture.ts";
 import { stopServers } from "./work-take.fixture.ts";
 
 afterAll(() => {
@@ -15,6 +30,17 @@ afterAll(() => {
 
 /** A `@coderabbitai review` comment as `--jq` prints it, posted at `at`. */
 const asked = (at: string, body = "@coderabbitai review") => ({ created_at: at, body });
+const iso = (ms: number) => new Date(ms).toISOString();
+
+/**
+ * `finish` on draft #7 in a checkout naming CodeRabbit, the comments made from
+ * `HEAD`'s committer date in ms, the check runs answering `answers` in turn.
+ */
+async function dated(comments: (committed: number) => object[], answers: (object[] | number)[] = [[]]) {
+	const cwd = checkout(true);
+	const committed = Date.parse(out(cwd, "show", "-s", "--format=%cI", "HEAD"));
+	return finish({ cwd, gh: { before: DRAFT, runs: answers, comments: comments(committed) } });
+}
 
 describe("the request for a skipped head", () => {
 	// spec: work-finish/a-first-request
@@ -53,8 +79,8 @@ describe("the request for a skipped head", () => {
 		expect(run.last).toEndWith("; asked for a review");
 	});
 
-	test("with no start time on the head's runs, an exact request still counts as asked", async () => {
-		const run = await watched([[{ ...SKIPPED, started_at: null }]], { comments: [asked("2026-10-31T09:55:25Z")] });
+	test("with no start time on the head's runs, a request at the committer date counts as asked", async () => {
+		const run = await dated((c) => [asked(iso(c))], [[{ ...SKIPPED, started_at: null }]]);
 		expect(run.last).toEndWith("; a review was already asked for");
 	});
 
@@ -109,5 +135,72 @@ describe("the request for a skipped head", () => {
 		const run = await watched([[SKIPPED], after]);
 		expect(run.code).toBe(0);
 		expect(run.calls.filter((call) => call === COMMENTS || call.startsWith("pr comment"))).toEqual([]);
+	});
+});
+
+describe("the request for a head with no run", () => {
+	const none = (cwd: string) => `finish: ready #7 — no CodeRabbit run on ${short(cwd)} after 18 reads`;
+
+	// spec: work-finish/a-first-request-for-a-head-with-no-run
+	test("no run through the reads and the read before the post, and no request since the commit, posts one", async () => {
+		const run = await dated((c) => [{ created_at: iso(c + 1000), body: "LGTM" }]);
+		expect(run.calls.filter((call) => call.startsWith("pr comment"))).toEqual([ASK]);
+		expect(run.calls.slice(-3)).toEqual([COMMENTS, runs(run.cwd), ASK]);
+		expect([run.code, run.last]).toEqual([0, `${none(run.cwd)}; asked for a review`]);
+	});
+
+	// spec: work-finish/already-asked-for-a-head-with-no-run
+	test.each<[string, (c: number) => object[]]>([
+		["at the committer date", (c) => [asked(iso(c))]],
+		["a minute after it", (c) => [asked(iso(c + 60_000))]],
+		// The user's answer 11 b (2026-11-01).
+		["for a full review after it", (c) => [asked(iso(c + 60_000), "@coderabbitai full review")]],
+	])("a request %s counts as asked", async (_, comments) => {
+		const run = await dated(comments);
+		expect(run.calls.at(-1)).toBe(COMMENTS);
+		expect([run.code, run.last]).toEqual([0, `${none(run.cwd)}; a review was already asked for`]);
+	});
+
+	// spec: work-finish/an-older-request
+	test("a request a second before the committer date does not count", async () => {
+		const run = await dated((c) => [asked(iso(c - 1000))]);
+		expect(run.calls.at(-1)).toBe(ASK);
+		expect(run.last).toBe(`${none(run.cwd)}; asked for a review`);
+	});
+
+	// spec: work-finish/a-run-that-starts-after-the-request
+	test("a request after the commit and before a skipped run's later start counts as asked", async () => {
+		const cwd = checkout(true);
+		const c = Date.parse(out(cwd, "show", "-s", "--format=%cI", "HEAD"));
+		const late = { ...SKIPPED, started_at: iso(c + 10_000) };
+		const run = await finish({ cwd, gh: { before: DRAFT, runs: [[late]], comments: [asked(iso(c + 5000))] } });
+		expect(run.calls.at(-1)).toBe(COMMENTS);
+		expect(run.last).toBe(`finish: ready #7 — CodeRabbit skipped ${short(cwd)}; a review was already asked for`);
+	});
+
+	test("no run, then three failed reads, goes on to the request, and a failed read before the post posts nothing", async () => {
+		const run = await watched([[SKIPPED], [], [], 1]);
+		expect(run.calls).toEqual([
+			READ,
+			"push",
+			runs(run.cwd),
+			READY,
+			...times(5, runs(run.cwd)),
+			COMMENTS,
+			runs(run.cwd),
+		]);
+		expect(run.last).toBe(`finish: ready #7 — CodeRabbit's runs on ${short(run.cwd)} unread: gh exited 1`);
+	});
+
+	test.each<[string, object[], string]>([
+		["skipped posts", [SKIPPED], "; asked for a review"],
+		["reviewing posts nothing and ends on reviewing", [RUNNING], ""],
+	])("no run through the reads and the read before the post giving %s", async (_, fresh, tail) => {
+		const run = await dated(() => [], [...times(30, "").map(() => []), fresh]);
+		const ends = tail ? [COMMENTS, runs(run.cwd), ASK] : [COMMENTS, runs(run.cwd)];
+		expect(run.calls.slice(-ends.length)).toEqual(ends);
+		expect(run.last).toBe(
+			tail ? `${none(run.cwd)}${tail}` : `finish: ready #7 — CodeRabbit reviewing ${short(run.cwd)}`,
+		);
 	});
 });

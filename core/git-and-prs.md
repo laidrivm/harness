@@ -82,11 +82,14 @@ entry, a hook or a CI check leaves this file the way it would leave
   pr`, opens it over `gh api` as the README's *Cloud sessions* says): it
   refuses without the pre-PR runner's passing records of `HEAD`, pushes while
   the PR is a draft, opens it as a draft when none is open, and marks it ready
-  unless a question waits on the card — where the checkout tracks
-  `.coderabbit.yaml`, only once CodeRabbit's run on the head has completed,
-  12 reads have found none, or three consecutive reads have failed, and its
-  last line then names CodeRabbit's state
-  of the head; in the harness's
+  unless a question waits on the card — where `harness.reviewers` in the
+  checkout's `package.json` names `CodeRabbit`, only once CodeRabbit's run on
+  the head has completed, 12 reads have found none, or three consecutive reads
+  have failed, and its last line then names CodeRabbit's state
+  of the head; with no such key it waits for no reviewer and asks for none, so
+  a consumer whose CodeRabbit posts a check run adds `"reviewers":
+  ["CodeRabbit"]` under `"harness"` before the pin bump that crosses
+  `finish-named-reviewers`, which an older harness ignores; in the harness's
   own sessions a hook refuses a hand-run `gh pr create`, and `gh pr ready`
   without `--undo`. An agent that then works on an existing PR marks it draft
   by hand (`gh pr ready <n> --undo`) as it starts, and runs `finish` only when
@@ -119,7 +122,8 @@ entry, a hook or a CI check leaves this file the way it would leave
   `@coderabbitai approve`, which a PR's author may post, approve without a
   review of the head — so no agent posts either, nor any other comment as the
   user, but for the one `@coderabbitai review` that `finish` posts on a head
-  CodeRabbit skipped, under the user's standing permission (2026-10-31).
+  CodeRabbit skipped or left without a run, under the user's standing
+  permission (2026-10-31, widened to a head without a run 2026-11-03).
 - Keep the PR description to what the diff can't say: a link to the
   proposal, the criteria the step closes named by their `### Requirement:`
   headings — or a line saying it closes none — decisions taken, anything the
@@ -144,8 +148,8 @@ entry, a hook or a CI check leaves this file the way it would leave
   enters git: `session-wrapup` step 5 keeps it outside the tree.
 - Send, reply, comment or review under the user's name only through a call the
   user approved at its prompt, or as the one `@coderabbitai review` `finish`
-  posts on a head CodeRabbit skipped, which the user granted standing
-  (2026-10-31); the `gh` writes stay refused. Never through a
+  posts on a head CodeRabbit skipped or left without a run, which the user
+  granted standing (2026-10-31, 2026-11-03); the `gh` writes stay refused. Never through a
   channel no permission entry reaches — a browser form, a direct HTTP call:
   report what you would have written and let them send it. Opening the pull
   request they asked for is not that, and nor is a question the question gate

@@ -6,14 +6,14 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
 
 ## 1. `harness.reviewers` in `bun/config.ts`
 
-- [ ] 1.1 Failing cases in `bun/config.test.ts` for `reviewers(root)`: an
+- [x] 1.1 Failing cases in `bun/config.test.ts` for `reviewers(root)`: an
       absent `package.json`, a file with no `harness` key, one with no
       `harness.reviewers`, and `[]` each give `[]`; `["CodeRabbit"]` gives
       itself; a file that is not JSON throws naming the file; `"CodeRabbit"`
       and `[1]` throw naming `harness.reviewers`; `["CodeRabbit", "Copilot"]`
       throws naming `Copilot`. Each fails on today's code, which has no
       `reviewers`
-- [ ] 1.2 Then `bun/config.ts`: `reviewers: string[]` in `Config`; the JSON
+- [x] 1.2 Then `bun/config.ts`: `reviewers: string[]` in `Config`; the JSON
       parse and its error lifted out of `read()` into one function `read()`
       and `reviewers()` both call; the header comment names this key as the
       one an absent value does not fail, and why (`design.md`, decision 1).
@@ -22,11 +22,11 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
 
 ## 2. The condition and its refusal in `finish`
 
-- [ ] 2.1 `bun/work-finish.fixture.ts`: `checkout(true)` commits a
+- [x] 2.1 `bun/work-finish.fixture.ts`: `checkout(true)` commits a
       `package.json` holding `{"harness": {"reviewers": ["CodeRabbit"]}}`
       instead of `.coderabbit.yaml`, and its comments and
       `work-finish-review.fixture.ts`'s say so
-- [ ] 2.2 Failing cases in `bun/work-finish-review.test.ts`: no
+- [x] 2.2 Failing cases in `bun/work-finish-review.test.ts`: no
       `harness.reviewers`, and `[]`, in a checkout tracking `.coderabbit.yaml`
       — calls `[READ, "push", READY]`, the out holds
       `finish: harness.reviewers names no reviewer, so none was waited for`,
@@ -38,7 +38,7 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
       (`a-reviewer-finish-does-not-know`), `"CodeRabbit"` naming
       `harness.reviewers` (`a-value-that-is-not-a-list`), a `package.json`
       that is not JSON naming the file (`a-package-file-that-is-not-json`)
-- [ ] 2.3 Then `bun/work-finish.ts`: `reviewers(top)` read among the
+- [x] 2.3 Then `bun/work-finish.ts`: `reviewers(top)` read among the
       refusals before the push, a throw refused as `reviewers`; `watched`
       from the list; the `tracked()` call, its "tracked files could not be
       listed" branch and that branch's test removed; the no-reviewer line
@@ -48,11 +48,11 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
 
 ## 3. The request on a head with no run
 
-- [ ] 3.1 Failing cases in `bun/coderabbit-run.test.ts`: `arrived(runs,
+- [x] 3.1 Failing cases in `bun/coderabbit-run.test.ts`: `arrived(runs,
       committed)` gives the earlier of `committed` and the earliest CodeRabbit
       start, of whichever parse — `committed` with no run, the start when it
       is the earlier — and `-Infinity` when neither parses
-- [ ] 3.2 Failing cases in `bun/work-finish-review-ask.test.ts`, the head's
+- [x] 3.2 Failing cases in `bun/work-finish-review-ask.test.ts`, the head's
       committer date read with `git show -s --format=%cI HEAD` in the case or
       set through `GIT_COMMITTER_DATE` in the fixture: no run through the reads
       and the read before the post, no request since the committer date —
@@ -71,7 +71,7 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
       their cutoff stays the run's start. In
       `bun/work-finish-review.test.ts`, the case "no completed
       run in 12 reads" ends on the request (`still-no-run-when-the-reads-end`)
-- [ ] 3.3 Then `bun/coderabbit-run.ts` (`arrived` takes `committed`) and
+- [x] 3.3 Then `bun/coderabbit-run.ts` (`arrived` takes `committed`) and
       `bun/work-finish.ts`: the reads after the switch end on `skipped` or no
       run into `request()`, which takes the state, accepts either from the
       read before the post, and prefixes its line by the state
@@ -83,7 +83,7 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
 - [ ] 4.1 `package.json`: `"reviewers": ["CodeRabbit"]` under `"harness"`.
       Verify `finish` on this branch's own pull request ends on CodeRabbit's
       state of the head, not on `finish: ready #<n>` alone
-- [ ] 4.2 `README.md`: *Consuming* step 3 names `harness.reviewers` as the key
+- [x] 4.2 `README.md`: *Consuming* step 3 names `harness.reviewers` as the key
       whose absence means no reviewer; step 7 says a consumer whose
       CodeRabbit posts a check run adds `"reviewers": ["CodeRabbit"]` before its bump crosses
       this change, or `finish` silently stops waiting; the `finish` row of the
@@ -99,7 +99,7 @@ changes, each cited as `// spec: work-finish/<slug>` where a scenario names it.
 
 ## 5. Consumers
 
-- [ ] 5.1 A card on d2ass's board: add `"reviewers": ["CodeRabbit"]` under
+- [x] 5.1 A card on d2ass's board: add `"reviewers": ["CodeRabbit"]` under
       `"harness"` before the daily bump crosses this change. A card on
       mellon's: first the probe of `design.md`'s first risk — read
       CodeRabbit's check runs and commit statuses on the head of mellon's

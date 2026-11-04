@@ -5,7 +5,7 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { interval, type Run, state } from "./coderabbit-run.ts";
+import { arrived, interval, type Run, state } from "./coderabbit-run.ts";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 
 afterAll(cleanup);
@@ -124,6 +124,28 @@ describe("read", () => {
 
 	test("a read killed at the limit is unread, saying so", () => {
 		expect(read("", 0, true).result).toEqual({ name: "unread", why: "gh was killed at its limit" });
+	});
+});
+
+describe("arrived", () => {
+	const start = Date.parse("2026-10-31T09:55:22Z");
+	const at = (started_at: unknown) => ({ ...SKIPPED, started_at });
+
+	test("the committer date with no run, and with no run that parses", () => {
+		expect(arrived([], start - 5000)).toBe(start - 5000);
+		expect(arrived([at(null), at("soon")], start - 5000)).toBe(start - 5000);
+	});
+
+	test("the earlier of the committer date and the earliest CodeRabbit start", () => {
+		const later = at("2026-10-31T09:55:30Z");
+		expect(arrived([later, SKIPPED], start + 60_000)).toBe(start);
+		expect(arrived([SKIPPED], start - 1000)).toBe(start - 1000);
+		// Another app's run named CodeRabbit is no start of CodeRabbit's.
+		expect(arrived([run("completed", "skipped", "x", "other")], start + 1000)).toBe(start + 1000);
+	});
+
+	test("neither parsing is -Infinity, so every exact request counts", () => {
+		expect(arrived([at(null)], Number.NaN)).toBe(Number.NEGATIVE_INFINITY);
 	});
 });
 

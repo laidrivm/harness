@@ -5,11 +5,12 @@
  * is, the card's `Pointer` and link (`work-finish-card.ts`), and the ready
  * switch unless a question waits on the card, when one is given
  * (`openspec/changes/archive/2026-10-28-work-finish/design.md`, *The
- * sequence and where each refusal sits*). Where the checkout tracks
- * `.coderabbit.yaml`, it reads the card's question, then waits for
- * CodeRabbit's run on `HEAD` and reads the question again, and names
- * CodeRabbit's state of `HEAD` after the ready switch
- * (`finish-review-arrives`'s design). With a card, after its last comments
+ * sequence and where each refusal sits*). Where `harness.reviewers` in the
+ * top's `package.json` names `CodeRabbit`, it reads the card's question, then
+ * waits for CodeRabbit's run on `HEAD` and reads the question again, and names
+ * CodeRabbit's state of `HEAD` after the ready switch, asking once for a
+ * review of a head skipped or left without a run (`finish-review-arrives`'s
+ * and `finish-named-reviewers`'s designs). With a card, after its last comments
  * read and before the ready switch, it releases the card's `Assign` when
  * nothing waits there (`cleared()`), and keeps the draft when the release put
  * the user back. Every refusal comes before the
@@ -19,12 +20,12 @@
 import { statSync } from "node:fs";
 import { ready } from "./ci-run-draft.ts";
 import { arrived, exited, interval, objects, own, plain, type Run, read, type State, state } from "./coderabbit-run.ts";
+import { CODERABBIT, reviewers } from "./config.ts";
 import { RUNNER_STEPS, ran, recordCheckout } from "./gate-ledger.ts";
 import { integration } from "./notion-ask.ts";
 import { waiting } from "./notion-bot.ts";
 import { cleared } from "./notion-release.ts";
 import { gh, originRepository, readPullRequests, readyOne } from "./pull-requests.ts";
-import { tracked } from "./tracked.ts";
 import { recorded } from "./work-finish-card.ts";
 
 const git = (...args: string[]) => {
@@ -72,6 +73,13 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 	const branch = git("symbolic-ref", "--short", "-q", "HEAD");
 	if (!branch) return refuse("detached", "HEAD names no branch");
 	if (branch === "main") return refuse("main", "HEAD is on main, which takes no pull request");
+	// Before the push, so a typo or a name `finish` cannot read costs no push, opening or wait.
+	let watched: boolean;
+	try {
+		watched = reviewers(top).includes(CODERABBIT);
+	} catch (error) {
+		return refuse("reviewers", (error as Error).message);
+	}
 
 	const repo = originRepository();
 	const pulls = repo && readPullRequests(branch, repo);
@@ -130,17 +138,6 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		lines.push(`finish: opened draft #${number}`);
 	}
 
-	// Tracked at the top, not present: a gitignored copy is in the author's checkout and absent in a clone.
-	let watched: boolean;
-	try {
-		watched = tracked(top).paths.includes(".coderabbit.yaml");
-	} catch (error) {
-		// After the push and the opening: a throw here would lose the line that names the open draft.
-		return done(
-			`finish: draft #${number} — the checkout's tracked files could not be listed: ${(error as Error).message.trim().split("\n")[0]}`,
-			1,
-		);
-	}
 	// Looked up before the wait, so settings that are missing cost none.
 	const found = card ? asking(card) : undefined;
 	if (typeof found === "string")
@@ -181,6 +178,8 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 			})
 		: { done: true, made: 0 };
 	if (!before.done) lines.push(`finish: no completed CodeRabbit run on ${short} after ${before.made} reads${unread}`);
+	// Said on every run, so a consumer that forgot the key sees it (the user's answer 2 b, 2026-11-03).
+	if (!watched) lines.push("finish: harness.reviewers names no reviewer, so none was waited for");
 
 	// No card, no question to read: a pin bump or a hotfix has none (`work-finish` spec, *No card: no question check*).
 	if (!found) lines.push("finish: no --card, so no card's question was read");
@@ -210,10 +209,12 @@ export async function finish(card: string | undefined, opening?: Opening): Promi
 		const got = read(full, commit);
 		if (Array.isArray(got)) [seen, last] = [got, state(got)];
 		else if (last.name === "unread") last = got;
-		return Array.isArray(got) ? !["skipped", "no run"].includes(last.name) : null;
+		return Array.isArray(got) ? !ASKED.includes(last.name) : null;
 	});
 	// Exit 0 whatever the state: the ready switch went through, and the line is the signal.
-	const outcome = last.name === "skipped" ? request(full, Number(number), commit, seen) : said(last, short, after.made);
+	const outcome = ASKED.includes(last.name)
+		? request(full, Number(number), commit, seen, said(last, short, after.made))
+		: said(last, short, after.made);
 	return done(`finish: ready #${number} — ${outcome}`, 0);
 }
 
@@ -224,6 +225,8 @@ function asking(card: string) {
 }
 
 const REQUEST = "@coderabbitai review";
+/** The states the reads after the ready switch go on through, and the request answers (the user's answer 1 a, 2026-11-03). */
+const ASKED: string[] = ["skipped", "no run"];
 /** The reads before the ready switch and after it, an interval apart: 11 and 17 intervals, 55 s and 85 s at the default 5 s, plus each read's own time. */
 const [WAIT, READS] = [12, 18];
 /** The failed reads in a row that end a wait: a revoked token or a dead network fails every read. */
@@ -231,30 +234,32 @@ const FAILS = 3;
 
 /**
  * Posts `@coderabbitai review` on #`n` as whoever `gh` holds, once per head:
- * not when such a comment came at or after `HEAD`'s first CodeRabbit run in
- * `runs`, and only when one more read of `sha`, right before the post, still
- * gives `skipped` (`core/git-and-prs.md` names the one comment as the user's
- * standing permission, answer 4 b). What the last line says of it.
+ * not when such a comment came at or after `sha`'s cutoff — the earlier of its
+ * committer date and its first CodeRabbit run in `runs` — and only when one
+ * more read of `sha`, right before the post, still gives `skipped` or no run
+ * (`core/git-and-prs.md` names the one comment as the user's standing
+ * permission, answers 4 b and 1 a). What the last line says of it, after
+ * `ended`, what the reads ended on.
  */
-function request(repo: string, n: number, sha: string, runs: Run[]) {
+function request(repo: string, n: number, sha: string, runs: Run[], ended: string) {
 	const short = sha.slice(0, 7);
-	const skipped = `CodeRabbit skipped ${short}`;
 	const comments = objects(`repos/${repo}/issues/${n}/comments?per_page=100`, ".[] | {created_at, body}");
-	if (!Array.isArray(comments)) return `${skipped}; comments unread, nothing asked: ${comments.why}`;
-	const since = arrived(runs);
+	if (!Array.isArray(comments)) return `${ended}; comments unread, nothing asked: ${comments.why}`;
+	// The committer date, not the push time, which neither git nor the check-runs read gives (`finish-named-reviewers`'s design, decision 4).
+	const since = arrived(runs, Number(git("show", "-s", "--format=%ct", sha)) * 1000);
 	// A full review asked for counts too (the user's answer 11 b, 2026-11-01).
 	const asked = [REQUEST, "@coderabbitai full review"];
 	if (comments.some((c) => asked.includes(String(c.body).trim()) && Date.parse(String(c.created_at)) >= since))
-		return `${skipped}; a review was already asked for`;
+		return `${ended}; a review was already asked for`;
 	const fresh = read(repo, sha);
 	const now = Array.isArray(fresh) ? state(fresh) : fresh;
-	if (now.name !== "skipped") return said(now, short);
+	if (!ASKED.includes(now.name)) return said(now, short);
 	try {
 		const post = gh(["pr", "comment", String(n), "-R", repo, "--body", REQUEST], plain());
-		return post.exitCode === 0 ? `${skipped}; asked for a review` : `${skipped}; the request failed, ${exited(post)}`;
+		return post.exitCode === 0 ? `${ended}; asked for a review` : `${ended}; the request failed, ${exited(post)}`;
 	} catch (error) {
 		// The pull request is ready by now: a throw would lose the line that says so.
-		return `${skipped}; the request failed, gh could not start: ${(error as Error).message}`;
+		return `${ended}; the request failed, gh could not start: ${(error as Error).message}`;
 	}
 }
 
