@@ -66,7 +66,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "4",
@@ -4269,7 +4269,7 @@
 		"bun/work-finish-card-changes.test.ts": "f9b36f264ecad197917e689c0fcdbd296b95d3a4",
 		"bun/work-finish-card.fixture.ts": "1ac54aedb56665ee9db238950699671aa49f4c89",
 		"bun/work-finish-card.test.ts": "5c0b53789760b6c910f822412ca21c9453287238",
-		"bun/work-finish.fixture.ts": "ff7767a048f57cfd0dc1ca5585442a4f1aabf5a4",
+		"bun/work-finish.fixture.ts": "270459600b56ffecc21a662c00c0f1155cd98ee1",
 		"bun/work-take.fixture.ts": "a1f4b51046821668d1629b1078d6a8179c3d3f19",
 		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6"
 	}

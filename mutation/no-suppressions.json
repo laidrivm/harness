@@ -18,7 +18,7 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "1",
@@ -34,7 +34,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "2",
@@ -50,7 +50,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "3",
@@ -66,7 +66,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "4",
@@ -82,7 +82,7 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "5",
@@ -98,7 +98,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "6",
@@ -114,7 +114,7 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "7",
@@ -130,7 +130,7 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "8",
@@ -146,7 +146,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "9",
@@ -162,7 +162,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "10",
@@ -178,7 +178,7 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "11",
@@ -194,7 +194,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "12",
@@ -210,7 +210,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "13",
@@ -226,7 +226,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "14",
@@ -242,7 +242,7 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "15",
@@ -258,7 +258,7 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "16",
@@ -274,7 +274,7 @@
 						}
 					},
 					"replacement": "!(value instanceof Object) && Array.isArray(value)",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "17",
@@ -290,7 +290,7 @@
 						}
 					},
 					"replacement": "value instanceof Object",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "18",
@@ -306,7 +306,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "19",
@@ -322,7 +322,7 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "20",
@@ -338,7 +338,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "21",
@@ -354,7 +354,7 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "22",
@@ -370,7 +370,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "23",
@@ -386,7 +386,7 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "24",
@@ -402,7 +402,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "25",
@@ -418,7 +418,7 @@
 						}
 					},
 					"replacement": "entry.count",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "26",
@@ -434,7 +434,7 @@
 						}
 					},
 					"replacement": "entry.why",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "27",
@@ -450,7 +450,7 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "28",
@@ -466,7 +466,7 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "29",
@@ -482,7 +482,7 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "30",
@@ -498,7 +498,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "31",
@@ -514,7 +514,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "32",
@@ -530,7 +530,7 @@
 						}
 					},
 					"replacement": "approved && allowlist(root).approved",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "33",
@@ -546,7 +546,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "34",
@@ -562,7 +562,7 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "35",
@@ -578,7 +578,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "36",
@@ -594,7 +594,7 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "37",
@@ -610,7 +610,7 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "38",
@@ -626,7 +626,7 @@
 						}
 					},
 					"replacement": "PROSE.every(ext => path.endsWith(ext))",
-					"status": "Survived"
+					"status": "Timeout"
 				},
 				{
 					"id": "39",
@@ -642,7 +642,7 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "40",
@@ -658,7 +658,7 @@
 						}
 					},
 					"replacement": "path.startsWith(ext)",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "41",
@@ -674,7 +674,7 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "42",
@@ -690,7 +690,7 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "43",
@@ -706,7 +706,7 @@
 						}
 					},
 					"replacement": "own.includes(path) && path === MANIFEST",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "44",
@@ -722,7 +722,7 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "45",
@@ -738,7 +738,7 @@
 						}
 					},
 					"replacement": "path !== MANIFEST",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "47",
@@ -754,7 +754,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "48",
@@ -770,7 +770,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "49",
@@ -786,7 +786,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "50",
@@ -802,7 +802,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "51",
@@ -818,7 +818,7 @@
 						}
 					},
 					"replacement": "text.split(marker).length + 1",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "52",
@@ -834,7 +834,7 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "53",
@@ -850,7 +850,7 @@
 						}
 					},
 					"replacement": "n <= times",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "54",
@@ -898,7 +898,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "58",
@@ -914,7 +914,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "59",
@@ -930,7 +930,7 @@
 						}
 					},
 					"replacement": "at - 1",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "60",
@@ -946,7 +946,7 @@
 						}
 					},
 					"replacement": "[...Map.groupBy(found, ({\n  path,\n  marker\n}) => `${path} ${marker}`)]",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "61",
@@ -962,7 +962,7 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "62",
@@ -978,7 +978,7 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "63",
@@ -994,7 +994,7 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "64",
@@ -1010,7 +1010,7 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "65",
@@ -1026,7 +1026,7 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "66",
@@ -1042,7 +1042,7 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "67",
@@ -1058,7 +1058,7 @@
 						}
 					},
 					"replacement": "list.length >= (allowed[key] ?? 0)",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "68",
@@ -1074,7 +1074,7 @@
 						}
 					},
 					"replacement": "list.length <= (allowed[key] ?? 0)",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "69",
@@ -1090,7 +1090,7 @@
 						}
 					},
 					"replacement": "allowed[key] && 0",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "70",
@@ -1106,7 +1106,7 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "71",
@@ -1122,7 +1122,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "72",
@@ -1138,7 +1138,7 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "73",
@@ -1154,7 +1154,7 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "74",
@@ -1170,7 +1170,7 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "75",
@@ -1202,7 +1202,7 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "77",
@@ -1218,7 +1218,7 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "78",
@@ -1234,7 +1234,7 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "79",
@@ -1250,7 +1250,7 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Timeout"
 				},
 				{
 					"id": "80",

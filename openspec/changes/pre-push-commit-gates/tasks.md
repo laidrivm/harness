@@ -176,7 +176,20 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       each listing its modules, every module whose dry run failed and why,
       and the stored files' total size. Verify the last batch leaves every
       module with tests holding a stored file (`a-run-asked-for-every-module`)
-      and a second `--all` rewrites none (`a-run-that-found-nothing-to-rewrite`)
+      and a second `--all` rewrites none (`a-run-that-found-nothing-to-rewrite`).
+      Measured 2026-11-04 on the laptop: `--all` on `25ce9821` wrote 73 stored
+      files, then the incremental run on `8d89655f` rewrote seven (#422's
+      `coderabbit-run`, `config`, `work-finish` and the modules whose tests it
+      changed). Every module with a test file holds one; the fifteen without
+      are those the run names as untested. 4 173 780 bytes, 12 678 mutants:
+      2 866 killed, 7 234 timed out, 2 578 survived. Decision 8's spread, from
+      the four of the seven whose source did not change between the two runs
+      and so ran whole twice on one source: `no-suppressions` 75 of 80 changed
+      status (74 killed to timed out, 1 survived to timed out),
+      `work-finish-card` 1 of 266, `work-resolve` 0 of 196, `work` 0 of 162.
+      Open: `work-status` (#423), `work` (its tests) and `no-suppressions`
+      (6.1) changed after `8d89655f`, so their stored files are stale and the
+      second run that rewrites none has not been made
 
 ## 7. The mutation step in the hook and in CI
 

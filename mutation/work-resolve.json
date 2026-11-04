@@ -3146,7 +3146,7 @@
 	"fingerprint": {
 		"bun/diff-budget.fixture.ts": "a51ac572bdc585134c3a16ebb17c58581b20dcb2",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bun/work-finish.fixture.ts": "ff7767a048f57cfd0dc1ca5585442a4f1aabf5a4",
+		"bun/work-finish.fixture.ts": "270459600b56ffecc21a662c00c0f1155cd98ee1",
 		"bun/work-resolve.fixture.ts": "b537ab36854e4f3447a411b83baa6d8142ae4ec5",
 		"bun/work-resolve.test.ts": "ab96f4556b2067d239d92cf9e4aa6772c2bd4199",
 		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6"
