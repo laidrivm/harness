@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { REVIEWED } from "./coderabbit-run.ts";
 import { flat } from "./prose.fixture.ts";
+import { tracked } from "./tracked.ts";
 
 const PATH = join(import.meta.dir, "..", "core", "skills", "session-wrapup", "SKILL.md");
 const skill = () => readFileSync(PATH, "utf8");
@@ -113,6 +114,60 @@ test("allowed-tools holds the two gh reads", () => {
 	const allowed = /^allowed-tools: "(.*)"$/m.exec(skill())?.[1]?.split(", ") ?? [];
 	expect(allowed).toContain("Bash(gh api:*)");
 	expect(allowed).toContain("Bash(gh pr list:*)");
+});
+
+// spec: agent-rulebook/a-wrap-up-on-main
+// spec: agent-rulebook/a-wrap-up-on-a-feature-branch
+test("step 5 appends to the state ledger of origin's <owner>/<name>, and the skill names no ledger in the tree", () => {
+	const text = step();
+	expect(text).toContain("`~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md`");
+	expect(text).toContain("`<repo>` as the `<owner>/<name>` that `git remote get-url origin` ends in, without `.git`");
+	// The whole path, never its basename: two origin-less repositories may share one (CodeRabbit).
+	expect(text).toContain("or `local` followed by `<top>` itself (`local/home/me/app`) where there is no `origin`");
+	expect(text).toContain("on every branch and machine");
+	expect(text).toContain("Append the same lines to `<repo>`'s file for this month");
+	expect(skill()).not.toMatch(/docs\/context\/pipeline-yield/);
+});
+
+// spec: agent-rulebook/two-repositories-on-one-machine
+test("every read of the previous entry reads <repo>'s files alone", () => {
+	const text = step();
+	expect(text).toContain(
+		"Wherever this step reads the previous entry — for `<gates-since>`, for `<since>` and for the earlier `first review` lines — it reads `<repo>`'s files there alone",
+	);
+	expect(text).toContain("less any an earlier `first review` line in `<repo>`'s files names as measured");
+});
+
+// spec: agent-rulebook/the-first-entry-on-a-machine
+test("a machine's first entry takes the first-entry-ever rules, the gates query's project filter unchanged", () => {
+	const text = step();
+	expect(text).toContain(
+		"When `<repo>`'s directory holds no file yet, the entry is this machine's first: take the rules for the first entry ever, and read no earlier entry from the tree",
+	);
+	expect(text).toContain('(.project == $top or (.project | startswith($top + "/")))');
+});
+
+// spec: agent-rulebook/a-wrap-up-on-a-detached-head
+test("the heading names the detached commit as git status prints it", () => {
+	expect(step()).toContain(
+		// Never `git status`, which can name a tag, a remote branch or the commit it detached from (CodeRabbit).
+		"on a detached `HEAD`, `<branch>` is the commit `git rev-parse --short HEAD` prints, never empty",
+	);
+});
+
+test("allowed-tools holds the state ledger's Edit and origin's read", () => {
+	const allowed = /^allowed-tools: "(.*)"$/m.exec(skill())?.[1]?.split(", ") ?? [];
+	expect(allowed).toContain("Edit(~/.local/state/harness/pipeline-yield/**)");
+	expect(allowed).toContain("Bash(git remote get-url origin)");
+	expect(allowed).toContain("Bash(git rev-parse:*)");
+});
+
+// spec: agent-rulebook/no-ledger-in-the-harness-tree
+test("the harness tracks no docs/context/pipeline-yield-*.md", () => {
+	// The tree's one listing (`tracked-file-sweep`), never a `git ls-files` of the case's own.
+	expect(
+		tracked(import.meta.dir).paths.filter((path) => /^docs\/context\/pipeline-yield-[^/]*\.md$/.test(path)),
+	).toEqual([]);
 });
 
 test("the example block holds a first review line, and the description names the count", () => {

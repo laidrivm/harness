@@ -9,7 +9,7 @@ whole harness; `design.md`, decisions 3–4).
 
 ## 1. A written done names the wrap-up, and the wrap-up leaves the tree alone
 
-- [ ] 1.1 Failing cases in `bun/work-status.test.ts`, a new describe "the
+- [x] 1.1 Failing cases in `bun/work-status.test.ts`, a new describe "the
       next step", over `work-status.fixture.ts`. A card at `archiving` moved
       to `done` over a clone whose `origin/main` archives the change, as the
       `done` cases of `work-status-tree.test.ts` build it, with `assign:
@@ -28,7 +28,7 @@ whole harness; `design.md`, decisions 3–4).
       harness's `.claude/settings.json` allows `Skill(<name>)`
       (`the-skill-the-line-names`). The first, second and last fail on today's
       code
-- [ ] 1.2 Then `bun/work-status.ts`: append the `next:` line, exported as a
+- [x] 1.2 Then `bun/work-status.ts`: append the `next:` line, exported as a
       constant the cases read, when the read-back `now` is `done` and `from`
       is not, after the release's line and independent of the exit code; a
       comment on the constant says its quoted Russian phrase is the user's own
@@ -42,7 +42,7 @@ whole harness; `design.md`, decisions 3–4).
       %s origin/main proves, five cards make no count" in
       `bun/work-status.test.ts`. Verify with `bun test bun/work-status*
       bun/work-release.test.ts`
-- [ ] 1.3 Failing cases in `bun/session-wrapup-yield.test.ts`, over step 5's
+- [x] 1.3 Failing cases in `bun/session-wrapup-yield.test.ts`, over step 5's
       flattened text as the file reads it: step 5 appends to
       `~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md`, names
       `git remote get-url origin`'s `<owner>/<name>` as `<repo>` and
@@ -59,8 +59,10 @@ whole harness; `design.md`, decisions 3–4).
       and `Bash(git remote get-url origin)`. And one case
       over the repository: `git ls-files` for
       `:(top)docs/context/pipeline-yield-*.md` exits 0 and lists nothing
-      (`no-ledger-in-the-harness-tree`). Each fails today
-- [ ] 1.4 Then `core/skills/session-wrapup/SKILL.md`: step 5's append
+      (`no-ledger-in-the-harness-tree`; read through `bun/tracked.ts`, the
+      tree's one listing `tracked.test.ts` holds every file to). Each fails
+      today
+- [x] 1.4 Then `core/skills/session-wrapup/SKILL.md`: step 5's append
       paragraph targets `<repo>`'s file as `design.md` decisions 3–4 set out;
       the three reads of the previous entry name that file's ledger alone; the
       heading's detached form; the two `allowed-tools` entries; the Rules section's
@@ -75,7 +77,7 @@ whole harness; `design.md`, decisions 3–4).
       the sentence pointing at `docs/context/pipeline-yield-*.md` names the
       ledger step 5 keeps. Verify with `bun test
       bun/session-wrapup-yield.test.ts bun/review-docs.test.ts`
-- [ ] 1.5 Delete `docs/context/pipeline-yield-2026-10.md` with `git rm`, and
+- [x] 1.5 Delete `docs/context/pipeline-yield-2026-10.md` with `git rm`, and
       grep the tree — `bun/`, `core/`, `openspec/specs/`, `.claude/`,
       `README.md`, `CLAUDE.md`, configs — for `pipeline-yield` and
       `docs/context`, leaving only the save point's mentions and archived
@@ -86,7 +88,9 @@ whole harness; `design.md`, decisions 3–4).
       pull request of the consumer's own (`dota2` and `mellon` hold them).
       Verify with `bun test bun/session-wrapup-yield.test.ts` and by reading
       the README passages back
-- [ ] 1.6 Rule 4 of the VPS rules (card 40c39875c31b81f0b1d1cbea945696bc):
+- [x] 1.6 Rule 4 of the VPS rules (card 40c39875c31b81f0b1d1cbea945696bc;
+      merged in #412 as `orchestrator/runner/session-rules.md`, copied to
+      `/etc/claude-code/CLAUDE.md`, and shrunk there, its eleven rules kept):
       if `orchestrator/runner/CLAUDE.md` is on `origin/main` (`git ls-tree
       --full-tree origin/main orchestrator/runner/CLAUDE.md`), shrink its
       rule 4 — "When a card reaches done, run `/session-wrapup`, then write
@@ -96,5 +100,5 @@ whole harness; `design.md`, decisions 3–4).
       leave a comment on that card saying rule 4 shrinks to that pointer
       once this change merges. Verify by reading the file back, or the
       card's comments
-- [ ] 1.7 Run the whole `bun test` and `bun bun/pre-pr.ts`, and confirm
+- [x] 1.7 Run the whole `bun test` and `bun bun/pre-pr.ts`, and confirm
       `openspec validate session-wrapup-on-done --strict` passes
