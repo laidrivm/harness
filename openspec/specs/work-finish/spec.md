@@ -547,9 +547,10 @@ the `package.json` at the checkout's top: the check-run names of the
 reviewers it waits for. With no such key, the key set to `null` (JSON's
 spelling of an absent value, as `bun/config.ts`'s `read()` treats it), no
 such file, or an empty list, it SHALL say no reviewer is named, read no check
-run, wait for none and ask for no review. A file that does not parse, any
-other value that is not a list of strings, or a name other than `CodeRabbit`
-SHALL be refused before the push, naming the value.
+run, wait for none and ask for no review. A file that does not parse SHALL be
+refused before the push, naming the file. Any other value that is not a list
+of strings SHALL be refused before the push, naming `harness.reviewers` and
+the value; a name other than `CodeRabbit`, naming that name.
 
 #### Scenario: A project naming no reviewer
 
