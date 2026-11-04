@@ -544,16 +544,17 @@ Without `--card`, `finish` SHALL write nothing to Notion.
 
 `finish` SHALL read, before the push, the list under `harness.reviewers` in
 the `package.json` at the checkout's top: the check-run names of the
-reviewers it waits for. With no such key, no such file, or an empty list, it
-SHALL say no reviewer is named, read no check run, wait for none and ask for
-no review. A file that does not parse, a value that is not a list of
-strings, or a name other than `CodeRabbit` SHALL be refused before the push,
-naming the value.
+reviewers it waits for. With no such key, the key set to `null` (JSON's
+spelling of an absent value, as `bun/config.ts`'s `read()` treats it), no
+such file, or an empty list, it SHALL say no reviewer is named, read no check
+run, wait for none and ask for no review. A file that does not parse, any
+other value that is not a list of strings, or a name other than `CodeRabbit`
+SHALL be refused before the push, naming the value.
 
 #### Scenario: A project naming no reviewer
 
 - **WHEN** the checkout's `package.json` has no `harness.reviewers`, or has
-  `[]`, and the checkout tracks `.coderabbit.yaml`
+  `null` or `[]`, and the checkout tracks `.coderabbit.yaml`
 - **THEN** `finish` prints that no reviewer is named, reads no check run,
   waits for none, asks for no review, and ends on `finish: ready #7`
 
