@@ -36,7 +36,7 @@ describe("a merged pull request proves done", () => {
 	test("pr:350 merged into main writes done, fetching nothing [10]", async () => {
 		const { dir, query } = checkout();
 		const run = await status({ args: to("done"), cwd: dir, page: { pointer: "pr:350" }, gh: pr() });
-		expect([run.code, run.last, run.gh]).toEqual([0, `status: ${CARD} approved → done`, [query]]);
+		expect([run.code, run.out.split("\n")[0], run.gh]).toEqual([0, `status: ${CARD} approved → done`, [query]]);
 		expect(run.git.filter((call) => call === "fetch" || call === "archive")).toEqual([]);
 	});
 

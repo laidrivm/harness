@@ -120,9 +120,10 @@ the same month merges. Three fixes were weighed:
   `~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md` on every
   branch, whatever its state. `<repo>` is the `<owner>/<name>` that `git
   remote get-url origin` ends in, without `.git` (`laidrivm/harness`,
-  `laidrivm/dota2`), or `local/` and `<top>`'s basename where there is no
-  `origin` — two directories, so no owner and name can run together into
-  another's: one machine runs several projects, and
+  `laidrivm/dota2`), or `local` followed by `<top>`'s whole path where there
+  is no `origin` — never its basename, which two such repositories can share
+  (CodeRabbit, round 1). Directories, so no owner and name can run together
+  into another's: one machine runs several projects, and
   a ledger they shared would date one project's windows from another's entry
   and skip its pull request numbers. The path is fixed rather than
   `$XDG_STATE_HOME`-relative, so the one `allowed-tools` rule always matches
@@ -186,12 +187,17 @@ change, delete the tracked `docs/context/pipeline-yield-*.md` in a pull
 request of the consumer's own. This change edits no other repository.
 
 A detached `HEAD` has no branch for the entry's `## <yyyy-mm-dd> — <branch>`
-heading; it names the detached commit as `git status` prints it.
+heading; it names the commit `git rev-parse --short HEAD` prints — never
+`git status`'s line, which can name a tag, a remote branch or the commit the
+`HEAD` detached from (CodeRabbit, round 1), and which `allowed-tools` covers
+with `Bash(git rev-parse:*)`, as it does `<top>`'s read.
 
 The skill's `allowed-tools` gain `Edit(~/.local/state/harness/pipeline-yield/**)`
 and `Bash(git remote get-url origin)` — an `Edit` rule covers the Write that
-creates a new month's file (to confirm against Claude Code's permission docs
-on apply). `core/review-toolkit.md`,
+creates a new month's file: Claude Code's permission docs (*Read and Edit*,
+read on apply, 03.11) say "`Edit` rules apply to all built-in tools that edit
+files", a `~/` path is home-relative, and `**` matches across directories.
+`core/review-toolkit.md`,
 which points readers at `docs/context/pipeline-yield-*.md`, points at the
 ledger step 5 names instead.
 

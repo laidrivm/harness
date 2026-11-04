@@ -15,7 +15,7 @@ The agent harness shared by several projects: a rulebook, Claude Code skills, an
 2. Link each skill the project uses as a tracked relative link, `.claude/skills/<name>` → `../../node_modules/harness/core/skills/<name>`.
 3. Put the values the gates run with under a `"harness"` key in `package.json`, typed in `bun/config.ts`; a gate whose key is absent fails, naming it. The one exception is `reviewers`, the check-run names of the reviewers `finish` waits for (`CodeRabbit` the only one understood), whose absence means no reviewer.
 4. From the project's root, run `bun node_modules/harness/bun/sync.ts`. It writes the rulebook and its docs into a tracked `harness/`, which the project's `CLAUDE.md` imports, the harness's hooks and its `deny` and `ask` entries into `.claude/settings.json`, and `[install]` into `bunfig.toml` ([harness-updates](openspec/specs/harness-updates/spec.md)). Edit a rule in the harness, never in the copy. So that the review bot reads the rules, name `harness/*.md` yourself under `knowledge_base.code_guidelines.filePatterns` in the project's `.coderabbit.yaml`.
-5. Add to `permissions.allow` what sync does not write: `Skill(code-review)` where unattended sessions run the pre-PR sequence's local review — it matches the skill's name, never its arguments, so it also allows `ultra --post`, which posts under the user's account — and `Bash(bun node_modules/harness/bun/notion-ask.ts *)` and `Bash(bun node_modules/harness/bun/work.ts *)` for the commands below.
+5. Add to `permissions.allow` what sync does not write: `Skill(code-review)` where unattended sessions run the pre-PR sequence's local review — it matches the skill's name, never its arguments, so it also allows `ultra --post`, which posts under the user's account — `Skill(session-wrapup)`, which an unattended session runs without waiting on the user, and `Bash(bun node_modules/harness/bun/notion-ask.ts *)` and `Bash(bun node_modules/harness/bun/work.ts *)` for the commands below.
 6. `bun node_modules/harness/bun/check.ts` runs every check over the tree; `bun node_modules/harness/bun/settings-local.ts` sweeps the untracked `.claude/settings.local.json` against the tracked policy ([agent-permissions](openspec/specs/agent-permissions/spec.md)).
 7. Bump daily with the workflow below, saved as `.github/workflows/harness-bump.yml`. `verify` moves the pin to the harness's `main` head when its `test` run passed, and otherwise waits for the next day, and runs sync, check and the command under `"harness": { "bumpTest": … }`, the project's unit tests; `land` pushes only the tree `verify` checked ([harness-updates](openspec/specs/harness-updates/spec.md)). In a public repository GitHub disables the schedule after 60 days without activity; `gh workflow enable harness-bump.yml` restarts it. A project whose CodeRabbit posts a check run adds `"reviewers": ["CodeRabbit"]` under `"harness"` before its bump crosses `finish-named-reviewers` — an older harness ignores the key — or `finish` silently stops waiting for the review.
 
@@ -71,6 +71,8 @@ jobs:
           TREE: ${{ needs.verify.outputs.tree }}
 ```
 
+8. Once, after the bump that moves `session-wrapup`'s yield ledger out of the tree, delete the tracked `docs/context/pipeline-yield-*.md` in a pull request of the project's own; nothing writes to them after that bump, and a pin bump deletes nothing in the project's tree.
+
 ## Hooks and commands
 
 Until `bun install` has run, the hooks stand aside: the bootstrap lets only the install through, and in a cloud session the `SessionStart` hook runs that install itself. Each guard and gate records what it decides in the gate ledger, `gates.jsonl` under the user's state directory ([gate-ledger](openspec/specs/gate-ledger/spec.md)).
@@ -104,7 +106,7 @@ Until `bun install` has run, the hooks stand aside: the bootstrap lets only the 
 | `feature-generator` | Expand `spec.md` into a dependency-ordered `features.md` |
 | `playwright-cli` | Vendored reference for driving a browser via the Playwright CLI |
 | `preflight` | Production pre-flight checklist for a branch |
-| `session-wrapup` | End-of-session debrief, capture pass and pipeline yield |
+| `session-wrapup` | End-of-session debrief, capture pass and pipeline yield, its ledger kept outside the tree under `~/.local/state/harness/pipeline-yield/` |
 | `spec-generator` | Turn a vague product idea into a structured product spec |
 | `triage` | Group a diff into feature areas with risk tiers |
 | `warm` | Vet the dependencies a branch adds |

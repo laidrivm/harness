@@ -14,7 +14,7 @@ afterAll(cleanup);
 
 const to = (target: string) => ["status", "--card", CARD, "--to", target];
 const wrote = (run: Awaited<ReturnType<typeof status>>, target: string) =>
-	expect([run.code, run.last, run.left]).toEqual([0, `status: ${CARD} approved → ${target}`, []]);
+	expect([run.code, run.out.split("\n")[0], run.left]).toEqual([0, `status: ${CARD} approved → ${target}`, []]);
 const without = (tree: Record<string, string | null>, end: string) =>
 	Object.fromEntries(Object.entries(tree).filter(([path]) => !path.endsWith(end)));
 

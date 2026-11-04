@@ -8,7 +8,8 @@
  * unproven entry into the range. Each refusal writes nothing in Notion and is
  * one `status` record; a failed write records nothing. After a write it
  * releases the card's `Assign` when nothing waits there (`cleared()`), and
- * prints that line after its own.
+ * prints that line after its own. A `--to done` that reads `done` back from
+ * another status gets `NEXT` last, the session's cue to wrap up.
  */
 import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -32,6 +33,14 @@ const MERGED = ["proposed", "applied", "done"];
 const ARCHIVE = /^openspec\/changes\/archive\/([^/]+)\/$/;
 /** A fix card's `Pointer`: the one pull request that closes it (task-board). */
 const PR = /^pr:([1-9]\d*)$/;
+/**
+ * The last line after a card moves to `done`. «можно /clear» stays in Russian
+ * on purpose: it is the user's own phrase, the one they wait for in chat
+ * (`openspec/changes/archive/2026-11-03-session-wrapup-on-done/design.md`,
+ * decision 1).
+ */
+export const NEXT =
+	"next: run /session-wrapup unless it is already running, then tell the user «можно /clear»; a subagent passes this line to its caller instead";
 
 /** A refusal under the ledger id `id`. */
 class Refusal extends Error {
@@ -185,5 +194,8 @@ export async function status(card: string, to: string, timeout = 30_000): Promis
 	}
 	const freed = await cleared(found.call, card, found.settings.user);
 	const line = `status: ${card} ${from} → ${now ?? "no status"}`;
-	return { lines: freed.line ? [line, freed.line] : [line], code: now === to && !freed.restoreFailed ? 0 : 1 };
+	const lines = freed.line ? [line, freed.line] : [line];
+	// Whatever the release's exit: a failed restore leaves the card done, and the debrief still due.
+	if (to === "done" && now === "done" && from !== "done") lines.push(NEXT);
+	return { lines, code: now === to && !freed.restoreFailed ? 0 : 1 };
 }
