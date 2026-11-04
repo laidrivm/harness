@@ -47,7 +47,8 @@ head, at most once.
 ### 1. The key lives in `package.json` under `"harness"`, read by `bun/config.ts`
 
 `reviewers: string[]` joins `Config`. A new `reviewers(root)` in
-`bun/config.ts` returns `[]` for an absent file or key and the list otherwise,
+`bun/config.ts` returns `[]` for an absent file or key (a `null` value counting
+as absent, as in `read()`) and the list otherwise,
 and throws naming the file or `harness.reviewers` for a file that does not
 parse, a value that is not an array of strings, or a name other than
 `CodeRabbit`. The JSON parse and its error are lifted out of `read()` into one
