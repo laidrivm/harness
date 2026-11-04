@@ -6,8 +6,8 @@
  * approval is an entry of the consumer's `harness.suppressions` and therefore a
  * line of the diff.
  *
- * Every tracked file is read but prose, the check's own script and test, and
- * the root manifest the approvals live in. Prose names these markers while
+ * Every tracked file is read but prose, the check's own script and test and
+ * its stored mutation results, and the root manifest the approvals live in. Prose names these markers while
  * explaining the rule — all four artefacts of the change introducing this check
  * do — and a check that fails on its own proposal is a check nobody keeps.
  */
@@ -28,15 +28,22 @@ const MARKERS = ["biome-ignore", "@ts-expect-error", "@ts-ignore"];
  */
 const PROSE = [".md"];
 
+/** The harness's own root, the directory above this script's. */
+const HOME = join(import.meta.dir, "..");
+
 /**
- * This script and its test, excluded by path rather than by allowlist entry:
- * both must spell the three markers out to do their job, and an entry would
- * pin a count that every added test case then has to re-approve. Named from
- * where they sit relative to `root`, which in a consumer is a path git does not
- * track and so never matches.
+ * This script, its test and the stored mutation results of the script, which
+ * hold its source, excluded by path rather than by allowlist entry: all three
+ * must spell the three markers out, and an entry would pin a count that every
+ * added test case or edit to the script then has to re-approve. The rest of
+ * `mutation/` is scanned, so a marker in another module's source still fails.
+ * Named from where they sit under `home` relative to `root`, which in a
+ * consumer is a path git does not track and so never matches.
  */
-const self = (root: string) =>
-	["no-suppressions.ts", "no-suppressions.test.ts"].map((name) => relative(root, join(import.meta.dir, name)));
+const self = (root: string, home: string) =>
+	["bun/no-suppressions.ts", "bun/no-suppressions.test.ts", "mutation/no-suppressions.json"].map((path) =>
+		relative(root, join(home, path)),
+	);
 
 /**
  * The root manifest, where `harness.suppressions` lives: every approval's key
@@ -97,17 +104,18 @@ export type Finding = { path: string; line: number; marker: string };
  * it, since every clone has it.
  *
  * The sweep's regular files, rooted at the repository root rather than at
- * `cwd`, so from a subdirectory the check's own two paths still match and it
- * does not fail on itself.
+ * `cwd`, so from a subdirectory the check's own paths still match and it
+ * does not fail on itself. `home` stands in for the harness root in a case
+ * that cannot hold the real `mutation/` file.
  */
-export function scan(cwd?: string, approved?: Record<string, number>): Finding[] {
+export function scan(cwd?: string, approved?: Record<string, number>, home = HOME): Finding[] {
 	const { root, files } = tracked(cwd);
-	return sweep(root, files, approved ?? allowlist(root).approved);
+	return sweep(root, files, approved ?? allowlist(root).approved, home);
 }
 
 /** The suppressions among `files` at `root` that `allowed` does not admit. */
-function sweep(root: string, files: string[], allowed: Record<string, number>): Finding[] {
-	const own = self(root);
+function sweep(root: string, files: string[], allowed: Record<string, number>, home = HOME): Finding[] {
+	const own = self(root, home);
 
 	const found: Finding[] = [];
 	for (const path of files) {

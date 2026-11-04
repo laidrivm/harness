@@ -88,6 +88,34 @@ describe("what the check does not read", () => {
 	});
 });
 
+// spec: commit-gates/the-stored-mutation-results-of-the-check-s-own-script
+describe("the stored mutation results of the check's own script", () => {
+	// The stored file holds the script's source, so it spells every marker out.
+	const stored = `{ "source": "biome-ignore @ts-expect-error @ts-ignore" }\n`;
+	// The harness root the exemption is named from, given as the fabricated
+	// tree: Stryker's sandbox leaves `mutation/` out, so the real one is absent there.
+	const home = (dir: string) => realpathSync(dir);
+
+	test("pass with an empty allowlist", () => {
+		const dir = fabricate({ "mutation/no-suppressions.json": stored });
+		expect(at(scan(dir, undefined, home(dir)))).toEqual([]);
+	});
+
+	test("while another file under mutation/ carrying a marker fails", () => {
+		const dir = fabricate({
+			"mutation/no-suppressions.json": stored,
+			"mutation/command-parse.json": `{ "source": "// @ts-ignore" }\n`,
+		});
+		expect(at(scan(dir, undefined, home(dir)))).toEqual(["mutation/command-parse.json:1: @ts-ignore"]);
+	});
+
+	test("and a consumer's file at that path is still scanned", () => {
+		// The path is named from where the harness sits, never matched by name alone.
+		const dir = fabricate({ "mutation/no-suppressions.json": "// @ts-ignore\n" });
+		expect(at(scan(dir))).toEqual(["mutation/no-suppressions.json:1: @ts-ignore"]);
+	});
+});
+
 describe("the allowlist", () => {
 	const approved = { "src/model.ts biome-ignore": 1 };
 

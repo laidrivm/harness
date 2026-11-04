@@ -161,12 +161,14 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 
 ## 6. The baseline
 
-- [ ] 6.1 Failing cases in `bun/no-suppressions.test.ts`: a tracked
+- [x] 6.1 Failing cases in `bun/no-suppressions.test.ts`: a tracked
       `mutation/no-suppressions.json` carrying the three markers passes with
       an empty allowlist, and another file under `mutation/` carrying one
       fails (`the-stored-mutation-results-of-the-check-s-own-script`); then
       exempt that path beside `self()`. Verify `bun bun/no-suppressions.ts`
-      exits 0 with the stored file present
+      exits 0 with the stored file present. #420 had not done it; the cases
+      pass the harness root to `scan` as the fabricated tree, since Stryker's
+      sandbox leaves `mutation/` out
 - [ ] 6.2 First, by the user's decision 8, run a few modules twice with
       `--force` and record on the card how many mutants change status, for
       the timeout setting. Then, on the laptop, `bun bun/mutation-run.ts --all`, committing each
