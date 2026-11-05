@@ -129,7 +129,8 @@ managed `CLAUDE.md`'s (session-runner-image, #421): after the `install -d -m
 - `SessionStart` with matcher `startup|clear`: creates `~/.harness-fresh`.
 - `SessionStart` with matcher `startup|clear|resume`: when
   `~/.harness-deploy-failed` exists, prints a line asking the session to
-  report it to the user in chat, followed by the file. A hook's plain stdout
+  report it to the user in chat and then delete it, followed by the file. A
+  hook's plain stdout
   on `SessionStart` enters the session's context.
 - `UserPromptSubmit`: removes `~/.harness-fresh`.
 
@@ -162,7 +163,10 @@ What a deploy's restart of a fresh session continues is open (question 18,
 
 ### `up -d`, then a restart when the runner was not recreated
 
-With the mark, the script takes the pass locks as on `main` (inert, below),
+With the mark, the script removes `~/.harness-deploy-failed`, which the head
+it now deploys supersedes: the restarted session's `SessionStart` can run
+before the wait below sees `main`, and would report an old failure as new
+(local review). It then takes the pass locks as on `main` (inert, below),
 reads the check again, and runs `docker compose up -d`. It compares the
 `runner` container's id before and after: when `up` did not recreate it (the
 image and its configuration unchanged), it runs `docker compose restart
@@ -176,12 +180,14 @@ picks up new hooks and skills in place, which is not verified (explore,
 After `up` the script polls `docker compose exec -T -u agent runner tmux
 has-session -t main` every 5 s for at most 120 s. When `main` answers, it
 writes the head to `$STATE_DIRECTORY/deployed` (or
-`/var/lib/harness-deploy/deployed` for a run by hand, as on `main`), removes
-`~/.harness-deploy-failed`, prunes, and exits 0.
+`/var/lib/harness-deploy/deployed` for a run by hand, as on `main`), prunes,
+and exits 0.
 
-When `main` does not answer, the script tags `orchestrator-runner:previous`
-back as `orchestrator-runner`, runs `docker compose up -d runner`, writes the
-head to `$STATE_DIRECTORY/rolled-back`, writes the failure file, and exits 1.
+When `main` does not answer, the script writes the head to
+`$STATE_DIRECTORY/rolled-back` and the failure file, tags
+`orchestrator-runner:previous` back as `orchestrator-runner`, runs `docker
+compose up -d runner`, and exits 1. The failure file comes before `up`, so
+the restored session's start finds it (local review).
 When the image did not change, there is no other image to go back to: the
 record and the failure file alone. The user chose this on the card: «light
 rollback: the previous image gets a tag before the build; if `main` is not up
@@ -204,7 +210,9 @@ this check; catching it is stage 9's probe.
 `failed()` on `main` names the step and the head on the journal and writes
 each clone's stop file. It gains one write before those: the failure file
 `~/.harness-deploy-failed` in agent's home, through the volume's mount point,
-owned as that home is, so the session can remove it. One line,
+owned as that home is, so the session can remove it; the hook's ask line
+tells it to once it has reported the failure, so the next start does not
+report it again (local review). One line,
 `<time> deploy: <step> failed at <sha>`, replacing an older one. Every step
 after the fast-forward calls it, the rollback included (a run the service's
 timeout kills cannot, *The timer alone starts the deploy*), so a failed build is

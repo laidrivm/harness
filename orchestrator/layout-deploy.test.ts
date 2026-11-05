@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
-import { instructions, read } from "./layout.fixture.ts";
+import { instructions, madeOpen, read } from "./layout.fixture.ts";
 
 /** The container's managed settings and the deploy's host files, read from the tree (host-deploy design). */
 
@@ -40,9 +40,7 @@ describe("the container's managed settings", () => {
 	test("the image copies them to Claude Code's Linux managed-settings path, between the directory's 0755 and the mode check", () => {
 		const all = instructions("orchestrator/runner/Dockerfile");
 		const copy = all.indexOf("COPY --chmod=0644 runner/managed-settings.json /etc/claude-code/managed-settings.json");
-		const made = all.findIndex(
-			(l) => l.startsWith("RUN ") && l.includes("install -d -m 0755 ") && l.includes("/etc/claude-code"),
-		);
+		const made = madeOpen(all, "/etc/claude-code");
 		const check = all.findIndex((l) => l.startsWith("RUN ") && l.includes("find ") && l.includes("/etc/claude-code"));
 		expect(copy).toBeGreaterThan(made);
 		expect(made).toBeGreaterThan(-1);
@@ -51,6 +49,9 @@ describe("the container's managed settings", () => {
 		expect(Object.keys(hooks).sort()).toEqual(["SessionStart", "UserPromptSubmit"]);
 		expect(hooks.SessionStart?.map((e) => e.matcher)).toContain("startup|clear");
 		expect(hooks.UserPromptSubmit?.every((e) => e.matcher === undefined)).toBe(true);
+		// Only a `command` hook runs its string in a shell, as the cases below do; no other field (async, timeout) may change that.
+		for (const entry of Object.values(hooks).flat())
+			for (const hook of entry.hooks) expect(hook).toEqual({ type: "command", command: expect.any(String) });
 	});
 
 	// spec: orchestrator/the-user-s-first-message
@@ -87,6 +88,7 @@ describe("the container's managed settings", () => {
 			const out = run(home, "SessionStart", source).split("\n");
 			expect(out[0]).toContain("report");
 			expect(out[0]).toContain("user");
+			expect(out[0]).toContain("delete ~/.harness-deploy-failed");
 			expect(out[1]).toBe(line);
 		},
 	);

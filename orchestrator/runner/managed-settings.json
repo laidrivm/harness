@@ -10,7 +10,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "[ ! -e \"$HOME/.harness-deploy-failed\" ] || { echo 'A deploy of the harness failed: report it to the user in chat, quoting the line below.'; cat \"$HOME/.harness-deploy-failed\"; }"
+						"command": "[ ! -e \"$HOME/.harness-deploy-failed\" ] || { echo 'A deploy of the harness failed: report it to the user in chat, quoting the line below, then delete ~/.harness-deploy-failed.'; cat \"$HOME/.harness-deploy-failed\"; }"
 					}
 				]
 			}

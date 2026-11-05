@@ -176,7 +176,7 @@ check read that fails SHALL write neither, nor SHALL a run that the service's
 start timeout kills, which leaves the timeout on the journal. The managed `SessionStart` hook
 SHALL print the failure file, when it exists, on startup, on clear and on a
 continued start, with a line asking the session to report it to the user in
-chat.
+chat and then to remove it.
 
 #### Scenario: The build fails
 
@@ -200,4 +200,4 @@ chat.
 
 - **WHEN** the managed `SessionStart` hook runs while the failure file exists
 - **THEN** its output asks the session to report the failure to the user and
-  carries the file's line
+  then remove the file, and carries the file's line

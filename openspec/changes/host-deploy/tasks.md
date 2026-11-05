@@ -88,22 +88,23 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       each citing its scenario: `orchestrator/a-session-at-work`,
       `orchestrator/a-fresh-session`, `orchestrator/an-unchanged-image`,
       `orchestrator/the-session-comes-back`,
-      `orchestrator/the-session-does-not-come-back` (the tag goes back, `up
-      -d runner`, `rolled-back` written, the failure file, exit 1),
+      `orchestrator/the-session-does-not-come-back` (`rolled-back` and the
+      failure file written, then the tag goes back, `up -d runner`, exit 1),
       `orchestrator/a-rolled-back-head`,
       `orchestrator/the-deploy-token-is-absent`; extend
       `orchestrator/the-build-fails` with the failure file, and change the
       order `orchestrator/a-green-head` asserts in `deploy.test.ts` from 1.1's
       (`up`, prune, engine wait, push, record) to the tag before the build,
-      then `up`, the wait for `main`, engine wait, push, record, the failure
-      file's removal, prune. Record that they fail
+      then the failure file's removal, `up`, the wait for `main`, engine
+      wait, push, record, prune. Record that they fail
 - [ ] 3.2 In `deploy.sh`, per design.md: skip a head equal to `rolled-back`;
       tag the running runner's image as `orchestrator-runner:previous` before
       the build; after the build, exit 0 without the fresh-session mark; with
-      it, `up -d`, then `restart runner` when the container id is unchanged;
-      the wait for `main`; the rollback; the failure file in `failed()`; the
+      it, the failure file's removal, `up -d`, then `restart runner` when the
+      container id is unchanged; the wait for `main`; the rollback, its
+      failure file before its `up`; the failure file in `failed()`; the
       push and the engine wait skipped while the token file is absent; the
-      record, the failure file's removal, then the prune. Update the header
+      record, then the prune. Update the header
       comment. Make 3.1 pass
 - [ ] 3.3 Add `orchestrator/host/harness-deploy.service` (`Type=oneshot`,
       `ExecStart=/root/harness/orchestrator/deploy.sh`,
@@ -132,7 +133,9 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       Control reconnects, and `journalctl -u harness-deploy` shows the head
       deployed. Note on the card whether `SessionStart` fired on that
       `/clear` and whether the first message cleared the mark, the three
-      points design.md lists as unverified
+      points design.md lists as unverified, and which conversation the
+      restarted session holds: the cleared one, or the one before `/clear`
+      (question 18)
 - [ ] 4.3 **User decision.** Confirm the `main` ruleset's bypass list names no
       App and no bot, since every merge now runs on the host as root
 
