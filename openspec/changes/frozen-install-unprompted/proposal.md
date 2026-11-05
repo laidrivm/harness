@@ -22,11 +22,19 @@ through Remote Control, that prompt is a manual step in the stage 2.5 metric.
 - The command guard blocks (exit 2, reason on stderr) every install-family
   command except exactly `bun install --frozen-lockfile` or
   `bun i --frozen-lockfile`. The reason names that form and tells the agent
-  to ask the user to run any other install in their own terminal. A
-  command that assigns a variable before `bun`, as in `CI=1 bun install
-  --frozen-lockfile`, is not the exact form: bun reads its install settings
-  from the environment, and `BUN_CONFIG_SKIP_LOAD_LOCKFILE=1` was measured
-  making a frozen install install a package the lockfile does not hold.
+  to ask the user to run any other install in their own terminal. `bun`
+  must be the command's first word: an assignment (`CI=1 bun install
+  --frozen-lockfile`), a wrapper or a redirection before it makes the form
+  inexact — bun reads its install settings from the environment, and
+  `BUN_CONFIG_SKIP_LOAD_LOCKFILE=1` was measured making a frozen install
+  install a package the lockfile does not hold. And the nearest
+  `package.json` and its `bun.lock` must be tracked and unchanged against
+  `HEAD`, as a `bun run` script's `package.json` already must, since a frozen
+  install still installs what those files hold and runs the root package's
+  lifecycle scripts.
+- The guard's parser reads `X+=1` as an assignment, as bash and zsh do, not
+  as the command name — which today hides the command after it from every
+  check.
 - A block, not a hook `ask`: a local `allow` silences a hook's `ask`
   (`2026-10-22-interpreter-prompt`, task 1.7), so one "don't ask again"
   would let a bare `bun install` run silently afterwards.
@@ -74,6 +82,8 @@ None.
 - Changed: `bun/settings.ts` (`MANIFEST_WRITES`), `bun/settings.fixture.ts`,
   `.claude/settings.json` (ask, allow, the bootstrap hook text),
   `bun/command-guard-exec.ts` and `bun/command-guard.ts` (the new check),
+  `bun/command-guard-interpreters.ts` (`committed()` lifted out for both
+  callers), `bun/command-words.ts` (`NOT_A_NAME` takes `+=`),
   `bun/bootstrap.ts` (`BOOTSTRAP`, `NOTICE`), `bun/board-loop-clone.ts`,
   `bun/board-loop.ts`, the tests `bun/command-guard-install.test.ts` (new),
   `bun/command-guard-interpreters.test.ts`, `bun/settings-local.test.ts`,
@@ -82,7 +92,9 @@ None.
   `orchestrator/README.md`.
 - Consumers: their next sync drops the two `ask` entries and writes the new
   bootstrap text; the harness check fails on a consumer whose settings still
-  carry the old ones, as it fails on any drift, until that sync runs. An
+  carry the old ones, as it fails on any drift, until that sync runs. A
+  checkout with the new settings and an older install has no install check
+  until its first install (`design.md`, *Risks*). An
   agent whose habit is a bare `bun install` is refused with the frozen form
   named, and a lockfile that disagrees with `package.json` makes the frozen
   install fail, which is the user's to resolve in their terminal.

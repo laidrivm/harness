@@ -130,29 +130,45 @@ can use*, naming each, and SHALL write neither file.
 ### Requirement: An install runs only in its frozen form
 
 The guard SHALL block every `bun install` or `bun i` except exactly
-`bun install --frozen-lockfile` or `bun i --frozen-lockfile`: the subcommand
-first after `bun`, that one flag and no other word, and no variable assigned
-before `bun`, since bun reads install settings from the environment. The
+`bun install --frozen-lockfile` or `bun i --frozen-lockfile` — `bun` the
+command's first word, then the subcommand, that one flag and nothing else —
+run where the nearest `package.json` and the `bun.lock` beside it are tracked
+and unchanged against `HEAD` in every directory the line may run in. The
 reason SHALL name the frozen form and ask that any other install be run by
 the user in their own terminal.
 
 #### Scenario: The frozen form runs without a prompt
 
 - **WHEN** the agent attempts `bun install --frozen-lockfile` or
-  `bun i --frozen-lockfile`
+  `bun i --frozen-lockfile` in a checkout whose `package.json` and `bun.lock`
+  are committed and unedited
 - **THEN** the hook does not block it, and no `ask` entry prompts for it
 
-#### Scenario: The frozen form however it is quoted or spaced
+#### Scenario: The frozen form however it is quoted, spaced or reached
 
-- **WHEN** the agent attempts `bun  i --frozen-lockfile` or
-  `bun "install" --frozen-lockfile`
-- **THEN** the hook does not block it, because the shell runs the same words
+- **WHEN** the agent attempts `bun  i --frozen-lockfile`,
+  `bun "install" --frozen-lockfile` or `~/.bun/bin/bun i --frozen-lockfile`
+- **THEN** the hook does not block it, because the shell runs the same bun
+  with the same words
 
-#### Scenario: The frozen form behind a wrapper or a path
+#### Scenario: Something before bun
 
-- **WHEN** the agent attempts `timeout 600 bun install --frozen-lockfile` or
-  `~/.bun/bin/bun i --frozen-lockfile`
-- **THEN** the hook does not block it
+- **WHEN** the agent attempts `timeout 600 bun install --frozen-lockfile`,
+  `env -C /tmp/x bun i --frozen-lockfile`,
+  `echo --config=x.toml | xargs bun i --frozen-lockfile` or
+  `>package.json bun install --frozen-lockfile`
+- **THEN** the hook blocks the call, because a word before `bun` can move the
+  install, add to its words or rewrite the manifest
+
+#### Scenario: A manifest the tree does not vouch for
+
+- **WHEN** the agent attempts `bun install --frozen-lockfile` where
+  `package.json` or `bun.lock` carries an uncommitted or staged edit, is
+  untracked, or is missing, or attempts
+  `cd /tmp/x && bun install --frozen-lockfile` outside any repository
+- **THEN** the hook blocks the call, because the install would run what no
+  reviewer read: dependencies the agent wrote in, and the root package's
+  lifecycle scripts
 
 #### Scenario: A bare install
 
@@ -181,10 +197,18 @@ the user in their own terminal.
 #### Scenario: A variable assigned before bun
 
 - **WHEN** the agent attempts `CI=1 bun install --frozen-lockfile`,
-  `BUN_CONFIG_SKIP_LOAD_LOCKFILE=1 bun install --frozen-lockfile` or
+  `BUN_CONFIG_SKIP_LOAD_LOCKFILE=1 bun install --frozen-lockfile`,
+  `BUN_CONFIG_SKIP_LOAD_LOCKFILE+=1 bun install --frozen-lockfile` or
   `env BUN_CONFIG_REGISTRY=https://x.test bun i --frozen-lockfile`
 - **THEN** the hook blocks the call, because a variable bun reads can make
   the install resolve what the lockfile does not hold
+
+#### Scenario: An appending assignment is not the command
+
+- **WHEN** the agent attempts `X+=1 bun install`
+- **THEN** the hook blocks the call, because bash and zsh run the command
+  after an appending assignment as they do after `X=1`, so `bun` is the
+  command and not `X+=1`
 
 #### Scenario: Each command of a compound line is judged alone
 

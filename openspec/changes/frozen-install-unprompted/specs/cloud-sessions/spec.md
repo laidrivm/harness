@@ -17,8 +17,8 @@ install nothing.
 The install is a hook's command and no tool call, so it SHALL pass neither
 through the Bash bootstrap nor through the command guard. Before the harness
 is installed, the bootstrap SHALL let through only `bun install
---frozen-lockfile` or `bun i --frozen-lockfile`, character for character, and
-block every other command, a bare `bun install` among them; once it is
+--frozen-lockfile` or `bun i --frozen-lockfile`, character for character once
+surrounding whitespace is trimmed, and block every other command, a bare `bun install` among them; once it is
 installed, `agent-permissions`' *An install runs only in its frozen form*
 decides a `bun install` the agent runs.
 
@@ -61,9 +61,10 @@ decides a `bun install` the agent runs.
 
 #### Scenario: The local policy is unchanged
 
-- **WHEN** the agent runs `bun install` itself in any session, cloud or local
-- **THEN** it is decided as in a local session: the guard refuses it and
-  names `bun install --frozen-lockfile`
+- **WHEN** the agent runs `bun install` itself in a cloud session
+- **THEN** it is decided exactly as in a local session — the cloud install
+  changes no part of the local policy — so the guard refuses it and names
+  `bun install --frozen-lockfile`
 
 #### Scenario: The agent's own install before the harness is installed
 
