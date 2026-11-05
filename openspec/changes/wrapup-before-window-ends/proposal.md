@@ -24,18 +24,21 @@ is the figure the status line's `used_percentage` is computed from.
   reads the last assistant reply's context size from the tail of the event's
   `transcript_path`. At or above 800 000 tokens — a 1M window less a reserve
   of 200 000, against the 18k–37k a wrap-up was measured to cost — it refuses
-  the stop once, with: wait for running subagents, finish the step in hand,
-  run `/session-wrapup` unless it is already running, then tell the user
-  «можно /clear». An unattended session (`This session runs unattended.`) is
-  not asked: a launcher reads its final message.
+  the stop once, with: finish the step in hand, run `/session-wrapup`, then
+  tell the user «можно /clear» — or, with a subagent still running, end the
+  turn naming the wait and wrap up once its report is in. A wrap-up already
+  in the transcript's tail counts as the ask. An unattended session (`This
+  session runs unattended.`) is not asked: a launcher reads its final
+  message.
 - "Once" is per context: a mark beside the turn gate's mark, set by the
   refusal and dropped by the first stop that measures under half the
   threshold, so a compaction or a `/clear` re-arms it, a small shrink within
   one context does not, and a resumed session above the threshold is not
   asked again.
-- The hook still refuses at most once per turn-gate mark: the size is not
-  read under a mark the gate refused, and a refusal for size flags the mark
-  as the gate's own refusal does.
+- The size is not read under a mark the turn gate refused, so its refusal's
+  promise that the next stop ends the turn holds; a refusal for size leaves
+  the gate free to judge the continued turn, and `commit-gates` gains a
+  requirement that its once-per-mark bound is the pre-PR refusal's own.
 - Each refusal is recorded in the gate ledger, so the wrap-up's `gates` line
   counts it.
 - Compaction is left alone. Known limit, stated in `design.md` and
@@ -59,9 +62,11 @@ model or per machine.
 
 ### Modified Capabilities
 
-None. The turn gate's refusal (`commit-gates`) and the round ceiling
-(`stage-goal`) keep their requirements; how the new refusal orders against
-them is set out in `context-window`.
+- `commit-gates`: the turn gate's once-per-mark bound counts its pre-PR
+  refusal alone; a refusal for size neither uses it nor is refused by it.
+
+The round ceiling (`stage-goal`) keeps its requirement; how the new refusal
+orders against it is set out in `context-window`.
 
 ## Impact
 
