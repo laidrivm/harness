@@ -44,3 +44,7 @@ wherever the two differ.
     chat when the session cannot edit the page, then rename the log to
     `~/manual-steps-<date of its first line>.log`, so the next count starts
     from an empty log.
+12. Expect an empty `GH_TOKEN` and no `~/.config/gh`: `gh` and git over HTTPS
+    get a GitHub App token the wrapper at `/usr/local/bin/gh` mints per call
+    and keeps in that call's environment alone — never run `gh auth login`,
+    write a token or set `GH_TOKEN` yourself.
