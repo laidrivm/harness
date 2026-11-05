@@ -12,9 +12,10 @@ often it is asked, and what the asking reads to know the window's size.
 
 The turn gate's `Stop` half SHALL refuse to end a turn whose context size is
 at or above 800 000 tokens, by exiting 2 with a reason on stderr that tells the
-session to wait for any subagent still running, finish the step in hand, run
-`/session-wrapup` unless it is already running, then tell the user «можно
-/clear». Below the threshold it SHALL add nothing to the stop.
+session to finish the step in hand, run `/session-wrapup`, then tell the user
+«можно /clear» — or, while a subagent it started is still running, to end the
+turn saying the wrap-up waits for its report, and run it once the report is
+in. Below the threshold it SHALL add nothing to the stop.
 
 #### Scenario: A context past the threshold
 
@@ -32,18 +33,38 @@ session to wait for any subagent still running, finish the step in hand, run
 - **WHEN** the context size reads 799 999
 - **THEN** the turn ends as the turn gate alone decides it
 
+### Requirement: A wrap-up already in the tail is not asked for
+
+A stop at or above the threshold whose transcript tail holds a call of the
+`session-wrapup` skill — the model's `Skill` call or the user's typed
+`/session-wrapup` — SHALL NOT be refused for size, and SHALL count as the
+context's one ask.
+
+#### Scenario: The wrap-up the done line started
+
+- **WHEN** the turn ran `/session-wrapup` through the `Skill` tool after a
+  `next:` line and its stop measures 815 000
+- **THEN** the turn ends, and a later stop at 830 000 in that context ends too
+
+#### Scenario: A wrap-up the user typed
+
+- **WHEN** the tail holds the user's typed `/session-wrapup` and the stop
+  measures 815 000
+- **THEN** the turn ends
+
 ### Requirement: An unattended session is not asked
 
 A session whose first user message holds the line `This session runs
-unattended.` (`agent-autonomy`) SHALL NOT be refused for size, whatever its
-size: a launcher reads its final message, and a wrap-up there would rewrite
-it. The line SHALL be read from the transcript by the same code the question
-gate reads it with.
+unattended.` (`agent-autonomy`) SHALL NOT be refused for size: a launcher
+reads its final message. The line SHALL be read with the question gate's own
+code, at most once per context.
 
 #### Scenario: A board-loop stage past the threshold
 
-- **WHEN** a session started with that line measures 820 000 at a stop
-- **THEN** the turn ends as the turn gate alone decides it
+- **WHEN** a session started with that line measures 820 000 at a stop, and
+  830 000 at the next
+- **THEN** both turns end as the turn gate alone decides them, and the line
+  is read at the first stop alone
 
 ### Requirement: The size is the last reply's, read from the transcript's tail
 
@@ -68,9 +89,9 @@ size, which asks nothing.
 
 #### Scenario: A large transcript
 
-- **WHEN** the transcript is larger than the tail the hook reads, and the
-  last reply lies within that tail
-- **THEN** the size is read without reading the whole file
+- **WHEN** the transcript is larger than the tail the hook reads, and its
+  only assistant reply, reading 810 000, lies before that tail
+- **THEN** no size is read and nothing is asked
 
 #### Scenario: A transcript smaller than the tail
 
@@ -86,11 +107,11 @@ size, which asks nothing.
 
 ### Requirement: The wrap-up is asked once per context
 
-After a refusal for size, the hook SHALL NOT refuse for size again in that
-session until a stop measures under half the threshold, 400 000, which only a
-compaction or a cleared context reaches; that stop re-arms it. The record of
-the refusal SHALL be kept per session id outside the tree, where a restart of
-Claude Code that resumes the session finds it.
+After a refusal for size, or a stop that counts as the ask, the hook SHALL NOT
+refuse for size again in that session until a stop measures under half the
+threshold, 400 000, which only a compaction or a cleared context reaches; that
+stop re-arms it. The record SHALL be kept per session id outside the tree,
+where a restart of Claude Code that resumes the session id finds it.
 
 #### Scenario: The continued turn
 
@@ -129,12 +150,12 @@ Claude Code that resumes the session finds it.
 
 ### Requirement: The turn gate's own decisions come first
 
-The round ceiling and the turn gate's refusal SHALL be decided before the
-size is read, and a stop either ends or refuses SHALL NOT be refused for size;
-nor SHALL a stop under a mark the turn gate refused. A refusal for size SHALL
-flag the mark refused, as the turn gate's own refusal does, so the hook
-refuses at most once per mark, and SHALL leave the mark where a refused turn
-leaves it.
+The round ceiling and the turn gate's refusal SHALL be decided before the size
+is read. A stop the ceiling ends, a stop the turn gate refuses, and a stop
+under a mark the turn gate refused SHALL NOT be refused for size, since that
+refusal promises the next stop ends the turn. A refusal for size SHALL leave
+the mark where a refused turn leaves it, and SHALL NOT flag it as the turn
+gate's refusal: the gate still judges the continued turn.
 
 #### Scenario: The turn gate refuses at the same stop
 
@@ -143,6 +164,12 @@ leaves it.
 - **THEN** the stop is refused with the turn gate's reason alone, the next
   stop of that turn ends, and the first stop of the next turn is refused for
   size
+
+#### Scenario: The continued turn completes a group
+
+- **WHEN** a stop is refused for size, and the continued turn commits and
+  completes a task group with no passing run of its tip
+- **THEN** the turn gate refuses its next stop
 
 #### Scenario: The ceiling at the same stop
 
@@ -155,20 +182,19 @@ leaves it.
   continued turn ends
 - **THEN** the turn gate's mark is not moved by that prompt
 
-### Requirement: Each refusal for size is recorded once
+### Requirement: Each refusal for size is recorded
 
 Run as the hook, each refusal for size SHALL append one gate-ledger record:
-gate `context-window`, decision `refused`, rule `wrapup`, and no record of the
-turn gate's for that stop; the turn gate's `passed` or `released` SHALL be
-recorded for the stop that ends the turn. A stop that asks nothing SHALL
-record nothing for size.
+gate `context-window`, decision `refused`, rule `wrapup`, beside whatever the
+turn gate records for that stop. A stop that asks nothing SHALL record
+nothing for size.
 
 #### Scenario: A refusal over a passing run
 
 - **WHEN** a turn that completed a group with a passing run of its tip
   measures 810 000 at its stop, and its next stop ends it
-- **THEN** the ledger gains one `context-window refused wrapup` record and
-  one `turn-gate passed` record
+- **THEN** the ledger gains one `context-window refused wrapup` record and a
+  `turn-gate passed` record for each of the two stops
 
 #### Scenario: A stop below the threshold
 
