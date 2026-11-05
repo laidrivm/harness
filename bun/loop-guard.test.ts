@@ -232,5 +232,6 @@ describe("the gate ledger", () => {
 		expect(written[2]?.out).toContain("additionalContext");
 		expect(written[3]?.code).toBe(2);
 		expect(answers(unwritable)).toEqual(written);
-	});
+		// Eight synchronous hook spawns: about 5 s under load, past bun's default, which cannot fire while one blocks.
+	}, 20_000);
 });

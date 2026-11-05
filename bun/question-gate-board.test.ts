@@ -145,7 +145,8 @@ describe("the card's comments were read", () => {
 		const state = join(scratch(), "state");
 		const answers = Array.from({ length: 10 }, () => run(asked({}, path), state).out);
 		expect(answers.every((out) => out !== "")).toBe(true);
-	});
+		// Ten synchronous gate spawns: about 8 s under load, past bun's default, which cannot fire while one blocks.
+	}, 30_000);
 });
 
 describe("the ledger", () => {
