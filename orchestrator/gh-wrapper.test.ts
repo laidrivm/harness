@@ -1,6 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
-import { userInfo } from "node:os";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 import { ALLOWED } from "../bun/github-app-mint.ts";
@@ -13,7 +12,9 @@ import { ALLOWED } from "../bun/github-app-mint.ts";
 afterAll(cleanup);
 
 const wrapper = join(import.meta.dir, "runner/gh");
-const me = userInfo().username;
+// The wrapper's own `id -un`, not `userInfo()`, which bun answers "unknown" with in the runner container.
+const me = Bun.spawnSync(["id", "-un"]).stdout.toString().trim();
+if (!me) throw new Error("id -un printed no user name");
 
 type Run = { code: number; err: string; mintArgs?: string[]; ghArgs?: string[]; ghToken?: string; ghStdin?: string };
 
