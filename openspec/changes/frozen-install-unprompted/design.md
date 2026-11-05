@@ -2,13 +2,6 @@
 
 ## Context
 
-The install family's prompt comes from two `ask` entries that `bun/settings.ts`
-holds in `MANIFEST_WRITES`, from which `ASK` is built: the harness check
-compares a consumer's `permissions.ask` with `ASK` whole, and
-`bun/sync-settings.ts` writes it. The harness's own `.claude/settings.json`
-carries the same entries, and `bun/settings.fixture.ts`' `policy()` builds the
-fixture from a copy of them.
-
 Before the harness is installed, the Bash hook's fallback — `BOOTSTRAP` in
 `bun/bootstrap.ts`, registered in every consumer's settings character for
 character — lets `bun install` and `bun i`, bare or with `--frozen-lockfile`,
@@ -81,12 +74,6 @@ not made. That reads `bun --cwd ../x install --frozen-lockfile` as an
 install, and inexact, so it blocks; `bun run install` and `bun pm ls` are not
 installs and this check leaves them alone.
 
-The check lives in `bun/command-guard-exec.ts` beside `bunxInstall` and
-`bunTestRetry`, returning a reason or nothing, and `check()` in
-`bun/command-guard.ts` blocks it under the id `bun-install`. It takes the
-command's whole word list as well as the name and the rest, as `unreadProgram`
-does, to see what `invocations()` strips before the name.
-
 `invocations()` itself reads `X+=1` as a command name today: `NOT_A_NAME` in
 `bun/command-words.ts` knows `X=1` but not the appending form, which bash and
 zsh export to the command exactly as they do `X=1` (probed by the review,
@@ -111,11 +98,6 @@ but lockfile is frozen", while `BUN_CONFIG_SKIP_LOAD_LOCKFILE=1 bun install
 --frozen-lockfile` installed `is-odd@3.0.1` and exited 0. The cost is a
 harmless `CI=1 bun install --frozen-lockfile` refused; the agent drops the
 prefix, which the reason makes plain.
-
-Not covered: `export BUN_CONFIG_SKIP_LOAD_LOCKFILE=1` as an earlier command,
-or a variable in the session's environment. The guard judges each command
-alone and keeps no shell state; following an `export` across a line would be
-a shell interpreter, for a path no session has taken.
 
 ### 3a. No check of what the manifest holds
 
@@ -168,15 +150,10 @@ remedy through bun's own message.
 
 ### 7. Docs and messages
 
-Where the agent is told to install, the text names the frozen form: the
-bootstrap's hint, the stale-install notice and its not-installed line, the
-board loop's "pinned check is missing" refusal, `orchestrator/README.md`'s
-clone setup, and the comment in `bun/board-loop.ts`, which explains an install
-before any session by an `ask` that no longer exists. Where the step is the
-user's own and must update the lockfile — README step 1 adding the harness,
-README's manual pin move, `core/git-and-prs.md`'s re-pin with `bun add` — the
+Where the agent is told to install, the text names the frozen form (tasks
+3.2–3.3, 4.2). Where the step is the user's own and must update the lockfile
+— adding the harness, moving the pin by hand, a re-pin with `bun add` — the
 text keeps `bun install` and says it runs in the user's terminal.
-`core/code-style.md` already says automated installs use the frozen form.
 
 ## Risks / Trade-offs
 
@@ -203,11 +180,7 @@ text keeps `bun install` and says it runs in the user's terminal.
   installs in the bootstrap's text, which syncs with the settings, would
   close the window, at the price of a second reader of the line — a raw
   regular expression over a compound line, kept in step with the guard by
-  hand; not taken. The apply PR's body asks
-  for the harness's self-pin bump right after its merge.
+  hand; not taken. The apply PR's body asks for the harness's self-pin bump
+  right after its merge.
 - [A consumer's check fails until it syncs] → as for any change to `ASK` or to
   the bootstrap text; the bump that lands the pin runs sync.
-- [An agent used to a bare `bun install` loses a turn] → the reason names the
-  form that runs.
-- [A stale lockfile] → the frozen install fails; resolving it rewrites
-  `bun.lock`, which is the user's in their terminal.
