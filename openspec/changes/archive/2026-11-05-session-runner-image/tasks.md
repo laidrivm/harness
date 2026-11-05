@@ -104,10 +104,14 @@ as `// spec: orchestrator/<slug>`. Group 4 is the user's and the probe's.
 
 ## 4. On the host, and the probe
 
-- [ ] 4.1 The user, per design *Migration Plan*: `orchestrator/.env`, `git
+- [x] 4.1 The user, per design *Migration Plan*: `orchestrator/.env`, `git
       pull`, `docker compose build runner`, `docker compose up -d runner`,
       the login. Verify `docker compose exec -u agent runner tmux has-session
       -t main` exits 0
-- [ ] 4.2 Hand the probe's checks to card
+      — exited 0 at step 2 of the live probe, card
+      `40c39875c31b814e8902ef481aad54e2`, 2026-11-05
+- [x] 4.2 Hand the probe's checks to card
       `40c39875c31b814e8902ef481aad54e2`; this change archives once it
       reports them
+      — reported there on 2026-11-05 («Итоги пробы 05.11» and its
+      addendum); its findings went to #427 and `fix/session-rules-gh-wrapper`
