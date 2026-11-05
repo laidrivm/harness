@@ -9,7 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { HOOKS, MARK, registration } from "./bootstrap.ts";
-import { isRecord } from "./loop-guard.ts";
+import { isRecord } from "./is-record.ts";
 import { ASK, ATTRIBUTION, DENY, EDIT_ASK, EDIT_DENY, INSTALL, MARKETPLACE, MCP_ASK, PLUGINS } from "./settings.ts";
 
 type Group = { matcher?: string; hooks?: { command?: unknown }[] };

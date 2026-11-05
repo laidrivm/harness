@@ -23,6 +23,7 @@ import {
 	TURN_MARK,
 	TURN_STOP,
 } from "./bootstrap.ts";
+import { MARKETPLACE, PLUGINS } from "./settings.ts";
 
 const made: string[] = [];
 
@@ -82,15 +83,9 @@ export const policy = () => ({
 		allow: ["Bash(bun test *)", "Read(docs/**)"],
 	},
 	attribution: { pr: "", sessionUrl: false } as unknown,
-	enabledPlugins: { "ponytail@ponytail": true, "cc-plugin-you-should-know@builtin": true } as
-		| Record<string, unknown>
-		| undefined,
-	extraKnownMarketplaces: {
-		ponytail: {
-			source: { source: "github", repo: "DietrichGebert/ponytail", ref: "v5.3.3" },
-			autoUpdate: false,
-		},
-	} as Record<string, unknown>,
+	// From the source, so a pin move edits no fixture; the own-settings cases pin the values.
+	enabledPlugins: Object.fromEntries(PLUGINS.map((id) => [id, true])) as Record<string, unknown> | undefined,
+	extraKnownMarketplaces: { ponytail: structuredClone(MARKETPLACE) } as Record<string, unknown>,
 	hooks: {
 		PreToolUse: [
 			{

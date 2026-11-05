@@ -130,7 +130,7 @@ led to D7. Each box below is ticked as done, with what it measured.
 - [x] 3.4 In `orchestrator/session.test.ts`, under `sh` and `dash`, write
       first the cases
       `orchestrator/ponytail-is-installed-before-each-start` (the install,
-      under `timeout 120`, with `DISABLE_AUTOUPDATER=1`, between `bun
+      under `timeout --foreground 120`, with `DISABLE_AUTOUPDATER=1`, between `bun
       install` and each start),
       `orchestrator/a-failed-plugin-install-leaves-the-session-starting` and
       `orchestrator/no-plugin-install-without-the-clone`, and count only

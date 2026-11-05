@@ -68,7 +68,7 @@ function run(
 	);
 	stub("bun", opts.failBun ? "exit 1\n" : "");
 	// The laptop has no coreutils timeout; the stub logs its limit and runs the command.
-	stub("timeout", 'shift\nexec "$@"\n');
+	stub("timeout", 'shift 2\nexec "$@"\n');
 	stub("sleep");
 	// Records the three variables, ends the loop on its second session start (a plugin install is
 	// not one), and otherwise exits as asked.
@@ -98,7 +98,7 @@ const roundWith = (start: string) => [
 	"git pull --ff-only @~/harness",
 	"git sees GIT_TERMINAL_PROMPT=0",
 	"bun install --frozen-lockfile @~/harness",
-	"timeout 120 claude plugin install ponytail@ponytail --scope project @~/harness",
+	"timeout --foreground 120 claude plugin install ponytail@ponytail --scope project @~/harness",
 	"claude plugin install ponytail@ponytail --scope project @~/harness",
 	ENV,
 	`${start} @~/harness`,
@@ -106,7 +106,7 @@ const roundWith = (start: string) => [
 ];
 const round = roundWith(CONTINUE);
 /** A round up to and including the session's start. */
-const toStart = round.slice(0, 7);
+const toStart = round.slice(0, round.indexOf(`${CONTINUE} @~/harness`) + 1);
 
 for (const shell of ["sh", "dash"])
 	describe(`the start script under ${shell}`, () => {
@@ -171,10 +171,9 @@ for (const shell of ["sh", "dash"])
 		});
 
 		// spec: orchestrator/ponytail-is-installed-before-each-start
-		test("ponytail is installed in the clone at project scope, with the updater off and a 120 s limit, after bun and before each start", () => {
-			const { calls } = run(shell);
-			const installs = calls.flatMap((c, i) => (c.startsWith("claude plugin ") ? [i] : []));
-			expect(installs.map((i) => calls.slice(i - 2, i + 3))).toEqual(Array(2).fill(round.slice(2, 7)));
+		test("ponytail is installed in the clone at project scope, with the updater off and a 120 s limit in the pane's foreground, after bun and before each start", () => {
+			// `round` lists the install between bun's and the start, its env line showing the updater off.
+			expect(run(shell).calls).toEqual([...round, "sleep 5 @~/harness", ...round]);
 		});
 
 		// spec: orchestrator/a-failed-plugin-install-leaves-the-session-starting

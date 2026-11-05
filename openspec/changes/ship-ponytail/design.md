@@ -267,7 +267,7 @@ The call goes in `session.sh`, in the round that finds the clone, after
 `bun install` and before `claude`:
 
 ```sh
-timeout 120 claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
+timeout --foreground 120 claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
 ```
 
 - **Not before the clone, the trust or the login.** The round runs it only
@@ -282,7 +282,9 @@ timeout 120 claude plugin install ponytail@ponytail --scope project || echo "ses
   install`, a failure prints its line and the session starts on what the
   volume holds. coreutils' `timeout`, which the forced command's notice
   already uses in the image, ends a call that hangs after 120 s, and its
-  exit takes the same line.
+  exit takes the same line. `--foreground` keeps the call in the pane's
+  foreground process group: without it a call that touches the tty would be
+  stopped and sit out the whole limit every round.
 - **Idempotent.** The call runs every round, so a repeat over an installed
   plugin must leave it as it was. What a repeat prints, and whether it
   reaches the network, is unmeasured; a non-zero exit there prints its line
