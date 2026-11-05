@@ -88,8 +88,12 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       each citing its scenario: `orchestrator/a-session-at-work`,
       `orchestrator/a-fresh-session`, `orchestrator/an-unchanged-image`,
       `orchestrator/the-session-comes-back`,
-      `orchestrator/the-session-does-not-come-back` (`rolled-back` and the
-      failure file written, then the tag goes back, `up -d runner`, exit 1),
+      `orchestrator/the-session-does-not-come-back` (the failure file and
+      `rolling-back` written, then the tag goes back, `up -d runner`,
+      `rolling-back` renamed `rolled-back`, exit 1),
+      `orchestrator/the-rollback-cannot-bring-the-runner-up` (the tag back or
+      `up -d runner` fails: `rolling-back` stays, no `rolled-back`; the next
+      run retries both before its fetch and tags no `previous`),
       `orchestrator/a-rolled-back-head`,
       `orchestrator/the-deploy-token-is-absent`; extend
       `orchestrator/the-build-fails` with the failure file, and change the
@@ -97,12 +101,16 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       (`up`, prune, engine wait, push, record) to the tag before the build,
       then the failure file's removal, `up`, the wait for `main`, engine
       wait, push, record, prune. Record that they fail
-- [ ] 3.2 In `deploy.sh`, per design.md: skip a head equal to `rolled-back`;
+- [ ] 3.2 In `deploy.sh`, per design.md: first, with `rolling-back`
+      present, retry the rollback alone; skip a head equal to `rolled-back`
+      or `rolling-back`;
       tag the running runner's image as `orchestrator-runner:previous` before
       the build; after the build, exit 0 without the fresh-session mark; with
-      it, the failure file's removal, `up -d`, then `restart runner` when the
+      it, under the locks, the second check read and mark check, then the
+      failure file's removal, `up -d`, then `restart runner` when the
       container id is unchanged; the wait for `main`; the rollback, its
-      failure file before its `up`; the failure file in `failed()`; the
+      failure file and `rolling-back` before its tag and `up`, `rolled-back`
+      after them; the failure file in `failed()`; the
       push and the engine wait skipped while the token file is absent; the
       record, then the prune. Update the header
       comment. Make 3.1 pass

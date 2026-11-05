@@ -51,10 +51,12 @@ the harness pin; another repository's host.
 `ExecStart=/root/harness/orchestrator/deploy.sh`, run as root, with
 `WorkingDirectory=/root/harness/orchestrator`,
 `StateDirectory=harness-deploy` and `TimeoutStartSec=3h`, which bounds a hung
-build. A run the timeout kills is the one failure after the fast-forward that
-writes no failure file: the script is gone before it could. It records
-nothing either, the journal names the timeout, and the next tick starts again
-from the first step.
+build. A run the timeout kills before `failed()` or the rollback has written
+the failure file is the one failure after the fast-forward that leaves none:
+the script is gone before it could; one killed later, in the rollback's `up`,
+leaves the file it wrote and `rolling-back`. It records nothing else, the
+journal names the timeout, and the next tick starts again from the first
+step, or from the rollback's retry (CodeRabbit on #426).
 `orchestrator/host/harness-deploy.timer` starts it with `OnBootSec=5min` and
 `OnUnitInactiveSec=5min`, `[Install] WantedBy=timers.target`. systemd runs one
 instance of a unit, so two ticks never deploy at once.
@@ -181,11 +183,14 @@ the old prompt kept).
 
 ### `up -d`, then a restart when the runner was not recreated
 
-With the mark, the script removes `~/.harness-deploy-failed`, which the head
-it now deploys supersedes: the restarted session's `SessionStart` can run
-before the wait below sees `main`, and would report an old failure as new
-(local review). It then takes the pass locks as on `main` (inert, below),
-reads the check again, and runs `docker compose up -d`. It compares the
+With the mark, the script takes the pass locks as on `main` (inert, below),
+reads the check again and looks for the mark again. Only then does it remove
+`~/.harness-deploy-failed`, which the head it now deploys supersedes: the
+restarted session's `SessionStart` can run before the wait below sees
+`main`, and would report an old failure as new (local review). Removed any
+earlier, a run that stops at the second read or the second mark check would
+erase an unreported failure (CodeRabbit on #426). It then runs `docker
+compose up -d`. It compares the
 `runner` container's id before and after: when `up` did not recreate it (the
 image and its configuration unchanged), it runs `docker compose restart
 runner`. Either way the start script runs again, pulls the clone, runs
@@ -201,11 +206,17 @@ writes the head to `$STATE_DIRECTORY/deployed` (or
 `/var/lib/harness-deploy/deployed` for a run by hand, as on `main`), prunes,
 and exits 0.
 
-When `main` does not answer, the script writes the head to
-`$STATE_DIRECTORY/rolled-back` and the failure file, tags
-`orchestrator-runner:previous` back as `orchestrator-runner`, runs `docker
-compose up -d runner`, and exits 1. The failure file comes before `up`, so
-the restored session's start finds it (local review).
+When `main` does not answer, the script writes the failure file and the head
+to `$STATE_DIRECTORY/rolling-back`, tags `orchestrator-runner:previous` back
+as `orchestrator-runner`, runs `docker compose up -d runner`, then renames
+`rolling-back` to `rolled-back` and exits 1. The failure file comes before
+`up`, so the restored session's start finds it (local review). The head is
+recorded as rolled back only once the runner is up on the previous image: a
+tag or an `up` that fails leaves `rolling-back`, and every later run, before
+its fetch, retries the tag back and `up -d runner` from that record alone,
+touching neither the checkout nor the `previous` tag, until both succeed
+(CodeRabbit on #426). Recording `rolled-back` first would leave a broken
+runner that no tick restores, since each skips that head.
 When the image did not change, there is no other image to go back to: the
 record and the failure file alone. The user chose this on the card: «light
 rollback: the previous image gets a tag before the build; if `main` is not up
@@ -213,8 +224,8 @@ within 2 minutes, go back to it and write a failure file; on start the
 session reports it in chat; the full probe with a sandbox and a stop file
 stays in stage 9» (user, 02.11, answer 17 a).
 
-A rolled-back head is not retried: each run skips a head equal to either
-record. Retrying it would recreate the broken runner every five minutes while
+A rolled-back head is not retried: each run skips a head equal to any of the
+three records. Retrying it would recreate the broken runner every five minutes while
 the restored session sits fresh. The next head, a fix merged to `main`, is
 deployed as usual. Every other failure is retried in full from the first step,
 as answers 7 and 14 settled.
@@ -231,7 +242,7 @@ each clone's stop file. It gains one write before those: the failure file
 owned as that home is, so the session's hook can rename it once printed. One line,
 `<time> deploy: <step> failed at <sha>`, replacing an older one. Every step
 after the fast-forward calls it, the rollback included (a run the service's
-timeout kills cannot, *The timer alone starts the deploy*), so a failed build is
+timeout kills before the write cannot, *The timer alone starts the deploy*), so a failed build is
 reported at the next `/clear` as a rolled-back runner is. A fetch or a check
 read that fails writes nothing, as on `main`: the host is still on a working
 commit.
