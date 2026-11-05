@@ -67,6 +67,8 @@ function run(
 		`echo "git sees GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset}" >>"${log}"\n${opts.failGit ? "exit 1\n" : ""}`,
 	);
 	stub("bun", opts.failBun ? "exit 1\n" : "");
+	// The laptop has no coreutils timeout; the stub logs its limit and runs the command.
+	stub("timeout", 'shift\nexec "$@"\n');
 	stub("sleep");
 	// Records the three variables, ends the loop on its second session start (a plugin install is
 	// not one), and otherwise exits as asked.
@@ -96,6 +98,7 @@ const roundWith = (start: string) => [
 	"git pull --ff-only @~/harness",
 	"git sees GIT_TERMINAL_PROMPT=0",
 	"bun install --frozen-lockfile @~/harness",
+	"timeout 120 claude plugin install ponytail@ponytail --scope project @~/harness",
 	"claude plugin install ponytail@ponytail --scope project @~/harness",
 	ENV,
 	`${start} @~/harness`,
@@ -103,7 +106,7 @@ const roundWith = (start: string) => [
 ];
 const round = roundWith(CONTINUE);
 /** A round up to and including the session's start. */
-const toStart = round.slice(0, 6);
+const toStart = round.slice(0, 7);
 
 for (const shell of ["sh", "dash"])
 	describe(`the start script under ${shell}`, () => {
@@ -143,21 +146,21 @@ for (const shell of ["sh", "dash"])
 
 		// spec: orchestrator/claude-code-exits
 		test("with CLAUDE_CONFIG_DIR set, the conversation is read from there", () => {
-			expect(run(shell, { configDir: true }).calls[5]).toBe(`${CONTINUE} @~/harness`);
+			expect(run(shell, { configDir: true }).calls[toStart.length - 1]).toBe(`${CONTINUE} @~/harness`);
 		});
 
 		// spec: orchestrator/the-pull-fails
 		test("a failing pull prints its line, and claude still starts", () => {
 			const { calls, out } = run(shell, { failGit: true });
 			expect(out).toContain("session: git pull failed; starting claude anyway");
-			expect(calls.slice(0, 6)).toEqual(toStart);
+			expect(calls.slice(0, toStart.length)).toEqual(toStart);
 		});
 
 		// spec: orchestrator/the-install-fails
 		test("a failing install prints its line, and claude still starts", () => {
 			const { calls, out } = run(shell, { failBun: true });
 			expect(out).toContain("session: bun install failed; starting claude anyway");
-			expect(calls.slice(0, 6)).toEqual(toStart);
+			expect(calls.slice(0, toStart.length)).toEqual(toStart);
 		});
 
 		// spec: orchestrator/no-clone-yet
@@ -168,17 +171,17 @@ for (const shell of ["sh", "dash"])
 		});
 
 		// spec: orchestrator/ponytail-is-installed-before-each-start
-		test("ponytail is installed in the clone at project scope, with the updater off, after bun and before each start", () => {
+		test("ponytail is installed in the clone at project scope, with the updater off and a 120 s limit, after bun and before each start", () => {
 			const { calls } = run(shell);
 			const installs = calls.flatMap((c, i) => (c.startsWith("claude plugin ") ? [i] : []));
-			expect(installs.map((i) => calls.slice(i - 1, i + 3))).toEqual(Array(2).fill(round.slice(2, 6)));
+			expect(installs.map((i) => calls.slice(i - 2, i + 3))).toEqual(Array(2).fill(round.slice(2, 7)));
 		});
 
 		// spec: orchestrator/a-failed-plugin-install-leaves-the-session-starting
 		test("a failing plugin install prints its line, and claude still starts", () => {
 			const { calls, out } = run(shell, { failPlugin: true });
 			expect(out).toContain("session: ponytail's install failed; starting claude anyway");
-			expect(calls.slice(0, 6)).toEqual(toStart);
+			expect(calls.slice(0, toStart.length)).toEqual(toStart);
 		});
 
 		// spec: orchestrator/no-plugin-install-without-the-clone
@@ -187,6 +190,6 @@ for (const shell of ["sh", "dash"])
 		});
 
 		test("a clone whose .git is a file, as a worktree's is, is pulled and installed", () => {
-			expect(run(shell, { clone: "worktree" }).calls.slice(0, 6)).toEqual(toStart);
+			expect(run(shell, { clone: "worktree" }).calls.slice(0, toStart.length)).toEqual(toStart);
 		});
 	});

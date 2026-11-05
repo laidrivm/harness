@@ -26,8 +26,8 @@ while :; do
 		bun install --frozen-lockfile || echo "session: bun install failed; starting claude anyway" >&2
 		# The project's settings alone left ponytail uninstalled from the second start on (2.1.316,
 		# ship-ponytail D7); the marketplace and its tag come from those settings.
-		# shortcut: no timeout, so a network that hangs holds the start; wrap it when that is seen.
-		claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
+		# coreutils' timeout, as the forced command's notice uses: a network that hangs must not hold the start.
+		timeout 120 claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
 	else
 		cd "$HOME"
 	fi

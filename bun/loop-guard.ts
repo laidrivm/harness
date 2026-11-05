@@ -114,7 +114,8 @@ export function refusal(count: Count, tool: string, key: string, prompt: string 
 /** What the guard answers, and the ledger records: a warning or a refusal. */
 export type Answer = { decision: "warned" | "refused"; reason: string };
 
-const isRecord = (value: unknown): value is Record<string, never> =>
+/** A plain object: not `null`, not a list. Exported for the settings check and sync. */
+export const isRecord = (value: unknown): value is Record<string, never> =>
 	!!value && typeof value === "object" && !Array.isArray(value);
 
 /** The count in `file`; one missing or not the guard's own is empty. */

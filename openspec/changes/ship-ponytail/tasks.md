@@ -130,7 +130,8 @@ led to D7. Each box below is ticked as done, with what it measured.
 - [x] 3.4 In `orchestrator/session.test.ts`, under `sh` and `dash`, write
       first the cases
       `orchestrator/ponytail-is-installed-before-each-start` (the install,
-      with `DISABLE_AUTOUPDATER=1`, between `bun install` and each start),
+      under `timeout 120`, with `DISABLE_AUTOUPDATER=1`, between `bun
+      install` and each start),
       `orchestrator/a-failed-plugin-install-leaves-the-session-starting` and
       `orchestrator/no-plugin-install-without-the-clone`, and count only
       Remote Control starts in the stub that ends the loop. 24 failed under
@@ -148,8 +149,10 @@ led to D7. Each box below is ticked as done, with what it measured.
       `/home/agent/harness`, shows no ponytail. Trust the clone and `/exit`
       as README step 12 says, before the loop is switched on (D5), and once
       the next start has run the install (D7), check that `git status` in
-      `/home/agent/harness` is clean and that `claude plugin list`, as
-      `agent` in a pass's clone, names ponytail (D5). Then check four
+      `/home/agent/harness` is clean; a dirty clone switches `session.sh`'s
+      call to `--scope local` (answer 5 а). Check that `claude plugin list`,
+      as `agent` in a pass's clone, names ponytail; where it does not, file
+      a card for an install in the pass (D5, answer 6 а). Then check four
       things. ponytail's SessionStart hook passes its rules to the model as
       hidden context and prints nothing in the pane, so read the level
       from its state. After `main` starts,

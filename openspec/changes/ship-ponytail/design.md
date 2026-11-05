@@ -205,9 +205,11 @@ the install, which does depend on the session.
   the pass runs without ponytail, as it does before this change, and D4's
   file is written all the same. `CLAUDE_CODE_SYNC_PLUGIN_INSTALL=1` stays
   rejected: it would cross the same four seams as D4's rejected variable.
-  The loop is off in stage 2.5, and task 4.2 reads `claude plugin list` as
-  `agent` in a pass's clone before the loop is switched on. README names the
-  gap.
+  Decided (user, 05.11, answer 6 а): nothing changes for the passes now. The
+  loop is off in stage 2.5, and task 4.2 reads `claude plugin list` as
+  `agent` in a pass's clone before the loop is switched on. A clone that
+  does not list the plugin becomes a card of its own, an install in the
+  pass. README names the gap.
 - **A consumer's fresh clone on the laptop** registers the marketplace when
   its owner accepts the trust dialog. you-should-know sits in the built-in
   marketplace and needs no entry.
@@ -265,7 +267,7 @@ The call goes in `session.sh`, in the round that finds the clone, after
 `bun install` and before `claude`:
 
 ```sh
-claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
+timeout 120 claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
 ```
 
 - **Not before the clone, the trust or the login.** The round runs it only
@@ -278,8 +280,9 @@ claude plugin install ponytail@ponytail --scope project || echo "session: ponyta
   restart.
 - **The network.** The call clones from GitHub. Like the pull and `bun
   install`, a failure prints its line and the session starts on what the
-  volume holds. A network that hangs holds the start; the script names that
-  as a shortcut.
+  volume holds. coreutils' `timeout`, which the forced command's notice
+  already uses in the image, ends a call that hangs after 120 s, and its
+  exit takes the same line.
 - **Idempotent.** The call runs every round, so a repeat over an installed
   plugin must leave it as it was. What a repeat prints, and whether it
   reaches the network, is unmeasured; a non-zero exit there prints its line
@@ -294,9 +297,11 @@ claude plugin install ponytail@ponytail --scope project || echo "session: ponyta
 Whether `--scope project` rewrites the tracked `.claude/settings.json`,
 which already carries the entry, is unmeasured: the probe's folder was no
 git clone. A rewrite in Claude Code's own layout would leave the clone dirty,
-and the next pull that touches the file would fail with its line. Task 4.2
-reads `git status` in the clone after the first install, and the card's
-question 5 holds the fallback.
+and the next pull that touches the file would fail with its line. Decided
+(user, 05.11, answer 5 а): the scope stays `project`. Task 4.2 reads `git
+status` in the clone after the first install, and a dirty clone switches the
+call to `--scope local`, which writes the untracked
+`.claude/settings.local.json` instead.
 
 ## Risks / Trade-offs
 
@@ -309,7 +314,7 @@ question 5 holds the fallback.
   undocumented.
 - [A pass's clone does not load the copy installed for `/home/agent/harness`]
   → the pass runs without ponytail, as before. Task 4.2 reads it before the
-  loop is switched on (D5).
+  loop is switched on, and a miss becomes a card of its own (D5, answer 6 а).
 - [The laptop's copy is re-fetched between folders] → task 1.2 was not run
   (05.11), so the settings land without it. The fallback is D6's option б.
 - [The install leaves the four `userConfig` options unset on the VPS] → the
@@ -320,9 +325,10 @@ question 5 holds the fallback.
   only for a webhook. Unset, they act as their defaults, and nothing leaves
   the host.
 - [`--scope project` rewrites the tracked settings in the clone] →
-  unmeasured. Task 4.2 reads `git status`; question 5 on the card (D7).
-- [A network that hangs holds the session's start] → named as a shortcut in
-  `session.sh` (D7).
+  unmeasured. Task 4.2 reads `git status`, and a dirty clone switches the
+  call to `--scope local` (D7, answer 5 а).
+- [A network that hangs holds the session's start] → the install runs under
+  a 120 s `timeout` (D7).
 - [Plugin hooks run in every consumer session] → ponytail's ledger
   (`userConfig.ledger`, default `true`) writes a line per turn under
   `~/.config/ponytail/band/`. The file stays local, and its webhook is

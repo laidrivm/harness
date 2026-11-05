@@ -14,6 +14,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { HOOKS } from "./bootstrap.ts";
+import { isRecord } from "./loop-guard.ts";
 import { tracked } from "./tracked.ts";
 
 /** Every package manager a consumer does not use. */
@@ -129,9 +130,8 @@ type Settings = {
 	hooks?: Record<string, { matcher?: string; hooks?: Hook[] }[]>;
 	disableAllHooks?: unknown;
 	attribution?: unknown;
-	// Indexed with `?.`, which reads nothing from a list, a string or `null`.
-	enabledPlugins?: Record<string, unknown> | null;
-	extraKnownMarketplaces?: Record<string, unknown> | null;
+	enabledPlugins?: unknown;
+	extraKnownMarketplaces?: unknown;
 };
 
 // Built from a char code rather than written into a regex literal, where the
@@ -248,8 +248,14 @@ export function settings(root: string): string[] {
 
 	if (!Bun.deepEquals(parsed.attribution, ATTRIBUTION))
 		say(`attribution is not ${JSON.stringify(ATTRIBUTION)} — ${fix}`);
-	for (const id of PLUGINS) if (parsed.enabledPlugins?.[id] !== true) say(`enabledPlugins.${id} is not true — ${fix}`);
-	if (!Bun.deepEquals(parsed.extraKnownMarketplaces?.ponytail, MARKETPLACE))
+	// Sync refuses a plugin key that is not an object, so the fix named for one is a hand edit.
+	const byHand = "is not an object — make it one by hand, then sync";
+	const plugins = parsed.enabledPlugins;
+	if (plugins !== undefined && !isRecord(plugins)) say(`enabledPlugins ${byHand}`);
+	else for (const id of PLUGINS) if (plugins?.[id] !== true) say(`enabledPlugins.${id} is not true — ${fix}`);
+	const marketplaces = parsed.extraKnownMarketplaces;
+	if (marketplaces !== undefined && !isRecord(marketplaces)) say(`extraKnownMarketplaces ${byHand}`);
+	else if (!Bun.deepEquals(marketplaces?.ponytail, MARKETPLACE))
 		say(`extraKnownMarketplaces.ponytail is not ${JSON.stringify(MARKETPLACE)} — ${fix}`);
 
 	if (!deny.includes(EDIT_DENY)) say(`${EDIT_DENY} is not denied`);
