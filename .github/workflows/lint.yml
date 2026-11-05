@@ -101,3 +101,4 @@ jobs:
           # the file and line, and `--redact` keeps the secret itself out of a
           # build log this public repository shows to anyone.
           args: git . --log-opts=HEAD -v --redact --no-banner
+# probe 2026-11-05: a push touching workflows
