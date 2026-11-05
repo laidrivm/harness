@@ -9,54 +9,77 @@ check only at the self-pin bump after merge (`design.md`, *Risks*).
 
 ## 1. The guard refuses every install but the frozen form
 
-- [ ] 1.1 Failing cases in a new `bun/command-guard-install.test.ts`, through
-      `verdict()` from `bun/command-guard.fixture.ts` as
-      `bun/command-guard-bunx.test.ts` does, each refusal asserting
+- [ ] 1.1 `X+=1` is an assignment: a failing case in
+      `bun/command-guard.test.ts`, through `run()` on a checkout on `main` as
+      its main-commit cases do: `GIT_X+=1 git commit -m x` blocks as
+      `main-commit` (no test calls `invocations()` directly, so the guard's
+      verdict is the observable). Then `NOT_A_NAME` in `bun/command-words.ts` takes
+      `[A-Za-z_][A-Za-z0-9_]*\+?=`, its comment naming the appending form and
+      that dash, which has none, fails on it. Verify `bun test bun/command`
+      passes
+- [ ] 1.2 Lift `committed()` (and the `git()` helper it calls) out of
+      `bun/command-guard-interpreters.ts` into one module both the
+      interpreter check and the install check import, switching the
+      interpreter check in the same commit (`core/rules.md`, *Write logic a
+      second time only by lifting it*). Verify `bun test
+      bun/command-guard-interpreters` passes unchanged
+- [ ] 1.3 Failing cases in a new `bun/command-guard-install.test.ts`. Its
+      checkout is a git repository with a committed `package.json` and
+      `bun.lock`, built as `bun/command-guard-interpreters.test.ts` builds
+      `base`, and verdicts are read from it; each refusal asserts
       `{ code: 2, rule: "bun-install" }`: `bun install` and `bun i`, the
       stderr naming `bun install --frozen-lockfile` and `terminal`
-      (`a-bare-install`); `bun install lodash`, `bun i foo`
+      (`a-bare-install`, with a comment that exit 2 blocks whatever a
+      permission entry allows, for
+      `a-local-allow-entry-does-not-reopen-the-bare-install`);
+      `bun install lodash`, `bun i foo`
       (`an-install-that-names-a-package`);
       `bun install --frozen-lockfile --production`,
       `bun install --frozen-lockfile=false`,
       `bun install --frozen-lockfile > package.json`
       (`another-word-beside-the-flag`);
       `bun --cwd ../x install --frozen-lockfile`
-      (`an-option-before-the-subcommand`); `CI=1 bun install
-      --frozen-lockfile`, `BUN_CONFIG_SKIP_LOAD_LOCKFILE=1 bun install
-      --frozen-lockfile`, `env BUN_CONFIG_REGISTRY=https://x.test bun i
-      --frozen-lockfile` (`a-variable-assigned-before-bun`);
+      (`an-option-before-the-subcommand`);
+      `timeout 600 bun install --frozen-lockfile`,
+      `env -C /tmp/x bun i --frozen-lockfile`,
+      `echo --config=x.toml | xargs bun i --frozen-lockfile`,
+      `>package.json bun install --frozen-lockfile` (`something-before-bun`);
+      `CI=1 …`, `BUN_CONFIG_SKIP_LOAD_LOCKFILE=1 …`,
+      `BUN_CONFIG_SKIP_LOAD_LOCKFILE+=1 …` and
+      `env BUN_CONFIG_REGISTRY=https://x.test bun i --frozen-lockfile`
+      (`a-variable-assigned-before-bun`); `X+=1 bun install`
+      (`an-appending-assignment-is-not-the-command`); the frozen form with
+      `package.json` edited and unstaged, with `bun.lock` staged, with
+      `bun.lock` deleted, in an untracked copy, and
+      `cd <a directory outside any repository> && bun install --frozen-lockfile`
+      (`a-manifest-the-tree-does-not-vouch-for`);
       `bun install --frozen-lockfile; bun install` and `bash -c "bun install"`
       (`each-command-of-a-compound-line-is-judged-alone`). Each fails on
       today's guard, which allows them all
-- [ ] 1.2 In the same file, cases that pass today and must keep passing:
-      `bun install --frozen-lockfile`, `bun i --frozen-lockfile`
+- [ ] 1.4 In the same file, cases that must exit 0 in the committed
+      checkout: `bun install --frozen-lockfile`, `bun i --frozen-lockfile`
       (`the-frozen-form-runs-without-a-prompt`), `bun  i --frozen-lockfile`,
-      `bun "install" --frozen-lockfile`
-      (`the-frozen-form-however-it-is-quoted-or-spaced`),
-      `timeout 600 bun install --frozen-lockfile`,
-      `~/.bun/bin/bun i --frozen-lockfile`
-      (`the-frozen-form-behind-a-wrapper-or-a-path`),
-      `bun install --frozen-lockfile && bun test` each exit 0; `bun add
-      preact`, `bun run install`, `bun pm ls` get no `bun-install` rule
+      `bun "install" --frozen-lockfile`, `~/.bun/bin/bun i --frozen-lockfile`
+      (`the-frozen-form-however-it-is-quoted-spaced-or-reached`),
+      `bun install --frozen-lockfile && bun test`; and `bun add preact`,
+      `bun run install`, `bun pm ls` get no `bun-install` rule
       (`another-package-command-is-not-refused-by-this-check`)
-- [ ] 1.3 Then `bunInstall(part, name, rest)` in `bun/command-guard-exec.ts`,
-      beside `bunxInstall`: the subcommand found as `bunTestRetry` finds its
-      verb; `undefined` unless it is `install` or `i`; `undefined` when `rest`
-      is exactly `[sub, "--frozen-lockfile"]` with `sub` at index 0 and no word
-      of `part` before `bun` matching `^[A-Za-z_][A-Za-z0-9_]*=`; otherwise the
-      reason in `design.md` decision 6. `check()` in `bun/command-guard.ts`
-      calls it beside `bunxInstall` and blocks under `bun-install`; the
-      header comment of each file names the new prohibition, and the guard's
-      header that a local `allow` silencing a hook's `ask` is why this one
-      blocks. Verify `bun test bun/command-guard-install.test.ts` passes
-- [ ] 1.4 `bun/command-guard-interpreters.test.ts`: the `"bun install"` row of
-      *gets no decision* becomes `"bun install --frozen-lockfile"`, since the
-      whole guard now refuses the bare form. Verify `bun test
-      bun/command-guard` passes
-- [ ] 1.5 A case for `a-local-allow-entry-does-not-reopen-the-bare-install`:
-      the guard decides from the hook event alone and reads no settings file,
-      so cite the scenario on the 1.1 `bun install` case with a comment saying
-      exit 2 blocks whatever a permission entry allows; no separate test
+- [ ] 1.5 Then `bunInstall(part, name, rest, dirs)` in
+      `bun/command-guard-exec.ts`, beside `bunxInstall`: `undefined` unless
+      `name` is `bun` and the subcommand, found as `bunTestRetry` finds its
+      verb, is `install` or `i`; `undefined` when `part` is exactly
+      `[<bun word>, "install" | "i", "--frozen-lockfile"]` and, for every
+      directory in `dirs`, the nearest `package.json` and the `bun.lock`
+      beside it pass `committed()`; otherwise the reason in `design.md`
+      decision 6. `check()` in `bun/command-guard.ts` calls it beside
+      `bunxInstall` and blocks under `bun-install`; the header comment of each
+      file names the new prohibition, and the guard's header that a local
+      `allow` silencing a hook's `ask` is why this one blocks. Verify
+      `bun test bun/command-guard-install.test.ts` passes
+- [ ] 1.6 `bun/command-guard-interpreters.test.ts`: the `"bun install"` row of
+      *gets no decision* becomes `"bun install --frozen-lockfile"` (its
+      checkout commits `package.json`; add a committed `bun.lock` to it if the
+      row then refuses). Verify `bun test bun/command-guard` passes
 
 ## 2. The install family leaves `ask`; the frozen form enters `allow`
 
