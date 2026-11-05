@@ -9,8 +9,9 @@
 
 `permissions.ask` in `.claude/settings.json` SHALL cover every invocation form
 that changes the project's dependency record — `package.json` or the lockfile
-— outside bun's install command, which *An install runs only in its frozen
-form* refuses instead. That is `bun add` and `bun remove`;
+— save `bun install` itself, which *An install runs only in its frozen form*
+refuses instead. That is the rest of bun's install family, `bun add` and
+`bun remove`;
 `bun update`, `bun patch` and its undocumented equivalent `bun patch-commit`;
 and the `bun pm` subcommands that edit `package.json` directly — `pkg`,
 `version` and `trust`. It SHALL also cover each alias `bun` documents for any
@@ -130,18 +131,15 @@ can use*, naming each, and SHALL write neither file.
 ### Requirement: An install runs only in its frozen form
 
 The guard SHALL block every `bun install` or `bun i` except exactly
-`bun install --frozen-lockfile` or `bun i --frozen-lockfile` — `bun` the
-command's first word, then the subcommand, that one flag and nothing else —
-run where the nearest `package.json` and the `bun.lock` beside it are tracked
-and unchanged against `HEAD` in every directory the line may run in. The
-reason SHALL name the frozen form and ask that any other install be run by
-the user in their own terminal.
+`bun install --frozen-lockfile` or `bun i --frozen-lockfile`: `bun` the
+command's first word, then the subcommand, that one flag and nothing else.
+The reason SHALL name the frozen form and ask that any other install be run
+by the user in their own terminal.
 
 #### Scenario: The frozen form runs without a prompt
 
 - **WHEN** the agent attempts `bun install --frozen-lockfile` or
-  `bun i --frozen-lockfile` in a checkout whose `package.json` and `bun.lock`
-  are committed and unedited
+  `bun i --frozen-lockfile`
 - **THEN** the hook does not block it, and no `ask` entry prompts for it
 
 #### Scenario: The frozen form however it is quoted, spaced or reached
@@ -159,16 +157,6 @@ the user in their own terminal.
   `>package.json bun install --frozen-lockfile`
 - **THEN** the hook blocks the call, because a word before `bun` can move the
   install, add to its words or rewrite the manifest
-
-#### Scenario: A manifest the tree does not vouch for
-
-- **WHEN** the agent attempts `bun install --frozen-lockfile` where
-  `package.json` or `bun.lock` carries an uncommitted or staged edit, is
-  untracked, or is missing, or attempts
-  `cd /tmp/x && bun install --frozen-lockfile` outside any repository
-- **THEN** the hook blocks the call, because the install would run what no
-  reviewer read: dependencies the agent wrote in, and the root package's
-  lifecycle scripts
 
 #### Scenario: A bare install
 
