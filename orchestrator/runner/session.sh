@@ -26,8 +26,9 @@ while :; do
 		bun install --frozen-lockfile || echo "session: bun install failed; starting claude anyway" >&2
 		# The project's settings alone left ponytail uninstalled from the second start on (2.1.316,
 		# ship-ponytail D7); the marketplace and its tag come from those settings.
-		# coreutils' timeout, as the forced command's notice uses: a network that hangs must not hold the start.
-		timeout 120 claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
+		# coreutils' timeout, so a network that hangs cannot hold the start; --foreground keeps claude
+		# in the pane's foreground process group, where a tty read would otherwise stop it.
+		timeout --foreground 120 claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
 	else
 		cd "$HOME"
 	fi

@@ -14,7 +14,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { HOOKS } from "./bootstrap.ts";
-import { isRecord } from "./loop-guard.ts";
+import { isRecord } from "./is-record.ts";
 import { tracked } from "./tracked.ts";
 
 /** Every package manager a consumer does not use. */
