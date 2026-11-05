@@ -18,7 +18,8 @@ not. `bun/git-env.test.ts` and `bun/pre-pr.test.ts` pin the hook's lines.
 
 1. б — reformat the tree with Biome now, in one pull request of its own
    whose body carries `oversize: <reason>`; the formatter stays on.
-2. Stryker covers every module: a baseline run once, module by module
+2. Stryker covers every module — narrowed to an allow list by decision 9: a
+   baseline run once, module by module
    (mutate `bun/x.ts`, run only `bun/x*.test.ts`); afterwards only
    incremental by diff — a push mutates the changed `bun/` files and runs
    their tests, and the other modules' results come from the stored
@@ -41,12 +42,18 @@ not. `bun/git-env.test.ts` and `bun/pre-pr.test.ts` pin the hook's lines.
    default of 80. The 12 are split first, as task 1.2 says.
 8. а (2026-11-02) — a slow mutant's status moving between whole runs changes
    nothing yet: the baseline first measures the spread on a few modules, and
-   the timeout setting is decided on it.
+   the timeout setting is decided on it. Measured on 2026-11-04 (whole modules
+   flipping, 7 234 of 12 678 mutants Timeout) and settled by decision 9.
+9. A (2026-11-05, after the card's architecture review) — mutate only an
+   allow list of modules their tests exercise in-process; set `concurrency`,
+   `timeoutMS` and `timeoutFactor` explicitly; give the sandbox no way to
+   write the real checkout, whatever the list; the floor counts the listed
+   modules alone, and the hook step stays. Design decision 7.
 
 ## Goals / Non-Goals
 
 **Non-Goals:** changing `bun/mutation-floor.ts` or `bun/check-yaml.ts`,
-which consumers run, or `bun/no-suppressions.ts` beyond one exempt path; an
+which consumers run, or `bun/no-suppressions.ts`; an
 import graph of which modules a changed helper affects (decision 4).
 
 ## Decisions
@@ -144,16 +151,19 @@ directory lands in the tree; mutants sorted by id, a run writing them as they
 finish. The probe confirms Stryker reads it so trimmed.
 
 Stryker's sandbox sits inside the checkout, so a test that finds the
-repository through git reads the checkout's files, not the mutated ones: the
-probe kills a deliberate mutant to show the sandbox is what is judged, and
-`tempDirName` moves outside the checkout if it is not.
+repository through git read the checkout's files, not the mutated ones, and
+a mutant could write there; decision 7 gives the sandbox a repository of its
+own.
 
-The fourteen modules no test file names by prefix (`bun/check-yaml.ts`,
-`bun/root.ts` and twelve more today) are not mutated, and the run names
-them: the user's decision 2 judges a module by `bun/x*.test.ts` alone.
+Which modules are mutated is decision 7's allow list, not every module with
+tests: a module no test file names by prefix (`bun/check-yaml.ts`,
+`bun/root.ts` and more) stays off it, since the user's decision 2 judges a
+module by `bun/x*.test.ts` alone, and the run names every module it leaves
+out.
 
-Before any run the step fails on a stored file whose module is untracked or
-has no test file, one with no `files` object, or two naming one source path,
+Before any run the step fails on a listed module that is untracked or has no
+test file, a stored file whose module is untracked, has no test file or is
+not listed, one with no `files` object, or two naming one source path,
 since no run could change those; a module with a test file and no stored file
 runs whole. After the runs it fails on a stored file differing from `HEAD`'s,
 or untracked, so the one it just wrote fails until committed, then merges every stored file's `files` entries, mutants
@@ -164,20 +174,19 @@ git, because a clone, a worktree, the host and CI must all read the same
 results. They are excluded from the diff budget (`mutation/**` in
 `harness.diffBudgetExclude`): the reviewed number is the floor's line.
 
-The stored copy of `bun/no-suppressions.ts` carries its three markers. The
-scan exempts that one file by path, beside its own script and test and for
-the same reason (`commit-gates` delta) — an approval would pin a count every
-edit to the script moves, and exempting all of `mutation/` would hide a
-marker in any other module's source.
+`bun/no-suppressions.ts` is off decision 7's list (it has a main block), so
+no stored file carries its three markers, and the scan exempts nothing under
+`mutation/`: the exemption task 6.1 planned is dropped.
 
 Stryker needs Node on `PATH` (d2ass's `mutation.yml` records why); the step
 fails naming Node when a module changed and none is found.
 
 ### 5. Where the baseline runs: by hand, on the laptop
 
-`bun bun/mutation-run.ts --all` by hand on the laptop, committed in pull
-requests of a batch of modules each; an interrupted run resumes, a module
-with current stored results being near-instant. Not CI on a schedule: the
+`bun bun/mutation-run.ts` by hand on the laptop over decision 7's list, in
+one pull request (the list is small enough; batches were for every module);
+an interrupted run resumes, a module with current stored results being
+near-instant. Not CI on a schedule: the
 results must be committed, every workflow here holds `contents: read`, and a
 write token for a once-off run of hours is a standing risk for one use. Not
 the host: 2 vCPU and 3.5 GiB beside parallel agents.
@@ -191,16 +200,81 @@ containers pinned by d2ass's digests, which nothing updates.
 `test.yml` pins it and Node as d2ass does: over current stored results it mutates nothing, and over
 stale ones it re-runs and fails. The user adds the check names to the ruleset.
 
+### 7. An allow list, explicit timeouts, a sandbox of its own (user's decision 9)
+
+This reverses "every module" in decisions 2 and 4–5 above. The 2026-11-04
+baseline was mostly `Timeout` (7 234 of 12 678), flipped whole modules
+between identical runs, and wrote the real checkout from the sandbox; the
+card's architecture review of 2026-11-05 traced all three.
+
+**The list.** A module is mutated only when all of these hold, read from the
+2026-11-04 baseline and the source:
+
+- its baseline shows no `Timeout` — its suite runs in seconds and in-process,
+  so the limit is not crossed by load alone;
+- it has no `import.meta.main` block — a `true` mutant of one runs the CLI
+  inside the test process, and one ending in `process.exit(0)` reads as
+  `Survived`;
+- no test that `bun test bun/<name>` runs starts the module, or a program
+  that imports it, with an environment built from scratch — that drops
+  `__STRYKER_ACTIVE_MUTANT__`, so the child runs no mutant and every one
+  survives (`push-draft`, `pr-sweep`, `board-loop-session`, `ci-run-session`
+  through `ci-run.fixture.ts`, and `gate-ledger`, which the review counted in).
+
+Nineteen modules pass, 1 550 mutants in the baseline. The list is
+`stryker.config.json`'s `mutate`, Stryker's own key for what it mutates and
+the one place both readers take it from: `bun/mutation-run.ts` mutates each
+listed module alone (its per-module `mutate` replaces the list) and fails on
+a listed module that is untracked or untested, or on a stored file of an
+unlisted one; the floor counts the report the run merges from those stored
+files, so it counts the list and nothing else. A module joins the list by a
+line there and a run that writes its stored file.
+
+**Timeouts.** A mutant's limit is `timeoutFactor` × the dry run +
+`timeoutMS`, the dry run timed alone while the mutants ran on 11 workers,
+where a suite ran up to 5 times slower. They sit beside `dryRunTimeoutMinutes`
+in `bun/mutation-run.ts`, whose comment says why, since JSON holds none:
+`concurrency` 4, a third of the laptop's cores, leaving room for the agents
+beside it; `timeoutFactor` 3 and `timeoutMS` 10 000, a slowdown of three
+plus 10 s of start-up. The baseline checks them: a listed module with more
+than 5 % `Timeout` means the list or these values are wrong.
+
+**The sandbox.** Stryker never copies `.git`, and its sandbox sits under the
+checkout, so `git rev-parse --show-toplevel` from it — `bun/root.ts`,
+`bun/tracked.ts`, `sync.ts`'s main block — named the real checkout. The
+command each mutant runs first makes the sandbox a repository of its own
+(`git init` and `git add -A`, once, in the dry run before any worker starts),
+so git stops there. Smallest sound fix, against the alternatives:
+
+- excluding main-block mutants covers the one path seen, not a mutant
+  elsewhere that turns a test's directory into the `root` git names, and
+  needs a Stryker comment or a line range per module;
+- refusing when the root resolves outside the sandbox needs a check inside
+  the tests' process, which `bun/mutation-run.ts` does not run;
+- `tempDirName` outside the checkout makes `git` fail in the sandbox, and
+  every module importing `bun/root.ts` with it.
+
+The sandbox's repository also makes a test read the sandbox's files rather
+than the checkout's, which the user or another mutant may change mid-run —
+the review's second source of drift. `bun/mutation-run-command.test.ts` pins
+it: a test that writes where git's root is writes the sandbox, not the
+checkout around it.
+
+**Not done:** option C, a scheduled CI job reporting the unlisted modules
+without a floor, may follow as a change of its own.
+
 ## Risks / Trade-offs
 
 - [The reformat conflicts with every open branch] → it lands alone; a
   branch merging it takes its own side and re-runs the reformat's two
   commands over its files.
-- [The baseline takes hours] → resumable per module, run by hand in batches.
+- [The floor says nothing about the CLI and hook modules off the list, which
+  carry most of the risk] → accepted by the user's decision 9; option C may
+  report them later.
 - [Tests that read the repository through git behave differently inside
-  Stryker's sandbox] → the probe showed it per module, and the baseline's
-  dry runs (decision 4) name every such module before any is mutated; each
-  is reported on the card, never skipped silently.
+  Stryker's sandbox] → since decision 7 they read the sandbox's repository;
+  the baseline's dry runs (decision 4) name every listed module that fails
+  there before any is mutated.
 - [The host has no Node] → a push and a runner pass there that changed a
   module would both fail naming Node; the probe reads `node -v` on the host,
   and if it is absent, installing it is a card that lands before group 7.

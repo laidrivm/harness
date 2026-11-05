@@ -161,29 +161,38 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 
 ## 6. The baseline
 
-- [ ] 6.1 Failing cases in `bun/no-suppressions.test.ts`: a tracked
-      `mutation/no-suppressions.json` carrying the three markers passes with
-      an empty allowlist, and another file under `mutation/` carrying one
-      fails (`the-stored-mutation-results-of-the-check-s-own-script`); then
-      exempt that path beside `self()`. Verify `bun bun/no-suppressions.ts`
-      exits 0 with the stored file present
-- [ ] 6.2 First, by the user's decision 8, run a few modules twice with
-      `--force` and record on the card how many mutants change status, for
-      the timeout setting. Then, on the laptop, `bun bun/mutation-run.ts --all`, committing each
-      module's stored file as it finishes; open one pull request per batch,
-      each listing its modules, every module whose dry run failed and why,
-      and the stored files' total size. Verify the last batch leaves every
-      module with tests holding a stored file (`a-run-asked-for-every-module`)
-      and a second `--all` rewrites none (`a-run-that-found-nothing-to-rewrite`)
+- [x] 6.1 Dropped by the user's decision 9: `bun/no-suppressions.ts` is off
+      design decision 7's list, so no stored file carries its markers and the
+      scan needs no exemption under `mutation/`
+- [ ] 6.2 Per design decision 7: failing cases in `bun/mutation-run.test.ts`
+      — a module the list does not name is named and not run
+      (`a-module-the-list-does-not-name`), a listed module that is untracked
+      or untested fails (`a-listed-module-no-test-file-matches`), a stored
+      file of an unlisted module fails
+      (`a-stored-file-whose-module-left-the-list`) — and in
+      `bun/mutation-run-command.test.ts`, a test writing to git's root writes
+      the sandbox, not the checkout
+      (`a-mutant-that-writes-to-the-root-git-names`). Then the list as
+      `stryker.config.json`'s `mutate`, the command making the sandbox's
+      repository, and `concurrency`, `timeoutFactor` and `timeoutMS` set.
+      Then, on the laptop, `bun bun/mutation-run.ts` over the list, in one
+      pull request listing per module the total, `Killed`, `Timeout` and
+      `Survived`, every module whose dry run failed and why, and the stored
+      files' total size. Verify every listed module holds a stored file with
+      at most 5 % `Timeout` (`a-run-asked-for-every-module`), a second run
+      rewrites none (`a-run-that-found-nothing-to-rewrite`), and the
+      checkout's root lists the same entries before and after the run
 
 ## 7. The mutation step in the hook and in CI
 
-- [ ] 7.1 Set `harness.mutationFloor` to the baseline's survivor total and
-      its reason. Verify `bun bun/mutation-run.ts && bun
+- [ ] 7.1 Set `harness.mutationFloor` to the survivor total of the listed
+      modules' baseline (design decision 7; the unlisted modules count for
+      nothing) and its reason. Verify `bun bun/mutation-run.ts && bun
       bun/mutation-floor.ts` exits 0
 - [ ] 7.2 Failing case in `bun/git-env.test.ts`: a push whose diff touches
       nothing under `bun/` starts no Stryker and still runs the floor
-      (`a-push-that-changed-no-module`). Then add the step and the floor to
+      (`a-push-that-changed-no-module`), and one touching only an unlisted
+      module starts none either. Then add the step and the floor to
       `.githooks/gates.sh`. Verify the case passes and a push of this group
       mutates nothing
 - [ ] 7.3 Add `.github/workflows/mutation.yml` per design decision 6.
@@ -191,5 +200,6 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       check name to the list for the ruleset
 - [ ] 7.4 `README.md`: `mutation/`, `.githooks/gates.sh`, `biome.json`,
       `tsconfig.json` and `stryker.config.json` in the map of where files
-      live, and how to refresh `mutation/` by hand (`--all --force`). No
+      live, how to refresh `mutation/` by hand (`--all --force`), and how a
+      module joins `stryker.config.json`'s `mutate` (design decision 7). No
       test reads the map, so verify by reading it back against `git ls-files`

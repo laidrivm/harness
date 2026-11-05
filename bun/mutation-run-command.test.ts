@@ -13,7 +13,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { unsaved } from "./mutation-run.ts";
+import { unsaved } from "./mutation-checkout.ts";
+import { command } from "./mutation-run.ts";
 
 const script = `${import.meta.dir}/mutation-run.ts`;
 const made: string[] = [];
@@ -39,10 +40,11 @@ const git = (dir: string, ...args: string[]) => {
 	if (run.exitCode !== 0) throw new Error(run.stderr.toString());
 };
 
-/** A committed repository holding `files` and one module with a test. */
-function repository(files: Record<string, string> = {}): string {
+/** A committed repository holding `files` and one module with a test, `listed` the modules it mutates. */
+function repository(files: Record<string, string> = {}, listed = ["bun/a.ts"]): string {
 	const dir = scratch();
-	write(dir, { "stryker.config.json": "{}\n", "bun/a.ts": "1\n", "bun/a.test.ts": "1\n", ...files });
+	const config = `${JSON.stringify({ mutate: listed })}\n`;
+	write(dir, { "stryker.config.json": config, "bun/a.ts": "1\n", "bun/a.test.ts": "1\n", ...files });
 	git(dir, "init", "-q", "-b", "main");
 	git(dir, "add", "-A");
 	git(dir, "commit", "-qm", "base");
@@ -109,6 +111,7 @@ const sweeping = (...failing: string[]) =>
 	].join("\n");
 
 const three = { "bun/b.ts": "1\n", "bun/b.test.ts": "1\n", "bun/c.ts": "1\n", "bun/c.test.ts": "1\n" };
+const listedThree = ["bun/a.ts", "bun/b.ts", "bun/c.ts"];
 
 describe("the command", () => {
 	test("a module to run with no node on PATH fails naming Node", () => {
@@ -172,7 +175,7 @@ describe("the command", () => {
 	});
 
 	test("of several modules, every one whose dry run fails is named before any is mutated or stored", () => {
-		const dir = repository(three);
+		const dir = repository(three, listedThree);
 		// Results are written on every call, so a dry run that stored them would leave `mutation/`.
 		const { code, err } = cli(dir, path({ node: "exit 0", bunx: sweeping("bun/a.ts", "bun/c.ts") }));
 		const named = ["bun/a.ts", "bun/b.ts", "bun/c.ts"].map((m) => err.includes(`dry run exited 1 on ${m}`));
@@ -182,7 +185,7 @@ describe("the command", () => {
 	});
 
 	test("of several modules whose dry runs all pass, each is then mutated and stored", () => {
-		const dir = repository(three);
+		const dir = repository(three, listedThree);
 		cli(dir, path({ node: "exit 0", bunx: sweeping() }));
 		const stored = ["a", "b", "c"].map((name) => existsSync(join(dir, `mutation/${name}.json`)));
 		expect([readFileSync(join(dir, "calls"), "utf8"), ...stored]).toEqual([
@@ -199,10 +202,10 @@ describe("the command", () => {
 		expect(readFileSync(join(dir, "calls"), "utf8")).toBe("0\n");
 	});
 
-	test("a named module with no test file fails, and a named run writes no report", () => {
-		const dir = repository({ "bun/b.ts": "1\n" });
+	test("a named module the list does not name fails, and a named run writes no report", () => {
+		const dir = repository({ "bun/b.ts": "1\n", "bun/b.test.ts": "1\n" });
 		const bin = path({ node: "exit 0", bunx: stryker });
-		expect(cli(dir, bin, "bun/b.ts").err).toContain("bun/b.ts has no test file to judge its mutants");
+		expect(cli(dir, bin, "bun/b.ts").err).toContain("bun/b.ts is not listed in stryker.config.json's mutate");
 		expect(cli(dir, bin, "bun/a.ts").code).toBe(1);
 		git(dir, "add", "-A");
 		git(dir, "commit", "-qm", "results");
@@ -215,6 +218,20 @@ describe("the command", () => {
 		write(dir, { "mutation/a.json": "{ }\n", "mutation/new.json": "{}\n" });
 		git(dir, "mv", "mutation/b.json", "mutation/c.json");
 		expect(unsaved(dir)).toEqual(["mutation/a.json", "mutation/b.json", "mutation/c.json", "mutation/new.json"]);
+	});
+
+	// spec: mutation-floor/a-mutant-that-writes-to-the-root-git-names
+	test("the tests a run starts find the sandbox through git, never the checkout around it", () => {
+		const checkout = repository();
+		const sandbox = join(checkout, ".stryker-tmp", "sandbox-1");
+		const find = 'Bun.spawnSync(["git", "rev-parse", "--show-toplevel"]).stdout.toString().trim()';
+		write(sandbox, {
+			"bun/a.ts": "1\n",
+			"bun/a.test.ts": `import { test } from "bun:test";\ntest("a main block", () => Bun.write(${find} + "/leak", ""));\n`,
+		});
+		// Twice: the second finds the sandbox's repository already made.
+		for (const _ of [1, 2]) expect(Bun.spawnSync(["sh", "-c", command("bun/a.ts")], { cwd: sandbox }).exitCode).toBe(0);
+		expect([existsSync(join(sandbox, "leak")), existsSync(join(checkout, "leak"))]).toEqual([true, false]);
 	});
 
 	test.each([

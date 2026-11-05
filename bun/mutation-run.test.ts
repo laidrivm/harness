@@ -2,8 +2,9 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Tree } from "./mutation-checkout.ts";
 import { loadReport, survivors } from "./mutation-floor.ts";
-import { fingerprint, merge, modules, plan, type Stored, type Tree, trim } from "./mutation-run.ts";
+import { fingerprint, merge, modules, plan, type Stored, trim } from "./mutation-run.ts";
 
 const made: string[] = [];
 afterAll(() => {
@@ -23,21 +24,25 @@ const mutant = (id: string, status: string) => ({
 	status,
 });
 
-/** A checkout whose working tree, index and `HEAD` all hold `files`. */
-const tree = (files: Record<string, string>): Tree => ({
-	tracked: Object.keys(files),
-	blobs: Object.fromEntries(Object.entries(files).map(([path, text]) => [path, Bun.hash(text).toString()])),
-	text: files,
-	stored: {},
-	dirty: [],
-});
+/** A checkout whose working tree, index and `HEAD` all hold `files`, every module a test matches on the list. */
+const tree = (files: Record<string, string>): Tree => {
+	const paths = Object.keys(files);
+	return {
+		tracked: paths,
+		blobs: Object.fromEntries(Object.entries(files).map(([path, text]) => [path, Bun.hash(text).toString()])),
+		text: files,
+		stored: {},
+		dirty: [],
+		listed: modules(paths).filter((m) => paths.some((p) => p.startsWith(m.slice(0, -3)) && p.endsWith(".test.ts"))),
+	};
+};
 
-/** `t` with `path` committed as `text`, or deleted where `text` is undefined. */
+/** `t` with `path` committed as `text`, or deleted where `text` is undefined; the list stays as it was. */
 function commit(t: Tree, path: string, text?: string): Tree {
 	const files = { ...t.text };
 	if (text === undefined) delete files[path];
 	else files[path] = text;
-	return { ...tree(files), stored: t.stored };
+	return { ...tree(files), stored: t.stored, listed: t.listed };
 }
 
 /** `t` with every module that has tests measured against it, one survivor each. */
@@ -84,17 +89,26 @@ describe("which modules there are", () => {
 		]);
 	});
 
-	// spec: mutation-floor/a-module-no-test-file-matches
-	test("a module no test file matches is named and not run", () => {
-		const { runs, untested } = plan(base);
-		expect(untested).toEqual(["bun/root.ts"]);
-		expect(runs.map((run) => run.module)).not.toContain("bun/root.ts");
+	// spec: mutation-floor/a-module-the-list-does-not-name
+	test("a module the list does not name is named and not run, though a test matches it", () => {
+		const { runs, skipped, problems } = plan({ ...base, listed: ["bun/board.ts"] });
+		expect(runs).toEqual([{ module: "bun/board.ts", force: false }]);
+		expect(skipped).toContain("bun/command-parse.ts");
+		expect(problems).toEqual([]);
+	});
+
+	// spec: mutation-floor/a-listed-module-no-test-file-matches
+	test("a listed module that no test file matches, or that is not tracked, fails naming it", () => {
+		expect(plan({ ...base, listed: ["bun/board.ts", "bun/root.ts", "bun/gone.ts"] }).problems).toEqual([
+			"stryker.config.json's mutate lists bun/root.ts, which is not a tracked module a test file matches",
+			"stryker.config.json's mutate lists bun/gone.ts, which is not a tracked module a test file matches",
+		]);
 	});
 });
 
 describe("what a run mutates", () => {
 	test("current stored results, or a change to a script that is not a module, run nothing", () => {
-		expect(plan(current())).toEqual({ runs: [], untested: ["bun/root.ts"], problems: [] });
+		expect(plan(current())).toEqual({ runs: [], skipped: ["bun/root.ts"], problems: [] });
 		expect(runs(commit(current(), "bun/diff-budget.sh", "exit 1\n"))).toEqual([]);
 	});
 
@@ -138,9 +152,10 @@ describe("what a run mutates", () => {
 	});
 
 	// spec: mutation-floor/a-new-module-has-no-stored-file
-	test("a new module runs whole", () => {
+	test("a new module runs whole once listed", () => {
 		const t = commit(commit(current(), "bun/new.ts", "export const n = 1;\n"), "bun/new.test.ts", "x\n");
-		expect(runs(t)).toEqual([{ module: "bun/new.ts", force: false }]);
+		expect(runs(t)).toEqual([]);
+		expect(runs({ ...t, listed: [...t.listed, "bun/new.ts"] })).toEqual([{ module: "bun/new.ts", force: false }]);
 	});
 
 	// spec: mutation-floor/a-module-with-tests-and-no-stored-file
@@ -173,7 +188,15 @@ describe("what fails the run before it mutates", () => {
 		["bun/board.ts", "bun/board.ts is not tracked"],
 		["bun/board.test.ts", "no test file matches bun/board"],
 	])("a stored file whose %s is deleted", (path, why) => {
-		expect(plan(commit(current(), path)).problems).toEqual([`mutation/board.json: ${why} — delete the stored file`]);
+		expect(plan(commit(current(), path)).problems).toContain(`mutation/board.json: ${why} — delete the stored file`);
+	});
+
+	// spec: mutation-floor/a-stored-file-whose-module-left-the-list
+	test("a stored file whose module left the list", () => {
+		const t = current();
+		expect(plan({ ...t, listed: t.listed.filter((m) => m !== "bun/board.ts") }).problems).toEqual([
+			"mutation/board.json: bun/board.ts is not listed in stryker.config.json's mutate — delete the stored file",
+		]);
 	});
 
 	test("a stored file without files, and two naming one path", () => {
