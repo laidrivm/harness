@@ -157,7 +157,7 @@ describe("the runner image", () => {
 	// /etc/claude-code/CLAUDE.md is Claude Code's managed memory on Linux; a file under /home/agent, a volume, would never update.
 	test("the image copies the session's rules to the managed CLAUDE.md at mode 0644", () => {
 		expect(lines()).toContain("COPY --chmod=0644 runner/session-rules.md /etc/claude-code/CLAUDE.md");
-		expect(read("orchestrator/runner/session-rules.md").match(/^\d+\. /gm)).toHaveLength(11);
+		expect(read("orchestrator/runner/session-rules.md").match(/^\d+\. /gm)).toHaveLength(12);
 	});
 
 	// An octal --chmod reaches the directories its COPY creates: one made by the COPY would be 0644, which agent cannot enter.
