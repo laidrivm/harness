@@ -9,6 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { HOOKS, MARK, registration } from "./bootstrap.ts";
+import { isRecord } from "./loop-guard.ts";
 import { ASK, ATTRIBUTION, DENY, EDIT_ASK, EDIT_DENY, INSTALL, MARKETPLACE, MCP_ASK, PLUGINS } from "./settings.ts";
 
 type Group = { matcher?: string; hooks?: { command?: unknown }[] };
@@ -87,11 +88,9 @@ function settingsText(text: string | undefined): string {
 	config.permissions = permissions;
 	config.attribution = ATTRIBUTION;
 	// Spread, a list or a string would lose the consumer's own entries without a word.
-	for (const key of ["enabledPlugins", "extraKnownMarketplaces"] as const) {
-		const value = config[key];
-		if (value !== undefined && (typeof value !== "object" || value === null || Array.isArray(value)))
+	for (const key of ["enabledPlugins", "extraKnownMarketplaces"] as const)
+		if (config[key] !== undefined && !isRecord(config[key]))
 			throw new Error(`.claude/settings.json: ${key} is not an object`);
-	}
 	config.enabledPlugins = { ...config.enabledPlugins, ...Object.fromEntries(PLUGINS.map((id) => [id, true])) };
 	config.extraKnownMarketplaces = { ...config.extraKnownMarketplaces, ponytail: MARKETPLACE };
 	const indent = text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";

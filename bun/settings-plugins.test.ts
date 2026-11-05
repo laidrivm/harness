@@ -5,7 +5,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { NOTE } from "../orchestrator/layout.ts";
+import { noted } from "../orchestrator/layout.ts";
 import { changed, cleanup, consumer, type Policy } from "./settings.fixture.ts";
 import { MARKETPLACE, PLUGINS, settings } from "./settings.ts";
 
@@ -14,13 +14,9 @@ afterAll(cleanup);
 const report = (change: (c: Policy) => void) => settings(consumer(changed(change))).join("\n");
 const own = () => JSON.parse(readFileSync(`${import.meta.dir}/../.claude/settings.json`, "utf8"));
 
-/** Each `ref` line of `text` whose line above carries no note, as `file:line`. */
+/** Each `ref` line of `text` with no note on it or above it, as `file:line`, by the runner's pin scan. */
 const noteless = (file: string, text: string) =>
-	text
-		.split("\n")
-		.flatMap((line, i, all) =>
-			/^\s*ref:/.test(line) && !(all[i - 1] ?? "").includes(NOTE) ? [`${file}:${i + 1}`] : [],
-		);
+	text.split("\n").flatMap((line, i, all) => (/^\s*ref:/.test(line) && !noted(all, i) ? [`${file}:${i + 1}`] : []));
 
 describe("the harness's plugins", () => {
 	// spec: agent-permissions/a-consumer-without-the-plugins
@@ -42,6 +38,16 @@ describe("the harness's plugins", () => {
 	// spec: agent-permissions/a-consumer-s-own-plugin-beside-the-harness-s
 	test.each([true, false])("a consumer's own plugin set to %p reports nothing", (on) => {
 		expect(report((c) => (c.enabledPlugins = { ...c.enabledPlugins, "some-tool@acme": on }))).toBe("");
+	});
+
+	test.each(
+		["enabledPlugins", "extraKnownMarketplaces"].flatMap((key) =>
+			[[], "x", null].map((value) => [key, value] as const),
+		),
+	)("%s as %p is named as no object, with a hand edit for its fix", (key, value) => {
+		const text = report((c) => Object.assign(c, { [key]: value }));
+		expect(text).toContain(`${key} is not an object — make it one by hand`);
+		expect(text).not.toContain(`${key}.`);
 	});
 
 	// spec: agent-permissions/the-harness-s-own-plugins

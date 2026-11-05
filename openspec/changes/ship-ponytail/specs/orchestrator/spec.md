@@ -56,7 +56,8 @@ to a laptop or a consumer SHALL set ponytail's level.
 In each round that finds the session's clone, the start script SHALL run
 `claude plugin install ponytail@ponytail --scope project` in the clone, after
 `bun install --frozen-lockfile` and before `claude`, with Claude Code's
-auto-updater off. A failed install SHALL print a line naming ponytail's
+auto-updater off and under a time limit. A failed or timed-out install SHALL
+print a line naming ponytail's
 install and SHALL NOT stop `claude` from starting. Where the clone does not
 exist, the script SHALL NOT run the install.
 
@@ -65,13 +66,13 @@ exist, the script SHALL NOT run the install.
 - **WHEN** the start script runs a round in the session's clone, under `sh`
   or `dash`
 - **THEN** it runs `claude plugin install ponytail@ponytail --scope project`
-  in the clone, with `DISABLE_AUTOUPDATER=1`, after the dependency install
-  and before `claude` starts
+  in the clone, under `timeout`, with `DISABLE_AUTOUPDATER=1`, after the
+  dependency install and before `claude` starts
 
 #### Scenario: A failed plugin install leaves the session starting
 
 - **WHEN** `claude plugin install` exits non-zero, offline or before the
-  clone is trusted
+  clone is trusted, or outruns its time limit
 - **THEN** the pane shows a line naming ponytail's install, and `claude`
   starts all the same
 
