@@ -135,7 +135,7 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       `/clear` and whether the first message cleared the mark, the three
       points design.md lists as unverified, and which conversation the
       restarted session holds: the cleared one, or the one before `/clear`
-      (question 18)
+      (answer 18 а)
 - [ ] 4.3 **User decision.** Confirm the `main` ruleset's bypass list names no
       App and no bot, since every merge now runs on the host as root
 

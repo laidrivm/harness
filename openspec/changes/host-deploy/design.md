@@ -167,8 +167,17 @@ comes back busy. The failure line is printed on `resume` too, since the
 rollback's restart and a crash's are `resume` starts and answer 17 a asks
 the session to report the failure on start.
 
-What a deploy's restart of a fresh session continues is open (question 18,
-*Open Questions*).
+A deploy's restart of a fresh session continues the directory's last
+conversation, as every start does (user, 05.11, answer 18 а). Whether
+`/clear` leaves a transcript before the first prompt is not verified: if it
+does not, the restart continues the conversation the user cleared. A
+continued conversation also keeps the system prompt of its first request
+until it is compacted (CLI reference, *System prompt flags in resumed
+conversations*), so the new main's rules may not reach it at once. Task 4.2
+and the stage's live probe check which conversation comes back. Rejected:
+starting a new conversation while the mark exists (18 б, a new entry in the
+app's Recents per deploy) and resuming an id a hook records (18 в, more code,
+the old prompt kept).
 
 ### `up -d`, then a restart when the runner was not recreated
 
@@ -292,18 +301,6 @@ with the pass loop:
 - [The build on 2 vCPU runs beside the session's subagents' tests] → it runs
   once per green head, cached on the ticks after.
 
-## Open Questions
-
-- 18 (asked 05.11): a deploy restarts a fresh session, which `--continue`
-  brings back to the directory's last conversation. Whether `/clear` leaves a
-  transcript before the first prompt is not verified; if it does not, the
-  restart continues the conversation the user cleared. A continued
-  conversation also keeps the system prompt of its first request until it is
-  compacted (CLI reference, *System prompt flags in resumed conversations*),
-  so the new main's rules may not reach it at once. Recommended: the start
-  script starts a new conversation while the mark exists, at the cost of a
-  new entry in the app's Recents per deploy.
-
 ## Migration Plan
 
 Merge after the image card, then the user's acts in tasks.md group 4:
@@ -317,6 +314,8 @@ remove `/var/lib/harness-deploy/rolled-back`.
 
 - 16 a (user, 02.11): restart only in a fresh session.
 - 17 a (user, 02.11): light rollback, failure file reported in chat.
+- 18 а (user, 05.11): a deploy's restart keeps `--continue`; the first
+  deploy (task 4.2) checks which conversation comes back.
 - 12а (2026-10-24): revised above, the timer alone in stage 2.5, the kick in
   stage 6.
 - 1б: a merge deploys without the user, within a tick of a fresh session.
