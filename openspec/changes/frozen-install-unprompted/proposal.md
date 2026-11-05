@@ -27,11 +27,10 @@ through Remote Control, that prompt is a manual step in the stage 2.5 metric.
   --frozen-lockfile`), a wrapper or a redirection before it makes the form
   inexact — bun reads its install settings from the environment, and
   `BUN_CONFIG_SKIP_LOAD_LOCKFILE=1` was measured making a frozen install
-  install a package the lockfile does not hold. And the nearest
-  `package.json` and its `bun.lock` must be tracked and unchanged against
-  `HEAD`, as a `bun run` script's `package.json` already must, since a frozen
-  install still installs what those files hold and runs the root package's
-  lifecycle scripts.
+  install a package the lockfile does not hold. What the manifest holds is
+  not checked: a frozen install installs what `package.json` and `bun.lock`
+  say and runs the root package's lifecycle scripts, and an agent rewriting
+  them on purpose is a threat not yet seen (`design.md`, decision 3a).
 - The guard's parser reads `X+=1` as an assignment, as bash and zsh do, not
   as the command name — which today hides the command after it from every
   check.
@@ -81,9 +80,9 @@ None.
 
 - Changed: `bun/settings.ts` (`MANIFEST_WRITES`), `bun/settings.fixture.ts`,
   `.claude/settings.json` (ask, allow, the bootstrap hook text),
-  `bun/command-guard-exec.ts` and `bun/command-guard.ts` (the new check),
-  `bun/command-guard-interpreters.ts` (`committed()` lifted out for both
-  callers), `bun/command-words.ts` (`NOT_A_NAME` takes `+=`),
+  `bun/command-guard-exec.ts` and `bun/command-guard.ts` (the new check, and
+  the subcommand walk `bunxInstall` and `bunTestRetry` share, lifted into
+  one helper), `bun/command-words.ts` (`NOT_A_NAME` takes `+=`),
   `bun/bootstrap.ts` (`BOOTSTRAP`, `NOTICE`), `bun/board-loop-clone.ts`,
   `bun/board-loop.ts`, the tests `bun/command-guard-install.test.ts` (new),
   `bun/command-guard-interpreters.test.ts`, `bun/settings-local.test.ts`,

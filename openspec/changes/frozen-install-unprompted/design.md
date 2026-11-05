@@ -73,9 +73,11 @@ input, so `echo --config=x.toml | xargs bun i --frozen-lockfile` loads a
 bunfig the guard never read. Refusing every wrapper costs `timeout 600 bun
 install --frozen-lockfile`, which the agent runs without the `timeout`.
 
-The install family is found as `bunTestRetry` finds `test`: the first word
-after `bun` that is `install` or `i`, or that is neither an option nor the
-word after one. That reads `bun --cwd ../x install --frozen-lockfile` as an
+The subcommand is found as `bunxInstall` finds `x` and `bunTestRetry` finds
+`test`: the first word after `bun` that is one of the verbs sought, or that is
+neither an option nor the word after one. Those two hold the walk as two
+copies today; it is lifted into one helper all three call, so a third copy is
+not made. That reads `bun --cwd ../x install --frozen-lockfile` as an
 install, and inexact, so it blocks; `bun run install` and `bun pm ls` are not
 installs and this check leaves them alone.
 
@@ -115,29 +117,28 @@ or a variable in the session's environment. The guard judges each command
 alone and keeps no shell state; following an `export` across a line would be
 a shell interpreter, for a path no session has taken.
 
-### 3a. Only a manifest the tree vouches for
+### 3a. No check of what the manifest holds
 
-"Frozen changes neither file" is true, but it is not the whole premise: a
-frozen install installs whatever `package.json` and `bun.lock` hold on disk,
-and runs the root package's lifecycle scripts (`preinstall`, `postinstall`,
-`prepare`), which `bun.lock` does not record. The agent can edit both files
-with the Edit tool, which no rule gates, so without more a frozen install
-would let a dependency the agent wrote in, or a `postinstall` carrying inline
-code, run unprompted — past the `ask` on `bun add` and past the interpreter
-check. (Raised by the review; not reproduced by hand.)
+A frozen install installs whatever `package.json` and `bun.lock` hold on disk
+and runs the root package's lifecycle scripts, which `bun.lock` does not
+record. An agent that writes a dependency or a `postinstall` into those files
+by hand, then runs the frozen form, gets them installed or run with no
+prompt; today the `ask` entry on `bun install` would have stopped it.
 
-So the frozen form passes only where, for every directory the line may run
-in, the nearest `package.json` and the `bun.lock` beside it are tracked and
-unchanged against `HEAD` — the `committed()` test `bun/command-guard-interpreters.ts`
-already applies to a `bun run` script's `package.json`, lifted into one module
-both callers import. A missing `bun.lock` fails it: a frozen install with no
-lockfile resolves freely and writes none (probed on bun 1.4.2, 2026-11-05). A
-directory outside any repository fails it, which closes
-`cd /tmp/x && bun i --frozen-lockfile` over a manifest the agent wrote there.
-What runs is then what a reviewer can read on the branch.
-
-This narrows the user's «б», which allowed the exact form wherever it ran;
-it widens nothing.
+The first review round proposed requiring the nearest `package.json` and its
+`bun.lock` to be committed unchanged, as a `bun run` script's `package.json`
+must be. The second showed what that would not cover: a rewrite earlier in
+the same line, after the guard has read the files; a `cd` into a directory the
+line creates; one commit on the agent's own branch; a workspace member's
+`package.json`, a patch file, a `bunfig.toml` written through Bash; a
+lockfile named `bun.lockb`. A check with that many open sides reads as a
+boundary and is not one. The threat it answers — an agent rewriting the
+manifest on purpose to run code — has not been seen, and the user's standing
+position is to guard only a seen threat, with CI's required checks and a
+human merge covering intent. So no manifest check: the exact form is decided
+by its words alone, as the user's «б» states it. The guard catches the casual
+path, an agent typing `bun install lodash`; a hand-written dependency shows
+in the pull request's diff of `package.json` and `bun.lock`.
 
 ### 4. The bootstrap allows only the frozen form
 
@@ -145,9 +146,7 @@ Its test becomes `/^bun (install|i) --frozen-lockfile$/` on the trimmed
 command, so a bare `bun install` or `bun i` is blocked before the install
 exactly as after it, and the hint names `bun install --frozen-lockfile`. The
 bootstrap stays a raw-string match: it runs before the parser is installed,
-and refusing an unusual spacing there costs one retry. It does not check the
-manifest against `HEAD` (decision 3a): it is inline text in every consumer's
-settings, and before the first install a clone holds what it was cloned with.
+and refusing an unusual spacing there costs one retry.
 
 ### 5. The harness's own allow list names the frozen form
 
@@ -161,10 +160,9 @@ it; the README says a consumer may add the same two entries.
 ### 6. The reason sends any other install to the user's terminal
 
 `command-guard: only \`bun install --frozen-lockfile\` (or \`bun i
---frozen-lockfile\`), exactly, with nothing before bun, over a package.json and
-bun.lock committed unchanged, installs without the user — it changes neither
-file. Any other install may rewrite them or run what no reviewer read: ask the
-user to run it in their own terminal.` A frozen install
+--frozen-lockfile\`), exactly and with nothing before bun, installs without the
+user — it changes neither package.json nor bun.lock. Any other install may
+rewrite them: ask the user to run it in their own terminal.` A frozen install
 that fails because the lockfile disagrees with `package.json` reaches the same
 remedy through bun's own message.
 
@@ -186,11 +184,11 @@ text keeps `bun install` and says it runs in the user's terminal.
   of the command, and `> package.json` truncates the manifest, so no
   redirection is exempt, before `bun` or after it. The agent drops it; a pipe
   after it is a separate command and passes.
-- [The root package's lifecycle scripts run] → only from a `package.json`
-  committed unchanged (decision 3a). `--ignore-scripts`, which the cloud hook
+- [The root package's lifecycle scripts run, from whatever `package.json`
+  holds] → accepted (decision 3a). `--ignore-scripts`, which the cloud hook
   passes, stays outside the exact form, as the user's decision names it; an
-  agent retrying after a failed cloud install therefore runs the committed
-  root scripts the hook skipped.
+  agent retrying after a failed cloud install therefore runs the root scripts
+  the hook skipped.
 - [A checkout whose installed guard predates the change] → the guard runs
   from `node_modules/harness/`, the settings from the tracked file. A
   checkout that has the new settings but an older install — a consumer's
@@ -201,7 +199,11 @@ text keeps `bun install` and says it runs in the user's terminal.
   The window closes at that checkout's first install, and the stale-install
   notice names `bun install --frozen-lockfile`, which the old guard and the
   new both let run. Keeping the `ask` entries a release longer would prompt
-  for the frozen form too, the very thing removed. The apply PR's body asks
+  for the frozen form too, the very thing removed. Refusing non-frozen
+  installs in the bootstrap's text, which syncs with the settings, would
+  close the window, at the price of a second reader of the line — a raw
+  regular expression over a compound line, kept in step with the guard by
+  hand; not taken. The apply PR's body asks
   for the harness's self-pin bump right after its merge.
 - [A consumer's check fails until it syncs] → as for any change to `ASK` or to
   the bootstrap text; the bump that lands the pin runs sync.
