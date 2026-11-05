@@ -24,13 +24,18 @@ is the figure the status line's `used_percentage` is computed from.
   reads the last assistant reply's context size from the tail of the event's
   `transcript_path`. At or above 800 000 tokens — a 1M window less a reserve
   of 200 000, against the 18k–37k a wrap-up was measured to cost — it refuses
-  the stop once, with: finish the step in hand, run `/session-wrapup` unless it
-  is already running, then tell the user «можно /clear». An unattended
-  session ends on the final message it meant to end on instead.
+  the stop once, with: wait for running subagents, finish the step in hand,
+  run `/session-wrapup` unless it is already running, then tell the user
+  «можно /clear». An unattended session (`This session runs unattended.`) is
+  not asked: a launcher reads its final message.
 - "Once" is per context: a mark beside the turn gate's mark, set by the
-  refusal and dropped by the first stop that measures below the threshold, so
-  a compaction or a `/clear` re-arms it, and a resumed session above the
-  threshold is not asked again.
+  refusal and dropped by the first stop that measures under half the
+  threshold, so a compaction or a `/clear` re-arms it, a small shrink within
+  one context does not, and a resumed session above the threshold is not
+  asked again.
+- The hook still refuses at most once per turn-gate mark: the size is not
+  read under a mark the gate refused, and a refusal for size flags the mark
+  as the gate's own refusal does.
 - Each refusal is recorded in the gate ledger, so the wrap-up's `gates` line
   counts it.
 - Compaction is left alone. Known limit, stated in `design.md` and
@@ -60,10 +65,12 @@ them is set out in `context-window`.
 
 ## Impact
 
-- New: `bun/context-window.ts` and its tests. Changed: `bun/turn-gate.ts`
-  (its stop half calls the new check, and its header names it),
-  `README.md`'s hook table row for the turn gate and a line on the
-  `/autocompact` limit.
+- New: `bun/context-window.ts` and its tests; `bun/task-groups.ts` (the
+  task-list reading moved out of `turn-gate.ts`, which is at its line cap)
+  and `bun/unattended.ts` (moved out of `question-gate.ts`, now shared).
+  Changed: `bun/turn-gate.ts` (its stop half calls the new check, and its
+  header names it), the importers of the moved functions, `README.md`'s hook
+  table row for the turn gate and a line on the `/autocompact` limit.
 - Settings: none, in the harness or in consumers.
 - Reach: the harness's own sessions run the hook from `node_modules/harness`,
   so it takes effect in the harness, on the laptop and on the VPS, with the
