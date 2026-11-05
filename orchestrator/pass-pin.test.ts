@@ -49,7 +49,8 @@ describe("pass.sh with a launcher", () => {
 		expect(tick(h).ran.version).toBe("one");
 		repository(h, "owner/repo", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("two") })));
 		expect(tick(h).ran.version).toBe("two");
-	});
+		// Two publishes and two passes, each spawned synchronously: about 4.5 s under load, so past bun's default.
+	}, 15_000);
 
 	// The lock is per repository, so a checkout two repositories shared could change under a running pass.
 	test("each repository runs its own pin from its own harness checkout", () => {
@@ -58,7 +59,8 @@ describe("pass.sh with a launcher", () => {
 		repository(h, "owner/two", pinOf(publish(h, "laidrivm/harness", { "bun/board-loop.ts": runner("two") })), "two");
 		expect([tick(h, "one", "owner/one").ran.version, tick(h, "two", "owner/two").ran.version]).toEqual(["one", "two"]);
 		for (const name of ["one", "two"]) expect(existsSync(join(h.home, "harness/owner", name, ".git"))).toBe(true);
-	});
+		// Two publishes and two passes, each spawned synchronously: about 4.5 s under load, so past bun's default.
+	}, 15_000);
 
 	// spec: orchestrator/the-pin-names-no-full-commit
 	test.each([
@@ -106,7 +108,8 @@ describe("pass.sh with a launcher", () => {
 		const [first, second] = [tick(h, "first", "a-b/c"), tick(h, "second", "a/b-c")];
 		expect(realpathSync(first.ran.cwd)).toBe(realpathSync(join(h.home, "push/a-b/c")));
 		expect(realpathSync(second.ran.cwd)).toBe(realpathSync(join(h.home, "push/a/b-c")));
-	});
+		// Two passes, each spawned synchronously: about 4 s under load, so past bun's default.
+	}, 15_000);
 });
 
 /** A hook `name` in `dir`'s `.git/hooks` that leaves `marker` behind when it runs. */
@@ -210,7 +213,8 @@ describe("the runner's clones are reset each pass", () => {
 		expect(Bun.spawnSync(["git", "config", "--get", "remote.origin.url"], { cwd: push }).stdout.toString().trim()).toBe(
 			"https://github.com/owner/repo.git",
 		);
-	});
+		// Two passes and the git calls between them, each spawned synchronously: about 4 s under load.
+	}, 15_000);
 
 	test("git configuration in the pass's environment never reaches the runner's clones", () => {
 		const h = stand();
