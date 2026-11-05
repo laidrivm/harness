@@ -10,29 +10,17 @@
  * every module with tests, each incrementally, so an interrupted baseline
  * resumes; `--force` re-runs each one whole; named modules narrow the run.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
+import { load, storedFiles, type Tree, unsaved } from "./mutation-checkout.ts";
 import { REPORT } from "./mutation-floor.ts";
 import { root } from "./root.ts";
-import { tracked as sweep } from "./tracked.ts";
 
 export type Mutant = { id: string; mutatorName: string; location: unknown; replacement?: string; status: string };
 export type Stored = {
 	schemaVersion: string;
 	files: Record<string, { source: string; mutants: Mutant[] }>;
 	fingerprint: Record<string, string>;
-};
-
-/**
- * What a plan reads of a checkout: every tracked path, `HEAD`'s blob id of each, the working-tree text of each
- * `bun/*.ts` and `bunfig.toml` and of each `mutation/<name>.json`, and the paths `git status` lists.
- */
-export type Tree = {
-	tracked: string[];
-	blobs: Record<string, string>;
-	text: Record<string, string>;
-	stored: Record<string, string>;
-	dirty: string[];
 };
 
 export type Run = { module: string; force: boolean };
@@ -73,18 +61,27 @@ export function fingerprint(module: string, tree: Tree): Record<string, string> 
 	return Object.fromEntries(paths.map((path) => [path, tree.blobs[path] ?? "absent"]));
 }
 
+/**
+ * What Stryker runs per mutant. Its sandbox sits under the checkout and holds no `.git`, so git found the checkout from
+ * it, and a mutant that ran `sync.ts`'s main block in a test wrote the checkout's `harness/` and `bunfig.toml`. A
+ * repository of the sandbox's own, made by the dry run before any worker starts, stops git at the sandbox.
+ */
+export const command = (module: string) =>
+	`{ test -d .git || { git init -q && git add -A; }; } && bun test ${stem(module)}`;
+
 const same = (a: Record<string, string> | undefined, b: Record<string, string>) =>
 	a !== undefined && Object.keys(a).length === Object.keys(b).length && Object.entries(b).every(([k, v]) => a[k] === v);
 
 /**
- * The modules to run, the ones no test file matches, and what fails the run
- * before anything is mutated: a stored file nothing could still have written,
- * one that is not a set of results, and a module whose tests are not `HEAD`'s.
+ * The modules to run, the ones the list leaves out, and what fails the run
+ * before anything is mutated: a listed module nothing could judge, a stored
+ * file nothing could still have written, one that is not a set of results, and
+ * a module whose tests are not `HEAD`'s.
  */
 export function plan(tree: Tree, flags = { all: false, force: false }) {
 	const problems: string[] = [];
 	const runs: Run[] = [];
-	const untested: string[] = [];
+	const skipped: string[] = [];
 	const read: Record<string, Stored> = {};
 	const holder = new Map<string, string>();
 	for (const [path, text] of Object.entries(tree.stored)) {
@@ -105,15 +102,19 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 		}
 	}
 	const tested = new Set(modules(tree.tracked).filter((module) => testsOf(module, tree.tracked).length));
+	for (const module of tree.listed.filter((m) => !tested.has(m)))
+		problems.push(`stryker.config.json's mutate lists ${module}, which is not a tracked module a test file matches`);
 	for (const path of Object.keys(read)) {
 		const module = `bun/${path.slice("mutation/".length, -".json".length)}.ts`;
 		if (!tree.tracked.includes(module)) problems.push(`${path}: ${module} is not tracked — delete the stored file`);
 		else if (!tested.has(module))
 			problems.push(`${path}: no test file matches ${stem(module)} — delete the stored file`);
+		else if (!tree.listed.includes(module))
+			problems.push(`${path}: ${module} is not listed in stryker.config.json's mutate — delete the stored file`);
 	}
 	for (const module of modules(tree.tracked)) {
-		if (!tested.has(module)) {
-			untested.push(module);
+		if (!tested.has(module) || !tree.listed.includes(module)) {
+			skipped.push(module);
 			continue;
 		}
 		const print = fingerprint(module, tree);
@@ -133,7 +134,7 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 		const force = flags.force || !same(stored.fingerprint, print);
 		if (force || flags.all || stored.files[module]?.source !== tree.text[module]) runs.push({ module, force });
 	}
-	return { runs, untested, problems };
+	return { runs, skipped, problems };
 }
 
 type Report = { schemaVersion: string; files: Record<string, { source: string; mutants: Mutant[] }> };
@@ -168,50 +169,6 @@ export const merge = (stored: Stored[]) => ({
 	files: Object.assign({}, ...stored.map((file) => file.files)),
 });
 
-const git = (cwd: string, ...args: string[]) => {
-	const run = Bun.spawnSync(["git", ...args], { cwd });
-	if (run.exitCode !== 0) throw new Error(`git ${args.join(" ")}: ${run.stderr.toString().trim()}`);
-	return run.stdout.toString();
-};
-
-/** The paths `git status -z` lists under `pathspec`; a rename's or copy's source follows as an entry of its own. */
-function changed(cwd: string, ...pathspec: string[]): string[] {
-	const entries = git(cwd, "status", "--porcelain", "-z", "--untracked-files=all", "--", ...pathspec).split("\0");
-	const paths: string[] = [];
-	for (let i = 0; i < entries.length; i++) {
-		const entry = entries[i] ?? "";
-		if (!entry) continue;
-		paths.push(entry.slice(3));
-		if (/[RC]/.test(entry.slice(0, 2))) paths.push(entries[++i] ?? "");
-	}
-	return paths;
-}
-
-/** The stored files under `cwd` that differ from `HEAD`'s, or that `HEAD` lacks. */
-export const unsaved = (cwd: string) => changed(cwd, "mutation").sort();
-
-function load(top: string): Tree {
-	const { paths: tracked } = sweep(top);
-	const blobs: Record<string, string> = {};
-	for (const entry of git(top, "ls-tree", "-r", "-z", "--full-tree", "HEAD").split("\0").filter(Boolean)) {
-		const [meta = "", path = ""] = entry.split("\t");
-		blobs[path] = meta.split(" ")[2] ?? "";
-	}
-	const text: Record<string, string> = {};
-	for (const path of tracked.filter((p) => p === "bunfig.toml" || /^bun\/[^/]+\.ts$/.test(p)))
-		if (existsSync(join(top, path))) text[path] = readFileSync(join(top, path), "utf8");
-	return { tracked, blobs, text, stored: storedFiles(top), dirty: changed(top) };
-}
-
-/** The text of each `mutation/<name>.json` under `top`, by its path. */
-function storedFiles(top: string): Record<string, string> {
-	const dir = join(top, "mutation");
-	const stored: Record<string, string> = {};
-	for (const name of existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith(".json")) : [])
-		stored[`mutation/${name}`] = readFileSync(join(dir, name), "utf8");
-	return stored;
-}
-
 function fail(problems: string[]): void {
 	if (!problems.length) return;
 	for (const problem of problems) console.error(problem);
@@ -236,11 +193,17 @@ function stryker(top: string, { module, force }: Run, print: Record<string, stri
 	if (!force && !dry && existsSync(stored)) writeFileSync(work, readFileSync(stored));
 	const own = {
 		mutate: [module],
-		commandRunner: { command: `bun test ${stem(module)}` },
+		commandRunner: { command: command(module) },
 		incrementalFile: work,
 		// Stryker's 5 stopped `bun/board-loop.ts`: its suite waits out real timers and took 313–330 s on a laptop at
 		// load 2–4, in the sandbox as outside it; `bun/work.ts`'s, the next slowest, 161 s. 15 is 2.7 times the worst.
 		dryRunTimeoutMinutes: 15,
+		// A mutant's limit is timeoutFactor × the dry run + timeoutMS, the dry run timed alone. Left at Stryker's 1.5 and
+		// 5000 ms with a worker per core but one, 11 copies of a suite ran up to 5 times slower than that sample, and most
+		// mutants read as Timeout. A third of this laptop's 12 cores, and three times the sample plus 10 s, is the margin.
+		concurrency: 4,
+		timeoutFactor: 3,
+		timeoutMS: 10000,
 		dryRunOnly: dry,
 	};
 	writeFileSync(config, JSON.stringify({ ...shared, ...own }));
@@ -266,13 +229,13 @@ if (import.meta.main) {
 		args.filter((arg) => arg.startsWith("--") && !["--all", "--force"].includes(arg)).map((a) => `unknown option ${a}`),
 	);
 	const tree = load(root);
-	const { runs, untested, problems } = plan(tree, flags);
-	for (const module of untested) console.log(`not mutated, no test file matches it: ${module}`);
+	const { runs, skipped, problems } = plan(tree, flags);
+	if (skipped.length) console.log(`not mutated, not listed in stryker.config.json's mutate: ${skipped.join(" ")}`);
 	const known = modules(tree.tracked);
 	fail([
 		...problems,
 		...named.filter((m) => !known.includes(m)).map((m) => `${m} is not a tracked module`),
-		...named.filter((m) => untested.includes(m)).map((m) => `${m} has no test file to judge its mutants`),
+		...named.filter((m) => skipped.includes(m)).map((m) => `${m} is not listed in stryker.config.json's mutate`),
 	]);
 	const chosen = named.length ? runs.filter((run) => named.includes(run.module)) : runs;
 	if (chosen.length && !Bun.which("node")) fail(["Stryker needs Node on PATH, and none was found"]);

@@ -42,9 +42,11 @@ design.md records them.
 - CI jobs for Biome, the type check, the YAML check, the suppression scan,
   `actionlint`, `gitleaks` and the mutation step. Making them required in
   the repository's ruleset is the user's step.
-- `harness.suppressions` and `harness.mutationFloor` in `package.json`; the
-  suppression scan exempts the stored results of its own script, which hold
-  its markers verbatim.
+- `harness.suppressions` and `harness.mutationFloor` in `package.json`.
+- Since the user's decision of 2026-11-05 (design decision 7): only an allow
+  list of modules their tests exercise in-process is mutated, Stryker's
+  timeouts are set explicitly, and the sandbox is a git repository of its
+  own, so no mutant writes the checkout.
 
 Not in this change: mutating `orchestrator/`, which the user's answer names
 no module of; the browser suite, coverage and `bun audit`, which the spec
@@ -61,11 +63,11 @@ None.
 
 - `commit-gates`: the pre-push hook's mutation run covers only the modules
   the branch changed, and the hook's judged gates are the ones the pre-PR
-  runner's project checks run; the suppression scan exempts
-  `mutation/no-suppressions.json`.
-- `mutation-floor`: what the harness mutates — every `bun/` module, each
-  against its own tests, with results stored per module — and that the floor
-  counts all of them.
+  runner's project checks run.
+- `mutation-floor`: what the harness mutates — the `bun/` modules one allow
+  list names, each against its own tests, in a sandbox that cannot write the
+  checkout, with results stored per module — and that the floor counts all
+  of them.
 
 ## Impact
 

@@ -119,10 +119,7 @@ documentation and OpenSpec artefacts discuss suppressions by name, this
 specification among them, and a check that fails on its own proposal is a check
 nobody keeps. The check's own script and test SHALL be
 outside the scanned set too, for the same reason and no other: they must carry
-the three markers literally to do their job. So SHALL the stored mutation
-results of that script, `mutation/no-suppressions.json` at the root, which
-hold its source verbatim: they carry the markers because it does, and an
-approval would pin a count that every edit to the script moves. The repository's root
+the three markers literally to do their job. The repository's root
 `package.json` SHALL be outside the scanned set as well, because the allowlist
 lives in it and each approval's key names its marker, so scanning it counts
 every approval as a suppression of its own. A marker there cannot suppress
@@ -167,13 +164,6 @@ ignored or untracked file cannot fail a clone that does not have it.
 - **WHEN** the check runs over the current tree
 - **THEN** it passes with an empty allowlist, because no tracked source
   carries a suppression today
-
-#### Scenario: The stored mutation results of the check's own script
-
-- **WHEN** `mutation/no-suppressions.json` is tracked and holds the check's
-  source with its three markers
-- **THEN** the check passes with an empty allowlist, while any other file
-  under `mutation/` carrying a marker fails it
 
 #### Scenario: A document that discusses suppressions
 

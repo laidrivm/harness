@@ -1,5 +1,26 @@
 {
 	"$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+	"mutate": [
+		"bun/autonomy.ts",
+		"bun/bootstrap.ts",
+		"bun/bump-pin.ts",
+		"bun/ci-run-draft.ts",
+		"bun/config.ts",
+		"bun/file-size.ts",
+		"bun/floor.ts",
+		"bun/github-app.ts",
+		"bun/manifest-ranges.ts",
+		"bun/notion-release.ts",
+		"bun/pr-sessions.ts",
+		"bun/push-refs.ts",
+		"bun/repo-layout.ts",
+		"bun/review-config.ts",
+		"bun/skill-record.ts",
+		"bun/sync-settings.ts",
+		"bun/tracked.ts",
+		"bun/transcript-archive-store.ts",
+		"bun/transient.ts"
+	],
 	"testRunner": "command",
 	"thresholds": {
 		"break": null
