@@ -170,13 +170,16 @@ rollback's restart and a crash's are `resume` starts and answer 17 a asks
 the session to report the failure on start.
 
 A deploy's restart of a fresh session continues the directory's last
-conversation, as every start does (user, 05.11, answer 18 а). Whether
-`/clear` leaves a transcript before the first prompt is not verified: if it
-does not, the restart continues the conversation the user cleared. A
-continued conversation also keeps the system prompt of its first request
-until it is compacted (CLI reference, *System prompt flags in resumed
-conversations*), so the new main's rules may not reach it at once. Task 4.2
-and the stage's live probe check which conversation comes back. Rejected:
+conversation, as every start does (user, 05.11, answer 18 а). The stage's
+live probe on the VPS (05.11) settled what this rested on: a `/clear` from
+Remote Control fires `SessionStart` with `clear` and writes the cleared
+conversation to disk at once; a killed `claude` and `restart runner` both
+come back with `resume` and the cleared conversation's id, so nothing from
+before the `/clear` is seen; and the managed `CLAUDE.md`, hooks and skills
+reach a running session without a restart. The CLI reference's note that a
+continued conversation keeps its first request's system prompt (*System
+prompt flags in resumed conversations*) therefore does not keep the new
+rules out. Rejected:
 starting a new conversation while the mark exists (18 б, a new entry in the
 app's Recents per deploy) and resuming an id a hook records (18 в, more code,
 the old prompt kept).
@@ -194,9 +197,9 @@ compose up -d`. It compares the
 `runner` container's id before and after: when `up` did not recreate it (the
 image and its configuration unchanged), it runs `docker compose restart
 runner`. Either way the start script runs again, pulls the clone, runs
-`bun install` and starts `claude`. A restart is chosen over hoping the session
-picks up new hooks and skills in place, which is not verified (explore,
-*Риски*).
+`bun install` and starts `claude`. The restart is what moves the clone: the
+image's managed files reach a running session in place (live probe, 05.11),
+but the clone's `git pull` and `bun install` run only in the start script.
 
 ### The session must be back within two minutes, or the runner goes back (answer 17 a)
 
@@ -293,10 +296,11 @@ with the pass loop:
 
 - [A message sent in the seconds between the mark check and the restart is
   lost] → the gap is seconds; the user sees the session restart and resends.
-- [Not verified: `SessionStart` fires on a `/clear` from Remote Control;
-  `UserPromptSubmit` fires on a message from Remote Control; Remote Control
-  reconnects after the restart (a stage criterion)] → task 4.2 watches the
-  first deploy for all three.
+- [Not verified: `UserPromptSubmit` fires on a message from Remote Control;
+  Remote Control reconnects after a deploy's restart (a stage criterion)] →
+  task 4.2 watches the first deploy for both. That `SessionStart` fires on a
+  `/clear` from Remote Control, and which conversation a restart continues,
+  the live probe settled (05.11, *Every start continues*).
 - [A session never cleared is never updated] → the user's `/clear` at the end
   of a card is the stage's rule; the journal shows the waiting head.
 - [The session's clone pulls `origin/main` as it is at the restart, which
