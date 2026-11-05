@@ -38,7 +38,9 @@ deploy acts.
   not up within two minutes, the runner goes back to the previous image, the
   head is recorded as rolled back, and a failure file in agent's home tells
   the next session, which reports it in chat (user, 02.11, answer 17 a). Any
-  other step after the fast-forward that fails writes the same file.
+  other step after the fast-forward that fails writes the same file, except
+  in a run the service's start timeout kills, which leaves only the journal's
+  line.
 - The Windmill push is skipped, with a journal line, while
   `secrets/windmill_deploy_token` does not exist.
 

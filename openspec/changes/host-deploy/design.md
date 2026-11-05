@@ -120,24 +120,45 @@ build's minutes.
 
 `orchestrator/runner/managed-settings.json` is copied into the image at the
 path Claude Code reads managed settings from on Linux
-(`/etc/claude-code/managed-settings.json`, confirmed against the Claude Code
-docs at apply). It holds two hooks:
+(`/etc/claude-code/managed-settings.json`, confirmed on 05.11 against the
+docs' *Deploy managed settings*). Its `COPY --chmod=0644` sits beside the
+managed `CLAUDE.md`'s (session-runner-image, #421): after the `install -d -m
+0755 /etc/claude-code` that keeps the directory open to agent, and before the
+`find` mode check, which then covers both files. It holds three hooks:
 
-- `SessionStart` with matcher `startup|clear`: creates `~/.harness-fresh`,
-  and, when `~/.harness-deploy-failed` exists, prints a line asking the
-  session to report it to the user in chat, followed by the file. A hook's
-  output on `SessionStart` enters the session's context.
+- `SessionStart` with matcher `startup|clear`: creates `~/.harness-fresh`.
+- `SessionStart` with matcher `startup|clear|resume`: when
+  `~/.harness-deploy-failed` exists, prints a line asking the session to
+  report it to the user in chat, followed by the file. A hook's plain stdout
+  on `SessionStart` enters the session's context.
 - `UserPromptSubmit`: removes `~/.harness-fresh`.
 
-They are inline commands, not a script: two shell lines need no file of
+They are inline commands, not a script: three shell lines need no file of
 their own. They live in the image, not in the repository's
 `.claude/settings.json`, so the laptop never runs them, and they are not the
 harness's `SessionStart` hooks that stage 3 adds (`compacted` mark). The
 image's hooks move only with a new image, which this deploy builds.
 
-A session restarted by the start script's loop after `claude` exits is
-fresh by the same hook; so is the one a deploy restarts, so a second merge
-deploys without waiting for the user.
+### Every start continues, so the mark is the file, not the start
+
+Since session-runner-image's *Every start continues the last conversation*
+(user, 03.11), the start script runs `claude --continue` wherever the clone
+has a conversation, and a continued start fires `SessionStart` with
+`resume` (hooks reference, the `SessionStart` matcher table: `resume` is
+`--resume`, `--continue` or `/resume`; read 05.11). `startup` fires only
+where the directory has no conversation yet.
+
+The mark is a file in agent's home, on the `agent_home` volume, so it
+outlives `claude`, a restart and a recreated container. The `resume` start
+leaves it as it was: a session fresh before a restart, the deploy's own or
+the rollback's, is fresh after it, so a second merge deploys without waiting
+for the user and the restored session sits fresh; a busy session that crashes
+comes back busy. The failure line is printed on `resume` too, since the
+rollback's restart and a crash's are `resume` starts and answer 17 a asks
+the session to report the failure on start.
+
+What a deploy's restart of a fresh session continues is open (question 18,
+*Open Questions*).
 
 ### `up -d`, then a restart when the runner was not recreated
 
@@ -255,6 +276,18 @@ with the pass loop:
   bot (task 4.3).
 - [The build on 2 vCPU runs beside the session's subagents' tests] → it runs
   once per green head, cached on the ticks after.
+
+## Open Questions
+
+- 18 (asked 05.11): a deploy restarts a fresh session, which `--continue`
+  brings back to the directory's last conversation. Whether `/clear` leaves a
+  transcript before the first prompt is not verified; if it does not, the
+  restart continues the conversation the user cleared. A continued
+  conversation also keeps the system prompt of its first request until it is
+  compacted (CLI reference, *System prompt flags in resumed conversations*),
+  so the new main's rules may not reach it at once. Recommended: the start
+  script starts a new conversation while the mark exists, at the cost of a
+  new entry in the app's Recents per deploy.
 
 ## Migration Plan
 

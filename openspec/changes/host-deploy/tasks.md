@@ -56,20 +56,25 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
 
 ## 2. The fresh-session mark in the image
 
-- [ ] 2.1 Write `orchestrator/layout-deploy.test.ts` first. Cases, each citing
+- [x] 2.1 Write `orchestrator/layout-deploy.test.ts` first. Cases, each citing
       its scenario: `orchestrator/the-container-s-managed-settings` (the
       Dockerfile copies `runner/managed-settings.json` to
-      `/etc/claude-code/managed-settings.json`; `SessionStart`'s matcher is
-      `startup|clear`; `UserPromptSubmit` is set);
-      `orchestrator/the-user-s-first-message` (runs the two hook commands
+      `/etc/claude-code/managed-settings.json` after the directory's
+      `install -d -m 0755` and before the mode check; a `SessionStart`
+      matcher is `startup|clear`; `UserPromptSubmit` is set);
+      `orchestrator/the-user-s-first-message` (runs the hook commands
       read from the JSON under `sh` with `HOME` in a temp dir: the mark
       exists after `SessionStart`, not after `UserPromptSubmit`);
-      `orchestrator/the-session-starts-after-a-failed-deploy` (with
-      `~/.harness-deploy-failed` present the output carries the ask line and
-      the file's line; absent, it prints nothing). Record that they fail
-- [ ] 2.2 Confirm the Linux managed-settings path and the `SessionStart`
-      matcher values against the Claude Code docs; write
-      `orchestrator/runner/managed-settings.json` per design.md, *The
+      `orchestrator/a-continued-start` (a `resume` start leaves the mark as
+      it was); `orchestrator/the-session-starts-after-a-failed-deploy` (on
+      `startup`, `clear` and `resume`, with `~/.harness-deploy-failed`
+      present the output carries the ask line and the file's line; absent,
+      it prints nothing). Record that they fail (05.11: 7 of 7, the file
+      absent)
+- [x] 2.2 Confirm the Linux managed-settings path and the `SessionStart`
+      matcher values against the Claude Code docs (05.11: the path, and
+      `--continue` fires `resume`, design.md, *Every start continues*);
+      write `orchestrator/runner/managed-settings.json` per design.md, *The
       fresh-session mark*, and its `COPY` line in the Dockerfile. Make 2.1
       pass
 
