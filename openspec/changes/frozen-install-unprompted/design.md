@@ -120,7 +120,8 @@ position is to guard only a seen threat, with CI's required checks and a
 human merge covering intent. So no manifest check: the exact form is decided
 by its words alone, as the user's «б» states it. The guard catches the casual
 path, an agent typing `bun install lodash`; a hand-written dependency shows
-in the pull request's diff of `package.json` and `bun.lock`.
+in the pull request's diff of `package.json` and `bun.lock`. Settled on the
+card 2026-11-05: а — out of scope; the HEAD check (б) rejected.
 
 ### 4. The bootstrap allows only the frozen form
 
