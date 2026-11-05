@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -22,6 +22,9 @@ import {
  * `loop-guard-refuse.test.ts`'s; that the harness registers it is
  * `self-pin.test.ts`'s.
  */
+
+// Every case spawns the hook synchronously several times; bun's 5 s default fails them on a busy laptop.
+setDefaultTimeout(20_000);
 
 afterAll(cleanup);
 
@@ -232,6 +235,5 @@ describe("the gate ledger", () => {
 		expect(written[2]?.out).toContain("additionalContext");
 		expect(written[3]?.code).toBe(2);
 		expect(answers(unwritable)).toEqual(written);
-		// Eight synchronous hook spawns: about 5 s under load, past bun's default, which cannot fire while one blocks.
-	}, 20_000);
+	});
 });
