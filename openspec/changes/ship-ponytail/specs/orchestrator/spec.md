@@ -50,3 +50,32 @@ to a laptop or a consumer SHALL set ponytail's level.
 - **WHEN** the harness's tracked settings file and the files sync writes are
   read
 - **THEN** none sets `PONYTAIL_DEFAULT_MODE` or names ponytail's config file
+
+### Requirement: The persistent session installs ponytail before each start
+
+In each round that finds the session's clone, the start script SHALL run
+`claude plugin install ponytail@ponytail --scope project` in the clone, after
+`bun install --frozen-lockfile` and before `claude`, with Claude Code's
+auto-updater off. A failed install SHALL print a line naming ponytail's
+install and SHALL NOT stop `claude` from starting. Where the clone does not
+exist, the script SHALL NOT run the install.
+
+#### Scenario: Ponytail is installed before each start
+
+- **WHEN** the start script runs a round in the session's clone, under `sh`
+  or `dash`
+- **THEN** it runs `claude plugin install ponytail@ponytail --scope project`
+  in the clone, with `DISABLE_AUTOUPDATER=1`, after the dependency install
+  and before `claude` starts
+
+#### Scenario: A failed plugin install leaves the session starting
+
+- **WHEN** `claude plugin install` exits non-zero, offline or before the
+  clone is trusted
+- **THEN** the pane shows a line naming ponytail's install, and `claude`
+  starts all the same
+
+#### Scenario: No plugin install without the clone
+
+- **WHEN** the session's clone does not exist
+- **THEN** the script does not run `claude plugin install`

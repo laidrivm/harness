@@ -1,10 +1,10 @@
 #!/bin/sh
 # The persistent session, which the entrypoint starts as agent in tmux session
 # `main` (session-runner-image design, *The start script*): pull and install in
-# the clone, start claude with Remote Control continuing the directory's last
+# the clone, install ponytail there, start claude with Remote Control continuing the directory's last
 # conversation, or a new one where it has none (user, 03.11, reversing answer
 # 1 a), pause 5 s once it exits, and again.
-# A failed pull or install prints its line and starts claude all the same, on
+# A failed pull or install, of either kind, prints its line and starts claude all the same, on
 # the tree and the dependencies the clone already holds. With no clone yet,
 # claude starts in HOME, so the user can log in first.
 #
@@ -24,6 +24,10 @@ while :; do
 	if [ -e "$HOME/harness/.git" ] && cd "$HOME/harness"; then
 		git pull --ff-only || echo "session: git pull failed; starting claude anyway" >&2
 		bun install --frozen-lockfile || echo "session: bun install failed; starting claude anyway" >&2
+		# The project's settings alone left ponytail uninstalled from the second start on (2.1.316,
+		# ship-ponytail D7); the marketplace and its tag come from those settings.
+		# shortcut: no timeout, so a network that hangs holds the start; wrap it when that is seen.
+		claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
 	else
 		cd "$HOME"
 	fi

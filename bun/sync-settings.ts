@@ -9,13 +9,15 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { HOOKS, MARK, registration } from "./bootstrap.ts";
-import { ASK, ATTRIBUTION, DENY, EDIT_ASK, EDIT_DENY, INSTALL, MCP_ASK } from "./settings.ts";
+import { ASK, ATTRIBUTION, DENY, EDIT_ASK, EDIT_DENY, INSTALL, MARKETPLACE, MCP_ASK, PLUGINS } from "./settings.ts";
 
 type Group = { matcher?: string; hooks?: { command?: unknown }[] };
 type Settings = {
 	permissions?: { deny?: string[]; ask?: string[] };
 	hooks?: Record<string, Group[]>;
 	attribution?: unknown;
+	enabledPlugins?: Record<string, unknown>;
+	extraKnownMarketplaces?: Record<string, unknown>;
 };
 
 /**
@@ -46,7 +48,10 @@ function owned(list: string[], prefix: string, entries: string[]) {
 /** `list` with `file` appended when absent. */
 const withFile = (list: string[], file: string) => (list.includes(file) ? list : [...list, file]);
 
-/** The settings file's new text: the harness's hooks and lists, the rest kept. */
+/**
+ * The settings file's new text: the harness's hooks, lists, attribution, two
+ * plugins and `ponytail` marketplace, the rest kept.
+ */
 function settingsText(text: string | undefined): string {
 	let config: Settings;
 	try {
@@ -81,6 +86,14 @@ function settingsText(text: string | undefined): string {
 	permissions.ask = owned(withFile(owned(permissions.ask ?? [], "Bash(", ASK), EDIT_ASK), "mcp__", MCP_ASK);
 	config.permissions = permissions;
 	config.attribution = ATTRIBUTION;
+	// Spread, a list or a string would lose the consumer's own entries without a word.
+	for (const key of ["enabledPlugins", "extraKnownMarketplaces"] as const) {
+		const value = config[key];
+		if (value !== undefined && (typeof value !== "object" || value === null || Array.isArray(value)))
+			throw new Error(`.claude/settings.json: ${key} is not an object`);
+	}
+	config.enabledPlugins = { ...config.enabledPlugins, ...Object.fromEntries(PLUGINS.map((id) => [id, true])) };
+	config.extraKnownMarketplaces = { ...config.extraKnownMarketplaces, ponytail: MARKETPLACE };
 	const indent = text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";
 	return `${JSON.stringify(config, null, indent)}\n`;
 }

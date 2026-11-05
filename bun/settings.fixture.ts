@@ -82,6 +82,15 @@ export const policy = () => ({
 		allow: ["Bash(bun test *)", "Read(docs/**)"],
 	},
 	attribution: { pr: "", sessionUrl: false } as unknown,
+	enabledPlugins: { "ponytail@ponytail": true, "cc-plugin-you-should-know@builtin": true } as
+		| Record<string, unknown>
+		| undefined,
+	extraKnownMarketplaces: {
+		ponytail: {
+			source: { source: "github", repo: "DietrichGebert/ponytail", ref: "v5.3.3" },
+			autoUpdate: false,
+		},
+	} as Record<string, unknown>,
 	hooks: {
 		PreToolUse: [
 			{
