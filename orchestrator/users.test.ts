@@ -157,6 +157,7 @@ describe("the image's users", () => {
 
 describe("as-agent", () => {
 	// spec: orchestrator/every-command-in-the-clone-goes-through-the-launcher
+	//   orchestrator/a-pass-s-session-reads-the-same-file
 	test("runs the command in the clone it is handed with agent's HOME, USER and LOGNAME, and none of the four config locations", () => {
 		const dir = realpathSync(emptyDir("orchestrator-as-agent-"));
 		const inherited = {
