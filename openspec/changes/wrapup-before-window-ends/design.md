@@ -34,8 +34,9 @@ than copying the conversation under a new one.
 ## Goals / Non-Goals
 
 **Goals:** one request per context to wrap up, made while at least 200k of a
-1M window is left; no new registration anywhere; the turn gate's existing
-decisions unchanged.
+1M window is left; no new registration anywhere; the turn gate's refusal and
+the round ceiling decided as today, and one refusal per mark kept
+(decision 5).
 
 **Non-Goals:**
 
@@ -43,8 +44,7 @@ decisions unchanged.
 - A window size per model or per machine: no hook field and no transcript line
   names the window.
 - Subagents (decision 8).
-- Telling a `claude -p` session apart from an interactive one in code
-  (decision 7).
+- Unattended sessions, which are not asked (decision 7).
 
 ## Decisions
 
@@ -52,12 +52,18 @@ decisions unchanged.
 
 `bun/context-window.ts` holds the threshold, the tail read and the
 once-per-context mark, and exports one function the turn gate's `decide()`
-calls after `judge()` returns no refusal:
-`reason = judge(...) ?? wrapup(event, file)`. `decide()`'s existing
-`if (!reason) stopped(file)` then leaves no `.stopped` after a refusal for
-size, so the continued wrap-up is still a turn of the same mark, and a
-message queued into it does not move the mark. `turn-gate.ts` gains the
-import, the one call and a header paragraph, which moves no code out of it.
+calls after `judge()` returns no refusal (decision 5 sets the order).
+`decide()`'s existing `if (!reason) stopped(file)` then leaves no `.stopped`
+after a refusal for size, so the continued wrap-up is still a turn of the
+same mark, and a message queued into it does not move the mark.
+
+`turn-gate.ts` is at 303 physical lines, over the 300-line cap `file-size.ts`
+counts. The import, the call, the logging change and a header paragraph add
+about ten, so `groups()` and `complete()` — the task-list reading, about 40
+lines that `goal-check.ts`, `work-status.ts` and `board-loop-takeable.ts`
+import from it — move to `bun/task-groups.ts`, and those importers and
+`turn-gate.test.ts` import them from there (`core/rules.md`: split to the cap
+that will apply).
 
 Alternative: a second `Stop` entry in `HOOKS`. Claude Code runs an event's
 hooks in parallel, so the two could not be ordered: both refusals would reach
@@ -79,7 +85,8 @@ the window — needs the window. Rejected for now.
 ### 3. The size is the last real reply's, read from a 4 MiB tail
 
 The hook opens `transcript_path`, reads its last 4 MiB (`Bun.file().slice()`),
-drops the first, possibly cut, line, and walks the rest from the end. The first
+drops the first line when the slice starts after byte 0 — only then can it be
+cut — and walks the rest from the end. The first
 line that parses as JSON with `type === "assistant"`, `isSidechain !== true`
 and a `usage` whose three input fields sum above zero gives the size. 4 MiB
 holds the longest line seen, and reading it costs a few milliseconds whatever
@@ -98,13 +105,18 @@ reply before it, a few thousand tokens behind, which the 200k reserve covers.
 
 A refusal writes `<mark>.wrapup` (`$TMPDIR/turn-gate/<session_id>.wrapup`,
 beside the turn gate's mark, reusing its safe-id check). A stop at or above
-the threshold with that file present asks nothing. A stop below the threshold
-removes it. An event with no safe session id asks nothing, so a refusal can
-never repeat for want of a place to record it.
+the threshold with that file present asks nothing. A stop under half the
+threshold, 400 000 (`REARM`), removes it. An event with no safe session id
+asks nothing, so a refusal can never repeat for want of a place to record it.
+
+The gap between the two figures is deliberate: a context that shrinks a
+little within one window — old tool results cleared, a `/rewind`, a read one
+reply behind — would otherwise re-arm the ask and buy a second wrap-up in
+the same context. Only a compaction or a cleared context falls under half.
 
 - **`/clear`** starts a new session id, so a new mark path: armed.
 - **Compaction** keeps the id; the next stop measures the compacted context,
-  below the threshold, and removes the mark: armed for the next crossing.
+  well under half, and removes the mark: armed for the next crossing.
 - **`--continue` on the VPS** keeps the id and `$TMPDIR`; the mark stands,
   and a session that already wrapped up is not asked again. A container
   restart empties `$TMPDIR`, so a resumed session past the threshold is asked
@@ -119,10 +131,23 @@ every consumer for nothing the size does not say. Rejected.
 
 The round ceiling ends the session before `decide()` runs, so a stop at the
 ceiling is never refused for size. The turn gate's refusal comes before the
-size, because a missing pre-PR run is the gate's whole purpose and its
-refusal is bounded to one stop; the next stop of that turn is released by the
-gate and may then be refused for size. One refusal reaches the model per
-stop.
+size, because a missing pre-PR run is the gate's whole purpose.
+
+`commit-gates` holds the hook to one refusal per mark, and the gate's refusal
+text promises that "the next stop ends it". So the size is not read under a
+mark flagged ` refused`, and a refusal for size flags the mark ` refused` as
+the gate's own does (where the mark names a commit; an empty one, outside a
+repository, has nothing for the gate to judge). The hook then refuses at most
+once per mark, for either reason: a turn the gate refused is asked for the
+wrap-up at the first stop of the next turn, and a wrap-up turn that completes
+a task group without a run is released by the gate, not refused. That turn
+commits nothing in the usual case — the yield ledger lives outside the tree —
+so the cost is accepted, and `commit-gates` needs no change.
+
+Inside `decide()`: `judge()` returns its decision instead of logging it;
+then, when it did not refuse and the mark is not flagged, the size check
+runs; the gate's `passed` or `released` is logged only when the stop ends
+(decision 9).
 
 A refusal for size makes the next stop arrive with `stop_hook_active` true,
 which the ceiling counts as one round: one of 20, once per context. Accepted.
@@ -134,16 +159,15 @@ event field. Skipping a stop with `stop_hook_active` true would never ask a
 `/goal` run, whose every stop after the first is continued — the longest
 runs, the ones most likely to fill the window.
 
-### 7. A session already wrapping up, and an unattended one, are told in words
+### 7. The reason, a session already wrapping up, and an unattended one
 
 The reason, exact text (`<n>` the size read):
 
 > The context holds `<n>` tokens, at or past the 800000 at which the harness
-> asks for a wrap-up while enough of the window is left for one. Finish the
-> step in hand, run /session-wrapup unless it is already running, then tell
-> the user «можно /clear». A session that runs unattended ends instead on the
-> whole final message it meant to end on, unchanged: a launcher reads that
-> message's lines. This is asked once in this context.
+> asks for a wrap-up while enough of the window is left for one. Wait for any
+> subagent still running to report, finish the step in hand, run
+> /session-wrapup unless it is already running, then tell the user «можно
+> /clear». This is asked once in this context.
 
 "Unless it is already running" is the `next:` line's own phrase
 (`work-status`). A session mid-wrap-up answers it in one short continuation,
@@ -151,12 +175,22 @@ and the mark passes its next stop. Alternative: find a `Skill` call naming
 `session-wrapup` in the tail; a parser for a case one sentence covers, once
 per context. Rejected.
 
-An unattended board-loop stage reads `PR-TITLE:` and `PR-BODY:` from the
-final message, the body running to its end, so a «можно /clear» appended
-there would land in the pull request. No event field tells a `claude -p`
-session from an interactive one; the session itself knows from its prompt's
-`This session runs unattended.` line (`core/autonomy.md`). The turn gate's
-refusal settles the same problem with the same instruction.
+Running subagents: the main session here usually dispatches worktree agents
+and waits for them. A wrap-up before they report would reconcile cards and
+write the yield entry early, and a `/clear` after it would lose the reports.
+The reason tells it to wait first; the 200k reserve is far above what the
+reports add.
+
+An unattended session is not asked at all. A board-loop stage reads
+`PR-TITLE:` and `PR-BODY:` from the final message, the body running to its
+end, so a continued turn risks the pull request's text and spends a goal
+round for a wrap-up nobody reads, in a `claude -p` session that ends anyway.
+`bun/question-gate.ts` already reads the unattended line from the
+transcript's first user message (`unattended()`); that function moves to
+`bun/unattended.ts`, which both callers import (`core/rules.md`: lift logic
+into one module, never write it twice), unchanged. It reads the whole file,
+so the size check calls it only for a stop that would otherwise be refused —
+once per context.
 
 ### 8. Subagents: `SubagentStop` is not covered
 
@@ -171,9 +205,15 @@ same session.
 
 Run as the hook, a refusal for size appends `context-window refused wrapup`
 to the gate ledger through `record()`, so the wrap-up's `gates` line counts
-how often it fires — the evidence the stage's metric needs. `decide()` gains a
-second logging callback for it; called from a test it records nothing, as
-today.
+how often it fires — the evidence the stage's metric needs. A stop refused for
+size records nothing of the turn gate's: its `passed` or `released` is
+recorded once, by the stop that ends the turn, so the `gates` line counts one
+gate decision per turn as today. `decide()`'s `log` callback receives the
+size refusal as its own decision, and the hook maps it to the
+`context-window` gate; called from a test it records nothing, as today.
+
+`turn-gate.ts`'s `ponytail:` comment on what accumulates in `$TMPDIR/turn-gate`
+names `.wrapup` beside the mark, `.rounds` and `.stopped`.
 
 ## Risks / Trade-offs
 
