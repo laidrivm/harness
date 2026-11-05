@@ -68,8 +68,8 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       `orchestrator/a-continued-start` (a `resume` start leaves the mark as
       it was); `orchestrator/the-session-starts-after-a-failed-deploy` (on
       `startup`, `clear` and `resume`, with `~/.harness-deploy-failed`
-      present the output carries the ask line and the file's line; absent,
-      it prints nothing). Record that they fail (05.11: 7 of 7, the file
+      present the output carries the ask line and the file's line, and the
+      next start's carries nothing; absent, it prints nothing). Record that they fail (05.11: 7 of 7, the file
       absent)
 - [x] 2.2 Confirm the Linux managed-settings path and the `SessionStart`
       matcher values against the Claude Code docs (05.11: the path, and

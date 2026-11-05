@@ -129,7 +129,9 @@ managed `CLAUDE.md`'s (session-runner-image, #421): after the `install -d -m
 - `SessionStart` with matcher `startup|clear`: creates `~/.harness-fresh`.
 - `SessionStart` with matcher `startup|clear|resume`: when
   `~/.harness-deploy-failed` exists, prints a line asking the session to
-  report it to the user in chat and then delete it, followed by the file. A
+  report it to the user in chat, followed by the file, then renames it
+  `~/.harness-deploy-failed.reported`: printed, it is in the conversation, and
+  the next start does not report it again (local review). A
   hook's plain stdout
   on `SessionStart` enters the session's context.
 - `UserPromptSubmit`: removes `~/.harness-fresh`.
@@ -139,6 +141,13 @@ their own. They live in the image, not in the repository's
 `.claude/settings.json`, so the laptop never runs them, and they are not the
 harness's `SessionStart` hooks that stage 3 adds (`compacted` mark). The
 image's hooks move only with a new image, which this deploy builds.
+
+shortcut: every `claude` in the container runs them, a board-loop pass's
+`claude -p` as agent too, which would set or clear the mark and take the
+failure line; passes are off in stage 2.5 and removed at stage 7. Stage 6's
+events typed into `main` with `tmux send-keys` would clear the mark as a
+message does. Gate the hooks on a variable only the start script sets when
+either runs beside the session (local review).
 
 ### Every start continues, so the mark is the file, not the start
 
@@ -210,9 +219,7 @@ this check; catching it is stage 9's probe.
 `failed()` on `main` names the step and the head on the journal and writes
 each clone's stop file. It gains one write before those: the failure file
 `~/.harness-deploy-failed` in agent's home, through the volume's mount point,
-owned as that home is, so the session can remove it; the hook's ask line
-tells it to once it has reported the failure, so the next start does not
-report it again (local review). One line,
+owned as that home is, so the session's hook can rename it once printed. One line,
 `<time> deploy: <step> failed at <sha>`, replacing an older one. Every step
 after the fast-forward calls it, the rollback included (a run the service's
 timeout kills cannot, *The timer alone starts the deploy*), so a failed build is

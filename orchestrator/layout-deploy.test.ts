@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 import { instructions, madeOpen, read } from "./layout.fixture.ts";
@@ -52,6 +52,8 @@ describe("the container's managed settings", () => {
 		// Only a `command` hook runs its string in a shell, as the cases below do; no other field (async, timeout) may change that.
 		for (const entry of Object.values(hooks).flat())
 			for (const hook of entry.hooks) expect(hook).toEqual({ type: "command", command: expect.any(String) });
+		// commands() reads a matcher as a list of exact values, which Claude Code does only for letters and `|`.
+		for (const entry of hooks.SessionStart ?? []) expect(entry.matcher).toMatch(/^[a-z]+(?:\|[a-z]+)*$/);
 	});
 
 	// spec: orchestrator/the-user-s-first-message
@@ -88,8 +90,10 @@ describe("the container's managed settings", () => {
 			const out = run(home, "SessionStart", source).split("\n");
 			expect(out[0]).toContain("report");
 			expect(out[0]).toContain("user");
-			expect(out[0]).toContain("delete ~/.harness-deploy-failed");
 			expect(out[1]).toBe(line);
+			// Once printed it is in the conversation: the next start reports nothing, and the line stays on disk.
+			expect(run(home, "SessionStart", source)).toBe("");
+			expect(readFileSync(join(home, ".harness-deploy-failed.reported"), "utf8")).toBe(`${line}\n`);
 		},
 	);
 });
