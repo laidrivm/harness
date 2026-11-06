@@ -31,6 +31,8 @@ import { MAIN, output, POINTER } from "./work-take.ts";
 export const STATUSES = [...ORDER, "discarded"];
 /** The targets whose move posts a reason, which `--why` gives. */
 export const REASONED = ["discarded", "idea"];
+/** The code mark the reason's comment opens with. */
+const MARK = "harness-status";
 /** `exploring` … `archiving`, which the WIP limit holds. */
 const RANGE = ORDER.slice(ORDER.indexOf("exploring"), ORDER.indexOf("done"));
 const MERGED = ["proposed", "applied", "done"];
@@ -135,13 +137,13 @@ function evidence(top: string, pointer: string, to: string, seen: { commit?: str
 
 /**
  * The line `status` prints for moving `card` to `to`, and its exit code: 0
- * written, 1 otherwise; `why` is the reason a move in `REASONED` posts, which
+ * written, 1 otherwise; `reason` is what a move in `REASONED` posts, which
  * `work.ts` requires there and refuses elsewhere.
  */
 export async function status(
 	card: string,
 	to: string,
-	why?: string,
+	reason?: string,
 	timeout = 30_000,
 ): Promise<{ lines: string[]; code: number }> {
 	const seen: { top?: string; commit?: string } = {};
@@ -201,8 +203,7 @@ export async function status(
 	let now: unknown;
 	try {
 		// Before the write: a failed write leaves a reason on an unmoved card, never a discard with none.
-		if (why !== undefined)
-			await comment(found.call, card, `\`harness-status\` ${from} → ${to}: ${why}`, "harness-status");
+		if (reason !== undefined) await comment(found.call, card, `\`${MARK}\` ${from} → ${to}: ${reason}`, MARK);
 		const written = await found.call<Page | null>("the Status write", `/v1/pages/${card}`, "PATCH", {
 			properties: { Status: { select: { name: to } } },
 		});

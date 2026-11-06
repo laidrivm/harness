@@ -6,7 +6,8 @@
  * whose `properties` carry `Status`, under any command, and a create in which
  * any page's `properties` carry a `Status` other than `"idea"` or `null`,
  * whatever its parent, naming `bun bun/work.ts status`, which moves a card only
- * on `origin/main`'s evidence and within the WIP limit (`work-status`). No
+ * on `origin/main`'s evidence and within the WIP limit, or into and out of
+ * `discarded` with a reason it posts (`work-status`). No
  * `# harness-managed` mark and no `HOOKS` entry, so `sync-settings` keeps it
  * here and never writes it into a consumer (stage 2, question 28 a″).
  *
@@ -46,5 +47,5 @@ if (typeof event?.tool_name === "string" && event.tool_name.endsWith("__notion-c
 		}
 } else if (isObject(input?.properties) && Object.hasOwn(input.properties, "Status"))
 	refuse(
-		"status-guard: a card's Status moves through `bun bun/work.ts status --card <id> --to <status>`, which checks origin/main's evidence and the WIP limit, and through `--to discarded --why <reason>`, which posts the reason on the card. Send any other property in a call without Status.",
+		"status-guard: a card's Status moves through `bun bun/work.ts status --card <id> --to <status>`, which checks origin/main's evidence and the WIP limit, and through `--to discarded --why <reason>`, or `--to idea --why <reason>` out of discarded, which post the reason on the card. Send any other property in a call without Status.",
 	);
