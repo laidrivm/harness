@@ -1,2 +1,2 @@
 [test]
-preload = ["./bun/git-env-guard.ts"]
+preload = ["./bun/git-env-guard.ts", "./bun/test-tmpdir.ts"]
