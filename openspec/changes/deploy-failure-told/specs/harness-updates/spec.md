@@ -28,3 +28,9 @@ having changed nothing and SHALL NOT proceed to land.
 - **WHEN** the harness's head carries a failed harness test run in one check
   suite and a newer successful one in another
 - **THEN** the bump targets the head
+
+#### Scenario: Test runs on more than one page
+
+- **WHEN** the harness's head carries harness test runs on more than one page
+  of the check runs' answer
+- **THEN** the bump reads every page and the newest run among them decides
