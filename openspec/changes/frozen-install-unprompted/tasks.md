@@ -78,14 +78,14 @@ are not touched.
 
 ## 4. The bootstrap and the notice
 
-- [ ] 4.1 Failing cases: in `bun/bootstrap.test.ts`, *before the install*
+- [x] 4.1 Failing cases: in `bun/bootstrap.test.ts`, *before the install*
       lets `bun run deps` through beside today's three, and a blocked row's
       stderr names `bun run deps`
       (`cloud-sessions/the-local-policy-is-unchanged`); in
       `bun/bootstrap-notice.test.ts`, the stale-install and not-installed
       lines name `bun run deps`
       (`harness-updates/a-stale-install-is-named-at-session-start`)
-- [ ] 4.2 Then `bun/bootstrap.ts`: `BOOTSTRAP`'s test becomes
+- [x] 4.2 Then `bun/bootstrap.ts`: `BOOTSTRAP`'s test becomes
       `/^(bun (install|i)( --frozen-lockfile)?|bun run deps)$/` and its hint
       `run bun run deps first`; `NOTICE`'s two lines name `bun run deps`;
       the header comments follow. Carry both strings, JSON-escaped, into the

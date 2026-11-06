@@ -44,7 +44,7 @@ const STALE = { ".bun-tag": "laidrivm-harness-9d321b6", "package.json": "{}" };
 
 describe("the stale-install notice", () => {
 	// spec: harness-updates/a-stale-install-is-named-at-session-start
-	test("an install from another commit is named in one line with bun install", () => {
+	test("an install from another commit is named in one line with bun run deps", () => {
 		const dir = project({
 			".bun-tag": "laidrivm-harness-9d321b6",
 			"package.json": "{}",
@@ -55,7 +55,9 @@ describe("the stale-install notice", () => {
 		expect(out.trim().split("\n")).toHaveLength(1);
 		expect(out).toContain("9d321b6");
 		expect(out).toContain(PIN.slice(0, 7));
-		expect(out).toContain("bun install");
+		expect(out).toContain("run bun run deps");
+		// The guard refuses `bun run deps` while package.json carries an uncommitted edit.
+		expect(out).toContain("bun install if package.json has uncommitted edits");
 	});
 
 	// spec: harness-updates/an-install-older-than-the-notice-is-still-named
@@ -67,7 +69,7 @@ describe("the stale-install notice", () => {
 		const { code, out } = notice(dir);
 		expect(code).toBe(0);
 		expect(out).toContain("1d26cf4");
-		expect(out).toContain("bun install");
+		expect(out).toContain("run bun run deps");
 	});
 
 	// spec: harness-updates/a-current-install-says-nothing
@@ -97,7 +99,7 @@ describe("the stale-install notice", () => {
 	test("no installed harness at all prints the not-installed line", () => {
 		const { code, out } = notice(project());
 		expect(code).toBe(0);
-		expect(out).toContain("not installed");
+		expect(out).toContain("not installed: run bun run deps");
 	});
 });
 

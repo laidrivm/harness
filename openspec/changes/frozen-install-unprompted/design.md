@@ -110,7 +110,9 @@ Before the harness is installed the bootstrap's test becomes
 `/^(bun (install|i)( --frozen-lockfile)?|bun run deps)$/` on the trimmed
 command, and its hint `run bun run deps first`. A bare `bun install` still
 passes the bootstrap and then meets the `ask` entry, as today. The notice's
-two lines name `bun run deps`.
+two lines name `bun run deps`; the stale-install one adds `bun install` for a
+`package.json` with uncommitted edits, as a pin moved by hand leaves it, where
+the guard refuses the script (CodeRabbit round 5).
 
 ### 5. Docs
 
