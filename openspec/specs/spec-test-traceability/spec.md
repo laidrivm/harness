@@ -147,26 +147,29 @@ the opposite of what this capability is for.
 
 ### Requirement: The count of uncited criteria may not rise silently
 
-The check SHALL compare the number of uncited criteria against a floor constant
-declared in the check itself, and SHALL fail when the count is above it. The
-floor SHALL also be failed when the count is *below* it, reporting the value to
-write instead, so the number tracks reality rather than drifting into a
-meaningless upper bound.
+The check SHALL compare the number of uncited criteria against the floor
+declared as `harness.uncitedFloor.count` in the `package.json` of the
+repository it runs in, failing and naming that field when it is not a whole
+number, and SHALL fail when the count is above it. The floor SHALL also be
+failed when the count is *below* it, reporting the value to write instead, so
+the number tracks reality rather than drifting into a meaningless upper bound.
 
-The floor's line SHALL carry a trailing comment holding at least one
-non-whitespace character after the marker, and the check SHALL fail when it does
-not — `const FLOOR = 380; //` states no reason and SHALL NOT pass. That is the whole exemption mechanism: a criterion no runtime can
-assert — 88 of the 382 are discharged by a person, not a process — is
-admitted by raising the floor with a reason a reviewer reads, rather than by a
-register of its own listing them one by one.
+The floor SHALL carry its reason as `harness.uncitedFloor.why`, holding at
+least one non-whitespace character, and the check SHALL fail when it does
+not — `{ "count": 380, "why": " " }` states no reason and SHALL NOT pass. That
+is the whole exemption mechanism: a criterion no runtime can assert, one a
+person discharges rather than a process, is admitted by raising the floor with
+a reason a reviewer reads, rather than by a register of its own listing them
+one by one.
 
-The check SHALL ship as `scripts/spec-coverage.test.ts`. CI already runs `bun
-test`, so no workflow changes and the gate is blocking from the first commit.
+The check SHALL run among the gates of `bun/check.ts`, the entry point a
+repository that installs the harness runs over itself, which reports every
+gate's problems in one run.
 
 #### Scenario: The repository as it stands
 
 - **WHEN** the check runs over the tree with the floor holding the measurement
-  its line's reason describes
+  its reason describes
 - **THEN** it passes
 
 #### Scenario: A criterion added without a test
@@ -176,14 +179,13 @@ test`, so no workflow changes and the gate is blocking from the first commit.
 
 #### Scenario: A criterion admitted as untestable
 
-- **WHEN** the same commit raises the floor by one and writes the reason on
-  that line
+- **WHEN** the same commit raises the floor by one and writes the reason in
+  `harness.uncitedFloor.why`
 - **THEN** the check passes, and the exemption is a sentence in the diff
 
 #### Scenario: The floor changed with no reason given
 
-- **WHEN** the floor's line carries no trailing comment, or one whose text is
-  empty or whitespace
+- **WHEN** `harness.uncitedFloor.why` is absent, empty or whitespace
 - **THEN** the check fails, whichever direction the number moved
 
 #### Scenario: A criterion newly covered
@@ -192,3 +194,9 @@ test`, so no workflow changes and the gate is blocking from the first commit.
   below the floor
 - **THEN** the check fails and names the lower value to write, so the gain is
   recorded rather than absorbed
+
+#### Scenario: A floor that is not a whole number
+
+- **WHEN** `harness.uncitedFloor.count` is absent, a string or a fraction
+- **THEN** the check fails naming `harness.uncitedFloor.count`, and reports no
+  gap against it
