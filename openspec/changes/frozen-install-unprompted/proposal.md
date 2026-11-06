@@ -18,9 +18,10 @@ install run without a prompt*, 40e39875c31b81e8b989ef568b1f65a9).
   body, so `bun run deps` does not prompt where `allow` holds it — the
   harness's tracked `Bash(bun run *)` does — or under auto mode.
 - The `ask` entries stay exactly as today, so every literal `bun install` or
-  `bun i`, frozen or not, still prompts. The command guard blocks nothing
-  new: it already reads a `bun run` script's text as a typed line and refuses
-  a script from an uncommitted `package.json`.
+  `bun i`, frozen or not, still prompts. The command guard already reads a
+  `bun run` script's text as a typed line and refuses a script from an
+  uncommitted `package.json`; it gains one refusal, `bun run deps` with any
+  word after it, which bun would forward to the install.
 - Sync writes the script into a consumer's `package.json` as it writes the
   settings entries, and the harness check fails while it is missing or
   different. A consumer whose `deps` already says something else is refused
@@ -55,6 +56,8 @@ None.
 
 - Changed: `package.json` (the script), `bun/sync-settings.ts` (the
   `package.json` writer), `bun/settings.ts` (the constant and the check),
+  `bun/command-guard-exec.ts` and `bun/command-guard.ts` (`deps-args`), a new
+  `bun/command-guard-deps.test.ts`,
   `bun/bootstrap.ts` (`BOOTSTRAP`, `NOTICE`), `.claude/settings.json` (the two
   hook texts), `README.md`; tests `bun/sync-settings.test.ts`,
   `bun/settings.test.ts`, `bun/bootstrap.test.ts`,
