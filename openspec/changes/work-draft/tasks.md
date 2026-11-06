@@ -7,11 +7,11 @@ numbers are the proposal-stage `/zombies` ideas.
 
 ## 1. `work.ts draft --pr <n>` and the rule naming it
 
-- [ ] 1.1 Write failing cases in `bun/pull-requests.test.ts` for
+- [x] 1.1 Write failing cases in `bun/pull-requests.test.ts` for
       `readPullRequest`: an open draft reads `draft: true` and its head's 40
       hex digits, an open ready one `draft: false` [12]. Verify: each fails
       against today's code
-- [ ] 1.2 Write failing cases in a new `bun/work-draft.test.ts`, running
+- [x] 1.2 Write failing cases in a new `bun/work-draft.test.ts`, running
       `bun bun/work.ts draft` in `work-finish.fixture.ts`'s checkout with a
       `gh` stub that logs every call, as `bun/work-resolve.fixture.ts` does.
       Arguments, each printing the usage, exiting 2 and making no `gh` call:
@@ -23,7 +23,7 @@ numbers are the proposal-stage `/zombies` ideas.
       #7 an open draft makes no `gh pr ready` call and prints `draft: #7
       already a draft, head <sha>`, exit 0 [3]. Verify: each fails against
       today's code
-- [ ] 1.3 Write failing cases for the refusals, each one line opening
+- [x] 1.3 Write failing cases for the refusals, each one line opening
       `draft: refused —`, exit 1 and no `gh pr ready` call: #7 merged, naming
       it merged [15]; #7 closed unmerged, naming it closed [16]; the read
       exiting non-zero [17]; `origin` set to a URL of one path segment,
@@ -35,7 +35,7 @@ numbers are the proposal-stage `/zombies` ideas.
       [19]; the undo killed at
       `HARNESS_GH_TIMEOUT_MS` does the same [20]. Verify: each fails against
       today's code
-- [ ] 1.4 Extend `readPullRequest` in `bun/pull-requests.ts` to return
+- [x] 1.4 Extend `readPullRequest` in `bun/pull-requests.ts` to return
       `draft` and `headRefOid` (design, *Reuse the reads and the call that
       exist*), leaving `work.ts status`'s use as it is, and widen the exact
       shapes `bun/pull-requests.test.ts`'s existing `readPullRequest` cases
@@ -49,7 +49,7 @@ numbers are the proposal-stage `/zombies` ideas.
       in `USAGE` [14] and the header comment. Verify: `bun test
       bun/pull-requests.test.ts bun/work-draft.test.ts bun/work-status*.test.ts`
       passes, and `bun bun/check.ts` passes
-- [ ] 1.5 Write a failing case, in `bun/work-draft.test.ts`, that
+- [x] 1.5 Write a failing case, in `bun/work-draft.test.ts`, that
       `core/rules.md`'s Process sublist names `work.ts draft --pr` in a rule
       covering both follow-up handed to a subagent and follow-up the session
       carries itself [21], and
@@ -66,7 +66,7 @@ numbers are the proposal-stage `/zombies` ideas.
       list grants a `gh` write, as the one it grants a switch to draft; the
       case checks that too. Verify: the case passes, and the Process sublist
       holds 19 rules
-- [ ] 1.6 In `README.md`, add the `draft` row to the `work.ts` table, linking
+- [x] 1.6 In `README.md`, add the `draft` row to the `work.ts` table, linking
       the change's delta, which the archive re-points to
       `openspec/specs/work-draft/spec.md` as `coderabbit-resolve-fixed-threads`'
       archive did for `resolve`'s row — and name `draft`

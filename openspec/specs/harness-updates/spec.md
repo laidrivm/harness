@@ -16,7 +16,7 @@ the harness's policy check compares exactly: the hook registrations, the
 of the `ask` list, the `Edit(.npmrc)` deny and `Edit(bunfig.toml)` ask
 entries, the `attribution` setting, the harness's two `enabledPlugins`
 entries, the `ponytail` entry of `extraKnownMarketplaces`, and
-`bunfig.toml`'s `[install]` section.
+`bunfig.toml`'s `[install]` section, and `package.json`'s `deps` script.
 After a sync, the check SHALL find none of them wrong.
 
 #### Scenario: A harness change to its policy needs no manual edit
@@ -60,7 +60,8 @@ ask entries, plugins and marketplaces other than the harness's, other
 settings keys and other TOML tables. When it cannot show
 that its `bunfig.toml` edit preserved the rest of the file, or when
 `enabledPlugins` or `extraKnownMarketplaces` is present and not an object, it
-SHALL write neither file and fail.
+SHALL write none of `bunfig.toml`, the settings file and `package.json`, and
+fail.
 
 #### Scenario: The project's own settings survive a sync
 
@@ -150,7 +151,9 @@ hook is installed to run at the push.
 
 At session start the harness SHALL compare the commit the installed harness
 came from with the consumer's pin. When they differ it SHALL print one line
-naming both commits and `bun install`, and it SHALL never block the session.
+naming both commits and `bun run deps`, with `bun install` as the fallback
+for a `package.json` with uncommitted edits, whose script the guard refuses,
+and it SHALL never block the session.
 This SHALL hold for an installed harness version too old to contain the
 comparison itself.
 
@@ -159,7 +162,7 @@ comparison itself.
 - **WHEN** a session starts with an installed harness from a different
   commit than the pin
 - **THEN** one line naming the installed commit, the pinned commit and
-  `bun install` is printed, and the session starts
+  `bun run deps` is printed, and the session starts
 
 #### Scenario: An install older than the notice is still named
 
@@ -255,3 +258,35 @@ what the sync writes.
 - **THEN** it finds the skill-call hook under `PostToolUse` with the matcher
   `Skill` and under `UserPromptExpansion` with no matcher, each a command
   hook run in the foreground with no `if`, running the pinned copy
+
+### Requirement: Sync writes the deps script
+
+Sync SHALL write the script `"deps": "bun install --frozen-lockfile"` into
+the consumer's `package.json` beside the settings it writes, leaving every
+other key as it was, and the policy check SHALL fail while the script is
+missing or holds other text. A `deps` script the consumer already holds with
+other text SHALL make sync refuse, naming that text, with no file written.
+
+#### Scenario: A consumer without the script
+
+- **WHEN** sync runs in a consumer whose `package.json` has no `deps` script,
+  or no `scripts` key
+- **THEN** `scripts.deps` holds `bun install --frozen-lockfile`, and every
+  other key and the file's indentation are unchanged
+
+#### Scenario: A consumer that already holds it
+
+- **WHEN** `scripts.deps` already holds `bun install --frozen-lockfile`
+- **THEN** sync leaves `package.json` byte for byte
+
+#### Scenario: A consumer's own deps script
+
+- **WHEN** `scripts.deps` holds other text, such as `pnpm install`
+- **THEN** sync exits non-zero naming that text, and neither `package.json`,
+  `.claude/settings.json` nor `bunfig.toml` changes
+
+#### Scenario: The check reads the script
+
+- **WHEN** the policy check runs on a consumer whose `scripts.deps` is
+  missing or holds other text
+- **THEN** it fails naming `package.json` and the expected text
