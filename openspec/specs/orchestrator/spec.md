@@ -987,7 +987,7 @@ runs under SHALL give `claude` the session user's home and no
 to a laptop or a consumer SHALL set ponytail's level. This requirement sets
 the level, not the plugin's presence: only the persistent session installs
 ponytail (the next requirement), and a pass whose clone does not load that
-install runs without ponytail (design.md, D5).
+install runs without ponytail (ship-ponytail design, D5).
 
 #### Scenario: The level is written before the session starts
 
@@ -1072,4 +1072,5 @@ SHALL NOT run either call.
 #### Scenario: No plugin install without the clone
 
 - **WHEN** the session's clone does not exist
-- **THEN** the script does not run `claude plugin install`
+- **THEN** the script runs neither `claude plugin marketplace add` nor
+  `claude plugin install`
