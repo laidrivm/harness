@@ -1,5 +1,232 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/repo-layout.test.ts": {
+			"source": "/**\n * Fails when a tracked file sits at the repository root without the exemption\n * list naming it, and when the list itself names nothing real.\n *\n * The check ships as a test rather than a script, the shape `file-size.test.ts`\n * uses: CI already runs `bun test` and so does the pre-push hook, so it is\n * blocking from its first commit with no workflow edit.\n */\nimport { afterAll, describe, expect, test } from \"bun:test\";\nimport { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { dirname, join } from \"node:path\";\nimport { HEADING, stray, unbacked } from \"./repo-layout.ts\";\n\nconst made: string[] = [];\n\nafterAll(() => {\n\tfor (const dir of made) rmSync(dir, { recursive: true, force: true });\n});\n\n/** A throwaway directory with no repository in it. */\nfunction bare(): string {\n\tconst dir = mkdtempSync(join(tmpdir(), \"repo-layout-\"));\n\tmade.push(dir);\n\treturn dir;\n}\n\n/** A throwaway repository holding `files`, all tracked. */\nfunction fabricate(files: Record<string, string>): string {\n\tconst dir = bare();\n\tconst git = (...args: string[]) => {\n\t\tconst run = Bun.spawnSync([\"git\", ...args], { cwd: dir });\n\t\tif (run.exitCode !== 0) throw new Error(run.stderr.toString());\n\t};\n\tgit(\"init\", \"-b\", \"main\");\n\tfor (const [path, text] of Object.entries(files)) {\n\t\tconst full = join(dir, path);\n\t\tmkdirSync(dirname(full), { recursive: true });\n\t\twriteFileSync(full, text);\n\t}\n\tgit(\"add\", \"-A\");\n\treturn dir;\n}\n\n/** The tracked paths of a repository, named from its root. */\nfunction listing(dir: string): string[] {\n\tconst ls = Bun.spawnSync([\"git\", \"ls-files\", \"-z\"], { cwd: dir });\n\tif (ls.exitCode !== 0) throw new Error(ls.stderr.toString());\n\treturn ls.stdout.toString().split(\"\\0\").filter(Boolean);\n}\n\n/** One exempted root file, so no case below trips the could-not-measure guard. */\nconst KEEP = { \"README.md\": \"the front door\" };\n\n// spec: repo-layout/a-source-file-added-to-the-root\ndescribe(\"a file added to the repository root\", () => {\n\ttest(\"a root the list names entirely reports nothing [1]\", () => {\n\t\tconst dir = fabricate({ \"README.md\": \"\", \"package.json\": \"{}\" });\n\t\texpect(stray(dir, { ...KEEP, \"package.json\": \"the manifest\" })).toEqual([]);\n\t});\n\n\ttest(\"an unexempted file is reported, naming it and the list [3]\", () => {\n\t\tconst dir = fabricate({ ...KEEP, \"server.ts\": \"\" });\n\t\tconst found = stray(dir, KEEP);\n\n\t\texpect(found).toHaveLength(1);\n\t\texpect(found[0]).toContain(\"server.ts\");\n\t\t// The reason as well as the path: \"server.ts\" alone reads as a file the\n\t\t// check dislikes rather than as a decision nobody has recorded.\n\t\texpect(found[0]).toMatch(/exemption list/i);\n\t});\n\n\ttest(\"two unexempted files are both reported [4]\", () => {\n\t\tconst dir = fabricate({ ...KEEP, \"a.ts\": \"\", \"b.sql\": \"\" });\n\t\texpect(stray(dir, KEEP).join(\"\\n\")).toMatch(/a\\.ts[\\s\\S]*b\\.sql/);\n\t});\n\n\t// spec: repo-layout/a-file-type-the-list-has-never-seen\n\ttest(\"an extension no exemption names is refused, not ignored [3]\", () => {\n\t\t// The whole reason this scan is scoped by what it exempts: an admission\n\t\t// list of extensions passes silently on the first type nobody thought of.\n\t\tconst dir = fabricate({ ...KEEP, \"compose.yaml\": \"\", \"run.sh\": \"\" });\n\t\texpect(stray(dir, KEEP)).toHaveLength(2);\n\t});\n\n\ttest(\"a root dotfile is subject to the list like any other [7]\", () => {\n\t\t// A leading dot is no implicit pass: `.env.example` is at the root by a\n\t\t// decision, and the list is where that decision is written down.\n\t\tconst dir = fabricate({ ...KEEP, \".env.example\": \"\" });\n\t\texpect(stray(dir, KEEP).join(\"\")).toContain(\".env.example\");\n\t});\n\n\ttest(\"a file named after an inherited property is not exempted by it\", () => {\n\t\t// Every object answers to `toString`, `constructor` and `valueOf`, so a\n\t\t// membership test written with `in` would pass these three on a list\n\t\t// that never mentioned them.\n\t\tconst dir = fabricate({\n\t\t\t...KEEP,\n\t\t\ttoString: \"\",\n\t\t\tconstructor: \"\",\n\t\t\tvalueOf: \"\",\n\t\t});\n\t\texpect(stray(dir, KEEP)).toHaveLength(3);\n\t});\n});\n\n// spec: repo-layout/a-file-under-a-directory\ndescribe(\"a file under a directory\", () => {\n\ttest(\"one directory down is not the root's business [6]\", () => {\n\t\tconst dir = fabricate({ ...KEEP, \"src/job/db.ts\": \"\", \"checks/a.ts\": \"\" });\n\t\texpect(stray(dir, KEEP)).toEqual([]);\n\t});\n});\n\ndescribe(\"the exemption list itself\", () => {\n\t// spec: repo-layout/an-exemption-naming-a-file-that-is-gone\n\ttest(\"an entry naming a path nothing tracks fails [8]\", () => {\n\t\tconst dir = fabricate(KEEP);\n\t\tconst found = stray(dir, { ...KEEP, \"server.ts\": \"moved to src/server/\" });\n\n\t\texpect(found).toHaveLength(1);\n\t\texpect(found[0]).toContain(\"server.ts\");\n\t\texpect(found[0]).toMatch(/tracks no such file/i);\n\t});\n\n\t// spec: repo-layout/an-exemption-carrying-no-reason\n\ttest(\"an entry whose reason is empty is refused [9]\", () => {\n\t\tconst dir = fabricate({ ...KEEP, \"package.json\": \"{}\" });\n\t\tconst found = stray(dir, { ...KEEP, \"package.json\": \"  \" });\n\n\t\texpect(found).toHaveLength(1);\n\t\texpect(found[0]).toContain(\"package.json\");\n\t\texpect(found[0]).toMatch(/reason/i);\n\t});\n});\n\n// spec: repo-layout/a-tree-the-check-could-not-read\ndescribe(\"a tree the check could not read\", () => {\n\ttest(\"a scan that matched no root file at all fails [2]\", () => {\n\t\t// Not an empty result: every assertion made over a tree nobody read is\n\t\t// satisfied by it, so a clean root and an unread one must not agree.\n\t\tconst dir = fabricate({ \"src/a.ts\": \"\" });\n\t\texpect(() => stray(dir, KEEP)).toThrow(/no tracked file/i);\n\t});\n\n\ttest(\"git exiting non-zero fails with git's own stderr [13]\", () => {\n\t\t// The check knows only that the command failed; the command knows why.\n\t\texpect(() => stray(bare(), KEEP)).toThrow(/not a git repository/i);\n\t});\n});\n\ndescribe(\"the tree the sweep reads\", () => {\n\t// spec: repo-layout/a-root-entry-that-is-not-a-regular-file\n\ttest(\"a tracked root entry absent from the work tree is skipped [11]\", () => {\n\t\tconst dir = fabricate({ ...KEEP, \"gone.ts\": \"\" });\n\t\tunlinkSync(join(dir, \"gone.ts\"));\n\t\texpect(stray(dir, KEEP)).toEqual([]);\n\t});\n\n\ttest(\"a tracked root symlink is skipped, not read as a file [12]\", () => {\n\t\t// `lstatSync` reads the link rather than following it, which is the\n\t\t// other thing `.isFile()` rejects besides an absent entry.\n\t\tconst dir = fabricate({ ...KEEP, \"src/real.ts\": \"\" });\n\t\tsymlinkSync(join(dir, \"src/real.ts\"), join(dir, \"link.ts\"));\n\t\t// Unchecked, a staging failure would leave the link untracked and this\n\t\t// case would pass on there being nothing at the root to report.\n\t\tconst staged = Bun.spawnSync([\"git\", \"add\", \"-A\"], { cwd: dir });\n\t\texpect(staged.exitCode).toBe(0);\n\n\t\texpect(stray(dir, KEEP)).toEqual([]);\n\t});\n\n\t// spec: repo-layout/a-check-run-from-a-subdirectory\n\ttest(\"run from below the root it still reads the whole repository [10]\", () => {\n\t\tconst dir = fabricate({ ...KEEP, \"server.ts\": \"\", \"src/a.ts\": \"\" });\n\t\texpect(stray(join(dir, \"src\"), KEEP).join(\"\")).toContain(\"server.ts\");\n\t});\n});\n\n/** A layout section holding one row per argument. */\nconst section = (...cells: string[]) =>\n\t`# A readme\\n\\n${HEADING}\\n\\n| Directory | Holds |\\n|---|---|\\n${cells.map((cell) => `| ${cell} |\\n`).join(\"\")}`;\n\n// spec: repo-layout/the-section-is-absent\ndescribe(\"a README with no layout section\", () => {\n\ttest(\"fails rather than passing over an absent heading [15]\", () => {\n\t\t// The vacuous pass a section-scoped scan gives when its heading is\n\t\t// renamed: no section, no rows, nothing to contradict.\n\t\texpect(unbacked(\"# A readme\\n\\n## Something else\\n\", [])).toHaveLength(1);\n\t});\n});\n\n// spec: repo-layout/the-section-names-no-directory\ndescribe(\"a layout section naming no directory\", () => {\n\ttest(\"fails rather than passing on having no rows [16]\", () => {\n\t\tconst empty = `# A readme\\n\\n${HEADING}\\n\\nprose, no table\\n`;\n\t\texpect(unbacked(empty, [\"src/app/a.ts\"])).toHaveLength(1);\n\t});\n});\n\n// spec: repo-layout/a-directory-the-section-names\n// spec: task-board/the-directory-s-row-in-the-ownership-map\ndescribe(\"a directory the section names\", () => {\n\ttest(\"passes where the repository tracks a file under it [17]\", () => {\n\t\tconst dir = fabricate({ \"src/app/a.ts\": \"\" });\n\t\texpect(unbacked(section(\"`src/app/` | the client\"), listing(dir))).toEqual([]);\n\t});\n\n\ttest(\"fails where it tracks nothing, naming the directory [19]\", () => {\n\t\tconst dir = fabricate({ \"src/app/a.ts\": \"\" });\n\t\tconst found = unbacked(section(\"`src/job/` | the job\"), listing(dir));\n\n\t\texpect(found).toHaveLength(1);\n\t\texpect(found[0]).toContain(\"src/job/\");\n\t});\n\n\ttest(\"a directory on disk but tracked by nothing does not satisfy it [20]\", () => {\n\t\t// git carries no empty directory, so this is the mechanism rather than a\n\t\t// contrivance: the row is satisfied in the author's working tree and in\n\t\t// no clone.\n\t\tconst dir = fabricate({ \"src/app/a.ts\": \"\" });\n\t\tmkdirSync(join(dir, \"src/job\"), { recursive: true });\n\n\t\texpect(unbacked(section(\"`src/job/` | the job\"), listing(dir))).toHaveLength(1);\n\t});\n\n\ttest(\"a row that stops naming a directory fails rather than dropping out\", () => {\n\t\t// The table half-reshaped: one row keeps its path and one loses it. A\n\t\t// scan that dropped the second would report nothing and read as though\n\t\t// the section were still whole.\n\t\tconst dir = fabricate({ \"src/app/a.ts\": \"\" });\n\t\tconst half = section(\"`src/app/` | the client\", \"src/job/ | the job\");\n\n\t\texpect(unbacked(half, listing(dir))).toHaveLength(1);\n\t});\n\n\ttest(\"a prefix match is on the directory, not on the name [19]\", () => {\n\t\t// `src/job/` must not be satisfied by `src/jobs-notes.md`, which shares\n\t\t// its first seven characters and lives somewhere else entirely.\n\t\tconst dir = fabricate({ \"src/jobs-notes.md\": \"\" });\n\t\texpect(unbacked(section(\"`src/job/` | the job\"), listing(dir))).toHaveLength(1);\n\t});\n});\n\n// spec: repo-layout/a-directory-reserved-for-later-work\ndescribe(\"a directory reserved for later work\", () => {\n\ttest(\"is not required to exist [18]\", () => {\n\t\tconst dir = fabricate({ \"src/app/a.ts\": \"\" });\n\t\tconst reserved = section(\"`src/job/build/` | reserved for `snapshot-build`\");\n\n\t\texpect(unbacked(reserved, listing(dir))).toEqual([]);\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/repo-layout.test.ts > a directory reserved for later work > is not required to exist [18]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 249
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/repo-layout.test.ts > a directory the section names > a directory on disk but tracked by nothing does not satisfy it [20]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 219
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/repo-layout.test.ts > a directory the section names > a prefix match is on the directory, not on the name [19]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 239
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/repo-layout.test.ts > a directory the section names > a row that stops naming a directory fails rather than dropping out",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 229
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/repo-layout.test.ts > a directory the section names > fails where it tracks nothing, naming the directory [19]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 211
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/repo-layout.test.ts > a directory the section names > passes where the repository tracks a file under it [17]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 206
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/repo-layout.test.ts > a file added to the repository root > a file named after an inherited property is not exempted by it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 95
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/repo-layout.test.ts > a file added to the repository root > a root dotfile is subject to the list like any other [7]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 88
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/repo-layout.test.ts > a file added to the repository root > a root the list names entirely reports nothing [1]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 59
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/repo-layout.test.ts > a file added to the repository root > an extension no exemption names is refused, not ignored [3]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 81
+						}
+					}
+				},
+				{
+					"id": "10",
+					"name": "bun/repo-layout.test.ts > a file added to the repository root > an unexempted file is reported, naming it and the list [3]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 64
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/repo-layout.test.ts > a file added to the repository root > two unexempted files are both reported [4]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 75
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/repo-layout.test.ts > a file under a directory > one directory down is not the root's business [6]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 111
+						}
+					}
+				},
+				{
+					"id": "13",
+					"name": "bun/repo-layout.test.ts > a layout section naming no directory > fails rather than passing on having no rows [16]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 197
+						}
+					}
+				},
+				{
+					"id": "14",
+					"name": "bun/repo-layout.test.ts > a README with no layout section > fails rather than passing over an absent heading [15]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 188
+						}
+					}
+				},
+				{
+					"id": "15",
+					"name": "bun/repo-layout.test.ts > a tree the check could not read > a scan that matched no root file at all fails [2]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 141
+						}
+					}
+				},
+				{
+					"id": "16",
+					"name": "bun/repo-layout.test.ts > a tree the check could not read > git exiting non-zero fails with git's own stderr [13]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 148
+						}
+					}
+				},
+				{
+					"id": "17",
+					"name": "bun/repo-layout.test.ts > the exemption list itself > an entry naming a path nothing tracks fails [8]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 119
+						}
+					}
+				},
+				{
+					"id": "18",
+					"name": "bun/repo-layout.test.ts > the exemption list itself > an entry whose reason is empty is refused [9]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 129
+						}
+					}
+				},
+				{
+					"id": "19",
+					"name": "bun/repo-layout.test.ts > the tree the sweep reads > a tracked root entry absent from the work tree is skipped [11]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 156
+						}
+					}
+				},
+				{
+					"id": "20",
+					"name": "bun/repo-layout.test.ts > the tree the sweep reads > a tracked root symlink is skipped, not read as a file [12]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 162
+						}
+					}
+				},
+				{
+					"id": "21",
+					"name": "bun/repo-layout.test.ts > the tree the sweep reads > run from below the root it still reads the whole repository [10]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 176
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/repo-layout.ts": {
 			"source": "/**\n * Where a file of each kind belongs: every tracked file at the repository root\n * has to be named in the consumer's `harness.rootFiles`, with why it is at the\n * root rather than under a directory.\n *\n * Scoped by what it exempts rather than by the extensions it covers, which is\n * the opposite of `file-size.ts` and the direction `CLAUDE.md` asks\n * for. The two differ because a line cap and a placement decision fail\n * differently: a file type nobody has capped is merely unmeasured, where a file\n * type nobody has placed is already in the wrong directory. A scan admitting by\n * extension would pass in silence on the first `.mjs`, `.sql` or `.sh` nobody\n * thought of — which is how thirty-three files reached the root the first time.\n *\n * Adding a root file means adding its name and its reason there. That is the\n * friction, and it is the point: the line is the decision being taken rather\n * than defaulted.\n */\nimport { read } from \"./config.ts\";\nimport { tracked } from \"./tracked.ts\";\n\n/**\n * The other half of the same contract, and in the same module because the\n * capability is one: `stray` refuses a file placed outside the documented\n * directories, and what follows refuses a documented directory holding no\n * file. Neither is a statement about this repository — both answer for a tree\n * that does not exist yet, which is why their cases fabricate one.\n */\n/** The heading the section is found under, and the only place it is written. */\nexport const HEADING = \"## Where each kind of file lives\";\n\n/**\n * Every directory the layout section names, paired with whether its row marks\n * it reserved. The first backticked span of a row is the directory, the idiom\n * `readme-map.test.ts` already reads the ownership map with; the header and\n * separator rows carry none and drop out here.\n */\nexport function rows(markdown: string): { path: string | undefined; reserved: boolean }[] | undefined {\n\t// `undefined` where the heading is absent, distinct from a section that is\n\t// present and holds no row: the two fail for different reasons and the\n\t// heading is matched in one place rather than tested again by the caller.\n\tconst section = markdown.match(new RegExp(`^${HEADING}$([\\\\s\\\\S]*?)(?=\\\\n#{1,2} |$(?![\\\\s\\\\S]))`, \"m\"))?.[1];\n\tif (section === undefined) return undefined;\n\treturn section\n\t\t.split(\"\\n\")\n\t\t.filter((line) => line.startsWith(\"|\"))\n\t\t.slice(2)\n\t\t.map((line) => ({\n\t\t\t// `undefined` rather than dropped: a row that stops naming a\n\t\t\t// directory is the table half-reshaped, and dropping it would leave\n\t\t\t// the check reading the rows that still parse and reporting nothing.\n\t\t\tpath: line.split(\"|\")[1]?.match(/`([^`]+)`/)?.[1],\n\t\t\t// The marker is read from the \"Holds\" cell alone, and only where the\n\t\t\t// cell opens with it: a directory whose path carries the word, or a\n\t\t\t// description using it for something else, would otherwise exempt its\n\t\t\t// own row from the tracking requirement with nobody deciding to.\n\t\t\treserved: /^\\s*reserved\\b/i.test(line.split(\"|\")[2] ?? \"\"),\n\t\t}));\n}\n\n/**\n * What the section gets wrong, read against a listing of tracked paths.\n *\n * Tracked rather than present on disk: git carries no empty directory, so a\n * directory that exists only in a working tree is absent from every clone —\n * the same reason the ownership map is checked this way.\n */\nexport function unbacked(markdown: string, tracked: string[]): string[] {\n\tconst named = rows(markdown);\n\tif (named === undefined) return [`the README carries no \"${HEADING}\" section`];\n\n\t// A reshaped table satisfies every assertion made over its rows by having\n\t// none, which is the same vacuous pass as an absent heading by another\n\t// route.\n\tif (named.length === 0) return [`the \"${HEADING}\" section names no directory`];\n\n\treturn named.flatMap(({ path, reserved }) => {\n\t\tif (path === undefined) return [`the \"${HEADING}\" section has a row naming no directory`];\n\t\tif (reserved) return [];\n\t\tconst prefix = path.endsWith(\"/\") ? path : `${path}/`;\n\t\treturn tracked.some((file) => file.startsWith(prefix))\n\t\t\t? []\n\t\t\t: [`${path}: named in the layout section, tracking nothing`];\n\t});\n}\n\n/**\n * Every tracked root file the list does not name, and every entry of the list\n * that names nothing real, in the repository containing `cwd`. The list is the\n * consumer's `harness.rootFiles`, each file mapped to why it is at the root,\n * unless `exempt` is passed.\n */\nexport function stray(cwd?: string, exempt?: Record<string, string>): string[] {\n\t// The regular-file view: a deleted path, a symlink and a gitlink are none of\n\t// them a file placed in the wrong directory.\n\tconst { root, files } = tracked(cwd);\n\tconst allowed = exempt ?? read(root, \"rootFiles\");\n\n\tconst found: string[] = [];\n\tconst seen = new Set<string>();\n\tfor (const path of files) {\n\t\tif (path.includes(\"/\")) continue;\n\t\tseen.add(path);\n\t\t// `hasOwn`, not `in`: every object inherits `toString`, `constructor`\n\t\t// and `valueOf`, so `in` would exempt a root file of any of those names\n\t\t// on a list that never mentioned it.\n\t\tif (Object.hasOwn(allowed, path)) continue;\n\t\tfound.push(`${path}: at the repository root, and the exemption list does not name it`);\n\t}\n\n\t// A sweep that matched nothing satisfies every assertion made over its\n\t// result, so it is an error rather than a clean root.\n\tif (seen.size === 0) throw new Error(`no tracked file at the root of ${root}`);\n\n\tfor (const [path, reason] of Object.entries(allowed)) {\n\t\tif (!seen.has(path))\n\t\t\t// \"tracks no such file\" rather than \"no longer tracks it\": the entry\n\t\t\t// may also name something git lists but this skipped — a symlink, or\n\t\t\t// a path deleted from the work tree — and the two read the same here.\n\t\t\tfound.push(`${path}: exempted, and the repository tracks no such file`);\n\t\telse if (reason.trim() === \"\") found.push(`${path}: exempted, and the entry carries no reason`);\n\t}\n\n\treturn found;\n}\n",
@@ -18,7 +245,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "1",
@@ -34,7 +262,20 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +291,20 @@
 						}
 					},
 					"replacement": "markdown.match(new RegExp(`^${HEADING}$([\\\\s\\\\S]*?)(?=\\\\n#{1,2} |$(?![\\\\s\\\\S]))`, \"m\"))[1]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +320,20 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +349,20 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +378,20 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +407,20 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +436,20 @@
 						}
 					},
 					"replacement": "section !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +465,19 @@
 						}
 					},
 					"replacement": "section.split(\"\\n\").filter(line => line.startsWith(\"|\"))",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +493,19 @@
 						}
 					},
 					"replacement": "section.split(\"\\n\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +521,19 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +549,19 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +577,16 @@
 						}
 					},
 					"replacement": "line.endsWith(\"|\")",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +602,19 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "14",
@@ -242,7 +630,19 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "15",
@@ -258,7 +658,18 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "16",
@@ -274,7 +685,18 @@
 						}
 					},
 					"replacement": "line.split(\"|\")[1]?.match(/`([^`]+)`/)[1]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "17",
@@ -290,7 +712,15 @@
 						}
 					},
 					"replacement": "line.split(\"|\")[1].match",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					]
 				},
 				{
 					"id": "18",
@@ -306,7 +736,18 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "19",
@@ -322,7 +763,18 @@
 						}
 					},
 					"replacement": "/`([^`])`/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "20",
@@ -338,7 +790,18 @@
 						}
 					},
 					"replacement": "/`([`]+)`/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "21",
@@ -354,7 +817,15 @@
 						}
 					},
 					"replacement": "/\\s*reserved\\b/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					]
 				},
 				{
 					"id": "22",
@@ -370,7 +841,15 @@
 						}
 					},
 					"replacement": "/^\\sreserved\\b/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					]
 				},
 				{
 					"id": "23",
@@ -386,7 +865,18 @@
 						}
 					},
 					"replacement": "/^\\S*reserved\\b/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "24",
@@ -402,7 +892,18 @@
 						}
 					},
 					"replacement": "line.split(\"|\")[2] && \"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "25",
@@ -418,7 +919,18 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "26",
@@ -434,7 +946,8 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "27",
@@ -450,7 +963,20 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "28",
@@ -466,7 +992,20 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "29",
@@ -482,7 +1021,20 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "30",
@@ -498,7 +1050,20 @@
 						}
 					},
 					"replacement": "named !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"14",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "31",
@@ -514,7 +1079,13 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"14"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "32",
@@ -530,7 +1101,10 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"14"
+					]
 				},
 				{
 					"id": "33",
@@ -546,7 +1120,19 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "34",
@@ -562,7 +1148,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "35",
@@ -578,7 +1176,19 @@
 						}
 					},
 					"replacement": "named.length !== 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "36",
@@ -594,7 +1204,13 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "37",
@@ -610,7 +1226,10 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"13"
+					]
 				},
 				{
 					"id": "38",
@@ -626,7 +1245,18 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "39",
@@ -642,7 +1272,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "40",
@@ -658,7 +1299,18 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "41",
@@ -674,7 +1326,18 @@
 						}
 					},
 					"replacement": "path !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "42",
@@ -690,7 +1353,13 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"3"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "43",
@@ -706,7 +1375,10 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"3"
+					]
 				},
 				{
 					"id": "44",
@@ -722,7 +1394,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "45",
@@ -738,7 +1421,18 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "46",
@@ -754,7 +1448,13 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "47",
@@ -770,7 +1470,17 @@
 						}
 					},
 					"replacement": "path.startsWith(\"/\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "48",
@@ -786,7 +1496,14 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					]
 				},
 				{
 					"id": "49",
@@ -802,7 +1519,8 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "50",
@@ -818,7 +1536,14 @@
 						}
 					},
 					"replacement": "tracked.every(file => file.startsWith(prefix))",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					]
 				},
 				{
 					"id": "51",
@@ -834,7 +1559,17 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "52",
@@ -850,7 +1585,17 @@
 						}
 					},
 					"replacement": "file.endsWith(prefix)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "53",
@@ -866,7 +1611,14 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"3",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "54",
@@ -882,7 +1634,15 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"4"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "55",
@@ -898,7 +1658,15 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"4"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "56",
@@ -914,7 +1682,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "57",
@@ -930,7 +1717,25 @@
 						}
 					},
 					"replacement": "exempt && read(root, \"rootFiles\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"15",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "58",
@@ -946,7 +1751,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "59",
@@ -962,7 +1768,25 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"15",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "60",
@@ -978,7 +1802,25 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"15",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "61",
@@ -994,7 +1836,25 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"15",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "62",
@@ -1010,7 +1870,25 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"15",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "63",
@@ -1026,7 +1904,25 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"15",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "64",
@@ -1042,7 +1938,24 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "65",
@@ -1058,7 +1971,24 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "66",
@@ -1074,7 +2004,24 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "68",
@@ -1090,7 +2037,18 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"21",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "69",
@@ -1106,7 +2064,25 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"15",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "70",
@@ -1122,7 +2098,25 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"15",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "71",
@@ -1138,7 +2132,25 @@
 						}
 					},
 					"replacement": "seen.size !== 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"15",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "73",
@@ -1154,7 +2166,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"15"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "74",
@@ -1170,7 +2188,24 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "75",
@@ -1186,7 +2221,24 @@
 						}
 					},
 					"replacement": "seen.has(path)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "76",
@@ -1202,7 +2254,24 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "77",
@@ -1218,7 +2287,24 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "79",
@@ -1234,7 +2320,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"17"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "80",
@@ -1250,7 +2342,24 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "81",
@@ -1266,7 +2375,24 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "82",
@@ -1282,7 +2408,24 @@
 						}
 					},
 					"replacement": "reason.trim() !== \"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "83",
@@ -1298,7 +2441,24 @@
 						}
 					},
 					"replacement": "reason",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "84",
@@ -1314,7 +2474,24 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "86",
@@ -1330,17 +2507,23 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"18"
+					],
+					"killedBy": [
+						"18"
+					]
 				}
 			]
 		}
 	},
 	"fingerprint": {
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bun/repo-layout.test.ts": "8c8e6bc07fb65c5e2ed9c9d7cbb8eaaf40e9baa6",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/repo-layout",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

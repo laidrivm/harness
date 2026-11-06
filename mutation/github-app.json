@@ -1,5 +1,537 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/github-app-mint.test.ts": {
+			"source": "import { afterAll, beforeAll, describe, expect, test } from \"bun:test\";\nimport { generateKeyPairSync } from \"node:crypto\";\nimport { chmodSync, writeFileSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { cleanup, emptyDir } from \"./diff-budget.fixture.ts\";\nimport { main } from \"./github-app-mint.ts\";\nimport { minted } from \"./github-app-minted.ts\";\nimport { TEMPFAIL, Transient } from \"./transient.ts\";\n\n/**\n * The key holder's mint against a stand-in API reached through\n * `GITHUB_API_URL`, with its three files in a directory made for the run: no\n * case reaches GitHub or holds a real key.\n */\n\nlet seen: { method: string; path: string; body: string }[] = [];\nlet server: ReturnType<typeof Bun.serve>;\nconst api = process.env.GITHUB_API_URL;\n\nbeforeAll(() => {\n\tserver = Bun.serve({\n\t\tport: 0,\n\t\tasync fetch(req) {\n\t\t\tconst path = new URL(req.url).pathname;\n\t\t\tseen.push({ method: req.method, path, body: await req.text() });\n\t\t\tconst answers: Record<string, unknown> = {\n\t\t\t\t\"/app\": { slug: \"demo-app\" },\n\t\t\t\t\"/repos/o/demo/installation\": { id: 99 },\n\t\t\t\t\"/app/installations/99/access_tokens\": { token: \"ghs_minted\" },\n\t\t\t};\n\t\t\tconst refused: Record<string, number> = {\n\t\t\t\t\"/repos/o/busy/installation\": 503,\n\t\t\t\t\"/repos/o/denied/installation\": 401,\n\t\t\t};\n\t\t\tif (path in refused) return new Response(\"no\", { status: refused[path] });\n\t\t\treturn path in answers ? Response.json(answers[path]) : new Response(\"no\", { status: 404 });\n\t\t},\n\t});\n\tprocess.env.GITHUB_API_URL = server.url.origin;\n});\n\nafterAll(() => {\n\tcleanup();\n\tserver.stop(true);\n\tif (api === undefined) delete process.env.GITHUB_API_URL;\n\telse process.env.GITHUB_API_URL = api;\n});\n\n/** The App's id, its key and the repositories the list names, as the image provisions them. */\nfunction files(repositories = \"o/demo\\nO/Other\\n\") {\n\tconst dir = emptyDir(\"github-app-mint-\");\n\tconst key = generateKeyPairSync(\"rsa\", {\n\t\tmodulusLength: 2048,\n\t\tprivateKeyEncoding: { type: \"pkcs1\", format: \"pem\" },\n\t}).privateKey;\n\tconst at = { id: join(dir, \"app-id\"), key: join(dir, \"app.pem\"), repositories: join(dir, \"repositories\") };\n\twriteFileSync(at.id, \"7\\n\");\n\twriteFileSync(at.key, key);\n\twriteFileSync(at.repositories, repositories);\n\treturn at;\n}\n\ndescribe(\"the mint\", () => {\n\t// spec: orchestrator/the-runner-asks-the-key-holder\n\ttest(\"prints the one repository's token on stdout, holding exactly the permissions asked\", async () => {\n\t\tseen = [];\n\t\texpect(await main([\"o/demo\", \"contents=write\", \"pull_requests=read\"], files())).toEqual({\n\t\t\tcode: 0,\n\t\t\tout: \"ghs_minted\\n\",\n\t\t\terr: \"\",\n\t\t});\n\t\texpect(JSON.parse(seen[1]?.body ?? \"\")).toEqual({\n\t\t\trepositories: [\"demo\"],\n\t\t\tpermissions: { contents: \"write\", pull_requests: \"read\" },\n\t\t});\n\t});\n\n\ttest(\"workflows at write, the board loop's push of a workflow file, is in the set\", async () => {\n\t\tseen = [];\n\t\texpect((await main([\"o/demo\", \"workflows=write\"], files())).code).toBe(0);\n\t\texpect(JSON.parse(seen[1]?.body ?? \"\").permissions).toEqual({ workflows: \"write\" });\n\t});\n\n\ttest(\"--slug prints the App's slug\", async () => {\n\t\texpect((await main([\"o/demo\", \"--slug\"], files())).out).toBe(\"demo-app\\n\");\n\t});\n\n\ttest(\"a listed repository is matched case-blind\", async () => {\n\t\tseen = [];\n\t\tawait main([\"o/other\", \"contents=read\"], files());\n\t\texpect(seen.map((r) => r.path)).toContain(\"/repos/o/other/installation\");\n\t});\n});\n\ndescribe(\"what it refuses, before any call\", () => {\n\t// spec: orchestrator/a-repository-outside-the-installation orchestrator/a-permission-outside-the-fixed-set\n\ttest.each([\n\t\t[\"a repository the list does not name\", [\"o/else\", \"contents=write\"], \"o/else\"],\n\t\t[\"a repository that is no owner and name\", [\"../o\", \"contents=write\"], \"../o\"],\n\t\t[\"a permission outside the set\", [\"o/demo\", \"administration=write\"], \"administration=write\"],\n\t\t[\"a level the set does not hold\", [\"o/demo\", \"actions=write\"], \"actions=write\"],\n\t\t[\"workflows at a level GitHub does not have\", [\"o/demo\", \"workflows=read\"], \"workflows=read\"],\n\t\t[\"a word that is no permission\", [\"o/demo\", \"contents\"], \"contents\"],\n\t\t[\"a name the table inherits\", [\"o/demo\", \"constructor=read\"], \"constructor=read\"],\n\t\t[\"the prototype's own name\", [\"o/demo\", \"__proto__=read\"], \"__proto__=read\"],\n\t\t[\"no permission at all\", [\"o/demo\"], \"no permission\"],\n\t])(\"%s exits non-zero, naming it\", async (_, args, named) => {\n\t\tseen = [];\n\t\tconst r = await main(args, files());\n\t\texpect([r.code, r.out]).toEqual([2, \"\"]);\n\t\texpect(r.err).toContain(named);\n\t\texpect(seen).toEqual([]);\n\t});\n\n\ttest(\"a call that fails exits 1 naming the path, never the key\", async () => {\n\t\tconst r = await main([\"o/demo\", \"contents=write\"], files(\"o/demo\\n\"));\n\t\texpect(r.code).toBe(0);\n\t\tconst failed = await main([\"o/gone\", \"contents=write\"], files(\"o/gone\\n\"));\n\t\texpect([failed.code, failed.out]).toEqual([1, \"\"]);\n\t\texpect(failed.err).toContain(\"/repos/o/gone/installation\");\n\t\texpect(failed.err).not.toContain(\"PRIVATE KEY\");\n\t});\n\n\ttest.each([\n\t\t[\"answered 503\", \"o/busy\", TEMPFAIL],\n\t\t[\"answered 401\", \"o/denied\", 1],\n\t])(\"a call %s, for %s, exits %p\", async (_, repository, code) => {\n\t\tconst r = await main([repository, \"contents=write\"], files(`${repository}\\n`));\n\t\texpect([r.code, r.out]).toEqual([code, \"\"]);\n\t\texpect(r.err).toContain(`/repos/${repository}/installation`);\n\t});\n});\n\ndescribe(\"the runner's side, minted()\", () => {\n\t/** What `minted()` throws for a mint command running `script`, with a short limit. */\n\tconst thrown = (script: string) => {\n\t\tconst file = join(emptyDir(\"github-app-minted-\"), \"mint\");\n\t\twriteFileSync(file, `#!/bin/sh\\n${script}\\n`);\n\t\tchmodSync(file, 0o755);\n\t\ttry {\n\t\t\tminted(file, \"o/demo\", [\"--slug\"], 500);\n\t\t} catch (error) {\n\t\t\treturn error as Error;\n\t\t}\n\t};\n\n\ttest.each([\n\t\t[\"exits 75\", \"exit 75\"],\n\t\t[\"is killed at its limit\", \"exec sleep 5\"],\n\t])(\"a mint that %s throws a Transient\", (_, script) => {\n\t\texpect(thrown(script)).toBeInstanceOf(Transient);\n\t});\n\n\ttest.each([\n\t\t[\"exits 1\", \"echo denied >&2; exit 1\"],\n\t\t[\"is killed by another signal\", \"kill -KILL $$\"],\n\t])(\"a mint that %s throws a plain Error\", (_, script) => {\n\t\tconst error = thrown(script);\n\t\texpect(error).toBeInstanceOf(Error);\n\t\texpect(error).not.toBeInstanceOf(Transient);\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/github-app-mint.test.ts > the mint > --slug prints the App's slug",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 85
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/github-app-mint.test.ts > the mint > a listed repository is matched case-blind",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 89
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/github-app-mint.test.ts > the mint > prints the one repository's token on stdout, holding exactly the permissions asked",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 66
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/github-app-mint.test.ts > the mint > workflows at write, the board loop's push of a workflow file, is in the set",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 79
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/github-app-mint.test.ts > the runner's side, minted() > a mint that exits 1 throws a plain Error",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 158
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/github-app-mint.test.ts > the runner's side, minted() > a mint that exits 75 throws a Transient",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 151
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/github-app-mint.test.ts > the runner's side, minted() > a mint that is killed at its limit throws a Transient",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 151
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/github-app-mint.test.ts > the runner's side, minted() > a mint that is killed by another signal throws a plain Error",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 158
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > a call answered 401, for o/denied, exits 1",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 128
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > a call answered 503, for o/busy, exits 75",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 128
+						}
+					}
+				},
+				{
+					"id": "10",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > a call that fails exits 1 naming the path, never the key",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 116
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > a level the set does not hold exits non-zero, naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > a name the table inherits exits non-zero, naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "13",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > a permission outside the set exits non-zero, naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "14",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > a repository that is no owner and name exits non-zero, naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "15",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > a repository the list does not name exits non-zero, naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "16",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > a word that is no permission exits non-zero, naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "17",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > no permission at all exits non-zero, naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "18",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > the prototype's own name exits non-zero, naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "19",
+					"name": "bun/github-app-mint.test.ts > what it refuses, before any call > workflows at a level GitHub does not have exits non-zero, naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				}
+			]
+		},
+		"bun/github-app.test.ts": {
+			"source": "import { afterAll, beforeAll, describe, expect, test } from \"bun:test\";\nimport { createPrivateKey, generateKeyPairSync, verify } from \"node:crypto\";\nimport { chmodSync, readFileSync, writeFileSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { cleanup, emptyDir } from \"./diff-budget.fixture.ts\";\nimport { configured, credentials, identity, jwt, mint, repository, request } from \"./github-app.ts\";\nimport { Transient } from \"./transient.ts\";\n\n/**\n * The GitHub App's calls, against a stand-in API reached through\n * `GITHUB_API_URL`, with a PKCS#1 key made for the run: no case reaches\n * GitHub or holds a real key. [n]: `github-app-identity`'s `/zombies` ideas.\n */\n\nconst pair = generateKeyPairSync(\"rsa\", {\n\tmodulusLength: 2048,\n\tprivateKeyEncoding: { type: \"pkcs1\", format: \"pem\" },\n\tpublicKeyEncoding: { type: \"spki\", format: \"pem\" },\n});\nconst app = { id: \"7\", key: createPrivateKey(pair.privateKey), owner: \"o\", repo: \"demo\" };\n/** The board loop's three, which `board-loop-push.ts` passes. */\nconst BOARD = { contents: \"write\", pull_requests: \"write\", workflows: \"write\" } as const;\n\n/** Each request the stand-in saw: its method, path, `Authorization` and body. */\nlet seen: { method: string; path: string; auth: string | null; body: string }[] = [];\nlet server: ReturnType<typeof Bun.serve>;\n/** A path the stand-in answers OK with an empty object. */\nlet empty = \"\";\nconst api = process.env.GITHUB_API_URL;\n\nbeforeAll(() => {\n\tserver = Bun.serve({\n\t\tport: 0,\n\t\tasync fetch(req) {\n\t\t\tconst path = decodeURIComponent(new URL(req.url).pathname);\n\t\t\tseen.push({ method: req.method, path, auth: req.headers.get(\"authorization\"), body: await req.text() });\n\t\t\tconst answers: Record<string, unknown> = {\n\t\t\t\t\"/app\": { slug: \"demo-app\" },\n\t\t\t\t\"/users/demo-app[bot]\": { id: 42 },\n\t\t\t\t\"/repos/o/demo/installation\": { id: 99 },\n\t\t\t\t\"/app/installations/99/access_tokens\": { token: \"ghs_minted\" },\n\t\t\t};\n\t\t\tif (path === empty) return Response.json({});\n\t\t\tconst status = /^\\/status\\/(\\d+)$/.exec(path)?.[1];\n\t\t\tif (status) return new Response(\"no\", { status: Number(status) });\n\t\t\tif (path === \"/hang\") return new Promise<Response>(() => {});\n\t\t\treturn path in answers ? Response.json(answers[path]) : new Response(\"no\", { status: 404 });\n\t\t},\n\t});\n\tprocess.env.GITHUB_API_URL = server.url.origin;\n});\n\nafterAll(() => {\n\tcleanup();\n\tserver.stop(true);\n\tif (api === undefined) delete process.env.GITHUB_API_URL;\n\telse process.env.GITHUB_API_URL = api;\n});\n\n/** A JWT's three parts, the first two decoded. */\nconst parts = (token: string) => {\n\tconst [head = \"\", body = \"\", signature = \"\"] = token.split(\".\");\n\tconst decode = (part: string) => JSON.parse(Buffer.from(part, \"base64url\").toString());\n\treturn { head: decode(head), body: decode(body), data: `${head}.${body}`, signature };\n};\n\ndescribe(\"the JWT\", () => {\n\ttest(\"is RS256, verifies with the App's public key, and names iss, iat and exp [35]\", () => {\n\t\tconst { head, body, data, signature } = parts(jwt(\"7\", app.key, 1_000_000));\n\t\texpect(verify(\"sha256\", Buffer.from(data), pair.publicKey, Buffer.from(signature, \"base64url\"))).toBe(true);\n\t\texpect([head.alg, body]).toEqual([\"RS256\", { iat: 1_000_000 - 60, exp: 1_000_000 + 540, iss: \"7\" }]);\n\t});\n});\n\ndescribe(\"the calls\", () => {\n\t// spec: board-loop/an-app-configured\n\ttest(\"the identity is the App's bot user, read from GET /app and GET /users [43]\", async () => {\n\t\tseen = [];\n\t\tconst as = await identity(app);\n\t\texpect(as).toEqual({\n\t\t\tGIT_AUTHOR_NAME: \"demo-app[bot]\",\n\t\t\tGIT_AUTHOR_EMAIL: \"42+demo-app[bot]@users.noreply.github.com\",\n\t\t\tGIT_COMMITTER_NAME: \"demo-app[bot]\",\n\t\t\tGIT_COMMITTER_EMAIL: \"42+demo-app[bot]@users.noreply.github.com\",\n\t\t});\n\t\texpect(seen.map((r) => `${r.method} ${r.path}`)).toEqual([\"GET /app\", \"GET /users/demo-app[bot]\"]);\n\t\texpect(seen[0]?.auth).toStartWith(\"Bearer \");\n\t});\n\n\t// spec: board-loop/an-app-configured\n\ttest(\"the installation is looked up for the repository with the JWT [42]\", async () => {\n\t\tseen = [];\n\t\tawait mint(app, BOARD);\n\t\texpect(seen.map((r) => `${r.method} ${r.path}`)).toEqual([\n\t\t\t\"GET /repos/o/demo/installation\",\n\t\t\t\"POST /app/installations/99/access_tokens\",\n\t\t]);\n\t\texpect(parts(seen[0]?.auth?.replace(\"Bearer \", \"\") ?? \"\").body.iss).toBe(\"7\");\n\t});\n\n\t// spec: board-loop/an-app-configured\n\ttest(\"the token names one repository and exactly contents, pull_requests and workflows at write [41]\", async () => {\n\t\tseen = [];\n\t\texpect(await mint(app, BOARD)).toBe(\"ghs_minted\");\n\t\texpect(JSON.parse(seen[1]?.body ?? \"\")).toEqual({\n\t\t\trepositories: [\"demo\"],\n\t\t\tpermissions: { contents: \"write\", pull_requests: \"write\", workflows: \"write\" },\n\t\t});\n\t});\n\n\t// spec: board-loop/github-does-not-answer\n\ttest(\"an answer that is not OK rejects naming the path, never the key\", async () => {\n\t\tconst failed = await mint({ ...app, repo: \"missing\" }, BOARD).then(\n\t\t\t() => \"\",\n\t\t\t(e: Error) => e.message,\n\t\t);\n\t\texpect(failed).toContain(\"/repos/o/missing/installation\");\n\t\texpect(failed).toContain(\"404\");\n\t\texpect(failed).not.toContain(\"PRIVATE KEY\");\n\t});\n\n\t// spec: board-loop/github-does-not-answer\n\ttest(\"an OK answer missing its field rejects naming the path and the field\", async () => {\n\t\tempty = \"/app\";\n\t\tconst failed = await identity(app).then(\n\t\t\t() => \"\",\n\t\t\t(e: Error) => e.message,\n\t\t);\n\t\tempty = \"\";\n\t\texpect(failed).toBe(\"GitHub's API answered /app with no slug\");\n\t});\n\n\t// spec: board-loop/github-does-not-answer\n\ttest(\"an API that cannot be reached rejects naming the path\", async () => {\n\t\tprocess.env.GITHUB_API_URL = \"http://127.0.0.1:1\";\n\t\tconst failed = await mint(app, BOARD).then(\n\t\t\t() => \"\",\n\t\t\t(e: Error) => e.message,\n\t\t);\n\t\tprocess.env.GITHUB_API_URL = server.url.origin;\n\t\texpect(failed).toStartWith(\"GitHub's API could not be reached for /repos/o/demo/installation: \");\n\t});\n\n\t/** What `request()` throws for `path`, with a short limit. */\n\tconst thrown = (path: string) =>\n\t\trequest(path, undefined, undefined, 200).then(\n\t\t\t() => undefined,\n\t\t\t(e: Error) => e,\n\t\t);\n\n\ttest.each([\"/status/502\", \"/status/503\", \"/status/429\", \"/hang\"])(\n\t\t\"%p throws a Transient, its message as before\",\n\t\tasync (path) => {\n\t\t\tconst error = await thrown(path);\n\t\t\texpect(error).toBeInstanceOf(Transient);\n\t\t\texpect(error?.message).toStartWith(\n\t\t\t\tpath === \"/hang\" ? \"GitHub's API could not be reached for /hang: \" : `GitHub's API answered ${path} with `,\n\t\t\t);\n\t\t},\n\t);\n\n\ttest(\"an unreachable API throws a Transient\", async () => {\n\t\tprocess.env.GITHUB_API_URL = \"http://127.0.0.1:1\";\n\t\tconst error = await thrown(\"/app\");\n\t\tprocess.env.GITHUB_API_URL = server.url.origin;\n\t\texpect(error).toBeInstanceOf(Transient);\n\t});\n\n\ttest.each([\n\t\t[\"a 401\", undefined, \"/status/401\"],\n\t\t[\"a malformed base URL\", \"not a url\", \"/app\"],\n\t])(\"%s throws a plain Error\", async (_, base, path) => {\n\t\tprocess.env.GITHUB_API_URL = base ?? server.url.origin;\n\t\tconst error = await thrown(path);\n\t\tprocess.env.GITHUB_API_URL = server.url.origin;\n\t\texpect(error).toBeInstanceOf(Error);\n\t\texpect(error).not.toBeInstanceOf(Transient);\n\t});\n\n\ttest(\"the push's credentials carry the token as git's extra header and as GH_TOKEN\", () => {\n\t\texpect(credentials(\"ghs_t\", 0)).toEqual({\n\t\t\tGH_TOKEN: \"ghs_t\",\n\t\t\tGIT_CONFIG_COUNT: \"1\",\n\t\t\tGIT_CONFIG_KEY_0: \"http.https://github.com/.extraheader\",\n\t\t\tGIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${Buffer.from(\"x-access-token:ghs_t\").toString(\"base64\")}`,\n\t\t});\n\t});\n\n\ttest(\"the credentials append after the GIT_CONFIG_COUNT the runner was started with\", () => {\n\t\tconst header = credentials(\"ghs_t\", 2);\n\t\texpect([header.GIT_CONFIG_COUNT, header.GIT_CONFIG_KEY_2]).toEqual([\"3\", \"http.https://github.com/.extraheader\"]);\n\t\texpect(header.GIT_CONFIG_KEY_0).toBeUndefined();\n\t});\n});\n\ndescribe(\"the key holder's mint command\", () => {\n\t/** A mint command that logs its arguments and prints `out`, exiting `code`. */\n\tconst command = (out: string, code = 0) => {\n\t\tconst dir = emptyDir(\"github-app-mint-\");\n\t\tconst file = join(dir, \"mint\");\n\t\twriteFileSync(file, `#!/bin/sh\\nprintf '%s\\\\n' \"$*\" >> '${dir}/calls'\\nprintf '%s' '${out}'\\nexit ${code}\\n`);\n\t\tchmodSync(file, 0o755);\n\t\treturn { mint: `${file} --as keyholder`, calls: () => readFileSync(join(dir, \"calls\"), \"utf8\").trim().split(\"\\n\") };\n\t};\n\tconst env = (mint: string) => ({ HARNESS_GITHUB_APP_ID: \"7\", HARNESS_GITHUB_APP_MINT: mint });\n\n\ttest(\"the App's id and the mint command configure the App, with no key read\", () => {\n\t\tconst made = command(\"ghs_minted\");\n\t\texpect(configured(env(made.mint), \"https://github.com/o/demo.git\")).toEqual({\n\t\t\tid: \"7\",\n\t\t\tmint: made.mint,\n\t\t\towner: \"o\",\n\t\t\trepo: \"demo\",\n\t\t});\n\t});\n\n\t// spec: orchestrator/the-runner-asks-the-key-holder\n\ttest(\"mint() runs the command for the one repository and its permissions, the token on stdout alone\", async () => {\n\t\tconst made = command(\"ghs_minted\\n\");\n\t\tconst app = configured(env(made.mint), \"git@github.com:o/demo.git\") as NonNullable<ReturnType<typeof configured>>;\n\t\tseen = [];\n\t\texpect(await mint(app, BOARD)).toBe(\"ghs_minted\");\n\t\tconst { calls } = made;\n\t\texpect(calls()).toEqual([\"--as keyholder o/demo contents=write pull_requests=write workflows=write\"]);\n\t\texpect(seen).toEqual([]);\n\t});\n\n\t// spec: orchestrator/the-runner-asks-the-key-holder\n\ttest(\"the App's slug is the command's --slug answer\", async () => {\n\t\tconst made = command(\"demo-app\");\n\t\tconst app = configured(env(made.mint), \"https://github.com/o/demo\") as NonNullable<ReturnType<typeof configured>>;\n\t\texpect(await identity(app)).toMatchObject({ GIT_AUTHOR_NAME: \"demo-app[bot]\" });\n\t\texpect(made.calls()).toEqual([\"--as keyholder o/demo --slug\"]);\n\t});\n\n\ttest(\"a command that fails rejects naming its status, and one that prints nothing rejects too\", async () => {\n\t\tfor (const [out, code] of [\n\t\t\t[\"\", 0],\n\t\t\t[\"denied\", 3],\n\t\t] as const) {\n\t\t\tconst app = configured(env(command(out, code).mint), \"https://github.com/o/demo\") as NonNullable<\n\t\t\t\tReturnType<typeof configured>\n\t\t\t>;\n\t\t\tconst failed = await mint(app, BOARD).then(\n\t\t\t\t() => \"\",\n\t\t\t\t(e: Error) => e.message,\n\t\t\t);\n\t\t\texpect(failed).toContain(`exited ${code}`);\n\t\t}\n\t});\n});\n\ndescribe(\"the settings\", () => {\n\t// spec: board-loop/half-an-app\n\ttest(\"an ID with whitespace around it is no number, never trimmed\", () => {\n\t\tconst env = { HARNESS_GITHUB_APP_ID: \" 7\", HARNESS_GITHUB_APP_KEY: \"/unread\" };\n\t\texpect(() => configured(env, \"https://github.com/o/demo.git\")).toThrow(\"HARNESS_GITHUB_APP_ID is no number\");\n\t});\n});\n\ndescribe(\"origin's URL\", () => {\n\t// spec: board-loop/an-app-configured\n\ttest.each([\n\t\t[\"https://github.com/o/demo.git\", \"HTTPS\"],\n\t\t[\"https://github.com/o/demo\", \"HTTPS with no .git\"],\n\t\t[\"git@github.com:o/demo.git\", \"SSH\"],\n\t\t[\"ssh://git@github.com/o/demo.git\", \"ssh://\"],\n\t])(\"%s (%s) names o/demo [39]\", (url) => {\n\t\texpect(repository(url)).toEqual({ owner: \"o\", repo: \"demo\" });\n\t});\n\n\t// spec: board-loop/half-an-app\n\ttest.each([\n\t\t[\"https://gitlab.com/o/demo.git\", \"another host\"],\n\t\t[\"https://github.com.evil.example/o/demo.git\", \"a host that only starts the same\"],\n\t\t[\"https://github.com/o/demo/extra.git\", \"an extra segment\"],\n\t\t[\"https://github.com/demo.git\", \"no owner\"],\n\t\t[\"https://github.com/o/...git\", \"a dot path for a name\"],\n\t\t[\"/srv/git/demo.git\", \"a local path\"],\n\t\t[\"\", \"nothing\"],\n\t])(\"%s (%s) is refused [40]\", (url) => {\n\t\texpect(repository(url)).toBeUndefined();\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "20",
+					"name": "bun/github-app.test.ts > origin's URL >  (nothing) is refused [40]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 282
+						}
+					}
+				},
+				{
+					"id": "21",
+					"name": "bun/github-app.test.ts > origin's URL > /srv/git/demo.git (a local path) is refused [40]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 282
+						}
+					}
+				},
+				{
+					"id": "22",
+					"name": "bun/github-app.test.ts > origin's URL > git@github.com:o/demo.git (SSH) names o/demo [39]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 269
+						}
+					}
+				},
+				{
+					"id": "23",
+					"name": "bun/github-app.test.ts > origin's URL > https://github.com.evil.example/o/demo.git (a host that only starts the same) is refused [40]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 282
+						}
+					}
+				},
+				{
+					"id": "24",
+					"name": "bun/github-app.test.ts > origin's URL > https://github.com/demo.git (no owner) is refused [40]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 282
+						}
+					}
+				},
+				{
+					"id": "25",
+					"name": "bun/github-app.test.ts > origin's URL > https://github.com/o/...git (a dot path for a name) is refused [40]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 282
+						}
+					}
+				},
+				{
+					"id": "26",
+					"name": "bun/github-app.test.ts > origin's URL > https://github.com/o/demo (HTTPS with no .git) names o/demo [39]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 269
+						}
+					}
+				},
+				{
+					"id": "27",
+					"name": "bun/github-app.test.ts > origin's URL > https://github.com/o/demo.git (HTTPS) names o/demo [39]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 269
+						}
+					}
+				},
+				{
+					"id": "28",
+					"name": "bun/github-app.test.ts > origin's URL > https://github.com/o/demo/extra.git (an extra segment) is refused [40]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 282
+						}
+					}
+				},
+				{
+					"id": "29",
+					"name": "bun/github-app.test.ts > origin's URL > https://gitlab.com/o/demo.git (another host) is refused [40]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 282
+						}
+					}
+				},
+				{
+					"id": "30",
+					"name": "bun/github-app.test.ts > origin's URL > ssh://git@github.com/o/demo.git (ssh://) names o/demo [39]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 269
+						}
+					}
+				},
+				{
+					"id": "31",
+					"name": "bun/github-app.test.ts > the calls > \"/hang\" throws a Transient, its message as before",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 152
+						}
+					}
+				},
+				{
+					"id": "32",
+					"name": "bun/github-app.test.ts > the calls > \"/status/429\" throws a Transient, its message as before",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 152
+						}
+					}
+				},
+				{
+					"id": "33",
+					"name": "bun/github-app.test.ts > the calls > \"/status/502\" throws a Transient, its message as before",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 152
+						}
+					}
+				},
+				{
+					"id": "34",
+					"name": "bun/github-app.test.ts > the calls > \"/status/503\" throws a Transient, its message as before",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 152
+						}
+					}
+				},
+				{
+					"id": "35",
+					"name": "bun/github-app.test.ts > the calls > a 401 throws a plain Error",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 173
+						}
+					}
+				},
+				{
+					"id": "36",
+					"name": "bun/github-app.test.ts > the calls > a malformed base URL throws a plain Error",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 173
+						}
+					}
+				},
+				{
+					"id": "37",
+					"name": "bun/github-app.test.ts > the calls > an answer that is not OK rejects naming the path, never the key",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 113
+						}
+					}
+				},
+				{
+					"id": "38",
+					"name": "bun/github-app.test.ts > the calls > an API that cannot be reached rejects naming the path",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 135
+						}
+					}
+				},
+				{
+					"id": "39",
+					"name": "bun/github-app.test.ts > the calls > an OK answer missing its field rejects naming the path and the field",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 124
+						}
+					}
+				},
+				{
+					"id": "40",
+					"name": "bun/github-app.test.ts > the calls > an unreachable API throws a Transient",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 163
+						}
+					}
+				},
+				{
+					"id": "41",
+					"name": "bun/github-app.test.ts > the calls > the credentials append after the GIT_CONFIG_COUNT the runner was started with",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 190
+						}
+					}
+				},
+				{
+					"id": "42",
+					"name": "bun/github-app.test.ts > the calls > the identity is the App's bot user, read from GET /app and GET /users [43]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 78
+						}
+					}
+				},
+				{
+					"id": "43",
+					"name": "bun/github-app.test.ts > the calls > the installation is looked up for the repository with the JWT [42]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 92
+						}
+					}
+				},
+				{
+					"id": "44",
+					"name": "bun/github-app.test.ts > the calls > the push's credentials carry the token as git's extra header and as GH_TOKEN",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 181
+						}
+					}
+				},
+				{
+					"id": "45",
+					"name": "bun/github-app.test.ts > the calls > the token names one repository and exactly contents, pull_requests and workflows at write [41]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 103
+						}
+					}
+				},
+				{
+					"id": "46",
+					"name": "bun/github-app.test.ts > the JWT > is RS256, verifies with the App's public key, and names iss, iat and exp [35]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 69
+						}
+					}
+				},
+				{
+					"id": "47",
+					"name": "bun/github-app.test.ts > the key holder's mint command > a command that fails rejects naming its status, and one that prints nothing rejects too",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 237
+						}
+					}
+				},
+				{
+					"id": "48",
+					"name": "bun/github-app.test.ts > the key holder's mint command > mint() runs the command for the one repository and its permissions, the token on stdout alone",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 219
+						}
+					}
+				},
+				{
+					"id": "49",
+					"name": "bun/github-app.test.ts > the key holder's mint command > the App's id and the mint command configure the App, with no key read",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 208
+						}
+					}
+				},
+				{
+					"id": "50",
+					"name": "bun/github-app.test.ts > the key holder's mint command > the App's slug is the command's --slug answer",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 230
+						}
+					}
+				},
+				{
+					"id": "51",
+					"name": "bun/github-app.test.ts > the settings > an ID with whitespace around it is no number, never trimmed",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 256
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/github-app.ts": {
 			"source": "/**\n * The GitHub App the board loop's runner pushes as, and `pr-sweep.ts` writes\n * as, when its environment names one: `HARNESS_GITHUB_APP_ID` and\n * `HARNESS_GITHUB_APP_KEY`, the path of the\n * App's private key. Everything else is asked of the API at `GITHUB_API_URL`,\n * read as `bump.ts` reads it: the bot's identity before any session, and an\n * installation token for the clone's repository alone after the stage session,\n * so no session ever holds one. On the host `HARNESS_GITHUB_APP_MINT` takes the\n * key's place: the key holder's mint command, which alone reads the key and\n * answers the slug and each token (`runner-isolation` *The key holder*).\n */\nimport { createPrivateKey, type KeyObject, sign } from \"node:crypto\";\nimport { readFileSync } from \"node:fs\";\nimport { minted } from \"./github-app-minted.ts\";\nimport { remoteRepository } from \"./pull-requests.ts\";\nimport { answered, Transient } from \"./transient.ts\";\n\n/** `key` where the runner reads the key itself, `mint` where the key holder does. */\nexport type App = { id: string; key?: KeyObject; mint?: string; owner: string; repo: string };\n\n/** The owner and name a GitHub URL names, HTTPS, SSH or `ssh://`, or undefined for any other. */\nexport function repository(url: string) {\n\t// GitHub's host alone, then exactly two segments: a token must never go to a proxy.\n\tconst github = /^(?:https:\\/\\/github\\.com\\/|git@github\\.com:|ssh:\\/\\/git@github\\.com\\/)[^/]+\\/[^/]+$/;\n\treturn github.test(url) ? remoteRepository(url) : undefined;\n}\n\n/**\n * The App the environment names, or undefined when it names none. Throws\n * naming the setting or the remote at fault, never the key's contents or\n * `origin`'s URL, which can hold a credential.\n */\nexport function configured(env: NodeJS.ProcessEnv, origin: string): App | undefined {\n\tconst { HARNESS_GITHUB_APP_ID: id, HARNESS_GITHUB_APP_KEY: path, HARNESS_GITHUB_APP_MINT: mint } = env;\n\tif (id === undefined && path === undefined && mint === undefined) return undefined;\n\tconst blank = (name: string, value?: string) =>\n\t\tnew Error(`${name} is ${value === undefined ? \"unset\" : \"blank\"} — set both App settings, or neither`);\n\tif (!id?.trim()) throw blank(\"HARNESS_GITHUB_APP_ID\", id);\n\tif (mint === undefined && !path?.trim()) throw blank(\"HARNESS_GITHUB_APP_KEY\", path);\n\tif (mint !== undefined && !mint.trim()) throw blank(\"HARNESS_GITHUB_APP_MINT\", mint);\n\tif (!/^\\d+$/.test(id)) throw new Error(\"HARNESS_GITHUB_APP_ID is no number\");\n\tconst repo = repository(origin);\n\tif (mint !== undefined) {\n\t\tif (!repo) throw new Error(\"origin's URL names no GitHub repository\");\n\t\t// No key path is read, even one set beside the command: the key holder's key is no file of this user's.\n\t\treturn { id, mint, ...repo };\n\t}\n\tlet key: KeyObject;\n\ttry {\n\t\tkey = createPrivateKey(readFileSync(path as string));\n\t} catch {\n\t\tthrow new Error(`HARNESS_GITHUB_APP_KEY names ${path}, which holds no private key this user can read`);\n\t}\n\tif (!repo) throw new Error(\"origin's URL names no GitHub repository\");\n\treturn { id, key, ...repo };\n}\n\nconst base64url = (data: string | Buffer) => Buffer.from(data).toString(\"base64url\");\n\n/** The App's JWT: RS256, through `node:crypto`, which reads the PKCS#1 key GitHub issues as it is. */\nexport function jwt(id: string, key: KeyObject, now = Math.floor(Date.now() / 1000)) {\n\t// 60 s back for clock drift, as GitHub advises; 540 s on stays inside its ten-minute cap.\n\tconst claims = { iat: now - 60, exp: now + 540, iss: id };\n\tconst data = `${base64url(JSON.stringify({ alg: \"RS256\", typ: \"JWT\" }))}.${base64url(JSON.stringify(claims))}`;\n\treturn `${data}.${base64url(sign(\"sha256\", Buffer.from(data), key))}`;\n}\n\n/**\n * One API call's parsed answer, a POST of `body` when there is one; an\n * unreachable API or a failed call throws naming the path, a `Transient` for\n * no answer, the timeout, a 5xx or a 429.\n */\nexport async function request(path: string, bearer?: string, body?: unknown, timeout = 30_000): Promise<unknown> {\n\tconst headers: Record<string, string> = { accept: \"application/vnd.github+json\" };\n\tif (bearer) headers.authorization = `Bearer ${bearer}`;\n\t// Parsed here, outside the catch: a malformed GITHUB_API_URL is a plain Error, so a rejected fetch is only the network.\n\tconst url = new URL(`${process.env.GITHUB_API_URL ?? \"https://api.github.com\"}${path}`);\n\t// Bounded, so a stalled API ends the pass rather than holding it.\n\tconst signal = AbortSignal.timeout(timeout);\n\tconst init = { method: body ? \"POST\" : \"GET\", headers, body: body ? JSON.stringify(body) : undefined, signal };\n\tconst answer = await fetch(url, init).catch((error: Error) => {\n\t\tthrow new Transient(`GitHub's API could not be reached for ${path}: ${error.message}`);\n\t});\n\tif (!answer.ok)\n\t\tthrow new (answered(answer.status) ? Transient : Error)(`GitHub's API answered ${path} with ${answer.status}`);\n\treturn answer.json().catch(() => ({}));\n}\n\n/** One API call's answer, `field` of it, which must be `type`; anything else throws naming the path. */\nasync function call(path: string, field: string, type: \"string\" | \"number\", bearer?: string, body?: unknown) {\n\tconst value = ((await request(path, bearer, body)) as Record<string, unknown> | null)?.[field];\n\tif (typeof value !== type) throw new Error(`GitHub's API answered ${path} with no ${field}`);\n\treturn String(value);\n}\n\n/** The App's slug, from `GET /app`: its pull requests' author is `app/<slug>`, its commits' `<slug>[bot]`. */\nexport const slug = async (app: App) =>\n\tapp.mint\n\t\t? minted(app.mint, `${app.owner}/${app.repo}`, [\"--slug\"])\n\t\t: call(\"/app\", \"slug\", \"string\", jwt(app.id, app.key as KeyObject));\n\n/** The `GIT_*` variables that author and commit a session's work as the App's bot user. */\nexport async function identity(app: App): Promise<Record<string, string>> {\n\tconst name = `${await slug(app)}[bot]`;\n\tconst email = `${await call(`/users/${encodeURIComponent(name)}`, \"id\", \"number\")}+${name}@users.noreply.github.com`;\n\treturn { GIT_AUTHOR_NAME: name, GIT_AUTHOR_EMAIL: email, GIT_COMMITTER_NAME: name, GIT_COMMITTER_EMAIL: email };\n}\n\n/** An installation token for the App's one repository, holding the `permissions` its caller names and no more. */\nexport async function mint(app: App, permissions: Record<string, \"read\" | \"write\">): Promise<string> {\n\tif (app.mint)\n\t\treturn minted(\n\t\t\tapp.mint,\n\t\t\t`${app.owner}/${app.repo}`,\n\t\t\tObject.entries(permissions).map(([name, level]) => `${name}=${level}`),\n\t\t);\n\tconst bearer = jwt(app.id, app.key as KeyObject);\n\tconst installation = await call(`/repos/${app.owner}/${app.repo}/installation`, \"id\", \"number\", bearer);\n\treturn call(`/app/installations/${installation}/access_tokens`, \"token\", \"string\", bearer, {\n\t\trepositories: [app.repo],\n\t\tpermissions,\n\t});\n}\n\n/** The `GIT_CONFIG_COUNT` this process was started with: read once, since `credentials` raises the live one. */\nconst STARTED = /^\\d+$/.test(process.env.GIT_CONFIG_COUNT ?? \"\") ? Number(process.env.GIT_CONFIG_COUNT) : 0;\n\n/**\n * The variables that push and open as the App: git's extra header and `gh`'s\n * `GH_TOKEN`. An environment is readable by its own user alone, where an\n * argument or a URL holding the token shows in `ps` to every user. The header\n * goes after the `GIT_CONFIG_*` entries the runner was started with, and a\n * second call replaces the first's rather than adding a second header.\n */\nexport const credentials = (token: string, started = STARTED) => ({\n\tGH_TOKEN: token,\n\tGIT_CONFIG_COUNT: String(started + 1),\n\t[`GIT_CONFIG_KEY_${started}`]: \"http.https://github.com/.extraheader\",\n\t[`GIT_CONFIG_VALUE_${started}`]: `AUTHORIZATION: basic ${Buffer.from(`x-access-token:${token}`).toString(\"base64\")}`,\n});\n",
@@ -18,7 +550,27 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +586,24 @@
 						}
 					},
 					"replacement": "/(?:https:\\/\\/github\\.com\\/|git@github\\.com:|ssh:\\/\\/git@github\\.com\\/)[^/]+\\/[^/]+$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"47",
+						"48",
+						"49",
+						"50"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +619,27 @@
 						}
 					},
 					"replacement": "/^(?:https:\\/\\/github\\.com\\/|git@github\\.com:|ssh:\\/\\/git@github\\.com\\/)[^/]+\\/[^/]+/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"28"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +655,24 @@
 						}
 					},
 					"replacement": "/^(?:https:\\/\\/github\\.com\\/|git@github\\.com:|ssh:\\/\\/git@github\\.com\\/)[^/]\\/[^/]+$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"47",
+						"48",
+						"49",
+						"50"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +688,27 @@
 						}
 					},
 					"replacement": "/^(?:https:\\/\\/github\\.com\\/|git@github\\.com:|ssh:\\/\\/git@github\\.com\\/)[/]+\\/[^/]+$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +724,27 @@
 						}
 					},
 					"replacement": "/^(?:https:\\/\\/github\\.com\\/|git@github\\.com:|ssh:\\/\\/git@github\\.com\\/)[^/]+\\/[^/]$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +760,27 @@
 						}
 					},
 					"replacement": "/^(?:https:\\/\\/github\\.com\\/|git@github\\.com:|ssh:\\/\\/git@github\\.com\\/)[^/]+\\/[/]+$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +796,17 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +822,17 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +848,14 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +871,17 @@
 						}
 					},
 					"replacement": "id === undefined && path === undefined || mint === undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"51"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +897,17 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"51"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +923,14 @@
 						}
 					},
 					"replacement": "id === undefined || path === undefined",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +946,14 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "14",
@@ -242,7 +969,14 @@
 						}
 					},
 					"replacement": "id !== undefined",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "15",
@@ -258,7 +992,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "16",
@@ -274,7 +1009,8 @@
 						}
 					},
 					"replacement": "path !== undefined",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "17",
@@ -290,7 +1026,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "18",
@@ -306,7 +1043,8 @@
 						}
 					},
 					"replacement": "mint !== undefined",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "19",
@@ -322,7 +1060,14 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "20",
@@ -338,7 +1083,8 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "21",
@@ -354,7 +1100,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "22",
@@ -370,7 +1117,8 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "23",
@@ -386,7 +1134,8 @@
 						}
 					},
 					"replacement": "value !== undefined",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "24",
@@ -402,7 +1151,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "25",
@@ -418,7 +1168,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "26",
@@ -434,7 +1185,17 @@
 						}
 					},
 					"replacement": "id?.trim()",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "27",
@@ -450,7 +1211,17 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "28",
@@ -466,7 +1237,14 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "29",
@@ -482,7 +1260,14 @@
 						}
 					},
 					"replacement": "id",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "30",
@@ -498,7 +1283,14 @@
 						}
 					},
 					"replacement": "id.trim",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "31",
@@ -514,7 +1306,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "32",
@@ -530,7 +1323,17 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "33",
@@ -546,7 +1349,14 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "34",
@@ -562,7 +1372,17 @@
 						}
 					},
 					"replacement": "mint === undefined || !path?.trim()",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "35",
@@ -578,7 +1398,17 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "36",
@@ -594,7 +1424,17 @@
 						}
 					},
 					"replacement": "mint !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "37",
@@ -610,7 +1450,13 @@
 						}
 					},
 					"replacement": "path?.trim()",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"51"
+					],
+					"killedBy": [
+						"51"
+					]
 				},
 				{
 					"id": "38",
@@ -626,7 +1472,10 @@
 						}
 					},
 					"replacement": "path",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"51"
+					]
 				},
 				{
 					"id": "39",
@@ -642,7 +1491,10 @@
 						}
 					},
 					"replacement": "path.trim",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"51"
+					]
 				},
 				{
 					"id": "40",
@@ -658,7 +1510,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "41",
@@ -674,7 +1527,17 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "42",
@@ -690,7 +1553,14 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "43",
@@ -706,7 +1576,17 @@
 						}
 					},
 					"replacement": "mint !== undefined || !mint.trim()",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "44",
@@ -722,7 +1602,17 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"51"
+					]
 				},
 				{
 					"id": "45",
@@ -738,7 +1628,17 @@
 						}
 					},
 					"replacement": "mint === undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"51"
+					]
 				},
 				{
 					"id": "46",
@@ -754,7 +1654,16 @@
 						}
 					},
 					"replacement": "mint.trim()",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "47",
@@ -770,7 +1679,13 @@
 						}
 					},
 					"replacement": "mint",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50"
+					]
 				},
 				{
 					"id": "48",
@@ -786,7 +1701,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "49",
@@ -802,7 +1718,17 @@
 						}
 					},
 					"replacement": "/^\\d+$/.test(id)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "50",
@@ -818,7 +1744,17 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "51",
@@ -834,7 +1770,17 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"51"
+					]
 				},
 				{
 					"id": "52",
@@ -850,7 +1796,17 @@
 						}
 					},
 					"replacement": "/\\d+$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"51"
+					]
 				},
 				{
 					"id": "53",
@@ -866,7 +1822,14 @@
 						}
 					},
 					"replacement": "/^\\d+/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "54",
@@ -882,7 +1845,14 @@
 						}
 					},
 					"replacement": "/^\\d$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					]
 				},
 				{
 					"id": "55",
@@ -898,7 +1868,17 @@
 						}
 					},
 					"replacement": "/^\\D+$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50",
+						"51"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "57",
@@ -914,7 +1894,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"51"
+					],
+					"killedBy": [
+						"51"
+					]
 				},
 				{
 					"id": "58",
@@ -930,7 +1916,13 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50"
+					]
 				},
 				{
 					"id": "59",
@@ -946,7 +1938,16 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "60",
@@ -962,7 +1963,16 @@
 						}
 					},
 					"replacement": "mint === undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "61",
@@ -978,7 +1988,16 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "62",
@@ -994,7 +2013,16 @@
 						}
 					},
 					"replacement": "repo",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "63",
@@ -1010,7 +2038,16 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "64",
@@ -1026,7 +2063,13 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50"
+					]
 				},
 				{
 					"id": "66",
@@ -1042,7 +2085,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "67",
@@ -1058,7 +2102,16 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48",
+						"49",
+						"50"
+					],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "68",
@@ -1074,7 +2127,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "69",
@@ -1090,7 +2144,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "71",
@@ -1106,7 +2161,8 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "72",
@@ -1122,7 +2178,8 @@
 						}
 					},
 					"replacement": "repo",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "73",
@@ -1138,7 +2195,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "74",
@@ -1154,7 +2212,8 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "76",
@@ -1170,7 +2229,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "77",
@@ -1186,7 +2246,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "78",
@@ -1202,7 +2263,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "79",
@@ -1218,7 +2283,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "80",
@@ -1234,7 +2318,22 @@
 						}
 					},
 					"replacement": "Date.now() * 1000",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "81",
@@ -1250,7 +2349,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "82",
@@ -1266,7 +2384,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "83",
@@ -1282,7 +2419,26 @@
 						}
 					},
 					"replacement": "now + 60",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "84",
@@ -1298,7 +2454,26 @@
 						}
 					},
 					"replacement": "now - 540",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "85",
@@ -1314,7 +2489,26 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "86",
@@ -1330,7 +2524,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "87",
@@ -1346,7 +2559,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "88",
@@ -1362,7 +2594,23 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "89",
@@ -1378,7 +2626,26 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "90",
@@ -1394,7 +2661,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"46",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "91",
@@ -1410,7 +2696,33 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "92",
@@ -1426,7 +2738,30 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "93",
@@ -1442,7 +2777,30 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "94",
@@ -1458,7 +2816,30 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "95",
@@ -1474,7 +2855,33 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "96",
@@ -1490,7 +2897,25 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "97",
@@ -1506,7 +2931,33 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "98",
@@ -1522,7 +2973,33 @@
 						}
 					},
 					"replacement": "process.env.GITHUB_API_URL && \"https://api.github.com\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "99",
@@ -1538,7 +3015,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "100",
@@ -1554,7 +3032,32 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"37",
+						"38",
+						"39",
+						"40",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "101",
@@ -1570,7 +3073,17 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"2",
+						"3",
+						"43",
+						"45"
+					],
+					"killedBy": [
+						"43"
+					]
 				},
 				{
 					"id": "102",
@@ -1586,7 +3099,29 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"37",
+						"38",
+						"39",
+						"40",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "103",
@@ -1602,7 +3137,15 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"31",
+						"38",
+						"40"
+					],
+					"killedBy": [
+						"38"
+					]
 				},
 				{
 					"id": "105",
@@ -1618,7 +3161,15 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"31",
+						"38",
+						"40"
+					],
+					"killedBy": [
+						"38"
+					]
 				},
 				{
 					"id": "106",
@@ -1634,7 +3185,29 @@
 						}
 					},
 					"replacement": "answer.ok",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"32",
+						"33",
+						"34",
+						"35",
+						"37",
+						"39",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "107",
@@ -1650,7 +3223,29 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"32",
+						"33",
+						"34",
+						"35",
+						"37",
+						"39",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "108",
@@ -1666,7 +3261,29 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"32",
+						"33",
+						"34",
+						"35",
+						"37",
+						"39",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"37"
+					]
 				},
 				{
 					"id": "110",
@@ -1682,7 +3299,21 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"32",
+						"33",
+						"34",
+						"35",
+						"37",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"37"
+					]
 				},
 				{
 					"id": "111",
@@ -1698,7 +3329,18 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"10",
+						"2",
+						"3",
+						"39",
+						"42",
+						"43",
+						"45",
+						"50"
+					]
 				},
 				{
 					"id": "112",
@@ -1714,7 +3356,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "113",
@@ -1730,7 +3391,23 @@
 						}
 					},
 					"replacement": "((await request(path, bearer, body)) as Record<string, unknown> | null)[field]",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"39",
+						"42",
+						"43",
+						"45",
+						"50",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "114",
@@ -1746,7 +3423,21 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"10",
+						"2",
+						"3",
+						"39",
+						"42",
+						"43",
+						"45",
+						"50"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "115",
@@ -1762,7 +3453,21 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"10",
+						"2",
+						"3",
+						"39",
+						"42",
+						"43",
+						"45",
+						"50"
+					],
+					"killedBy": [
+						"39"
+					]
 				},
 				{
 					"id": "116",
@@ -1778,7 +3483,21 @@
 						}
 					},
 					"replacement": "typeof value === type",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"10",
+						"2",
+						"3",
+						"39",
+						"42",
+						"43",
+						"45",
+						"50"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "118",
@@ -1794,7 +3513,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"39"
+					],
+					"killedBy": [
+						"39"
+					]
 				},
 				{
 					"id": "119",
@@ -1810,7 +3535,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "120",
@@ -1826,7 +3555,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"50"
+					],
+					"killedBy": [
+						"50"
+					]
 				},
 				{
 					"id": "121",
@@ -1842,7 +3577,13 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"50"
+					],
+					"killedBy": [
+						"50"
+					]
 				},
 				{
 					"id": "122",
@@ -1858,7 +3599,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"50"
+					],
+					"killedBy": [
+						"50"
+					]
 				},
 				{
 					"id": "123",
@@ -1874,7 +3621,15 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"39",
+						"42"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "124",
@@ -1890,7 +3645,15 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"39",
+						"42"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "125",
@@ -1906,7 +3669,15 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"39",
+						"42"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "126",
@@ -1922,7 +3693,15 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"39",
+						"42",
+						"50"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "127",
@@ -1938,7 +3717,15 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"39",
+						"42",
+						"50"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "128",
@@ -1954,7 +3741,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"42",
+						"50"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "129",
@@ -1970,7 +3764,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"42",
+						"50"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "130",
@@ -1986,7 +3787,14 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"42",
+						"50"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "131",
@@ -2002,7 +3810,14 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"42",
+						"50"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "132",
@@ -2018,7 +3833,14 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"42",
+						"50"
+					],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "133",
@@ -2034,7 +3856,24 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"43",
+						"45",
+						"47",
+						"48",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"43"
+					]
 				},
 				{
 					"id": "134",
@@ -2050,7 +3889,24 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"43",
+						"45",
+						"47",
+						"48",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"43"
+					]
 				},
 				{
 					"id": "135",
@@ -2066,7 +3922,24 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"43",
+						"45",
+						"47",
+						"48",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"48"
+					]
 				},
 				{
 					"id": "136",
@@ -2082,7 +3955,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48"
+					],
+					"killedBy": [
+						"48"
+					]
 				},
 				{
 					"id": "137",
@@ -2098,7 +3978,14 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48"
+					],
+					"killedBy": [
+						"48"
+					]
 				},
 				{
 					"id": "138",
@@ -2114,7 +4001,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"47",
+						"48"
+					],
+					"killedBy": [
+						"48"
+					]
 				},
 				{
 					"id": "139",
@@ -2130,7 +4024,22 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"43",
+						"45",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"43"
+					]
 				},
 				{
 					"id": "140",
@@ -2146,7 +4055,22 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"43",
+						"45",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"43"
+					]
 				},
 				{
 					"id": "141",
@@ -2162,7 +4086,22 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"2",
+						"3",
+						"37",
+						"38",
+						"43",
+						"45",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"43"
+					]
 				},
 				{
 					"id": "142",
@@ -2178,7 +4117,17 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"2",
+						"3",
+						"43",
+						"45"
+					],
+					"killedBy": [
+						"43"
+					]
 				},
 				{
 					"id": "143",
@@ -2194,7 +4143,17 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"2",
+						"3",
+						"43",
+						"45"
+					],
+					"killedBy": [
+						"43"
+					]
 				},
 				{
 					"id": "144",
@@ -2210,7 +4169,17 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"2",
+						"3",
+						"43",
+						"45"
+					],
+					"killedBy": [
+						"43"
+					]
 				},
 				{
 					"id": "145",
@@ -2226,7 +4195,17 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"2",
+						"3",
+						"43",
+						"45"
+					],
+					"killedBy": [
+						"45"
+					]
 				},
 				{
 					"id": "146",
@@ -2242,7 +4221,17 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"2",
+						"3",
+						"43",
+						"45"
+					],
+					"killedBy": [
+						"45"
+					]
 				},
 				{
 					"id": "147",
@@ -2258,7 +4247,8 @@
 						}
 					},
 					"replacement": "/\\d+$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "148",
@@ -2274,7 +4264,8 @@
 						}
 					},
 					"replacement": "/^\\d+/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "149",
@@ -2290,7 +4281,8 @@
 						}
 					},
 					"replacement": "/^\\d$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "150",
@@ -2306,7 +4298,8 @@
 						}
 					},
 					"replacement": "/^\\D+$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "151",
@@ -2322,7 +4315,8 @@
 						}
 					},
 					"replacement": "process.env.GIT_CONFIG_COUNT && \"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "152",
@@ -2338,7 +4332,8 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "153",
@@ -2354,7 +4349,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "154",
@@ -2370,7 +4369,14 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"41",
+						"44"
+					],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "155",
@@ -2386,7 +4392,14 @@
 						}
 					},
 					"replacement": "started - 1",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"41",
+						"44"
+					],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "156",
@@ -2402,7 +4415,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"41",
+						"44"
+					],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "157",
@@ -2418,7 +4438,14 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"41",
+						"44"
+					],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "158",
@@ -2434,7 +4461,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"41",
+						"44"
+					],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "159",
@@ -2450,7 +4484,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"41",
+						"44"
+					],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "160",
@@ -2466,7 +4507,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"41",
+						"44"
+					],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "161",
@@ -2482,7 +4530,14 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"41",
+						"44"
+					],
+					"killedBy": [
+						"44"
+					]
 				}
 			]
 		}
@@ -2490,11 +4545,10 @@
 	"fingerprint": {
 		"bun/diff-budget.fixture.ts": "a51ac572bdc585134c3a16ebb17c58581b20dcb2",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bun/github-app-mint.test.ts": "9af8f2917d7e242d7056c4c3d4b41654aa68d04f",
-		"bun/github-app.test.ts": "9ecae0760da7917fb6c3cf732dd5d087f30f124f",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/github-app",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }
