@@ -56,20 +56,25 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
 
 ## 2. The fresh-session mark in the image
 
-- [ ] 2.1 Write `orchestrator/layout-deploy.test.ts` first. Cases, each citing
+- [x] 2.1 Write `orchestrator/layout-deploy.test.ts` first. Cases, each citing
       its scenario: `orchestrator/the-container-s-managed-settings` (the
       Dockerfile copies `runner/managed-settings.json` to
-      `/etc/claude-code/managed-settings.json`; `SessionStart`'s matcher is
-      `startup|clear`; `UserPromptSubmit` is set);
-      `orchestrator/the-user-s-first-message` (runs the two hook commands
+      `/etc/claude-code/managed-settings.json` after the directory's
+      `install -d -m 0755` and before the mode check; a `SessionStart`
+      matcher is `startup|clear`; `UserPromptSubmit` is set);
+      `orchestrator/the-user-s-first-message` (runs the hook commands
       read from the JSON under `sh` with `HOME` in a temp dir: the mark
       exists after `SessionStart`, not after `UserPromptSubmit`);
-      `orchestrator/the-session-starts-after-a-failed-deploy` (with
-      `~/.harness-deploy-failed` present the output carries the ask line and
-      the file's line; absent, it prints nothing). Record that they fail
-- [ ] 2.2 Confirm the Linux managed-settings path and the `SessionStart`
-      matcher values against the Claude Code docs; write
-      `orchestrator/runner/managed-settings.json` per design.md, *The
+      `orchestrator/a-continued-start` (a `resume` start leaves the mark as
+      it was); `orchestrator/the-session-starts-after-a-failed-deploy` (on
+      `startup`, `clear` and `resume`, with `~/.harness-deploy-failed`
+      present the output carries the ask line and the file's line, and the
+      next start's carries nothing; absent, it prints nothing). Record that they fail (05.11: 7 of 7, the file
+      absent)
+- [x] 2.2 Confirm the Linux managed-settings path and the `SessionStart`
+      matcher values against the Claude Code docs (05.11: the path, and
+      `--continue` fires `resume`, design.md, *Every start continues*);
+      write `orchestrator/runner/managed-settings.json` per design.md, *The
       fresh-session mark*, and its `COPY` line in the Dockerfile. Make 2.1
       pass
 
@@ -83,22 +88,28 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       each citing its scenario: `orchestrator/a-session-at-work`,
       `orchestrator/a-fresh-session`, `orchestrator/an-unchanged-image`,
       `orchestrator/the-session-comes-back`,
-      `orchestrator/the-session-does-not-come-back` (the tag goes back, `up
-      -d runner`, `rolled-back` written, the failure file, exit 1),
+      `orchestrator/the-session-does-not-come-back` (the failure file and
+      `rolled-back` written, then the tag goes back, `up -d runner`, exit 1),
+      `orchestrator/the-rollback-fails` (the tag back or `up -d runner`
+      fails: the failure file names that step, `rolled-back` stays, the next
+      run skips the head),
       `orchestrator/a-rolled-back-head`,
       `orchestrator/the-deploy-token-is-absent`; extend
       `orchestrator/the-build-fails` with the failure file, and change the
       order `orchestrator/a-green-head` asserts in `deploy.test.ts` from 1.1's
       (`up`, prune, engine wait, push, record) to the tag before the build,
-      then `up`, the wait for `main`, engine wait, push, record, the failure
-      file's removal, prune. Record that they fail
+      then the failure file's removal, `up`, the wait for `main`, engine
+      wait, push, record, prune. Record that they fail
 - [ ] 3.2 In `deploy.sh`, per design.md: skip a head equal to `rolled-back`;
       tag the running runner's image as `orchestrator-runner:previous` before
       the build; after the build, exit 0 without the fresh-session mark; with
-      it, `up -d`, then `restart runner` when the container id is unchanged;
-      the wait for `main`; the rollback; the failure file in `failed()`; the
+      it, under the locks, the second check read and mark check, then the
+      failure file's removal, `up -d`, then `restart runner` when the
+      container id is unchanged; the wait for `main`; the one rollback, its
+      failure file and `rolled-back` before its tag and `up`; the failure file
+      in `failed()`; the
       push and the engine wait skipped while the token file is absent; the
-      record, the failure file's removal, then the prune. Update the header
+      record, then the prune. Update the header
       comment. Make 3.1 pass
 - [ ] 3.3 Add `orchestrator/host/harness-deploy.service` (`Type=oneshot`,
       `ExecStart=/root/harness/orchestrator/deploy.sh`,
@@ -125,9 +136,10 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
 - [ ] 4.2 **User act.** After the next merge, `/clear` the session from
       Remote Control and watch: within a tick the session restarts, Remote
       Control reconnects, and `journalctl -u harness-deploy` shows the head
-      deployed. Note on the card whether `SessionStart` fired on that
-      `/clear` and whether the first message cleared the mark, the three
-      points design.md lists as unverified
+      deployed. Note on the card whether the first message cleared the mark
+      and whether Remote Control reconnected, the two points design.md lists
+      as unverified; the `SessionStart` on `/clear` and the conversation a
+      restart continues the live probe settled on 05.11 (answer 18 а)
 - [ ] 4.3 **User decision.** Confirm the `main` ruleset's bypass list names no
       App and no bot, since every merge now runs on the host as root
 

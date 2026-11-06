@@ -98,6 +98,9 @@ COPY --chmod=0755 runner/gh /usr/local/bin/gh
 # Its directory is made with the users above: an octal --chmod reaches the
 # directories its COPY creates, and a 0644 one is closed to agent.
 COPY --chmod=0644 runner/session-rules.md /etc/claude-code/CLAUDE.md
+# The fresh-session mark and the failed deploy's report, as managed settings,
+# so only the image runs them, never the laptop (host-deploy design).
+COPY --chmod=0644 runner/managed-settings.json /etc/claude-code/managed-settings.json
 # The event handler's code, root-owned, from compose's named context `bun`
 # (ci-run-agent design, *The engine's contract*): it reads the webhook secret,
 # so it never runs from a clone agent can write. The modes are set, never the
@@ -107,7 +110,7 @@ COPY --chmod=0644 runner/session-rules.md /etc/claude-code/CLAUDE.md
 # would make every file executable or every directory untraversable.
 COPY --from=bun --chmod=u=rwX,go=rX . /opt/orchestrator/bun/
 # A builder that took the flag and set other modes fails here, not at the mint;
-# so does a managed CLAUDE.md agent cannot read, rather than a session without its rules.
+# so does a managed CLAUDE.md or settings file agent cannot read, rather than a session without its rules or hooks.
 # find's errors are kept: a missing path, or one BSD find cannot enter, prints only on stderr.
 RUN test -z "$(find /opt/orchestrator/bun /etc/claude-code ! -perm -o=r -o -perm -g=w -o -perm -o=w -o -type d ! -perm -o=x 2>&1)"
 
