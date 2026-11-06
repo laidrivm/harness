@@ -143,7 +143,9 @@ function countFile(store: string, event: Event): string | undefined {
 /**
  * A `gh pr checks` call alone — words of a set that starts no expansion, at
  * most a last `2>&1` — so its exit code is gh's, and a separator is a space
- * or a tab, since a newline would start a second command.
+ * or a tab, since a newline would start a second command. The one expansion
+ * left is zsh's leading `=word`, which fails the line with 1 before gh runs,
+ * so it is safe only while the exemption holds no exit code but 8.
  */
 const CHECKS_READ = /^gh[ \t]+pr[ \t]+checks(?:[ \t]+[\w./:@=-]+)*(?:[ \t]+2>&1)?$/;
 
