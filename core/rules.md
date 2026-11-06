@@ -112,9 +112,9 @@ describes is rewritten, the rule is a candidate for deletion.
   count as a pass.
 - Await a rejection from a driver's query object through `then(ok, err)`,
   never `expect().rejects`, which hangs on a thenable instead of failing.
-- Give a test hook that spawns synchronously an explicit timeout — bun cannot
-  fire the default one while the call blocks, so the hook overruns and is
-  reported with a time no configured limit explains.
+- Give a test hook or case that spawns synchronously an explicit timeout of
+  three to four times its time measured under load — bun's 5 s default kills
+  the spawn mid-call on a busy machine.
 - Convert a `file:` URL with `fileURLToPath` before handing it to the
   filesystem; never `.pathname`, which stays percent-encoded.
 - Compare prose across a line wrap by normalising whitespace, never by matching
