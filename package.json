@@ -6,7 +6,7 @@
 		"@biomejs/biome": "2.5.15",
 		"@stryker-mutator/core": "10.0.0",
 		"@types/bun": "1.4.2",
-		"harness": "github:laidrivm/harness#50765a4e3775a7f155995f1303d95bbb51f2036b",
+		"harness": "github:laidrivm/harness#8a1fffd6769454841b5763793d138815607c239e",
 		"typescript": "7.0.2"
 	},
 	"harness": {
