@@ -8,6 +8,9 @@ The agent harness shared by several projects: a rulebook, Claude Code skills, an
 - `bun/` — what assumes Bun and TypeScript: the command guard and the hook text that boots it, the gates, and `check.ts`, which runs every check over a consumer's tree.
 - `orchestrator/` — what a host of the user's own runs to start passes with nobody at a terminal ([orchestrator/README.md](orchestrator/README.md), [spec](openspec/specs/orchestrator/spec.md)).
 - `openspec/` — the specs (`specs/<capability>/spec.md`) and the changes that made them, with each decision's rationale in the archived `design.md`.
+- `.githooks/` — the pre-push hook and `gates.sh`, the one list of judged gates it and the pre-PR runner run ([commit-gates](openspec/specs/commit-gates/spec.md)).
+- `mutation/` — one stored Stryker result per mutated module, `mutation/<name>.json`, written by `bun/mutation-run.ts` and counted against `harness.mutationFloor` ([mutation-floor](openspec/specs/mutation-floor/spec.md)).
+- `biome.json`, `tsconfig.json` and `stryker.config.json` — the formatter and linter, the type check, and Stryker's shared options, its `mutate` the list of modules mutated.
 
 ## Consuming
 
@@ -141,6 +144,7 @@ git diff            # see what changed upstream
 
 - The repository is its own consumer: it pins itself under `devDependencies`, so a session runs its gates from `node_modules/harness/`, and an edit to `bun/` holds no session until it merges and the pin moves past it. Three hooks are its own and reach no consumer: the skill recorder, the ready guard and the status guard ([harness-updates](openspec/specs/harness-updates/spec.md)).
 - Run `bun install` first, then `git config core.hooksPath .githooks` once per clone. A push then runs the gates [commit-gates](openspec/specs/commit-gates/spec.md) lists, through `.githooks/gates.sh` (Biome and the type check need the install), unless the pre-PR runner passed every ref's tip it lands here, and the diff budget ([git and PRs](core/git-and-prs.md)).
+- The mutation step reads the working tree: an uncommitted edit to a module `stryker.config.json`'s `mutate` lists, its tests, the fixtures they import or `bunfig.toml` fails every push. A push that changes one of them re-runs that module (a change to `bunfig.toml`, its preloads or Stryker's options, every module), needs Node on `PATH` and a tree with nothing modified or untracked outside `mutation/`, and fails until the rewritten `mutation/<name>.json` is committed and `harness.mutationFloor` set to the count the floor then names: before pushing, run `bun bun/mutation-run.ts`, commit what it writes, run it again and then `bun bun/mutation-floor.ts`, and commit the floor it names. `bun bun/mutation-run.ts --all --force` re-runs every listed module whole, about 6 minutes on the laptop. A module joins the list by a line in `mutate` and a run that writes its stored file, both in one pull request, if its suite runs in-process, it has no `import.meta.main` block, and no test it runs starts it with an environment built from scratch ([mutation-floor](openspec/specs/mutation-floor/spec.md)).
 - Move the pin by hand: set its line in `package.json` to a `main` commit whose `test` run passed, run `bun install`, and open a pull request carrying `package.json` and `bun.lock`.
 - `.claude/commands/opsx/` is OpenSpec's output: regenerate it with `openspec update`, never edit it here.
 

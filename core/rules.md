@@ -220,6 +220,8 @@ not age with the code.
 - Delete a branch, local or remote, only when the user asks for it — never
   folded into a command run for another purpose (unattended: user — delete
   nothing, and name the branch in the report).
+- Never signal a process this session did not start — find yours by the pid
+  its own launch printed, never by a `ps`/`pgrep` match across the machine.
 - Never run an act the command guard or a permission entry refuses or asks
   about — a commit, a push, a `gh` write, a package command, an edit to a gated
   file — through an interpreter (`python3 -c`, `bun -e`, `node -e`) or a
