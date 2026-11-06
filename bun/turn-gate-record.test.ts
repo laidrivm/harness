@@ -259,7 +259,7 @@ describe("the runner's path in the refusal", () => {
 		commit(dir, { [TASKS]: DONE });
 		const bin = join(dir, at);
 		mkdirSync(bin, { recursive: true });
-		for (const file of ["turn-gate.ts", "branch-state.ts", "gate-ledger.ts", "goal-rounds.ts"])
+		for (const file of ["turn-gate.ts", "branch-state.ts", "gate-ledger.ts", "goal-rounds.ts", "task-groups.ts"])
 			copyFileSync(join(import.meta.dir, file), join(bin, file));
 		const call = Bun.spawnSync(["bun", join(bin, "turn-gate.ts"), "stop"], {
 			cwd,

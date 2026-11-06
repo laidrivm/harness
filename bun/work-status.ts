@@ -21,7 +21,7 @@ import { integration } from "./notion-ask.ts";
 import { type Listed, type Page, plain } from "./notion-bot.ts";
 import { cleared } from "./notion-release.ts";
 import { readPullRequest } from "./pull-requests.ts";
-import { complete, groups } from "./turn-gate.ts";
+import { complete, groups } from "./task-groups.ts";
 import { MAIN, output, POINTER } from "./work-take.ts";
 
 /** The eleven statuses task-board defines, which `--to` names one of. */
