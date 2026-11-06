@@ -9,7 +9,14 @@ test("the Rules preamble says how a session delegates to a subagent", () => {
 	const start = rules.indexOf("### Rules");
 	expect(start).toBeGreaterThan(-1);
 	const preamble = rules.slice(start, rules.indexOf("####", start)).replace(/\s+/g, " ");
-	for (const phrase of ["a fresh one", "forking only when", "never into git", "nothing the harness already loads", "`description` with the slug", "the agent's ID"]) {
+	for (const phrase of [
+		"a fresh one",
+		"forking only when",
+		"never into git",
+		"nothing the harness already loads",
+		"`description` with the slug",
+		"the agent's ID",
+	]) {
 		expect(preamble).toContain(phrase);
 	}
 });
