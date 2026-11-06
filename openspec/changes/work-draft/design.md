@@ -46,7 +46,8 @@ alike.
 The dispatcher's checkout is not on the pull request's branch — the
 follow-up runs in a worktree of its own — so `draft` takes the number, as
 `gh pr ready <n> --undo` does today. A fork's pull request is drafted the
-same way; nothing here pushes into it.
+same way, though the head printed for it is no `--head` `resolve` can use,
+since `resolve` reads the branch's own-repository pull requests alone.
 
 ### Reuse the reads and the call that exist
 
@@ -69,8 +70,9 @@ The full head is the `--head` `work.ts resolve` takes, and the commit the
 follow-up builds on, so the dispatcher copies it into the brief from the one
 call. It is read before the undo and not again: while the pull request is
 ready, the pre-push hook and `finish` refuse every push into it, so only a
-push that bypasses the hooks moves it in that window, and `resolve` refuses
-a head that moved anyway.
+push the hooks do not see — one bypassing them, one into a fork, or a cloud
+session's, where `.githooks` is off — moves it in that window, and
+`resolve` refuses a head that moved anyway.
 
 ### Where the rule sits
 
@@ -93,5 +95,14 @@ it starts, names the command instead.
   refusing a push into a ready pull request, so a forgotten draft costs a
   window of ready-under-rework, never a push into it.
 - A cloud session cannot run it (`gh pr ready` uses GraphQL, which the
-  proxy closes) → `draft` exits 1 there with `gh`'s failure, as `resolve`
-  does, and the README's cloud note says so.
+  proxy closes) → `draft` exits 1 there, as `resolve` does, the README's
+  cloud note says so, and the rule says a failed `draft` is reported and
+  does not stop the follow-up.
+- `bun bun/work.ts *`'s allow entry now grants a switch to draft that a
+  hand-run `gh pr ready --undo` is asked about → the Safety rule naming the
+  scripts that carry a granted `gh` write names `draft`, so the grant is
+  stated where `finish`'s and `resolve`'s are; merging this proposal is the
+  user's approval of it.
+- Drafting right after `finish` readied a head can leave CodeRabbit's run on
+  that head skipped → that head is the one the follow-up replaces, and
+  `finish` asks once for a review of a pushed head CodeRabbit skipped.

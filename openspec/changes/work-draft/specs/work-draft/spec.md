@@ -2,9 +2,10 @@
 
 ## Purpose
 
-The command a session marks an open pull request draft with when it hands
-follow-up on it over, so a ready pull request is never under rework, until
-`work.ts finish` pushes the new head and readies it again.
+The command a session marks an open pull request draft with when follow-up
+on it starts, handed to a subagent or carried by the session itself, so a
+ready pull request is never under rework, until `work.ts finish` pushes the
+new head and readies it again.
 
 ## ADDED Requirements
 
@@ -57,8 +58,9 @@ pull request's head commit, all 40 hex digits. Both exit 0.
 nothing, when `origin`'s URL names no owner and repository — read before
 the pull request, as `finish` reads it — when the pull request cannot be
 read, or when it is merged or closed. When `gh pr ready --undo` exits
-non-zero or is killed at its time limit, it SHALL exit 1 on a line saying
-`gh pr ready --undo` failed and #`<n>` was not marked draft, never claiming
+non-zero or is killed at its time limit, it SHALL exit 1 on one line opening
+`draft: failed —` that says `gh pr ready --undo` failed and #`<n>` was not
+marked draft, never claiming
 the pull request's state, which the failure leaves unread — merged in the
 meantime, or a cloud session's closed GraphQL, read the same.
 
@@ -78,8 +80,8 @@ meantime, or a cloud session's closed GraphQL, read the same.
 
 - **WHEN** `draft --pr 7` runs, #7 is open and ready, and `gh pr ready 7
   --undo` exits non-zero
-- **THEN** it prints that `gh pr ready --undo` failed and #7 was not marked
-  draft, and exits 1
+- **THEN** it prints a line opening `draft: failed —` that says `gh pr
+  ready --undo` failed and #7 was not marked draft, and exits 1
 
 #### Scenario: No repository in origin
 
@@ -94,8 +96,13 @@ meantime, or a cloud session's closed GraphQL, read the same.
 `work.ts draft --pr <n>` before follow-up on an open pull request starts,
 whether it hands that follow-up to a subagent or carries it itself, naming
 the command in the consumer's form with the harness's own in brackets, as
-`core/feature-workflow.md` names `take`. `core/git-and-prs.md`'s draft rule
-SHALL name that command in place of a hand-run `gh pr ready <n> --undo`.
+`core/feature-workflow.md` names `take`, and saying that a failed `draft` is
+named in the report and does not stop the follow-up — a cloud session's
+always fails. `core/git-and-prs.md`'s draft
+rule SHALL name that command in place of a hand-run `gh pr ready <n>
+--undo`, and `core/rules.md`'s Safety rule that names the scripts the allow
+list grants a `gh` write SHALL name `work.ts draft` as the one it grants a
+pull request's switch to draft.
 
 #### Scenario: The rulebook names the command
 

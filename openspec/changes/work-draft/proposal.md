@@ -58,9 +58,12 @@ CI flow does.
 - Changed: `bun/work.ts` (dispatch, `USAGE`, header comment),
   `bun/pull-requests.ts` (`readPullRequest` also returns `draft` and
   `headRefOid`, `Pull`'s names for them), `core/rules.md`, `core/git-and-prs.md`, `README.md`.
-- No new dependency, permission or hook: `.claude/settings.json` already
+- No new dependency, allow entry or hook: `.claude/settings.json` already
   allows `bun bun/work.ts *`, and a consumer's `README` step 5 already allows
-  `bun node_modules/harness/bun/work.ts *`.
+  `bun node_modules/harness/bun/work.ts *`. That entry now grants `gh pr
+  ready --undo`, which a hand-run call is asked about, since no entry allows
+  `gh pr ready`; `core/rules.md`'s Safety rule naming the scripts the allow
+  list grants a `gh` write names `draft` beside `finish` and `resolve`.
 - The laptop session's memory rule *Draft while fixing* becomes this
   command; retiring the memory is the user's.
 - Closest existing artefact: `bun/ci-run-draft.ts`'s `draftWhile`, which
