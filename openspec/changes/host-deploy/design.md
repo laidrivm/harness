@@ -99,7 +99,16 @@ Before the build the script tags the image of the running `runner` container
 `orchestrator-runner:previous`. Tagging the name instead would be wrong from
 the second tick on: a build that waited for a fresh session has already moved
 the name to the new image. A tag that fails fails its step (*A failed deploy
-is told to the session*). `docker image prune -f` after the record removes
+is told to the session*).
+
+The tag moves only when no earlier run reached `up` and left its head
+unrecorded. Right before `up` the script writes the head to
+`$STATE_DIRECTORY/attempted`, and removes it once the head is recorded as
+deployed or rolled back; a run that finds `attempted` keeps the tag. An `up`
+that fails part way may have recreated the runner on the new image before
+another service failed, and the full retry would otherwise tag that unvetted
+image `previous`; kept, the retry's rollback still returns to the image the
+last vetted run left (CodeRabbit on #426). `docker image prune -f` after the record removes
 the image the tag held before; the previous one stays until the next deploy
 moves the tag (disk, *Risks*).
 
@@ -211,17 +220,22 @@ and exits 0.
 
 When `main` does not answer, the script writes the failure file and the head
 to `$STATE_DIRECTORY/rolling-back`, tags `orchestrator-runner:previous` back
-as `orchestrator-runner`, runs `docker compose up -d runner`, then renames
-`rolling-back` to `rolled-back` and exits 1. The failure file comes before
-`up`, so the restored session's start finds it (local review). The head is
-recorded as rolled back only once the runner is up on the previous image: a
-tag or an `up` that fails leaves `rolling-back`, and every later run, before
-its fetch, retries the tag back and `up -d runner` from that record alone,
-touching neither the checkout nor the `previous` tag, until both succeed
-(CodeRabbit on #426). Recording `rolled-back` first would leave a broken
-runner that no tick restores, since each skips that head.
-When the image did not change, there is no other image to go back to: the
-record and the failure file alone. The user chose this on the card: «light
+as `orchestrator-runner`, brings the runner up as the deploy does (`docker
+compose up -d runner`, then `restart runner` when its id is unchanged), waits
+for `main` as above, and only when `main` answers renames `rolling-back` to
+`rolled-back`; it exits 1 either way. The failure file comes before `up`, so
+the restored session's start finds it (local review). When the image did not
+change, the tag back and `up` change nothing and the restart alone acts.
+
+The head is recorded as rolled back only once `main` is back: a tag, an `up`
+or a wait that fails leaves `rolling-back`, and every later run, before its
+fetch, retries the rollback from that record alone, touching neither the
+checkout nor the `previous` tag (CodeRabbit on #426). The retry first asks
+for `main`: when it answers, the session came back late, perhaps busy by now,
+so the retry renames the record and leaves the runner as it is; only with no
+`main`, and so no session to lose, does it tag back, bring the runner up and
+wait again. Recording `rolled-back` first would leave a runner with no
+session that no tick restores, since each skips that head. The user chose this on the card: «light
 rollback: the previous image gets a tag before the build; if `main` is not up
 within 2 minutes, go back to it and write a failure file; on start the
 session reports it in chat; the full probe with a sandbox and a stop file

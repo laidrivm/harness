@@ -113,12 +113,15 @@ session starts again on the updated clone.
 ### Requirement: A session that does not come back is rolled back
 
 Before the build the deploy SHALL tag the image the running runner container
-runs as the previous image. After bringing the stack up it SHALL wait at most
-two minutes for the tmux session `main` in the runner. When `main` is not up
-by then, it SHALL write the failure file, bring the runner up on the previous
-image, and only then record the head as rolled back, and SHALL NOT deploy that
-head again. A rollback that cannot bring the runner up SHALL be retried by
-each later run, before anything else, until it does.
+runs as the previous image, unless an earlier run brought the stack up and
+recorded no head, in which case the tag SHALL stay as it is. After bringing
+the stack up it SHALL wait at most two minutes for the tmux session `main` in
+the runner. When `main` is not up by then, it SHALL write the failure file,
+bring the runner up on the previous image, and only once `main` is up again
+record the head as rolled back, and SHALL NOT deploy that head again. A
+rollback that does not bring `main` back SHALL be retried by each later run,
+before anything else, until it does; a retry that finds `main` up SHALL leave
+the runner as it is.
 
 #### Scenario: The session comes back
 
@@ -139,10 +142,23 @@ each later run, before anything else, until it does.
 
 #### Scenario: The rollback cannot bring the runner up
 
-- **WHEN** the tag back or the runner's `up` fails during a rollback
+- **WHEN** the tag back or the runner's `up` fails during a rollback, or
+  `main` is not up two minutes after it
 - **THEN** the head is not recorded as rolled back, the failure file names
   the failed step, the run fails, and the next run retries the tag back and
   the runner's `up` before its fetch, leaving the `previous` tag as it was
+
+#### Scenario: The session comes back during a rollback's retry
+
+- **WHEN** a run that would retry a rollback finds `main` up
+- **THEN** the runner is neither recreated nor restarted, and the head is
+  recorded as rolled back
+
+#### Scenario: A retry after an up that failed part way
+
+- **WHEN** a run finds that an earlier run brought the stack up and recorded
+  no head
+- **THEN** the `previous` tag is not moved
 
 ### Requirement: A deploy never ends a running pass
 

@@ -89,11 +89,17 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       `orchestrator/a-fresh-session`, `orchestrator/an-unchanged-image`,
       `orchestrator/the-session-comes-back`,
       `orchestrator/the-session-does-not-come-back` (the failure file and
-      `rolling-back` written, then the tag goes back, `up -d runner`,
-      `rolling-back` renamed `rolled-back`, exit 1),
-      `orchestrator/the-rollback-cannot-bring-the-runner-up` (the tag back or
-      `up -d runner` fails: `rolling-back` stays, no `rolled-back`; the next
-      run retries both before its fetch and tags no `previous`),
+      `rolling-back` written, then the tag goes back, `up -d runner`, the
+      wait for `main`, `rolling-back` renamed `rolled-back`, exit 1),
+      `orchestrator/the-rollback-cannot-bring-the-runner-up` (the tag back,
+      `up -d runner` or the wait fails: `rolling-back` stays, no
+      `rolled-back`; the next run retries them before its fetch and tags no
+      `previous`),
+      `orchestrator/the-session-comes-back-during-a-rollback-s-retry` (with
+      `rolling-back` and `main` answering: no tag, `up` or `restart`, the
+      record renamed),
+      `orchestrator/a-retry-after-an-up-that-failed-part-way` (with
+      `attempted` present: no tag before the build),
       `orchestrator/a-rolled-back-head`,
       `orchestrator/the-deploy-token-is-absent`; extend
       `orchestrator/the-build-fails` with the failure file, and change the
@@ -102,15 +108,17 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       then the failure file's removal, `up`, the wait for `main`, engine
       wait, push, record, prune. Record that they fail
 - [ ] 3.2 In `deploy.sh`, per design.md: first, with `rolling-back`
-      present, retry the rollback alone; skip a head equal to `rolled-back`
-      or `rolling-back`;
+      present, retry the rollback alone, leaving the runner as it is when
+      `main` answers; skip a head equal to `rolled-back` or `rolling-back`;
       tag the running runner's image as `orchestrator-runner:previous` before
-      the build; after the build, exit 0 without the fresh-session mark; with
-      it, under the locks, the second check read and mark check, then the
-      failure file's removal, `up -d`, then `restart runner` when the
-      container id is unchanged; the wait for `main`; the rollback, its
-      failure file and `rolling-back` before its tag and `up`, `rolled-back`
-      after them; the failure file in `failed()`; the
+      the build unless `attempted` exists; after the build, exit 0 without
+      the fresh-session mark; with it, under the locks, the second check read
+      and mark check, then the failure file's removal, `attempted`, `up -d`,
+      then `restart runner` when the container id is unchanged; the wait for
+      `main`; the rollback, its failure file and `rolling-back` before its
+      tag and `up`, its own wait for `main`, `rolled-back` only after `main`
+      answers; `attempted` removed with either record; the failure file in
+      `failed()`; the
       push and the engine wait skipped while the token file is absent; the
       record, then the prune. Update the header
       comment. Make 3.1 pass
