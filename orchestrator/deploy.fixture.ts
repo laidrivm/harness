@@ -36,7 +36,7 @@ echo "$n" >"$FAKE/reads"
 [ "$(code curl)" = 0 ] || exit 22
 cat "$FAKE/runs.$n" 2>/dev/null || cat "$FAKE/runs"`,
 	// \`up\` notes, from its own process, whether each lock file is still held
-	// and whether the failure file is there, and recreates the runner unless
+	// and whether the failure file and rolled-back are there, and recreates the runner unless
 	// \`kept\` exists; the rollback's \`up -d runner\` answers rollup. The nth
 	// \`tmux has-session\` answers session.<n>, or session.
 	docker: `case "$1 $2" in
@@ -46,6 +46,7 @@ cat "$FAKE/runs.$n" 2>/dev/null || cat "$FAKE/runs"`,
 		for f in "$LOCKS"/*.lock; do "$REAL_FLOCK" -n "$f" true && echo "free \${f##*/}" || echo "held \${f##*/}"; done >>"$FAKE/log"
 	fi
 	[ ! -e "$FAKE/orchestrator_agent_home/.harness-deploy-failed" ] || echo "up with the failure file" >>"$FAKE/log"
+	[ ! -e "$STATE_DIRECTORY/rolled-back" ] || echo "up with rolled-back" >>"$FAKE/log"
 	if [ "$4" = runner ]; then c=$(code rollup); else c=$(code up); fi
 	[ "$c" = 0 ] || exit "$c"
 	[ -e "$FAKE/kept" ] || echo new >"$FAKE/id" ;;
@@ -141,6 +142,12 @@ export const started = (h: Host, flock: string) =>
 
 export const log = (h: Host) =>
 	existsSync(join(h.fake, "log")) ? readFileSync(join(h.fake, "log"), "utf8").trim().split("\n") : [];
+
+/** What a run did after the log's first `from` lines, beyond the fetch and reading `origin/main`. */
+export const moved = (h: Host, from = 0) =>
+	log(h)
+		.slice(from)
+		.filter((l) => !/^git (fetch|rev-parse)/.test(l));
 
 /** The log as the steps a reader names, jq's runs and the reads of state dropped, a step repeated once. */
 export function steps(h: Host) {

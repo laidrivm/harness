@@ -10,6 +10,7 @@ import {
 	HEAD,
 	host,
 	log,
+	moved,
 	rolledBack,
 	STOP,
 	set,
@@ -24,13 +25,13 @@ const sleeps = (h: ReturnType<typeof host>) => log(h).filter((l) => l === "sleep
 
 describe("deploy.sh and the session", () => {
 	// spec: orchestrator/a-session-at-work
-	test("without the fresh-session mark a built head recreates nothing, records nothing, exits 0, and the next tick deploys it", () => {
+	test("without the fresh-session mark a built head recreates nothing, records nothing, prunes, exits 0, and the next tick deploys it", () => {
 		const h = host();
 		rmSync(join(h.agent, ".harness-fresh"));
 		const r = deploy(h);
 		expect(r.code).toBe(0);
 		expect(r.out).toContain(`deploy: the session is at work; ${HEAD} waits for a fresh one`);
-		expect(steps(h)).toEqual(["read", "ff", "tag", "build"]);
+		expect(steps(h)).toEqual(["read", "ff", "tag", "build", "prune"]);
 		expect(deployed(h)).toBeUndefined();
 		writeFileSync(join(h.agent, ".harness-fresh"), "");
 		expect(deploy(h).code).toBe(0);
@@ -131,7 +132,11 @@ describe("deploy.sh and the session", () => {
 		expect(r.code).toBe(1);
 		expect(sleeps(h) * 5).toBe(120);
 		expect(steps(h).slice(-3)).toEqual(["session", "back", "up"]);
-		expect(log(h).slice(-2)).toEqual(["docker compose up -d runner", "up with the failure file"]);
+		expect(log(h).slice(-3)).toEqual([
+			"docker compose up -d runner",
+			"up with the failure file",
+			"up with rolled-back",
+		]);
 		expect(rolledBack(h)).toBe(`${HEAD}\n`);
 		expect(failure(h)).toMatch(STOP("the wait for main"));
 		expect(deployed(h)).toBeUndefined();
@@ -152,11 +157,7 @@ describe("deploy.sh and the session", () => {
 		expect(rolledBack(h)).toBe(`${HEAD}\n`);
 		const before = log(h).length;
 		expect(deploy(h).code).toBe(0);
-		expect(
-			log(h)
-				.slice(before)
-				.filter((l) => !/^git (fetch|rev-parse)/.test(l)),
-		).toEqual([]);
+		expect(moved(h, before)).toEqual([]);
 	});
 
 	// spec: orchestrator/the-build-fails
@@ -180,7 +181,7 @@ describe("deploy.sh and the session", () => {
 		const r = deploy(h);
 		expect(r.code).toBe(0);
 		expect(r.out).toContain(`deploy: ${HEAD} was rolled back`);
-		expect(log(h).filter((l) => !/^git (fetch|rev-parse)/.test(l))).toEqual([]);
+		expect(moved(h)).toEqual([]);
 	});
 
 	// spec: orchestrator/the-deploy-token-is-absent
