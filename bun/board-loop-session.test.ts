@@ -103,7 +103,7 @@ function abandoned(guard = "") {
 		entry,
 		`import { session } from ${JSON.stringify(module)};\nconst r = await session("PICK", 60_000, ${across}, false, {}, [], [${JSON.stringify(launcher)}, ${JSON.stringify(clone)}]);\nconsole.log(JSON.stringify({ left: r.left ?? null }));\n`,
 	);
-	// Bounded: bun cannot fire a test's timeout while this call blocks.
+	// Bounded on its own as well as by the test's timeout, so a stall never outlives the run.
 	const run = Bun.spawnSync([process.execPath, entry], {
 		cwd: dir,
 		env: { PATH: `${dir}:/usr/bin:/bin`, HOME: emptyDir("board-loop-home-") },
