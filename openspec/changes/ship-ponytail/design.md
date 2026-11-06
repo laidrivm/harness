@@ -108,9 +108,8 @@ default to `false`, so the pin does not rest on a default.
   so the note sits where the value is defined and sync copies it from
   (Safety rule on pins outside a manifest). A test reads the line before
   `ref` and pins the note.
-- Moving the pin means a PR that edits `MARKETPLACE`, the harness's own
-  settings file and the source in `orchestrator/runner/session.sh`, whose
-  test fails until it matches `MARKETPLACE` (D7). Consumers take it on their next bump, through sync. Until
+- Moving the pin means a PR that edits `MARKETPLACE` and the harness's own
+  settings file. Consumers take it on their next bump, through sync. Until
   then the VPS has two refs on one copy. `/home/agent/harness` names the new
   tag, a consumer's clone still names the old one, and both share agent's
   single `~/.claude/plugins/marketplaces/ponytail`. A session may therefore
@@ -126,7 +125,9 @@ default to `false`, so the pin does not rest on a default.
   unmeasured. So a pin move ends with the read task 4.2 makes: `claude
   plugin list`, as `agent` in `/home/agent/harness`, names the new version.
   Where it does not, run `claude plugin marketplace update ponytail` as
-  `agent` and restart `main`.
+  `agent` and restart `main`. D7's round re-adds the marketplace with the
+  pulled ref, but only a repeat at the same ref was probed (`already on
+  disk`), so whether a new ref re-clones is unmeasured too.
 - An author can move a tag. The commit in the note lets a reader see that
   the tag moved. No test can check it without the network.
 - `DISABLE_AUTOUPDATER=1`, which `session.sh` exports, also stops plugin
@@ -305,7 +306,8 @@ The calls go in `session.sh`, in the round that finds the clone, after
 mkdir -p "$HOME/.cache"
 {
 	date -u "+%Y-%m-%dT%H:%M:%SZ ponytail's install"
-	timeout --foreground 120 claude plugin marketplace add DietrichGebert/ponytail#v5.3.3 --scope local &&
+	src=$(bun -e 'const s = (await Bun.file(".claude/settings.json").json()).extraKnownMarketplaces.ponytail.source; console.log(`${s.repo}#${s.ref}`)') &&
+		timeout --foreground 120 claude plugin marketplace add "$src" --scope local &&
 		timeout --foreground 120 claude plugin install ponytail@ponytail --scope local
 } >>"$HOME/.cache/session-start.log" 2>&1 || echo "session: ponytail's install failed; starting claude anyway" >&2
 ```
@@ -335,11 +337,23 @@ mkdir -p "$HOME/.cache"
   both over an installed plugin exits 0 and changes nothing. Whether a
   repeat reaches the network stays unmeasured. A round is rare, once per
   exit of `claude`.
-- **Pinned.** The add names the source and tag the project's settings
-  declare, `MARKETPLACE` in `bun/settings.ts`. `orchestrator/session.test.ts`
-  builds the expected call from that constant, so a pin moved in one place
-  alone fails the test (D3). `DISABLE_AUTOUPDATER=1`, exported at the top of
-  the script, keeps claude itself at the image's version (D3).
+- **Pinned.** The round reads the source and tag from
+  `extraKnownMarketplaces.ponytail` in the clone's `.claude/settings.json`,
+  which the round's pull has just brought up to date, with bun, which the
+  image already runs. The script is baked into the image at
+  `/opt/orchestrator/session.sh`, so a literal there would keep the old tag
+  after a pin move until the next rebuild. Settings without the entry fail
+  the read, and the round prints the install's line.
+  `orchestrator/session.test.ts` runs the read over the harness's own
+  settings and expects the add built from `MARKETPLACE`.
+  `DISABLE_AUTOUPDATER=1`, exported at the top of the script, keeps claude
+  itself at the image's version (D3).
+- **The shell.** A redirection that fails on a compound command may end a
+  POSIX shell. dash, the image's `/bin/sh`, skips the group and goes on,
+  and the test pins that under `sh` and `dash` with `~/.cache` a file.
+- **The limit.** Each call has its own 120 s limit, so a slow network can
+  hold a round for up to 240 s; a hung add skips the install, so a dead
+  one holds it for 120 s.
 - **Local scope.** Both calls write only the clone's untracked
   `.claude/settings.local.json` and agent's files under `~/.claude/plugins/`,
   so the clone stays clean for the next pull. A pass's clone does not read
@@ -407,8 +421,9 @@ Refreshed 05.11: #413, #418, #421 and #423 have merged.
   it (D7), the install's lines in the round that finds the clone, and its
   test's stub. Task 3.5's fix (06.11, `fix/ponytail-install-at-start`)
   replaced the one line with the block D7 shows, on `main` after
-  `dbf00ef8`; the stub now prints a line per plugin call, which the start
-  log's case reads.
+  `dbf00ef8`. claude's stub now prints a line per plugin call, which the
+  start log's case reads, and bun's runs the real bun for the settings'
+  read.
 - **#413 (`fix/runner-image-bun-modes`)** edited the Dockerfile's copy of
   `bun/` and README step 12's numbered items. This change edits neither: it
   adds two sentences to the end of step 12's first paragraph as #418 left it.
