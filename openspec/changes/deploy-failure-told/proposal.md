@@ -41,8 +41,9 @@ main comes up is never told to the session…*,
 - The deploy decides by the newest `test` run from `github-actions` across
   every check suite the read returns, so an older suite's success no longer
   outweighs a newer suite's failure or pending run; a consumer's bump
-  chooses its target by the same module, which the deploy runs through the
-  runner image.
+  chooses its target by the same module. The deploy runs the checkout's copy
+  of that module under the runner image's bun, so an image built before the
+  module existed can still read the check.
 - A retry of a head whose images a run has already brought up leaves the
   previous image as tagged. Today it tags the head's own image as previous,
   and the image that was previous is pruned, so the retry's rollback would
@@ -86,4 +87,6 @@ None.
   `orchestrator/deploy.fixture.ts` for runs from more than one suite and a
   `docker run` of bun.
 - The host: the next deploy after the merge rebuilds the runner image, which
-  carries the new hook.
+  carries the new hook. That deploy still reads the check by the old rule,
+  so its head is checked by hand for a single `test` suite before merging
+  (design, *Risks*).

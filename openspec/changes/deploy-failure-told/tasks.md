@@ -92,20 +92,27 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       `bun test bun/bump` passes
 - [ ] 3.5 Failing cases in `orchestrator/deploy.test.ts`, with
       `orchestrator/deploy.fixture.ts`'s `runs()` able to answer several runs
-      with ids and its `docker run` stub running `--entrypoint bun` on the
-      tree's `bun/` file for the image's `/opt/orchestrator/bun/` path: an
-      older suite's `success` and a newer `failure` or pending run move
-      nothing and exit 0 (`orchestrator/an-older-check-suite-s-success`); an
-      older `failure` and a newer `success` deploy the head
+      with ids, the fixture's checkout gaining `bun/green-run.ts` beside
+      `orchestrator/`, and its `docker run` stub running `--entrypoint bun`
+      on the `--mount` source it is handed: an older suite's `success` and a
+      newer `failure` or pending run move nothing and exit 0
+      (`orchestrator/an-older-check-suite-s-success`); an older `failure`
+      and a newer `success` deploy the head
       (`orchestrator/a-newer-check-suite-s-success`); a script that exits 2
       reads as a check that cannot be read; the existing pending, failed,
-      absent and other-app cases keep passing
+      absent and other-app cases keep passing. Two recovery cases: with the
+      image's `/opt/orchestrator/bun/green-run.ts` absent (a build that
+      failed after the fast-forward, or a rollback to an image from before
+      the module), the read still decides from the checkout's file; and the
+      read's command names the checkout's file, never the image's path
+      (`orchestrator/an-image-older-than-the-check`)
 - [ ] 3.6 Then `deploy.sh`'s `green()` pipes the body to
-      `docker run --rm -i --entrypoint bun "$image" /opt/orchestrator/bun/green-run.ts`
-      and maps its exit as it maps `jq`'s today; a case in
-      `orchestrator/layout-deploy.test.ts` pins that the Dockerfile copies
-      `bun/` to `/opt/orchestrator/bun/`. Verify
-      `bun test orchestrator/deploy orchestrator/layout-deploy` passes
+      `docker run --rm -i --mount "type=bind,source=${PWD%/*}/bun/green-run.ts,target=/green-run.ts,readonly" --entrypoint bun "$image" /green-run.ts`
+      and maps its exit as it maps `jq`'s today, its comment saying why the
+      checkout's file. Verify `bun test orchestrator/deploy` passes
+- [ ] 3.7 The implementation's pull request body names the check by hand
+      from design *Risks*: before merging, the merge commit's `test` runs
+      under `filter=latest` are one. Verify by reading the body back
 
 ## 4. A retry keeps the previous image
 

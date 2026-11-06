@@ -150,19 +150,26 @@ unchanged; only the step's words grow.
 `github-actions` run by `id` and returns whether it concluded `success`,
 and, run as a script, the same over the API's JSON on standard input,
 exiting 0 for green, 1 for not, 2 for input it cannot read. `greenHead()`
-imports it. `deploy.sh`'s `green()` pipes the body to it through the runner
-image, as it runs `jq` today:
-`docker run --rm -i --entrypoint bun "$image" /opt/orchestrator/bun/green-run.ts`
-— the image carries bun and the harness's `bun/` at `/opt/orchestrator/bun/`
-(Dockerfile, the event handler's `COPY`), and the host needs no bun. A
-second copy, `jq` beside TypeScript, would be the two hand-kept copies
-`core/rules.md` forbids. The module imports nothing, so the image's copy
-runs with no `node_modules`.
+imports it. `deploy.sh`'s `green()` pipes the body to it under the runner
+image's bun, as it runs `jq` today, but runs the checkout's own file,
+bind-mounted read-only:
+`docker run --rm -i --mount "type=bind,source=${PWD%/*}/bun/green-run.ts,target=/green-run.ts,readonly" --entrypoint bun "$image" /green-run.ts`.
+Every runner image carries bun (`FROM oven/bun`), and the host needs none.
+A second copy, `jq` beside TypeScript, would be the two hand-kept copies
+`core/rules.md` forbids. The module imports nothing, so it runs with no
+`node_modules`.
 
-Both reads run the image the name holds, which an earlier run built, so a
-change to the rule reaches the deploy one build later; a change to
-`deploy.sh`'s own `jq` filter today reaches it one fast-forward later. The
-`json()` helper stays for `push()`'s read of the compose config.
+The file comes from the checkout, never the image's `/opt/orchestrator/bun/`
+(CodeRabbit on #464, 06.11). The name's image can predate the module: a
+build that fails after the fast-forward leaves the name on the older image,
+and a rollback tags the previous image back. Either way the image's copy is
+missing, and a read through it would fail every tick. It would then block
+the build that repairs the image, or the next head after a rollback. The
+checkout's file is the version `deploy.sh` itself was read from, so script
+and rule move together on each fast-forward, as the `jq` filter does today.
+A missing file fails `--mount`, and that failure reads as a check that
+cannot be read: the run exits 1 and the journal shows it. The `json()`
+helper stays for `push()`'s read of the compose config.
 
 Check run ids grow with creation (121313516713 then 121785033664 above), so
 the largest id is the newest run, a re-run of an older suite included. An
@@ -229,3 +236,12 @@ deploy's rollback would bring back the first deploy's previous image.
 - [The image must be rebuilt to carry the hook] → the deploy that ships this
   change rebuilds it; until then the old hook stays, which is the behaviour
   today.
+- [The deploy that ships this change decides by the old rule] → that run is
+  the `deploy.sh` read before its fast-forward, so both of its check reads
+  use `any(success)`. If the head that carries this change has an older
+  suite passed and a newer one failed, that run deploys it anyway (CodeRabbit
+  on #464, 06.11). The window is one head, and every deploy so far has had
+  the same exposure. Before merging the implementation, check that the
+  merge commit's `test` runs come from one suite: `gh api
+  repos/laidrivm/harness/commits/<sha>/check-runs?check_name=test&filter=latest`
+  lists one run. The implementation's pull request body names this step.
