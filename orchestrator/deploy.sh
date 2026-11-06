@@ -9,11 +9,12 @@
 # under every pass lock, restart the runner when up left it as it was, and
 # wait two minutes at most for tmux session `main`; then it pushes the
 # Windmill scripts and route while their token exists, records the head and
-# prunes. A session that does not come back is rolled back once: the failure
-# file and the rolled-back record first, then the previous image under the
-# name and the runner up on it. A rollback step that fails is named in the
-# failure file and left for the user; no run retries it (design, *Known
-# limits of the light rollback*).
+# prunes. A session that does not come back is rolled back once: the
+# rolled-back record and the failure file first, then the previous image under
+# the name and the runner up on it. A rollback step that fails, and a
+# rolled-back record that cannot be written, is named in the failure file and
+# left for the user; no run retries it (design, *Known limits of the light
+# rollback*).
 #
 # The records are `deployed` and `rolled-back` in $STATE_DIRECTORY, systemd's
 # StateDirectory, or /var/lib/harness-deploy for a run by hand. A fetch or a
@@ -147,18 +148,25 @@ locked() {
 	{ flock 9 && locked "$@"; } 9<"$file"
 }
 
-# The run's one rollback. The failure file and rolled-back come before up, so
+# The run's one rollback. rolled-back and the failure file come before up, so
 # the restored session's start finds the failure and no later run deploys the
 # head again; a tag or an up that fails is named in the same file and left for
-# the user. When the image did not change, the tag and up change nothing.
+# the user. A rolled-back that cannot be written is named beside the step in
+# every failure line, since each replaces the one before; the next run then
+# deploys the head again. When the image did not change, the tag and up
+# change nothing.
 rollback() {
-	failed "the wait for main"
-	printf '%s\n' "$head" >"$state/rolled-back" || echo "deploy: $head could not be recorded as rolled back"
+	local also=
+	printf '%s\n' "$head" >"$state/rolled-back" || {
+		echo "deploy: $head could not be recorded as rolled back"
+		also=" and the rolled-back record"
+	}
+	failed "the wait for main$also"
 	docker tag "$image:previous" "$image" || {
-		failed "the tag back"
+		failed "the tag back$also"
 		return
 	}
-	docker compose up -d runner || failed "the rollback's up"
+	docker compose up -d runner || failed "the rollback's up$also"
 }
 
 deploy() {

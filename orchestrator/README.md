@@ -532,7 +532,9 @@ deploys as usual. It does not check the restored session, and a tag or `up`
 of that rollback that fails is named in the failure file and left for you
 (the host-deploy design, *Known limits of the light rollback*): after a rollback, read
 the journal and attach to `main` (step 12). When the journal says the head
-`could not be recorded as rolled back`, the next run tries that head again:
+`could not be recorded as rolled back`, and the failure file names
+`the rolled-back record` beside the step that failed, the next run tries that
+head again:
 stop deploys, below, and once `/var/lib/harness-deploy` can be written, write
 the head's full sha from that line to `/var/lib/harness-deploy/rolled-back`
 before enabling them again. To retry the rolled-back head,
