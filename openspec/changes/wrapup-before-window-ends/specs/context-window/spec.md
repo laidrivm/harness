@@ -37,8 +37,9 @@ in. Below the threshold it SHALL add nothing to the stop.
 
 A stop at or above the threshold whose transcript tail holds a call of the
 `session-wrapup` skill — the model's `Skill` call or the user's typed
-`/session-wrapup` — SHALL NOT be refused for size, and SHALL count as the
-context's one ask.
+`/session-wrapup` — after the tail's last compaction boundary, if any, SHALL
+NOT be refused for size, and SHALL count as the context's one ask. A call
+before that boundary belongs to an earlier context and SHALL NOT count.
 
 #### Scenario: The wrap-up the done line started
 
@@ -51,6 +52,12 @@ context's one ask.
 - **WHEN** the tail holds the user's typed `/session-wrapup` and the stop
   measures 815 000
 - **THEN** the turn ends
+
+#### Scenario: A wrap-up from before a compaction
+
+- **WHEN** the tail holds a `session-wrapup` call, then a compaction
+  boundary, then replies up to 810 000, and the mark was re-armed
+- **THEN** the stop is refused for size
 
 ### Requirement: An unattended session is not asked
 
@@ -151,9 +158,10 @@ where a restart of Claude Code that resumes the session id finds it.
 ### Requirement: The turn gate's own decisions come first
 
 The round ceiling and the turn gate's refusal SHALL be decided before the size
-is read. A stop the ceiling ends, a stop the turn gate refuses, and a stop
-under a mark the turn gate refused SHALL NOT be refused for size, since that
-refusal promises the next stop ends the turn. A refusal for size SHALL leave
+is read. A stop the ceiling ends, a stop the turn gate refuses, a stop under a
+mark the turn gate refused, since that refusal promises the next stop ends the
+turn, and a stop with no mark at all, which the turn gate lets end, SHALL NOT
+be refused for size. A refusal for size SHALL leave
 the mark where a refused turn leaves it, and SHALL NOT flag it as the turn
 gate's refusal: the gate still judges the continued turn.
 
@@ -170,6 +178,12 @@ gate's refusal: the gate still judges the continued turn.
 - **WHEN** a stop is refused for size, and the continued turn commits and
   completes a task group with no passing run of its tip
 - **THEN** the turn gate refuses its next stop
+
+#### Scenario: No mark
+
+- **WHEN** no prompt wrote the session's turn-gate mark, and a stop measures
+  850 000
+- **THEN** the turn ends
 
 #### Scenario: The ceiling at the same stop
 
