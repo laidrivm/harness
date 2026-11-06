@@ -80,7 +80,7 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
 
 ## 3. The deploy for the session, its units and the README
 
-- [ ] 3.1 `wc -l` `deploy.test.ts` and `deploy.fixture.ts`; new cases go in
+- [x] 3.1 `wc -l` `deploy.test.ts` and `deploy.fixture.ts`; new cases go in
       a new `orchestrator/deploy-session.test.ts` on the same fixture, whose
       stub `docker` gains the container's image and id, `tag`, `restart` and
       `exec … tmux has-session`, answered from fixture files, and a stub
@@ -99,8 +99,8 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       order `orchestrator/a-green-head` asserts in `deploy.test.ts` from 1.1's
       (`up`, prune, engine wait, push, record) to the tag before the build,
       then the failure file's removal, `up`, the wait for `main`, engine
-      wait, push, record, prune. Record that they fail
-- [ ] 3.2 In `deploy.sh`, per design.md: skip a head equal to `rolled-back`;
+      wait, push, record, prune. Record that they fail (06.11: 22 of 38)
+- [x] 3.2 In `deploy.sh`, per design.md: skip a head equal to `rolled-back`;
       tag the running runner's image as `orchestrator-runner:previous` before
       the build; after the build, exit 0 without the fresh-session mark; with
       it, under the locks, the second check read and mark check, then the

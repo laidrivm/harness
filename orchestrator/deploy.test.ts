@@ -2,14 +2,26 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup } from "../bun/diff-budget.fixture.ts";
-import { answer, deploy, deployed, HEAD, host, log, set, started, steps, stopOf, stopped } from "./deploy.fixture.ts";
+import {
+	answer,
+	deploy,
+	deployed,
+	failure,
+	HEAD,
+	host,
+	log,
+	STOP,
+	set,
+	started,
+	steps,
+	stopOf,
+	stopped,
+} from "./deploy.fixture.ts";
 import { held, skip } from "./pass.fixture.ts";
 
-/** `deploy.sh` against a fabricated host (`deploy.fixture.ts`). */
+/** `deploy.sh` against a fabricated host (`deploy.fixture.ts`); the session's cases are `deploy-session.test.ts`. */
 
 afterAll(cleanup);
-
-const STOP = (step: string) => new RegExp(`^\\d{8}T\\d{6}Z deploy: ${step} failed at ${HEAD}\\n$`);
 
 describe("deploy.sh", () => {
 	// spec: orchestrator/main-has-not-moved
@@ -64,19 +76,19 @@ describe("deploy.sh", () => {
 			answer(h, conclusion, "github-actions", 2);
 			const r = deploy(h);
 			expect(r.code).toBe(0);
-			expect(steps(h)).toEqual(["read", "ff", "build", "hold", "read"]);
+			expect(steps(h)).toEqual(["read", "ff", "tag", "build", "hold", "read"]);
 			expect(deployed(h)).toBeUndefined();
 			expect(stopped(h, "one")).toBeUndefined();
 		},
 	);
 
 	// spec: orchestrator/a-green-head
-	test("a green head is read, fast-forwarded, built, brought up under the locks, pushed and recorded, in that order", () => {
+	test("a green head is read, fast-forwarded, tagged, built, brought up under the locks, waited for, pushed, recorded and pruned, in that order", () => {
 		const h = host();
 		expect(existsSync(h.state)).toBe(false);
 		const r = deploy(h);
 		expect([r.code, r.out.trim().split("\n").at(-1)]).toEqual([0, `deploy: ${HEAD} deployed`]);
-		expect(steps(h)).toEqual(["read", "ff", "build", "hold", "read", "up", "prune", "wait", "push"]);
+		expect(steps(h)).toEqual(["read", "ff", "tag", "build", "hold", "read", "up", "session", "wait", "push", "prune"]);
 		expect(deployed(h)).toBe(`${HEAD}\n`);
 		expect(stopped(h, "one")).toBeUndefined();
 		// The gate first, then the repository's lock, each on the descriptor the level holds.
@@ -124,13 +136,14 @@ describe("deploy.sh", () => {
 	});
 
 	// spec: orchestrator/the-build-fails
-	test("a failed build writes each clone's stop file, records nothing, and the next run deploys again from the start", () => {
+	test("a failed build writes the failure file and each clone's stop file, records nothing, and the next run deploys again from the start", () => {
 		const h = host();
 		set(h, "build", 1);
 		const r = deploy(h);
 		expect(r.code).toBe(1);
-		expect(steps(h)).toEqual(["read", "ff", "build"]);
+		expect(steps(h)).toEqual(["read", "ff", "tag", "build"]);
 		expect(deployed(h)).toBeUndefined();
+		expect(failure(h)).toMatch(STOP("the build"));
 		for (const clone of ["one", "two"]) expect(stopped(h, clone)).toMatch(STOP("the build"));
 		set(h, "build", 0);
 		expect(deploy(h).code).toBe(0);
@@ -139,14 +152,16 @@ describe("deploy.sh", () => {
 
 	// spec: orchestrator/the-build-fails
 	test.each([
+		["tag", "tag", "the tag"],
 		["up", "up", "up"],
 		["the engine wait", "engine", "the push"],
 		["the push", "push", "the push"],
-	])("a failed %s writes the stop files naming it and records nothing", (_, file, step) => {
+	])("a failed %s writes the failure file and the stop files naming it and records nothing", (_, file, step) => {
 		const h = host();
 		set(h, file, 1);
 		expect(deploy(h).code).toBe(1);
 		expect(deployed(h)).toBeUndefined();
+		expect(failure(h)).toMatch(STOP(step));
 		expect(stopped(h, "two")).toMatch(STOP(step));
 	});
 
@@ -154,11 +169,12 @@ describe("deploy.sh", () => {
 	test.each([
 		["the fetch", "fetch", []],
 		["the check read", "curl", ["read"]],
-	])("%s failing exits 1 with no stop file and no fast-forward", (_, file, expected) => {
+	])("%s failing exits 1 with no failure file, no stop file and no fast-forward", (_, file, expected) => {
 		const h = host();
 		set(h, file, 1);
 		expect(deploy(h).code).toBe(1);
 		expect(steps(h)).toEqual(expected);
+		expect(failure(h)).toBeUndefined();
 		expect(stopped(h, "one")).toBeUndefined();
 		expect(deployed(h)).toBeUndefined();
 	});
