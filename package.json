@@ -22,6 +22,10 @@
 			"mutation/**",
 			"skills-lock.json"
 		],
+		"mutationFloor": {
+			"surviving": 454,
+			"why": "The baseline of #443: 454 of 1 564 mutants survive over the 19 modules stryker.config.json's mutate lists, none of them yet triaged into equivalent and missing tests; the unlisted modules count for nothing (design decision 7 of pre-push-commit-gates)."
+		},
 		"reviewers": [
 			"CodeRabbit"
 		],
