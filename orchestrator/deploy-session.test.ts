@@ -160,6 +160,25 @@ describe("deploy.sh and the session", () => {
 		expect(moved(h, before)).toEqual([]);
 	});
 
+	// spec: orchestrator/the-rolled-back-record-cannot-be-written
+	// spec: orchestrator/the-rollback-fails-without-its-record
+	test.each([
+		["the wait for main", undefined, ["session", "back", "up"]],
+		["the tag back", "back", ["session", "back"]],
+		["the rollback's up", "rollup", ["session", "back", "up"]],
+	])("with rolled-back unwritable, %s is named in the failure file with the record", (step, file, tail) => {
+		const h = host();
+		mkdirSync(join(h.state, "rolled-back"), { recursive: true });
+		set(h, "session", 1);
+		if (file) set(h, file, 1);
+		const r = deploy(h);
+		expect(r.code).toBe(1);
+		expect(r.out).toContain(`deploy: ${HEAD} could not be recorded as rolled back`);
+		expect(steps(h).slice(-tail.length)).toEqual(tail);
+		expect(failure(h)).toMatch(STOP(`${step} and the rolled-back record`));
+		expect(deployed(h)).toBeUndefined();
+	});
+
 	// spec: orchestrator/a-failure-after-main-is-up
 	// Pins what the prompt hook relies on; deploy.sh is unchanged for it.
 	test("a push failing after main is up leaves the failure file after the start, and a retry while fresh leaves it again", () => {

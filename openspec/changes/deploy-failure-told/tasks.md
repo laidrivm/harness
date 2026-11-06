@@ -53,7 +53,7 @@ fail first. `put()` and its `shortcut:` comment are not touched.
 
 ## 2. A rolled-back record that cannot be written
 
-- [ ] 2.1 Failing cases in `orchestrator/deploy-session.test.ts`: the state
+- [x] 2.1 Failing cases in `orchestrator/deploy-session.test.ts`: the state
       directory unwritable for `rolled-back` (a directory in its place) with
       `main` not coming back — the failure file reads
       `the wait for main and the rolled-back record failed at <head>`, the
@@ -63,11 +63,11 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       with the tag back failing, and with the rollback's `up` failing, each
       names its step and the record
       (`orchestrator/the-rollback-fails-without-its-record`)
-- [ ] 2.2 Then `rollback()` writes `rolled-back` first and, on a failed
+- [x] 2.2 Then `rollback()` writes `rolled-back` first and, on a failed
       write, appends ` and the rolled-back record` to each step it hands
       `failed`; the header comment and `rollback()`'s say so. Verify
       `bun test orchestrator/deploy-session` passes
-- [ ] 2.3 `orchestrator/README.md`: the passage on `could not be recorded as
+- [x] 2.3 `orchestrator/README.md`: the passage on `could not be recorded as
       rolled back` says the failure file names it too; verify by reading it
       back
 
