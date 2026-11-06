@@ -80,7 +80,7 @@ Until `bun install` has run, the hooks stand aside: the bootstrap lets only the 
 | Piece | What it is for | Contract |
 |---|---|---|
 | Bootstrap and command guard (`PreToolUse` Bash) | lets only the install through before it, then checks every command against the policy | [agent-permissions](openspec/specs/agent-permissions/spec.md), [commit-gates](openspec/specs/commit-gates/spec.md) |
-| Turn gate (`UserPromptSubmit`, `Stop`) | refuses, once, a turn that completes a task group without passing records of both pre-PR runner steps at its tip, whatever its message says; ends a `/goal` run at its round ceiling | [commit-gates](openspec/specs/commit-gates/spec.md), [stage-goal](openspec/specs/stage-goal/spec.md) |
+| Turn gate (`UserPromptSubmit`, `Stop`) | refuses, once, a turn that completes a task group without passing records of both pre-PR runner steps at its tip, whatever its message says; ends a `/goal` run at its round ceiling; asks an attended session once per context for `/session-wrapup` at 800k tokens | [commit-gates](openspec/specs/commit-gates/spec.md), [stage-goal](openspec/specs/stage-goal/spec.md), [context-window](openspec/specs/context-window/spec.md) |
 | Loop guard (`PreToolUse`, `PostToolUseFailure`) | warns on the third identical failed call and refuses it until the next prompt | [loop-guard](openspec/specs/loop-guard/spec.md) |
 | Flake watch (`PostToolUse`, `PostToolUseFailure` Bash) | names a run that passes after an identical failed one as flaky; never blocks | [flaky-tests](openspec/specs/flaky-tests/spec.md) |
 | Notion update guard | refuses a card write whose `properties` the connector would drop | [task-board](openspec/specs/task-board/spec.md) |
@@ -96,6 +96,8 @@ Until `bun install` has run, the hooks stand aside: the bootstrap lets only the 
 | `bun/push-proven.ts` | the pre-push hook's skip: exits 0, and the hook skips its gates, when every ref's tip a push lands has a passing pre-PR record of `project-checks` in this checkout and none that failed or erred, and the push updates or deletes no tag | [commit-gates](openspec/specs/commit-gates/spec.md) |
 | `bun/board-loop.ts` | one unattended pass of the board loop, started only by the user or a host timer | [board-loop](openspec/specs/board-loop/spec.md) |
 | `bun/pr-sweep.ts <owner>/<repo>` | one sweep of a repository's open agent pull requests; reads GraphQL, so never in a cloud session | [pr-sweep](openspec/specs/pr-sweep/spec.md) |
+
+The wrap-up request has a limit: with `/autocompact` set below 800 000 tokens, or a model whose window is under 1M, compaction comes first and nothing is asked, so leave `/autocompact` at its default or above 800 000.
 
 ## Plugins
 

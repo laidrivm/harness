@@ -35,8 +35,9 @@ is the figure the status line's `used_percentage` is computed from.
   threshold, so a compaction or a `/clear` re-arms it, a small shrink within
   one context does not, and a resumed session above the threshold is not
   asked again.
-- The size is not read under a mark the turn gate refused, so its refusal's
-  promise that the next stop ends the turn holds; a refusal for size leaves
+- No refusal for size is made under a mark the turn gate refused, so its
+  refusal's promise that the next stop ends the turn holds; the size is still
+  read at every stop, so the re-arm is never skipped. A refusal for size leaves
   the gate free to judge the continued turn, and `commit-gates` gains a
   requirement that its once-per-mark bound is the pre-PR refusal's own.
 - Each refusal is recorded in the gate ledger, so the wrap-up's `gates` line
