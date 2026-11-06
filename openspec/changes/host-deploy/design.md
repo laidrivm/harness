@@ -53,10 +53,10 @@ the harness pin; another repository's host.
 `StateDirectory=harness-deploy` and `TimeoutStartSec=3h`, which bounds a hung
 build. A run the timeout kills before `failed()` or the rollback has written
 the failure file is the one failure after the fast-forward that leaves none:
-the script is gone before it could; one killed later, in the rollback's `up`,
-leaves the file it wrote and `rolling-back`. It records nothing else, the
-journal names the timeout, and the next tick starts again from the first
-step, or from the rollback's retry (CodeRabbit on #426).
+the script is gone before it could; one killed later, in the rollback's tag
+or `up`, leaves the file and the `rolled-back` record it wrote (CodeRabbit on
+#426). The journal names the timeout, and a run killed before any record
+starts again from the first step at the next tick.
 `orchestrator/host/harness-deploy.timer` starts it with `OnBootSec=5min` and
 `OnUnitInactiveSec=5min`, `[Install] WantedBy=timers.target`. systemd runs one
 instance of a unit, so two ticks never deploy at once.
@@ -99,19 +99,9 @@ Before the build the script tags the image of the running `runner` container
 `orchestrator-runner:previous`. Tagging the name instead would be wrong from
 the second tick on: a build that waited for a fresh session has already moved
 the name to the new image. A tag that fails fails its step (*A failed deploy
-is told to the session*).
-
-The tag moves only when no earlier run reached `up` and left its head
-unrecorded. Right before `up` the script writes the head to
-`$STATE_DIRECTORY/attempted`, and removes it once the head is recorded as
-deployed or rolled back. Each run, before its skip and tag decisions, removes
-an `attempted` naming the head `deployed` or `rolled-back` names, since a run
-stopped between the record and the removal left it stale; an `attempted`
-naming an unrecorded head stays, and keeps the tag (CodeRabbit on #426). An `up`
-that fails part way may have recreated the runner on the new image before
-another service failed, and the full retry would otherwise tag that unvetted
-image `previous`; kept, the retry's rollback still returns to the image the
-last vetted run left (CodeRabbit on #426). `docker image prune -f` after the record removes
+is told to the session*). An `up` that failed part way leaves the next run
+tagging an unvetted image (*Known limits of the light rollback*).
+`docker image prune -f` after the record removes
 the image the tag held before; the previous one stays until the next deploy
 moves the tag (disk, *Risks*).
 
@@ -221,31 +211,25 @@ writes the head to `$STATE_DIRECTORY/deployed` (or
 `/var/lib/harness-deploy/deployed` for a run by hand, as on `main`), prunes,
 and exits 0.
 
-When `main` does not answer, the script writes the failure file and the head
-to `$STATE_DIRECTORY/rolling-back`, tags `orchestrator-runner:previous` back
-as `orchestrator-runner`, brings the runner up as the deploy does (`docker
-compose up -d runner`, then `restart runner` when its id is unchanged), waits
-for `main` as above, and only when `main` answers renames `rolling-back` to
-`rolled-back`; it exits 1 either way. The failure file comes before `up`, so
-the restored session's start finds it (local review). When the image did not
-change, the tag back and `up` change nothing and the restart alone acts.
-
-The head is recorded as rolled back only once `main` is back: a tag, an `up`
-or a wait that fails leaves `rolling-back`, and every later run, before its
-fetch, retries the rollback from that record alone, touching neither the
-checkout nor the `previous` tag (CodeRabbit on #426). The retry first asks
-for `main`: when it answers, the session came back late, perhaps busy by now,
-so the retry renames the record and leaves the runner as it is; only with no
-`main`, and so no session to lose, does it tag back, bring the runner up and
-wait again. Recording `rolled-back` first would leave a runner with no
-session that no tick restores, since each skips that head. The user chose this on the card: «light
+When `main` does not answer, the script makes one rollback and stops: it
+writes the failure file and the head to `$STATE_DIRECTORY/rolled-back`, tags
+`orchestrator-runner:previous` back as `orchestrator-runner`, runs `docker
+compose up -d runner`, and exits 1. The failure file comes before `up`, so
+the restored session's start finds it (local review); a tag or an `up` that
+fails calls `failed()`, which names that step in the same file. When the
+image did not change, there is no other image to go back to: the record and
+the failure file alone. The user chose this on the card: «light
 rollback: the previous image gets a tag before the build; if `main` is not up
 within 2 minutes, go back to it and write a failure file; on start the
 session reports it in chat; the full probe with a sandbox and a stop file
-stays in stage 9» (user, 02.11, answer 17 a).
+stays in stage 9» (user, 02.11, answer 17 a). After four CodeRabbit rounds
+on #426 each found a new state in a rollback that retried and verified
+itself, the user kept it light for stage 2.5: one rollback per run, its gaps
+known limits fixed by hand, the full rollback stage 9's (user, 2026-11-06,
+answers 1 б and 2 а).
 
-A rolled-back head is not retried: each run skips a head equal to any of the
-three records. Retrying it would recreate the broken runner every five minutes while
+A rolled-back head is not retried: each run skips a head equal to either
+record. Retrying it would recreate the broken runner every five minutes while
 the restored session sits fresh. The next head, a fix merged to `main`, is
 deployed as usual. Every other failure is retried in full from the first step,
 as answers 7 and 14 settled.
@@ -253,6 +237,31 @@ as answers 7 and 14 settled.
 The rollback returns the image, not the clone: the start script has already
 pulled it. A tree that keeps `claude` from running while tmux stays up passes
 this check; catching it is stage 9's probe.
+
+### Known limits of the light rollback (answers 1 б and 2 а)
+
+Each is fixed by hand on the host; stage 9's full rollback, with a stop file
+and an escalation card, owns the answer to all of them.
+
+- **An `up` that fails part way.** `up -d` can recreate the runner on the new
+  image before another service fails. `failed()` writes the failure file and
+  the journal names the step; the head is not recorded, so the next tick
+  retries in full and tags that unvetted image `previous`, and a later
+  rollback returns to it.
+- **A rollback that fails.** The tag back or the rollback's `up` fails: the
+  failure file names that step, the head is recorded as rolled back, and the
+  runner stays on the new image or down, with no tick restoring it.
+- **A rollback that leaves no session.** The rollback does not wait for
+  `main` again; a runner the previous image cannot start, or an unchanged
+  image's runner, stays without `main`, and the failure file waits for a
+  session that is not there. The journal shows the rollback.
+- **A late `main`.** A session that comes up after the two minutes is
+  replaced by the rollback's `up`, or, when that `up` failed, keeps running
+  on the new image under a `rolled-back` record (CodeRabbit on #426, closed
+  as this limit by answer 2 а).
+
+What the user sees for each is the journal (`journalctl -u harness-deploy`)
+and `~/.harness-deploy-failed`, reported by the next session that starts.
 
 ### A failed deploy is told to the session
 
@@ -348,6 +357,9 @@ remove `/var/lib/harness-deploy/rolled-back`.
 - 17 a (user, 02.11): light rollback, failure file reported in chat.
 - 18 а (user, 05.11): a deploy's restart keeps `--continue`; the first
   deploy (task 4.2) checks which conversation comes back.
+- 1 б and 2 а (user, 2026-11-06): the light rollback, one per run, its gaps
+  the known limits above and stage 9's; CodeRabbit's late-`main` finding on
+  #426 closes as one of them.
 - 12а (2026-10-24): revised above, the timer alone in stage 2.5, the kick in
   stage 6.
 - 1б: a merge deploys without the user, within a tick of a fresh session.
