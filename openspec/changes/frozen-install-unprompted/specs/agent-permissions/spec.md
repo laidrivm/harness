@@ -200,7 +200,9 @@ by the user in their own terminal.
 
 #### Scenario: Each command of a compound line is judged alone
 
-- **WHEN** the agent attempts `bun install --frozen-lockfile && bun test`
+- **WHEN** the agent attempts `bun install --frozen-lockfile && bun test`, or
+  `bash -c "bun install --frozen-lockfile"`, whose program the guard reads as
+  a line of its own
 - **THEN** the hook does not block it
 - **AND WHEN** the agent attempts `bun install --frozen-lockfile; bun install`
   or `bash -c "bun install"`
