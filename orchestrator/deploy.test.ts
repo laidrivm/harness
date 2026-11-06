@@ -10,6 +10,7 @@ import {
 	HEAD,
 	host,
 	log,
+	moved,
 	STOP,
 	set,
 	started,
@@ -31,11 +32,7 @@ describe("deploy.sh", () => {
 		const before = log(h).length;
 		const r = deploy(h);
 		expect(r.code).toBe(0);
-		expect(
-			log(h)
-				.slice(before)
-				.filter((l) => !/^git (fetch|rev-parse)/.test(l)),
-		).toEqual([]);
+		expect(moved(h, before)).toEqual([]);
 	});
 
 	// spec: orchestrator/the-head-s-test-check-has-not-passed

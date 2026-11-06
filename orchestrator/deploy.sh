@@ -54,9 +54,13 @@ green() {
 }
 
 # Writes the line $2 to a new file $1 in a volume a container's user can
-# write, owned as $3 is. noclobber refuses an existing file and creates a new
-# one with O_EXCL, so a symlink planted at $1 is never followed, and chown -h
+# write, owned as $3 is. noclobber creates a missing file with O_EXCL and
+# refuses an existing regular one, a symlink to one included, and chown -h
 # changes the file, never a link's target.
+# shortcut: bash opens an existing non-regular target (a symlink to a device
+# or a FIFO, planted by the container's user after the caller's rm), so root
+# can still write through one; drop to that user for the write if the session
+# is ever treated as hostile.
 put() {
 	(set -C && printf '%s\n' "$2" >"$1") 2>/dev/null && chown -h --reference="$3" "$1"
 }
@@ -127,9 +131,9 @@ locked() {
 		step=up
 		docker compose up -d || return 1
 		local now
-		step="the restart"
 		now=$(docker compose ps -aq runner) || return 1
 		[ "$now" = "$container" ] || return 0
+		step="the restart"
 		docker compose restart runner || return 1
 		return 0
 	fi
@@ -227,7 +231,12 @@ deploy() {
 		failed "the mark"
 		return 1
 	}
-	fresh || return 0
+	# Each head built while the session is at work moves the name, and the
+	# image it left would wait for a deploy to be pruned.
+	fresh || {
+		prune
+		return 0
+	}
 
 	# Every pass lock, from the host: the gate first, which pass.sh takes
 	# before its own, then each repository's lock file.
@@ -278,7 +287,11 @@ deploy() {
 		return 1
 	}
 	echo "deploy: $head deployed"
-	# A rebuild leaves the old image dangling, and the disk is small.
+	prune
+}
+
+# A rebuild leaves the old image dangling, and the disk is small.
+prune() {
 	docker image prune -f >/dev/null || echo "deploy: the prune failed; the old images stay"
 }
 
