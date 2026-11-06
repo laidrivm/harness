@@ -84,10 +84,23 @@ words and marks the command `FED` (rounds 8 and 9;
 `deps-args`, the reason naming
 `bun run deps` with nothing after it. It is the one refusal the change adds.
 
+The apply step's local review found words reaching the install from before
+`bun` as well: `echo --no-verify | xargs bun run deps` appends its input, and
+`BUN_OPTIONS=--no-verify bun run deps` hands bun a variable it may read, and
+both passed. So the check compares the whole command a `bun run deps` stands
+in — wrapper, assignment and redirection words included — with the three
+words `bun run deps`, the script's name found after bun's own options as
+`bunTestRetry` finds the subcommand. This narrows nothing 2 б reversed: that
+answer dropped the refusal of every install form, and this one stays on the
+one command the change lets through unprompted. A fed `bun run` whose script
+is not `deps` gets a reason naming the substitution, not `deps`.
+
 ### 3. Sync owns `scripts.deps`
 
 `syncSettings()` already computes every file's new text before writing any,
-so a throw leaves all of them as they were. It gains `package.json`:
+so a throw leaves all of them as they were; `sync.ts` computes them before it
+writes the `harness/` rules copy too, so a refusal writes nothing at all
+(CodeRabbit round 5). It gains `package.json`:
 
 - no `scripts.deps` (or no `scripts`) → the key is added, the rest of the
   object kept in order, the file's indentation and trailing newline kept;
@@ -108,7 +121,9 @@ Before the harness is installed the bootstrap's test becomes
 `/^(bun (install|i)( --frozen-lockfile)?|bun run deps)$/` on the trimmed
 command, and its hint `run bun run deps first`. A bare `bun install` still
 passes the bootstrap and then meets the `ask` entry, as today. The notice's
-two lines name `bun run deps`.
+two lines name `bun run deps`; the stale-install one adds `bun install` for a
+`package.json` with uncommitted edits, as a pin moved by hand leaves it, where
+the guard refuses the script (CodeRabbit round 5).
 
 ### 5. Docs
 
@@ -141,3 +156,25 @@ which prompts.
   checkout's first install, `bun run deps --no-verify` passes. The order that
   closes it is the one the notice names: the first install is a bare
   `bun run deps`, after which the installed guard refuses the words.
+- [A redirection on a group around the call] → in
+  `(bun run deps) > package.json` the parse splits the redirection from the
+  call, so `deps-args` sees a bare `bun run deps`. The shell truncates
+  `package.json` before bun starts, and bun then finds no `deps` script and
+  installs nothing (probed 2026-11-06), so no word reaches the install: what
+  is left is a file write, which `: > package.json` makes as well, and no
+  check of this change refuses (CodeRabbit round 7; a limit, decided in the
+  apply step).
+- [A variable exported before the call] → `export BUN_OPTIONS=--no-verify;
+  bun run deps` reaches the install through the environment, which the guard
+  does not read: bun 1.4.2 takes options from `BUN_OPTIONS`
+  (`BUN_OPTIONS=--silent bun run deps` printed nothing, probed 2026-11-06).
+  The same kind of limit as the substitution below — the guard reads the
+  typed command, not the state it runs in. Accepted as a known limit (local
+  review on the apply; settled on the card 2026-11-06, answer 8 а).
+- [A substitution that supplies the command's name] →
+  `$(printf bun) run deps --no-verify` passes the `ask` rules and the guard
+  alike: the rules match the text, which holds no `bun`, and the parse drops
+  the substitution's output before it finds the command, so `deps-args` never
+  sees `bun run`. `$(printf bun) install lodash` passed the `ask` rules the
+  same way before the change. Accepted as a known limit (CodeRabbit round 10;
+  settled on the card 2026-11-06, answer 7 а).

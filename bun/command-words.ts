@@ -53,6 +53,10 @@ const NOT_A_NAME = /^([A-Za-z_][A-Za-z0-9_]*=|-|[0-9]*[<>])/;
  */
 export const OPEN_REDIRECTION = /^[0-9]*(<<<|[<>]{1,2}&?)$/;
 
+/** The words after the redirections, which name no program. */
+export const args = (rest: string[]) =>
+	rest.filter((word, at) => !/^[0-9]*[<>]/.test(word) && !OPEN_REDIRECTION.test(rest[at - 1] ?? ""));
+
 /**
  * The commands a fragment may invoke, each by its base name and with its
  * arguments — leading assignments, wrapper words, their options and

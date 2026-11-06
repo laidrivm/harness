@@ -15,12 +15,12 @@ session. With the variable unset or holding any other value, the hook SHALL
 install nothing.
 
 The install is a hook's command and no tool call, so it SHALL pass neither
-through the Bash bootstrap nor through `permissions.ask`, and neither SHALL
-change: the bootstrap lets only an install through before the harness is
-installed — `bun install` or `bun i`, bare or with `--frozen-lockfile`, or
-`bun run deps` — and `agent-permissions`' *Every manifest-mutating invocation
-prompts, whatever else allows it* still prompts for a `bun install` the
-agent runs.
+through the Bash bootstrap nor through `permissions.ask`. The bootstrap SHALL
+let only an install through before the harness is installed — `bun install`
+or `bun i`, bare or with `--frozen-lockfile`, or `bun run deps` — and
+`permissions.ask` SHALL NOT change: `agent-permissions`' *Every
+manifest-mutating invocation prompts, whatever else allows it* still prompts
+for a `bun install` the agent runs.
 
 #### Scenario: A cloud session starts on a fresh clone
 
