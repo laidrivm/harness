@@ -164,7 +164,7 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 - [x] 6.1 Dropped by the user's decision 9: `bun/no-suppressions.ts` is off
       design decision 7's list, so no stored file carries its markers and the
       scan needs no exemption under `mutation/`
-- [ ] 6.2 Per design decision 7: failing cases in `bun/mutation-run.test.ts`
+- [x] 6.2 Per design decision 7: failing cases in `bun/mutation-run.test.ts`
       — a module the list does not name is named and not run
       (`a-module-the-list-does-not-name`), a listed module that is untracked
       or untested fails (`a-listed-module-no-test-file-matches`), a stored
@@ -181,7 +181,15 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       files' total size. Verify every listed module holds a stored file with
       at most 5 % `Timeout` (`a-run-asked-for-every-module`), a second run
       rewrites none (`a-run-that-found-nothing-to-rewrite`), and the
-      checkout's root lists the same entries before and after the run
+      checkout's root lists the same entries before and after the run.
+      Measured 2026-11-06: the run over the 19 listed modules took 6 min 8 s
+      at a one-minute load of 1.6 to 7.4, no dry run failed, and wrote 1 564 mutants — 1 110
+      `Killed`, 0 `Timeout`, 454 `Survived` — in 538 222 bytes. Seventeen
+      stored files are byte-identical to #425's on `8d89655f`, so no mutant
+      of theirs moved between two whole runs under different timeouts
+      (decision 8); `notion-release` and `sync-settings` changed on main
+      since. The second run mutated nothing and exited 0, and the root gained
+      only `mutation/` and the ignored `reports/` and `.stryker-tmp/`
 
 ## 7. The mutation step in the hook and in CI
 
