@@ -7,7 +7,7 @@ an explicit timeout.
 
 ## 1. The parent and its sweep
 
-- [ ] 1.1 Failing cases in `bun/test-tmpdir.test.ts`, a fixture writing a
+- [x] 1.1 Failing cases in `bun/test-tmpdir.test.ts`, a fixture writing a
       project whose `bunfig.toml` preloads `bun/test-tmpdir.ts` by absolute
       path: a test's `tmpdir()` is a `harness-test-*` directory directly under
       the case's `TMPDIR`
@@ -20,10 +20,10 @@ an explicit timeout.
       leaves a non-empty subdirectory without write permission exits 0
       (`a-parent-that-cannot-be-removed-at-the-end`); a run killed with
       `SIGKILL` once its test has made a directory, and a run whose test
-      calls `process.exit(0)` after making one, each leave exactly one new
-      `harness-test-*` directory (`a-run-killed-mid-test`,
+      calls `process.exit(0)` after making one, each leave the parent the
+      run made, as its test wrote it down (`a-run-killed-mid-test`,
       `a-run-stopped-by-a-test-s-process-exit`)
-- [ ] 1.2 Failing cases for the sweep, each entry backdated with `utimesSync`:
+- [x] 1.2 Failing cases for the sweep, each entry backdated with `utimesSync`:
       a `harness-test-*` directory two hours old is gone, and no
       `harness-swept-*` entry is left (`a-later-run-removes-an-abandoned-parent`);
       a `harness-swept-*` directory two hours old is gone
@@ -39,11 +39,11 @@ an explicit timeout.
       exiting 0 (`an-abandoned-parent-that-cannot-be-removed`). The two
       permission cases restore the permission in their cleanup and skip
       themselves under uid 0, which ignores permission bits, naming why
-- [ ] 1.3 A failing case running the harness's own `bunfig.toml` on
+- [x] 1.3 A failing case running the harness's own `bunfig.toml` on
       `bun/tracked.test.ts` with `GIT_DIR` set and the case's `TMPDIR`: the
       run is refused and the case's `TMPDIR` lists no `harness-test-*` entry
       (`a-refused-run-makes-no-parent`)
-- [ ] 1.4 Then `bun/test-tmpdir.ts`: the sweep of `harness-test-*` and
+- [x] 1.4 Then `bun/test-tmpdir.ts`: the sweep of `harness-test-*` and
       `harness-swept-*` entries under the starting `tmpdir()` that `lstat`
       reads as directories unmodified for an hour, each claimed by setting
       its modification time to now and renaming it to a new
@@ -57,11 +57,11 @@ an explicit timeout.
 
 ## 2. The suite and Stryker
 
-- [ ] 2.1 Run `bun test` with `TMPDIR` set to a new empty directory: no
+- [x] 2.1 Run `bun test` with `TMPDIR` set to a new empty directory: no
       `harness-test-*` entry is left in it; every other entry left, from a
       process a test started outside the parent (design, *Non-Goals*), is
       named by prefix and count in the pull request
-- [ ] 2.2 Re-run the mutation baseline, `bun bun/mutation-run.ts --all
+- [x] 2.2 Re-run the mutation baseline, `bun bun/mutation-run.ts --all
       --force`, with `TMPDIR` set to a new empty directory, commit what it
       writes, run `bun bun/mutation-run.ts` again, which must mutate nothing,
       then `bun bun/mutation-floor.ts`, setting `harness.mutationFloor` to

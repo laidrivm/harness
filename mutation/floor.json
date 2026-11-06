@@ -683,7 +683,8 @@
 		"bun/floor.fixture.ts": "08f6214ba4f9a14f74ba2d50ba59527c779a0e4b",
 		"bun/floor.test.ts": "8746b69aae0bf383375055ec4bf987c5b8329b47",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6",
+		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
+		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
 		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/floor",
 		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}

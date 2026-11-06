@@ -108,3 +108,7 @@ it starts, names the command instead.
 - Drafting right after `finish` readied a head can leave CodeRabbit's run on
   that head skipped → that head is the one the follow-up replaces, and
   `finish` asks once for a review of a pushed head CodeRabbit skipped.
+- With `HARNESS_GITHUB_APP_MINT` set, the read runs as the App and the undo
+  as `gh`'s identity → `draft` does not refuse there as `resolve` does; #458's
+  review left that refusal open and the user merged #458 without it, so it is
+  not taken.

@@ -2,7 +2,7 @@
  * `work.ts draft --pr <n>`: marks open pull request `<n>` of `origin`'s
  * repository a draft as follow-up on it starts, and names its head, the
  * `--head` `work.ts resolve` takes
- * (`openspec/changes/work-draft/design.md`). The undo is the CI flow's
+ * (`openspec/changes/archive/2026-11-06-work-draft/design.md`). The undo is the CI flow's
  * `ready(…, "--undo")`, which answers only whether `gh` exited 0, so a failure
  * claims no state; there is no read-back, as `finish` trusts `ready()` too.
  */
