@@ -24,6 +24,7 @@
  * `try`, and it never rejects, so the process exits 0 with no `process.exit`.
  */
 import { type Env, recordCheckout } from "./gate-ledger.ts";
+import { unlocal } from "./git-local.ts";
 
 type Event = {
 	session_id?: unknown;
@@ -41,10 +42,8 @@ export async function recordSkill(input: { text(): Promise<string> }, environmen
 		const name = event.tool_input?.skill ?? (event.expansion_type === "slash_command" ? event.command_name : undefined);
 		const dir = event.cwd;
 		if (typeof name === "string" && name && typeof dir === "string") {
-			// A session started under a git hook inherits its GIT_DIR, which outranks `-C`: drop every variable git names as local.
-			// The list is git's own and reads no repository, so it needs no environment; the gits below get one.
-			const local = new Set(Bun.spawnSync(["git", "rev-parse", "--local-env-vars"]).stdout.toString().split("\n"));
-			const env = Object.fromEntries(Object.entries(environment).filter(([key]) => !local.has(key)));
+			// A session started under a git hook inherits its GIT_DIR, which outranks `-C`.
+			const env = unlocal(environment);
 			/** git's trimmed stdout in `dir`, or `undefined` when it fails. */
 			const git = (...args: string[]) => {
 				const p = Bun.spawnSync(["git", "-C", dir, ...args], { env });
