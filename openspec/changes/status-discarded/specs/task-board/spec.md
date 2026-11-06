@@ -25,7 +25,10 @@ between OpenSpec stages, and `discarded`, which leaves the stages:
 - `discarded` — the work is dropped, at whatever stage it had reached; the
   user moves a card here or out of it, and so does a session through `bun
   bun/work.ts status`, which posts the reason on the card and returns a card
-  to `idea` alone (`work-status`); no reconciliation moves a card out of it,
+  to `idea` alone (`work-status`) — never through the connector, so on a
+  board whose sessions move statuses through the connector the move stays
+  the user's; no
+  reconciliation moves a card out of it,
   whatever the tree holds for its slug — a change directory it still points
   at included.
 
@@ -108,8 +111,10 @@ status disagrees. `discarded` is outside that order and behind no floor:
 `discarded` card where it is.
 
 The remaining eight SHALL be moved by hand and `bun/board-state.ts` SHALL
-NOT report them: `approved` by the user alone, `discarded` by the user or by
-a session that gives its reason, the other six by whoever does the work, in
+NOT report them: `approved` by the user alone; `idea` and `discarded` by the
+user, or by a session through `bun bun/work.ts status` with its reason —
+`idea` only from `discarded`, a card a session files being created at
+`idea` rather than moved there; the other five by whoever does the work, in
 the turn the work moves. Deriving them
 was measured and refused: applied to the thirty archived changes, a
 branch-name derivation gets fourteen wrong. Nine of those changes have no

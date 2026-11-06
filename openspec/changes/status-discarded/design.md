@@ -28,7 +28,10 @@ and why.
 
 **Non-Goals:** sessions setting `approved`, or `idea` from any status but
 `discarded`; restoring the status a card was discarded from; a guard on
-which session may discard (an unattended one included).
+which session may discard (an unattended one included); a session's
+discard on a board whose sessions move statuses through the connector
+rather than `work.ts status` — there `discarded` stays the user's, since no
+command posts the reason.
 
 ## Decisions
 
@@ -42,9 +45,10 @@ when the tree holds one, and a hand-moved status is reached by a further
 restoring it would need a reader for the comment or a second property for a
 case those two moves already cover.
 
-`--to discarded` on a card already at `discarded` is written as any other
-move, and posts its note: it is the retry of a run whose write failed after
-its note, and refusing it would leave that retry no path.
+A `discarded` card's only target is `idea`: `--to discarded` on it is
+refused like any other. A retry after a failed write needs no such move —
+a card the write left at its old status is discarded again from there, and
+one the write did move is already where the retry wanted it.
 
 ### `--why` is required, and only where the move is the user's otherwise
 
@@ -70,7 +74,11 @@ and the line says the status was not written; the other order would leave a
 card at `discarded` with no reason when the post fails. A post that fails
 writes nothing and prints one line opening `status: <card> not written —`,
 exit 1, and records nothing in the gate ledger — both as a failed write
-does.
+does. A post that timed out or answered a 5xx may still have landed, so a
+rerun can leave the reason twice on the card. That is accepted: a repeated
+note costs a line in the discussion, while reading the comments back before
+a retry, as `notion-ask.ts` does for a question, would add a read for a note
+nothing waits on.
 
 ### No WIP count and no evidence for either move
 
@@ -84,4 +92,12 @@ applies, as today for any move out of the range. Leaving the range for
   is the audit, and the user returns the card with one move; no session has
   been seen discarding wrongly, so no guard is added against one.
 - The ledger keeps `user-only` as the refusal id for the moves that stay the
-  user's, so the gate ledger's earlier records keep their meaning.
+  user's. A `--to idea` from a card outside `discarded` is now refused under
+  it after the page read, not before any call, so a run with no ask settings
+  is recorded as `unread` instead, and one with no `--why` exits 2 with no
+  record: the ledger counts fewer `idea` attempts than it did.
+- The release after a discard is `cleared()`'s, unchanged: a card discarded
+  while a question waits keeps the user on `Assign`, so the user sees the
+  discard beside the question it leaves unanswered, and clears both.
+- `status` now needs the ask integration's *Insert comments* capability as
+  well as *Update content*; the `README.md` row names both.
