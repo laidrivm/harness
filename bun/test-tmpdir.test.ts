@@ -9,13 +9,14 @@ import { afterAll, describe, expect, test } from "bun:test";
 import {
 	chmodSync,
 	existsSync,
+	lutimesSync,
 	mkdirSync,
 	mkdtempSync,
 	readdirSync,
 	readFileSync,
 	realpathSync,
 	rmSync,
-	utimesSync,
+	symlinkSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -43,7 +44,7 @@ const BODIES = {
 	exit: "process.exit(0);",
 	hang: "await new Promise(() => {});",
 	locked:
-		'const locked = join(made, "locked"); mkdirSync(locked); writeFileSync(join(locked, "f"), ""); chmodSync(locked, 0o500); appendFileSync(process.env.OUT ?? "", `${locked}\\n`);',
+		'const locked = join(made, "locked"); mkdirSync(locked); writeFileSync(join(locked, "f"), ""); chmodSync(locked, 0o500); appendFileSync(process.env.OUT ?? "", locked + "\\n");',
 };
 
 const fixture = (body: string) => `import { expect, test } from "bun:test";
@@ -78,21 +79,18 @@ function run(p: { dir: string; tmp: string; out: string }): { code: number; line
 	return { code: r.exitCode ?? -1, lines: readFileSync(p.out, "utf8").split("\n").filter(Boolean) };
 }
 
-/** Sets `path`'s modification time two hours back. */
-function backdate(path: string): void {
-	const when = new Date(Date.now() - HOURS_2);
-	utimesSync(path, when, when);
+/** Sets `path`'s modification time `age` milliseconds back, not following a link. */
+function backdate(path: string, age = HOURS_2): void {
+	const when = new Date(Date.now() - age);
+	lutimesSync(path, when, when);
 }
 
-/** A directory under `tmp`, holding one file, last modified two hours ago, or a minute ago if `recent`. */
-function aged(tmp: string, name: string, recent = false): string {
+/** A directory under `tmp`, holding one file, last modified `age` milliseconds ago. */
+function aged(tmp: string, name: string, age = HOURS_2): string {
 	const path = join(tmp, name);
 	mkdirSync(path);
 	writeFileSync(join(path, "f"), "");
-	if (recent) {
-		const when = new Date(Date.now() - 60_000);
-		utimesSync(path, when, when);
-	} else backdate(path);
+	backdate(path, age);
 	return path;
 }
 
@@ -216,8 +214,24 @@ describe("the sweep at start", () => {
 	// spec: test-temp-dir/a-later-run-keeps-a-parent-in-use
 	test("a harness-test-* directory a minute old is still there", () => {
 		const p = project("pass");
-		aged(p.tmp, "harness-test-recent", true);
+		aged(p.tmp, "harness-test-recent", 60_000);
 		expect([run(p).code, readdirSync(p.tmp)]).toEqual([0, ["harness-test-recent"]]);
+	}, 30_000);
+
+	// spec: test-temp-dir/a-later-run-keeps-a-parent-in-use
+	test("a harness-test-* directory 59 minutes old is still there, so the sweep waits the whole hour", () => {
+		const p = project("pass");
+		aged(p.tmp, "harness-test-recent", 59 * 60_000);
+		expect([run(p).code, readdirSync(p.tmp)]).toEqual([0, ["harness-test-recent"]]);
+	}, 30_000);
+
+	// spec: test-temp-dir/other-entries-are-left-alone
+	test("a link named harness-test-link to a directory two hours old is still there, not followed", () => {
+		const p = project("pass");
+		const target = aged(p.tmp, "other-old");
+		symlinkSync(target, join(p.tmp, "harness-test-link"));
+		backdate(join(p.tmp, "harness-test-link"));
+		expect([run(p).code, readdirSync(p.tmp).sort()]).toEqual([0, ["harness-test-link", "other-old"]]);
 	}, 30_000);
 
 	// spec: test-temp-dir/other-entries-are-left-alone
