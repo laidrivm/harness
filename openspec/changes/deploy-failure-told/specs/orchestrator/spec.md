@@ -46,6 +46,14 @@ does not exist, the run SHALL skip the Windmill push and say so.
   check suite and a newer successful one in another
 - **THEN** the head is deployed as a green head is
 
+#### Scenario: An image older than the check
+
+- **WHEN** the runner image under the name was built from a commit before
+  the checkout's, because a build after the fast-forward failed or a
+  rollback restored the previous image
+- **THEN** the check is read and decided by the checkout's rule, as on any
+  other run
+
 #### Scenario: A green head
 
 - **WHEN** the head differs from the commits last deployed and last rolled
