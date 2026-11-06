@@ -20,6 +20,8 @@ f=$HOME/.harness-deploy-failed
 if [ ! -d "$f.reported" ] && mv "$f" "$f.reported"; then
 	f=$f.reported
 fi
+# Removed since the look, by a deploy that superseded it or another session's report.
+[ -e "$f" ] || exit 0
 echo 'A deploy of the harness failed: report it to the user in chat, quoting the line below.'
 cat "$f" || echo "(the line could not be read from $f)"
 exit 0

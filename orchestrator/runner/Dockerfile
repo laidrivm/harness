@@ -112,10 +112,12 @@ COPY --chmod=0755 runner/deploy-failed.sh /opt/orchestrator/deploy-failed.sh
 # would make every file executable or every directory untraversable.
 COPY --from=bun --chmod=u=rwX,go=rX . /opt/orchestrator/bun/
 # A builder that took the flag and set other modes fails here, not at the mint;
-# so does a managed CLAUDE.md or settings file agent cannot read, or a report
-# script agent cannot run, rather than a session without its rules or hooks.
+# so does a managed CLAUDE.md or settings file agent cannot read, or a script
+# beside the code that agent's hooks cannot run, rather than a session without
+# its rules or hooks. Every script there runs but clone-name.sh, which is sourced.
 # find's errors are kept: a missing path, or one BSD find cannot enter, prints only on stderr.
-RUN test -z "$(find /opt/orchestrator/bun /etc/claude-code /opt/orchestrator/deploy-failed.sh ! -perm -o=r -o -perm -g=w -o -perm -o=w -o -type d ! -perm -o=x -o -path /opt/orchestrator/deploy-failed.sh ! -perm -o=x 2>&1)"
+RUN test -z "$(find /opt/orchestrator /etc/claude-code ! -perm -o=r -o -perm -g=w -o -perm -o=w -o -type d ! -perm -o=x 2>&1)" \
+	&& test -z "$(find /opt/orchestrator -maxdepth 1 -type f ! -name clone-name.sh ! -perm -o=x 2>&1)"
 
 ENTRYPOINT ["/opt/orchestrator/entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D", "-e"]

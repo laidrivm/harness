@@ -167,11 +167,16 @@ describe("deploy.sh and the session", () => {
 		set(h, "push", 1);
 		expect(deploy(h).code).toBe(1);
 		expect(failure(h)).toMatch(STOP("the push"));
-		expect(log(h)).not.toContain("up with the failure file");
+		expect(steps(h).slice(-4)).toEqual(["up", "session", "wait", "push"]);
 		expect(deployed(h)).toBeUndefined();
+		// Read by the session's hook in between; the retry writes it anew.
+		writeFileSync(failureOf(h), "reported\n");
 		const before = log(h).length;
 		expect(deploy(h).code).toBe(1);
-		expect(log(h).slice(before)).not.toContain("up with the failure file");
+		const retry = log(h).slice(before);
+		expect(retry).toContain("docker compose up -d");
+		expect(retry).not.toContain("up with the failure file");
+		expect(retry.some((l) => /^docker run .*--entrypoint sh/.test(l))).toBe(true);
 		expect(failure(h)).toMatch(STOP("the push"));
 	});
 

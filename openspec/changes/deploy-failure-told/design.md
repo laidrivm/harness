@@ -125,12 +125,17 @@ by `rm` and a new write, so a read before the move could print one failure
 and move aside a newer one that arrived in between, unread. A directory at
 `.reported`, writable or not, counts as a failed move, since `mv` would
 nest the file inside a writable one where nothing looks. A file it cannot
-read is still reported, by its path.
+read is still reported, by its path; one gone after a failed move, removed
+by a deploy that superseded it, is not.
 
 The inline command had no file whose mode could break it; the script does.
-The Dockerfile's mode check gains the script: a builder that took
+The Dockerfile's mode check covers it: a builder that took
 `--chmod=0755` and set another mode fails the build, as it does for the
-managed settings, rather than every start and prompt failing its hook.
+managed settings, rather than every start and prompt failing its hook. The
+check scans all of `/opt/orchestrator`, and every file directly in it must
+run for others but `clone-name.sh`, which is sourced (local `/code-review`,
+group 1: a scan scoped by what it exempts, `core/rules.md`), so the other
+scripts copied there are covered too.
 
 `orchestrator/layout-deploy.test.ts` runs the hook commands under `sh`; it
 maps the command's path to the tree's file through the Dockerfile's `COPY`

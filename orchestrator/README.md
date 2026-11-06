@@ -522,9 +522,9 @@ step that fails writes the failure file `.harness-deploy-failed` in
 again from the fetch; the session reports the file in its chat at its next
 start or prompt, whichever comes first, and again at each later one while
 the file cannot be moved aside. A run the three-hour timeout kills before
-that write leaves no file, only the journal's line. The run waits for tmux session `main` alone, so a
-head recorded as deployed does not prove that `claude` started or that Remote
-Control reconnected: attach to `main` (step 12) to check. When `main` does
+that write leaves no file, only the journal's line. The run waits for tmux
+session `main` alone, so a head recorded as deployed does not prove that
+`claude` started or that Remote Control reconnected: attach to `main` (step 12) to check. When `main` does
 not come back within two minutes, the run records the head in
 `/var/lib/harness-deploy/rolled-back`, so no later run tries that head again,
 and tries once to put the runner back on the image it ran before; a later head
