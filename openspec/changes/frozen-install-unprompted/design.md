@@ -76,8 +76,11 @@ seen.
 forwards those to the install: `bun run deps --no-verify` skips integrity
 checks (CodeRabbit round 5). That is no manifest edit, so a new check in
 `bun/command-guard-exec.ts` blocks `bun run deps` followed by any word,
-redirections included, or fed by a substitution — the parse drops its output
-from the words and marks the command `FED` (round 8) — under the id
+redirections included, and any `bun run` a substitution feeds, whatever its
+script — the parse drops the output, a script's name included, from the
+words and marks the command `FED` (rounds 8 and 9;
+`bun run $(printf deps) --no-verify` passed the guard when probed on
+2026-11-06) — under the id
 `deps-args`, the reason naming
 `bun run deps` with nothing after it. It is the one refusal the change adds.
 
