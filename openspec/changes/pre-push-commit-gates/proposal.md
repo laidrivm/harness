@@ -75,8 +75,7 @@ None.
   `.githooks/gates.sh`, `.github/workflows/lint.yml`,
   `.github/workflows/mutation.yml`, `bun/mutation-run.ts` and its test,
   `mutation/*.json`.
-- Changed: `bun/no-suppressions.ts` and its test (one exempt path); every
-  formatted file in one pull request; the files the type
+- Changed: every formatted file in one pull request; the files the type
   errors sit in; `.githooks/pre-push`; `package.json` and `bun.lock`;
   `.gitignore` (`reports`, `.stryker-tmp`); `bun/git-env.test.ts` and
   `bun/pre-pr.test.ts`, which pin the hook's lines; `README.md`'s *Working on

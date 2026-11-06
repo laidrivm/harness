@@ -251,7 +251,9 @@ checkout, so `git rev-parse --show-toplevel` from it — `bun/root.ts`,
 command each mutant runs first makes the sandbox a repository of its own
 (`git init`, `git add -A` and one commit, so a test reading `HEAD` reads the
 sandbox's, once, in the dry run before any worker starts, and again where an
-earlier attempt left `.git` without a `HEAD`), so git stops there. Smallest sound fix, against the alternatives:
+earlier attempt left `.git` without a `HEAD`), so git stops there. The command
+first unsets what `git rev-parse --local-env-vars` names, as `.githooks/pre-push`
+does, since an inherited `GIT_DIR` would outrank the sandbox's `.git`. Smallest sound fix, against the alternatives:
 
 - excluding main-block mutants covers the one path seen, not a mutant
   elsewhere that turns a test's directory into the `root` git names, and

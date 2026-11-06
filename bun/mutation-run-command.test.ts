@@ -116,6 +116,9 @@ const sweeping = (...failing: string[]) =>
 		...failing.map((module) => `if /usr/bin/grep -q '"${module}"' "$4"; then exit 1; fi`),
 	].join("\n");
 
+/** A sandbox's module and a test of it that passes, for the cases that run `command` itself. */
+const passing = { "bun/a.ts": "1\n", "bun/a.test.ts": 'import { test } from "bun:test";\ntest("a", () => {});\n' };
+
 const three = { "bun/b.ts": "1\n", "bun/b.test.ts": "1\n", "bun/c.ts": "1\n", "bun/c.test.ts": "1\n" };
 const listedThree = ["bun/a.ts", "bun/b.ts", "bun/c.ts"];
 
@@ -242,12 +245,26 @@ describe("the command", () => {
 
 	test("the sandbox's repository has a HEAD, and one an earlier attempt left without it is remade", () => {
 		const sandbox = join(repository(), ".stryker-tmp", "sandbox-1");
-		write(sandbox, { "bun/a.ts": "1\n", "bun/a.test.ts": 'import { test } from "bun:test";\ntest("a", () => {});\n' });
+		write(sandbox, passing);
 		git(sandbox, "init", "-q");
 		const head = () => Bun.spawnSync(["git", "log", "--format=%an", "-1"], { cwd: sandbox }).stdout.toString().trim();
 		expect(Bun.spawnSync(["sh", "-c", command("bun/a.ts")], { cwd: sandbox }).exitCode).toBe(0);
 		expect(head()).toBe("stryker");
 	});
+
+	test.each(["sh", "dash", "bash"].filter((shell) => Bun.which(shell)))(
+		"under %s, git's repository variables inherited from a hook point the sandbox's git at the sandbox",
+		(shell) => {
+			const checkout = repository();
+			const sandbox = join(checkout, ".stryker-tmp", "sandbox-1");
+			write(sandbox, passing);
+			const env = { ...process.env, GIT_DIR: join(checkout, ".git"), GIT_WORK_TREE: checkout };
+			expect(Bun.spawnSync([shell, "-c", command("bun/a.ts")], { cwd: sandbox, env }).exitCode).toBe(0);
+			const count = (cwd: string) =>
+				Bun.spawnSync(["git", "rev-list", "--count", "HEAD"], { cwd }).stdout.toString().trim();
+			expect([count(checkout), count(sandbox), existsSync(join(sandbox, ".git"))]).toEqual(["1", "1", true]);
+		},
+	);
 
 	test.each([
 		["no mutate", "{}\n"],
