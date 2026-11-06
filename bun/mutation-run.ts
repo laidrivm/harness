@@ -14,16 +14,10 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync 
 import { availableParallelism } from "node:os";
 import { dirname, join, posix } from "node:path";
 import { unlocal } from "./git-local.ts";
-import { load, storedFiles, type Tree, unsaved } from "./mutation-checkout.ts";
+import { load, RUNNERS, storedFiles, type Tree, unsaved } from "./mutation-checkout.ts";
 import { REPORT } from "./mutation-floor.ts";
+import { merge, type Stored, trim } from "./mutation-stored.ts";
 import { root } from "./root.ts";
-
-export type Mutant = { id: string; mutatorName: string; location: unknown; replacement?: string; status: string };
-export type Stored = {
-	schemaVersion: string;
-	files: Record<string, { source: string; mutants: Mutant[] }>;
-	fingerprint: Record<string, string>;
-};
 
 export type Run = { module: string; force: boolean };
 
@@ -42,16 +36,14 @@ export const testsOf = (module: string, tracked: string[]) =>
 const transpiler = new Bun.Transpiler({ loader: "ts" });
 
 /**
- * What the module's results were measured against: by `HEAD`'s blob id, its
- * tests, the fixtures they import (one level, Bun's own parse, so an import a
- * comment names is not one), `bunfig.toml` and what it preloads; and, as text,
- * the command each mutant ran and the Stryker options and limits it ran under,
- * which decide what reads as `Timeout`. The command runner reports no tests, so
- * Stryker cannot see any of them change.
+ * What the module's results were measured against and Stryker cannot see change: by `HEAD`'s blob id, the fixtures
+ * its tests import (one level, Bun's own parse, so an import a comment names is not one), `bunfig.toml` and what it
+ * preloads; the versions of the runner and of Stryker, either of which can change a verdict; and, as text, the
+ * Stryker options and limits it ran under, which decide what reads as `Timeout`. The test files themselves are out:
+ * the stored file holds their sources, which Stryker diffs to re-run only the mutants a changed test reaches.
  */
 export function fingerprint(module: string, tree: Tree): Record<string, string> {
-	const tests = testsOf(module, tree.tracked);
-	const fixtures = tests.flatMap((test) =>
+	const fixtures = testsOf(module, tree.tracked).flatMap((test) =>
 		transpiler
 			.scanImports(tree.text[test] ?? "")
 			.map(({ path }) => posix.join(posix.dirname(test), path))
@@ -62,10 +54,10 @@ export function fingerprint(module: string, tree: Tree): Record<string, string> 
 		bunfig === undefined ? [] : (Bun.TOML.parse(bunfig) as { test?: { preload?: unknown } }).test?.preload;
 	const shared =
 		bunfig === undefined ? [] : ["bunfig.toml", ...[preload ?? []].flat().map((path) => posix.normalize(String(path)))];
-	const paths = [...new Set([...tests, ...fixtures, ...shared])].sort();
+	const paths = [...new Set([...fixtures, ...shared])].sort();
 	return {
 		...Object.fromEntries(paths.map((path) => [path, tree.blobs[path] ?? "absent"])),
-		"stryker command": command(module),
+		...Object.fromEntries(RUNNERS.map((name) => [name, tree.versions[name] ?? "absent"])),
 		"stryker options": JSON.stringify({ ...tree.options, ...limits }),
 	};
 }
@@ -87,18 +79,20 @@ export const limits = { dryRunTimeoutMinutes: 15, timeoutFactor: 3, timeoutMS: 1
 const concurrency = Math.max(1, Math.floor(availableParallelism() / 3));
 
 /**
- * What Stryker runs per mutant. Its sandbox sits under the checkout and holds no `.git`, so git found the checkout from
- * it, and a mutant that ran `sync.ts`'s main block in a test wrote the checkout's `harness/` and `bunfig.toml`. A
- * repository of the sandbox's own, made by the dry run before any worker starts, stops git at the sandbox; it is
- * committed, so a test reading `HEAD` reads the sandbox's, and remade when an earlier attempt left it without one. The
- * `-c` values keep the user's identity, signing and hooks out of it. First, as `.githooks/pre-push` does, it unsets the
- * variables git names as local: an inherited `GIT_DIR` or `GIT_WORK_TREE` outranks the sandbox's `.git` and would make
- * and commit the repository in the checkout instead.
+ * The Stryker configuration one module runs under: the options `load` read, not the file again, so the fingerprint
+ * names what every module ran under, plus the module, the test files `bun test bun/<name>` would match, and
+ * `bun.timeout`, the runner's wall-clock limit on the dry run's `bun test` process, from the same limit Stryker's own
+ * dry run has. A `dry` run stops after Stryker's initial test run.
  */
-export const command = (module: string) =>
-	"unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A" +
-	" && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null" +
-	` commit -qm sandbox; }; } && bun test ${stem(module)}`;
+export const configuration = (tree: Tree, module: string, work: string, dry: boolean) => ({
+	...tree.options,
+	mutate: [module],
+	bun: { testFiles: testsOf(module, tree.tracked).sort(), timeout: limits.dryRunTimeoutMinutes * 60_000 },
+	incrementalFile: work,
+	...limits,
+	concurrency,
+	dryRunOnly: dry,
+});
 
 const same = (a: Record<string, string> | undefined, b: Record<string, string>) =>
 	a !== undefined && Object.keys(a).length === Object.keys(b).length && Object.entries(b).every(([k, v]) => a[k] === v);
@@ -148,8 +142,9 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 		}
 		if (!tested.has(module)) continue; // listed and untested: a problem above, not a module the list leaves out
 		const print = fingerprint(module, tree);
-		// The module too: its results would otherwise describe a source `HEAD` does not hold.
-		const dirty = [module, ...Object.keys(print)].filter((path) => tree.dirty.includes(path));
+		const tests = testsOf(module, tree.tracked);
+		// The module and its tests too: its results would otherwise describe a source `HEAD` does not hold.
+		const dirty = [module, ...tests, ...Object.keys(print)].filter((path) => tree.dirty.includes(path));
 		if (dirty.length) {
 			problems.push(`${module}: commit ${dirty.join(", ")} first — results are measured against HEAD's copy`);
 			continue;
@@ -162,7 +157,14 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 			continue;
 		}
 		const force = flags.force || !same(stored.fingerprint, print);
-		if (force || flags.all || stored.files[module]?.source !== tree.text[module]) runs.push({ module, force });
+		// A test edited, added or deleted: Stryker diffs the stored tests and re-runs only the mutants they reach.
+		const had = Object.entries(stored.testFiles ?? {}).map(([path, file]) => [path, file.source ?? ""]);
+		const retest = !same(
+			Object.fromEntries(had),
+			Object.fromEntries(tests.map((path) => [path, tree.text[path] ?? ""])),
+		);
+		if (force || flags.all || retest || stored.files[module]?.source !== tree.text[module])
+			runs.push({ module, force });
 	}
 	// Stryker copies the working tree, not `HEAD`, so an edit or an untracked file anywhere judges mutants on code no
 	// clone holds. The stored files are exempt: Stryker leaves `mutation/` out, and a resumed run finds its own there.
@@ -171,38 +173,6 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 		problems.push(`commit or remove ${stray.join(", ")} first — Stryker copies the working tree, not HEAD`);
 	return { runs, skipped, problems };
 }
-
-type Report = { schemaVersion: string; files: Record<string, { source: string; mutants: Mutant[] }> };
-
-/**
- * Stryker's incremental file cut to what its next run reads, as the probe measured, plus `print`. The rest depends
- * on the machine or the order mutants finished in, so a re-run anywhere writes the same bytes.
- */
-export function trim(report: Report, print: Record<string, string>): Stored {
-	const files: Stored["files"] = {};
-	for (const path of Object.keys(report.files).sort()) {
-		const { source, mutants } = report.files[path] as Report["files"][string];
-		files[path] = {
-			source,
-			mutants: mutants
-				.map(({ id, mutatorName, location, replacement, status }) => ({
-					id,
-					mutatorName,
-					location,
-					replacement,
-					status,
-				}))
-				.sort((a, b) => Number(a.id) - Number(b.id)),
-		};
-	}
-	return { schemaVersion: report.schemaVersion, files, fingerprint: print };
-}
-
-/** One report holding every stored file's results, for `bun/mutation-floor.ts`. */
-export const merge = (stored: Stored[]) => ({
-	schemaVersion: stored[0]?.schemaVersion ?? "1.0",
-	files: Object.assign({}, ...stored.map((file) => file.files)),
-});
 
 function fail(problems: string[]): void {
 	if (!problems.length) return;
@@ -226,16 +196,7 @@ function stryker(tree: Tree, top: string, { module, force }: Run, print: Record<
 	mkdirSync(tmp, { recursive: true });
 	rmSync(work, { force: true });
 	if (!force && !dry && existsSync(stored)) writeFileSync(work, readFileSync(stored));
-	const own = {
-		mutate: [module],
-		commandRunner: { command: command(module) },
-		incrementalFile: work,
-		...limits,
-		concurrency,
-		dryRunOnly: dry,
-	};
-	// The options `load` read, not the file again, so the fingerprint names what every module ran under.
-	writeFileSync(config, JSON.stringify({ ...tree.options, ...own }));
+	writeFileSync(config, JSON.stringify(configuration(tree, module, work, dry)));
 	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force ? ["--force"] : [])];
 	// Without git's local variables: an inherited `GIT_DIR` would point the sandbox's git, and every test's, at the
 	// checkout, and the build step's own unset reaches none of the test processes Stryker starts.

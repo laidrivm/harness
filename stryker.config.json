@@ -21,7 +21,9 @@
 		"bun/transcript-archive-store.ts",
 		"bun/transient.ts"
 	],
-	"testRunner": "command",
+	"testRunner": "bun",
+	"appendPlugins": ["@hughescr/stryker-bun-runner"],
+	"coverageAnalysis": "perTest",
 	"buildCommand": "bun bun/mutation-sandbox.ts",
 	"thresholds": {
 		"break": null

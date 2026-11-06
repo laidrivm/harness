@@ -1,87 +1,11 @@
-import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+/** Which modules `bun/mutation-run.ts` runs, and what fails a run first; what it stores is in `mutation-run-stored.test.ts`. */
+import { describe, expect, test } from "bun:test";
 import type { Tree } from "./mutation-checkout.ts";
-import { loadReport, survivors } from "./mutation-floor.ts";
-import { fingerprint, merge, modules, plan, type Stored, testsOf, trim } from "./mutation-run.ts";
-
-const made: string[] = [];
-afterAll(() => {
-	for (const dir of made) rmSync(dir, { recursive: true, force: true });
-});
-const scratch = () => {
-	const dir = mkdtempSync(join(tmpdir(), "mutation-run-"));
-	made.push(dir);
-	return dir;
-};
-
-const mutant = (id: string, status: string) => ({
-	id,
-	mutatorName: "BooleanLiteral",
-	location: { start: { line: 1, column: 1 }, end: { line: 1, column: 5 } },
-	replacement: "false",
-	status,
-});
-
-/** A checkout whose working tree, index and `HEAD` all hold `files`, every module a test matches on the list. */
-const tree = (files: Record<string, string>): Tree => {
-	const paths = Object.keys(files);
-	return {
-		tracked: paths,
-		blobs: Object.fromEntries(Object.entries(files).map(([path, text]) => [path, Bun.hash(text).toString()])),
-		text: files,
-		stored: {},
-		dirty: [],
-		listed: modules(paths).filter((m) => testsOf(m, paths).length),
-		options: { testRunner: "command" },
-	};
-};
-
-/** `t` with `path` committed as `text`, or deleted where `text` is undefined; the list stays as it was. */
-function commit(t: Tree, path: string, text?: string): Tree {
-	const files = { ...t.text };
-	if (text === undefined) delete files[path];
-	else files[path] = text;
-	return { ...tree(files), stored: t.stored, listed: t.listed, options: t.options };
-}
-
-/** `t` with every module that has tests measured against it, one survivor each. */
-function measured(t: Tree): Tree {
-	const stored: Record<string, string> = {};
-	for (const module of plan(t, { all: true, force: false }).runs.map((run) => run.module)) {
-		const report = {
-			schemaVersion: "1.0",
-			files: { [module]: { source: t.text[module] ?? "", mutants: [mutant("0", "Survived")] } },
-		};
-		stored[`mutation/${module.slice(4, -3)}.json`] = JSON.stringify(trim(report, fingerprint(module, t)));
-	}
-	return { ...t, stored };
-}
+import { base, commit, current, versions } from "./mutation-run.fixture.ts";
+import { fingerprint, modules, plan } from "./mutation-run.ts";
 
 const runs = (t: Tree) => plan(t).runs;
 const named = (t: Tree) => runs(t).map((run) => run.module);
-
-const base = tree({
-	"bunfig.toml": '[test]\npreload = ["./bun/guard.ts"]\n',
-	"bun/guard.ts": "export {};\n",
-	"bun/guard.test.ts": "test('a', () => {});\n",
-	"bun/pre-pr.ts": "export const a = 1;\n",
-	"bun/pre-pr.test.ts": "test('a', () => {});\n",
-	"bun/pre-pr-steps.ts": "export const b = 1;\n",
-	"bun/pre-pr-steps.test.ts": "test('b', () => {});\n",
-	"bun/pre-pr-steps-run.test.ts": "test('b', () => {});\n",
-	"bun/command-parse.ts": "export const c = 1;\n",
-	"bun/command-parse.test.ts": 'import { run } from "./command-guard.fixture.ts";\n',
-	"bun/command-guard.ts": "export const d = 1;\n",
-	"bun/command-guard.test.ts": 'import { run } from "./command-guard.fixture.ts";\n',
-	"bun/command-guard.fixture.ts": "export const run = 1;\n",
-	"bun/board.ts": "export const e = 1;\n",
-	"bun/board.test.ts": "test('e', () => {});\n",
-	"bun/root.ts": "export const root = '.';\n",
-	"bun/diff-budget.sh": "exit 0\n",
-});
-const current = () => measured(base);
 
 describe("which modules there are", () => {
 	test("tests, fixtures and files outside bun/ are not modules", () => {
@@ -136,15 +60,24 @@ describe("what a run mutates", () => {
 	});
 
 	// spec: mutation-floor/a-test-file-changed
-	test("a changed test forces the modules whose filter matches it, and no other", () => {
-		const forced = [
-			{ module: "bun/pre-pr.ts", force: true },
-			{ module: "bun/pre-pr-steps.ts", force: true },
+	test("a changed test runs the modules whose filter matches it incrementally, and no other", () => {
+		const incremental = [
+			{ module: "bun/pre-pr.ts", force: false },
+			{ module: "bun/pre-pr-steps.ts", force: false },
 		];
-		expect(runs(commit(current(), "bun/pre-pr-steps.test.ts", "test('c', () => {});\n"))).toEqual(forced);
-		expect(runs(commit(current(), "bun/pre-pr-steps.test.ts"))).toEqual(forced);
+		expect(runs(commit(current(), "bun/pre-pr-steps.test.ts", "test('c', () => {});\n"))).toEqual(incremental);
+	});
+
+	// spec: mutation-floor/a-test-file-deleted
+	test("a test file deleted, added or renamed runs the modules whose filter matches it incrementally", () => {
+		const incremental = [
+			{ module: "bun/pre-pr.ts", force: false },
+			{ module: "bun/pre-pr-steps.ts", force: false },
+		];
+		expect(runs(commit(current(), "bun/pre-pr-steps.test.ts"))).toEqual(incremental);
+		expect(runs(commit(current(), "bun/pre-pr-steps-x.test.ts", "x\n"))).toEqual(incremental);
 		const renamed = commit(commit(current(), "bun/pre-pr-steps.test.ts"), "bun/pre-pr-steps-x.test.ts", "x\n");
-		expect(runs(renamed)).toEqual(forced);
+		expect(runs(renamed)).toEqual(incremental);
 	});
 
 	// spec: mutation-floor/a-fixture-another-module-s-tests-import
@@ -168,12 +101,13 @@ describe("what a run mutates", () => {
 	});
 
 	// spec: mutation-floor/stryker-s-options-changed
-	test("a change to Stryker's shared options forces every module, and the fingerprint names the command", () => {
-		const t = current();
-		const all = runs({ ...t, options: { ...t.options, ignoreStatic: true } });
+	test.each([
+		["Stryker's shared options", { options: { testRunner: "bun", ignoreStatic: true } }],
+		["the runner's version", { versions: { ...versions, "@hughescr/stryker-bun-runner": "1.6.1" } }],
+		["Stryker's version", { versions: { ...versions, "@stryker-mutator/core": "10.0.1" } }],
+	])("a change to %s forces every module", (_, change) => {
+		const all = runs({ ...current(), ...change });
 		expect([all.length, all.every((run) => run.force)]).toEqual([6, true]);
-		expect(fingerprint("bun/board.ts", t)["stryker command"]).toEndWith("bun test bun/board");
-		expect(JSON.parse(fingerprint("bun/board.ts", t)["stryker options"] ?? "")).toMatchObject({ timeoutFactor: 3 });
 	});
 
 	// spec: mutation-floor/a-new-module-has-no-stored-file
@@ -252,49 +186,5 @@ describe("what fails the run before it mutates", () => {
 		expect(plan({ ...t, stored: { ...t.stored, "mutation/old.json": board } }).problems).toContain(
 			"mutation/old.json holds bun/board.ts, not bun/old.ts — delete the stored file",
 		);
-	});
-});
-
-describe("what a stored file holds", () => {
-	// spec: mutation-floor/the-same-results-written-in-another-checkout
-	test("only the fields an incremental run reads, mutants in id order, whatever the machine", () => {
-		const from = (root: string, reason: string) => ({
-			schemaVersion: "1.0",
-			projectRoot: root,
-			config: { configFile: `${root}/stryker.config.json` },
-			testFiles: { "": { tests: [{ id: "0", name: "All tests" }] } },
-			files: {
-				"bun/a.ts": {
-					language: "typescript",
-					source: "a",
-					mutants: [
-						{ ...mutant("10", "Killed"), statusReason: reason, killedBy: ["0"], coveredBy: [], testsCompleted: 1 },
-						{ ...mutant("9", "Survived"), static: false },
-					],
-				},
-			},
-		});
-		const one = trim(from("/home/a", "at /home/a/x.ts:1"), { "bun/a.test.ts": "1" });
-		expect(one).toEqual({
-			schemaVersion: "1.0",
-			files: { "bun/a.ts": { source: "a", mutants: [mutant("9", "Survived"), mutant("10", "Killed")] } },
-			fingerprint: { "bun/a.test.ts": "1" },
-		});
-		expect(JSON.stringify(trim(from("/Users/b", "at /Users/b/x.ts:2"), { "bun/a.test.ts": "1" }))).toBe(
-			JSON.stringify(one),
-		);
-	});
-
-	// spec: mutation-floor/unchanged-modules-counted-from-their-stored-results
-	test("the merge mutation-floor reads sums every stored file's survivors", () => {
-		const file = (path: string, ...statuses: string[]): Stored => ({
-			schemaVersion: "1.0",
-			files: { [path]: { source: "x", mutants: statuses.map((status, i) => mutant(String(i), status)) } },
-			fingerprint: {},
-		});
-		const report = join(scratch(), "mutation.json");
-		const merged = merge([file("bun/a.ts", "Survived", "Killed"), file("bun/b.ts", "Survived")]);
-		writeFileSync(report, JSON.stringify(merged));
-		expect(survivors(loadReport(report))).toBe(2);
 	});
 });

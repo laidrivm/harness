@@ -73,13 +73,14 @@ const cli = (cwd: string, bin: string, ...args: string[]) => {
 	return { code: run.exitCode, err: run.stderr.toString(), out: run.stdout.toString() };
 };
 
-/** `dir` with its results committed, then a changed test committed over them, so the next run is forced. */
+/** `dir` with its results committed, then a changed Stryker option committed over them, so the next run is forced. */
 function forced(dir: string): string {
 	cli(dir, path({ node: "exit 0", bunx: stryker }));
 	git(dir, "add", "mutation");
 	git(dir, "commit", "-qm", "results");
-	write(dir, { "bun/a.test.ts": "2\n" });
-	git(dir, "commit", "-qam", "a changed test");
+	const config = JSON.parse(readFileSync(join(dir, "stryker.config.json"), "utf8"));
+	write(dir, { "stryker.config.json": JSON.stringify({ ...config, ignoreStatic: true }) });
+	git(dir, "commit", "-qam", "a changed option");
 	return readFileSync(join(dir, "mutation/a.json"), "utf8");
 }
 
@@ -89,6 +90,7 @@ const REPORT = "reports/mutation/mutation.json";
 const results = JSON.stringify({
 	schemaVersion: "1.0",
 	projectRoot: "/somewhere",
+	testFiles: { "bun/a.test.ts": { source: "1\n", tests: [] } },
 	files: {
 		"bun/a.ts": {
 			source: "1\n",
@@ -142,7 +144,7 @@ describe("the command", () => {
 		expect(first.code).toBe(1);
 		expect(first.err).toContain("mutation/a.json differs from HEAD's");
 		const kept = Object.keys(JSON.parse(readFileSync(join(dir, "mutation/a.json"), "utf8")));
-		expect(kept).toEqual(["schemaVersion", "files", "fingerprint"]);
+		expect(kept).toEqual(["schemaVersion", "testFiles", "files", "fingerprint"]);
 		git(dir, "add", "mutation");
 		git(dir, "commit", "-qm", "results");
 		expect(cli(dir, path({ node: "exit 0", bunx: "exit 3" })).code).toBe(0);
