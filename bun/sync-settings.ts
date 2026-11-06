@@ -176,9 +176,8 @@ function packageText(text: string | undefined): string {
 		throw new Error(
 			`package.json: scripts.deps is ${JSON.stringify(scripts.deps)}, not "${DEPS}" — rename that script, then sync`,
 		);
-	manifest.scripts = { ...scripts, deps: DEPS };
 	const indent = text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";
-	return `${JSON.stringify(manifest, null, indent)}${text === undefined || text.endsWith("\n") ? "\n" : ""}`;
+	return `${JSON.stringify({ ...manifest, scripts: { ...scripts, deps: DEPS } }, null, indent)}${text === undefined || text.endsWith("\n") ? "\n" : ""}`;
 }
 
 type Write = readonly [file: string, was: string | undefined, now: string];
