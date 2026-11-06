@@ -384,7 +384,9 @@ conversation yet, the start is a new one. Its `gh` and git mint a
 token from the App for each call, for `laidrivm/harness` alone, so they reach
 no other repository; it holds none. That is the wrapper's scope, not a
 boundary: `agent` may run the mint itself for any repository
-`app/repositories` names. No step here makes that
+`app/repositories` names. The wrapper is git's credential helper for HTTPS
+alone, so the clone's `origin` is an `https://github.com/` URL; over SSH
+git has no key. No step here makes that
 clone, which the roadmap's stage 2.5 sets up in its step 6: until it exists,
 the session starts in `/home/agent` and pulls nothing, and the first start
 after it is cloned runs in it. Every `claude` that runs as `agent` takes

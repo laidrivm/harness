@@ -839,9 +839,10 @@ and, once `claude` exits, a 5-second pause before the next round.
 #### Scenario: Claude Code exits
 
 - **WHEN** `claude` in `main` exits, by a crash or `/exit`
-- **THEN** after 5 seconds the script pulls, installs and starts `claude`
-  again with `--continue`, in the same conversation (user, 03.11, reversing
-  answer 1 a)
+- **THEN** after 5 seconds the script pulls and installs where the clone
+  exists, and starts `claude` again with `--continue` where the directory it
+  starts in holds a conversation, so in the same conversation unless the
+  clone appeared between the two starts (user, 03.11, reversing answer 1 a)
 
 #### Scenario: Nothing to continue
 
@@ -875,7 +876,8 @@ and, once `claude` exits, a 5-second pause before the next round.
 
 - **WHEN** the runner container restarts or is recreated
 - **THEN** `main` exists again as the session user, and its `claude` runs
-  with Remote Control in the conversation it ran before
+  with Remote Control in the conversation it ran before, or in a new one
+  where the clone appeared since and holds none
 
 ### Requirement: The session's gh mints a token for each call
 
@@ -918,7 +920,8 @@ credential helper SHALL be this wrapper. No token SHALL be written to disk.
 #### Scenario: git reaches GitHub
 
 - **WHEN** the session user's git fetches from or pushes to
-  `laidrivm/harness` on `github.com`
+  `laidrivm/harness` on `github.com` over HTTPS, the only transport the
+  wrapper is the credential helper for
 - **THEN** git takes its credential from the wrapper, so a push an hour or
   more after the session started succeeds; another repository gets a token
   that does not reach it
