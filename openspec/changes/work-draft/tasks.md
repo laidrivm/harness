@@ -30,7 +30,8 @@ numbers are the proposal-stage `/zombies` ideas.
       naming `origin` and making no `gh` call at all [18]; a head that is not
       40 hex digits, read as unread [11]. And the undo exiting non-zero
       prints one line opening `draft: failed —` that says `gh pr ready
-      --undo` failed and #7 was not marked draft, claiming no state, exit 1
+      --undo` failed and #7 could not be confirmed a draft, claiming no
+      state, exit 1
       [19]; the undo killed at
       `HARNESS_GH_TIMEOUT_MS` does the same [20]. Verify: each fails against
       today's code
