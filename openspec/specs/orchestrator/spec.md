@@ -654,7 +654,9 @@ configuration from the pushed tree.
 - **WHEN** a CI fix session answers `fixed` and its bundle's tip is a new
   commit on top of the run's `head_sha` with a passing pre-PR record
 - **THEN** the runner pushes that tip from its push clone, with no hook and
-  no force, and the App's token never enters the session's clone
+  no force, and the runner's token never enters the session's clone; a token
+  the session's own `gh` mints is the session's (*The session's gh mints a
+  token for each call*)
 
 #### Scenario: A CI fix with no pre-PR record
 
@@ -915,9 +917,11 @@ credential helper SHALL be this wrapper. No token SHALL be written to disk.
 
 #### Scenario: git reaches GitHub
 
-- **WHEN** the session user's git fetches from or pushes to `github.com`
+- **WHEN** the session user's git fetches from or pushes to
+  `laidrivm/harness` on `github.com`
 - **THEN** git takes its credential from the wrapper, so a push an hour or
-  more after the session started succeeds
+  more after the session started succeeds; another repository gets a token
+  that does not reach it
 
 #### Scenario: A permission the mint does not hold
 
@@ -952,14 +956,15 @@ version and checksum with its auto-updater off.
 ### Requirement: The session commits as the App's bot, named only on the host
 
 The commit identity SHALL reach the session from the `runner` service's
-environment, interpolated from an untracked `orchestrator/.env` that compose
-refuses to start without. No tracked file SHALL hold the App's slug, its
-bot's numeric id or its bot's email.
+environment, interpolated from an untracked `orchestrator/.env`, or from the
+host shell's variable of the same name, which compose prefers to the file;
+compose SHALL refuse to start while neither names a variable. No tracked file
+SHALL hold the App's slug, its bot's numeric id or its bot's email.
 
 #### Scenario: No identity on the host
 
-- **WHEN** `orchestrator/.env` is absent or lacks a variable the identity
-  needs
+- **WHEN** neither `orchestrator/.env` nor the host shell names a variable
+  the identity needs
 - **THEN** `docker compose up` refuses, naming the variable
 
 #### Scenario: A bot email in a tracked file
