@@ -28,7 +28,8 @@
   `./`. Claude Code docs (plugins/org, *Require plugins per repository*): a
   relative-path plugin loads from the marketplace copy once the repository's
   `extraKnownMarketplaces` applies, and that happens only in a trusted folder,
-  `-p` included.
+  `-p` included. On 2.1.316 the probe of 05.11 saw that hold for the first
+  start alone (D7).
 
 ## Goals / Non-Goals
 
@@ -114,14 +115,25 @@ default to `false`, so the pin does not rest on a default.
   single `~/.claude/plugins/marketplaces/ponytail`. A session may therefore
   run the version the other ref named. The gap ends when a consumer's bump
   lands. A bump that fails its checks leaves the old pin, so the gap can
-  last longer than a day. Probe 1.3 shows whether the copy follows `ref` at all, and the pin
-  move's procedure is written after it.
+  last longer than a day.
+- Probe 1.3 measured nothing (05.11). On the laptop Claude Code updated
+  itself from 2.1.316 to 2.1.318 between runs, and under 2.1.318
+  `CLAUDE_CONFIG_DIR` did not keep the user's own plugins out, so the run is
+  void. The VPS probe (D7) shows only that a first registration honours the
+  tag: the copy came up at `v5.3.3`, commit `7801d061…`, and the plugin was
+  cached at 5.3.3. Whether a registered copy follows a changed `ref` stays
+  unmeasured. So a pin move ends with the read task 4.2 makes: `claude
+  plugin list`, as `agent` in `/home/agent/harness`, names the new version.
+  Where it does not, run `claude plugin marketplace update ponytail` as
+  `agent` and restart `main`.
 - An author can move a tag. The commit in the note lets a reader see that
   the tag moved. No test can check it without the network.
 - `DISABLE_AUTOUPDATER=1`, which `session.sh` exports, also stops plugin
   auto-update in the main session. A pass's `claude` does not get it, because
   the allowlist in `bun/board-loop-session.ts` drops it. The pass relies on
-  `autoUpdate: false` alone.
+  `autoUpdate: false` alone. The same export reaches D7's install, which
+  needs it for claude itself: the probe's session without it downloaded
+  2.1.318 into agent's `~/.local/bin`.
 
 ### D4. The level reaches every agent session through a file the entrypoint writes
 
@@ -165,8 +177,10 @@ allowlist in `bun/board-loop-session.ts`, and sudoers `env_keep`. Each is a
 list kept short on purpose. The file needs none of them.
 
 **Rejected: writing in `session.sh`.** That script also runs as `agent`, but
-the `fix/session-continue` PR edits it now (see *Seams*), and the passes do
-not depend on the session's script.
+the passes do not depend on the session's script: the level must be in place
+whether or not `main` ever started. The seam that also kept the line out of
+it, `fix/session-continue`, has merged (#418), and D7 now edits the script for
+the install, which does depend on the session.
 
 ### D5. Trust and the install
 
@@ -176,22 +190,26 @@ not depend on the session's script.
   the harness's marketplace entry does not apply and the session runs
   without ponytail. Task 3.3 adds the trust step to the host README, and
   task 4.2 checks the result. Once the folder is trusted, the marketplace
-  registers into agent's `~/.claude/plugins` on the volume, and the
-  relative-path plugin loads from that copy. Whether that first start shows
-  an install or `userConfig` dialog in the pane nobody watches is unverified.
-  Probe 1.4 checks it before the image change lands.
+  registers into agent's `~/.claude/plugins` on the volume at once, but the
+  settings alone do not keep the plugin loaded past that first start (probe,
+  05.11): the start script installs it (D7). Probe 1.4's question has its
+  answer: no dialog follows the trust dialog, on the VPS and in a clean
+  configuration on the laptop, both on 2.1.316, so the pane nobody watches
+  waits on nothing.
 - **A pass's clone** is trusted already: `bun/board-loop-clone.ts` refuses an
   untrusted one (`not a trusted workspace`). So `extraKnownMarketplaces`
-  applies there too. In `-p` the install runs in the background. A pass that
-  runs before the marketplace was ever cloned can miss ponytail on its first
-  turn. `CLAUDE_CODE_SYNC_PLUGIN_INSTALL=1` would close that gap, but it
-  would cross the same four seams as D4's rejected variable. Nothing orders
-  the main session's first registration before a pass: `tmux new-session -d`
-  returns at once. Several passes starting the first install together could
-  race on one copy. The loop is off in stage 2.5, and task 4.2 confirms the
-  registration through the main session before the loop is switched on.
-  Once the copy exists, no pass installs it again. The gap is accepted and
-  named in README.
+  applies there too, and the clone's own settings enable the plugin. Whether
+  the clone loads the copy D7 installs at project scope for
+  `/home/agent/harness` is unmeasured: the probe ran in one folder, and a
+  project-scope install is recorded against its folder. Where it does not,
+  the pass runs without ponytail, as it does before this change, and D4's
+  file is written all the same. `CLAUDE_CODE_SYNC_PLUGIN_INSTALL=1` stays
+  rejected: it would cross the same four seams as D4's rejected variable.
+  Decided (user, 05.11, answer 6 а): nothing changes for the passes now. The
+  loop is off in stage 2.5, and task 4.2 reads `claude plugin list` as
+  `agent` in a pass's clone before the loop is switched on. A clone that
+  does not list the plugin becomes a card of its own, an install in the
+  pass. README names the gap.
 - **A consumer's fresh clone on the laptop** registers the marketplace when
   its owner accepts the trust dialog. you-should-know sits in the built-in
   marketplace and needs no entry.
@@ -214,18 +232,105 @@ version between folders, the user switches to option б: their own entry
 takes the same `ref` and `autoUpdate: false`, and they move it by hand
 whenever the harness moves the tag.
 
+Unverified (05.11): tasks 1.1 and 1.2 were not run, and 1.3 and 1.4 on the
+laptop are void (D3). D6 rests on the documentation alone until 1.2 runs,
+and option б stays the fallback. One laptop run did count: in a clean
+configuration on 2.1.316 the trust dialog was followed by no screen and
+nothing was installed. So a laptop that never had ponytail needs the one
+install README names. The user's own laptop has it already, at user scope.
+
+### D7. The runner installs ponytail before each start
+
+Decided (user, 05.11, «а»): on 2.1.316 the project's settings alone do not
+install ponytail reliably, so the runner installs it explicitly, as `agent`
+in `/home/agent/harness`, with `claude plugin install ponytail@ponytail
+--scope project`. The project's settings stay as task 2.4 writes them.
+
+The probe that decided it (VPS, as `agent`, 2.1.316, nothing of ponytail
+installed beforehand, a scratch folder holding exactly task 2.4's settings):
+
+- The first trusted start showed no screen after the trust dialog. The
+  marketplace registered at once at `v5.3.3` (`7801d061…`) and the plugin was
+  cached at 5.3.3. It loaded into that session, its band and skill listed,
+  but its SessionStart hook did not run there: no `PONYTAIL MODE ACTIVE`,
+  band `off`. `installed_plugins.json` kept `.plugins` empty, and `claude
+  plugin list` named none.
+- The second start did not load it. `/plugin` → Errors: `Plugin "ponytail"
+  not cached at /home/agent/.claude/plugins/marketplaces/ponytail — Run
+  /plugin to refresh`. The marketplace's manifest has `"source": "./"`.
+- `claude plugin install ponytail@ponytail --scope project` in that folder
+  succeeded and warned `4 userConfig options not yet set` (*Risks*).
+  `installed_plugins.json` listed the plugin. On the next start the band read
+  `full`, and ponytail's mode file appeared under `~/.claude/ponytail-modes/`.
+
+The call goes in `session.sh`, in the round that finds the clone, after
+`bun install` and before `claude`:
+
+```sh
+timeout --foreground 120 claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
+```
+
+- **Not before the clone, the trust or the login.** The round runs it only
+  where `$HOME/harness/.git` exists. Before the folder is trusted the
+  marketplace is not registered, so the call fails, prints its line, and the
+  session starts. README step 12 has the user trust the folder and `/exit`
+  once, and the next round installs. The entrypoint, the other place
+  weighed, runs once per container start: on a fresh volume that is before
+  anyone trusted the clone, and it would not try again until the next
+  restart.
+- **The network.** The call clones from GitHub. Like the pull and `bun
+  install`, a failure prints its line and the session starts on what the
+  volume holds. coreutils' `timeout`, which the forced command's notice
+  already uses in the image, ends a call that hangs after 120 s, and its
+  exit takes the same line. `--foreground` keeps the call in the pane's
+  foreground process group: without it a call that touches the tty would be
+  stopped and sit out the whole limit every round.
+- **Idempotent.** The call runs every round, so a repeat over an installed
+  plugin must leave it as it was. What a repeat prints, and whether it
+  reaches the network, is unmeasured; a non-zero exit there prints its line
+  and changes nothing else. A round is rare, once per exit of `claude`.
+- **Pinned.** The call names no ref. The marketplace and its tag come from
+  the clone's project settings, which the round's pull has just brought up
+  to date. `DISABLE_AUTOUPDATER=1`, exported at the top of the script, keeps
+  claude itself at the image's version (D3).
+- **D4's level file stays in the entrypoint.** The passes read it whether or
+  not `main` runs, and it needs neither the network nor the trust.
+
+Whether `--scope project` rewrites the tracked `.claude/settings.json`,
+which already carries the entry, is unmeasured: the probe's folder was no
+git clone. A rewrite in Claude Code's own layout would leave the clone dirty,
+and the next pull that touches the file would fail with its line. Decided
+(user, 05.11, answer 5 а): the scope stays `project`. Task 4.2 reads `git
+status` in the clone after the first install, and a dirty clone switches the
+call to `--scope local`, which writes the untracked
+`.claude/settings.local.json` instead.
+
 ## Risks / Trade-offs
 
 - [A moved tag] → the note records the commit. A reader sees the drift on
   the next bump of the pin. Nothing detects it sooner.
 - [you-should-know is renamed or removed from a Claude Code build] → the
   check still passes, since it reads settings, not the installed set. What
-  Claude Code does with a missing `@builtin` id is unverified (task 1.1).
-  README names the plugin's costs and that it is undocumented.
-- [A pass misses ponytail on its first turn before the first registration]
-  → accepted, D5.
-- [The laptop's copy is re-fetched between folders] → task 1.2 checks it
-  before the settings land. The fallback is D6's option б.
+  Claude Code does with a missing `@builtin` id is unverified: task 1.1 was
+  not run (05.11). README names the plugin's costs and that it is
+  undocumented.
+- [A pass's clone does not load the copy installed for `/home/agent/harness`]
+  → the pass runs without ponytail, as before. Task 4.2 reads it before the
+  loop is switched on, and a miss becomes a card of its own (D5, answer 6 а).
+- [The laptop's copy is re-fetched between folders] → task 1.2 was not run
+  (05.11), so the settings land without it. The fallback is D6's option б.
+- [The install leaves the four `userConfig` options unset on the VPS] → the
+  install warns about `ledger`, `webhookUrl`, `webhookToken` and
+  `sendNames`. Nothing needs them: ponytail 5.3.3's band
+  (`hooks/band/register.tsx`) writes the ledger unless `ledger` is `false`,
+  posts nothing without a `webhookUrl`, and reads the token and the names
+  only for a webhook. Unset, they act as their defaults, and nothing leaves
+  the host.
+- [`--scope project` rewrites the tracked settings in the clone] →
+  unmeasured. Task 4.2 reads `git status`, and a dirty clone switches the
+  call to `--scope local` (D7, answer 5 а).
+- [A network that hangs holds the session's start] → the install runs under
+  a 120 s `timeout` (D7).
 - [Plugin hooks run in every consumer session] → ponytail's ledger
   (`userConfig.ledger`, default `true`) writes a line per turn under
   `~/.config/ponytail/band/`. The file stays local, and its webhook is
@@ -242,26 +347,30 @@ whenever the harness moves the tag.
 1. Merge, and the harness's own settings carry the keys at once.
 2. Consumers take them on their next daily bump: sync writes them, and the
    check passes.
-3. The VPS takes the entrypoint line at the next image build and start
-   (host-deploy, or by hand until it lands).
+3. The VPS takes the entrypoint line and the start script's install at the
+   next image build and start (host-deploy, or by hand until it lands), then
+   README step 12's trust and `/exit`.
 4. Rollback: revert the PR. A consumer's next bump removes nothing, because
    sync keeps keys it does not own, so a revert leaves the two entries in
    consumers until they are removed by hand. README says so.
 
 ## Seams
 
-- **`fix/session-continue`** edits `orchestrator/runner/session.sh`. This
-  change leaves that file alone (D4).
-- **`fix/runner-image-bun-modes`** edits the Dockerfile's `COPY --from=bun`
-  line and README step 12. This change edits neither the Dockerfile nor that
-  step.
-- **The session-rules PR** adds `orchestrator/runner/CLAUDE.md` →
-  `/etc/claude-code/`. **host-deploy** owns `managed-settings.json` there.
-  This change writes nothing under `/etc/claude-code/`.
-- **`spec/session-wrapup-on-done`** adds `Skill(session-wrapup)` to the allow
-  list of `.claude/settings.json`. This change adds two top-level keys at the
-  end of the file and leaves the allow list alone. A conflict on merge is
-  textual at most.
+Refreshed 05.11: #413, #418, #421 and #423 have merged.
+
+- **#418 (`fix/session-continue`)** rewrote `orchestrator/runner/session.sh`
+  to continue the last conversation. This change edits that script on top of
+  it (D7), one line in the round that finds the clone, and its test's stub.
+- **#413 (`fix/runner-image-bun-modes`)** edited the Dockerfile's copy of
+  `bun/` and README step 12's numbered items. This change edits neither: it
+  adds two sentences to the end of step 12's first paragraph as #418 left it.
+- **#412 and #421** put the session's rules at `/etc/claude-code/CLAUDE.md`
+  and that directory at 0755. **host-deploy**, still open, owns
+  `managed-settings.json` there. This change writes nothing under
+  `/etc/claude-code/`.
+- **#423 (`feat/session-wrapup-on-done`)** added `Skill(session-wrapup)` to
+  the allow list of `.claude/settings.json`. This change adds two top-level
+  keys at the end of the file and leaves the allow list alone.
 - **The entrypoint's tmux line** is pinned by the test of the requirement
   *the-container-restarts*. The new line goes before it and leaves it
   unedited.

@@ -23,6 +23,11 @@
 # the container's environment, so the commit identity reaches the session; a
 # tmux that cannot start fails the entrypoint, and the restart policy retries.
 #
+# Before that, as agent, it writes ponytail's level, ultra, to the config file
+# the session, its subagents and every pass read (ship-ponytail design, D4). A
+# failed write prints a line and goes on: its cause lives in agent's volume,
+# and stopping here would take sshd down with it.
+#
 # shortcut: PID 1 stays sshd, so a tmux server that dies is not restarted
 # until the container is; upgrade to a supervisor when that is seen.
 #
@@ -47,6 +52,8 @@ printf 'restrict,command="set -f; PASS_CLONES=/home/agent/clones PASS_AS_AGENT=\
 printf 'restrict,command="exec bun /opt/orchestrator/bun/on-event.ts \\"$SSH_ORIGINAL_COMMAND\\"" %s\n' "$(head -n 1 "$event")" >>/home/runner/.ssh/authorized_keys
 chown runner:runner /home/runner/.ssh/authorized_keys
 chmod 0600 /home/runner/.ssh/authorized_keys
+
+runuser -u agent -- sh -c 'mkdir -p "$HOME/.config/ponytail" && printf "%s\n" "{\"defaultMode\":\"ultra\"}" >"$HOME/.config/ponytail/config.json"' || echo "entrypoint: ponytail's level was not written" >&2
 
 runuser -u agent -- tmux new-session -d -s main /opt/orchestrator/session.sh
 

@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
+import { syncSettings } from "../bun/sync-settings.ts";
 import { composed, instructions, read, root, yaml } from "./layout.fixture.ts";
 
 /** The runner image and the host README, read from the tree. [n]: `/zombies` ideas. */
@@ -157,7 +158,7 @@ describe("the runner image", () => {
 	// /etc/claude-code/CLAUDE.md is Claude Code's managed memory on Linux; a file under /home/agent, a volume, would never update.
 	test("the image copies the session's rules to the managed CLAUDE.md at mode 0644", () => {
 		expect(lines()).toContain("COPY --chmod=0644 runner/session-rules.md /etc/claude-code/CLAUDE.md");
-		expect(read("orchestrator/runner/session-rules.md").match(/^\d+\. /gm)).toHaveLength(11);
+		expect(read("orchestrator/runner/session-rules.md").match(/^\d+\. /gm)).toHaveLength(12);
 	});
 
 	// An octal --chmod reaches the directories its COPY creates: one made by the COPY would be 0644, which agent cannot enter.
@@ -186,6 +187,81 @@ describe("the runner image", () => {
 		expect(call).toMatch(
 			/ runner@runner [A-Za-z0-9][A-Za-z0-9._-]* [A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/,
 		);
+	});
+});
+
+describe("ponytail's level in the runner", () => {
+	const all = () => read("orchestrator/runner/entrypoint.sh").split("\n");
+	const line = () => all().find((l) => l.includes(".config/ponytail/config.json")) ?? "";
+	/** The `sh -c` body the line runs as agent. */
+	const body = () => /sh -c '([^']*)'/.exec(line())?.[1] ?? "";
+	/** The image's /bin/sh is dash; the laptop's sh is bash. */
+	const SHELLS = ["sh", "dash"];
+
+	// spec: orchestrator/the-level-is-written-before-the-session-starts
+	test("the entrypoint writes the level after the authorized_keys lines and before tmux starts main", () => {
+		const at = all().indexOf(line());
+		expect(line()).not.toBe("");
+		expect(at).toBeGreaterThan(all().findLastIndex((l) => l.includes("authorized_keys")));
+		expect(at).toBeLessThan(all().findIndex((l) => l.includes("tmux new-session")));
+	});
+
+	// spec: orchestrator/the-written-file-names-ultra
+	test.each(SHELLS)(
+		"its command under %s, run twice with a HOME holding no .config, leaves a file whose defaultMode is ultra",
+		(shell) => {
+			const home = emptyDir("orchestrator-ponytail-");
+			const file = join(home, ".config/ponytail/config.json");
+			const texts = [1, 2].map(() => {
+				expect(
+					Bun.spawnSync([shell, "-c", body()], { env: { PATH: process.env.PATH ?? "", HOME: home } }).exitCode,
+				).toBe(0);
+				return readFileSync(file, "utf8");
+			});
+			expect(JSON.parse(texts[0] ?? "").defaultMode).toBe("ultra");
+			expect(texts[1]).toBe(texts[0]);
+		},
+	);
+
+	// spec: orchestrator/the-write-runs-as-the-session-user
+	test("the line runs its write through runuser as agent", () => {
+		expect(line()).toStartWith("runuser -u agent -- sh -c '");
+	});
+
+	// spec: orchestrator/a-failed-write-leaves-the-runner-starting
+	test.each(SHELLS)(
+		"under %s, where .config/ponytail is a file, the write fails and the line, under set -e, prints its own and goes on",
+		(shell) => {
+			const home = emptyDir("orchestrator-ponytail-");
+			mkdirSync(join(home, ".config"));
+			writeFileSync(join(home, ".config/ponytail"), "");
+			const env = { PATH: process.env.PATH ?? "", HOME: home };
+			expect(Bun.spawnSync([shell, "-c", body()], { env }).exitCode).not.toBe(0);
+			expect(line()).toEndWith(`|| echo "entrypoint: ponytail's level was not written" >&2`);
+			// runuser stubbed to run what follows `--`, and `sh` the shell under test, so the whole
+			// line runs as the entrypoint would.
+			const bin = emptyDir("orchestrator-runuser-");
+			writeFileSync(join(bin, "runuser"), '#!/bin/sh\nshift 3\nexec "$@"\n', { mode: 0o755 });
+			symlinkSync(Bun.which(shell) ?? shell, join(bin, "sh"));
+			const r = Bun.spawnSync([shell, "-ec", `${line()}\necho went on`], {
+				env: { ...env, PATH: `${bin}:${env.PATH}` },
+			});
+			expect([r.exitCode, r.stdout.toString()]).toEqual([0, "went on\n"]);
+			expect(r.stderr.toString()).toContain("entrypoint: ponytail's level was not written");
+		},
+	);
+
+	// spec: orchestrator/the-laptop-s-level-is-untouched
+	test("neither the harness's tracked settings nor the files sync writes name ponytail's level", () => {
+		const dir = emptyDir("orchestrator-synced-");
+		syncSettings(dir);
+		for (const text of [
+			read(".claude/settings.json"),
+			...[".claude/settings.json", "bunfig.toml"].map((p) => readFileSync(join(dir, p), "utf8")),
+		]) {
+			expect(text).not.toContain("PONYTAIL_DEFAULT_MODE");
+			expect(text).not.toContain(".config/ponytail");
+		}
 	});
 });
 
