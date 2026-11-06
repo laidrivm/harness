@@ -18,8 +18,10 @@
  * neither.
  *
  * The logic is `recordSkill`, given the event's text and the environment to
- * run git and find the ledger with, so the tests call it in their own process;
- * the main block reads stdin, calls it and exits.
+ * run git and find the ledger with, so the tests call it in their own process.
+ * The main block is one statement handing it stdin, so no mutant sits where
+ * only a spawned hook reaches it; it never throws, so the process exits 0 with
+ * no `process.exit`.
  */
 import { type Env, recordCheckout } from "./gate-ledger.ts";
 
@@ -31,10 +33,10 @@ type Event = {
 	command_name?: unknown;
 };
 
-/** Records the skill `input` names, if any; never throws. */
-export function recordSkill(input: string, environment: Env): void {
+/** Records the skill `input` names, if any; never rejects. */
+export async function recordSkill(input: string | Promise<string>, environment: Env): Promise<void> {
 	try {
-		const event: Event = JSON.parse(input) ?? {};
+		const event: Event = JSON.parse(await input) ?? {};
 		// An MCP server's prompt shares the expansion event, and can share a skill's name.
 		const name = event.tool_input?.skill ?? (event.expansion_type === "slash_command" ? event.command_name : undefined);
 		const dir = event.cwd;
@@ -57,15 +59,8 @@ export function recordSkill(input: string, environment: Env): void {
 			}
 		}
 	} catch {
-		// An event that is no JSON, or no git: nothing to record.
+		// Unreadable stdin, an event that is no JSON, or no git: nothing to record.
 	}
 }
 
-if (import.meta.main) {
-	try {
-		recordSkill(await Bun.stdin.text(), process.env);
-	} catch {
-		// Unreadable stdin: nothing to record.
-	}
-	process.exit(0);
-}
+if (import.meta.main) await recordSkill(Bun.stdin.text(), process.env);
