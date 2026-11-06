@@ -108,8 +108,9 @@ default to `false`, so the pin does not rest on a default.
   so the note sits where the value is defined and sync copies it from
   (Safety rule on pins outside a manifest). A test reads the line before
   `ref` and pins the note.
-- Moving the pin means a PR that edits `MARKETPLACE` and the harness's own
-  settings file. Consumers take it on their next bump, through sync. Until
+- Moving the pin means a PR that edits `MARKETPLACE`, the harness's own
+  settings file and the source in `orchestrator/runner/session.sh`, whose
+  test fails until it matches `MARKETPLACE` (D7). Consumers take it on their next bump, through sync. Until
   then the VPS has two refs on one copy. `/home/agent/harness` names the new
   tag, a consumer's clone still names the old one, and both share agent's
   single `~/.claude/plugins/marketplaces/ponytail`. A session may therefore
@@ -199,9 +200,9 @@ the install, which does depend on the session.
 - **A pass's clone** is trusted already: `bun/board-loop-clone.ts` refuses an
   untrusted one (`not a trusted workspace`). So `extraKnownMarketplaces`
   applies there too, and the clone's own settings enable the plugin. Whether
-  the clone loads the copy D7 installs at project scope for
+  the clone loads the copy D7 installs at local scope for
   `/home/agent/harness` is unmeasured: the probe ran in one folder, and a
-  project-scope install is recorded against its folder. Where it does not,
+  local-scope install is recorded against its folder. Where it does not,
   the pass runs without ponytail, as it does before this change, and D4's
   file is written all the same. `CLAUDE_CODE_SYNC_PLUGIN_INSTALL=1` stays
   rejected: it would cross the same four seams as D4's rejected variable.
@@ -243,8 +244,10 @@ install README names. The user's own laptop has it already, at user scope.
 
 Decided (user, 05.11, «а»): on 2.1.316 the project's settings alone do not
 install ponytail reliably, so the runner installs it explicitly, as `agent`
-in `/home/agent/harness`, with `claude plugin install ponytail@ponytail
---scope project`. The project's settings stay as task 2.4 writes them.
+in `/home/agent/harness`. The project's settings stay as task 2.4 writes them.
+The call first shipped as `claude plugin install ponytail@ponytail --scope
+project` alone; the VPS on 06.11 replaced it with two calls at local scope
+(below, task 3.5).
 
 The probe that decided it (VPS, as `agent`, 2.1.316, nothing of ponytail
 installed beforehand, a scratch folder holding exactly task 2.4's settings):
@@ -263,47 +266,86 @@ installed beforehand, a scratch folder holding exactly task 2.4's settings):
   `installed_plugins.json` listed the plugin. On the next start the band read
   `full`, and ponytail's mode file appeared under `~/.claude/ponytail-modes/`.
 
-The call goes in `session.sh`, in the round that finds the clone, after
+What the image built from `330f3e76` showed (VPS, as `agent` in
+`/home/agent/harness`, 2.1.316, 06.11):
+
+- **A fresh home's install fails at once.** With no ponytail in
+  `known_marketplaces.json`, `claude plugin install ponytail@ponytail` exits
+  1: `Plugin "ponytail" not found in marketplace "ponytail"`. The project's
+  `extraKnownMarketplaces` reaches `known_marketplaces.json` only once
+  `claude` itself starts, after the round's install has run. So the install
+  succeeds from the second round on at best, and the pane never shows why
+  the first failed: claude's screen draws over the line.
+- **Project scope dirties the clone.** A successful `--scope project` install
+  rewrites the tracked `.claude/settings.json` in Claude Code's own layout,
+  two spaces for tabs and its own key order, with the same content. `git
+  status` shows it modified, and the next pull that touches the file fails.
+  This is the dirty clone answer 5 а named (user, 05.11): the call switches
+  to `--scope local`.
+- **`claude plugin marketplace remove ponytail` in the clone strips the
+  project's entries.** Run there, it rewrote the tracked
+  `.claude/settings.json` without `extraKnownMarketplaces.ponytail` and
+  without `ponytail@ponytail` in `enabledPlugins`. Nothing in the harness
+  runs it; a person removing the marketplace by hand runs it from another
+  folder.
+- **The two calls at local scope.** `claude plugin marketplace add
+  DietrichGebert/ponytail#v5.3.3 --scope local` cloned the tag at
+  `7801d061…`, registered it in `known_marketplaces.json` with that ref, and
+  wrote the entry into the clone's `.claude/settings.local.json`, which
+  `.gitignore` names. `claude plugin install ponytail@ponytail --scope local`
+  then installed 5.3.3 and wrote `enabledPlugins` there. `git status` stayed
+  clean, agent's `~/.claude/settings.json` was untouched, and `claude plugin
+  list` showed `ponytail@ponytail`, 5.3.3, scope local, enabled. A second run
+  of both exited 0: `already on disk` and `already installed`.
+
+The calls go in `session.sh`, in the round that finds the clone, after
 `bun install` and before `claude`:
 
 ```sh
-timeout --foreground 120 claude plugin install ponytail@ponytail --scope project || echo "session: ponytail's install failed; starting claude anyway" >&2
+mkdir -p "$HOME/.cache"
+{
+	date -u "+%Y-%m-%dT%H:%M:%SZ ponytail's install"
+	timeout --foreground 120 claude plugin marketplace add DietrichGebert/ponytail#v5.3.3 --scope local &&
+		timeout --foreground 120 claude plugin install ponytail@ponytail --scope local
+} >>"$HOME/.cache/session-start.log" 2>&1 || echo "session: ponytail's install failed; starting claude anyway" >&2
 ```
 
-- **Not before the clone, the trust or the login.** The round runs it only
-  where `$HOME/harness/.git` exists. Before the folder is trusted the
-  marketplace is not registered, so the call fails, prints its line, and the
-  session starts. README step 12 has the user trust the folder and `/exit`
-  once, and the next round installs. The entrypoint, the other place
-  weighed, runs once per container start: on a fresh volume that is before
-  anyone trusted the clone, and it would not try again until the next
-  restart.
-- **The network.** The call clones from GitHub. Like the pull and `bun
-  install`, a failure prints its line and the session starts on what the
-  volume holds. coreutils' `timeout`, which the forced command's notice
-  already uses in the image, ends a call that hangs after 120 s, and its
-  exit takes the same line. `--foreground` keeps the call in the pane's
-  foreground process group: without it a call that touches the tty would be
-  stopped and sit out the whole limit every round.
-- **Idempotent.** The call runs every round, so a repeat over an installed
-  plugin must leave it as it was. What a repeat prints, and whether it
-  reaches the network, is unmeasured; a non-zero exit there prints its line
-  and changes nothing else. A round is rare, once per exit of `claude`.
-- **Pinned.** The call names no ref. The marketplace and its tag come from
-  the clone's project settings, which the round's pull has just brought up
-  to date. `DISABLE_AUTOUPDATER=1`, exported at the top of the script, keeps
-  claude itself at the image's version (D3).
+- **Not before the clone or the login.** The round runs the calls only
+  where `$HOME/harness/.git` exists. With the marketplace added by the round
+  itself, the install no longer waits for a start to register it. Whether
+  the calls need the folder trusted is unmeasured: the probe's clone was
+  trusted. README step 12 still has the user trust the folder and `/exit`
+  once. The entrypoint, the other place weighed, runs once per container
+  start: on a fresh volume that is before anyone logged in, and it would not
+  try again until the next restart.
+- **The network.** Both calls reach GitHub. Like the pull and `bun install`,
+  a failure prints its line and the session starts on what the volume
+  holds. coreutils' `timeout`, which the forced command's notice already
+  uses in the image, ends a call that hangs after 120 s, and its exit takes
+  the same line. `--foreground` keeps each call in the pane's foreground
+  process group: without it a call that touches the tty would be stopped and
+  sit out the whole limit every round. A failed add skips the install,
+  which would find no marketplace either.
+- **The log.** Each round appends a UTC timestamp line and both calls'
+  output to `~/.cache/session-start.log`, so a failure can be read after
+  claude's screen has covered the pane. The pane keeps only the one line.
+  Nothing rotates the log: a few short lines per round, and a round is
+  rare.
+- **Idempotent.** The calls run every round. Probed on 06.11: a repeat of
+  both over an installed plugin exits 0 and changes nothing. Whether a
+  repeat reaches the network stays unmeasured. A round is rare, once per
+  exit of `claude`.
+- **Pinned.** The add names the source and tag the project's settings
+  declare, `MARKETPLACE` in `bun/settings.ts`. `orchestrator/session.test.ts`
+  builds the expected call from that constant, so a pin moved in one place
+  alone fails the test (D3). `DISABLE_AUTOUPDATER=1`, exported at the top of
+  the script, keeps claude itself at the image's version (D3).
+- **Local scope.** Both calls write only the clone's untracked
+  `.claude/settings.local.json` and agent's files under `~/.claude/plugins/`,
+  so the clone stays clean for the next pull. A pass's clone does not read
+  that file; whether a pass loads ponytail stays task 4.2's read (D5).
 - **D4's level file stays in the entrypoint.** The passes read it whether or
   not `main` runs, and it needs neither the network nor the trust.
-
-Whether `--scope project` rewrites the tracked `.claude/settings.json`,
-which already carries the entry, is unmeasured: the probe's folder was no
-git clone. A rewrite in Claude Code's own layout would leave the clone dirty,
-and the next pull that touches the file would fail with its line. Decided
-(user, 05.11, answer 5 а): the scope stays `project`. Task 4.2 reads `git
-status` in the clone after the first install, and a dirty clone switches the
-call to `--scope local`, which writes the untracked
-`.claude/settings.local.json` instead.
 
 ## Risks / Trade-offs
 
@@ -326,9 +368,11 @@ call to `--scope local`, which writes the untracked
   posts nothing without a `webhookUrl`, and reads the token and the names
   only for a webhook. Unset, they act as their defaults, and nothing leaves
   the host.
-- [`--scope project` rewrites the tracked settings in the clone] →
-  unmeasured. Task 4.2 reads `git status`, and a dirty clone switches the
-  call to `--scope local` (D7, answer 5 а).
+- [`--scope project` rewrites the tracked settings in the clone] → seen on
+  06.11, so the calls run at `--scope local`, which leaves the tracked tree
+  clean (D7, answer 5 а). Task 4.2 still reads `git status`.
+- [The start log grows on the volume with nothing rotating it] → a few
+  short lines per round, and a round is rare (D7).
 - [A network that hangs holds the session's start] → the install runs under
   a 120 s `timeout` (D7).
 - [Plugin hooks run in every consumer session] → ponytail's ledger
@@ -360,7 +404,11 @@ Refreshed 05.11: #413, #418, #421 and #423 have merged.
 
 - **#418 (`fix/session-continue`)** rewrote `orchestrator/runner/session.sh`
   to continue the last conversation. This change edits that script on top of
-  it (D7), one line in the round that finds the clone, and its test's stub.
+  it (D7), the install's lines in the round that finds the clone, and its
+  test's stub. Task 3.5's fix (06.11, `fix/ponytail-install-at-start`)
+  replaced the one line with the block D7 shows, on `main` after
+  `dbf00ef8`; the stub now prints a line per plugin call, which the start
+  log's case reads.
 - **#413 (`fix/runner-image-bun-modes`)** edited the Dockerfile's copy of
   `bun/` and README step 12's numbered items. This change edits neither: it
   adds two sentences to the end of step 12's first paragraph as #418 left it.

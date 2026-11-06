@@ -137,6 +137,15 @@ led to D7. Each box below is ticked as done, with what it measured.
       Remote Control starts in the stub that ends the loop. 24 failed under
       the two shells, the reshaped round included. Add D7's line to
       `orchestrator/runner/session.sh` and make them pass
+- [x] 3.5 The VPS on 06.11 (D7): a fresh home's install found no ponytail
+      marketplace, and a project-scope install dirtied the clone. In
+      `orchestrator/session.test.ts`, write first the round with the
+      marketplace add, its source built from `MARKETPLACE`, and both calls
+      at `--scope local`, the case
+      `orchestrator/the-install-s-output-is-kept-in-a-log`, and a failing
+      add that skips the install; 24 failed under the two shells. Replace
+      D7's line in `orchestrator/runner/session.sh` with D7's block and make
+      them pass. Update README step 12's install sentence
 
 ## 4. Integration
 
@@ -149,8 +158,9 @@ led to D7. Each box below is ticked as done, with what it measured.
       `/home/agent/harness`, shows no ponytail. Trust the clone and `/exit`
       as README step 12 says, before the loop is switched on (D5), and once
       the next start has run the install (D7), check that `git status` in
-      `/home/agent/harness` is clean; a dirty clone switches `session.sh`'s
-      call to `--scope local` (answer 5 а). Check that `claude plugin list`,
+      `/home/agent/harness` is clean, the install at `--scope local` since
+      task 3.5 (answer 5 а), and that `~/.cache/session-start.log` holds
+      the round's entry. Check that `claude plugin list`,
       as `agent` in a pass's clone, names ponytail; where it does not, file
       a card for an install in the pass (D5, answer 6 а). Then check four
       things. ponytail's SessionStart hook passes its rules to the model as
