@@ -12,9 +12,10 @@ after that one.
 
 ## Goals / Non-Goals
 
-**Non-Goals:** any change to the floor checks beyond decisions 5 to 7; the
-requirements `pre-push-commit-gates` adds to `mutation-floor`; checking the
-shape of every `harness` key in `bun/config.ts`.
+**Non-Goals:** any change to the floor checks beyond decisions 5 to 7; any
+change to the requirements `pre-push-commit-gates` adds to `mutation-floor`
+beyond decision 9's wording; checking the shape of every `harness` key in
+`bun/config.ts`.
 
 ## Decisions
 
@@ -36,7 +37,10 @@ No delta reaches a spec's Purpose. The archive rewrites it by hand, as
 the requirement change on `main` in one commit rather than the Purpose
 describing the harness while the requirement still describes d2ass. The
 apply writes the text here (task 1.3), and the archive copies it: a task
-that archives cannot be ticked, since the archive moves `tasks.md`.
+that archives cannot be ticked, since the archive moves `tasks.md`. The
+archive narrowed "each tracked `bun/<name>.ts` that is not a test or a
+fixture" to the modules `stryker.config.json`'s `mutate` lists, the allow
+list `pre-push-commit-gates` added after this text was written.
 
 The Purpose the archive copies, in place of the main spec's current one:
 
@@ -44,9 +48,9 @@ The Purpose the archive copies, in place of the main spec's current one:
 > check counts the mutants a Stryker report says survived and fails when that
 > count moves from the floor the repository declares, in either direction, or
 > when the floor states no reason — in the harness and in every repository
-> that installs it and runs the check. The harness mutates each tracked
-> `bun/<name>.ts` that is not a test or a fixture, alone, against the tests
-> under `bun/<name>`, and stores each module's results in the tree. It exists
+> that installs it and runs the check. The harness mutates each module
+> `stryker.config.json`'s `mutate` lists, alone, against the tests under
+> `bun/<name>`, and stores each module's results in the tree. It exists
 > because a test that asserts a value and one that merely executes the line
 > cover the same lines, so coverage cannot tell them apart and a surviving
 > mutant can.
@@ -140,6 +144,31 @@ exception for copies that would fail loudly — its dash clause explains the
 rule, it does not exempt from it. On the user's approval the rule in
 `core/rules.md` now ends "a copy that would fail loudly is no exception", in
 this change.
+
+### 9. The archived requirements say what the step does
+
+`pre-push-commit-gates`' archive (#453) synced its requirements as its groups
+settled them, and its local review handed four Minors on that text to this
+change, beside the Purpose decision 2 rewrites. At archive two of its
+requirements gain MODIFIED deltas that change wording only — `bun/mutation-run.ts`
+is as it was, and every scenario keeps its name:
+
+- *The module's source changed*, *A test file changed* and *A fixture another
+  module's tests import* named `bun/command-parse.ts`, `bun/pre-pr.ts` and
+  `bun/pre-pr-steps.ts`, none on the list, which the requirement before says
+  is never mutated; they now name `bun/<name>` placeholders, as the other
+  scenarios do.
+- `plan` refuses a listed module whose source, tests, imported fixtures or
+  `bunfig.toml` differ from `HEAD`'s even when no module needs a run, which
+  the requirement did not say; it does now, under the scenario *A listed
+  module's file left uncommitted*, which the existing case in
+  `bun/mutation-run.test.ts` cites.
+- A listed module with tests and no stored file fails only once the run has
+  rewritten that file, through the unsaved-results check, not before it
+  mutates; the requirement and the scenario say so.
+- The fingerprint holds directly imported fixtures only, which
+  `pre-push-commit-gates`' decision 4 chose; the requirement now states that
+  limit.
 
 ## Risks / Trade-offs
 
