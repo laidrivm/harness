@@ -27,7 +27,7 @@
 
 ## 5. Baseline, floor and documentation
 
-- [ ] 5.1 Run `bun bun/mutation-run.ts --all --force`, commit the rewritten `mutation/*.json`, and compare each module's killed count with 2.1's and 2.4's bun-runner counts: equal — verified by the table in the PR body
+- [ ] 5.1 Run `bun bun/mutation-run.ts --all --force`, commit the rewritten `mutation/*.json`, and compare each module's killed count with its bun-runner count on the same source: a module group 2 refactored with its post-refactor count from 2.4, never its pre-refactor one, whose tests differ, and every other module with its count from 2.1 — equal, verified by the table in the PR body
 - [ ] 5.2 Run `bun bun/mutation-run.ts` unnamed, which writes the report, then set `harness.mutationFloor.surviving` to the count `bun bun/mutation-floor.ts` names, its `why` naming the share now `NoCoverage` and each refactor — verified by the floor passing
 - [ ] 5.3 Cite the scenarios *A survivor no test reaches*, *A mutant no test reaches* and *A module its tests reach only through a child process* from cases in `bun/mutation-floor.test.ts` and `bun/mutation-run.test.ts`, the last over a fixture stored file whose mutants read `NoCoverage` — verified by `bun bun/check.ts` passing `harness.uncitedFloor` unchanged
 - [ ] 5.4 Update the comments in `bun/mutation-run.ts`, `bun/mutation-floor.ts` and `.github/workflows/mutation.yml` that name the command runner — verified by `grep -rn "command runner" bun .github` naming none
