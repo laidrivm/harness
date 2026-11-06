@@ -112,6 +112,17 @@ describe("deploy.sh and the session", () => {
 		expect(rolledBack(h)).toBeUndefined();
 	});
 
+	// spec: orchestrator/the-session-comes-back
+	test("main up at the 25th poll, after 120 s, still records the head", () => {
+		const h = host();
+		set(h, "session", 1);
+		set(h, "session.25", 0);
+		expect(deploy(h).code).toBe(0);
+		expect(sleeps(h) * 5).toBe(120);
+		expect(deployed(h)).toBe(`${HEAD}\n`);
+		expect(rolledBack(h)).toBeUndefined();
+	});
+
 	// spec: orchestrator/the-session-does-not-come-back
 	test("main not up within two minutes: the failure file and rolled-back written, then the tag back and up runner, exit 1", () => {
 		const h = host();
