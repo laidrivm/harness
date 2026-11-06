@@ -1,6 +1,6 @@
 # deploy-failure-told — tasks
 
-One pull request. In each group the failing cases come first, their failure
+One pull request per group, each under the diff budget. In each group the failing cases come first, their failure
 seen before the code changes, each cited as `// spec: <capability>/<slug>`;
 a case that pins behaviour the change keeps says so and is not expected to
 fail first. `put()` and its `shortcut:` comment are not touched.
@@ -20,8 +20,10 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       while an earlier `.reported` file exists is printed and replaces it
       (`orchestrator/a-failure-after-main-is-up`); a read-only directory at
       `.harness-deploy-failed.reported`, which the move cannot enter, still
-      leaves the report printed, the hook exiting 0 and the file in place
-      (`orchestrator/a-failure-after-main-is-up`); the existing start cases
+      leaves the report printed, the hook exiting 0 and the file in place,
+      and the next prompt reports it again, for the start hook as for the
+      prompt hook (`orchestrator/the-failure-file-cannot-be-moved-aside`);
+      the existing start cases
       keep passing (`orchestrator/the-session-starts-after-a-failed-deploy`)
 - [ ] 1.2 A pinning case in `orchestrator/deploy-session.test.ts`, passing
       before the change since `deploy.sh` is not changed for this gap: a
@@ -73,9 +75,13 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       `green(runs)`: no runs, another app's success alone, a pending, failed
       and successful single run; an older `success` with a newer `failure`
       or pending run is not green, an older `failure` with a newer `success`
-      is, each with the newer run listed first and listed last; run as a
-      script, it exits 0, 1 and 2 for green, not green and unreadable
-      standard input
+      is, each with the newer run listed first and listed last. For
+      `collect(pages)`: no pages and pages short of the first's
+      `total_count` answer `more`; pages that reach it answer their runs
+      together; a body with no `total_count`, and a last page with no runs
+      while the count is short, throw. Run as a script over a JSON array of
+      bodies, it exits 0, 1, 2 and 3 for green, not green, unreadable
+      standard input and another page wanted
 - [ ] 3.2 Then `bun/green-run.ts`, importing nothing, its comment naming the
       per-suite reading of `filter=latest`; add it to `stryker.config.json`'s
       `mutate` if the mutation floor's rules call for it. Verify
@@ -87,9 +93,14 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       (`harness-updates/an-older-check-suite-s-success-does-not-make-the-head-green`);
       an older `failure` and a newer `success` target the head
       (`harness-updates/a-newer-check-suite-s-success-makes-the-head-green`);
-      the existing cases keep passing
-- [ ] 3.4 Then `greenHead()` in `bun/bump.ts` calls `green()`. Verify
-      `bun test bun/bump` passes
+      with the fixture answering `total_count` and serving runs a page at a
+      time by `per_page` and `page`, a newer `failure` on the second page
+      after an older `success` on the first reports no target
+      (`harness-updates/test-runs-on-more-than-one-page`); the existing
+      cases keep passing
+- [ ] 3.4 Then `greenHead()` in `bun/bump.ts` reads pages of
+      `per_page=100` while `collect()` answers `more` and calls `green()`.
+      Verify `bun test bun/bump` passes
 - [ ] 3.5 Failing cases in `orchestrator/deploy.test.ts`, with
       `orchestrator/deploy.fixture.ts`'s `runs()` able to answer several runs
       with ids, the fixture's checkout gaining `bun/green-run.ts` beside
@@ -98,7 +109,11 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       newer `failure` or pending run move nothing and exit 0
       (`orchestrator/an-older-check-suite-s-success`); an older `failure`
       and a newer `success` deploy the head
-      (`orchestrator/a-newer-check-suite-s-success`); a script that exits 2
+      (`orchestrator/a-newer-check-suite-s-success`); a newer `failure` on a
+      second page after an older `success` on the first moves nothing, both
+      pages read, and a second page with no runs while the count is short
+      reads as a check that cannot be read
+      (`orchestrator/check-runs-on-more-than-one-page`); a script that exits 2
       reads as a check that cannot be read; the existing pending, failed,
       absent and other-app cases keep passing. Two recovery cases: with the
       image's `/opt/orchestrator/bun/green-run.ts` absent (a build that
@@ -106,10 +121,12 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       the module), the read still decides from the checkout's file; and the
       read's command names the checkout's file, never the image's path
       (`orchestrator/an-image-older-than-the-check`)
-- [ ] 3.6 Then `deploy.sh`'s `green()` pipes the body to
-      `docker run --rm -i --mount "type=bind,source=${PWD%/*}/bun/green-run.ts,target=/green-run.ts,readonly" --entrypoint bun "$image" /green-run.ts`
-      and maps its exit as it maps `jq`'s today, its comment saying why the
-      checkout's file. Verify `bun test orchestrator/deploy` passes
+- [ ] 3.6 Then `deploy.sh`'s `green()` reads `$runs&per_page=100&page=<n>`
+      and pipes the bodies read so far, as a JSON array, to
+      `docker run --rm -i --mount "type=bind,source=${PWD%/*}/bun/green-run.ts,target=/green-run.ts,readonly" --entrypoint bun "$image" /green-run.ts`,
+      reading the next page while it exits 3, and maps its other exits as it
+      maps `jq`'s today, its comment saying why the checkout's file. Verify
+      `bun test orchestrator/deploy` passes
 - [ ] 3.7 The implementation's pull request body names the check by hand
       from design *Risks*: before merging, the merge commit's `test` runs
       under `filter=latest` are one. Verify by reading the body back

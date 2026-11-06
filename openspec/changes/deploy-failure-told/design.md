@@ -147,10 +147,13 @@ unchanged; only the step's words grow.
 `bun/bump.ts`'s `greenHead()` reads the same URL and has the same
 `some(success && github-actions)`, so the rule is lifted into one module,
 `bun/green-run.ts`: an exported `green(runs)` that takes the newest
-`github-actions` run by `id` and returns whether it concluded `success`,
-and, run as a script, the same over the API's JSON on standard input,
-exiting 0 for green, 1 for not, 2 for input it cannot read. `greenHead()`
-imports it. `deploy.sh`'s `green()` pipes the body to it under the runner
+`github-actions` run by `id` and returns whether it concluded `success`;
+an exported `collect(pages)` that takes the API's page bodies read so far
+and returns their runs, or `more` while they hold fewer runs than the first
+page's `total_count`; and, run as a script, both over a JSON array of those
+bodies on standard input, exiting 0 for green, 1 for not, 2 for input it
+cannot read and 3 for another page wanted. `greenHead()` imports both.
+`deploy.sh`'s `green()` pipes the pages to it under the runner
 image's bun, as it runs `jq` today, but runs the checkout's own file,
 bind-mounted read-only:
 `docker run --rm -i --mount "type=bind,source=${PWD%/*}/bun/green-run.ts,target=/green-run.ts,readonly" --entrypoint bun "$image" /green-run.ts`.
@@ -173,9 +176,19 @@ helper stays for `push()`'s read of the compose config.
 
 Check run ids grow with creation (121313516713 then 121785033664 above), so
 the largest id is the newest run, a re-run of an older suite included. An
-empty list is not green, the *absent* case. The URL keeps `filter=latest`:
-it already drops the older attempts inside a suite, and the read stays one
-page.
+empty list is not green, the *absent* case. The URL keeps `filter=latest`,
+which already drops the older attempts inside a suite.
+
+Every page is read (CodeRabbit on #464, round 2), since the newest run can
+sit on any page: the API lists 30 runs a page unless asked, and the order
+it lists them in is not documented. Both callers ask for `per_page=100` and
+read page after page while `collect()` answers `more`, `deploy.sh` piping
+every body read so far to each run of the script. `total_count` counts the
+filtered runs, not the page's (observed 06.11: `a03ec51` with `per_page=1`
+answers `total_count` 2 and one run), so the pages read hold every run once
+they hold that many. A body with no `total_count`, or a page with no runs
+while the count is short, cannot be read: each page read adds a run or ends
+the read, so it ends.
 
 A newest run that is `cancelled` keeps the head undeployed, as a failed one
 does. `test.yml` cancels in progress per ref, so a run of `main` is
@@ -230,9 +243,11 @@ deploy's rollback would bring back the first deploy's previous image.
   file appears after that start and is reported at the next prompt.
 - [`UserPromptSubmit` runs the script on every prompt] → one `[ -e ]` test
   when no file exists; the hook prints nothing then.
-- [A page of check runs past 30] → `check_name=test&filter=latest` returns
-  one run per suite; reaching 30 suites of `test` on one commit is not a
-  case this host meets.
+- [Runs created while the pages are read] → a run created between two page
+  reads can land on the page already read and shift another onto the next,
+  so the pages hold that one twice and miss the new run, as a single read
+  misses a run created just after it. The deploy's second read before `up`
+  and the next tick see it; the bump reads it on its next day.
 - [The image must be rebuilt to carry the hook] → the deploy that ships this
   change rebuilds it; until then the old hook stays, which is the behaviour
   today.

@@ -39,8 +39,9 @@ main comes up is never told to the session…*,
   The next run still deploys that head again, as it does today: the user,
   told, frees the state directory, which `deployed` needs as well.
 - The deploy decides by the newest `test` run from `github-actions` across
-  every check suite the read returns, so an older suite's success no longer
-  outweighs a newer suite's failure or pending run; a consumer's bump
+  every check suite the read returns, every page of it read, so an older
+  suite's success no longer outweighs a newer suite's failure or pending
+  run; a consumer's bump
   chooses its target by the same module. The deploy runs the checkout's copy
   of that module under the runner image's bun, so an image built before the
   module existed can still read the check.

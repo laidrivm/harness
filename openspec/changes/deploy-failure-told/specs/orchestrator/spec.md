@@ -46,6 +46,14 @@ does not exist, the run SHALL skip the Windmill push and say so.
   check suite and a newer successful one in another
 - **THEN** the head is deployed as a green head is
 
+#### Scenario: Check runs on more than one page
+
+- **WHEN** the head's `test` runs span more than one page of the check runs'
+  answer
+- **THEN** every page is read and the newest run among them decides, and a
+  page with no runs before the count is reached reads as a check that cannot
+  be read
+
 #### Scenario: An image older than the check
 
 - **WHEN** the runner image under the name was built from a commit before
@@ -168,8 +176,10 @@ timeout on the journal. The managed `SessionStart` hook
 SHALL print the failure file, when it exists, on startup, on clear and on a
 continued start, and the managed `UserPromptSubmit` hook on each submitted
 prompt, each with a line asking the session to report it to the user in
-chat, and SHALL then move it aside, so the next start or prompt does not
-report it again.
+chat, and SHALL then move it aside. Only a move that succeeds SHALL keep the
+next start or prompt from reporting it again; a move that fails SHALL leave
+the report printed and the file where it was, for the next start or prompt to
+report again.
 
 #### Scenario: The build fails
 
@@ -202,6 +212,13 @@ report it again.
 - **THEN** the `UserPromptSubmit` hook's output asks the session to report the
   failure to the user and carries the file's line, and the next prompt's
   output does not
+
+#### Scenario: The failure file cannot be moved aside
+
+- **WHEN** the start or prompt hook prints the failure file and its move
+  aside fails
+- **THEN** the hook's output still carries the report, the failure file stays
+  where it was, and the next start or prompt reports it again
 
 #### Scenario: A prompt with no failure
 
