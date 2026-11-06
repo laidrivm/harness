@@ -33,8 +33,10 @@ while :; do
 		{
 			date -u "+%Y-%m-%dT%H:%M:%SZ ponytail's install"
 			# The settings' marketplace exists only once claude has started, so a fresh home's install
-			# found no ponytail (2.1.316, 06.11); the source and tag are the settings', pinned by the test.
-			timeout --foreground 120 claude plugin marketplace add DietrichGebert/ponytail#v5.3.3 --scope local &&
+			# found no ponytail (2.1.316, 06.11). Its source and tag are read from the pulled settings,
+			# since this script is baked into the image and the clone moves without it.
+			src=$(bun -e 'const s = (await Bun.file(".claude/settings.json").json()).extraKnownMarketplaces.ponytail.source; console.log(`${s.repo}#${s.ref}`)') &&
+				timeout --foreground 120 claude plugin marketplace add "$src" --scope local &&
 				# Local scope: project scope rewrites the tracked settings, dirtying the clone (answer 5 а).
 				timeout --foreground 120 claude plugin install ponytail@ponytail --scope local
 		} >>"$HOME/.cache/session-start.log" 2>&1 || echo "session: ponytail's install failed; starting claude anyway" >&2

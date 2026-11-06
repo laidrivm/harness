@@ -71,10 +71,10 @@ SHALL NOT run either call.
 
 - **WHEN** the start script runs a round in the session's clone, under `sh`
   or `dash`
-- **THEN** it runs `claude plugin marketplace add
-  DietrichGebert/ponytail#v5.3.3 --scope local`, the `MARKETPLACE` source in
-  `bun/settings.ts`, and then `claude plugin install ponytail@ponytail
-  --scope local`, in the clone, each under `timeout`, with
+- **THEN** it runs `claude plugin marketplace add <repo>#<ref> --scope
+  local`, with the repository and tag of `extraKnownMarketplaces.ponytail`
+  in the clone's `.claude/settings.json`, and then `claude plugin install
+  ponytail@ponytail --scope local`, in the clone, each under `timeout`, with
   `DISABLE_AUTOUPDATER=1`, after the dependency install and before `claude`
   starts
 
@@ -86,9 +86,10 @@ SHALL NOT run either call.
 
 #### Scenario: A failed plugin install leaves the session starting
 
-- **WHEN** `claude plugin marketplace add` or `claude plugin install` exits
-  non-zero, offline or before the clone is trusted, or outruns its time
-  limit
+- **WHEN** the clone's settings name no ponytail marketplace, the start log
+  cannot be opened, or `claude plugin marketplace add` or `claude plugin
+  install` exits non-zero, offline or before the clone is trusted, or
+  outruns its time limit
 - **THEN** the pane shows a line naming ponytail's install, a failed add
   skips the install, and `claude` starts all the same
 

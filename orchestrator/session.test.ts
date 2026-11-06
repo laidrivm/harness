@@ -13,6 +13,7 @@ import { MARKETPLACE } from "../bun/settings.ts";
 afterAll(cleanup);
 
 const script = join(import.meta.dir, "runner/session.sh");
+const settings = join(import.meta.dir, "../.claude/settings.json");
 
 /**
  * The script under `shell`, with a clone in `HOME` unless `clone` is false, git, bun or claude
@@ -33,6 +34,7 @@ function run(
 		failClaude?: boolean;
 		failPlugin?: "marketplace" | "install";
 		cacheIsFile?: boolean;
+		settings?: string;
 	} = {},
 ) {
 	// The é makes every case a path Claude Code names by its characters, not its bytes.
@@ -61,6 +63,11 @@ function run(
 		mkdirSync(join(home, "harness"));
 		writeFileSync(join(home, "harness", ".git"), "gitdir: /elsewhere\n");
 	} else if (opts.clone !== false) mkdirSync(join(home, "harness", ".git"), { recursive: true });
+	// The clone holds the harness's own settings, which the round reads ponytail's source from.
+	if (opts.clone !== false) {
+		mkdirSync(join(home, "harness", ".claude"));
+		writeFileSync(join(home, "harness", ".claude/settings.json"), opts.settings ?? readFileSync(settings, "utf8"));
+	}
 	if (opts.cacheIsFile) writeFileSync(join(home, ".cache"), "");
 	const log = join(home, "calls.log");
 	const stub = (name: string, body = "") =>
@@ -70,7 +77,8 @@ function run(
 		"git",
 		`echo "git sees GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset}" >>"${log}"\n${opts.failGit ? "exit 1\n" : ""}`,
 	);
-	stub("bun", opts.failBun ? "exit 1\n" : "");
+	// The real bun runs the round's read of the settings; only the install is stubbed.
+	stub("bun", `if [ "$1" = -e ]; then exec "${process.execPath}" "$@"; fi\n${opts.failBun ? "exit 1\n" : ""}`);
 	// The laptop has no coreutils timeout; the stub logs its limit and runs the command.
 	stub("timeout", 'shift 2\nexec "$@"\n');
 	stub("sleep");
@@ -107,8 +115,8 @@ const ENV = "env GIT_TERMINAL_PROMPT=0 DISABLE_AUTOUPDATER=1 LANG=C.UTF-8";
 // The marketplace the script adds is the one the project's settings declare, at the same tag.
 const ADD = `claude plugin marketplace add ${MARKETPLACE.source.repo}#${MARKETPLACE.source.ref} --scope local @~/harness`;
 const INSTALL = "claude plugin install ponytail@ponytail --scope local @~/harness";
-/** The marketplace's registration, each call under `timeout`. */
-const register = [`timeout --foreground 120 ${ADD}`, ADD, ENV];
+/** The marketplace's registration: the read of the clone's settings, then the add under `timeout`. */
+const register = [expect.stringMatching(/^bun -e .* @~\/harness$/), `timeout --foreground 120 ${ADD}`, ADD, ENV];
 /** One round in the clone, `claude` started as `start`. */
 const roundWith = (start: string) => [
 	"git pull --ff-only @~/harness",
@@ -229,7 +237,16 @@ for (const shell of ["sh", "dash"])
 		test("a start log that cannot be opened prints the install's line, and claude still starts", () => {
 			const { calls, out } = run(shell, { cacheIsFile: true });
 			expect(out).toContain("session: ponytail's install failed; starting claude anyway");
-			expect(calls).toContain(`${CONTINUE} @~/harness`);
+			const bunAt = round.indexOf("bun install --frozen-lockfile @~/harness");
+			expect(calls.slice(0, bunAt + 3)).toEqual([...round.slice(0, bunAt + 1), `${CONTINUE} @~/harness`, ENV]);
+		});
+
+		// spec: orchestrator/a-failed-plugin-install-leaves-the-session-starting
+		test("settings without ponytail's marketplace skip both calls, print the install's line, and claude still starts", () => {
+			const { calls, out } = run(shell, { settings: "{}\n" });
+			expect(out).toContain("session: ponytail's install failed; starting claude anyway");
+			const bunAt = round.indexOf("bun install --frozen-lockfile @~/harness");
+			expect(calls.slice(0, bunAt + 4)).toEqual([...round.slice(0, bunAt + 2), `${CONTINUE} @~/harness`, ENV]);
 		});
 
 		// spec: orchestrator/no-plugin-install-without-the-clone

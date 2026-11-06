@@ -145,7 +145,10 @@ led to D7. Each box below is ticked as done, with what it measured.
       `orchestrator/the-install-s-output-is-kept-in-a-log`, and a failing
       add that skips the install; 24 failed under the two shells. Replace
       D7's line in `orchestrator/runner/session.sh` with D7's block and make
-      them pass. Update README step 12's install sentence
+      them pass. After the review, read the source from the clone's
+      settings rather than a literal the image would keep, with cases for
+      settings without the entry and a start log that cannot be opened.
+      Update README step 12's install sentence
 
 ## 4. Integration
 
