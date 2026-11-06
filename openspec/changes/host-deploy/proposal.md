@@ -35,10 +35,15 @@ deploy acts.
   image card pulls the session's clone and runs `bun install` before `claude`
   starts again.
 - The head is recorded once the tmux session `main` is up again. When it is
-  not up within two minutes, the runner goes back to the previous image, the
-  head is recorded as rolled back, and a failure file in agent's home tells
-  the next session, which reports it in chat (user, 02.11, answer 17 a). Any
-  other step after the fast-forward that fails writes the same file.
+  not up within two minutes, a failure file in agent's home tells the next
+  session, which reports it in chat (user, 02.11, answer 17 a), the head is
+  recorded as rolled back, and the runner goes back to the previous image,
+  once per run; a rollback that fails, an `up` that fails part way and a
+  late `main` are known limits, fixed by hand until stage 9 (user,
+  2026-11-06, answers 1 б and 2 а). Any other
+  step after the fast-forward that fails writes the same file, except in a
+  run the service's `TimeoutStartSec=3h` kills before the file is written,
+  which leaves only the journal's line.
 - The Windmill push is skipped, with a journal line, while
   `secrets/windmill_deploy_token` does not exist.
 

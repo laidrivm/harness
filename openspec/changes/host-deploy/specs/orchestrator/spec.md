@@ -34,8 +34,8 @@ does not exist, the run SHALL skip the Windmill push and say so.
 
 #### Scenario: A green head
 
-- **WHEN** the head differs from the commit last deployed, its `test` check
-  concluded `success`, and the session is fresh
+- **WHEN** the head differs from the commits last deployed and last rolled
+  back, its `test` check concluded `success`, and the session is fresh
 - **THEN** the checkout is at the head, the runner runs the image built from
   it, the session has started again, and the head is recorded as deployed
 
@@ -64,7 +64,8 @@ does not exist, the run SHALL skip the Windmill push and say so.
 ### Requirement: The deploy restarts the session only while it is fresh
 
 The runner image SHALL carry managed settings whose `SessionStart` hook, on
-startup and on clear, marks the session fresh in agent's home, and whose
+startup and on clear, marks the session fresh in agent's home, leaving the
+mark as it was on a start that continues a conversation, and whose
 `UserPromptSubmit` hook removes the mark. After its build the deploy SHALL
 bring the stack up only while the mark exists; otherwise it SHALL exit 0
 without recording the head, so the next tick tries again. When `up` leaves
@@ -102,13 +103,22 @@ session starts again on the updated clone.
   prompt
 - **THEN** the mark exists after the first and not after the second
 
+#### Scenario: A continued start
+
+- **WHEN** the managed hooks run for a start that continues the last
+  conversation
+- **THEN** the mark exists exactly when it existed before, and a failure file
+  is reported as on any other start
+
 ### Requirement: A session that does not come back is rolled back
 
 Before the build the deploy SHALL tag the image the running runner container
 runs as the previous image. After bringing the stack up it SHALL wait at most
 two minutes for the tmux session `main` in the runner. When `main` is not up
-by then, it SHALL bring the runner up on the previous image, record the head
-as rolled back, write the failure file, and SHALL NOT deploy that head again.
+by then, it SHALL write the failure file, record the head as rolled back,
+bring the runner up on the previous image once, and SHALL NOT deploy that
+head again. A rollback that fails SHALL be told by the failure file and the
+journal and left for the user; retrying or verifying it is stage 9's.
 
 #### Scenario: The session comes back
 
@@ -126,6 +136,12 @@ as rolled back, write the failure file, and SHALL NOT deploy that head again.
 - **WHEN** a run finds `origin/main`'s head equal to the commit last rolled
   back
 - **THEN** the checkout, the images and the runner are unchanged
+
+#### Scenario: The rollback fails
+
+- **WHEN** the tag back or the runner's `up` fails during a rollback
+- **THEN** the failure file names the failed step, the head stays recorded as
+  rolled back, the run fails, and no later run retries the rollback
 
 ### Requirement: A deploy never ends a running pass
 
@@ -166,8 +182,10 @@ older one, SHALL write each clone's stop file that does not exist yet, until
 stage 7 removes them, and SHALL NOT record the commit as deployed. A fetch or
 check read that fails SHALL write neither, nor SHALL a run that the service's
 start timeout kills, which leaves the timeout on the journal. The managed `SessionStart` hook
-SHALL print the failure file, when it exists, with a line asking the session
-to report it to the user in chat.
+SHALL print the failure file, when it exists, on startup, on clear and on a
+continued start, with a line asking the session to report it to the user in
+chat, and SHALL then move it aside, so the next start does not report it
+again.
 
 #### Scenario: The build fails
 
@@ -191,4 +209,4 @@ to report it to the user in chat.
 
 - **WHEN** the managed `SessionStart` hook runs while the failure file exists
 - **THEN** its output asks the session to report the failure to the user and
-  carries the file's line
+  carries the file's line, and the next start's output does not

@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 import { syncSettings } from "../bun/sync-settings.ts";
-import { composed, instructions, read, root, yaml } from "./layout.fixture.ts";
+import { composed, instructions, madeOpen, read, root, yaml } from "./layout.fixture.ts";
 
 /** The runner image and the host README, read from the tree. [n]: `/zombies` ideas. */
 
@@ -164,13 +164,7 @@ describe("the runner image", () => {
 	// An octal --chmod reaches the directories its COPY creates: one made by the COPY would be 0644, which agent cannot enter.
 	test("the image makes /etc/claude-code 0755 before the COPY writes the managed CLAUDE.md into it", () => {
 		const all = lines();
-		const made = all.findIndex(
-			(l) =>
-				l.startsWith("RUN ") &&
-				l
-					.split("&&")
-					.some((c) => c.trim().startsWith("install -d -m 0755 ") && c.split(/\s+/).includes("/etc/claude-code")),
-		);
+		const made = madeOpen(all, "/etc/claude-code");
 		expect(made).toBeGreaterThan(-1);
 		expect(made).toBeLessThan(all.indexOf("COPY --chmod=0644 runner/session-rules.md /etc/claude-code/CLAUDE.md"));
 	});
