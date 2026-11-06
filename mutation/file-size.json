@@ -1,0 +1,544 @@
+{
+	"schemaVersion": "1.0",
+	"files": {
+		"bun/file-size.ts": {
+			"source": "/**\n * The per-file line cap: what a reader has to hold at once to understand one\n * file, as against the diff budget's question of what one change asks them to\n * read.\n *\n * The caps are an enumeration of the extensions they cover rather than of what\n * they exempt, which is the direction `CLAUDE.md` warns against — deliberately,\n * because the numbers differ per extension and a file type nobody has capped is\n * one nobody has measured. Markdown is bounded by the always-on context budget\n * where it matters, and JSON and YAML are read by key rather than by line.\n */\nimport { readFileSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { tracked } from \"./tracked.ts\";\n\n/** Longest a file of each extension may be, inclusive. */\nconst CAPS: Record<string, number> = {\n\t\".ts\": 300,\n\t\".tsx\": 300,\n\t\".css\": 200,\n};\n\n/**\n * The cap a path is subject to, or `undefined` when it is subject to none.\n * Matched case-insensitively: `endsWith` is not, so `src/A.TS` would be capped\n * by nothing at all — and a cap that silently does not apply is the direction\n * that passes wrongly.\n */\nconst capOf = (path: string) => {\n\tconst lower = path.toLowerCase();\n\treturn Object.entries(CAPS).find(([ext]) => lower.endsWith(ext))?.[1];\n};\n\n/**\n * What ends a line: a CRLF pair, a bare newline, or a bare carriage return.\n * Written once and read two ways, so the alternation cannot drift between the\n * splitting form and the anchored one. A lone `\\r` counts because an editor\n * showing a CR-terminated file shows separate lines, and a cap on what a\n * reader holds at once has to agree with what the reader sees.\n */\nconst ENDING = String.raw`\\r\\n|\\n|\\r`;\nconst ENDINGS = new RegExp(ENDING, \"g\");\nconst LAST_ENDING = new RegExp(`(?:${ENDING})$`);\n\n/**\n * Physical lines, blank ones included. A final line carrying no terminating\n * ending counts: `wc -l` counts newline characters and so reads a 301-line\n * file whose last line is unterminated as 300, which is the arithmetic that\n * would let a file over the cap through. A CRLF pair is one ending rather than\n * two, because the alternation tries the pair first.\n */\nexport function count(text: string): number {\n\tif (text === \"\") return 0;\n\tconst endings = text.split(ENDINGS).length - 1;\n\treturn LAST_ENDING.test(text) ? endings : endings + 1;\n}\n\nexport type Oversize = { path: string; count: number; cap: number };\n\n/**\n * Every tracked file over its cap in the repository containing `cwd`.\n *\n * Tracked only, so a file present for its author and absent from a clone\n * cannot fail one machine and no other.\n */\nexport function oversize(cwd?: string): Oversize[] {\n\tconst { root, files } = tracked(cwd);\n\n\tconst found: Oversize[] = [];\n\tlet read = 0;\n\tfor (const path of files) {\n\t\tconst cap = capOf(path);\n\t\tif (cap === undefined) continue;\n\t\tread++;\n\t\tconst lines = count(readFileSync(join(root, path), \"utf8\"));\n\t\tif (lines > cap) found.push({ path, count: lines, cap });\n\t}\n\n\t// A sweep that matched nothing satisfies every assertion made over its\n\t// result, so it is an error rather than a pass.\n\tif (read === 0) throw new Error(`no capped files under ${root}`);\n\n\treturn found;\n}\n",
+			"mutants": [
+				{
+					"id": "0",
+					"mutatorName": "ObjectLiteral",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 21
+						},
+						"start": {
+							"column": 38,
+							"line": 17
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "1",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 32
+						},
+						"start": {
+							"column": 33,
+							"line": 29
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "2",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 34,
+							"line": 30
+						},
+						"start": {
+							"column": 16,
+							"line": 30
+						}
+					},
+					"replacement": "path.toUpperCase()",
+					"status": "Killed"
+				},
+				{
+					"id": "3",
+					"mutatorName": "OptionalChaining",
+					"location": {
+						"end": {
+							"column": 71,
+							"line": 31
+						},
+						"start": {
+							"column": 9,
+							"line": 31
+						}
+					},
+					"replacement": "Object.entries(CAPS).find(([ext]) => lower.endsWith(ext))[1]",
+					"status": "Killed"
+				},
+				{
+					"id": "4",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 65,
+							"line": 31
+						},
+						"start": {
+							"column": 35,
+							"line": 31
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Killed"
+				},
+				{
+					"id": "5",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 65,
+							"line": 31
+						},
+						"start": {
+							"column": 46,
+							"line": 31
+						}
+					},
+					"replacement": "lower.startsWith(ext)",
+					"status": "Killed"
+				},
+				{
+					"id": "6",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 38,
+							"line": 41
+						},
+						"start": {
+							"column": 26,
+							"line": 41
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "7",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 39,
+							"line": 42
+						},
+						"start": {
+							"column": 36,
+							"line": 42
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "8",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 48,
+							"line": 43
+						},
+						"start": {
+							"column": 32,
+							"line": 43
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "9",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 56
+						},
+						"start": {
+							"column": 45,
+							"line": 52
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "10",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 53
+						},
+						"start": {
+							"column": 6,
+							"line": 53
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "11",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 53
+						},
+						"start": {
+							"column": 6,
+							"line": 53
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "12",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 53
+						},
+						"start": {
+							"column": 6,
+							"line": 53
+						}
+					},
+					"replacement": "text !== \"\"",
+					"status": "Killed"
+				},
+				{
+					"id": "13",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 53
+						},
+						"start": {
+							"column": 15,
+							"line": 53
+						}
+					},
+					"replacement": "\"Stryker was here!\"",
+					"status": "Killed"
+				},
+				{
+					"id": "14",
+					"mutatorName": "ArithmeticOperator",
+					"location": {
+						"end": {
+							"column": 48,
+							"line": 54
+						},
+						"start": {
+							"column": 18,
+							"line": 54
+						}
+					},
+					"replacement": "text.split(ENDINGS).length + 1",
+					"status": "Killed"
+				},
+				{
+					"id": "15",
+					"mutatorName": "ArithmeticOperator",
+					"location": {
+						"end": {
+							"column": 55,
+							"line": 55
+						},
+						"start": {
+							"column": 44,
+							"line": 55
+						}
+					},
+					"replacement": "endings - 1",
+					"status": "Killed"
+				},
+				{
+					"id": "16",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 84
+						},
+						"start": {
+							"column": 52,
+							"line": 66
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "17",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 30,
+							"line": 69
+						},
+						"start": {
+							"column": 28,
+							"line": 69
+						}
+					},
+					"replacement": "[\"Stryker was here\"]",
+					"status": "Killed"
+				},
+				{
+					"id": "18",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 77
+						},
+						"start": {
+							"column": 28,
+							"line": 71
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "19",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 24,
+							"line": 73
+						},
+						"start": {
+							"column": 7,
+							"line": 73
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "20",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 24,
+							"line": 73
+						},
+						"start": {
+							"column": 7,
+							"line": 73
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "21",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 24,
+							"line": 73
+						},
+						"start": {
+							"column": 7,
+							"line": 73
+						}
+					},
+					"replacement": "cap !== undefined",
+					"status": "Killed"
+				},
+				{
+					"id": "22",
+					"mutatorName": "UpdateOperator",
+					"location": {
+						"end": {
+							"column": 9,
+							"line": 74
+						},
+						"start": {
+							"column": 3,
+							"line": 74
+						}
+					},
+					"replacement": "read--",
+					"status": "Survived"
+				},
+				{
+					"id": "23",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 60,
+							"line": 75
+						},
+						"start": {
+							"column": 54,
+							"line": 75
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed"
+				},
+				{
+					"id": "24",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 18,
+							"line": 76
+						},
+						"start": {
+							"column": 7,
+							"line": 76
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "25",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 18,
+							"line": 76
+						},
+						"start": {
+							"column": 7,
+							"line": 76
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "26",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 18,
+							"line": 76
+						},
+						"start": {
+							"column": 7,
+							"line": 76
+						}
+					},
+					"replacement": "lines >= cap",
+					"status": "Killed"
+				},
+				{
+					"id": "27",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 18,
+							"line": 76
+						},
+						"start": {
+							"column": 7,
+							"line": 76
+						}
+					},
+					"replacement": "lines <= cap",
+					"status": "Killed"
+				},
+				{
+					"id": "29",
+					"mutatorName": "ObjectLiteral",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 76
+						},
+						"start": {
+							"column": 31,
+							"line": 76
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "30",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 16,
+							"line": 81
+						},
+						"start": {
+							"column": 6,
+							"line": 81
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "31",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 16,
+							"line": 81
+						},
+						"start": {
+							"column": 6,
+							"line": 81
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "32",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 16,
+							"line": 81
+						},
+						"start": {
+							"column": 6,
+							"line": 81
+						}
+					},
+					"replacement": "read !== 0",
+					"status": "Killed"
+				},
+				{
+					"id": "34",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 65,
+							"line": 81
+						},
+						"start": {
+							"column": 34,
+							"line": 81
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				}
+			]
+		}
+	},
+	"fingerprint": {
+		"bun/file-size-kinds.test.ts": "fc7775c522898c8d393cd262a923909429da5849",
+		"bun/file-size.test.ts": "3a20e424f517361dff8602452e9732672fa4242c",
+		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6"
+	}
+}
