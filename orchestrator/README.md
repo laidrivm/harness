@@ -12,7 +12,8 @@ for the host's own values; this file names no address and no account.
   of RAM and 20 GB of free disk (the runner image is about 6 GB).
 - SSH as root by key only.
 - A Cloudflare zone for the hostname Windmill's UI sits on.
-- This repository checked out on the host, as root, for `compose.yaml`.
+- This repository checked out on the host, as root, at `/root/harness`,
+  for `compose.yaml` and step 13's units.
 
 ## 1. The tunnel and Access
 
@@ -489,8 +490,9 @@ minutes after boot and five minutes after each run, and the service runs
 `deploy.sh` from this checkout at `/root/harness`. Each run that finds a new
 head of `main` whose `test` check passed fast-forwards the checkout and
 builds the images. It brings the stack up only while the session is fresh,
-after a start or a `/clear` and before its first message, so it never cuts a
-turn short: the runner restarts, the session pulls and installs its clone
+after a `/clear` or a new conversation's first start and before its first
+message, so it never cuts a turn short; step 12's continued start leaves the
+session as it was: the runner restarts, the session pulls and installs its clone
 and continues its conversation. A session at work keeps the built head
 waiting, and the journal says so; `/clear` it at the end of a card. As root,
 one command per line:
@@ -500,11 +502,15 @@ systemctl link /root/harness/orchestrator/host/harness-deploy.service /root/harn
 systemctl enable --now harness-deploy.timer
 ```
 
-`journalctl -u harness-deploy` shows each run. A step after the
-fast-forward that fails writes the failure file `.harness-deploy-failed` in
+systemd reads a unit when it is linked: after a merge that changes either
+file, run `systemctl daemon-reload`.
+
+`journalctl -u harness-deploy` shows each run. The fast-forward or a later
+step that fails writes the failure file `.harness-deploy-failed` in
 `agent`'s home, and each clone's stop file (step 7), and the next run starts
 again from the fetch; the session reports the file in its chat at its next
-start. When the session does not come back within two minutes, the run puts
+start. A run the three-hour timeout kills before that write leaves no file,
+only the journal's line. When the session does not come back within two minutes, the run puts
 the runner back on the image it ran before, once, and records the head in
 `/var/lib/harness-deploy/rolled-back`, so no run tries that head again; a
 later head deploys as usual. To retry the rolled-back head, remove the
@@ -520,6 +526,10 @@ To stop deploys:
 systemctl disable --now harness-deploy.timer
 ```
 
+`disable` also removes the links, so deploys start again with both commands
+above.
+
 A deploy moves the session's rules, docs, skills and `bun/` with the clone,
-but not its hooks: they run from the harness version `package.json` pins,
-and move only with a pull request that moves the pin.
+but not its hooks, nor the commands it runs from `node_modules/harness`, the
+ask command among them: they run from the harness version `package.json`
+pins, and move only with a pull request that moves the pin.

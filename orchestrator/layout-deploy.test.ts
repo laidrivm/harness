@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 import { instructions, madeOpen, read, root } from "./layout.fixture.ts";
@@ -37,8 +37,9 @@ const mark = (home: string) => existsSync(join(home, ".harness-fresh"));
 
 /**
  * A systemd unit file as section → key → value. Every line must be a
- * `[Section]`, a `Key=Value` under one, a comment or blank, and no key may
- * repeat, so a line the reader does not take fails the case (systemd.syntax).
+ * `[Section]`, a `Key=Value` under one, a comment or blank, and no section or
+ * key may repeat, since systemd merges what this would overwrite, so a line
+ * the reader does not take fails the case (systemd.syntax).
  */
 function unit(p: string) {
 	const out: Record<string, Record<string, string>> = {};
@@ -47,11 +48,13 @@ function unit(p: string) {
 		if (line === "" || line.startsWith("#") || line.startsWith(";")) continue;
 		const head = /^\[([A-Za-z]+)\]$/.exec(line);
 		if (head?.[1]) {
+			if (Object.hasOwn(out, head[1])) throw new Error(`${p}: repeated section ${line}`);
 			out[head[1]] = section = {};
 			continue;
 		}
 		const pair = /^([A-Za-z]+)=(\S.*)$/.exec(line);
-		if (!pair?.[1] || !pair[2] || !section || pair[1] in section) throw new Error(`${p}: unread line ${line}`);
+		if (!pair?.[1] || !pair[2] || !section || Object.hasOwn(section, pair[1]))
+			throw new Error(`${p}: unread line ${line}`);
 		section[pair[1]] = pair[2];
 	}
 	return out;
@@ -132,8 +135,10 @@ describe("the deploy's units", () => {
 			StateDirectory: "harness-deploy",
 			TimeoutStartSec: "3h",
 		});
-		// The host's checkout is the tree at /root/harness, so ExecStart names the tracked script, which systemd runs only when executable.
-		expect(statSync(join(root, "orchestrator/deploy.sh")).mode & 0o111).toBe(0o111);
+		// The host's checkout is the tree at /root/harness, so ExecStart names the tracked script, which systemd
+		// runs only when executable: the mode git records, the one a clone gets.
+		const mode = Bun.spawnSync(["git", "ls-files", "-s", "--", "orchestrator/deploy.sh"], { cwd: root });
+		expect(mode.stdout.toString()).toStartWith("100755 ");
 		const timer = unit("orchestrator/host/harness-deploy.timer");
 		expect(timer.Timer).toEqual({ OnBootSec: "5min", OnUnitInactiveSec: "5min" });
 		expect(timer.Install).toEqual({ WantedBy: "timers.target" });
