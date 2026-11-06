@@ -257,8 +257,8 @@ step that waits on the user SHALL carry an `(unattended: card` marker.
 #### Scenario: The head moves before a fix is applied
 
 - **WHEN** a run that counted the head as reviewed, by a review object or by
-  its check runs alone, is about to apply a fix, and the head has moved since
-  step 1
+  its check runs alone, is about to apply a fix or name a `resolve` command,
+  and the head has moved since step 1
 - **THEN** it reads the new head's check runs, commit status and reviews
   again, in step 1's order, then, if one of step 1's three tests counts the
   new head as reviewed, both comment calls and the threads, and verifies

@@ -148,8 +148,9 @@ describe("the skill's rule for a reviewed head", () => {
 	// spec: agent-autonomy/the-head-moves-before-a-fix-is-applied
 	test("a head that moved before a resolve command is re-read through all of step 1's calls, threads included", () => {
 		const skill = flat(readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8"));
+		expect(skill).toContain("and before naming a `resolve` command (step 6), read the head commit again.");
 		expect(skill).toContain(
-			"Otherwise run step 1's other three calls again — both comment calls and the threads — so a finding the new head's review added to a thread is counted before the thread is named",
+			"if none of step 1's tests counts the new head as reviewed, end on the no-review `OPEN` line naming it. Otherwise run both of step 1's comment calls and its threads call again, so a finding the new head's review added to a thread is counted before the thread is named",
 		);
 	});
 });
