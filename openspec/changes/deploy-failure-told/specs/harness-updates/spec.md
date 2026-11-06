@@ -22,3 +22,9 @@ having changed nothing and SHALL NOT proceed to land.
   one succeeded
 - **THEN** the bump exits 0, the consumer's tree is unchanged, and it reports
   no target to land
+
+#### Scenario: A newer check suite's success makes the head green
+
+- **WHEN** the harness's head carries a failed harness test run in one check
+  suite and a newer successful one in another
+- **THEN** the bump targets the head

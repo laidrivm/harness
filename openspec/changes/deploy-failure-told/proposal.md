@@ -36,10 +36,13 @@ main comes up is never told to the session…*,
   carries, which both hooks run.
 - A `rolled-back` record that cannot be written is named in the failure file,
   in each failure line the rollback writes, beside the step that failed.
-- `green()` decides by the newest `test` run from `github-actions` across
+  The next run still deploys that head again, as it does today: the user,
+  told, frees the state directory, which `deployed` needs as well.
+- The deploy decides by the newest `test` run from `github-actions` across
   every check suite the read returns, so an older suite's success no longer
   outweighs a newer suite's failure or pending run; a consumer's bump
-  chooses its target the same way.
+  chooses its target by the same module, which the deploy runs through the
+  runner image.
 
 Not in this change: the restart of a still-fresh session on each tick while a
 step after `main` keeps failing, which is the retry every other failed step
@@ -68,11 +71,13 @@ None.
 
 - Changed: `orchestrator/deploy.sh` (`green()`, `rollback()`),
   `orchestrator/runner/managed-settings.json`, `orchestrator/runner/Dockerfile`
-  (the script's `COPY`), a new `orchestrator/runner/deploy-failed.sh`,
-  `orchestrator/README.md` where it names the hooks; tests
+  (the script's `COPY`, the mode check), a new
+  `orchestrator/runner/deploy-failed.sh`, `orchestrator/README.md` where it
+  names the hooks; a new `bun/green-run.ts` and its test, `bun/bump.ts`
+  (`greenHead()`), `bun/bump.fixture.ts` (runs with ids); tests
   `orchestrator/deploy-session.test.ts`, `orchestrator/deploy.test.ts`,
-  `orchestrator/layout-deploy.test.ts`, and `orchestrator/deploy.fixture.ts`
-  for runs from more than one suite; `bun/bump.ts` (`greenHead()`) and
-  `bun/bump-verify.test.ts`.
+  `orchestrator/layout-deploy.test.ts`, `bun/bump-verify.test.ts`, and
+  `orchestrator/deploy.fixture.ts` for runs from more than one suite and a
+  `docker run` of bun.
 - The host: the next deploy after the merge rebuilds the runner image, which
   carries the new hook.

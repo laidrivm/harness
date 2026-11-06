@@ -76,9 +76,13 @@ session reads it with the prompt that follows the failure.
 
 The file the next tick removes is then harmless: that tick either succeeds,
 which supersedes the failure, or writes the file again after the restart,
-where the next prompt finds it. A prompt arriving between the removal and the
-new write makes the session busy, so the following tick stops at `fresh()`
-and leaves the new file for the prompt after.
+where the next prompt finds it. A prompt arriving after the restarted
+session's start and before the new write makes the session busy, so the
+following tick stops at `fresh()` and leaves the new file for the prompt
+after. A prompt arriving between the removal and the restart is the one the
+requirement *The deploy restarts the session only while it is fresh* already
+lets the restart cut short; the restarted start marks the session fresh
+again, and the report waits for the first prompt after the new write.
 
 Alternatives:
 
@@ -108,11 +112,17 @@ neither reads what the other writes.
 
 The script exits 0 whatever its move does. Claude Code adds a hook's
 standard output to the context only on exit 0, and the inline command
-today exits with `mv`'s status: a move that fails — a directory at
-`.harness-deploy-failed.reported` — drops the report it has just printed,
-and does so on every later start. With exit 0 the report reaches the
-session, the file stays where it was, and the next start or prompt reports
-it again, which is the louder failure.
+today exits with `mv`'s status: a move that fails — a directory agent
+cannot write at `.harness-deploy-failed.reported`, since `mv` moves the file
+into a writable one and exits 0 — drops the report it has just printed, and
+does so on every later start. With exit 0 the report reaches the session,
+the file stays where it was, and the next start or prompt reports it again,
+which is the louder failure.
+
+The inline command had no file whose mode could break it; the script does.
+The Dockerfile's mode check gains the script: a builder that took
+`--chmod=0755` and set another mode fails the build, as it does for the
+managed settings, rather than every start and prompt failing its hook.
 
 `orchestrator/layout-deploy.test.ts` runs the hook commands under `sh`; it
 maps the command's path to the tree's file through the Dockerfile's `COPY`
@@ -132,15 +142,33 @@ restored session's start finds both.
 The file's line format, `<UTC time> deploy: <step> failed at <head>`, is
 unchanged; only the step's words grow.
 
-### 4. The newest run decides
+### 4. The newest run decides, in one module both callers run
 
-`green()`'s filter becomes
-`[.check_runs[] | select(.app.slug == "github-actions")] | max_by(.id) | .conclusion == "success"`
-under `jq -e`. Check run ids grow with creation (121313516713 then
-121785033664 above), so the largest id is the newest run, a re-run of an
-older suite included. An empty list gives `null`, which compares unequal and
-exits 1, the *absent* case. The URL keeps `filter=latest`: it already drops
-the older attempts inside a suite, and the read stays one page.
+`bun/bump.ts`'s `greenHead()` reads the same URL and has the same
+`some(success && github-actions)`, so the rule is lifted into one module,
+`bun/green-run.ts`: an exported `green(runs)` that takes the newest
+`github-actions` run by `id` and returns whether it concluded `success`,
+and, run as a script, the same over the API's JSON on standard input,
+exiting 0 for green, 1 for not, 2 for input it cannot read. `greenHead()`
+imports it. `deploy.sh`'s `green()` pipes the body to it through the runner
+image, as it runs `jq` today:
+`docker run --rm -i --entrypoint bun "$image" /opt/orchestrator/bun/green-run.ts`
+— the image carries bun and the harness's `bun/` at `/opt/orchestrator/bun/`
+(Dockerfile, the event handler's `COPY`), and the host needs no bun. A
+second copy, `jq` beside TypeScript, would be the two hand-kept copies
+`core/rules.md` forbids. The module imports nothing, so the image's copy
+runs with no `node_modules`.
+
+Both reads run the image the name holds, which an earlier run built, so a
+change to the rule reaches the deploy one build later; a change to
+`deploy.sh`'s own `jq` filter today reaches it one fast-forward later. The
+`json()` helper stays for `push()`'s read of the compose config.
+
+Check run ids grow with creation (121313516713 then 121785033664 above), so
+the largest id is the newest run, a re-run of an older suite included. An
+empty list is not green, the *absent* case. The URL keeps `filter=latest`:
+it already drops the older attempts inside a suite, and the read stays one
+page.
 
 A newest run that is `cancelled` keeps the head undeployed, as a failed one
 does. `test.yml` cancels in progress per ref, so a run of `main` is
@@ -148,17 +176,16 @@ cancelled by a newer run of `main`, which is then the newest; a run
 cancelled by hand stays undeployed until it is re-run or `main` moves,
 which is what cancelling a check asks for.
 
+The newest run decides whatever event made it. A `pull_request` run tests
+the pull request's merge ref, not the commit, so a commit pushed to `main`
+as a pull request's own head, with its `push` run failed and its pull
+request run re-run green, would read as green. No such commit is among the
+1426 runs read: a merge here makes a new commit. The read cannot tell the
+suites' events apart without a second call per suite, so the case is left
+as a known limit; the code before this change had it too.
+
 Alternative: `max_by(.started_at)` — a queued run has no `started_at`, and
 two jobs can start in the same second.
-
-### 5. A consumer's bump reads the runs the same way
-
-`bun/bump.ts`'s `greenHead()` reads the same URL and has the same
-`some(success && github-actions)`. It takes the newest `github-actions` run
-by `id` and requires its `success`, as `green()` does. The two cannot share
-code — one is `jq` in a script that runs on a host with no bun, the other
-TypeScript — so each carries a case for the two-suite answer, and each
-comment names the per-suite reading of `filter=latest`.
 
 ## Risks / Trade-offs
 
