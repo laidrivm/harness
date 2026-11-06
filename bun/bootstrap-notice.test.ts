@@ -56,8 +56,9 @@ describe("the stale-install notice", () => {
 		expect(out).toContain("9d321b6");
 		expect(out).toContain(PIN.slice(0, 7));
 		expect(out).toContain("run bun run deps");
-		// The guard refuses `bun run deps` while package.json carries an uncommitted edit.
-		expect(out).toContain("bun install if package.json has uncommitted edits");
+		// The guard refuses `bun run deps` while package.json carries an uncommitted edit, and the frozen install while
+		// bun.lock lacks the pin.
+		expect(out).toContain("bun install if package.json has uncommitted edits or bun.lock lacks the pin");
 	});
 
 	// spec: harness-updates/an-install-older-than-the-notice-is-still-named
