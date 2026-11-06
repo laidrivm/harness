@@ -136,8 +136,10 @@ describe("the deploy's units", () => {
 			TimeoutStartSec: "3h",
 		});
 		// The host's checkout is the tree at /root/harness, so ExecStart names the tracked script, which systemd
-		// runs only when executable: the mode git records, the one a clone gets.
-		const mode = Bun.spawnSync(["git", "ls-files", "-s", "--", "orchestrator/deploy.sh"], { cwd: root });
+		// runs only when executable: the mode the commit records, the one a clone gets.
+		const mode = Bun.spawnSync(["git", "ls-tree", "--full-tree", "HEAD", "--", "orchestrator/deploy.sh"], {
+			cwd: root,
+		});
 		expect(mode.stdout.toString()).toStartWith("100755 ");
 		const timer = unit("orchestrator/host/harness-deploy.timer");
 		expect(timer.Timer).toEqual({ OnBootSec: "5min", OnUnitInactiveSec: "5min" });
