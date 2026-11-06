@@ -202,6 +202,17 @@ describe("the command", () => {
 		]);
 	});
 
+	test("a run after a test changed hands Stryker its results less the survivor no test covered", () => {
+		const dir = repository();
+		cli(dir, path({ node: "exit 0", bunx: stryker }));
+		git(dir, "add", "mutation");
+		git(dir, "commit", "-qm", "results");
+		write(dir, { "bun/a.test.ts": "2\n" });
+		git(dir, "commit", "-qam", "a changed test");
+		cli(dir, path({ node: "exit 0", bunx: `${writes[0]}\n/bin/cp "$f" seen; exit 3` }));
+		expect(JSON.parse(readFileSync(join(dir, "seen"), "utf8")).files["bun/a.ts"].mutants).toEqual([]);
+	});
+
 	test("one module is not dry-run apart, its own run starting with one", () => {
 		const dir = repository();
 		cli(dir, path({ node: "exit 0", bunx: `/usr/bin/grep -c '"dryRunOnly":true' "$4" >> calls; exit 3` }));

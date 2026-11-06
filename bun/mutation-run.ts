@@ -17,10 +17,11 @@ import { dirname, join, posix } from "node:path";
 import { unlocal } from "./git-local.ts";
 import { load, RUNNERS, storedFiles, type Tree, unsaved } from "./mutation-checkout.ts";
 import { REPORT } from "./mutation-floor.ts";
-import { merge, type Stored, trim } from "./mutation-stored.ts";
+import { merge, reusable, type Stored, trim } from "./mutation-stored.ts";
 import { root } from "./root.ts";
 
-export type Run = { module: string; force: boolean };
+/** `retest`: its test files changed, so the survivors no test covered are run again (see `reusable`). */
+export type Run = { module: string; force: boolean; retest?: boolean };
 
 /** Every tracked `bun/<name>.ts` that is neither a test nor a fixture. */
 export const modules = (tracked: string[]) =>
@@ -165,7 +166,7 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 			Object.fromEntries(tests.map((path) => [path, tree.text[path] ?? ""])),
 		);
 		if (force || flags.all || retest || stored.files[module]?.source !== tree.text[module])
-			runs.push({ module, force });
+			runs.push({ module, force, ...(retest && { retest }) });
 	}
 	// Stryker copies the working tree, not `HEAD`, so an edit or an untracked file anywhere judges mutants on code no
 	// clone holds. The stored files are exempt: Stryker leaves `mutation/` out, and a resumed run finds its own there.
@@ -189,14 +190,18 @@ function fail(problems: string[]): void {
  * run stops after Stryker's initial test run, which writes no incremental file, so it neither copies nor stores one.
  * Returns how Stryker failed, or `""` when it did not.
  */
-function stryker(tree: Tree, top: string, { module, force }: Run, print: Record<string, string>, dry = false): string {
+function stryker(tree: Tree, top: string, job: Run, print: Record<string, string>, dry = false): string {
+	const { module, force } = job;
 	const tmp = join(top, ".stryker-tmp");
 	const name = stem(module).slice("bun/".length);
 	const [config, work] = [join(tmp, `${name}.config.json`), join(tmp, `${name}.incremental.json`)];
 	const stored = join(top, storedPath(module));
 	mkdirSync(tmp, { recursive: true });
 	rmSync(work, { force: true });
-	if (!force && !dry && existsSync(stored)) writeFileSync(work, readFileSync(stored));
+	if (!force && !dry && existsSync(stored)) {
+		const results: Stored = JSON.parse(readFileSync(stored, "utf8"));
+		writeFileSync(work, JSON.stringify(job.retest ? reusable(results) : results));
+	}
 	writeFileSync(config, JSON.stringify(configuration(tree, module, work, dry)));
 	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force ? ["--force"] : [])];
 	// Without git's local variables: an inherited `GIT_DIR` would point the sandbox's git, and every test's, at the

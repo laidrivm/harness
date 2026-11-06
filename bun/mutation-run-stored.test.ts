@@ -7,7 +7,7 @@ import { load } from "./mutation-checkout.ts";
 import { loadReport, survivors } from "./mutation-floor.ts";
 import { base, mutant } from "./mutation-run.fixture.ts";
 import { configuration, fingerprint } from "./mutation-run.ts";
-import { merge, type Stored, trim } from "./mutation-stored.ts";
+import { merge, reusable, type Stored, trim } from "./mutation-stored.ts";
 import { root } from "./root.ts";
 
 const made: string[] = [];
@@ -107,6 +107,19 @@ describe("what a stored file holds", () => {
 			"@hughescr/stryker-bun-runner": pins["@hughescr/stryker-bun-runner"],
 			"@stryker-mutator/core": pins["@stryker-mutator/core"],
 		});
+	});
+
+	test("a run whose tests changed reuses every result but a survivor no test covered, which a static mutant is", () => {
+		const covered = { ...mutant("1", "Survived"), coveredBy: ["0"] };
+		const mutants = [mutant("0", "Survived"), covered, mutant("2", "NoCoverage"), mutant("3", "Killed")];
+		const stored: Stored = {
+			schemaVersion: "1.0",
+			testFiles: {},
+			files: { "bun/a.ts": { source: "a", mutants } },
+			fingerprint: {},
+		};
+		expect(reusable(stored).files["bun/a.ts"]?.mutants.map((m) => m.id)).toEqual(["1", "2", "3"]);
+		expect(stored.files["bun/a.ts"]?.mutants).toHaveLength(4);
 	});
 
 	// spec: mutation-floor/a-mutant-no-test-reaches
