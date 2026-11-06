@@ -1,7 +1,7 @@
 /**
  * Whether a session declared itself unattended (agent-autonomy). The question
- * gate reads it, and so will the turn gate's context-window check
- * (`wrapup-before-window-ends`), so it lives in a module of its own.
+ * gate and the turn gate's context-window check both read it, so it lives in
+ * a module of its own.
  */
 import { readFileSync } from "node:fs";
 

@@ -163,6 +163,12 @@ tree, where a restart of Claude Code that resumes the session id finds it.
   805 000
 - **THEN** that stop is refused for size
 
+#### Scenario: The ceiling stop re-arms it
+
+- **WHEN** a refusal for size was made, and the stop that ends the session at
+  the round ceiling measures 150 000
+- **THEN** the record is gone, and the next crossing is asked
+
 #### Scenario: A resumed session above the threshold
 
 - **WHEN** a session refused for size is resumed under the same session id

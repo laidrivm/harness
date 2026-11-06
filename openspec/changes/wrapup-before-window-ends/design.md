@@ -162,7 +162,9 @@ every consumer for nothing the size does not say. Rejected.
 ### 5. Order: ceiling, turn gate, size
 
 The round ceiling ends the session before `decide()` runs, so a stop at the
-ceiling is never refused for size. The turn gate's refusal comes before the
+ceiling is never refused for size; the hook still runs the size check there
+with no right to refuse, so the ceiling's stop re-arms like any other (review
+of #436). The turn gate's refusal comes before the
 size, because a missing pre-PR run is the gate's whole purpose.
 
 The gate's refusal text promises that "the next stop ends it", so no refusal
