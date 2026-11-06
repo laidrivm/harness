@@ -12,9 +12,12 @@ setDefaultTimeout(20_000);
 
 afterAll(cleanup);
 
-/** gh's answer while a check is still pending, as the hook receives it. */
+/** gh's answer while a check is still pending, as the hook receives it: gh off a terminal prints tab-separated rows. */
 const PENDING =
-	"Exit code 8\nSome checks are still pending\n0 cancelled, 0 failing, 2 successful, 0 skipped, and 1 pending checks\n";
+	"Exit code 8\nCodeRabbit\tpending\t0\thttps://github.com/laidrivm/harness/pull/437\ntest\tpass\t1m5s\thttps://github.com/laidrivm/harness/actions/runs/1\n";
+
+/** Every word of the set, a tab separator and a redirect: the line the shells run below. */
+const EVERY_WORD = "gh pr checks 437 -R o/r\t--interval=30 a.b:c@d_e-f 2>&1";
 
 /** A failure of `command` with `error`. */
 const read = (command: string, error = PENDING) => failure({ tool_input: { command }, error });
@@ -39,7 +42,7 @@ describe("a pending checks read is not counted", () => {
 	});
 
 	// spec: loop-guard/a-repository-flag-and-a-redirect
-	test.each(["gh pr checks 437 -R laidrivm/harness 2>&1", "gh pr checks 437 --repo laidrivm/harness"])(
+	test.each(["gh pr checks 437 -R laidrivm/harness 2>&1", "gh pr checks 437 --repo laidrivm/harness", EVERY_WORD])(
 		"`%s` exiting 8 three times is not counted",
 		(command) => {
 			expect(answers(3, read(command))).toEqual(Array(4).fill(SILENT));
@@ -82,12 +85,15 @@ describe("every other failure is counted", () => {
 	});
 
 	// spec: loop-guard/a-word-outside-the-set
-	test.each(["gh pr checks fix+retry", "gh pr checks 4372>&1"])(
-		"`%s` exiting 8 warns on the third failure",
-		(command) => {
-			expect(third(read(command))).toContain("3 times");
-		},
-	);
+	test.each([
+		"gh pr checks fix+retry",
+		"gh pr checks 4372>&1",
+		"gh pr checks $N 2>&1",
+		"gh pr checks *",
+		"gh pr checks ~",
+	])("`%s` exiting 8 warns on the third failure", (command) => {
+		expect(third(read(command))).toContain("3 times");
+	});
 
 	// spec: loop-guard/another-command-exiting-8
 	test("`bun test` exiting 8 warns on the third failure", () => {
@@ -115,14 +121,15 @@ function exit(shell: string, command: string): number | null {
 // design.md, *Match the whole command*: a line the exemption matches is one
 // simple command, so its exit code is gh's, except where zsh's `=word` fails
 // the line before gh runs — with 1, never the 8 the exemption holds.
+// A shell not installed is reported as a skip, never dropped from the count.
 describe("the shells read a matched line as gh's call alone", () => {
-	const shells = ["dash", "bash", "zsh"].filter((shell) => Bun.which(shell));
+	for (const shell of ["dash", "bash", "zsh"]) {
+		test.skipIf(!Bun.which(shell))(`under ${shell}, every word of the set and a redirect exit 8`, () => {
+			expect(exit(shell, EVERY_WORD)).toBe(8);
+		});
 
-	test.each(shells)("under %s, every word of the set and a redirect exit 8", (shell) => {
-		expect(exit(shell, "gh pr checks 437 -R o/r --interval=30 a.b:c@d_e-f 2>&1")).toBe(8);
-	});
-
-	test.each(shells)("under %s, a leading `=` word exits 1 under zsh and 8 elsewhere", (shell) => {
-		expect(exit(shell, "gh pr checks =nosuchcmd")).toBe(shell === "zsh" ? 1 : 8);
-	});
+		test.skipIf(!Bun.which(shell))(`under ${shell}, a leading \`=\` word exits ${shell === "zsh" ? 1 : 8}`, () => {
+			expect(exit(shell, "gh pr checks =nosuchcmd")).toBe(shell === "zsh" ? 1 : 8);
+		});
+	}
 });

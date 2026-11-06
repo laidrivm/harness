@@ -8,8 +8,9 @@
  * under the prompt being processed and warns the agent, through
  * `additionalContext` beside the error. On `PreToolUse` it refuses a barred
  * call made under that same prompt, by exiting 2 with the reason on stderr; a
- * new prompt lets the call run once more. A pending checks read — a bare
- * `gh pr checks` exiting 8 — is not a failure, and is not counted. Each warning and refusal is one
+ * new prompt lets the call run once more. A pending checks read — `gh pr
+ * checks` alone on its line, with plain words after it, exiting 8 — is not a
+ * failure, and is not counted. Each warning and refusal is one
  * record in the gate ledger. It never ends the session. The thresholds are
  * fixed by `openspec/specs/loop-guard/spec.md`, not by
  * configuration.
