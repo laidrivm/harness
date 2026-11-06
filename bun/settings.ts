@@ -282,8 +282,11 @@ export function settings(root: string): string[] {
 	const bunfig = Bun.TOML.parse(readFileSync(join(root, "bunfig.toml"), "utf8")) as { install?: unknown };
 	if (JSON.stringify(bunfig.install) !== JSON.stringify(INSTALL))
 		problems.push(`bunfig.toml: [install] is not exactly ${JSON.stringify(INSTALL)}`);
-	const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts?: { deps?: unknown } };
-	if (manifest.scripts?.deps !== DEPS) problems.push(`package.json: scripts.deps is not exactly "${DEPS}"`);
+	// JSONC, as bun reads the manifest, so a trailing comma bun accepts is no throw here.
+	const manifest = Bun.JSONC.parse(readFileSync(join(root, "package.json"), "utf8")) as {
+		scripts?: { deps?: unknown };
+	} | null;
+	if (manifest?.scripts?.deps !== DEPS) problems.push(`package.json: scripts.deps is not exactly "${DEPS}"`);
 
 	for (const path of tracked(root).paths)
 		if (path === ".npmrc" || path.endsWith("/.npmrc"))

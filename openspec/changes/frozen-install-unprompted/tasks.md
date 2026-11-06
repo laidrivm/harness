@@ -41,6 +41,11 @@ are not touched.
       Indentation is read as `settingsText()` reads it. Verify
       `bun test bun/sync-settings bun/sync` passes
 
+- [x] 2.3 From the local review: a `package.json` with a trailing comma bun
+      accepts gains the script and passes the check — sync and the check read
+      it as JSONC, as bun does — and `settingsText()` and `packageText()`
+      share one parse-and-name helper and one indentation reader
+
 ## 3. The guard reads the script
 
 - [x] 3.1 In `bun/command-guard-deps.test.ts` (3.3's file;
@@ -75,6 +80,13 @@ are not touched.
       from `check()` in
       `bun/command-guard.ts`; both header comments name it. Verify
       `bun test bun/command-guard` passes
+- [x] 3.4 From the local review: `echo --no-verify | xargs bun run deps` and
+      `BUN_OPTIONS=--no-verify bun run deps` block as `deps-args`
+      (`agent-permissions/words-before-bun`), and so does
+      `bun run --silent deps --no-verify`; `bun run test deps` does not. Then
+      `depsArgs` finds `run` and the script's name past bun's options, and
+      refuses a `bun run deps` whose command is not exactly those three
+      words; a fed `bun run` names the substitution in its reason
 
 ## 4. The bootstrap and the notice
 

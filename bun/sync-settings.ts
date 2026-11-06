@@ -61,17 +61,24 @@ function owned(list: string[], prefix: string, entries: string[]) {
 /** `list` with `file` appended when absent. */
 const withFile = (list: string[], file: string) => (list.includes(file) ? list : [...list, file]);
 
+/** `text` parsed by `parse`, `{}` for a missing file, or a throw naming `file`. */
+function parsed(file: string, text: string | undefined, parse: (text: string) => unknown = JSON.parse) {
+	try {
+		return text === undefined ? {} : parse(text);
+	} catch (error) {
+		throw new Error(`${file}: ${(error as Error).message}`);
+	}
+}
+
+/** The indentation `text` uses, a tab where it shows none. */
+const indentOf = (text: string | undefined) => text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";
+
 /**
  * The settings file's new text: the harness's hooks, lists, attribution, two
  * plugins and `ponytail` marketplace, the rest kept.
  */
 function settingsText(text: string | undefined): string {
-	let config: Settings;
-	try {
-		config = text === undefined ? {} : JSON.parse(text);
-	} catch (error) {
-		throw new Error(`.claude/settings.json: ${(error as Error).message}`);
-	}
+	const config = parsed(".claude/settings.json", text) as Settings;
 	const hooks = config.hooks ?? {};
 	for (const [event, groups] of Object.entries(hooks)) {
 		if (!Array.isArray(groups)) throw new Error(`.claude/settings.json: hooks.${event} is not a list`);
@@ -105,8 +112,7 @@ function settingsText(text: string | undefined): string {
 			throw new Error(`.claude/settings.json: ${key} is not an object`);
 	config.enabledPlugins = { ...config.enabledPlugins, ...Object.fromEntries(PLUGINS.map((id) => [id, true])) };
 	config.extraKnownMarketplaces = { ...config.extraKnownMarketplaces, ponytail: MARKETPLACE };
-	const indent = text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";
-	return `${JSON.stringify(config, null, indent)}\n`;
+	return `${JSON.stringify(config, null, indentOf(text))}\n`;
 }
 
 /** JSON's spelling of a boolean, a number and a string array is TOML's too. */
@@ -162,12 +168,8 @@ function bunfigText(text: string | undefined): string {
  * consumer's own is refused, since overwriting it would break what calls it.
  */
 function packageText(text: string | undefined): string {
-	let manifest: unknown;
-	try {
-		manifest = text === undefined ? {} : JSON.parse(text);
-	} catch (error) {
-		throw new Error(`package.json: ${(error as Error).message}`);
-	}
+	// JSONC, as bun reads the manifest; a comment it held is lost only when the script is added.
+	const manifest = parsed("package.json", text, Bun.JSONC.parse);
 	if (!isRecord(manifest)) throw new Error("package.json: not an object");
 	const scripts = manifest.scripts ?? {};
 	if (!isRecord(scripts)) throw new Error("package.json: scripts is not an object");
@@ -176,8 +178,7 @@ function packageText(text: string | undefined): string {
 		throw new Error(
 			`package.json: scripts.deps is ${JSON.stringify(scripts.deps)}, not "${DEPS}" — rename that script, then sync`,
 		);
-	const indent = text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";
-	return `${JSON.stringify({ ...manifest, scripts: { ...scripts, deps: DEPS } }, null, indent)}${text === undefined || text.endsWith("\n") ? "\n" : ""}`;
+	return `${JSON.stringify({ ...manifest, scripts: { ...scripts, deps: DEPS } }, null, indentOf(text))}${text === undefined || text.endsWith("\n") ? "\n" : ""}`;
 }
 
 type Write = readonly [file: string, was: string | undefined, now: string];

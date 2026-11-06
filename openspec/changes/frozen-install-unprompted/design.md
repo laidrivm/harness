@@ -84,6 +84,17 @@ words and marks the command `FED` (rounds 8 and 9;
 `deps-args`, the reason naming
 `bun run deps` with nothing after it. It is the one refusal the change adds.
 
+The apply step's local review found words reaching the install from before
+`bun` as well: `echo --no-verify | xargs bun run deps` appends its input, and
+`BUN_OPTIONS=--no-verify bun run deps` hands bun a variable it may read, and
+both passed. So the check compares the whole command a `bun run deps` stands
+in — wrapper, assignment and redirection words included — with the three
+words `bun run deps`, the script's name found after bun's own options as
+`bunTestRetry` finds the subcommand. This narrows nothing 2 б reversed: that
+answer dropped the refusal of every install form, and this one stays on the
+one command the change lets through unprompted. A fed `bun run` whose script
+is not `deps` gets a reason naming the substitution, not `deps`.
+
 ### 3. Sync owns `scripts.deps`
 
 `syncSettings()` already computes every file's new text before writing any,
@@ -153,6 +164,11 @@ which prompts.
   is left is a file write, which `: > package.json` makes as well, and no
   check of this change refuses (CodeRabbit round 7; a limit, decided in the
   apply step).
+- [A variable exported before the call] → `export BUN_OPTIONS=…` earlier in
+  the line or in the session reaches the install through the environment,
+  which the guard does not read; whether bun 1.4.2 takes an install flag from
+  it was not probed. The same limit as the substitution below: the guard
+  reads the typed command, not the state it runs in.
 - [A substitution that supplies the command's name] →
   `$(printf bun) run deps --no-verify` passes the `ask` rules and the guard
   alike: the rules match the text, which holds no `bun`, and the parse drops

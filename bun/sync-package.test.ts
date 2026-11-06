@@ -26,6 +26,13 @@ describe("package.json", () => {
 		expect(read(dir, "package.json")).toBe(JSON.stringify(after, null, indent));
 	});
 
+	test("a trailing comma bun accepts is read, and the check then passes", () => {
+		const dir = consumer({ [SETTINGS]: JSON.stringify(stale()), "package.json": '{ "name": "app", }' });
+		syncSettings(dir);
+		expect(JSON.parse(read(dir, "package.json")).scripts).toEqual({ deps: DEPS });
+		expect(settings(dir).join("\n")).not.toContain("package.json");
+	}, 30_000);
+
 	test("a trailing newline is kept", () => {
 		const dir = consumer({ [SETTINGS]: "{}", "package.json": '{\n\t"name": "app"\n}\n' });
 		syncSettings(dir);

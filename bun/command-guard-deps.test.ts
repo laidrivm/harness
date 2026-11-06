@@ -14,23 +14,32 @@ afterAll(cleanup);
 
 describe("words after the deps script's name", () => {
 	// spec: agent-permissions/words-after-the-script-s-name
+	//   agent-permissions/words-before-bun
 	test.each([
 		"bun run deps --no-verify",
 		"bun run deps --production",
 		"bun run deps lodash",
 		"bun run deps > package.json",
 		"bun 2>/dev/null run deps --no-verify",
+		"bun run --silent deps --no-verify",
 		"env A=1 bun run deps --no-verify",
+		"echo --no-verify | xargs bun run deps",
+		"BUN_OPTIONS=--no-verify bun run deps",
 		"bun run deps $(printf -- --no-verify)",
 		"bun run $(printf deps) --no-verify",
 	])("%s blocks, naming the bare call", (line) => {
 		const { code, rule, reason } = verdict(line);
 		expect({ code, rule }).toEqual({ code: 2, rule: "deps-args" });
-		expect(reason).toContain("`bun run deps` with nothing after it");
+		expect(reason).toContain("`bun run deps` with nothing before or after it");
 	});
 
-	test.each(["bun run deps", "bun run test --watch", "bun deps-report --x"])("%s is not refused as deps-args", (line) =>
-		expect(verdict(line).rule).not.toBe("deps-args"),
+	test("a substitution in another script's words names the substitution, not deps", () => {
+		expect(verdict('bun run test > "out-$(date +%s).log"').reason).toContain("a substitution feeds this `bun run`");
+	});
+
+	test.each(["bun run deps", "bun run test --watch", "bun run test deps", "bun deps-report --x"])(
+		"%s is not refused as deps-args",
+		(line) => expect(verdict(line).rule).not.toBe("deps-args"),
 	);
 });
 

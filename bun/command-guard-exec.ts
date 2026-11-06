@@ -136,18 +136,29 @@ export function bunxInstall(name: string, rest: string[]): string | undefined {
 }
 
 /**
- * Why `name` with `rest` is a `bun run deps` with any word after the script's
- * name, a redirection included, or a `bun run` a substitution feeds, or
- * nothing. bun forwards those words to the install (`--no-verify` skips its
- * integrity checks), and the parse drops a substitution's output — the
- * script's name among it — from the words, so a fed `bun run` refuses
- * whatever its script (frozen-install-unprompted D2).
+ * Why `name` with `rest` is a `bun run` a substitution feeds, or a `bun run
+ * deps` whose command is anything but those three words, or nothing. bun
+ * forwards every word after the script's name to the install (`--no-verify`
+ * skips its integrity checks), and a word before `bun` — an `xargs` that
+ * appends its input, an assignment bun reads — reaches it too, so the whole
+ * command is compared, its redirections included. The parse drops a
+ * substitution's output, the script's name among it, from the words, so a fed
+ * `bun run` refuses whatever its script. The subcommand is found as
+ * `bunTestRetry` finds it (frozen-install-unprompted D2).
  */
 export function depsArgs(part: string[], name: string, rest: string[]): string | undefined {
+	if (name !== "bun") return undefined;
 	const words = args(rest);
-	if (name !== "bun" || words[0] !== "run") return undefined;
-	if (!FED.has(part) && !(words[1] === "deps" && rest.length > 2)) return undefined;
-	return "command-guard: bun forwards every word after `bun run deps` to `bun install --frozen-lockfile`, where a flag such as `--no-verify` changes what it installs, and a substitution can supply those words or the script's name unseen. Install with `bun run deps` with nothing after it.";
+	const sub = words.findIndex(
+		(word, at) => word === "run" || !(word.startsWith("-") || words[at - 1]?.startsWith("-")),
+	);
+	if (words[sub] !== "run") return undefined;
+	const bare = "Install with `bun run deps` with nothing before or after it.";
+	if (FED.has(part))
+		return `command-guard: a substitution feeds this \`bun run\`, and the guard cannot see the words it supplies — the script's name among them — so it may be \`bun run deps\` with words bun forwards to the install. Write the words out. ${bare}`;
+	if (words.slice(sub + 1).find((word) => !word.startsWith("-")) !== "deps" || part.join(" ") === "bun run deps")
+		return undefined;
+	return `command-guard: bun forwards every word after \`bun run deps\` to \`bun install --frozen-lockfile\`, where a flag such as \`--no-verify\` changes what it installs, and a word before \`bun\` — an \`xargs\`, an assignment bun reads — reaches it as well. ${bare}`;
 }
 
 /**
