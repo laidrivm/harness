@@ -28,15 +28,13 @@ git-environment guard refuses SHALL make no such directory.
 
 - **WHEN** a run whose tests make temporary directories ends, its tests
   passing
-- **THEN** the `TMPDIR` it started with holds no `harness-test-*` or
-  `harness-swept-*` entry it did not hold before the run
+- **THEN** the parent the run made is gone
 
 #### Scenario: A run whose tests fail leaves nothing
 
 - **WHEN** a run whose tests make temporary directories ends with a failing
   test
-- **THEN** the `TMPDIR` it started with holds no `harness-test-*` or
-  `harness-swept-*` entry it did not hold before the run
+- **THEN** the parent the run made is gone
 
 #### Scenario: A parent that cannot be removed at the end
 
@@ -60,7 +58,8 @@ killed on timeout among them, or stopped by a test's `process.exit` or by
 Before making its own parent, a run SHALL remove each directory, not followed
 through a link, named `harness-test-*` or `harness-swept-*` under that
 `TMPDIR` that has not been modified for an hour, claiming it first by a rename
-to a new `harness-swept-*` name, so concurrent runs never remove the same one;
+to a new `harness-swept-*` name after setting its modification time to now,
+so concurrent runs never remove the same one;
 it SHALL keep every other one and every entry of any other name or kind. An
 entry it cannot read, claim or remove SHALL NOT stop the run.
 
@@ -89,6 +88,13 @@ entry it cannot read, claim or remove SHALL NOT stop the run.
 - **WHEN** a run starts while the `TMPDIR` holds a `harness-swept-*`
   directory last modified two hours earlier, a sweep killed mid-removal
 - **THEN** that directory is gone once the run has started
+
+#### Scenario: Runs starting together sweep one parent once
+
+- **WHEN** several runs start together while the `TMPDIR` holds one
+  `harness-test-*` directory last modified two hours earlier
+- **THEN** every run exits 0, that directory is gone, and no
+  `harness-swept-*` entry is left
 
 #### Scenario: A later run keeps a parent in use
 

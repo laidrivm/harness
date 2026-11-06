@@ -27,8 +27,10 @@ leaves one entry in TMPDIR*, 40f39875c31b81419e4bda065090a934).
 - At start, before making its own, the preload removes every parent another
   run left that has not been modified for an hour, so leftovers from killed
   runs, and from runs a test's `process.exit` or `--bail` ended before the
-  end-of-run hook, do not accumulate either. A parent a concurrent run is
-  still using is kept.
+  end-of-run hook, do not accumulate either. A parent a concurrent run has
+  modified within the hour is kept; a run paused for longer, by a sleeping
+  laptop or a debugger, can lose its parent to another run's sweep and fail
+  on `ENOENT` (design, *Risks*).
 - No fixture changes: every one already builds its paths on `tmpdir()`, which
   bun reads from `process.env.TMPDIR` at each call (probed with bun 1.4.2).
 - Under Stryker each mutant's `bun test` runs in a sandbox that copies
@@ -57,7 +59,8 @@ None.
 ## Impact
 
 - New: `bun/test-tmpdir.ts`, `bun/test-tmpdir.test.ts`. Changed:
-  `bunfig.toml` (`[test] preload`), and all nineteen `mutation/*.json`.
+  `bunfig.toml` (`[test] preload`), all nineteen `mutation/*.json`, and
+  `package.json`'s `harness.mutationFloor` if the survivors' count moves.
 - Every stored file under `mutation/` records `bunfig.toml` and each file it
   preloads in its fingerprint (`bun/mutation-run.ts`, `fingerprint`), so all
   of them go stale with this change; the same pull request re-runs the
