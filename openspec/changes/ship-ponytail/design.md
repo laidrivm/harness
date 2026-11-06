@@ -309,7 +309,7 @@ mkdir -p "$HOME/.cache"
 	src=$(bun -e 'const s = (await Bun.file(".claude/settings.json").json()).extraKnownMarketplaces.ponytail.source; console.log(`${s.repo}#${s.ref}`)') &&
 		timeout --foreground 120 claude plugin marketplace add "$src" --scope local &&
 		timeout --foreground 120 claude plugin install ponytail@ponytail --scope local
-} >>"$HOME/.cache/session-start.log" 2>&1 || echo "session: ponytail's install failed; starting claude anyway" >&2
+} </dev/null >>"$HOME/.cache/session-start.log" 2>&1 || echo "session: ponytail's install failed; starting claude anyway" >&2
 ```
 
 - **Not before the clone or the login.** The round runs the calls only
@@ -331,6 +331,8 @@ mkdir -p "$HOME/.cache"
 - **The log.** Each round appends a UTC timestamp line and both calls'
   output to `~/.cache/session-start.log`, so a failure can be read after
   claude's screen has covered the pane. The pane keeps only the one line.
+  Stdin is `/dev/null`, so a prompt the log would hide reads end of file
+  rather than sitting out the limit; the probe's calls ran without a tty.
   Nothing rotates the log: a few short lines per round, and a round is
   rare.
 - **Idempotent.** The calls run every round. Probed on 06.11: a repeat of
