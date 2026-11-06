@@ -28,13 +28,15 @@ git-environment guard refuses SHALL make no such directory.
 
 - **WHEN** a run whose tests make temporary directories ends, its tests
   passing
-- **THEN** the `TMPDIR` it started with holds what it held before the run
+- **THEN** the `TMPDIR` it started with holds no `harness-test-*` or
+  `harness-swept-*` entry it did not hold before the run
 
 #### Scenario: A run whose tests fail leaves nothing
 
 - **WHEN** a run whose tests make temporary directories ends with a failing
   test
-- **THEN** the `TMPDIR` it started with holds what it held before the run
+- **THEN** the `TMPDIR` it started with holds no `harness-test-*` or
+  `harness-swept-*` entry it did not hold before the run
 
 #### Scenario: A parent that cannot be removed at the end
 
@@ -46,37 +48,46 @@ git-environment guard refuses SHALL make no such directory.
 
 - **WHEN** the suite is started with `GIT_DIR` set and the git-environment
   guard refuses it
-- **THEN** the `TMPDIR` it started with holds what it held before the run
+- **THEN** the `TMPDIR` it started with holds no `harness-test-*` or
+  `harness-swept-*` entry it did not hold before the run
 
 ### Requirement: A killed run leaves one entry, which a later run removes
 
 A run that ends without its end-of-run hooks — killed, a Stryker mutant
 killed on timeout among them, or stopped by a test's `process.exit` or by
-`--bail` — SHALL leave in the `TMPDIR` it started with only its
-`harness-test-*` parent. Before making its own parent, a run SHALL remove
-each `harness-test-*` directory under that `TMPDIR` that has not been
-modified for an hour, claiming it first by a rename to a name outside that
-pattern, so concurrent runs never remove the same one; it SHALL keep every
-other one and every entry of any other name. An entry it cannot claim or
-remove SHALL NOT stop the run.
+`--bail` — SHALL leave, of the directories its test process made through
+`tmpdir()`, only its `harness-test-*` parent in the `TMPDIR` it started with.
+Before making its own parent, a run SHALL remove each directory, not followed
+through a link, named `harness-test-*` or `harness-swept-*` under that
+`TMPDIR` that has not been modified for an hour, claiming it first by a rename
+to a new `harness-swept-*` name, so concurrent runs never remove the same one;
+it SHALL keep every other one and every entry of any other name or kind. An
+entry it cannot read, claim or remove SHALL NOT stop the run.
 
 #### Scenario: A run killed mid-test
 
 - **WHEN** a run whose test has made temporary directories is killed with
   `SIGKILL`
-- **THEN** the `TMPDIR` it started with holds one entry more than before, a
-  `harness-test-*` directory
+- **THEN** the `TMPDIR` it started with holds one `harness-test-*`
+  directory more than before
 
 #### Scenario: A run stopped by a test's process.exit
 
 - **WHEN** a test that has made temporary directories calls `process.exit(0)`
-- **THEN** the `TMPDIR` the run started with holds one entry more than
-  before, a `harness-test-*` directory
+- **THEN** the `TMPDIR` the run started with holds one `harness-test-*`
+  directory more than before
 
 #### Scenario: A later run removes an abandoned parent
 
 - **WHEN** a run starts while the `TMPDIR` holds a `harness-test-*`
   directory last modified two hours earlier
+- **THEN** that directory is gone once the run has started, and no
+  `harness-swept-*` entry is left in its place
+
+#### Scenario: A later run removes an abandoned claim
+
+- **WHEN** a run starts while the `TMPDIR` holds a `harness-swept-*`
+  directory last modified two hours earlier, a sweep killed mid-removal
 - **THEN** that directory is gone once the run has started
 
 #### Scenario: A later run keeps a parent in use
@@ -94,6 +105,7 @@ remove SHALL NOT stop the run.
 
 #### Scenario: Other entries are left alone
 
-- **WHEN** a run starts while the `TMPDIR` holds a directory of another name
-  last modified two hours earlier
-- **THEN** that directory is still there when the run ends
+- **WHEN** a run starts while the `TMPDIR` holds, each last modified two
+  hours earlier, a directory of another name and a regular file named
+  `harness-test-x`
+- **THEN** both are still there when the run ends

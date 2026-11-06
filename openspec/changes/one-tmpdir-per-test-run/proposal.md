@@ -57,8 +57,8 @@ None.
 ## Impact
 
 - New: `bun/test-tmpdir.ts`, `bun/test-tmpdir.test.ts`. Changed:
-  `bunfig.toml` (`[test] preload`).
+  `bunfig.toml` (`[test] preload`), and all nineteen `mutation/*.json`.
 - Every stored file under `mutation/` records `bunfig.toml` and each file it
   preloads in its fingerprint (`bun/mutation-run.ts`, `fingerprint`), so all
-  of them go stale with this change and the next mutation run re-runs every
-  listed module whole.
+  of them go stale with this change; the same pull request re-runs the
+  baseline and commits them (design, decision 6).
