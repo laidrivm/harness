@@ -5,7 +5,7 @@
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import { ARCHIVE, HOOKS, MARK, registration } from "./bootstrap.ts";
-import { ASK, ATTRIBUTION, DENY, settings } from "./settings.ts";
+import { ASK, ATTRIBUTION, DENY, MARKETPLACE, PLUGINS, settings } from "./settings.ts";
 import { cleanup, consumer, old, parsed, read, SETTINGS, STALE_BUNFIG, stale } from "./sync-settings.fixture.ts";
 import { syncSettings } from "./sync-settings.ts";
 
@@ -202,6 +202,54 @@ describe("the settings file", () => {
 		syncSettings(dir);
 		expect(parsed(dir).attribution).toEqual(ATTRIBUTION);
 		expect(settings(dir).join("\n")).not.toContain("attribution");
+	});
+
+	// spec: harness-updates/a-consumer-adopts-the-plugins-through-the-sync
+	test.each([
+		["neither plugin key", {}],
+		[
+			"ponytail off and the marketplace at another tag",
+			{
+				enabledPlugins: { "ponytail@ponytail": false },
+				extraKnownMarketplaces: { ponytail: { ...MARKETPLACE, source: { ...MARKETPLACE.source, ref: "v5.3.2" } } },
+			},
+		],
+	])("settings with %s come out with the harness's", (_, extra) => {
+		const dir = consumer({ [SETTINGS]: JSON.stringify(stale(extra)) });
+		syncSettings(dir);
+		const after = parsed(dir);
+		for (const id of PLUGINS) expect(after.enabledPlugins[id]).toBe(true);
+		expect(after.extraKnownMarketplaces.ponytail).toEqual(MARKETPLACE);
+		expect(settings(dir).join("\n")).not.toMatch(/enabledPlugins|extraKnownMarketplaces/);
+	});
+
+	// spec: harness-updates/the-project-s-own-plugins-survive-a-sync
+	test("a project's own plugins, on and off, and its own marketplace parse equal", () => {
+		const acme = { source: { source: "github", repo: "acme/tools" } };
+		const dir = consumer({
+			[SETTINGS]: JSON.stringify(
+				stale({
+					enabledPlugins: { "some-tool@acme": true, "other-tool@acme": false },
+					extraKnownMarketplaces: { acme },
+				}),
+			),
+		});
+		syncSettings(dir);
+		const after = parsed(dir);
+		expect([after.enabledPlugins["some-tool@acme"], after.enabledPlugins["other-tool@acme"]]).toEqual([true, false]);
+		expect(after.extraKnownMarketplaces.acme).toEqual(acme);
+	});
+
+	// spec: harness-updates/a-plugin-key-sync-cannot-read
+	test.each(
+		["enabledPlugins", "extraKnownMarketplaces"].flatMap((key) =>
+			[[], "x", null].map((value) => [key, JSON.stringify(value), value] as const),
+		),
+	)("%s as %s fails naming the key and writes neither file", (key, _, value) => {
+		const json = JSON.stringify(stale({ [key]: value }));
+		const dir = consumer({ [SETTINGS]: json, "bunfig.toml": STALE_BUNFIG });
+		expect(() => syncSettings(dir)).toThrow(key);
+		expect([read(dir, SETTINGS), read(dir, "bunfig.toml")]).toEqual([json, STALE_BUNFIG]);
 	});
 
 	test("settings that are not JSON fail naming the file and write nothing", () => {

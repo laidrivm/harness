@@ -1,0 +1,82 @@
+# wrapup-before-window-ends
+
+## Why
+
+`/session-wrapup` starts only from the `next:` line `bun bun/work.ts status
+--to done` prints (`work-status`, *A written done names the wrap-up next*) or
+when the user types it. Long work that never reaches `done` runs into Claude
+Code's auto-compaction instead: no debrief, no pipeline-yield entry, and a
+summary in place of what the session knew. On the laptop a main session lost
+track of a running subagent after a compaction, and no yield entry was
+written. On the VPS one persistent session runs, and only the user can
+`/clear` it (card *Run session-wrapup before the context window runs out*,
+40c39875c31b8105837eed7d739a8086; explore of 05.11, the user's answer to
+question 1: «б»).
+
+No hook receives the context size, and the model does not see the status
+line. The transcript does carry it: every assistant reply's `message.usage`,
+whose `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`
+is the figure the status line's `used_percentage` is computed from.
+
+## What Changes
+
+- The turn gate's `Stop` half, after its own decision lets the turn end,
+  reads the last assistant reply's context size from the tail of the event's
+  `transcript_path`. At or above 800 000 tokens — a 1M window less a reserve
+  of 200 000, against the 18k–37k a wrap-up was measured to cost — it refuses
+  the stop once, with: finish the step in hand, run `/session-wrapup`, then
+  tell the user «можно /clear» — or, with a subagent still running, end the
+  turn naming the wait and wrap up once its report is in. A wrap-up already
+  in the transcript's tail counts as the ask. An unattended session (`This
+  session runs unattended.`) is not asked: a launcher reads its final
+  message.
+- "Once" is per context: a mark beside the turn gate's mark, set by the
+  refusal and dropped by the first stop that measures under half the
+  threshold, so a compaction or a `/clear` re-arms it, a small shrink within
+  one context does not, and a resumed session above the threshold is not
+  asked again.
+- The size is not read under a mark the turn gate refused, so its refusal's
+  promise that the next stop ends the turn holds; a refusal for size leaves
+  the gate free to judge the continued turn, and `commit-gates` gains a
+  requirement that its once-per-mark bound is the pre-PR refusal's own.
+- Each refusal is recorded in the gate ledger, so the wrap-up's `gates` line
+  counts it.
+- Compaction is left alone. Known limit, stated in `design.md` and
+  `README.md`: where `/autocompact` sits below 800 000, compaction comes
+  first and nothing is asked; a model with a smaller window never reaches
+  the threshold.
+- No new hook registration: the turn gate's `Stop` command already runs in
+  every consumer, so the pin bump carries it and `sync.ts` writes nothing new.
+
+Not in this change: `PreCompact` (it can block a compaction but tells the
+model nothing — answer 1 «а» declined), a status-line rule (the model cannot
+see it — «в»), subagents (`SubagentStop`, `design.md`), a threshold per
+model or per machine.
+
+## Capabilities
+
+### New Capabilities
+
+- `context-window`: what the harness does as a session's context window fills
+  — when the session is asked to wrap up, how often, and what it reads to know.
+
+### Modified Capabilities
+
+- `commit-gates`: the turn gate's once-per-mark bound counts its pre-PR
+  refusal alone; a refusal for size neither uses it nor is refused by it.
+
+The round ceiling (`stage-goal`) keeps its requirement; how the new refusal
+orders against it is set out in `context-window`.
+
+## Impact
+
+- New: `bun/context-window.ts` and its tests; `bun/task-groups.ts` (the
+  task-list reading moved out of `turn-gate.ts`, which is at its line cap)
+  and `bun/unattended.ts` (moved out of `question-gate.ts`, now shared).
+  Changed: `bun/turn-gate.ts` (its stop half calls the new check, and its
+  header names it), the importers of the moved functions, `README.md`'s hook
+  table row for the turn gate and a line on the `/autocompact` limit.
+- Settings: none, in the harness or in consumers.
+- Reach: the harness's own sessions run the hook from `node_modules/harness`,
+  so it takes effect in the harness, on the laptop and on the VPS, with the
+  self-pin bump after merge; consumers with their next bump.
