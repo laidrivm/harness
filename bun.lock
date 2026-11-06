@@ -8,7 +8,7 @@
         "@biomejs/biome": "2.5.15",
         "@stryker-mutator/core": "10.0.0",
         "@types/bun": "1.4.2",
-        "harness": "github:laidrivm/harness#50765a4e3775a7f155995f1303d95bbb51f2036b",
+        "harness": "github:laidrivm/harness#8a1fffd6769454841b5763793d138815607c239e",
         "typescript": "7.0.2",
       },
     },
@@ -286,7 +286,7 @@
 
     "gopd": ["gopd@1.2.0", "", {}, "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg=="],
 
-    "harness": ["harness@github:laidrivm/harness#50765a4", {}, "laidrivm-harness-50765a4", "sha512-kbWV4DQASFPJtzMslgvpSnn9anBr7lDFZgcdd28Qh3dMfEnYHdgfgSS32Ag7VY+p4uGQZWz8xPRjhv1KlpnVug=="],
+    "harness": ["harness@github:laidrivm/harness#8a1fffd", {}, "laidrivm-harness-8a1fffd", "sha512-Nznkeot+HpPhifsadugLN5MDtkmC8u8AnVFVxLkTiEmZ/oiUDgDs1nK2edA310adYjm1KG3U7ny4/Zl5uAorDA=="],
 
     "has-symbols": ["has-symbols@1.1.0", "", {}, "sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ=="],
 
