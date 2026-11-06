@@ -86,6 +86,13 @@ describe("the refusals", () => {
 		refused(await draft({ pulls: [seven({ state: "closed" })] }), "#7", "closed");
 	});
 
+	test("a merged #7 with no head is refused as merged, not unread (local review)", async () => {
+		refused(
+			await draft({ pulls: [seven({ state: "closed", merged_at: "2026-11-06T00:00:00Z", head: null })] }),
+			"merged",
+		);
+	});
+
 	// spec: work-draft/an-unread-pull-request
 	test("a read exiting non-zero is refused as unread [17]", async () => {
 		refused(await draft({ pullsCode: [1] }), "cannot read #7");
@@ -122,8 +129,9 @@ describe("the refusals", () => {
 		failed(await draft({ pulls: [seven()], readyCode: 1 }));
 	});
 
+	// 5 s: the limit also kills the `git` and read stubs, bun scripts that start slowly under load.
 	test("an undo killed at HARNESS_GH_TIMEOUT_MS fails the same way [20]", async () => {
-		failed(await draft({ pulls: [seven()], readyHangs: true }, undefined, { env: { HARNESS_GH_TIMEOUT_MS: "2000" } }));
+		failed(await draft({ pulls: [seven()], readyHangs: true }, undefined, { env: { HARNESS_GH_TIMEOUT_MS: "5000" } }));
 	}, 20_000);
 });
 

@@ -18,11 +18,12 @@ export function draft(n: string): { lines: string[]; code: number } {
 	if (!repo) return refuse("origin names no owner and repository");
 	const full = `${repo.owner}/${repo.repo}`;
 	const pr = readPullRequest(n, repo);
-	const head = pr?.headRefOid;
-	// A head that is not 40 hex digits is no `--head` `resolve` takes, so the answer counts as unread.
-	if (!pr || typeof head !== "string" || !/^[0-9a-f]{40}$/.test(head))
-		return refuse(`cannot read #${n} of ${full}; check \`gh auth status\``);
+	const unread = refuse(`cannot read #${n} of ${full}; check \`gh auth status\``);
+	if (!pr) return unread;
 	if (pr.state !== "OPEN") return refuse(`#${n} is ${pr.state.toLowerCase()}`);
+	const head = pr.headRefOid;
+	// A head that is not 40 hex digits is no `--head` `resolve` takes, so the answer counts as unread.
+	if (typeof head !== "string" || !/^[0-9a-f]{40}$/.test(head)) return unread;
 	if (pr.draft) return say(`draft: #${n} already a draft, head ${head}`);
 	if (!ready(full, Number(n), "--undo"))
 		return say(`draft: failed — gh pr ready --undo failed, so #${n} could not be confirmed a draft`, 1);

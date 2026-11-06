@@ -99,8 +99,8 @@ entry, a hook or a CI check leaves this file the way it would leave
   the push would review the old head and then the new one; with nothing to
   push, `finish` marks it ready. The pre-push hook refuses a push into an open pull
   request of the same repository that is not a draft (one from a fork is
-  not read), the user's own push too — run `draft --pr <n>`, or the `gh pr
-  ready <n> --undo` the refusal names, first —
+  not read), the user's own push too — run that `work.ts draft --pr <n>`, or
+  the `gh pr ready <n> --undo` the refusal names, first —
   and a push to GitHub whose pull requests it cannot read. A question to
   the user on the card keeps it draft regardless, and the CI flow
   (`bun/ci-run.ts`) holds its pull request the same way, keeping it draft
