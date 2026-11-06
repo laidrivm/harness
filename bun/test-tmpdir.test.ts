@@ -73,19 +73,35 @@ function project(...bodies: (keyof typeof BODIES)[]): { dir: string; tmp: string
 const env = (tmp: string, out: string) => ({ ...process.env, TMPDIR: tmp, OUT: out });
 
 function run(p: { dir: string; tmp: string; out: string }): { code: number; lines: string[] } {
-	const r = Bun.spawnSync([process.execPath, "test"], { cwd: p.dir, env: env(p.tmp, p.out), timeout: 30_000 });
+	// Below each case's 30 s, so a slow nested run reads as this limit, not as one bun could not fire.
+	const r = Bun.spawnSync([process.execPath, "test"], { cwd: p.dir, env: env(p.tmp, p.out), timeout: 20_000 });
 	return { code: r.exitCode ?? -1, lines: readFileSync(p.out, "utf8").split("\n").filter(Boolean) };
 }
 
-/** A directory under `tmp`, holding one file, last modified `age` milliseconds ago. */
-function aged(tmp: string, name: string, age: number): string {
+/** Sets `path`'s modification time two hours back. */
+function backdate(path: string): void {
+	const when = new Date(Date.now() - HOURS_2);
+	utimesSync(path, when, when);
+}
+
+/** A directory under `tmp`, holding one file, last modified two hours ago, or a minute ago if `recent`. */
+function aged(tmp: string, name: string, recent = false): string {
 	const path = join(tmp, name);
 	mkdirSync(path);
 	writeFileSync(join(path, "f"), "");
-	const when = new Date(Date.now() - age);
-	utimesSync(path, when, when);
+	if (recent) {
+		const when = new Date(Date.now() - 60_000);
+		utimesSync(path, when, when);
+	} else backdate(path);
 	return path;
 }
+
+describe("the harness's own suite", () => {
+	// spec: test-temp-dir/a-fixture-s-temporary-directory-lands-in-the-parent
+	test("runs under a harness-test-* parent, so its bunfig.toml preloads the module", () => {
+		expect(basename(tmpdir())).toStartWith("harness-test-");
+	});
+});
 
 // Root ignores permission bits, so a directory it cannot write to never exists for it.
 const ROOT_USER = process.getuid?.() === 0;
@@ -125,7 +141,9 @@ describe("a run's parent", () => {
 		() => {
 			const p = project("locked");
 			try {
-				expect(run(p).code).toBe(0);
+				const { code, lines } = run(p);
+				// The lock still there shows the removal failed, so the exit code is the catch's.
+				expect([code, existsSync(lines[1] ?? "")]).toEqual([0, true]);
 			} finally {
 				for (const line of readFileSync(p.out, "utf8").split("\n"))
 					if (line.endsWith("/locked") && existsSync(line)) chmodSync(line, 0o755);
@@ -175,21 +193,21 @@ describe("the sweep at start", () => {
 	// spec: test-temp-dir/a-later-run-removes-an-abandoned-parent
 	test("a harness-test-* directory two hours old is gone, and no harness-swept-* entry is left", () => {
 		const p = project("pass");
-		aged(p.tmp, "harness-test-old", HOURS_2);
+		aged(p.tmp, "harness-test-old");
 		expect([run(p).code, readdirSync(p.tmp)]).toEqual([0, []]);
 	}, 30_000);
 
 	// spec: test-temp-dir/a-later-run-removes-an-abandoned-claim
 	test("a harness-swept-* directory two hours old is gone", () => {
 		const p = project("pass");
-		aged(p.tmp, "harness-swept-old", HOURS_2);
+		aged(p.tmp, "harness-swept-old");
 		expect([run(p).code, readdirSync(p.tmp)]).toEqual([0, []]);
 	}, 30_000);
 
 	// spec: test-temp-dir/runs-starting-together-sweep-one-parent-once
 	test("four runs started together against one abandoned parent all exit 0 and leave nothing", async () => {
 		const p = project("pass");
-		aged(p.tmp, "harness-test-old", HOURS_2);
+		aged(p.tmp, "harness-test-old");
 		const runs = [0, 1, 2, 3].map(() => Bun.spawn([process.execPath, "test"], { cwd: p.dir, env: env(p.tmp, p.out) }));
 		const codes = await Promise.all(runs.map((r) => r.exited));
 		expect([codes, readdirSync(p.tmp)]).toEqual([[0, 0, 0, 0], []]);
@@ -198,18 +216,17 @@ describe("the sweep at start", () => {
 	// spec: test-temp-dir/a-later-run-keeps-a-parent-in-use
 	test("a harness-test-* directory a minute old is still there", () => {
 		const p = project("pass");
-		aged(p.tmp, "harness-test-recent", 60_000);
+		aged(p.tmp, "harness-test-recent", true);
 		expect([run(p).code, readdirSync(p.tmp)]).toEqual([0, ["harness-test-recent"]]);
 	}, 30_000);
 
 	// spec: test-temp-dir/other-entries-are-left-alone
 	test("a directory of another name and a regular file named harness-test-x, two hours old, are still there", () => {
 		const p = project("pass");
-		aged(p.tmp, "other-old", HOURS_2);
+		aged(p.tmp, "other-old");
 		const file = join(p.tmp, "harness-test-x");
 		writeFileSync(file, "");
-		const when = new Date(Date.now() - HOURS_2);
-		utimesSync(file, when, when);
+		backdate(file);
 		expect([run(p).code, readdirSync(p.tmp).sort()]).toEqual([0, ["harness-test-x", "other-old"]]);
 	}, 30_000);
 
@@ -218,16 +235,18 @@ describe("the sweep at start", () => {
 		"an abandoned parent holding an unwritable non-empty directory leaves the run exiting 0 (skipped as root)",
 		() => {
 			const p = project("pass");
-			const old = aged(p.tmp, "harness-test-old", HOURS_2);
+			const old = aged(p.tmp, "harness-test-old");
 			const locked = join(old, "locked");
 			mkdirSync(locked);
 			writeFileSync(join(locked, "f"), "");
 			chmodSync(locked, 0o500);
-			const when = new Date(Date.now() - HOURS_2);
-			utimesSync(old, when, when);
+			backdate(old);
 			try {
 				const { code, lines } = run(p);
-				expect([code, lines.length]).toEqual([0, 1]);
+				// One claim holding the lock: the sweep reached the removal and it failed.
+				const left = readdirSync(p.tmp);
+				const claimed = left.filter((n) => n.startsWith("harness-swept-") && existsSync(join(p.tmp, n, "locked")));
+				expect([code, lines.length, left.length, claimed.length]).toEqual([0, 1, 1, 1]);
 			} finally {
 				// The sweep renamed the parent before its removal failed, so the lock is wherever it now sits.
 				for (const name of readdirSync(p.tmp))

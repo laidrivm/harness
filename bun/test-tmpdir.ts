@@ -3,15 +3,16 @@
  * refused run makes nothing: keeps a run's temporary directories under one
  * `harness-test-*` parent, which `process.env.TMPDIR` points at — bun reads it
  * at each `tmpdir()` — and a global `afterAll` removes (design of
- * one-tmpdir-per-test-run, decision 1). A `Bun.spawn` without `env` still
- * hands its child the starting `TMPDIR`.
+ * one-tmpdir-per-test-run, decision 1). A `Bun.spawnSync` without `env` still
+ * hands its child the starting `TMPDIR` (the design's *Context*).
  *
  * Before making it, sweeps the parents and claims other runs left unmodified
- * for an hour (decision 3): each is touched, then renamed to a new
- * `harness-swept-*` name, so of runs starting together one removes it, then
- * removed. No signal handler (decision 4): a killed run's parent waits for a
- * later run's sweep. No leftover fails a run: an entry another run claims
- * between two steps, or one that cannot be removed, is skipped.
+ * for an hour (decision 3). Each is touched, renamed to a new
+ * `harness-swept-*` name and then removed; the touch and the rename make it a
+ * claim only one of several runs starting together can win. No signal handler
+ * (decision 4): a killed run's parent waits for a later run's sweep. No
+ * leftover fails a run: an entry another run claims between two steps, or one
+ * that cannot be removed, is skipped.
  */
 import { afterAll } from "bun:test";
 import { lstatSync, mkdtempSync, readdirSync, renameSync, rmSync, utimesSync } from "node:fs";
