@@ -34,7 +34,8 @@ function project(event: Event, preferred: string | undefined): string {
 export function stateDir(env: Env = process.env): string {
 	// The XDG spec ignores a relative value, which would land in the tree.
 	const xdg = env.XDG_STATE_HOME ?? "";
-	return isAbsolute(xdg) ? xdg : join(homedir(), ".local", "state");
+	// The environment's own HOME, so a caller handed one never lands in this process's.
+	return isAbsolute(xdg) ? xdg : join(env.HOME || homedir(), ".local", "state");
 }
 
 /** The ledger's path. The turn gate reads it back to find the runner's record. */
