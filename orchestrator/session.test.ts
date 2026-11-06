@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
+import { MARKETPLACE } from "../bun/settings.ts";
 
 /**
  * The persistent session's start script (`session-runner-image` design, *The start script*), run
@@ -12,12 +13,14 @@ import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 afterAll(cleanup);
 
 const script = join(import.meta.dir, "runner/session.sh");
+const settings = join(import.meta.dir, "../.claude/settings.json");
 
 /**
  * The script under `shell`, with a clone in `HOME` unless `clone` is false, git, bun or claude
  * failing when asked, and a conversation Claude Code keeps for the clone unless `conversation`
  * names `HOME` instead or is false. `linkHome` reaches `HOME` through a symlink; `configDir` keeps
- * Claude Code's files under `CLAUDE_CONFIG_DIR` rather than `~/.claude`.
+ * Claude Code's files under `CLAUDE_CONFIG_DIR` rather than `~/.claude`. `failPlugin` names the
+ * `claude plugin` subcommand that fails.
  */
 function run(
 	shell: string,
@@ -29,7 +32,9 @@ function run(
 		failGit?: boolean;
 		failBun?: boolean;
 		failClaude?: boolean;
-		failPlugin?: boolean;
+		failPlugin?: "marketplace" | "install";
+		cacheIsFile?: boolean;
+		settings?: string;
 	} = {},
 ) {
 	// The é makes every case a path Claude Code names by its characters, not its bytes.
@@ -58,6 +63,12 @@ function run(
 		mkdirSync(join(home, "harness"));
 		writeFileSync(join(home, "harness", ".git"), "gitdir: /elsewhere\n");
 	} else if (opts.clone !== false) mkdirSync(join(home, "harness", ".git"), { recursive: true });
+	// The clone holds the harness's own settings, which the round reads ponytail's source from.
+	if (opts.clone !== false) {
+		mkdirSync(join(home, "harness", ".claude"));
+		writeFileSync(join(home, "harness", ".claude/settings.json"), opts.settings ?? readFileSync(settings, "utf8"));
+	}
+	if (opts.cacheIsFile) writeFileSync(join(home, ".cache"), "");
 	const log = join(home, "calls.log");
 	const stub = (name: string, body = "") =>
 		writeFileSync(join(bin, name), `#!/bin/sh\necho "${name} $* @$(pwd)" >>"${log}"\n${body}`, { mode: 0o755 });
@@ -66,26 +77,34 @@ function run(
 		"git",
 		`echo "git sees GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset}" >>"${log}"\n${opts.failGit ? "exit 1\n" : ""}`,
 	);
-	stub("bun", opts.failBun ? "exit 1\n" : "");
+	// The real bun runs the round's read of the settings; only the install is stubbed.
+	stub("bun", `if [ "$1" = -e ]; then exec "${process.execPath}" "$@"; fi\n${opts.failBun ? "exit 1\n" : ""}`);
 	// The laptop has no coreutils timeout; the stub logs its limit and runs the command.
 	stub("timeout", 'shift 2\nexec "$@"\n');
 	stub("sleep");
-	// Records the three variables, ends the loop on its second session start (a plugin install is
-	// not one), and otherwise exits as asked.
+	// Records the three variables, ends the loop on its second session start (a plugin call is
+	// not one), and otherwise exits as asked; a plugin call prints a line naming its subcommand.
 	stub(
 		"claude",
-		`echo "env GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset} DISABLE_AUTOUPDATER=\${DISABLE_AUTOUPDATER-unset} LANG=\${LANG-unset}" >>"${log}"\nif [ "$1" = plugin ]; then exit ${opts.failPlugin ? 1 : 0}; fi\n[ "$(grep -c '^claude .*remote-control' "${log}")" -lt 2 ] || kill "$PPID"\n${opts.failClaude ? "exit 1\n" : ""}`,
+		`echo "env GIT_TERMINAL_PROMPT=\${GIT_TERMINAL_PROMPT-unset} DISABLE_AUTOUPDATER=\${DISABLE_AUTOUPDATER-unset} LANG=\${LANG-unset}" >>"${log}"\nif [ "$1" = plugin ]; then echo "claude plugin $2 printed this"; [ "$2" != "${opts.failPlugin ?? ""}" ]; exit; fi\n[ "$(grep -c '^claude .*remote-control' "${log}")" -lt 2 ] || kill "$PPID"\n${opts.failClaude ? "exit 1\n" : ""}`,
 	);
 	const r = Bun.spawnSync([shell, script], {
 		env: { PATH: `${bin}:${process.env.PATH ?? ""}`, HOME: home, ...(opts.configDir && { CLAUDE_CONFIG_DIR: config }) },
 		timeout: 10_000,
 	});
-	let calls: string[] = [];
-	try {
-		calls = readFileSync(log, "utf8").split("\n").slice(0, -1);
-	} catch {}
-	// Each call with its directory named relative to HOME.
-	return { calls: calls.map((c) => c.replace(` @${home}`, " @~")), out: r.stdout.toString() + r.stderr.toString() };
+	const lines = (file: string) => {
+		try {
+			return readFileSync(file, "utf8").split("\n").slice(0, -1);
+		} catch {
+			return [];
+		}
+	};
+	return {
+		// Each call with its directory named relative to HOME.
+		calls: lines(log).map((c) => c.replace(` @${home}`, " @~")),
+		out: r.stdout.toString() + r.stderr.toString(),
+		startLog: lines(join(home, ".cache/session-start.log")),
+	};
 }
 
 // Built from parts, so remoteControl()'s scan of the tree does not read this file as a starter.
@@ -93,13 +112,19 @@ const START = `claude ${"-".repeat(2)}remote-control harness`;
 const CONTINUE = `claude --continue ${"-".repeat(2)}remote-control harness`;
 
 const ENV = "env GIT_TERMINAL_PROMPT=0 DISABLE_AUTOUPDATER=1 LANG=C.UTF-8";
+// The marketplace the script adds is the one the project's settings declare, at the same tag.
+const ADD = `claude plugin marketplace add ${MARKETPLACE.source.repo}#${MARKETPLACE.source.ref} --scope local @~/harness`;
+const INSTALL = "claude plugin install ponytail@ponytail --scope local @~/harness";
+/** The marketplace's registration: the read of the clone's settings, then the add under `timeout`. */
+const register = [expect.stringMatching(/^bun -e .* @~\/harness$/), `timeout --foreground 120 ${ADD}`, ADD, ENV];
 /** One round in the clone, `claude` started as `start`. */
 const roundWith = (start: string) => [
 	"git pull --ff-only @~/harness",
 	"git sees GIT_TERMINAL_PROMPT=0",
 	"bun install --frozen-lockfile @~/harness",
-	"timeout --foreground 120 claude plugin install ponytail@ponytail --scope project @~/harness",
-	"claude plugin install ponytail@ponytail --scope project @~/harness",
+	...register,
+	`timeout --foreground 120 ${INSTALL}`,
+	INSTALL,
 	ENV,
 	`${start} @~/harness`,
 	ENV,
@@ -171,21 +196,64 @@ for (const shell of ["sh", "dash"])
 		});
 
 		// spec: orchestrator/ponytail-is-installed-before-each-start
-		test("ponytail is installed in the clone at project scope, with the updater off and a 120 s limit in the pane's foreground, after bun and before each start", () => {
-			// `round` lists the install between bun's and the start, its env line showing the updater off.
+		test("ponytail's marketplace is added and the plugin installed in the clone at local scope, with the updater off and a 120 s limit in the pane's foreground, after bun and before each start", () => {
+			// `round` lists both calls between bun's and the start, their env lines showing the updater off.
 			expect(run(shell).calls).toEqual([...round, "sleep 5 @~/harness", ...round]);
+		});
+
+		// spec: orchestrator/the-install-s-output-is-kept-in-a-log
+		test("both calls' output goes to the start log under a timestamp line per round, not to the pane", () => {
+			const { out, startLog } = run(shell);
+			const entry = [
+				expect.stringMatching(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ ponytail's install$/),
+				"claude plugin marketplace printed this",
+				"claude plugin install printed this",
+			];
+			expect(startLog).toEqual([...entry, ...entry]);
+			expect(out).not.toContain("printed this");
 		});
 
 		// spec: orchestrator/a-failed-plugin-install-leaves-the-session-starting
 		test("a failing plugin install prints its line, and claude still starts", () => {
-			const { calls, out } = run(shell, { failPlugin: true });
+			const { calls, out } = run(shell, { failPlugin: "install" });
 			expect(out).toContain("session: ponytail's install failed; starting claude anyway");
 			expect(calls.slice(0, toStart.length)).toEqual(toStart);
 		});
 
+		// spec: orchestrator/a-failed-plugin-install-leaves-the-session-starting
+		test("a failing marketplace add skips the install, prints the install's line, and claude still starts", () => {
+			const { calls, out } = run(shell, { failPlugin: "marketplace" });
+			expect(out).toContain("session: ponytail's install failed; starting claude anyway");
+			const bunAt = round.indexOf("bun install --frozen-lockfile @~/harness");
+			expect(calls.slice(0, bunAt + 1 + register.length + 2)).toEqual([
+				...round.slice(0, bunAt + 1),
+				...register,
+				`${CONTINUE} @~/harness`,
+				ENV,
+			]);
+		});
+
+		// spec: orchestrator/a-failed-plugin-install-leaves-the-session-starting
+		test("a start log that cannot be opened prints the install's line, and claude still starts", () => {
+			const { calls, out } = run(shell, { cacheIsFile: true });
+			expect(out).toContain("session: ponytail's install failed; starting claude anyway");
+			const bunAt = round.indexOf("bun install --frozen-lockfile @~/harness");
+			expect(calls.slice(0, bunAt + 3)).toEqual([...round.slice(0, bunAt + 1), `${CONTINUE} @~/harness`, ENV]);
+		});
+
+		// spec: orchestrator/a-failed-plugin-install-leaves-the-session-starting
+		test("settings without ponytail's marketplace skip both calls, print the install's line, and claude still starts", () => {
+			const { calls, out } = run(shell, { settings: "{}\n" });
+			expect(out).toContain("session: ponytail's install failed; starting claude anyway");
+			const bunAt = round.indexOf("bun install --frozen-lockfile @~/harness");
+			expect(calls.slice(0, bunAt + 4)).toEqual([...round.slice(0, bunAt + 2), `${CONTINUE} @~/harness`, ENV]);
+		});
+
 		// spec: orchestrator/no-plugin-install-without-the-clone
-		test("with no clone, ponytail's install does not run", () => {
-			expect(run(shell, { clone: false }).calls.filter((c) => c.startsWith("claude plugin "))).toEqual([]);
+		test("with no clone, ponytail's install does not run and writes no start log", () => {
+			const { calls, startLog } = run(shell, { clone: false });
+			expect(calls.filter((c) => c.startsWith("claude plugin "))).toEqual([]);
+			expect(startLog).toEqual([]);
 		});
 
 		test("a clone whose .git is a file, as a worktree's is, is pulled and installed", () => {

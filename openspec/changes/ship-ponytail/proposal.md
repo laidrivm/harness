@@ -31,8 +31,9 @@ plugins ship in this one change (answer 3 б).
   `defaultMode` `ultra`, before it starts the persistent session. The main
   session, its subagents and every pass's session read that file. The
   laptop's and the consumers' levels do not change.
-- `orchestrator/runner/session.sh` runs `claude plugin install
-  ponytail@ponytail --scope project` in the clone before each start: on
+- `orchestrator/runner/session.sh` adds ponytail's marketplace at the pinned
+  tag and runs `claude plugin install ponytail@ponytail`, both at local
+  scope, in the clone before each start, logging both calls' output: on
   Claude Code 2.1.316 the project's settings alone kept ponytail for the
   first start only (probe and user, 05.11; design.md, D7).
 - `README.md` gains a section on the harness's plugins: which, why, what they

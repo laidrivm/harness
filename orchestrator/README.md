@@ -392,10 +392,14 @@ the session starts in `/home/agent` and pulls nothing, and the first start
 after it is cloned runs in it. Every `claude` that runs as `agent` takes
 ponytail's level, ultra, from `/home/agent/.config/ponytail/config.json`,
 which the entrypoint writes on each start. Trust `/home/agent/harness` once
-in the session's pane, as step 5 does for a pass's clone, then `/exit`: until
-then the session runs without ponytail, and from the next start `session.sh`
-installs it with `claude plugin install ponytail@ponytail --scope project`
-before `claude`.
+in the session's pane, as step 5 does for a pass's clone, then `/exit`.
+Before each start `session.sh` adds ponytail's marketplace at the tag the
+clone's `.claude/settings.json` pins and installs the plugin, both at
+`--scope local`; whether that works before the trust is unmeasured. Their
+output goes to `/home/agent/.cache/session-start.log`, since claude's screen
+covers the pane, so read a failed install there; never run `claude plugin
+marketplace remove ponytail` in the clone, which strips ponytail from its
+tracked `.claude/settings.json`.
 
 1. The commit identity, the App's bot. On a host that already runs the stack,
    do this before pulling the change that needs it, since every

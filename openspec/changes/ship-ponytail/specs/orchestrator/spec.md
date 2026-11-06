@@ -57,27 +57,41 @@ install runs without ponytail (design.md, D5).
 ### Requirement: The persistent session installs ponytail before each start
 
 In each round that finds the session's clone, the start script SHALL run
-`claude plugin install ponytail@ponytail --scope project` in the clone, after
-`bun install --frozen-lockfile` and before `claude`, with Claude Code's
-auto-updater off and under a time limit. A failed or timed-out install SHALL
-print a line naming ponytail's
-install and SHALL NOT stop `claude` from starting. Where the clone does not
-exist, the script SHALL NOT run the install.
+`claude plugin marketplace add` with the source and tag the project's
+settings declare for ponytail, then `claude plugin install ponytail@ponytail`,
+both with `--scope local`, in the clone, after `bun install
+--frozen-lockfile` and before `claude`, with Claude Code's auto-updater off
+and each call under a time limit. The script SHALL append a timestamp line
+and both calls' output to `~/.cache/session-start.log`. A failed or
+timed-out call SHALL print a line naming ponytail's install and SHALL NOT
+stop `claude` from starting. Where the clone does not exist, the script
+SHALL NOT run either call.
 
 #### Scenario: Ponytail is installed before each start
 
 - **WHEN** the start script runs a round in the session's clone, under `sh`
   or `dash`
-- **THEN** it runs `claude plugin install ponytail@ponytail --scope project`
-  in the clone, under `timeout`, with `DISABLE_AUTOUPDATER=1`, after the
-  dependency install and before `claude` starts
+- **THEN** it runs `claude plugin marketplace add <repo>#<ref> --scope
+  local`, with the repository and tag of `extraKnownMarketplaces.ponytail`
+  in the clone's `.claude/settings.json`, and then `claude plugin install
+  ponytail@ponytail --scope local`, in the clone, each under `timeout`, with
+  `DISABLE_AUTOUPDATER=1`, after the dependency install and before `claude`
+  starts
+
+#### Scenario: The install's output is kept in a log
+
+- **WHEN** the start script runs a round in the session's clone
+- **THEN** `~/.cache/session-start.log` gains a UTC timestamp line naming
+  ponytail's install and both calls' output, and the pane shows none of it
 
 #### Scenario: A failed plugin install leaves the session starting
 
-- **WHEN** `claude plugin install` exits non-zero, offline or before the
-  clone is trusted, or outruns its time limit
-- **THEN** the pane shows a line naming ponytail's install, and `claude`
-  starts all the same
+- **WHEN** the clone's settings name no ponytail marketplace, the start log
+  cannot be opened, or `claude plugin marketplace add` or `claude plugin
+  install` exits non-zero, offline or before the clone is trusted, or
+  outruns its time limit
+- **THEN** the pane shows a line naming ponytail's install, a failed add
+  skips the install, and `claude` starts all the same
 
 #### Scenario: No plugin install without the clone
 
