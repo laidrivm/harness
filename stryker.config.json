@@ -8,6 +8,7 @@
 		"bun/config.ts",
 		"bun/file-size.ts",
 		"bun/floor.ts",
+		"bun/git-local.ts",
 		"bun/github-app.ts",
 		"bun/manifest-ranges.ts",
 		"bun/notion-release.ts",
