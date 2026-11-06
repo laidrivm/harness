@@ -1,8 +1,9 @@
 # deploy-failure-told — tasks
 
 One pull request. In each group the failing cases come first, their failure
-seen before the code changes, each cited as `// spec: orchestrator/<slug>`.
-`put()` and its `shortcut:` comment are not touched.
+seen before the code changes, each cited as `// spec: <capability>/<slug>`;
+a case that pins behaviour the change keeps says so and is not expected to
+fail first. `put()` and its `shortcut:` comment are not touched.
 
 ## 1. The prompt hook reports a late failure
 
@@ -13,27 +14,34 @@ seen before the code changes, each cited as `// spec: orchestrator/<slug>`.
       command naming a path no such line copies. Cases: a submitted prompt
       with the failure file prints the ask line and the file's line, moves it
       to `.harness-deploy-failed.reported`, and the next prompt prints nothing
-      (`a-failure-after-main-is-up`); a prompt with no failure file prints
-      nothing and still removes the fresh-session mark
-      (`a-prompt-with-no-failure`); a second failure reported while an
-      earlier `.reported` file exists is printed and replaces it
-      (`a-failure-after-main-is-up`); the existing start cases keep passing
-      (`the-session-starts-after-a-failed-deploy`)
-- [ ] 1.2 Failing case in `orchestrator/deploy-session.test.ts`: a fresh
-      session, the push failing after `main` is up — the failure file names
-      the push and the head after the run, `up` saw no failure file, and a
-      second run with the push still failing leaves the file again
-      (`a-failure-after-main-is-up`)
+      (`orchestrator/a-failure-after-main-is-up`); a prompt with no failure
+      file prints nothing and still removes the fresh-session mark
+      (`orchestrator/a-prompt-with-no-failure`); a second failure reported
+      while an earlier `.reported` file exists is printed and replaces it
+      (`orchestrator/a-failure-after-main-is-up`); a directory at
+      `.harness-deploy-failed.reported` still leaves the report printed, the
+      hook exiting 0 and the file in place
+      (`orchestrator/a-failure-after-main-is-up`); the existing start cases
+      keep passing (`orchestrator/the-session-starts-after-a-failed-deploy`)
+- [ ] 1.2 A pinning case in `orchestrator/deploy-session.test.ts`, passing
+      before the change since `deploy.sh` is not changed for this gap: a
+      fresh session, the push failing after `main` is up — the failure file
+      names the push and the head after the run, `up` saw no failure file,
+      and a second run with the push still failing leaves the file again
+      (`orchestrator/a-failure-after-main-is-up`)
 - [ ] 1.3 Then `orchestrator/runner/deploy-failed.sh` (mode 0755 in the
-      commit) carrying the start hook's report; the Dockerfile copies it to
+      commit) carrying the start hook's report and exiting 0 whatever its
+      move does; the Dockerfile copies it to
       `/opt/orchestrator/deploy-failed.sh` beside the other scripts; the
       `SessionStart` `startup|clear|resume` entry and the `UserPromptSubmit`
-      entry, after the mark's removal, run it. Verify
+      entry, beside the mark's removal, run it. Verify
       `bun test orchestrator/layout-deploy orchestrator/deploy-session`
       passes and `shellcheck orchestrator/runner/deploy-failed.sh` is clean
-- [ ] 1.4 `orchestrator/README.md`'s deploy section says the session reports
-      the failure file at its next start or prompt, whichever comes first;
-      verify by reading the passage back
+- [ ] 1.4 The comments and docs that name a start-only report say a start or
+      a prompt: `deploy.sh`'s header (*which the session's next start
+      reports*), the Dockerfile's comment above the managed settings' `COPY`,
+      and `orchestrator/README.md`'s deploy section; verify by reading each
+      passage back
 
 ## 2. A rolled-back record that cannot be written
 
@@ -42,10 +50,11 @@ seen before the code changes, each cited as `// spec: orchestrator/<slug>`.
       `main` not coming back — the failure file reads
       `the wait for main and the rolled-back record failed at <head>`, the
       journal says the head could not be recorded, and the tag back and the
-      runner's `up` still run (`the-rolled-back-record-cannot-be-written`);
-      the same with the tag back failing, and with the rollback's `up`
-      failing, each names its step and the record
-      (`the-rollback-fails-without-its-record`)
+      runner's `up` still run
+      (`orchestrator/the-rolled-back-record-cannot-be-written`); the same
+      with the tag back failing, and with the rollback's `up` failing, each
+      names its step and the record
+      (`orchestrator/the-rollback-fails-without-its-record`)
 - [ ] 2.2 Then `rollback()` writes `rolled-back` first and, on a failed
       write, appends ` and the rolled-back record` to each step it hands
       `failed`; the header comment and `rollback()`'s say so. Verify
@@ -59,14 +68,23 @@ seen before the code changes, each cited as `// spec: orchestrator/<slug>`.
 - [ ] 3.1 Failing cases in `orchestrator/deploy.test.ts`, with
       `orchestrator/deploy.fixture.ts`'s `runs()` able to answer several runs
       with ids: an older suite's `success` and a newer `failure` or pending
-      run move nothing and exit 0 (`an-older-check-suite-s-success`); an
-      older `failure` and a newer `success` deploy the head
-      (`a-newer-check-suite-s-success`); each with the newer run listed
-      first and listed last in the response; the existing pending, failed, absent
-      and other-app cases keep passing
+      run move nothing and exit 0
+      (`orchestrator/an-older-check-suite-s-success`); an older `failure`
+      and a newer `success` deploy the head
+      (`orchestrator/a-newer-check-suite-s-success`); each with the newer run
+      listed first and listed last in the response; the existing pending,
+      failed, absent and other-app cases keep passing
 - [ ] 3.2 Then `green()` filters `github-actions` runs and takes
       `max_by(.id)`'s conclusion, its comment naming the per-suite reading of
       `filter=latest`. Verify `bun test orchestrator/deploy` passes
+- [ ] 3.3 Failing cases in `bun/bump-verify.test.ts`'s *choosing a target*:
+      an older run's `success` and a newer `failure` or pending one, each
+      order, report no target and change nothing
+      (`harness-updates/an-older-check-suite-s-success-does-not-make-the-head-green`);
+      the existing cases keep passing
+- [ ] 3.4 Then `greenHead()` in `bun/bump.ts` takes the newest
+      `github-actions` run by `id` and requires its `success`, its comment
+      naming the per-suite reading. Verify `bun test bun/bump` passes
 
 ## 4. Integration
 
