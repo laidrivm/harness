@@ -3,8 +3,10 @@
 ## Purpose
 The command a session marks an open pull request draft with when follow-up
 on it starts, handed to a subagent or carried by the session itself, so a
-ready pull request is never under rework, until `work.ts finish` pushes the
-new head and readies it again.
+pull request it drafts is not ready while under rework, until `work.ts finish`
+pushes the new head and readies it again. A failed `draft` — a cloud
+session's on a ready pull request — is reported, and the follow-up goes on
+while the pull request stays ready.
 
 ## Requirements
 
