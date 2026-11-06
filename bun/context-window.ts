@@ -66,7 +66,8 @@ function size(line: Line): number | undefined {
 /**
  * A main-thread call of the wrap-up: the model's `Skill` call or the user's
  * typed command. A tool result is never the user's text: one quoting the tag,
- * as this change's own files do, would otherwise read as a wrap-up run.
+ * as `openspec/changes/archive/2026-11-06-wrapup-before-window-ends/` does,
+ * would otherwise read as a wrap-up run.
  */
 function wrapping(line: Line): boolean {
 	if (line.isSidechain === true) return false;
