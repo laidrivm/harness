@@ -76,9 +76,9 @@ launch prompt, never into git — the task, the clone and branch, the acts
 allowed, the user's words that apply and the report's form, and nothing the
 harness already loads. Open the call's `description` with the slug of the
 change it carries, or of the card where there is none, and name the agent's
-ID beside that card in each report — the description is what the agent list
-and notifications show, and the ID is what `SendMessage` still reaches after
-a compaction.
+ID beside the change's card, or beside that card when there is no change, in
+each report — the description is what the agent list and notifications show,
+and the ID is what `SendMessage` still reaches after a compaction.
 
 #### Code
 

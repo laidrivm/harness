@@ -10,7 +10,9 @@ user's words that apply and the report's form, and SHALL NOT copy anything
 the harness already loads for a fresh subagent. For a subagent that works on
 a change or a card, the session SHALL open the call's `description` with the
 slug of the change, or of the card where there is none, and SHALL name the
-agent's ID, where the call returns one, beside that card in each report. `core/rules.md` SHALL state this in one line of its
+agent's ID, where the call returns one, beside the change's card, or beside
+that card when there is no change, in each report. `core/rules.md` SHALL
+state this in one line of its
 `### Rules` preamble, outside the Code, Process and Safety sublists, whose
 counts it leaves as they are.
 

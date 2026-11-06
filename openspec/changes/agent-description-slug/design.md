@@ -29,24 +29,30 @@ after a compaction.
 ## Decisions
 
 Numbered as on the card's question of 2026-11-06, and the user's answers of
-the same day: 1 — ok, 2 — yes, 3 — ok.
+the same day: 1 — ok, 2 — yes, 3 — ok; and question 4, on the apply pull
+request, answered б on 2026-11-06.
 
 1. **One sentence appended to the delegation line.** User: ok. It stays the
    one line `fresh-subagent-brief` decided, in the preamble outside the Code,
    Process and Safety sublists, whose counts stay as they are. Wording:
 
    > Open the call's `description` with the slug of the change it carries, or
-   > of the card where there is none, and name the agent's ID beside that card
-   > in each report — the description is what the agent list and
-   > notifications show, and the ID is what `SendMessage` still reaches after
-   > a compaction.
+   > of the card where there is none, and name the agent's ID beside the
+   > change's card, or beside that card when there is no change, in each
+   > report — the description is what the agent list and notifications show,
+   > and the ID is what `SendMessage` still reaches after a compaction.
+
+   Its card clause is the user's answer б to question 4 on the card, of
+   2026-11-06, taking CodeRabbit's wording from round 1 on the apply pull
+   request: the confirmed sentence said "beside that card", which named no
+   card where the slug is a change's.
 
    What its terms mean, so two sessions write the same label:
    - *the slug of the change* is the change's directory name under
      `openspec/changes/`; *of the card* is a short kebab-case form of the
      card's title, for a card with no change yet;
-   - *that card* is the card the slug names, and a change's card where the
-     slug is a change's, since every change has one on the board;
+   - *the change's card* is the one on the board that every change has, and
+     *that card* the card the slug names where there is no change;
    - *each report* is the session's report to the user or its caller that
      mentions the agent, not the agent's own;
    - *the agent's ID* is the one the call returns; the built-in Explore and
@@ -69,7 +75,8 @@ the same day: 1 — ok, 2 — yes, 3 — ok.
    CodeRabbit's round 1 on the apply pull request, each is pinned within its
    whole clause — "Open the call's `description` with the slug of the change
    it carries, or of the card where there is none" and "name the agent's ID
-   beside that card in each report" — so the slug's place at the opening and
+   beside the change's card, or beside that card when there is no change, in
+   each report" — so the slug's place at the opening and
    the ID's place beside the card fail it too.
 
 ## Alternatives
