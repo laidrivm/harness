@@ -252,6 +252,21 @@ describe("the command", () => {
 		expect(head()).toBe("stryker");
 	});
 
+	test("the sandbox's commit is stryker's even where git's identity variables are exported", () => {
+		const sandbox = join(repository(), ".stryker-tmp", "sandbox-1");
+		write(sandbox, passing);
+		const env = {
+			...process.env,
+			GIT_AUTHOR_NAME: "x",
+			GIT_AUTHOR_EMAIL: "x@x",
+			GIT_COMMITTER_NAME: "x",
+			GIT_COMMITTER_EMAIL: "x@x",
+		};
+		expect(Bun.spawnSync(["sh", "-c", command("bun/a.ts")], { cwd: sandbox, env }).exitCode).toBe(0);
+		const log = Bun.spawnSync(["git", "log", "--format=%an %ae %cn %ce", "-1"], { cwd: sandbox });
+		expect(log.stdout.toString().trim()).toBe("stryker stryker@sandbox stryker stryker@sandbox");
+	});
+
 	test.each(["sh", "dash", "bash"].filter((shell) => Bun.which(shell)))(
 		"under %s, git's repository variables inherited from a hook point the sandbox's git at the sandbox",
 		(shell) => {
