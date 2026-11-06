@@ -15,12 +15,14 @@ session. With the variable unset or holding any other value, the hook SHALL
 install nothing.
 
 The install is a hook's command and no tool call, so it SHALL pass neither
-through the Bash bootstrap nor through the command guard. Before the harness
-is installed, the bootstrap SHALL let through only `bun install
---frozen-lockfile` or `bun i --frozen-lockfile`, character for character once
-surrounding whitespace is trimmed, and block every other command, a bare `bun install` among them; once it is
-installed, `agent-permissions`' *An install runs only in its frozen form*
-decides a `bun install` the agent runs.
+through the Bash bootstrap nor through the command guard. While the installed
+package holds no command guard — before the harness is installed, or with an
+install too old to hold one — the bootstrap SHALL let through only `bun
+install --frozen-lockfile` or `bun i --frozen-lockfile`, character for
+character once surrounding whitespace is trimmed, and block every other
+command, a bare `bun install` among them; once the guard is there,
+`agent-permissions`' *An install runs only in its frozen form* decides a
+`bun install` the agent runs.
 
 #### Scenario: A cloud session starts on a fresh clone
 

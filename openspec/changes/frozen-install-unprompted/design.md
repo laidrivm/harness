@@ -66,6 +66,11 @@ input, so `echo --config=x.toml | xargs bun i --frozen-lockfile` loads a
 bunfig the guard never read. Refusing every wrapper costs `timeout 600 bun
 install --frozen-lockfile`, which the agent runs without the `timeout`.
 
+A shell is not a wrapper here. The guard reads a `-c` program in full as a
+line of its own, as it does for every other check, and the shell hands bun
+neither words nor a directory the program does not spell out, so
+`bash -c "bun install --frozen-lockfile"` is the exact form and runs.
+
 The subcommand is found as `bunxInstall` finds `x` and `bunTestRetry` finds
 `test`: the first word after `bun` that is one of the verbs sought, or that is
 neither an option nor the word after one. Those two hold the walk as two

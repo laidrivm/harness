@@ -57,7 +57,9 @@ check only at the self-pin bump after merge (`design.md`, *Risks*).
       (`the-frozen-form-runs-without-a-prompt`), `bun  i --frozen-lockfile`,
       `bun "install" --frozen-lockfile`, `~/.bun/bin/bun i --frozen-lockfile`
       (`the-frozen-form-however-it-is-quoted-spaced-or-reached`),
-      `bun install --frozen-lockfile && bun test`; and `bun add preact`,
+      `bun install --frozen-lockfile && bun test`,
+      `bash -c "bun install --frozen-lockfile"`
+      (`each-command-of-a-compound-line-is-judged-alone`); and `bun add preact`,
       `bun run install`, `bun pm ls` get no `bun-install` rule
       (`another-package-command-is-not-refused-by-this-check`)
 - [ ] 1.5 Then `bunInstall(part, name, rest)` in
@@ -121,8 +123,9 @@ check only at the self-pin bump after merge (`design.md`, *Risks*).
       the one over `NOTICE` no longer citing an `ask` entry as what stops the
       agent's install. Carry the same two strings into the bootstrap and
       `SessionStart` hook commands of `.claude/settings.json` (the JSON
-      escaping of `BOOTSTRAP`'s and `NOTICE`'s text), confirm the diff of that
-      file touches only those two commands, and verify
+      escaping of `BOOTSTRAP`'s and `NOTICE`'s text), confirm this task's
+      diff of that file, against the commit that closed group 2, touches only
+      those two commands, and verify
       `bun test bun/self-pin` passes, which compares them character for
       character
 - [ ] 3.3 `bun/board-loop-clone.ts`'s refusal for a missing pinned check
