@@ -99,7 +99,8 @@ export const ARCHIVE = `g="$CLAUDE_PROJECT_DIR/node_modules/harness/bun/transcri
  * The `SessionStart` notice: one line when the installed harness is not the
  * pinned one, as after a `git pull` that brought a bump, until `bun run deps`
  * — or `bun install` after a hand edit of the pin, since the guard refuses a
- * script from a `package.json` with uncommitted edits. Claude Code adds a
+ * script from a `package.json` with uncommitted edits, and the frozen install
+ * a pin committed without its `bun.lock`. Claude Code adds a
  * `SessionStart` hook's output to the session, so the agent reads it too.
  *
  * Inline rather than a script in the package: a stale install is an older
@@ -138,7 +139,7 @@ export const NOTICE = [
 	'const pin = (m.dependencies?.harness ?? m.devDependencies?.harness ?? "").match(/#([0-9a-f]{40})$/)?.[1];',
 	'const tag = fs.readFileSync(d + "/node_modules/harness/.bun-tag", "utf8").trim().match(/-([0-9a-f]{7,40})$/)?.[1];',
 	"if (pin && tag && !pin.startsWith(tag))",
-	'console.log("The installed harness is " + tag + ", the pin " + pin.slice(0, 7) + ": run bun run deps (bun install if package.json has uncommitted edits).");',
+	'console.log("The installed harness is " + tag + ", the pin " + pin.slice(0, 7) + ": run bun run deps (bun install if package.json has uncommitted edits or bun.lock lacks the pin).");',
 	"} catch {}' || true",
 	MARK,
 ].join(" ");

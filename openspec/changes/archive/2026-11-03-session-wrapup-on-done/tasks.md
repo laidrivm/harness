@@ -46,15 +46,16 @@ whole harness; `design.md`, decisions 3–4).
       flattened text as the file reads it: step 5 appends to
       `~/.local/state/harness/pipeline-yield/<repo>/<yyyy-mm>.md`, names
       `git remote get-url origin`'s `<owner>/<name>` as `<repo>` and
-      `local/<basename>` of `<top>` without an `origin`, and the whole
+      `local` followed by `<top>` itself without an `origin`, and the whole
       skill names no `pipeline-yield` path under `docs/context/`
       (`a-wrap-up-on-main`, `a-wrap-up-on-a-feature-branch`);
       `<gates-since>`, `<since>` and the measured `first review` lines are
       read from `<repo>`'s files alone (`two-repositories-on-one-machine`),
       and its first entry takes the first-entry-ever rules with the gates
       query's project filter unchanged (`the-first-entry-on-a-machine`); the
-      heading names the detached commit as `git status` prints it when there
-      is no branch (`a-wrap-up-on-a-detached-head`); the frontmatter's
+      heading names the detached commit as `git rev-parse --short HEAD`
+      prints it when there is no branch (`a-wrap-up-on-a-detached-head`); the
+      frontmatter's
       `allowed-tools` holds `Edit(~/.local/state/harness/pipeline-yield/**)`
       and `Bash(git remote get-url origin)`. And one case
       over the repository: `git ls-files` for

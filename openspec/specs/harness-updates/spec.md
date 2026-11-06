@@ -153,6 +153,8 @@ At session start the harness SHALL compare the commit the installed harness
 came from with the consumer's pin. When they differ it SHALL print one line
 naming both commits and `bun run deps`, with `bun install` as the fallback
 for a `package.json` with uncommitted edits, whose script the guard refuses,
+and for a `bun.lock` that lacks the pin, which the frozen install refuses —
+a pin moved by hand and committed without its lockfile —
 and it SHALL never block the session.
 This SHALL hold for an installed harness version too old to contain the
 comparison itself.
