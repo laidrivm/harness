@@ -75,8 +75,8 @@ function manifest(from: string): string | null {
 	}
 }
 
-/** The scripts of `file`, read as the JSONC bun accepts, or `null` when unreadable. */
-function scripts(file: string): Record<string, unknown> | null {
+/** The scripts of `file`, read as the JSONC bun accepts, or `null` when unreadable. Exported for the policy check. */
+export function scripts(file: string): Record<string, unknown> | null {
 	try {
 		return (Bun.JSONC.parse(readFileSync(file, "utf8")) as { scripts?: Record<string, unknown> })?.scripts ?? {};
 	} catch {

@@ -136,6 +136,15 @@ export function bunxInstall(name: string, rest: string[]): string | undefined {
 }
 
 /**
+ * The index in `words` — redirections already dropped by `args` — of bun's
+ * subcommand among `verbs`, found as `bunxInstall` finds `x`: a word straight
+ * after an option is passed over as its possible value. Shared by `depsArgs`
+ * and `bunTestRetry`.
+ */
+const subcommand = (words: string[], verbs: string[]) =>
+	words.findIndex((word, at) => verbs.includes(word) || !(word.startsWith("-") || words[at - 1]?.startsWith("-")));
+
+/**
  * Why `name` with `rest` is a `bun run` a substitution feeds, or a `bun run
  * deps` whose command is anything but those three words, or nothing. bun
  * forwards every word after the script's name to the install (`--no-verify`
@@ -143,15 +152,12 @@ export function bunxInstall(name: string, rest: string[]): string | undefined {
  * appends its input, an assignment bun reads — reaches it too, so the whole
  * command is compared, its redirections included. The parse drops a
  * substitution's output, the script's name among it, from the words, so a fed
- * `bun run` refuses whatever its script. The subcommand is found as
- * `bunTestRetry` finds it (frozen-install-unprompted D2).
+ * `bun run` refuses whatever its script (frozen-install-unprompted D2).
  */
 export function depsArgs(part: string[], name: string, rest: string[]): string | undefined {
 	if (name !== "bun") return undefined;
 	const words = args(rest);
-	const sub = words.findIndex(
-		(word, at) => word === "run" || !(word.startsWith("-") || words[at - 1]?.startsWith("-")),
-	);
+	const sub = subcommand(words, ["run"]);
 	if (words[sub] !== "run") return undefined;
 	const bare = "Install with `bun run deps` with nothing before or after it.";
 	if (FED.has(part))
@@ -171,12 +177,11 @@ export function depsArgs(part: string[], name: string, rest: string[]): string |
  */
 export function bunTestRetry(name: string, rest: string[]): string | undefined {
 	if (name !== "bun") return undefined;
-	const sub = rest.findIndex(
-		(word, at) => word === "test" || word === "run" || !(word.startsWith("-") || rest[at - 1]?.startsWith("-")),
-	);
-	const verb = rest[sub];
+	const words = args(rest);
+	const sub = subcommand(words, ["test", "run"]);
+	const verb = words[sub];
 	if (verb !== "test" && verb !== "run") return undefined;
 	const retry = (word: string) => word === "--retry" || word.startsWith("--retry=");
-	if (!rest.slice(sub + 1).some(retry)) return undefined;
+	if (!words.slice(sub + 1).some(retry)) return undefined;
 	return `command-guard: \`bun ${verb}\` with \`--retry\` reruns a failing test until it passes, which hides a flaky test instead of naming it. Run the suite once; a test that fails and then passes unchanged is named as flaky and filed as a card (\`core/testing.md\`). \`--rerun-each\` stays allowed for finding one.`;
 }

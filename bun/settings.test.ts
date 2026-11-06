@@ -211,9 +211,12 @@ describe("the supply-chain files", () => {
 	test.each([
 		["missing", "{}\n"],
 		["another manager's", '{ "scripts": { "deps": "pnpm install" } }\n'],
+		["in a manifest that does not parse", "{\n<<<<<<< HEAD\n"],
 	])("a deps script %s is named", (_, text) => {
 		const dir = consumer(policy(), { "package.json": text });
-		expect(settings(dir)).toContain('package.json: scripts.deps is not exactly "bun install --frozen-lockfile"');
+		expect(settings(dir).join("\n")).toContain(
+			'package.json: scripts.deps is not exactly "bun install --frozen-lockfile"',
+		);
 	});
 
 	test("an .npmrc tracked below the root is named", () => {

@@ -164,11 +164,12 @@ which prompts.
   is left is a file write, which `: > package.json` makes as well, and no
   check of this change refuses (CodeRabbit round 7; a limit, decided in the
   apply step).
-- [A variable exported before the call] → `export BUN_OPTIONS=…` earlier in
-  the line or in the session reaches the install through the environment,
-  which the guard does not read; whether bun 1.4.2 takes an install flag from
-  it was not probed. The same limit as the substitution below: the guard
-  reads the typed command, not the state it runs in.
+- [A variable exported before the call] → `export BUN_OPTIONS=--no-verify;
+  bun run deps` reaches the install through the environment, which the guard
+  does not read: bun 1.4.2 takes options from `BUN_OPTIONS`
+  (`BUN_OPTIONS=--silent bun run deps` printed nothing, probed 2026-11-06).
+  The same kind of limit as the substitution below — the guard reads the
+  typed command, not the state it runs in; open on the card as question 8.
 - [A substitution that supplies the command's name] →
   `$(printf bun) run deps --no-verify` passes the `ask` rules and the guard
   alike: the rules match the text, which holds no `bun`, and the parse drops
