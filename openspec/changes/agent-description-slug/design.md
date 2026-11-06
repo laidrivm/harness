@@ -41,6 +41,22 @@ the same day: 1 — ok, 2 — yes, 3 — ok.
    > notifications show, and the ID is what `SendMessage` still reaches after
    > a compaction.
 
+   What its terms mean, so two sessions write the same label:
+   - *the slug of the change* is the change's directory name under
+     `openspec/changes/`; *of the card* is a short kebab-case form of the
+     card's title, for a card with no change yet;
+   - *that card* is the card the slug names, and a change's card where the
+     slug is a change's, since every change has one on the board;
+   - *each report* is the session's report to the user or its caller that
+     mentions the agent, not the agent's own;
+   - a call that works on neither a change nor a card — a lookup, a service
+     call such as the reviewers `/code-review` starts — is outside the rule.
+
+   The delegation entry stays one entry of the preamble, now two sentences;
+   "one line" in the requirement means that entry, as it did in
+   `fresh-subagent-brief`. The Process rule *Resume a subagent only for work
+   on its own open pull request* says when to resume an agent, not how to
+   find it, and stays as it is.
 2. **No mechanism; the rule holds it.** User: yes. Why none fits is under
    *Alternatives*.
 3. **The test pins two phrases.** User: ok. `bun/delegation.test.ts` adds
@@ -54,10 +70,13 @@ would without blocking far more than the rule intends.
 
 - **A `PreToolUse` hook on `Agent`.** A hook can match `Agent` and read
   `tool_input.description`, but it would refuse the service calls too: the
-  reviewers `/code-review` starts, Explore, deep-research. A card has no
-  machine-checkable slug, so the hook could not tell a card's call from a
-  service one, and `isolation`, which might have told them apart, is not a
-  documented `tool_input` field.
+  reviewers `/code-review` starts, Explore, deep-research. Keying it on
+  `isolation`, which the `Agent` schema lists, would spare most of those, but
+  a card has no machine-checkable slug, so the hook could check only that a
+  description opens with some kebab-case word, never that the word names the
+  card, and a card's read-only agent started without `isolation` would pass
+  unchecked. A gate that checks the form and not the fact holds no more than
+  the rule.
 - **Agent teams for `name`.** Experimental. A named call without `isolation`
   launches a teammate in the main session's directory that does not survive
   `/resume`, and a name given before a compaction stops working after a
@@ -73,3 +92,7 @@ would without blocking far more than the rule intends.
   the brief itself; a missed slug costs a lookup by worktree, as today.
 - [The display rests on one Claude Code version] → the docs' read date is
   above, so a reader can re-check it.
+- [That `SendMessage` reaches an agent by ID after a compaction is read from
+  the docs, not exercised] → a list of agents can miss one started before a
+  compaction while it still runs; an ID written into the report survives in
+  the conversation either way, and is the first thing to try.

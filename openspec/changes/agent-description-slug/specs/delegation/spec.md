@@ -7,10 +7,10 @@ fork itself only when the task needs the session's history. It SHALL write
 the subagent's brief into the launch prompt and into no tracked file. The
 brief SHALL carry the task, the clone and branch, the acts allowed, the
 user's words that apply and the report's form, and SHALL NOT copy anything
-the harness already loads for a fresh subagent. The session SHALL open the
-call's `description` with the slug of the change the subagent carries, or of
-its card where there is none, and SHALL name the agent's ID beside that card
-in each report. `core/rules.md` SHALL state this in one line of its
+the harness already loads for a fresh subagent. For a subagent that works on
+a change or a card, the session SHALL open the call's `description` with the
+slug of the change, or of the card where there is none, and SHALL name the
+agent's ID beside that card in each report. `core/rules.md` SHALL state this in one line of its
 `### Rules` preamble, outside the Code, Process and Safety sublists, whose
 counts it leaves as they are.
 
