@@ -13,8 +13,8 @@ failure*, 41039875c31b811180eed2b6d8ea0738).
 ## What Changes
 
 - The loop guard counts no failure of a Bash call whose command is
-  `gh pr checks` with plain arguments, and whose error starts with the line
-  `Exit code 8`. Such a call is neither warned of nor barred, however often it
+  `gh pr checks` with plain words after it — a number, a flag, `owner/name` —
+  and whose error's first line is `Exit code 8`. Such a call is neither warned of nor barred, however often it
   is made.
 - Every other failure counts as today: `gh pr checks` exiting 1 on a failed
   check, any other exit code, and any command where `gh pr checks` is not the
@@ -35,11 +35,13 @@ None.
 
 ### Modified Capabilities
 
-- `loop-guard`: a new requirement, *A pending checks read is not a failure*.
+- `loop-guard`: a new requirement, *A pending checks read is not a failure*;
+  *A repeat is the same call failing the same way* names it beside the
+  interrupted call.
 
 ## Impact
 
-- Changed: `bun/loop-guard.ts` (one test before the count), with cases in
-  `bun/loop-guard.test.ts`.
+- Changed: `bun/loop-guard.ts` (one test before the count), with cases in a
+  new `bun/loop-guard-pending.test.ts`.
 - No consumer's tree, settings or registration changes: the guard's hooks
   stay as they are, and the change only takes calls out of its count.

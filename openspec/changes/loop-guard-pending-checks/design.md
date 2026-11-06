@@ -39,6 +39,16 @@ newline — leaves the call counted, since the shell may then run more than
 gh, and the exit code need not be gh's. A newline is a command separator,
 so the separator between words is spaces and tabs, never any whitespace.
 
+Such a line is one simple command with at most one redirect, and a simple
+command's exit status is its program's. No character of the set starts an
+expansion that could add a command: no `$`, quote, backtick, glob character
+or `~`. The one expansion left is zsh's `=word`, which replaces a leading
+`=` word with a program's path or fails the line with status 1 before gh
+runs, so it never yields an 8 that is not gh's. A run of the form under
+dash, bash and zsh, with `gh` a function returning 8, was refused here by
+the command guard as an unreadable program, so task 1.1 makes that run a
+case.
+
 - *Alternative: any command that starts with `gh pr checks`.* A chain such as
   `gh pr checks 1; false` exits with the last command's code, so its exit 8
   would not be gh's.
@@ -48,13 +58,17 @@ so the separator between words is spaces and tabs, never any whitespace.
   agents' real forms do not need.
 - *Alternative: a convention to read CI with `--json`.* Proposal, *What
   Changes*.
+- *Alternative: a table of command patterns and harmless exit codes.* One
+  pair is known; a table waits for a second.
 
 ### Skip before the count is touched
 
 The check sits in `guard()` beside the existing `is_interrupt` check: a
 skipped call neither loads nor writes the count, so no earlier count of the
 same call is raised and no bar is written. A `PreToolUse` event is decided
-as today; a pending read is never barred, because it is never counted.
+as today, by the call key alone: pending reads never bar a call, but a bar
+left by three `Exit code 1` reads of the same command still refuses a later
+pending read under that prompt (*Risks*).
 
 ### No pin on gh's code
 
@@ -66,9 +80,14 @@ silent pass — so no test reads gh's help, which CI's runner may not have.
 ## Risks / Trade-offs
 
 - [A pending read that loops — an agent polling CI in a tight loop] → It is
-  no longer warned. The briefs and `orchestrator/runner/session-rules.md`
-  already forbid waiting on CI in a loop, and a poll is cheap; the false
-  warning cost two agents their CI read.
+  no longer warned, and no rule in this tree forbids polling; only the
+  launch briefs of 2026-11-06 said to read CI once. Accepted: polling a
+  pending state is not a call failing, which is what the guard is for, and
+  the false warning cost two agents their CI read.
+- [A bar by three failed-check reads refuses the read after a fix, under
+  the same prompt] → As for any barred call: the warning and refusal tell
+  the agent to change approach, and `gh pr checks <N> --json name,state`,
+  a different call key that exits 0 while pending, reads CI on.
 - [A form agents use that the match leaves out, such as a pipe into `cut`]
   → That call is counted as today, and its exit code is the pipe's last
   command's anyway, so gh's 8 does not reach it.
