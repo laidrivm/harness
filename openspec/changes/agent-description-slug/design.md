@@ -38,17 +38,21 @@ request, answered б on 2026-11-06.
 
    > For a subagent that works on a change or a card, open the call's
    > `description` with the slug of the change it carries, or of the card
-   > where there is none, and name the agent's ID beside the change's card, or
-   > beside that card when there is no change, in each report — the
-   > description is what the agent list and notifications show, and the ID is
-   > what `SendMessage` still reaches after a compaction.
+   > where there is none, and name the agent's ID, where the call returns
+   > one, beside the change's card, or beside that card when there is no
+   > change, in each report — the description is what the agent list and
+   > notifications show, and the ID is what `SendMessage` still reaches after
+   > a compaction.
 
    Its card clause is the user's answer б to question 4 on the card, of
    2026-11-06, taking CodeRabbit's wording from round 1 on the apply pull
    request: the confirmed sentence said "beside that card", which named no
    card where the slug is a change's. Its opening clause, from CodeRabbit's
    round 2, is the requirement's own scope, word for word, so the line no
-   longer asks a lookup or a review call for a slug that does not exist.
+   longer asks a lookup or a review call for a slug that does not exist; and
+   "where the call returns one", from round 3, is the requirement's own
+   exception, so an Explore or Plan call is not asked for an ID it never
+   returns.
 
    What its terms mean, so two sessions write the same label:
    - *the slug of the change* is the change's directory name under
@@ -79,10 +83,10 @@ request, answered б on 2026-11-06.
    whole clause — "For a subagent that works on a change or a card, open the
    call's `description` with the slug of the change it carries, or of the
    card where there is none" (its scope pinned since round 2) and "name the
-   agent's ID
-   beside the change's card, or beside that card when there is no change, in
-   each report" — so the slug's place at the opening and
-   the ID's place beside the card fail it too.
+   agent's ID, where the call returns one, beside the change's card, or
+   beside that card when there is no change, in each report" (its exception
+   pinned since round 3) — so the slug's place at the opening and the ID's
+   place beside the card fail it too.
 
 ## Alternatives
 
