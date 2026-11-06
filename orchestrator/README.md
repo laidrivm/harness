@@ -286,7 +286,8 @@ engine's code:
 
 MCP refuses a token without `mcp:*`, so it is not used: chat control goes
 through `wmill` and Windmill's REST API on that token. Keep both values on
-the laptop in files only the user can read, each made empty first with
+the laptop in files only the user can read, in a directory made first with
+`mkdir -p ~/.config/harness`, each file made empty first with
 `install -m 0600 /dev/null <file>` and written with `read -rs`, never under a
 `umask` the shell keeps: the token in `~/.config/harness/windmill-chat.token`, and the
 service token as one `CF-Access-Client-Id: …,CF-Access-Client-Secret: …` line
