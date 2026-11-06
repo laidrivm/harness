@@ -103,7 +103,9 @@ is told to the session*). An `up` that failed part way leaves the next run
 tagging an unvetted image (*Known limits of the light rollback*).
 `docker image prune -f` after the record removes
 the image the tag held before; the previous one stays until the next deploy
-moves the tag (disk, *Risks*).
+moves the tag (disk, *Risks*). A run that exits because the session is at work
+prunes too, so heads built while the session is busy do not pile up dangling
+images (local review).
 
 ### Build first, then act only in a fresh session (answer 16 a)
 

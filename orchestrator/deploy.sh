@@ -1,17 +1,28 @@
 #!/usr/bin/env bash
 # One run of harness-deploy.service, as root on the host, from the checkout's
-# orchestrator/ (host-deploy design). When origin/main's head is not the
-# commit last deployed and its latest `test` check run from github-actions
-# concluded success, it fast-forwards the checkout to that head, builds the
-# images, brings the stack up while it holds every pass lock, pushes the
-# Windmill scripts and route, and only then records the head.
+# orchestrator/ (host-deploy design). When origin/main's head is neither the
+# commit last deployed nor the one last rolled back, and its latest `test`
+# check run from github-actions concluded success, it fast-forwards the
+# checkout to that head, tags the runner's running image as the previous one,
+# and builds the images. Only while the persistent session is fresh (the
+# managed hooks' ~/.harness-fresh in agent's home) does it bring the stack up,
+# under every pass lock, restart the runner when up left it as it was, and
+# wait two minutes at most for tmux session `main`; then it pushes the
+# Windmill scripts and route while their token exists, records the head and
+# prunes. A session that does not come back is rolled back once: the failure
+# file and the rolled-back record first, then the previous image under the
+# name and the runner up on it. A rollback step that fails is named in the
+# failure file and left for the user; no run retries it (design, *Known
+# limits of the light rollback*).
 #
-# The record is $STATE_DIRECTORY/deployed, systemd's StateDirectory, or
-# /var/lib/harness-deploy/deployed for a run by hand. A fetch or a check read
-# that fails exits 1 and pauses nothing: the host is still on a working commit.
-# A step after the fast-forward that fails writes each clone's stop file,
-# unless one exists, and exits 1; the next run starts again from the fetch.
-# Every other run exits 0.
+# The records are `deployed` and `rolled-back` in $STATE_DIRECTORY, systemd's
+# StateDirectory, or /var/lib/harness-deploy for a run by hand. A fetch or a
+# check read that fails exits 1 and writes nothing: the host is still on a
+# working commit. A step after the fast-forward that fails writes the failure
+# file ~/.harness-deploy-failed in agent's home, which the session's next start
+# reports, and each clone's stop file, unless one exists, and exits 1; the next
+# run starts again from the fetch. Every other run exits 0, a busy session's
+# included.
 
 # Compose names them after the project, `orchestrator`: <project>-<service>
 # for a built image, <project>_<name> for a network or a volume.
@@ -42,13 +53,34 @@ green() {
 	esac
 }
 
-# Says which step failed, writes each clone's stop file that does not exist
-# yet, owned as the runner's home is, and fails.
+# Writes the line $2 to a new file $1 in a volume a container's user can
+# write, owned as $3 is. noclobber creates a missing file with O_EXCL and
+# refuses an existing regular one, a symlink to one included, and chown -h
+# changes the file, never a link's target.
+# shortcut: bash opens an existing non-regular target (a symlink to a device
+# or a FIFO, planted by the container's user after the caller's rm), so root
+# can still write through one; drop to that user for the write if the session
+# is ever treated as hostile.
+put() {
+	(set -C && printf '%s\n' "$2" >"$1") 2>/dev/null && chown -h --reference="$3" "$1"
+}
+
+# Says which step failed, writes the failure file in place of an older one,
+# owned as agent's home is so the session's hook can move it aside, then each
+# clone's stop file that does not exist yet, owned as the runner's home is,
+# and fails.
 failed() {
 	echo "deploy: $1 failed at $head"
-	local runner agent dir name stop
-	if ! runner=$(volume runner_home) || ! agent=$(volume agent_home); then
-		echo "deploy: no stop file written: the runner's and the agent's volumes cannot be found"
+	local line runner agent dir name stop
+	line="$(date -u +%Y%m%dT%H%M%SZ) deploy: $1 failed at $head"
+	if ! agent=$(volume agent_home); then
+		echo "deploy: no failure file written: the agent's volume cannot be found"
+		return 1
+	fi
+	rm -f "$agent/.harness-deploy-failed" && put "$agent/.harness-deploy-failed" "$line" "$agent" ||
+		echo "deploy: the failure file could not be written"
+	if ! runner=$(volume runner_home); then
+		echo "deploy: no stop file written: the runner's volume cannot be found"
 		return 1
 	fi
 	for dir in "$agent"/clones/*/; do
@@ -57,17 +89,27 @@ failed() {
 		name=${name##*/}
 		stop=$runner/orchestrator/$name.stop
 		[ -e "$stop" ] && continue
-		printf '%s deploy: %s failed at %s\n' "$(date -u +%Y%m%dT%H%M%SZ)" "$1" "$head" >"$stop" &&
-			chown --reference="$runner" "$stop" || echo "deploy: the stop file $stop could not be written"
+		put "$stop" "$line" "$runner" || echo "deploy: the stop file $stop could not be written"
 	done
 	return 1
 }
 
-# Takes each lock file it is handed, blocking, then reads the check again and
-# brings the stack up. Each level holds its file on fd 9: bash keeps the
-# enclosing level's open on another descriptor while the inner one runs, so
-# every lock stays held until the calls return. Returns 3 when the check is no
-# longer green and 4 when it cannot be read.
+# 0 while the managed hooks' mark is in $agent: set on startup and /clear,
+# removed by the first message, so a restart then ends no turn.
+fresh() {
+	[ -e "$agent/.harness-fresh" ] && return 0
+	echo "deploy: the session is at work; $head waits for a fresh one"
+	return 1
+}
+
+# Takes each lock file it is handed, blocking, then reads the check again,
+# looks for the mark again, removes an older failure file, brings the stack
+# up, and restarts the runner when up left $container, the one tagged, as it
+# was, so the session starts again on the updated clone. Each level holds its
+# file on fd 9: bash keeps the enclosing level's open on another descriptor
+# while the inner one runs, so every lock stays held until the calls return.
+# Returns 3 when the check is no longer green or the session is at work, and
+# 4 when the check cannot be read.
 locked() {
 	if [ $# = 0 ]; then
 		green
@@ -81,8 +123,18 @@ locked() {
 			return 4
 			;;
 		esac
+		# Again, since a message may have come during the hold or the read.
+		fresh || return 3
+		# This head supersedes an older failure, and the restarted session's
+		# start can run before the wait for main sees it.
+		rm -f "$agent/.harness-deploy-failed"
 		step=up
 		docker compose up -d || return 1
+		local now
+		now=$(docker compose ps -aq runner) || return 1
+		[ "$now" = "$container" ] || return 0
+		step="the restart"
+		docker compose restart runner || return 1
 		return 0
 	fi
 	local file=$1
@@ -93,6 +145,20 @@ locked() {
 		return
 	fi
 	{ flock 9 && locked "$@"; } 9<"$file"
+}
+
+# The run's one rollback. The failure file and rolled-back come before up, so
+# the restored session's start finds the failure and no later run deploys the
+# head again; a tag or an up that fails is named in the same file and left for
+# the user. When the image did not change, the tag and up change nothing.
+rollback() {
+	failed "the wait for main"
+	printf '%s\n' "$head" >"$state/rolled-back" || echo "deploy: $head could not be recorded as rolled back"
+	docker tag "$image:previous" "$image" || {
+		failed "the tag back"
+		return
+	}
+	docker compose up -d runner || failed "the rollback's up"
 }
 
 deploy() {
@@ -110,6 +176,11 @@ deploy() {
 	}
 	if [ "$head" = "$(cat "$state/deployed" 2>/dev/null)" ]; then
 		echo "deploy: $head is deployed"
+		return 0
+	fi
+	# Retried, it would recreate the broken runner every tick.
+	if [ "$head" = "$(cat "$state/rolled-back" 2>/dev/null)" ]; then
+		echo "deploy: $head was rolled back; the next head deploys, or removing $state/rolled-back retries it"
 		return 0
 	fi
 	local url part='[A-Za-z0-9][A-Za-z0-9._-]*'
@@ -140,9 +211,31 @@ deploy() {
 		failed "the fast-forward"
 		return 1
 	}
+	# The running container's image, not the name's: a build that waited for
+	# a fresh session has moved the name already. With no container, a stack
+	# brought down, the name's image is the one up would have brought back.
+	local source=$image
+	container=$(docker compose ps -aq runner) &&
+		{ [ -z "$container" ] || source=$(docker inspect -f '{{ .Image }}' "$container"); } &&
+		docker tag "$source" "$image:previous" || {
+		failed "the tag"
+		return 1
+	}
 	docker compose build || {
 		failed "the build"
 		return 1
+	}
+
+	local agent
+	agent=$(volume agent_home) || {
+		failed "the mark"
+		return 1
+	}
+	# Each head built while the session is at work moves the name, and the
+	# image it left would wait for a deploy to be pruned.
+	fresh || {
+		prune
+		return 0
 	}
 
 	# Every pass lock, from the host: the gate first, which pass.sh takes
@@ -172,9 +265,38 @@ deploy() {
 		;;
 	esac
 
-	# A rebuild leaves the old image dangling, and the disk is small.
-	docker image prune -f >/dev/null || echo "deploy: the prune failed; the old images stay"
+	# main every 5 s, 120 s at most.
+	local polls=25
+	until docker compose exec -T -u agent runner tmux has-session -t main >/dev/null 2>&1; do
+		polls=$((polls - 1))
+		if [ "$polls" = 0 ]; then
+			rollback
+			return 1
+		fi
+		sleep 5
+	done
 
+	if [ ! -e secrets/windmill_deploy_token ]; then
+		echo "deploy: no secrets/windmill_deploy_token; the Windmill push is skipped"
+	else
+		push || return 1
+	fi
+
+	printf '%s\n' "$head" >"$state/deployed" || {
+		failed "the record"
+		return 1
+	}
+	echo "deploy: $head deployed"
+	prune
+}
+
+# A rebuild leaves the old image dangling, and the disk is small.
+prune() {
+	docker image prune -f >/dev/null || echo "deploy: the prune failed; the old images stay"
+}
+
+# The engine wait and the push, each in a one-off container.
+push() {
 	# The CLI moves with the engine: its version is the server's image tag.
 	local server version
 	server=$(docker compose config --format json | json -r '.services.windmill_server.image')
@@ -201,9 +323,6 @@ deploy() {
 		failed "the push"
 		return 1
 	}
-
-	printf '%s\n' "$head" >"$state/deployed" || return 1
-	echo "deploy: $head deployed"
 }
 
 # Bash has read the whole body before the fast-forward rewrites this file, so
