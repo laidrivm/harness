@@ -324,8 +324,9 @@ with the pass loop:
 
 ## Risks / Trade-offs
 
-- [A message sent in the seconds between the mark check and the restart is
-  lost] → the gap is seconds; the user sees the session restart and resends.
+- [A message sent between the mark check and the restart is lost] → the gap
+  is seconds plus `up -d` recreating the changed services; the user sees the
+  session restart and resends.
 - [Not verified: `UserPromptSubmit` fires on a message from Remote Control;
   Remote Control reconnects after a deploy's restart (a stage criterion)] →
   task 4.2 watches the first deploy for both. That `SessionStart` fires on a

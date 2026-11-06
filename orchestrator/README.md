@@ -494,8 +494,9 @@ minutes after boot and five minutes after each run, and the service runs
 head of `main` whose `test` check passed fast-forwards the checkout and
 builds the images. It brings the stack up only while the session is fresh,
 after a `/clear` or a new conversation's first start and before its first
-message, so it cuts no turn short but one whose prompt arrives in the seconds
-between the run's last look for the mark and the restart; resend that prompt
+message, so it cuts no turn short but one whose prompt arrives between the
+run's last look for the mark and the restart, a span that holds
+`docker compose up -d` recreating every changed service; resend that prompt
 once the session is back. The runner restarts, the session
 pulls and installs its clone and continues its conversation. Step 12's
 continued start leaves the session as it was, so a session at work keeps the
@@ -528,7 +529,9 @@ of that rollback that fails is named in the failure file and left for you
 (the host-deploy design, *Known limits of the light rollback*): after a rollback, read
 the journal and attach to `main` (step 12). When the journal says the head
 `could not be recorded as rolled back`, the next run tries that head again:
-stop deploys, below, until `/var/lib/harness-deploy` takes the record. To retry the rolled-back head,
+stop deploys, below, and once `/var/lib/harness-deploy` can be written, write
+the head's full sha from that line to `/var/lib/harness-deploy/rolled-back`
+before enabling them again. To retry the rolled-back head,
 remove the record:
 
 ```sh
