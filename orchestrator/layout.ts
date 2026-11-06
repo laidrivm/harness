@@ -136,6 +136,10 @@ export const remoteControl = (path: string, text: string) =>
 
 const PINNED = /^\s*(?:FROM\s|image:|ARG\s+\w+_(?:VERSION|SHA256)=)/;
 
+/** Whether line `i` of `lines` carries the note, on itself or the line above; `bun/settings-plugins.test.ts` reads the plugin pin with it. */
+export const noted = (lines: string[], i: number) =>
+	(lines[i] ?? "").includes(NOTE) || (lines[i - 1] ?? "").includes(NOTE);
+
 /** Every pin by digest or full version, each with its note. */
 export function pins(path: string, text: string): string[] {
 	const wrong: string[] = [];
@@ -144,8 +148,7 @@ export function pins(path: string, text: string): string[] {
 		if (!PINNED.test(line)) return;
 		const at = `${path}:${i + 1}`;
 		if (/^\s*(?:FROM\s|image:)/.test(line) && !line.includes("@sha256:")) wrong.push(`${at}: no @sha256: digest`);
-		if (!line.includes(NOTE) && !(lines[i - 1] ?? "").includes(NOTE))
-			wrong.push(`${at}: no note naming what moves the pin`);
+		if (!noted(lines, i)) wrong.push(`${at}: no note naming what moves the pin`);
 		const version = /^\s*ARG\s+\w+_VERSION=(\S*)/.exec(line)?.[1];
 		if (version !== undefined && !/^\d+\.\d+\.\d+$/.test(version)) wrong.push(`${at}: ${version} is not a full x.y.z`);
 	});

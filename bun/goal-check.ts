@@ -20,7 +20,7 @@
  */
 import { passed, ranUnder, recordCheckout } from "./gate-ledger.ts";
 import { type Pull, readPullRequests } from "./pull-requests.ts";
-import { complete, groups } from "./turn-gate.ts";
+import { complete, groups } from "./task-groups.ts";
 
 const git = (...args: string[]) => {
 	const run = Bun.spawnSync(["git", ...args]);

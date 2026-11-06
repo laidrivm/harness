@@ -152,6 +152,20 @@ describe("finish --card", () => {
 		]);
 	});
 
+	// spec: task-board/the-restore-fails
+	test("the second read and the restore both failing: the unread read named, exit 1 (CodeRabbit on #382)", async () => {
+		const run = await finish({
+			gh: DRAFT,
+			stub: { assign: [UUID], next: { [PATCH]: [{ fail: { [COMMENTS]: 500, [PATCH]: 500 } }] } },
+		});
+		expect([run.code, run.last, run.calls]).toEqual([
+			1,
+			"finish: draft #7 — the card's comments could not be read after the release",
+			[READ, "push"],
+		]);
+		expect(run.out).toContain("assign: failed — the restore");
+	});
+
 	// spec: task-board/the-release-fails
 	test("a failed release leaves the other lines and the exit [28]", async () => {
 		const run = await finish({ gh: DRAFT, stub: { assign: [UUID], fail: { [PATCH]: 500 } } });

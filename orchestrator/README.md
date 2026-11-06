@@ -381,10 +381,25 @@ and starts it again 5 s after it exits, so a crash, a restart of the
 container or a reboot of the VPS comes back to the same conversation; keep
 its size down with `/compact` and `/clear`. Where the directory has no
 conversation yet, the start is a new one. Its `gh` and git mint a
-token from the App for each call; it holds none. No step here makes that
+token from the App for each call, for `laidrivm/harness` alone, so they reach
+no other repository; it holds none. That is the wrapper's scope, not a
+boundary: `agent` may run the mint itself for any repository
+`app/repositories` names. The wrapper is git's credential helper for HTTPS
+alone, so the clone's `origin` is an `https://github.com/` URL; over SSH
+git has no key. No step here makes that
 clone, which the roadmap's stage 2.5 sets up in its step 6: until it exists,
 the session starts in `/home/agent` and pulls nothing, and the first start
-after it is cloned runs in it.
+after it is cloned runs in it. Every `claude` that runs as `agent` takes
+ponytail's level, ultra, from `/home/agent/.config/ponytail/config.json`,
+which the entrypoint writes on each start. Trust `/home/agent/harness` once
+in the session's pane, as step 5 does for a pass's clone, then `/exit`.
+Before each start `session.sh` adds ponytail's marketplace at the tag the
+clone's `.claude/settings.json` pins and installs the plugin, both at
+`--scope local`; whether that works before the trust is unmeasured. Their
+output goes to `/home/agent/.cache/session-start.log`, since claude's screen
+covers the pane, so read a failed install there; never run `claude plugin
+marketplace remove ponytail` in the clone, which strips ponytail from its
+tracked `.claude/settings.json`.
 
 1. The commit identity, the App's bot. On a host that already runs the stack,
    do this before pulling the change that needs it, since every
@@ -421,6 +436,9 @@ after it is cloned runs in it.
    GIT_COMMITTER_NAME=<slug>[bot]
    GIT_COMMITTER_EMAIL=<id>+<slug>[bot]@users.noreply.github.com
    ```
+
+   Compose prefers a variable the shell exports to the file's, so root's
+   shell exports none of these four.
 
    Then `git pull`, `docker compose build runner` and
    `docker compose up -d runner`.

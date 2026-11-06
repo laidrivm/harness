@@ -29,6 +29,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { record } from "./gate-ledger.ts";
+import { isRecord } from "./is-record.ts";
 
 type Event = {
 	hook_event_name?: unknown;
@@ -113,9 +114,6 @@ export function refusal(count: Count, tool: string, key: string, prompt: string 
 
 /** What the guard answers, and the ledger records: a warning or a refusal. */
 export type Answer = { decision: "warned" | "refused"; reason: string };
-
-const isRecord = (value: unknown): value is Record<string, never> =>
-	!!value && typeof value === "object" && !Array.isArray(value);
 
 /** The count in `file`; one missing or not the guard's own is empty. */
 function load(file: string): Count {

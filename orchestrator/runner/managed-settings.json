@@ -1,0 +1,20 @@
+{
+	"hooks": {
+		"SessionStart": [
+			{
+				"matcher": "startup|clear",
+				"hooks": [{ "type": "command", "command": "touch \"$HOME/.harness-fresh\"" }]
+			},
+			{
+				"matcher": "startup|clear|resume",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "f=\"$HOME/.harness-deploy-failed\"; [ ! -e \"$f\" ] || { echo 'A deploy of the harness failed: report it to the user in chat, quoting the line below.'; cat \"$f\"; mv \"$f\" \"$f.reported\"; }"
+					}
+				]
+			}
+		],
+		"UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "rm -f \"$HOME/.harness-fresh\"" }] }]
+	}
+}
