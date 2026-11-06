@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import type { Step } from "./board-loop-prompt.ts";
 import type { sh } from "./board-loop-push.ts";
 import { type Pull, readPullRequests } from "./pull-requests.ts";
-import { groups } from "./turn-gate.ts";
+import { groups } from "./task-groups.ts";
 
 /** The branch's pull requests, the number of a draft open on it, or why the change waits: a failed read or a ready open one. */
 function read(branch: string): Pull[] | number | string {

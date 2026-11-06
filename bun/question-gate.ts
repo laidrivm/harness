@@ -33,6 +33,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { record } from "./gate-ledger.ts";
+import { unattended } from "./unattended.ts";
 
 /** `name` under the user's config home: `XDG_CONFIG_HOME`, else `~/.config`. */
 export const where = (name: string, env: Record<string, string | undefined> = process.env) =>
@@ -51,11 +52,6 @@ const LIMIT = 1500;
  */
 export const RUNNER_ASKS = { name: "HARNESS_RUNNER_ASKS", value: "1" };
 const BOARDS = ["D2ASS", "Harness", "mellon"];
-/**
- * agent-autonomy's declared line, on a line of its own in the first prompt,
- * whitespace around it ignored.
- */
-const UNATTENDED = "This session runs unattended.";
 
 /**
  * What is wrong with the call under each condition `verdict` fails, and what
@@ -79,40 +75,6 @@ export const REMEDY: Record<string, string> = {
 /** The reason a `deny` carries for `rule`: an `ask` refusal is the tool's, so it never asks for a second call. */
 const refusal = (rule: string) =>
 	`question-gate refused this comment (${rule}): ${REMEDY[rule]}${rule === "ask" ? "" : " This refusal is the comment's, not the tool's: fix it and call `notion-create-comment` again."}`;
-
-/**
- * Whether the session's first prompt, the first user line holding text rather
- * than a tool result, holds the declared line on a line of its own, whitespace
- * around it ignored. A transcript it cannot read, or one with no prompt, reads
- * as attended.
- */
-function unattended(path: unknown): boolean {
-	if (typeof path !== "string") return false;
-	let lines: string[];
-	try {
-		lines = readFileSync(path, "utf8").split("\n");
-	} catch {
-		return false;
-	}
-	for (const line of lines) {
-		let message: { role?: unknown; content?: unknown } | undefined;
-		try {
-			message = JSON.parse(line)?.message;
-		} catch {
-			continue;
-		}
-		if (message?.role !== "user") continue;
-		const { content } = message;
-		const parts = Array.isArray(content)
-			? content.filter((part) => part?.type === "text" && typeof part.text === "string")
-			: [];
-		if (typeof content !== "string" && parts.length === 0) continue;
-		const text = typeof content === "string" ? content : parts.map((part) => part.text).join("\n");
-		// Trimmed: a terminal copy indents each line, and a CRLF prompt ends each in `\r`.
-		return text.split("\n").some((line) => line.trim() === UNATTENDED);
-	}
-	return false;
-}
 
 type Input = Record<string, unknown>;
 type Use = { name: string; input: Input; result?: string };

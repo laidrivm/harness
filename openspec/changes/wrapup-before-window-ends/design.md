@@ -53,7 +53,8 @@ kept (decision 5).
 
 `bun/context-window.ts` holds the threshold, the tail read and the
 once-per-context mark, and exports one function the turn gate's `decide()`
-calls after `judge()` returns no refusal (decision 5 sets the order).
+calls after `judge()`, at every stop, letting it refuse only where `judge()`
+did not (decision 5 sets the order).
 `decide()`'s existing `if (!reason) stopped(file)` then leaves no `.stopped`
 after a refusal for size, so the continued wrap-up is still a turn of the
 same mark, and a message queued into it does not move the mark.
@@ -85,11 +86,11 @@ the window — needs the window. Rejected for now.
 
 ### 3. The size is the last real reply's, read from a 4 MiB tail
 
-The hook opens `transcript_path`, reads its last 4 MiB (`Bun.file().slice()`),
+The hook opens `transcript_path`, reads its last 4 MiB (`readSync` at that offset: `decide()` is synchronous),
 drops the first line when the slice starts after byte 0 — only then can it be
 cut — and walks the rest from the end, parsing each line once; the walk also
-looks for a wrap-up call back to the last compaction (decision 7), so it may
-cover the whole tail, a few
+looks for a wrap-up call back to the last compaction (decision 7) and notes
+that compaction's `uuid` (decision 4), so it may cover the whole tail, a few
 milliseconds at 4 MiB. The first
 line that parses as JSON with `type === "assistant"`, `isSidechain !== true`
 and a `usage` whose three input fields sum above zero gives the size. 4 MiB
@@ -112,9 +113,22 @@ beside the turn gate's mark, reusing its safe-id check), and so does a stop at
 or above the threshold that asks nothing because a wrap-up already ran
 (decision 7) or the session is unattended — so either is read once per
 context, not at every stop. A stop at or above
-the threshold with that file present asks nothing. A stop under half the
-threshold, 400 000 (`REARM`), removes it. An event with no safe session id
-asks nothing, so a refusal can never repeat for want of a place to record it.
+the threshold with that file present asks nothing. Two things remove it, so
+re-arm the ask: a stop under half the threshold, 400 000 (`REARM`), and a
+stop whose tail's last `compact_boundary` line is not the one the mark
+records. The mark holds that line's `uuid` as it was when the mark was
+written, or nothing when the tail held none; a boundary that has since left
+the tail reads as no change, since a new one is appended after the mark and
+so lies in any tail that reaches past it. Both are read at every stop with a
+size, before and whatever the turn gate decides (decision 5): a stop the
+gate refuses still re-arms. An event with no safe session id asks nothing,
+so a refusal can never repeat for want of a place to record it.
+
+Either alone leaves a hole. Half the threshold alone: a wrap-up run before a
+compaction writes the mark, and a first stop after it measuring 500 000 —
+a long first turn over a large summary — keeps it, so the next crossing is
+not asked. The boundary alone: one more than 4 MiB behind the stop is out of
+the tail.
 
 The gap between the two figures is deliberate: a context that shrinks a
 little within one window — old tool results cleared, a `/rewind`, a read one
@@ -122,8 +136,9 @@ reply behind — would otherwise re-arm the ask and buy a second wrap-up in
 the same context. Only a compaction or a cleared context falls under half.
 
 - **`/clear`** starts a new session id, so a new mark path: armed.
-- **Compaction** keeps the id; the next stop measures the compacted context,
-  well under half, and removes the mark: armed for the next crossing.
+- **Compaction** keeps the id; the next stop finds a boundary the mark does
+  not record, and usually measures well under half too, and removes the
+  mark: armed for the next crossing.
 - **`--continue` on the VPS**: if the resume keeps the id, `$TMPDIR` still
   holds the mark and a session that already wrapped up is not asked again.
   If it gets a new id, or a container restart empties `$TMPDIR`, a resumed
@@ -141,9 +156,12 @@ The round ceiling ends the session before `decide()` runs, so a stop at the
 ceiling is never refused for size. The turn gate's refusal comes before the
 size, because a missing pre-PR run is the gate's whole purpose.
 
-The gate's refusal text promises that "the next stop ends it", so the size is
-not read under a mark the gate flagged ` refused`: a turn the gate refused is
-asked for the wrap-up at the first stop of the next turn. A refusal for size
+The gate's refusal text promises that "the next stop ends it", so no refusal
+for size is made under a mark the gate flagged ` refused`: a turn the gate
+refused is asked for the wrap-up at the first stop of the next turn. The size
+is still read there, and at a stop the gate refuses, so the re-arm of
+decision 4 is never skipped: a first stop after a compaction that the gate
+refuses would otherwise leave the old context's mark in place. A refusal for size
 does not flag the mark. The reason tells the model to finish the step in hand,
 which in an apply session can mean ticking the last box and committing; the
 gate must still judge that, and must not carry a flag it never set into the
@@ -155,11 +173,22 @@ refuses at most once per mark; this change adds a `commit-gates` requirement
 that the bound is the pre-PR refusal's own, rather than copying that 425-line
 requirement into a MODIFIED delta, which alone would pass the diff budget.
 
-Inside `decide()`: `reason = judge(...) ?? (no mark file or flagged ?
-undefined : wrapup(...))`. `judge()` logs its decision as today. With no mark
-file the `mark` half never ran — a partial installation — and the stop ends,
-as `commit-gates` requires of a stop with no mark; an empty mark, written
-outside a repository, still lets the size be read.
+Inside `decide()`: `reason = judge(...)`, then `wrapup(file, event, ask)`
+with `ask` true only when `judge()` did not refuse and the mark file exists
+unflagged; `wrapup()` re-arms whatever `ask` says and refuses only when it is
+true. `judge()` logs its decision as today. With no mark file the `mark` half
+never ran — a partial installation — and the stop ends, as `commit-gates`
+requires of a stop with no mark.
+
+An empty mark, written outside a repository, and a `HEAD` naming no branch
+are another matter. `commit-gates` lets such a stop end, but for want of a
+commit to judge, not of a partner hook: the window fills as fast outside a
+repository, and a wrap-up there is as useful. So a stop under an empty mark,
+or on a detached `HEAD`, may be refused for size, and the `commit-gates`
+requirement this change adds says the fail-open cases are the pre-PR
+refusal's own, as its once-per-mark bound is. Requiring a mark that names a
+commit would keep the two rules from meeting, at the cost of never asking a
+session that runs outside a repository. Rejected.
 
 A refusal for size makes the next stop arrive with `stop_hook_active` true,
 which the ceiling counts as one round: one of 20, once per context. Accepted.

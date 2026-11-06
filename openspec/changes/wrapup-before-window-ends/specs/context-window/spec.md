@@ -115,10 +115,13 @@ size, which asks nothing.
 ### Requirement: The wrap-up is asked once per context
 
 After a refusal for size, or a stop that counts as the ask, the hook SHALL NOT
-refuse for size again in that session until a stop measures under half the
-threshold, 400 000, which only a compaction or a cleared context reaches; that
-stop re-arms it. The record SHALL be kept per session id outside the tree,
-where a restart of Claude Code that resumes the session id finds it.
+refuse for size again in that session until a stop re-arms it: one that
+measures under half the threshold, 400 000, which only a compaction or a
+cleared context reaches, or one whose tail's last compaction boundary is not
+the one the tail held when the record was written. The re-arm SHALL be read
+at every stop with a size, a stop the turn gate refuses and one under a mark
+it refused included. The record SHALL be kept per session id outside the
+tree, where a restart of Claude Code that resumes the session id finds it.
 
 #### Scenario: The continued turn
 
@@ -136,6 +139,20 @@ where a restart of Claude Code that resumes the session id finds it.
 - **WHEN** a refusal for size was made at 805 000, a later stop measures
   790 000, and a still later one 802 000
 - **THEN** neither later stop is refused for size
+
+#### Scenario: A wrap-up, a compaction and a large first stop
+
+- **WHEN** a stop at 815 000 found a wrap-up in its tail, a compaction
+  boundary follows, the first stop after it measures 500 000, and a later one
+  810 000
+- **THEN** the last one is refused for size
+
+#### Scenario: The turn gate refuses the first stop after a compaction
+
+- **WHEN** a refusal for size was made, the turn gate refuses a later stop
+  that measures 150 000, and the first stop of a still later turn measures
+  805 000
+- **THEN** that stop is refused for size
 
 #### Scenario: A resumed session above the threshold
 
@@ -157,11 +174,14 @@ where a restart of Claude Code that resumes the session id finds it.
 
 ### Requirement: The turn gate's own decisions come first
 
-The round ceiling and the turn gate's refusal SHALL be decided before the size
-is read. A stop the ceiling ends, a stop the turn gate refuses, a stop under a
-mark the turn gate refused, since that refusal promises the next stop ends the
-turn, and a stop with no mark at all, which the turn gate lets end, SHALL NOT
-be refused for size. A refusal for size SHALL leave
+The round ceiling and the turn gate's refusal SHALL be decided before a
+refusal for size is weighed. A stop the ceiling ends, a stop the turn gate
+refuses, a stop under a mark the turn gate refused, since that refusal
+promises the next stop ends the turn, and a stop with no mark at all, which
+the turn gate lets end, SHALL NOT be refused for size. A stop under a mark
+naming no commit, written outside a repository, or on a `HEAD` naming no
+branch MAY be: the turn gate lets it end for want of a commit to judge, not
+of its partner hook. A refusal for size SHALL leave
 the mark where a refused turn leaves it, and SHALL NOT flag it as the turn
 gate's refusal: the gate still judges the continued turn.
 
@@ -184,6 +204,12 @@ gate's refusal: the gate still judges the continued turn.
 - **WHEN** no prompt wrote the session's turn-gate mark, and a stop measures
   850 000
 - **THEN** the turn ends
+
+#### Scenario: Outside a repository
+
+- **WHEN** a prompt outside a git repository wrote an empty mark, and a stop
+  measures 850 000
+- **THEN** the stop is refused for size
 
 #### Scenario: The ceiling at the same stop
 
