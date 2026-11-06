@@ -67,10 +67,12 @@ input, so `echo --config=x.toml | xargs bun i --frozen-lockfile` loads a
 bunfig the guard never read. Refusing every wrapper costs `timeout 600 bun
 install --frozen-lockfile`, which the agent runs without the `timeout`.
 
-A shell is not a wrapper here. The guard reads a `-c` program in full as a
-line of its own, as it does for every other check, and the shell hands bun
-neither words nor a directory the program does not spell out, so
-`bash -c "bun install --frozen-lockfile"` is the exact form and runs.
+A shell's `-c` program or an `eval`'s text counts as something before `bun`:
+the guard reads it as a line of its own and loses what stood before the
+shell, so `BUN_CONFIG_SKIP_LOAD_LOCKFILE=1 bash -c "bun install
+--frozen-lockfile"` would pass (CodeRabbit round 3; this reverses round 1's
+"a shell is not a wrapper"). So does a command a substitution feeds: `bun
+install --frozen-lockfile$(printf ' --production')` parses as the exact words.
 
 The subcommand is found as `bunxInstall` finds `x` and `bunTestRetry` finds
 `test`: the first word after `bun` that is one of the verbs sought, or that is
