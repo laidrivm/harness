@@ -24,8 +24,8 @@
 			"skills-lock.json"
 		],
 		"mutationFloor": {
-			"surviving": 452,
-			"why": "The baseline of #443, 454 of 1 564 mutants surviving over the 19 modules stryker.config.json's mutate lists, less two from the refactor of bun/skill-record.ts into recordSkill (stryker-bun-runner, task 2.4): its 53 mutants now leave 2 survivors where its 59 left 4, git's local-variable filter having moved to bun/git-local.ts. None is yet triaged into equivalent and missing tests; the unlisted modules count for nothing (design decision 7 of pre-push-commit-gates)."
+			"surviving": 454,
+			"why": "The bun runner's forced baseline (stryker-bun-runner, task 5.2): 454 of 1 591 mutants over the 19 listed modules, 248 Survived and 206 NoCoverage, the share no test reaches that the command runner scored Survived. Two more than the command runner's 452: bun/skill-record.ts, refactored into recordSkill in task 2.4, leaves import.meta.main mutated to true Survived where the command runner scored it Timeout; and bun/bootstrap.ts's join(\" \") to join(\"\") on BOOTSTRAP survives, equivalent under dash, which ends `exit 2#` with 2 as well (the user's answer of 2026-11-06). None is yet triaged into equivalent and missing tests; the unlisted modules count for nothing (design decision 7 of pre-push-commit-gates)."
 		},
 		"reviewers": [
 			"CodeRabbit"
