@@ -24,8 +24,8 @@
 			"skills-lock.json"
 		],
 		"mutationFloor": {
-			"surviving": 455,
-			"why": "The baseline of #443, 454 of 1 564 mutants surviving over the 19 modules stryker.config.json's mutate lists, plus one from the refactor of bun/skill-record.ts into recordSkill (stryker-bun-runner, task 2.4): its 62 mutants now leave 5 survivors where its 59 left 4. None is yet triaged into equivalent and missing tests; the unlisted modules count for nothing (design decision 7 of pre-push-commit-gates)."
+			"surviving": 452,
+			"why": "The baseline of #443, 454 of 1 564 mutants surviving over the 19 modules stryker.config.json's mutate lists, less two from the refactor of bun/skill-record.ts into recordSkill (stryker-bun-runner, task 2.4): its 61 mutants now leave 2 survivors where its 59 left 4. None is yet triaged into equivalent and missing tests; the unlisted modules count for nothing (design decision 7 of pre-push-commit-gates)."
 		},
 		"reviewers": [
 			"CodeRabbit"
