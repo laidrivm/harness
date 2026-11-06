@@ -91,10 +91,10 @@ function hook(main: string, ...events: unknown[]) {
 }
 
 /** `hook`, with `extra` in the environment it is given. */
-function hookWith(extra: Record<string, string>, main: string, ...events: unknown[]) {
+async function hookWith(extra: Record<string, string>, main: string, ...events: unknown[]) {
 	const state = emptyDir("skill-record-state-");
 	for (const event of events)
-		recordSkill(stdin(event), env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }));
+		await recordSkill(stdin(event), env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }));
 	return ledger(state);
 }
 
@@ -116,9 +116,9 @@ function spawned(extra: Record<string, string>, main: string, ...events: unknown
 
 describe("a skill call is recorded", () => {
 	// spec: gate-ledger/a-skill-claude-calls-in-a-worktree
-	test("a Skill call in a worktree names the worktree's HEAD and top level [3, 19, 20]", () => {
+	test("a Skill call in a worktree names the worktree's HEAD and top level [3, 19, 20]", async () => {
 		const { main, tree, head } = scratch();
-		const r = hook(main, called("zombies", tree));
+		const r = await hook(main, called("zombies", tree));
 		expect(r.records).toEqual([
 			expect.objectContaining({
 				gate: "skill",
@@ -132,15 +132,15 @@ describe("a skill call is recorded", () => {
 	});
 
 	// spec: gate-ledger/a-skill-the-user-types
-	test("a typed /triage names the main checkout's HEAD [4]", () => {
+	test("a typed /triage names the main checkout's HEAD [4]", async () => {
 		const { main, head } = scratch();
-		const r = hook(main, typed("triage", main));
+		const r = await hook(main, typed("triage", main));
 		expect(r.records.map((x) => [x.rule, x.commit, x.project])).toEqual([["triage", head(main), main]]);
 	});
 
-	test("ran() finds it under the gate skill and its rule, and the runner's asks do not [24]", () => {
+	test("ran() finds it under the gate skill and its rule, and the runner's asks do not [24]", async () => {
 		const { main, tree, head } = scratch();
-		const r = hook(main, called("zombies", tree));
+		const r = await hook(main, called("zombies", tree));
 		const commit = head(tree);
 		expect([
 			ran(commit, tree, "called", r.text, "zombies", "skill"),
@@ -150,43 +150,43 @@ describe("a skill call is recorded", () => {
 		]).toEqual([true, true, false, false]);
 	});
 
-	test("two calls append two records, in order [5]", () => {
+	test("two calls append two records, in order [5]", async () => {
 		const { main } = scratch();
-		const r = hook(main, called("zombies", main), typed("triage", main));
+		const r = await hook(main, called("zombies", main), typed("triage", main));
 		expect(r.records.map((x) => x.rule)).toEqual(["zombies", "triage"]);
 	});
 
-	test("a cwd in a subdirectory records the top level [8]", () => {
+	test("a cwd in a subdirectory records the top level [8]", async () => {
 		const { main } = scratch();
 		mkdirSync(join(main, "sub"));
-		expect(hook(main, called("zombies", join(main, "sub"))).records[0]?.project).toBe(main);
+		expect((await hook(main, called("zombies", join(main, "sub")))).records[0]?.project).toBe(main);
 	});
 
-	test("an inherited GIT_DIR and GIT_WORK_TREE do not outrank the event's cwd", () => {
+	test("an inherited GIT_DIR and GIT_WORK_TREE do not outrank the event's cwd", async () => {
 		const { main, tree, head } = scratch();
-		const r = hookWith({ GIT_DIR: join(main, ".git"), GIT_WORK_TREE: main }, main, called("zombies", tree));
+		const r = await hookWith({ GIT_DIR: join(main, ".git"), GIT_WORK_TREE: main }, main, called("zombies", tree));
 		expect(r.records.map((x) => [x.commit, x.project])).toEqual([[head(tree), tree]]);
 	});
 
-	test("a cwd reached through a symlink records the real top level", () => {
+	test("a cwd reached through a symlink records the real top level", async () => {
 		const { main } = scratch();
 		const link = join(realpathSync(emptyDir("skill-record-link-")), "link");
 		symlinkSync(main, link);
-		expect(hook(main, called("zombies", link)).records[0]?.project).toBe(main);
+		expect((await hook(main, called("zombies", link))).records[0]?.project).toBe(main);
 	});
 
 	// spec: gate-ledger/a-skill-called-with-only-an-untracked-file
-	test("an untracked file alone still records [9]", () => {
+	test("an untracked file alone still records [9]", async () => {
 		const { main } = scratch();
 		writeFileSync(join(main, "new.txt"), "n\n");
-		expect(hook(main, called("zombies", main)).records).toHaveLength(1);
+		expect((await hook(main, called("zombies", main))).records).toHaveLength(1);
 	});
 
 	// spec: gate-ledger/a-skill-called-with-arguments
-	test("the arguments appear nowhere, and the record holds the six keys and the commit [16, 17]", () => {
+	test("the arguments appear nowhere, and the record holds the six keys and the commit [16, 17]", async () => {
 		const { main } = scratch();
 		const args = "/Users/someone/secret.txt ghp_TOKEN123";
-		const r = hook(main, called("zombies", main, args), typed("triage", main, "slash_command", args));
+		const r = await hook(main, called("zombies", main, args), typed("triage", main, "slash_command", args));
 		expect([r.text.includes("secret.txt"), r.text.includes("ghp_TOKEN123")]).toEqual([false, false]);
 		const keys = ["at", "commit", "decision", "gate", "project", "rule", "session"];
 		expect(r.records.map((x) => Object.keys(x).sort())).toEqual([keys, keys]);
@@ -213,50 +213,56 @@ describe("no record, exit 0 and nothing printed", () => {
 		nothing(r);
 	});
 
-	test("for a PATH with no git in the environment it is given, though this process has one", () => {
+	test("for a PATH with no git in the environment it is given, though this process has one", async () => {
 		const { main } = scratch();
-		nothing(hookWith({ PATH: emptyDir("skill-record-path-") }, main, called("zombies", main)));
+		nothing(await hookWith({ PATH: emptyDir("skill-record-path-") }, main, called("zombies", main)));
 	});
 
 	// spec: gate-ledger/an-mcp-prompt-the-user-types
-	test("for an MCP server's prompt", () => {
+	test("for an MCP server's prompt", async () => {
 		const { main } = scratch();
-		nothing(hook(main, typed("triage", main, "mcp_prompt")));
+		nothing(await hook(main, typed("triage", main, "mcp_prompt")));
 	});
 
 	test.each([
 		["empty stdin [1]", ""],
 		["stdin that is not JSON [21]", "{not json"],
-	])("for %s, spawned and in-process", (_, event) => {
+	])("for %s, spawned and in-process", async (_, event) => {
 		const { main } = scratch();
 		const r = spawned({}, main, event);
 		expect(r.outs).toHaveLength(1);
 		nothing(r);
-		nothing(hook(main, event));
+		nothing(await hook(main, event));
 	});
 
-	test("for neither a skill nor a command name [2]", () => {
+	test("for stdin that cannot be read, and the call does not reject", async () => {
+		const state = emptyDir("skill-record-state-");
+		await recordSkill(Promise.reject(new Error("stdin closed")), env({ XDG_STATE_HOME: state }));
+		nothing(ledger(state));
+	});
+
+	test("for neither a skill nor a command name [2]", async () => {
 		const { main } = scratch();
-		nothing(hook(main, { hook_event_name: "PostToolUse", session_id: SESSION, tool_input: {}, cwd: main }));
+		nothing(await hook(main, { hook_event_name: "PostToolUse", session_id: SESSION, tool_input: {}, cwd: main }));
 	});
 
 	test.each([
 		["an empty name [7]", ""],
 		["a name that is not a string [15]", 42],
-	])("for %s", (_, name) => {
+	])("for %s", async (_, name) => {
 		const { main } = scratch();
-		nothing(hook(main, called(name, main)));
+		nothing(await hook(main, called(name, main)));
 	});
 
 	// spec: gate-ledger/a-skill-called-on-an-uncommitted-edit
 	test.each([
 		["a staged edit [10]", true],
 		["an unstaged edit [11]", false],
-	])("for %s", (_, staged) => {
+	])("for %s", async (_, staged) => {
 		const { main } = scratch();
 		writeFileSync(join(main, "a.txt"), "changed\n");
 		if (staged) git(main, "add", "a.txt");
-		nothing(hook(main, called("zombies", main)));
+		nothing(await hook(main, called("zombies", main)));
 	});
 
 	// spec: gate-ledger/a-skill-called-outside-a-repository
@@ -271,9 +277,9 @@ describe("no record, exit 0 and nothing printed", () => {
 		],
 		["a cwd that is no repository [13]", () => realpathSync(emptyDir("skill-record-none-"))],
 		["a cwd that does not exist [14]", () => join(realpathSync(emptyDir("skill-record-gone-")), "missing")],
-	])("for %s", (_, dir) => {
+	])("for %s", async (_, dir) => {
 		const { main } = scratch();
-		nothing(hook(main, called("zombies", dir())));
+		nothing(await hook(main, called("zombies", dir())));
 	});
 });
 
