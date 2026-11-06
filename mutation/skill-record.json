@@ -2,7 +2,7 @@
 	"schemaVersion": "1.0",
 	"files": {
 		"bun/skill-record.ts": {
-			"source": "#!/usr/bin/env bun\n/**\n * The skill-call hook: one `PostToolUse` event for the `Skill` tool, or one\n * `UserPromptExpansion` event for a typed `/skill`, becomes one gate-ledger\n * record — gate `skill`, decision `called`, the skill's name as the rule, and\n * the commit `HEAD` names in the event's `cwd`, with that checkout's top level\n * as the project. It proves the call, not that the skill was followed\n * (`openspec/specs/gate-ledger/spec.md`).\n *\n * No record is written while a tracked file differs from `HEAD`: the record\n * names a commit, and a skill run over an uncommitted edit read a tree no\n * commit holds. Untracked files do not count, unlike the pre-PR runner's rule,\n * whose project checks run the whole tree. Only the name is read into the\n * record; a skill's arguments are free text and can carry a path or a token.\n *\n * It prints nothing and exits 0 on every path: a typed command's expansion can\n * be blocked by a hook, and its stdout can reach the model; a recorder must do\n * neither.\n *\n * The logic is `recordSkill`, given the event's text and the environment to\n * run git and find the ledger with, so the tests call it in their own process;\n * the main block reads stdin, calls it and exits.\n */\nimport { type Env, recordCheckout } from \"./gate-ledger.ts\";\n\ntype Event = {\n\tsession_id?: unknown;\n\tcwd?: unknown;\n\ttool_input?: { skill?: unknown };\n\texpansion_type?: unknown;\n\tcommand_name?: unknown;\n};\n\n/** Records the skill `input` names, if any; never throws. */\nexport function recordSkill(input: string, environment: Env): void {\n\ttry {\n\t\tconst event: Event = JSON.parse(input) ?? {};\n\t\t// An MCP server's prompt shares the expansion event, and can share a skill's name.\n\t\tconst name = event.tool_input?.skill ?? (event.expansion_type === \"slash_command\" ? event.command_name : undefined);\n\t\tconst dir = event.cwd;\n\t\tif (typeof name === \"string\" && name && typeof dir === \"string\") {\n\t\t\t// A session started under a git hook inherits its GIT_DIR, which outranks `-C`: drop every variable git names as local.\n\t\t\tconst listed = Bun.spawnSync([\"git\", \"rev-parse\", \"--local-env-vars\"], { env: environment });\n\t\t\tconst local = new Set(listed.stdout.toString().split(\"\\n\"));\n\t\t\tconst env = Object.fromEntries(Object.entries(environment).filter(([key]) => !local.has(key)));\n\t\t\t/** git's trimmed stdout in `dir`, or `undefined` when it fails. */\n\t\t\tconst git = (...args: string[]) => {\n\t\t\t\tconst p = Bun.spawnSync([\"git\", \"-C\", dir, ...args], { env });\n\t\t\t\treturn p.exitCode === 0 ? p.stdout.toString().trim() : undefined;\n\t\t\t};\n\t\t\tconst commit = git(\"rev-parse\", \"--verify\", \"-q\", \"HEAD\");\n\t\t\tconst top = git(\"rev-parse\", \"--show-toplevel\");\n\t\t\t// A status git cannot read is never a clean tree.\n\t\t\tconst status = git(\"status\", \"--porcelain\", \"--untracked-files=no\");\n\t\t\tif (commit && top && status === \"\") {\n\t\t\t\trecordCheckout(\"skill\", \"called\", name, { session_id: event.session_id, cwd: top }, commit, environment);\n\t\t\t}\n\t\t}\n\t} catch {\n\t\t// An event that is no JSON, or no git: nothing to record.\n\t}\n}\n\nif (import.meta.main) {\n\ttry {\n\t\trecordSkill(await Bun.stdin.text(), process.env);\n\t} catch {\n\t\t// Unreadable stdin: nothing to record.\n\t}\n\tprocess.exit(0);\n}\n",
+			"source": "#!/usr/bin/env bun\n/**\n * The skill-call hook: one `PostToolUse` event for the `Skill` tool, or one\n * `UserPromptExpansion` event for a typed `/skill`, becomes one gate-ledger\n * record — gate `skill`, decision `called`, the skill's name as the rule, and\n * the commit `HEAD` names in the event's `cwd`, with that checkout's top level\n * as the project. It proves the call, not that the skill was followed\n * (`openspec/specs/gate-ledger/spec.md`).\n *\n * No record is written while a tracked file differs from `HEAD`: the record\n * names a commit, and a skill run over an uncommitted edit read a tree no\n * commit holds. Untracked files do not count, unlike the pre-PR runner's rule,\n * whose project checks run the whole tree. Only the name is read into the\n * record; a skill's arguments are free text and can carry a path or a token.\n *\n * It prints nothing and exits 0 on every path: a typed command's expansion can\n * be blocked by a hook, and its stdout can reach the model; a recorder must do\n * neither.\n *\n * The logic is `recordSkill`, given the event's text and the environment to\n * run git and find the ledger with, so the tests call it in their own process.\n * The main block is one statement handing it stdin, so no mutant sits where\n * only a spawned hook reaches it; it never throws, so the process exits 0 with\n * no `process.exit`.\n */\nimport { type Env, recordCheckout } from \"./gate-ledger.ts\";\n\ntype Event = {\n\tsession_id?: unknown;\n\tcwd?: unknown;\n\ttool_input?: { skill?: unknown };\n\texpansion_type?: unknown;\n\tcommand_name?: unknown;\n};\n\n/** Records the skill `input` names, if any; never rejects. */\nexport async function recordSkill(input: string | Promise<string>, environment: Env): Promise<void> {\n\ttry {\n\t\tconst event: Event = JSON.parse(await input) ?? {};\n\t\t// An MCP server's prompt shares the expansion event, and can share a skill's name.\n\t\tconst name = event.tool_input?.skill ?? (event.expansion_type === \"slash_command\" ? event.command_name : undefined);\n\t\tconst dir = event.cwd;\n\t\tif (typeof name === \"string\" && name && typeof dir === \"string\") {\n\t\t\t// A session started under a git hook inherits its GIT_DIR, which outranks `-C`: drop every variable git names as local.\n\t\t\tconst listed = Bun.spawnSync([\"git\", \"rev-parse\", \"--local-env-vars\"], { env: environment });\n\t\t\tconst local = new Set(listed.stdout.toString().split(\"\\n\"));\n\t\t\tconst env = Object.fromEntries(Object.entries(environment).filter(([key]) => !local.has(key)));\n\t\t\t/** git's trimmed stdout in `dir`, or `undefined` when it fails. */\n\t\t\tconst git = (...args: string[]) => {\n\t\t\t\tconst p = Bun.spawnSync([\"git\", \"-C\", dir, ...args], { env });\n\t\t\t\treturn p.exitCode === 0 ? p.stdout.toString().trim() : undefined;\n\t\t\t};\n\t\t\tconst commit = git(\"rev-parse\", \"--verify\", \"-q\", \"HEAD\");\n\t\t\tconst top = git(\"rev-parse\", \"--show-toplevel\");\n\t\t\t// A status git cannot read is never a clean tree.\n\t\t\tconst status = git(\"status\", \"--porcelain\", \"--untracked-files=no\");\n\t\t\tif (commit && top && status === \"\") {\n\t\t\t\trecordCheckout(\"skill\", \"called\", name, { session_id: event.session_id, cwd: top }, commit, environment);\n\t\t\t}\n\t\t}\n\t} catch {\n\t\t// Unreadable stdin, an event that is no JSON, or no git: nothing to record.\n\t}\n}\n\nif (import.meta.main) await recordSkill(Bun.stdin.text(), process.env);\n",
 			"mutants": [
 				{
 					"id": "0",
@@ -10,11 +10,11 @@
 					"location": {
 						"end": {
 							"column": 2,
-							"line": 62
+							"line": 64
 						},
 						"start": {
-							"column": 68,
-							"line": 35
+							"column": 101,
+							"line": 37
 						}
 					},
 					"replacement": "{}",
@@ -26,11 +26,11 @@
 					"location": {
 						"end": {
 							"column": 3,
-							"line": 59
+							"line": 61
 						},
 						"start": {
 							"column": 6,
-							"line": 36
+							"line": 38
 						}
 					},
 					"replacement": "{}",
@@ -41,15 +41,15 @@
 					"mutatorName": "LogicalOperator",
 					"location": {
 						"end": {
-							"column": 47,
-							"line": 37
+							"column": 53,
+							"line": 39
 						},
 						"start": {
 							"column": 24,
-							"line": 37
+							"line": 39
 						}
 					},
-					"replacement": "JSON.parse(input) && {}",
+					"replacement": "JSON.parse(await input) && {}",
 					"status": "Killed"
 				},
 				{
@@ -58,11 +58,11 @@
 					"location": {
 						"end": {
 							"column": 118,
-							"line": 39
+							"line": 41
 						},
 						"start": {
 							"column": 16,
-							"line": 39
+							"line": 41
 						}
 					},
 					"replacement": "event.tool_input?.skill && (event.expansion_type === \"slash_command\" ? event.command_name : undefined)",
@@ -74,11 +74,11 @@
 					"location": {
 						"end": {
 							"column": 39,
-							"line": 39
+							"line": 41
 						},
 						"start": {
 							"column": 16,
-							"line": 39
+							"line": 41
 						}
 					},
 					"replacement": "event.tool_input.skill",
@@ -90,11 +90,11 @@
 					"location": {
 						"end": {
 							"column": 84,
-							"line": 39
+							"line": 41
 						},
 						"start": {
 							"column": 44,
-							"line": 39
+							"line": 41
 						}
 					},
 					"replacement": "true",
@@ -106,11 +106,11 @@
 					"location": {
 						"end": {
 							"column": 84,
-							"line": 39
+							"line": 41
 						},
 						"start": {
 							"column": 44,
-							"line": 39
+							"line": 41
 						}
 					},
 					"replacement": "false",
@@ -122,11 +122,11 @@
 					"location": {
 						"end": {
 							"column": 84,
-							"line": 39
+							"line": 41
 						},
 						"start": {
 							"column": 44,
-							"line": 39
+							"line": 41
 						}
 					},
 					"replacement": "event.expansion_type !== \"slash_command\"",
@@ -138,11 +138,11 @@
 					"location": {
 						"end": {
 							"column": 84,
-							"line": 39
+							"line": 41
 						},
 						"start": {
 							"column": 69,
-							"line": 39
+							"line": 41
 						}
 					},
 					"replacement": "\"\"",
@@ -154,11 +154,11 @@
 					"location": {
 						"end": {
 							"column": 66,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 7,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "true",
@@ -170,11 +170,11 @@
 					"location": {
 						"end": {
 							"column": 66,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 7,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "false",
@@ -186,11 +186,11 @@
 					"location": {
 						"end": {
 							"column": 66,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 7,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "typeof name === \"string\" && name || typeof dir === \"string\"",
@@ -202,11 +202,11 @@
 					"location": {
 						"end": {
 							"column": 39,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 7,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "true",
@@ -218,11 +218,11 @@
 					"location": {
 						"end": {
 							"column": 39,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 7,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "typeof name === \"string\" || name",
@@ -234,11 +234,11 @@
 					"location": {
 						"end": {
 							"column": 31,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 7,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "true",
@@ -250,11 +250,11 @@
 					"location": {
 						"end": {
 							"column": 31,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 7,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "typeof name !== \"string\"",
@@ -266,11 +266,11 @@
 					"location": {
 						"end": {
 							"column": 31,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 23,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "\"\"",
@@ -282,11 +282,11 @@
 					"location": {
 						"end": {
 							"column": 66,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 43,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "true",
@@ -298,11 +298,11 @@
 					"location": {
 						"end": {
 							"column": 66,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 43,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "typeof dir !== \"string\"",
@@ -314,11 +314,11 @@
 					"location": {
 						"end": {
 							"column": 66,
-							"line": 41
+							"line": 43
 						},
 						"start": {
 							"column": 58,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "\"\"",
@@ -330,11 +330,11 @@
 					"location": {
 						"end": {
 							"column": 4,
-							"line": 58
+							"line": 60
 						},
 						"start": {
 							"column": 68,
-							"line": 41
+							"line": 43
 						}
 					},
 					"replacement": "{}",
@@ -346,11 +346,11 @@
 					"location": {
 						"end": {
 							"column": 73,
-							"line": 43
+							"line": 45
 						},
 						"start": {
 							"column": 33,
-							"line": 43
+							"line": 45
 						}
 					},
 					"replacement": "[]",
@@ -362,11 +362,11 @@
 					"location": {
 						"end": {
 							"column": 39,
-							"line": 43
+							"line": 45
 						},
 						"start": {
 							"column": 34,
-							"line": 43
+							"line": 45
 						}
 					},
 					"replacement": "\"\"",
@@ -378,11 +378,11 @@
 					"location": {
 						"end": {
 							"column": 52,
-							"line": 43
+							"line": 45
 						},
 						"start": {
 							"column": 41,
-							"line": 43
+							"line": 45
 						}
 					},
 					"replacement": "\"\"",
@@ -394,11 +394,11 @@
 					"location": {
 						"end": {
 							"column": 72,
-							"line": 43
+							"line": 45
 						},
 						"start": {
 							"column": 54,
-							"line": 43
+							"line": 45
 						}
 					},
 					"replacement": "\"\"",
@@ -410,11 +410,11 @@
 					"location": {
 						"end": {
 							"column": 95,
-							"line": 43
+							"line": 45
 						},
 						"start": {
 							"column": 75,
-							"line": 43
+							"line": 45
 						}
 					},
 					"replacement": "{}",
@@ -426,11 +426,11 @@
 					"location": {
 						"end": {
 							"column": 61,
-							"line": 44
+							"line": 46
 						},
 						"start": {
 							"column": 57,
-							"line": 44
+							"line": 46
 						}
 					},
 					"replacement": "\"\"",
@@ -442,11 +442,11 @@
 					"location": {
 						"end": {
 							"column": 97,
-							"line": 45
+							"line": 47
 						},
 						"start": {
 							"column": 35,
-							"line": 45
+							"line": 47
 						}
 					},
 					"replacement": "Object.entries(environment)",
@@ -458,11 +458,11 @@
 					"location": {
 						"end": {
 							"column": 96,
-							"line": 45
+							"line": 47
 						},
 						"start": {
 							"column": 70,
-							"line": 45
+							"line": 47
 						}
 					},
 					"replacement": "() => undefined",
@@ -474,11 +474,11 @@
 					"location": {
 						"end": {
 							"column": 96,
-							"line": 45
+							"line": 47
 						},
 						"start": {
 							"column": 81,
-							"line": 45
+							"line": 47
 						}
 					},
 					"replacement": "local.has(key)",
@@ -490,11 +490,11 @@
 					"location": {
 						"end": {
 							"column": 5,
-							"line": 50
+							"line": 52
 						},
 						"start": {
 							"column": 39,
-							"line": 47
+							"line": 49
 						}
 					},
 					"replacement": "{}",
@@ -506,11 +506,11 @@
 					"location": {
 						"end": {
 							"column": 56,
-							"line": 48
+							"line": 50
 						},
 						"start": {
 							"column": 29,
-							"line": 48
+							"line": 50
 						}
 					},
 					"replacement": "[]",
@@ -522,11 +522,11 @@
 					"location": {
 						"end": {
 							"column": 35,
-							"line": 48
+							"line": 50
 						},
 						"start": {
 							"column": 30,
-							"line": 48
+							"line": 50
 						}
 					},
 					"replacement": "\"\"",
@@ -538,11 +538,11 @@
 					"location": {
 						"end": {
 							"column": 41,
-							"line": 48
+							"line": 50
 						},
 						"start": {
 							"column": 37,
-							"line": 48
+							"line": 50
 						}
 					},
 					"replacement": "\"\"",
@@ -554,11 +554,11 @@
 					"location": {
 						"end": {
 							"column": 65,
-							"line": 48
+							"line": 50
 						},
 						"start": {
 							"column": 58,
-							"line": 48
+							"line": 50
 						}
 					},
 					"replacement": "{}",
@@ -570,11 +570,11 @@
 					"location": {
 						"end": {
 							"column": 28,
-							"line": 49
+							"line": 51
 						},
 						"start": {
 							"column": 12,
-							"line": 49
+							"line": 51
 						}
 					},
 					"replacement": "true",
@@ -586,11 +586,11 @@
 					"location": {
 						"end": {
 							"column": 28,
-							"line": 49
+							"line": 51
 						},
 						"start": {
 							"column": 12,
-							"line": 49
+							"line": 51
 						}
 					},
 					"replacement": "false",
@@ -602,11 +602,11 @@
 					"location": {
 						"end": {
 							"column": 28,
-							"line": 49
+							"line": 51
 						},
 						"start": {
 							"column": 12,
-							"line": 49
+							"line": 51
 						}
 					},
 					"replacement": "p.exitCode !== 0",
@@ -618,11 +618,11 @@
 					"location": {
 						"end": {
 							"column": 57,
-							"line": 49
+							"line": 51
 						},
 						"start": {
 							"column": 31,
-							"line": 49
+							"line": 51
 						}
 					},
 					"replacement": "p.stdout.toString()",
@@ -634,11 +634,11 @@
 					"location": {
 						"end": {
 							"column": 34,
-							"line": 51
+							"line": 53
 						},
 						"start": {
 							"column": 23,
-							"line": 51
+							"line": 53
 						}
 					},
 					"replacement": "\"\"",
@@ -650,11 +650,11 @@
 					"location": {
 						"end": {
 							"column": 46,
-							"line": 51
+							"line": 53
 						},
 						"start": {
 							"column": 36,
-							"line": 51
+							"line": 53
 						}
 					},
 					"replacement": "\"\"",
@@ -666,11 +666,11 @@
 					"location": {
 						"end": {
 							"column": 52,
-							"line": 51
+							"line": 53
 						},
 						"start": {
 							"column": 48,
-							"line": 51
+							"line": 53
 						}
 					},
 					"replacement": "\"\"",
@@ -682,11 +682,11 @@
 					"location": {
 						"end": {
 							"column": 60,
-							"line": 51
+							"line": 53
 						},
 						"start": {
 							"column": 54,
-							"line": 51
+							"line": 53
 						}
 					},
 					"replacement": "\"\"",
@@ -698,11 +698,11 @@
 					"location": {
 						"end": {
 							"column": 31,
-							"line": 52
+							"line": 54
 						},
 						"start": {
 							"column": 20,
-							"line": 52
+							"line": 54
 						}
 					},
 					"replacement": "\"\"",
@@ -714,11 +714,11 @@
 					"location": {
 						"end": {
 							"column": 50,
-							"line": 52
+							"line": 54
 						},
 						"start": {
 							"column": 33,
-							"line": 52
+							"line": 54
 						}
 					},
 					"replacement": "\"\"",
@@ -730,11 +730,11 @@
 					"location": {
 						"end": {
 							"column": 31,
-							"line": 54
+							"line": 56
 						},
 						"start": {
 							"column": 23,
-							"line": 54
+							"line": 56
 						}
 					},
 					"replacement": "\"\"",
@@ -746,11 +746,11 @@
 					"location": {
 						"end": {
 							"column": 46,
-							"line": 54
+							"line": 56
 						},
 						"start": {
 							"column": 33,
-							"line": 54
+							"line": 56
 						}
 					},
 					"replacement": "\"\"",
@@ -762,11 +762,11 @@
 					"location": {
 						"end": {
 							"column": 70,
-							"line": 54
+							"line": 56
 						},
 						"start": {
 							"column": 48,
-							"line": 54
+							"line": 56
 						}
 					},
 					"replacement": "\"\"",
@@ -778,11 +778,11 @@
 					"location": {
 						"end": {
 							"column": 38,
-							"line": 55
+							"line": 57
 						},
 						"start": {
 							"column": 8,
-							"line": 55
+							"line": 57
 						}
 					},
 					"replacement": "true",
@@ -794,11 +794,11 @@
 					"location": {
 						"end": {
 							"column": 38,
-							"line": 55
+							"line": 57
 						},
 						"start": {
 							"column": 8,
-							"line": 55
+							"line": 57
 						}
 					},
 					"replacement": "false",
@@ -810,11 +810,11 @@
 					"location": {
 						"end": {
 							"column": 38,
-							"line": 55
+							"line": 57
 						},
 						"start": {
 							"column": 8,
-							"line": 55
+							"line": 57
 						}
 					},
 					"replacement": "commit && top || status === \"\"",
@@ -826,11 +826,11 @@
 					"location": {
 						"end": {
 							"column": 21,
-							"line": 55
+							"line": 57
 						},
 						"start": {
 							"column": 8,
-							"line": 55
+							"line": 57
 						}
 					},
 					"replacement": "true",
@@ -842,11 +842,11 @@
 					"location": {
 						"end": {
 							"column": 21,
-							"line": 55
+							"line": 57
 						},
 						"start": {
 							"column": 8,
-							"line": 55
+							"line": 57
 						}
 					},
 					"replacement": "commit || top",
@@ -858,11 +858,11 @@
 					"location": {
 						"end": {
 							"column": 38,
-							"line": 55
+							"line": 57
 						},
 						"start": {
 							"column": 25,
-							"line": 55
+							"line": 57
 						}
 					},
 					"replacement": "true",
@@ -874,11 +874,11 @@
 					"location": {
 						"end": {
 							"column": 38,
-							"line": 55
+							"line": 57
 						},
 						"start": {
 							"column": 25,
-							"line": 55
+							"line": 57
 						}
 					},
 					"replacement": "status !== \"\"",
@@ -890,11 +890,11 @@
 					"location": {
 						"end": {
 							"column": 38,
-							"line": 55
+							"line": 57
 						},
 						"start": {
 							"column": 36,
-							"line": 55
+							"line": 57
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
@@ -906,11 +906,11 @@
 					"location": {
 						"end": {
 							"column": 5,
-							"line": 57
+							"line": 59
 						},
 						"start": {
 							"column": 40,
-							"line": 55
+							"line": 57
 						}
 					},
 					"replacement": "{}",
@@ -922,11 +922,11 @@
 					"location": {
 						"end": {
 							"column": 27,
-							"line": 56
+							"line": 58
 						},
 						"start": {
 							"column": 20,
-							"line": 56
+							"line": 58
 						}
 					},
 					"replacement": "\"\"",
@@ -938,11 +938,11 @@
 					"location": {
 						"end": {
 							"column": 37,
-							"line": 56
+							"line": 58
 						},
 						"start": {
 							"column": 29,
-							"line": 56
+							"line": 58
 						}
 					},
 					"replacement": "\"\"",
@@ -954,11 +954,11 @@
 					"location": {
 						"end": {
 							"column": 87,
-							"line": 56
+							"line": 58
 						},
 						"start": {
 							"column": 45,
-							"line": 56
+							"line": 58
 						}
 					},
 					"replacement": "{}",
@@ -970,11 +970,11 @@
 					"location": {
 						"end": {
 							"column": 21,
-							"line": 64
+							"line": 66
 						},
 						"start": {
 							"column": 5,
-							"line": 64
+							"line": 66
 						}
 					},
 					"replacement": "true",
@@ -986,79 +986,15 @@
 					"location": {
 						"end": {
 							"column": 21,
-							"line": 64
+							"line": 66
 						},
 						"start": {
 							"column": 5,
-							"line": 64
+							"line": 66
 						}
 					},
 					"replacement": "false",
 					"status": "Killed"
-				},
-				{
-					"id": "63",
-					"mutatorName": "BlockStatement",
-					"location": {
-						"end": {
-							"column": 2,
-							"line": 71
-						},
-						"start": {
-							"column": 23,
-							"line": 64
-						}
-					},
-					"replacement": "{}",
-					"status": "Killed"
-				},
-				{
-					"id": "64",
-					"mutatorName": "BlockStatement",
-					"location": {
-						"end": {
-							"column": 3,
-							"line": 67
-						},
-						"start": {
-							"column": 6,
-							"line": 65
-						}
-					},
-					"replacement": "{}",
-					"status": "Killed"
-				},
-				{
-					"id": "65",
-					"mutatorName": "CallExpression",
-					"location": {
-						"end": {
-							"column": 52,
-							"line": 66
-						},
-						"start": {
-							"column": 3,
-							"line": 66
-						}
-					},
-					"replacement": ";",
-					"status": "Killed"
-				},
-				{
-					"id": "66",
-					"mutatorName": "CallExpression",
-					"location": {
-						"end": {
-							"column": 18,
-							"line": 70
-						},
-						"start": {
-							"column": 2,
-							"line": 70
-						}
-					},
-					"replacement": ";",
-					"status": "Survived"
 				}
 			]
 		}
@@ -1066,7 +1002,7 @@
 	"fingerprint": {
 		"bun/diff-budget.fixture.ts": "a51ac572bdc585134c3a16ebb17c58581b20dcb2",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bun/skill-record.test.ts": "b3187d5fb6219342791e0e639e0b5126bf99e969",
+		"bun/skill-record.test.ts": "447e225b23ffded5827d31aa3e53cafcdd6308e9",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
 		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/skill-record",
