@@ -17,11 +17,11 @@
  * be blocked by a hook, and its stdout can reach the model; a recorder must do
  * neither.
  *
- * The logic is `recordSkill`, given the event's text and the environment to
- * run git and find the ledger with, so the tests call it in their own process.
- * The main block is one statement handing it stdin, so no mutant sits where
- * only a spawned hook reaches it; it never throws, so the process exits 0 with
- * no `process.exit`.
+ * The logic is `recordSkill`, given what to read the event from and the
+ * environment to run git and find the ledger with, so the tests call it in
+ * their own process. The main block is one statement handing it stdin, so no
+ * mutant sits where only a spawned hook reaches it; stdin is read inside its
+ * `try`, and it never rejects, so the process exits 0 with no `process.exit`.
  */
 import { type Env, recordCheckout } from "./gate-ledger.ts";
 
@@ -33,17 +33,17 @@ type Event = {
 	command_name?: unknown;
 };
 
-/** Records the skill `input` names, if any; never rejects. */
-export async function recordSkill(input: string | Promise<string>, environment: Env): Promise<void> {
+/** Records the skill the event `input` holds names, if any; never rejects. */
+export async function recordSkill(input: { text(): Promise<string> }, environment: Env): Promise<void> {
 	try {
-		const event: Event = JSON.parse(await input) ?? {};
+		const event: Event = JSON.parse(await input.text()) ?? {};
 		// An MCP server's prompt shares the expansion event, and can share a skill's name.
 		const name = event.tool_input?.skill ?? (event.expansion_type === "slash_command" ? event.command_name : undefined);
 		const dir = event.cwd;
 		if (typeof name === "string" && name && typeof dir === "string") {
 			// A session started under a git hook inherits its GIT_DIR, which outranks `-C`: drop every variable git names as local.
-			const listed = Bun.spawnSync(["git", "rev-parse", "--local-env-vars"], { env: environment });
-			const local = new Set(listed.stdout.toString().split("\n"));
+			// The list is git's own and reads no repository, so it needs no environment; the gits below get one.
+			const local = new Set(Bun.spawnSync(["git", "rev-parse", "--local-env-vars"]).stdout.toString().split("\n"));
 			const env = Object.fromEntries(Object.entries(environment).filter(([key]) => !local.has(key)));
 			/** git's trimmed stdout in `dir`, or `undefined` when it fails. */
 			const git = (...args: string[]) => {
@@ -63,4 +63,4 @@ export async function recordSkill(input: string | Promise<string>, environment: 
 	}
 }
 
-if (import.meta.main) await recordSkill(Bun.stdin.text(), process.env);
+if (import.meta.main) await recordSkill(Bun.stdin, process.env);

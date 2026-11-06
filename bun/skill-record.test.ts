@@ -86,15 +86,13 @@ function ledger(state: string, outs: [number | null, string][] = []) {
 }
 
 /** The hook's logic on each event in turn, in this process and one state directory; the ledger after. */
-function hook(main: string, ...events: unknown[]) {
-	return hookWith({}, main, ...events);
-}
+const hook = (main: string, ...events: unknown[]) => hookWith({}, main, ...events);
 
 /** `hook`, with `extra` in the environment it is given. */
 async function hookWith(extra: Record<string, string>, main: string, ...events: unknown[]) {
 	const state = emptyDir("skill-record-state-");
 	for (const event of events)
-		await recordSkill(stdin(event), env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }));
+		await recordSkill(new Blob([stdin(event)]), env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }));
 	return ledger(state);
 }
 
@@ -108,10 +106,8 @@ function spawned(extra: Record<string, string>, main: string, ...events: unknown
 			env: env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }),
 		}),
 	);
-	return ledger(
-		state,
-		runs.map((r) => [r.exitCode, r.stdout.toString()]),
-	);
+	const outs = runs.map((r): [number | null, string] => [r.exitCode, r.stdout.toString()]);
+	return ledger(state, outs);
 }
 
 describe("a skill call is recorded", () => {
@@ -235,15 +231,23 @@ describe("no record, exit 0 and nothing printed", () => {
 		nothing(await hook(main, event));
 	});
 
-	test("for stdin that cannot be read, and the call does not reject", async () => {
+	test.each([
+		["rejects", { text: () => Promise.reject(new Error("stdin closed")) }],
+		// `JSON.parse` of a torn text throws before any promise exists, as a closed fd 0 would.
+		["throws", { text: () => JSON.parse("{") }],
+	])("for stdin whose read %s, and the call does not reject", async (_, input) => {
 		const state = emptyDir("skill-record-state-");
-		await recordSkill(Promise.reject(new Error("stdin closed")), env({ XDG_STATE_HOME: state }));
+		await recordSkill(input, env({ XDG_STATE_HOME: state }));
 		nothing(ledger(state));
 	});
 
-	test("for neither a skill nor a command name [2]", async () => {
+	test("for neither a skill nor a command name [2], spawned and in-process", async () => {
 		const { main } = scratch();
-		nothing(await hook(main, { hook_event_name: "PostToolUse", session_id: SESSION, tool_input: {}, cwd: main }));
+		const event = { hook_event_name: "PostToolUse", session_id: SESSION, tool_input: {}, cwd: main };
+		const r = spawned({}, main, event);
+		expect(r.outs).toHaveLength(1);
+		nothing(r);
+		nothing(await hook(main, event));
 	});
 
 	test.each([
