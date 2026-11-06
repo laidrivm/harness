@@ -16,7 +16,7 @@ the harness's policy check compares exactly: the hook registrations, the
 of the `ask` list, the `Edit(.npmrc)` deny and `Edit(bunfig.toml)` ask
 entries, the `attribution` setting, the harness's two `enabledPlugins`
 entries, the `ponytail` entry of `extraKnownMarketplaces`, and
-`bunfig.toml`'s `[install]` section.
+`bunfig.toml`'s `[install]` section, and `package.json`'s `deps` script.
 After a sync, the check SHALL find none of them wrong.
 
 #### Scenario: A harness change to its policy needs no manual edit
@@ -60,7 +60,8 @@ ask entries, plugins and marketplaces other than the harness's, other
 settings keys and other TOML tables. When it cannot show
 that its `bunfig.toml` edit preserved the rest of the file, or when
 `enabledPlugins` or `extraKnownMarketplaces` is present and not an object, it
-SHALL write neither file and fail.
+SHALL write none of `bunfig.toml`, the settings file and `package.json`, and
+fail.
 
 #### Scenario: The project's own settings survive a sync
 
@@ -150,7 +151,9 @@ hook is installed to run at the push.
 
 At session start the harness SHALL compare the commit the installed harness
 came from with the consumer's pin. When they differ it SHALL print one line
-naming both commits and `bun run deps`, and it SHALL never block the session.
+naming both commits and `bun run deps`, with `bun install` as the fallback
+for a `package.json` with uncommitted edits, whose script the guard refuses,
+and it SHALL never block the session.
 This SHALL hold for an installed harness version too old to contain the
 comparison itself.
 

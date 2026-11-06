@@ -24,7 +24,8 @@ install nothing.
 The install is a hook's command and no tool call, so it SHALL pass neither
 through the Bash bootstrap nor through `permissions.ask`. The bootstrap SHALL
 let only an install through before the harness is installed — `bun install`
-or `bun i`, bare or with `--frozen-lockfile`, or `bun run deps` — and
+or `bun i`, bare or with `--frozen-lockfile`, or `bun run deps`, matched by
+its text alone, so `deps` runs whatever `package.json` holds — and
 `permissions.ask` SHALL NOT change: `agent-permissions`' *Every
 manifest-mutating invocation prompts, whatever else allows it* still prompts
 for a `bun install` the agent runs.
