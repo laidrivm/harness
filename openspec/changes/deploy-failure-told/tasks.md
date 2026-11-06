@@ -18,9 +18,9 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       file prints nothing and still removes the fresh-session mark
       (`orchestrator/a-prompt-with-no-failure`); a second failure reported
       while an earlier `.reported` file exists is printed and replaces it
-      (`orchestrator/a-failure-after-main-is-up`); a directory at
-      `.harness-deploy-failed.reported` still leaves the report printed, the
-      hook exiting 0 and the file in place
+      (`orchestrator/a-failure-after-main-is-up`); a read-only directory at
+      `.harness-deploy-failed.reported`, which the move cannot enter, still
+      leaves the report printed, the hook exiting 0 and the file in place
       (`orchestrator/a-failure-after-main-is-up`); the existing start cases
       keep passing (`orchestrator/the-session-starts-after-a-failed-deploy`)
 - [ ] 1.2 A pinning case in `orchestrator/deploy-session.test.ts`, passing
@@ -32,7 +32,11 @@ fail first. `put()` and its `shortcut:` comment are not touched.
 - [ ] 1.3 Then `orchestrator/runner/deploy-failed.sh` (mode 0755 in the
       commit) carrying the start hook's report and exiting 0 whatever its
       move does; the Dockerfile copies it to
-      `/opt/orchestrator/deploy-failed.sh` beside the other scripts; the
+      `/opt/orchestrator/deploy-failed.sh` beside the other scripts, and its
+      mode check fails the build when that file is not executable and
+      readable by others or is writable by group or others, a case in
+      `orchestrator/layout-deploy.test.ts` reading the `RUN test -z` line
+      for the path; the
       `SessionStart` `startup|clear|resume` entry and the `UserPromptSubmit`
       entry, beside the mark's removal, run it. Verify
       `bun test orchestrator/layout-deploy orchestrator/deploy-session`
@@ -65,26 +69,43 @@ fail first. `put()` and its `shortcut:` comment are not touched.
 
 ## 3. The newest test run decides
 
-- [ ] 3.1 Failing cases in `orchestrator/deploy.test.ts`, with
-      `orchestrator/deploy.fixture.ts`'s `runs()` able to answer several runs
-      with ids: an older suite's `success` and a newer `failure` or pending
-      run move nothing and exit 0
-      (`orchestrator/an-older-check-suite-s-success`); an older `failure`
-      and a newer `success` deploy the head
-      (`orchestrator/a-newer-check-suite-s-success`); each with the newer run
-      listed first and listed last in the response; the existing pending,
-      failed, absent and other-app cases keep passing
-- [ ] 3.2 Then `green()` filters `github-actions` runs and takes
-      `max_by(.id)`'s conclusion, its comment naming the per-suite reading of
-      `filter=latest`. Verify `bun test orchestrator/deploy` passes
-- [ ] 3.3 Failing cases in `bun/bump-verify.test.ts`'s *choosing a target*:
-      an older run's `success` and a newer `failure` or pending one, each
-      order, report no target and change nothing
+- [ ] 3.1 Failing cases in a new `bun/green-run.test.ts` for
+      `green(runs)`: no runs, another app's success alone, a pending, failed
+      and successful single run; an older `success` with a newer `failure`
+      or pending run is not green, an older `failure` with a newer `success`
+      is, each with the newer run listed first and listed last; run as a
+      script, it exits 0, 1 and 2 for green, not green and unreadable
+      standard input
+- [ ] 3.2 Then `bun/green-run.ts`, importing nothing, its comment naming the
+      per-suite reading of `filter=latest`; add it to `stryker.config.json`'s
+      `mutate` if the mutation floor's rules call for it. Verify
+      `bun test bun/green-run` passes
+- [ ] 3.3 Failing cases in `bun/bump-verify.test.ts`'s *choosing a target*,
+      `bun/bump.fixture.ts`'s `CheckRun` and `GREEN` gaining ids: an older
+      run's `success` and a newer `failure` or pending one report no target
+      and change nothing
       (`harness-updates/an-older-check-suite-s-success-does-not-make-the-head-green`);
+      an older `failure` and a newer `success` target the head
+      (`harness-updates/a-newer-check-suite-s-success-makes-the-head-green`);
       the existing cases keep passing
-- [ ] 3.4 Then `greenHead()` in `bun/bump.ts` takes the newest
-      `github-actions` run by `id` and requires its `success`, its comment
-      naming the per-suite reading. Verify `bun test bun/bump` passes
+- [ ] 3.4 Then `greenHead()` in `bun/bump.ts` calls `green()`. Verify
+      `bun test bun/bump` passes
+- [ ] 3.5 Failing cases in `orchestrator/deploy.test.ts`, with
+      `orchestrator/deploy.fixture.ts`'s `runs()` able to answer several runs
+      with ids and its `docker run` stub running `--entrypoint bun` on the
+      tree's `bun/` file for the image's `/opt/orchestrator/bun/` path: an
+      older suite's `success` and a newer `failure` or pending run move
+      nothing and exit 0 (`orchestrator/an-older-check-suite-s-success`); an
+      older `failure` and a newer `success` deploy the head
+      (`orchestrator/a-newer-check-suite-s-success`); a script that exits 2
+      reads as a check that cannot be read; the existing pending, failed,
+      absent and other-app cases keep passing
+- [ ] 3.6 Then `deploy.sh`'s `green()` pipes the body to
+      `docker run --rm -i --entrypoint bun "$image" /opt/orchestrator/bun/green-run.ts`
+      and maps its exit as it maps `jq`'s today; a case in
+      `orchestrator/layout-deploy.test.ts` pins that the Dockerfile copies
+      `bun/` to `/opt/orchestrator/bun/`. Verify
+      `bun test orchestrator/deploy orchestrator/layout-deploy` passes
 
 ## 4. Integration
 
