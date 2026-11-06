@@ -18,6 +18,7 @@ afterAll(cleanup);
 
 const to = (target: string) => ["status", "--card", CARD, "--to", target];
 const QUERY = "POST /v1/data_sources/ds1/query";
+const POSTED = "POST /v1/comments";
 const RANGE = ["exploring", "explored", "proposing", "proposed", "applying", "applied", "archiving"];
 
 describe("the arguments", () => {
@@ -30,6 +31,15 @@ describe("the arguments", () => {
 		["a positional", [...to("exploring"), "more"]],
 		["an unknown option", [...to("exploring"), "--force"]],
 		["a 31-hex card", ["status", "--card", CARD.slice(1), "--to", "exploring"]],
+		// spec: work-status/a-discard-with-no-reason
+		["--to discarded with no --why [1]", to("discarded")],
+		["--to idea with no --why [2]", to("idea")],
+		["a blank --why [3]", [...to("discarded"), "--why", "  "]],
+		["an empty --why= [4]", [...to("discarded"), "--why="]],
+		["a repeated --why [5]", [...to("discarded"), "--why", "a", "--why", "b"]],
+		// spec: work-status/a-reason-on-another-move
+		["--why on exploring [9]", [...to("exploring"), "--why", "x"]],
+		["--why on approved [14]", [...to("approved"), "--why", "x"]],
 	])("%s prints the usage and exits 2, calling nothing", async (_, args) => {
 		const run = await status({ args });
 		expect([run.code, run.err.trim(), run.seen, run.git, run.refusals]).toEqual([2, USAGE.join("\n"), [], [], []]);
@@ -38,17 +48,108 @@ describe("the arguments", () => {
 
 describe("the user's statuses", () => {
 	// spec: work-status/approved-as-the-target
-	test.each(["idea", "approved", "discarded"])("--to %s refuses naming the user, calling nothing", async (target) => {
-		const run = await status({ args: to(target) });
+	test("--to approved refuses naming the user, calling nothing", async () => {
+		const run = await status({ args: to("approved") });
 		refused(run, "user-only");
 		expect([run.seen, run.last.includes("user")]).toEqual([[], true]);
 	});
 
-	// spec: work-status/a-discarded-card
-	test.each(["exploring", "done"])("a discarded card refuses --to %s after the page read alone", async (target) => {
-		const run = await status({ args: to(target), page: { status: "discarded" } });
+	// spec: work-status/idea-from-a-card-in-the-work
+	test("--to idea on a card at exploring refuses naming the user after the page read alone [10] [20]", async () => {
+		const run = await status({ args: [...to("idea"), "--why", "x"], page: { status: "exploring" } });
 		refused(run, "user-only");
-		expect(run.seen).toEqual([PAGE]);
+		expect([run.seen, run.last.includes("user")]).toEqual([[PAGE], true]);
+	});
+
+	// spec: work-status/a-discarded-card
+	test.each([
+		["exploring", []],
+		["done", []],
+		["discarded", ["--why", "x"]],
+	])("a discarded card refuses --to %s after the page read alone, naming idea [11] [18]", async (target, why) => {
+		const run = await status({ args: [...to(target), ...why], page: { status: "discarded" } });
+		refused(run, "user-only");
+		expect([run.seen, run.last.includes("idea")]).toEqual([[PAGE], true]);
+	});
+});
+
+describe("into and out of discarded", () => {
+	const why = (target: string, text: string) => [...to(target), "--why", text];
+	const said = (body: unknown) =>
+		(body as { rich_text: { text: { content: string } }[] }).rich_text
+			.slice(1)
+			.map((run) => run.text.content)
+			.join("");
+
+	// spec: work-status/a-duplicate-discarded
+	test("an approved card with five in the range is discarded with its reason posted first [7] [8] [15]", async () => {
+		const run = await status({ args: why("discarded", "duplicate of x"), cards: 5 });
+		expect([run.code, run.seen, run.last, run.refusals]).toEqual([
+			0,
+			[PAGE, POSTED, PATCH, PAGE],
+			`status: ${CARD} approved → discarded`,
+			[],
+		]);
+		expect(run.bodies[1]).toEqual({
+			parent: { page_id: CARD },
+			rich_text: [
+				{ type: "text", text: { content: "harness-status" }, annotations: { code: true } },
+				{ type: "text", text: { content: " approved → discarded: duplicate of x" } },
+			],
+		});
+	});
+
+	// spec: work-status/a-card-in-the-work-discarded
+	test("a card at applying is discarded running no git [16]", async () => {
+		const run = await status({ args: why("discarded", "dropped"), page: { status: "applying" } });
+		expect([run.code, run.seen, run.git]).toEqual([0, [PAGE, POSTED, PATCH, PAGE], []]);
+	});
+
+	// spec: work-status/a-discarded-card-returned
+	test("a discarded card returns to idea [17]", async () => {
+		const run = await status({ args: why("idea", "needed after all"), page: { status: "discarded" } });
+		expect([run.code, said(run.bodies[1]), run.last]).toEqual([
+			0,
+			" discarded → idea: needed after all",
+			`status: ${CARD} discarded → idea`,
+		]);
+	});
+
+	test("a reason of 2500 characters reaches the comment whole [6]", async () => {
+		const long = "r".repeat(2500);
+		const run = await status({ args: why("discarded", long) });
+		expect([run.code, said(run.bodies[1])]).toEqual([0, ` approved → discarded: ${long}`]);
+	});
+
+	test("a card whose Assign holds the user is released after a discard [19]", async () => {
+		const run = await status({ args: why("discarded", "dropped"), assign: [USER] });
+		expect([run.code, run.out.trim().split("\n"), run.assign]).toEqual([
+			0,
+			[`status: ${CARD} approved → discarded`, `assign: removed the user from ${CARD}`],
+			[],
+		]);
+	});
+
+	// spec: work-status/the-post-fails
+	test("a post answering 500 writes no status, exits 1 and records nothing [12]", async () => {
+		const run = await status({ args: why("discarded", "dropped"), fail: { [POSTED]: 500 } });
+		expect([run.code, run.seen.includes(PATCH), run.last, run.refusals]).toEqual([
+			1,
+			false,
+			expect.stringMatching(new RegExp(`^status: ${CARD} not written — `)),
+			[],
+		]);
+	});
+
+	// spec: work-status/the-write-fails-after-the-post
+	test("a write answering 500 after the post leaves the post made and exits 1 [13]", async () => {
+		const run = await status({ args: why("discarded", "dropped"), fail: { [PATCH]: 500 } });
+		expect([run.code, run.seen.includes(POSTED), run.last, run.refusals]).toEqual([
+			1,
+			true,
+			expect.stringMatching(new RegExp(`^status: ${CARD} not written — `)),
+			[],
+		]);
 	});
 });
 
