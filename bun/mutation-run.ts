@@ -125,8 +125,9 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 		}
 		read[path] = value;
 		// A module's run mutates that module alone, so any other source is results the floor would count twice or unjudged.
+		const own = moduleOf(path);
 		for (const source of Object.keys(files))
-			if (source !== moduleOf(path)) problems.push(`${path} holds ${source}, not ${moduleOf(path)}`);
+			if (source !== own) problems.push(`${path} holds ${source}, not ${own} — delete the stored file`);
 	}
 	const tested = new Set(modules(tree.tracked).filter((module) => testsOf(module, tree.tracked).length));
 	for (const module of tree.listed.filter((m) => !tested.has(m)))
@@ -239,7 +240,11 @@ function stryker(tree: Tree, top: string, { module, force }: Run, print: Record<
 	rmSync(config, { force: true });
 	// A signal leaves no exit code, only its name.
 	const failed =
-		run.exitCode === 0 ? "" : run.exitCode === null ? `was killed by ${run.signalCode}` : `exited ${run.exitCode}`;
+		run.exitCode === 0
+			? ""
+			: run.exitCode === null
+				? `was killed by ${run.signalCode ?? "a signal"}`
+				: `exited ${run.exitCode}`;
 	if (failed || dry) return failed;
 	mkdirSync(dirname(stored), { recursive: true });
 	// Through a rename, so a kill mid-write leaves the old stored file rather than a truncated one.
@@ -281,7 +286,9 @@ if (import.meta.main) {
 	);
 	// A narrowed run left the other modules unchecked, so a report from it would be a count nobody verified.
 	if (named.length) {
-		const done = chosen.length ? "named modules measured" : "named modules already current, none mutated";
+		const done = chosen.length
+			? `measured ${chosen.map((run) => run.module).join(" ")}`
+			: "named modules already current, none mutated";
 		console.log(`${done}; no report written — run without names for the one the floor reads`);
 		process.exit(0);
 	}

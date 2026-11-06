@@ -151,8 +151,9 @@ Each mutated module's results SHALL be stored as Stryker's incremental file,
 one tracked file per module under `mutation/`, so that every clone reads the
 same results. The floor SHALL count the survivors across every stored file.
 A stored file whose module is no longer tracked, no longer has a test file,
-or is no longer listed, SHALL fail the run before it mutates anything, naming
-it: the count would include code nothing judges. A listed module with a test
+or is no longer listed, or one holding results for any source but its own
+module, SHALL fail the run before it mutates anything, naming it: the count
+would include code nothing judges, or count a module twice. A listed module with a test
 file and no stored file SHALL be mutated whole, and the run SHALL then fail
 naming the file it wrote until that file is committed: the count would
 otherwise leave the module out. A stored file SHALL record a fingerprint of
@@ -183,6 +184,12 @@ writes the same file for the same results.
 - **WHEN** `bun/<name>.ts` is taken off the list and `mutation/<name>.json`
   is not deleted
 - **THEN** the run fails and names `mutation/<name>.json`
+
+#### Scenario: A stored file holding results of another module
+
+- **WHEN** `mutation/<name>.json` holds results for a source other than
+  `bun/<name>.ts`
+- **THEN** the run fails naming `mutation/<name>.json` and that source
 
 #### Scenario: A module with tests and no stored file
 
