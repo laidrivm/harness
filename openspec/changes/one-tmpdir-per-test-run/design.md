@@ -19,7 +19,9 @@ Probed with bun 1.4.2 on 2026-11-06, a preload that sets `process.env.TMPDIR`:
   child of `node:child_process` or `Bun.$` (local review's probe);
 - the global `afterAll` does not run after a test's `process.exit` nor under
   `--bail` (local review's probe), nor does a `process.on("exit")` handler
-  under `bun test`.
+  under `bun test`; a test file that throws while loading still runs it
+  (local review's probe), and a `bun test <filter>` that matches no file
+  leaves nothing a preload made.
 
 Stryker's command runner runs `bun test bun/<name>` per mutant in a sandbox
 copy of the checkout, `bunfig.toml` and `bun/` included, and on timeout kills
@@ -77,16 +79,19 @@ whose process is gone, which empties the directory at once but reads a run in
 another process namespace sharing `/tmp` as gone and removes a parent in use;
 and no sweep, leaving one entry per killed run for good.
 
-The sweep claims an abandoned parent by renaming it to `harness-swept-*`
-before removing it, so of several runs starting together, Stryker's
-concurrent mutants among them, one removes it and the rest find it gone and
-move on; a rename that fails is skipped. The winner pays the removal inside
-its own run, a mutant's timed run included, once per abandoned parent.
+The sweep claims an abandoned parent by renaming it to a new
+`harness-swept-*` name before removing it, so of several runs starting
+together, Stryker's concurrent mutants among them, one removes it and the
+rest find it gone and move on. A `harness-swept-*` directory unmodified for
+an hour, left by a sweep killed mid-removal, is swept the same way. It reads
+each entry with `lstat`, so a link or a regular file of either name is left
+alone. The winner pays the removal inside its own run, a mutant's timed run
+included, once per abandoned parent.
 
-An entry the sweep cannot claim or remove is skipped, and so is a failed
-removal of the run's own parent at its end: a leftover is not a reason to
-refuse or fail a suite. A `harness-swept-*` entry a failed removal leaves is
-not swept again; none is expected outside a permission fault.
+An entry the sweep cannot read, claim or remove is skipped — the read, the
+rename and the removal in one `try`, since another run may claim the entry
+between any two of them — and so is a failed removal of the run's own parent
+at its end: a leftover is not a reason to refuse or fail a suite.
 
 ### 4. No signal handler
 
@@ -117,8 +122,16 @@ laptop and their sweeps cannot move the count read after it.
 
 ## Risks / Trade-offs
 
-- [A test that runs over an hour without touching its parent loses it to a
-  concurrent run's sweep] → no suite comes near it (decision 3).
+- [A test that runs over an hour without touching its parent, or a run frozen
+  for an hour by a sleeping laptop or a debugger, loses its parent to a
+  concurrent run's sweep] → no suite comes near the first; the second fails
+  that run loudly on `ENOENT`, and a rerun passes.
+- [A mutant that wins a sweep pays the removal against its timeout and may
+  read as `Timeout`] → task 2.2 runs in an empty `TMPDIR`, where only parents
+  of that same run's killed mutants are swept; a status that moves is re-run
+  for its module alone before it is attributed to the code.
+- [Each run lists the whole `TMPDIR` once] → one `readdir`, against the
+  thousands of fixture directories this change keeps out of it.
 - [A child started with `{ ...process.env }`, through `node:child_process` or
   through `Bun.$` that outlives the run writes into a removed parent] → none
   is known; it would fail loudly on `ENOENT`.
