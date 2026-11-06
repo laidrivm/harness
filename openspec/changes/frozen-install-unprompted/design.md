@@ -27,7 +27,9 @@ the script's command line through `check()`, as a typed line.
   Without a lockfile, bun 1.4.2's frozen install resolves from `package.json`
   and writes none (probed 2026-11-05), so a checkout with no `bun.lock` gets
   unpinned versions; every consumer commits one, and checking for it is left
-  out.
+  out. Neither the guard nor the bootstrap compares `bun.lock` with `HEAD`,
+  so a working-tree edit of it installs what the edit says; that is a
+  manifest edit, out of scope by 1 а.
 - Every literal `bun install` or `bun i` prompts exactly as today.
 
 **Non-Goals:**

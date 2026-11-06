@@ -6,7 +6,8 @@ The project's `package.json` SHALL carry the script `deps` with exactly the
 text `bun install --frozen-lockfile`, and an agent SHALL install with
 `bun run deps`. The `ask` entries of *Every manifest-mutating invocation
 prompts, whatever else allows it* SHALL stay as they are, so every literal
-`bun install` or `bun i` still prompts. The command guard SHALL judge
+`bun install` or `bun i` still prompts. The install is pinned only by the
+`bun.lock` on disk, which nothing compares with `HEAD`. The command guard SHALL judge
 `bun run deps` as it judges any `bun run`: by the script's text, from a
 committed `package.json`; and it SHALL block `bun run deps` with any word
 after it, since bun forwards those words to the install.
