@@ -1,8 +1,9 @@
 /**
- * `bun bun/work.ts resolve` run as a session runs it, in `work-finish.fixture.ts`'s
- * checkout on `feature`, whose `origin` names `o/demo`, with a `PATH` of a
- * logging `git` and a `gh` stub that answers each call by its arguments: the
- * pull-request read in turn, the threads query, each mutation by its place.
+ * `bun bun/work.ts resolve`, or `draft`, run as a session runs it, in
+ * `work-finish.fixture.ts`'s checkout on `feature`, whose `origin` names
+ * `o/demo`, with a `PATH` of a logging `git` and a `gh` stub that answers each
+ * call by its arguments: the pull-request read in turn, the threads query,
+ * each mutation by its place, and `gh pr ready`.
  * Both are bun scripts, so a call is logged with the time it was made.
  */
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -38,22 +39,26 @@ export const page = (...nodes: object[]) => ({
 });
 
 /**
- * The stub's answers: `pulls` is the pull-request list of each read in turn,
- * the last repeating, and `pullsCode` each read's exit code; `pages` the
- * threads read's pages, which `--slurp` prints as one array, and `threadsCode`
- * its exit code; `fail` the places, from 0, of the mutations that fail, and
- * `unresolved` of those that exit 0 with the thread still unresolved.
+ * The stub's answers: `pulls` is the answer of each pull-request read in turn
+ * — a branch's list, or one pull request for `work.ts draft` — the last
+ * repeating, and `pullsCode` each read's exit code; `pages` the threads read's
+ * pages, which `--slurp` prints as one array, and `threadsCode` its exit code;
+ * `fail` the places, from 0, of the mutations that fail, and `unresolved` of
+ * those that exit 0 with the thread still unresolved; `readyCode` the exit
+ * code of `gh pr ready`, and `readyHangs` a `gh pr ready` that never answers.
  */
 export type Gh = {
-	pulls?: object[][];
+	pulls?: object[];
 	pullsCode?: number[];
 	pages?: object[];
 	threadsCode?: number;
 	fail?: number[];
 	unresolved?: number[];
+	readyCode?: number;
+	readyHangs?: boolean;
 };
 
-export type Call = { kind: "git" | "pulls" | "threads" | "mutation" | "other"; args: string[]; at: number };
+export type Call = { kind: "git" | "pulls" | "threads" | "mutation" | "ready" | "other"; args: string[]; at: number };
 
 const stub = (dir: string, name: string, body: string) => {
 	const path = join(dir, name);
@@ -81,7 +86,7 @@ function bin(gh: Gh) {
 		[
 			`const fs = require("node:fs");`,
 			`const args = process.argv.slice(2);`,
-			`const kind = (a) => a[0] !== "api" ? "other" : String(a[1]).startsWith("repos/") ? "pulls" : a.some((s) => s.startsWith("query=mutation")) ? "mutation" : a[1] === "graphql" ? "threads" : "other";`,
+			`const kind = (a) => a[0] === "pr" && a[1] === "ready" ? "ready" : a[0] !== "api" ? "other" :String(a[1]).startsWith("repos/") ? "pulls" : a.some((s) => s.startsWith("query=mutation")) ? "mutation" : a[1] === "graphql" ? "threads" : "other";`,
 			`const prior = fs.existsSync(${JSON.stringify(log)}) ? fs.readFileSync(${JSON.stringify(log)}, "utf8").split("\\n").filter(Boolean).map(JSON.parse).filter((c) => c.kind === kind(args)).length : 0;`,
 			append("kind(args)"),
 			`const gh = JSON.parse(fs.readFileSync(${JSON.stringify(join(dir, "gh.json"))}, "utf8"));`,
@@ -89,6 +94,7 @@ function bin(gh: Gh) {
 			`if (kind(args) === "pulls") { const code = gh.pullsCode?.[prior] ?? 0; if (code) fail(code); const list = gh.pulls ?? [[]]; console.log(JSON.stringify(list[Math.min(prior, list.length - 1)])); }`,
 			`else if (kind(args) === "threads") { if (gh.threadsCode) fail(gh.threadsCode); console.log(JSON.stringify(gh.pages ?? [])); }`,
 			`else if (kind(args) === "mutation") { if (gh.fail?.includes(prior)) fail(1); console.log(JSON.stringify({ data: { resolveReviewThread: { thread: { isResolved: !gh.unresolved?.includes(prior) } } } })); }`,
+			`else if (kind(args) === "ready") { if (gh.readyHangs) Bun.sleepSync(60_000); if (gh.readyCode) fail(gh.readyCode); }`,
 			`else process.exit(9);`,
 			"",
 		].join("\n"),
@@ -139,6 +145,8 @@ export async function resolve({
 		gh: calls.filter((c) => c.kind !== "git"),
 		reads: of("pulls"),
 		threads: of("threads"),
+		/** Each `gh pr ready` call's arguments. */
+		readies: of("ready").map((c) => c.args),
 		/** The thread id each mutation named. */
 		mutations: of("mutation").map((c) => c.args.find((s) => s.startsWith("t="))?.slice(2)),
 	};

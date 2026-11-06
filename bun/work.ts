@@ -17,9 +17,12 @@
  * - `resolve --pr <n> --head <sha> --comment <id> …` (`work-resolve.ts`):
  *   resolves the review bot's threads those comments open, on the branch's
  *   open pull request while its head is `<sha>`.
+ * - `draft --pr <n>` (`work-draft.ts`): marks open pull request `<n>` a draft
+ *   as follow-up on it starts, and prints its head.
  */
 import { type ParseArgsConfig, parseArgs } from "node:util";
 import { ID } from "./notion-bot.ts";
+import { draft } from "./work-draft.ts";
 import { finish } from "./work-finish.ts";
 import { resolve } from "./work-resolve.ts";
 import { STATUSES, status } from "./work-status.ts";
@@ -30,6 +33,7 @@ export const USAGE = [
 	"       work.ts finish [--card <id>] [--title <text> --body-file <path>]",
 	"       work.ts status --card <id> --to <status>",
 	"       work.ts resolve --pr <n> --head <sha> --comment <id> [--comment <id> …]",
+	"       work.ts draft --pr <n>",
 ];
 
 /** A positive whole number with no leading zero, as a string: a pull request's or a comment's id. */
@@ -85,6 +89,12 @@ export async function work(args: string[]): Promise<{ lines: string[]; code: num
 			comment.every((id) => NUMBER.test(id))
 		)
 			return resolve(number, sha, [...new Set(comment)]);
+	}
+	if (subcommand === "draft") {
+		// `multiple`, so a repeated `--pr` is refused rather than the last one kept.
+		const pr = values(rest, { pr: { type: "string", multiple: true } })?.pr ?? [];
+		const [number] = pr;
+		if (pr.length === 1 && number !== undefined && NUMBER.test(number)) return draft(number);
 	}
 	return { lines: USAGE, code: 2 };
 }

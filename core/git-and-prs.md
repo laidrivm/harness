@@ -91,13 +91,16 @@ entry, a hook or a CI check leaves this file the way it would leave
   ["CodeRabbit"]` under `"harness"` before the pin bump that crosses
   `finish-named-reviewers`, which an older harness ignores; in the harness's
   own sessions a hook refuses a hand-run `gh pr create`, and `gh pr ready`
-  without `--undo`. An agent that then works on an existing PR marks it draft
-  by hand (`gh pr ready <n> --undo`) as it starts, and runs `finish` only when
+  without `--undo`. Follow-up on an existing PR starts with `bun
+  node_modules/harness/bun/work.ts draft --pr <n>` (`bun bun/work.ts` in the
+  harness itself), run by the session that hands it over or carries it, which
+  marks it draft and prints its head; the agent runs `finish` only when
   that work ends — CodeRabbit reviews on the switch to ready, so ready before
   the push would review the old head and then the new one; with nothing to
   push, `finish` marks it ready. The pre-push hook refuses a push into an open pull
   request of the same repository that is not a draft (one from a fork is
-  not read), the user's own push too — run `gh pr ready <n> --undo` first —
+  not read), the user's own push too — run `draft --pr <n>`, or the `gh pr
+  ready <n> --undo` the refusal names, first —
   and a push to GitHub whose pull requests it cannot read. A question to
   the user on the card keeps it draft regardless, and the CI flow
   (`bun/ci-run.ts`) holds its pull request the same way, keeping it draft
