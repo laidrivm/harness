@@ -76,7 +76,9 @@ seen.
 forwards those to the install: `bun run deps --no-verify` skips integrity
 checks (CodeRabbit round 5). That is no manifest edit, so a new check in
 `bun/command-guard-exec.ts` blocks `bun run deps` followed by any word,
-redirections included, under the id `deps-args`, the reason naming
+redirections included, or fed by a substitution — the parse drops its output
+from the words and marks the command `FED` (round 8) — under the id
+`deps-args`, the reason naming
 `bun run deps` with nothing after it. It is the one refusal the change adds.
 
 ### 3. Sync owns `scripts.deps`
