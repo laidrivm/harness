@@ -111,19 +111,21 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       push and the engine wait skipped while the token file is absent; the
       record, then the prune. Update the header
       comment. Make 3.1 pass
-- [ ] 3.3 Add `orchestrator/host/harness-deploy.service` (`Type=oneshot`,
+- [x] 3.3 Add `orchestrator/host/harness-deploy.service` (`Type=oneshot`,
       `ExecStart=/root/harness/orchestrator/deploy.sh`,
       `StateDirectory=harness-deploy`, `TimeoutStartSec=3h`,
       `WorkingDirectory=/root/harness/orchestrator`) and
       `orchestrator/host/harness-deploy.timer` (`OnBootSec=5min`,
       `OnUnitInactiveSec=5min`, `[Install] WantedBy=timers.target`); a case
       in `layout-deploy.test.ts` citing `orchestrator/the-deploy-s-units`
-- [ ] 3.4 `orchestrator/README.md`: a step after 11, *Deploys from main*:
+- [x] 3.4 `orchestrator/README.md`: a step after 11, *Deploys from main*:
       what the deploy moves and when (a fresh session), the two `systemctl`
       commands, the failure file, how to retry a rolled-back head, how to
-      stop deploys, and that hooks move only with the pin
-- [ ] 3.5 Run the build's own scans over every file this group writes
+      stop deploys, and that hooks move only with the pin (06.11: step 13,
+      after step 12's session, which it restarts)
+- [x] 3.5 Run the build's own scans over every file this group writes
       (`bun test` covers layout, spec coverage and board-state hygiene)
+      (06.11: `.githooks/gates.sh` with the units tracked, 0 fail)
 
 ## 4. On the host
 
