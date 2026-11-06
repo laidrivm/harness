@@ -15,7 +15,8 @@ only against earlier failures in the same session and the same sub-agent. Two
 failures SHALL count as one call repeated only when the tool and its input are
 equal, and their error text is equal once runs of digits and of whitespace are
 normalised. A call's free-text description SHALL NOT be part of its input. A
-call the user or the runtime interrupted SHALL NOT be counted.
+call the user or the runtime interrupted SHALL NOT be counted, nor a pending
+checks read as *A pending checks read is not a failure* defines it.
 
 #### Scenario: The same command fails the same way three times
 
@@ -58,6 +59,54 @@ call the user or the runtime interrupted SHALL NOT be counted.
 - **WHEN** a call ends as an interruption rather than as an error the tool
   reported
 - **THEN** it is not counted
+
+### Requirement: A pending checks read is not a failure
+
+The guard SHALL NOT count a failed Bash call whose trimmed command is words
+separated by spaces or tabs: `gh`, `pr`, `checks`, then only words of
+letters, digits and `./:@=_-`, and at most a last word `2>&1` — when its
+error's first line is exactly `Exit code 8`, which gh documents as *Checks
+pending*. Any other failure of such a command SHALL count as *A repeat is
+the same call failing the same way* says.
+
+#### Scenario: Checks still pending, read four times
+
+- **WHEN** an agent runs `gh pr checks 437` four times under one prompt and
+  each run exits 8 with the same output
+- **THEN** no warning is added, and the fourth run is not refused
+
+#### Scenario: A repository flag and a redirect
+
+- **WHEN** the command is `gh pr checks 437 -R laidrivm/harness 2>&1` or
+  `gh pr checks 437 --repo laidrivm/harness`, and it exits 8 three times the
+  same way
+- **THEN** none of the three is counted
+
+#### Scenario: A failed check
+
+- **WHEN** `gh pr checks 437` exits 1 three times the same way, because a
+  check failed
+- **THEN** the third failure warns, as for any other call
+
+#### Scenario: The read inside a compound command
+
+- **WHEN** a command runs `gh pr checks 437` in a pipe, beside a `;`, `&&`
+  or newline, inside a substitution or with a quoted word, and the call
+  fails with `Exit code 8` three times the same way
+- **THEN** the third failure warns, since the exit code need not be gh's
+
+#### Scenario: A word outside the set
+
+- **WHEN** the command is `gh pr checks fix+retry` or
+  `gh pr checks 4372>&1`, and it fails with `Exit code 8` three times the
+  same way
+- **THEN** the third failure warns
+
+#### Scenario: Another command exiting 8
+
+- **WHEN** a Bash command other than `gh pr checks` fails with `Exit code 8`
+  three times the same way
+- **THEN** the third failure warns
 
 ### Requirement: The third repeat warns the agent
 
