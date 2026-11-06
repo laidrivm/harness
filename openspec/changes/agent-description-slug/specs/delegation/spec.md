@@ -23,4 +23,5 @@ counts it leaves as they are.
 - **THEN** the rulebook's `### Rules` preamble names a fresh subagent, the
   fork's exception, a brief kept out of git, that the brief copies nothing
   the harness already loads, a `description` opened with the slug of the
-  change or card, and the agent's ID named beside its card in each report
+  change or card, and the agent's ID, where the call returns one, named
+  beside its card in each report
