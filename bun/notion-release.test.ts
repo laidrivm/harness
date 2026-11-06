@@ -149,12 +149,17 @@ describe("something arrives during the release", () => {
 
 	// spec: task-board/the-restore-fails
 	test.each([
-		["a restore answered 500 [35]", { [PATCH]: { fail: { [PATCH]: 500 } } }, "waits", "the restore: "],
-		["a restore answer without the user", { [PATCH]: { keep: true } }, "waits", "the restore did not hold the user"],
+		["a restore answered 500 [35]", { [PATCH]: { fail: { [PATCH]: 500 } } }, "waits" as const, "the restore: "],
+		[
+			"a restore answer without the user",
+			{ [PATCH]: { keep: true } },
+			"waits" as const,
+			"the restore did not hold the user",
+		],
 		[
 			"a second comments read and the restore answered 500",
 			{ [PATCH]: { fail: { [COMMENTS]: 500, [PATCH]: 500 } } },
-			"unread",
+			"unread" as const,
 			"the restore: ",
 		],
 	])("%s: restoreFailed, back kept", async (_, next, back, why) => {
