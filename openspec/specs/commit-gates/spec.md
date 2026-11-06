@@ -174,8 +174,8 @@ vulnerabilities rather than about the branch. CI runs it on a pull request that
 touches `package.json`, and nightly.
 
 The secret scan SHALL be bounded to the checked-out branch's range —
-`--log-opts` from the base branch to `HEAD`, resolved as
-`bun/diff-budget.sh` resolves its own base — and SHALL NOT walk the whole
+`--log-opts` from the base branch to `HEAD`, the base being the one
+`bun/diff-base.sh` prints, which the diff budget reads too — and SHALL NOT walk the whole
 history the way CI does. Two failure modes decide the bound: an unbounded scan
 means one secret ever reaching history blocks every push by everyone until a
 baseline is written, and a working-tree scan reads the gitignored files that
