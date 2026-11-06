@@ -2220,3 +2220,55 @@ entry, pinned by a test.
 - **WHEN** this repository's `.claude/settings.json` is read
 - **THEN** its `extraKnownMarketplaces.ponytail` equals the entry the check
   compares
+
+### Requirement: A frozen install runs through the deps script
+
+The project's `package.json` SHALL carry the script `deps` with exactly the
+text `bun install --frozen-lockfile`, and an agent SHALL install with
+`bun run deps`. The `ask` entries of *Every manifest-mutating invocation
+prompts, whatever else allows it* SHALL stay as they are, so every literal
+`bun install` or `bun i` still prompts. The install is pinned only by the
+`bun.lock` on disk, which nothing compares with `HEAD`. The command guard SHALL judge
+`bun run deps` as it judges any `bun run`: by the script's text, from a
+committed `package.json`; and it SHALL block a `bun run deps` whose command
+holds any word but those three — after the script's name, since bun forwards
+those words to the install, or before `bun`, such as an `xargs` or an
+assignment.
+
+#### Scenario: The script runs without a prompt
+
+- **WHEN** the agent attempts `bun run deps` in a checkout whose committed
+  `package.json` holds the script, with `Bash(bun run *)` allowed
+- **THEN** the hook does not block it and no `ask` entry prompts, because an
+  `ask` rule matches the command's text, not a script's body
+
+#### Scenario: A literal install still prompts
+
+- **WHEN** the agent attempts `bun install --frozen-lockfile`, `bun install`
+  or `bun install lodash`
+- **THEN** Claude Code prompts, as before this change, because a matching
+  `ask` rule prompts even when a hook returns `"allow"`
+
+#### Scenario: Words after the script's name
+
+- **WHEN** the agent attempts `bun run deps --no-verify`,
+  `bun run deps --production`, `bun run deps lodash`,
+  `bun run deps $(printf -- --no-verify)` or
+  `bun run $(printf deps) --no-verify` — any `bun run` a substitution feeds,
+  since the parse drops its output from the words
+- **THEN** the hook blocks the call, and the reason names `bun run deps` with
+  nothing before or after it
+
+#### Scenario: Words before bun
+
+- **WHEN** the agent attempts `echo --no-verify | xargs bun run deps` or
+  `BUN_OPTIONS=--no-verify bun run deps`
+- **THEN** the hook blocks the call, and the reason names `bun run deps` with
+  nothing before or after it
+
+#### Scenario: A script the tree does not vouch for
+
+- **WHEN** the agent attempts `bun run deps` while `package.json` carries an
+  uncommitted or staged edit
+- **THEN** the guard refuses the call, as it refuses any `bun run` script
+  whose `package.json` is not committed
