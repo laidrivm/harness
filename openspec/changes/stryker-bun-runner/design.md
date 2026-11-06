@@ -2,20 +2,20 @@
 
 ## Context
 
-See proposal.md, *Why*, for the measurements. `bun/mutation-run.ts` writes one
-Stryker configuration per listed module under `.stryker-tmp`, from
-`stryker.config.json`'s shared options plus `mutate`, `commandRunner.command`,
-`incrementalFile`, `limits` and `concurrency`, runs `bunx --no-install stryker
-run` on it, and trims Stryker's incremental file into `mutation/<name>.json`
-with a fingerprint (decision 4 of the archived `pre-push-commit-gates`). The
-command each mutant runs also gives the sandbox a git repository of its own
-before `bun test bun/<name>`. Stryker's incremental differ
-(`@stryker-mutator/core` 10.0.0, `mutants/incremental-differ.js`) reuses a
-mutant's result when its source is unchanged and, under a runner that reports
-coverage, when its killing test is unchanged (killed) or it gained no covering
-test (not killed); it tells a changed test from an unchanged one by diffing
-each test file's stored `source`, and falls back to test names alone when no
-source is stored.
+See proposal.md, *Why*, for the measurements and the user's answer.
+`bun/mutation-run.ts` writes one Stryker configuration per listed module
+under `.stryker-tmp`, from `stryker.config.json`'s shared options plus
+`mutate`, `commandRunner.command`, `incrementalFile`, `limits` and
+`concurrency`, runs `bunx --no-install stryker run` on it, and trims
+Stryker's incremental file into `mutation/<name>.json` with a fingerprint
+(decision 4 of the archived `pre-push-commit-gates`). The command each mutant
+runs also gives the sandbox a git repository of its own before `bun test
+bun/<name>`. Stryker's incremental differ (`@stryker-mutator/core` 10.0.0,
+`mutants/incremental-differ.js`) reuses a mutant's result when its source is
+unchanged and, under a runner that reports coverage, when its killing test is
+unchanged (killed) or it gained no covering test (not killed); it tells a
+changed test from an unchanged one by diffing each test file's stored
+`source`, and falls back to test names alone when no source is stored.
 
 ## Goals / Non-Goals
 
@@ -23,14 +23,14 @@ source is stored.
 
 - Each mutant runs only the tests that reached it, and a test edit re-runs
   only the mutants whose covering or killing tests changed.
-- Every kill the stored results hold today survives the switch.
+- No module switches runner with fewer kills than the command runner gives
+  it on the same source.
 
 **Non-Goals:**
 
 - Which modules a run selects: card *Mutate only changed files*
   (41039875c31b81088ac5d49379578b78). Its selection reads the fingerprint
   this change narrows; neither change moves the other's rule (decision 7).
-- Making `bun/skill-record.ts` testable in its own process.
 
 ## Decisions
 
@@ -58,25 +58,31 @@ Rejected: `stryker-mutator-bun-runner` 0.4.0, one release on 2025-07-07, peer
 richpjames/on-the-beach#345, which would own the inspector, coverage preload
 and scoring this package already tests against bun 1.4.2.
 
-### 2. A module the runner cannot judge stays on the command runner
+### 2. A module its tests reach only through a child process is refactored
 
 `bun/skill-record.ts` is a hook script: its body reads stdin and calls
 `process.exit(0)` when imported. The runner imports every mutated module
-before the dry run, so the dry run exits with no test summary, and its
-completeness check fails the run; and even past that, its tests reach the
-module only through the `bun` process they start, which per-test coverage
-does not see, so all 55 kills would be lost. `package.json`'s
-`harness.mutationCommandRunner` maps it to that reason, and
-`bun/mutation-run.ts` writes the command runner and `bun test bun/<name>` into
-that module's configuration, its test files staying in its fingerprint.
-Reasoned per entry, as `harness.suppressions` is, so an entry is never a
-silent opt-out.
+before the dry run, so the dry run exits with no test summary and its
+completeness check fails the run; and past that, its tests reach the module
+only through the `bun` process they start, which per-test coverage does not
+see, so all 55 kills would be lost. The answer of 2026-11-06 (1 б) settles
+it: the body becomes an exported function, the hook's main block under
+`import.meta.main` reads stdin, calls it and exits 0, and the tests call the
+function in their own process with the event and the environment they set
+today — one case keeps spawning the hook, for its wiring: stdin read, nothing
+printed, exit 0. Its mutants are then counted against the command runner on
+the refactored source before the switch, and the bun runner must kill at
+least as many (decision 8).
 
-Alternatives: make the hook export its body and run it under
-`import.meta.main`, testing it in-process — a change to another module and
-its tests, with kills to re-earn, outside this card; drop it from `mutate` —
-loses 55 kills from the floor. The choice is put to the user on the card; the
-tasks follow the map until the answer says otherwise.
+The same holds for any listed module the baseline finds killed only through
+a child process; `bun/tracked.ts` and `bun/review-config.ts`, which the
+scratch copy could not run, are the candidates. Answer 2 lets the apply
+refactor one for that cause without asking; a module losing kills for
+another cause stops the apply for a question on the card.
+
+Rejected, by the same answer: keeping such modules on the command runner
+through a reasoned map in `package.json` (two runners, two fingerprint
+shapes), and dropping them from `mutate` (55 kills gone from the count).
 
 ### 3. The sandbox repository comes from `buildCommand`
 
@@ -86,9 +92,7 @@ bun/mutation-sandbox.ts`, a committed script holding what the command's
 prelude does today: unset the variables `git rev-parse --local-env-vars`
 names, and, unless the sandbox already has a `.git` with a `HEAD`, `git init`,
 `git add -A` and one commit under `-c` values that keep the user's identity,
-signing and hooks out. A module the map keeps on the command runner then
-runs plain `bun test bun/<name>`, the build step having made the repository
-for every module. A preload was rejected: it runs in every `bun test`
+signing and hooks out. A preload was rejected: it runs in every `bun test`
 process at once and would race.
 
 ### 4. The stored file keeps tests and coverage
@@ -105,13 +109,13 @@ that Stryker reuses every mutant from the trimmed file, as decision 4 of
 
 ### 5. The fingerprint
 
-For a per-test module the fingerprint drops the test files, which Stryker now
-diffs itself, and keeps the fixtures they import, `bunfig.toml` and its
-preload — none of which Stryker sees — and the options as text. The runner's
-name and installed version (read from
+The fingerprint drops the test files, which Stryker now diffs itself, and
+keeps the fixtures they import, `bunfig.toml` and its preload — none of which
+Stryker sees — and the options as text. The command each mutant ran leaves
+it; the runner's name and installed version (read from
 `node_modules/@hughescr/stryker-bun-runner/package.json`, the file Stryker
-loads) join the options: its 1.5 and 1.6 notes changed verdicts, and a bump
-must re-run every module. `concurrency` stays out, as before.
+loads) join it: its 1.5 and 1.6 notes changed verdicts, and a bump must
+re-run every module. `concurrency` stays out, as before.
 
 ### 6. The per-module configuration
 
@@ -119,40 +123,45 @@ must re-run every module. `concurrency` stays out, as before.
 `coverageAnalysis: "perTest"` sit in `stryker.config.json`;
 `bun/mutation-run.ts` adds `bun.testFiles` — `testsOf(module)`, the same
 files the command runner's `bun test bun/<name>` matched — and `bun.timeout`
-from `limits.dryRunTimeoutMinutes`. Measured that way, the scratch runs above
-killed exactly the stored kills.
+from `limits.dryRunTimeoutMinutes`, in place of `commandRunner`. Measured
+that way, the scratch runs killed exactly the stored kills.
 
 ### 7. Where it meets *Mutate only changed files*
 
 That card decides which modules a push runs; this one decides how a module
 runs once chosen and what makes its fingerprint stale. The shared seam is
-`fingerprint` in `bun/mutation-run.ts`: here it loses test files for
-per-test modules and gains the runner's version; a test edit then selects the
-module through the stored test sources rather than the fingerprint. Whichever
+`fingerprint` in `bun/mutation-run.ts`: here it loses the test files and the
+command and gains the runner's version; a test edit then selects the module
+through the stored test sources rather than the fingerprint. Whichever
 change merges second rebases onto the other's `plan`.
 
-### 8. The floor
+### 8. The kill check and the floor
 
-Stays 454: every kill held, and `NoCoverage` counts with `Survived`. The `why`
-gains that 205 of them now read `NoCoverage`, a number the `--all --force`
-baseline confirms; `bun/tracked.ts` and `bun/review-config.ts`, which the
-scratch copy could not run, are measured there, and any kill they lose stops
-the change for the user rather than joining the map unasked.
+Before `stryker.config.json` switches, the apply runs both runners over every
+listed module on the same source — after any refactor of decision 2 — and
+compares killed counts module by module; one where the bun runner kills fewer
+blocks the switch until it is refactored or asked about. The floor then takes
+the count the `--all --force` baseline gives: 454 if nothing moves, since
+`NoCoverage` counts with `Survived`, or a new value where a refactor changed
+the mutants, with the `why` naming the share now `NoCoverage` and any
+refactor.
 
 ## Risks / Trade-offs
 
-- [One maintainer] → pinned exactly; the command runner stays in the tree
-  for the map, so reverting is one configuration line and a baseline.
+- [One maintainer] → pinned exactly; reverting is the configuration and one
+  baseline.
 - [Strict dry run: a test that ends its process early fails the module] → it
   fails loudly naming the module, as a crashed Stryker does today.
 - [Mutant runs order test files by cost, not as `bun test` does] → no listed
   module's tests use `mock.module`, the runner's named source of order
-  dependence; the baseline matching today's kills is the check.
+  dependence; the kill check is the evidence.
 - [Tests run one at a time] → slower dry runs; measured net faster above.
 - [A runner bump changes verdicts] → its version is in the fingerprint.
+- [A refactored hook stops doing what the platform runs it for] → the
+  spawning case keeps its wiring under test.
 
 ## Migration Plan
 
 One `bun bun/mutation-run.ts --all --force` rewrites every stored file,
-committed with the floor's `why`. Rollback: revert the change; the next run
-re-runs every module, its fingerprint having changed.
+committed with the floor's count and `why`. Rollback: revert the change; the
+next run re-runs every module, its fingerprint having changed.

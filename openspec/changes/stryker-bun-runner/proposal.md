@@ -28,37 +28,46 @@ Over every listed module, one after another, the bun runner took 104 s
 against the about six minutes the command runner takes. On the 16 modules it
 ran, it killed exactly the mutants the stored results under `mutation/` hold
 as killed, mutant by mutant, and only moved 205 of their survivors from
-`Survived` to `NoCoverage`; the floor counts both, so it stays 454. Three did
-not run: `bun/tracked.ts` and `bun/review-config.ts` failed their dry run on
-the scratch copy, which held no commit for the tests that read the
-repository's tracked files, and `bun/skill-record.ts` cannot run under it at
-all — its whole body runs when the module is imported and exits, and its
-tests kill its 55 mutants only through the `bun` process they start, which
-per-test coverage does not see.
+`Survived` to `NoCoverage`; the floor counts both. Three did not run:
+`bun/tracked.ts` and `bun/review-config.ts` failed their dry run on the
+scratch copy, which held no commit for the tests that read the repository's
+tracked files, and `bun/skill-record.ts` cannot run under it at all — its
+whole body runs when the module is imported and exits, and its tests kill
+its 55 mutants only through the `bun` process they start, which per-test
+coverage does not see.
+
+The user answered on the card on 2026-11-06: refactor `bun/skill-record.ts`
+so its tests reach it in their own process, rather than keep it on the
+command runner or drop it (1 б), and refactor `bun/tracked.ts` or
+`bun/review-config.ts` the same way without asking if the baseline shows
+them losing kills for the same cause, asking only for a different one (2).
 
 ## What Changes
 
 - Every listed module's mutants run under `@hughescr/stryker-bun-runner`
   with per-test coverage: each mutant runs only the tests that reached it in
   the module's dry run, and one no test reaches is `NoCoverage` without a run.
-- A module the runner cannot judge stays on the command runner, named in a
-  new `harness.mutationCommandRunner` map in `package.json` with the reason
-  for each; `bun/skill-record.ts` is the one entry, pending the user's answer
-  on the card.
-- A bun-runner module's stored file keeps the tests and coverage Stryker's
-  incremental mode reads — each test file's source and tests, each mutant's
-  covering and killing tests — and its fingerprint leaves the test files out,
-  so a test edit re-runs only the mutants whose covering tests changed.
-  Fixtures, `bunfig.toml`, its preload, Stryker's options and now the
-  runner's version stay in the fingerprint and re-run every module whole.
+  The command runner leaves the configuration.
+- `bun/skill-record.ts` keeps its hook behaviour, but its body becomes an
+  exported function the hook's main block, under `import.meta.main`, calls;
+  its tests call that function in their own process. Any other listed module
+  the baseline finds killed only through a child process is refactored the
+  same way.
+- No module switches with fewer kills: each module's killed count under the
+  bun runner matches or beats its command-runner count on the same source.
+- A stored file keeps the tests and coverage Stryker's incremental mode reads
+  — each test file's source and tests, each mutant's covering and killing
+  tests — and its fingerprint leaves the test files out, so a test edit
+  re-runs only the mutants whose covering or killing tests changed. Fixtures,
+  `bunfig.toml`, its preload, Stryker's options and now the runner's version
+  stay in the fingerprint and re-run every module whole.
 - The sandbox's own git repository, made today by the command each mutant
   runs, is made once per run by Stryker's `buildCommand` running a committed
   `bun/mutation-sandbox.ts`.
 - New dev dependency `@hughescr/stryker-bun-runner` 1.6.0, pinned exactly.
 
 Not in this change: which modules a run selects (card *Mutate only changed
-files*); making `bun/skill-record.ts` testable in its own process;
-`ignoreStatic`; a second Stryker major.
+files*); `ignoreStatic`; a second Stryker major.
 
 ## Capabilities
 
@@ -68,19 +77,21 @@ None.
 
 ### Modified Capabilities
 
-- `mutation-floor`: the runner a listed module's mutants are judged by, the
-  exceptions to it, what a stored file and its fingerprint hold, when a test
-  edit re-runs a module, and `NoCoverage` as an expected status.
+- `mutation-floor`: the runner a listed module's mutants are judged by, a
+  module's tests reaching it in their own process, what a stored file and its
+  fingerprint hold, when a test edit re-runs a module, and `NoCoverage` as an
+  expected status.
 
 ## Impact
 
 - `stryker.config.json`: `testRunner: "bun"`, `appendPlugins`,
   `coverageAnalysis: "perTest"`, `buildCommand`.
 - `bun/mutation-run.ts` and its tests: the per-module configuration, the
-  fingerprint, the trimmed stored file, the exception map; new
-  `bun/mutation-sandbox.ts` with its test.
-- `package.json`: the dev dependency and `harness.mutationCommandRunner`;
-  `bun.lock`.
+  fingerprint, the trimmed stored file; new `bun/mutation-sandbox.ts` with its
+  test.
+- `bun/skill-record.ts` and its tests, and any module the baseline adds.
+- `package.json`: the dev dependency, and the floor's count and `why` the
+  baseline gives; `bun.lock`.
 - `mutation/*.json`: every stored file rewritten once by an `--all --force`
   baseline, larger by its tests' sources and coverage.
 - `.githooks/gates.sh` and `.github/workflows/mutation.yml` run the same two

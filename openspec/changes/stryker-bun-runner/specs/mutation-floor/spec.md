@@ -98,10 +98,10 @@ mutant's status reflects the tests rather than the load or a child process
 that never saw the mutant. A listed module SHALL be mutated alone, and its
 mutants SHALL be judged by the test files whose path begins with
 `bun/<name>`, and by no other test. Each mutant SHALL run only the tests of
-those files that reached it in the module's dry run, and a mutant none
-reached SHALL read `NoCoverage` without a run; a module the exception map
-names instead runs every one of those files against each mutant, as `bun
-test bun/<name>`. A module the list does not name SHALL NOT be mutated, and
+those files that reached it in the module's dry run, in the test's own
+process, and a mutant none reached SHALL read `NoCoverage` without a run: a
+mutant reached only in a process a test starts counts as reached by none. A
+module the list does not name SHALL NOT be mutated, and
 the run SHALL name it. A listed module that is not tracked, or that no such
 test file matches, SHALL fail the run naming it: nothing could kill its
 mutants, and a crashed run is not a count.
@@ -118,11 +118,11 @@ mutants, and a crashed run is not a count.
   dry run
 - **THEN** the mutant reads `NoCoverage`, and no test runs against it
 
-#### Scenario: A module the exception map names
+#### Scenario: A module its tests reach only through a child process
 
-- **WHEN** the exception map names a listed `bun/skill-record.ts`
-- **THEN** the run mutates that file alone and runs `bun test
-  bun/skill-record` against each mutant
+- **WHEN** a listed module's tests run it only as a `bun` process they start
+- **THEN** its mutants read `NoCoverage`, and the floor counts them as
+  survivors
 
 #### Scenario: A module the list does not name
 
@@ -149,11 +149,10 @@ file and no stored file SHALL be mutated whole, and the run SHALL then fail
 naming the file it wrote until that file is committed: the count would
 otherwise leave the module out. A stored file SHALL record a fingerprint of
 what its results were measured against and Stryker cannot see change itself:
-the fixtures its tests import, the shared test configuration, the command or
-runner and the runner's version its mutants ran under, and the Stryker
-options and timeouts — and, for a module the exception map names, its test
-files. A module judged with per-test coverage SHALL also store each of its
-test files' source and tests, and each mutant's covering and killing tests,
+the fixtures its tests import, the shared test configuration, the runner and
+its version its mutants ran under, and the Stryker options and timeouts. It
+SHALL also store each of its test files' source and tests, and each mutant's
+covering and killing tests,
 which Stryker reads to tell a changed test from an unchanged one. A stored
 file SHALL hold nothing that depends on the machine or the checkout that
 wrote it — no absolute path, system, timing or test output — so that every
@@ -195,9 +194,9 @@ clone writes the same file for the same results.
   change
 - **THEN** the stored file it writes is the one `HEAD` tracks
 
-#### Scenario: A module judged with per-test coverage
+#### Scenario: What a stored file holds of tests
 
-- **WHEN** a listed module outside the exception map is mutated
+- **WHEN** a listed module is mutated
 - **THEN** its stored file holds its test files' sources and tests and each
   mutant's covering and killing tests, and its fingerprint names no test file
 
@@ -259,18 +258,11 @@ them by hand; deriving every importer would be machinery for a rare case.
 
 #### Scenario: A test file changed
 
-- **WHEN** the list names `bun/<name>.ts` and `bun/<name>-steps.ts`, neither
-  in the exception map, and only `bun/<name>-steps.test.ts` changed since the
-  stored files were written
+- **WHEN** the list names `bun/<name>.ts` and `bun/<name>-steps.ts`, and only
+  `bun/<name>-steps.test.ts` changed since the stored files were written
 - **THEN** the run re-runs incrementally every listed module whose test files
   include that path — `bun/<name>.ts` and `bun/<name>-steps.ts` — and no
   other, and in each only the mutants whose covering or killing tests changed
-
-#### Scenario: A test file of a module the exception map names changed
-
-- **WHEN** only `bun/skill-record.test.ts` changed and the exception map names
-  `bun/skill-record.ts`
-- **THEN** the run re-runs `bun/skill-record.ts` whole, and no other module
 
 #### Scenario: A fixture another module's tests import
 
@@ -284,29 +276,3 @@ them by hand; deriving every importer would be machinery for a rare case.
 - **WHEN** the run is started for every listed module
 - **THEN** it mutates each module in turn, each incrementally from its stored
   file where one exists, so an interrupted baseline resumes where it stopped
-
-## ADDED Requirements
-
-### Requirement: A module kept on the command runner names why
-
-`package.json`'s `harness.mutationCommandRunner` SHALL map each listed module
-the per-test runner cannot judge to the reason, at least one non-whitespace
-character, and the run SHALL fail before it mutates anything, naming the
-entry, when an entry names a module the list does not, or gives no reason.
-
-#### Scenario: An entry with a reason
-
-- **WHEN** the map names the listed `bun/skill-record.ts` with a reason
-- **THEN** the run judges that module under the command runner and passes on
-  the map
-
-#### Scenario: An entry naming a module off the list
-
-- **WHEN** the map names `bun/gone.ts`, which the list does not name
-- **THEN** the run fails naming `bun/gone.ts` before it mutates anything
-
-#### Scenario: An entry with no reason
-
-- **WHEN** the map gives `bun/skill-record.ts` an empty or whitespace reason
-- **THEN** the run fails naming `bun/skill-record.ts` before it mutates
-  anything
