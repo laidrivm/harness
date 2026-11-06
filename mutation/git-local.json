@@ -1,0 +1,234 @@
+{
+	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/git-local.test.ts": {
+			"source": "import { expect, test } from \"bun:test\";\nimport { unlocal } from \"./git-local.ts\";\n\ntest(\"drops every variable git names as local, keeps the rest, and leaves its argument whole\", () => {\n\tconst env = { GIT_DIR: \"/r/.git\", GIT_WORK_TREE: \"/r\", GIT_INDEX_FILE: \"/r/i\", GIT_EDITOR: \"true\", HOME: \"/h\" };\n\texpect(unlocal(env)).toEqual({ GIT_EDITOR: \"true\", HOME: \"/h\" });\n\texpect(Object.keys(env)).toHaveLength(5);\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/git-local.test.ts > drops every variable git names as local, keeps the rest, and leaves its argument whole",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 5
+						}
+					}
+				}
+			]
+		}
+	},
+	"files": {
+		"bun/git-local.ts": {
+			"source": "/**\n * `env` less every variable `git rev-parse --local-env-vars` names. A session or a run started under a git hook\n * inherits its `GIT_DIR` and `GIT_WORK_TREE`, which outrank both `-C` and a directory's own `.git`, so a git given\n * them reads another repository. The list is git's own and reads no repository, so it is asked in this process's\n * environment whatever `env` holds.\n */\nexport function unlocal(env: Record<string, string | undefined>): Record<string, string | undefined> {\n\tconst local = new Set(Bun.spawnSync([\"git\", \"rev-parse\", \"--local-env-vars\"]).stdout.toString().split(\"\\n\"));\n\treturn Object.fromEntries(Object.entries(env).filter(([key]) => !local.has(key)));\n}\n",
+			"mutants": [
+				{
+					"id": "0",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 10
+						},
+						"start": {
+							"column": 102,
+							"line": 7
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
+				},
+				{
+					"id": "1",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 78,
+							"line": 8
+						},
+						"start": {
+							"column": 38,
+							"line": 8
+						}
+					},
+					"replacement": "[]",
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
+				},
+				{
+					"id": "2",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 8
+						},
+						"start": {
+							"column": 39,
+							"line": 8
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
+				},
+				{
+					"id": "3",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 57,
+							"line": 8
+						},
+						"start": {
+							"column": 46,
+							"line": 8
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
+				},
+				{
+					"id": "4",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 77,
+							"line": 8
+						},
+						"start": {
+							"column": 59,
+							"line": 8
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
+				},
+				{
+					"id": "5",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 108,
+							"line": 8
+						},
+						"start": {
+							"column": 104,
+							"line": 8
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
+				},
+				{
+					"id": "6",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 82,
+							"line": 9
+						},
+						"start": {
+							"column": 28,
+							"line": 9
+						}
+					},
+					"replacement": "Object.entries(env)",
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
+				},
+				{
+					"id": "7",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 81,
+							"line": 9
+						},
+						"start": {
+							"column": 55,
+							"line": 9
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
+				},
+				{
+					"id": "8",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 81,
+							"line": 9
+						},
+						"start": {
+							"column": 66,
+							"line": 9
+						}
+					},
+					"replacement": "local.has(key)",
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
+				}
+			]
+		}
+	},
+	"fingerprint": {
+		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/mutation-sandbox.ts": "8f49905c3e1997723e79f546090f50aad24dba8c",
+		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
+		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+	}
+}
