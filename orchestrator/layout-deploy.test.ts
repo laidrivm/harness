@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 import { instructions, madeOpen, read, root } from "./layout.fixture.ts";
@@ -22,11 +22,27 @@ const commands = (event: string, source?: string) =>
 		.filter((e) => e.matcher === undefined || (source !== undefined && e.matcher.split("|").includes(source)))
 		.flatMap((e) => e.hooks.map((h) => h.command));
 
-/** Runs an event's commands under sh in `home`, as agent's session would, and returns their joined output. */
+const dockerfile = "orchestrator/runner/Dockerfile";
+
+/** The tree file the Dockerfile's `COPY --chmod=0755 <source> <path>` puts at `path`, which the build context is orchestrator/ for. */
+function copied(path: string) {
+	const words = instructions(dockerfile)
+		.map((l) => l.split(" "))
+		.find((w) => w.length === 4 && w[0] === "COPY" && w[1] === "--chmod=0755" && w[3] === path);
+	if (!words?.[2]) throw new Error(`no COPY --chmod=0755 line of ${dockerfile} puts a file at ${path}`);
+	return join(root, "orchestrator", words[2]);
+}
+
+/**
+ * Runs an event's commands under sh in `home`, as agent's session would, each
+ * `/opt/orchestrator/<file>` they name read as the tree file the image copies
+ * there, and returns their joined output.
+ */
 function run(home: string, event: string, source?: string) {
 	let out = "";
 	for (const command of commands(event, source)) {
-		const r = Bun.spawnSync(["sh", "-c", command], { env: { PATH: process.env.PATH ?? "", HOME: home } });
+		const local = command.replace(/\/opt\/orchestrator\/[\w.-]+/g, (p) => `'${copied(p)}'`);
+		const r = Bun.spawnSync(["sh", "-c", local], { env: { PATH: process.env.PATH ?? "", HOME: home } });
 		expect(r.exitCode).toBe(0);
 		out += r.stdout.toString();
 	}
@@ -121,6 +137,60 @@ describe("the container's managed settings", () => {
 			expect(readFileSync(join(home, ".harness-deploy-failed.reported"), "utf8")).toBe(`${line}\n`);
 		},
 	);
+
+	const failed = (home: string, line: string) => writeFileSync(join(home, ".harness-deploy-failed"), `${line}\n`);
+	const reported = (home: string) => readFileSync(join(home, ".harness-deploy-failed.reported"), "utf8");
+
+	// spec: orchestrator/a-failure-after-main-is-up
+	test("a prompt prints a failure written after the start under the ask line, once, and a later one replaces the reported", () => {
+		const home = emptyDir("orchestrator-home-");
+		run(home, "SessionStart", "startup");
+		failed(home, "20261106T100000Z deploy: the push failed at 0123abc");
+		const out = run(home, "UserPromptSubmit").split("\n");
+		expect(out[0]).toContain("report it to the user");
+		expect(out[1]).toBe("20261106T100000Z deploy: the push failed at 0123abc");
+		expect(run(home, "UserPromptSubmit")).toBe("");
+		failed(home, "20261106T100500Z deploy: the record failed at 4567def");
+		expect(run(home, "UserPromptSubmit").split("\n")[1]).toBe("20261106T100500Z deploy: the record failed at 4567def");
+		expect(reported(home)).toBe("20261106T100500Z deploy: the record failed at 4567def\n");
+	});
+
+	// spec: orchestrator/a-prompt-with-no-failure
+	test("a prompt with no failure file prints nothing and removes the mark", () => {
+		const home = emptyDir("orchestrator-home-");
+		run(home, "SessionStart", "startup");
+		expect(run(home, "UserPromptSubmit")).toBe("");
+		expect(mark(home)).toBe(false);
+	});
+
+	// spec: orchestrator/the-failure-file-cannot-be-moved-aside
+	// A read-only directory stops nobody running as root, whom no session runs as.
+	test.skipIf(process.getuid?.() === 0).each([
+		["SessionStart", "startup"],
+		["UserPromptSubmit", undefined],
+	])("a %s hook whose move aside fails still prints the report, exits 0, and the next one reports it again", (event, source) => {
+		const home = emptyDir("orchestrator-home-");
+		const line = "20261106T100000Z deploy: the push failed at 0123abc";
+		failed(home, line);
+		mkdirSync(join(home, ".harness-deploy-failed.reported"), { mode: 0o555 });
+		for (const _ of [1, 2]) expect(run(home, event, source).split("\n").slice(1, 2)).toEqual([line]);
+		expect(readFileSync(join(home, ".harness-deploy-failed"), "utf8")).toBe(`${line}\n`);
+	});
+
+	// spec: orchestrator/a-failure-after-main-is-up
+	test("both hooks run the report the image copies executable, and the mode check covers it", () => {
+		const script = "/opt/orchestrator/deploy-failed.sh";
+		expect(commands("SessionStart", "startup")).toContain(script);
+		expect(commands("SessionStart", "resume")).toContain(script);
+		expect(commands("UserPromptSubmit")).toContain(script);
+		expect(() => copied("/opt/orchestrator/no-such.sh")).toThrow();
+		const all = instructions(dockerfile);
+		const copy = all.findIndex((l) => l === `COPY --chmod=0755 runner/deploy-failed.sh ${script}`);
+		const check = all.findIndex((l) => l.startsWith('RUN test -z "$(find '));
+		expect(copy).toBeGreaterThan(-1);
+		// The check's modes are run in users.test.ts.
+		expect(check).toBeGreaterThan(copy);
+	});
 });
 
 describe("the deploy's units", () => {
