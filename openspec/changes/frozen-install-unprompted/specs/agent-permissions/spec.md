@@ -200,13 +200,13 @@ by the user in their own terminal.
 
 #### Scenario: Each command of a compound line is judged alone
 
-- **WHEN** the agent attempts `bun install --frozen-lockfile && bun test`, or
-  `bash -c "bun install --frozen-lockfile"`, whose program the guard reads as
-  a line of its own
+- **WHEN** the agent attempts `bun install --frozen-lockfile && bun test`
 - **THEN** the hook does not block it
-- **AND WHEN** the agent attempts `bun install --frozen-lockfile; bun install`
-  or `bash -c "bun install"`
-- **THEN** the hook blocks the call
+- **AND WHEN** the agent attempts `bun install --frozen-lockfile; bun install`,
+  `X=1 bash -c "bun install --frozen-lockfile"`, `eval bun i --frozen-lockfile`
+  or `bun install --frozen-lockfile$(printf ' --production')`
+- **THEN** the hook blocks the call, because a shell's or `eval`'s program and
+  a substitution's output are read without what stood around them
 
 #### Scenario: A local allow entry does not reopen the bare install
 

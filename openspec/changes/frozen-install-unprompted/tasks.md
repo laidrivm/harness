@@ -49,7 +49,10 @@ check only at the self-pin bump after merge (`design.md`, *Risks*).
       `env BUN_CONFIG_REGISTRY=https://x.test bun i --frozen-lockfile`
       (`a-variable-assigned-before-bun`); `X+=1 bun install`
       (`an-appending-assignment-is-not-the-command`);
-      `bun install --frozen-lockfile; bun install` and `bash -c "bun install"`
+      `bun install --frozen-lockfile; bun install`, `bash -c "bun install"`,
+      `X=1 bash -c "bun install --frozen-lockfile"`,
+      `eval bun i --frozen-lockfile` and
+      `bun install --frozen-lockfile$(printf ' --production')`
       (`each-command-of-a-compound-line-is-judged-alone`). Each fails on
       today's guard, which allows them all
 - [ ] 1.4 In the same file, cases that must exit 0:
@@ -57,8 +60,7 @@ check only at the self-pin bump after merge (`design.md`, *Risks*).
       (`the-frozen-form-runs-without-a-prompt`), `bun  i --frozen-lockfile`,
       `bun "install" --frozen-lockfile`, `~/.bun/bin/bun i --frozen-lockfile`
       (`the-frozen-form-however-it-is-quoted-spaced-or-reached`),
-      `bun install --frozen-lockfile && bun test`,
-      `bash -c "bun install --frozen-lockfile"`
+      `bun install --frozen-lockfile && bun test`
       (`each-command-of-a-compound-line-is-judged-alone`); and `bun add preact`,
       `bun run install`, `bun pm ls` get no `bun-install` rule
       (`another-package-command-is-not-refused-by-this-check`)
@@ -67,7 +69,8 @@ check only at the self-pin bump after merge (`design.md`, *Risks*).
       `name` is `bun` and the subcommand, found by the 1.2 helper, is
       `install` or `i`; `undefined` when `part` is exactly
       `[<bun word>, "install" | "i", "--frozen-lockfile"]`, the bun word
-      first; otherwise the reason in `design.md` decision 6. `check()` in `bun/command-guard.ts` calls it beside
+      first, `part` not in `FED`, and the line not a shell's or `eval`'s
+      program (`check()` passes that down); otherwise the reason in `design.md` decision 6. `check()` in `bun/command-guard.ts` calls it beside
       `bunxInstall` and blocks under `bun-install`; the header comment of each
       file names the new prohibition, and the guard's header that a local
       `allow` silencing a hook's `ask` is why this one blocks. Verify
