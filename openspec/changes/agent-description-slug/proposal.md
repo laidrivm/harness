@@ -13,7 +13,8 @@ of the harness.
 ## What Changes
 
 - `core/rules.md` gains one sentence, appended to the delegation paragraph of
-  its `### Rules` preamble: a session opens the `Agent` call's `description`
+  its `### Rules` preamble: for a subagent that works on a change or a card,
+  a session opens the `Agent` call's `description`
   with the slug of the change the subagent carries, or of the card where there
   is none, and names the agent's ID beside the change's card, or beside that
   card when there is no change, in each report. No
