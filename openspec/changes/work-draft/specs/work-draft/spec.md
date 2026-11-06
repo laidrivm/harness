@@ -59,10 +59,10 @@ nothing, when `origin`'s URL names no owner and repository — read before
 the pull request, as `finish` reads it — when the pull request cannot be
 read, or when it is merged or closed. When `gh pr ready --undo` exits
 non-zero or is killed at its time limit, it SHALL exit 1 on one line opening
-`draft: failed —` that says `gh pr ready --undo` failed and #`<n>` was not
-marked draft, never claiming
-the pull request's state, which the failure leaves unread — merged in the
-meantime, or a cloud session's closed GraphQL, read the same.
+`draft: failed —` that says `gh pr ready --undo` failed and #`<n>` could not
+be confirmed a draft, never claiming the pull request's state, which the
+failure leaves unread — a pull request merged since the read, a cloud
+session's closed GraphQL and a switch made before a kill read the same.
 
 #### Scenario: A merged pull request
 
@@ -81,7 +81,7 @@ meantime, or a cloud session's closed GraphQL, read the same.
 - **WHEN** `draft --pr 7` runs, #7 is open and ready, and `gh pr ready 7
   --undo` exits non-zero
 - **THEN** it prints a line opening `draft: failed —` that says `gh pr
-  ready --undo` failed and #7 was not marked draft, and exits 1
+  ready --undo` failed and #7 could not be confirmed a draft, and exits 1
 
 #### Scenario: No repository in origin
 
