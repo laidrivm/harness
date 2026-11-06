@@ -202,7 +202,7 @@ describe("the command", () => {
 		]);
 	});
 
-	test("a run after a test changed hands Stryker its results less the survivor no test covered", () => {
+	test("a run after a test changed hands Stryker its results less its survivors", () => {
 		const dir = repository();
 		cli(dir, path({ node: "exit 0", bunx: stryker }));
 		git(dir, "add", "mutation");

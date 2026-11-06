@@ -109,7 +109,7 @@ describe("what a stored file holds", () => {
 		});
 	});
 
-	test("a run whose tests changed reuses every result but a survivor no test covered, which a static mutant is", () => {
+	test("a run whose tests changed reuses no survivor, covered or static, since a change outside every test body reads to Stryker as none", () => {
 		const covered = { ...mutant("1", "Survived"), coveredBy: ["0"] };
 		const mutants = [mutant("0", "Survived"), covered, mutant("2", "NoCoverage"), mutant("3", "Killed")];
 		const stored: Stored = {
@@ -118,7 +118,7 @@ describe("what a stored file holds", () => {
 			files: { "bun/a.ts": { source: "a", mutants } },
 			fingerprint: {},
 		};
-		expect(reusable(stored).files["bun/a.ts"]?.mutants.map((m) => m.id)).toEqual(["1", "2", "3"]);
+		expect(reusable(stored).files["bun/a.ts"]?.mutants.map((m) => m.id)).toEqual(["2", "3"]);
 		expect(stored.files["bun/a.ts"]?.mutants).toHaveLength(4);
 	});
 
