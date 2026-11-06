@@ -102,8 +102,8 @@ are not touched.
 
 ## 6. Integration
 
-- [ ] 6.1 `bunx --no-install openspec validate frozen-install-unprompted
+- [x] 6.1 `bunx --no-install openspec validate frozen-install-unprompted
       --strict` passes, and `bun test` passes whole
-- [ ] 6.2 In a fresh worktree, an agent's `bun run deps` installs with no
+- [x] 6.2 In a fresh worktree, an agent's `bun run deps` installs with no
       prompt under auto mode, while `bun install --frozen-lockfile` still
       prompts; record both in the PR body
