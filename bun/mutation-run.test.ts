@@ -236,15 +236,18 @@ describe("what fails the run before it mutates", () => {
 		]);
 	});
 
-	test("a stored file without files, and two naming one path", () => {
+	test("a stored file without files, or holding a source other than its own module's", () => {
 		const t = current();
 		const board = t.stored["mutation/board.json"] ?? "";
 		for (const text of ["{}", "not JSON"])
 			expect(plan({ ...t, stored: { ...t.stored, "mutation/board.json": text } }).problems).toEqual([
 				"mutation/board.json carries no files",
 			]);
+		expect(plan({ ...t, stored: { ...t.stored, "mutation/guard.json": board } }).problems).toEqual([
+			"mutation/guard.json holds bun/board.ts, not bun/guard.ts",
+		]);
 		expect(plan({ ...t, stored: { ...t.stored, "mutation/old.json": board } }).problems).toContain(
-			"mutation/board.json and mutation/old.json both hold bun/board.ts",
+			"mutation/old.json holds bun/board.ts, not bun/old.ts",
 		);
 	});
 });

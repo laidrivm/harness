@@ -2,8 +2,8 @@
 .claude/settings.local.json
 .claude/worktrees
 node_modules
-reports
-.stryker-tmp
+/reports
+/.stryker-tmp
 orchestrator/secrets
 orchestrator/app
 orchestrator/app-key

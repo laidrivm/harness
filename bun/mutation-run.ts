@@ -32,6 +32,7 @@ export const modules = (tracked: string[]) =>
 
 const stem = (module: string) => module.slice(0, -".ts".length);
 const storedPath = (module: string) => `mutation/${stem(module).slice("bun/".length)}.json`;
+const moduleOf = (stored: string) => `bun/${stored.slice("mutation/".length, -".json".length)}.ts`;
 
 /** The test files `bun test bun/<name>` runs: those whose path begins with it. */
 export const testsOf = (module: string, tracked: string[]) =>
@@ -104,15 +105,14 @@ const same = (a: Record<string, string> | undefined, b: Record<string, string>) 
 /**
  * The modules to run, the ones the list leaves out, and what fails the run
  * before anything is mutated: a listed module nothing could judge, a stored
- * file nothing could still have written, one that is not a set of results, and
- * a module whose tests are not `HEAD`'s.
+ * file nothing could still have written, one that is not a set of results or
+ * holds another module's, and a module whose tests are not `HEAD`'s.
  */
 export function plan(tree: Tree, flags = { all: false, force: false }) {
 	const problems: string[] = [];
 	const runs: Run[] = [];
 	const skipped: string[] = [];
 	const read: Record<string, Stored> = {};
-	const holder = new Map<string, string>();
 	for (const [path, text] of Object.entries(tree.stored)) {
 		let value: Stored | undefined;
 		try {
@@ -124,17 +124,15 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 			continue;
 		}
 		read[path] = value;
-		for (const source of Object.keys(files)) {
-			const other = holder.get(source);
-			if (other) problems.push(`${other} and ${path} both hold ${source}`);
-			else holder.set(source, path);
-		}
+		// A module's run mutates that module alone, so any other source is results the floor would count twice or unjudged.
+		for (const source of Object.keys(files))
+			if (source !== moduleOf(path)) problems.push(`${path} holds ${source}, not ${moduleOf(path)}`);
 	}
 	const tested = new Set(modules(tree.tracked).filter((module) => testsOf(module, tree.tracked).length));
 	for (const module of tree.listed.filter((m) => !tested.has(m)))
 		problems.push(`stryker.config.json's mutate lists ${module}, which is not a tracked module a test file matches`);
 	for (const path of Object.keys(read)) {
-		const module = `bun/${path.slice("mutation/".length, -".json".length)}.ts`;
+		const module = moduleOf(path);
 		if (!tree.tracked.includes(module)) problems.push(`${path}: ${module} is not tracked — delete the stored file`);
 		else if (!tested.has(module))
 			problems.push(`${path}: no test file matches ${stem(module)} — delete the stored file`);
@@ -216,8 +214,9 @@ function fail(problems: string[]): void {
  * of the stored file, so the partial results an interrupt saves over that copy never reach the stored file. A run
  * resumes by module, never from a leftover copy: one could hold results the stored file has since replaced. A `dry`
  * run stops after Stryker's initial test run, which writes no incremental file, so it neither copies nor stores one.
+ * Returns how Stryker failed, or `""` when it did not.
  */
-function stryker(tree: Tree, top: string, { module, force }: Run, print: Record<string, string>, dry = false): number {
+function stryker(tree: Tree, top: string, { module, force }: Run, print: Record<string, string>, dry = false): string {
 	const tmp = join(top, ".stryker-tmp");
 	const name = stem(module).slice("bun/".length);
 	const [config, work] = [join(tmp, `${name}.config.json`), join(tmp, `${name}.incremental.json`)];
@@ -238,13 +237,16 @@ function stryker(tree: Tree, top: string, { module, force }: Run, print: Record<
 	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force ? ["--force"] : [])];
 	const run = Bun.spawnSync(args, { cwd: top, stdio: ["inherit", "inherit", "inherit"] });
 	rmSync(config, { force: true });
-	if (run.exitCode !== 0 || dry) return run.exitCode;
+	// A signal leaves no exit code, only its name.
+	const failed =
+		run.exitCode === 0 ? "" : run.exitCode === null ? `was killed by ${run.signalCode}` : `exited ${run.exitCode}`;
+	if (failed || dry) return failed;
 	mkdirSync(dirname(stored), { recursive: true });
 	// Through a rename, so a kill mid-write leaves the old stored file rather than a truncated one.
 	writeFileSync(`${work}.out`, `${JSON.stringify(trim(JSON.parse(readFileSync(work, "utf8")), print), null, "\t")}\n`);
 	renameSync(`${work}.out`, stored);
 	rmSync(work);
-	return 0;
+	return "";
 }
 
 if (import.meta.main) {
@@ -268,18 +270,19 @@ if (import.meta.main) {
 	const chosen = named.length ? runs.filter((run) => named.includes(run.module)) : runs;
 	if (chosen.length && !Bun.which("node")) fail(["Stryker needs Node on PATH, and none was found"]);
 	// Only for several: one module's own run starts with the same dry run, so a sweep would only repeat it.
-	const dry = (chosen.length > 1 ? chosen : []).map((run) => ({ ...run, code: stryker(tree, root, run, {}, true) }));
-	fail(dry.filter(({ code }) => code !== 0).map(({ module, code }) => `Stryker's dry run exited ${code} on ${module}`));
+	const dry = (chosen.length > 1 ? chosen : []).map((run) => ({ ...run, failed: stryker(tree, root, run, {}, true) }));
+	fail(dry.filter(({ failed }) => failed).map(({ module, failed }) => `Stryker's dry run ${failed} on ${module}`));
 	for (const run of chosen) {
-		const code = stryker(tree, root, run, fingerprint(run.module, tree));
-		if (code !== 0) fail([`Stryker exited ${code} on ${run.module}`]);
+		const failed = stryker(tree, root, run, fingerprint(run.module, tree));
+		if (failed) fail([`Stryker ${failed} on ${run.module}`]);
 	}
 	fail(
 		unsaved(root).map((path) => `${path} differs from HEAD's — commit it, and the same run passes without mutating`),
 	);
 	// A narrowed run left the other modules unchecked, so a report from it would be a count nobody verified.
 	if (named.length) {
-		console.log("named modules measured; no report written — run without names for the one the floor reads");
+		const done = chosen.length ? "named modules measured" : "named modules already current, none mutated";
+		console.log(`${done}; no report written — run without names for the one the floor reads`);
 		process.exit(0);
 	}
 	mkdirSync(dirname(REPORT), { recursive: true });

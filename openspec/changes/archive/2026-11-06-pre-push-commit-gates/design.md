@@ -169,7 +169,8 @@ out.
 
 Before any run the step fails on a listed module that is untracked or has no
 test file, a stored file whose module is untracked, has no test file or is
-not listed, one with no `files` object, or two naming one source path,
+not listed, one with no `files` object, or one naming a source path other
+than its own module's,
 since no run could change those; a module with a test file and no stored file
 runs whole. After the runs it fails on a stored file differing from `HEAD`'s,
 or untracked, so the one it just wrote fails until committed, then merges every stored file's `files` entries, mutants
@@ -294,10 +295,11 @@ without a floor, may follow as a change of its own.
   files a consumer's install carries, bun reads only `tsconfig.json`, which
   sets nothing it applies at run time.
 - [A Stryker incremental file that is not byte-stable across identical runs
-  even when trimmed] → the probe checks it; if it is not, the step writes a
-  stored file only when its mutants' results changed. Reused results are
-  byte-stable; a whole re-run is not, a slow mutant's status depending on the
-  load (decision 8).
+  even when trimmed] → the probe checked it: reused results are byte-stable;
+  a whole re-run is not, a slow mutant's status depending on the load
+  (decision 8). The step writes the stored file after every successful run,
+  not only when its mutants' results changed, so a whole re-run can rewrite it
+  with the same count.
 
 ## Migration Plan
 

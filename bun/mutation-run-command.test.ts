@@ -71,7 +71,7 @@ function path(stubs: Record<string, string>): string {
 const cli = (cwd: string, bin: string, ...args: string[]) => {
 	// HOME outside the repository: bun caches there, and a run refuses untracked files.
 	const run = Bun.spawnSync(["bun", script, ...args], { cwd, env: { PATH: bin, HOME: scratch() }, stderr: "pipe" });
-	return { code: run.exitCode, err: run.stderr.toString() };
+	return { code: run.exitCode, err: run.stderr.toString(), out: run.stdout.toString() };
 };
 
 /** `dir` with its results committed, then a changed test committed over them, so the next run is forced. */
@@ -128,15 +128,14 @@ describe("the command", () => {
 		expect([code, err.includes("Node")]).toEqual([1, true]);
 	});
 
-	test("a Stryker exit that is not 0 fails before the merge, leaving not even the run's own report", () => {
+	test.each([
+		["exit 3", "exited 3"],
+		["kill -9 $$", "was killed by SIGKILL"],
+	])("a Stryker that ends with `%s` fails before the merge, saying it %s and leaving no report", (end, how) => {
 		const dir = repository();
-		const bunx = `/bin/mkdir -p reports/mutation && echo '{}' > ${REPORT}; exit 3`;
+		const bunx = `/bin/mkdir -p reports/mutation && echo '{}' > ${REPORT}; ${end}`;
 		const { code, err } = cli(dir, path({ node: "exit 0", bunx }));
-		expect([code, err.includes("Stryker exited 3 on bun/a.ts"), existsSync(join(dir, REPORT))]).toEqual([
-			1,
-			true,
-			false,
-		]);
+		expect([code, err.includes(`Stryker ${how} on bun/a.ts`), existsSync(join(dir, REPORT))]).toEqual([1, true, false]);
 	});
 
 	// spec: mutation-floor/a-new-module-has-no-stored-file
@@ -218,7 +217,8 @@ describe("the command", () => {
 		expect(cli(dir, bin, "bun/a.ts").code).toBe(1);
 		git(dir, "add", "-A");
 		git(dir, "commit", "-qm", "results");
-		expect(cli(dir, bin, "bun/a.ts").code).toBe(0);
+		const current = cli(dir, bin, "bun/a.ts");
+		expect([current.code, current.out.includes("named modules already current, none mutated")]).toEqual([0, true]);
 		expect(existsSync(join(dir, REPORT))).toBe(false);
 	});
 
