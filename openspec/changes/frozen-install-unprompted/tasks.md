@@ -95,7 +95,7 @@ are not touched.
 
 ## 5. Docs
 
-- [ ] 5.1 `README.md`: the bootstrap paragraph (~78) and the clone setup
+- [x] 5.1 `README.md`: the bootstrap paragraph (~78) and the clone setup
       (~141) name `bun run deps`; a sentence says a consumer whose `allow`
       lacks `Bash(bun run *)` may add `Bash(bun run deps)` for the default
       mode, and that sync adds the script and refuses a `deps` of its own
