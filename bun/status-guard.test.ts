@@ -43,6 +43,10 @@ describe("a Status write through the connector is refused", () => {
 		expect(run.err).toContain("bun bun/work.ts status");
 		expect(run.ledger).toEqual([{ decision: "block", rule: "mcp-status" }]);
 	});
+
+	test("the refusal names --why for a discard", () => {
+		expect(guard(update({ properties: { Status: "discarded" } })).err).toContain("--to discarded --why <reason>");
+	});
 });
 
 describe("allowed, recording nothing", () => {
