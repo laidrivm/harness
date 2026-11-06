@@ -109,7 +109,9 @@ function read(text: string): { tokens?: number; boundary?: string; wrapped: bool
 		} catch {
 			continue;
 		}
-		if (line?.type === "system" && line.subtype === "compact_boundary") {
+		// A `null` line would throw in `size` and `wrapping`, past the caller's refusal.
+		if (line === null || typeof line !== "object") continue;
+		if (line.type === "system" && line.subtype === "compact_boundary") {
 			found.boundary = typeof line.uuid === "string" ? line.uuid : "";
 			break;
 		}

@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, readdirSync } from "node:fs";
+import { appendFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { boundary, cleanupTranscripts, reply, said, skill, transcript, typed } from "./context-window.fixture.ts";
 import { REARM, THRESHOLD, wrapup } from "./context-window.ts";
@@ -107,6 +107,12 @@ describe("the size read", () => {
 	test("a sidechain's reply and an all-zero one are passed over", () => {
 		const reason = session(reply(810_000), reply(900_000, { isSidechain: true }), reply(0)).stop();
 		expect(reason).toContain("810000");
+	});
+
+	test("a line that parses to no object is passed over", () => {
+		const s = session(reply(810_000));
+		appendFileSync(s.path, "null\n5\n");
+		expect(s.stop()).toContain("810000");
 	});
 
 	// spec: context-window/a-compaction-and-no-reply-since
