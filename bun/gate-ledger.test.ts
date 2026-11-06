@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, event, fabricate, run } from "./command-guard.fixture.ts";
+import { stateDir } from "./gate-ledger.ts";
 
 /**
  * `gate-ledger.ts`: what one record holds and where it lands. Every case runs
@@ -61,6 +62,14 @@ describe("where the ledger lives", () => {
 		const home = dir();
 		write(envOf({ HOME: home, XDG_STATE_HOME: value }));
 		expect(lines(join(home, ".local", "state"))).toHaveLength(1);
+	});
+
+	test("an environment handed in names the state directory, its HOME too, whatever this process's are", () => {
+		const home = dir();
+		expect([stateDir({ HOME: home }), stateDir({ HOME: home, XDG_STATE_HOME: "/s" })]).toEqual([
+			join(home, ".local", "state"),
+			"/s",
+		]);
 	});
 
 	test("a second record appends without rewriting the first", () => {
