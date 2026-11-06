@@ -30,8 +30,15 @@
  * refusal would only hand the goal another round. `commit-gates`' "SHALL NOT
  * depend on a loop-protection field" is about the refusal, so the ceiling may.
  *
+ * After its own decision, at every stop, the ceiling's included, it runs the
+ * context-window check (`context-window.ts`), which may refuse once per
+ * context for `/session-wrapup` — only where this gate did not refuse, under
+ * a mark naming a commit it did not flag, on a branch. Elsewhere the check
+ * only re-arms. A refusal for size flags nothing, so the gate still judges the
+ * continued turn; `decide` hands it to `log` as `wrapup`.
+ *
  * Whatever it cannot read — no mark, no repository, a detached `HEAD`, an
- * event that is not JSON — ends the turn. This is fail-open on purpose,
+ * event that is not JSON — ends the turn, at any size. This is fail-open on purpose,
  * unlike the command guard. A hook that refuses when its partner did not run
  * turns a partial installation into a session that cannot end a turn. The
  * ledger is the exception: one it cannot read holds no record, and the
@@ -50,11 +57,12 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { BASE } from "./branch-state.ts";
+import { wrapup } from "./context-window.ts";
 import { passed, record } from "./gate-ledger.ts";
 import { countRound, resetRounds } from "./goal-rounds.ts";
 import { complete } from "./task-groups.ts";
 
-type Event = { session_id?: unknown; cwd?: unknown };
+type Event = { session_id?: unknown; cwd?: unknown; transcript_path?: unknown };
 
 /** Where a session's mark lives, or nothing for an id unsafe as a file name. */
 function markFile(store: string, event: Event): string | undefined {
@@ -194,12 +202,21 @@ function runner(cwd: string): string {
  * The refusal for this turn, or nothing when it may end. A turn that completed
  * a group is handed to `log` as `passed` when the ledger holds a passing run
  * of the tip; `released` when the once-per-mark bound alone lets it end; or
- * `refused`. Every answer but a refusal ends the turn, so leaves `stopped`.
+ * `refused`; a refusal for size, as `wrapup`. Every answer but a refusal ends
+ * the turn, so leaves `stopped`.
  */
 export function decide(event: Event, store: string, log: (decision: string) => void = () => {}): string | undefined {
 	const file = markFile(store, event);
 	if (!file) return;
-	const reason = typeof event.cwd === "string" ? judge(file, event.cwd, log) : undefined;
+	const cwd = typeof event.cwd === "string" ? event.cwd : undefined;
+	const refused = cwd ? judge(file, cwd, log) : undefined;
+	const found = marked(file);
+	// Only a stop this gate can judge may be refused for size: `commit-gates` ends the rest.
+	const ask = !refused && found !== undefined && !found.refused && !!cwd && !!git(cwd, "symbolic-ref", "-q", "HEAD");
+	// At every stop, so a stop that may not be refused for size still re-arms the ask.
+	const size = wrapup(file, event, ask);
+	if (size) log("wrapup");
+	const reason = refused ?? size;
 	if (!reason) stopped(file);
 	return reason;
 }
@@ -236,7 +253,7 @@ function judge(file: string, cwd: string, log: (decision: string) => void): stri
 }
 
 if (import.meta.main) {
-	// ponytail: a mark, its `.rounds` and its `.stopped` per session accumulate
+	// ponytail: a mark, its `.rounds`, `.stopped` and `.wrapup` per session accumulate
 	// in the OS temp dir, which the OS clears; prune here if that ever stops being true.
 	const store = join(tmpdir(), "turn-gate");
 	const stopping = process.argv[2] !== "mark";
@@ -249,9 +266,16 @@ if (import.meta.main) {
 		const ceiling = stopping && file ? countRound(event, file) : undefined;
 		if (!stopping) mark(event, store);
 		else if (ceiling) {
+			// `decide` is not reached, so the ceiling's stop re-arms here, refusing nothing.
+			if (file) wrapup(file, event, false);
 			record("goal", "ceiling", "rounds", event);
 			console.log(JSON.stringify({ continue: false, stopReason: ceiling }));
-		} else reason = decide(event, store, (decision) => record("turn-gate", decision, "pre-pr-sequence", event));
+		} else
+			reason = decide(event, store, (decision) =>
+				decision === "wrapup"
+					? record("context-window", "refused", "wrapup", event)
+					: record("turn-gate", decision, "pre-pr-sequence", event),
+			);
 	} catch {
 		// Fail-open, as the header says: an event this script cannot read
 		// ends the turn rather than holding it.
