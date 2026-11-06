@@ -2,6 +2,9 @@
 	"name": "harness",
 	"version": "0.0.0",
 	"private": true,
+	"scripts": {
+		"deps": "bun install --frozen-lockfile"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.15",
 		"@stryker-mutator/core": "10.0.0",

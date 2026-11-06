@@ -206,6 +206,15 @@ describe("the supply-chain files", () => {
 		expect(settings(dir).join("\n")).toContain("bunfig.toml: [install]");
 	});
 
+	// spec: harness-updates/the-check-reads-the-script
+	test.each([
+		["missing", "{}\n"],
+		["another manager's", '{ "scripts": { "deps": "pnpm install" } }\n'],
+	])("a deps script %s is named", (_, text) => {
+		const dir = consumer(policy(), { "package.json": text });
+		expect(settings(dir)).toContain('package.json: scripts.deps is not exactly "bun install --frozen-lockfile"');
+	});
+
 	test("an .npmrc tracked below the root is named", () => {
 		const dir = consumer(policy(), {
 			"pkg/.npmrc": "registry=https://x.test\n",

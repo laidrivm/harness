@@ -7,13 +7,13 @@ are not touched.
 
 ## 1. The script and its check
 
-- [ ] 1.1 Failing cases in `bun/settings.test.ts`, beside the
+- [x] 1.1 Failing cases in `bun/settings.test.ts`, beside the
       `bunfig.toml: [install]` case: a consumer fixture whose `package.json`
       has no `scripts.deps`, and one whose `scripts.deps` is `pnpm install`,
       each fail naming `package.json` and `bun install --frozen-lockfile`
       (`harness-updates/the-check-reads-the-script`); the fixture
       `bun/settings.fixture.ts` builds a passing consumer with the script
-- [ ] 1.2 Then `DEPS = "bun install --frozen-lockfile"` exported from
+- [x] 1.2 Then `DEPS = "bun install --frozen-lockfile"` exported from
       `bun/settings.ts`, and its check pushes
       `package.json: scripts.deps is not exactly "<DEPS>"` when the script
       is missing or differs; the header comment names `package.json` among

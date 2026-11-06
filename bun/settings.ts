@@ -1,6 +1,7 @@
 /**
  * The agent permission policy, read from the consumer's tracked
- * `.claude/settings.json` and `bunfig.toml`: what is refused, what prompts,
+ * `.claude/settings.json`, `bunfig.toml` and `package.json`'s `deps` script:
+ * what is refused, what prompts,
  * what is pre-approved, the hook that catches what a permission pattern
  * cannot express, every other hook `bootstrap.ts` lists, the attribution
  * Claude Code adds, and the plugins every session runs with the marketplace
@@ -105,6 +106,13 @@ export const INSTALL = {
 	minimumReleaseAge: 259200,
 	minimumReleaseAgeExcludes: [],
 };
+
+/**
+ * The script an agent installs through, `bun run deps`: the `ask` rules match
+ * the typed text, not a script's body, so it runs unprompted where `allow`
+ * holds `bun run` (frozen-install-unprompted D2).
+ */
+export const DEPS = "bun install --frozen-lockfile";
 
 type Hook = {
 	type?: string;
@@ -274,6 +282,8 @@ export function settings(root: string): string[] {
 	const bunfig = Bun.TOML.parse(readFileSync(join(root, "bunfig.toml"), "utf8")) as { install?: unknown };
 	if (JSON.stringify(bunfig.install) !== JSON.stringify(INSTALL))
 		problems.push(`bunfig.toml: [install] is not exactly ${JSON.stringify(INSTALL)}`);
+	const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts?: { deps?: unknown } };
+	if (manifest.scripts?.deps !== DEPS) problems.push(`package.json: scripts.deps is not exactly "${DEPS}"`);
 
 	for (const path of tracked(root).paths)
 		if (path === ".npmrc" || path.endsWith("/.npmrc"))
