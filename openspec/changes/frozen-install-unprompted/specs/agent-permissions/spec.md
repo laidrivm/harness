@@ -29,9 +29,10 @@ after it, since bun forwards those words to the install.
 #### Scenario: Words after the script's name
 
 - **WHEN** the agent attempts `bun run deps --no-verify`,
-  `bun run deps --production`, `bun run deps lodash` or
-  `bun run deps $(printf -- --no-verify)`, whose substitution the parse drops
-  from the words
+  `bun run deps --production`, `bun run deps lodash`,
+  `bun run deps $(printf -- --no-verify)` or
+  `bun run $(printf deps) --no-verify` — any `bun run` a substitution feeds,
+  since the parse drops its output from the words
 - **THEN** the hook blocks the call, and the reason names `bun run deps` with
   nothing after it
 
