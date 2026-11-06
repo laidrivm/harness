@@ -1,7 +1,8 @@
 # deploy-failure-told — tasks
 
-One pull request per group, each under the diff budget. In each group the failing cases come first, their failure
-seen before the code changes, each cited as `// spec: <capability>/<slug>`;
+One pull request per group, each under the diff budget. In each group the
+failing cases come first, their failure seen before the code changes, each
+cited as `// spec: <capability>/<slug>`;
 a case that pins behaviour the change keeps says so and is not expected to
 fail first. `put()` and its `shortcut:` comment are not touched.
 
@@ -35,8 +36,9 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       commit) carrying the start hook's report and exiting 0 whatever its
       move does; the Dockerfile copies it to
       `/opt/orchestrator/deploy-failed.sh` beside the other scripts, and its
-      mode check fails the build when that file is not executable and
-      readable by others or is writable by group or others, a case in
+      mode check fails the build when that file, or any other there but the
+      sourced `clone-name.sh`, is not executable and readable by others or
+      is writable by group or others, a case in
       `orchestrator/users.test.ts` running the `RUN test -z` line over the
       path's modes; the
       `SessionStart` `startup|clear|resume` entry and the `UserPromptSubmit`

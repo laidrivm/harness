@@ -171,7 +171,11 @@ describe("the container's managed settings", () => {
 	const line = "20261106T100000Z deploy: the push failed at 0123abc";
 	/** Two runs of the hook each print the report, and the failure file is left in place. */
 	function reportedTwice(home: string, event: string, source?: string) {
-		for (const _ of [1, 2]) expect(run(home, event, source).split("\n").slice(1, 2)).toEqual([line]);
+		for (const _ of [1, 2]) {
+			const out = run(home, event, source).split("\n");
+			expect(out[0]).toContain("report it to the user");
+			expect(out[1]).toBe(line);
+		}
 		expect(readFileSync(join(home, ".harness-deploy-failed"), "utf8")).toBe(`${line}\n`);
 	}
 
