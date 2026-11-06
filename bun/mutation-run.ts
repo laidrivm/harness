@@ -56,7 +56,11 @@ export function fingerprint(module: string, tree: Tree): Record<string, string> 
 		bunfig === undefined ? [] : (Bun.TOML.parse(bunfig) as { test?: { preload?: unknown } }).test?.preload;
 	const shared =
 		bunfig === undefined ? [] : ["bunfig.toml", ...[preload ?? []].flat().map((path) => posix.normalize(String(path)))];
-	const paths = [...new Set([...fixtures, ...shared])].sort();
+	// The build step's script too: it makes the sandbox every test of every module runs in.
+	const build = String(tree.options.buildCommand ?? "")
+		.split(" ")
+		.filter((word) => word.endsWith(".ts"));
+	const paths = [...new Set([...fixtures, ...shared, ...build])].sort();
 	return {
 		...Object.fromEntries(paths.map((path) => [path, tree.blobs[path] ?? "absent"])),
 		...Object.fromEntries(RUNNERS.map((name) => [name, tree.versions[name] ?? "absent"])),
@@ -89,7 +93,12 @@ const concurrency = Math.max(1, Math.floor(availableParallelism() / 3));
 export const configuration = (tree: Tree, module: string, work: string, dry: boolean) => ({
 	...tree.options,
 	mutate: [module],
-	bun: { testFiles: testsOf(module, tree.tracked).sort(), timeout: limits.dryRunTimeoutMinutes * 60_000 },
+	// A `bun` block the shared file sets survives beside the module's own.
+	bun: {
+		...(tree.options.bun as object | undefined),
+		testFiles: testsOf(module, tree.tracked).sort(),
+		timeout: limits.dryRunTimeoutMinutes * 60_000,
+	},
 	incrementalFile: work,
 	...limits,
 	concurrency,

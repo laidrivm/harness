@@ -9,19 +9,21 @@
  * Its git runs without the variables git names as local, though `bun/mutation-run.ts` already starts Stryker without
  * them: an inherited `GIT_DIR` or `GIT_WORK_TREE` outranks the sandbox's `.git` and would commit in the checkout.
  */
-import { existsSync, rmSync } from "node:fs";
+import { realpathSync, rmSync } from "node:fs";
 import { unlocal } from "./git-local.ts";
 
 // The identity variables too: they outrank `-c user.name`, and would put the caller's identity on the sandbox commit.
 const identity = /^GIT_(AUTHOR|COMMITTER)_(NAME|EMAIL)$/;
 const env = Object.fromEntries(Object.entries(unlocal(process.env)).filter(([key]) => !identity.test(key)));
-const git = (...args: string[]) => Bun.spawnSync(["git", ...args], { env, stdout: "ignore", stderr: "inherit" });
+const git = (...args: string[]) => Bun.spawnSync(["git", ...args], { env, stdout: "pipe", stderr: "inherit" });
 const fail = (step: string) => {
 	console.error(`mutation-sandbox: git ${step} failed`);
 	process.exit(1);
 };
 
-if (!existsSync(".git") || git("rev-parse", "-q", "--verify", "HEAD").exitCode !== 0) {
+// The top level first: with no `.git` here, or one git does not accept, git answers from the checkout around it.
+const top = git("rev-parse", "--show-toplevel").stdout.toString().trim();
+if (top !== realpathSync(".") || git("rev-parse", "-q", "--verify", "HEAD").exitCode !== 0) {
 	rmSync(".git", { recursive: true, force: true });
 	if (git("init", "-q").exitCode !== 0) fail("init");
 	if (git("add", "-A").exitCode !== 0) fail("add");
