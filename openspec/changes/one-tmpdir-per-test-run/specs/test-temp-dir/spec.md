@@ -8,8 +8,9 @@ The harness's `bunfig.toml` SHALL preload, after the git-environment guard, a
 module that makes one directory named `harness-test-*` under the `TMPDIR` the
 run started with, sets `process.env.TMPDIR` to it before any test file loads,
 and removes it with everything under it once the run's last test file has
-finished, whether its tests passed or failed. A run the git-environment guard
-refuses SHALL make no such directory.
+finished, whether its tests passed or failed. A removal that fails SHALL NOT
+fail the run, and leaves the parent to a later run's sweep. A run the
+git-environment guard refuses SHALL make no such directory.
 
 #### Scenario: A fixture's temporary directory lands in the parent
 
@@ -35,6 +36,12 @@ refuses SHALL make no such directory.
   test
 - **THEN** the `TMPDIR` it started with holds what it held before the run
 
+#### Scenario: A parent that cannot be removed at the end
+
+- **WHEN** a passing run's test leaves a non-empty subdirectory without write
+  permission
+- **THEN** the run exits 0
+
 #### Scenario: A refused run makes no parent
 
 - **WHEN** the suite is started with `GIT_DIR` set and the git-environment
@@ -43,12 +50,15 @@ refuses SHALL make no such directory.
 
 ### Requirement: A killed run leaves one entry, which a later run removes
 
-A run killed before its end, a Stryker mutant killed on timeout among them,
-SHALL leave in the `TMPDIR` it started with only its `harness-test-*` parent.
-Before making its own parent, a run SHALL remove each `harness-test-*`
-directory under that `TMPDIR` that has not been modified for an hour, and
-SHALL keep every other one and every entry of any other name. An entry it
-cannot remove SHALL NOT stop the run.
+A run that ends without its end-of-run hooks — killed, a Stryker mutant
+killed on timeout among them, or stopped by a test's `process.exit` or by
+`--bail` — SHALL leave in the `TMPDIR` it started with only its
+`harness-test-*` parent. Before making its own parent, a run SHALL remove
+each `harness-test-*` directory under that `TMPDIR` that has not been
+modified for an hour, claiming it first by a rename to a name outside that
+pattern, so concurrent runs never remove the same one; it SHALL keep every
+other one and every entry of any other name. An entry it cannot claim or
+remove SHALL NOT stop the run.
 
 #### Scenario: A run killed mid-test
 
@@ -56,6 +66,12 @@ cannot remove SHALL NOT stop the run.
   `SIGKILL`
 - **THEN** the `TMPDIR` it started with holds one entry more than before, a
   `harness-test-*` directory
+
+#### Scenario: A run stopped by a test's process.exit
+
+- **WHEN** a test that has made temporary directories calls `process.exit(0)`
+- **THEN** the `TMPDIR` the run started with holds one entry more than
+  before, a `harness-test-*` directory
 
 #### Scenario: A later run removes an abandoned parent
 
