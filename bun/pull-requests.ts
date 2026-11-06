@@ -2,7 +2,8 @@
  * Pull requests read through GitHub's REST endpoint with `gh api`, and no
  * GraphQL, which a cloud session's proxy refuses: a branch's, for every caller
  * that asks what a branch's pull request is, and one by its number, for
- * `work.ts status` on a card whose `Pointer` names it. Both go
+ * `work.ts status` on a card whose `Pointer` names it and for `work.ts draft`.
+ * Both go
  * through one call: a read that has not answered within its time limit is
  * killed and fails, so no caller waits on a `gh` that neither answers nor
  * exits, and where `HARNESS_GITHUB_APP_MINT` names the key holder's mint, the
@@ -132,7 +133,8 @@ export function readPullRequests(branch: string, repo?: { owner: string; repo: s
 
 /**
  * Pull request `n` of the repository `repo` names, or `origin` given none: its
- * state and its base branch, or undefined for a read that failed — the
+ * state, its base branch, whether it is a draft and its head as REST gave it,
+ * unchecked, under `Pull`'s names, or undefined for a read that failed — the
  * reasons `readPullRequests` fails for, `n` not a positive whole number with
  * no leading zero, or an answer that is not that pull request with a base
  * branch, as an error body `gh` printed with exit 0 is not.
@@ -140,7 +142,7 @@ export function readPullRequests(branch: string, repo?: { owner: string; repo: s
 export function readPullRequest(
 	n: string,
 	repo?: { owner: string; repo: string },
-): { state: Pull["state"]; base: string } | undefined {
+): ({ state: Pull["state"]; base: string } & Pick<Pull, "draft" | "headRefOid">) | undefined {
 	// `n` goes into the API path, so only the digits the Pointer's pattern admits reach it, as the string, never `Number()`'s rounding.
 	if (!/^[1-9]\d*$/.test(n)) return undefined;
 	try {
@@ -155,7 +157,7 @@ export function readPullRequest(
 			typeof base !== "string"
 		)
 			return undefined;
-		return { state: stateOf(pr), base };
+		return { state: stateOf(pr), base, draft: pr.draft === true, headRefOid: pr.head?.sha };
 	} catch {
 		// A git, a mint or a spawn that throws, or output that is not JSON, fails the read.
 		return undefined;
