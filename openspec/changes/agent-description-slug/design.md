@@ -28,10 +28,12 @@ after a compaction.
 
 ## Decisions
 
-1. **One sentence appended to the delegation line.** It stays the one line
-   `fresh-subagent-brief` decided, in the preamble outside the Code, Process
-   and Safety sublists, whose counts stay as they are. Wording, for the
-   user's confirmation:
+Numbered as on the card's question of 2026-11-06, and the user's answers of
+the same day: 1 — ok, 2 — yes, 3 — ok.
+
+1. **One sentence appended to the delegation line.** User: ok. It stays the
+   one line `fresh-subagent-brief` decided, in the preamble outside the Code,
+   Process and Safety sublists, whose counts stay as they are. Wording:
 
    > Open the call's `description` with the slug of the change it carries, or
    > of the card where there is none, and name the agent's ID beside that card
@@ -39,7 +41,9 @@ after a compaction.
    > notifications show, and the ID is what `SendMessage` still reaches after
    > a compaction.
 
-2. **The test pins two phrases.** `bun/delegation.test.ts` adds
+2. **No mechanism; the rule holds it.** User: yes. Why none fits is under
+   *Alternatives*.
+3. **The test pins two phrases.** User: ok. `bun/delegation.test.ts` adds
    "`description` with the slug" and "the agent's ID" to the phrases it
    already expects in the preamble, so dropping either half fails it.
 

@@ -7,6 +7,6 @@
       Run `bun test bun/delegation.test.ts` and record that it fails (no
       sentence)
 - [ ] 1.2 Append the sentence of design decision 1, in the wording the user
-      confirmed, to the delegation line of `core/rules.md`'s `### Rules`
+      confirmed on 2026-11-06, to the delegation line of `core/rules.md`'s `### Rules`
       preamble. Run `bun test bun/delegation.test.ts` green, then every test
       file that reads `core/rules.md`
