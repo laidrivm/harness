@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { unsaved } from "./mutation-checkout.ts";
+import { load, unsaved } from "./mutation-checkout.ts";
 import { command } from "./mutation-run.ts";
 
 const script = `${import.meta.dir}/mutation-run.ts`;
@@ -40,11 +40,16 @@ const git = (dir: string, ...args: string[]) => {
 	if (run.exitCode !== 0) throw new Error(run.stderr.toString());
 };
 
-/** A committed repository holding `files` and one module with a test, `listed` the modules it mutates. */
+/**
+ * A committed repository holding `files` and one module with a test, `listed` the modules it mutates, and ignoring what
+ * a run and the stubs write, as the harness's `.gitignore` does.
+ */
 function repository(files: Record<string, string> = {}, listed = ["bun/a.ts"]): string {
 	const dir = scratch();
 	const config = `${JSON.stringify({ mutate: listed })}\n`;
-	write(dir, { "stryker.config.json": config, "bun/a.ts": "1\n", "bun/a.test.ts": "1\n", ...files });
+	const ignore = ".stryker-tmp\nreports\ncalls\nfail-once\n";
+	const base = { ".gitignore": ignore, "stryker.config.json": config, "bun/a.ts": "1\n", "bun/a.test.ts": "1\n" };
+	write(dir, { ...base, ...files });
 	git(dir, "init", "-q", "-b", "main");
 	git(dir, "add", "-A");
 	git(dir, "commit", "-qm", "base");
@@ -64,7 +69,8 @@ function path(stubs: Record<string, string>): string {
 }
 
 const cli = (cwd: string, bin: string, ...args: string[]) => {
-	const run = Bun.spawnSync(["bun", script, ...args], { cwd, env: { PATH: bin, HOME: cwd }, stderr: "pipe" });
+	// HOME outside the repository: bun caches there, and a run refuses untracked files.
+	const run = Bun.spawnSync(["bun", script, ...args], { cwd, env: { PATH: bin, HOME: scratch() }, stderr: "pipe" });
 	return { code: run.exitCode, err: run.stderr.toString() };
 };
 
@@ -232,6 +238,23 @@ describe("the command", () => {
 		// Twice: the second finds the sandbox's repository already made.
 		for (const _ of [1, 2]) expect(Bun.spawnSync(["sh", "-c", command("bun/a.ts")], { cwd: sandbox }).exitCode).toBe(0);
 		expect([existsSync(join(sandbox, "leak")), existsSync(join(checkout, "leak"))]).toEqual([true, false]);
+	});
+
+	test("the sandbox's repository has a HEAD, and one an earlier attempt left without it is remade", () => {
+		const sandbox = join(repository(), ".stryker-tmp", "sandbox-1");
+		write(sandbox, { "bun/a.ts": "1\n", "bun/a.test.ts": 'import { test } from "bun:test";\ntest("a", () => {});\n' });
+		git(sandbox, "init", "-q");
+		const head = () => Bun.spawnSync(["git", "log", "--format=%an", "-1"], { cwd: sandbox }).stdout.toString().trim();
+		expect(Bun.spawnSync(["sh", "-c", command("bun/a.ts")], { cwd: sandbox }).exitCode).toBe(0);
+		expect(head()).toBe("stryker");
+	});
+
+	test.each([
+		["no mutate", "{}\n"],
+		["a mutate entry that is not a path", '{ "mutate": [1] }\n'],
+	])("a stryker.config.json with %s fails naming the key", (_, config) => {
+		const dir = repository({ "stryker.config.json": config });
+		expect(() => load(dir)).toThrow("stryker.config.json's mutate must list the modules the run mutates");
 	});
 
 	test.each([

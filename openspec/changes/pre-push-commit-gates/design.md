@@ -136,7 +136,13 @@ and its preload hash differently (`HEAD`'s blob ids, the step refusing while
 any of them is dirty) from the fingerprint its stored file records: the
 command runner reports no tests, so Stryker cannot see a test change (the
 probe confirms this, and `--force` goes if it is wrong); a test change that
-leaves every result as it was still rewrites the fingerprint. A change to a
+leaves every result as it was still rewrites the fingerprint. The fingerprint
+also holds, as text, the command a mutant runs and the options it runs under —
+`stryker.config.json`'s save `mutate`, and decision 7's timeouts — so changing
+how mutants are judged re-runs every module; `concurrency` stays out, being
+the machine's. A run that would mutate refuses while anything outside
+`mutation/` is edited or untracked, since Stryker copies the working tree, not
+`HEAD`, and the sandbox's repository would hold it. A change to a
 non-fixture helper another module imports re-runs only the helper's own
 module; `--all --force` by hand refreshes everything. Deriving importers was
 the alternative, rejected as machinery for a rare case.
@@ -234,17 +240,18 @@ line there and a run that writes its stored file.
 `timeoutMS`, the dry run timed alone while the mutants ran on 11 workers,
 where a suite ran up to 5 times slower. They sit beside `dryRunTimeoutMinutes`
 in `bun/mutation-run.ts`, whose comment says why, since JSON holds none:
-`concurrency` 4, a third of the laptop's cores, leaving room for the agents
-beside it; `timeoutFactor` 3 and `timeoutMS` 10 000, a slowdown of three
-plus 10 s of start-up. The baseline checks them: a listed module with more
+`concurrency` a third of the machine's cores (4 on the laptop), leaving room
+for the agents beside it; `timeoutFactor` 3 and `timeoutMS` 10 000, a
+slowdown of three plus 10 s of start-up. The baseline checks them: a listed module with more
 than 5 % `Timeout` means the list or these values are wrong.
 
 **The sandbox.** Stryker never copies `.git`, and its sandbox sits under the
 checkout, so `git rev-parse --show-toplevel` from it — `bun/root.ts`,
 `bun/tracked.ts`, `sync.ts`'s main block — named the real checkout. The
 command each mutant runs first makes the sandbox a repository of its own
-(`git init` and `git add -A`, once, in the dry run before any worker starts),
-so git stops there. Smallest sound fix, against the alternatives:
+(`git init`, `git add -A` and one commit, so a test reading `HEAD` reads the
+sandbox's, once, in the dry run before any worker starts, and again where an
+earlier attempt left `.git` without a `HEAD`), so git stops there. Smallest sound fix, against the alternatives:
 
 - excluding main-block mutants covers the one path seen, not a mutant
   elsewhere that turns a test's directory into the `root` git names, and
