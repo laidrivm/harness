@@ -50,8 +50,9 @@ agent SHALL resolve the thread of a skipped or rejected finding, nor post
 
 #### Scenario: Only findings already fixed
 
-- **WHEN** the run applies no fix and verifies an unresolved thread's finding
-  as already fixed on the head
+- **WHEN** the run, in a session whose launcher does not push for it,
+  applies no fix and verifies an unresolved thread's finding as already fixed
+  on the head
 - **THEN** the session runs the named `resolve` at once, with no `finish`
   before it
 
