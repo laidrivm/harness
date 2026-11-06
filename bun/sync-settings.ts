@@ -1,6 +1,7 @@
 /**
  * The policy half of `sync.ts`: every value `settings.ts` compares exactly,
- * written into the consumer's `.claude/settings.json` and `bunfig.toml`, so a
+ * written into the consumer's `.claude/settings.json`, `bunfig.toml` and
+ * `package.json`'s `deps` script, so a
  * harness change to a hook or a list lands with the pin rather than as a hand
  * edit in each consumer. What the check only refuses — an empty allow list,
  * `disableAllHooks`, an `mcp__` deny or allow rule with parentheses — stays
@@ -10,7 +11,18 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { HOOKS, MARK, registration } from "./bootstrap.ts";
 import { isRecord } from "./is-record.ts";
-import { ASK, ATTRIBUTION, DENY, EDIT_ASK, EDIT_DENY, INSTALL, MARKETPLACE, MCP_ASK, PLUGINS } from "./settings.ts";
+import {
+	ASK,
+	ATTRIBUTION,
+	DENY,
+	DEPS,
+	EDIT_ASK,
+	EDIT_DENY,
+	INSTALL,
+	MARKETPLACE,
+	MCP_ASK,
+	PLUGINS,
+} from "./settings.ts";
 
 type Group = { matcher?: string; hooks?: { command?: unknown }[] };
 type Settings = {
@@ -49,17 +61,24 @@ function owned(list: string[], prefix: string, entries: string[]) {
 /** `list` with `file` appended when absent. */
 const withFile = (list: string[], file: string) => (list.includes(file) ? list : [...list, file]);
 
+/** `text` parsed by `parse`, `{}` for a missing file, or a throw naming `file`. */
+function parsed(file: string, text: string | undefined, parse: (text: string) => unknown = JSON.parse) {
+	try {
+		return text === undefined ? {} : parse(text);
+	} catch (error) {
+		throw new Error(`${file}: ${(error as Error).message}`);
+	}
+}
+
+/** The indentation `text` uses, a tab where it shows none. */
+const indentOf = (text: string | undefined) => text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";
+
 /**
  * The settings file's new text: the harness's hooks, lists, attribution, two
  * plugins and `ponytail` marketplace, the rest kept.
  */
 function settingsText(text: string | undefined): string {
-	let config: Settings;
-	try {
-		config = text === undefined ? {} : JSON.parse(text);
-	} catch (error) {
-		throw new Error(`.claude/settings.json: ${(error as Error).message}`);
-	}
+	const config = parsed(".claude/settings.json", text) as Settings;
 	const hooks = config.hooks ?? {};
 	for (const [event, groups] of Object.entries(hooks)) {
 		if (!Array.isArray(groups)) throw new Error(`.claude/settings.json: hooks.${event} is not a list`);
@@ -93,8 +112,7 @@ function settingsText(text: string | undefined): string {
 			throw new Error(`.claude/settings.json: ${key} is not an object`);
 	config.enabledPlugins = { ...config.enabledPlugins, ...Object.fromEntries(PLUGINS.map((id) => [id, true])) };
 	config.extraKnownMarketplaces = { ...config.extraKnownMarketplaces, ponytail: MARKETPLACE };
-	const indent = text?.match(/\n([ \t]+)"/)?.[1] ?? "\t";
-	return `${JSON.stringify(config, null, indent)}\n`;
+	return `${JSON.stringify(config, null, indentOf(text))}\n`;
 }
 
 /** JSON's spelling of a boolean, a number and a string array is TOML's too. */
@@ -145,22 +163,52 @@ function bunfigText(text: string | undefined): string {
 }
 
 /**
- * Writes the harness's policy into `root`'s two files. Both new texts are
- * computed, and the `bunfig.toml` one verified, before either is written, so
- * a throw leaves both as they were.
+ * `package.json`'s new text: `scripts.deps` added after the other scripts, or
+ * the text unchanged when it already holds `DEPS`. A `deps` of the
+ * consumer's own is refused, since overwriting it would break what calls it.
  */
-export function syncSettings(root: string): void {
-	const settingsFile = join(root, ".claude/settings.json");
-	const bunfigFile = join(root, "bunfig.toml");
-	const settings = read(settingsFile);
-	const bunfig = read(bunfigFile);
-	const writes = [
-		[bunfigFile, bunfig, bunfigText(bunfig)],
-		[settingsFile, settings, settingsText(settings)],
-	] as const;
+function packageText(text: string | undefined): string {
+	// JSONC, as bun reads the manifest; a comment it held is lost only when the script is added.
+	const manifest = parsed("package.json", text, Bun.JSONC.parse);
+	if (!isRecord(manifest)) throw new Error("package.json: not an object");
+	const scripts = manifest.scripts ?? {};
+	if (!isRecord(scripts)) throw new Error("package.json: scripts is not an object");
+	if (scripts.deps === DEPS) return text as string;
+	if (scripts.deps !== undefined)
+		throw new Error(
+			`package.json: scripts.deps is ${JSON.stringify(scripts.deps)}, not "${DEPS}" — rename that script, then sync`,
+		);
+	return `${JSON.stringify({ ...manifest, scripts: { ...scripts, deps: DEPS } }, null, indentOf(text))}${text === undefined || text.endsWith("\n") ? "\n" : ""}`;
+}
+
+type Write = readonly [file: string, was: string | undefined, now: string];
+
+/**
+ * The harness's policy for `root`'s three files, every new text computed and
+ * the `bunfig.toml` one verified, so a throw comes before any write — `sync.ts`
+ * calls this before it touches the rules copy too.
+ */
+export function settingsWrites(root: string): Write[] {
+	return (
+		[
+			[join(root, "bunfig.toml"), bunfigText],
+			[join(root, ".claude/settings.json"), settingsText],
+			[join(root, "package.json"), packageText],
+		] as const
+	).map(([file, text]) => {
+		const was = read(file);
+		return [file, was, text(was)] as const;
+	});
+}
+
+/** Writes each of `writes` whose text changed. */
+export function applyWrites(writes: Write[]): void {
 	for (const [file, was, now] of writes)
 		if (was !== now) {
 			mkdirSync(dirname(file), { recursive: true });
 			writeFileSync(file, now);
 		}
 }
+
+/** Writes the harness's policy into `root`'s three files, or none of them. */
+export const syncSettings = (root: string) => applyWrites(settingsWrites(root));

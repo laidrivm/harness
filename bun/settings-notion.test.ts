@@ -30,6 +30,7 @@ function named(groups: object[]): boolean {
 	const config = { hooks: { PreToolUse: groups } };
 	writeFileSync(join(dir, ".claude/settings.json"), JSON.stringify(config));
 	writeFileSync(join(dir, "bunfig.toml"), "");
+	writeFileSync(join(dir, "package.json"), "{}");
 	Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
 	return settings(dir).some((problem) =>
 		problem.includes("the PreToolUse hook is not the harness Notion update guard"),
