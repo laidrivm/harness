@@ -68,8 +68,8 @@ The three gaps the proposal names all sit in that path:
 ### 1. The prompt hook reports the failure file too
 
 `UserPromptSubmit` gains the report the start hook runs: when the file
-exists, print the ask line and the file, then move it to
-`.harness-deploy-failed.reported`. Claude Code adds a `UserPromptSubmit`
+exists, move it to `.harness-deploy-failed.reported` and print the ask line
+and the file (decision 2 says why in that order). Claude Code adds a `UserPromptSubmit`
 hook's plain-text standard output to the context, as it does
 `SessionStart`'s (hooks reference, *Exit code 0*, read 06.11), so the
 session reads it with the prompt that follows the failure.
@@ -118,6 +118,14 @@ into a writable one and exits 0 — drops the report it has just printed, and
 does so on every later start. With exit 0 the report reaches the session,
 the file stays where it was, and the next start or prompt reports it again,
 which is the louder failure.
+
+The script moves the file before it reads it, and reads whichever path the
+file is then at (local `/code-review`, group 1). The deploy replaces the file
+by `rm` and a new write, so a read before the move could print one failure
+and move aside a newer one that arrived in between, unread. A directory at
+`.reported`, writable or not, counts as a failed move, since `mv` would
+nest the file inside a writable one where nothing looks. A file it cannot
+read is still reported, by its path.
 
 The inline command had no file whose mode could break it; the script does.
 The Dockerfile's mode check gains the script: a builder that took

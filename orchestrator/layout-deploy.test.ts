@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
 import { instructions, madeOpen, read, root } from "./layout.fixture.ts";
@@ -164,19 +164,38 @@ describe("the container's managed settings", () => {
 	});
 
 	// spec: orchestrator/the-failure-file-cannot-be-moved-aside
-	// A read-only directory stops nobody running as root, whom no session runs as.
-	test.skipIf(process.getuid?.() === 0).each([
-		["SessionStart", "startup"],
+	const hooks = [
+		["SessionStart", "resume"],
 		["UserPromptSubmit", undefined],
-	])(
+	] as const;
+	const line = "20261106T100000Z deploy: the push failed at 0123abc";
+	/** Two runs of the hook each print the report, and the failure file is left in place. */
+	function reportedTwice(home: string, event: string, source?: string) {
+		for (const _ of [1, 2]) expect(run(home, event, source).split("\n").slice(1, 2)).toEqual([line]);
+		expect(readFileSync(join(home, ".harness-deploy-failed"), "utf8")).toBe(`${line}\n`);
+	}
+
+	// spec: orchestrator/the-failure-file-cannot-be-moved-aside
+	test.each(hooks)("a %s hook leaves the file in place when a directory sits at the reported one", (event, source) => {
+		const home = emptyDir("orchestrator-home-");
+		failed(home, line);
+		mkdirSync(join(home, ".harness-deploy-failed.reported"));
+		reportedTwice(home, event, source);
+	});
+
+	// spec: orchestrator/the-failure-file-cannot-be-moved-aside
+	// A read-only directory stops nobody running as root, whom no session runs as.
+	test.skipIf(process.getuid?.() === 0).each(hooks)(
 		"a %s hook whose move aside fails still prints the report, exits 0, and the next one reports it again",
 		(event, source) => {
 			const home = emptyDir("orchestrator-home-");
-			const line = "20261106T100000Z deploy: the push failed at 0123abc";
 			failed(home, line);
-			mkdirSync(join(home, ".harness-deploy-failed.reported"), { mode: 0o555 });
-			for (const _ of [1, 2]) expect(run(home, event, source).split("\n").slice(1, 2)).toEqual([line]);
-			expect(readFileSync(join(home, ".harness-deploy-failed"), "utf8")).toBe(`${line}\n`);
+			chmodSync(home, 0o555);
+			try {
+				reportedTwice(home, event, source);
+			} finally {
+				chmodSync(home, 0o755);
+			}
 		},
 	);
 
