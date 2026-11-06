@@ -92,11 +92,14 @@ const concurrency = Math.max(1, Math.floor(availableParallelism() / 3));
  * committed, so a test reading `HEAD` reads the sandbox's, and remade when an earlier attempt left it without one. The
  * `-c` values keep the user's identity, signing and hooks out of it. First, as `.githooks/pre-push` does, it unsets the
  * variables git names as local: an inherited `GIT_DIR` or `GIT_WORK_TREE` outranks the sandbox's `.git` and would make
- * and commit the repository in the checkout instead.
+ * and commit the repository in the checkout instead. It unsets git's identity variables too, which outrank any `-c`:
+ * a runner that exports them would otherwise author the sandbox's commit. `author.*` and `committer.*` are set beside
+ * `user.*` because a global `author.*` or `committer.*` outranks `user.*` given on the command line.
  */
 export const command = (module: string) =>
-	"unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A" +
-	" && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null" +
+	"unset $(git rev-parse --local-env-vars) GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A" +
+	" && git -c user.name=stryker -c user.email=stryker@sandbox -c author.name=stryker -c author.email=stryker@sandbox" +
+	" -c committer.name=stryker -c committer.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null" +
 	` commit -qm sandbox; }; } && bun test ${stem(module)}`;
 
 const same = (a: Record<string, string> | undefined, b: Record<string, string>) =>

@@ -2525,7 +2525,7 @@
 		"bun/review-config.test.ts": "8ce67bb36be07208fdc9d2c22d6a35a74ee039de",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/review-config",
+		"stryker command": "unset $(git rev-parse --local-env-vars) GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c author.name=stryker -c author.email=stryker@sandbox -c committer.name=stryker -c committer.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/review-config",
 		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }
