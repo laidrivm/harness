@@ -67,18 +67,19 @@ export function trim(report: Report, print: Record<string, string>): Stored {
 }
 
 /**
- * What a run whose tests changed hands Stryker to reuse: every result but a survivor. Stryker 10's differ reuses a
- * survivor that gained no covering test, and it reads a test as changed only where the edit falls between its start
- * and the next test's: a static mutant has no covering test to compare, and an edit to setup above the first test
- * changes none, so a test that now kills either would leave the floor counting it. Left out, Stryker runs each again
- * as a new mutant, against the tests that cover it.
+ * What a run whose tests changed hands Stryker to reuse: every result but a survivor, `Survived` or `NoCoverage`.
+ * Stryker 10's differ reuses a result that is not `Killed` when its mutant gained no covering test, and it reads a test
+ * as changed only where the edit falls between its start and the next test's: a static mutant has no covering test to
+ * compare — one setup code now reaches included, whose old result was `NoCoverage` — and an edit to setup above the
+ * first test changes none, so a test that now kills either would leave the floor counting it. Left out, Stryker runs
+ * each again as a new mutant, against the tests that cover it.
  */
 export const reusable = (stored: Stored): Stored => ({
 	...stored,
 	files: Object.fromEntries(
 		Object.entries(stored.files).map(([path, file]) => [
 			path,
-			{ ...file, mutants: file.mutants.filter((m) => m.status !== "Survived") },
+			{ ...file, mutants: file.mutants.filter((m) => m.status !== "Survived" && m.status !== "NoCoverage") },
 		]),
 	),
 });
