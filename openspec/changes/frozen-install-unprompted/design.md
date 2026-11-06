@@ -21,7 +21,8 @@ does not).
 
 **Goals:**
 - `bun install --frozen-lockfile` and `bun i --frozen-lockfile` run without a
-  prompt, before and after the harness is installed.
+  prompt, before and after the harness is installed: in auto mode, and in the
+  default mode where `allow` holds them (decision 5; a consumer adds its own).
 - Every other install form is refused, with no prompt a local `allow` could
   silence.
 
