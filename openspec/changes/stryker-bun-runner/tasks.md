@@ -31,4 +31,4 @@
 - [x] 5.2 Run `bun bun/mutation-run.ts` unnamed, which writes the report, then set `harness.mutationFloor.surviving` to the count `bun bun/mutation-floor.ts` names, its `why` naming the share now `NoCoverage` and each refactor — verified by the floor passing
 - [x] 5.3 Cite the scenarios *A survivor no test reaches*, *A mutant no test reaches* and *A module its tests reach only through a child process* from cases in `bun/mutation-floor.test.ts` and `bun/mutation-run.test.ts`, the last over a fixture stored file whose mutants read `NoCoverage` — verified by `bun bun/check.ts` passing `harness.uncitedFloor` unchanged
 - [x] 5.4 Update the comments in `bun/mutation-run.ts`, `bun/mutation-floor.ts` and `.github/workflows/mutation.yml` that name the command runner — verified by `grep -rn "command runner" bun .github` naming none
-- [ ] 5.5 Run `bash .githooks/gates.sh` twice: the second run mutates nothing and passes — verified by its output
+- [x] 5.5 Run `bash .githooks/gates.sh` twice: the second run mutates nothing and passes — verified by its output
