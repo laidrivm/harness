@@ -397,8 +397,9 @@ Before each start `session.sh` adds ponytail's marketplace at the tag the
 clone's `.claude/settings.json` pins and installs the plugin, both at
 `--scope local`; whether that works before the trust is unmeasured. Their
 output goes to `/home/agent/.cache/session-start.log`, since claude's screen
-covers the pane, so read a failed install there; never run `claude plugin marketplace remove ponytail` in the clone,
-which strips ponytail from its tracked `.claude/settings.json`.
+covers the pane, so read a failed install there; never run `claude plugin
+marketplace remove ponytail` in the clone, which strips ponytail from its
+tracked `.claude/settings.json`.
 
 1. The commit identity, the App's bot. On a host that already runs the stack,
    do this before pulling the change that needs it, since every

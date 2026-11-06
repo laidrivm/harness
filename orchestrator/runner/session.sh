@@ -5,7 +5,8 @@
 # conversation, or a new one where it has none (user, 03.11, reversing answer
 # 1 a), pause 5 s once it exits, and again.
 # A failed pull or install, of either kind, prints its line and starts claude all the same, on
-# the tree and the dependencies the clone already holds. With no clone yet,
+# the tree and the dependencies the clone already holds; ponytail's line also covers a failed
+# read of its source, a failed marketplace add and a start log that cannot be opened. With no clone yet,
 # claude starts in HOME, so the user can log in first.
 #
 # The clone is $HOME/harness, not a variable: the test runs this with a
@@ -28,7 +29,9 @@ while :; do
 		# ship-ponytail D7).
 		# coreutils' timeout, so a network that hangs cannot hold the start; --foreground keeps claude
 		# in the pane's foreground process group, where a tty read would otherwise stop it.
-		# A log, since claude's screen draws over the pane and hides a failure's line.
+		# A log, since claude's screen draws over the pane and hides a failure's line. Stdin is
+		# /dev/null, so a prompt the log would hide reads end of file instead of waiting out the limit;
+		# both calls succeeded without a tty on the VPS (06.11).
 		mkdir -p "$HOME/.cache"
 		{
 			date -u "+%Y-%m-%dT%H:%M:%SZ ponytail's install"
@@ -39,7 +42,7 @@ while :; do
 				timeout --foreground 120 claude plugin marketplace add "$src" --scope local &&
 				# Local scope: project scope rewrites the tracked settings, dirtying the clone (answer 5 а).
 				timeout --foreground 120 claude plugin install ponytail@ponytail --scope local
-		} >>"$HOME/.cache/session-start.log" 2>&1 || echo "session: ponytail's install failed; starting claude anyway" >&2
+		} </dev/null >>"$HOME/.cache/session-start.log" 2>&1 || echo "session: ponytail's install failed; starting claude anyway" >&2
 	else
 		cd "$HOME"
 	fi
