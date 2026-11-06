@@ -100,7 +100,9 @@ choices are `design.md`'s decisions 1–9.
       805 000 is refused for size
       (`the-turn-gate-refuses-the-first-stop-after-a-compaction`); a mark
       written outside a repository and a stop at 850 000 is refused for size
-      (`outside-a-repository`, `commit-gates/outside-a-repository-a-full-context`).
+      (`outside-a-repository`, `commit-gates/outside-a-repository-a-full-context`);
+      a marked commit, then a detached `HEAD` and a stop at 850 000, is
+      refused for size (`on-a-detached-head`).
       Passing today and kept as guards:
       spawned as the hook, the twentieth continued stop prints `continue:
       false` and no wrap-up reason (`the-ceiling-at-the-same-stop`); a stop
@@ -117,7 +119,9 @@ choices are `design.md`'s decisions 1–9.
       size refusal to `log` as its own decision; `judge()` logs as today; the
       hook maps the size refusal to `record("context-window", "refused",
       "wrapup", event)`. The header gains one paragraph naming the check, its order
-      and its module; the `ponytail:` comment on the store names `.wrapup`.
+      and its module, and its fail-open paragraph says that no repository
+      and a detached `HEAD` end the turn gate's own judgement, not the
+      size check's; the `ponytail:` comment on the store names `.wrapup`.
       Verify with `bun test bun/turn-gate* bun/context-window.test.ts
       bun/gate-ledger*`, and `wc -l bun/turn-gate.ts` at or under 300 (the
       file ends in a newline, so `wc -l` equals `file-size.ts`'s count)
