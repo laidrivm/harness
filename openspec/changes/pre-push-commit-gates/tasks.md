@@ -189,7 +189,10 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
       of theirs moved between two whole runs under different timeouts
       (decision 8); `notion-release` and `sync-settings` changed on main
       since. The second run mutated nothing and exited 0, and the root gained
-      only `mutation/` and the ignored `reports/` and `.stryker-tmp/`
+      only `mutation/` and the ignored `reports/` and `.stryker-tmp/`. After
+      #443's local review put the command and options in the fingerprint and
+      committed the sandbox, a third whole run (6 min 44 s, load 4.4 to 8.3
+      beside other runs) left every mutant's status as it was
 
 ## 7. The mutation step in the hook and in CI
 
