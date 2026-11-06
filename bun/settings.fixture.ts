@@ -23,6 +23,7 @@ import {
 	TURN_MARK,
 	TURN_STOP,
 } from "./bootstrap.ts";
+import { MARKETPLACE, PLUGINS } from "./settings.ts";
 
 const made: string[] = [];
 
@@ -82,6 +83,9 @@ export const policy = () => ({
 		allow: ["Bash(bun test *)", "Read(docs/**)"],
 	},
 	attribution: { pr: "", sessionUrl: false } as unknown,
+	// From the source, so a pin move edits no fixture; the own-settings cases pin the values.
+	enabledPlugins: Object.fromEntries(PLUGINS.map((id) => [id, true])) as Record<string, unknown> | undefined,
+	extraKnownMarketplaces: { ponytail: structuredClone(MARKETPLACE) } as Record<string, unknown>,
 	hooks: {
 		PreToolUse: [
 			{
