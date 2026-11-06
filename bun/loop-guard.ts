@@ -8,7 +8,9 @@
  * under the prompt being processed and warns the agent, through
  * `additionalContext` beside the error. On `PreToolUse` it refuses a barred
  * call made under that same prompt, by exiting 2 with the reason on stderr; a
- * new prompt lets the call run once more. Each warning and refusal is one
+ * new prompt lets the call run once more. A pending checks read — `gh pr
+ * checks` alone on its line, with plain words after it, exiting 8 — is not a
+ * failure, and is not counted. Each warning and refusal is one
  * record in the gate ledger. It never ends the session. The thresholds are
  * fixed by `openspec/specs/loop-guard/spec.md`, not by
  * configuration.
@@ -139,6 +141,23 @@ function countFile(store: string, event: Event): string | undefined {
 }
 
 /**
+ * A `gh pr checks` call alone — words of a set that starts no expansion, at
+ * most a last `2>&1` — so its exit code is gh's, and a separator is a space
+ * or a tab, since a newline would start a second command. The one expansion
+ * left is zsh's leading `=word`, which fails the line with 1 before gh runs,
+ * so it is safe only while the exemption holds no exit code but 8.
+ */
+const CHECKS_READ = /^gh[ \t]+pr[ \t]+checks(?:[ \t]+[\w./:@=-]+)*(?:[ \t]+2>&1)?$/;
+
+/** Whether a failure is a checks read that only found checks still pending. */
+function pending(tool: string, input: unknown, error: string): boolean {
+	const command: unknown = isRecord(input) ? input.command : undefined;
+	if (tool !== "Bash" || typeof command !== "string") return false;
+	// gh pr checks --help: `8: Checks pending`.
+	return error.split("\n", 1)[0] === "Exit code 8" && CHECKS_READ.test(command.trim());
+}
+
+/**
  * Plays the event's role, choosing it from `hook_event_name`: the refusal on
  * `PreToolUse`, the warning on a failure that bars its call, and nothing on
  * any other failure or event.
@@ -155,6 +174,7 @@ export function guard(event: Event, store: string): Answer | undefined {
 	}
 	if (event.hook_event_name !== "PostToolUseFailure") return;
 	if (event.is_interrupt === true || typeof error !== "string") return;
+	if (pending(tool, event.tool_input, error)) return;
 	const print = fingerprint(key, error);
 	const next = fail(load(file), key, print, prompt);
 	mkdirSync(store, { recursive: true });

@@ -6,9 +6,9 @@
  * Stryker that crashed is a non-zero exit its own invoker already surfaced, and
  * this check never has to tell that apart from an exceeded floor.
  *
- * The invoker also deletes the previous report before the run — see
- * `.github/workflows/mutation.yml`. A reader cannot tell a stale report from a
- * fresh one; an absent one already fails here.
+ * The invoker also deletes the previous report before writing it — in the
+ * harness, the mutation step `bun/mutation-run.ts`. A reader cannot tell a
+ * stale report from a fresh one; an absent one already fails here.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

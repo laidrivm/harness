@@ -6,7 +6,7 @@ first where they change behaviour.
 
 ## 1. The spec describes the harness
 
-- [ ] 1.1 Confirm `pre-push-commit-gates` is archived on `main` and
+- [x] 1.1 Confirm `pre-push-commit-gates` is archived on `main` and
       `package.json` declares `harness.mutationFloor`. Verify with
       `git ls-tree --full-tree --name-only origin/main openspec/changes/archive/`
       naming a `*-pre-push-commit-gates` directory and `git show
@@ -14,7 +14,9 @@ first where they change behaviour.
       `main`'s manifest, not the work tree's; if either is missing,
       stop and leave this change unarchived. Open at apply (2026-11-01):
       neither was on `main` yet, so this box waits for
-      `pre-push-commit-gates`' archive
+      `pre-push-commit-gates`' archive. Done 2026-11-06: `main` holds
+      `2026-11-06-pre-push-commit-gates` and its manifest names
+      `"mutationFloor"`
 - [x] 1.2 Confirm the three cases citing this requirement's scenarios still
       cite them. Verify with `grep -n "spec: mutation-floor/<slug>$"
       bun/*.test.ts` printing a line for each `<slug>` of

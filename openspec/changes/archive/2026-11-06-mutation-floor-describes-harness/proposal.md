@@ -15,8 +15,10 @@ while that change was proposed; it was left out because that diff was already
 `40a39875c31b81eb836bfb46d8f41e9c`, explored 2026-11-01).
 
 `pre-push-commit-gates` does not reach this requirement: its
-`mutation-floor` delta only adds the three requirements on what the harness
-mutates and where the results are stored.
+`mutation-floor` delta only adds the requirements on what the harness
+mutates and where the results are stored. Its archive (#453) handed this
+change four wording Minors on two of those, which the archive settles as
+MODIFIED deltas (design.md, decision 9).
 
 ## What Changes
 
@@ -59,7 +61,10 @@ None.
 
 - `mutation-floor`: *The count of surviving mutants may not rise silently*
   describes the floor as `harness.mutationFloor` declares it, the report path
-  the check reads, and the harness's mutated modules.
+  the check reads, and the harness's mutated modules. At archive, *Each
+  module's results are stored in the tree* and *A run mutates only what its
+  stored results do not cover* say what the mutation step already does
+  (decision 9).
 - `spec-test-traceability`: *The count of uncited criteria may not rise
   silently* describes the floor as `harness.uncitedFloor` declares it and the
   gate that runs it.

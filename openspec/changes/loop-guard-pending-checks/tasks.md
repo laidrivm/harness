@@ -6,7 +6,7 @@ names it.
 
 ## 1. The guard skips a pending checks read
 
-- [ ] 1.1 Failing cases in a new `bun/loop-guard-pending.test.ts`, since
+- [x] 1.1 Failing cases in a new `bun/loop-guard-pending.test.ts`, since
       `bun/loop-guard.test.ts` would pass the 300-line cap, on the fixture
       `bun/loop-guard.fixture.ts`, each driving the spawned guard with three
       or four failures under one prompt:
@@ -37,7 +37,7 @@ names it.
       Verify `bun test bun/loop-guard-pending.test.ts` fails on the
       not-counted cases and the skipped-read case — whose `Exit code 8`
       folds to the same fingerprint as `Exit code 1` today — and only those
-- [ ] 1.2 Then, in `bun/loop-guard.ts`, `guard()` returns before it loads
+- [x] 1.2 Then, in `bun/loop-guard.ts`, `guard()` returns before it loads
       the count when the tool is `Bash`, the trimmed `command` matches
       `gh pr checks` followed by space- or tab-separated words of letters,
       digits and `./:@=_-` and at most a trailing `2>&1`, and the error's

@@ -2,8 +2,8 @@
 
 ### Requirement: The host deploys main's green head and nothing else
 
-A root timer SHALL start the host's deploy every five minutes, one run at a
-time. Each run SHALL compare `origin/main`'s head with the commit it last
+A root timer SHALL start the host's deploy five minutes after boot and five
+minutes after each run ends, one run at a time. Each run SHALL compare `origin/main`'s head with the commit it last
 deployed and with the commit it last rolled back. When the head is neither and
 its latest `test` check run from `github-actions` has concluded `success`, the
 run SHALL fast-forward the host's checkout to that head and rebuild the
@@ -67,8 +67,10 @@ The runner image SHALL carry managed settings whose `SessionStart` hook, on
 startup and on clear, marks the session fresh in agent's home, leaving the
 mark as it was on a start that continues a conversation, and whose
 `UserPromptSubmit` hook removes the mark. After its build the deploy SHALL
-bring the stack up only while the mark exists; otherwise it SHALL exit 0
-without recording the head, so the next tick tries again. When `up` leaves
+bring the stack up only when its last look for the mark, right before `up`,
+finds it; otherwise it SHALL exit 0 without recording the head, so the next
+tick tries again. A prompt submitted after that look MAY be cut short by the
+restart. When `up` leaves
 the runner container as it was, the deploy SHALL restart the runner, so the
 session starts again on the updated clone.
 
@@ -99,8 +101,8 @@ session starts again on the updated clone.
 
 #### Scenario: The user's first message
 
-- **WHEN** the managed hooks run for a session start and then for a submitted
-  prompt
+- **WHEN** the managed hooks run for a `startup` or `clear` session start and
+  then for a submitted prompt
 - **THEN** the mark exists after the first and not after the second
 
 #### Scenario: A continued start
@@ -117,19 +119,22 @@ runs as the previous image. After bringing the stack up it SHALL wait at most
 two minutes for the tmux session `main` in the runner. When `main` is not up
 by then, it SHALL write the failure file, record the head as rolled back,
 bring the runner up on the previous image once, and SHALL NOT deploy that
-head again. A rollback that fails SHALL be told by the failure file and the
+head again while the record holds it; a record that cannot be written SHALL
+be told by the journal. A rollback that fails SHALL be told by the failure file and the
 journal and left for the user; retrying or verifying it is stage 9's.
 
 #### Scenario: The session comes back
 
-- **WHEN** `main` is up within two minutes of `up`
+- **WHEN** `main` is up within two minutes of `up`, and the engine wait and
+  the push succeed or are skipped for want of the token
 - **THEN** the head is recorded as deployed and the failure file is removed
 
 #### Scenario: The session does not come back
 
 - **WHEN** `main` is not up two minutes after `up`
-- **THEN** the runner runs the previous image, the head is recorded as rolled
-  back, the failure file names the head, and the run fails
+- **THEN** the head is recorded as rolled back, the failure file names the
+  head, the run fails, and, when the rollback's tag and `up` succeed, the
+  runner runs the previous image
 
 #### Scenario: A rolled-back head
 
@@ -181,7 +186,8 @@ file in agent's home, naming the failed step and the commit and replacing an
 older one, SHALL write each clone's stop file that does not exist yet, until
 stage 7 removes them, and SHALL NOT record the commit as deployed. A fetch or
 check read that fails SHALL write neither, nor SHALL a run that the service's
-start timeout kills, which leaves the timeout on the journal. The managed `SessionStart` hook
+start timeout kills before the failure file is written, which leaves the
+timeout on the journal. The managed `SessionStart` hook
 SHALL print the failure file, when it exists, on startup, on clear and on a
 continued start, with a line asking the session to report it to the user in
 chat, and SHALL then move it aside, so the next start does not report it
