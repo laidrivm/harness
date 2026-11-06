@@ -159,7 +159,8 @@ Rules about how work is carried out here. They do not age with the code.
   carries a backtick or `${`.
 - Install dependencies with `bun run deps`, never a literal `bun install` or
   `bun i` — those prompt even with `--frozen-lockfile`, and the prompt is a
-  manual step.
+  manual step; the one exception is the plain `bun install` after a re-pin
+  that `git-and-prs.md` asks for, which resolves versions on purpose.
 - Split a file to the cap that will apply to it, not the one that applies
   today, and re-measure the diff budget afterwards — a split counts its moved
   lines in it twice.

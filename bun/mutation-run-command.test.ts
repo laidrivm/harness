@@ -252,11 +252,16 @@ describe("the command", () => {
 		expect(head()).toBe("stryker");
 	});
 
-	test("the sandbox's commit is stryker's even where git's identity variables are exported", () => {
+	test("the sandbox's commit is stryker's even where git's identity variables and global identity are set", () => {
 		const sandbox = join(repository(), ".stryker-tmp", "sandbox-1");
 		write(sandbox, passing);
+		const global = join(scratch(), "gitconfig");
+		write(dirname(global), {
+			gitconfig: "[author]\n\tname = y\n\temail = y@y\n[committer]\n\tname = y\n\temail = y@y\n",
+		});
 		const env = {
 			...process.env,
+			GIT_CONFIG_GLOBAL: global,
 			GIT_AUTHOR_NAME: "x",
 			GIT_AUTHOR_EMAIL: "x@x",
 			GIT_COMMITTER_NAME: "x",
