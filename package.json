@@ -7,6 +7,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.15",
+		"@hughescr/stryker-bun-runner": "1.6.0",
 		"@stryker-mutator/core": "10.0.0",
 		"@types/bun": "1.4.2",
 		"harness": "github:laidrivm/harness#8a1fffd6769454841b5763793d138815607c239e",
