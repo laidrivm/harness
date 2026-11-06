@@ -491,11 +491,13 @@ minutes after boot and five minutes after each run, and the service runs
 head of `main` whose `test` check passed fast-forwards the checkout and
 builds the images. It brings the stack up only while the session is fresh,
 after a `/clear` or a new conversation's first start and before its first
-message, so it never cuts a turn short; step 12's continued start leaves the
-session as it was: the runner restarts, the session pulls and installs its clone
-and continues its conversation. A session at work keeps the built head
-waiting, and the journal says so; `/clear` it at the end of a card. As root,
-one command per line:
+message, so it never cuts a turn short: the runner restarts, the session
+pulls and installs its clone and continues its conversation. Step 12's
+continued start leaves the session as it was, so a session at work keeps the
+built head waiting, and the journal says so; `/clear` it at the end of a
+card. The timer counts its five minutes from boot, so on a host up longer
+than that the first run starts as soon as the second command below enables
+it. As root, one command per line:
 
 ```sh
 systemctl link /root/harness/orchestrator/host/harness-deploy.service /root/harness/orchestrator/host/harness-deploy.timer
@@ -510,8 +512,9 @@ step that fails writes the failure file `.harness-deploy-failed` in
 `agent`'s home, and each clone's stop file (step 7), and the next run starts
 again from the fetch; the session reports the file in its chat at its next
 start. A run the three-hour timeout kills before that write leaves no file,
-only the journal's line. When the session does not come back within two minutes, the run puts
-the runner back on the image it ran before, once, and records the head in
+only the journal's line. When the session does not come back within two
+minutes, the run puts the runner back on the image it ran before, once, and
+records the head in
 `/var/lib/harness-deploy/rolled-back`, so no run tries that head again; a
 later head deploys as usual. To retry the rolled-back head, remove the
 record:
@@ -526,8 +529,10 @@ To stop deploys:
 systemctl disable --now harness-deploy.timer
 ```
 
-`disable` also removes the links, so deploys start again with both commands
-above.
+This stops the timer, not a run already under way: that run finishes, its
+rollback included, and `systemctl is-active harness-deploy.service` prints
+`inactive` once it has. `disable` also removes the links, so deploys start
+again with both commands above.
 
 A deploy moves the session's rules, docs, skills and `bun/` with the clone,
 but not its hooks, nor the commands it runs from `node_modules/harness`, the
