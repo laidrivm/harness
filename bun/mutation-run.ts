@@ -13,6 +13,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { dirname, join, posix } from "node:path";
+import { unlocal } from "./git-local.ts";
 import { load, storedFiles, type Tree, unsaved } from "./mutation-checkout.ts";
 import { REPORT } from "./mutation-floor.ts";
 import { root } from "./root.ts";
@@ -236,7 +237,10 @@ function stryker(tree: Tree, top: string, { module, force }: Run, print: Record<
 	// The options `load` read, not the file again, so the fingerprint names what every module ran under.
 	writeFileSync(config, JSON.stringify({ ...tree.options, ...own }));
 	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force ? ["--force"] : [])];
-	const run = Bun.spawnSync(args, { cwd: top, stdio: ["inherit", "inherit", "inherit"] });
+	// Without git's local variables: an inherited `GIT_DIR` would point the sandbox's git, and every test's, at the
+	// checkout, and the build step's own unset reaches none of the test processes Stryker starts.
+	const env = unlocal(process.env);
+	const run = Bun.spawnSync(args, { cwd: top, env, stdio: ["inherit", "inherit", "inherit"] });
 	rmSync(config, { force: true });
 	// A signal leaves no exit code, only its name.
 	const failed =

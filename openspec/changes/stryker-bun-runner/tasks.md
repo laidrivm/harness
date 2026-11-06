@@ -14,8 +14,8 @@
 
 ## 3. The sandbox repository and its environment
 
-- [ ] 3.1 Tests first in `bun/mutation-sandbox.test.ts`: run in a scratch directory, it makes a repository with one commit holding that directory's files, and a second run leaves that one commit; carry over from `bun/mutation-run-command.test.ts` the `// spec: mutation-floor/a-mutant-that-writes-to-the-root-git-names` citation and the inherited `GIT_DIR` and `GIT_WORK_TREE` cases under sh, dash and bash, now asserting that the environment `bun/mutation-run.ts` spawns Stryker with holds none of the variables `git rev-parse --local-env-vars` names — verified by those cases failing before 3.2
-- [ ] 3.2 Write `bun/mutation-sandbox.ts`, set `buildCommand: "bun bun/mutation-sandbox.ts"` in `stryker.config.json`, and spawn Stryker in `bun/mutation-run.ts` with those variables removed — verified by 3.1 passing
+- [x] 3.1 Tests first in `bun/mutation-sandbox.test.ts`: run in a scratch directory, it makes a repository with one commit holding that directory's files, and a second run leaves that one commit; carry over from `bun/mutation-run-command.test.ts` the `// spec: mutation-floor/a-mutant-that-writes-to-the-root-git-names` citation and the inherited `GIT_DIR` and `GIT_WORK_TREE` cases under sh, dash and bash, now asserting that the environment `bun/mutation-run.ts` spawns Stryker with holds none of the variables `git rev-parse --local-env-vars` names — verified by those cases failing before 3.2
+- [x] 3.2 Write `bun/mutation-sandbox.ts`, set `buildCommand: "bun bun/mutation-sandbox.ts"` in `stryker.config.json`, and spawn Stryker in `bun/mutation-run.ts` with those variables removed — verified by 3.1 passing
 
 ## 4. The per-test runner, the stored file and the fingerprint
 

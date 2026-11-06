@@ -22,6 +22,7 @@
 		"bun/transient.ts"
 	],
 	"testRunner": "command",
+	"buildCommand": "bun bun/mutation-sandbox.ts",
 	"thresholds": {
 		"break": null
 	},
