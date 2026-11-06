@@ -53,6 +53,11 @@ describe("a pending checks read is not counted", () => {
 		expect(answers(3, read("gh pr checks"))).toEqual(Array(4).fill(SILENT));
 	});
 
+	// The command is trimmed first: `$` without the `m` flag stops short of a final newline.
+	test("a read with whitespace around it exiting 8 is not counted", () => {
+		expect(answers(3, read(" \tgh pr checks 437 \n"))).toEqual(Array(4).fill(SILENT));
+	});
+
 	test("an error that is `Exit code 8` with no output is not counted", () => {
 		expect(answers(3, read("gh pr checks 437", "Exit code 8"))).toEqual(Array(4).fill(SILENT));
 	});
