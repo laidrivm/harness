@@ -57,7 +57,7 @@ an explicit timeout.
 
 ## 2. The suite and Stryker
 
-- [ ] 2.1 Run `bun test` with `TMPDIR` set to a new empty directory: no
+- [x] 2.1 Run `bun test` with `TMPDIR` set to a new empty directory: no
       `harness-test-*` entry is left in it; every other entry left, from a
       process a test started outside the parent (design, *Non-Goals*), is
       named by prefix and count in the pull request
