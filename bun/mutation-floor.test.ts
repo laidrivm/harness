@@ -106,6 +106,12 @@ describe("the count against the floor", () => {
 		expect(gauge(12, 12, why)).toEqual([]);
 	});
 
+	// spec: mutation-floor/a-survivor-no-test-reaches
+	test("a survivor the per-test runner reads as NoCoverage leaves the count and the verdict where they were", () => {
+		const [before, after] = [survivors(report("Killed", "Survived")), survivors(report("Killed", "NoCoverage"))];
+		expect([before, after, gauge(after, 1, why)]).toEqual([1, 1, []]);
+	});
+
 	// spec: mutation-floor/a-branch-added-without-a-test
 	test("a count above the floor fails", () => {
 		expect(gauge(13, 12, why)).not.toEqual([]);
