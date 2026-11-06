@@ -116,10 +116,12 @@ which prompts.
   intent.
 - [A committed `predeps` or `postdeps`] → bun runs it around `deps`, and the
   guard reads it as a line, which no check refuses for `bun add`; a manifest
-  edit, out of scope by 1 а (CodeRabbit round 5, held for the user).
+  edit, out of scope by 1 а (CodeRabbit round 5; settled on the card
+  2026-11-06, answer 5 а).
 - [An edited `package.json` before the harness is installed] → the bootstrap
   matches `bun run deps` by text and reads no file, so an uncommitted script
-  runs; a manifest edit, out of scope by 1 а (round 5, held for the user).
+  runs; a manifest edit, out of scope by 1 а (round 5; settled on the card
+  2026-11-06, answer 6 а).
 - [A consumer's own `deps` script] → sync refuses and names it; the consumer
   renames it by hand before the bump lands.
 - [A checkout whose install predates the change] → no window: the `ask`
