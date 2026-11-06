@@ -22,8 +22,12 @@ the script's command line through `check()`, as a typed line.
 ## Goals / Non-Goals
 
 **Goals:**
-- An agent installs from the lockfile with no prompt: in auto mode, and in
-  the default mode where `allow` holds `bun run deps` or `bun run *`.
+- An agent installs from a committed `bun.lock` with no prompt: in auto mode,
+  and in the default mode where `allow` holds `bun run deps` or `bun run *`.
+  Without a lockfile, bun 1.4.2's frozen install resolves from `package.json`
+  and writes none (probed 2026-11-05), so a checkout with no `bun.lock` gets
+  unpinned versions; every consumer commits one, and checking for it is left
+  out.
 - Every literal `bun install` or `bun i` prompts exactly as today.
 
 **Non-Goals:**
@@ -124,5 +128,9 @@ which prompts.
   2026-11-06, answer 6 а).
 - [A consumer's own `deps` script] → sync refuses and names it; the consumer
   renames it by hand before the bump lands.
-- [A checkout whose install predates the change] → no window: the `ask`
-  entries do not move, and an older guard reads `bun run deps` the same way.
+- [A checkout whose install predates the change] → the `ask` entries do not
+  move, and an older guard reads `bun run deps` the same way, but has no
+  `deps-args`: from the pull that brings the synced script until that
+  checkout's first install, `bun run deps --no-verify` passes. The order that
+  closes it is the one the notice names: the first install is a bare
+  `bun run deps`, after which the installed guard refuses the words.
