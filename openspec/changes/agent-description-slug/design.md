@@ -65,7 +65,12 @@ the same day: 1 — ok, 2 — yes, 3 — ok.
    *Alternatives*.
 3. **The test pins two phrases.** User: ok. `bun/delegation.test.ts` adds
    "`description` with the slug" and "the agent's ID" to the phrases it
-   already expects in the preamble, so dropping either half fails it.
+   already expects in the preamble, so dropping either half fails it. Since
+   CodeRabbit's round 1 on the apply pull request, each is pinned within its
+   whole clause — "Open the call's `description` with the slug of the change
+   it carries, or of the card where there is none" and "name the agent's ID
+   beside that card in each report" — so the slug's place at the opening and
+   the ID's place beside the card fail it too.
 
 ## Alternatives
 
