@@ -236,6 +236,7 @@ describe("what fails the run before it mutates", () => {
 		]);
 	});
 
+	// spec: mutation-floor/a-stored-file-holding-results-of-another-module
 	test("a stored file without files, or holding a source other than its own module's", () => {
 		const t = current();
 		const board = t.stored["mutation/board.json"] ?? "";
@@ -246,10 +247,10 @@ describe("what fails the run before it mutates", () => {
 		const both = JSON.stringify({ files: { ...JSON.parse(board).files, "bun/guard.ts": { source: "", mutants: [] } } });
 		for (const text of [board, both])
 			expect(plan({ ...t, stored: { ...t.stored, "mutation/guard.json": text } }).problems).toEqual([
-				"mutation/guard.json holds bun/board.ts, not bun/guard.ts",
+				"mutation/guard.json holds bun/board.ts, not bun/guard.ts — delete the stored file",
 			]);
 		expect(plan({ ...t, stored: { ...t.stored, "mutation/old.json": board } }).problems).toContain(
-			"mutation/old.json holds bun/board.ts, not bun/old.ts",
+			"mutation/old.json holds bun/board.ts, not bun/old.ts — delete the stored file",
 		);
 	});
 });

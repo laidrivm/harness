@@ -47,7 +47,7 @@ const git = (dir: string, ...args: string[]) => {
 function repository(files: Record<string, string> = {}, listed = ["bun/a.ts"]): string {
 	const dir = scratch();
 	const config = `${JSON.stringify({ mutate: listed })}\n`;
-	const ignore = ".stryker-tmp\nreports\ncalls\nfail-once\n";
+	const ignore = "/.stryker-tmp\n/reports\ncalls\nfail-once\n";
 	const base = { ".gitignore": ignore, "stryker.config.json": config, "bun/a.ts": "1\n", "bun/a.test.ts": "1\n" };
 	write(dir, { ...base, ...files });
 	git(dir, "init", "-q", "-b", "main");
