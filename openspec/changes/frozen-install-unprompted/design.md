@@ -143,6 +143,14 @@ which prompts.
   checkout's first install, `bun run deps --no-verify` passes. The order that
   closes it is the one the notice names: the first install is a bare
   `bun run deps`, after which the installed guard refuses the words.
+- [A redirection on a group around the call] → in
+  `(bun run deps) > package.json` the parse splits the redirection from the
+  call, so `deps-args` sees a bare `bun run deps`. The shell truncates
+  `package.json` before bun starts, and bun then finds no `deps` script and
+  installs nothing (probed 2026-11-06), so no word reaches the install: what
+  is left is a file write, which `: > package.json` makes as well, and no
+  check of this change refuses (CodeRabbit round 7; a limit, decided in the
+  apply step).
 - [A substitution that supplies the command's name] →
   `$(printf bun) run deps --no-verify` passes the `ask` rules and the guard
   alike: the rules match the text, which holds no `bun`, and the parse drops

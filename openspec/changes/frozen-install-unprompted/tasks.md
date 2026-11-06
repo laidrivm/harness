@@ -43,20 +43,21 @@ are not touched.
 
 ## 3. The guard reads the script
 
-- [ ] 3.1 In `bun/command-guard-interpreters.test.ts`, beside *bun run check
-      is refused when package.json is edited or untracked*: a checkout whose
+- [x] 3.1 In `bun/command-guard-deps.test.ts` (3.3's file;
+      `bun/command-guard-interpreters.test.ts` sits at the line cap): a checkout whose
       committed `package.json` holds `deps: bun install --frozen-lockfile`
       lets `bun run deps` pass with no decision
       (`agent-permissions/the-script-runs-without-a-prompt`), and refuses it
       as `untracked-script` once `package.json` is edited
       (`agent-permissions/a-script-the-tree-does-not-vouch-for`). Both pass
       on today's guard; they pin it. Verify `bun test
-      bun/command-guard-interpreters` passes
-- [ ] 3.2 `agent-permissions/a-literal-install-still-prompts` is Claude Code's
+      bun/command-guard-deps` passes
+- [x] 3.2 `agent-permissions/a-literal-install-still-prompts` is Claude Code's
       behaviour over the unchanged `ask` list: cite it on the existing case
-      that pins `Bash(bun install *)` and `Bash(bun i *)` in `ASK`, with no
-      new test
-- [ ] 3.3 Failing cases in a new `bun/command-guard-deps.test.ts`, through
+      *an ask entry dropped is named* in `bun/settings.test.ts`, its one
+      dropped entry widened to `Bash(bun install *)`, `Bash(bun i *)` and
+      `Bash(bun r *)`
+- [x] 3.3 Failing cases in a new `bun/command-guard-deps.test.ts`, through
       `verdict()` as `bun/command-guard-bunx.test.ts` does:
       `bun run deps --no-verify`, `bun run deps --production`,
       `bun run deps lodash`, `bun run deps > package.json` and
@@ -68,7 +69,9 @@ are not touched.
       name, rest)` in `bun/command-guard-exec.ts` beside `bunxInstall`: `bun`
       then `run`, and either `deps` then any word, or `part` in `FED` whatever
       the script — the parse drops a substitution's output, the script's name
-      included, from the words — called and blocked
+      included, from the words; redirections are passed over to find `run`,
+      through `args()`, lifted from `command-guard-interpreters.ts` into
+      `command-words.ts` — called and blocked
       from `check()` in
       `bun/command-guard.ts`; both header comments name it. Verify
       `bun test bun/command-guard` passes

@@ -165,9 +165,10 @@ describe("the permission lists", () => {
 		expect(settings(consumer(config)).join("\n")).toContain("the Bash deny list is not");
 	});
 
-	test("an ask entry dropped is named", () => {
+	// spec: agent-permissions/a-literal-install-still-prompts — Claude Code prompts on these entries, whatever allows `bun run deps`
+	test.each(["Bash(bun install *)", "Bash(bun i *)", "Bash(bun r *)"])("an ask entry %s dropped is named", (entry) => {
 		const config = changed((c) => {
-			c.permissions.ask = c.permissions.ask.filter((e) => e !== "Bash(bun r *)");
+			c.permissions.ask = c.permissions.ask.filter((e) => e !== entry);
 		});
 		expect(settings(consumer(config)).join("\n")).toContain("the Bash ask list is not");
 	});

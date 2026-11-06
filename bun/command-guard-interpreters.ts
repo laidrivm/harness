@@ -13,7 +13,7 @@
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { shellWords } from "./command-guard-exec.ts";
-import { OPEN_REDIRECTION, place, SHELLS } from "./command-words.ts";
+import { args, place, SHELLS } from "./command-words.ts";
 
 export type Refusal = { id: "inline-code" | "stdin-code" | "untracked-script"; reason: string };
 
@@ -31,10 +31,6 @@ export const BUN_SUBCOMMANDS = new Set([
 const RUNS_CODE = new Set(["exec", "repl", "create", "c"]);
 
 const INTERPRETER = /^(python(\d[\d.]*t?)?|node|bun|deno|perl|ruby|php)$/;
-
-/** The words after the redirections, which name no program. */
-const args = (rest: string[]) =>
-	rest.filter((word, at) => !/^[0-9]*[<>]/.test(word) && !OPEN_REDIRECTION.test(rest[at - 1] ?? ""));
 
 const refuse = (name: string, id: Refusal["id"], what: string): Refusal => ({
 	id,

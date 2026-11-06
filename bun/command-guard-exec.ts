@@ -1,8 +1,9 @@
 /**
  * What `command-guard.ts` refuses of a program handed to a shell: a shell,
  * `source`, `.` or `eval` whose program the line does not spell out, a
- * `bunx` that would install what it runs, and a `bun test` or `bun run` that
- * carries `--retry`. Decided by where the program comes
+ * `bunx` that would install what it runs, a `bun test` or `bun run` that
+ * carries `--retry`, and a `bun run deps` given words after the script's name
+ * (`depsArgs`). Decided by where the program comes
  * from — standard input, a substitution, an expansion — never by what
  * produced it, so no list of downloaders stands here. Each check returns the
  * reason rather than blocking, because the exit code and the ledger id are the
@@ -11,7 +12,7 @@
 
 import { posix } from "node:path";
 import { FED } from "./command-parse.ts";
-import { OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
+import { args, OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
 
 /**
  * The long shell options that take the next word as their value. A short
@@ -132,6 +133,21 @@ export function bunxInstall(name: string, rest: string[]): string | undefined {
 		if (words[at] === "-p" || words[at] === "--package") at++;
 	}
 	return `command-guard: \`${name === "bun" ? "bun x" : "bunx"}\` without --no-install installs a package the project does not have and runs it, past the dependency check and the release-age gate. Run an installed tool with \`bunx --no-install <tool>\`; a package not yet installed is the user's to add.`;
+}
+
+/**
+ * Why `name` with `rest` is a `bun run deps` with any word after the script's
+ * name, a redirection included, or a `bun run` a substitution feeds, or
+ * nothing. bun forwards those words to the install (`--no-verify` skips its
+ * integrity checks), and the parse drops a substitution's output — the
+ * script's name among it — from the words, so a fed `bun run` refuses
+ * whatever its script (frozen-install-unprompted D2).
+ */
+export function depsArgs(part: string[], name: string, rest: string[]): string | undefined {
+	const words = args(rest);
+	if (name !== "bun" || words[0] !== "run") return undefined;
+	if (!FED.has(part) && !(words[1] === "deps" && rest.length > 2)) return undefined;
+	return "command-guard: bun forwards every word after `bun run deps` to `bun install --frozen-lockfile`, where a flag such as `--no-verify` changes what it installs, and a substitution can supply those words or the script's name unseen. Install with `bun run deps` with nothing after it.";
 }
 
 /**
