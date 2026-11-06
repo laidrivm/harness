@@ -41,21 +41,23 @@ function raw(dir: string, input: string) {
 const hook = (dir: string, command: string) => raw(dir, JSON.stringify({ tool_name: "Bash", tool_input: { command } }));
 
 describe("before the install", () => {
-	test.each(["bun install", "bun i", "bun install --frozen-lockfile"])("%s runs", (command) => {
+	// spec: cloud-sessions/the-local-policy-is-unchanged
+	test.each(["bun install", "bun i", "bun install --frozen-lockfile", "bun run deps"])("%s runs", (command) => {
 		expect(hook(project(), command).code).toBe(0);
 	});
 
 	test.each([
 		["any other command", "git status"],
+		["the deps script with a word after it", "bun run deps --no-verify"],
 		["an install that names a package", "bun install lodash"],
 		["an install with another flag", "bun install --registry https://x.test"],
 		["an install from another directory", "bun install --cwd ../other"],
 		["an install with a command chained after it", "bun install && git status"],
 		["an install with a command chained before it", "git status; bun install"],
-	])("%s is blocked, naming bun install", (_, command) => {
+	])("%s is blocked, naming bun run deps", (_, command) => {
 		const { code, stderr } = hook(project(), command);
 		expect(code).toBe(2);
-		expect(stderr).toContain("bun install");
+		expect(stderr).toContain("run bun run deps first");
 	});
 
 	test("input that is not JSON blocks rather than letting through", () => {

@@ -75,4 +75,13 @@ describe("sync.ts run from a consumer's root", () => {
 		expect(existsSync(join(dir, "harness/rules.md"))).toBe(true);
 		expect(parsed(dir).permissions.deny).toContain("Bash(gh pr review *)");
 	}, 30_000);
+
+	// spec: harness-updates/a-consumer-s-own-deps-script
+	test("a deps script of the consumer's own is refused before the rules copy is written", () => {
+		const dir = consumer({ [SETTINGS]: "{}", "package.json": '{ "scripts": { "deps": "pnpm install" } }' });
+		const run = Bun.spawnSync(["bun", join(import.meta.dir, "sync.ts")], { cwd: dir, timeout: 20_000 });
+		expect(run.exitCode).not.toBe(0);
+		expect(run.stderr.toString()).toContain("pnpm install");
+		expect(existsSync(join(dir, "harness"))).toBe(false);
+	}, 30_000);
 });
