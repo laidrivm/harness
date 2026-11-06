@@ -32,6 +32,7 @@ function named(groups: object[]): boolean {
 	const config = { hooks: { PermissionRequest: groups } };
 	writeFileSync(join(dir, ".claude/settings.json"), JSON.stringify(config));
 	writeFileSync(join(dir, "bunfig.toml"), "");
+	writeFileSync(join(dir, "package.json"), "{}");
 	Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
 	return settings(dir).some((problem) =>
 		problem.includes("the PermissionRequest hook is not the harness question gate"),

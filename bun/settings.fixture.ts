@@ -122,6 +122,8 @@ export type Policy = ReturnType<typeof policy>;
 
 export const BUNFIG = "[install]\nexact = true\nminimumReleaseAge = 259200\nminimumReleaseAgeExcludes = []\n";
 
+export const PACKAGE = '{ "scripts": { "deps": "bun install --frozen-lockfile" } }\n';
+
 /** A consumer tracking `config` as its settings, plus `files`. */
 export function consumer(config: Policy, files: Record<string, string> = {}): string {
 	const dir = mkdtempSync(join(tmpdir(), "harness-settings-"));
@@ -129,6 +131,7 @@ export function consumer(config: Policy, files: Record<string, string> = {}): st
 	const all = {
 		".claude/settings.json": JSON.stringify(config),
 		"bunfig.toml": BUNFIG,
+		"package.json": PACKAGE,
 		...files,
 	};
 	for (const [path, text] of Object.entries(all)) {
