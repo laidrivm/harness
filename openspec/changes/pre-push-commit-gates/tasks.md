@@ -196,20 +196,22 @@ budget. Failing cases first, their failure recorded, cited as `// spec:
 
 ## 7. The mutation step in the hook and in CI
 
-- [ ] 7.1 Set `harness.mutationFloor` to the survivor total of the listed
+- [x] 7.1 Set `harness.mutationFloor` to the survivor total of the listed
       modules' baseline (design decision 7; the unlisted modules count for
       nothing) and its reason. Verify `bun bun/mutation-run.ts && bun
-      bun/mutation-floor.ts` exits 0
-- [ ] 7.2 Failing case in `bun/git-env.test.ts`: a push whose diff touches
+      bun/mutation-floor.ts` exits 0.
+      Measured 2026-11-06 on `9c47f182`: the 19 stored files hold 1 564
+      mutants, 454 `Survived` and no `NoCoverage`; the floor is 454
+- [x] 7.2 Failing case in `bun/git-env.test.ts`: a push whose diff touches
       nothing under `bun/` starts no Stryker and still runs the floor
       (`a-push-that-changed-no-module`), and one touching only an unlisted
       module starts none either. Then add the step and the floor to
       `.githooks/gates.sh`. Verify the case passes and a push of this group
       mutates nothing
-- [ ] 7.3 Add `.github/workflows/mutation.yml` per design decision 6.
+- [x] 7.3 Add `.github/workflows/mutation.yml` per design decision 6.
       Verify the job passes on the pull request without mutating, and add its
       check name to the list for the ruleset
-- [ ] 7.4 `README.md`: `mutation/`, `.githooks/gates.sh`, `biome.json`,
+- [x] 7.4 `README.md`: `mutation/`, `.githooks/gates.sh`, `biome.json`,
       `tsconfig.json` and `stryker.config.json` in the map of where files
       live, how to refresh `mutation/` by hand (`--all --force`), and how a
       module joins `stryker.config.json`'s `mutate` (design decision 7). No
