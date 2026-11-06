@@ -19,8 +19,8 @@ stand-in already logs and answers `POST /v1/comments` and fails it through
 - [ ] 1.2 Rework *the user's statuses*: `--to approved` still refuses before
       any call; `--to idea --why x` on a card at `exploring` refuses
       `user-only` after the page read alone, posting no comment [10]; a
-      `discarded` card refuses `--to exploring` and `--to done` naming
-      `idea`, posting no comment [11]. Verify: the new expectations fail
+      `discarded` card refuses `--to exploring`, `--to done` and `--to
+      discarded --why x` naming `idea`, posting no comment [11] [18]. Verify: the new expectations fail
       against today's code
 - [ ] 1.3 Write failing cases for the moves: a card at `approved` with five
       cards in the range and `--to discarded --why "duplicate of x"` makes no
@@ -29,8 +29,7 @@ stand-in already logs and answers `POST /v1/comments` and fails it through
       discarded: duplicate of x` on the card's `page_id` [7], prints
       `status: <card> approved → discarded` and exits 0 [8]; a card at
       `applying` discarded runs no git [16]; a `discarded` card `--to idea
-      --why …` writes `idea`, exit 0 [17]; a `discarded` card `--to
-      discarded --why …` posts and writes again [18]; a `--why` of 2500
+      --why …` writes `idea`, exit 0 [17]; a `--why` of 2500
       characters reaches the comment whole, across its runs [6]; a card
       whose `Assign` holds the user is released after a discard [19].
       Verify: each fails against today's code
@@ -57,8 +56,13 @@ stand-in already logs and answers `POST /v1/comments` and fails it through
       statuses: a session discards a card or returns one to `idea` with
       `bun bun/work.ts status … --why <reason>`, giving the reason; `approved`
       stays the user's alone; a reconciliation still leaves a `discarded`
-      card as it is. Update the `README.md` row for `status` to name the two
-      moves and `--why`. Grep the tree outside `openspec/changes/archive/`
+      card as it is; reword `core/skills/session-wrapup/SKILL.md`'s sentence
+      on `discarded` alike. Update the `README.md` row for `status` to name
+      the two moves, `--why` and the *Insert comments* capability beside
+      *Update content*. In `bun/status-guard.ts`, name `--why <reason>` for
+      `discarded` in the refusal of a connector `Status` write, with a case
+      in `bun/status-guard.test.ts` that fails first. Grep the tree outside
+      `openspec/changes/archive/`
       for `only the user moves` and `discarded` and reconcile each statement
       with the deltas. Verify: `bun test` passes, and `openspec validate
       --strict status-discarded` passes

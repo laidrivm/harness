@@ -16,10 +16,10 @@ moved it and why.
 
 ## What Changes
 
-- `work.ts status --to discarded` writes from any status, with no WIP count
-  and no evidence.
-- A card at `discarded` may be moved to `idea`, and to `discarded` again;
-  every other target stays refused for it, naming `idea` as the way back.
+- `work.ts status --to discarded` writes from any other status, with no WIP
+  count and no evidence.
+- A card at `discarded` may be moved to `idea`; every other target stays
+  refused for it, naming `idea` as the way back.
   `--to idea` from any other status, and `--to approved` from any status,
   stay refused as the user's.
 - Both moves take a required `--why <text>`; `status` posts it on the card as
@@ -28,8 +28,12 @@ moved it and why.
   the status. `--why` on any other target, or a blank one, prints the usage
   and exits 2.
 - `openspec/specs/task-board/`, `openspec/specs/work-status/`,
-  `core/feature-workflow.md`, the `README.md` row for `status` and the
-  comments in `bun/board-state.ts` stop calling `discarded` the user's alone.
+  `core/feature-workflow.md`, `core/skills/session-wrapup/SKILL.md`, the
+  `README.md` row for `status` and the comments in `bun/board-state.ts` stop
+  calling `discarded` the user's alone; the `README.md` row also names the
+  *Insert comments* capability the note needs.
+- `status-guard`'s refusal of a connector `Status` write names `--why` for
+  `discarded` beside the command it points to.
 
 Out of scope: restoring the status a card left `discarded` from. A card
 returned to `idea` is lifted to its change's floor by the next
@@ -46,7 +50,9 @@ None.
 ### Modified Capabilities
 
 - `work-status`: `discarded` becomes a session's target, a discarded card's
-  way out is `idea`, and both moves carry a `--why` posted on the card.
+  way out is `idea`, and both moves carry a `--why` posted on the card. The
+  connector guard's requirement is unchanged; only its refusal's wording
+  gains `--why`.
 - `task-board`: `discarded` is moved by the user or by a session through
   `work.ts status`; a reconciliation still leaves a `discarded` card where
   it is.
@@ -55,13 +61,15 @@ None.
 
 - Changed: `bun/work-status.ts`, `bun/work.ts` (`--why` in the dispatch,
   `USAGE` and the header comment), `bun/work-status.test.ts`,
-  `bun/board-state.ts` (comments only), `core/feature-workflow.md`,
-  `README.md`.
+  `bun/board-state.ts` (comments only), `bun/status-guard.ts` (its
+  refusal's text) and `bun/status-guard.test.ts`, `core/feature-workflow.md`,
+  `core/skills/session-wrapup/SKILL.md`, `README.md`.
 - No new dependency, allow entry or hook: `.claude/settings.json` already
-  allows `bun bun/work.ts *`. `status-guard` is unchanged: it still sends
-  every `Status` write to `work.ts status`, and its line for a card created
-  at a status other than `idea` names only `approved` as the user's.
+  allows `bun bun/work.ts *`. `status-guard` still sends every `Status`
+  write to `work.ts status`, and its line for a card created at a status
+  other than `idea` names only `approved` as the user's, which stays true.
 - The comment uses the ask integration's *Insert comments* capability, which
-  `bun bun/notion-ask.ts` already needs.
+  `bun bun/notion-ask.ts` already needs; an integration set up for `status`
+  alone now needs it too.
 - The laptop session's memory saying these statuses are the user's alone is
   the user's to retire.
