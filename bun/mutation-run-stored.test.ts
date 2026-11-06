@@ -133,8 +133,25 @@ describe("what a stored file holds", () => {
 			files: { "bun/a.ts": { source: "a", mutants } },
 			fingerprint: {},
 		};
-		expect(reusable(stored).files["bun/a.ts"]?.mutants.map((m) => m.id)).toEqual(["2", "3"]);
+		expect(reusable(stored).files["bun/a.ts"]?.mutants.map((m) => m.id)).toEqual(["3"]);
 		expect(stored.files["bun/a.ts"]?.mutants).toHaveLength(4);
+	});
+
+	test("a mutant no test covered, which a test change now covers, reads after an incremental run as after a forced one", () => {
+		// Stryker reuses a result that is not Killed when its mutant gained no covering test, and a mutant setup code now
+		// reaches is covered statically, by no test: a NoCoverage handed back would outlive the change.
+		const before = ["0", "1"].map((id) => ({ ...mutant(id, id === "0" ? "NoCoverage" : "Killed"), coveredBy: [] }));
+		const stored: Stored = {
+			schemaVersion: "1.0",
+			testFiles: {},
+			files: { "bun/a.ts": { source: "a", mutants: before } },
+			fingerprint: {},
+		};
+		const forced: Record<string, string> = { "0": "Killed", "1": "Killed" };
+		const handed = reusable(stored).files["bun/a.ts"]?.mutants ?? [];
+		// What Stryker reports incrementally: a handed result where one is reused, a fresh run where none is.
+		const incremental = Object.keys(forced).map((id) => handed.find((m) => m.id === id)?.status ?? forced[id]);
+		expect(incremental).toEqual(Object.values(forced));
 	});
 
 	// spec: mutation-floor/a-mutant-no-test-reaches
