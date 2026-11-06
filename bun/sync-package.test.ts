@@ -26,6 +26,12 @@ describe("package.json", () => {
 		expect(read(dir, "package.json")).toBe(JSON.stringify(after, null, indent));
 	});
 
+	test("a trailing newline is kept", () => {
+		const dir = consumer({ [SETTINGS]: "{}", "package.json": '{\n\t"name": "app"\n}\n' });
+		syncSettings(dir);
+		expect(read(dir, "package.json")).toBe(`{\n\t"name": "app",\n\t"scripts": {\n\t\t"deps": "${DEPS}"\n\t}\n}\n`);
+	});
+
 	test("a missing package.json is written with the script, and the check then passes", () => {
 		const dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });
 		syncSettings(dir);
@@ -56,6 +62,7 @@ describe("package.json", () => {
 
 	test.each([
 		["not JSON", "{"],
+		["a list at the top", "[]"],
 		["scripts that are not an object", '{ "scripts": [] }'],
 	])("a package.json with %s fails naming the file and writes nothing", (_, pkg) => {
 		const dir = consumer({ [SETTINGS]: "{}", "bunfig.toml": CANONICAL, "package.json": pkg });
