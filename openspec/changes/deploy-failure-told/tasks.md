@@ -107,6 +107,30 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       `bun/` to `/opt/orchestrator/bun/`. Verify
       `bun test orchestrator/deploy orchestrator/layout-deploy` passes
 
-## 4. Integration
+## 4. A retry keeps the previous image
 
-- [ ] 4.1 `bun test` and `bun bun/pre-pr.ts` pass on the branch
+- [ ] 4.1 Failing cases in `orchestrator/deploy-session.test.ts`, two tests.
+      First, a run whose push fails after `main` is up, then a second run of
+      the same head whose wait for `main` fails: the second run logs no tag
+      of the container's image as `orchestrator-runner:previous`, still
+      builds, brings up and waits, and its rollback tags `previous` back
+      (`orchestrator/a-retry-after-a-late-failure`). Second, a `test.each`
+      with two rows. In one, `brought-up` names another head, and the run
+      tags the container's image as before
+      (`orchestrator/a-new-head-after-a-brought-up-one`). In the other, a
+      directory sits at `brought-up`: no `up` runs, the failure file names
+      `the brought-up record` and the head, and the run exits 1
+      (`orchestrator/the-brought-up-record-cannot-be-written`)
+- [ ] 4.2 Then `locked()` writes the head to `$state/brought-up` right
+      before `up`, and a failed write fails the step `the brought-up record`.
+      The tag before the build is skipped while that record names the head.
+      The header comment names the third record, and the tag's comment says
+      why it is skipped. Verify `bun test orchestrator/deploy-session
+      orchestrator/deploy` passes
+- [ ] 4.3 `orchestrator/README.md`'s deploy section names
+      `/var/lib/harness-deploy/brought-up` beside the other two records.
+      Verify by reading the passage back
+
+## 5. Integration
+
+- [ ] 5.1 `bun test` and `bun bun/pre-pr.ts` pass on the branch

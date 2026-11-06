@@ -78,7 +78,10 @@ does not exist, the run SHALL skip the Windmill push and say so.
 ### Requirement: A session that does not come back is rolled back
 
 Before the build the deploy SHALL tag the image the running runner container
-runs as the previous image. After bringing the stack up it SHALL wait at most
+runs as the previous image, unless the head is the one whose images it last
+brought up, when the previous image SHALL stay as tagged; it SHALL record
+that head before bringing the stack up, and SHALL NOT bring it up when the
+record cannot be written. After bringing the stack up it SHALL wait at most
 two minutes for the tmux session `main` in the runner. When `main` is not up
 by then, it SHALL record the head as rolled back, write the failure file,
 bring the runner up on the previous image once, and SHALL NOT deploy that
@@ -107,6 +110,25 @@ journal and left for the user; retrying or verifying it is stage 9's.
 - **THEN** the failure file names the wait for `main`, the rolled-back record
   and the head, the journal says the head could not be recorded, and the
   rollback's tag and `up` still run
+
+#### Scenario: A retry after a late failure
+
+- **WHEN** a run brought the stack up for the head and a later step failed,
+  and the next run deploys the same head
+- **THEN** that run does not move the previous image, and a rollback in it
+  brings the runner up on the image that ran before the first run
+
+#### Scenario: A new head after a brought-up one
+
+- **WHEN** the head differs from the one whose images a run last brought up
+- **THEN** the image the running runner container runs is tagged as the
+  previous image, as on any deploy
+
+#### Scenario: The brought-up record cannot be written
+
+- **WHEN** the head cannot be recorded as brought up
+- **THEN** the stack is not brought up, the failure file names the
+  brought-up record and the head, and the run fails
 
 #### Scenario: A rolled-back head
 

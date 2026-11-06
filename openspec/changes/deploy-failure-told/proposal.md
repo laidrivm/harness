@@ -43,13 +43,16 @@ main comes up is never told to the session…*,
   outweighs a newer suite's failure or pending run; a consumer's bump
   chooses its target by the same module, which the deploy runs through the
   runner image.
+- A retry of a head whose images a run has already brought up leaves the
+  previous image as tagged. Today it tags the head's own image as previous,
+  and the image that was previous is pruned, so the retry's rollback would
+  have nothing to roll back to. A `brought-up` record names that head (the
+  user's answer 1 а on the card, 06.11).
 
 Not in this change: the restart of a still-fresh session on each tick while a
 step after `main` keeps failing, which is the retry every other failed step
 gets; the symlink hole in `put()`, deferred by the user's decision of 06.11
-until a seen threat. Whether this change also stops that retry from tagging
-the image it brought up as the previous one is asked on the card (design,
-*Open Questions*).
+until a seen threat.
 
 ## Capabilities
 
@@ -62,14 +65,17 @@ None.
 - `orchestrator`: *A failed deploy is told to the session* — the prompt hook
   reports the failure file too; *A session that does not come back is rolled
   back* — a `rolled-back` record that cannot be written is named in the
-  failure file; *The host deploys main's green head and nothing else* — a
+  failure file, and a retry of a head already brought up keeps the previous
+  image; *The host deploys main's green head and nothing else* — a
   scenario for a head with more than one check suite.
 - `harness-updates`: *A bump attempts only the harness's newest green
   commit* — the newest test run decides, across check suites.
 
 ## Impact
 
-- Changed: `orchestrator/deploy.sh` (`green()`, `rollback()`),
+- Changed: `orchestrator/deploy.sh` (`green()`, `rollback()`, `locked()`,
+  the tag before the build, and the `brought-up` record in its state
+  directory),
   `orchestrator/runner/managed-settings.json`, `orchestrator/runner/Dockerfile`
   (the script's `COPY`, the mode check), a new
   `orchestrator/runner/deploy-failed.sh`, `orchestrator/README.md` where it
