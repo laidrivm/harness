@@ -60,6 +60,13 @@ test("a repository an earlier attempt left without a HEAD is remade", () => {
 	expect(commits(dir)).toBe("sandbox");
 });
 
+test("a `.git` git does not accept is remade, though git would answer from the checkout around it", () => {
+	const { checkout, sandbox: dir } = sandbox({ "bun/a.ts": "1\n" });
+	mkdirSync(join(dir, ".git"));
+	expect(build(dir).exitCode).toBe(0);
+	expect([commits(checkout), commits(dir)]).toEqual(["base", "sandbox"]);
+});
+
 // spec: mutation-floor/a-mutant-that-writes-to-the-root-git-names
 test("a test run in the sandbox finds the sandbox through git, never the checkout around it", () => {
 	const find = 'Bun.spawnSync(["git", "rev-parse", "--show-toplevel"]).stdout.toString().trim()';

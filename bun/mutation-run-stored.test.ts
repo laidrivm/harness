@@ -30,6 +30,15 @@ describe("what Stryker is handed", () => {
 		});
 		expect(Object.keys(config)).not.toContain("commandRunner");
 	});
+
+	test("a bun block the shared file sets survives beside the module's own", () => {
+		const tree = load(root);
+		const shared = { ...tree, options: { ...tree.options, bun: { bunArgs: ["--smol"] } } };
+		expect(configuration(shared, "bun/sync-settings.ts", "work.json", false).bun).toMatchObject({
+			bunArgs: ["--smol"],
+			timeout: 900000,
+		});
+	});
 });
 
 describe("what a stored file holds", () => {
@@ -99,6 +108,12 @@ describe("what a stored file holds", () => {
 		]);
 		expect(print).toMatchObject({ "@hughescr/stryker-bun-runner": "1.6.0", "@stryker-mutator/core": "10.0.0" });
 		expect(JSON.parse(print["stryker options"] ?? "")).toMatchObject({ timeoutFactor: 3 });
+	});
+
+	test("the fingerprint names the script the build step runs, which makes every module's sandbox", () => {
+		const t = { ...base, options: { ...base.options, buildCommand: "bun bun/root.ts" } };
+		expect(Object.keys(fingerprint("bun/command-guard.ts", t))).toContain("bun/root.ts");
+		expect(Object.keys(fingerprint("bun/command-guard.ts", base))).not.toContain("bun/root.ts");
 	});
 
 	test("load reads both versions from package.json's pins", () => {
