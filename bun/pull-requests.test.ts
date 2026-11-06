@@ -157,6 +157,7 @@ describe("a repository handed to the read", () => {
 });
 
 describe("one pull request by its number", () => {
+	const HEAD = "c".repeat(40);
 	/** Pull request 350 as the REST endpoint answers it, merged into `main` unless `fields` say otherwise. */
 	const one = (fields: object = {}) =>
 		JSON.stringify({
@@ -164,37 +165,48 @@ describe("one pull request by its number", () => {
 			state: "closed",
 			merged_at: "2026-10-31T00:00:00Z",
 			draft: false,
+			head: { sha: HEAD },
 			base: { ref: "main" },
 			...fields,
 		});
 	const ONE = "api repos/o/r/pulls/350";
+	const MERGED = { state: "MERGED", base: "main", draft: false, headRefOid: HEAD };
 
 	// spec: work-status/a-pull-request-merged-into-main
 	test("one merged into main reads MERGED and its base, after one call [2]", () => {
-		expect(read({ number: "350", answer: one() })).toEqual({
-			result: { state: "MERGED", base: "main" },
-			calls: [ONE],
-			tokens: [],
-		});
+		expect(read({ number: "350", answer: one() })).toEqual({ result: MERGED, calls: [ONE], tokens: [] });
 	});
 
 	// spec: work-status/a-pull-request-still-open
-	test("an open draft reads OPEN [4]", () => {
+	// spec: work-draft/already-a-draft
+	test("an open draft reads OPEN, a draft, and its head's 40 hex digits [4, work-draft 12]", () => {
 		expect(read({ number: "350", answer: one({ state: "open", merged_at: null, draft: true }) }).result).toEqual({
 			state: "OPEN",
 			base: "main",
+			draft: true,
+			headRefOid: HEAD,
+		});
+	});
+
+	// spec: work-draft/a-ready-pull-request
+	test("an open ready one reads OPEN and no draft [work-draft 12]", () => {
+		expect(read({ number: "350", answer: one({ state: "open", merged_at: null }) }).result).toEqual({
+			state: "OPEN",
+			base: "main",
+			draft: false,
+			headRefOid: HEAD,
 		});
 	});
 
 	// spec: work-status/a-pull-request-closed-without-merging
 	test("a closed one with an empty merged_at is not merged [3]", () => {
-		expect(read({ number: "350", answer: one({ merged_at: "" }) }).result).toEqual({ state: "CLOSED", base: "main" });
+		expect(read({ number: "350", answer: one({ merged_at: "" }) }).result).toEqual({ ...MERGED, state: "CLOSED" });
 	});
 
 	// spec: work-status/a-pull-request-merged-into-another-branch
 	test("the base is the one read", () => {
 		expect(read({ number: "350", answer: one({ base: { ref: "release" } }) }).result).toEqual({
-			state: "MERGED",
+			...MERGED,
 			base: "release",
 		});
 	});
@@ -247,7 +259,7 @@ describe("one pull request by its number", () => {
 	test("the minted pull_requests=read token reaches gh [9]", () => {
 		const run = read({ number: "350", answer: one(), mint: ["ghs_read", 0] });
 		expect(run).toEqual({
-			result: { state: "MERGED", base: "main" },
+			result: MERGED,
 			calls: ["mint -n o/r pull_requests=read", ONE],
 			tokens: ["ghs_read"],
 		});

@@ -179,6 +179,12 @@ Rules about how work is carried out here. They do not age with the code.
 - Merge `origin/main` into a branch before pushing it whenever main has moved
   since the branch last merged it — the push hook tests the branch, CI tests
   its merge with main.
+- Before follow-up on an open pull request starts — a review round, a CI fix,
+  a merge of `main` — whether you hand it to a subagent or carry it yourself,
+  run `bun node_modules/harness/bun/work.ts draft --pr <n>` (`bun bun/work.ts`
+  in the harness itself) and put the head it prints in any brief; name a
+  failed `draft` — a cloud session's fails on a ready one — in the report,
+  and go on with the follow-up.
 - Pass `--full-tree` to a `git ls-tree` whose pathspec names a path from the
   repository root — a working directory below the root resolves it against
   itself and lists nothing.
@@ -235,4 +241,5 @@ not age with the code.
   script the allow list grants a push, a pull request and a ready, and the
   one `@coderabbitai review` it posts on a head CodeRabbit skipped or left
   without a run, and
-  `bun bun/work.ts resolve` the one it grants a review thread's resolve.
+  `bun bun/work.ts resolve` the one it grants a review thread's resolve, and
+  `bun bun/work.ts draft` the one it grants a switch to draft.
