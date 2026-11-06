@@ -10,12 +10,17 @@ stand-in already logs and answers `POST /v1/comments` and fails it through
 
 ## 1. `work.ts status` moves a card into and out of `discarded`
 
-- [ ] 1.1 Write failing argument cases in `bun/work-status.test.ts`'s *the
-      arguments*, each printing the usage, exiting 2 and calling nothing:
-      `--to discarded` with no `--why` [1]; `--to idea` with no `--why` [2];
-      `--why "  "` [3]; `--why=` [4]; `--why a --why b` [5]; `--to exploring
-      --why x` [9]; `--to approved --why x` [14]. Verify: each fails against
-      today's code
+- [ ] 1.1 Write argument cases in `bun/work-status.test.ts`'s *the
+      arguments*, each printing the usage, exiting 2 and calling nothing.
+      Failing first: `--to discarded` with no `--why` [1] and `--to idea`
+      with no `--why` [2], which today's parser takes and refuses as
+      `user-only`, exit 1. Passing already, since today's strict parser
+      refuses `--why` as an unknown option, and kept as guards for the
+      parser that will take it: `--to discarded --why "  "` [3]; `--to
+      discarded --why=` [4]; `--to discarded --why a --why b` [5]; `--to
+      exploring --why x` [9]; `--to approved --why x` [14]. Verify: [1] and
+      [2] fail against today's code, and the other five pass against it,
+      the result recorded in the commit
 - [ ] 1.2 Rework *the user's statuses*: `--to approved` still refuses before
       any call; `--to idea --why x` on a card at `exploring` refuses
       `user-only` after the page read alone, posting no comment [10]; a
