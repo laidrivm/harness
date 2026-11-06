@@ -93,6 +93,7 @@ export const MARKETPLACE = {
 	source: {
 		source: "github",
 		repo: "DietrichGebert/ponytail",
+		// orchestrator/runner/session.sh repeats repo and ref, and its test fails until they match.
 		// moved by hand — nothing updates this pin; v5.3.3 was 7801d061243d7b753bad0e0b3c057cd250b11755 on 03.11
 		ref: "v5.3.3",
 	},
