@@ -160,6 +160,21 @@ describe("deploy.sh and the session", () => {
 		expect(moved(h, before)).toEqual([]);
 	});
 
+	// spec: orchestrator/a-failure-after-main-is-up
+	// Pins what the prompt hook relies on; deploy.sh is unchanged for it.
+	test("a push failing after main is up leaves the failure file after the start, and a retry while fresh leaves it again", () => {
+		const h = host();
+		set(h, "push", 1);
+		expect(deploy(h).code).toBe(1);
+		expect(failure(h)).toMatch(STOP("the push"));
+		expect(log(h)).not.toContain("up with the failure file");
+		expect(deployed(h)).toBeUndefined();
+		const before = log(h).length;
+		expect(deploy(h).code).toBe(1);
+		expect(log(h).slice(before)).not.toContain("up with the failure file");
+		expect(failure(h)).toMatch(STOP("the push"));
+	});
+
 	// spec: orchestrator/the-build-fails
 	test("a symlink planted at the failure file is replaced, never followed", () => {
 		const h = host();

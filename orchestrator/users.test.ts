@@ -77,7 +77,8 @@ describe("the image's users", () => {
 		]);
 	});
 
-	test("the image's build fails when its copy of bun/ or the managed CLAUDE.md holds a mode agent or the key holder cannot read, or one they could write", () => {
+	// spec: orchestrator/a-failure-after-main-is-up — the report script's modes too
+	test("the image's build fails when its copy of bun/, the managed CLAUDE.md or the failed deploy's report holds a mode agent or the key holder cannot read, or one they could write", () => {
 		const run = instructions("orchestrator/runner/Dockerfile").find(
 			(l) => l.startsWith("RUN ") && l.includes("find /opt/orchestrator/bun "),
 		);
@@ -85,7 +86,14 @@ describe("the image's users", () => {
 		const script = (run ?? "RUN false")
 			.slice(4)
 			.replaceAll("/opt/orchestrator/bun", '"$1"')
-			.replaceAll("/etc/claude-code", '"$2"');
+			.replaceAll("/etc/claude-code", '"$2"')
+			.replaceAll("/opt/orchestrator/deploy-failed.sh", '"$3"');
+		const report = (mode: number) => {
+			const file = join(emptyDir("orchestrator-modes-"), "deploy-failed.sh");
+			writeFileSync(file, "");
+			chmodSync(file, mode);
+			return file;
+		};
 		const tree = (file: number, dir: number) => {
 			const top = emptyDir("orchestrator-modes-");
 			chmodSync(top, 0o755);
@@ -95,10 +103,15 @@ describe("the image's users", () => {
 			chmodSync(join(top, "sub"), dir);
 			return top;
 		};
-		const built = (bun: string, managed: string) =>
-			["dash", "sh"].map((shell) => Bun.spawnSync([shell, "-c", script, shell, bun, managed]).exitCode);
+		const executable = report(0o755);
+		const built = (bun: string, managed: string, failed = executable) =>
+			["dash", "sh"].map((shell) => Bun.spawnSync([shell, "-c", script, shell, bun, managed, failed]).exitCode);
 		const good = tree(0o644, 0o755);
 		expect(built(good, good)).toEqual([0, 0]);
+		// Run by agent's hooks, so it must be executable by others as well.
+		for (const mode of [0o744, 0o775, 0o757, 0o711])
+			expect([mode.toString(8), ...built(good, good, report(mode))]).toEqual([mode.toString(8), 1, 1]);
+		expect(built(good, good, join(good, "absent"))).toEqual([1, 1]);
 		expect(built(tree(0o755, 0o755), tree(0o755, 0o755))).toEqual([0, 0]);
 		for (const [file, dir] of [
 			[0o600, 0o755],
