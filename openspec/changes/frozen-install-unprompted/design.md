@@ -27,7 +27,7 @@ the script's command line through `check()`, as a typed line.
 - Every literal `bun install` or `bun i` prompts exactly as today.
 
 **Non-Goals:**
-- Any new refusal in the command guard.
+- Any new refusal in the command guard but the one decision 2 names.
 - CI, the runner image, `orchestrator/runner/session.sh` and the board loop,
   which install outside any agent session.
 
@@ -57,7 +57,7 @@ dropped — "Yes, don't ask again" would write a local `allow`, which silences
 a hook's `ask` (`2026-10-22-interpreter-prompt`, task 1.7), the reason «а» of
 2026-11-04 was rejected; returning to the block; changing nothing.
 
-### 2. The guard is unchanged
+### 2. The guard reads the script, and refuses words after it
 
 `bun run deps` reaches `bunRun()`, which reads `bun install
 --frozen-lockfile` from a committed `package.json` and checks it as a line;
@@ -65,6 +65,13 @@ no check refuses that line, so the call passes. A `package.json` with an
 uncommitted or staged edit is refused as `untracked-script` before the script
 is read. A test pins both, so a later check that refuses the script's text is
 seen.
+
+`bunRun()` reads the script, not the words typed after its name, and bun
+forwards those to the install: `bun run deps --no-verify` skips integrity
+checks (CodeRabbit round 5). That is no manifest edit, so a new check in
+`bun/command-guard-exec.ts` blocks `bun run deps` followed by any word,
+redirections included, under the id `deps-args`, the reason naming
+`bun run deps` with nothing after it. It is the one refusal the change adds.
 
 ### 3. Sync owns `scripts.deps`
 
@@ -107,6 +114,12 @@ which prompts.
   manifest edit, out of scope by the user's answer 1 а of 2026-11-05: guard
   only a seen threat, with the pull request's diff and a human merge covering
   intent.
+- [A committed `predeps` or `postdeps`] → bun runs it around `deps`, and the
+  guard reads it as a line, which no check refuses for `bun add`; a manifest
+  edit, out of scope by 1 а (CodeRabbit round 5, held for the user).
+- [An edited `package.json` before the harness is installed] → the bootstrap
+  matches `bun run deps` by text and reads no file, so an uncommitted script
+  runs; a manifest edit, out of scope by 1 а (round 5, held for the user).
 - [A consumer's own `deps` script] → sync refuses and names it; the consumer
   renames it by hand before the bump lands.
 - [A checkout whose install predates the change] → no window: the `ask`
