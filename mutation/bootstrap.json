@@ -2,7 +2,7 @@
 	"schemaVersion": "1.0",
 	"files": {
 		"bun/bootstrap.ts": {
-			"source": "/**\n * The shell comment every command in `HOOKS` ends with: how `sync.ts` tells a\n * hook it wrote from a project's own, which may call the harness's scripts\n * through the same `node_modules/harness/` path.\n */\nexport const MARK = \"# harness-managed\";\n\n/**\n * The Bash `PreToolUse` hook command every consumer's `.claude/settings.json`\n * carries, character for character, as `sync.ts` writes it there. The\n * consumer holds it as text because it has to run before the harness is\n * installed: `settings.ts` asserts it exactly, so a copy that drifts fails the\n * consumer's check instead of booting differently.\n *\n * With the package installed it hands every command to the guard. Without it,\n * only `bun install` or `bun i` runs, bare or with `--frozen-lockfile`, or\n * `bun run deps` — the install a clone needs first — and everything else is\n * blocked with a hint naming `bun run deps`, the form that runs unprompted,\n * rather than every command failing alike on a guard that is not there. The\n * script's text is not read here: an edited `deps` is a manifest edit\n * (frozen-install-unprompted, Risks).\n *\n * `|| exit 2` on both branches: a guard that cannot launch exits 1, which\n * Claude Code treats as non-blocking and runs the command anyway. Exit 2 is\n * the one code that blocks.\n */\nexport const BOOTSTRAP = [\n\t'g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/command-guard.ts\";',\n\t'if [ -f \"$g\" ]; then bun \"$g\" || exit 2; exit 0; fi;',\n\t'bun -e \\'const c = JSON.parse(await Bun.stdin.text()).tool_input?.command ?? \"\";',\n\t\"if (/^(bun (install|i)( --frozen-lockfile)?|bun run deps)$/.test(c.trim())) process.exit(0);\",\n\t'console.error(\"The harness is not installed: run bun run deps first.\");',\n\t\"process.exit(2)' || exit 2\",\n\tMARK,\n].join(\" \");\n\n/**\n * The turn gate's `UserPromptSubmit` and `Stop` registrations, held as text\n * for the same reason: `settings.ts` asserts each exactly.\n *\n * Without the package the `if` exits 0, which lets the prompt through and the\n * turn end. With it, the gate's own exit code is the hook's. No `|| exit 2`,\n * unlike the bootstrap: a gate that cannot launch must end the turn rather\n * than hold it, as the gate's own fail-open header says.\n */\nconst turnGate = (half: \"mark\" | \"stop\") =>\n\t`g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/turn-gate.ts\"; if [ -f \"$g\" ]; then bun \"$g\" ${half}; fi ${MARK}`;\nexport const TURN_MARK = turnGate(\"mark\");\nexport const TURN_STOP = turnGate(\"stop\");\n\n/**\n * The Notion update guard's `PreToolUse` registration. The matcher is a\n * regular expression, as Claude Code reads a hook's, so it reaches the tool\n * under any server name and no longer tool. Before the install every call goes\n * through; after it, the guard's exit code is the hook's. No `|| exit 2`, like\n * the turn gate: the guard is fail-open, as its header says.\n */\nexport const NOTION_MATCHER = \"^mcp__.+__notion-update-page$\";\nexport const NOTION_GUARD = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/notion-guard.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The question gate's `PermissionRequest` registration, under the same kind\n * of matcher for `notion-create-comment`. Before the install, and whenever the\n * gate cannot run, the hook prints nothing and gives no answer, so the prompt\n * stands: this one fails closed with no `|| exit 2`, since only an `allow`\n * the gate prints widens anything.\n */\nexport const QUESTION_MATCHER = \"^mcp__.+__notion-create-comment$\";\nexport const QUESTION_GATE = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/question-gate.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The loop guard's registration, one text on both `PreToolUse` and\n * `PostToolUseFailure` with no matcher: the script chooses its role from the\n * event, and sees every tool. Before the install every call goes through and\n * every failure passes uncounted; after it, the guard's exit code and its\n * warning on stdout are the hook's. No `|| exit 2`: the guard is fail-open,\n * as its header says.\n */\nexport const LOOP_GUARD = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/loop-guard.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The flake watch's registration, one text on both `PostToolUse` and\n * `PostToolUseFailure` under matcher `Bash` with no `if`: the script reads the\n * call's output, since a list of test commands would miss every wrapper.\n * Before the install every call passes unread; after it, the watch's hint on\n * stdout is the hook's. No `|| exit 2`: the watch never blocks.\n */\nexport const FLAKE_WATCH = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/flake-watch.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The `SessionEnd` transcript archive, registered with a `timeout` of 60 s,\n * the most Claude Code allows, since the event's hooks otherwise share 1.5 s.\n * Before the install it does nothing; it exits 0 on every fault, and a\n * `SessionEnd` hook cannot stop the session anyway.\n */\nexport const ARCHIVE = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/transcript-archive.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The `SessionStart` notice: one line when the installed harness is not the\n * pinned one, as after a `git pull` that brought a bump, until `bun run deps`\n * — or `bun install` after a hand edit of the pin, since the guard refuses a\n * script from a `package.json` with uncommitted edits. Claude Code adds a\n * `SessionStart` hook's output to the session, so the agent reads it too.\n *\n * Inline rather than a script in the package: a stale install is an older\n * package, which may predate any script, and a notice living there would be\n * missing in exactly the state it exists to name. Every path exits 0, and\n * `|| true` covers a bun that cannot start: a notice never stops a session.\n *\n * The pin is read from `devDependencies` when `dependencies` names none: the\n * harness pins itself there, since a consumer would install a runtime\n * self-pin and, through it, every earlier one.\n *\n * shortcut: the installed commit is read from `node_modules/harness/.bun-tag`,\n * which bun 1.4.2 writes as `<owner>-<repo>-<7 hex>` and documents nowhere; a\n * bun that changes it makes the notice fall silent rather than wrong. Upgrade\n * when bun documents where an installed git dependency's commit is recorded.\n *\n * In a cloud session (`CLAUDE_CODE_REMOTE` exactly `true`) it first installs\n * from the lockfile, with no lifecycle script: the VM's clone is fresh at\n * every start, and a hook's command passes neither the Bash bootstrap nor an\n * `ask` entry, which would otherwise stop the agent's own `bun install` there\n * with a prompt nobody answers (cloud-sessions D1, D2). In the same command,\n * so the notice runs after it rather than racing it; a failure prints one line\n * and the notice then says what is missing.\n */\nexport const NOTICE = [\n\t'if [ \"$CLAUDE_CODE_REMOTE\" = true ]; then',\n\t'o=$(cd \"${CLAUDE_PROJECT_DIR:-.}\" && bun install --frozen-lockfile --ignore-scripts 2>&1) ||',\n\t'{ l=$(printf \"%s\" \"$o\" | tail -n 1); echo \"The harness cloud install failed${l:+: $l}\"; };',\n\t\"fi;\",\n\t'bun -e \\'const fs = require(\"node:fs\");',\n\t'const d = process.env.CLAUDE_PROJECT_DIR ?? \".\";',\n\t'if (!fs.existsSync(d + \"/node_modules/harness\")) {',\n\t'console.log(\"The harness is not installed: run bun run deps.\"); process.exit(0); }',\n\t\"try {\",\n\t'const m = JSON.parse(fs.readFileSync(d + \"/package.json\", \"utf8\"));',\n\t'const pin = (m.dependencies?.harness ?? m.devDependencies?.harness ?? \"\").match(/#([0-9a-f]{40})$/)?.[1];',\n\t'const tag = fs.readFileSync(d + \"/node_modules/harness/.bun-tag\", \"utf8\").trim().match(/-([0-9a-f]{7,40})$/)?.[1];',\n\t\"if (pin && tag && !pin.startsWith(tag))\",\n\t'console.log(\"The installed harness is \" + tag + \", the pin \" + pin.slice(0, 7) + \": run bun run deps (bun install if package.json has uncommitted edits or bun.lock lacks the pin).\");',\n\t\"} catch {}' || true\",\n\tMARK,\n].join(\" \");\n\n/**\n * Every hook the harness registers in a consumer's settings: what\n * `settings.ts` asserts and `sync.ts` writes, so the two cannot disagree on\n * which hooks there are. A hook the harness adds is one entry here, and its\n * command ends with `MARK`. `sole` makes `settings.ts` refuse any\n * other hook under the same matcher; without it the hook need only be present.\n * An entry with no matcher is registered, and checked, in a group with none.\n * A `timeout` is written with the hook and checked whenever the entry has one.\n */\nexport const HOOKS: {\n\tevent: string;\n\tmatcher?: string;\n\tcommand: string;\n\tname: string;\n\tsole?: true;\n\ttimeout?: number;\n}[] = [\n\t{\n\t\tevent: \"PreToolUse\",\n\t\tmatcher: \"Bash\",\n\t\tcommand: BOOTSTRAP,\n\t\tname: \"harness bootstrap\",\n\t\tsole: true,\n\t},\n\t{\n\t\tevent: \"PreToolUse\",\n\t\tmatcher: NOTION_MATCHER,\n\t\tcommand: NOTION_GUARD,\n\t\tname: \"harness Notion update guard\",\n\t},\n\t{\n\t\tevent: \"PermissionRequest\",\n\t\tmatcher: QUESTION_MATCHER,\n\t\tcommand: QUESTION_GATE,\n\t\tname: \"harness question gate\",\n\t},\n\t{ event: \"PreToolUse\", command: LOOP_GUARD, name: \"harness loop guard\" },\n\t{\n\t\tevent: \"PostToolUseFailure\",\n\t\tcommand: LOOP_GUARD,\n\t\tname: \"harness loop guard\",\n\t},\n\t{ event: \"PostToolUse\", matcher: \"Bash\", command: FLAKE_WATCH, name: \"harness flake watch\" },\n\t{ event: \"PostToolUseFailure\", matcher: \"Bash\", command: FLAKE_WATCH, name: \"harness flake watch\" },\n\t{ event: \"UserPromptSubmit\", command: TURN_MARK, name: \"harness turn gate\" },\n\t{ event: \"Stop\", command: TURN_STOP, name: \"harness turn gate\" },\n\t{ event: \"SessionStart\", command: NOTICE, name: \"harness stale-install notice\" },\n\t{\n\t\tevent: \"SessionEnd\",\n\t\tcommand: ARCHIVE,\n\t\tname: \"harness transcript archive\",\n\t\ttimeout: 60,\n\t},\n];\n\n/** The hook object a `HOOKS` entry is registered as in the settings. */\nexport const registration = ({ command, timeout }: (typeof HOOKS)[number]) => ({\n\ttype: \"command\",\n\tcommand,\n\t...(timeout === undefined ? {} : { timeout }),\n});\n",
+			"source": "/**\n * The shell comment every command in `HOOKS` ends with: how `sync.ts` tells a\n * hook it wrote from a project's own, which may call the harness's scripts\n * through the same `node_modules/harness/` path.\n */\nexport const MARK = \"# harness-managed\";\n\n/**\n * The Bash `PreToolUse` hook command every consumer's `.claude/settings.json`\n * carries, character for character, as `sync.ts` writes it there. The\n * consumer holds it as text because it has to run before the harness is\n * installed: `settings.ts` asserts it exactly, so a copy that drifts fails the\n * consumer's check instead of booting differently.\n *\n * With the package installed it hands every command to the guard. Without it,\n * only `bun install` or `bun i` runs, bare or with `--frozen-lockfile`, or\n * `bun run deps` — the install a clone needs first — and everything else is\n * blocked with a hint naming `bun run deps`, the form that runs unprompted,\n * rather than every command failing alike on a guard that is not there. The\n * script's text is not read here: an edited `deps` is a manifest edit\n * (frozen-install-unprompted, Risks).\n *\n * `|| exit 2` on both branches: a guard that cannot launch exits 1, which\n * Claude Code treats as non-blocking and runs the command anyway. Exit 2 is\n * the one code that blocks.\n */\nexport const BOOTSTRAP = [\n\t'g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/command-guard.ts\";',\n\t'if [ -f \"$g\" ]; then bun \"$g\" || exit 2; exit 0; fi;',\n\t'bun -e \\'const c = JSON.parse(await Bun.stdin.text()).tool_input?.command ?? \"\";',\n\t\"if (/^(bun (install|i)( --frozen-lockfile)?|bun run deps)$/.test(c.trim())) process.exit(0);\",\n\t'console.error(\"The harness is not installed: run bun run deps first.\");',\n\t\"process.exit(2)' || exit 2\",\n\tMARK,\n].join(\" \");\n\n/**\n * The turn gate's `UserPromptSubmit` and `Stop` registrations, held as text\n * for the same reason: `settings.ts` asserts each exactly.\n *\n * Without the package the `if` exits 0, which lets the prompt through and the\n * turn end. With it, the gate's own exit code is the hook's. No `|| exit 2`,\n * unlike the bootstrap: a gate that cannot launch must end the turn rather\n * than hold it, as the gate's own fail-open header says.\n */\nconst turnGate = (half: \"mark\" | \"stop\") =>\n\t`g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/turn-gate.ts\"; if [ -f \"$g\" ]; then bun \"$g\" ${half}; fi ${MARK}`;\nexport const TURN_MARK = turnGate(\"mark\");\nexport const TURN_STOP = turnGate(\"stop\");\n\n/**\n * The Notion update guard's `PreToolUse` registration. The matcher is a\n * regular expression, as Claude Code reads a hook's, so it reaches the tool\n * under any server name and no longer tool. Before the install every call goes\n * through; after it, the guard's exit code is the hook's. No `|| exit 2`, like\n * the turn gate: the guard is fail-open, as its header says.\n */\nexport const NOTION_MATCHER = \"^mcp__.+__notion-update-page$\";\nexport const NOTION_GUARD = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/notion-guard.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The question gate's `PermissionRequest` registration, under the same kind\n * of matcher for `notion-create-comment`. Before the install, and whenever the\n * gate cannot run, the hook prints nothing and gives no answer, so the prompt\n * stands: this one fails closed with no `|| exit 2`, since only an `allow`\n * the gate prints widens anything.\n */\nexport const QUESTION_MATCHER = \"^mcp__.+__notion-create-comment$\";\nexport const QUESTION_GATE = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/question-gate.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The loop guard's registration, one text on both `PreToolUse` and\n * `PostToolUseFailure` with no matcher: the script chooses its role from the\n * event, and sees every tool. Before the install every call goes through and\n * every failure passes uncounted; after it, the guard's exit code and its\n * warning on stdout are the hook's. No `|| exit 2`: the guard is fail-open,\n * as its header says.\n */\nexport const LOOP_GUARD = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/loop-guard.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The flake watch's registration, one text on both `PostToolUse` and\n * `PostToolUseFailure` under matcher `Bash` with no `if`: the script reads the\n * call's output, since a list of test commands would miss every wrapper.\n * Before the install every call passes unread; after it, the watch's hint on\n * stdout is the hook's. No `|| exit 2`: the watch never blocks.\n */\nexport const FLAKE_WATCH = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/flake-watch.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The `SessionEnd` transcript archive, registered with a `timeout` of 60 s,\n * the most Claude Code allows, since the event's hooks otherwise share 1.5 s.\n * Before the install it does nothing; it exits 0 on every fault, and a\n * `SessionEnd` hook cannot stop the session anyway.\n */\nexport const ARCHIVE = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/transcript-archive.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The `SessionStart` notice: one line when the installed harness is not the\n * pinned one, as after a `git pull` that brought a bump, until `bun run deps`\n * — or `bun install` after a hand edit of the pin, since the guard refuses a\n * script from a `package.json` with uncommitted edits, and the frozen install\n * a pin committed without its `bun.lock`. Claude Code adds a\n * `SessionStart` hook's output to the session, so the agent reads it too.\n *\n * Inline rather than a script in the package: a stale install is an older\n * package, which may predate any script, and a notice living there would be\n * missing in exactly the state it exists to name. Every path exits 0, and\n * `|| true` covers a bun that cannot start: a notice never stops a session.\n *\n * The pin is read from `devDependencies` when `dependencies` names none: the\n * harness pins itself there, since a consumer would install a runtime\n * self-pin and, through it, every earlier one.\n *\n * shortcut: the installed commit is read from `node_modules/harness/.bun-tag`,\n * which bun 1.4.2 writes as `<owner>-<repo>-<7 hex>` and documents nowhere; a\n * bun that changes it makes the notice fall silent rather than wrong. Upgrade\n * when bun documents where an installed git dependency's commit is recorded.\n *\n * In a cloud session (`CLAUDE_CODE_REMOTE` exactly `true`) it first installs\n * from the lockfile, with no lifecycle script: the VM's clone is fresh at\n * every start, and a hook's command passes neither the Bash bootstrap nor an\n * `ask` entry, which would otherwise stop the agent's own `bun install` there\n * with a prompt nobody answers (cloud-sessions D1, D2). In the same command,\n * so the notice runs after it rather than racing it; a failure prints one line\n * and the notice then says what is missing.\n */\nexport const NOTICE = [\n\t'if [ \"$CLAUDE_CODE_REMOTE\" = true ]; then',\n\t'o=$(cd \"${CLAUDE_PROJECT_DIR:-.}\" && bun install --frozen-lockfile --ignore-scripts 2>&1) ||',\n\t'{ l=$(printf \"%s\" \"$o\" | tail -n 1); echo \"The harness cloud install failed${l:+: $l}\"; };',\n\t\"fi;\",\n\t'bun -e \\'const fs = require(\"node:fs\");',\n\t'const d = process.env.CLAUDE_PROJECT_DIR ?? \".\";',\n\t'if (!fs.existsSync(d + \"/node_modules/harness\")) {',\n\t'console.log(\"The harness is not installed: run bun run deps.\"); process.exit(0); }',\n\t\"try {\",\n\t'const m = JSON.parse(fs.readFileSync(d + \"/package.json\", \"utf8\"));',\n\t'const pin = (m.dependencies?.harness ?? m.devDependencies?.harness ?? \"\").match(/#([0-9a-f]{40})$/)?.[1];',\n\t'const tag = fs.readFileSync(d + \"/node_modules/harness/.bun-tag\", \"utf8\").trim().match(/-([0-9a-f]{7,40})$/)?.[1];',\n\t\"if (pin && tag && !pin.startsWith(tag))\",\n\t'console.log(\"The installed harness is \" + tag + \", the pin \" + pin.slice(0, 7) + \": run bun run deps (bun install if package.json has uncommitted edits or bun.lock lacks the pin).\");',\n\t\"} catch {}' || true\",\n\tMARK,\n].join(\" \");\n\n/**\n * Every hook the harness registers in a consumer's settings: what\n * `settings.ts` asserts and `sync.ts` writes, so the two cannot disagree on\n * which hooks there are. A hook the harness adds is one entry here, and its\n * command ends with `MARK`. `sole` makes `settings.ts` refuse any\n * other hook under the same matcher; without it the hook need only be present.\n * An entry with no matcher is registered, and checked, in a group with none.\n * A `timeout` is written with the hook and checked whenever the entry has one.\n */\nexport const HOOKS: {\n\tevent: string;\n\tmatcher?: string;\n\tcommand: string;\n\tname: string;\n\tsole?: true;\n\ttimeout?: number;\n}[] = [\n\t{\n\t\tevent: \"PreToolUse\",\n\t\tmatcher: \"Bash\",\n\t\tcommand: BOOTSTRAP,\n\t\tname: \"harness bootstrap\",\n\t\tsole: true,\n\t},\n\t{\n\t\tevent: \"PreToolUse\",\n\t\tmatcher: NOTION_MATCHER,\n\t\tcommand: NOTION_GUARD,\n\t\tname: \"harness Notion update guard\",\n\t},\n\t{\n\t\tevent: \"PermissionRequest\",\n\t\tmatcher: QUESTION_MATCHER,\n\t\tcommand: QUESTION_GATE,\n\t\tname: \"harness question gate\",\n\t},\n\t{ event: \"PreToolUse\", command: LOOP_GUARD, name: \"harness loop guard\" },\n\t{\n\t\tevent: \"PostToolUseFailure\",\n\t\tcommand: LOOP_GUARD,\n\t\tname: \"harness loop guard\",\n\t},\n\t{ event: \"PostToolUse\", matcher: \"Bash\", command: FLAKE_WATCH, name: \"harness flake watch\" },\n\t{ event: \"PostToolUseFailure\", matcher: \"Bash\", command: FLAKE_WATCH, name: \"harness flake watch\" },\n\t{ event: \"UserPromptSubmit\", command: TURN_MARK, name: \"harness turn gate\" },\n\t{ event: \"Stop\", command: TURN_STOP, name: \"harness turn gate\" },\n\t{ event: \"SessionStart\", command: NOTICE, name: \"harness stale-install notice\" },\n\t{\n\t\tevent: \"SessionEnd\",\n\t\tcommand: ARCHIVE,\n\t\tname: \"harness transcript archive\",\n\t\ttimeout: 60,\n\t},\n];\n\n/** The hook object a `HOOKS` entry is registered as in the settings. */\nexport const registration = ({ command, timeout }: (typeof HOOKS)[number]) => ({\n\ttype: \"command\",\n\tcommand,\n\t...(timeout === undefined ? {} : { timeout }),\n});\n",
 			"mutants": [
 				{
 					"id": "0",
@@ -330,11 +330,11 @@
 					"location": {
 						"end": {
 							"column": 2,
-							"line": 144
+							"line": 145
 						},
 						"start": {
 							"column": 23,
-							"line": 127
+							"line": 128
 						}
 					},
 					"replacement": "[]",
@@ -346,11 +346,11 @@
 					"location": {
 						"end": {
 							"column": 45,
-							"line": 128
+							"line": 129
 						},
 						"start": {
 							"column": 2,
-							"line": 128
+							"line": 129
 						}
 					},
 					"replacement": "\"\"",
@@ -362,11 +362,11 @@
 					"location": {
 						"end": {
 							"column": 96,
-							"line": 129
+							"line": 130
 						},
 						"start": {
 							"column": 2,
-							"line": 129
+							"line": 130
 						}
 					},
 					"replacement": "\"\"",
@@ -378,11 +378,11 @@
 					"location": {
 						"end": {
 							"column": 94,
-							"line": 130
+							"line": 131
 						},
 						"start": {
 							"column": 2,
-							"line": 130
+							"line": 131
 						}
 					},
 					"replacement": "\"\"",
@@ -394,11 +394,11 @@
 					"location": {
 						"end": {
 							"column": 7,
-							"line": 131
+							"line": 132
 						},
 						"start": {
 							"column": 2,
-							"line": 131
+							"line": 132
 						}
 					},
 					"replacement": "\"\"",
@@ -410,11 +410,11 @@
 					"location": {
 						"end": {
 							"column": 43,
-							"line": 132
+							"line": 133
 						},
 						"start": {
 							"column": 2,
-							"line": 132
+							"line": 133
 						}
 					},
 					"replacement": "\"\"",
@@ -426,11 +426,11 @@
 					"location": {
 						"end": {
 							"column": 52,
-							"line": 133
+							"line": 134
 						},
 						"start": {
 							"column": 2,
-							"line": 133
+							"line": 134
 						}
 					},
 					"replacement": "\"\"",
@@ -442,11 +442,11 @@
 					"location": {
 						"end": {
 							"column": 54,
-							"line": 134
+							"line": 135
 						},
 						"start": {
 							"column": 2,
-							"line": 134
+							"line": 135
 						}
 					},
 					"replacement": "\"\"",
@@ -458,11 +458,11 @@
 					"location": {
 						"end": {
 							"column": 86,
-							"line": 135
+							"line": 136
 						},
 						"start": {
 							"column": 2,
-							"line": 135
+							"line": 136
 						}
 					},
 					"replacement": "\"\"",
@@ -474,11 +474,11 @@
 					"location": {
 						"end": {
 							"column": 9,
-							"line": 136
+							"line": 137
 						},
 						"start": {
 							"column": 2,
-							"line": 136
+							"line": 137
 						}
 					},
 					"replacement": "\"\"",
@@ -490,11 +490,11 @@
 					"location": {
 						"end": {
 							"column": 71,
-							"line": 137
+							"line": 138
 						},
 						"start": {
 							"column": 2,
-							"line": 137
+							"line": 138
 						}
 					},
 					"replacement": "\"\"",
@@ -506,11 +506,11 @@
 					"location": {
 						"end": {
 							"column": 109,
-							"line": 138
+							"line": 139
 						},
 						"start": {
 							"column": 2,
-							"line": 138
+							"line": 139
 						}
 					},
 					"replacement": "\"\"",
@@ -522,11 +522,11 @@
 					"location": {
 						"end": {
 							"column": 118,
-							"line": 139
+							"line": 140
 						},
 						"start": {
 							"column": 2,
-							"line": 139
+							"line": 140
 						}
 					},
 					"replacement": "\"\"",
@@ -538,11 +538,11 @@
 					"location": {
 						"end": {
 							"column": 43,
-							"line": 140
+							"line": 141
 						},
 						"start": {
 							"column": 2,
-							"line": 140
+							"line": 141
 						}
 					},
 					"replacement": "\"\"",
@@ -554,11 +554,11 @@
 					"location": {
 						"end": {
 							"column": 186,
-							"line": 141
+							"line": 142
 						},
 						"start": {
 							"column": 2,
-							"line": 141
+							"line": 142
 						}
 					},
 					"replacement": "\"\"",
@@ -570,11 +570,11 @@
 					"location": {
 						"end": {
 							"column": 23,
-							"line": 142
+							"line": 143
 						},
 						"start": {
 							"column": 2,
-							"line": 142
+							"line": 143
 						}
 					},
 					"replacement": "\"\"",
@@ -586,11 +586,11 @@
 					"location": {
 						"end": {
 							"column": 11,
-							"line": 144
+							"line": 145
 						},
 						"start": {
 							"column": 8,
-							"line": 144
+							"line": 145
 						}
 					},
 					"replacement": "\"\"",
@@ -602,11 +602,11 @@
 					"location": {
 						"end": {
 							"column": 2,
-							"line": 199
+							"line": 200
 						},
 						"start": {
 							"column": 7,
-							"line": 162
+							"line": 163
 						}
 					},
 					"replacement": "[]",
@@ -618,11 +618,11 @@
 					"location": {
 						"end": {
 							"column": 3,
-							"line": 169
+							"line": 170
 						},
 						"start": {
 							"column": 2,
-							"line": 163
+							"line": 164
 						}
 					},
 					"replacement": "{}",
@@ -634,11 +634,11 @@
 					"location": {
 						"end": {
 							"column": 22,
-							"line": 164
+							"line": 165
 						},
 						"start": {
 							"column": 10,
-							"line": 164
+							"line": 165
 						}
 					},
 					"replacement": "\"\"",
@@ -650,11 +650,11 @@
 					"location": {
 						"end": {
 							"column": 18,
-							"line": 165
+							"line": 166
 						},
 						"start": {
 							"column": 12,
-							"line": 165
+							"line": 166
 						}
 					},
 					"replacement": "\"\"",
@@ -666,11 +666,11 @@
 					"location": {
 						"end": {
 							"column": 28,
-							"line": 167
+							"line": 168
 						},
 						"start": {
 							"column": 9,
-							"line": 167
+							"line": 168
 						}
 					},
 					"replacement": "\"\"",
@@ -682,11 +682,11 @@
 					"location": {
 						"end": {
 							"column": 13,
-							"line": 168
+							"line": 169
 						},
 						"start": {
 							"column": 9,
-							"line": 168
+							"line": 169
 						}
 					},
 					"replacement": "false",
@@ -698,11 +698,11 @@
 					"location": {
 						"end": {
 							"column": 3,
-							"line": 175
+							"line": 176
 						},
 						"start": {
 							"column": 2,
-							"line": 170
+							"line": 171
 						}
 					},
 					"replacement": "{}",
@@ -714,11 +714,11 @@
 					"location": {
 						"end": {
 							"column": 22,
-							"line": 171
+							"line": 172
 						},
 						"start": {
 							"column": 10,
-							"line": 171
+							"line": 172
 						}
 					},
 					"replacement": "\"\"",
@@ -730,11 +730,11 @@
 					"location": {
 						"end": {
 							"column": 38,
-							"line": 174
+							"line": 175
 						},
 						"start": {
 							"column": 9,
-							"line": 174
+							"line": 175
 						}
 					},
 					"replacement": "\"\"",
@@ -746,11 +746,11 @@
 					"location": {
 						"end": {
 							"column": 3,
-							"line": 181
+							"line": 182
 						},
 						"start": {
 							"column": 2,
-							"line": 176
+							"line": 177
 						}
 					},
 					"replacement": "{}",
@@ -762,11 +762,11 @@
 					"location": {
 						"end": {
 							"column": 29,
-							"line": 177
+							"line": 178
 						},
 						"start": {
 							"column": 10,
-							"line": 177
+							"line": 178
 						}
 					},
 					"replacement": "\"\"",
@@ -778,11 +778,11 @@
 					"location": {
 						"end": {
 							"column": 32,
-							"line": 180
+							"line": 181
 						},
 						"start": {
 							"column": 9,
-							"line": 180
+							"line": 181
 						}
 					},
 					"replacement": "\"\"",
@@ -794,11 +794,11 @@
 					"location": {
 						"end": {
 							"column": 74,
-							"line": 182
+							"line": 183
 						},
 						"start": {
 							"column": 2,
-							"line": 182
+							"line": 183
 						}
 					},
 					"replacement": "{}",
@@ -810,11 +810,11 @@
 					"location": {
 						"end": {
 							"column": 23,
-							"line": 182
+							"line": 183
 						},
 						"start": {
 							"column": 11,
-							"line": 182
+							"line": 183
 						}
 					},
 					"replacement": "\"\"",
@@ -826,11 +826,11 @@
 					"location": {
 						"end": {
 							"column": 72,
-							"line": 182
+							"line": 183
 						},
 						"start": {
 							"column": 52,
-							"line": 182
+							"line": 183
 						}
 					},
 					"replacement": "\"\"",
@@ -842,11 +842,11 @@
 					"location": {
 						"end": {
 							"column": 3,
-							"line": 187
+							"line": 188
 						},
 						"start": {
 							"column": 2,
-							"line": 183
+							"line": 184
 						}
 					},
 					"replacement": "{}",
@@ -858,11 +858,11 @@
 					"location": {
 						"end": {
 							"column": 30,
-							"line": 184
+							"line": 185
 						},
 						"start": {
 							"column": 10,
-							"line": 184
+							"line": 185
 						}
 					},
 					"replacement": "\"\"",
@@ -874,11 +874,11 @@
 					"location": {
 						"end": {
 							"column": 29,
-							"line": 186
+							"line": 187
 						},
 						"start": {
 							"column": 9,
-							"line": 186
+							"line": 187
 						}
 					},
 					"replacement": "\"\"",
@@ -890,11 +890,11 @@
 					"location": {
 						"end": {
 							"column": 94,
-							"line": 188
+							"line": 189
 						},
 						"start": {
 							"column": 2,
-							"line": 188
+							"line": 189
 						}
 					},
 					"replacement": "{}",
@@ -906,11 +906,11 @@
 					"location": {
 						"end": {
 							"column": 24,
-							"line": 188
+							"line": 189
 						},
 						"start": {
 							"column": 11,
-							"line": 188
+							"line": 189
 						}
 					},
 					"replacement": "\"\"",
@@ -922,11 +922,11 @@
 					"location": {
 						"end": {
 							"column": 41,
-							"line": 188
+							"line": 189
 						},
 						"start": {
 							"column": 35,
-							"line": 188
+							"line": 189
 						}
 					},
 					"replacement": "\"\"",
@@ -938,11 +938,11 @@
 					"location": {
 						"end": {
 							"column": 92,
-							"line": 188
+							"line": 189
 						},
 						"start": {
 							"column": 71,
-							"line": 188
+							"line": 189
 						}
 					},
 					"replacement": "\"\"",
@@ -954,11 +954,11 @@
 					"location": {
 						"end": {
 							"column": 101,
-							"line": 189
+							"line": 190
 						},
 						"start": {
 							"column": 2,
-							"line": 189
+							"line": 190
 						}
 					},
 					"replacement": "{}",
@@ -970,11 +970,11 @@
 					"location": {
 						"end": {
 							"column": 31,
-							"line": 189
+							"line": 190
 						},
 						"start": {
 							"column": 11,
-							"line": 189
+							"line": 190
 						}
 					},
 					"replacement": "\"\"",
@@ -986,11 +986,11 @@
 					"location": {
 						"end": {
 							"column": 48,
-							"line": 189
+							"line": 190
 						},
 						"start": {
 							"column": 42,
-							"line": 189
+							"line": 190
 						}
 					},
 					"replacement": "\"\"",
@@ -1002,11 +1002,11 @@
 					"location": {
 						"end": {
 							"column": 99,
-							"line": 189
+							"line": 190
 						},
 						"start": {
 							"column": 78,
-							"line": 189
+							"line": 190
 						}
 					},
 					"replacement": "\"\"",
@@ -1018,11 +1018,11 @@
 					"location": {
 						"end": {
 							"column": 78,
-							"line": 190
+							"line": 191
 						},
 						"start": {
 							"column": 2,
-							"line": 190
+							"line": 191
 						}
 					},
 					"replacement": "{}",
@@ -1034,11 +1034,11 @@
 					"location": {
 						"end": {
 							"column": 29,
-							"line": 190
+							"line": 191
 						},
 						"start": {
 							"column": 11,
-							"line": 190
+							"line": 191
 						}
 					},
 					"replacement": "\"\"",
@@ -1050,11 +1050,11 @@
 					"location": {
 						"end": {
 							"column": 76,
-							"line": 190
+							"line": 191
 						},
 						"start": {
 							"column": 57,
-							"line": 190
+							"line": 191
 						}
 					},
 					"replacement": "\"\"",
@@ -1066,11 +1066,11 @@
 					"location": {
 						"end": {
 							"column": 66,
-							"line": 191
+							"line": 192
 						},
 						"start": {
 							"column": 2,
-							"line": 191
+							"line": 192
 						}
 					},
 					"replacement": "{}",
@@ -1082,11 +1082,11 @@
 					"location": {
 						"end": {
 							"column": 17,
-							"line": 191
+							"line": 192
 						},
 						"start": {
 							"column": 11,
-							"line": 191
+							"line": 192
 						}
 					},
 					"replacement": "\"\"",
@@ -1098,11 +1098,11 @@
 					"location": {
 						"end": {
 							"column": 64,
-							"line": 191
+							"line": 192
 						},
 						"start": {
 							"column": 45,
-							"line": 191
+							"line": 192
 						}
 					},
 					"replacement": "\"\"",
@@ -1114,11 +1114,11 @@
 					"location": {
 						"end": {
 							"column": 82,
-							"line": 192
+							"line": 193
 						},
 						"start": {
 							"column": 2,
-							"line": 192
+							"line": 193
 						}
 					},
 					"replacement": "{}",
@@ -1130,11 +1130,11 @@
 					"location": {
 						"end": {
 							"column": 25,
-							"line": 192
+							"line": 193
 						},
 						"start": {
 							"column": 11,
-							"line": 192
+							"line": 193
 						}
 					},
 					"replacement": "\"\"",
@@ -1146,11 +1146,11 @@
 					"location": {
 						"end": {
 							"column": 80,
-							"line": 192
+							"line": 193
 						},
 						"start": {
 							"column": 50,
-							"line": 192
+							"line": 193
 						}
 					},
 					"replacement": "\"\"",
@@ -1162,11 +1162,11 @@
 					"location": {
 						"end": {
 							"column": 3,
-							"line": 198
+							"line": 199
 						},
 						"start": {
 							"column": 2,
-							"line": 193
+							"line": 194
 						}
 					},
 					"replacement": "{}",
@@ -1178,11 +1178,11 @@
 					"location": {
 						"end": {
 							"column": 22,
-							"line": 194
+							"line": 195
 						},
 						"start": {
 							"column": 10,
-							"line": 194
+							"line": 195
 						}
 					},
 					"replacement": "\"\"",
@@ -1194,11 +1194,11 @@
 					"location": {
 						"end": {
 							"column": 37,
-							"line": 196
+							"line": 197
 						},
 						"start": {
 							"column": 9,
-							"line": 196
+							"line": 197
 						}
 					},
 					"replacement": "\"\"",
@@ -1210,11 +1210,11 @@
 					"location": {
 						"end": {
 							"column": 3,
-							"line": 206
+							"line": 207
 						},
 						"start": {
 							"column": 29,
-							"line": 202
+							"line": 203
 						}
 					},
 					"replacement": "() => undefined",
@@ -1226,11 +1226,11 @@
 					"location": {
 						"end": {
 							"column": 2,
-							"line": 206
+							"line": 207
 						},
 						"start": {
 							"column": 80,
-							"line": 202
+							"line": 203
 						}
 					},
 					"replacement": "{}",
@@ -1242,11 +1242,11 @@
 					"location": {
 						"end": {
 							"column": 17,
-							"line": 203
+							"line": 204
 						},
 						"start": {
 							"column": 8,
-							"line": 203
+							"line": 204
 						}
 					},
 					"replacement": "\"\"",
@@ -1258,11 +1258,11 @@
 					"location": {
 						"end": {
 							"column": 27,
-							"line": 205
+							"line": 206
 						},
 						"start": {
 							"column": 6,
-							"line": 205
+							"line": 206
 						}
 					},
 					"replacement": "true",
@@ -1274,11 +1274,11 @@
 					"location": {
 						"end": {
 							"column": 27,
-							"line": 205
+							"line": 206
 						},
 						"start": {
 							"column": 6,
-							"line": 205
+							"line": 206
 						}
 					},
 					"replacement": "false",
@@ -1290,11 +1290,11 @@
 					"location": {
 						"end": {
 							"column": 27,
-							"line": 205
+							"line": 206
 						},
 						"start": {
 							"column": 6,
-							"line": 205
+							"line": 206
 						}
 					},
 					"replacement": "timeout !== undefined",
@@ -1306,11 +1306,11 @@
 					"location": {
 						"end": {
 							"column": 46,
-							"line": 205
+							"line": 206
 						},
 						"start": {
 							"column": 35,
-							"line": 205
+							"line": 206
 						}
 					},
 					"replacement": "{}",
