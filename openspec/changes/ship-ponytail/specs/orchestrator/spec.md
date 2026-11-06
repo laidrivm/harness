@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-### Requirement: Every claude the runner starts as the session user runs ponytail at ultra
+### Requirement: Every claude the runner starts as the session user reads ponytail's level as ultra
 
 On every container start, before it starts the persistent session, the
 runner's entrypoint SHALL write the session user's ponytail config file with
@@ -8,7 +8,10 @@ runner's entrypoint SHALL write the session user's ponytail config file with
 entrypoint. The launcher a pass's session
 runs under SHALL give `claude` the session user's home and no
 `XDG_CONFIG_HOME`, so the pass reads the same file. Nothing the harness ships
-to a laptop or a consumer SHALL set ponytail's level.
+to a laptop or a consumer SHALL set ponytail's level. This requirement sets
+the level, not the plugin's presence: only the persistent session installs
+ponytail (the next requirement), and a pass whose clone does not load that
+install runs without ponytail (design.md, D5).
 
 #### Scenario: The level is written before the session starts
 

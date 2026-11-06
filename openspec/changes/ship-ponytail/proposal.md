@@ -50,8 +50,9 @@ None.
   from a pinned marketplace, and the check fails when they do not.
 - `harness-updates`: the sync writes the two plugins and the marketplace
   entry, and keeps the consumer's own.
-- `orchestrator`: every claude the runner starts as `agent` runs ponytail at
-  ultra.
+- `orchestrator`: every claude the runner starts as `agent` reads ponytail's
+  level as ultra, and the persistent session installs ponytail before each
+  start; a pass may run without it (design.md, D5).
 
 ## Impact
 
