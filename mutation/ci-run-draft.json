@@ -1,0 +1,352 @@
+{
+	"schemaVersion": "1.0",
+	"files": {
+		"bun/ci-run-draft.ts": {
+			"source": "/**\n * The CI flow's half of the draft rule in `core/git-and-prs.md`: the pull\n * request is a draft while the runner works on it, and ready once that work\n * ends — right after the push when one comes — unless the session left a\n * question to the user on the card, which keeps it a draft\n * (`ci-flow-draft`'s design).\n */\nimport type { Outcome } from \"./ci-run.ts\";\nimport { gh } from \"./pull-requests.ts\";\n\n/**\n * `gh pr ready` on #`n` in `repo` as the runner, with the App's token in `GH_TOKEN` when one is minted;\n * `--undo` marks it draft. Killed at `pull-requests.ts`'s limit, as its read is, so a `gh` that never\n * answers cannot hold the pass.\n */\nexport const ready = (repo: string, n: number, ...undo: string[]) =>\n\tgh([\"pr\", \"ready\", String(n), \"-R\", repo, ...undo]).exitCode === 0;\n\n/**\n * Runs `work` with #`n` a draft. `work` answers its outcome and whether a\n * question to the user is open, which leaves the draft as it is. A draft that\n * cannot be made does not stop the work: its attempt is already spent.\n */\nexport async function draftWhile(repo: string, n: number, work: () => Promise<[Outcome, boolean]>): Promise<Outcome> {\n\tready(repo, n, \"--undo\");\n\tlet done: [Outcome, boolean];\n\ttry {\n\t\tdone = await work();\n\t} catch (e) {\n\t\t// No push will come from a flow that threw.\n\t\tif (ready(repo, n)) throw e;\n\t\tthrow new Error(`${e instanceof Error ? e.message : String(e)}; #${n} could not be marked ready`);\n\t}\n\tconst [outcome, asked] = done;\n\tif (asked || ready(repo, n)) return outcome;\n\treturn [\"failed\", `${outcome[1]}; #${n} could not be marked ready`];\n}\n",
+			"mutants": [
+				{
+					"id": "0",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 17
+						},
+						"start": {
+							"column": 22,
+							"line": 16
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Killed"
+				},
+				{
+					"id": "1",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 17
+						},
+						"start": {
+							"column": 2,
+							"line": 17
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "2",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 17
+						},
+						"start": {
+							"column": 2,
+							"line": 17
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "3",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 17
+						},
+						"start": {
+							"column": 2,
+							"line": 17
+						}
+					},
+					"replacement": "gh([\"pr\", \"ready\", String(n), \"-R\", repo, ...undo]).exitCode !== 0",
+					"status": "Killed"
+				},
+				{
+					"id": "4",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 52,
+							"line": 17
+						},
+						"start": {
+							"column": 5,
+							"line": 17
+						}
+					},
+					"replacement": "[]",
+					"status": "Survived"
+				},
+				{
+					"id": "5",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 10,
+							"line": 17
+						},
+						"start": {
+							"column": 6,
+							"line": 17
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "6",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 19,
+							"line": 17
+						},
+						"start": {
+							"column": 12,
+							"line": 17
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "7",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 36,
+							"line": 17
+						},
+						"start": {
+							"column": 32,
+							"line": 17
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "8",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 37
+						},
+						"start": {
+							"column": 118,
+							"line": 24
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "10",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 25,
+							"line": 25
+						},
+						"start": {
+							"column": 17,
+							"line": 25
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "11",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 29
+						},
+						"start": {
+							"column": 6,
+							"line": 27
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "12",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 33
+						},
+						"start": {
+							"column": 14,
+							"line": 29
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "13",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 21,
+							"line": 31
+						},
+						"start": {
+							"column": 7,
+							"line": 31
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "14",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 21,
+							"line": 31
+						},
+						"start": {
+							"column": 7,
+							"line": 31
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "16",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 99,
+							"line": 32
+						},
+						"start": {
+							"column": 19,
+							"line": 32
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "17",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 29,
+							"line": 35
+						},
+						"start": {
+							"column": 6,
+							"line": 35
+						}
+					},
+					"replacement": "true",
+					"status": "Survived"
+				},
+				{
+					"id": "18",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 29,
+							"line": 35
+						},
+						"start": {
+							"column": 6,
+							"line": 35
+						}
+					},
+					"replacement": "false",
+					"status": "Survived"
+				},
+				{
+					"id": "19",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 29,
+							"line": 35
+						},
+						"start": {
+							"column": 6,
+							"line": 35
+						}
+					},
+					"replacement": "asked && ready(repo, n)",
+					"status": "Survived"
+				},
+				{
+					"id": "20",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 69,
+							"line": 36
+						},
+						"start": {
+							"column": 9,
+							"line": 36
+						}
+					},
+					"replacement": "[]",
+					"status": "Survived"
+				},
+				{
+					"id": "21",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 18,
+							"line": 36
+						},
+						"start": {
+							"column": 10,
+							"line": 36
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "22",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 36
+						},
+						"start": {
+							"column": 20,
+							"line": 36
+						}
+					},
+					"replacement": "``",
+					"status": "Survived"
+				}
+			]
+		}
+	},
+	"fingerprint": {
+		"bun/ci-run-draft.test.ts": "cdd8b78e1cf2888143fbe58e46cc7f2f565f87ed",
+		"bun/diff-budget.fixture.ts": "a51ac572bdc585134c3a16ebb17c58581b20dcb2",
+		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6"
+	}
+}

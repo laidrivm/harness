@@ -1,0 +1,415 @@
+{
+	"schemaVersion": "1.0",
+	"files": {
+		"bun/transient.ts": {
+			"source": "/**\n * What a transient failure is (`retry-on-transient`): one the next tick may\n * not meet, which ends a pass `retry` rather than pausing the clone. A caller\n * that knows the status classifies it there and throws `Transient`; nothing\n * reads a message the runner itself printed.\n */\n\n/** A failure the next tick may not meet: no answer, a timeout, a 5xx or a 429; `status` is the answer's, none when no answer came. */\nexport class Transient extends Error {\n\tconstructor(\n\t\tmessage: string,\n\t\treadonly status?: number,\n\t) {\n\t\tsuper(message);\n\t}\n}\n\n/** `EX_TEMPFAIL` from `sysexits.h`: what a pass ended `retry` and the mint's transient failure exit. */\nexport const TEMPFAIL = 75;\n\n/** How a session's result opens on the subscription's usage limit, which is never transient: `loop-every-stage`'s `limited`. */\nexport const LIMITED = \"You've hit your\";\n\n/** Whether an answered call's status is transient: 5xx, or 429. */\nexport const answered = (status: number) => (status >= 500 && status <= 599) || status === 429;\n\n/**\n * Whether a failed `git fetch` or `git push` met the network, read from its\n * stderr, the only structure git gives. A 4xx other than 429 anywhere wins\n * first, since git prints `RPC failed` or `early EOF` beside a permanent\n * rejection too.\n */\nexport function network(stderr: string) {\n\tif (/\\b(?:HTTP(?: status)?|returned error:) 4(?!29)\\d\\d\\b/.test(stderr)) return false;\n\t// ssh's own wording too, for an `origin` the App does not push over: `ssh: connect to host … : No route to host`.\n\treturn /Could not resolve (?:host|proxy)|Failed to connect|Network is unreachable|No route to host|timed out|Connection (?:refused|reset)|returned error: (?:5\\d\\d|429)\\b|RPC failed|early EOF|unexpected disconnect|Empty reply from server/.test(\n\t\tstderr,\n\t);\n}\n",
+			"mutants": [
+				{
+					"id": "0",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 41,
+							"line": 22
+						},
+						"start": {
+							"column": 24,
+							"line": 22
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Survived"
+				},
+				{
+					"id": "1",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 95,
+							"line": 25
+						},
+						"start": {
+							"column": 25,
+							"line": 25
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Killed"
+				},
+				{
+					"id": "2",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 95,
+							"line": 25
+						},
+						"start": {
+							"column": 45,
+							"line": 25
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "3",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 95,
+							"line": 25
+						},
+						"start": {
+							"column": 45,
+							"line": 25
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "4",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 95,
+							"line": 25
+						},
+						"start": {
+							"column": 45,
+							"line": 25
+						}
+					},
+					"replacement": "status >= 500 && status <= 599 && status === 429",
+					"status": "Killed"
+				},
+				{
+					"id": "5",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 25
+						},
+						"start": {
+							"column": 46,
+							"line": 25
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "6",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 25
+						},
+						"start": {
+							"column": 46,
+							"line": 25
+						}
+					},
+					"replacement": "status >= 500 || status <= 599",
+					"status": "Killed"
+				},
+				{
+					"id": "7",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 59,
+							"line": 25
+						},
+						"start": {
+							"column": 46,
+							"line": 25
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "8",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 59,
+							"line": 25
+						},
+						"start": {
+							"column": 46,
+							"line": 25
+						}
+					},
+					"replacement": "status > 500",
+					"status": "Killed"
+				},
+				{
+					"id": "9",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 59,
+							"line": 25
+						},
+						"start": {
+							"column": 46,
+							"line": 25
+						}
+					},
+					"replacement": "status < 500",
+					"status": "Killed"
+				},
+				{
+					"id": "10",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 25
+						},
+						"start": {
+							"column": 63,
+							"line": 25
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "11",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 25
+						},
+						"start": {
+							"column": 63,
+							"line": 25
+						}
+					},
+					"replacement": "status < 599",
+					"status": "Survived"
+				},
+				{
+					"id": "12",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 76,
+							"line": 25
+						},
+						"start": {
+							"column": 63,
+							"line": 25
+						}
+					},
+					"replacement": "status > 599",
+					"status": "Killed"
+				},
+				{
+					"id": "13",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 95,
+							"line": 25
+						},
+						"start": {
+							"column": 81,
+							"line": 25
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "14",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 95,
+							"line": 25
+						},
+						"start": {
+							"column": 81,
+							"line": 25
+						}
+					},
+					"replacement": "status !== 429",
+					"status": "Killed"
+				},
+				{
+					"id": "15",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 39
+						},
+						"start": {
+							"column": 41,
+							"line": 33
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "16",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 34
+						},
+						"start": {
+							"column": 6,
+							"line": 34
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "17",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 73,
+							"line": 34
+						},
+						"start": {
+							"column": 6,
+							"line": 34
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "18",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 60,
+							"line": 34
+						},
+						"start": {
+							"column": 6,
+							"line": 34
+						}
+					},
+					"replacement": "/\\b(?:HTTP(?: status)|returned error:) 4(?!29)\\d\\d\\b/",
+					"status": "Survived"
+				},
+				{
+					"id": "19",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 60,
+							"line": 34
+						},
+						"start": {
+							"column": 6,
+							"line": 34
+						}
+					},
+					"replacement": "/\\b(?:HTTP(?: status)?|returned error:) 4(?=29)\\d\\d\\b/",
+					"status": "Killed"
+				},
+				{
+					"id": "20",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 60,
+							"line": 34
+						},
+						"start": {
+							"column": 6,
+							"line": 34
+						}
+					},
+					"replacement": "/\\b(?:HTTP(?: status)?|returned error:) 4(?!29)\\D\\d\\b/",
+					"status": "Killed"
+				},
+				{
+					"id": "21",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 60,
+							"line": 34
+						},
+						"start": {
+							"column": 6,
+							"line": 34
+						}
+					},
+					"replacement": "/\\b(?:HTTP(?: status)?|returned error:) 4(?!29)\\d\\D\\b/",
+					"status": "Killed"
+				},
+				{
+					"id": "22",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 87,
+							"line": 34
+						},
+						"start": {
+							"column": 82,
+							"line": 34
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "23",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 239,
+							"line": 36
+						},
+						"start": {
+							"column": 9,
+							"line": 36
+						}
+					},
+					"replacement": "/Could not resolve (?:host|proxy)|Failed to connect|Network is unreachable|No route to host|timed out|Connection (?:refused|reset)|returned error: (?:5\\D\\d|429)\\b|RPC failed|early EOF|unexpected disconnect|Empty reply from server/",
+					"status": "Killed"
+				},
+				{
+					"id": "24",
+					"mutatorName": "Regex",
+					"location": {
+						"end": {
+							"column": 239,
+							"line": 36
+						},
+						"start": {
+							"column": 9,
+							"line": 36
+						}
+					},
+					"replacement": "/Could not resolve (?:host|proxy)|Failed to connect|Network is unreachable|No route to host|timed out|Connection (?:refused|reset)|returned error: (?:5\\d\\D|429)\\b|RPC failed|early EOF|unexpected disconnect|Empty reply from server/",
+					"status": "Killed"
+				}
+			]
+		}
+	},
+	"fingerprint": {
+		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/transient.test.ts": "493f49a63368471fff955e07b9819664f35ecf8a",
+		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6"
+	}
+}

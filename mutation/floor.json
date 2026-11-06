@@ -1,0 +1,688 @@
+{
+	"schemaVersion": "1.0",
+	"files": {
+		"bun/floor.ts": {
+			"source": "/**\n * What a count owes the floor a consumer declares under `harness.<key>` — the\n * one rule behind `harness.mutationFloor` and `harness.uncitedFloor`, so the\n * two cannot drift apart — and what makes a counted entry with a reason\n * readable, which each approval of `harness.suppressions` is too.\n *\n * Both directions fail: a rise admits something nothing checks, and a floor\n * left above reality stops being a measurement. The reason is demanded on every\n * run rather than only on a rise, because telling a rise from a drop needs the\n * previously committed value, and reading git history to decide whether to ask\n * is more machinery than one field.\n */\n\n/** Where a floor sits and how its problems read. */\nexport type Floor = {\n\t/** The key under `harness` in `package.json`. */\n\tkey: string;\n\t/** The field under it holding the number. */\n\tfield: string;\n\t/** What the count counts, as a plural noun. */\n\tcounted: string;\n\t/** How a count above the floor comes back down. */\n\tlower: string;\n};\n\n/**\n * True for a count a measurement can be compared against: a whole number, zero\n * or above. A fraction or a negative one no count can equal, and a gain would\n * be reported that is not one. A type guard, since `Number.isInteger` does not\n * narrow `unknown`.\n */\nconst whole = (n: unknown): n is number => typeof n === \"number\" && Number.isInteger(n) && n >= 0;\n\n/**\n * What is wrong with a `{ <field>: count, why }` entry at `path` — a floor, or\n * one approval of `harness.suppressions` — in a hand-edited `package.json`\n * that `bun/config.ts` checks only for presence: an absent reason or a count\n * written as `\"12\"` is named here rather than thrown as a `TypeError` or\n * compared as never equal, or as `NaN`, which nothing exceeds.\n */\nexport function unreadable(path: string, field: string, count: unknown, why: unknown): string[] {\n\treturn [\n\t\t...(typeof why === \"string\" && why.trim() ? [] : [`${path}.why gives no reason — write one as text`]),\n\t\t...(whole(count) ? [] : [`${path}.${field} is not a whole number`]),\n\t];\n}\n\n/** The gap between `count` and the floor, after what `unreadable` names. */\nexport function gauge(at: Floor, count: number, floor: unknown, why: unknown): string[] {\n\tconst problems = unreadable(`harness.${at.key}`, at.field, floor, why);\n\tif (whole(floor) && count !== floor) {\n\t\tconst gap = `${count} ${at.counted} against a floor of ${floor}`;\n\t\tproblems.push(\n\t\t\tcount > floor\n\t\t\t\t? `${gap} — ${at.lower}, or raise the floor and say why`\n\t\t\t\t: `${gap} — write ${count} as the floor, so the gain is recorded`,\n\t\t);\n\t}\n\treturn problems;\n}\n",
+			"mutants": [
+				{
+					"id": "0",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 98,
+							"line": 32
+						},
+						"start": {
+							"column": 15,
+							"line": 32
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Killed"
+				},
+				{
+					"id": "1",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 98,
+							"line": 32
+						},
+						"start": {
+							"column": 44,
+							"line": 32
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "2",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 98,
+							"line": 32
+						},
+						"start": {
+							"column": 44,
+							"line": 32
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "3",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 98,
+							"line": 32
+						},
+						"start": {
+							"column": 44,
+							"line": 32
+						}
+					},
+					"replacement": "typeof n === \"number\" && Number.isInteger(n) || n >= 0",
+					"status": "Killed"
+				},
+				{
+					"id": "4",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 88,
+							"line": 32
+						},
+						"start": {
+							"column": 44,
+							"line": 32
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "5",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 88,
+							"line": 32
+						},
+						"start": {
+							"column": 44,
+							"line": 32
+						}
+					},
+					"replacement": "typeof n === \"number\" || Number.isInteger(n)",
+					"status": "Killed"
+				},
+				{
+					"id": "6",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 65,
+							"line": 32
+						},
+						"start": {
+							"column": 44,
+							"line": 32
+						}
+					},
+					"replacement": "true",
+					"status": "Survived"
+				},
+				{
+					"id": "7",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 65,
+							"line": 32
+						},
+						"start": {
+							"column": 44,
+							"line": 32
+						}
+					},
+					"replacement": "typeof n !== \"number\"",
+					"status": "Killed"
+				},
+				{
+					"id": "8",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 65,
+							"line": 32
+						},
+						"start": {
+							"column": 57,
+							"line": 32
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed"
+				},
+				{
+					"id": "9",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 98,
+							"line": 32
+						},
+						"start": {
+							"column": 92,
+							"line": 32
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "10",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 98,
+							"line": 32
+						},
+						"start": {
+							"column": 92,
+							"line": 32
+						}
+					},
+					"replacement": "n > 0",
+					"status": "Killed"
+				},
+				{
+					"id": "11",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 98,
+							"line": 32
+						},
+						"start": {
+							"column": 92,
+							"line": 32
+						}
+					},
+					"replacement": "n < 0",
+					"status": "Killed"
+				},
+				{
+					"id": "12",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 46
+						},
+						"start": {
+							"column": 97,
+							"line": 41
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "13",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 45
+						},
+						"start": {
+							"column": 9,
+							"line": 42
+						}
+					},
+					"replacement": "[]",
+					"status": "Killed"
+				},
+				{
+					"id": "14",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 43
+						},
+						"start": {
+							"column": 7,
+							"line": 43
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "15",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 43
+						},
+						"start": {
+							"column": 7,
+							"line": 43
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "16",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 43
+						},
+						"start": {
+							"column": 7,
+							"line": 43
+						}
+					},
+					"replacement": "typeof why === \"string\" || why.trim()",
+					"status": "Killed"
+				},
+				{
+					"id": "17",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 30,
+							"line": 43
+						},
+						"start": {
+							"column": 7,
+							"line": 43
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "18",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 30,
+							"line": 43
+						},
+						"start": {
+							"column": 7,
+							"line": 43
+						}
+					},
+					"replacement": "typeof why !== \"string\"",
+					"status": "Killed"
+				},
+				{
+					"id": "19",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 30,
+							"line": 43
+						},
+						"start": {
+							"column": 22,
+							"line": 43
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed"
+				},
+				{
+					"id": "20",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 43
+						},
+						"start": {
+							"column": 34,
+							"line": 43
+						}
+					},
+					"replacement": "why",
+					"status": "Killed"
+				},
+				{
+					"id": "21",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 49,
+							"line": 43
+						},
+						"start": {
+							"column": 47,
+							"line": 43
+						}
+					},
+					"replacement": "[\"Stryker was here\"]",
+					"status": "Killed"
+				},
+				{
+					"id": "22",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 103,
+							"line": 43
+						},
+						"start": {
+							"column": 52,
+							"line": 43
+						}
+					},
+					"replacement": "[]",
+					"status": "Killed"
+				},
+				{
+					"id": "23",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 102,
+							"line": 43
+						},
+						"start": {
+							"column": 53,
+							"line": 43
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "24",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 24,
+							"line": 44
+						},
+						"start": {
+							"column": 22,
+							"line": 44
+						}
+					},
+					"replacement": "[\"Stryker was here\"]",
+					"status": "Killed"
+				},
+				{
+					"id": "25",
+					"mutatorName": "ArrayDeclaration",
+					"location": {
+						"end": {
+							"column": 69,
+							"line": 44
+						},
+						"start": {
+							"column": 27,
+							"line": 44
+						}
+					},
+					"replacement": "[]",
+					"status": "Killed"
+				},
+				{
+					"id": "26",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 68,
+							"line": 44
+						},
+						"start": {
+							"column": 28,
+							"line": 44
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "27",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 2,
+							"line": 60
+						},
+						"start": {
+							"column": 89,
+							"line": 49
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "28",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 49,
+							"line": 50
+						},
+						"start": {
+							"column": 30,
+							"line": 50
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "29",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 51
+						},
+						"start": {
+							"column": 6,
+							"line": 51
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "30",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 51
+						},
+						"start": {
+							"column": 6,
+							"line": 51
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "31",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 51
+						},
+						"start": {
+							"column": 6,
+							"line": 51
+						}
+					},
+					"replacement": "whole(floor) || count !== floor",
+					"status": "Killed"
+				},
+				{
+					"id": "32",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 51
+						},
+						"start": {
+							"column": 22,
+							"line": 51
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "33",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 37,
+							"line": 51
+						},
+						"start": {
+							"column": 22,
+							"line": 51
+						}
+					},
+					"replacement": "count === floor",
+					"status": "Killed"
+				},
+				{
+					"id": "34",
+					"mutatorName": "BlockStatement",
+					"location": {
+						"end": {
+							"column": 3,
+							"line": 58
+						},
+						"start": {
+							"column": 39,
+							"line": 51
+						}
+					},
+					"replacement": "{}",
+					"status": "Killed"
+				},
+				{
+					"id": "35",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 67,
+							"line": 52
+						},
+						"start": {
+							"column": 15,
+							"line": 52
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "37",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 54
+						},
+						"start": {
+							"column": 4,
+							"line": 54
+						}
+					},
+					"replacement": "true",
+					"status": "Killed"
+				},
+				{
+					"id": "38",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 54
+						},
+						"start": {
+							"column": 4,
+							"line": 54
+						}
+					},
+					"replacement": "false",
+					"status": "Killed"
+				},
+				{
+					"id": "39",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 54
+						},
+						"start": {
+							"column": 4,
+							"line": 54
+						}
+					},
+					"replacement": "count >= floor",
+					"status": "Survived"
+				},
+				{
+					"id": "40",
+					"mutatorName": "EqualityOperator",
+					"location": {
+						"end": {
+							"column": 17,
+							"line": 54
+						},
+						"start": {
+							"column": 4,
+							"line": 54
+						}
+					},
+					"replacement": "count <= floor",
+					"status": "Killed"
+				},
+				{
+					"id": "41",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 61,
+							"line": 55
+						},
+						"start": {
+							"column": 7,
+							"line": 55
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				},
+				{
+					"id": "42",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 70,
+							"line": 56
+						},
+						"start": {
+							"column": 7,
+							"line": 56
+						}
+					},
+					"replacement": "``",
+					"status": "Killed"
+				}
+			]
+		}
+	},
+	"fingerprint": {
+		"bun/floor.fixture.ts": "08f6214ba4f9a14f74ba2d50ba59527c779a0e4b",
+		"bun/floor.test.ts": "8746b69aae0bf383375055ec4bf987c5b8329b47",
+		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bunfig.toml": "a2d93a6938267c57cbaaaa512ceb24e63df151c6"
+	}
+}
