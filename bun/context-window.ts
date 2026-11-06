@@ -63,12 +63,22 @@ function size(line: Line): number | undefined {
 	return sum > 0 ? sum : undefined; // zero: a synthetic reply, an API error shown as one
 }
 
-/** A call of the wrap-up: the model's `Skill` call or the user's typed command. */
+/**
+ * A main-thread call of the wrap-up: the model's `Skill` call or the user's
+ * typed command. A tool result is never the user's text: one quoting the tag,
+ * as this change's own files do, would otherwise read as a wrap-up run.
+ */
 function wrapping(line: Line): boolean {
+	if (line.isSidechain === true) return false;
 	const content = line.message?.content;
 	if (line.type === "user") {
-		const text = typeof content === "string" ? content : JSON.stringify(content ?? "");
-		return /<command-name>\/(?:[\w.-]+:)?session-wrapup<\/command-name>/.test(text);
+		const text =
+			typeof content === "string"
+				? content
+				: Array.isArray(content)
+					? content.map((part) => (part?.type === "text" ? part.text : "")).join("\n")
+					: "";
+		return /<command-name>\/(?:[^<]+:)?session-wrapup<\/command-name>/.test(text);
 	}
 	return (
 		line.type === "assistant" &&
@@ -124,14 +134,20 @@ function held(file: string): string | undefined {
  * its mark, or no `mark` half ran, and then this only re-arms.
  */
 export function wrapup(file: string, event: Event, ask: boolean): string | undefined {
+	const mark = `${file}.wrapup`;
+	let asked = held(mark);
+	// Nothing to re-arm and nothing to ask: the tail is not read.
+	if (!ask && asked === undefined) return;
 	const text = tail(event.transcript_path);
 	if (text === undefined) return;
 	const { tokens, boundary, wrapped } = read(text);
 	if (tokens === undefined) return;
-	const mark = `${file}.wrapup`;
-	let asked = held(mark);
 	if (asked !== undefined && (tokens < REARM || (boundary !== undefined && boundary !== asked))) {
-		rmSync(mark, { force: true });
+		try {
+			rmSync(mark, { force: true });
+		} catch {
+			return; // still armed against: asking now would repeat at every stop
+		}
 		asked = undefined;
 	}
 	if (!ask || tokens < THRESHOLD || asked !== undefined) return;
