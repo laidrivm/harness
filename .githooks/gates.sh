@@ -19,3 +19,7 @@ if command -v gitleaks >/dev/null; then
 fi
 # Without the runner's base: the suite's cases read `diff-base.sh` with none set.
 env -u HARNESS_BASE bun test
+# Two commands, so a crashed Stryker fails here and the floor never reads a stale report. Over current stored
+# results the step mutates nothing; a module it re-runs fails until its rewritten stored file is committed.
+bun bun/mutation-run.ts
+bun bun/mutation-floor.ts
