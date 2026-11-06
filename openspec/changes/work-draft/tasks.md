@@ -29,15 +29,20 @@ numbers are the proposal-stage `/zombies` ideas.
       exiting non-zero [17]; `origin` set to a URL of one path segment,
       naming `origin` and making no `gh` call at all [18]; a head that is not
       40 hex digits, read as unread [11]. And the undo exiting non-zero
-      prints that `gh pr ready --undo` failed and #7 was not marked draft,
-      claiming no state, exit 1 [19]; the undo killed at
+      prints one line opening `draft: failed —` that says `gh pr ready
+      --undo` failed and #7 was not marked draft, claiming no state, exit 1
+      [19]; the undo killed at
       `HARNESS_GH_TIMEOUT_MS` does the same [20]. Verify: each fails against
       today's code
 - [ ] 1.4 Extend `readPullRequest` in `bun/pull-requests.ts` to return
       `draft` and `headRefOid` (design, *Reuse the reads and the call that
-      exist*), leaving `work.ts status`'s use as it is. Add
-      `bun/work-draft.ts` with `draft(n)`, reading `originRepository()`
-      first, then calling `ready(full, n, "--undo")` from
+      exist*), leaving `work.ts status`'s use as it is, and widen the exact
+      shapes `bun/pull-requests.test.ts`'s existing `readPullRequest` cases
+      assert by the two fields; update the module's header comment and
+      `readPullRequest`'s doc comment to its second caller and the fields it
+      returns. Add `bun/work-draft.ts` with `draft(n)`, reading
+      `originRepository()` first, then calling `ready(full, Number(n),
+      "--undo")`, as `finish` converts its number, from
       `bun/ci-run-draft.ts`; in `bun/work.ts` dispatch `draft` with
       `--pr` checked against `NUMBER` and refused when repeated, and name it
       in `USAGE` [14] and the header comment. Verify: `bun test
@@ -53,9 +58,13 @@ numbers are the proposal-stage `/zombies` ideas.
       follow-up on an open pull request starts (a review round, a CI fix, a
       merge of `main`), whether handed to a subagent or carried yourself, run
       `bun node_modules/harness/bun/work.ts draft --pr <n>` (`bun
-      bun/work.ts` in the harness), and put the head it prints in any brief —
-      and reword `core/git-and-prs.md`'s sentence to name the command.
-      Verify: the case passes, and the Process sublist holds 19 rules
+      bun/work.ts` in the harness), put the head it prints in any brief, and
+      name a failed `draft` in the report without stopping the follow-up —
+      reword `core/git-and-prs.md`'s sentence to name the command, and add
+      `bun bun/work.ts draft` to the Safety rule naming the scripts the allow
+      list grants a `gh` write, as the one it grants a switch to draft; the
+      case checks that too. Verify: the case passes, and the Process sublist
+      holds 19 rules
 - [ ] 1.6 In `README.md`, add the `draft` row to the `work.ts` table, linking
       the change's delta, which the archive re-points to
       `openspec/specs/work-draft/spec.md` as `coderabbit-resolve-fixed-threads`'
