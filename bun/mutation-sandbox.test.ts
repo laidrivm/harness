@@ -36,12 +36,21 @@ function sandbox(files: Record<string, string>): { checkout: string; sandbox: st
 const build = (cwd: string, env: Record<string, string | undefined> = process.env) =>
 	Bun.spawnSync(["bun", script], { cwd, env, stderr: "pipe" });
 const commits = (cwd: string) => Bun.spawnSync(["git", "log", "--format=%s"], { cwd }).stdout.toString().trim();
-const files = (cwd: string) => Bun.spawnSync(["git", "ls-files"], { cwd }).stdout.toString().trim().split("\n");
+const files = (cwd: string) =>
+	Bun.spawnSync(["git", "ls-tree", "-r", "--name-only", "HEAD"], { cwd }).stdout.toString().trim().split("\n");
 
 test("it makes a repository holding the sandbox's files in one commit, and a second run leaves that one", () => {
 	const { sandbox: dir } = sandbox({ "bun/a.ts": "1\n", "bun/a.test.ts": "1\n" });
 	for (const _ of [1, 2]) expect(build(dir).exitCode).toBe(0);
 	expect([commits(dir), files(dir)]).toEqual(["sandbox", ["bun/a.test.ts", "bun/a.ts"]]);
+});
+
+test("the sandbox's commit is stryker's, whatever identity the environment exports", () => {
+	const { sandbox: dir } = sandbox({ "bun/a.ts": "1\n" });
+	const who = { GIT_AUTHOR_NAME: "x", GIT_AUTHOR_EMAIL: "x@x", GIT_COMMITTER_NAME: "y", GIT_COMMITTER_EMAIL: "y@y" };
+	expect(build(dir, { ...process.env, ...who }).exitCode).toBe(0);
+	const log = Bun.spawnSync(["git", "log", "--format=%an %ae %cn %ce"], { cwd: dir }).stdout.toString().trim();
+	expect(log).toBe("stryker stryker@sandbox stryker stryker@sandbox");
 });
 
 test("a repository an earlier attempt left without a HEAD is remade", () => {

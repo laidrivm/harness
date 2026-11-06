@@ -12,7 +12,9 @@
 import { existsSync, rmSync } from "node:fs";
 import { unlocal } from "./git-local.ts";
 
-const env = unlocal(process.env);
+// The identity variables too: they outrank `-c user.name`, and would put the caller's identity on the sandbox commit.
+const identity = /^GIT_(AUTHOR|COMMITTER)_(NAME|EMAIL)$/;
+const env = Object.fromEntries(Object.entries(unlocal(process.env)).filter(([key]) => !identity.test(key)));
 const git = (...args: string[]) => Bun.spawnSync(["git", ...args], { env, stdout: "ignore", stderr: "inherit" });
 const fail = (step: string) => {
 	console.error(`mutation-sandbox: git ${step} failed`);
@@ -23,6 +25,6 @@ if (!existsSync(".git") || git("rev-parse", "-q", "--verify", "HEAD").exitCode !
 	rmSync(".git", { recursive: true, force: true });
 	if (git("init", "-q").exitCode !== 0) fail("init");
 	if (git("add", "-A").exitCode !== 0) fail("add");
-	const identity = ["-c", "user.name=stryker", "-c", "user.email=stryker@sandbox", "-c", "commit.gpgsign=false"];
-	if (git(...identity, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "sandbox").exitCode !== 0) fail("commit");
+	const values = ["-c", "user.name=stryker", "-c", "user.email=stryker@sandbox", "-c", "commit.gpgsign=false"];
+	if (git(...values, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "sandbox").exitCode !== 0) fail("commit");
 }
