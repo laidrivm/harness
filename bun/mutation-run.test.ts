@@ -198,6 +198,7 @@ describe("what a run mutates", () => {
 });
 
 describe("what fails the run before it mutates", () => {
+	// spec: mutation-floor/a-listed-module-s-file-left-uncommitted
 	test.each(["bun/board.ts", "bun/board.test.ts", "bun/command-guard.fixture.ts", "bunfig.toml"])(
 		"a dirty %s",
 		(path) => {

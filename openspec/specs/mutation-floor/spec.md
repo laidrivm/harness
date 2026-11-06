@@ -2,31 +2,38 @@
 
 ## Purpose
 
-What is mutated in this repository, what kills a mutant, and what the floor
-forbids. It exists because `src/model.ts` is at
-100% line and function coverage from its own tests, so coverage can no longer
-tell a test that asserts a value from one that merely executes a line — and the
-model is the one place here where a wrong sign or a wrong boundary yields a
-plausible number instead of a crash.
+What the floor check counts and forbids, and what the harness mutates. The
+check counts the mutants a Stryker report says survived and fails when that
+count moves from the floor the repository declares, in either direction, or
+when the floor states no reason — in the harness and in every repository
+that installs it and runs the check. The harness mutates each module
+`stryker.config.json`'s `mutate` lists, alone, against the tests under
+`bun/<name>`, and stores each module's results in the tree. It exists
+because a test that asserts a value and one that merely executes the line
+cover the same lines, so coverage cannot tell them apart and a surviving
+mutant can.
 
 ## Requirements
 
 ### Requirement: The count of surviving mutants may not rise silently
 
-A check SHALL read Stryker's JSON report, count the mutants that survived, and
-compare that count against a floor constant declared in the check itself. A
+A check SHALL read a report in Stryker's JSON schema at `reports/mutation/mutation.json`,
+resolved from the repository root, count the mutants that survived, and
+compare that count against the floor declared as
+`harness.mutationFloor.surviving` in the `package.json` of the repository it
+runs in, failing and naming that field when it is not a whole number. A
 mutant counts as surviving when its status is `Survived` or `NoCoverage`:
-`Killed`, `Timeout`, `Ignored`, `CompileError` and `RuntimeError` all mean
-something other than "the tests let this through", and `NoCoverage` means no
-test ran against it at all. `NoCoverage` should not arise under the command
-runner, which performs no coverage analysis, and is counted rather than
-excluded precisely because its appearance would mean the setup is not what this
-requirement assumes.
+`Killed`, `Timeout`, `Ignored`, `CompileError` and
+`RuntimeError` all mean something other than "the tests let this through",
+and `NoCoverage` means no test ran against it at all. `NoCoverage` should not
+arise under the command runner, which performs no coverage analysis, and is
+counted rather than excluded precisely because its appearance would mean the
+setup is not what this requirement assumes.
 
 Stryker's own `thresholds.break` SHALL stay `null`: it compares a
-mutation-score percentage whose denominator moves with every edit to
-`src/model.ts`, so the same set of survivors yields a different score after an
-unrelated refactor and no one can write a reason about it.
+mutation-score percentage whose denominator moves with every edit to a
+mutated module, so the same set of survivors yields a different score after
+an unrelated refactor and no one can write a reason about it.
 
 `stryker.config.json` SHALL list `json` among its `reporters`. The default is
 `clear-text`, `progress` and `html`, and `jsonReporter.fileName` names a path
@@ -34,12 +41,15 @@ without enabling the reporter that writes it — a configuration setting only th
 filename produces no report, and the check then fails on an absent file at
 every run.
 
-The check SHALL run no tool. Whoever invokes it runs Stryker first — the CI job
-runs the two as separate commands — so a Stryker that crashed is a non-zero
-exit the shell already surfaces, and the check never has to tell its own
-verdict apart from the tool's failure. For the same reason the invoker, not the
-check, SHALL delete the previous report before the run: a reader cannot tell a
-stale file from a fresh one, and an absent report already fails.
+The check SHALL run no tool. Whoever invokes it produces the report first, as
+a separate command, so a Stryker that crashed is a non-zero exit the shell
+already surfaces, and the check never has to tell its own verdict apart from
+the tool's failure. In the harness that invoker is the mutation step the
+pre-push hook and the CI job run before the check: the step runs Stryker on
+the modules its stored results do not cover, or on none, and writes the
+report as the merge of every stored result. For the same reason the invoker, not the check, SHALL
+delete the previous report before writing it: a reader cannot tell a stale
+file from a fresh one, and an absent report already fails.
 
 A mutant whose status appears in neither list above SHALL fail the check,
 naming the status. Counting the known survivors and ignoring the rest would
@@ -50,23 +60,24 @@ The check SHALL fail when the count is above the floor, reporting both numbers.
 It SHALL also fail when the count is *below* the floor, naming the value to
 write, so a gain is recorded rather than absorbed into slack.
 
-The floor's line SHALL carry a trailing comment holding at least one
-non-whitespace character after the marker, and the check SHALL fail when it
-does not — `const FLOOR = 12; //` states no reason and SHALL NOT pass. The
-comment is required whichever direction the number moved, because establishing
-the direction would mean reading the previous value out of git history for a
-guarantee the diff already gives.
+The floor SHALL carry its reason as `harness.mutationFloor.why`, holding at
+least one non-whitespace character, and the check SHALL fail when it does
+not — `{ "surviving": 12, "why": " " }` states no reason and SHALL NOT pass.
+The reason is required whichever direction the number moved, because
+establishing the direction would mean reading the previous value out of git
+history for a guarantee the diff already gives.
 
 #### Scenario: The repository as it stands
 
-- **WHEN** the check runs over the current tree with the floor set to the first
-  measurement and its reason on that line
+- **WHEN** the check runs over the current tree with
+  `harness.mutationFloor.surviving` set to the measured count and its reason
+  in `harness.mutationFloor.why`
 - **THEN** it passes
 
 #### Scenario: A branch added without a test
 
-- **WHEN** a line is added to `src/model.ts` whose mutant no test under
-  `src/model` kills
+- **WHEN** a line is added to a mutated `bun/<name>.ts` whose mutant no test
+  under `bun/<name>` kills
 - **THEN** the check fails, reporting the survivor count and the floor
 
 #### Scenario: A survivor newly killed
@@ -77,9 +88,14 @@ guarantee the diff already gives.
 
 #### Scenario: The floor changed with no reason given
 
-- **WHEN** the floor's line carries no trailing comment, or one whose text is
-  empty or whitespace
+- **WHEN** `harness.mutationFloor.why` is absent, empty or whitespace
 - **THEN** the check fails, whichever direction the number moved
+
+#### Scenario: A floor that is not a whole number
+
+- **WHEN** `harness.mutationFloor.surviving` is absent, a string or a fraction
+- **THEN** the check fails naming `harness.mutationFloor.surviving`, and
+  reports no gap against it
 
 ### Requirement: The harness mutates each listed module against its own tests
 
@@ -135,14 +151,16 @@ Each mutated module's results SHALL be stored as Stryker's incremental file,
 one tracked file per module under `mutation/`, so that every clone reads the
 same results. The floor SHALL count the survivors across every stored file.
 A stored file whose module is no longer tracked, no longer has a test file,
-or is no longer listed, SHALL fail the run, naming it, and so SHALL a listed
-module with a test file and no stored file: either way the count would leave out, or include, code
-nothing judged. A stored file SHALL record a fingerprint of the test files
-and the fixtures they import that it was measured against, and of the
-command, Stryker options and timeouts its mutants ran under, and SHALL hold
-nothing that depends on the machine or the checkout that wrote it — no
-absolute path, system, timing or test output — so that every clone writes
-the same file for the same results.
+or is no longer listed, SHALL fail the run before it mutates anything, naming
+it: the count would include code nothing judges. A listed module with a test
+file and no stored file SHALL be mutated whole, and the run SHALL then fail
+naming the file it wrote until that file is committed: the count would
+otherwise leave the module out. A stored file SHALL record a fingerprint of
+the test files and the fixtures they import that it was measured against,
+and of the command, Stryker options and timeouts its mutants ran under, and
+SHALL hold nothing that depends on the machine or the checkout that wrote
+it — no absolute path, system, timing or test output — so that every clone
+writes the same file for the same results.
 
 #### Scenario: Unchanged modules counted from their stored results
 
@@ -170,8 +188,9 @@ the same file for the same results.
 
 - **WHEN** `mutation/<name>.json` is deleted and the listed `bun/<name>.ts`
   still has a test file
-- **THEN** the run fails and names the missing file, whether or not the
-  branch changed anything under `bun/`
+- **THEN** the run mutates `bun/<name>.ts` whole, whether or not the branch
+  changed anything under `bun/`, and fails naming `mutation/<name>.json`
+  until it is committed
 
 #### Scenario: The same results written in another checkout
 
@@ -190,7 +209,16 @@ tests, and a module with no stored file too; the rest incrementally. The
 baseline SHALL be the same run asked for every listed module. A run that would
 mutate SHALL fail first while the checkout holds an edited or untracked file
 outside `mutation/`, naming each, since Stryker copies the working tree and
-not `HEAD`.
+not `HEAD`. Whether or not any module needs a run, a listed module whose
+source, tests, the fixtures they import or the shared test configuration
+differ from `HEAD`'s copy SHALL fail the run first, naming each, since its
+results and its fingerprint are measured against `HEAD`'s copy.
+
+The fingerprint SHALL hold the fixtures a module's tests import directly, and
+no other file the tests reach: a change to a module a test imports that is
+not a fixture, or to a fixture only another fixture imports, re-runs no module
+whose tests reach it that way. A run asked for every module whole refreshes
+them by hand; deriving every importer would be machinery for a rare case.
 
 #### Scenario: Stryker's options changed
 
@@ -205,6 +233,13 @@ not `HEAD`.
 - **THEN** the run fails naming `notes.ts` before it mutates anything, and a
   run that needs no module does not
 
+#### Scenario: A listed module's file left uncommitted
+
+- **WHEN** a listed `bun/<name>.ts`, a test file matching `bun/<name>`, a
+  fixture that test imports or `bunfig.toml` is edited and not committed, and
+  every stored file is current
+- **THEN** the run fails naming that file before it mutates anything
+
 #### Scenario: A new module has no stored file
 
 - **WHEN** a branch adds `bun/new.ts` and `bun/new.test.ts`, and lists it
@@ -213,23 +248,23 @@ not `HEAD`.
 
 #### Scenario: The module's source changed
 
-- **WHEN** `bun/command-parse.ts` differs from the source
-  `mutation/command-parse.json` holds, and its tests match the fingerprint
+- **WHEN** a listed `bun/<name>.ts` differs from the source
+  `mutation/<name>.json` holds, and its tests match the fingerprint
 - **THEN** the run mutates that module incrementally and no other module
 
 #### Scenario: A test file changed
 
-- **WHEN** only `bun/pre-pr-steps.test.ts` changed since the stored files
-  were written
-- **THEN** the run re-runs whole every module whose test filter matches that
-  path — `bun/pre-pr.ts` and `bun/pre-pr-steps.ts` — and no other
+- **WHEN** the list names `bun/<name>.ts` and `bun/<name>-steps.ts`, and only
+  `bun/<name>-steps.test.ts` changed since the stored files were written
+- **THEN** the run re-runs whole every listed module whose test filter matches
+  that path — `bun/<name>.ts` and `bun/<name>-steps.ts` — and no other
 
 #### Scenario: A fixture another module's tests import
 
-- **WHEN** only `bun/command-guard.fixture.ts` changed, and
-  `bun/command-parse.test.ts` imports it
-- **THEN** the run re-runs `bun/command-parse.ts` whole among the modules
-  whose tests import it
+- **WHEN** only `bun/<other>.fixture.ts` changed, and a test file of a listed
+  `bun/<name>.ts` imports it
+- **THEN** the run re-runs `bun/<name>.ts` whole among the modules whose
+  tests import it
 
 #### Scenario: A run asked for every module
 
