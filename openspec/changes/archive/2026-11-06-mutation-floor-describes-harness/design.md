@@ -166,7 +166,8 @@ is as it was, and every scenario keeps its name:
 - A listed module with tests and no stored file fails only once the run has
   rewritten that file, through the unsaved-results check, not before it
   mutates; the requirement and the scenario say so.
-- The fingerprint holds directly imported fixtures only, which
+- Of the files the tests reach, the fingerprint holds directly imported
+  fixtures, `bunfig.toml` and its preload only, which
   `pre-push-commit-gates`' decision 4 chose; the requirement now states that
   limit.
 
@@ -186,6 +187,7 @@ is as it was, and every scenario keeps its name:
   now fails] → intended: the refusal names the entry and the field, so the fix
   is one line of its `package.json`.
 - [`bun/floor.ts` is a new module, and `pre-push-commit-gates` stores one
-  result file per module under `mutation/`] → that step is not on `main` yet,
-  so this change adds no `mutation/floor.json`; its apply mutates the module
-  with the rest, `bun/floor.test.ts` being the tests whose path begins with it.
+  result file per module under `mutation/`] → that step was not on `main`
+  when this change was applied, so this change added no `mutation/floor.json`;
+  by archive `pre-push-commit-gates` lists `bun/floor.ts` and tracks its
+  results, `bun/floor.test.ts` being the tests whose path begins with it.
