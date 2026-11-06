@@ -8,9 +8,11 @@ the output. gh 2.97.0 documents `8: Checks pending` under `gh pr checks
 --help`, and on 2026-11-06 a pull request with one check pending gave exit 8
 for `gh pr checks <N> -R <repo>`, and 0 for the same command with
 `--json name,state,bucket` and for `gh pr view <N> --json statusCheckRollup`.
-A pending read's output changes little between reads: durations are digits,
-which the fingerprint already folds, so three reads a minute apart count as
-one call failing the same way. The session transcripts on this machine hold
+A pending read's output often does not change between reads: a check still
+pending shows `0` as its time, as CodeRabbit's did on #437, and the finished
+checks' durations are digits the fingerprint folds, so reads count as one
+call failing the same way until a check changes state or a duration crosses
+a unit (`45s`, `1m5s`). The session transcripts on this machine hold
 `gh pr checks` in these forms: bare with a number, with `-R` or `--repo`,
 with a trailing `2>&1`, and inside pipes and `;` chains.
 
@@ -31,9 +33,9 @@ with a trailing `2>&1`, and inside pipes and `;` chains.
 
 ### Match the whole command, and only exit 8
 
-The exemption holds when the trimmed command is `gh pr checks`, then words of
-letters, digits and `./:@=_-` separated by spaces or tabs, then at most one
-trailing `2>&1`, and the error's first line is exactly `Exit code 8`. Any
+The exemption holds when the trimmed command is words separated by spaces
+or tabs — `gh`, `pr`, `checks`, then words of letters, digits and
+`./:@=_-`, then at most a last word `2>&1`, so `4372>&1` is no match — and the error's first line is exactly `Exit code 8`. Any
 other character — a quote, `$`, a backtick, `;`, `|`, `&` outside `2>&1`, a
 newline — leaves the call counted, since the shell may then run more than
 gh, and the exit code need not be gh's. A newline is a command separator,
@@ -88,6 +90,12 @@ silent pass — so no test reads gh's help, which CI's runner may not have.
   the same prompt] → As for any barred call: the warning and refusal tell
   the agent to change approach, and `gh pr checks <N> --json name,state`,
   a different call key that exits 0 while pending, reads CI on.
+- [`gh` an alias or function in the user's shell, whose own exit 8 is then
+  exempt] → Accepted: the guard cannot see the shell's definitions, and a
+  wrapper's 8 is still one more uncounted call, not a refused one.
+- [`gh pr checks $N` unpiped, which the word set leaves out though `$N`
+  cannot add a command] → Counted as today; transcripts hold `$N` only in
+  loops and pipes, so widening the set waits for a form seen alone.
 - [A form agents use that the match leaves out, such as a pipe into `cut`]
   → That call is counted as today, and its exit code is the pipe's last
   command's anyway, so gh's 8 does not reach it.

@@ -56,11 +56,12 @@ checks read as *A pending checks read is not a failure* defines it.
 
 ### Requirement: A pending checks read is not a failure
 
-The guard SHALL NOT count a failed Bash call whose command, trimmed, is
-`gh pr checks` followed only by words of letters, digits and `./:@=_-`,
-separated by spaces or tabs, and at most a trailing `2>&1`, when its error's
-first line is exactly `Exit code 8`, which gh documents as *Checks pending*.
-Any other failure SHALL count.
+The guard SHALL NOT count a failed Bash call whose trimmed command is words
+separated by spaces or tabs: `gh`, `pr`, `checks`, then only words of
+letters, digits and `./:@=_-`, and at most a last word `2>&1` — when its
+error's first line is exactly `Exit code 8`, which gh documents as *Checks
+pending*. Any other failure of such a command SHALL count as *A repeat is
+the same call failing the same way* says.
 
 #### Scenario: Checks still pending, read four times
 
@@ -90,8 +91,8 @@ Any other failure SHALL count.
 
 #### Scenario: A word outside the set
 
-- **WHEN** the command is `gh pr checks 437 --json name,state` or
-  `gh pr checks fix+retry`, and it fails with `Exit code 8` three times the
+- **WHEN** the command is `gh pr checks fix+retry` or
+  `gh pr checks 4372>&1`, and it fails with `Exit code 8` three times the
   same way
 - **THEN** the third failure warns
 
