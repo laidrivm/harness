@@ -79,18 +79,20 @@ whose process is gone, which empties the directory at once but reads a run in
 another process namespace sharing `/tmp` as gone and removes a parent in use;
 and no sweep, leaving one entry per killed run for good.
 
-The sweep claims an abandoned parent by renaming it to a new
-`harness-swept-*` name before removing it, so of several runs starting
-together, Stryker's concurrent mutants among them, one removes it and the
-rest find it gone and move on. A `harness-swept-*` directory unmodified for
+The sweep claims an abandoned parent by setting its modification time to now
+and then renaming it to a new `harness-swept-*` name before removing it, so
+of several runs starting together, Stryker's concurrent mutants among them,
+one removes it and the rest find it gone, or fresh, and move on. A rename
+alone keeps the old modification time (CodeRabbit round 1 on #451), so a run
+starting during the removal would claim the claim again and race it. A `harness-swept-*` directory unmodified for
 an hour, left by a sweep killed mid-removal, is swept the same way. It reads
 each entry with `lstat`, so a link or a regular file of either name is left
 alone. The winner pays the removal inside its own run, a mutant's timed run
 included, once per abandoned parent.
 
 An entry the sweep cannot read, claim or remove is skipped — the read, the
-rename and the removal in one `try`, since another run may claim the entry
-between any two of them — and so is a failed removal of the run's own parent
+touch, the rename and the removal in one `try`, since another run may claim
+the entry between any two of them — and so is a failed removal of the run's own parent
 at its end: a leftover is not a reason to refuse or fail a suite.
 
 ### 4. No signal handler
@@ -113,7 +115,10 @@ decision 2 is what it checks.
 ### 6. The mutation baseline is re-run in the same pull request
 
 The user's answer 2 а on the card, 2026-11-06. Every `mutation/*.json`
-fingerprints `bunfig.toml` and its preloads, so all nineteen go stale. #443
+fingerprints `bunfig.toml` and its preloads, so all nineteen go stale, and
+since #446 the push gate and the `Mutation` workflow run
+`bun bun/mutation-run.ts`, which fails until the rewritten files are
+committed, so the apply pull request cannot leave them stale. #443
 re-ran the baseline in the pull request that changed the preload, and the
 same run is the check that the preload works under Stryker. It runs with
 `TMPDIR` set to an empty directory of its own, which Stryker passes to every
