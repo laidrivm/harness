@@ -7,14 +7,16 @@
 			},
 			{
 				"matcher": "startup|clear|resume",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "f=\"$HOME/.harness-deploy-failed\"; [ ! -e \"$f\" ] || { echo 'A deploy of the harness failed: report it to the user in chat, quoting the line below.'; cat \"$f\"; mv \"$f\" \"$f.reported\"; }"
-					}
-				]
+				"hooks": [{ "type": "command", "command": "/opt/orchestrator/deploy-failed.sh" }]
 			}
 		],
-		"UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "rm -f \"$HOME/.harness-fresh\"" }] }]
+		"UserPromptSubmit": [
+			{
+				"hooks": [
+					{ "type": "command", "command": "rm -f \"$HOME/.harness-fresh\"" },
+					{ "type": "command", "command": "/opt/orchestrator/deploy-failed.sh" }
+				]
+			}
+		]
 	}
 }

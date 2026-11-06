@@ -7,7 +7,7 @@ fail first. `put()` and its `shortcut:` comment are not touched.
 
 ## 1. The prompt hook reports a late failure
 
-- [ ] 1.1 Failing cases in `orchestrator/layout-deploy.test.ts`: `run()` maps
+- [x] 1.1 Failing cases in `orchestrator/layout-deploy.test.ts`: `run()` maps
       a command naming `/opt/orchestrator/<file>` to the tree file the
       Dockerfile's `COPY --chmod=0755 runner/<file> /opt/orchestrator/<file>`
       line names, read from `orchestrator/runner/Dockerfile`, and fails on a
@@ -25,25 +25,25 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       prompt hook (`orchestrator/the-failure-file-cannot-be-moved-aside`);
       the existing start cases
       keep passing (`orchestrator/the-session-starts-after-a-failed-deploy`)
-- [ ] 1.2 A pinning case in `orchestrator/deploy-session.test.ts`, passing
+- [x] 1.2 A pinning case in `orchestrator/deploy-session.test.ts`, passing
       before the change since `deploy.sh` is not changed for this gap: a
       fresh session, the push failing after `main` is up — the failure file
       names the push and the head after the run, `up` saw no failure file,
       and a second run with the push still failing leaves the file again
       (`orchestrator/a-failure-after-main-is-up`)
-- [ ] 1.3 Then `orchestrator/runner/deploy-failed.sh` (mode 0755 in the
+- [x] 1.3 Then `orchestrator/runner/deploy-failed.sh` (mode 0755 in the
       commit) carrying the start hook's report and exiting 0 whatever its
       move does; the Dockerfile copies it to
       `/opt/orchestrator/deploy-failed.sh` beside the other scripts, and its
       mode check fails the build when that file is not executable and
       readable by others or is writable by group or others, a case in
-      `orchestrator/layout-deploy.test.ts` reading the `RUN test -z` line
-      for the path; the
+      `orchestrator/users.test.ts` running the `RUN test -z` line over the
+      path's modes; the
       `SessionStart` `startup|clear|resume` entry and the `UserPromptSubmit`
       entry, beside the mark's removal, run it. Verify
       `bun test orchestrator/layout-deploy orchestrator/deploy-session`
       passes and `shellcheck orchestrator/runner/deploy-failed.sh` is clean
-- [ ] 1.4 The comments and docs that name a start-only report say a start or
+- [x] 1.4 The comments and docs that name a start-only report say a start or
       a prompt: `deploy.sh`'s header (*which the session's next start
       reports*), the Dockerfile's comment above the managed settings' `COPY`,
       and `orchestrator/README.md`'s deploy section; verify by reading each
