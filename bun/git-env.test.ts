@@ -178,9 +178,9 @@ function measured(floor = 1): string {
 	});
 	const mutants = [{ id: "0", mutatorName: "M", location: {}, replacement: "2", status: "Survived" }];
 	const files = { "bun/a.ts": { source: "1\n", mutants } };
-	commit(dir, {
-		"mutation/a.json": JSON.stringify({ schemaVersion: "1.0", files, fingerprint: fingerprint("bun/a.ts", load(dir)) }),
-	});
+	const testFiles = { "bun/a.test.ts": { source: "1\n", tests: [] } };
+	const print = fingerprint("bun/a.ts", load(dir));
+	commit(dir, { "mutation/a.json": JSON.stringify({ schemaVersion: "1.0", testFiles, files, fingerprint: print }) });
 	return dir;
 }
 
