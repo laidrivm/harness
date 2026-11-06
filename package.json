@@ -24,8 +24,8 @@
 			"skills-lock.json"
 		],
 		"mutationFloor": {
-			"surviving": 454,
-			"why": "The bun runner's forced baseline (stryker-bun-runner, task 5.2): 454 of 1 591 mutants over the 19 listed modules, 248 Survived and 206 NoCoverage, the share no test reaches that the command runner scored Survived. Two more than the command runner's 452: bun/skill-record.ts, refactored into recordSkill in task 2.4, leaves import.meta.main mutated to true Survived where the command runner scored it Timeout; and bun/bootstrap.ts's join(\" \") to join(\"\") on BOOTSTRAP survives, equivalent under dash, which ends `exit 2#` with 2 as well (the user's answer of 2026-11-06). None is yet triaged into equivalent and missing tests; the unlisted modules count for nothing (design decision 7 of pre-push-commit-gates)."
+			"surviving": 453,
+			"why": "The bun runner's baseline (stryker-bun-runner, task 5.2), re-run when the fingerprint came to name the build step's script: 453 of 1 600 mutants over the 20 listed modules, 247 Survived and 206 NoCoverage, the share no test reaches that the command runner scored Survived; bun/git-local.ts, listed now that eight of skill-record's mutants moved there, kills all 9 of its own. One more than the command runner's 452: bun/skill-record.ts, refactored into recordSkill in task 2.4, leaves import.meta.main mutated to true Survived where the command runner scored it Timeout. bun/bootstrap.ts's join(\" \") to join(\"\") on BOOTSTRAP reads Killed in this run, on a laptop whose /bin/sh is bash; under dash, where it ends `exit 2#` with 2 as well, it survives (the user's answer of 2026-11-06), so a run on Linux reads one more. None is yet triaged into equivalent and missing tests; the unlisted modules count for nothing (design decision 7 of pre-push-commit-gates)."
 		},
 		"reviewers": [
 			"CodeRabbit"
