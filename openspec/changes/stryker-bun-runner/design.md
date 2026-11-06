@@ -150,7 +150,11 @@ files that must match `HEAD` adds `testsOf(module)` itself, so an uncommitted
 test still fails the run. And a module whose current test files are not
 exactly the stored file's `testFiles` keys — one added or one deleted — runs
 incrementally, as one whose test source differs does: Stryker then reruns
-the mutants an added test covers, and those a deleted test killed.
+the mutants an added test covers, and those a deleted test killed. Stryker
+10's differ reuses a survivor no test covered, a static mutant run against
+every test, whatever the tests did, so such a run hands Stryker the stored
+file without those survivors and Stryker runs them again as new (CodeRabbit
+on #472).
 
 ### 6. The per-module configuration
 

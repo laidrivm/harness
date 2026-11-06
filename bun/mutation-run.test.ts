@@ -62,8 +62,8 @@ describe("what a run mutates", () => {
 	// spec: mutation-floor/a-test-file-changed
 	test("a changed test runs the modules whose filter matches it incrementally, and no other", () => {
 		const incremental = [
-			{ module: "bun/pre-pr.ts", force: false },
-			{ module: "bun/pre-pr-steps.ts", force: false },
+			{ module: "bun/pre-pr.ts", force: false, retest: true },
+			{ module: "bun/pre-pr-steps.ts", force: false, retest: true },
 		];
 		expect(runs(commit(current(), "bun/pre-pr-steps.test.ts", "test('c', () => {});\n"))).toEqual(incremental);
 	});
@@ -71,8 +71,8 @@ describe("what a run mutates", () => {
 	// spec: mutation-floor/a-test-file-deleted
 	test("a test file deleted, added or renamed runs the modules whose filter matches it incrementally", () => {
 		const incremental = [
-			{ module: "bun/pre-pr.ts", force: false },
-			{ module: "bun/pre-pr-steps.ts", force: false },
+			{ module: "bun/pre-pr.ts", force: false, retest: true },
+			{ module: "bun/pre-pr-steps.ts", force: false, retest: true },
 		];
 		expect(runs(commit(current(), "bun/pre-pr-steps.test.ts"))).toEqual(incremental);
 		expect(runs(commit(current(), "bun/pre-pr-steps-x.test.ts", "x\n"))).toEqual(incremental);

@@ -66,6 +66,21 @@ export function trim(report: Report, print: Record<string, string>): Stored {
 	return { schemaVersion: report.schemaVersion, testFiles: keepTests(report.testFiles), files, fingerprint: print };
 }
 
+/**
+ * What a run whose tests changed hands Stryker to reuse: every result but a survivor no test covered. A static mutant
+ * reads that way, run against every test, and Stryker 10's differ reuses it whatever the tests did, so a new test that
+ * kills it would leave the floor counting it; left out, Stryker runs it again as a new mutant.
+ */
+export const reusable = (stored: Stored): Stored => ({
+	...stored,
+	files: Object.fromEntries(
+		Object.entries(stored.files).map(([path, file]) => [
+			path,
+			{ ...file, mutants: file.mutants.filter((m) => m.status !== "Survived" || m.coveredBy?.length) },
+		]),
+	),
+});
+
 /** One report holding every stored file's results, for `bun/mutation-floor.ts`. */
 export const merge = (stored: Stored[]) => ({
 	schemaVersion: stored[0]?.schemaVersion ?? "1.0",
