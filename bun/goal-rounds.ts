@@ -11,7 +11,7 @@
  * cannot be read or written, ends nothing.
  *
  * Its own module rather than a part of `goal-check.ts`: that file is a script
- * whose top level runs the check, and it imports `turn-gate.ts` already.
+ * whose top level runs the check, which importing it would run.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 

@@ -51,10 +51,12 @@ the harness pin; another repository's host.
 `ExecStart=/root/harness/orchestrator/deploy.sh`, run as root, with
 `WorkingDirectory=/root/harness/orchestrator`,
 `StateDirectory=harness-deploy` and `TimeoutStartSec=3h`, which bounds a hung
-build. A run the timeout kills is the one failure after the fast-forward that
-writes no failure file: the script is gone before it could. It records
-nothing either, the journal names the timeout, and the next tick starts again
-from the first step.
+build. A run the timeout kills before `failed()` or the rollback has written
+the failure file is the one failure after the fast-forward that leaves none:
+the script is gone before it could; one killed later, in the rollback's tag
+or `up`, leaves the file and the `rolled-back` record it wrote (CodeRabbit on
+#426). The journal names the timeout, and a run killed before any record
+starts again from the first step at the next tick.
 `orchestrator/host/harness-deploy.timer` starts it with `OnBootSec=5min` and
 `OnUnitInactiveSec=5min`, `[Install] WantedBy=timers.target`. systemd runs one
 instance of a unit, so two ticks never deploy at once.
@@ -97,7 +99,9 @@ Before the build the script tags the image of the running `runner` container
 `orchestrator-runner:previous`. Tagging the name instead would be wrong from
 the second tick on: a build that waited for a fresh session has already moved
 the name to the new image. A tag that fails fails its step (*A failed deploy
-is told to the session*). `docker image prune -f` after the record removes
+is told to the session*). An `up` that failed part way leaves the next run
+tagging an unvetted image (*Known limits of the light rollback*).
+`docker image prune -f` after the record removes
 the image the tag held before; the previous one stays until the next deploy
 moves the tag (disk, *Risks*).
 
@@ -120,53 +124,109 @@ build's minutes.
 
 `orchestrator/runner/managed-settings.json` is copied into the image at the
 path Claude Code reads managed settings from on Linux
-(`/etc/claude-code/managed-settings.json`, confirmed against the Claude Code
-docs at apply). It holds two hooks:
+(`/etc/claude-code/managed-settings.json`, confirmed on 05.11 against the
+docs' *Deploy managed settings*). Its `COPY --chmod=0644` sits beside the
+managed `CLAUDE.md`'s (session-runner-image, #421): after the `install -d -m
+0755 /etc/claude-code` that keeps the directory open to agent, and before the
+`find` mode check, which then covers both files. It holds three hooks:
 
-- `SessionStart` with matcher `startup|clear`: creates `~/.harness-fresh`,
-  and, when `~/.harness-deploy-failed` exists, prints a line asking the
-  session to report it to the user in chat, followed by the file. A hook's
-  output on `SessionStart` enters the session's context.
+- `SessionStart` with matcher `startup|clear`: creates `~/.harness-fresh`.
+- `SessionStart` with matcher `startup|clear|resume`: when
+  `~/.harness-deploy-failed` exists, prints a line asking the session to
+  report it to the user in chat, followed by the file, then renames it
+  `~/.harness-deploy-failed.reported`: printed, it is in the conversation, and
+  the next start does not report it again (local review). A
+  hook's plain stdout
+  on `SessionStart` enters the session's context.
 - `UserPromptSubmit`: removes `~/.harness-fresh`.
 
-They are inline commands, not a script: two shell lines need no file of
+They are inline commands, not a script: three shell lines need no file of
 their own. They live in the image, not in the repository's
 `.claude/settings.json`, so the laptop never runs them, and they are not the
 harness's `SessionStart` hooks that stage 3 adds (`compacted` mark). The
 image's hooks move only with a new image, which this deploy builds.
 
-A session restarted by the start script's loop after `claude` exits is
-fresh by the same hook; so is the one a deploy restarts, so a second merge
-deploys without waiting for the user.
+shortcut: every `claude` in the container runs them, a board-loop pass's
+`claude -p` as agent too, which would set or clear the mark and take the
+failure line; passes are off in stage 2.5 and removed at stage 7. Stage 6's
+events typed into `main` with `tmux send-keys` would clear the mark as a
+message does. Gate the hooks on a variable only the start script sets when
+either runs beside the session (local review).
+
+### Every start continues, so the mark is the file, not the start
+
+Since session-runner-image's *Every start continues the last conversation*
+(user, 03.11), the start script runs `claude --continue` wherever the clone
+has a conversation, and a continued start fires `SessionStart` with
+`resume` (hooks reference, the `SessionStart` matcher table: `resume` is
+`--resume`, `--continue` or `/resume`; read 05.11). `startup` fires only
+where the directory has no conversation yet.
+
+The mark is a file in agent's home, on the `agent_home` volume, so it
+outlives `claude`, a restart and a recreated container. The `resume` start
+leaves it as it was: a session fresh before a restart, the deploy's own or
+the rollback's, is fresh after it, so a second merge deploys without waiting
+for the user and the restored session sits fresh; a busy session that crashes
+comes back busy. The failure line is printed on `resume` too, since the
+rollback's restart and a crash's are `resume` starts and answer 17 a asks
+the session to report the failure on start.
+
+A deploy's restart of a fresh session continues the directory's last
+conversation, as every start does (user, 05.11, answer 18 а). The stage's
+live probe on the VPS (05.11) settled what this rested on: a `/clear` from
+Remote Control fires `SessionStart` with `clear` and writes the cleared
+conversation to disk at once; a killed `claude` and `restart runner` both
+come back with `resume` and the cleared conversation's id, so nothing from
+before the `/clear` is seen; and the managed `CLAUDE.md`, hooks and skills
+reach a running session without a restart. The CLI reference's note that a
+continued conversation keeps its first request's system prompt (*System
+prompt flags in resumed conversations*) therefore does not keep the new
+rules out. Rejected:
+starting a new conversation while the mark exists (18 б, a new entry in the
+app's Recents per deploy) and resuming an id a hook records (18 в, more code,
+the old prompt kept).
 
 ### `up -d`, then a restart when the runner was not recreated
 
 With the mark, the script takes the pass locks as on `main` (inert, below),
-reads the check again, and runs `docker compose up -d`. It compares the
+reads the check again and looks for the mark again. Only then does it remove
+`~/.harness-deploy-failed`, which the head it now deploys supersedes: the
+restarted session's `SessionStart` can run before the wait below sees
+`main`, and would report an old failure as new (local review). Removed any
+earlier, a run that stops at the second read or the second mark check would
+erase an unreported failure (CodeRabbit on #426). It then runs `docker
+compose up -d`. It compares the
 `runner` container's id before and after: when `up` did not recreate it (the
 image and its configuration unchanged), it runs `docker compose restart
 runner`. Either way the start script runs again, pulls the clone, runs
-`bun install` and starts `claude`. A restart is chosen over hoping the session
-picks up new hooks and skills in place, which is not verified (explore,
-*Риски*).
+`bun install` and starts `claude`. The restart is what moves the clone: the
+image's managed files reach a running session in place (live probe, 05.11),
+but the clone's `git pull` and `bun install` run only in the start script.
 
 ### The session must be back within two minutes, or the runner goes back (answer 17 a)
 
 After `up` the script polls `docker compose exec -T -u agent runner tmux
 has-session -t main` every 5 s for at most 120 s. When `main` answers, it
 writes the head to `$STATE_DIRECTORY/deployed` (or
-`/var/lib/harness-deploy/deployed` for a run by hand, as on `main`), removes
-`~/.harness-deploy-failed`, prunes, and exits 0.
+`/var/lib/harness-deploy/deployed` for a run by hand, as on `main`), prunes,
+and exits 0.
 
-When `main` does not answer, the script tags `orchestrator-runner:previous`
-back as `orchestrator-runner`, runs `docker compose up -d runner`, writes the
-head to `$STATE_DIRECTORY/rolled-back`, writes the failure file, and exits 1.
-When the image did not change, there is no other image to go back to: the
-record and the failure file alone. The user chose this on the card: «light
+When `main` does not answer, the script makes one rollback and stops: it
+writes the failure file and the head to `$STATE_DIRECTORY/rolled-back`, tags
+`orchestrator-runner:previous` back as `orchestrator-runner`, runs `docker
+compose up -d runner`, and exits 1. The failure file comes before `up`, so
+the restored session's start finds it (local review); a tag or an `up` that
+fails calls `failed()`, which names that step in the same file. When the
+image did not change, there is no other image to go back to: the record and
+the failure file alone. The user chose this on the card: «light
 rollback: the previous image gets a tag before the build; if `main` is not up
 within 2 minutes, go back to it and write a failure file; on start the
 session reports it in chat; the full probe with a sandbox and a stop file
-stays in stage 9» (user, 02.11, answer 17 a).
+stays in stage 9» (user, 02.11, answer 17 a). After four CodeRabbit rounds
+on #426 each found a new state in a rollback that retried and verified
+itself, the user kept it light for stage 2.5: one rollback per run, its gaps
+known limits fixed by hand, the full rollback stage 9's (user, 2026-11-06,
+answers 1 б and 2 а).
 
 A rolled-back head is not retried: each run skips a head equal to either
 record. Retrying it would recreate the broken runner every five minutes while
@@ -178,15 +238,40 @@ The rollback returns the image, not the clone: the start script has already
 pulled it. A tree that keeps `claude` from running while tmux stays up passes
 this check; catching it is stage 9's probe.
 
+### Known limits of the light rollback (answers 1 б and 2 а)
+
+Each is fixed by hand on the host; stage 9's full rollback, with a stop file
+and an escalation card, owns the answer to all of them.
+
+- **An `up` that fails part way.** `up -d` can recreate the runner on the new
+  image before another service fails. `failed()` writes the failure file and
+  the journal names the step; the head is not recorded, so the next tick
+  retries in full and tags that unvetted image `previous`, and a later
+  rollback returns to it.
+- **A rollback that fails.** The tag back or the rollback's `up` fails: the
+  failure file names that step, the head is recorded as rolled back, and the
+  runner stays on the new image or down, with no tick restoring it.
+- **A rollback that leaves no session.** The rollback does not wait for
+  `main` again; a runner the previous image cannot start, or an unchanged
+  image's runner, stays without `main`, and the failure file waits for a
+  session that is not there. The journal shows the rollback.
+- **A late `main`.** A session that comes up after the two minutes is
+  replaced by the rollback's `up`, or, when that `up` failed, keeps running
+  on the new image under a `rolled-back` record (CodeRabbit on #426, closed
+  as this limit by answer 2 а).
+
+What the user sees for each is the journal (`journalctl -u harness-deploy`)
+and `~/.harness-deploy-failed`, reported by the next session that starts.
+
 ### A failed deploy is told to the session
 
 `failed()` on `main` names the step and the head on the journal and writes
 each clone's stop file. It gains one write before those: the failure file
 `~/.harness-deploy-failed` in agent's home, through the volume's mount point,
-owned as that home is, so the session can remove it. One line,
+owned as that home is, so the session's hook can rename it once printed. One line,
 `<time> deploy: <step> failed at <sha>`, replacing an older one. Every step
 after the fast-forward calls it, the rollback included (a run the service's
-timeout kills cannot, *The timer alone starts the deploy*), so a failed build is
+timeout kills before the write cannot, *The timer alone starts the deploy*), so a failed build is
 reported at the next `/clear` as a rolled-back runner is. A fetch or a check
 read that fails writes nothing, as on `main`: the host is still on a working
 commit.
@@ -237,10 +322,11 @@ with the pass loop:
 
 - [A message sent in the seconds between the mark check and the restart is
   lost] → the gap is seconds; the user sees the session restart and resends.
-- [Not verified: `SessionStart` fires on a `/clear` from Remote Control;
-  `UserPromptSubmit` fires on a message from Remote Control; Remote Control
-  reconnects after the restart (a stage criterion)] → task 4.2 watches the
-  first deploy for all three.
+- [Not verified: `UserPromptSubmit` fires on a message from Remote Control;
+  Remote Control reconnects after a deploy's restart (a stage criterion)] →
+  task 4.2 watches the first deploy for both. That `SessionStart` fires on a
+  `/clear` from Remote Control, and which conversation a restart continues,
+  the live probe settled (05.11, *Every start continues*).
 - [A session never cleared is never updated] → the user's `/clear` at the end
   of a card is the stage's rule; the journal shows the waiting head.
 - [The session's clone pulls `origin/main` as it is at the restart, which
@@ -269,6 +355,11 @@ remove `/var/lib/harness-deploy/rolled-back`.
 
 - 16 a (user, 02.11): restart only in a fresh session.
 - 17 a (user, 02.11): light rollback, failure file reported in chat.
+- 18 а (user, 05.11): a deploy's restart keeps `--continue`; the first
+  deploy (task 4.2) checks which conversation comes back.
+- 1 б and 2 а (user, 2026-11-06): the light rollback, one per run, its gaps
+  the known limits above and stage 9's; CodeRabbit's late-`main` finding on
+  #426 closes as one of them.
 - 12а (2026-10-24): revised above, the timer alone in stage 2.5, the kick in
   stage 6.
 - 1б: a merge deploys without the user, within a tick of a fresh session.

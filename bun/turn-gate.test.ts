@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { complete } from "./task-groups.ts";
 import { cleanup, commit, DONE, end, OPEN, prompt, repo, SILENT, store, TASKS } from "./turn-gate.fixture.ts";
-import { complete, decide, mark } from "./turn-gate.ts";
+import { decide, mark } from "./turn-gate.ts";
 
 /**
  * What `turn-gate.ts` reads: which task groups a task list completes. What

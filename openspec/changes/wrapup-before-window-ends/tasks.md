@@ -1,14 +1,16 @@
 # wrapup-before-window-ends — tasks
 
-One group, one pull request on `feat/wrapup-before-window-ends`. Each failing
+Two groups, one pull request each, on `feat/wrapup-before-window-ends-1` and
+`-2`: together they pass the diff budget's 800 lines, and the move that makes
+room under the turn gate's line cap is a change of its own. Each failing
 case first, its failure seen, cited as `// spec: context-window/<slug>` or
 `// spec: commit-gates/<slug>`. The
 trigger is the user's answer to question 1 on the card (05.11, «б»); the
 choices are `design.md`'s decisions 1–9.
 
-## 1. The turn gate's stop asks for the wrap-up once per full context
+## 1. Room under the turn gate's line cap
 
-- [ ] 1.1 Make room first, with no change in behaviour: move `groups()` and
+- [x] 1.1 Make room first, with no change in behaviour: move `groups()` and
       `complete()` from `bun/turn-gate.ts` to a new `bun/task-groups.ts`,
       and point `goal-check.ts`, `work-status.ts`, `board-loop-takeable.ts`
       and `turn-gate.test.ts` at it (grep `from "./turn-gate.ts"` for any
@@ -18,7 +20,11 @@ choices are `design.md`'s decisions 1–9.
       comment, and import it back.
       Verify with `bun test bun/turn-gate* bun/goal-check* bun/work-status*
       bun/board-loop* bun/question-gate*`, all passing unchanged
-- [ ] 1.2 Failing cases in a new `bun/context-window.test.ts`, in process,
+- [x] 1.2 Run the whole `bun test` and `bun bun/pre-pr.ts`
+
+## 2. The turn gate's stop asks for the wrap-up once per full context
+
+- [ ] 2.1 Failing cases in a new `bun/context-window.test.ts`, in process,
       over a transcript written into a temp directory per case (a helper that
       writes assistant lines with a given `usage`, `isSidechain` and padding,
       and an optional first user message) and a temp mark store: 812 000
@@ -38,7 +44,9 @@ choices are `design.md`'s decisions 1–9.
       refuses (`a-wrap-up-from-before-a-compaction`); 900 000 then 120 000 reads
       120 000 (`the-last-reply-counts`); a sidechain line and an all-zero
       line after an 810 000 reply read 810 000
-      (`a-sidechain-or-synthetic-reply-after-the-last-real-one`); a 6 MiB
+      (`a-sidechain-or-synthetic-reply-after-the-last-real-one`); an 815 000
+      reply, then a `compact_boundary` line and no reply, reads no size
+      (`a-compaction-and-no-reply-since`); a 6 MiB
       transcript whose only reply, at 810 000, sits before its final 4 MiB,
       the rest padding, reads no size — a whole-file read would find it
       (`a-large-transcript`); a one-line transcript holding an 810 000 reply
@@ -47,24 +55,34 @@ choices are `design.md`'s decisions 1–9.
       (`no-size-to-read`); the stop after a refusal at 830 000 asks nothing
       (`the-continued-turn`); refusal, 150 000, then 805 000 refuses again
       (`a-compaction-re-arms-it`); refusal at 805 000, 790 000, then 802 000
-      asks nothing twice (`a-small-shrink-does-not-re-arm-it`); a refusal,
+      asks nothing twice (`a-small-shrink-does-not-re-arm-it`); a
+      `session-wrapup` call with a stop at 815 000, then a
+      `compact_boundary` line, a stop at 500 000 and one at 810 000, refuses
+      the last (`a-wrap-up-a-compaction-and-a-large-first-stop`); a refusal at
+      805 000, a stop at 150 000 called as the turn gate calls it after its
+      own refusal, then 805 000 refuses again
+      (`the-turn-gate-refuses-the-first-stop-after-a-compaction`); a refusal,
       then a fresh call with the same session id and store at 820 000, asks
       nothing (`a-resumed-session-above-the-threshold`); session A refused,
       session B at 810 000 refused (`two-sessions`); no session id or `../x`
       asks nothing and writes no file (`an-unsafe-session-id`). Each fails
       today for want of the module
-- [ ] 1.3 Then `bun/context-window.ts` as `design.md` decisions 2–4 and 7 set
+- [ ] 2.2 Then `bun/context-window.ts` as `design.md` decisions 2–4 and 7 set
       out: `THRESHOLD` and `REARM` exported, the 4 MiB tail read with the
       first line dropped only past byte 0, the backward walk passing over
-      sidechain and zero-sum replies and looking for a `session-wrapup` call
-      back to the tail's last `compact_boundary` line, the `.wrapup` mark beside the turn gate's,
+      sidechain and zero-sum replies, reading the size and looking for a
+      `session-wrapup` call only back to the tail's last `compact_boundary`
+      line, the `.wrapup` mark beside the turn gate's,
       written on a refusal and on an ask skipped for a wrap-up or an
-      unattended session, `unattended()` called only for a stop it would
+      unattended session and holding that boundary's `uuid`, removed at
+      every stop that measures under `REARM` or whose last boundary is
+      another — whether or not that stop may be refused, which the caller
+      says — `unattended()` called only for a stop it would
       otherwise refuse, the
       reason's exact text with a comment that «можно /clear» is the user's
       own phrase. Fail-open on every read, as `turn-gate.ts`'s header says.
       Verify with `bun test bun/context-window.test.ts`
-- [ ] 1.4 Cases in a new `bun/turn-gate-wrapup.test.ts`, over
+- [ ] 2.3 Cases in a new `bun/turn-gate-wrapup.test.ts`, over
       `turn-gate.fixture.ts` and a transcript at 850 000. Failing today: a
       stop that completes a task group with no passing run is refused with
       the turn gate's reason alone, its next stop ends, and the first stop
@@ -79,8 +97,16 @@ choices are `design.md`'s decisions 1–9.
       810 000 whose next stop ends it adds one `context-window`/`refused`/
       `wrapup` record and two `turn-gate`/`passed`
       (`a-refusal-over-a-passing-run`); the stop after the gate's refusal,
-      at 850 000, ends (`commit-gates/a-refusal-for-the-run-then-a-full-context`).
-      Passing today and kept as guards:
+      at 850 000, ends (`commit-gates/a-refusal-for-the-run-then-a-full-context`);
+      a refusal for size, then a turn whose stop at 150 000 the turn gate
+      refuses and whose next stop ends, then a stop of the next turn at
+      805 000 is refused for size
+      (`the-turn-gate-refuses-the-first-stop-after-a-compaction`).
+      Passing today and kept as guards: a mark written outside a repository
+      and a stop at 850 000 ends (`outside-a-repository`,
+      `commit-gates/outside-a-repository-a-full-context`); a marked commit,
+      then a detached `HEAD` and a stop at 850 000, ends
+      (`on-a-detached-head`);
       spawned as the hook, the twentieth continued stop prints `continue:
       false` and no wrap-up reason (`the-ceiling-at-the-same-stop`); a stop
       at 850 000 in a session no `mark` ran for ends (`no-mark`); a stop
@@ -88,22 +114,25 @@ choices are `design.md`'s decisions 1–9.
       (`a-stop-below-the-threshold`); `HOOKS` and the harness's
       `.claude/settings.json` hold no `SubagentStop` entry
       (`a-subagent-s-stop`)
-- [ ] 1.5 Then `bun/turn-gate.ts` as decisions 1, 5 and 9 set out:
-      `decide()` runs the size check when `judge()` did not refuse and the
-      mark file exists and is not flagged ` refused`, never flags it for
-      size, and passes a
+- [ ] 2.4 Then `bun/turn-gate.ts` as decisions 1, 5 and 9 set out:
+      `decide()` runs the size check at every stop with a safe session id,
+      letting it refuse only when `judge()` did not refuse, the mark names
+      a commit and is not flagged ` refused`, and `HEAD` names a branch,
+      never flags it for size, and passes a
       size refusal to `log` as its own decision; `judge()` logs as today; the
       hook maps the size refusal to `record("context-window", "refused",
       "wrapup", event)`. The header gains one paragraph naming the check, its order
-      and its module; the `ponytail:` comment on the store names `.wrapup`.
+      and its module, and its fail-open paragraph says that what it cannot
+      read ends the turn whatever its size; the `ponytail:` comment on the
+      store names `.wrapup`.
       Verify with `bun test bun/turn-gate* bun/context-window.test.ts
       bun/gate-ledger*`, and `wc -l bun/turn-gate.ts` at or under 300 (the
       file ends in a newline, so `wc -l` equals `file-size.ts`'s count)
-- [ ] 1.6 `README.md`: the turn gate's row in the hook table adds "asks an
+- [ ] 2.5 `README.md`: the turn gate's row in the hook table adds "asks an
       attended session once per context for `/session-wrapup` at 800k
       tokens" and cites `context-window`; one line below the table states
       the limit — with `/autocompact` below 800 000, or a model whose window
       is under 1M, compaction comes first and nothing is asked. Verify by
       reading the passages back, and `bun test bun/review-docs.test.ts`
-- [ ] 1.7 Run the whole `bun test` and `bun bun/pre-pr.ts`, and confirm
+- [ ] 2.6 Run the whole `bun test` and `bun bun/pre-pr.ts`, and confirm
       `openspec validate wrapup-before-window-ends --strict` passes
