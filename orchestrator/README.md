@@ -382,7 +382,9 @@ container or a reboot of the VPS comes back to the same conversation; keep
 its size down with `/compact` and `/clear`. Where the directory has no
 conversation yet, the start is a new one. Its `gh` and git mint a
 token from the App for each call, for `laidrivm/harness` alone, so they reach
-no other repository; it holds none. No step here makes that
+no other repository; it holds none. That is the wrapper's scope, not a
+boundary: `agent` may run the mint itself for any repository
+`app/repositories` names. No step here makes that
 clone, which the roadmap's stage 2.5 sets up in its step 6: until it exists,
 the session starts in `/home/agent` and pulls nothing, and the first start
 after it is cloned runs in it. Every `claude` that runs as `agent` takes
