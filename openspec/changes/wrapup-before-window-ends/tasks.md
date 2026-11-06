@@ -44,7 +44,9 @@ choices are `design.md`'s decisions 1–9.
       refuses (`a-wrap-up-from-before-a-compaction`); 900 000 then 120 000 reads
       120 000 (`the-last-reply-counts`); a sidechain line and an all-zero
       line after an 810 000 reply read 810 000
-      (`a-sidechain-or-synthetic-reply-after-the-last-real-one`); a 6 MiB
+      (`a-sidechain-or-synthetic-reply-after-the-last-real-one`); an 815 000
+      reply, then a `compact_boundary` line and no reply, reads no size
+      (`a-compaction-and-no-reply-since`); a 6 MiB
       transcript whose only reply, at 810 000, sits before its final 4 MiB,
       the rest padding, reads no size — a whole-file read would find it
       (`a-large-transcript`); a one-line transcript holding an 810 000 reply
@@ -68,8 +70,9 @@ choices are `design.md`'s decisions 1–9.
 - [ ] 2.2 Then `bun/context-window.ts` as `design.md` decisions 2–4 and 7 set
       out: `THRESHOLD` and `REARM` exported, the 4 MiB tail read with the
       first line dropped only past byte 0, the backward walk passing over
-      sidechain and zero-sum replies and looking for a `session-wrapup` call
-      back to the tail's last `compact_boundary` line, the `.wrapup` mark beside the turn gate's,
+      sidechain and zero-sum replies, reading the size and looking for a
+      `session-wrapup` call only back to the tail's last `compact_boundary`
+      line, the `.wrapup` mark beside the turn gate's,
       written on a refusal and on an ask skipped for a wrap-up or an
       unattended session and holding that boundary's `uuid`, removed at
       every stop that measures under `REARM` or whose last boundary is
@@ -98,12 +101,12 @@ choices are `design.md`'s decisions 1–9.
       a refusal for size, then a turn whose stop at 150 000 the turn gate
       refuses and whose next stop ends, then a stop of the next turn at
       805 000 is refused for size
-      (`the-turn-gate-refuses-the-first-stop-after-a-compaction`); a mark
-      written outside a repository and a stop at 850 000 is refused for size
-      (`outside-a-repository`, `commit-gates/outside-a-repository-a-full-context`);
-      a marked commit, then a detached `HEAD` and a stop at 850 000, is
-      refused for size (`on-a-detached-head`).
-      Passing today and kept as guards:
+      (`the-turn-gate-refuses-the-first-stop-after-a-compaction`).
+      Passing today and kept as guards: a mark written outside a repository
+      and a stop at 850 000 ends (`outside-a-repository`,
+      `commit-gates/outside-a-repository-a-full-context`); a marked commit,
+      then a detached `HEAD` and a stop at 850 000, ends
+      (`on-a-detached-head`);
       spawned as the hook, the twentieth continued stop prints `continue:
       false` and no wrap-up reason (`the-ceiling-at-the-same-stop`); a stop
       at 850 000 in a session no `mark` ran for ends (`no-mark`); a stop
@@ -113,15 +116,15 @@ choices are `design.md`'s decisions 1–9.
       (`a-subagent-s-stop`)
 - [ ] 2.4 Then `bun/turn-gate.ts` as decisions 1, 5 and 9 set out:
       `decide()` runs the size check at every stop with a safe session id,
-      letting it refuse only when `judge()` did not refuse and the
-      mark file exists and is not flagged ` refused`, never flags it for
-      size, and passes a
+      letting it refuse only when `judge()` did not refuse, the mark names
+      a commit and is not flagged ` refused`, and `HEAD` names a branch,
+      never flags it for size, and passes a
       size refusal to `log` as its own decision; `judge()` logs as today; the
       hook maps the size refusal to `record("context-window", "refused",
       "wrapup", event)`. The header gains one paragraph naming the check, its order
-      and its module, and its fail-open paragraph says that no repository
-      and a detached `HEAD` end the turn gate's own judgement, not the
-      size check's; the `ponytail:` comment on the store names `.wrapup`.
+      and its module, and its fail-open paragraph says that what it cannot
+      read ends the turn whatever its size; the `ponytail:` comment on the
+      store names `.wrapup`.
       Verify with `bun test bun/turn-gate* bun/context-window.test.ts
       bun/gate-ledger*`, and `wc -l bun/turn-gate.ts` at or under 300 (the
       file ends in a newline, so `wc -l` equals `file-size.ts`'s count)

@@ -6,10 +6,9 @@ The bound of *A turn that commits reports its gates before it ends* — the hook
 refuses at most once per mark — SHALL count the turn gate's refusal for a
 missing pre-PR run alone. The same `Stop` hook's refusal for size
 (`context-window`) is bounded by its own record once per context, and SHALL
-neither use the bound nor be refused by it. So are that requirement's
-fail-open cases of no repository and a `HEAD` naming no branch the pre-PR
-refusal's own: such a stop ends for want of a commit to judge, and MAY be
-refused for size. A stop with no mark at all SHALL NOT be.
+neither use the bound nor be refused by it. That requirement's fail-open
+cases — no mark, no repository, a `HEAD` naming no branch — SHALL still end
+the turn, a refusal for size included.
 
 #### Scenario: A refusal for size, then a completed group
 
@@ -28,4 +27,4 @@ refused for size. A stop with no mark at all SHALL NOT be.
 
 - **WHEN** a turn ends outside a git repository, under the empty mark its
   prompt wrote, and the stop measures 850 000
-- **THEN** the hook refuses it for size alone, since no commit is in question
+- **THEN** the turn ends, as it does at any size
