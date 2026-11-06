@@ -20,9 +20,9 @@
 # check read that fails exits 1 and writes nothing: the host is still on a
 # working commit. A step after the fast-forward that fails writes the failure
 # file ~/.harness-deploy-failed in agent's home, which the session's next start
-# reports, and each clone's stop file, unless one exists, and exits 1; the next
-# run starts again from the fetch. Every other run exits 0, a busy session's
-# included.
+# or prompt reports, and each clone's stop file, unless one exists, and exits
+# 1; the next run starts again from the fetch. Every other run exits 0, a busy
+# session's included.
 
 # Compose names them after the project, `orchestrator`: <project>-<service>
 # for a built image, <project>_<name> for a network or a volume.
