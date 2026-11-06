@@ -148,7 +148,7 @@ test("a machine's first entry takes the first-entry-ever rules, the gates query'
 });
 
 // spec: agent-rulebook/a-wrap-up-on-a-detached-head
-test("the heading names the detached commit as git status prints it", () => {
+test("the heading names the detached commit as git rev-parse --short HEAD prints it", () => {
 	expect(step()).toContain(
 		// Never `git status`, which can name a tag, a remote branch or the commit it detached from (CodeRabbit).
 		"on a detached `HEAD`, `<branch>` is the commit `git rev-parse --short HEAD` prints, never empty",
