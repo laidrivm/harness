@@ -18,7 +18,7 @@ test("the Rules preamble says how a session delegates to a subagent", () => {
 		"never into git",
 		"nothing the harness already loads",
 		"Open the call's `description` with the slug of the change it carries, or of the card where there is none",
-		"name the agent's ID beside that card in each report",
+		"name the agent's ID beside the change's card, or beside that card when there is no change, in each report",
 	]) {
 		expect(preamble).toContain(phrase);
 	}
