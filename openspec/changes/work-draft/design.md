@@ -19,9 +19,10 @@ anything.
 
 ## Goals / Non-Goals
 
-**Goals:** one command the dispatching session runs at the hand-over that
-leaves the pull request a draft, whether it was ready or already a draft,
-and names its head; a rule every session reads at that moment.
+**Goals:** one command a session runs as follow-up starts — at the
+hand-over, or before its own first edit — that leaves the pull request a
+draft, whether it was ready or already a draft, and names its head; a rule
+every session reads.
 
 **Non-Goals:** an automatic trigger; changing `finish`'s or the pre-push
 hook's refusal text; a branch-based form; anything for a cloud session,
@@ -49,26 +50,42 @@ same way; nothing here pushes into it.
 
 ### Reuse the reads and the call that exist
 
-`readPullRequest` also returns `draft` and `head` — the REST answer already
-carries `draft` and `head.sha` — and `draft` refuses an answer whose head is
-not 40 hex digits as an unread one. The undo is `ready(full, n, "--undo")`
-from `bun/ci-run-draft.ts`. No read-back after the undo: `finish` trusts
-`ready()`'s exit status the same way.
+`draft` reads `originRepository()` first, as `finish` does, so an `origin`
+naming no owner and repository is refused as that rather than as a failed
+read, then `readPullRequest(n, repo)`. `readPullRequest` also returns
+`draft` and `headRefOid`, the names `Pull` already gives them — the REST
+answer carries `draft` and `head.sha` — and `draft` refuses an answer whose
+head is not 40 hex digits as an unread one. The undo is `ready(full, n,
+"--undo")` from `bun/ci-run-draft.ts`, which spawns `gh pr ready <n> -R
+<repo> --undo` and answers only whether it exited 0, so a failure line
+names the call that failed and claims no state: a pull request merged
+between the read and the undo, and a cloud session's closed GraphQL, fail
+the same way. No read-back after the undo: `finish` trusts `ready()`'s exit
+status the same way.
 
-### The head on every outcome line
+### The head on the lines that leave a draft
 
 The full head is the `--head` `work.ts resolve` takes, and the commit the
-subagent's fixes build on, so the dispatcher copies it into the brief from
-the one call.
+follow-up builds on, so the dispatcher copies it into the brief from the one
+call. It is read before the undo and not again: while the pull request is
+ready, the pre-push hook and `finish` refuse every push into it, so only a
+push that bypasses the hooks moves it in that window, and `resolve` refuses
+a head that moved anyway.
 
 ### Where the rule sits
 
-`core/rules.md` is the only file every session reads, and the hand-over is
-when the rule applies, so it gets one Process rule — 19 rules there, under
-the ~20 trigger. It sits in the sublist, not in the delegation line of the
-preamble, so `delegation`'s requirement is left as it stands.
+`core/rules.md` is the only file every session reads, and the start of the
+follow-up is when the rule applies, so it gets one Process rule — 19 rules
+there, under the ~20 trigger. It covers a session that carries the
+follow-up itself — an attended single session, a subagent that picks up a CI
+fix — as well as one that hands it over, so the case `git-and-prs.md` covers
+today is not dropped. It names the consumer's
+`bun node_modules/harness/bun/work.ts` with the harness's `bun bun/work.ts`
+in brackets, as `core/feature-workflow.md` names `take`, since a consumer
+imports the same file. It sits in the sublist, not in the delegation line of
+the preamble, so `delegation`'s requirement is left as it stands.
 `core/git-and-prs.md`'s draft rule, which said the agent drafts by hand as
-it starts, names the command and the dispatcher instead.
+it starts, names the command instead.
 
 ## Risks / Trade-offs
 

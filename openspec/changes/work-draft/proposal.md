@@ -19,15 +19,16 @@ laptop session holds that as a memory rule since 2026-11-05 and ran it about
 - New subcommand `bun bun/work.ts draft --pr <n>`: reads pull request `<n>`
   of `origin`'s repository, marks it draft when it is open and ready, says
   so when it is already a draft, and refuses a merged or closed one or a read
-  that fails. Every outcome line names the pull request's head commit in
-  full, the `--head` that `work.ts resolve` takes and a brief can carry.
-- `core/rules.md` gains one Process rule, read by every session at the
-  moment it hands work over: before handing follow-up on an open pull
-  request to a subagent — a review round, a CI fix, a merge of `main` — run
-  `work.ts draft --pr <n>`.
-- `core/git-and-prs.md`'s draft rule names `work.ts draft --pr <n>` run by
-  the session that hands the follow-up over, in place of the agent's hand-run
-  `gh pr ready <n> --undo`, which still passes the ready guard.
+  that fails. Both lines that leave it a draft name the pull request's head
+  commit in full, the `--head` that `work.ts resolve` takes and a brief can
+  carry.
+- `core/rules.md` gains one Process rule, read by every session: before
+  follow-up on an open pull request starts — a review round, a CI fix, a
+  merge of `main`, handed to a subagent or carried by the session itself —
+  run `work.ts draft --pr <n>`.
+- `core/git-and-prs.md`'s draft rule names `work.ts draft --pr <n>` in place
+  of the agent's hand-run `gh pr ready <n> --undo`, which still passes the
+  ready guard.
 - `README.md` gets a row for `draft` beside `take`, `resolve`, `finish` and
   `status`, and its *Cloud sessions* note names `draft` beside `resolve` as
   failing there, since `gh pr ready` goes through GraphQL.
@@ -42,8 +43,8 @@ is already refused. `finish`'s and the pre-push hook's refusals keep naming
 
 ### New Capabilities
 
-- `work-draft`: the command a session runs when it hands follow-up on an
-  open pull request over, marking it draft until `finish` readies it again.
+- `work-draft`: the command a session runs when follow-up on an open pull
+  request starts, marking it draft until `finish` readies it again.
 
 ### Modified Capabilities
 
@@ -55,8 +56,8 @@ CI flow does.
 
 - New: `bun/work-draft.ts`, `bun/work-draft.test.ts`.
 - Changed: `bun/work.ts` (dispatch, `USAGE`, header comment),
-  `bun/pull-requests.ts` (`readPullRequest` also returns `draft` and the
-  head), `core/rules.md`, `core/git-and-prs.md`, `README.md`.
+  `bun/pull-requests.ts` (`readPullRequest` also returns `draft` and
+  `headRefOid`, `Pull`'s names for them), `core/rules.md`, `core/git-and-prs.md`, `README.md`.
 - No new dependency, permission or hook: `.claude/settings.json` already
   allows `bun bun/work.ts *`, and a consumer's `README` step 5 already allows
   `bun node_modules/harness/bun/work.ts *`.

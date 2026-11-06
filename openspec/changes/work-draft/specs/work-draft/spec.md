@@ -34,7 +34,7 @@ usage and exit 2 before any `gh` call.
 
 `draft --pr <n>` SHALL read pull request `<n>` of the repository `origin`
 names. When it is open and not a draft, it SHALL mark it draft with `gh pr
-ready <n> --undo -R <owner>/<repo>` and print `draft: #<n> marked draft, head
+ready <n> -R <owner>/<repo> --undo` and print `draft: #<n> marked draft, head
 <sha>`; when it is open and already a draft, it SHALL make no `gh pr ready`
 call and print `draft: #<n> already a draft, head <sha>`. `<sha>` is the
 pull request's head commit, all 40 hex digits. Both exit 0.
@@ -42,7 +42,7 @@ pull request's head commit, all 40 hex digits. Both exit 0.
 #### Scenario: A ready pull request
 
 - **WHEN** `draft --pr 7` runs and #7 is open and ready with head `<sha>`
-- **THEN** it calls `gh pr ready 7 --undo -R <owner>/<repo>`, prints
+- **THEN** it calls `gh pr ready 7 -R <owner>/<repo> --undo`, prints
   `draft: #7 marked draft, head <sha>`, and exits 0
 
 #### Scenario: Already a draft
@@ -54,9 +54,13 @@ pull request's head commit, all 40 hex digits. Both exit 0.
 ### Requirement: Draft refuses what it cannot draft
 
 `draft` SHALL exit 1 on one line opening `draft: refused —`, changing
-nothing, when `origin` names no GitHub repository, when the pull request
-cannot be read, or when it is merged or closed. When `gh pr ready --undo`
-fails it SHALL exit 1 on a line saying #`<n>` is still ready.
+nothing, when `origin`'s URL names no owner and repository — read before
+the pull request, as `finish` reads it — when the pull request cannot be
+read, or when it is merged or closed. When `gh pr ready --undo` exits
+non-zero or is killed at its time limit, it SHALL exit 1 on a line saying
+`gh pr ready --undo` failed and #`<n>` was not marked draft, never claiming
+the pull request's state, which the failure leaves unread — merged in the
+meantime, or a cloud session's closed GraphQL, read the same.
 
 #### Scenario: A merged pull request
 
@@ -74,18 +78,28 @@ fails it SHALL exit 1 on a line saying #`<n>` is still ready.
 
 - **WHEN** `draft --pr 7` runs, #7 is open and ready, and `gh pr ready 7
   --undo` exits non-zero
-- **THEN** it prints that #7 is still ready and exits 1
+- **THEN** it prints that `gh pr ready --undo` failed and #7 was not marked
+  draft, and exits 1
 
-### Requirement: The session that hands follow-up over drafts first
+#### Scenario: No repository in origin
+
+- **WHEN** `draft --pr 7` runs in a checkout whose `origin` URL has one path
+  segment
+- **THEN** it prints a refusal naming `origin`, makes no `gh` call, and
+  exits 1
+
+### Requirement: Follow-up on an open pull request starts with a draft
 
 `core/rules.md` SHALL state, in its Process sublist, that a session runs
-`work.ts draft --pr <n>` before it hands follow-up on an open pull request
-to a subagent, and `core/git-and-prs.md`'s draft rule SHALL name that
-command in place of a hand-run `gh pr ready <n> --undo`.
+`work.ts draft --pr <n>` before follow-up on an open pull request starts,
+whether it hands that follow-up to a subagent or carries it itself, naming
+the command in the consumer's form with the harness's own in brackets, as
+`core/feature-workflow.md` names `take`. `core/git-and-prs.md`'s draft rule
+SHALL name that command in place of a hand-run `gh pr ready <n> --undo`.
 
 #### Scenario: The rulebook names the command
 
 - **WHEN** a session starts in a project whose `CLAUDE.md` imports
   `core/rules.md`
-- **THEN** its Process sublist names `work.ts draft --pr` for follow-up
-  handed over on an open pull request
+- **THEN** its Process sublist names `work.ts draft --pr` for follow-up on an
+  open pull request, handed over or carried by the session itself
