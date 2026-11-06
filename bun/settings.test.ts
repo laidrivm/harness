@@ -165,9 +165,10 @@ describe("the permission lists", () => {
 		expect(settings(consumer(config)).join("\n")).toContain("the Bash deny list is not");
 	});
 
-	test("an ask entry dropped is named", () => {
+	// spec: agent-permissions/a-literal-install-still-prompts — Claude Code prompts on these entries, whatever allows `bun run deps`
+	test.each(["Bash(bun install *)", "Bash(bun i *)", "Bash(bun r *)"])("an ask entry %s dropped is named", (entry) => {
 		const config = changed((c) => {
-			c.permissions.ask = c.permissions.ask.filter((e) => e !== "Bash(bun r *)");
+			c.permissions.ask = c.permissions.ask.filter((e) => e !== entry);
 		});
 		expect(settings(consumer(config)).join("\n")).toContain("the Bash ask list is not");
 	});
@@ -204,6 +205,18 @@ describe("the supply-chain files", () => {
 			"bunfig.toml": BUNFIG.replace("259200", "0"),
 		});
 		expect(settings(dir).join("\n")).toContain("bunfig.toml: [install]");
+	});
+
+	// spec: harness-updates/the-check-reads-the-script
+	test.each([
+		["missing", "{}\n"],
+		["another manager's", '{ "scripts": { "deps": "pnpm install" } }\n'],
+		["in a manifest that does not parse", "{\n<<<<<<< HEAD\n"],
+	])("a deps script %s is named", (_, text) => {
+		const dir = consumer(policy(), { "package.json": text });
+		expect(settings(dir).join("\n")).toContain(
+			'package.json: scripts.deps is not exactly "bun install --frozen-lockfile"',
+		);
 	});
 
 	test("an .npmrc tracked below the root is named", () => {

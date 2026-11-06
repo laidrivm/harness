@@ -9,12 +9,12 @@
  * The layout is the same on both sides, so a link between the rules and a doc
  * resolves in the package and in the copy alike.
  *
- * Run as a script, it also writes the harness's hooks, permission lists and
- * `[install]` into the consumer's settings — `sync-settings.ts`.
+ * Run as a script, it also writes the harness's hooks, permission lists,
+ * `[install]` and `deps` script into the consumer's files — `sync-settings.ts`.
  */
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { syncSettings } from "./sync-settings.ts";
+import { applyWrites, settingsWrites } from "./sync-settings.ts";
 
 /** What a consumer copies: this package's own `core/`. */
 export const CORE = join(import.meta.dir, "..", "core");
@@ -72,6 +72,8 @@ if (import.meta.main) {
 	const top = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"]);
 	if (top.exitCode !== 0) throw new Error(top.stderr.toString());
 	const root = top.stdout.toString().replace(/\n$/, "");
+	// Computed first, so a refusal — a consumer's own `deps` — leaves the rules copy as it was too.
+	const writes = settingsWrites(root);
 	sync(CORE, join(root, "harness"));
-	syncSettings(root);
+	applyWrites(writes);
 }

@@ -28,6 +28,7 @@ describe("a test run with a retry", () => {
 		["bun test --retry 3", "[46]"],
 		["bun --bun test --retry=1 a.test.ts", "[47]"],
 		["bun test a.test.ts --retry=1", "[48]"],
+		["bun 2>/dev/null test --retry 3", "(a redirection before the subcommand)"],
 		["bun test -t --retry", "[54]"],
 		["/usr/local/bin/bun test --retry=1", "[58]"],
 	])("%s blocks %s", (line) => refused(line));

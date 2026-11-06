@@ -1,8 +1,9 @@
 /**
  * What `command-guard.ts` refuses of a program handed to a shell: a shell,
  * `source`, `.` or `eval` whose program the line does not spell out, a
- * `bunx` that would install what it runs, and a `bun test` or `bun run` that
- * carries `--retry`. Decided by where the program comes
+ * `bunx` that would install what it runs, a `bun test` or `bun run` that
+ * carries `--retry`, and a `bun run deps` given words after the script's name
+ * (`depsArgs`). Decided by where the program comes
  * from — standard input, a substitution, an expansion — never by what
  * produced it, so no list of downloaders stands here. Each check returns the
  * reason rather than blocking, because the exit code and the ledger id are the
@@ -11,7 +12,7 @@
 
 import { posix } from "node:path";
 import { FED } from "./command-parse.ts";
-import { OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
+import { args, OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
 
 /**
  * The long shell options that take the next word as their value. A short
@@ -135,6 +136,38 @@ export function bunxInstall(name: string, rest: string[]): string | undefined {
 }
 
 /**
+ * The index in `words` — redirections already dropped by `args` — of bun's
+ * subcommand among `verbs`, found as `bunxInstall` finds `x`: a word straight
+ * after an option is passed over as its possible value. Shared by `depsArgs`
+ * and `bunTestRetry`.
+ */
+const subcommand = (words: string[], verbs: string[]) =>
+	words.findIndex((word, at) => verbs.includes(word) || !(word.startsWith("-") || words[at - 1]?.startsWith("-")));
+
+/**
+ * Why `name` with `rest` is a `bun run` a substitution feeds, or a `bun run
+ * deps` whose command is anything but those three words, or nothing. bun
+ * forwards every word after the script's name to the install (`--no-verify`
+ * skips its integrity checks), and a word before `bun` — an `xargs` that
+ * appends its input, an assignment bun reads — reaches it too, so the whole
+ * command is compared, its redirections included. The parse drops a
+ * substitution's output, the script's name among it, from the words, so a fed
+ * `bun run` refuses whatever its script (frozen-install-unprompted D2).
+ */
+export function depsArgs(part: string[], name: string, rest: string[]): string | undefined {
+	if (name !== "bun") return undefined;
+	const words = args(rest);
+	const sub = subcommand(words, ["run"]);
+	if (words[sub] !== "run") return undefined;
+	const bare = "Install with `bun run deps` with nothing before or after it.";
+	if (FED.has(part))
+		return `command-guard: a substitution feeds this \`bun run\`, and the guard cannot see the words it supplies — the script's name among them — so it may be \`bun run deps\` with words bun forwards to the install. Write the words out. ${bare}`;
+	if (words.slice(sub + 1).find((word) => !word.startsWith("-")) !== "deps" || part.join(" ") === "bun run deps")
+		return undefined;
+	return `command-guard: bun forwards every word after \`bun run deps\` to \`bun install --frozen-lockfile\`, where a flag such as \`--no-verify\` changes what it installs, and a word before \`bun\` — an \`xargs\`, an assignment bun reads — reaches it as well. ${bare}`;
+}
+
+/**
  * Why `name` with `rest` is a `bun test` carrying `--retry`, or a `bun run`
  * carrying it before or after the script's name, or nothing. The subcommand
  * is found as `bunxInstall` finds `x`. After `run` the guard cannot read what
@@ -144,12 +177,11 @@ export function bunxInstall(name: string, rest: string[]): string | undefined {
  */
 export function bunTestRetry(name: string, rest: string[]): string | undefined {
 	if (name !== "bun") return undefined;
-	const sub = rest.findIndex(
-		(word, at) => word === "test" || word === "run" || !(word.startsWith("-") || rest[at - 1]?.startsWith("-")),
-	);
-	const verb = rest[sub];
+	const words = args(rest);
+	const sub = subcommand(words, ["test", "run"]);
+	const verb = words[sub];
 	if (verb !== "test" && verb !== "run") return undefined;
 	const retry = (word: string) => word === "--retry" || word.startsWith("--retry=");
-	if (!rest.slice(sub + 1).some(retry)) return undefined;
+	if (!words.slice(sub + 1).some(retry)) return undefined;
 	return `command-guard: \`bun ${verb}\` with \`--retry\` reruns a failing test until it passes, which hides a flaky test instead of naming it. Run the suite once; a test that fails and then passes unchanged is named as flaky and filed as a card (\`core/testing.md\`). \`--rerun-each\` stays allowed for finding one.`;
 }
