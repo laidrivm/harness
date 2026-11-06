@@ -3,8 +3,7 @@
  * GraphQL, which a cloud session's proxy refuses: a branch's, for every caller
  * that asks what a branch's pull request is, and one by its number, for
  * `work.ts status` on a card whose `Pointer` names it and for `work.ts draft`.
- * Both go
- * through one call: a read that has not answered within its time limit is
+ * Both go through one call: a read that has not answered within its time limit is
  * killed and fails, so no caller waits on a `gh` that neither answers nor
  * exits, and where `HARNESS_GITHUB_APP_MINT` names the key holder's mint, the
  * read alone holds a token it minted, so a private repository's are read.

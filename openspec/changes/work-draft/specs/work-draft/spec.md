@@ -98,7 +98,7 @@ whether it hands that follow-up to a subagent or carries it itself, naming
 the command in the consumer's form with the harness's own in brackets, as
 `core/feature-workflow.md` names `take`, and saying that a failed `draft` is
 named in the report and does not stop the follow-up — a cloud session's
-always fails. `core/git-and-prs.md`'s draft
+fails on a ready pull request. `core/git-and-prs.md`'s draft
 rule SHALL name that command in place of a hand-run `gh pr ready <n>
 --undo`, and `core/rules.md`'s Safety rule that names the scripts the allow
 list grants a `gh` write SHALL name `work.ts draft` as the one it grants a

@@ -86,7 +86,7 @@ function bin(gh: Gh) {
 		[
 			`const fs = require("node:fs");`,
 			`const args = process.argv.slice(2);`,
-			`const kind = (a) => a[0] === "pr" && a[1] === "ready" ? "ready" : a[0] !== "api" ? "other" :String(a[1]).startsWith("repos/") ? "pulls" : a.some((s) => s.startsWith("query=mutation")) ? "mutation" : a[1] === "graphql" ? "threads" : "other";`,
+			`const kind = (a) => a[0] === "pr" && a[1] === "ready" ? "ready" : a[0] !== "api" ? "other" : String(a[1]).startsWith("repos/") ? "pulls" : a.some((s) => s.startsWith("query=mutation")) ? "mutation" : a[1] === "graphql" ? "threads" : "other";`,
 			`const prior = fs.existsSync(${JSON.stringify(log)}) ? fs.readFileSync(${JSON.stringify(log)}, "utf8").split("\\n").filter(Boolean).map(JSON.parse).filter((c) => c.kind === kind(args)).length : 0;`,
 			append("kind(args)"),
 			`const gh = JSON.parse(fs.readFileSync(${JSON.stringify(join(dir, "gh.json"))}, "utf8"));`,

@@ -179,8 +179,8 @@ Rules about how work is carried out here. They do not age with the code.
   a merge of `main` — whether you hand it to a subagent or carry it yourself,
   run `bun node_modules/harness/bun/work.ts draft --pr <n>` (`bun bun/work.ts`
   in the harness itself) and put the head it prints in any brief; name a
-  failed `draft` — a cloud session's always fails — in the report, and go on
-  with the follow-up.
+  failed `draft` — a cloud session's fails on a ready one — in the report,
+  and go on with the follow-up.
 - Pass `--full-tree` to a `git ls-tree` whose pathspec names a path from the
   repository root — a working directory below the root resolves it against
   itself and lists nothing.
