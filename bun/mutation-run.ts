@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 /**
  * The mutation step `openspec/specs/mutation-floor/spec.md` sets out. Each
- * module `stryker.config.json`'s `mutate` lists is mutated alone, judged by
- * `bun test bun/<name>`, and its results stored as `mutation/<name>.json`; a
+ * module `stryker.config.json`'s `mutate` lists is mutated alone, each mutant
+ * judged by the tests of `bun/<name>*.test.ts` that reached it in the dry run,
+ * and its results stored as `mutation/<name>.json`; a
  * run mutates only the listed modules those results no longer cover, then
  * merges every stored file into the report `bun/mutation-floor.ts` counts.
  *

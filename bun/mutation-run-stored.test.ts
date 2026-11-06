@@ -109,6 +109,27 @@ describe("what a stored file holds", () => {
 		});
 	});
 
+	// spec: mutation-floor/a-mutant-no-test-reaches
+	test("a mutant no test reached is stored as NoCoverage with no covering or killing test", () => {
+		const uncovered = { ...mutant("0", "NoCoverage"), coveredBy: [], killedBy: [], static: false };
+		const report = { schemaVersion: "1.0", files: { "bun/a.ts": { source: "a", mutants: [uncovered] } } };
+		expect(trim(report, {}).files["bun/a.ts"]?.mutants).toEqual([{ ...mutant("0", "NoCoverage"), coveredBy: [] }]);
+	});
+
+	// spec: mutation-floor/a-module-its-tests-reach-only-through-a-child-process
+	test("a stored file whose mutants a spawned process alone reached counts every one as a survivor", () => {
+		const spawned: Stored = {
+			schemaVersion: "1.0",
+			testFiles: { "bun/a.test.ts": { source: "spawn('bun', ['bun/a.ts'])", tests: [{ id: "0", name: "a" }] } },
+			files: { "bun/a.ts": { source: "a", mutants: ["0", "1"].map((id) => mutant(id, "NoCoverage")) } },
+			fingerprint: {},
+		};
+		const dir = mkdtempSync(join(tmpdir(), "mutation-run-"));
+		made.push(dir);
+		writeFileSync(join(dir, "mutation.json"), JSON.stringify(merge([spawned])));
+		expect(survivors(loadReport(join(dir, "mutation.json")))).toBe(2);
+	});
+
 	// spec: mutation-floor/unchanged-modules-counted-from-their-stored-results
 	test("the merge mutation-floor reads sums every stored file's survivors", () => {
 		const file = (path: string, ...statuses: string[]): Stored => ({
