@@ -1,5 +1,52 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/push-refs.test.ts": {
+			"source": "import { describe, expect, test } from \"bun:test\";\nimport { pushRefs } from \"./push-refs.ts\";\n\n/**\n * The pre-push hook's ref-update records, read once for the draft check and\n * the gates' skip: `<local ref> <local sha> <remote ref> <remote sha>` a line.\n */\n\nconst SHA = \"a\".repeat(40);\nconst ZERO = \"0\".repeat(40);\nconst OLD = \"b\".repeat(40);\n\ndescribe(\"pushRefs()\", () => {\n\t// spec: commit-gates/a-head-the-runner-passed\n\ttest(\"a record yields its local sha and remote ref\", () => {\n\t\texpect(pushRefs(`refs/heads/x ${SHA} refs/heads/y ${OLD}\\n`)).toEqual([\n\t\t\t{ sha: SHA, ref: \"refs/heads/y\", deletion: false },\n\t\t]);\n\t});\n\n\t// spec: commit-gates/a-push-that-only-deletes\n\ttest(\"an all-zero local sha is a deletion, its remote ref kept\", () => {\n\t\texpect(pushRefs(`(delete) ${ZERO} refs/tags/v1 ${OLD}\\n`)).toEqual([\n\t\t\t{ sha: ZERO, ref: \"refs/tags/v1\", deletion: true },\n\t\t]);\n\t});\n\n\t// spec: commit-gates/a-push-with-nothing-to-update\n\ttest.each([\n\t\t[\"empty input\", \"\"],\n\t\t[\"one blank line\", \"\\n\"],\n\t])(\"%s yields none\", (_, input) => {\n\t\texpect(pushRefs(input)).toEqual([]);\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/push-refs.test.ts > pushRefs() > a record yields its local sha and remote ref",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 16
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/push-refs.test.ts > pushRefs() > an all-zero local sha is a deletion, its remote ref kept",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 23
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/push-refs.test.ts > pushRefs() > empty input yields none",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/push-refs.test.ts > pushRefs() > one blank line yields none",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/push-refs.ts": {
 			"source": "/**\n * The one parser of the ref-update records git hands a pre-push hook on\n * standard input, `<local ref> <local sha> <remote ref> <remote sha>` a line,\n * so the draft check and the gates' skip never read different shas from one\n * input. A deletion's local sha is all zeros; it is kept, flagged, because a\n * deleted tag still bars the skip.\n */\nexport type PushRef = { sha: string; ref: string; deletion: boolean };\n\nexport const pushRefs = (input: string): PushRef[] =>\n\tinput.split(\"\\n\").flatMap((line) => {\n\t\tconst [local, sha, ref] = line.split(\" \");\n\t\treturn local && sha && ref ? [{ sha, ref, deletion: /^0+$/.test(sha) }] : [];\n\t});\n",
@@ -18,7 +65,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +85,16 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +110,16 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +135,16 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +160,16 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +185,16 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +210,13 @@
 						}
 					},
 					"replacement": "local && sha || ref",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +232,13 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +254,13 @@
 						}
 					},
 					"replacement": "local || sha",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +276,14 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +299,14 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +322,11 @@
 						}
 					},
 					"replacement": "/0+$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +342,11 @@
 						}
 					},
 					"replacement": "/^0+/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +362,14 @@
 						}
 					},
 					"replacement": "/^0$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "14",
@@ -242,17 +385,26 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"0"
+					]
 				}
 			]
 		}
 	},
 	"fingerprint": {
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bun/push-refs.test.ts": "19787b58ef8757eac71fe05d33bb1de027889b4e",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/push-refs",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

@@ -1,5 +1,272 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/skill-record.test.ts": {
+			"source": "import { afterAll, describe, expect, test } from \"bun:test\";\nimport { mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { cleanup, emptyDir } from \"./diff-budget.fixture.ts\";\nimport { ran } from \"./gate-ledger.ts\";\nimport { recordSkill } from \"./skill-record.ts\";\n\n/**\n * The skill-call hook, with a state directory of the case's own and\n * `CLAUDE_PROJECT_DIR` naming the main checkout. Its logic is called in the\n * test's own process, so per-test coverage sees it, with that environment as a\n * parameter, never through the `process.env` every test file here shares; the\n * cases about the process — stdin, output, exit code, a `PATH` with no git —\n * spawn it as the platform does, one event on stdin. Bracketed numbers are the\n * proposal-stage `/zombies` ideas.\n */\n\nafterAll(cleanup);\n\nconst HOOK = join(import.meta.dir, \"skill-record.ts\");\nconst SESSION = \"s-1\";\n\n// Every GIT_* removed: under a hook that exports GIT_DIR, git would read another repository.\nconst env = (extra: Record<string, string> = {}) => ({\n\t...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith(\"GIT_\"))),\n\t...extra,\n});\n\nconst git = (cwd: string, ...args: string[]) => {\n\tconst config = [\"-c\", \"user.name=t\", \"-c\", \"user.email=t@t\", \"-c\", \"commit.gpgsign=false\"];\n\tconst p = Bun.spawnSync([\"git\", ...config, ...args], { cwd, env: env() });\n\tif (p.exitCode !== 0) throw new Error(`git ${args.join(\" \")}: ${p.stderr}`);\n\treturn p.stdout.toString().trim();\n};\n\n/** A repository at one commit, and a worktree of it at a second. */\nfunction scratch() {\n\tconst main = realpathSync(emptyDir(\"skill-record-\"));\n\tgit(main, \"init\", \"-q\", \"-b\", \"main\");\n\twriteFileSync(join(main, \"a.txt\"), \"a\\n\");\n\tgit(main, \"add\", \"a.txt\");\n\tgit(main, \"commit\", \"-qm\", \"one\");\n\tconst tree = join(realpathSync(emptyDir(\"skill-record-wt-\")), \"w\");\n\tgit(main, \"worktree\", \"add\", \"-q\", \"-b\", \"w\", tree);\n\twriteFileSync(join(tree, \"b.txt\"), \"b\\n\");\n\tgit(tree, \"add\", \"b.txt\");\n\tgit(tree, \"commit\", \"-qm\", \"two\");\n\treturn { main, tree, head: (dir: string) => git(dir, \"rev-parse\", \"HEAD\") };\n}\n\nconst called = (skill: unknown, cwd: string, args = \"\") => ({\n\thook_event_name: \"PostToolUse\",\n\tsession_id: SESSION,\n\tcwd,\n\ttool_name: \"Skill\",\n\ttool_input: { skill, args },\n\ttool_response: { success: true },\n});\n\nconst typed = (name: string, cwd: string, type = \"slash_command\", args = \"\") => ({\n\thook_event_name: \"UserPromptExpansion\",\n\tsession_id: SESSION,\n\tcwd,\n\texpansion_type: type,\n\tcommand_name: name,\n\tcommand_args: args,\n\tprompt: `/${name} ${args}`,\n});\n\nconst stdin = (event: unknown) => (typeof event === \"string\" ? event : JSON.stringify(event));\n\n/** The ledger in `state`, as text and as records; `outs` each spawned run's exit code and stdout. */\nfunction ledger(state: string, outs: [number | null, string][] = []) {\n\tlet text = \"\";\n\ttry {\n\t\ttext = readFileSync(join(state, \"harness\", \"gates.jsonl\"), \"utf8\");\n\t} catch {}\n\treturn {\n\t\ttext,\n\t\trecords: text\n\t\t\t.split(\"\\n\")\n\t\t\t.filter(Boolean)\n\t\t\t.map((line) => JSON.parse(line)),\n\t\touts,\n\t};\n}\n\n/** The hook's logic on each event in turn, in this process and one state directory; the ledger after. */\nconst hook = (main: string, ...events: unknown[]) => hookWith({}, main, ...events);\n\n/** `hook`, with `extra` in the environment it is given. */\nasync function hookWith(extra: Record<string, string>, main: string, ...events: unknown[]) {\n\tconst state = emptyDir(\"skill-record-state-\");\n\tfor (const event of events)\n\t\tawait recordSkill(new Blob([stdin(event)]), env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }));\n\treturn ledger(state);\n}\n\n/** The hook spawned on each event in turn, as the platform runs it; the ledger and each run's exit and stdout. */\nfunction spawned(extra: Record<string, string>, main: string, ...events: unknown[]) {\n\tconst state = emptyDir(\"skill-record-state-\");\n\tconst runs = events.map((event) =>\n\t\t// bun by its path: a case's PATH can hold no programs at all.\n\t\tBun.spawnSync([process.execPath, HOOK], {\n\t\t\tstdin: Buffer.from(stdin(event)),\n\t\t\tenv: env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }),\n\t\t}),\n\t);\n\tconst outs = runs.map((r): [number | null, string] => [r.exitCode, r.stdout.toString()]);\n\treturn ledger(state, outs);\n}\n\ndescribe(\"a skill call is recorded\", () => {\n\t// spec: gate-ledger/a-skill-claude-calls-in-a-worktree\n\ttest(\"a Skill call in a worktree names the worktree's HEAD and top level [3, 19, 20]\", async () => {\n\t\tconst { main, tree, head } = scratch();\n\t\tconst r = await hook(main, called(\"zombies\", tree));\n\t\texpect(r.records).toEqual([\n\t\t\texpect.objectContaining({\n\t\t\t\tgate: \"skill\",\n\t\t\t\tdecision: \"called\",\n\t\t\t\trule: \"zombies\",\n\t\t\t\tcommit: head(tree),\n\t\t\t\tproject: tree,\n\t\t\t\tsession: SESSION,\n\t\t\t}),\n\t\t]);\n\t});\n\n\t// spec: gate-ledger/a-skill-the-user-types\n\ttest(\"a typed /triage names the main checkout's HEAD [4]\", async () => {\n\t\tconst { main, head } = scratch();\n\t\tconst r = await hook(main, typed(\"triage\", main));\n\t\texpect(r.records.map((x) => [x.rule, x.commit, x.project])).toEqual([[\"triage\", head(main), main]]);\n\t});\n\n\ttest(\"ran() finds it under the gate skill and its rule, and the runner's asks do not [24]\", async () => {\n\t\tconst { main, tree, head } = scratch();\n\t\tconst r = await hook(main, called(\"zombies\", tree));\n\t\tconst commit = head(tree);\n\t\texpect([\n\t\t\tran(commit, tree, \"called\", r.text, \"zombies\", \"skill\"),\n\t\t\tran(commit, tree, undefined, r.text, \"zombies\", \"skill\"),\n\t\t\tran(commit, tree, undefined, r.text),\n\t\t\tran(commit, tree, \"pass\", r.text, \"diff-budget\"),\n\t\t]).toEqual([true, true, false, false]);\n\t});\n\n\ttest(\"two calls append two records, in order [5]\", async () => {\n\t\tconst { main } = scratch();\n\t\tconst r = await hook(main, called(\"zombies\", main), typed(\"triage\", main));\n\t\texpect(r.records.map((x) => x.rule)).toEqual([\"zombies\", \"triage\"]);\n\t});\n\n\ttest(\"a cwd in a subdirectory records the top level [8]\", async () => {\n\t\tconst { main } = scratch();\n\t\tmkdirSync(join(main, \"sub\"));\n\t\texpect((await hook(main, called(\"zombies\", join(main, \"sub\")))).records[0]?.project).toBe(main);\n\t});\n\n\ttest(\"an inherited GIT_DIR and GIT_WORK_TREE do not outrank the event's cwd\", async () => {\n\t\tconst { main, tree, head } = scratch();\n\t\tconst r = await hookWith({ GIT_DIR: join(main, \".git\"), GIT_WORK_TREE: main }, main, called(\"zombies\", tree));\n\t\texpect(r.records.map((x) => [x.commit, x.project])).toEqual([[head(tree), tree]]);\n\t});\n\n\ttest(\"a cwd reached through a symlink records the real top level\", async () => {\n\t\tconst { main } = scratch();\n\t\tconst link = join(realpathSync(emptyDir(\"skill-record-link-\")), \"link\");\n\t\tsymlinkSync(main, link);\n\t\texpect((await hook(main, called(\"zombies\", link))).records[0]?.project).toBe(main);\n\t});\n\n\t// spec: gate-ledger/a-skill-called-with-only-an-untracked-file\n\ttest(\"an untracked file alone still records [9]\", async () => {\n\t\tconst { main } = scratch();\n\t\twriteFileSync(join(main, \"new.txt\"), \"n\\n\");\n\t\texpect((await hook(main, called(\"zombies\", main))).records).toHaveLength(1);\n\t});\n\n\t// spec: gate-ledger/a-skill-called-with-arguments\n\ttest(\"the arguments appear nowhere, and the record holds the six keys and the commit [16, 17]\", async () => {\n\t\tconst { main } = scratch();\n\t\tconst args = \"/Users/someone/secret.txt ghp_TOKEN123\";\n\t\tconst r = await hook(main, called(\"zombies\", main, args), typed(\"triage\", main, \"slash_command\", args));\n\t\texpect([r.text.includes(\"secret.txt\"), r.text.includes(\"ghp_TOKEN123\")]).toEqual([false, false]);\n\t\tconst keys = [\"at\", \"commit\", \"decision\", \"gate\", \"project\", \"rule\", \"session\"];\n\t\texpect(r.records.map((x) => Object.keys(x).sort())).toEqual([keys, keys]);\n\t});\n\n\ttest(\"prints nothing and exits 0 when it records [18]\", () => {\n\t\tconst { main } = scratch();\n\t\tconst r = spawned({}, main, called(\"zombies\", main));\n\t\texpect([r.records.length, r.outs]).toEqual([1, [[0, \"\"]]]);\n\t});\n});\n\ndescribe(\"no record, exit 0 and nothing printed\", () => {\n\t// In-process cases carry no runs, so only a spawned case checks the exit code and output.\n\tconst nothing = (r: ReturnType<typeof ledger>) => {\n\t\texpect(r.text).toBe(\"\");\n\t\texpect(r.outs.every(([code, out]) => code === 0 && out === \"\")).toBe(true);\n\t};\n\n\ttest(\"for a PATH with no git on it\", () => {\n\t\tconst { main } = scratch();\n\t\tconst r = spawned({ PATH: emptyDir(\"skill-record-path-\") }, main, called(\"zombies\", main));\n\t\texpect(r.outs).toHaveLength(1);\n\t\tnothing(r);\n\t});\n\n\ttest(\"for a PATH with no git in the environment it is given, though this process has one\", async () => {\n\t\tconst { main } = scratch();\n\t\tnothing(await hookWith({ PATH: emptyDir(\"skill-record-path-\") }, main, called(\"zombies\", main)));\n\t});\n\n\t// spec: gate-ledger/an-mcp-prompt-the-user-types\n\ttest(\"for an MCP server's prompt\", async () => {\n\t\tconst { main } = scratch();\n\t\tnothing(await hook(main, typed(\"triage\", main, \"mcp_prompt\")));\n\t});\n\n\ttest.each([\n\t\t[\"empty stdin [1]\", \"\"],\n\t\t[\"stdin that is not JSON [21]\", \"{not json\"],\n\t])(\"for %s, spawned and in-process\", async (_, event) => {\n\t\tconst { main } = scratch();\n\t\tconst r = spawned({}, main, event);\n\t\texpect(r.outs).toHaveLength(1);\n\t\tnothing(r);\n\t\tnothing(await hook(main, event));\n\t});\n\n\ttest.each([\n\t\t[\"rejects\", { text: () => Promise.reject(new Error(\"stdin closed\")) }],\n\t\t// `JSON.parse` of a torn text throws before any promise exists, as a closed fd 0 would.\n\t\t[\"throws\", { text: () => JSON.parse(\"{\") }],\n\t])(\"for stdin whose read %s, and the call does not reject\", async (_, input) => {\n\t\tconst state = emptyDir(\"skill-record-state-\");\n\t\tawait recordSkill(input, env({ XDG_STATE_HOME: state }));\n\t\tnothing(ledger(state));\n\t});\n\n\ttest(\"for neither a skill nor a command name [2], spawned and in-process\", async () => {\n\t\tconst { main } = scratch();\n\t\tconst event = { hook_event_name: \"PostToolUse\", session_id: SESSION, tool_input: {}, cwd: main };\n\t\tconst r = spawned({}, main, event);\n\t\texpect(r.outs).toHaveLength(1);\n\t\tnothing(r);\n\t\tnothing(await hook(main, event));\n\t});\n\n\ttest.each([\n\t\t[\"an empty name [7]\", \"\"],\n\t\t[\"a name that is not a string [15]\", 42],\n\t])(\"for %s\", async (_, name) => {\n\t\tconst { main } = scratch();\n\t\tnothing(await hook(main, called(name, main)));\n\t});\n\n\t// spec: gate-ledger/a-skill-called-on-an-uncommitted-edit\n\ttest.each([\n\t\t[\"a staged edit [10]\", true],\n\t\t[\"an unstaged edit [11]\", false],\n\t])(\"for %s\", async (_, staged) => {\n\t\tconst { main } = scratch();\n\t\twriteFileSync(join(main, \"a.txt\"), \"changed\\n\");\n\t\tif (staged) git(main, \"add\", \"a.txt\");\n\t\tnothing(await hook(main, called(\"zombies\", main)));\n\t});\n\n\t// spec: gate-ledger/a-skill-called-outside-a-repository\n\ttest.each([\n\t\t[\n\t\t\t\"a repository with no commit [12]\",\n\t\t\t() => {\n\t\t\t\tconst dir = realpathSync(emptyDir(\"skill-record-bare-\"));\n\t\t\t\tgit(dir, \"init\", \"-q\");\n\t\t\t\treturn dir;\n\t\t\t},\n\t\t],\n\t\t[\"a cwd that is no repository [13]\", () => realpathSync(emptyDir(\"skill-record-none-\"))],\n\t\t[\"a cwd that does not exist [14]\", () => join(realpathSync(emptyDir(\"skill-record-gone-\")), \"missing\")],\n\t])(\"for %s\", async (_, dir) => {\n\t\tconst { main } = scratch();\n\t\tnothing(await hook(main, called(\"zombies\", dir())));\n\t});\n});\n\n// spec: gate-ledger/a-skill-called-while-the-ledger-cannot-be-written\ntest(\"an unwritable state directory: exit 0, nothing printed [22]\", () => {\n\tconst { main } = scratch();\n\tconst state = join(emptyDir(\"skill-record-file-\"), \"state\");\n\twriteFileSync(state, \"a file, not a directory\\n\");\n\tconst p = Bun.spawnSync([\"bun\", HOOK], {\n\t\tstdin: Buffer.from(JSON.stringify(called(\"zombies\", main))),\n\t\tenv: env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main }),\n\t});\n\texpect([p.exitCode, p.stdout.toString()]).toEqual([0, \"\"]);\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/skill-record.test.ts > a skill call is recorded > a cwd in a subdirectory records the top level [8]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 156
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/skill-record.test.ts > a skill call is recorded > a cwd reached through a symlink records the real top level",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 168
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/skill-record.test.ts > a skill call is recorded > a Skill call in a worktree names the worktree's HEAD and top level [3, 19, 20]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 116
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/skill-record.test.ts > a skill call is recorded > a typed /triage names the main checkout's HEAD [4]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 132
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/skill-record.test.ts > a skill call is recorded > an inherited GIT_DIR and GIT_WORK_TREE do not outrank the event's cwd",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 162
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/skill-record.test.ts > a skill call is recorded > an untracked file alone still records [9]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 176
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/skill-record.test.ts > a skill call is recorded > prints nothing and exits 0 when it records [18]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 192
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/skill-record.test.ts > a skill call is recorded > ran() finds it under the gate skill and its rule, and the runner's asks do not [24]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 138
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/skill-record.test.ts > a skill call is recorded > the arguments appear nowhere, and the record holds the six keys and the commit [16, 17]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 183
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/skill-record.test.ts > a skill call is recorded > two calls append two records, in order [5]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 150
+						}
+					}
+				},
+				{
+					"id": "10",
+					"name": "bun/skill-record.test.ts > an unwritable state directory: exit 0, nothing printed [22]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 292
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for a cwd that does not exist [14]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 285
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for a cwd that is no repository [13]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 285
+						}
+					}
+				},
+				{
+					"id": "13",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for a name that is not a string [15]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 257
+						}
+					}
+				},
+				{
+					"id": "14",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for a PATH with no git in the environment it is given, though this process has one",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 213
+						}
+					}
+				},
+				{
+					"id": "15",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for a PATH with no git on it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 206
+						}
+					}
+				},
+				{
+					"id": "16",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for a repository with no commit [12]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 285
+						}
+					}
+				},
+				{
+					"id": "17",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for a staged edit [10]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 266
+						}
+					}
+				},
+				{
+					"id": "18",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for an empty name [7]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 257
+						}
+					}
+				},
+				{
+					"id": "19",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for an MCP server's prompt",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 219
+						}
+					}
+				},
+				{
+					"id": "20",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for an unstaged edit [11]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 266
+						}
+					}
+				},
+				{
+					"id": "21",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for empty stdin [1], spawned and in-process",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 227
+						}
+					}
+				},
+				{
+					"id": "22",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for neither a skill nor a command name [2], spawned and in-process",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 245
+						}
+					}
+				},
+				{
+					"id": "23",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for stdin that is not JSON [21], spawned and in-process",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 227
+						}
+					}
+				},
+				{
+					"id": "24",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for stdin whose read rejects, and the call does not reject",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 239
+						}
+					}
+				},
+				{
+					"id": "25",
+					"name": "bun/skill-record.test.ts > no record, exit 0 and nothing printed > for stdin whose read throws, and the call does not reject",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 239
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/skill-record.ts": {
 			"source": "#!/usr/bin/env bun\n/**\n * The skill-call hook: one `PostToolUse` event for the `Skill` tool, or one\n * `UserPromptExpansion` event for a typed `/skill`, becomes one gate-ledger\n * record — gate `skill`, decision `called`, the skill's name as the rule, and\n * the commit `HEAD` names in the event's `cwd`, with that checkout's top level\n * as the project. It proves the call, not that the skill was followed\n * (`openspec/specs/gate-ledger/spec.md`).\n *\n * No record is written while a tracked file differs from `HEAD`: the record\n * names a commit, and a skill run over an uncommitted edit read a tree no\n * commit holds. Untracked files do not count, unlike the pre-PR runner's rule,\n * whose project checks run the whole tree. Only the name is read into the\n * record; a skill's arguments are free text and can carry a path or a token.\n *\n * It prints nothing and exits 0 on every path: a typed command's expansion can\n * be blocked by a hook, and its stdout can reach the model; a recorder must do\n * neither.\n *\n * The logic is `recordSkill`, given what to read the event from and the\n * environment to run git and find the ledger with, so the tests call it in\n * their own process. The main block is one statement handing it stdin, so no\n * mutant sits where only a spawned hook reaches it; stdin is read inside its\n * `try`, and it never rejects, so the process exits 0 with no `process.exit`.\n */\nimport { type Env, recordCheckout } from \"./gate-ledger.ts\";\nimport { unlocal } from \"./git-local.ts\";\n\ntype Event = {\n\tsession_id?: unknown;\n\tcwd?: unknown;\n\ttool_input?: { skill?: unknown };\n\texpansion_type?: unknown;\n\tcommand_name?: unknown;\n};\n\n/** Records the skill the event `input` holds names, if any; never rejects. */\nexport async function recordSkill(input: { text(): Promise<string> }, environment: Env): Promise<void> {\n\ttry {\n\t\tconst event: Event = JSON.parse(await input.text()) ?? {};\n\t\t// An MCP server's prompt shares the expansion event, and can share a skill's name.\n\t\tconst name = event.tool_input?.skill ?? (event.expansion_type === \"slash_command\" ? event.command_name : undefined);\n\t\tconst dir = event.cwd;\n\t\tif (typeof name === \"string\" && name && typeof dir === \"string\") {\n\t\t\t// A session started under a git hook inherits its GIT_DIR, which outranks `-C`.\n\t\t\tconst env = unlocal(environment);\n\t\t\t/** git's trimmed stdout in `dir`, or `undefined` when it fails. */\n\t\t\tconst git = (...args: string[]) => {\n\t\t\t\tconst p = Bun.spawnSync([\"git\", \"-C\", dir, ...args], { env });\n\t\t\t\treturn p.exitCode === 0 ? p.stdout.toString().trim() : undefined;\n\t\t\t};\n\t\t\tconst commit = git(\"rev-parse\", \"--verify\", \"-q\", \"HEAD\");\n\t\t\tconst top = git(\"rev-parse\", \"--show-toplevel\");\n\t\t\t// A status git cannot read is never a clean tree.\n\t\t\tconst status = git(\"status\", \"--porcelain\", \"--untracked-files=no\");\n\t\t\tif (commit && top && status === \"\") {\n\t\t\t\trecordCheckout(\"skill\", \"called\", name, { session_id: event.session_id, cwd: top }, commit, environment);\n\t\t\t}\n\t\t}\n\t} catch {\n\t\t// Unreadable stdin, an event that is no JSON, or no git: nothing to record.\n\t}\n}\n\nif (import.meta.main) await recordSkill(Bun.stdin, process.env);\n",
@@ -18,7 +285,35 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +329,35 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +373,35 @@
 						}
 					},
 					"replacement": "JSON.parse(await input.text()) && {}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +417,31 @@
 						}
 					},
 					"replacement": "event.tool_input?.skill && (event.expansion_type === \"slash_command\" ? event.command_name : undefined)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"22",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +457,31 @@
 						}
 					},
 					"replacement": "event.tool_input.skill",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"22",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +497,17 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"19",
+						"22",
+						"3",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +523,17 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"19",
+						"22",
+						"3",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +549,17 @@
 						}
 					},
 					"replacement": "event.expansion_type !== \"slash_command\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"19",
+						"22",
+						"3",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +575,17 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"19",
+						"22",
+						"3",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +601,31 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"22",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +641,31 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"22",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +681,31 @@
 						}
 					},
 					"replacement": "typeof name === \"string\" && name || typeof dir === \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"22",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +721,31 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"22",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +761,31 @@
 						}
 					},
 					"replacement": "typeof name === \"string\" || name",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"22",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "14",
@@ -242,7 +801,31 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"22",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "15",
@@ -258,7 +841,31 @@
 						}
 					},
 					"replacement": "typeof name !== \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"22",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "16",
@@ -274,7 +881,31 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"22",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "17",
@@ -290,7 +921,24 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "18",
@@ -306,7 +954,27 @@
 						}
 					},
 					"replacement": "typeof dir !== \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "19",
@@ -322,7 +990,27 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "20",
@@ -338,7 +1026,27 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "21",
@@ -354,7 +1062,27 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "22",
@@ -370,7 +1098,27 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "23",
@@ -386,7 +1134,27 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "24",
@@ -402,7 +1170,27 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "25",
@@ -418,7 +1206,27 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "26",
@@ -434,7 +1242,23 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "27",
@@ -450,7 +1274,26 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "28",
@@ -466,7 +1309,26 @@
 						}
 					},
 					"replacement": "p.exitCode !== 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "29",
@@ -482,7 +1344,24 @@
 						}
 					},
 					"replacement": "p.stdout.toString()",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "30",
@@ -498,7 +1377,27 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "31",
@@ -514,7 +1413,27 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "32",
@@ -530,7 +1449,27 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "33",
@@ -546,7 +1485,27 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"14",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "34",
@@ -562,7 +1521,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "35",
@@ -578,7 +1556,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "36",
@@ -594,7 +1591,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "37",
@@ -610,7 +1626,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "38",
@@ -626,7 +1661,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "39",
@@ -642,7 +1696,26 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "40",
@@ -658,7 +1731,26 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "41",
@@ -674,7 +1766,26 @@
 						}
 					},
 					"replacement": "commit && top || status === \"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "42",
@@ -690,7 +1801,26 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "43",
@@ -706,7 +1836,26 @@
 						}
 					},
 					"replacement": "commit || top",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"11",
+						"12",
+						"16",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "44",
@@ -722,7 +1871,23 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "45",
@@ -738,7 +1903,23 @@
 						}
 					},
 					"replacement": "status !== \"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "46",
@@ -754,7 +1935,23 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"17",
+						"2",
+						"20",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "47",
@@ -770,7 +1967,21 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "49",
@@ -786,7 +1997,21 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "50",
@@ -802,7 +2027,21 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "51",
@@ -818,7 +2057,21 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "52",
@@ -834,7 +2087,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Timeout"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "53",
@@ -850,7 +2104,11 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"6"
+					]
 				}
 			]
 		}
@@ -858,10 +2116,10 @@
 	"fingerprint": {
 		"bun/diff-budget.fixture.ts": "a51ac572bdc585134c3a16ebb17c58581b20dcb2",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bun/skill-record.test.ts": "c5ec04ea7f7c2da61ddf025c10e47c4b260e73e0",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/skill-record",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

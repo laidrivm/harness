@@ -1,5 +1,42 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/ci-run-draft.test.ts": {
+			"source": "import { afterAll, beforeAll, expect, test } from \"bun:test\";\nimport { writeFileSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { draftWhile } from \"./ci-run-draft.ts\";\nimport { cleanup, emptyDir } from \"./diff-budget.fixture.ts\";\n\n/** A work that throws, against a `gh` that refuses `pr ready` or takes it; the flow's own cases are in `ci-run.test.ts`, `ci-run-session.test.ts` and `ci-run-routes.test.ts`. */\n\nconst path = process.env.PATH;\nlet refusing = \"\";\nlet taking = \"\";\nbeforeAll(() => {\n\trefusing = emptyDir(\"ci-run-draft-refusing-\");\n\twriteFileSync(join(refusing, \"gh\"), \"#!/bin/sh\\nexit 1\\n\", { mode: 0o755 });\n\ttaking = emptyDir(\"ci-run-draft-taking-\");\n\twriteFileSync(join(taking, \"gh\"), \"#!/bin/sh\\nexit 0\\n\", { mode: 0o755 });\n});\nafterAll(() => {\n\tprocess.env.PATH = path;\n\tcleanup();\n});\n\nconst thrown = (dir: string) => {\n\tprocess.env.PATH = `${dir}:${path}`;\n\treturn draftWhile(\"o/r\", 7, () => Promise.reject(new Error(\"the work broke\"))).then(\n\t\t() => \"\",\n\t\t(e: Error) => e.message,\n\t);\n};\n\ntest(\"a work that throws keeps its error when the ready goes through\", async () => {\n\texpect(await thrown(taking)).toBe(\"the work broke\");\n});\n\ntest(\"a work that throws names the pull request beside its error when the ready is refused\", async () => {\n\texpect(await thrown(refusing)).toBe(\"the work broke; #7 could not be marked ready\");\n});\n\n// A synchronous spawn blocks bun's own timer, hence the explicit limit and a hang shorter than it.\ntest(\"a gh that never answers is killed at the read limit and reads as refused\", async () => {\n\tconst hanging = emptyDir(\"ci-run-draft-hanging-\");\n\twriteFileSync(join(hanging, \"gh\"), \"#!/bin/sh\\nexec sleep 10\\n\", { mode: 0o755 });\n\tprocess.env.HARNESS_GH_TIMEOUT_MS = \"300\";\n\tconst started = Date.now();\n\tconst message = await thrown(hanging).finally(() => delete process.env.HARNESS_GH_TIMEOUT_MS);\n\texpect([message, Date.now() - started < 5000]).toEqual([\"the work broke; #7 could not be marked ready\", true]);\n}, 30_000);\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/ci-run-draft.test.ts > a gh that never answers is killed at the read limit and reads as refused",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 41
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/ci-run-draft.test.ts > a work that throws keeps its error when the ready goes through",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 32
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/ci-run-draft.test.ts > a work that throws names the pull request beside its error when the ready is refused",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 36
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/ci-run-draft.ts": {
 			"source": "/**\n * The CI flow's half of the draft rule in `core/git-and-prs.md`: the pull\n * request is a draft while the runner works on it, and ready once that work\n * ends — right after the push when one comes — unless the session left a\n * question to the user on the card, which keeps it a draft\n * (`ci-flow-draft`'s design).\n */\nimport type { Outcome } from \"./ci-run.ts\";\nimport { gh } from \"./pull-requests.ts\";\n\n/**\n * `gh pr ready` on #`n` in `repo` as the runner, with the App's token in `GH_TOKEN` when one is minted;\n * `--undo` marks it draft. Killed at `pull-requests.ts`'s limit, as its read is, so a `gh` that never\n * answers cannot hold the pass.\n */\nexport const ready = (repo: string, n: number, ...undo: string[]) =>\n\tgh([\"pr\", \"ready\", String(n), \"-R\", repo, ...undo]).exitCode === 0;\n\n/**\n * Runs `work` with #`n` a draft. `work` answers its outcome and whether a\n * question to the user is open, which leaves the draft as it is. A draft that\n * cannot be made does not stop the work: its attempt is already spent.\n */\nexport async function draftWhile(repo: string, n: number, work: () => Promise<[Outcome, boolean]>): Promise<Outcome> {\n\tready(repo, n, \"--undo\");\n\tlet done: [Outcome, boolean];\n\ttry {\n\t\tdone = await work();\n\t} catch (e) {\n\t\t// No push will come from a flow that threw.\n\t\tif (ready(repo, n)) throw e;\n\t\tthrow new Error(`${e instanceof Error ? e.message : String(e)}; #${n} could not be marked ready`);\n\t}\n\tconst [outcome, asked] = done;\n\tif (asked || ready(repo, n)) return outcome;\n\treturn [\"failed\", `${outcome[1]}; #${n} could not be marked ready`];\n}\n",
@@ -18,7 +55,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +75,15 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +99,15 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +123,15 @@
 						}
 					},
 					"replacement": "gh([\"pr\", \"ready\", String(n), \"-R\", repo, ...undo]).exitCode !== 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +147,12 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +168,12 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +189,12 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +210,12 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +231,15 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "10",
@@ -162,7 +255,12 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					]
 				},
 				{
 					"id": "11",
@@ -178,7 +276,15 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "12",
@@ -194,7 +300,15 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "13",
@@ -210,7 +324,15 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "14",
@@ -226,7 +348,15 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "16",
@@ -242,7 +372,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "17",
@@ -258,7 +395,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "18",
@@ -274,7 +412,8 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "19",
@@ -290,7 +429,8 @@
 						}
 					},
 					"replacement": "asked && ready(repo, n)",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "20",
@@ -306,7 +446,8 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "21",
@@ -322,7 +463,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "22",
@@ -338,18 +480,19 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				}
 			]
 		}
 	},
 	"fingerprint": {
-		"bun/ci-run-draft.test.ts": "cdd8b78e1cf2888143fbe58e46cc7f2f565f87ed",
 		"bun/diff-budget.fixture.ts": "a51ac572bdc585134c3a16ebb17c58581b20dcb2",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/ci-run-draft",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

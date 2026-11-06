@@ -1,5 +1,587 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/bootstrap-notice.test.ts": {
+			"source": "/**\n * The `SessionStart` notice, run as Claude Code runs it: the command through\n * bash in a project directory. It must name an install that lags the pin,\n * even one too old to hold any harness script, and never fail the session.\n */\nimport { afterAll, describe, expect, test } from \"bun:test\";\nimport { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { join } from \"node:path\";\nimport { NOTICE } from \"./bootstrap.ts\";\n\nconst PIN = \"eddf1fdd56642c48a3b222034ec6268c9b55971f\";\nconst made: string[] = [];\nafterAll(() => {\n\tfor (const dir of made) rmSync(dir, { recursive: true, force: true });\n});\n\n/** A project pinned to `PIN`, with `files` under `node_modules/harness/`. */\nfunction project(files?: Record<string, string>): string {\n\tconst dir = mkdtempSync(join(tmpdir(), \"harness-notice-\"));\n\tmade.push(dir);\n\twriteFileSync(\n\t\tjoin(dir, \"package.json\"),\n\t\tJSON.stringify({ dependencies: { harness: `github:laidrivm/harness#${PIN}` } }),\n\t);\n\tif (files !== undefined) {\n\t\tconst pkg = join(dir, \"node_modules/harness\");\n\t\tmkdirSync(join(pkg, \"bun\"), { recursive: true });\n\t\tfor (const [path, text] of Object.entries(files)) writeFileSync(join(pkg, path), text);\n\t}\n\treturn dir;\n}\n\nfunction notice(dir: string, env: Record<string, string | undefined> = {}) {\n\t// By absolute path, so a case can empty PATH and still start the shell.\n\tconst run = Bun.spawnSync([\"/bin/bash\", \"-c\", NOTICE], {\n\t\tcwd: dir,\n\t\tenv: { ...process.env, CLAUDE_PROJECT_DIR: dir, ...env },\n\t});\n\treturn { code: run.exitCode, out: run.stdout.toString() };\n}\n\nconst STALE = { \".bun-tag\": \"laidrivm-harness-9d321b6\", \"package.json\": \"{}\" };\n\ndescribe(\"the stale-install notice\", () => {\n\t// spec: harness-updates/a-stale-install-is-named-at-session-start\n\ttest(\"an install from another commit is named in one line with bun run deps\", () => {\n\t\tconst dir = project({\n\t\t\t\".bun-tag\": \"laidrivm-harness-9d321b6\",\n\t\t\t\"package.json\": \"{}\",\n\t\t\t\"bun/command-guard.ts\": \"\",\n\t\t});\n\t\tconst { code, out } = notice(dir);\n\t\texpect(code).toBe(0);\n\t\texpect(out.trim().split(\"\\n\")).toHaveLength(1);\n\t\texpect(out).toContain(\"9d321b6\");\n\t\texpect(out).toContain(PIN.slice(0, 7));\n\t\texpect(out).toContain(\"run bun run deps\");\n\t\t// The guard refuses `bun run deps` while package.json carries an uncommitted edit, and the frozen install while\n\t\t// bun.lock lacks the pin.\n\t\texpect(out).toContain(\"bun install if package.json has uncommitted edits or bun.lock lacks the pin\");\n\t});\n\n\t// spec: harness-updates/an-install-older-than-the-notice-is-still-named\n\ttest(\"an install holding no harness script at all is named the same way\", () => {\n\t\tconst dir = project({\n\t\t\t\".bun-tag\": \"laidrivm-harness-1d26cf4\",\n\t\t\t\"package.json\": \"{}\",\n\t\t});\n\t\tconst { code, out } = notice(dir);\n\t\texpect(code).toBe(0);\n\t\texpect(out).toContain(\"1d26cf4\");\n\t\texpect(out).toContain(\"run bun run deps\");\n\t});\n\n\t// spec: harness-updates/a-current-install-says-nothing\n\ttest.each([\n\t\t[\"at the pinned commit\", { \".bun-tag\": \"laidrivm-harness-eddf1fd\" }],\n\t\t[\"with no tag\", {}],\n\t\t[\"with a tag of another form\", { \".bun-tag\": \"something else\" }],\n\t])(\"an install %s prints nothing\", (_, files) => {\n\t\texpect(notice(project(files))).toEqual({ code: 0, out: \"\" });\n\t});\n\n\ttest(\"without CLAUDE_PROJECT_DIR it reads the project in the working directory\", () => {\n\t\tconst { out } = notice(project(STALE), { CLAUDE_PROJECT_DIR: undefined });\n\t\texpect(out).toContain(\"9d321b6\");\n\t});\n\n\ttest(\"an unreadable package.json prints nothing\", () => {\n\t\tconst dir = project(STALE);\n\t\twriteFileSync(join(dir, \"package.json\"), \"{\");\n\t\texpect(notice(dir)).toEqual({ code: 0, out: \"\" });\n\t});\n\n\ttest(\"a bun that cannot start still exits 0\", () => {\n\t\texpect(notice(project(STALE), { PATH: \"/nonexistent\" }).code).toBe(0);\n\t});\n\n\ttest(\"no installed harness at all prints the not-installed line\", () => {\n\t\tconst { code, out } = notice(project());\n\t\texpect(code).toBe(0);\n\t\texpect(out).toContain(\"not installed: run bun run deps\");\n\t});\n});\n\n/** The installed commit of `STALE`, as a full pin. */\nconst INSTALLED = \"9d321b6a0c4e8f1b2d3c4b5a6e7f8091a2b3c4d5\";\n\n/** A stale install whose project's `package.json` is `manifest`. */\nfunction pinned(manifest: object): string {\n\tconst dir = project(STALE);\n\twriteFileSync(join(dir, \"package.json\"), JSON.stringify(manifest));\n\treturn dir;\n}\n\ndescribe(\"the stale-install notice on a development-dependency pin\", () => {\n\t// spec: harness-updates/the-notice-reads-a-development-dependency-pin\n\ttest(\"a pin held only as a development dependency is named\", () => {\n\t\tconst { code, out } = notice(pinned({ devDependencies: { harness: `github:laidrivm/harness#${PIN}` } }));\n\t\texpect(code).toBe(0);\n\t\texpect(out).toContain(\"9d321b6\");\n\t\texpect(out).toContain(PIN.slice(0, 7));\n\t});\n\n\t// spec: harness-updates/a-runtime-pin-is-preferred\n\ttest(\"a runtime pin is compared even where the development pin matches the install\", () => {\n\t\tconst { out } = notice(\n\t\t\tpinned({\n\t\t\t\tdependencies: { harness: `github:laidrivm/harness#${PIN}` },\n\t\t\t\tdevDependencies: { harness: `github:laidrivm/harness#${INSTALLED}` },\n\t\t\t}),\n\t\t);\n\t\texpect(out).toContain(PIN.slice(0, 7));\n\t});\n\n\ttest(\"a development pin at no full commit prints nothing\", () => {\n\t\tconst dir = pinned({ devDependencies: { harness: \"github:laidrivm/harness#main\" } });\n\t\texpect(notice(dir)).toEqual({ code: 0, out: \"\" });\n\t});\n});\n\n/**\n * A `bun` ahead on `PATH` that logs an `install` call with its directory and\n * answers it with `STUB_OUT` (escapes read by `printf %b`) and `STUB_CODE`,\n * and hands anything else, the notice's `-e`, to the real bun.\n */\nfunction stub(): { path: string; log: string } {\n\tconst dir = mkdtempSync(join(tmpdir(), \"harness-bun-stub-\"));\n\tmade.push(dir);\n\tconst log = join(dir, \"install.log\");\n\tconst script = [\n\t\t\"#!/bin/sh\",\n\t\t'if [ \"$1\" = install ]; then',\n\t\t'printf \"%s|%s\\\\n\" \"$*\" \"$PWD\" >> \"$STUB_LOG\"',\n\t\t'[ -n \"$STUB_OUT\" ] && printf \"%b\\\\n\" \"$STUB_OUT\"',\n\t\t'exit \"${STUB_CODE:-0}\"',\n\t\t\"fi\",\n\t\t`exec \"${process.execPath}\" \"$@\"`,\n\t].join(\"\\n\");\n\twriteFileSync(join(dir, \"bun\"), script, { mode: 0o755 });\n\treturn { path: `${dir}:${process.env.PATH}`, log };\n}\n\nconst CURRENT = { \".bun-tag\": \"laidrivm-harness-eddf1fd\" };\n\nfunction cloud(dir: string, env: Record<string, string | undefined> = {}) {\n\tconst bun = stub();\n\tconst run = notice(dir, { PATH: bun.path, STUB_LOG: bun.log, CLAUDE_CODE_REMOTE: \"true\", ...env });\n\tconst calls = existsSync(bun.log) ? readFileSync(bun.log, \"utf8\").trim().split(\"\\n\") : [];\n\treturn { ...run, calls };\n}\n\ndescribe(\"the cloud install before the notice\", () => {\n\t// spec: cloud-sessions/a-local-session\n\ttest.each([[undefined], [\"\"], [\"TRUE\"], [\"1\"], [\"true \"], [\"false\"]])(\n\t\t\"CLAUDE_CODE_REMOTE=%p installs nothing [27, 28, 30]\",\n\t\t(value) => {\n\t\t\texpect(cloud(project(CURRENT), { CLAUDE_CODE_REMOTE: value })).toEqual({ code: 0, out: \"\", calls: [] });\n\t\t},\n\t);\n\n\t// spec: cloud-sessions/a-cloud-session-starts-on-a-fresh-clone\n\t// spec: cloud-sessions/no-package-code-runs-unprompted\n\t// spec: cloud-sessions/the-notice-never-races-the-install\n\ttest(\"true installs from the lockfile in the project, with no scripts, and prints nothing [29]\", () => {\n\t\tconst dir = project(CURRENT);\n\t\texpect(cloud(dir)).toEqual({ code: 0, out: \"\", calls: [`install --frozen-lockfile --ignore-scripts|${dir}`] });\n\t});\n\n\ttest(\"with no CLAUDE_PROJECT_DIR it installs in the working directory [31]\", () => {\n\t\t// The spawn's working directory reaches the shell resolved (`/private/var` on macOS).\n\t\tconst dir = realpathSync(project(CURRENT));\n\t\texpect(cloud(dir, { CLAUDE_PROJECT_DIR: undefined }).calls).toEqual([\n\t\t\t`install --frozen-lockfile --ignore-scripts|${dir}`,\n\t\t]);\n\t});\n\n\ttest(\"a project directory holding a space is installed whole [32]\", () => {\n\t\tconst dir = join(project(), \"with space\");\n\t\tmkdirSync(join(dir, \"node_modules/harness\"), { recursive: true });\n\t\twriteFileSync(join(dir, \"package.json\"), \"{}\");\n\t\texpect(cloud(dir).calls).toEqual([`install --frozen-lockfile --ignore-scripts|${dir}`]);\n\t});\n\n\t// spec: cloud-sessions/the-install-fails\n\ttest(\"a failed install prints one line with bun's last line, then the not-installed line, and exits 0 [33, 35]\", () => {\n\t\tconst { code, out } = cloud(project(), { STUB_OUT: \"resolving\\\\nerror: GET tarball - 403\", STUB_CODE: \"1\" });\n\t\texpect(code).toBe(0);\n\t\tconst lines = out.trim().split(\"\\n\");\n\t\texpect(lines).toHaveLength(2);\n\t\texpect(lines[0]).toContain(\"install failed\");\n\t\texpect(lines[0]).toEndWith(\": error: GET tarball - 403\");\n\t\texpect(lines[1]).toContain(\"not installed\");\n\t});\n\n\ttest(\"a failed install that printed nothing names no empty quote [34]\", () => {\n\t\tconst first = cloud(project(), { STUB_CODE: \"1\" }).out.split(\"\\n\")[0] ?? \"\";\n\t\texpect(first).toContain(\"install failed\");\n\t\texpect(first).not.toContain(\":\");\n\t});\n\n\ttest(\"no bun on PATH still exits 0 [36]\", () => {\n\t\texpect(notice(project(), { CLAUDE_CODE_REMOTE: \"true\", PATH: \"/nonexistent\" }).code).toBe(0);\n\t});\n\n\t// spec: cloud-sessions/a-lockfile-that-disagrees-with-the-manifest\n\ttest(\"with the real bun, a lockfile behind the manifest changes neither file [37]\", () => {\n\t\tconst dir = project();\n\t\tfor (const name of [\"dep\", \"dep2\"]) {\n\t\t\tmkdirSync(join(dir, name));\n\t\t\twriteFileSync(join(dir, name, \"package.json\"), JSON.stringify({ name, version: \"1.0.0\" }));\n\t\t}\n\t\twriteFileSync(join(dir, \"package.json\"), JSON.stringify({ dependencies: { dep: \"file:./dep\" } }));\n\t\texpect(Bun.spawnSync([\"bun\", \"install\"], { cwd: dir }).exitCode).toBe(0);\n\t\trmSync(join(dir, \"node_modules\"), { recursive: true, force: true });\n\t\twriteFileSync(\n\t\t\tjoin(dir, \"package.json\"),\n\t\t\tJSON.stringify({ dependencies: { dep: \"file:./dep\", dep2: \"file:./dep2\" } }),\n\t\t);\n\t\tconst before = [readFileSync(join(dir, \"package.json\"), \"utf8\"), readFileSync(join(dir, \"bun.lock\"), \"utf8\")];\n\t\tconst { code, out } = notice(dir, { CLAUDE_CODE_REMOTE: \"true\" });\n\t\texpect(code).toBe(0);\n\t\texpect(out).toContain(\"install failed\");\n\t\texpect([readFileSync(join(dir, \"package.json\"), \"utf8\"), readFileSync(join(dir, \"bun.lock\"), \"utf8\")]).toEqual(\n\t\t\tbefore,\n\t\t);\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > a failed install prints one line with bun's last line, then the not-installed line, and exits 0 [33, 35]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 209
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > a failed install that printed nothing names no empty quote [34]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 219
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > a project directory holding a space is installed whole [32]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 201
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > CLAUDE_CODE_REMOTE=\"\" installs nothing [27, 28, 30]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 178
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > CLAUDE_CODE_REMOTE=\"1\" installs nothing [27, 28, 30]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 178
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > CLAUDE_CODE_REMOTE=\"false\" installs nothing [27, 28, 30]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 178
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > CLAUDE_CODE_REMOTE=\"true \" installs nothing [27, 28, 30]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 178
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > CLAUDE_CODE_REMOTE=\"TRUE\" installs nothing [27, 28, 30]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 178
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > CLAUDE_CODE_REMOTE=undefined installs nothing [27, 28, 30]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 178
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > no bun on PATH still exits 0 [36]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 225
+						}
+					}
+				},
+				{
+					"id": "10",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > true installs from the lockfile in the project, with no scripts, and prints nothing [29]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 188
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > with no CLAUDE_PROJECT_DIR it installs in the working directory [31]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 193
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/bootstrap-notice.test.ts > the cloud install before the notice > with the real bun, a lockfile behind the manifest changes neither file [37]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 230
+						}
+					}
+				},
+				{
+					"id": "13",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice > a bun that cannot start still exits 0",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 98
+						}
+					}
+				},
+				{
+					"id": "14",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice > an install at the pinned commit prints nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 83
+						}
+					}
+				},
+				{
+					"id": "15",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice > an install from another commit is named in one line with bun run deps",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 49
+						}
+					}
+				},
+				{
+					"id": "16",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice > an install holding no harness script at all is named the same way",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 67
+						}
+					}
+				},
+				{
+					"id": "17",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice > an install with a tag of another form prints nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 83
+						}
+					}
+				},
+				{
+					"id": "18",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice > an install with no tag prints nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 83
+						}
+					}
+				},
+				{
+					"id": "19",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice > an unreadable package.json prints nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 92
+						}
+					}
+				},
+				{
+					"id": "20",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice > no installed harness at all prints the not-installed line",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 102
+						}
+					}
+				},
+				{
+					"id": "21",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice > without CLAUDE_PROJECT_DIR it reads the project in the working directory",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 87
+						}
+					}
+				},
+				{
+					"id": "22",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice on a development-dependency pin > a development pin at no full commit prints nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 139
+						}
+					}
+				},
+				{
+					"id": "23",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice on a development-dependency pin > a pin held only as a development dependency is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 121
+						}
+					}
+				},
+				{
+					"id": "24",
+					"name": "bun/bootstrap-notice.test.ts > the stale-install notice on a development-dependency pin > a runtime pin is compared even where the development pin matches the install",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 129
+						}
+					}
+				}
+			]
+		},
+		"bun/bootstrap.test.ts": {
+			"source": "/**\n * The bootstrap hook and the turn gate's, Notion guard's, question gate's,\n * loop guard's and flake watch's registrations run as Claude Code runs them: the command\n * through a shell, the event as JSON on stdin, in a project with no harness\n * installed and then with one.\n */\nimport { afterAll, describe, expect, test } from \"bun:test\";\nimport { mkdirSync, mkdtempSync, rmSync, writeFileSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { join } from \"node:path\";\nimport { BOOTSTRAP, HOOKS, NOTION_GUARD, QUESTION_GATE, TURN_MARK, TURN_STOP } from \"./bootstrap.ts\";\n\nconst made: string[] = [];\n\nafterAll(() => {\n\tfor (const dir of made) rmSync(dir, { recursive: true, force: true });\n});\n\n/** A project directory, with a stand-in guard installed when `guard` is set. */\nfunction project(guard?: string): string {\n\tconst dir = mkdtempSync(join(tmpdir(), \"harness-bootstrap-\"));\n\tmade.push(dir);\n\tif (guard !== undefined) {\n\t\tmkdirSync(join(dir, \"node_modules/harness/bun\"), { recursive: true });\n\t\twriteFileSync(join(dir, \"node_modules/harness/bun/command-guard.ts\"), guard);\n\t}\n\treturn dir;\n}\n\n/** The hook's verdict in `dir` on `input`, exactly as given on stdin. */\nfunction raw(dir: string, input: string) {\n\tconst run = Bun.spawnSync([\"sh\", \"-c\", BOOTSTRAP], {\n\t\tcwd: dir,\n\t\tenv: { ...process.env, CLAUDE_PROJECT_DIR: dir },\n\t\tstdin: new TextEncoder().encode(input),\n\t});\n\treturn { code: run.exitCode, stderr: run.stderr.toString() };\n}\n\n/** The hook's verdict on `command` in `dir`. */\nconst hook = (dir: string, command: string) => raw(dir, JSON.stringify({ tool_name: \"Bash\", tool_input: { command } }));\n\ndescribe(\"before the install\", () => {\n\t// spec: cloud-sessions/the-local-policy-is-unchanged\n\ttest.each([\"bun install\", \"bun i\", \"bun install --frozen-lockfile\", \"bun run deps\"])(\"%s runs\", (command) => {\n\t\texpect(hook(project(), command).code).toBe(0);\n\t});\n\n\ttest.each([\n\t\t[\"any other command\", \"git status\"],\n\t\t[\"the deps script with a word after it\", \"bun run deps --no-verify\"],\n\t\t[\"an install that names a package\", \"bun install lodash\"],\n\t\t[\"an install with another flag\", \"bun install --registry https://x.test\"],\n\t\t[\"an install from another directory\", \"bun install --cwd ../other\"],\n\t\t[\"an install with a command chained after it\", \"bun install && git status\"],\n\t\t[\"an install with a command chained before it\", \"git status; bun install\"],\n\t])(\"%s is blocked, naming bun run deps\", (_, command) => {\n\t\tconst { code, stderr } = hook(project(), command);\n\t\texpect(code).toBe(2);\n\t\texpect(stderr).toContain(\"run bun run deps first\");\n\t});\n\n\ttest(\"input that is not JSON blocks rather than letting through\", () => {\n\t\t// The parse throws, bun exits 1, and the hook turns that into 2.\n\t\texpect(raw(project(), \"bun install\").code).toBe(2);\n\t});\n});\n\ndescribe(\"after the install\", () => {\n\ttest(\"the guard decides, and a command it allows runs\", () => {\n\t\tconst dir = project(\"process.exit(0);\\n\");\n\t\texpect(hook(dir, \"git status\").code).toBe(0);\n\t});\n\n\ttest(\"a command the guard blocks stays blocked\", () => {\n\t\tconst dir = project(\"console.error('guarded'); process.exit(2);\\n\");\n\t\tconst { code, stderr } = hook(dir, \"bun install\");\n\t\texpect(code).toBe(2);\n\t\texpect(stderr).toContain(\"guarded\");\n\t});\n\n\ttest(\"a guard that fails to run blocks rather than letting through\", () => {\n\t\t// Exit 1 is non-blocking to Claude Code; the hook turns it into 2.\n\t\tconst dir = project(\"throw new Error('broken');\\n\");\n\t\texpect(hook(dir, \"git status\").code).toBe(2);\n\t});\n});\n\n/** A project with `script` installed as `file`, the turn gate by default. */\nfunction gated(script?: string, prefix = \"harness-turn-gate-\", file = \"turn-gate.ts\"): string {\n\tconst dir = mkdtempSync(join(tmpdir(), prefix));\n\tmade.push(dir);\n\tif (script !== undefined) {\n\t\tmkdirSync(join(dir, \"node_modules/harness/bun\"), { recursive: true });\n\t\twriteFileSync(join(dir, \"node_modules/harness/bun\", file), script);\n\t}\n\treturn dir;\n}\n\n/**\n * A registration's verdict in `dir`, as Claude Code runs it: the turn gate's\n * on an empty event, the Notion guard's on any.\n */\nfunction turn(command: string, dir: string) {\n\tconst run = Bun.spawnSync([\"sh\", \"-c\", command], {\n\t\tcwd: dir,\n\t\tenv: { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: dir },\n\t\tstdin: new TextEncoder().encode(\"{}\"),\n\t});\n\treturn {\n\t\tcode: run.exitCode,\n\t\tstdout: run.stdout.toString(),\n\t\tstderr: run.stderr.toString(),\n\t};\n}\n\n/** Refuses, naming the half it was run as. */\nconst REFUSES = \"console.error(process.argv[2]); process.exit(2);\\n\";\n\ndescribe(\"the turn gate before the install\", () => {\n\t// spec: commit-gates/a-consumer-clone-before-install\n\ttest(\"the turn ends, with nothing printed [1]\", () => {\n\t\texpect(turn(TURN_STOP, gated())).toEqual({ code: 0, stdout: \"\", stderr: \"\" });\n\t});\n\n\ttest(\"the prompt goes through, with nothing added to it [2]\", () => {\n\t\tconst { code, stdout } = turn(TURN_MARK, gated());\n\t\texpect({ code, stdout }).toEqual({ code: 0, stdout: \"\" });\n\t});\n});\n\ndescribe(\"the turn gate after the install\", () => {\n\ttest(\"a refusal leaves exactly 2, with its reason [3]\", () => {\n\t\texpect(turn(TURN_STOP, gated(REFUSES))).toMatchObject({\n\t\t\tcode: 2,\n\t\t\tstderr: \"stop\\n\",\n\t\t});\n\t});\n\n\ttest(\"the mark text runs the mark half\", () => {\n\t\texpect(turn(TURN_MARK, gated(REFUSES)).stderr).toBe(\"mark\\n\");\n\t});\n\n\ttest(\"a gate that fails to run ends the turn rather than holding it [4]\", () => {\n\t\texpect(turn(TURN_STOP, gated(\"throw (\\n\")).code).not.toBe(2);\n\t});\n\n\ttest(\"a project path holding a space still reaches the gate [5]\", () => {\n\t\tconst dir = gated(REFUSES, \"harness turn gate \");\n\t\texpect(turn(TURN_STOP, dir).code).toBe(2);\n\t});\n});\n\n/** A project with `script` installed as the Notion guard. */\nconst guarded = (script: string) => gated(script, \"harness-notion-guard-\", \"notion-guard.ts\");\n\ndescribe(\"the Notion guard's registration\", () => {\n\ttest(\"before the install, the call goes through with nothing printed\", () => {\n\t\texpect(turn(NOTION_GUARD, gated())).toEqual({\n\t\t\tcode: 0,\n\t\t\tstdout: \"\",\n\t\t\tstderr: \"\",\n\t\t});\n\t});\n\n\ttest(\"after the install, a refusal leaves exactly 2, with its reason\", () => {\n\t\tconst refuses = \"console.error('refused'); process.exit(2);\\n\";\n\t\texpect(turn(NOTION_GUARD, guarded(refuses))).toMatchObject({\n\t\t\tcode: 2,\n\t\t\tstderr: \"refused\\n\",\n\t\t});\n\t});\n\n\ttest(\"a guard that fails to run lets the call through\", () => {\n\t\texpect(turn(NOTION_GUARD, guarded(\"throw (\\n\")).code).not.toBe(2);\n\t});\n});\n\ndescribe(\"the question gate's registration\", () => {\n\tconst gate = (script: string) => gated(script, \"harness-question-gate-\", \"question-gate.ts\");\n\n\ttest(\"before the install, nothing is printed, so the prompt stands\", () => {\n\t\texpect(turn(QUESTION_GATE, gated())).toEqual({\n\t\t\tcode: 0,\n\t\t\tstdout: \"\",\n\t\t\tstderr: \"\",\n\t\t});\n\t});\n\n\ttest(\"after the install, the gate's answer reaches Claude Code\", () => {\n\t\texpect(turn(QUESTION_GATE, gate(\"console.log('allow');\\n\")).stdout).toBe(\"allow\\n\");\n\t});\n\n\ttest(\"a gate that fails to run prints no answer\", () => {\n\t\texpect(turn(QUESTION_GATE, gate(\"throw (\\n\")).stdout).toBe(\"\");\n\t});\n});\n\ndescribe(\"the loop guard's registrations\", () => {\n\t/** The text `HOOKS` registers the guard with on `event`. */\n\tconst on = (event: string) => {\n\t\tconst hook = HOOKS.find((h) => h.event === event && h.name === \"harness loop guard\");\n\t\texpect(hook).toBeDefined();\n\t\treturn hook?.command ?? \"\";\n\t};\n\tconst events = [\"PreToolUse\", \"PostToolUseFailure\"];\n\n\t// spec: loop-guard/before-the-install\n\ttest.each(events)(\"on %s, before the install, exit 0 with nothing printed [35]\", (event) => {\n\t\texpect(turn(on(event), gated())).toEqual({ code: 0, stdout: \"\", stderr: \"\" });\n\t});\n\n\ttest.each(events)(\"on %s, after the install, pass on the guard's answer\", (event) => {\n\t\tconst answers = \"console.log('warned'); console.error('refused'); process.exit(2);\\n\";\n\t\tconst dir = gated(answers, \"harness-loop-guard-\", \"loop-guard.ts\");\n\t\texpect(turn(on(event), dir)).toEqual({\n\t\t\tcode: 2,\n\t\t\tstdout: \"warned\\n\",\n\t\t\tstderr: \"refused\\n\",\n\t\t});\n\t});\n});\n\ndescribe(\"the flake watch's registrations\", () => {\n\t// spec: flaky-tests/before-the-watch-is-installed\n\ttest(\"on each event, before the install, exit 0 with nothing printed [43]\", () => {\n\t\tconst commands = HOOKS.filter((h) => h.name === \"harness flake watch\").map((h) => h.command);\n\t\texpect(commands).toHaveLength(2);\n\t\tfor (const command of commands) expect(turn(command, gated())).toEqual({ code: 0, stdout: \"\", stderr: \"\" });\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "25",
+					"name": "bun/bootstrap.test.ts > after the install > a command the guard blocks stays blocked",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 77
+						}
+					}
+				},
+				{
+					"id": "26",
+					"name": "bun/bootstrap.test.ts > after the install > a guard that fails to run blocks rather than letting through",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 84
+						}
+					}
+				},
+				{
+					"id": "27",
+					"name": "bun/bootstrap.test.ts > after the install > the guard decides, and a command it allows runs",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 72
+						}
+					}
+				},
+				{
+					"id": "28",
+					"name": "bun/bootstrap.test.ts > before the install > an install from another directory is blocked, naming bun run deps",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 59
+						}
+					}
+				},
+				{
+					"id": "29",
+					"name": "bun/bootstrap.test.ts > before the install > an install that names a package is blocked, naming bun run deps",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 59
+						}
+					}
+				},
+				{
+					"id": "30",
+					"name": "bun/bootstrap.test.ts > before the install > an install with a command chained after it is blocked, naming bun run deps",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 59
+						}
+					}
+				},
+				{
+					"id": "31",
+					"name": "bun/bootstrap.test.ts > before the install > an install with a command chained before it is blocked, naming bun run deps",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 59
+						}
+					}
+				},
+				{
+					"id": "32",
+					"name": "bun/bootstrap.test.ts > before the install > an install with another flag is blocked, naming bun run deps",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 59
+						}
+					}
+				},
+				{
+					"id": "33",
+					"name": "bun/bootstrap.test.ts > before the install > any other command is blocked, naming bun run deps",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 59
+						}
+					}
+				},
+				{
+					"id": "34",
+					"name": "bun/bootstrap.test.ts > before the install > bun i runs",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 47
+						}
+					}
+				},
+				{
+					"id": "35",
+					"name": "bun/bootstrap.test.ts > before the install > bun install --frozen-lockfile runs",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 47
+						}
+					}
+				},
+				{
+					"id": "36",
+					"name": "bun/bootstrap.test.ts > before the install > bun install runs",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 47
+						}
+					}
+				},
+				{
+					"id": "37",
+					"name": "bun/bootstrap.test.ts > before the install > bun run deps runs",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 47
+						}
+					}
+				},
+				{
+					"id": "38",
+					"name": "bun/bootstrap.test.ts > before the install > input that is not JSON blocks rather than letting through",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 65
+						}
+					}
+				},
+				{
+					"id": "39",
+					"name": "bun/bootstrap.test.ts > before the install > the deps script with a word after it is blocked, naming bun run deps",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 59
+						}
+					}
+				},
+				{
+					"id": "40",
+					"name": "bun/bootstrap.test.ts > the flake watch's registrations > on each event, before the install, exit 0 with nothing printed [43]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 228
+						}
+					}
+				},
+				{
+					"id": "41",
+					"name": "bun/bootstrap.test.ts > the loop guard's registrations > on PostToolUseFailure, after the install, pass on the guard's answer",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 215
+						}
+					}
+				},
+				{
+					"id": "42",
+					"name": "bun/bootstrap.test.ts > the loop guard's registrations > on PostToolUseFailure, before the install, exit 0 with nothing printed [35]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 211
+						}
+					}
+				},
+				{
+					"id": "43",
+					"name": "bun/bootstrap.test.ts > the loop guard's registrations > on PreToolUse, after the install, pass on the guard's answer",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 215
+						}
+					}
+				},
+				{
+					"id": "44",
+					"name": "bun/bootstrap.test.ts > the loop guard's registrations > on PreToolUse, before the install, exit 0 with nothing printed [35]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 211
+						}
+					}
+				},
+				{
+					"id": "45",
+					"name": "bun/bootstrap.test.ts > the Notion guard's registration > a guard that fails to run lets the call through",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 176
+						}
+					}
+				},
+				{
+					"id": "46",
+					"name": "bun/bootstrap.test.ts > the Notion guard's registration > after the install, a refusal leaves exactly 2, with its reason",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 168
+						}
+					}
+				},
+				{
+					"id": "47",
+					"name": "bun/bootstrap.test.ts > the Notion guard's registration > before the install, the call goes through with nothing printed",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 160
+						}
+					}
+				},
+				{
+					"id": "48",
+					"name": "bun/bootstrap.test.ts > the question gate's registration > a gate that fails to run prints no answer",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 196
+						}
+					}
+				},
+				{
+					"id": "49",
+					"name": "bun/bootstrap.test.ts > the question gate's registration > after the install, the gate's answer reaches Claude Code",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 192
+						}
+					}
+				},
+				{
+					"id": "50",
+					"name": "bun/bootstrap.test.ts > the question gate's registration > before the install, nothing is printed, so the prompt stands",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 184
+						}
+					}
+				},
+				{
+					"id": "51",
+					"name": "bun/bootstrap.test.ts > the turn gate after the install > a gate that fails to run ends the turn rather than holding it [4]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 146
+						}
+					}
+				},
+				{
+					"id": "52",
+					"name": "bun/bootstrap.test.ts > the turn gate after the install > a project path holding a space still reaches the gate [5]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 150
+						}
+					}
+				},
+				{
+					"id": "53",
+					"name": "bun/bootstrap.test.ts > the turn gate after the install > a refusal leaves exactly 2, with its reason [3]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 135
+						}
+					}
+				},
+				{
+					"id": "54",
+					"name": "bun/bootstrap.test.ts > the turn gate after the install > the mark text runs the mark half",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 142
+						}
+					}
+				},
+				{
+					"id": "55",
+					"name": "bun/bootstrap.test.ts > the turn gate before the install > the prompt goes through, with nothing added to it [2]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 128
+						}
+					}
+				},
+				{
+					"id": "56",
+					"name": "bun/bootstrap.test.ts > the turn gate before the install > the turn ends, with nothing printed [1]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 124
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/bootstrap.ts": {
 			"source": "/**\n * The shell comment every command in `HOOKS` ends with: how `sync.ts` tells a\n * hook it wrote from a project's own, which may call the harness's scripts\n * through the same `node_modules/harness/` path.\n */\nexport const MARK = \"# harness-managed\";\n\n/**\n * The Bash `PreToolUse` hook command every consumer's `.claude/settings.json`\n * carries, character for character, as `sync.ts` writes it there. The\n * consumer holds it as text because it has to run before the harness is\n * installed: `settings.ts` asserts it exactly, so a copy that drifts fails the\n * consumer's check instead of booting differently.\n *\n * With the package installed it hands every command to the guard. Without it,\n * only `bun install` or `bun i` runs, bare or with `--frozen-lockfile`, or\n * `bun run deps` — the install a clone needs first — and everything else is\n * blocked with a hint naming `bun run deps`, the form that runs unprompted,\n * rather than every command failing alike on a guard that is not there. The\n * script's text is not read here: an edited `deps` is a manifest edit\n * (frozen-install-unprompted, Risks).\n *\n * `|| exit 2` on both branches: a guard that cannot launch exits 1, which\n * Claude Code treats as non-blocking and runs the command anyway. Exit 2 is\n * the one code that blocks.\n */\nexport const BOOTSTRAP = [\n\t'g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/command-guard.ts\";',\n\t'if [ -f \"$g\" ]; then bun \"$g\" || exit 2; exit 0; fi;',\n\t'bun -e \\'const c = JSON.parse(await Bun.stdin.text()).tool_input?.command ?? \"\";',\n\t\"if (/^(bun (install|i)( --frozen-lockfile)?|bun run deps)$/.test(c.trim())) process.exit(0);\",\n\t'console.error(\"The harness is not installed: run bun run deps first.\");',\n\t\"process.exit(2)' || exit 2\",\n\tMARK,\n].join(\" \");\n\n/**\n * The turn gate's `UserPromptSubmit` and `Stop` registrations, held as text\n * for the same reason: `settings.ts` asserts each exactly.\n *\n * Without the package the `if` exits 0, which lets the prompt through and the\n * turn end. With it, the gate's own exit code is the hook's. No `|| exit 2`,\n * unlike the bootstrap: a gate that cannot launch must end the turn rather\n * than hold it, as the gate's own fail-open header says.\n */\nconst turnGate = (half: \"mark\" | \"stop\") =>\n\t`g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/turn-gate.ts\"; if [ -f \"$g\" ]; then bun \"$g\" ${half}; fi ${MARK}`;\nexport const TURN_MARK = turnGate(\"mark\");\nexport const TURN_STOP = turnGate(\"stop\");\n\n/**\n * The Notion update guard's `PreToolUse` registration. The matcher is a\n * regular expression, as Claude Code reads a hook's, so it reaches the tool\n * under any server name and no longer tool. Before the install every call goes\n * through; after it, the guard's exit code is the hook's. No `|| exit 2`, like\n * the turn gate: the guard is fail-open, as its header says.\n */\nexport const NOTION_MATCHER = \"^mcp__.+__notion-update-page$\";\nexport const NOTION_GUARD = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/notion-guard.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The question gate's `PermissionRequest` registration, under the same kind\n * of matcher for `notion-create-comment`. Before the install, and whenever the\n * gate cannot run, the hook prints nothing and gives no answer, so the prompt\n * stands: this one fails closed with no `|| exit 2`, since only an `allow`\n * the gate prints widens anything.\n */\nexport const QUESTION_MATCHER = \"^mcp__.+__notion-create-comment$\";\nexport const QUESTION_GATE = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/question-gate.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The loop guard's registration, one text on both `PreToolUse` and\n * `PostToolUseFailure` with no matcher: the script chooses its role from the\n * event, and sees every tool. Before the install every call goes through and\n * every failure passes uncounted; after it, the guard's exit code and its\n * warning on stdout are the hook's. No `|| exit 2`: the guard is fail-open,\n * as its header says.\n */\nexport const LOOP_GUARD = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/loop-guard.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The flake watch's registration, one text on both `PostToolUse` and\n * `PostToolUseFailure` under matcher `Bash` with no `if`: the script reads the\n * call's output, since a list of test commands would miss every wrapper.\n * Before the install every call passes unread; after it, the watch's hint on\n * stdout is the hook's. No `|| exit 2`: the watch never blocks.\n */\nexport const FLAKE_WATCH = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/flake-watch.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The `SessionEnd` transcript archive, registered with a `timeout` of 60 s,\n * the most Claude Code allows, since the event's hooks otherwise share 1.5 s.\n * Before the install it does nothing; it exits 0 on every fault, and a\n * `SessionEnd` hook cannot stop the session anyway.\n */\nexport const ARCHIVE = `g=\"$CLAUDE_PROJECT_DIR/node_modules/harness/bun/transcript-archive.ts\"; if [ -f \"$g\" ]; then bun \"$g\"; fi ${MARK}`;\n\n/**\n * The `SessionStart` notice: one line when the installed harness is not the\n * pinned one, as after a `git pull` that brought a bump, until `bun run deps`\n * — or `bun install` after a hand edit of the pin, since the guard refuses a\n * script from a `package.json` with uncommitted edits, and the frozen install\n * a pin committed without its `bun.lock`. Claude Code adds a\n * `SessionStart` hook's output to the session, so the agent reads it too.\n *\n * Inline rather than a script in the package: a stale install is an older\n * package, which may predate any script, and a notice living there would be\n * missing in exactly the state it exists to name. Every path exits 0, and\n * `|| true` covers a bun that cannot start: a notice never stops a session.\n *\n * The pin is read from `devDependencies` when `dependencies` names none: the\n * harness pins itself there, since a consumer would install a runtime\n * self-pin and, through it, every earlier one.\n *\n * shortcut: the installed commit is read from `node_modules/harness/.bun-tag`,\n * which bun 1.4.2 writes as `<owner>-<repo>-<7 hex>` and documents nowhere; a\n * bun that changes it makes the notice fall silent rather than wrong. Upgrade\n * when bun documents where an installed git dependency's commit is recorded.\n *\n * In a cloud session (`CLAUDE_CODE_REMOTE` exactly `true`) it first installs\n * from the lockfile, with no lifecycle script: the VM's clone is fresh at\n * every start, and a hook's command passes neither the Bash bootstrap nor an\n * `ask` entry, which would otherwise stop the agent's own `bun install` there\n * with a prompt nobody answers (cloud-sessions D1, D2). In the same command,\n * so the notice runs after it rather than racing it; a failure prints one line\n * and the notice then says what is missing.\n */\nexport const NOTICE = [\n\t'if [ \"$CLAUDE_CODE_REMOTE\" = true ]; then',\n\t'o=$(cd \"${CLAUDE_PROJECT_DIR:-.}\" && bun install --frozen-lockfile --ignore-scripts 2>&1) ||',\n\t'{ l=$(printf \"%s\" \"$o\" | tail -n 1); echo \"The harness cloud install failed${l:+: $l}\"; };',\n\t\"fi;\",\n\t'bun -e \\'const fs = require(\"node:fs\");',\n\t'const d = process.env.CLAUDE_PROJECT_DIR ?? \".\";',\n\t'if (!fs.existsSync(d + \"/node_modules/harness\")) {',\n\t'console.log(\"The harness is not installed: run bun run deps.\"); process.exit(0); }',\n\t\"try {\",\n\t'const m = JSON.parse(fs.readFileSync(d + \"/package.json\", \"utf8\"));',\n\t'const pin = (m.dependencies?.harness ?? m.devDependencies?.harness ?? \"\").match(/#([0-9a-f]{40})$/)?.[1];',\n\t'const tag = fs.readFileSync(d + \"/node_modules/harness/.bun-tag\", \"utf8\").trim().match(/-([0-9a-f]{7,40})$/)?.[1];',\n\t\"if (pin && tag && !pin.startsWith(tag))\",\n\t'console.log(\"The installed harness is \" + tag + \", the pin \" + pin.slice(0, 7) + \": run bun run deps (bun install if package.json has uncommitted edits or bun.lock lacks the pin).\");',\n\t\"} catch {}' || true\",\n\tMARK,\n].join(\" \");\n\n/**\n * Every hook the harness registers in a consumer's settings: what\n * `settings.ts` asserts and `sync.ts` writes, so the two cannot disagree on\n * which hooks there are. A hook the harness adds is one entry here, and its\n * command ends with `MARK`. `sole` makes `settings.ts` refuse any\n * other hook under the same matcher; without it the hook need only be present.\n * An entry with no matcher is registered, and checked, in a group with none.\n * A `timeout` is written with the hook and checked whenever the entry has one.\n */\nexport const HOOKS: {\n\tevent: string;\n\tmatcher?: string;\n\tcommand: string;\n\tname: string;\n\tsole?: true;\n\ttimeout?: number;\n}[] = [\n\t{\n\t\tevent: \"PreToolUse\",\n\t\tmatcher: \"Bash\",\n\t\tcommand: BOOTSTRAP,\n\t\tname: \"harness bootstrap\",\n\t\tsole: true,\n\t},\n\t{\n\t\tevent: \"PreToolUse\",\n\t\tmatcher: NOTION_MATCHER,\n\t\tcommand: NOTION_GUARD,\n\t\tname: \"harness Notion update guard\",\n\t},\n\t{\n\t\tevent: \"PermissionRequest\",\n\t\tmatcher: QUESTION_MATCHER,\n\t\tcommand: QUESTION_GATE,\n\t\tname: \"harness question gate\",\n\t},\n\t{ event: \"PreToolUse\", command: LOOP_GUARD, name: \"harness loop guard\" },\n\t{\n\t\tevent: \"PostToolUseFailure\",\n\t\tcommand: LOOP_GUARD,\n\t\tname: \"harness loop guard\",\n\t},\n\t{ event: \"PostToolUse\", matcher: \"Bash\", command: FLAKE_WATCH, name: \"harness flake watch\" },\n\t{ event: \"PostToolUseFailure\", matcher: \"Bash\", command: FLAKE_WATCH, name: \"harness flake watch\" },\n\t{ event: \"UserPromptSubmit\", command: TURN_MARK, name: \"harness turn gate\" },\n\t{ event: \"Stop\", command: TURN_STOP, name: \"harness turn gate\" },\n\t{ event: \"SessionStart\", command: NOTICE, name: \"harness stale-install notice\" },\n\t{\n\t\tevent: \"SessionEnd\",\n\t\tcommand: ARCHIVE,\n\t\tname: \"harness transcript archive\",\n\t\ttimeout: 60,\n\t},\n];\n\n/** The hook object a `HOOKS` entry is registered as in the settings. */\nexport const registration = ({ command, timeout }: (typeof HOOKS)[number]) => ({\n\ttype: \"command\",\n\tcommand,\n\t...(timeout === undefined ? {} : { timeout }),\n});\n",
@@ -18,7 +600,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "1",
@@ -34,7 +617,11 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"33"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +637,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"27"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +657,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"27"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +677,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"36"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +697,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"36"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +717,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"33"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +737,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"36"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +757,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "9",
@@ -162,7 +774,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"56"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +794,11 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"53"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +814,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"54"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +834,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"53"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +854,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "14",
@@ -242,7 +871,11 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"46"
+					]
 				},
 				{
 					"id": "15",
@@ -258,7 +891,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "16",
@@ -274,7 +908,11 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"49"
+					]
 				},
 				{
 					"id": "17",
@@ -290,7 +928,11 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"43"
+					]
 				},
 				{
 					"id": "18",
@@ -306,7 +948,8 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "19",
@@ -322,7 +965,8 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "20",
@@ -338,7 +982,11 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "21",
@@ -354,7 +1002,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "22",
@@ -370,7 +1022,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "23",
@@ -386,7 +1042,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "24",
@@ -402,7 +1062,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "25",
@@ -418,7 +1082,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "26",
@@ -434,7 +1102,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "27",
@@ -450,7 +1122,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "28",
@@ -466,7 +1142,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "29",
@@ -482,7 +1162,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "30",
@@ -498,7 +1182,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "31",
@@ -514,7 +1202,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "32",
@@ -530,7 +1222,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "33",
@@ -546,7 +1242,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "34",
@@ -562,7 +1262,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "35",
@@ -578,7 +1282,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "36",
@@ -594,7 +1302,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "37",
@@ -610,7 +1322,11 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "38",
@@ -626,7 +1342,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "39",
@@ -642,7 +1359,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "40",
@@ -658,7 +1376,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "41",
@@ -674,7 +1393,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "42",
@@ -690,7 +1410,8 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "43",
@@ -706,7 +1427,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "44",
@@ -722,7 +1444,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "45",
@@ -738,7 +1461,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "46",
@@ -754,7 +1478,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "47",
@@ -770,7 +1495,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "48",
@@ -786,7 +1512,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "49",
@@ -802,7 +1529,11 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "50",
@@ -818,7 +1549,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "51",
@@ -834,7 +1569,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"44"
+					]
 				},
 				{
 					"id": "52",
@@ -850,7 +1589,11 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "53",
@@ -866,7 +1609,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "54",
@@ -882,7 +1629,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"42"
+					]
 				},
 				{
 					"id": "55",
@@ -898,7 +1649,11 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"40"
+					]
 				},
 				{
 					"id": "56",
@@ -914,7 +1669,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "57",
@@ -930,7 +1686,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "58",
@@ -946,7 +1703,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"40"
+					]
 				},
 				{
 					"id": "59",
@@ -962,7 +1723,11 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"40"
+					]
 				},
 				{
 					"id": "60",
@@ -978,7 +1743,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "61",
@@ -994,7 +1760,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "62",
@@ -1010,7 +1777,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"40"
+					]
 				},
 				{
 					"id": "63",
@@ -1026,7 +1797,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "64",
@@ -1042,7 +1814,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "65",
@@ -1058,7 +1831,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "66",
@@ -1074,7 +1848,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "67",
@@ -1090,7 +1865,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "68",
@@ -1106,7 +1882,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "69",
@@ -1122,7 +1899,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "70",
@@ -1138,7 +1916,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "71",
@@ -1154,7 +1933,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "72",
@@ -1170,7 +1950,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "73",
@@ -1186,7 +1967,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "74",
@@ -1202,7 +1984,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "75",
@@ -1218,7 +2001,8 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "76",
@@ -1234,7 +2018,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "77",
@@ -1250,7 +2035,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "78",
@@ -1266,7 +2052,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "79",
@@ -1282,7 +2069,8 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "80",
@@ -1298,7 +2086,8 @@
 						}
 					},
 					"replacement": "timeout !== undefined",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "81",
@@ -1314,18 +2103,18 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				}
 			]
 		}
 	},
 	"fingerprint": {
-		"bun/bootstrap-notice.test.ts": "2614fc55431a8f44aaad49fd97354ed16c9bfd53",
-		"bun/bootstrap.test.ts": "6987a5fffcf1676aaddad3f62a31cca6a952dabe",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/bootstrap",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

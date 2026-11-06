@@ -1,5 +1,427 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/sync-settings-package.test.ts": {
+			"source": "/**\n * What `sync.ts` writes into a consumer's `package.json`: the `deps` script\n * and nothing else. Its own file because `sync-settings.test.ts` is at the\n * line cap; the entry point's refusal is in `sync-bunfig.test.ts`.\n */\nimport { afterAll, describe, expect, test } from \"bun:test\";\nimport { DEPS, settings } from \"./settings.ts\";\nimport { CANONICAL, cleanup, consumer, read, SETTINGS, STALE_BUNFIG, stale } from \"./sync-settings.fixture.ts\";\nimport { syncSettings } from \"./sync-settings.ts\";\n\nafterAll(cleanup);\n\ndescribe(\"package.json\", () => {\n\t// spec: harness-updates/a-consumer-without-the-script\n\ttest.each([\n\t\t[\"no scripts\", { name: \"app\", private: true }, \"\\t\", { name: \"app\", private: true, scripts: { deps: DEPS } }],\n\t\t[\n\t\t\t\"scripts but no deps\",\n\t\t\t{ name: \"app\", scripts: { test: \"bun test\" }, private: true },\n\t\t\t\"  \",\n\t\t\t{ name: \"app\", scripts: { test: \"bun test\", deps: DEPS }, private: true },\n\t\t],\n\t])(\"%s gains scripts.deps, the other keys and the indentation kept\", (_, before, indent, after) => {\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(stale()), \"package.json\": JSON.stringify(before, null, indent) });\n\t\tsyncSettings(dir);\n\t\texpect(read(dir, \"package.json\")).toBe(JSON.stringify(after, null, indent));\n\t});\n\n\ttest(\"a trailing comma bun accepts is read, and the check then passes\", () => {\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(stale()), \"package.json\": '{ \"name\": \"app\", }' });\n\t\tsyncSettings(dir);\n\t\texpect(JSON.parse(read(dir, \"package.json\")).scripts).toEqual({ deps: DEPS });\n\t\texpect(settings(dir).join(\"\\n\")).not.toContain(\"package.json\");\n\t}, 30_000);\n\n\ttest(\"a trailing newline is kept\", () => {\n\t\tconst dir = consumer({ [SETTINGS]: \"{}\", \"package.json\": '{\\n\\t\"name\": \"app\"\\n}\\n' });\n\t\tsyncSettings(dir);\n\t\texpect(read(dir, \"package.json\")).toBe(`{\\n\\t\"name\": \"app\",\\n\\t\"scripts\": {\\n\\t\\t\"deps\": \"${DEPS}\"\\n\\t}\\n}\\n`);\n\t});\n\n\ttest(\"a missing package.json is written with the script, and the check then passes\", () => {\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });\n\t\tsyncSettings(dir);\n\t\texpect(JSON.parse(read(dir, \"package.json\"))).toEqual({ scripts: { deps: DEPS } });\n\t\texpect(settings(dir).join(\"\\n\")).not.toContain(\"package.json\");\n\t}, 30_000);\n\n\t// spec: harness-updates/a-consumer-that-already-holds-it\n\ttest(\"one already holding the script is left byte for byte\", () => {\n\t\tconst text = `{\"scripts\":{  \"deps\": \"${DEPS}\"}, \"z\": 1}`;\n\t\tconst dir = consumer({ [SETTINGS]: \"{}\", \"package.json\": text });\n\t\tsyncSettings(dir);\n\t\texpect(read(dir, \"package.json\")).toBe(text);\n\t});\n\n\t// spec: harness-updates/a-consumer-s-own-deps-script\n\ttest(\"a deps script of the consumer's own fails naming it and writes no file\", () => {\n\t\tconst json = JSON.stringify(stale());\n\t\tconst pkg = '{ \"scripts\": { \"deps\": \"pnpm install\" } }\\n';\n\t\tconst dir = consumer({ [SETTINGS]: json, \"bunfig.toml\": STALE_BUNFIG, \"package.json\": pkg });\n\t\texpect(() => syncSettings(dir)).toThrow('package.json: scripts.deps is \"pnpm install\"');\n\t\texpect([read(dir, \"package.json\"), read(dir, SETTINGS), read(dir, \"bunfig.toml\")]).toEqual([\n\t\t\tpkg,\n\t\t\tjson,\n\t\t\tSTALE_BUNFIG,\n\t\t]);\n\t});\n\n\ttest.each([\n\t\t[\"not JSON\", \"{\"],\n\t\t[\"a list at the top\", \"[]\"],\n\t\t[\"scripts that are not an object\", '{ \"scripts\": [] }'],\n\t])(\"a package.json with %s fails naming the file and writes nothing\", (_, pkg) => {\n\t\tconst dir = consumer({ [SETTINGS]: \"{}\", \"bunfig.toml\": CANONICAL, \"package.json\": pkg });\n\t\texpect(() => syncSettings(dir)).toThrow(\"package.json\");\n\t\texpect([read(dir, \"package.json\"), read(dir, SETTINGS)]).toEqual([pkg, \"{}\"]);\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/sync-settings-package.test.ts > package.json > a deps script of the consumer's own fails naming it and writes no file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 60
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/sync-settings-package.test.ts > package.json > a missing package.json is written with the script, and the check then passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 44
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/sync-settings-package.test.ts > package.json > a package.json with a list at the top fails naming the file and writes nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 76
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/sync-settings-package.test.ts > package.json > a package.json with not JSON fails naming the file and writes nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 76
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/sync-settings-package.test.ts > package.json > a package.json with scripts that are not an object fails naming the file and writes nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 76
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/sync-settings-package.test.ts > package.json > a trailing comma bun accepts is read, and the check then passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 31
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/sync-settings-package.test.ts > package.json > a trailing newline is kept",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 38
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/sync-settings-package.test.ts > package.json > no scripts gains scripts.deps, the other keys and the indentation kept",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 25
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/sync-settings-package.test.ts > package.json > one already holding the script is left byte for byte",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 52
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/sync-settings-package.test.ts > package.json > scripts but no deps gains scripts.deps, the other keys and the indentation kept",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 25
+						}
+					}
+				}
+			]
+		},
+		"bun/sync-settings.test.ts": {
+			"source": "/**\n * What `sync.ts` writes into a consumer's `.claude/settings.json`: every value\n * the policy check dictates, and nothing it only checks. `bunfig.toml` and\n * the script's own entry point are in `sync-bunfig.test.ts`.\n */\nimport { afterAll, describe, expect, test } from \"bun:test\";\nimport { ARCHIVE, HOOKS, MARK, registration } from \"./bootstrap.ts\";\nimport { ASK, ATTRIBUTION, DENY, MARKETPLACE, PLUGINS, settings } from \"./settings.ts\";\nimport { cleanup, consumer, old, parsed, read, SETTINGS, STALE_BUNFIG, stale } from \"./sync-settings.fixture.ts\";\nimport { syncSettings } from \"./sync-settings.ts\";\n\nafterAll(cleanup);\n\n/** The MCP ask entries the harness owns, as the check names them. */\nconst FOUR = [\"mcp__*__send_message\", \"mcp__*__reply\", \"mcp__*__forward\", \"mcp__*__notion-create-comment\"];\n\ndescribe(\"the settings file\", () => {\n\t// spec: harness-updates/a-harness-change-to-its-policy-needs-no-manual-edit\n\t//   harness-updates/a-consumer-adopts-the-mcp-ask-entries-through-the-sync\n\ttest(\"a previous version's hooks, lists and [install] come out passing the check\", () => {\n\t\tconst dir = consumer({\n\t\t\t[SETTINGS]: JSON.stringify(stale(), null, \"\\t\"),\n\t\t\t\"bunfig.toml\": STALE_BUNFIG,\n\t\t});\n\t\tsyncSettings(dir);\n\t\texpect(settings(dir)).toEqual([]);\n\t\tconst text = read(dir, SETTINGS);\n\t\tfor (const script of [\"g.ts\", \"turn-gate.ts mark\", \"turn-gate.ts stop\"])\n\t\t\texpect(text).not.toContain(JSON.stringify(old(script)).slice(1, -1));\n\t\tconst hooks = parsed(dir).hooks;\n\t\texpect(hooks.UserPromptSubmit).toHaveLength(1);\n\t\texpect(hooks.Stop).toHaveLength(1);\n\t}, 30_000);\n\n\t// spec: harness-updates/the-project-s-own-settings-survive-a-sync\n\ttest(\"a project hook, the allow list, non-Bash entries and unknown keys parse equal\", () => {\n\t\tconst own = { type: \"command\", command: \"echo own\" };\n\t\t// A project's own hook may call a harness script by its path.\n\t\tconst check = {\n\t\t\ttype: \"command\",\n\t\t\tcommand: \"bun node_modules/harness/bun/check.ts\",\n\t\t};\n\t\tconst config = stale({ model: \"opus\" });\n\t\tconfig.permissions.deny.push(\"Edit(secrets/**)\");\n\t\tconfig.permissions.deny.push(\"mcp__notion__update\");\n\t\tconfig.permissions.allow.push(\"mcp__design__read_file\");\n\t\tconfig.hooks.PreToolUse.push({ matcher: \"Edit\", hooks: [own] });\n\t\tconfig.hooks.UserPromptSubmit[0]?.hooks.push(own);\n\t\tconfig.hooks.Stop.push({ hooks: [check] });\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(config, null, \"\\t\") });\n\t\tsyncSettings(dir);\n\t\tconst after = parsed(dir);\n\t\texpect(after.model).toBe(\"opus\");\n\t\texpect(after.permissions.allow).toEqual([\"Bash(bun test *)\", \"mcp__design__read_file\"]);\n\t\texpect(after.permissions.deny).toEqual([...DENY, \"Edit(.npmrc)\", \"Edit(secrets/**)\", \"mcp__notion__update\"]);\n\t\texpect(after.hooks.PreToolUse).toContainEqual({\n\t\t\tmatcher: \"Edit\",\n\t\t\thooks: [own],\n\t\t});\n\t\texpect(after.hooks.UserPromptSubmit[0]).toEqual({ hooks: [own] });\n\t\texpect(after.hooks.Stop).toContainEqual({ hooks: [check] });\n\t});\n\n\ttest(\"a hook copied by hand before the mark existed is replaced, not doubled\", () => {\n\t\tconst unmarked = (command: string) => command.slice(0, -` ${MARK}`.length);\n\t\tconst config = stale();\n\t\ttype Group = { matcher?: string; hooks: object[] };\n\t\tfor (const { event, matcher, command } of HOOKS) {\n\t\t\t// A hook the previous version never registered is only added.\n\t\t\tconst groups: Group[] = config.hooks[event as keyof typeof config.hooks] ?? [];\n\t\t\tconst group = groups.find((g) => g.matcher === matcher);\n\t\t\tif (group) group.hooks = [{ type: \"command\", command: unmarked(command) }];\n\t\t}\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(config) });\n\t\tsyncSettings(dir);\n\t\tfor (const hook of HOOKS)\n\t\t\texpect(parsed(dir).hooks[hook.event].filter((g: Group) => g.matcher === hook.matcher)).toEqual([\n\t\t\t\texpect.objectContaining({ hooks: [registration(hook)] }),\n\t\t\t]);\n\t});\n\n\ttest(\"a sync over a previous version's watch leaves one registration per event [42]\", () => {\n\t\tconst config = stale();\n\t\tObject.assign(config.hooks, {\n\t\t\tPostToolUse: [{ matcher: \"Bash\", hooks: [{ type: \"command\", command: old(\"flake-watch.ts\") }] }],\n\t\t});\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(config) });\n\t\tsyncSettings(dir);\n\t\tconst watches = (event: string) =>\n\t\t\tJSON.stringify(parsed(dir).hooks[event] ?? []).split(\"flake-watch.ts\").length - 1;\n\t\texpect([watches(\"PostToolUse\"), watches(\"PostToolUseFailure\")]).toEqual([1, 1]);\n\t});\n\n\ttest(\"a matcher group the removal empties is dropped, not left empty\", () => {\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });\n\t\tsyncSettings(dir);\n\t\tfor (const groups of Object.values(parsed(dir).hooks) as {\n\t\t\thooks: unknown[];\n\t\t}[][])\n\t\t\tfor (const group of groups) expect(group.hooks.length).toBeGreaterThan(0);\n\t});\n\n\ttest.each([\n\t\t[\"tabs\", \"\\t\"],\n\t\t[\"two spaces\", \"  \"],\n\t])(\"indentation by %s is kept\", (_, indent) => {\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(stale(), null, indent) });\n\t\tsyncSettings(dir);\n\t\tconst text = read(dir, SETTINGS);\n\t\texpect(text).toBe(`${JSON.stringify(JSON.parse(text), null, indent)}\\n`);\n\t});\n\n\ttest(\"a consumer with no settings file gets the hooks and the lists\", () => {\n\t\tconst dir = consumer({});\n\t\tsyncSettings(dir);\n\t\tconst after = parsed(dir);\n\t\texpect(after.permissions.deny).toEqual([...DENY, \"Edit(.npmrc)\"]);\n\t\texpect(after.permissions.ask).toEqual([...ASK, \"Edit(bunfig.toml)\", ...FOUR]);\n\t\tfor (const { event, command } of HOOKS)\n\t\t\texpect(JSON.stringify(after.hooks[event])).toContain(JSON.stringify(command));\n\t});\n\n\ttest(\"an event left with no hooks once a previous version's are gone is dropped\", () => {\n\t\tconst config = stale();\n\t\tObject.assign(config.hooks, {\n\t\t\tPreCompact: [{ hooks: [{ type: \"command\", command: old(\"bye.ts\") }] }],\n\t\t});\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(config) });\n\t\tsyncSettings(dir);\n\t\texpect(Object.keys(parsed(dir).hooks)).not.toContain(\"PreCompact\");\n\t});\n\n\t// spec: transcript-archive/a-registration-with-no-timeout\n\ttest(\"the archive registered with no timeout is written with 60, and then passes [33]\", () => {\n\t\tconst config = stale();\n\t\tObject.assign(config.hooks, {\n\t\t\tSessionEnd: [{ hooks: [{ type: \"command\", command: ARCHIVE }] }],\n\t\t});\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(config) });\n\t\tsyncSettings(dir);\n\t\texpect(parsed(dir).hooks.SessionEnd).toEqual([{ hooks: [{ type: \"command\", command: ARCHIVE, timeout: 60 }] }]);\n\t\texpect(settings(dir)).toEqual([]);\n\t});\n\n\ttest(\"a deny list with no Bash entries gets them after the project's own\", () => {\n\t\tconst config = stale();\n\t\tconfig.permissions.deny = [\"Edit(secrets/**)\"];\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(config) });\n\t\tsyncSettings(dir);\n\t\texpect(parsed(dir).permissions.deny).toEqual([\"Edit(secrets/**)\", ...DENY, \"Edit(.npmrc)\"]);\n\t});\n\n\ttest(\"interleaved Bash entries collapse where the first stood\", () => {\n\t\tconst config = stale();\n\t\tconfig.permissions.deny = [\"Edit(a)\", \"Bash(npx *)\", \"Edit(b)\", \"Bash(x *)\"];\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(config) });\n\t\tsyncSettings(dir);\n\t\texpect(parsed(dir).permissions.deny).toEqual([\"Edit(a)\", ...DENY, \"Edit(b)\", \"Edit(.npmrc)\"]);\n\t});\n\n\t// spec: harness-updates/a-consumer-adopts-the-mcp-ask-entries-through-the-sync\n\ttest(\"an ask list with no mcp__ entry gets the four after its others [14]\", () => {\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });\n\t\tsyncSettings(dir);\n\t\texpect(parsed(dir).permissions.ask).toEqual([...ASK, \"Edit(bunfig.toml)\", ...FOUR]);\n\t});\n\n\t// spec: agent-permissions/a-consumer-adopts-the-entries-through-the-sync\n\ttest(\"a consumer lacking the gh run entries gets them in the harness's order [76]\", () => {\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(stale()) });\n\t\tsyncSettings(dir);\n\t\tconst bash = parsed(dir).permissions.ask.filter((e: string) => e.startsWith(\"Bash(gh run\"));\n\t\texpect(bash).toEqual(\n\t\t\t[\"rerun\", \"cancel\", \"delete\"].flatMap((s) => [`Bash(gh run ${s} *)`, `Bash(gh run * ${s} *)`]),\n\t\t);\n\t});\n\n\t// spec: harness-updates/a-consumer-adopts-the-mcp-ask-entries-through-the-sync\n\ttest(\"interleaved mcp__ ask entries collapse into the four where the first stood [17] [18] [19] [22]\", () => {\n\t\tconst config = stale();\n\t\tconfig.permissions.ask = [\n\t\t\t\"Edit(a)\",\n\t\t\t\"mcp__notion__update\",\n\t\t\t\"Bash(bun add *)\",\n\t\t\t\"mcp__*__reply(*)\",\n\t\t\t\"Edit(b)\",\n\t\t\t\"mcp__*__send_mail\",\n\t\t];\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(config) });\n\t\tsyncSettings(dir);\n\t\texpect(parsed(dir).permissions.ask).toEqual([\"Edit(a)\", ...FOUR, ...ASK, \"Edit(b)\", \"Edit(bunfig.toml)\"]);\n\t});\n\n\t// spec: harness-updates/a-consumer-adopts-the-attribution-setting-through-the-sync\n\ttest.each([\n\t\t[\"no attribution [z10]\", undefined],\n\t\t[\"one carrying commit [z11]\", { pr: \"\", commit: \"\", sessionUrl: false }],\n\t])(\"settings with %s come out with the harness's\", (_, attribution) => {\n\t\tconst dir = consumer({\n\t\t\t[SETTINGS]: JSON.stringify(stale({ attribution })),\n\t\t});\n\t\tsyncSettings(dir);\n\t\texpect(parsed(dir).attribution).toEqual(ATTRIBUTION);\n\t\texpect(settings(dir).join(\"\\n\")).not.toContain(\"attribution\");\n\t});\n\n\t// spec: harness-updates/a-consumer-adopts-the-plugins-through-the-sync\n\ttest.each([\n\t\t[\"neither plugin key\", {}],\n\t\t[\n\t\t\t\"ponytail off and the marketplace at another tag\",\n\t\t\t{\n\t\t\t\tenabledPlugins: { \"ponytail@ponytail\": false },\n\t\t\t\textraKnownMarketplaces: { ponytail: { ...MARKETPLACE, source: { ...MARKETPLACE.source, ref: \"v5.3.2\" } } },\n\t\t\t},\n\t\t],\n\t])(\"settings with %s come out with the harness's\", (_, extra) => {\n\t\tconst dir = consumer({ [SETTINGS]: JSON.stringify(stale(extra)) });\n\t\tsyncSettings(dir);\n\t\tconst after = parsed(dir);\n\t\tfor (const id of PLUGINS) expect(after.enabledPlugins[id]).toBe(true);\n\t\texpect(after.extraKnownMarketplaces.ponytail).toEqual(MARKETPLACE);\n\t\texpect(settings(dir).join(\"\\n\")).not.toMatch(/enabledPlugins|extraKnownMarketplaces/);\n\t});\n\n\t// spec: harness-updates/the-project-s-own-plugins-survive-a-sync\n\ttest(\"a project's own plugins, on and off, and its own marketplace parse equal\", () => {\n\t\tconst acme = { source: { source: \"github\", repo: \"acme/tools\" } };\n\t\tconst dir = consumer({\n\t\t\t[SETTINGS]: JSON.stringify(\n\t\t\t\tstale({\n\t\t\t\t\tenabledPlugins: { \"some-tool@acme\": true, \"other-tool@acme\": false },\n\t\t\t\t\textraKnownMarketplaces: { acme },\n\t\t\t\t}),\n\t\t\t),\n\t\t});\n\t\tsyncSettings(dir);\n\t\tconst after = parsed(dir);\n\t\texpect([after.enabledPlugins[\"some-tool@acme\"], after.enabledPlugins[\"other-tool@acme\"]]).toEqual([true, false]);\n\t\texpect(after.extraKnownMarketplaces.acme).toEqual(acme);\n\t});\n\n\t// spec: harness-updates/a-plugin-key-sync-cannot-read\n\ttest.each(\n\t\t[\"enabledPlugins\", \"extraKnownMarketplaces\"].flatMap((key) =>\n\t\t\t[[], \"x\", null].map((value) => [key, JSON.stringify(value), value] as const),\n\t\t),\n\t)(\"%s as %s fails naming the key and writes neither file\", (key, _, value) => {\n\t\tconst json = JSON.stringify(stale({ [key]: value }));\n\t\tconst dir = consumer({ [SETTINGS]: json, \"bunfig.toml\": STALE_BUNFIG });\n\t\texpect(() => syncSettings(dir)).toThrow(key);\n\t\texpect([read(dir, SETTINGS), read(dir, \"bunfig.toml\")]).toEqual([json, STALE_BUNFIG]);\n\t});\n\n\ttest(\"settings that are not JSON fail naming the file and write nothing\", () => {\n\t\tconst dir = consumer({ [SETTINGS]: \"{\", \"bunfig.toml\": STALE_BUNFIG });\n\t\texpect(() => syncSettings(dir)).toThrow(\".claude/settings.json\");\n\t\texpect(read(dir, SETTINGS)).toBe(\"{\");\n\t\texpect(read(dir, \"bunfig.toml\")).toBe(STALE_BUNFIG);\n\t});\n\n\ttest.each([\n\t\t[\"an event that is not a list\", { Stop: \"x\" }],\n\t\t[\"an entry that is not an object\", { Stop: [null] }],\n\t\t[\"an entry whose hooks are not a list\", { Stop: [{ hooks: \"x\" }] }],\n\t])(\"%s fails naming hooks.Stop and writes nothing\", (_, hooks) => {\n\t\tconst json = JSON.stringify({ hooks });\n\t\tconst dir = consumer({ [SETTINGS]: json });\n\t\texpect(() => syncSettings(dir)).toThrow(\"hooks.Stop\");\n\t\texpect(read(dir, SETTINGS)).toBe(json);\n\t});\n\n\ttest(\"a second sync changes no byte of either file\", () => {\n\t\tconst dir = consumer({\n\t\t\t[SETTINGS]: JSON.stringify(stale(), null, \"  \"),\n\t\t\t\"bunfig.toml\": STALE_BUNFIG,\n\t\t});\n\t\tsyncSettings(dir);\n\t\tconst once = [read(dir, SETTINGS), read(dir, \"bunfig.toml\")];\n\t\tsyncSettings(dir);\n\t\texpect([read(dir, SETTINGS), read(dir, \"bunfig.toml\")]).toEqual(once);\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "10",
+					"name": "bun/sync-settings.test.ts > the settings file > a consumer lacking the gh run entries gets them in the harness's order [76]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 171
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/sync-settings.test.ts > the settings file > a consumer with no settings file gets the hooks and the lists",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 115
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/sync-settings.test.ts > the settings file > a deny list with no Bash entries gets them after the project's own",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 147
+						}
+					}
+				},
+				{
+					"id": "13",
+					"name": "bun/sync-settings.test.ts > the settings file > a hook copied by hand before the mark existed is replaced, not doubled",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 66
+						}
+					}
+				},
+				{
+					"id": "14",
+					"name": "bun/sync-settings.test.ts > the settings file > a matcher group the removal empties is dropped, not left empty",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 96
+						}
+					}
+				},
+				{
+					"id": "15",
+					"name": "bun/sync-settings.test.ts > the settings file > a previous version's hooks, lists and [install] come out passing the check",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 22
+						}
+					}
+				},
+				{
+					"id": "16",
+					"name": "bun/sync-settings.test.ts > the settings file > a project hook, the allow list, non-Bash entries and unknown keys parse equal",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 38
+						}
+					}
+				},
+				{
+					"id": "17",
+					"name": "bun/sync-settings.test.ts > the settings file > a project's own plugins, on and off, and its own marketplace parse equal",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 229
+						}
+					}
+				},
+				{
+					"id": "18",
+					"name": "bun/sync-settings.test.ts > the settings file > a second sync changes no byte of either file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 275
+						}
+					}
+				},
+				{
+					"id": "19",
+					"name": "bun/sync-settings.test.ts > the settings file > a sync over a previous version's watch leaves one registration per event [42]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 84
+						}
+					}
+				},
+				{
+					"id": "20",
+					"name": "bun/sync-settings.test.ts > the settings file > an ask list with no mcp__ entry gets the four after its others [14]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 164
+						}
+					}
+				},
+				{
+					"id": "21",
+					"name": "bun/sync-settings.test.ts > the settings file > an entry that is not an object fails naming hooks.Stop and writes nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 268
+						}
+					}
+				},
+				{
+					"id": "22",
+					"name": "bun/sync-settings.test.ts > the settings file > an entry whose hooks are not a list fails naming hooks.Stop and writes nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 268
+						}
+					}
+				},
+				{
+					"id": "23",
+					"name": "bun/sync-settings.test.ts > the settings file > an event left with no hooks once a previous version's are gone is dropped",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 125
+						}
+					}
+				},
+				{
+					"id": "24",
+					"name": "bun/sync-settings.test.ts > the settings file > an event that is not a list fails naming hooks.Stop and writes nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 268
+						}
+					}
+				},
+				{
+					"id": "25",
+					"name": "bun/sync-settings.test.ts > the settings file > enabledPlugins as \"x\" fails naming the key and writes neither file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 250
+						}
+					}
+				},
+				{
+					"id": "26",
+					"name": "bun/sync-settings.test.ts > the settings file > enabledPlugins as [] fails naming the key and writes neither file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 250
+						}
+					}
+				},
+				{
+					"id": "27",
+					"name": "bun/sync-settings.test.ts > the settings file > enabledPlugins as null fails naming the key and writes neither file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 250
+						}
+					}
+				},
+				{
+					"id": "28",
+					"name": "bun/sync-settings.test.ts > the settings file > extraKnownMarketplaces as \"x\" fails naming the key and writes neither file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 250
+						}
+					}
+				},
+				{
+					"id": "29",
+					"name": "bun/sync-settings.test.ts > the settings file > extraKnownMarketplaces as [] fails naming the key and writes neither file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 250
+						}
+					}
+				},
+				{
+					"id": "30",
+					"name": "bun/sync-settings.test.ts > the settings file > extraKnownMarketplaces as null fails naming the key and writes neither file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 250
+						}
+					}
+				},
+				{
+					"id": "31",
+					"name": "bun/sync-settings.test.ts > the settings file > indentation by tabs is kept",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "32",
+					"name": "bun/sync-settings.test.ts > the settings file > indentation by two spaces is kept",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "33",
+					"name": "bun/sync-settings.test.ts > the settings file > interleaved Bash entries collapse where the first stood",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 155
+						}
+					}
+				},
+				{
+					"id": "34",
+					"name": "bun/sync-settings.test.ts > the settings file > interleaved mcp__ ask entries collapse into the four where the first stood [17] [18] [19] [22]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 181
+						}
+					}
+				},
+				{
+					"id": "35",
+					"name": "bun/sync-settings.test.ts > the settings file > settings that are not JSON fail naming the file and write nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 257
+						}
+					}
+				},
+				{
+					"id": "36",
+					"name": "bun/sync-settings.test.ts > the settings file > settings with neither plugin key come out with the harness's",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 219
+						}
+					}
+				},
+				{
+					"id": "37",
+					"name": "bun/sync-settings.test.ts > the settings file > settings with no attribution [z10] come out with the harness's",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 200
+						}
+					}
+				},
+				{
+					"id": "38",
+					"name": "bun/sync-settings.test.ts > the settings file > settings with one carrying commit [z11] come out with the harness's",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 200
+						}
+					}
+				},
+				{
+					"id": "39",
+					"name": "bun/sync-settings.test.ts > the settings file > settings with ponytail off and the marketplace at another tag come out with the harness's",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 219
+						}
+					}
+				},
+				{
+					"id": "40",
+					"name": "bun/sync-settings.test.ts > the settings file > the archive registered with no timeout is written with 60, and then passes [33]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 136
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/sync-settings.ts": {
 			"source": "/**\n * The policy half of `sync.ts`: every value `settings.ts` compares exactly,\n * written into the consumer's `.claude/settings.json`, `bunfig.toml` and\n * `package.json`'s `deps` script, so a\n * harness change to a hook or a list lands with the pin rather than as a hand\n * edit in each consumer. What the check only refuses — an empty allow list,\n * `disableAllHooks`, an `mcp__` deny or allow rule with parentheses — stays\n * the consumer's to fix, since no harness change can introduce it.\n */\nimport { existsSync, mkdirSync, readFileSync, writeFileSync } from \"node:fs\";\nimport { dirname, join } from \"node:path\";\nimport { HOOKS, MARK, registration } from \"./bootstrap.ts\";\nimport { isRecord } from \"./is-record.ts\";\nimport {\n\tASK,\n\tATTRIBUTION,\n\tDENY,\n\tDEPS,\n\tEDIT_ASK,\n\tEDIT_DENY,\n\tINSTALL,\n\tMARKETPLACE,\n\tMCP_ASK,\n\tPLUGINS,\n} from \"./settings.ts\";\n\ntype Group = { matcher?: string; hooks?: { command?: unknown }[] };\ntype Settings = {\n\tpermissions?: { deny?: string[]; ask?: string[] };\n\thooks?: Record<string, Group[]>;\n\tattribution?: unknown;\n\tenabledPlugins?: Record<string, unknown>;\n\textraKnownMarketplaces?: Record<string, unknown>;\n};\n\n/**\n * Whether the harness wrote `command`: it ends with `MARK`, or it is a\n * current hook's text without it, as consumers copied it by hand before the\n * mark existed. A project hook calling a harness script by its path is\n * neither, so it survives.\n */\nconst ours = (command: unknown) =>\n\ttypeof command === \"string\" &&\n\t(command.endsWith(MARK) || HOOKS.some((hook) => hook.command === `${command} ${MARK}`));\n\nconst read = (file: string) => (existsSync(file) ? readFileSync(file, \"utf8\") : undefined);\n\n/**\n * `list` with its entries starting with `prefix` replaced by `entries`, where\n * the first of them stood, or after the rest when there is none. The check\n * compares each such subset whole — `Bash(` in both lists, `mcp__` in `ask` —\n * so the harness owns all of it; every other entry keeps its place.\n */\nfunction owned(list: string[], prefix: string, entries: string[]) {\n\tconst first = list.findIndex((entry) => entry.startsWith(prefix));\n\tconst rest = list.filter((entry) => !entry.startsWith(prefix));\n\tconst at = first === -1 ? rest.length : first;\n\treturn [...rest.slice(0, at), ...entries, ...rest.slice(at)];\n}\n\n/** `list` with `file` appended when absent. */\nconst withFile = (list: string[], file: string) => (list.includes(file) ? list : [...list, file]);\n\n/** `text` parsed by `parse`, `{}` for a missing file, or a throw naming `file`. */\nfunction parsed(file: string, text: string | undefined, parse: (text: string) => unknown = JSON.parse) {\n\ttry {\n\t\treturn text === undefined ? {} : parse(text);\n\t} catch (error) {\n\t\tthrow new Error(`${file}: ${(error as Error).message}`);\n\t}\n}\n\n/** The indentation `text` uses, a tab where it shows none. */\nconst indentOf = (text: string | undefined) => text?.match(/\\n([ \\t]+)\"/)?.[1] ?? \"\\t\";\n\n/**\n * The settings file's new text: the harness's hooks, lists, attribution, two\n * plugins and `ponytail` marketplace, the rest kept.\n */\nfunction settingsText(text: string | undefined): string {\n\tconst config = parsed(\".claude/settings.json\", text) as Settings;\n\tconst hooks = config.hooks ?? {};\n\tfor (const [event, groups] of Object.entries(hooks)) {\n\t\tif (!Array.isArray(groups)) throw new Error(`.claude/settings.json: hooks.${event} is not a list`);\n\t\thooks[event] = groups.flatMap((group) => {\n\t\t\tif (typeof group !== \"object\" || group === null)\n\t\t\t\tthrow new Error(`.claude/settings.json: an entry of hooks.${event} is not an object`);\n\t\t\tif (group.hooks === undefined) return [group];\n\t\t\tif (!Array.isArray(group.hooks))\n\t\t\t\tthrow new Error(`.claude/settings.json: a hooks list under hooks.${event} is not a list`);\n\t\t\tconst kept = group.hooks.filter((hook) => !ours(hook?.command));\n\t\t\treturn kept.length ? [{ ...group, hooks: kept }] : [];\n\t\t});\n\t}\n\tfor (const hook of HOOKS) {\n\t\tconst groups = hooks[hook.event] ?? [];\n\t\tgroups.push({ ...(hook.matcher === undefined ? {} : { matcher: hook.matcher }), hooks: [registration(hook)] });\n\t\thooks[hook.event] = groups;\n\t}\n\t// An event whose only hooks were a previous version's, and which the\n\t// harness no longer registers, would otherwise be left as an empty list.\n\tfor (const [event, groups] of Object.entries(hooks)) if (groups.length === 0) delete hooks[event];\n\tconfig.hooks = hooks;\n\tconst permissions = config.permissions ?? {};\n\tpermissions.deny = withFile(owned(permissions.deny ?? [], \"Bash(\", DENY), EDIT_DENY);\n\tpermissions.ask = owned(withFile(owned(permissions.ask ?? [], \"Bash(\", ASK), EDIT_ASK), \"mcp__\", MCP_ASK);\n\tconfig.permissions = permissions;\n\tconfig.attribution = ATTRIBUTION;\n\t// Spread, a list or a string would lose the consumer's own entries without a word.\n\tfor (const key of [\"enabledPlugins\", \"extraKnownMarketplaces\"] as const)\n\t\tif (config[key] !== undefined && !isRecord(config[key]))\n\t\t\tthrow new Error(`.claude/settings.json: ${key} is not an object`);\n\tconfig.enabledPlugins = { ...config.enabledPlugins, ...Object.fromEntries(PLUGINS.map((id) => [id, true])) };\n\tconfig.extraKnownMarketplaces = { ...config.extraKnownMarketplaces, ponytail: MARKETPLACE };\n\treturn `${JSON.stringify(config, null, indentOf(text))}\\n`;\n}\n\n/** JSON's spelling of a boolean, a number and a string array is TOML's too. */\nconst SECTION = [\"[install]\", ...Object.entries(INSTALL).map(([k, v]) => `${k} = ${JSON.stringify(v)}`)];\n\nconst same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);\n\nfunction toml(text: string): Record<string, unknown> {\n\ttry {\n\t\treturn Bun.TOML.parse(text) as Record<string, unknown>;\n\t} catch (error) {\n\t\tthrow new Error(`bunfig.toml: ${(error as Error).message}`);\n\t}\n}\n\n/**\n * `bunfig.toml`'s new text. An `[install]` that already equals `INSTALL` is\n * left byte for byte, so its comments survive. Otherwise its lines, up to the\n * next header, become the canonical ones. Bun parses TOML but cannot write\n * it, so that is a line scan, and the result is verified by parsing: a layout\n * the scan misreads throws rather than being written.\n */\nfunction bunfigText(text: string | undefined): string {\n\tif (text === undefined) return `${SECTION.join(\"\\n\")}\\n`;\n\tconst before = toml(text);\n\tif (same(before.install, INSTALL)) return text;\n\tconst lines = text.split(\"\\n\");\n\tconst start = lines.findIndex((l) => /^\\s*\\[\\s*install\\s*\\]\\s*(#.*)?$/.test(l));\n\tlet out: string[];\n\tif (start === -1) {\n\t\tconst body = text.endsWith(\"\\n\") ? lines.slice(0, -1) : lines;\n\t\tout = [...body, ...(text.trim() ? [\"\"] : []), ...SECTION, \"\"];\n\t} else {\n\t\tlet end = lines.findIndex((l, i) => i > start && /^\\s*\\[/.test(l));\n\t\tif (end === -1) end = lines.length;\n\t\twhile (end > start + 1 && lines[end - 1]?.trim() === \"\") end--;\n\t\tout = [...lines.slice(0, start), ...SECTION, ...lines.slice(end)];\n\t}\n\tconst result = out.join(\"\\n\");\n\tconst after = toml(result);\n\tconst tables = new Set([...Object.keys(before), ...Object.keys(after)]);\n\ttables.delete(\"install\");\n\tif (!same(after.install, INSTALL) || [...tables].some((table) => !same(before[table], after[table])))\n\t\tthrow new Error(\n\t\t\t`bunfig.toml: replacing [install] would not leave exactly ${JSON.stringify(INSTALL)} with every other table unchanged — set it by hand`,\n\t\t);\n\treturn result;\n}\n\n/**\n * `package.json`'s new text: `scripts.deps` added after the other scripts, or\n * the text unchanged when it already holds `DEPS`. A `deps` of the\n * consumer's own is refused, since overwriting it would break what calls it.\n */\nfunction packageText(text: string | undefined): string {\n\t// JSONC, as bun reads the manifest; a comment it held is lost only when the script is added.\n\tconst manifest = parsed(\"package.json\", text, Bun.JSONC.parse);\n\tif (!isRecord(manifest)) throw new Error(\"package.json: not an object\");\n\tconst scripts = manifest.scripts ?? {};\n\tif (!isRecord(scripts)) throw new Error(\"package.json: scripts is not an object\");\n\tif (scripts.deps === DEPS) return text as string;\n\tif (scripts.deps !== undefined)\n\t\tthrow new Error(\n\t\t\t`package.json: scripts.deps is ${JSON.stringify(scripts.deps)}, not \"${DEPS}\" — rename that script, then sync`,\n\t\t);\n\treturn `${JSON.stringify({ ...manifest, scripts: { ...scripts, deps: DEPS } }, null, indentOf(text))}${text === undefined || text.endsWith(\"\\n\") ? \"\\n\" : \"\"}`;\n}\n\ntype Write = readonly [file: string, was: string | undefined, now: string];\n\n/**\n * The harness's policy for `root`'s three files, every new text computed and\n * the `bunfig.toml` one verified, so a throw comes before any write — `sync.ts`\n * calls this before it touches the rules copy too.\n */\nexport function settingsWrites(root: string): Write[] {\n\treturn (\n\t\t[\n\t\t\t[join(root, \"bunfig.toml\"), bunfigText],\n\t\t\t[join(root, \".claude/settings.json\"), settingsText],\n\t\t\t[join(root, \"package.json\"), packageText],\n\t\t] as const\n\t).map(([file, text]) => {\n\t\tconst was = read(file);\n\t\treturn [file, was, text(was)] as const;\n\t});\n}\n\n/** Writes each of `writes` whose text changed. */\nexport function applyWrites(writes: Write[]): void {\n\tfor (const [file, was, now] of writes)\n\t\tif (was !== now) {\n\t\t\tmkdirSync(dirname(file), { recursive: true });\n\t\t\twriteFileSync(file, now);\n\t\t}\n}\n\n/** Writes the harness's policy into `root`'s three files, or none of them. */\nexport const syncSettings = (root: string) => applyWrites(settingsWrites(root));\n",
@@ -18,7 +440,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +460,43 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +512,43 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +564,43 @@
 						}
 					},
 					"replacement": "typeof command === \"string\" || command.endsWith(MARK) || HOOKS.some(hook => hook.command === `${command} ${MARK}`)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +616,40 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +665,43 @@
 						}
 					},
 					"replacement": "typeof command !== \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +717,43 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +769,43 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +821,43 @@
 						}
 					},
 					"replacement": "command.endsWith(MARK) && HOOKS.some(hook => hook.command === `${command} ${MARK}`)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +873,43 @@
 						}
 					},
 					"replacement": "command.startsWith(MARK)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +925,14 @@
 						}
 					},
 					"replacement": "HOOKS.every(hook => hook.command === `${command} ${MARK}`)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"16"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +948,14 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"16"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +971,14 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"16"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +994,14 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"16"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "14",
@@ -242,7 +1017,14 @@
 						}
 					},
 					"replacement": "hook.command !== `${command} ${MARK}`",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"16"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "15",
@@ -258,7 +1040,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"16"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "16",
@@ -274,7 +1063,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "17",
@@ -290,7 +1083,52 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "18",
@@ -306,7 +1144,49 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "19",
@@ -322,7 +1202,49 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "20",
@@ -338,7 +1260,49 @@
 						}
 					},
 					"replacement": "entry.endsWith(prefix)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "21",
@@ -354,7 +1318,49 @@
 						}
 					},
 					"replacement": "list",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "22",
@@ -370,7 +1376,49 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "23",
@@ -386,7 +1434,49 @@
 						}
 					},
 					"replacement": "entry.startsWith(prefix)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "24",
@@ -402,7 +1492,49 @@
 						}
 					},
 					"replacement": "entry.endsWith(prefix)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "25",
@@ -418,7 +1550,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "26",
@@ -434,7 +1608,49 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "27",
@@ -450,7 +1666,49 @@
 						}
 					},
 					"replacement": "first !== -1",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "28",
@@ -466,7 +1724,49 @@
 						}
 					},
 					"replacement": "+1",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "29",
@@ -482,7 +1782,49 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "30",
@@ -498,7 +1840,49 @@
 						}
 					},
 					"replacement": "rest",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "31",
@@ -514,7 +1898,49 @@
 						}
 					},
 					"replacement": "rest",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "32",
@@ -530,7 +1956,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "33",
@@ -546,7 +1976,21 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"11",
+						"12",
+						"2",
+						"3",
+						"33",
+						"34",
+						"4",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "34",
@@ -562,7 +2006,53 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "35",
@@ -578,7 +2068,53 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "36",
@@ -594,7 +2130,53 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "37",
@@ -610,7 +2192,53 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "38",
@@ -626,7 +2254,53 @@
 						}
 					},
 					"replacement": "text !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "39",
@@ -642,7 +2316,14 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"3",
+						"35"
+					],
+					"killedBy": [
+						"35"
+					]
 				},
 				{
 					"id": "40",
@@ -658,7 +2339,14 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"3",
+						"35"
+					],
+					"killedBy": [
+						"35"
+					]
 				},
 				{
 					"id": "41",
@@ -674,7 +2362,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"3",
+						"35"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "42",
@@ -690,7 +2385,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"31"
+					]
 				},
 				{
 					"id": "43",
@@ -706,7 +2405,43 @@
 						}
 					},
 					"replacement": "text?.match(/\\n([ \\t]+)\"/)?.[1] && \"\\t\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "44",
@@ -722,7 +2457,43 @@
 						}
 					},
 					"replacement": "text?.match(/\\n([ \\t]+)\"/)[1]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "45",
@@ -738,7 +2509,43 @@
 						}
 					},
 					"replacement": "text.match",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "46",
@@ -754,7 +2561,42 @@
 						}
 					},
 					"replacement": "/\\n([ \\t])\"/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "47",
@@ -770,7 +2612,42 @@
 						}
 					},
 					"replacement": "/\\n([^ \\t]+)\"/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "48",
@@ -786,7 +2663,40 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "49",
@@ -802,7 +2712,53 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "50",
@@ -818,7 +2774,52 @@
 						}
 					},
 					"replacement": "config.hooks && {}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "51",
@@ -834,7 +2835,46 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "52",
@@ -850,7 +2890,46 @@
 						}
 					},
 					"replacement": "Array.isArray(groups)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "53",
@@ -866,7 +2945,46 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "54",
@@ -882,7 +3000,46 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"24"
+					]
 				},
 				{
 					"id": "56",
@@ -898,7 +3055,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"24"
+					],
+					"killedBy": [
+						"24"
+					]
 				},
 				{
 					"id": "57",
@@ -914,7 +3077,45 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "58",
@@ -930,7 +3131,45 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "59",
@@ -946,7 +3185,45 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"21"
+					]
 				},
 				{
 					"id": "60",
@@ -962,7 +3239,45 @@
 						}
 					},
 					"replacement": "typeof group !== \"object\" && group === null",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"21"
+					]
 				},
 				{
 					"id": "61",
@@ -978,7 +3293,42 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					]
 				},
 				{
 					"id": "62",
@@ -994,7 +3344,45 @@
 						}
 					},
 					"replacement": "typeof group === \"object\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "63",
@@ -1010,7 +3398,45 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "64",
@@ -1026,7 +3452,45 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"21"
+					]
 				},
 				{
 					"id": "65",
@@ -1042,7 +3506,45 @@
 						}
 					},
 					"replacement": "group !== null",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "67",
@@ -1058,7 +3560,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"21"
+					],
+					"killedBy": [
+						"21"
+					]
 				},
 				{
 					"id": "68",
@@ -1074,7 +3582,44 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "69",
@@ -1090,7 +3635,41 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					]
 				},
 				{
 					"id": "70",
@@ -1106,7 +3685,44 @@
 						}
 					},
 					"replacement": "group.hooks !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "71",
@@ -1122,7 +3738,8 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "72",
@@ -1138,7 +3755,44 @@
 						}
 					},
 					"replacement": "Array.isArray(group.hooks)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "73",
@@ -1154,7 +3808,44 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "74",
@@ -1170,7 +3861,44 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"22",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"22"
+					]
 				},
 				{
 					"id": "76",
@@ -1186,7 +3914,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"22"
+					],
+					"killedBy": [
+						"22"
+					]
 				},
 				{
 					"id": "77",
@@ -1202,7 +3936,43 @@
 						}
 					},
 					"replacement": "group.hooks",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "78",
@@ -1218,7 +3988,43 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "79",
@@ -1234,7 +4040,43 @@
 						}
 					},
 					"replacement": "ours(hook?.command)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "80",
@@ -1250,7 +4092,40 @@
 						}
 					},
 					"replacement": "hook.command",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					]
 				},
 				{
 					"id": "81",
@@ -1266,7 +4141,13 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"16"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "82",
@@ -1282,7 +4163,13 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"16"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "83",
@@ -1298,7 +4185,43 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "84",
@@ -1314,7 +4237,49 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "85",
@@ -1330,7 +4295,49 @@
 						}
 					},
 					"replacement": "hooks[hook.event] && []",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "86",
@@ -1346,7 +4353,49 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"13"
+					]
 				},
 				{
 					"id": "88",
@@ -1362,7 +4411,49 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "89",
@@ -1378,7 +4469,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "90",
@@ -1394,7 +4527,46 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "91",
@@ -1410,7 +4582,49 @@
 						}
 					},
 					"replacement": "hook.matcher !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "92",
@@ -1426,7 +4640,49 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "93",
@@ -1442,7 +4698,49 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "94",
@@ -1458,7 +4756,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "95",
@@ -1474,7 +4814,49 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"23"
+					]
 				},
 				{
 					"id": "96",
@@ -1490,7 +4872,49 @@
 						}
 					},
 					"replacement": "groups.length !== 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "97",
@@ -1506,7 +4930,49 @@
 						}
 					},
 					"replacement": "config.permissions && {}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "98",
@@ -1522,7 +4988,49 @@
 						}
 					},
 					"replacement": "permissions.deny && []",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "99",
@@ -1538,7 +5046,18 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"11",
+						"2",
+						"3",
+						"4",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "100",
@@ -1554,7 +5073,49 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "101",
@@ -1570,7 +5131,49 @@
 						}
 					},
 					"replacement": "permissions.ask && []",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "102",
@@ -1586,7 +5189,18 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"11",
+						"2",
+						"3",
+						"4",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "103",
@@ -1602,7 +5216,49 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"34"
+					]
 				},
 				{
 					"id": "104",
@@ -1618,7 +5274,49 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "105",
@@ -1634,7 +5332,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "106",
@@ -1650,7 +5390,49 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "107",
@@ -1666,7 +5448,49 @@
 						}
 					},
 					"replacement": "config[key] !== undefined || !isRecord(config[key])",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "108",
@@ -1682,7 +5506,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "109",
@@ -1698,7 +5564,49 @@
 						}
 					},
 					"replacement": "config[key] === undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "110",
@@ -1714,7 +5622,21 @@
 						}
 					},
 					"replacement": "isRecord(config[key])",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"17",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"39"
+					],
+					"killedBy": [
+						"39"
+					]
 				},
 				{
 					"id": "112",
@@ -1730,7 +5652,18 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "113",
@@ -1746,7 +5679,43 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "114",
@@ -1762,7 +5731,43 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "115",
@@ -1778,7 +5783,43 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "116",
@@ -1794,7 +5835,43 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "117",
@@ -1810,7 +5887,43 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "118",
@@ -1826,7 +5939,43 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "119",
@@ -1842,7 +5991,11 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "120",
@@ -1858,7 +6011,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "121",
@@ -1874,7 +6031,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "122",
@@ -1890,7 +6051,11 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "123",
@@ -1906,7 +6071,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "124",
@@ -1922,7 +6091,25 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"2",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"35",
+						"4"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "125",
@@ -1938,7 +6125,25 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"2",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"35",
+						"4"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "126",
@@ -1954,7 +6159,25 @@
 						}
 					},
 					"replacement": "JSON.stringify(a) !== JSON.stringify(b)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"2",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"35",
+						"4"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "127",
@@ -1970,7 +6193,25 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"2",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"35",
+						"4"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "128",
@@ -1986,7 +6227,25 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"2",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"35",
+						"4"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "129",
@@ -2002,7 +6261,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "130",
@@ -2018,7 +6278,8 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "131",
@@ -2034,7 +6295,8 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "132",
@@ -2050,7 +6312,53 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "133",
@@ -2066,7 +6374,50 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "134",
@@ -2082,7 +6433,53 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "135",
@@ -2098,7 +6495,53 @@
 						}
 					},
 					"replacement": "text !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "136",
@@ -2114,7 +6557,40 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"40"
+					]
 				},
 				{
 					"id": "137",
@@ -2130,7 +6606,40 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"16",
+						"17",
+						"19",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "138",
@@ -2146,7 +6655,25 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"2",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"35",
+						"4"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "139",
@@ -2162,7 +6689,22 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"2",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"35",
+						"4"
+					]
 				},
 				{
 					"id": "140",
@@ -2178,7 +6720,22 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "141",
@@ -2194,7 +6751,22 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "142",
@@ -2210,7 +6782,19 @@
 						}
 					},
 					"replacement": "/\\s*\\[\\s*install\\s*\\]\\s*(#.*)?$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "143",
@@ -2226,7 +6810,19 @@
 						}
 					},
 					"replacement": "/^\\s*\\[\\s*install\\s*\\]\\s*(#.*)?/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "144",
@@ -2242,7 +6838,22 @@
 						}
 					},
 					"replacement": "/^\\s\\[\\s*install\\s*\\]\\s*(#.*)?$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "145",
@@ -2258,7 +6869,19 @@
 						}
 					},
 					"replacement": "/^\\S*\\[\\s*install\\s*\\]\\s*(#.*)?$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "146",
@@ -2274,7 +6897,22 @@
 						}
 					},
 					"replacement": "/^\\s*\\[\\sinstall\\s*\\]\\s*(#.*)?$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "147",
@@ -2290,7 +6928,19 @@
 						}
 					},
 					"replacement": "/^\\s*\\[\\S*install\\s*\\]\\s*(#.*)?$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "148",
@@ -2306,7 +6956,22 @@
 						}
 					},
 					"replacement": "/^\\s*\\[\\s*install\\s\\]\\s*(#.*)?$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "149",
@@ -2322,7 +6987,19 @@
 						}
 					},
 					"replacement": "/^\\s*\\[\\s*install\\S*\\]\\s*(#.*)?$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "150",
@@ -2338,7 +7015,22 @@
 						}
 					},
 					"replacement": "/^\\s*\\[\\s*install\\s*\\]\\s(#.*)?$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "151",
@@ -2354,7 +7046,19 @@
 						}
 					},
 					"replacement": "/^\\s*\\[\\s*install\\s*\\]\\S*(#.*)?$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "152",
@@ -2370,7 +7074,22 @@
 						}
 					},
 					"replacement": "/^\\s*\\[\\s*install\\s*\\]\\s*(#.*)$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "153",
@@ -2386,7 +7105,19 @@
 						}
 					},
 					"replacement": "/^\\s*\\[\\s*install\\s*\\]\\s*(#.)?$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "154",
@@ -2402,7 +7133,22 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "155",
@@ -2418,7 +7164,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "156",
@@ -2434,7 +7192,22 @@
 						}
 					},
 					"replacement": "start !== -1",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "157",
@@ -2450,7 +7223,19 @@
 						}
 					},
 					"replacement": "+1",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "158",
@@ -2466,7 +7251,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "159",
@@ -2482,7 +7268,8 @@
 						}
 					},
 					"replacement": "text.startsWith(\"\\n\")",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "160",
@@ -2498,7 +7285,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "161",
@@ -2514,7 +7302,8 @@
 						}
 					},
 					"replacement": "lines",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "162",
@@ -2530,7 +7319,8 @@
 						}
 					},
 					"replacement": "+1",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "163",
@@ -2546,7 +7336,8 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "164",
@@ -2562,7 +7353,8 @@
 						}
 					},
 					"replacement": "text",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "165",
@@ -2578,7 +7370,8 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "166",
@@ -2594,7 +7387,8 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "167",
@@ -2610,7 +7404,8 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "168",
@@ -2626,7 +7421,8 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "169",
@@ -2642,7 +7438,22 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "170",
@@ -2658,7 +7469,19 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "171",
@@ -2674,7 +7497,22 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "172",
@@ -2690,7 +7528,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "173",
@@ -2706,7 +7556,22 @@
 						}
 					},
 					"replacement": "i > start || /^\\s*\\[/.test(l)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "174",
@@ -2722,7 +7587,22 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "175",
@@ -2738,7 +7618,22 @@
 						}
 					},
 					"replacement": "i >= start",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "176",
@@ -2754,7 +7649,22 @@
 						}
 					},
 					"replacement": "i <= start",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "177",
@@ -2770,7 +7680,22 @@
 						}
 					},
 					"replacement": "/\\s*\\[/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "178",
@@ -2786,7 +7711,19 @@
 						}
 					},
 					"replacement": "/^\\s\\[/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "179",
@@ -2802,7 +7739,19 @@
 						}
 					},
 					"replacement": "/^\\S*\\[/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "180",
@@ -2818,7 +7767,19 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "181",
@@ -2834,7 +7795,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "182",
@@ -2850,7 +7823,19 @@
 						}
 					},
 					"replacement": "end !== -1",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "183",
@@ -2866,7 +7851,19 @@
 						}
 					},
 					"replacement": "+1",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "184",
@@ -2882,7 +7879,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "185",
@@ -2898,7 +7907,22 @@
 						}
 					},
 					"replacement": "end > start + 1 || lines[end - 1]?.trim() === \"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "186",
@@ -2914,7 +7938,19 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "187",
@@ -2930,7 +7966,19 @@
 						}
 					},
 					"replacement": "end >= start + 1",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "188",
@@ -2946,7 +7994,19 @@
 						}
 					},
 					"replacement": "end <= start + 1",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "189",
@@ -2962,7 +8022,19 @@
 						}
 					},
 					"replacement": "start - 1",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "190",
@@ -2978,7 +8050,22 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "191",
@@ -2994,7 +8081,19 @@
 						}
 					},
 					"replacement": "lines[end - 1]?.trim() !== \"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "192",
@@ -3010,7 +8109,19 @@
 						}
 					},
 					"replacement": "lines[end - 1]",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "193",
@@ -3026,7 +8137,19 @@
 						}
 					},
 					"replacement": "lines[end - 1].trim",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "194",
@@ -3042,7 +8165,19 @@
 						}
 					},
 					"replacement": "end + 1",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "195",
@@ -3058,7 +8193,19 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "196",
@@ -3074,7 +8221,19 @@
 						}
 					},
 					"replacement": "end++",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "197",
@@ -3090,7 +8249,22 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "198",
@@ -3106,7 +8280,22 @@
 						}
 					},
 					"replacement": "lines",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "199",
@@ -3122,7 +8311,22 @@
 						}
 					},
 					"replacement": "lines",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "200",
@@ -3138,7 +8342,22 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "201",
@@ -3154,7 +8373,19 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "203",
@@ -3170,7 +8401,22 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "204",
@@ -3186,7 +8432,22 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "205",
@@ -3202,7 +8463,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "206",
@@ -3218,7 +8491,19 @@
 						}
 					},
 					"replacement": "!same(after.install, INSTALL) && [...tables].some(table => !same(before[table], after[table]))",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "207",
@@ -3234,7 +8519,22 @@
 						}
 					},
 					"replacement": "same(after.install, INSTALL)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "208",
@@ -3250,7 +8550,22 @@
 						}
 					},
 					"replacement": "[...tables].every(table => !same(before[table], after[table]))",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "209",
@@ -3266,7 +8581,19 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "210",
@@ -3282,7 +8609,19 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"15",
+						"18",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"35"
+					]
 				},
 				{
 					"id": "211",
@@ -3298,7 +8637,8 @@
 						}
 					},
 					"replacement": "same(before[table], after[table])",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "213",
@@ -3314,7 +8654,8 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "214",
@@ -3330,7 +8671,43 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "215",
@@ -3346,7 +8723,43 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"3",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "216",
@@ -3362,7 +8775,42 @@
 						}
 					},
 					"replacement": "isRecord(manifest)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "217",
@@ -3378,7 +8826,42 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "218",
@@ -3394,7 +8877,42 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "220",
@@ -3410,7 +8928,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"2"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "221",
@@ -3426,7 +8950,41 @@
 						}
 					},
 					"replacement": "manifest.scripts && {}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "222",
@@ -3442,7 +9000,41 @@
 						}
 					},
 					"replacement": "isRecord(scripts)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "223",
@@ -3458,7 +9050,41 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "224",
@@ -3474,7 +9100,41 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "226",
@@ -3490,7 +9150,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"4"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "227",
@@ -3506,7 +9172,40 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "228",
@@ -3522,7 +9221,40 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "229",
@@ -3538,7 +9270,40 @@
 						}
 					},
 					"replacement": "scripts.deps !== DEPS",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "230",
@@ -3554,7 +9319,39 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "231",
@@ -3570,7 +9367,39 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "232",
@@ -3586,7 +9415,39 @@
 						}
 					},
 					"replacement": "scripts.deps === undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "234",
@@ -3602,7 +9463,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "235",
@@ -3618,7 +9485,38 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "236",
@@ -3634,7 +9532,38 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "237",
@@ -3650,7 +9579,38 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "238",
@@ -3666,7 +9626,38 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "239",
@@ -3682,7 +9673,38 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "240",
@@ -3698,7 +9720,38 @@
 						}
 					},
 					"replacement": "text === undefined && text.endsWith(\"\\n\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "241",
@@ -3714,7 +9767,38 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "242",
@@ -3730,7 +9814,38 @@
 						}
 					},
 					"replacement": "text !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "243",
@@ -3746,7 +9861,16 @@
 						}
 					},
 					"replacement": "text.startsWith(\"\\n\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "244",
@@ -3762,7 +9886,16 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "245",
@@ -3778,7 +9911,35 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"6"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "246",
@@ -3794,7 +9955,15 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"5",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "247",
@@ -3810,7 +9979,53 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "248",
@@ -3826,7 +10041,53 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"37",
+						"38",
+						"39",
+						"4",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "249",
@@ -3842,7 +10103,39 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "250",
@@ -3858,7 +10151,36 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "251",
@@ -3874,7 +10196,39 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "252",
@@ -3890,7 +10244,39 @@
 						}
 					},
 					"replacement": "was === now",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "253",
@@ -3906,7 +10292,39 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "255",
@@ -3922,7 +10340,39 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "256",
@@ -3938,7 +10388,39 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "257",
@@ -3954,7 +10436,39 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"23",
+						"31",
+						"32",
+						"33",
+						"34",
+						"36",
+						"37",
+						"38",
+						"39",
+						"40",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "258",
@@ -3970,19 +10484,22 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"15"
+					]
 				}
 			]
 		}
 	},
 	"fingerprint": {
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bun/sync-settings-package.test.ts": "86a9ef90824f540a000228b15e599fbb80ea3a4e",
 		"bun/sync-settings.fixture.ts": "f3fa578e6da6ce8d4766553d4014594b71f85470",
-		"bun/sync-settings.test.ts": "dbf0a8d9f8f691ca574754d9ed313c34f55bf307",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/sync-settings",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

@@ -1,5 +1,312 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/review-config.test.ts": {
+			"source": "/**\n * Fails when the harness's `.coderabbit.yaml` stops reaching its rulebook: a\n * doc the rulebook indexes outside every configured guideline pattern, a\n * pattern that matches no tracked file, or a config the check cannot read.\n * Each reads, to the review bot, as a rulebook with nothing in it. Also fails\n * when the config turns the bot's approval off or its draft reviews on, or\n * when the instructions that keep the bot to contradictions in a change's\n * artefacts are gone.\n */\nimport { afterAll, describe, expect, test } from \"bun:test\";\nimport { mkdirSync, mkdtempSync, rmSync, writeFileSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { dirname, join } from \"node:path\";\nimport { flat } from \"./prose.fixture.ts\";\nimport { at, parsed, unreached } from \"./review-config.ts\";\nimport { root } from \"./root.ts\";\n\nconst made: string[] = [];\n\nafterAll(() => {\n\tfor (const dir of made) rmSync(dir, { recursive: true, force: true });\n});\n\n/** A config naming `patterns`, written as JSON, which is valid YAML. */\nfunction config(patterns: unknown): string {\n\treturn JSON.stringify({\n\t\tknowledge_base: { code_guidelines: { filePatterns: patterns } },\n\t});\n}\n\n/** A rulebook every pattern below reaches, unless a case overrides it. */\nconst BASE: Record<string, string | null> = {\n\t\"CLAUDE.md\": \"@core/rules.md\\n\",\n\t\"core/rules.md\": \"# Rules\\n\",\n\t\".coderabbit.yaml\": config([\"core/*.md\"]),\n};\n\n/**\n * A throwaway repository holding `BASE` with `files` laid over it — `null`\n * removes a file — all tracked, then `untracked` written beside them.\n */\nfunction fabricate(files: Record<string, string | null>, untracked: Record<string, string> = {}): string {\n\tconst dir = mkdtempSync(join(tmpdir(), \"review-config-\"));\n\tmade.push(dir);\n\tconst git = (...args: string[]) => {\n\t\tconst run = Bun.spawnSync([\"git\", ...args], { cwd: dir });\n\t\tif (run.exitCode !== 0) throw new Error(run.stderr.toString());\n\t};\n\tconst write = (path: string, text: string) => {\n\t\tmkdirSync(dirname(join(dir, path)), { recursive: true });\n\t\twriteFileSync(join(dir, path), text);\n\t};\n\tgit(\"init\", \"-b\", \"main\");\n\tfor (const [path, text] of Object.entries({ ...BASE, ...files })) if (text !== null) write(path, text);\n\tgit(\"add\", \"-A\");\n\tfor (const [path, text] of Object.entries(untracked)) write(path, text);\n\treturn dir;\n}\n\ndescribe(\"the repository as it stands\", () => {\n\ttest(\"its config reaches the rulebook and every doc it indexes\", () => {\n\t\texpect(unreached(root)).toEqual([]);\n\t});\n});\n\ndescribe(\"the bot's approval\", () => {\n\t// spec: local-review-loop/the-config-leaves-automatic-approvals-off local-review-loop/the-config-turns-draft-reviews-on\n\ttest(\"Automatic Approvals is on and draft reviews are not\", () => {\n\t\tconst read = parsed(root);\n\t\tif (typeof read === \"string\") throw new Error(read);\n\t\texpect(at(read.config, \"reviews.auto_approvals.enabled\")).toBe(true);\n\t\texpect(at(read.config, \"reviews.auto_review.drafts\")).not.toBe(true);\n\t\t// The schema's legacy alias of `auto_approvals.enabled`: one switch, one key.\n\t\texpect(at(read.config, \"reviews.request_changes_workflow\")).toBeUndefined();\n\t});\n\n\t// spec: local-review-loop/a-pull-request-past-the-default-pause\n\ttest(\"automatic reviews never pause\", () => {\n\t\tconst read = parsed(root);\n\t\tif (typeof read === \"string\") throw new Error(read);\n\t\tconst key = \"reviews.auto_review.auto_pause_after_reviewed_commits\";\n\t\texpect(at(read.config, key)).toBe(0);\n\t});\n});\n\ndescribe(\"the instructions for a change's artefacts\", () => {\n\tconst PATH = \"openspec/changes/**\";\n\n\t/** The `reviews.path_instructions` entry whose `path` is exactly `PATH`, from the config the bot parses. */\n\tfunction entry(): Record<string, unknown> | undefined {\n\t\tconst read = parsed(root);\n\t\tif (typeof read === \"string\") throw new Error(read);\n\t\tconst list = at(read.config, \"reviews.path_instructions\");\n\t\tif (!Array.isArray(list)) return undefined;\n\t\treturn list.find((item) => item?.path === PATH);\n\t}\n\n\t// spec: local-review-loop/the-entry-is-missing\n\ttest(\"an entry names the change directory, not its archive alone [10, 11]\", () => {\n\t\texpect(entry()).toBeDefined();\n\t});\n\n\t// spec: local-review-loop/the-instructions-lose-their-scope\n\ttest.each([\n\t\t\"A working artefact of an OpenSpec change, headed for the archive\",\n\t\t\"contradictions with a spec, the code or another artefact\",\n\t\t\"Do not flag wording, duplication or style\",\n\t])(\"its instructions keep `%s` [12, 13]\", (phrase) => {\n\t\tconst text = entry()?.instructions;\n\t\texpect(typeof text === \"string\" ? flat(text) : \"\").toContain(phrase);\n\t});\n});\n\ndescribe(\"a doc out of reach\", () => {\n\t// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach\n\ttest(\"a doc CLAUDE.md links outside every pattern is named\", () => {\n\t\tconst dir = fabricate({\n\t\t\t\"CLAUDE.md\": \"@core/rules.md\\nSee [x](docs/x.md).\\n\",\n\t\t\t\"docs/x.md\": \"# X\\n\",\n\t\t});\n\t\tconst problems = unreached(dir);\n\t\texpect(problems).toHaveLength(1);\n\t\texpect(problems[0]).toContain(\"docs/x.md\");\n\t});\n\n\t// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach\n\ttest(\"the rulebook itself outside every pattern is named\", () => {\n\t\tconst dir = fabricate({\n\t\t\t\"CLAUDE.md\": \"@core/rules.md\\nSee [x](docs/x.md).\\n\",\n\t\t\t\"docs/x.md\": \"# X\\n\",\n\t\t\t\".coderabbit.yaml\": config([\"docs/*.md\"]),\n\t\t});\n\t\tconst problems = unreached(dir);\n\t\texpect(problems).toHaveLength(1);\n\t\texpect(problems[0]).toContain(\"core/rules.md\");\n\t});\n\n\t// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach\n\ttest(\"a doc only the rulebook links, outside every pattern, is named\", () => {\n\t\tconst dir = fabricate({\n\t\t\t\"core/rules.md\": \"# Rules\\nSee [v](../docs/v.md).\\n\",\n\t\t\t\"docs/v.md\": \"# V\\n\",\n\t\t});\n\t\tconst problems = unreached(dir);\n\t\texpect(problems).toHaveLength(1);\n\t\texpect(problems[0]).toContain(\"docs/v.md\");\n\t});\n\n\t// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach\n\ttest(\"a file CLAUDE.md imports outside every pattern is named\", () => {\n\t\tconst dir = fabricate({\n\t\t\t\"CLAUDE.md\": \"@core/rules.md\\n@docs/extra.md\\n\",\n\t\t\t\"docs/extra.md\": \"# Extra\\n\",\n\t\t});\n\t\tconst problems = unreached(dir);\n\t\texpect(problems).toHaveLength(1);\n\t\texpect(problems[0]).toContain(\"docs/extra.md\");\n\t});\n\n\t// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach\n\ttest(\"`core/*.md` does not reach a skill under core/skills/\", () => {\n\t\tconst dir = fabricate({\n\t\t\t\"CLAUDE.md\": \"@core/rules.md\\nSee [s](core/skills/x/SKILL.md).\\n\",\n\t\t\t\"core/skills/x/SKILL.md\": \"# Skill\\n\",\n\t\t});\n\t\tconst problems = unreached(dir);\n\t\texpect(problems).toHaveLength(1);\n\t\texpect(problems[0]).toContain(\"core/skills/x/SKILL.md\");\n\t});\n\n\t// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach\n\ttest.each([\n\t\t// Another doc keeps `core/*.md` live, so the rulebook is the one problem.\n\t\t[\"the rulebook\", { \"core/rules.md\": null, \"core/x.md\": \"# X\\n\" }, \"core/rules.md\"],\n\t\t[\"a doc CLAUDE.md links\", { \"CLAUDE.md\": \"@core/rules.md\\nSee [g](core/gone.md).\\n\" }, \"core/gone.md\"],\n\t\t[\"CLAUDE.md\", { \"CLAUDE.md\": null }, \"CLAUDE.md\"],\n\t])(\"%s absent from the tree is named\", (_name, files, named) => {\n\t\tconst problems = unreached(fabricate(files));\n\t\texpect(problems).toHaveLength(1);\n\t\texpect(problems[0]).toContain(named);\n\t});\n\n\t// spec: local-review-loop/a-doc-the-rulebook-indexes-falls-out-of-reach\n\ttest.each([\n\t\t[\"a titled link\", 'See [x](docs/x.md \"X\").\\n'],\n\t\t[\"a reference definition\", \"See [x][x].\\n\\n[x]: docs/x.md\\n\"],\n\t])(\"a doc behind %s outside every pattern is named\", (_name, link) => {\n\t\tconst dir = fabricate({\n\t\t\t\"CLAUDE.md\": `@core/rules.md\\n${link}`,\n\t\t\t\"docs/x.md\": \"# X\\n\",\n\t\t});\n\t\tconst problems = unreached(dir);\n\t\texpect(problems).toHaveLength(1);\n\t\texpect(problems[0]).toContain(\"docs/x.md\");\n\t});\n\n\ttest(\"a link carrying an anchor reaches the doc it names\", () => {\n\t\tconst dir = fabricate({\n\t\t\t\"CLAUDE.md\": \"@core/rules.md\\nSee [t](core/t.md#a-section).\\n\",\n\t\t\t\"core/t.md\": \"# T\\n\",\n\t\t});\n\t\texpect(unreached(dir)).toEqual([]);\n\t});\n\n\ttest(\"an external link is not taken as a doc\", () => {\n\t\tconst dir = fabricate({\n\t\t\t\"CLAUDE.md\": \"@core/rules.md\\nSee [w](https://example.com/w.md).\\n\",\n\t\t});\n\t\texpect(unreached(dir)).toEqual([]);\n\t});\n\n\ttest(\"a README link is exempt and needs no pattern\", () => {\n\t\tconst dir = fabricate({\n\t\t\t\"CLAUDE.md\": \"@core/rules.md\\nLayout in [README.md](README.md).\\n\",\n\t\t\t\"README.md\": \"# Package\\n\",\n\t\t});\n\t\texpect(unreached(dir)).toEqual([]);\n\t});\n});\n\ndescribe(\"a pattern that matches nothing\", () => {\n\t// spec: local-review-loop/a-pattern-that-matches-nothing\n\ttest(\"a dead pattern beside a live one is named alone\", () => {\n\t\tconst dir = fabricate({\n\t\t\t\".coderabbit.yaml\": config([\"core/*.md\", \"lib/*.md\"]),\n\t\t});\n\t\tconst problems = unreached(dir);\n\t\texpect(problems).toHaveLength(1);\n\t\texpect(problems[0]).toContain(\"lib/*.md\");\n\t});\n\n\t// spec: local-review-loop/a-pattern-that-matches-nothing\n\ttest(\"a pattern matching only an untracked file matches nothing\", () => {\n\t\tconst dir = fabricate({ \".coderabbit.yaml\": config([\"core/*.md\", \"notes/*.md\"]) }, { \"notes/a.md\": \"# Draft\\n\" });\n\t\tconst problems = unreached(dir);\n\t\texpect(problems).toHaveLength(1);\n\t\texpect(problems[0]).toContain(\"notes/*.md\");\n\t});\n});\n\ndescribe(\"a config the check cannot read\", () => {\n\t// spec: local-review-loop/a-config-the-test-cannot-read\n\ttest.each([\n\t\t[\"is absent\", null, \"absent\"],\n\t\t[\"is empty\", \"\", \"missing\"],\n\t\t[\"names a single string\", config(\"core/*.md\"), \"not a list\"],\n\t\t[\"does not parse\", \"knowledge_base: [\", \"does not parse\"],\n\t\t[\"has no filePatterns\", \"language: en-GB\\n\", \"missing\"],\n\t\t[\"has an empty list\", config([]), \"empty\"],\n\t\t[\"has a blank entry\", config([\"core/*.md\", \"  \"]), \"filePatterns[1]\"],\n\t\t[\"has a non-string entry\", config([\"core/*.md\", { a: 1 }]), \"filePatterns[1]\"],\n\t])(\"a config that %s fails, saying so\", (_name, text, says) => {\n\t\tconst dir = fabricate({ \".coderabbit.yaml\": text });\n\t\tconst problems = unreached(dir);\n\t\texpect(problems).toHaveLength(1);\n\t\texpect(problems[0]).toContain(\".coderabbit.yaml\");\n\t\texpect(problems[0]).toContain(says);\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/review-config.test.ts > a config the check cannot read > a config that does not parse fails, saying so",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 254
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/review-config.test.ts > a config the check cannot read > a config that has a blank entry fails, saying so",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 254
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/review-config.test.ts > a config the check cannot read > a config that has a non-string entry fails, saying so",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 254
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/review-config.test.ts > a config the check cannot read > a config that has an empty list fails, saying so",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 254
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/review-config.test.ts > a config the check cannot read > a config that has no filePatterns fails, saying so",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 254
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/review-config.test.ts > a config the check cannot read > a config that is absent fails, saying so",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 254
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/review-config.test.ts > a config the check cannot read > a config that is empty fails, saying so",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 254
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/review-config.test.ts > a config the check cannot read > a config that names a single string fails, saying so",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 254
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/review-config.test.ts > a doc out of reach > `core/*.md` does not reach a skill under core/skills/",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 163
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/review-config.test.ts > a doc out of reach > a doc behind a reference definition outside every pattern is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 189
+						}
+					}
+				},
+				{
+					"id": "10",
+					"name": "bun/review-config.test.ts > a doc out of reach > a doc behind a titled link outside every pattern is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 189
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/review-config.test.ts > a doc out of reach > a doc CLAUDE.md links absent from the tree is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 179
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/review-config.test.ts > a doc out of reach > a doc CLAUDE.md links outside every pattern is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 118
+						}
+					}
+				},
+				{
+					"id": "13",
+					"name": "bun/review-config.test.ts > a doc out of reach > a doc only the rulebook links, outside every pattern, is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 141
+						}
+					}
+				},
+				{
+					"id": "14",
+					"name": "bun/review-config.test.ts > a doc out of reach > a file CLAUDE.md imports outside every pattern is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 152
+						}
+					}
+				},
+				{
+					"id": "15",
+					"name": "bun/review-config.test.ts > a doc out of reach > a link carrying an anchor reaches the doc it names",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 199
+						}
+					}
+				},
+				{
+					"id": "16",
+					"name": "bun/review-config.test.ts > a doc out of reach > a README link is exempt and needs no pattern",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 214
+						}
+					}
+				},
+				{
+					"id": "17",
+					"name": "bun/review-config.test.ts > a doc out of reach > an external link is not taken as a doc",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 207
+						}
+					}
+				},
+				{
+					"id": "18",
+					"name": "bun/review-config.test.ts > a doc out of reach > CLAUDE.md absent from the tree is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 179
+						}
+					}
+				},
+				{
+					"id": "19",
+					"name": "bun/review-config.test.ts > a doc out of reach > the rulebook absent from the tree is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 179
+						}
+					}
+				},
+				{
+					"id": "20",
+					"name": "bun/review-config.test.ts > a doc out of reach > the rulebook itself outside every pattern is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 129
+						}
+					}
+				},
+				{
+					"id": "21",
+					"name": "bun/review-config.test.ts > a pattern that matches nothing > a dead pattern beside a live one is named alone",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 225
+						}
+					}
+				},
+				{
+					"id": "22",
+					"name": "bun/review-config.test.ts > a pattern that matches nothing > a pattern matching only an untracked file matches nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 235
+						}
+					}
+				},
+				{
+					"id": "23",
+					"name": "bun/review-config.test.ts > the bot's approval > Automatic Approvals is on and draft reviews are not",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 70
+						}
+					}
+				},
+				{
+					"id": "24",
+					"name": "bun/review-config.test.ts > the bot's approval > automatic reviews never pause",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 80
+						}
+					}
+				},
+				{
+					"id": "25",
+					"name": "bun/review-config.test.ts > the instructions for a change's artefacts > an entry names the change directory, not its archive alone [10, 11]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 101
+						}
+					}
+				},
+				{
+					"id": "26",
+					"name": "bun/review-config.test.ts > the instructions for a change's artefacts > its instructions keep `A working artefact of an OpenSpec change, headed for the archive` [12, 13]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 110
+						}
+					}
+				},
+				{
+					"id": "27",
+					"name": "bun/review-config.test.ts > the instructions for a change's artefacts > its instructions keep `contradictions with a spec, the code or another artefact` [12, 13]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 110
+						}
+					}
+				},
+				{
+					"id": "28",
+					"name": "bun/review-config.test.ts > the instructions for a change's artefacts > its instructions keep `Do not flag wording, duplication or style` [12, 13]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 110
+						}
+					}
+				},
+				{
+					"id": "29",
+					"name": "bun/review-config.test.ts > the repository as it stands > its config reaches the rulebook and every doc it indexes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 63
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/review-config.ts": {
 			"source": "/**\n * What the harness's review bot cannot reach: each doc the rulebook indexes\n * that no pattern under `.coderabbit.yaml`'s\n * `knowledge_base.code_guidelines.filePatterns` matches, and each pattern that\n * matches no tracked file. `local-review-loop` §*The review bot reads the\n * rulebook and the docs it indexes* fixes the contract.\n *\n * The harness's own pin, run by its suite. A consumer's copy sits under\n * `harness/`, and checking a consumer's config is a gate of its own, not this.\n */\nimport { existsSync, readFileSync } from \"node:fs\";\nimport { dirname, join, normalize } from \"node:path\";\nimport { Glob } from \"bun\";\nimport { tracked } from \"./tracked.ts\";\n\nconst CONFIG = \".coderabbit.yaml\";\nconst KEY = \"knowledge_base.code_guidelines.filePatterns\";\nconst RULEBOOK = \"core/rules.md\";\n// `CLAUDE.md` links the README for the package's layout; it holds no rule.\nconst EXEMPT = new Set([\"README.md\"]);\n\n/** The harness's `.coderabbit.yaml` parsed as YAML, or why it cannot be. */\nexport function parsed(root: string): { config: unknown } | string {\n\tconst path = join(root, CONFIG);\n\tif (!existsSync(path)) return `${CONFIG}: absent`;\n\ttry {\n\t\treturn { config: Bun.YAML.parse(readFileSync(path, \"utf8\")) };\n\t} catch (e) {\n\t\treturn `${CONFIG}: does not parse — ${e instanceof Error ? e.message : String(e)}`;\n\t}\n}\n\n/** The value at a dotted key path, `undefined` where a step is missing. */\nexport function at(value: unknown, path: string): unknown {\n\tfor (const key of path.split(\".\"))\n\t\tvalue = value && typeof value === \"object\" ? (value as Record<string, unknown>)[key] : undefined;\n\treturn value;\n}\n\n/**\n * The patterns the config names, or the one problem that stops them being\n * read. Read from the structure the bot parses, never from a line resembling\n * it.\n */\nfunction patterns(root: string): string[] | string {\n\tconst read = parsed(root);\n\tif (typeof read === \"string\") return read;\n\tconst list = at(read.config, KEY);\n\tif (list === undefined) return `${CONFIG}: ${KEY} is missing`;\n\tif (!Array.isArray(list)) return `${CONFIG}: ${KEY} is not a list`;\n\tif (list.length === 0) return `${CONFIG}: ${KEY} is empty`;\n\tconst bad = list.flatMap((p, i) =>\n\t\ttypeof p !== \"string\" ? [`${KEY}[${i}] is not a string`] : p.trim() === \"\" ? [`${KEY}[${i}] is blank`] : [],\n\t);\n\treturn bad.length ? `${CONFIG}: ${bad.join(\"; \")}` : list;\n}\n\n/**\n * The markdown files `from` points at, named from the root: its relative\n * links, and — `CLAUDE.md` only — its `@` import lines. A link carrying a\n * scheme points off the tree and is no doc.\n */\nfunction indexed(root: string, from: string): string[] {\n\tconst path = join(root, from);\n\tif (!existsSync(path)) return [];\n\tconst text = readFileSync(path, \"utf8\");\n\t// An inline link's destination runs to the first space, `#` or `)`, so an\n\t// optional title after it is ignored; a reference definition is a line of\n\t// its own, `[label]: destination`.\n\tconst inline = /\\]\\(\\s*([^)\\s#]+\\.md)(?:#[^)\\s]*)?(?:\\s+[^)]*)?\\)/g;\n\tconst reference = /^\\s{0,3}\\[[^\\]]+\\]:\\s*([^\\s#]+\\.md)(?:#\\S*)?(?:\\s|$)/gm;\n\tconst targets = [...text.matchAll(inline), ...text.matchAll(reference)]\n\t\t.map((m) => m[1] as string)\n\t\t.filter((t) => !/^[a-z][a-z0-9+.-]*:/i.test(t))\n\t\t.map((t) => normalize(join(dirname(from), t)));\n\tif (from === \"CLAUDE.md\") for (const m of text.matchAll(/^@(\\S+\\.md)\\s*$/gm)) targets.push(normalize(m[1] as string));\n\treturn targets;\n}\n\n/** Every problem keeping the bot from the rulebook; empty when it reaches it. */\nexport function unreached(root: string): string[] {\n\tconst named = patterns(root);\n\tif (typeof named === \"string\") return [named];\n\t// Paths, not files: a pattern ruling on a tracked path is reached whether or\n\t// not the work tree holds it.\n\tconst { paths } = tracked(root);\n\tconst globs = named.map((p) => new Glob(p));\n\tconst docs = new Set([RULEBOOK, ...indexed(root, \"CLAUDE.md\"), ...indexed(root, RULEBOOK)]);\n\t// A glob matches a path string whether or not the file exists, so a doc\n\t// the tree lacks would otherwise read as reached.\n\tconst absent = [\"CLAUDE.md\", ...docs].filter((d) => !EXEMPT.has(d) && !paths.includes(d));\n\treturn [\n\t\t...named\n\t\t\t.filter((_, i) => !paths.some((f) => globs[i]?.match(f)))\n\t\t\t.map((p) => `${CONFIG}: pattern \"${p}\" matches no tracked file`),\n\t\t...absent.map((d) => `${d}: indexed by the rulebook but not tracked`),\n\t\t...[...docs]\n\t\t\t.filter((d) => !EXEMPT.has(d) && !absent.includes(d))\n\t\t\t.filter((d) => !globs.some((g) => g.match(d)))\n\t\t\t.map((d) => `${d}: no pattern under ${KEY} in ${CONFIG} matches it`),\n\t];\n}\n",
@@ -18,7 +325,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +345,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +365,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +385,11 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +405,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +425,42 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +476,42 @@
 						}
 					},
 					"replacement": "existsSync(path)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +527,42 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +578,42 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +629,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +651,41 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +701,41 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +751,38 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +798,13 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "14",
@@ -242,7 +820,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "15",
@@ -258,7 +842,40 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "16",
@@ -274,7 +891,40 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "17",
@@ -290,7 +940,40 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "18",
@@ -306,7 +989,40 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "19",
@@ -322,7 +1038,40 @@
 						}
 					},
 					"replacement": "value || typeof value === \"object\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "20",
@@ -338,7 +1087,36 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "21",
@@ -354,7 +1132,39 @@
 						}
 					},
 					"replacement": "typeof value !== \"object\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "22",
@@ -370,7 +1180,39 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"4",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "23",
@@ -386,7 +1228,36 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "24",
@@ -402,7 +1273,36 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "25",
@@ -418,7 +1318,36 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "26",
@@ -434,7 +1363,36 @@
 						}
 					},
 					"replacement": "typeof read !== \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "27",
@@ -450,7 +1408,36 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "28",
@@ -466,7 +1453,34 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "29",
@@ -482,7 +1496,34 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "30",
@@ -498,7 +1539,34 @@
 						}
 					},
 					"replacement": "list !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "31",
@@ -514,7 +1582,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"4",
+						"6"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "32",
@@ -530,7 +1605,32 @@
 						}
 					},
 					"replacement": "Array.isArray(list)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "33",
@@ -546,7 +1646,32 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "34",
@@ -562,7 +1687,32 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "35",
@@ -578,7 +1728,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "36",
@@ -594,7 +1750,31 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "37",
@@ -610,7 +1790,31 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "38",
@@ -626,7 +1830,31 @@
 						}
 					},
 					"replacement": "list.length !== 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "39",
@@ -642,7 +1870,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"3"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "40",
@@ -658,7 +1892,30 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "41",
@@ -674,7 +1931,30 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "42",
@@ -690,7 +1970,30 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "43",
@@ -706,7 +2009,30 @@
 						}
 					},
 					"replacement": "typeof p === \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "44",
@@ -722,7 +2048,30 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "45",
@@ -738,7 +2087,13 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"2"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "46",
@@ -754,7 +2109,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"2"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "47",
@@ -770,7 +2131,30 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "48",
@@ -786,7 +2170,30 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "49",
@@ -802,7 +2209,30 @@
 						}
 					},
 					"replacement": "p.trim() !== \"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "50",
@@ -818,7 +2248,30 @@
 						}
 					},
 					"replacement": "p",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "51",
@@ -834,7 +2287,30 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "52",
@@ -850,7 +2326,13 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "53",
@@ -866,7 +2348,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "54",
@@ -882,7 +2370,30 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "55",
@@ -898,7 +2409,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "56",
@@ -914,7 +2432,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"2"
+					]
 				},
 				{
 					"id": "57",
@@ -930,7 +2452,28 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "58",
@@ -946,7 +2489,28 @@
 						}
 					},
 					"replacement": "existsSync(path)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "59",
@@ -962,7 +2526,28 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "60",
@@ -978,7 +2563,28 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "61",
@@ -994,7 +2600,14 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"18",
+						"19"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "62",
@@ -1010,7 +2623,28 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "63",
@@ -1026,7 +2660,28 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s([^)\\s#]+\\.md)(?:#[^)\\s]*)?(?:\\s+[^)]*)?\\)/g",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "64",
@@ -1042,7 +2697,28 @@
 						}
 					},
 					"replacement": "/\\]\\(\\S*([^)\\s#]+\\.md)(?:#[^)\\s]*)?(?:\\s+[^)]*)?\\)/g",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "65",
@@ -1058,7 +2734,28 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\s#]\\.md)(?:#[^)\\s]*)?(?:\\s+[^)]*)?\\)/g",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "66",
@@ -1074,7 +2771,28 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([)\\s#]+\\.md)(?:#[^)\\s]*)?(?:\\s+[^)]*)?\\)/g",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "67",
@@ -1090,7 +2808,28 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\S#]+\\.md)(?:#[^)\\s]*)?(?:\\s+[^)]*)?\\)/g",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "68",
@@ -1106,7 +2845,28 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\s#]+\\.md)(?:#[^)\\s]*)(?:\\s+[^)]*)?\\)/g",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "69",
@@ -1122,7 +2882,25 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\s#]+\\.md)(?:#[^)\\s])?(?:\\s+[^)]*)?\\)/g",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "70",
@@ -1138,7 +2916,25 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\s#]+\\.md)(?:#[)\\s]*)?(?:\\s+[^)]*)?\\)/g",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "71",
@@ -1154,7 +2950,25 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\s#]+\\.md)(?:#[^)\\S]*)?(?:\\s+[^)]*)?\\)/g",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "72",
@@ -1170,7 +2984,28 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\s#]+\\.md)(?:#[^)\\s]*)?(?:\\s+[^)]*)\\)/g",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "73",
@@ -1186,7 +3021,25 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\s#]+\\.md)(?:#[^)\\s]*)?(?:\\s[^)]*)?\\)/g",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "74",
@@ -1202,7 +3055,28 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\s#]+\\.md)(?:#[^)\\s]*)?(?:\\S+[^)]*)?\\)/g",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "75",
@@ -1218,7 +3092,28 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\s#]+\\.md)(?:#[^)\\s]*)?(?:\\s+[^)])?\\)/g",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "76",
@@ -1234,7 +3129,28 @@
 						}
 					},
 					"replacement": "/\\]\\(\\s*([^)\\s#]+\\.md)(?:#[^)\\s]*)?(?:\\s+[)]*)?\\)/g",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "77",
@@ -1250,7 +3166,25 @@
 						}
 					},
 					"replacement": "/\\s{0,3}\\[[^\\]]+\\]:\\s*([^\\s#]+\\.md)(?:#\\S*)?(?:\\s|$)/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "78",
@@ -1266,7 +3200,25 @@
 						}
 					},
 					"replacement": "/^\\s\\[[^\\]]+\\]:\\s*([^\\s#]+\\.md)(?:#\\S*)?(?:\\s|$)/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "79",
@@ -1282,7 +3234,25 @@
 						}
 					},
 					"replacement": "/^\\S{0,3}\\[[^\\]]+\\]:\\s*([^\\s#]+\\.md)(?:#\\S*)?(?:\\s|$)/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "80",
@@ -1298,7 +3268,25 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]\\]:\\s*([^\\s#]+\\.md)(?:#\\S*)?(?:\\s|$)/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "81",
@@ -1314,7 +3302,28 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[\\]]+\\]:\\s*([^\\s#]+\\.md)(?:#\\S*)?(?:\\s|$)/gm",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "82",
@@ -1330,7 +3339,25 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]+\\]:\\s([^\\s#]+\\.md)(?:#\\S*)?(?:\\s|$)/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "83",
@@ -1346,7 +3373,28 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]+\\]:\\S*([^\\s#]+\\.md)(?:#\\S*)?(?:\\s|$)/gm",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "84",
@@ -1362,7 +3410,28 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]+\\]:\\s*([^\\s#]\\.md)(?:#\\S*)?(?:\\s|$)/gm",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "85",
@@ -1378,7 +3447,28 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]+\\]:\\s*([\\s#]+\\.md)(?:#\\S*)?(?:\\s|$)/gm",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "86",
@@ -1394,7 +3484,28 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]+\\]:\\s*([^\\S#]+\\.md)(?:#\\S*)?(?:\\s|$)/gm",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "87",
@@ -1410,7 +3521,28 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]+\\]:\\s*([^\\s#]+\\.md)(?:#\\S*)(?:\\s|$)/gm",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "88",
@@ -1426,7 +3558,25 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]+\\]:\\s*([^\\s#]+\\.md)(?:#\\S)?(?:\\s|$)/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "89",
@@ -1442,7 +3592,25 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]+\\]:\\s*([^\\s#]+\\.md)(?:#\\s*)?(?:\\s|$)/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "90",
@@ -1458,7 +3626,25 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]+\\]:\\s*([^\\s#]+\\.md)(?:#\\S*)?(?:\\s)/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "91",
@@ -1474,7 +3660,25 @@
 						}
 					},
 					"replacement": "/^\\s{0,3}\\[[^\\]]+\\]:\\s*([^\\s#]+\\.md)(?:#\\S*)?(?:\\S|$)/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "92",
@@ -1490,7 +3694,28 @@
 						}
 					},
 					"replacement": "[...text.matchAll(inline), ...text.matchAll(reference)].map(m => m[1] as string)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "93",
@@ -1506,7 +3731,28 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "94",
@@ -1522,7 +3768,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "95",
@@ -1538,7 +3805,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "96",
@@ -1554,7 +3842,23 @@
 						}
 					},
 					"replacement": "/^[a-z][a-z0-9+.-]*:/i.test(t)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"15",
+						"16",
+						"17",
+						"20",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "97",
@@ -1570,7 +3874,20 @@
 						}
 					},
 					"replacement": "/[a-z][a-z0-9+.-]*:/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"15",
+						"16",
+						"17",
+						"20",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "98",
@@ -1586,7 +3903,23 @@
 						}
 					},
 					"replacement": "/^[^a-z][a-z0-9+.-]*:/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"15",
+						"16",
+						"17",
+						"20",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "99",
@@ -1602,7 +3935,23 @@
 						}
 					},
 					"replacement": "/^[a-z][a-z0-9+.-]:/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"15",
+						"16",
+						"17",
+						"20",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "100",
@@ -1618,7 +3967,23 @@
 						}
 					},
 					"replacement": "/^[a-z][^a-z0-9+.-]*:/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"15",
+						"16",
+						"17",
+						"20",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "101",
@@ -1634,7 +3999,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "102",
@@ -1650,7 +4036,25 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "103",
@@ -1666,7 +4070,28 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "104",
@@ -1682,7 +4107,28 @@
 						}
 					},
 					"replacement": "from !== \"CLAUDE.md\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "105",
@@ -1698,7 +4144,28 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "106",
@@ -1714,7 +4181,24 @@
 						}
 					},
 					"replacement": "/@(\\S+\\.md)\\s*$/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "107",
@@ -1730,7 +4214,24 @@
 						}
 					},
 					"replacement": "/^@(\\S+\\.md)\\s*/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "108",
@@ -1746,7 +4247,27 @@
 						}
 					},
 					"replacement": "/^@(\\S\\.md)\\s*$/gm",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "109",
@@ -1762,7 +4283,27 @@
 						}
 					},
 					"replacement": "/^@(\\s+\\.md)\\s*$/gm",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "110",
@@ -1778,7 +4319,24 @@
 						}
 					},
 					"replacement": "/^@(\\S+\\.md)\\s$/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "111",
@@ -1794,7 +4352,24 @@
 						}
 					},
 					"replacement": "/^@(\\S+\\.md)\\S*$/gm",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "112",
@@ -1810,7 +4385,27 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "113",
@@ -1826,7 +4421,36 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "114",
@@ -1842,7 +4466,36 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "115",
@@ -1858,7 +4511,36 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "116",
@@ -1874,7 +4556,36 @@
 						}
 					},
 					"replacement": "typeof named !== \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "117",
@@ -1890,7 +4601,36 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"29",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "118",
@@ -1906,7 +4646,20 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "119",
@@ -1922,7 +4675,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "120",
@@ -1938,7 +4712,28 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "121",
@@ -1954,7 +4749,28 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "122",
@@ -1970,7 +4786,28 @@
 						}
 					},
 					"replacement": "[\"CLAUDE.md\", ...docs]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "123",
@@ -1986,7 +4823,28 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "124",
@@ -2002,7 +4860,28 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "125",
@@ -2018,7 +4897,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "126",
@@ -2034,7 +4934,28 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "127",
@@ -2050,7 +4971,28 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "128",
@@ -2066,7 +5008,28 @@
 						}
 					},
 					"replacement": "!EXEMPT.has(d) || !paths.includes(d)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "129",
@@ -2082,7 +5045,28 @@
 						}
 					},
 					"replacement": "EXEMPT.has(d)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "130",
@@ -2098,7 +5082,28 @@
 						}
 					},
 					"replacement": "paths.includes(d)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "131",
@@ -2114,7 +5119,28 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "132",
@@ -2130,7 +5156,28 @@
 						}
 					},
 					"replacement": "named",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "133",
@@ -2146,7 +5193,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"21"
+					]
 				},
 				{
 					"id": "134",
@@ -2162,7 +5230,28 @@
 						}
 					},
 					"replacement": "paths.some(f => globs[i]?.match(f))",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "135",
@@ -2178,7 +5267,28 @@
 						}
 					},
 					"replacement": "paths.every(f => globs[i]?.match(f))",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "136",
@@ -2194,7 +5304,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "137",
@@ -2210,7 +5341,25 @@
 						}
 					},
 					"replacement": "globs[i].match",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "138",
@@ -2226,7 +5375,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"21"
+					]
 				},
 				{
 					"id": "139",
@@ -2242,7 +5412,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"21",
+						"22"
+					],
+					"killedBy": [
+						"21"
+					]
 				},
 				{
 					"id": "140",
@@ -2258,7 +5435,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "141",
@@ -2274,7 +5472,15 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"11",
+						"18",
+						"19"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "142",
@@ -2290,7 +5496,28 @@
 						}
 					},
 					"replacement": "[...docs].filter(d => !EXEMPT.has(d) && !absent.includes(d))",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "143",
@@ -2306,7 +5533,28 @@
 						}
 					},
 					"replacement": "[...docs]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "144",
@@ -2322,7 +5570,28 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "145",
@@ -2338,7 +5607,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "146",
@@ -2354,7 +5644,28 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "147",
@@ -2370,7 +5681,28 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "148",
@@ -2386,7 +5718,28 @@
 						}
 					},
 					"replacement": "!EXEMPT.has(d) || !absent.includes(d)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "149",
@@ -2402,7 +5755,28 @@
 						}
 					},
 					"replacement": "EXEMPT.has(d)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "150",
@@ -2418,7 +5792,28 @@
 						}
 					},
 					"replacement": "absent.includes(d)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "151",
@@ -2434,7 +5829,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "152",
@@ -2450,7 +5866,27 @@
 						}
 					},
 					"replacement": "globs.some(g => g.match(d))",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "153",
@@ -2466,7 +5902,27 @@
 						}
 					},
 					"replacement": "globs.every(g => g.match(d))",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"21"
+					]
 				},
 				{
 					"id": "154",
@@ -2482,7 +5938,27 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "155",
@@ -2498,7 +5974,28 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"22",
+						"29",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "156",
@@ -2514,7 +6011,19 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"12",
+						"13",
+						"14",
+						"20",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				}
 			]
 		}
@@ -2522,10 +6031,10 @@
 	"fingerprint": {
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
 		"bun/prose.fixture.ts": "dd8811a9b22a8fe40da66808acf876f24c9e9092",
-		"bun/review-config.test.ts": "8ce67bb36be07208fdc9d2c22d6a35a74ee039de",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/review-config",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

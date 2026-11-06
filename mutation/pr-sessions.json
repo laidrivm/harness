@@ -1,5 +1,112 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/pr-sessions.test.ts": {
+			"source": "import { afterAll, describe, expect, test } from \"bun:test\";\nimport { mkdirSync, readFileSync, statSync, writeFileSync } from \"node:fs\";\nimport { dirname, join } from \"node:path\";\nimport { cleanup, emptyDir } from \"./diff-budget.fixture.ts\";\nimport { append, lookup } from \"./pr-sessions.ts\";\n\n/** The PR → session table's append and lookup. [n]: `ci-run-agent`'s `/zombies` items. */\n\nafterAll(cleanup);\n\n/** A table path under a directory that does not exist yet. */\nconst table = () => join(emptyDir(\"pr-sessions-\"), \"orchestrator\", \"pr-sessions.jsonl\");\nconst step = (repo: string, branch: string, session: string) => ({ repo, branch, session, clone: \"/clones/r\" });\n\ndescribe(\"a lookup\", () => {\n\t// spec: board-loop/a-step-continued-by-a-second-session\n\ttest(\"in a missing table finds no session [20]\", () => {\n\t\texpect(lookup(\"o/r\", \"feat/x\", table())).toBeUndefined();\n\t});\n\n\t// spec: board-loop/a-step-continued-by-a-second-session\n\ttest(\"finds the last of two lines for one branch [22]\", () => {\n\t\tconst file = table();\n\t\tappend(step(\"o/r\", \"feat/x\", \"first\"), file);\n\t\tappend(step(\"o/r\", \"feat/x\", \"second\"), file);\n\t\texpect(lookup(\"o/r\", \"feat/x\", file)?.session).toBe(\"second\");\n\t});\n\n\t// spec: board-loop/a-step-continued-by-a-second-session\n\ttest(\"keeps one branch name in two repositories apart [23]\", () => {\n\t\tconst file = table();\n\t\tappend(step(\"o/r\", \"feat/x\", \"here\"), file);\n\t\tappend(step(\"o/other\", \"feat/x\", \"there\"), file);\n\t\texpect([lookup(\"o/r\", \"feat/x\", file)?.session, lookup(\"o/other\", \"feat/x\", file)?.session]).toEqual([\n\t\t\t\"here\",\n\t\t\t\"there\",\n\t\t]);\n\t});\n\n\t// spec: board-loop/a-step-continued-by-a-second-session\n\ttest.each([\n\t\t[\"a line cut off mid-JSON\", `{\"repo\":\"o/r\",\"branch\":\"feat/x\",\"session\":\"cut`],\n\t\t[\"a line lacking session\", `{\"repo\":\"o/r\",\"branch\":\"feat/x\",\"clone\":\"/c\",\"at\":\"2026-10-20T00:00:00.000Z\"}`],\n\t\t[\n\t\t\t\"a line with an empty session\",\n\t\t\t`{\"repo\":\"o/r\",\"branch\":\"feat/x\",\"session\":\"\",\"clone\":\"/c\",\"at\":\"2026-10-20T00:00:00.000Z\"}`,\n\t\t],\n\t])(\"skips %s and finds the earlier line [24]\", (_, bad) => {\n\t\tconst file = table();\n\t\tappend(step(\"o/r\", \"feat/x\", \"valid\"), file);\n\t\twriteFileSync(file, `${readFileSync(file, \"utf8\")}${bad}\\n`);\n\t\texpect(lookup(\"o/r\", \"feat/x\", file)?.session).toBe(\"valid\");\n\t});\n});\n\ndescribe(\"an append\", () => {\n\t// spec: board-loop/a-step-ready-to-push\n\ttest(\"writes one line with every field and an ISO time, creating the directory [21]\", () => {\n\t\tconst file = table();\n\t\tappend(step(\"o/r\", \"feat/x\", \"s\"), file);\n\t\tconst lines = readFileSync(file, \"utf8\").split(\"\\n\").filter(Boolean);\n\t\texpect(lines.length).toBe(1);\n\t\tconst row = JSON.parse(lines[0] ?? \"\");\n\t\texpect(Object.keys(row)).toEqual([\"repo\", \"branch\", \"session\", \"clone\", \"at\"]);\n\t\texpect(new Date(row.at).toISOString()).toBe(row.at);\n\t\t// The runner's alone: on the host no session user may read which session carries which pull request.\n\t\texpect([statSync(dirname(file)).mode & 0o777, statSync(file).mode & 0o777]).toEqual([0o700, 0o600]);\n\t});\n\n\t// spec: board-loop/a-step-ready-to-push\n\ttest(\"sets a table that exists readable by others to 0600 [35]\", () => {\n\t\tconst file = table();\n\t\tmkdirSync(dirname(file), { recursive: true });\n\t\twriteFileSync(file, \"\", { mode: 0o644 });\n\t\tappend(step(\"o/r\", \"feat/x\", \"s\"), file);\n\t\texpect(statSync(file).mode & 0o777).toBe(0o600);\n\t});\n\n\t// spec: board-loop/a-step-ready-to-push\n\ttest(\"starts a new line after a last line left unended [36]\", () => {\n\t\tconst file = table();\n\t\tmkdirSync(dirname(file), { recursive: true });\n\t\twriteFileSync(file, `{\"repo\":\"o/r\",\"branch\":\"feat/x\",\"session\":\"cut`);\n\t\tappend(step(\"o/r\", \"feat/x\", \"new\"), file);\n\t\texpect(lookup(\"o/r\", \"feat/x\", file)?.session).toBe(\"new\");\n\t});\n\n\t// spec: board-loop/the-table-cannot-be-written\n\ttest(\"throws where the table's directory cannot be made [26]\", () => {\n\t\tconst file = table();\n\t\tmkdirSync(dirname(dirname(file)), { recursive: true });\n\t\twriteFileSync(dirname(file), \"a file where the directory goes\");\n\t\texpect(() => append(step(\"o/r\", \"feat/x\", \"s\"), file)).toThrow();\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/pr-sessions.test.ts > a lookup > finds the last of two lines for one branch [22]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 23
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/pr-sessions.test.ts > a lookup > in a missing table finds no session [20]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 18
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/pr-sessions.test.ts > a lookup > keeps one branch name in two repositories apart [23]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 31
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/pr-sessions.test.ts > a lookup > skips a line cut off mid-JSON and finds the earlier line [24]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 49
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/pr-sessions.test.ts > a lookup > skips a line lacking session and finds the earlier line [24]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 49
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/pr-sessions.test.ts > a lookup > skips a line with an empty session and finds the earlier line [24]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 49
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/pr-sessions.test.ts > an append > sets a table that exists readable by others to 0600 [35]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 72
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/pr-sessions.test.ts > an append > starts a new line after a last line left unended [36]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 81
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/pr-sessions.test.ts > an append > throws where the table's directory cannot be made [26]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 90
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/pr-sessions.test.ts > an append > writes one line with every field and an ISO time, creating the directory [21]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 59
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/pr-sessions.ts": {
 			"source": "/**\n * The PR → session table: one JSON line per step the board-loop runner pushes,\n * naming the session that carried it, so a later flow can resume that session\n * on the step's pull request. The runner writes it; only the orchestrator reads\n * it. Keyed by branch, since the pull request's number exists only after the push.\n */\nimport { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync } from \"node:fs\";\nimport { homedir } from \"node:os\";\nimport { dirname, join } from \"node:path\";\n\nexport type Step = { repo: string; branch: string; session: string; clone: string };\nexport type Row = Step & { at: string };\n\nconst FIELDS = [\"repo\", \"branch\", \"session\", \"clone\", \"at\"] as const;\n\n/** The table, in the runner's home: on the host a volume no session user can read. */\nexport const table = () => join(homedir(), \"orchestrator\", \"pr-sessions.jsonl\");\n\n/**\n * Appends one record, or throws where it cannot be written. One `appendFileSync`\n * of a line well under 4 KiB lands whole, so a reader sees it all or none of it.\n */\nexport function append(step: Step, file = table()) {\n\tmkdirSync(dirname(file), { recursive: true, mode: 0o700 });\n\tlet cut = \"\";\n\tif (existsSync(file)) {\n\t\t// `mode` applies only on creation: a table made another way keeps its mode until set here.\n\t\tchmodSync(file, 0o600);\n\t\tconst text = readFileSync(file, \"utf8\");\n\t\t// A last line an interrupted write left unended would swallow this record.\n\t\tif (text && !text.endsWith(\"\\n\")) cut = \"\\n\";\n\t}\n\tappendFileSync(file, `${cut}${JSON.stringify({ ...step, at: new Date().toISOString() })}\\n`, { mode: 0o600 });\n}\n\n/**\n * The last record for `repo` and `branch`, so a step a later session continued\n * resumes that session. An unreadable table, a line that does not parse and a\n * line lacking a field are all no record, never an error.\n */\nexport function lookup(repo: string, branch: string, file = table()): Row | undefined {\n\tlet text: string;\n\ttry {\n\t\ttext = readFileSync(file, \"utf8\");\n\t} catch {\n\t\treturn undefined;\n\t}\n\tlet found: Row | undefined;\n\tfor (const line of text.split(\"\\n\")) {\n\t\tlet row: Record<string, unknown>;\n\t\ttry {\n\t\t\trow = JSON.parse(line);\n\t\t} catch {\n\t\t\tcontinue;\n\t\t}\n\t\tconst whole = FIELDS.every((name) => typeof row?.[name] === \"string\" && row[name] !== \"\");\n\t\tif (whole && row.repo === repo && row.branch === branch) found = row as Row;\n\t}\n\treturn found;\n}\n",
@@ -18,7 +125,8 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "1",
@@ -34,7 +142,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "2",
@@ -50,7 +159,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "3",
@@ -66,7 +176,21 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "5",
@@ -82,7 +206,21 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "6",
@@ -98,7 +236,21 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "7",
@@ -114,7 +266,20 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "8",
@@ -130,7 +295,20 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "9",
@@ -146,7 +324,20 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "10",
@@ -162,7 +353,16 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "11",
@@ -178,7 +378,16 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "12",
@@ -194,7 +403,16 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "13",
@@ -210,7 +428,13 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"2",
+						"6",
+						"7"
+					]
 				},
 				{
 					"id": "14",
@@ -226,7 +450,16 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "15",
@@ -242,7 +475,13 @@
 						}
 					},
 					"replacement": "text || !text.endsWith(\"\\n\")",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"2",
+						"6",
+						"7"
+					]
 				},
 				{
 					"id": "16",
@@ -258,7 +497,15 @@
 						}
 					},
 					"replacement": "text.endsWith(\"\\n\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "17",
@@ -274,7 +521,12 @@
 						}
 					},
 					"replacement": "text.startsWith(\"\\n\")",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"2",
+						"7"
+					]
 				},
 				{
 					"id": "18",
@@ -290,7 +542,15 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "19",
@@ -306,7 +566,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "21",
@@ -322,7 +588,20 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "22",
@@ -338,7 +617,20 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "23",
@@ -354,7 +646,20 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "24",
@@ -370,7 +675,19 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "25",
@@ -386,7 +703,19 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "26",
@@ -402,7 +731,19 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "27",
@@ -418,7 +759,13 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "28",
@@ -434,7 +781,18 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "29",
@@ -450,7 +808,18 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "30",
@@ -466,7 +835,18 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "31",
@@ -482,7 +862,15 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					]
 				},
 				{
 					"id": "32",
@@ -498,7 +886,18 @@
 						}
 					},
 					"replacement": "FIELDS.some(name => typeof row?.[name] === \"string\" && row[name] !== \"\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "33",
@@ -514,7 +913,18 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "34",
@@ -530,7 +940,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "35",
@@ -546,7 +967,18 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "36",
@@ -562,7 +994,18 @@
 						}
 					},
 					"replacement": "typeof row?.[name] === \"string\" || row[name] !== \"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "37",
@@ -578,7 +1021,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "38",
@@ -594,7 +1048,18 @@
 						}
 					},
 					"replacement": "typeof row?.[name] !== \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "39",
@@ -610,7 +1075,15 @@
 						}
 					},
 					"replacement": "row[name]",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					]
 				},
 				{
 					"id": "40",
@@ -626,7 +1099,18 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "41",
@@ -642,7 +1126,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "42",
@@ -658,7 +1153,18 @@
 						}
 					},
 					"replacement": "row[name] === \"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "43",
@@ -674,7 +1180,18 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "44",
@@ -690,7 +1207,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "45",
@@ -706,7 +1234,18 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "46",
@@ -722,7 +1261,18 @@
 						}
 					},
 					"replacement": "whole && row.repo === repo || row.branch === branch",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "47",
@@ -738,7 +1288,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "48",
@@ -754,7 +1315,18 @@
 						}
 					},
 					"replacement": "whole || row.repo === repo",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "49",
@@ -770,7 +1342,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "50",
@@ -786,7 +1369,18 @@
 						}
 					},
 					"replacement": "row.repo !== repo",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				},
 				{
 					"id": "51",
@@ -802,7 +1396,15 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					]
 				},
 				{
 					"id": "52",
@@ -818,7 +1420,18 @@
 						}
 					},
 					"replacement": "row.branch !== branch",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4",
+						"5",
+						"7"
+					],
+					"killedBy": [
+						"0"
+					]
 				}
 			]
 		}
@@ -826,10 +1439,10 @@
 	"fingerprint": {
 		"bun/diff-budget.fixture.ts": "a51ac572bdc585134c3a16ebb17c58581b20dcb2",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bun/pr-sessions.test.ts": "6525f9a81bd24b479a6a44b4756f18439518b278",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/pr-sessions",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }
