@@ -55,12 +55,15 @@ are not touched.
 - [ ] 3.3 Failing cases in a new `bun/command-guard-deps.test.ts`, through
       `verdict()` as `bun/command-guard-bunx.test.ts` does:
       `bun run deps --no-verify`, `bun run deps --production`,
-      `bun run deps lodash` and `bun run deps > package.json` each block as
+      `bun run deps lodash`, `bun run deps > package.json` and
+      `bun run deps $(printf -- --no-verify)` each block as
       `{ code: 2, rule: "deps-args" }`, the stderr naming `bun run deps`
       (`agent-permissions/words-after-the-script-s-name`); `bun run deps` and
-      `bun run test --watch` get no `deps-args` rule. Then `depsArgs(name,
-      rest)` in `bun/command-guard-exec.ts` beside `bunxInstall` (`bun`, then
-      `run`, then `deps`, then any word), called and blocked from `check()` in
+      `bun run test --watch` get no `deps-args` rule. Then `depsArgs(part,
+      name, rest)` in `bun/command-guard-exec.ts` beside `bunxInstall` (`bun`,
+      then `run`, then `deps`, then any word, or `part` in `FED`, since the
+      parse drops a substitution's output from the words), called and blocked
+      from `check()` in
       `bun/command-guard.ts`; both header comments name it. Verify
       `bun test bun/command-guard` passes
 
