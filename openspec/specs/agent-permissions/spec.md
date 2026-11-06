@@ -2224,8 +2224,9 @@ entry, pinned by a test.
 ### Requirement: A frozen install runs through the deps script
 
 The project's `package.json` SHALL carry the script `deps` with exactly the
-text `bun install --frozen-lockfile`, and an agent SHALL install with
-`bun run deps`. The `ask` entries of *Every manifest-mutating invocation
+text `bun install --frozen-lockfile`, and an agent SHALL run a frozen install
+as `bun run deps`; an install that must rewrite the lockfile, or one from a
+`package.json` with uncommitted edits, stays a prompted `bun install`. The `ask` entries of *Every manifest-mutating invocation
 prompts, whatever else allows it* SHALL stay as they are, so every literal
 `bun install` or `bun i` still prompts. The install is pinned only by the
 `bun.lock` on disk, which nothing compares with `HEAD`. The install SHALL run
@@ -2242,7 +2243,8 @@ in, so a variable an earlier `export` set reaches the install unread.
 #### Scenario: The script runs without a prompt
 
 - **WHEN** the agent attempts `bun run deps` in a checkout whose committed
-  `package.json` holds the script, with `Bash(bun run *)` allowed
+  `package.json` holds the script, and whose `predeps` and `postdeps`, where
+  present, pass the guard as typed lines, with `Bash(bun run *)` allowed
 - **THEN** the hook does not block it and no `ask` entry prompts, because an
   `ask` rule matches the command's text, not a script's body
 
