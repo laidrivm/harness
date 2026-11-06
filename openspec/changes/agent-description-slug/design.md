@@ -49,6 +49,10 @@ the same day: 1 — ok, 2 — yes, 3 — ok.
      slug is a change's, since every change has one on the board;
    - *each report* is the session's report to the user or its caller that
      mentions the agent, not the agent's own;
+   - *the agent's ID* is the one the call returns; the built-in Explore and
+     Plan agents are one-shot and return none (*Resume subagents*), so a
+     report names none for them, and work a session will want to continue
+     goes to `general-purpose` or a custom type, which return one;
    - a call that works on neither a change nor a card — a lookup, a service
      call such as the reviewers `/code-review` starts — is outside the rule.
 
