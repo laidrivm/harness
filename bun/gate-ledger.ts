@@ -17,6 +17,7 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
 type Event = { session_id?: unknown; cwd?: unknown } | null;
+export type Env = Record<string, string | undefined>;
 
 /** The project's real path: `preferred` when set, then the event's `cwd`. */
 function project(event: Event, preferred: string | undefined): string {
@@ -30,15 +31,15 @@ function project(event: Event, preferred: string | undefined): string {
 }
 
 /** The user's state directory, which the ledger and the transcript archive share. */
-export function stateDir(): string {
+export function stateDir(env: Env = process.env): string {
 	// The XDG spec ignores a relative value, which would land in the tree.
-	const xdg = process.env.XDG_STATE_HOME ?? "";
+	const xdg = env.XDG_STATE_HOME ?? "";
 	return isAbsolute(xdg) ? xdg : join(homedir(), ".local", "state");
 }
 
 /** The ledger's path. The turn gate reads it back to find the runner's record. */
-export function ledgerFile(): string {
-	return join(stateDir(), "harness", "gates.jsonl");
+export function ledgerFile(env: Env = process.env): string {
+	return join(stateDir(env), "harness", "gates.jsonl");
 }
 
 /**
@@ -132,10 +133,18 @@ export function record(gate: string, decision: string, rule: string, event: unkn
 /**
  * `record` for a writer that can run in another checkout than the session's
  * own — a command or a git hook: the record names the checkout it read, the
- * event's `cwd`, whatever `CLAUDE_PROJECT_DIR` says.
+ * event's `cwd`, whatever `CLAUDE_PROJECT_DIR` says. `env` names the state
+ * directory, for a caller handed its environment rather than reading its own.
  */
-export function recordCheckout(gate: string, decision: string, rule: string, event: unknown, commit?: string): void {
-	append(gate, decision, rule, event, commit, undefined);
+export function recordCheckout(
+	gate: string,
+	decision: string,
+	rule: string,
+	event: unknown,
+	commit?: string,
+	env: Env = process.env,
+): void {
+	append(gate, decision, rule, event, commit, undefined, env);
 }
 
 function append(
@@ -145,10 +154,11 @@ function append(
 	event: unknown,
 	commit: string | undefined,
 	preferred: string | undefined,
+	env: Env = process.env,
 ): void {
 	try {
 		const seen = (typeof event === "object" ? event : null) as Event;
-		const file = ledgerFile();
+		const file = ledgerFile(env);
 		// Private: a record names a project path and a session id.
 		mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
 		const line = JSON.stringify({
