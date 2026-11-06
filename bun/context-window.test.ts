@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { boundary, cleanupTranscripts, reply, said, skill, transcript, typed } from "./context-window.fixture.ts";
-import { THRESHOLD, wrapup } from "./context-window.ts";
+import { REARM, THRESHOLD, wrapup } from "./context-window.ts";
 import { decide } from "./turn-gate.ts";
 
 /**
@@ -70,6 +70,27 @@ describe("a wrap-up already asked for", () => {
 		expect(session(typed, reply(815_000)).stop()).toBeUndefined();
 	});
 
+	test("a typed directory-scoped name counts too", () => {
+		const scoped = said("<command-name>/.claude/worktrees/x:session-wrapup</command-name>");
+		expect(session(scoped, reply(815_000)).stop()).toBeUndefined();
+	});
+
+	test("a tool result quoting the tag does not count", () => {
+		const read = {
+			type: "user",
+			isSidechain: false,
+			message: {
+				role: "user",
+				content: [{ type: "tool_result", tool_use_id: "t", content: typed.message.content }],
+			},
+		};
+		expect(session(read, reply(815_000)).stop()).toBeString();
+	});
+
+	test("a sidechain's call does not count", () => {
+		expect(session({ ...skill(), isSidechain: true }, reply(815_000)).stop()).toBeString();
+	});
+
 	// spec: context-window/a-wrap-up-from-before-a-compaction
 	test("a call before the last compaction boundary belongs to another context", () => {
 		expect(session(skill(), reply(900_000), boundary(), reply(810_000)).stop()).toBeString();
@@ -134,6 +155,16 @@ describe("once per context", () => {
 	test("a stop above half does not", () => {
 		const s = session(reply(805_000));
 		expect([s.stop(), s.stop([reply(790_000)]), s.stop([reply(802_000)])].map(Boolean)).toEqual([true, false, false]);
+	});
+
+	test("exactly half the threshold does not", () => {
+		const s = session(reply(805_000));
+		expect([s.stop(), s.stop([reply(REARM)]), s.stop([reply(805_000)])].map(Boolean)).toEqual([true, false, false]);
+	});
+
+	test("a mark it cannot write asks nothing", () => {
+		const { path } = transcript(reply(850_000));
+		expect(wrapup(join(path, "no-such-dir", "s1"), { transcript_path: path }, true)).toBeUndefined();
 	});
 
 	// spec: context-window/a-wrap-up-a-compaction-and-a-large-first-stop

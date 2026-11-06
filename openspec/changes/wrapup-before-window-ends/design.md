@@ -229,7 +229,10 @@ append a duplicate yield entry. The walk over the tail (decision 3) also looks
 for a `session-wrapup` call: an assistant `tool_use` named `Skill` whose
 `input.skill` is `session-wrapup` or ends in `:session-wrapup`, or a user
 message holding `<command-name>/session-wrapup</command-name>`, the form a
-typed command takes (both seen in the laptop's transcripts). One found asks
+typed command takes (both seen in the laptop's transcripts), a scope prefix
+allowed in either. Only the user's own text counts, never a tool result,
+which can quote the tag (this change's own files do), and never a
+sidechain's line (review of group 2). One found asks
 nothing and writes the mark. A wrap-up older than the tail is not seen, and
 one more is asked for; the tail is several times a wrap-up's size.
 
