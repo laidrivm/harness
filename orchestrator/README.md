@@ -484,7 +484,10 @@ file under `/run/secrets` and the App's key.
 
 ## 13. Deploys from main
 
-Once step 12's session runs, a root timer deploys `main` to this host:
+Link the units below only once step 12's runner runs an image built from a
+checkout that holds `runner/managed-settings.json`, whose hooks mark a fresh
+session: an older image never writes the mark, so every head the timer
+builds waits. Then a root timer deploys `main` to this host:
 `host/harness-deploy.timer` starts `host/harness-deploy.service` five
 minutes after boot and five minutes after each run, and the service runs
 `deploy.sh` from this checkout at `/root/harness`. Each run that finds a new
@@ -512,12 +515,15 @@ step that fails writes the failure file `.harness-deploy-failed` in
 `agent`'s home, and each clone's stop file (step 7), and the next run starts
 again from the fetch; the session reports the file in its chat at its next
 start. A run the three-hour timeout kills before that write leaves no file,
-only the journal's line. When the session does not come back within two
-minutes, the run puts the runner back on the image it ran before, once, and
-records the head in
-`/var/lib/harness-deploy/rolled-back`, so no run tries that head again; a
-later head deploys as usual. To retry the rolled-back head, remove the
-record:
+only the journal's line. When tmux session `main` does not come back within
+two minutes, the run records the head in
+`/var/lib/harness-deploy/rolled-back`, so no run tries that head again, and
+tries once to put the runner back on the image it ran before; a later head
+deploys as usual. It does not check the restored session, and a tag or `up`
+of that rollback that fails is named in the failure file and left for you
+(the host-deploy design, *Known limits of the light rollback*): after a rollback, read
+the journal and attach to `main` (step 12). To retry the rolled-back head,
+remove the record:
 
 ```sh
 rm /var/lib/harness-deploy/rolled-back
