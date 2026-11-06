@@ -53,8 +53,9 @@ whole harness; `design.md`, decisions 3–4).
       read from `<repo>`'s files alone (`two-repositories-on-one-machine`),
       and its first entry takes the first-entry-ever rules with the gates
       query's project filter unchanged (`the-first-entry-on-a-machine`); the
-      heading names the detached commit as `git rev-parse --short HEAD` prints it when there
-      is no branch (`a-wrap-up-on-a-detached-head`); the frontmatter's
+      heading names the detached commit as `git rev-parse --short HEAD`
+      prints it when there is no branch (`a-wrap-up-on-a-detached-head`); the
+      frontmatter's
       `allowed-tools` holds `Edit(~/.local/state/harness/pipeline-yield/**)`
       and `Bash(git remote get-url origin)`. And one case
       over the repository: `git ls-files` for

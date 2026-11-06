@@ -153,11 +153,11 @@ same results. The floor SHALL count the survivors across every stored file.
 A stored file whose module is no longer tracked, no longer has a test file,
 or is no longer listed, or one holding results for any source but its own
 module, SHALL fail the run before it mutates anything, naming it: the count
-would include code nothing judges, or count a module twice. A listed module with a test
-file and no stored file SHALL be mutated whole, and the run SHALL then fail
-naming the file it wrote until that file is committed: the count would
-otherwise leave the module out. A stored file SHALL record a fingerprint of
-the test files and the fixtures they import that it was measured against,
+would include code nothing judges, or count a module twice. A listed module
+with a test file and no stored file SHALL be mutated whole, and the run
+SHALL then fail naming the file it wrote until that file is committed: the
+count would otherwise leave the module out. A stored file SHALL record a
+fingerprint of the test files and the fixtures they import that it was measured against,
 and of the command, Stryker options and timeouts its mutants ran under, and
 SHALL hold nothing that depends on the machine or the checkout that wrote
 it — no absolute path, system, timing or test output — so that every clone

@@ -2226,8 +2226,9 @@ entry, pinned by a test.
 The project's `package.json` SHALL carry the script `deps` with exactly the
 text `bun install --frozen-lockfile`, and an agent SHALL run a frozen install
 as `bun run deps`; an install that must rewrite the lockfile, or one from a
-`package.json` with uncommitted edits, stays a prompted `bun install`. The `ask` entries of *Every manifest-mutating invocation
-prompts, whatever else allows it* SHALL stay as they are, so every literal
+`package.json` with uncommitted edits, stays a prompted `bun install`. The
+`ask` entries of *Every manifest-mutating invocation prompts, whatever else
+allows it* SHALL stay as they are, so every literal
 `bun install` or `bun i` still prompts. The install is pinned only by the
 `bun.lock` on disk, which nothing compares with `HEAD`. The install SHALL run
 the root lifecycle scripts the committed manifest names (`preinstall`,
