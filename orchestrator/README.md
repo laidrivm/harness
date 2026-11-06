@@ -546,7 +546,7 @@ systemctl disable --now harness-deploy.timer
 
 This stops the timer, not a run already under way: that run finishes, its
 rollback included, and `systemctl is-active harness-deploy.service` prints
-`inactive` once it has. `disable` also removes the links, so deploys start
+`inactive`, or `failed` after a run that failed or rolled back, once it has. `disable` also removes the links, so deploys start
 again with both commands above.
 
 A deploy moves the session's rules, docs, skills and `bun/` with the clone,

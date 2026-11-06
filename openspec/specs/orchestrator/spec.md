@@ -1142,8 +1142,10 @@ The runner image SHALL carry managed settings whose `SessionStart` hook, on
 startup and on clear, marks the session fresh in agent's home, leaving the
 mark as it was on a start that continues a conversation, and whose
 `UserPromptSubmit` hook removes the mark. After its build the deploy SHALL
-bring the stack up only while the mark exists; otherwise it SHALL exit 0
-without recording the head, so the next tick tries again. When `up` leaves
+bring the stack up only when its last look for the mark, right before `up`,
+finds it; otherwise it SHALL exit 0 without recording the head, so the next
+tick tries again. A prompt submitted after that look MAY be cut short by the
+restart. When `up` leaves
 the runner container as it was, the deploy SHALL restart the runner, so the
 session starts again on the updated clone.
 
@@ -1198,7 +1200,8 @@ journal and left for the user; retrying or verifying it is stage 9's.
 
 #### Scenario: The session comes back
 
-- **WHEN** `main` is up within two minutes of `up`
+- **WHEN** `main` is up within two minutes of `up`, and the engine wait and
+  the push succeed or are skipped for want of the token
 - **THEN** the head is recorded as deployed and the failure file is removed
 
 #### Scenario: The session does not come back
