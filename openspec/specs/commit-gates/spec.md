@@ -133,11 +133,24 @@ ignored or untracked file cannot fail a clone that does not have it.
 
 The pre-push hook SHALL run, in addition to the type check and `bun test`:
 `biome ci`, the YAML syntax check, the suppression scan, and the mutation
-floor with the Stryker run that produces its report. A non-zero exit from any
+floor with the Stryker run that produces its report. That run SHALL mutate
+only the modules whose stored results no longer match the tree, as
+`mutation-floor` sets out, while the floor SHALL count every mutated module,
+the unchanged ones from their stored results: a run over every module on every
+push would cost hours, and a floor over the changed modules alone would let a
+survivor elsewhere go uncounted. A non-zero exit from any
 of them SHALL block the push. The diff budget SHALL remain the single
 exception, absorbed as `change-slicing` requires, because it measures rather
 than judges. Whether the judged gates run at all is the one exception
 *The pre-push hook skips the gates a passing run record proved* sets out.
+
+The judged gates SHALL be one script, and the project checks the pre-PR
+runner records — the command under `harness.bumpTest` — SHALL run that same
+script, so that on one machine the runner and the push judge a commit by the
+same gates: a record that proves less than the push is one an agent reads as
+more. The draft check stays outside the script, being about the pull
+request's state rather than the commit, and a gate guarded by `command -v`
+judges only where its tool is installed.
 
 No specification under `openspec/specs/` other than this one SHALL enumerate
 what the hook runs. The list was previously spread across four of them, two of
@@ -162,7 +175,7 @@ touches `package.json`, and nightly.
 
 The secret scan SHALL be bounded to the checked-out branch's range —
 `--log-opts` from the base branch to `HEAD`, resolved as
-`scripts/diff-budget.sh` resolves its own base — and SHALL NOT walk the whole
+`bun/diff-budget.sh` resolves its own base — and SHALL NOT walk the whole
 history the way CI does. Two failure modes decide the bound: an unbounded scan
 means one secret ever reaching history blocks every push by everyone until a
 baseline is written, and a working-tree scan reads the gitignored files that
@@ -182,6 +195,19 @@ where the verdict is binding.
 - **WHEN** a branch is pushed whose surviving-mutant count exceeds the floor
 - **THEN** the hook reports the count and the floor and exits non-zero, and the
   push does not happen
+
+#### Scenario: A push that changed no module
+
+- **WHEN** a branch that changed no file under `bun/` is pushed over current
+  stored results
+- **THEN** the hook starts no Stryker run, and the floor is checked against
+  the stored results of every mutated module
+
+#### Scenario: A gate the runner's checks run too
+
+- **WHEN** `biome ci` fails on a branch and the pre-PR runner runs
+- **THEN** the runner's project checks fail and record no `pass` for the
+  commit, as the push would refuse it
 
 #### Scenario: A tool the machine does not have
 
