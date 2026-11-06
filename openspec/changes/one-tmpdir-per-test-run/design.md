@@ -51,7 +51,7 @@ before a parent exists, so a refused run leaves nothing to remove.
 
 ### 3. The sweep removes parents unmodified for an hour
 
-Proposed, open as question 1 on the card. A run's parent changes its
+The user's answer 1 а on the card, 2026-11-06. A run's parent changes its
 modification time whenever a fixture makes or removes a directory directly
 under it, so a parent a run is still using stays recent. The longest runs
 seen are a pre-PR suite run of 39 minutes on a loaded laptop (2026-11-05) and
@@ -85,7 +85,7 @@ decision 2 is what it checks.
 
 ### 6. The mutation baseline is re-run in the same pull request
 
-Proposed, open as question 2 on the card. Every `mutation/*.json`
+The user's answer 2 а on the card, 2026-11-06. Every `mutation/*.json`
 fingerprints `bunfig.toml` and its preloads, so all nineteen go stale. #443
 re-ran the baseline in the pull request that changed the preload, and the
 same run is the check that the preload works under Stryker: the count of
