@@ -123,6 +123,15 @@ runs on unchanged code give every test the same id and write the same bytes,
 and that Stryker reuses every mutant from the trimmed file, as decision 4 of
 `pre-push-commit-gates` probed for the command runner.
 
+Probed on 2026-11-06, scratch configuration, four workers: the first run,
+`--force`, ran 41 tests and scored 189 `Killed`, 42 `Survived` and 17
+`NoCoverage`; the second, from the first's trimmed file, printed `248 of 248
+mutant result(s) are reused.`; the 41 test ids and names were the same in
+both. The two trimmed files differed in one thing only: a mutant whose result
+is reused gains `"killedBy": []` where a fresh run that did not kill it writes
+no `killedBy`. `trim` therefore drops an empty `killedBy`, and the two files
+are then byte-identical.
+
 ### 5. The fingerprint
 
 The fingerprint drops the test files, which Stryker now diffs itself, and
