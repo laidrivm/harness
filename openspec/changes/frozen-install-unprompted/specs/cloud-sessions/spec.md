@@ -15,14 +15,12 @@ session. With the variable unset or holding any other value, the hook SHALL
 install nothing.
 
 The install is a hook's command and no tool call, so it SHALL pass neither
-through the Bash bootstrap nor through the command guard. While the installed
-package holds no command guard — before the harness is installed, or with an
-install too old to hold one — the bootstrap SHALL let through only `bun
-install --frozen-lockfile` or `bun i --frozen-lockfile`, character for
-character once surrounding whitespace is trimmed, and block every other
-command, a bare `bun install` among them; once the guard is there,
-`agent-permissions`' *An install runs only in its frozen form* decides a
-`bun install` the agent runs.
+through the Bash bootstrap nor through `permissions.ask`, and neither SHALL
+change: the bootstrap lets only an install through before the harness is
+installed — `bun install` or `bun i`, bare or with `--frozen-lockfile`, or
+`bun run deps` — and `agent-permissions`' *Every manifest-mutating invocation
+prompts, whatever else allows it* still prompts for a `bun install` the
+agent runs.
 
 #### Scenario: A cloud session starts on a fresh clone
 
@@ -63,17 +61,7 @@ command, a bare `bun install` among them; once the guard is there,
 
 #### Scenario: The local policy is unchanged
 
-- **WHEN** the agent runs `bun install` itself in a cloud session
-- **THEN** it is decided exactly as in a local session — the cloud install
-  changes no part of the local policy — so the guard refuses it and names
-  `bun install --frozen-lockfile`
-
-#### Scenario: The agent's own install before the harness is installed
-
-- **WHEN** the harness is not installed and the agent runs
-  `bun install --frozen-lockfile` or `bun i --frozen-lockfile`
-- **THEN** the bootstrap lets it through
-- **AND WHEN** the agent runs `bun install`, `bun i`, `bun install lodash` or
-  `git status`
-- **THEN** the bootstrap blocks the call, and the reason names
-  `bun install --frozen-lockfile`
+- **WHEN** the agent runs `bun install` itself in any session
+- **THEN** it prompts as before, and before the harness is installed the
+  bootstrap lets through only `bun install` or `bun i`, bare or with
+  `--frozen-lockfile`, or `bun run deps`, and its hint names `bun run deps`
