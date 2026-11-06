@@ -89,10 +89,12 @@ const concurrency = Math.max(1, Math.floor(availableParallelism() / 3));
  * it, and a mutant that ran `sync.ts`'s main block in a test wrote the checkout's `harness/` and `bunfig.toml`. A
  * repository of the sandbox's own, made by the dry run before any worker starts, stops git at the sandbox; it is
  * committed, so a test reading `HEAD` reads the sandbox's, and remade when an earlier attempt left it without one. The
- * `-c` values keep the user's identity, signing and hooks out of it.
+ * `-c` values keep the user's identity, signing and hooks out of it. First, as `.githooks/pre-push` does, it unsets the
+ * variables git names as local: an inherited `GIT_DIR` or `GIT_WORK_TREE` outranks the sandbox's `.git` and would make
+ * and commit the repository in the checkout instead.
  */
 export const command = (module: string) =>
-	"{ { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A" +
+	"unset $(git rev-parse --local-env-vars); { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A" +
 	" && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null" +
 	` commit -qm sandbox; }; } && bun test ${stem(module)}`;
 
