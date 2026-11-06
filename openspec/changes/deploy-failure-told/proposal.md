@@ -24,7 +24,9 @@ main comes up is never told to the session…*,
    `filter=latest`, while mellon's `99d775c`, re-run four times, returns one
    per name, its re-runs sharing one suite. A head whose older suite passed
    and newer one failed is therefore deployed, against the requirement's
-   *latest `test` check run*.
+   *latest `test` check run*. `bun/bump.ts`'s `greenHead()` reads the same
+   URL the same way, so every consumer's bump adopts such a harness commit
+   as green too.
 
 ## What Changes
 
@@ -36,12 +38,15 @@ main comes up is never told to the session…*,
   in each failure line the rollback writes, beside the step that failed.
 - `green()` decides by the newest `test` run from `github-actions` across
   every check suite the read returns, so an older suite's success no longer
-  outweighs a newer suite's failure or pending run.
+  outweighs a newer suite's failure or pending run; a consumer's bump
+  chooses its target the same way.
 
 Not in this change: the restart of a still-fresh session on each tick while a
 step after `main` keeps failing, which is the retry every other failed step
 gets; the symlink hole in `put()`, deferred by the user's decision of 06.11
-until a seen threat.
+until a seen threat. Whether this change also stops that retry from tagging
+the image it brought up as the previous one is asked on the card (design,
+*Open Questions*).
 
 ## Capabilities
 
@@ -56,6 +61,8 @@ None.
   back* — a `rolled-back` record that cannot be written is named in the
   failure file; *The host deploys main's green head and nothing else* — a
   scenario for a head with more than one check suite.
+- `harness-updates`: *A bump attempts only the harness's newest green
+  commit* — the newest test run decides, across check suites.
 
 ## Impact
 
@@ -65,6 +72,7 @@ None.
   `orchestrator/README.md` where it names the hooks; tests
   `orchestrator/deploy-session.test.ts`, `orchestrator/deploy.test.ts`,
   `orchestrator/layout-deploy.test.ts`, and `orchestrator/deploy.fixture.ts`
-  for runs from more than one suite.
+  for runs from more than one suite; `bun/bump.ts` (`greenHead()`) and
+  `bun/bump-verify.test.ts`.
 - The host: the next deploy after the merge rebuilds the runner image, which
   carries the new hook.

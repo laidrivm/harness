@@ -55,7 +55,8 @@ The three gaps the proposal names all sit in that path:
 - Stopping the restart of a still-fresh session on every tick while a step
   after `main` keeps failing. That is the retry every failed step after the
   fast-forward gets (*The build fails*); a fresh session has no turn to
-  lose, and the retry is what recovers a transient push failure.
+  lose, and the retry is what recovers a transient push failure. What the
+  retry does to the previous image is under *Open Questions*.
 - The symlink hole in `put()`: deferred by the user's decision of 06.11, its
   `shortcut:` comment stays.
 - Telling the session at the moment of the failure, without a prompt or a
@@ -100,8 +101,18 @@ The report becomes `orchestrator/runner/deploy-failed.sh`, copied to
 and both hook entries' command is that path. Two copies of the command in
 the settings would have to be kept in step by hand. The `SessionStart`
 entry keeps its `startup|clear|resume` matcher; the `UserPromptSubmit`
-entry runs the mark's removal and then the script, as two hooks of the one
-entry.
+entry carries the mark's removal and the script as two hooks. Claude Code
+runs an event's matching hooks in parallel (hooks reference, read 06.11),
+so the two run in no order;
+neither reads what the other writes.
+
+The script exits 0 whatever its move does. Claude Code adds a hook's
+standard output to the context only on exit 0, and the inline command
+today exits with `mv`'s status: a move that fails — a directory at
+`.harness-deploy-failed.reported` — drops the report it has just printed,
+and does so on every later start. With exit 0 the report reaches the
+session, the file stays where it was, and the next start or prompt reports
+it again, which is the louder failure.
 
 `orchestrator/layout-deploy.test.ts` runs the hook commands under `sh`; it
 maps the command's path to the tree's file through the Dockerfile's `COPY`
@@ -131,8 +142,23 @@ older suite included. An empty list gives `null`, which compares unequal and
 exits 1, the *absent* case. The URL keeps `filter=latest`: it already drops
 the older attempts inside a suite, and the read stays one page.
 
+A newest run that is `cancelled` keeps the head undeployed, as a failed one
+does. `test.yml` cancels in progress per ref, so a run of `main` is
+cancelled by a newer run of `main`, which is then the newest; a run
+cancelled by hand stays undeployed until it is re-run or `main` moves,
+which is what cancelling a check asks for.
+
 Alternative: `max_by(.started_at)` — a queued run has no `started_at`, and
 two jobs can start in the same second.
+
+### 5. A consumer's bump reads the runs the same way
+
+`bun/bump.ts`'s `greenHead()` reads the same URL and has the same
+`some(success && github-actions)`. It takes the newest `github-actions` run
+by `id` and requires its `success`, as `green()` does. The two cannot share
+code — one is `jq` in a script that runs on a host with no bun, the other
+TypeScript — so each carries a case for the two-suite answer, and each
+comment names the per-suite reading of `filter=latest`.
 
 ## Risks / Trade-offs
 
@@ -147,3 +173,18 @@ two jobs can start in the same second.
 - [The image must be rebuilt to carry the hook] → the deploy that ships this
   change rebuilds it; until then the old hook stays, which is the behaviour
   today.
+
+## Open Questions
+
+- The retry after a late failure moves `previous` (local `/code-review`,
+  06.11). Once `up` has run, the runner container runs the image built from
+  the head. When a later step fails, the head is not recorded, and the next
+  tick tags that container's image as `orchestrator-runner:previous`
+  (`deploy.sh:218-220`) before it rebuilds. The image that was previous
+  before the deploy is left dangling, and `prune` deletes it. If that tick's
+  wait for `main` then fails, the rollback brings the runner up on the
+  head's own image, and the light rollback no longer rolls back. This is the
+  behaviour today, and the retry the non-goals keep depends on it. Asked on
+  the card: fix it in this change — a `brought-up` record of the head whose
+  images `up` started, with no re-tag while it names the head — or file a
+  separate card.

@@ -80,7 +80,7 @@ does not exist, the run SHALL skip the Windmill push and say so.
 Before the build the deploy SHALL tag the image the running runner container
 runs as the previous image. After bringing the stack up it SHALL wait at most
 two minutes for the tmux session `main` in the runner. When `main` is not up
-by then, it SHALL write the failure file, record the head as rolled back,
+by then, it SHALL record the head as rolled back, write the failure file,
 bring the runner up on the previous image once, and SHALL NOT deploy that
 head again while the record holds it; a record that cannot be written SHALL
 be told by the journal and named in every failure line the rollback writes.
