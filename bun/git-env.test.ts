@@ -22,7 +22,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { git } from "./turn-gate.fixture.ts";
+import { load } from "./mutation-checkout.ts";
+import { fingerprint } from "./mutation-run.ts";
+import { commit, git } from "./turn-gate.fixture.ts";
 
 const ROOT = join(import.meta.dir, "..");
 const HOOK = join(ROOT, ".githooks", "pre-push");
@@ -81,11 +83,14 @@ const OPTIONAL = ["actionlint", "gitleaks"];
  * config key as a fixture would: with no inherited `GIT_DIR` the ceiling stops
  * git finding any repository, so the write fails harmlessly; with one, it
  * lands in the decoy. `bun/diff-budget.sh` is such a stub too, exiting 0.
+ * Given a repository, it runs there, and `bun` runs the harness's own mutation
+ * step and floor in it once it has recorded the call.
  */
 function hook(
 	env: Record<string, string>,
 	tools: Record<string, number | string> = {},
 	stdin = "",
+	repo?: string,
 ): { code: number; calls: string[][] } {
 	const dir = scratch("git-env-hook-");
 	const stub = join(dir, "stub");
@@ -100,6 +105,9 @@ function hook(
 			'env >> "$RECORD"',
 			'echo --- >> "$RECORD"',
 			`GIT_CEILING_DIRECTORIES=${dir} git config probe.written yes 2>/dev/null || true`,
+			...(repo && name === "bun"
+				? [`case "$1" in bun/mutation-*) exec "${process.execPath}" "${ROOT}/$1" ;; esac`]
+				: []),
 			typeof code === "number" ? `exit ${code}` : `case "$*" in ${code}) exit 1 ;; esac`,
 			"",
 		].join("\n");
@@ -107,7 +115,7 @@ function hook(
 		writeFileSync(join(stub, name), body(name, code));
 		chmodSync(join(stub, name), 0o755);
 	}
-	const work = join(dir, "work");
+	const work = repo ?? join(dir, "work");
 	for (const path of [".githooks/gates.sh", "bun/diff-base.sh"]) {
 		mkdirSync(dirname(join(work, path)), { recursive: true });
 		if (existsSync(join(ROOT, path))) copyFileSync(join(ROOT, path), join(work, path));
@@ -153,9 +161,28 @@ const GATES = [
 	"bunx --no-install biome ci --colors=off --diagnostic-level=error .",
 	"bunx --no-install tsc --noEmit",
 	"bun test",
+	"bun bun/mutation-run.ts",
+	"bun bun/mutation-floor.ts",
 	"diff-budget.sh",
 ];
 const BUNS = GATES.length;
+
+/** A repository whose one listed module has stored results current at `HEAD`, one survivor, and a floor of one. */
+function measured(): string {
+	const dir = decoy();
+	commit(dir, {
+		"stryker.config.json": `${JSON.stringify({ mutate: ["bun/a.ts"] })}\n`,
+		"package.json": `${JSON.stringify({ harness: { mutationFloor: { surviving: 1, why: "a fixture" } } })}\n`,
+		"bun/a.ts": "1\n",
+		"bun/a.test.ts": "1\n",
+	});
+	const mutants = [{ id: "0", mutatorName: "M", location: {}, replacement: "2", status: "Survived" }];
+	const files = { "bun/a.ts": { source: "1\n", mutants } };
+	commit(dir, {
+		"mutation/a.json": JSON.stringify({ schemaVersion: "1.0", files, fingerprint: fingerprint("bun/a.ts", load(dir)) }),
+	});
+	return dir;
+}
 
 describe("the pre-push hook", () => {
 	// spec: commit-gates/a-tool-the-machine-does-not-have
@@ -217,6 +244,26 @@ describe("the pre-push hook", () => {
 			[],
 		]);
 	});
+
+	// spec: commit-gates/a-push-that-changed-no-module
+	test.each([
+		["nothing under bun/", { "README.md": "1\n" }],
+		["only a module the list leaves out", { "bun/b.ts": "1\n", "bun/b.test.ts": "1\n" }],
+	])(
+		"a push that changed %s starts no Stryker, and the floor counts the stored results",
+		(_, files) => {
+			const dir = measured();
+			commit(dir, files);
+			const { code, calls } = hook({}, {}, "", dir);
+			const stryker = started(calls).filter((line) => line.includes("stryker"));
+			expect([code, started(calls).slice(-3), stryker]).toEqual([
+				0,
+				["bun bun/mutation-run.ts", "bun bun/mutation-floor.ts", "diff-budget.sh"],
+				[],
+			]);
+		},
+		30_000,
+	);
 
 	// spec: commit-gates/a-push-from-a-worktree
 	test("a linked worktree's GIT_DIR reaches no command it starts [2]", () => {

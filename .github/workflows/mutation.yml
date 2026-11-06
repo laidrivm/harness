@@ -1,0 +1,41 @@
+name: Mutation
+
+# The mutation step and the floor `.githooks/gates.sh` runs before a push, run
+# again where a push that skipped the hook cannot skip them. Over current
+# stored results under `mutation/` the step mutates nothing; over stale ones it
+# re-runs the module and fails, since the file it rewrites is not committed.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned by commit, as in d2ass's mutation.yml. Nothing updates these pins
+      # here — no dependabot runs in this repository — so they are bumped by
+      # hand, to the ones d2ass's dependabot has moved to.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      # Stryker is the one tool here that needs Node. Without it on PATH, bunx
+      # runs bin/stryker.js on Bun instead of honouring its node shebang, and
+      # the instrumenter dies on @babel/generator's CommonJS default.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.19.0
+      - run: bun install --frozen-lockfile
+      # Two commands, not one: a crashed Stryker fails the job through the
+      # shell, and the step deletes the old report first, so the floor never
+      # reads a stale one.
+      - run: bun bun/mutation-run.ts
+      - run: bun bun/mutation-floor.ts
