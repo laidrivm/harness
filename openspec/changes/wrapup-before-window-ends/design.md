@@ -88,7 +88,8 @@ the window — needs the window. Rejected for now.
 The hook opens `transcript_path`, reads its last 4 MiB (`Bun.file().slice()`),
 drops the first line when the slice starts after byte 0 — only then can it be
 cut — and walks the rest from the end, parsing each line once; the walk also
-looks for a wrap-up call (decision 7), so it covers the whole tail, a few
+looks for a wrap-up call back to the last compaction (decision 7), so it may
+cover the whole tail, a few
 milliseconds at 4 MiB. The first
 line that parses as JSON with `type === "assistant"`, `isSidechain !== true`
 and a `usage` whose three input fields sum above zero gives the size. 4 MiB
@@ -154,8 +155,11 @@ refuses at most once per mark; this change adds a `commit-gates` requirement
 that the bound is the pre-PR refusal's own, rather than copying that 425-line
 requirement into a MODIFIED delta, which alone would pass the diff budget.
 
-Inside `decide()`: `reason = judge(...) ?? (flagged ? undefined :
-wrapup(...))`. `judge()` logs its decision as today.
+Inside `decide()`: `reason = judge(...) ?? (no mark file or flagged ?
+undefined : wrapup(...))`. `judge()` logs its decision as today. With no mark
+file the `mark` half never ran — a partial installation — and the stop ends,
+as `commit-gates` requires of a stop with no mark; an empty mark, written
+outside a repository, still lets the size be read.
 
 A refusal for size makes the next stop arrive with `stop_hook_active` true,
 which the ceiling counts as one round: one of 20, once per context. Accepted.
@@ -187,6 +191,14 @@ message holding `<command-name>/session-wrapup</command-name>`, the form a
 typed command takes (both seen in the laptop's transcripts). One found asks
 nothing and writes the mark. A wrap-up older than the tail is not seen, and
 one more is asked for; the tail is several times a wrap-up's size.
+
+Only a call of the current context counts. A compaction appends to the same
+file, so a wrap-up run before it can still sit in the tail at the next
+crossing. Walking from the end, the search for a call stops at the first
+`type: "system"` line with `subtype: "compact_boundary"` (the marker Claude
+Code writes at a compaction, seen in the laptop's transcripts); the search
+for the size does not, since the last reply is always the current context's.
+A `/clear` starts a new file, so needs no marker.
 
 Running subagents: the main session here usually dispatches background
 worktree agents and ends its turns while they run. It cannot wait inside the

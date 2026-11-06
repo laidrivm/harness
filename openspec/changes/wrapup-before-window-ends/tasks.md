@@ -32,7 +32,10 @@ choices are `design.md`'s decisions 1–9.
       `session-wrapup`, at 815 000 and then 830 000, asks nothing twice
       (`the-wrap-up-the-done-line-started`); a tail holding a user message
       with `<command-name>/session-wrapup</command-name>` at 815 000 asks
-      nothing (`a-wrap-up-the-user-typed`); 900 000 then 120 000 reads
+      nothing (`a-wrap-up-the-user-typed`); a tail holding a `Skill`
+      `session-wrapup` call, then a `system` line with `subtype`
+      `compact_boundary`, then a reply at 810 000, with no `.wrapup` mark,
+      refuses (`a-wrap-up-from-before-a-compaction`); 900 000 then 120 000 reads
       120 000 (`the-last-reply-counts`); a sidechain line and an all-zero
       line after an 810 000 reply read 810 000
       (`a-sidechain-or-synthetic-reply-after-the-last-real-one`); a 6 MiB
@@ -54,7 +57,7 @@ choices are `design.md`'s decisions 1–9.
       out: `THRESHOLD` and `REARM` exported, the 4 MiB tail read with the
       first line dropped only past byte 0, the backward walk passing over
       sidechain and zero-sum replies and looking for a `session-wrapup` call
-      across the whole tail, the `.wrapup` mark beside the turn gate's,
+      back to the tail's last `compact_boundary` line, the `.wrapup` mark beside the turn gate's,
       written on a refusal and on an ask skipped for a wrap-up or an
       unattended session, `unattended()` called only for a stop it would
       otherwise refuse, the
@@ -80,13 +83,15 @@ choices are `design.md`'s decisions 1–9.
       Passing today and kept as guards:
       spawned as the hook, the twentieth continued stop prints `continue:
       false` and no wrap-up reason (`the-ceiling-at-the-same-stop`); a stop
+      at 850 000 in a session no `mark` ran for ends (`no-mark`); a stop
       at 400 000 adds no `context-window` record
       (`a-stop-below-the-threshold`); `HOOKS` and the harness's
       `.claude/settings.json` hold no `SubagentStop` entry
       (`a-subagent-s-stop`)
 - [ ] 1.5 Then `bun/turn-gate.ts` as decisions 1, 5 and 9 set out:
       `decide()` runs the size check when `judge()` did not refuse and the
-      mark is not flagged ` refused`, never flags it for size, and passes a
+      mark file exists and is not flagged ` refused`, never flags it for
+      size, and passes a
       size refusal to `log` as its own decision; `judge()` logs as today; the
       hook maps the size refusal to `record("context-window", "refused",
       "wrapup", event)`. The header gains one paragraph naming the check, its order
