@@ -7,7 +7,8 @@
 `allow`. Every agent in a new worktree therefore stops on its first install,
 and on the VPS, reached through Remote Control, that prompt is a manual step
 in the stage 2.5 metric. `bun install --frozen-lockfile` changes neither
-`package.json` nor `bun.lock`, so it needs no prompt (card *Let a frozen bun
+`package.json` nor `bun.lock` and installs what the `bun.lock` on disk pins,
+so it needs no prompt (card *Let a frozen bun
 install run without a prompt*, 40e39875c31b81e8b989ef568b1f65a9).
 
 ## What Changes
