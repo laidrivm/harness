@@ -151,10 +151,10 @@ source, tests, the fixtures they import or the shared test configuration
 differ from `HEAD`'s copy SHALL fail the run first, naming each, since its
 results and its fingerprint are measured against `HEAD`'s copy.
 
-The fingerprint SHALL hold the fixtures a module's tests import directly, and
-no other file the tests reach: a change to a module a test imports that is
-not a fixture, or to a fixture only another fixture imports, re-runs no module
-whose tests reach it that way. A run asked for every module whole refreshes
+Of the files a module's tests reach, the fingerprint SHALL hold only the
+fixtures they import directly, `bunfig.toml` and what it preloads: a change
+to a module a test imports that is not a fixture, or to a fixture only
+another fixture imports, re-runs no module whose tests reach it that way. A run asked for every module whole refreshes
 them by hand; deriving every importer would be machinery for a rare case.
 
 #### Scenario: Stryker's options changed
