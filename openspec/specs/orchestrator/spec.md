@@ -1077,8 +1077,8 @@ SHALL NOT run either call.
 
 ### Requirement: The host deploys main's green head and nothing else
 
-A root timer SHALL start the host's deploy every five minutes, one run at a
-time. Each run SHALL compare `origin/main`'s head with the commit it last
+A root timer SHALL start the host's deploy five minutes after boot and five
+minutes after each run ends, one run at a time. Each run SHALL compare `origin/main`'s head with the commit it last
 deployed and with the commit it last rolled back. When the head is neither and
 its latest `test` check run from `github-actions` has concluded `success`, the
 run SHALL fast-forward the host's checkout to that head and rebuild the
@@ -1192,7 +1192,8 @@ runs as the previous image. After bringing the stack up it SHALL wait at most
 two minutes for the tmux session `main` in the runner. When `main` is not up
 by then, it SHALL write the failure file, record the head as rolled back,
 bring the runner up on the previous image once, and SHALL NOT deploy that
-head again. A rollback that fails SHALL be told by the failure file and the
+head again while the record holds it; a record that cannot be written SHALL
+be told by the journal. A rollback that fails SHALL be told by the failure file and the
 journal and left for the user; retrying or verifying it is stage 9's.
 
 #### Scenario: The session comes back
