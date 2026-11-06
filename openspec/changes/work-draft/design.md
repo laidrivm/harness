@@ -94,8 +94,10 @@ it starts, names the command instead.
 - The rule can still be forgotten → the pre-push hook and `finish` keep
   refusing a push into a ready pull request, so a forgotten draft costs a
   window of ready-under-rework, never a push into it.
-- A cloud session cannot run it (`gh pr ready` uses GraphQL, which the
-  proxy closes) → `draft` exits 1 there, as `resolve` does, the README's
+- A cloud session cannot mark a ready pull request draft (`gh pr ready`
+  uses GraphQL, which the proxy closes; the read is REST, so an open draft
+  and a merged or closed one are answered there as anywhere) → `draft`
+  exits 1 there on a ready one, as `resolve` does, the README's
   cloud note says so, and the rule says a failed `draft` is reported and
   does not stop the follow-up.
 - `bun bun/work.ts *`'s allow entry now grants a switch to draft that a

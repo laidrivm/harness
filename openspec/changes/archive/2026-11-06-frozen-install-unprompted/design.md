@@ -144,6 +144,11 @@ which prompts.
   guard reads it as a line, which no check refuses for `bun add`; a manifest
   edit, out of scope by 1 а (CodeRabbit round 5; settled on the card
   2026-11-06, answer 5 а).
+- [A committed root `preinstall`, `postinstall` or `prepare`] → the frozen
+  install runs it with no prompt, since `deps` carries no `--ignore-scripts`,
+  unlike the cloud hook's install; a manifest edit, out of scope by 1 а
+  (question 1 on the card named it; local review and CodeRabbit round 1 on
+  the archive, #454).
 - [An edited `package.json` before the harness is installed] → the bootstrap
   matches `bun run deps` by text and reads no file, so an uncommitted script
   runs; a manifest edit, out of scope by 1 а (round 5; settled on the card
