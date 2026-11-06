@@ -55,8 +55,8 @@ The three gaps the proposal names all sit in that path:
 - Stopping the restart of a still-fresh session on every tick while a step
   after `main` keeps failing. That is the retry every failed step after the
   fast-forward gets (*The build fails*); a fresh session has no turn to
-  lose, and the retry is what recovers a transient push failure. What the
-  retry does to the previous image is under *Open Questions*.
+  lose, and the retry is what recovers a transient push failure. Decision 5
+  stops the retry from moving the previous image.
 - The symlink hole in `put()`: deferred by the user's decision of 06.11, its
   `shortcut:` comment stays.
 - Telling the session at the moment of the failure, without a prompt or a
@@ -187,6 +187,35 @@ as a known limit; the code before this change had it too.
 Alternative: `max_by(.started_at)` — a queued run has no `started_at`, and
 two jobs can start in the same second.
 
+### 5. A retry keeps the previous image (the user's answer 1 а, 06.11)
+
+Local `/code-review` found that the retry after a late failure moves
+`previous`. Once `up` has run, the runner container runs the image built
+from the head. When a later step fails, the head is not recorded, and the
+next tick tags that container's image as `orchestrator-runner:previous`
+(`deploy.sh:218-220`) before it rebuilds. The image that was previous before
+the deploy is left dangling, and `prune` deletes it. If that tick's wait for
+`main` then fails, the rollback brings the runner up on the head's own image,
+so the light rollback has nothing to roll back to. The retry the non-goals
+keep relies on that path, so the user chose to fix it here, not on a separate
+card.
+
+A third record, `brought-up` in the state directory, holds the head whose
+images the run is about to bring up. `locked()` writes it right before
+`up`, after the second check read and the look for the mark. A write that
+fails is a failed step, `the brought-up record`, so nothing is brought up
+with no record. Writing it before `up` rather than after covers an `up` that
+fails part way and leaves the new runner running. Before its tag, the run
+compares the record with the head. While they match, the image tagged as
+previous is left as it is, and the build, `up` and the wait go on. A
+different head, or no record, tags as today. The record is never removed. A
+recorded or rolled-back head is not attempted again, and every newer head
+differs from it.
+
+Alternative: tag `previous` only when the name has no `previous` yet. That
+also blocks the tag on a fresh deploy after a recorded one, so the second
+deploy's rollback would bring back the first deploy's previous image.
+
 ## Risks / Trade-offs
 
 - [A prompt cut short by a restart still gets no report from it] → the
@@ -200,18 +229,3 @@ two jobs can start in the same second.
 - [The image must be rebuilt to carry the hook] → the deploy that ships this
   change rebuilds it; until then the old hook stays, which is the behaviour
   today.
-
-## Open Questions
-
-- The retry after a late failure moves `previous` (local `/code-review`,
-  06.11). Once `up` has run, the runner container runs the image built from
-  the head. When a later step fails, the head is not recorded, and the next
-  tick tags that container's image as `orchestrator-runner:previous`
-  (`deploy.sh:218-220`) before it rebuilds. The image that was previous
-  before the deploy is left dangling, and `prune` deletes it. If that tick's
-  wait for `main` then fails, the rollback brings the runner up on the
-  head's own image, and the light rollback no longer rolls back. This is the
-  behaviour today, and the retry the non-goals keep depends on it. Asked on
-  the card: fix it in this change — a `brought-up` record of the head whose
-  images `up` started, with no re-tag while it names the head — or file a
-  separate card.
