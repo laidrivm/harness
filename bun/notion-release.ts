@@ -69,8 +69,8 @@ async function open(call: Call, card: string, user: string) {
 /**
  * What `cleared()` did: the line to print, none when it wrote nothing; `back`,
  * `waits` when its own reads found a question or a pause notice, whether it
- * then wrote nothing or put the user back, and `unread` when its second read
- * failed; and whether a restore failed.
+ * then wrote nothing, put the user back or failed to, and `unread` when its
+ * second read failed; and whether a restore failed.
  */
 export type Cleared = { line?: string; back?: "waits" | "unread"; restoreFailed: boolean };
 
@@ -79,8 +79,8 @@ export type Cleared = { line?: string; back?: "waits" | "unread"; restoreFailed:
  * then reads the comments again and puts the user back when something now
  * waits or that read failed. The second read follows any write that may have
  * landed, its answer read back or not, so a question posted meanwhile keeps
- * the user whatever the write answered. A failed restore leaves a question
- * with no one on `Assign`.
+ * the user whatever the write answered. A failed restore leaves what waits,
+ * or the comments it could not read, with no one on `Assign`.
  */
 export async function cleared(call: Call, card: string, user: string): Promise<Cleared> {
 	const failed = (why: string, restoreFailed = false): Cleared => ({
