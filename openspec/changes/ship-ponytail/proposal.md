@@ -31,6 +31,10 @@ plugins ship in this one change (answer 3 б).
   `defaultMode` `ultra`, before it starts the persistent session. The main
   session, its subagents and every pass's session read that file. The
   laptop's and the consumers' levels do not change.
+- `orchestrator/runner/session.sh` runs `claude plugin install
+  ponytail@ponytail --scope project` in the clone before each start: on
+  Claude Code 2.1.316 the project's settings alone kept ponytail for the
+  first start only (probe and user, 05.11; design.md, D7).
 - `README.md` gains a section on the harness's plugins: which, why, what they
   cost, and how to turn one off locally.
 
@@ -46,13 +50,15 @@ None.
   from a pinned marketplace, and the check fails when they do not.
 - `harness-updates`: the sync writes the two plugins and the marketplace
   entry, and keeps the consumer's own.
-- `orchestrator`: every claude the runner starts as `agent` runs ponytail at
-  ultra.
+- `orchestrator`: every claude the runner starts as `agent` reads ponytail's
+  level as ultra, and the persistent session installs ponytail before each
+  start; a pass may run without it (design.md, D5).
 
 ## Impact
 
 - Code: `bun/settings.ts`, `bun/sync-settings.ts`,
-  `orchestrator/runner/entrypoint.sh`, and their tests.
+  `orchestrator/runner/entrypoint.sh`, `orchestrator/runner/session.sh`, and
+  their tests.
 - Configuration: the harness's `.claude/settings.json`; every consumer's on
   its next sync.
 - The user's laptop: in the harness's and consumers' folders, the project's

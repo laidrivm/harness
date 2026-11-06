@@ -384,7 +384,13 @@ conversation yet, the start is a new one. Its `gh` and git mint a
 token from the App for each call; it holds none. No step here makes that
 clone, which the roadmap's stage 2.5 sets up in its step 6: until it exists,
 the session starts in `/home/agent` and pulls nothing, and the first start
-after it is cloned runs in it.
+after it is cloned runs in it. Every `claude` that runs as `agent` takes
+ponytail's level, ultra, from `/home/agent/.config/ponytail/config.json`,
+which the entrypoint writes on each start. Trust `/home/agent/harness` once
+in the session's pane, as step 5 does for a pass's clone, then `/exit`: until
+then the session runs without ponytail, and from the next start `session.sh`
+installs it with `claude plugin install ponytail@ponytail --scope project`
+before `claude`.
 
 1. The commit identity, the App's bot. On a host that already runs the stack,
    do this before pulling the change that needs it, since every

@@ -2,8 +2,9 @@
  * The agent permission policy, read from the consumer's tracked
  * `.claude/settings.json` and `bunfig.toml`: what is refused, what prompts,
  * what is pre-approved, the hook that catches what a permission pattern
- * cannot express, every other hook `bootstrap.ts` lists, and the attribution
- * Claude Code adds. The same for every consumer — strictness is not a value a
+ * cannot express, every other hook `bootstrap.ts` lists, the attribution
+ * Claude Code adds, and the plugins every session runs with the marketplace
+ * their pin rests on. The same for every consumer — strictness is not a value a
  * project chooses.
  *
  * The deny and ask lists are compared whole. An exact list pins every word
@@ -13,6 +14,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { HOOKS } from "./bootstrap.ts";
+import { isRecord } from "./is-record.ts";
 import { tracked } from "./tracked.ts";
 
 /** Every package manager a consumer does not use. */
@@ -73,6 +75,30 @@ export const EDIT_ASK = "Edit(bunfig.toml)";
  */
 export const ATTRIBUTION = { pr: "", sessionUrl: false };
 
+/**
+ * The plugins every consumer runs (ship-ponytail D1, D2). Each must be `true`
+ * under `enabledPlugins`; the consumer's other plugins are its own, and one
+ * person turns one of these off in `.claude/settings.local.json`, which the
+ * check never reads. The ids are checked by name alone: nothing offline can
+ * read ponytail's `marketplace.json` or Claude Code's built-in marketplace.
+ */
+export const PLUGINS = ["ponytail@ponytail", "cc-plugin-you-should-know@builtin"];
+
+/**
+ * The `ponytail` marketplace entry, compared and synced whole: a `github`
+ * source has no `sha`, so the tag is the pin, and `autoUpdate` is written out
+ * so the pin does not rest on a default (ship-ponytail D3).
+ */
+export const MARKETPLACE = {
+	source: {
+		source: "github",
+		repo: "DietrichGebert/ponytail",
+		// moved by hand — nothing updates this pin; v5.3.3 was 7801d061243d7b753bad0e0b3c057cd250b11755 on 03.11
+		ref: "v5.3.3",
+	},
+	autoUpdate: false,
+};
+
 /** The `[install]` section the release-age and exact-version gates rest on. */
 export const INSTALL = {
 	exact: true,
@@ -104,6 +130,8 @@ type Settings = {
 	hooks?: Record<string, { matcher?: string; hooks?: Hook[] }[]>;
 	disableAllHooks?: unknown;
 	attribution?: unknown;
+	enabledPlugins?: unknown;
+	extraKnownMarketplaces?: unknown;
 };
 
 // Built from a char code rather than written into a regex literal, where the
@@ -220,6 +248,15 @@ export function settings(root: string): string[] {
 
 	if (!Bun.deepEquals(parsed.attribution, ATTRIBUTION))
 		say(`attribution is not ${JSON.stringify(ATTRIBUTION)} — ${fix}`);
+	// Sync refuses a plugin key that is not an object, so the fix named for one is a hand edit.
+	const byHand = "is not an object — make it one by hand, then sync";
+	const plugins = parsed.enabledPlugins;
+	if (plugins !== undefined && !isRecord(plugins)) say(`enabledPlugins ${byHand}`);
+	else for (const id of PLUGINS) if (plugins?.[id] !== true) say(`enabledPlugins.${id} is not true — ${fix}`);
+	const marketplaces = parsed.extraKnownMarketplaces;
+	if (marketplaces !== undefined && !isRecord(marketplaces)) say(`extraKnownMarketplaces ${byHand}`);
+	else if (!Bun.deepEquals(marketplaces?.ponytail, MARKETPLACE))
+		say(`extraKnownMarketplaces.ponytail is not ${JSON.stringify(MARKETPLACE)} — ${fix}`);
 
 	if (!deny.includes(EDIT_DENY)) say(`${EDIT_DENY} is not denied`);
 	if (!ask.includes(EDIT_ASK)) say(`${EDIT_ASK} is not asked`);

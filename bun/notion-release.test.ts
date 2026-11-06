@@ -148,11 +148,28 @@ describe("something arrives during the release", () => {
 	});
 
 	// spec: task-board/the-restore-fails
-	test("a restore answered 500: restoreFailed [35]", async () => {
-		const run = await release({
-			next: { [COMMENTS]: { comments: [question(3)] }, [PATCH]: { fail: { [PATCH]: 500 } } },
-		});
-		expect([run.line?.startsWith("assign: failed — "), run.restoreFailed]).toEqual([true, true]);
+	test.each([
+		["a restore answered 500 [35]", { [PATCH]: { fail: { [PATCH]: 500 } } }, "waits" as const, "the restore: "],
+		[
+			"a restore answer without the user",
+			{ [PATCH]: { keep: true } },
+			"waits" as const,
+			"the restore did not hold the user",
+		],
+		[
+			"a second comments read and the restore answered 500",
+			{ [PATCH]: { fail: { [COMMENTS]: 500, [PATCH]: 500 } } },
+			"unread" as const,
+			"the restore: ",
+		],
+	])("%s: restoreFailed, back kept", async (_, next, back, why) => {
+		const run = await release({ next: { [COMMENTS]: { comments: [question(3)] }, ...next } });
+		expect([run.line?.startsWith("assign: failed — "), run.line?.includes(why), run.back, run.restoreFailed]).toEqual([
+			true,
+			true,
+			back,
+			true,
+		]);
 	});
 });
 
