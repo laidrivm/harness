@@ -61,7 +61,7 @@ an explicit timeout.
       `harness-test-*` entry is left in it; every other entry left, from a
       process a test started outside the parent (design, *Non-Goals*), is
       named by prefix and count in the pull request
-- [ ] 2.2 Re-run the mutation baseline, `bun bun/mutation-run.ts --all
+- [x] 2.2 Re-run the mutation baseline, `bun bun/mutation-run.ts --all
       --force`, with `TMPDIR` set to a new empty directory, commit what it
       writes, run `bun bun/mutation-run.ts` again, which must mutate nothing,
       then `bun bun/mutation-floor.ts`, setting `harness.mutationFloor` to
