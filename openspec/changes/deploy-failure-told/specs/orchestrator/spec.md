@@ -176,7 +176,7 @@ timeout on the journal. The managed `SessionStart` hook
 SHALL print the failure file, when it exists, on startup, on clear and on a
 continued start, and the managed `UserPromptSubmit` hook on each submitted
 prompt, each with a line asking the session to report it to the user in
-chat, and SHALL then move it aside. Only a move that succeeds SHALL keep the
+chat, and SHALL move it aside. Only a move that succeeds SHALL keep the
 next start or prompt from reporting it again; a move that fails SHALL leave
 the report printed and the file where it was, for the next start or prompt to
 report again.
