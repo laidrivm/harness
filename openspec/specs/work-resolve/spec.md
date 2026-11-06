@@ -10,7 +10,7 @@ resolved, does not wait on the user for a fix already on the pull request.
 ### Requirement: Resolve reads its arguments strictly
 
 `bun bun/work.ts resolve` SHALL take `--pr <n>`, a positive integer,
-`--head <sha>`, a full 40-hex commit id, and one or more `--comment <id>`,
+`--head <sha>`, a full commit id of 40 lowercase hex digits, and one or more `--comment <id>`,
 each a positive integer. Any other option, a positional argument, a missing
 value, a malformed value, a missing or repeated `--pr` or `--head`, or no
 `--comment` at all SHALL print the usage and exit 2 before any git or `gh`
