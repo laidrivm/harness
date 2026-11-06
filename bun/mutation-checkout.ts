@@ -9,7 +9,7 @@ import { tracked as sweep } from "./tracked.ts";
  * What a plan reads of a checkout: every tracked path, `HEAD`'s blob id of each, the working-tree text of each
  * `bun/*.ts` and `bunfig.toml` and of each `mutation/<name>.json`, the paths `git status` lists, and the modules
  * `stryker.config.json`'s `mutate` lists — the one list of what is mutated, which the floor counts through the stored
- * files it allows.
+ * files it allows — and the file's other options, which every module runs under.
  */
 export type Tree = {
 	tracked: string[];
@@ -18,6 +18,7 @@ export type Tree = {
 	stored: Record<string, string>;
 	dirty: string[];
 	listed: string[];
+	options: Record<string, unknown>;
 };
 
 const git = (cwd: string, ...args: string[]) => {
@@ -52,10 +53,10 @@ export function load(top: string): Tree {
 	const text: Record<string, string> = {};
 	for (const path of tracked.filter((p) => p === "bunfig.toml" || /^bun\/[^/]+\.ts$/.test(p)))
 		if (existsSync(join(top, path))) text[path] = readFileSync(join(top, path), "utf8");
-	const { mutate } = JSON.parse(readFileSync(join(top, "stryker.config.json"), "utf8"));
+	const { $schema: _, mutate, ...options } = JSON.parse(readFileSync(join(top, "stryker.config.json"), "utf8"));
 	if (!Array.isArray(mutate) || !mutate.every((m) => typeof m === "string"))
 		throw new Error("stryker.config.json's mutate must list the modules the run mutates");
-	return { tracked, blobs, text, stored: storedFiles(top), dirty: changed(top), listed: mutate };
+	return { tracked, blobs, text, stored: storedFiles(top), dirty: changed(top), listed: mutate, options };
 }
 
 /** The text of each `mutation/<name>.json` under `top`, by its path. */

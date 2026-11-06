@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Tree } from "./mutation-checkout.ts";
 import { loadReport, survivors } from "./mutation-floor.ts";
-import { fingerprint, merge, modules, plan, type Stored, trim } from "./mutation-run.ts";
+import { fingerprint, merge, modules, plan, type Stored, testsOf, trim } from "./mutation-run.ts";
 
 const made: string[] = [];
 afterAll(() => {
@@ -33,7 +33,8 @@ const tree = (files: Record<string, string>): Tree => {
 		text: files,
 		stored: {},
 		dirty: [],
-		listed: modules(paths).filter((m) => paths.some((p) => p.startsWith(m.slice(0, -3)) && p.endsWith(".test.ts"))),
+		listed: modules(paths).filter((m) => testsOf(m, paths).length),
+		options: { testRunner: "command" },
 	};
 };
 
@@ -42,7 +43,7 @@ function commit(t: Tree, path: string, text?: string): Tree {
 	const files = { ...t.text };
 	if (text === undefined) delete files[path];
 	else files[path] = text;
-	return { ...tree(files), stored: t.stored, listed: t.listed };
+	return { ...tree(files), stored: t.stored, listed: t.listed, options: t.options };
 }
 
 /** `t` with every module that has tests measured against it, one survivor each. */
@@ -104,6 +105,21 @@ describe("which modules there are", () => {
 			"stryker.config.json's mutate lists bun/gone.ts, which is not a tracked module a test file matches",
 		]);
 	});
+
+	test("a listed module that no test file matches is not reported as one the list leaves out", () => {
+		expect(plan({ ...base, listed: ["bun/root.ts"] }).skipped).not.toContain("bun/root.ts");
+	});
+
+	test("a test file the list names is not a module, and fails naming it", () => {
+		expect(plan({ ...base, listed: ["bun/board.test.ts"] }).problems).toEqual([
+			"stryker.config.json's mutate lists bun/board.test.ts, which is not a tracked module a test file matches",
+		]);
+	});
+
+	test("an empty list mutates nothing and leaves every module out", () => {
+		const { runs, skipped, problems } = plan({ ...base, listed: [] });
+		expect([runs, skipped.length, problems]).toEqual([[], 7, []]);
+	});
 });
 
 describe("what a run mutates", () => {
@@ -151,6 +167,15 @@ describe("what a run mutates", () => {
 		expect([all.length, all.every((run) => run.force)]).toEqual([6, true]);
 	});
 
+	// spec: mutation-floor/stryker-s-options-changed
+	test("a change to Stryker's shared options forces every module, and the fingerprint names the command", () => {
+		const t = current();
+		const all = runs({ ...t, options: { ...t.options, ignoreStatic: true } });
+		expect([all.length, all.every((run) => run.force)]).toEqual([6, true]);
+		expect(fingerprint("bun/board.ts", t)["stryker command"]).toEndWith("bun test bun/board");
+		expect(JSON.parse(fingerprint("bun/board.ts", t)["stryker options"] ?? "")).toMatchObject({ timeoutFactor: 3 });
+	});
+
 	// spec: mutation-floor/a-new-module-has-no-stored-file
 	test("a new module runs whole once listed", () => {
 		const t = commit(commit(current(), "bun/new.ts", "export const n = 1;\n"), "bun/new.test.ts", "x\n");
@@ -188,7 +213,18 @@ describe("what fails the run before it mutates", () => {
 		["bun/board.ts", "bun/board.ts is not tracked"],
 		["bun/board.test.ts", "no test file matches bun/board"],
 	])("a stored file whose %s is deleted", (path, why) => {
-		expect(plan(commit(current(), path)).problems).toContain(`mutation/board.json: ${why} — delete the stored file`);
+		expect(plan(commit(current(), path)).problems).toEqual([
+			"stryker.config.json's mutate lists bun/board.ts, which is not a tracked module a test file matches",
+			`mutation/board.json: ${why} — delete the stored file`,
+		]);
+	});
+
+	// spec: mutation-floor/a-checkout-with-uncommitted-files
+	test("an edited or untracked file outside mutation/ fails a run that would mutate, and only one", () => {
+		const t = commit(current(), "bun/board.ts", "export const e = 2;\n");
+		const stray = "commit or remove notes.ts first — Stryker copies the working tree, not HEAD";
+		expect(plan({ ...t, dirty: ["notes.ts", "mutation/board.json"] }).problems).toEqual([stray]);
+		expect(plan({ ...current(), dirty: ["notes.ts"] }).problems).toEqual([]);
 	});
 
 	// spec: mutation-floor/a-stored-file-whose-module-left-the-list

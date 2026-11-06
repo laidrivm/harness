@@ -1,16 +1,17 @@
 #!/usr/bin/env bun
 /**
  * The mutation step `openspec/specs/mutation-floor/spec.md` sets out. Each
- * module `bun/<name>.ts` is mutated alone, judged by `bun test bun/<name>`,
- * and its results stored as `mutation/<name>.json`; a run mutates only the
- * modules those results no longer cover, then merges every stored file into
- * the report `bun/mutation-floor.ts` counts.
+ * module `stryker.config.json`'s `mutate` lists is mutated alone, judged by
+ * `bun test bun/<name>`, and its results stored as `mutation/<name>.json`; a
+ * run mutates only the listed modules those results no longer cover, then
+ * merges every stored file into the report `bun/mutation-floor.ts` counts.
  *
  * `bun bun/mutation-run.ts [--all] [--force] [bun/<name>.ts…]`: `--all` runs
- * every module with tests, each incrementally, so an interrupted baseline
- * resumes; `--force` re-runs each one whole; named modules narrow the run.
+ * every listed module, each incrementally, so an interrupted baseline resumes;
+ * `--force` re-runs each one whole; named modules narrow the run.
  */
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import { dirname, join, posix } from "node:path";
 import { load, storedFiles, type Tree, unsaved } from "./mutation-checkout.ts";
 import { REPORT } from "./mutation-floor.ts";
@@ -33,16 +34,18 @@ const stem = (module: string) => module.slice(0, -".ts".length);
 const storedPath = (module: string) => `mutation/${stem(module).slice("bun/".length)}.json`;
 
 /** The test files `bun test bun/<name>` runs: those whose path begins with it. */
-const testsOf = (module: string, tracked: string[]) =>
+export const testsOf = (module: string, tracked: string[]) =>
 	tracked.filter((path) => path.startsWith(stem(module)) && path.endsWith(".test.ts"));
 
 const transpiler = new Bun.Transpiler({ loader: "ts" });
 
 /**
- * What the module's results were measured against, by `HEAD`'s blob id: its
+ * What the module's results were measured against: by `HEAD`'s blob id, its
  * tests, the fixtures they import (one level, Bun's own parse, so an import a
- * comment names is not one), `bunfig.toml` and what it preloads. The command
- * runner reports no tests, so Stryker cannot see any of them change.
+ * comment names is not one), `bunfig.toml` and what it preloads; and, as text,
+ * the command each mutant ran and the Stryker options and limits it ran under,
+ * which decide what reads as `Timeout`. The command runner reports no tests, so
+ * Stryker cannot see any of them change.
  */
 export function fingerprint(module: string, tree: Tree): Record<string, string> {
 	const tests = testsOf(module, tree.tracked);
@@ -58,16 +61,40 @@ export function fingerprint(module: string, tree: Tree): Record<string, string> 
 	const shared =
 		bunfig === undefined ? [] : ["bunfig.toml", ...[preload ?? []].flat().map((path) => posix.normalize(String(path)))];
 	const paths = [...new Set([...tests, ...fixtures, ...shared])].sort();
-	return Object.fromEntries(paths.map((path) => [path, tree.blobs[path] ?? "absent"]));
+	return {
+		...Object.fromEntries(paths.map((path) => [path, tree.blobs[path] ?? "absent"])),
+		"stryker command": command(module),
+		"stryker options": JSON.stringify({ ...tree.options, ...limits }),
+	};
 }
+
+/**
+ * A mutant's limit is timeoutFactor × the dry run + timeoutMS, the dry run timed alone. Left at Stryker's 1.5 and
+ * 5000 ms with a worker per core but one, 11 copies of a suite ran up to 5 times slower than that sample, and most
+ * mutants read as Timeout; three times the sample plus 10 s is the margin. Stryker's 5-minute dry run stopped
+ * `bun/board-loop.ts`, whose suite waits out real timers and took 313–330 s on a laptop at load 2–4; `bun/work.ts`'s,
+ * the next slowest, 161 s. 15 is 2.7 times the worst.
+ */
+export const limits = { dryRunTimeoutMinutes: 15, timeoutFactor: 3, timeoutMS: 10000 };
+
+/**
+ * A third of the machine's cores, leaving room for the agents beside it: 4 on the 12-core laptop the baseline ran on.
+ * Not in the fingerprint, unlike `limits`: it is the machine's, so a CI runner would otherwise re-run every module, and
+ * it moves results only through load, which decision 8 measured as moving none on the list.
+ */
+const concurrency = Math.max(1, Math.floor(availableParallelism() / 3));
 
 /**
  * What Stryker runs per mutant. Its sandbox sits under the checkout and holds no `.git`, so git found the checkout from
  * it, and a mutant that ran `sync.ts`'s main block in a test wrote the checkout's `harness/` and `bunfig.toml`. A
- * repository of the sandbox's own, made by the dry run before any worker starts, stops git at the sandbox.
+ * repository of the sandbox's own, made by the dry run before any worker starts, stops git at the sandbox; it is
+ * committed, so a test reading `HEAD` reads the sandbox's, and remade when an earlier attempt left it without one. The
+ * `-c` values keep the user's identity, signing and hooks out of it.
  */
 export const command = (module: string) =>
-	`{ test -d .git || { git init -q && git add -A; }; } && bun test ${stem(module)}`;
+	"{ { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A" +
+	" && git -c user.name=stryker -c user.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null" +
+	` commit -qm sandbox; }; } && bun test ${stem(module)}`;
 
 const same = (a: Record<string, string> | undefined, b: Record<string, string>) =>
 	a !== undefined && Object.keys(a).length === Object.keys(b).length && Object.entries(b).every(([k, v]) => a[k] === v);
@@ -113,10 +140,11 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 			problems.push(`${path}: ${module} is not listed in stryker.config.json's mutate — delete the stored file`);
 	}
 	for (const module of modules(tree.tracked)) {
-		if (!tested.has(module) || !tree.listed.includes(module)) {
+		if (!tree.listed.includes(module)) {
 			skipped.push(module);
 			continue;
 		}
+		if (!tested.has(module)) continue; // listed and untested: a problem above, not a module the list leaves out
 		const print = fingerprint(module, tree);
 		// The module too: its results would otherwise describe a source `HEAD` does not hold.
 		const dirty = [module, ...Object.keys(print)].filter((path) => tree.dirty.includes(path));
@@ -134,6 +162,11 @@ export function plan(tree: Tree, flags = { all: false, force: false }) {
 		const force = flags.force || !same(stored.fingerprint, print);
 		if (force || flags.all || stored.files[module]?.source !== tree.text[module]) runs.push({ module, force });
 	}
+	// Stryker copies the working tree, not `HEAD`, so an edit or an untracked file anywhere judges mutants on code no
+	// clone holds. The stored files are exempt: Stryker leaves `mutation/` out, and a resumed run finds its own there.
+	const stray = tree.dirty.filter((path) => !path.startsWith("mutation/"));
+	if (runs.length && stray.length)
+		problems.push(`commit or remove ${stray.join(", ")} first — Stryker copies the working tree, not HEAD`);
 	return { runs, skipped, problems };
 }
 
@@ -182,8 +215,7 @@ function fail(problems: string[]): void {
  * resumes by module, never from a leftover copy: one could hold results the stored file has since replaced. A `dry`
  * run stops after Stryker's initial test run, which writes no incremental file, so it neither copies nor stores one.
  */
-function stryker(top: string, { module, force }: Run, print: Record<string, string>, dry = false): number {
-	const { $schema: _, ...shared } = JSON.parse(readFileSync(join(top, "stryker.config.json"), "utf8"));
+function stryker(tree: Tree, top: string, { module, force }: Run, print: Record<string, string>, dry = false): number {
 	const tmp = join(top, ".stryker-tmp");
 	const name = stem(module).slice("bun/".length);
 	const [config, work] = [join(tmp, `${name}.config.json`), join(tmp, `${name}.incremental.json`)];
@@ -195,18 +227,12 @@ function stryker(top: string, { module, force }: Run, print: Record<string, stri
 		mutate: [module],
 		commandRunner: { command: command(module) },
 		incrementalFile: work,
-		// Stryker's 5 stopped `bun/board-loop.ts`: its suite waits out real timers and took 313–330 s on a laptop at
-		// load 2–4, in the sandbox as outside it; `bun/work.ts`'s, the next slowest, 161 s. 15 is 2.7 times the worst.
-		dryRunTimeoutMinutes: 15,
-		// A mutant's limit is timeoutFactor × the dry run + timeoutMS, the dry run timed alone. Left at Stryker's 1.5 and
-		// 5000 ms with a worker per core but one, 11 copies of a suite ran up to 5 times slower than that sample, and most
-		// mutants read as Timeout. A third of this laptop's 12 cores, and three times the sample plus 10 s, is the margin.
-		concurrency: 4,
-		timeoutFactor: 3,
-		timeoutMS: 10000,
+		...limits,
+		concurrency,
 		dryRunOnly: dry,
 	};
-	writeFileSync(config, JSON.stringify({ ...shared, ...own }));
+	// The options `load` read, not the file again, so the fingerprint names what every module ran under.
+	writeFileSync(config, JSON.stringify({ ...tree.options, ...own }));
 	const args = ["bunx", "--no-install", "stryker", "run", config, ...(force ? ["--force"] : [])];
 	const run = Bun.spawnSync(args, { cwd: top, stdio: ["inherit", "inherit", "inherit"] });
 	rmSync(config, { force: true });
@@ -240,10 +266,10 @@ if (import.meta.main) {
 	const chosen = named.length ? runs.filter((run) => named.includes(run.module)) : runs;
 	if (chosen.length && !Bun.which("node")) fail(["Stryker needs Node on PATH, and none was found"]);
 	// Only for several: one module's own run starts with the same dry run, so a sweep would only repeat it.
-	const dry = (chosen.length > 1 ? chosen : []).map((run) => ({ ...run, code: stryker(root, run, {}, true) }));
+	const dry = (chosen.length > 1 ? chosen : []).map((run) => ({ ...run, code: stryker(tree, root, run, {}, true) }));
 	fail(dry.filter(({ code }) => code !== 0).map(({ module, code }) => `Stryker's dry run exited ${code} on ${module}`));
 	for (const run of chosen) {
-		const code = stryker(root, run, fingerprint(run.module, tree));
+		const code = stryker(tree, root, run, fingerprint(run.module, tree));
 		if (code !== 0) fail([`Stryker exited ${code} on ${run.module}`]);
 	}
 	fail(

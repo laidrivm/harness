@@ -35,7 +35,8 @@ nothing could kill its mutants, and a crashed run is not a count.
 
 ### Requirement: A mutant's tests cannot write to the checkout
 
-The run SHALL give the sandbox Stryker mutates in a git repository of its own
+The run SHALL give the sandbox Stryker mutates in a git repository of its own,
+holding one commit of the sandbox's files,
 before the first test runs there, so that a test, or a mutant run in a test's
 process, that finds the repository through git finds the sandbox and never
 the checkout the run was started from: the sandbox sits under that checkout,
@@ -56,7 +57,8 @@ A stored file whose module is no longer tracked, no longer has a test file,
 or is no longer listed, SHALL fail the run, naming it, and so SHALL a listed
 module with a test file and no stored file: either way the count would leave out, or include, code
 nothing judged. A stored file SHALL record a fingerprint of the test files
-and the fixtures they import that it was measured against, and SHALL hold
+and the fixtures they import that it was measured against, and of the
+command, Stryker options and timeouts its mutants ran under, and SHALL hold
 nothing that depends on the machine or the checkout that wrote it — no
 absolute path, system, timing or test output — so that every clone writes
 the same file for the same results.
@@ -100,11 +102,27 @@ the same file for the same results.
 
 A run SHALL mutate exactly the listed modules with tests that have no stored file, whose
 source differs from the copy their stored file holds, or whose tests, the
-fixtures they import and the shared test configuration no longer match its
-fingerprint — a branch's changes, and any stale file a merge left. The last
-SHALL re-run whole, because the command runner reports no tests, and a
-module with no stored file too; the rest incrementally. The baseline SHALL
-be the same run asked for every listed module.
+fixtures they import, the shared test configuration and Stryker's options no
+longer match its fingerprint — a branch's changes, and any stale file a merge
+left. The last SHALL re-run whole, because the command runner reports no
+tests, and a module with no stored file too; the rest incrementally. The
+baseline SHALL be the same run asked for every listed module. A run that would
+mutate SHALL fail first while the checkout holds an edited or untracked file
+outside `mutation/`, naming each, since Stryker copies the working tree and
+not `HEAD`.
+
+#### Scenario: Stryker's options changed
+
+- **WHEN** `stryker.config.json`'s options other than `mutate`, the command a
+  mutant runs, or its timeouts differ from those a stored file records
+- **THEN** the run re-runs every listed module whole
+
+#### Scenario: A checkout with uncommitted files
+
+- **WHEN** a module needs a run and the checkout holds an untracked
+  `notes.ts`
+- **THEN** the run fails naming `notes.ts` before it mutates anything, and a
+  run that needs no module does not
 
 #### Scenario: A new module has no stored file
 
