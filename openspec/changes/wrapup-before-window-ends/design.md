@@ -105,6 +105,11 @@ is.
 
 A reply may not yet be flushed when `Stop` fires; the hook then reads the
 reply before it, a few thousand tokens behind, which the 200k reserve covers.
+The reply read must lie after the tail's last `compact_boundary` line: a
+first turn after a compaction whose only reply is not yet flushed would
+otherwise read the old context's last reply, past the threshold, and ask
+for a wrap-up in a context just compacted. A walk that meets the boundary
+before a reply reads no size, and the next stop measures.
 
 ### 4. "Once" is a mark per session, re-armed by a smaller context
 
@@ -117,9 +122,10 @@ the threshold with that file present asks nothing. Two things remove it, so
 re-arm the ask: a stop under half the threshold, 400 000 (`REARM`), and a
 stop whose tail's last `compact_boundary` line is not the one the mark
 records. The mark holds that line's `uuid` as it was when the mark was
-written, or nothing when the tail held none; a boundary that has since left
-the tail reads as no change, since a new one is appended after the mark and
-so lies in any tail that reaches past it. Both are read at every stop with a
+written, or nothing when the tail held none. A boundary missing from the
+tail reads as no change: the mark's own has left it, or a new one did before
+any stop read it, which takes more than 4 MiB of transcript between a
+compaction and the stop after it — then only the size re-arms (Risks). Both are read at every stop with a
 size, before and whatever the turn gate decides (decision 5): a stop the
 gate refuses still re-arms. An event with no safe session id asks nothing,
 so a refusal can never repeat for want of a place to record it.
@@ -128,7 +134,10 @@ Either alone leaves a hole. Half the threshold alone: a wrap-up run before a
 compaction writes the mark, and a first stop after it measuring 500 000 —
 a long first turn over a large summary — keeps it, so the next crossing is
 not asked. The boundary alone: one more than 4 MiB behind the stop is out of
-the tail.
+the tail. Both miss a compaction only when the first stop after it is both
+over 4 MiB of transcript away and at or above 400 000. Tracking a boundary
+beyond the tail would mean reading the transcript back to the mark, a read
+with no bound; the miss costs one wrap-up not asked for in that context.
 
 The gap between the two figures is deliberate: a context that shrinks a
 little within one window — old tool results cleared, a `/rewind`, a read one
@@ -174,21 +183,22 @@ that the bound is the pre-PR refusal's own, rather than copying that 425-line
 requirement into a MODIFIED delta, which alone would pass the diff budget.
 
 Inside `decide()`: `reason = judge(...)`, then `wrapup(file, event, ask)`
-with `ask` true only when `judge()` did not refuse and the mark file exists
-unflagged; `wrapup()` re-arms whatever `ask` says and refuses only when it is
-true. `judge()` logs its decision as today. With no mark file the `mark` half
-never ran — a partial installation — and the stop ends, as `commit-gates`
-requires of a stop with no mark.
+with `ask` true only when `judge()` did not refuse, the mark names a commit
+unflagged, and `HEAD` names a branch; `wrapup()` re-arms whatever `ask` says
+and refuses only when it is true. `judge()` logs its decision as today.
 
-An empty mark, written outside a repository, and a `HEAD` naming no branch
-are another matter. `commit-gates` lets such a stop end, but for want of a
-commit to judge, not of a partner hook: the window fills as fast outside a
-repository, and a wrap-up there is as useful. So a stop under an empty mark,
-or on a detached `HEAD`, may be refused for size, and the `commit-gates`
-requirement this change adds says the fail-open cases are the pre-PR
-refusal's own, as its once-per-mark bound is. Requiring a mark that names a
-commit would keep the two rules from meeting, at the cost of never asking a
-session that runs outside a repository. Rejected.
+`commit-gates` requires every stop the hook cannot judge — no mark, no
+repository, a `HEAD` naming no branch — to end, so none is refused for size:
+with no mark the `mark` half never ran, a partial installation; an empty
+mark is written outside a repository. A session outside a repository, or on
+a detached `HEAD`, is therefore never asked. Asking it was tried in review
+(#436) under an ADDED `commit-gates` requirement that read those cases as the
+pre-PR refusal's own; archived, it would have stood beside the fail-open
+requirement and its scenario *There is no repository, or no branch*, which
+still say the turn ends, and the MODIFIED delta that would reconcile them
+copies that 425-line requirement, past the diff budget. The harness's
+sessions run in a repository on a branch, and a detached `HEAD` lasts a
+rebase. Rejected.
 
 A refusal for size makes the next stop arrive with `stop_hook_active` true,
 which the ceiling counts as one round: one of 20, once per context. Accepted.
@@ -225,8 +235,8 @@ Only a call of the current context counts. A compaction appends to the same
 file, so a wrap-up run before it can still sit in the tail at the next
 crossing. Walking from the end, the search for a call stops at the first
 `type: "system"` line with `subtype: "compact_boundary"` (the marker Claude
-Code writes at a compaction, seen in the laptop's transcripts); the search
-for the size does not, since the last reply is always the current context's.
+Code writes at a compaction, seen in the laptop's transcripts), and so does
+the search for the size (decision 3).
 A `/clear` starts a new file, so needs no marker.
 
 Running subagents: the main session here usually dispatches background
@@ -290,6 +300,11 @@ is re-read once `groups()` moves (decision 1).
 - [A reply not flushed when `Stop` fires] → the size read is one reply old;
   covered by the reserve.
 - [A refusal adds a round to a `/goal` run] → one of 20, once per context.
+- [A compaction whose next stop lies more than 4 MiB of transcript after it
+  and measures 400 000 or more] → the old context's mark survives, and that
+  context is not asked; decision 4.
+- [A session outside a repository or on a detached `HEAD`] → never asked
+  (decision 5).
 
 ## Migration Plan
 

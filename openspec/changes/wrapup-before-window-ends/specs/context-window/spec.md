@@ -77,10 +77,17 @@ code, at most once per context.
 
 The context size SHALL be `input_tokens + cache_read_input_tokens +
 cache_creation_input_tokens` of the `usage` of the last main-thread assistant
-reply in the event's `transcript_path`, read from the file's tail alone. A
+reply in the event's `transcript_path`, read from the file's tail alone and
+after the tail's last compaction boundary, if any. A
 reply marked as a sidechain, or whose sum is zero, SHALL be passed over. No
 transcript, an unreadable one, or a tail with no such reply SHALL read as no
 size, which asks nothing.
+
+#### Scenario: A compaction and no reply since
+
+- **WHEN** the tail holds a reply at 815 000, then a compaction boundary, and
+  no reply after it
+- **THEN** no size is read and nothing is asked
 
 #### Scenario: The last reply counts
 
@@ -118,7 +125,8 @@ After a refusal for size, or a stop that counts as the ask, the hook SHALL NOT
 refuse for size again in that session until a stop re-arms it: one that
 measures under half the threshold, 400 000, which only a compaction or a
 cleared context reaches, or one whose tail's last compaction boundary is not
-the one the tail held when the record was written. The re-arm SHALL be read
+the one the tail held when the record was written. A boundary that left the
+tail before any stop read it re-arms nothing; then only the size does. The re-arm SHALL be read
 at every stop with a size, a stop the turn gate refuses and one under a mark
 it refused included. The record SHALL be kept per session id outside the
 tree, where a restart of Claude Code that resumes the session id finds it.
@@ -143,7 +151,8 @@ tree, where a restart of Claude Code that resumes the session id finds it.
 #### Scenario: A wrap-up, a compaction and a large first stop
 
 - **WHEN** a stop at 815 000 found a wrap-up in its tail, a compaction
-  boundary follows, the first stop after it measures 500 000, and a later one
+  boundary follows, the first stop after it, with the boundary in its tail,
+  measures 500 000, and a later one
   810 000
 - **THEN** the last one is refused for size
 
@@ -177,11 +186,10 @@ tree, where a restart of Claude Code that resumes the session id finds it.
 The round ceiling and the turn gate's refusal SHALL be decided before a
 refusal for size is weighed. A stop the ceiling ends, a stop the turn gate
 refuses, a stop under a mark the turn gate refused, since that refusal
-promises the next stop ends the turn, and a stop with no mark at all, which
-the turn gate lets end, SHALL NOT be refused for size. A stop under a mark
-naming no commit, written outside a repository, or on a `HEAD` naming no
-branch MAY be: the turn gate lets it end for want of a commit to judge, not
-of its partner hook. A refusal for size SHALL leave
+promises the next stop ends the turn, and a stop the turn gate cannot judge
+and so lets end — no mark at all, a mark naming no commit, written outside a
+repository, or a `HEAD` naming no branch (`commit-gates`) — SHALL NOT be
+refused for size. A refusal for size SHALL leave
 the mark where a refused turn leaves it, and SHALL NOT flag it as the turn
 gate's refusal: the gate still judges the continued turn.
 
@@ -209,13 +217,13 @@ gate's refusal: the gate still judges the continued turn.
 
 - **WHEN** a prompt outside a git repository wrote an empty mark, and a stop
   measures 850 000
-- **THEN** the stop is refused for size
+- **THEN** the turn ends
 
 #### Scenario: On a detached HEAD
 
 - **WHEN** a prompt marked a commit, `HEAD` is then detached, and a stop
   measures 850 000
-- **THEN** the stop is refused for size
+- **THEN** the turn ends
 
 #### Scenario: The ceiling at the same stop
 
