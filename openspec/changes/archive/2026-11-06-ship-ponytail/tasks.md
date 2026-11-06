@@ -154,7 +154,12 @@ led to D7. Each box below is ticked as done, with what it measured.
 
 - [x] 4.1 `bun bun/pre-pr.ts` passes
 - [x] 4.2 Run 06.11 on the image from main `cf76f46a` (with #437); results
-      on the card, *Проверки задачи 4.2 на VPS, 06.11*. The clone was
+      on the card, *Проверки задачи 4.2 на VPS, 06.11*. The start log shows
+      the add at `v5.3.3` and the install at local scope; the clone stayed
+      clean; the list shows `ponytail@ponytail` 5.3.3 enabled; the modes
+      file reads `ultra`, and the session and a subagent quote `level:
+      ultra`; `config.json` is owned by `agent`; the built-in id resolves,
+      and the user saw it enabled in `/plugin`. The clone was
       trusted since the probe, so the list read before the rebuild, which
       showed no plugins, stands in for the one before trust. The pass's clone
       lists ponytail as disabled: card *Enable ponytail in a pass's clone*
