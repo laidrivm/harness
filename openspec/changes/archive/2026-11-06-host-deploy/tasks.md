@@ -129,21 +129,25 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
 
 ## 4. On the host
 
-- [ ] 4.1 **User act.** Once group 3 is merged and the image of group 2 runs
+- [x] 4.1 **User act.** Once group 3 is merged and the image of group 2 runs
       (built by hand, stage page step 3): as root, `systemctl link` both
       units from `/root/harness/orchestrator/host/`, then
       `systemctl enable --now harness-deploy.timer`. Never before group 3:
       the deploy on `main` brings the stack up without waiting for a fresh
-      session
-- [ ] 4.2 **User act.** After the next merge, `/clear` the session from
+      session (06.11: the timer enabled; card, «Задача 4.1 на VPS, 06.11»)
+- [x] 4.2 **User act.** After the next merge, `/clear` the session from
       Remote Control and watch: within a tick the session restarts, Remote
       Control reconnects, and `journalctl -u harness-deploy` shows the head
       deployed. Note on the card whether the first message cleared the mark
       and whether Remote Control reconnected, the two points design.md lists
       as unverified; the `SessionStart` on `/clear` and the conversation a
       restart continues the live probe settled on 05.11 (answer 18 а)
-- [ ] 4.3 **User decision.** Confirm the `main` ruleset's bypass list names no
-      App and no bot, since every merge now runs on the host as root
+      (06.11: 9c47f18 deployed at 13:37 UTC after the `/clear`, Remote
+      Control reconnected, the first message removed `.harness-fresh`; card,
+      «Задача 4.2 на VPS, 06.11»)
+- [x] 4.3 **User decision.** Confirm the `main` ruleset's bypass list names no
+      App and no bot, since every merge now runs on the host as root (06.11:
+      only the user, as repository admin; card, «Задача 4.3, 06.11»)
 
 ## Moved out of this change
 
