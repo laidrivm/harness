@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, emptyDir } from "../bun/diff-budget.fixture.ts";
-import { instructions, madeOpen, read } from "./layout.fixture.ts";
+import { instructions, madeOpen, read, root } from "./layout.fixture.ts";
 
 /** The container's managed settings and the deploy's host files, read from the tree (host-deploy design). */
 
@@ -34,6 +34,28 @@ function run(home: string, event: string, source?: string) {
 }
 
 const mark = (home: string) => existsSync(join(home, ".harness-fresh"));
+
+/**
+ * A systemd unit file as section → key → value. Every line must be a
+ * `[Section]`, a `Key=Value` under one, a comment or blank, and no key may
+ * repeat, so a line the reader does not take fails the case (systemd.syntax).
+ */
+function unit(p: string) {
+	const out: Record<string, Record<string, string>> = {};
+	let section: Record<string, string> | undefined;
+	for (const line of read(p).split("\n")) {
+		if (line === "" || line.startsWith("#") || line.startsWith(";")) continue;
+		const head = /^\[([A-Za-z]+)\]$/.exec(line);
+		if (head?.[1]) {
+			out[head[1]] = section = {};
+			continue;
+		}
+		const pair = /^([A-Za-z]+)=(\S.*)$/.exec(line);
+		if (!pair?.[1] || !pair[2] || !section || pair[1] in section) throw new Error(`${p}: unread line ${line}`);
+		section[pair[1]] = pair[2];
+	}
+	return out;
+}
 
 describe("the container's managed settings", () => {
 	// spec: orchestrator/the-container-s-managed-settings
@@ -96,4 +118,24 @@ describe("the container's managed settings", () => {
 			expect(readFileSync(join(home, ".harness-deploy-failed.reported"), "utf8")).toBe(`${line}\n`);
 		},
 	);
+});
+
+describe("the deploy's units", () => {
+	// spec: orchestrator/the-deploy-s-units
+	test("a root oneshot runs deploy.sh from the checkout, five minutes after boot and after each run", () => {
+		const service = unit("orchestrator/host/harness-deploy.service");
+		// No User=: the deploy runs as root, which the Docker socket and the volumes' directories need.
+		expect(service.Service).toEqual({
+			Type: "oneshot",
+			ExecStart: "/root/harness/orchestrator/deploy.sh",
+			WorkingDirectory: "/root/harness/orchestrator",
+			StateDirectory: "harness-deploy",
+			TimeoutStartSec: "3h",
+		});
+		// The host's checkout is the tree at /root/harness, so ExecStart names the tracked script, which systemd runs only when executable.
+		expect(statSync(join(root, "orchestrator/deploy.sh")).mode & 0o111).toBe(0o111);
+		const timer = unit("orchestrator/host/harness-deploy.timer");
+		expect(timer.Timer).toEqual({ OnBootSec: "5min", OnUnitInactiveSec: "5min" });
+		expect(timer.Install).toEqual({ WantedBy: "timers.target" });
+	});
 });

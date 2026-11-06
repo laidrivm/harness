@@ -480,3 +480,46 @@ tracked `.claude/settings.json`.
 
 Step 11's reach check is unchanged: as `agent` it still fails to read every
 file under `/run/secrets` and the App's key.
+
+## 13. Deploys from main
+
+Once step 12's session runs, a root timer deploys `main` to this host:
+`host/harness-deploy.timer` starts `host/harness-deploy.service` five
+minutes after boot and five minutes after each run, and the service runs
+`deploy.sh` from this checkout at `/root/harness`. Each run that finds a new
+head of `main` whose `test` check passed fast-forwards the checkout and
+builds the images. It brings the stack up only while the session is fresh,
+after a start or a `/clear` and before its first message, so it never cuts a
+turn short: the runner restarts, the session pulls and installs its clone
+and continues its conversation. A session at work keeps the built head
+waiting, and the journal says so; `/clear` it at the end of a card. As root,
+one command per line:
+
+```sh
+systemctl link /root/harness/orchestrator/host/harness-deploy.service /root/harness/orchestrator/host/harness-deploy.timer
+systemctl enable --now harness-deploy.timer
+```
+
+`journalctl -u harness-deploy` shows each run. A step after the
+fast-forward that fails writes the failure file `.harness-deploy-failed` in
+`agent`'s home, and each clone's stop file (step 7), and the next run starts
+again from the fetch; the session reports the file in its chat at its next
+start. When the session does not come back within two minutes, the run puts
+the runner back on the image it ran before, once, and records the head in
+`/var/lib/harness-deploy/rolled-back`, so no run tries that head again; a
+later head deploys as usual. To retry the rolled-back head, remove the
+record:
+
+```sh
+rm /var/lib/harness-deploy/rolled-back
+```
+
+To stop deploys:
+
+```sh
+systemctl disable --now harness-deploy.timer
+```
+
+A deploy moves the session's rules, docs, skills and `bun/` with the clone,
+but not its hooks: they run from the harness version `package.json` pins,
+and move only with a pull request that moves the pin.
