@@ -138,7 +138,7 @@ export const NOTICE = [
 	'const pin = (m.dependencies?.harness ?? m.devDependencies?.harness ?? "").match(/#([0-9a-f]{40})$/)?.[1];',
 	'const tag = fs.readFileSync(d + "/node_modules/harness/.bun-tag", "utf8").trim().match(/-([0-9a-f]{7,40})$/)?.[1];',
 	"if (pin && tag && !pin.startsWith(tag))",
-	'console.log("The installed harness is " + tag + ", the pin " + pin.slice(0, 7) + ": run bun run deps (bun install if package.json has uncommitted edits).");',
+	'console.log("The installed harness is " + tag + ", the pin " + pin.slice(0, 7) + ": run bun run deps (bun install if package.json has uncommitted edits or bun.lock lacks the pin).");',
 	"} catch {}' || true",
 	MARK,
 ].join(" ");
