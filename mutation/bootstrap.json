@@ -146,7 +146,7 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Killed"
 				},
 				{
 					"id": "9",
@@ -1321,7 +1321,7 @@
 	},
 	"fingerprint": {
 		"bun/bootstrap-notice.test.ts": "2614fc55431a8f44aaad49fd97354ed16c9bfd53",
-		"bun/bootstrap.test.ts": "6987a5fffcf1676aaddad3f62a31cca6a952dabe",
+		"bun/bootstrap.test.ts": "00292abb401ae2cea0abe7b331761974b523fcb5",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
