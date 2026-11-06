@@ -104,7 +104,10 @@ is told to the session*).
 The tag moves only when no earlier run reached `up` and left its head
 unrecorded. Right before `up` the script writes the head to
 `$STATE_DIRECTORY/attempted`, and removes it once the head is recorded as
-deployed or rolled back; a run that finds `attempted` keeps the tag. An `up`
+deployed or rolled back. Each run, before its skip and tag decisions, removes
+an `attempted` naming the head `deployed` or `rolled-back` names, since a run
+stopped between the record and the removal left it stale; an `attempted`
+naming an unrecorded head stays, and keeps the tag (CodeRabbit on #426). An `up`
 that fails part way may have recreated the runner on the new image before
 another service failed, and the full retry would otherwise tag that unvetted
 image `previous`; kept, the retry's rollback still returns to the image the

@@ -113,8 +113,9 @@ session starts again on the updated clone.
 ### Requirement: A session that does not come back is rolled back
 
 Before the build the deploy SHALL tag the image the running runner container
-runs as the previous image, unless an earlier run brought the stack up and
-recorded no head, in which case the tag SHALL stay as it is. After bringing
+runs as the previous image, unless an earlier run brought the stack up for a
+head that is recorded neither as deployed nor as rolled back, in which case
+the tag SHALL stay as it is. After bringing
 the stack up it SHALL wait at most two minutes for the tmux session `main` in
 the runner. When `main` is not up by then, it SHALL write the failure file,
 bring the runner up on the previous image, and only once `main` is up again
@@ -159,6 +160,13 @@ the runner as it is.
 - **WHEN** a run finds that an earlier run brought the stack up and recorded
   no head
 - **THEN** the `previous` tag is not moved
+
+#### Scenario: A run stopped after its record
+
+- **WHEN** a run finds the mark of an earlier run's `up` naming the head last
+  recorded as deployed or rolled back
+- **THEN** the mark is removed, and the `previous` tag moves as after any
+  recorded deploy
 
 ### Requirement: A deploy never ends a running pass
 

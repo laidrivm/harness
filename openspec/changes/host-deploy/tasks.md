@@ -100,6 +100,8 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       record renamed),
       `orchestrator/a-retry-after-an-up-that-failed-part-way` (with
       `attempted` present: no tag before the build),
+      `orchestrator/a-run-stopped-after-its-record` (with `attempted` naming
+      the `deployed` head: `attempted` removed, the tag moved),
       `orchestrator/a-rolled-back-head`,
       `orchestrator/the-deploy-token-is-absent`; extend
       `orchestrator/the-build-fails` with the failure file, and change the
@@ -109,7 +111,9 @@ Task 1.5, the gate in `bun/ci-run.ts`, was dropped on 2026-10-25.
       wait, push, record, prune. Record that they fail
 - [ ] 3.2 In `deploy.sh`, per design.md: first, with `rolling-back`
       present, retry the rollback alone, leaving the runner as it is when
-      `main` answers; skip a head equal to `rolled-back` or `rolling-back`;
+      `main` answers; remove an `attempted` naming the `deployed` or
+      `rolled-back` head; skip a head equal to `rolled-back` or
+      `rolling-back`;
       tag the running runner's image as `orchestrator-runner:previous` before
       the build unless `attempted` exists; after the build, exit 0 without
       the fresh-session mark; with it, under the locks, the second check read
