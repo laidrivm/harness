@@ -149,8 +149,9 @@ file and no stored file SHALL be mutated whole, and the run SHALL then fail
 naming the file it wrote until that file is committed: the count would
 otherwise leave the module out. A stored file SHALL record a fingerprint of
 what its results were measured against and Stryker cannot see change itself:
-the fixtures its tests import, the shared test configuration, the runner and
-its version its mutants ran under, and the Stryker options and timeouts. It
+the fixtures its tests import, the shared test configuration, the versions of
+the runner and of Stryker its mutants ran under, and the Stryker options and
+timeouts. It
 SHALL also store each of its test files' source and tests, and each mutant's
 covering and killing tests,
 which Stryker reads to tell a changed test from an unchanged one. A stored
@@ -203,8 +204,9 @@ clone writes the same file for the same results.
 ### Requirement: A run mutates only what its stored results do not cover
 
 A run SHALL mutate exactly the listed modules with tests that have no stored file, whose
-source differs from the copy their stored file holds, whose test files differ
-from the copies it holds, or whose fingerprint no longer matches — a
+source differs from the copy their stored file holds, whose test files —
+one edited, added or deleted — differ from the copies it holds, or whose
+fingerprint no longer matches — a
 branch's changes, and any stale file a merge left. A fingerprint mismatch,
 and a module with no stored file, SHALL re-run whole; the rest
 incrementally, Stryker re-running only the mutants whose source or covering
@@ -226,8 +228,8 @@ them by hand; deriving every importer would be machinery for a rare case.
 #### Scenario: Stryker's options changed
 
 - **WHEN** `stryker.config.json`'s options other than `mutate`, the command a
-  mutant runs, the runner or its version, or the timeouts differ from those a
-  stored file records
+  mutant runs, the runner's or Stryker's version, or the timeouts differ from
+  those a stored file records
 - **THEN** the run re-runs every listed module whole
 
 #### Scenario: A checkout with uncommitted files
@@ -263,6 +265,13 @@ them by hand; deriving every importer would be machinery for a rare case.
 - **THEN** the run re-runs incrementally every listed module whose test files
   include that path — `bun/<name>.ts` and `bun/<name>-steps.ts` — and no
   other, and in each only the mutants whose covering or killing tests changed
+
+#### Scenario: A test file deleted
+
+- **WHEN** `bun/sync-settings-package.test.ts` is deleted and
+  `bun/sync-settings.test.ts` and `bun/sync-settings.ts` are unchanged
+- **THEN** the run re-runs `bun/sync-settings.ts` incrementally, testing
+  again each mutant a test of the deleted file killed
 
 #### Scenario: A fixture another module's tests import
 
