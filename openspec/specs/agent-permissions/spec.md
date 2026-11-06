@@ -2233,7 +2233,8 @@ prompts, whatever else allows it* SHALL stay as they are, so every literal
 committed `package.json`; and it SHALL block a `bun run deps` whose command
 holds any word but those three — after the script's name, since bun forwards
 those words to the install, or before `bun`, such as an `xargs` or an
-assignment.
+assignment. The guard reads the typed command, not the environment it runs
+in, so a variable an earlier `export` set reaches the install unread.
 
 #### Scenario: The script runs without a prompt
 
