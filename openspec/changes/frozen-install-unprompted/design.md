@@ -141,3 +141,10 @@ which prompts.
   checkout's first install, `bun run deps --no-verify` passes. The order that
   closes it is the one the notice names: the first install is a bare
   `bun run deps`, after which the installed guard refuses the words.
+- [A substitution that supplies the command's name] →
+  `$(printf bun) run deps --no-verify` passes the `ask` rules and the guard
+  alike: the rules match the text, which holds no `bun`, and the parse drops
+  the substitution's output before it finds the command, so `deps-args` never
+  sees `bun run`. `$(printf bun) install lodash` passed the `ask` rules the
+  same way before the change. Accepted as a known limit (CodeRabbit round 10;
+  settled on the card 2026-11-06, answer 7 а).
