@@ -87,7 +87,9 @@ words and marks the command `FED` (rounds 8 and 9;
 ### 3. Sync owns `scripts.deps`
 
 `syncSettings()` already computes every file's new text before writing any,
-so a throw leaves all of them as they were. It gains `package.json`:
+so a throw leaves all of them as they were; `sync.ts` computes them before it
+writes the `harness/` rules copy too, so a refusal writes nothing at all
+(CodeRabbit round 5). It gains `package.json`:
 
 - no `scripts.deps` (or no `scripts`) → the key is added, the rest of the
   object kept in order, the file's indentation and trailing newline kept;

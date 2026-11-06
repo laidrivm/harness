@@ -23,17 +23,21 @@ are not touched.
 
 ## 2. Sync writes the script
 
-- [ ] 2.1 Failing cases in `bun/sync-settings.test.ts`: a `package.json` with
+- [x] 2.1 Failing cases in a new `bun/sync-package.test.ts`
+      (`sync-settings.test.ts` sits at the line cap): a `package.json` with
       no `scripts` and one with `scripts` but no `deps` gain
       `scripts.deps`, every other key and the indentation unchanged
       (`a-consumer-without-the-script`); one already holding it is left byte
       for byte (`a-consumer-that-already-holds-it`); one holding
       `pnpm install` makes `syncSettings` throw naming `pnpm install`, with
       `package.json`, `.claude/settings.json` and `bunfig.toml` unchanged
-      (`a-consumer-s-own-deps-script`)
-- [ ] 2.2 Then a `packageText()` in `bun/sync-settings.ts` beside
-      `bunfigText()`, joined to the `writes` list of `syncSettings()` so it is
-      computed before any write; the header comment names `package.json`.
+      (`a-consumer-s-own-deps-script`); and in `bun/sync-bunfig.test.ts`,
+      `sync.ts` run over that `pnpm install` consumer exits non-zero with no
+      `harness/` written
+- [x] 2.2 Then a `packageText()` in `bun/sync-settings.ts` beside
+      `bunfigText()`, joined to the writes `settingsWrites()` computes before
+      any write; `sync.ts` calls it before it writes the rules copy, then
+      `applyWrites()`; the header comment names `package.json`.
       Indentation is read as `settingsText()` reads it. Verify
       `bun test bun/sync-settings bun/sync` passes
 
