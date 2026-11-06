@@ -194,10 +194,15 @@ between OpenSpec stages, and `discarded`, which leaves the stages:
 - `applied` — the change is merged and waits to be archived;
 - `archiving` — a session is running the archive;
 - `done` — archived; the change has been through the whole cycle;
-- `discarded` — the user has dropped the work, at whatever stage it had
-  reached; only the user moves a card here, and no session moves a card out
-  of it, whatever the tree holds for its slug — a change directory it still
-  points at included.
+- `discarded` — the work is dropped, at whatever stage it had reached; the
+  user moves a card here or out of it, and so does a session through `bun
+  bun/work.ts status`, which posts the reason on the card and returns a card
+  to `idea` alone (`work-status`) — never through the connector, so on a
+  board whose sessions move statuses through the connector the move stays
+  the user's; no
+  reconciliation moves a card out of it,
+  whatever the tree holds for its slug — a change directory it still points
+  at included.
 
 The eleven SHALL be the **options** of each board's `Status` property, named
 exactly as listed above, and that property SHALL be of Notion's `select`
@@ -278,8 +283,11 @@ status disagrees. `discarded` is outside that order and behind no floor:
 `discarded` card where it is.
 
 The remaining eight SHALL be moved by hand and `bun/board-state.ts` SHALL
-NOT report them: `approved` and `discarded` by the user alone, the other six
-by whoever does the work, in the turn the work moves. Deriving them
+NOT report them: `approved` by the user alone; `idea` and `discarded` by the
+user, or by a session through `bun bun/work.ts status` with its reason —
+`idea` only from `discarded`, a card a session files being created at
+`idea` rather than moved there; the other five by whoever does the work, in
+the turn the work moves. Deriving them
 was measured and refused: applied to the thirty archived changes, a
 branch-name derivation gets fourteen wrong. Nine of those changes have no
 `feat/<slug>` pull request at all, their work having shipped on `chore/` and
@@ -323,8 +331,18 @@ pull request to its change.
 - **WHEN** a card reads `discarded` and its `Pointer` names a directory the
   tree derives `proposing`, `proposed` or `done` for
 - **THEN** a reconciliation SHALL leave the card at `discarded` and SHALL NOT
-  report it as a correction, and no session SHALL move a card to `discarded`
-  or out of it — that is the user's move alone
+  report it as a correction; a card leaves `discarded` only by a deliberate
+  move — the user's, or a session's `work.ts status --to idea` with its
+  reason — never by a reconciliation
+
+#### Scenario: A session returns a discarded card
+
+- **WHEN** a session moves a card from `discarded` to `idea` with its
+  reason, and the card's `Pointer` names a change the tree derives
+  `proposed` for
+- **THEN** the card SHALL read `idea` and carry the reason as the
+  integration's comment, and the next reconciliation SHALL lift it to
+  `proposed` as it lifts any card behind its floor
 
 #### Scenario: A complete change directory, no step applied
 
