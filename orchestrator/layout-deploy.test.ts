@@ -168,14 +168,17 @@ describe("the container's managed settings", () => {
 	test.skipIf(process.getuid?.() === 0).each([
 		["SessionStart", "startup"],
 		["UserPromptSubmit", undefined],
-	])("a %s hook whose move aside fails still prints the report, exits 0, and the next one reports it again", (event, source) => {
-		const home = emptyDir("orchestrator-home-");
-		const line = "20261106T100000Z deploy: the push failed at 0123abc";
-		failed(home, line);
-		mkdirSync(join(home, ".harness-deploy-failed.reported"), { mode: 0o555 });
-		for (const _ of [1, 2]) expect(run(home, event, source).split("\n").slice(1, 2)).toEqual([line]);
-		expect(readFileSync(join(home, ".harness-deploy-failed"), "utf8")).toBe(`${line}\n`);
-	});
+	])(
+		"a %s hook whose move aside fails still prints the report, exits 0, and the next one reports it again",
+		(event, source) => {
+			const home = emptyDir("orchestrator-home-");
+			const line = "20261106T100000Z deploy: the push failed at 0123abc";
+			failed(home, line);
+			mkdirSync(join(home, ".harness-deploy-failed.reported"), { mode: 0o555 });
+			for (const _ of [1, 2]) expect(run(home, event, source).split("\n").slice(1, 2)).toEqual([line]);
+			expect(readFileSync(join(home, ".harness-deploy-failed"), "utf8")).toBe(`${line}\n`);
+		},
+	);
 
 	// spec: orchestrator/a-failure-after-main-is-up
 	test("both hooks run the report the image copies executable, and the mode check covers it", () => {
