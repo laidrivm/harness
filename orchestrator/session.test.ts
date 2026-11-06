@@ -32,6 +32,7 @@ function run(
 		failBun?: boolean;
 		failClaude?: boolean;
 		failPlugin?: "marketplace" | "install";
+		cacheIsFile?: boolean;
 	} = {},
 ) {
 	// The é makes every case a path Claude Code names by its characters, not its bytes.
@@ -60,6 +61,7 @@ function run(
 		mkdirSync(join(home, "harness"));
 		writeFileSync(join(home, "harness", ".git"), "gitdir: /elsewhere\n");
 	} else if (opts.clone !== false) mkdirSync(join(home, "harness", ".git"), { recursive: true });
+	if (opts.cacheIsFile) writeFileSync(join(home, ".cache"), "");
 	const log = join(home, "calls.log");
 	const stub = (name: string, body = "") =>
 		writeFileSync(join(bin, name), `#!/bin/sh\necho "${name} $* @$(pwd)" >>"${log}"\n${body}`, { mode: 0o755 });
@@ -223,9 +225,18 @@ for (const shell of ["sh", "dash"])
 			]);
 		});
 
+		// spec: orchestrator/a-failed-plugin-install-leaves-the-session-starting
+		test("a start log that cannot be opened prints the install's line, and claude still starts", () => {
+			const { calls, out } = run(shell, { cacheIsFile: true });
+			expect(out).toContain("session: ponytail's install failed; starting claude anyway");
+			expect(calls).toContain(`${CONTINUE} @~/harness`);
+		});
+
 		// spec: orchestrator/no-plugin-install-without-the-clone
-		test("with no clone, ponytail's install does not run", () => {
-			expect(run(shell, { clone: false }).calls.filter((c) => c.startsWith("claude plugin "))).toEqual([]);
+		test("with no clone, ponytail's install does not run and writes no start log", () => {
+			const { calls, startLog } = run(shell, { clone: false });
+			expect(calls.filter((c) => c.startsWith("claude plugin "))).toEqual([]);
+			expect(startLog).toEqual([]);
 		});
 
 		test("a clone whose .git is a file, as a worktree's is, is pulled and installed", () => {
