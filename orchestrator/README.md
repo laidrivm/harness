@@ -12,7 +12,8 @@ for the host's own values; this file names no address and no account.
   of RAM and 20 GB of free disk (the runner image is about 6 GB).
 - SSH as root by key only.
 - A Cloudflare zone for the hostname Windmill's UI sits on.
-- This repository checked out on the host, as root, for `compose.yaml`.
+- This repository checked out on the host, as root, at `/root/harness`,
+  for `compose.yaml` and step 13's units.
 
 ## 1. The tunnel and Access
 
@@ -480,3 +481,66 @@ tracked `.claude/settings.json`.
 
 Step 11's reach check is unchanged: as `agent` it still fails to read every
 file under `/run/secrets` and the App's key.
+
+## 13. Deploys from main
+
+Link the units below only once step 12's runner runs an image built from a
+checkout that holds `runner/managed-settings.json`, whose hooks mark a fresh
+session: an older image never writes the mark, so every head the timer
+builds waits. Then a root timer deploys `main` to this host:
+`host/harness-deploy.timer` starts `host/harness-deploy.service` five
+minutes after boot and five minutes after each run, and the service runs
+`deploy.sh` from this checkout at `/root/harness`. Each run that finds a new
+head of `main` whose `test` check passed fast-forwards the checkout and
+builds the images. It brings the stack up only while the session is fresh,
+after a `/clear` or a new conversation's first start and before its first
+message, so it never cuts a turn short: the runner restarts, the session
+pulls and installs its clone and continues its conversation. Step 12's
+continued start leaves the session as it was, so a session at work keeps the
+built head waiting, and the journal says so; `/clear` it at the end of a
+card. The timer counts its five minutes from boot, so on a host up longer
+than that the first run starts as soon as the second command below enables
+it. As root, one command per line:
+
+```sh
+systemctl link /root/harness/orchestrator/host/harness-deploy.service /root/harness/orchestrator/host/harness-deploy.timer
+systemctl enable --now harness-deploy.timer
+```
+
+systemd reads a unit when it is linked: after a merge that changes either
+file, run `systemctl daemon-reload`.
+
+`journalctl -u harness-deploy` shows each run. The fast-forward or a later
+step that fails writes the failure file `.harness-deploy-failed` in
+`agent`'s home, and each clone's stop file (step 7), and the next run starts
+again from the fetch; the session reports the file in its chat at its next
+start. A run the three-hour timeout kills before that write leaves no file,
+only the journal's line. When tmux session `main` does not come back within
+two minutes, the run records the head in
+`/var/lib/harness-deploy/rolled-back`, so no run tries that head again, and
+tries once to put the runner back on the image it ran before; a later head
+deploys as usual. It does not check the restored session, and a tag or `up`
+of that rollback that fails is named in the failure file and left for you
+(the host-deploy design, *Known limits of the light rollback*): after a rollback, read
+the journal and attach to `main` (step 12). To retry the rolled-back head,
+remove the record:
+
+```sh
+rm /var/lib/harness-deploy/rolled-back
+```
+
+To stop deploys:
+
+```sh
+systemctl disable --now harness-deploy.timer
+```
+
+This stops the timer, not a run already under way: that run finishes, its
+rollback included, and `systemctl is-active harness-deploy.service` prints
+`inactive` once it has. `disable` also removes the links, so deploys start
+again with both commands above.
+
+A deploy moves the session's rules, docs, skills and `bun/` with the clone,
+but not its hooks, nor the commands it runs from `node_modules/harness`, the
+ask command among them: they run from the harness version `package.json`
+pins, and move only with a pull request that moves the pin.

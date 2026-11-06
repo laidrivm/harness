@@ -1,0 +1,11 @@
+# Starts harness-deploy.service five minutes after boot and five minutes
+# after each run ends; systemd runs one instance, so two runs never overlap.
+[Unit]
+Description=Deploy the harness orchestrator from main every five minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=5min
+
+[Install]
+WantedBy=timers.target

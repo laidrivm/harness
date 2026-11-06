@@ -1,0 +1,12 @@
+# Deploys main's green head to this host, as root (host-deploy design).
+# Linked from the checkout by orchestrator/README.md, step 13; the timer
+# beside it starts it.
+[Unit]
+Description=Deploy the harness orchestrator from main
+
+[Service]
+Type=oneshot
+ExecStart=/root/harness/orchestrator/deploy.sh
+WorkingDirectory=/root/harness/orchestrator
+StateDirectory=harness-deploy
+TimeoutStartSec=3h
