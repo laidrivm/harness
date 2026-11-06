@@ -23,7 +23,8 @@ are not touched.
 
 ## 2. Sync writes the script
 
-- [x] 2.1 Failing cases in a new `bun/sync-package.test.ts`
+- [x] 2.1 Failing cases in a new `bun/sync-settings-package.test.ts`, its
+      name under the module's so the mutation step runs it
       (`sync-settings.test.ts` sits at the line cap): a `package.json` with
       no `scripts` and one with `scripts` but no `deps` gain
       `scripts.deps`, every other key and the indentation unchanged
