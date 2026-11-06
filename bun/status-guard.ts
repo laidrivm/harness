@@ -46,5 +46,5 @@ if (typeof event?.tool_name === "string" && event.tool_name.endsWith("__notion-c
 		}
 } else if (isObject(input?.properties) && Object.hasOwn(input.properties, "Status"))
 	refuse(
-		"status-guard: a card's Status moves through `bun bun/work.ts status --card <id> --to <status>`, which checks origin/main's evidence and the WIP limit. Send any other property in a call without Status.",
+		"status-guard: a card's Status moves through `bun bun/work.ts status --card <id> --to <status>`, which checks origin/main's evidence and the WIP limit, and through `--to discarded --why <reason>`, which posts the reason on the card. Send any other property in a call without Status.",
 	);
