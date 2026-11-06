@@ -3,11 +3,16 @@ import { mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } fro
 import { join } from "node:path";
 import { cleanup, emptyDir } from "./diff-budget.fixture.ts";
 import { ran } from "./gate-ledger.ts";
+import { recordSkill } from "./skill-record.ts";
 
 /**
- * The skill-call hook, spawned as the platform runs it: one event on stdin, a
- * state directory of the case's own, and `CLAUDE_PROJECT_DIR` naming the main
- * checkout. Bracketed numbers are the proposal-stage `/zombies` ideas.
+ * The skill-call hook, with a state directory of the case's own and
+ * `CLAUDE_PROJECT_DIR` naming the main checkout. Its logic is called in the
+ * test's own process, so per-test coverage sees it, with that environment as a
+ * parameter, never through the `process.env` every test file here shares; the
+ * cases about the process — stdin, output, exit code, a `PATH` with no git —
+ * spawn it as the platform does, one event on stdin. Bracketed numbers are the
+ * proposal-stage `/zombies` ideas.
  */
 
 afterAll(cleanup);
@@ -62,21 +67,10 @@ const typed = (name: string, cwd: string, type = "slash_command", args = "") => 
 	prompt: `/${name} ${args}`,
 });
 
-/** The hook run on each event in turn, in one state directory; the ledger's lines after. */
-function hook(main: string, ...events: unknown[]) {
-	return hookWith({}, main, ...events);
-}
+const stdin = (event: unknown) => (typeof event === "string" ? event : JSON.stringify(event));
 
-/** `hook`, with `extra` in the hook's environment. */
-function hookWith(extra: Record<string, string>, main: string, ...events: unknown[]) {
-	const state = emptyDir("skill-record-state-");
-	const runs = events.map((event) =>
-		// bun by its path: a case's PATH can hold no programs at all.
-		Bun.spawnSync([process.execPath, HOOK], {
-			stdin: Buffer.from(typeof event === "string" ? event : JSON.stringify(event)),
-			env: env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }),
-		}),
-	);
+/** The ledger in `state`, as text and as records; `outs` each spawned run's exit code and stdout. */
+function ledger(state: string, outs: [number | null, string][] = []) {
 	let text = "";
 	try {
 		text = readFileSync(join(state, "harness", "gates.jsonl"), "utf8");
@@ -87,8 +81,37 @@ function hookWith(extra: Record<string, string>, main: string, ...events: unknow
 			.split("\n")
 			.filter(Boolean)
 			.map((line) => JSON.parse(line)),
-		outs: runs.map((r) => [r.exitCode, r.stdout.toString()]),
+		outs,
 	};
+}
+
+/** The hook's logic on each event in turn, in this process and one state directory; the ledger after. */
+function hook(main: string, ...events: unknown[]) {
+	return hookWith({}, main, ...events);
+}
+
+/** `hook`, with `extra` in the environment it is given. */
+function hookWith(extra: Record<string, string>, main: string, ...events: unknown[]) {
+	const state = emptyDir("skill-record-state-");
+	for (const event of events)
+		recordSkill(stdin(event), env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }));
+	return ledger(state);
+}
+
+/** The hook spawned on each event in turn, as the platform runs it; the ledger and each run's exit and stdout. */
+function spawned(extra: Record<string, string>, main: string, ...events: unknown[]) {
+	const state = emptyDir("skill-record-state-");
+	const runs = events.map((event) =>
+		// bun by its path: a case's PATH can hold no programs at all.
+		Bun.spawnSync([process.execPath, HOOK], {
+			stdin: Buffer.from(stdin(event)),
+			env: env({ XDG_STATE_HOME: state, CLAUDE_PROJECT_DIR: main, ...extra }),
+		}),
+	);
+	return ledger(
+		state,
+		runs.map((r) => [r.exitCode, r.stdout.toString()]),
+	);
 }
 
 describe("a skill call is recorded", () => {
@@ -171,18 +194,26 @@ describe("a skill call is recorded", () => {
 
 	test("prints nothing and exits 0 when it records [18]", () => {
 		const { main } = scratch();
-		const r = hook(main, called("zombies", main));
+		const r = spawned({}, main, called("zombies", main));
 		expect([r.records.length, r.outs]).toEqual([1, [[0, ""]]]);
 	});
 });
 
 describe("no record, exit 0 and nothing printed", () => {
-	const nothing = (r: ReturnType<typeof hook>) => {
+	// In-process cases carry no runs, so only a spawned case checks the exit code and output.
+	const nothing = (r: ReturnType<typeof ledger>) => {
 		expect(r.text).toBe("");
 		expect(r.outs.every(([code, out]) => code === 0 && out === "")).toBe(true);
 	};
 
 	test("for a PATH with no git on it", () => {
+		const { main } = scratch();
+		const r = spawned({ PATH: emptyDir("skill-record-path-") }, main, called("zombies", main));
+		expect(r.outs).toHaveLength(1);
+		nothing(r);
+	});
+
+	test("for a PATH with no git in the environment it is given, though this process has one", () => {
 		const { main } = scratch();
 		nothing(hookWith({ PATH: emptyDir("skill-record-path-") }, main, called("zombies", main)));
 	});
@@ -196,10 +227,17 @@ describe("no record, exit 0 and nothing printed", () => {
 	test.each([
 		["empty stdin [1]", ""],
 		["stdin that is not JSON [21]", "{not json"],
-		["neither a skill nor a command name [2]", { hook_event_name: "PostToolUse", session_id: SESSION, tool_input: {} }],
-	])("for %s", (_, event) => {
+	])("for %s, spawned and in-process", (_, event) => {
 		const { main } = scratch();
-		nothing(hook(main, typeof event === "string" ? event : { ...event, cwd: main }));
+		const r = spawned({}, main, event);
+		expect(r.outs).toHaveLength(1);
+		nothing(r);
+		nothing(hook(main, event));
+	});
+
+	test("for neither a skill nor a command name [2]", () => {
+		const { main } = scratch();
+		nothing(hook(main, { hook_event_name: "PostToolUse", session_id: SESSION, tool_input: {}, cwd: main }));
 	});
 
 	test.each([
