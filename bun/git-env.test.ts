@@ -91,7 +91,7 @@ function hook(
 	tools: Record<string, number | string> = {},
 	stdin = "",
 	repo?: string,
-): { code: number; calls: string[][] } {
+): { code: number; calls: string[][]; err: string } {
 	const dir = scratch("git-env-hook-");
 	const stub = join(dir, "stub");
 	mkdirSync(stub);
@@ -140,7 +140,7 @@ function hook(
 		.split("---\n")
 		.filter((block) => block !== "")
 		.map((block) => block.split("\n"));
-	return { code: run.exitCode ?? -1, calls };
+	return { code: run.exitCode ?? -1, calls, err: run.stderr.toString() };
 }
 
 /** The first line of each call: the stub's name and its arguments, less the space a call with none leaves. */
@@ -167,12 +167,12 @@ const GATES = [
 ];
 const BUNS = GATES.length;
 
-/** A repository whose one listed module has stored results current at `HEAD`, one survivor, and a floor of one. */
-function measured(): string {
+/** A repository whose one listed module has stored results current at `HEAD`, one survivor, and `floor` as its floor. */
+function measured(floor = 1): string {
 	const dir = decoy();
 	commit(dir, {
 		"stryker.config.json": `${JSON.stringify({ mutate: ["bun/a.ts"] })}\n`,
-		"package.json": `${JSON.stringify({ harness: { mutationFloor: { surviving: 1, why: "a fixture" } } })}\n`,
+		"package.json": `${JSON.stringify({ harness: { mutationFloor: { surviving: floor, why: "a fixture" } } })}\n`,
 		"bun/a.ts": "1\n",
 		"bun/a.test.ts": "1\n",
 	});
@@ -264,6 +264,16 @@ describe("the pre-push hook", () => {
 		},
 		30_000,
 	);
+
+	// spec: commit-gates/a-gate-that-ci-would-fail-blocks-the-push-instead
+	test("survivors above the floor fail the hook, naming the count and the floor", () => {
+		const { code, calls, err } = hook({}, {}, "", measured(0));
+		expect([code === 0, started(calls).at(-1), err.includes("1 surviving mutants against a floor of 0")]).toEqual([
+			false,
+			"bun bun/mutation-floor.ts",
+			true,
+		]);
+	}, 30_000);
 
 	// spec: commit-gates/a-push-from-a-worktree
 	test("a linked worktree's GIT_DIR reaches no command it starts [2]", () => {
