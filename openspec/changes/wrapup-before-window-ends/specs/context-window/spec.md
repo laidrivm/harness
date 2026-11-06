@@ -211,6 +211,12 @@ gate's refusal: the gate still judges the continued turn.
   measures 850 000
 - **THEN** the stop is refused for size
 
+#### Scenario: On a detached HEAD
+
+- **WHEN** a prompt marked a commit, `HEAD` is then detached, and a stop
+  measures 850 000
+- **THEN** the stop is refused for size
+
 #### Scenario: The ceiling at the same stop
 
 - **WHEN** the twentieth continued stop since the prompt measures 850 000
