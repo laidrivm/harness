@@ -147,6 +147,8 @@ describe("the skill's rule for a reviewed head", () => {
 
 	test("a head that moved before a resolve command is re-read through all of step 1's calls, threads included", () => {
 		const skill = flat(readFileSync(`${import.meta.dir}/../core/skills/coderabbit/SKILL.md`, "utf8"));
-		expect(skill).toContain("read the new head's check runs and status, then all of step 1's calls — comments, reviews and threads — again in step 1's order");
+		expect(skill).toContain(
+			"read the new head's check runs and status, then all of step 1's calls — comments, reviews and threads — again in step 1's order",
+		);
 	});
 });
