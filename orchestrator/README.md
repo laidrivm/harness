@@ -494,7 +494,9 @@ minutes after boot and five minutes after each run, and the service runs
 head of `main` whose `test` check passed fast-forwards the checkout and
 builds the images. It brings the stack up only while the session is fresh,
 after a `/clear` or a new conversation's first start and before its first
-message, so it never cuts a turn short: the runner restarts, the session
+message, so it cuts no turn short but one whose prompt arrives in the seconds
+between the run's last look for the mark and the restart; resend that prompt
+once the session is back. The runner restarts, the session
 pulls and installs its clone and continues its conversation. Step 12's
 continued start leaves the session as it was, so a session at work keeps the
 built head waiting, and the journal says so; `/clear` it at the end of a
@@ -515,14 +517,18 @@ step that fails writes the failure file `.harness-deploy-failed` in
 `agent`'s home, and each clone's stop file (step 7), and the next run starts
 again from the fetch; the session reports the file in its chat at its next
 start. A run the three-hour timeout kills before that write leaves no file,
-only the journal's line. When tmux session `main` does not come back within
-two minutes, the run records the head in
-`/var/lib/harness-deploy/rolled-back`, so no run tries that head again, and
-tries once to put the runner back on the image it ran before; a later head
+only the journal's line. The run waits for tmux session `main` alone, so a
+head recorded as deployed does not prove that `claude` started or that Remote
+Control reconnected: attach to `main` (step 12) to check. When `main` does
+not come back within two minutes, the run records the head in
+`/var/lib/harness-deploy/rolled-back`, so no later run tries that head again,
+and tries once to put the runner back on the image it ran before; a later head
 deploys as usual. It does not check the restored session, and a tag or `up`
 of that rollback that fails is named in the failure file and left for you
 (the host-deploy design, *Known limits of the light rollback*): after a rollback, read
-the journal and attach to `main` (step 12). To retry the rolled-back head,
+the journal and attach to `main` (step 12). When the journal says the head
+`could not be recorded as rolled back`, the next run tries that head again:
+stop deploys, below, until `/var/lib/harness-deploy` takes the record. To retry the rolled-back head,
 remove the record:
 
 ```sh

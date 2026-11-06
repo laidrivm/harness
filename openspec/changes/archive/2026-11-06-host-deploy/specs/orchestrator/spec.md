@@ -99,8 +99,8 @@ session starts again on the updated clone.
 
 #### Scenario: The user's first message
 
-- **WHEN** the managed hooks run for a session start and then for a submitted
-  prompt
+- **WHEN** the managed hooks run for a `startup` or `clear` session start and
+  then for a submitted prompt
 - **THEN** the mark exists after the first and not after the second
 
 #### Scenario: A continued start
@@ -128,8 +128,9 @@ journal and left for the user; retrying or verifying it is stage 9's.
 #### Scenario: The session does not come back
 
 - **WHEN** `main` is not up two minutes after `up`
-- **THEN** the runner runs the previous image, the head is recorded as rolled
-  back, the failure file names the head, and the run fails
+- **THEN** the head is recorded as rolled back, the failure file names the
+  head, the run fails, and, when the rollback's tag and `up` succeed, the
+  runner runs the previous image
 
 #### Scenario: A rolled-back head
 
@@ -181,7 +182,8 @@ file in agent's home, naming the failed step and the commit and replacing an
 older one, SHALL write each clone's stop file that does not exist yet, until
 stage 7 removes them, and SHALL NOT record the commit as deployed. A fetch or
 check read that fails SHALL write neither, nor SHALL a run that the service's
-start timeout kills, which leaves the timeout on the journal. The managed `SessionStart` hook
+start timeout kills before the failure file is written, which leaves the
+timeout on the journal. The managed `SessionStart` hook
 SHALL print the failure file, when it exists, on startup, on clear and on a
 continued start, with a line asking the session to report it to the user in
 chat, and SHALL then move it aside, so the next start does not report it

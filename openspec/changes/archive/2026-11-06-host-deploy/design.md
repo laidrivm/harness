@@ -209,7 +209,9 @@ but the clone's `git pull` and `bun install` run only in the start script.
 
 After `up` the script polls `docker compose exec -T -u agent runner tmux
 has-session -t main` every 5 s for at most 120 s. When `main` answers, it
-writes the head to `$STATE_DIRECTORY/deployed` (or
+runs the engine wait and the Windmill push while the token's file exists
+(*The Windmill push waits for its token*), then writes the head to
+`$STATE_DIRECTORY/deployed` (or
 `/var/lib/harness-deploy/deployed` for a run by hand, as on `main`), prunes,
 and exits 0.
 
@@ -357,8 +359,9 @@ remove `/var/lib/harness-deploy/rolled-back`.
 
 - 16 a (user, 02.11): restart only in a fresh session.
 - 17 a (user, 02.11): light rollback, failure file reported in chat.
-- 18 а (user, 05.11): a deploy's restart keeps `--continue`; the first
-  deploy (task 4.2) checks which conversation comes back.
+- 18 а (user, 05.11): a deploy's restart keeps `--continue`; which
+  conversation comes back the live probe settled (05.11, *Every start
+  continues*).
 - 1 б and 2 а (user, 2026-11-06): the light rollback, one per run, its gaps
   the known limits above and stage 9's; CodeRabbit's late-`main` finding on
   #426 closes as one of them.
