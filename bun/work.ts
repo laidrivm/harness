@@ -12,8 +12,10 @@
  *   (`work-finish.ts`): pushes the branch, opens its pull request as a draft
  *   when none is open, and marks it ready unless a question waits on the
  *   card; with no card, it reads none.
- * - `status --card <id> --to <status>` (`work-status.ts`): moves the card's
- *   `Status` once the evidence and the WIP limit allow it.
+ * - `status --card <id> --to <status> [--why <reason>]` (`work-status.ts`):
+ *   moves the card's `Status` once the evidence and the WIP limit allow it;
+ *   `--why`, required with `--to discarded` and `--to idea` and refused with
+ *   any other, is posted on the card before the write.
  * - `resolve --pr <n> --head <sha> --comment <id> …` (`work-resolve.ts`):
  *   resolves the review bot's threads those comments open, on the branch's
  *   open pull request while its head is `<sha>`.
@@ -25,13 +27,13 @@ import { ID } from "./notion-bot.ts";
 import { draft } from "./work-draft.ts";
 import { finish } from "./work-finish.ts";
 import { resolve } from "./work-resolve.ts";
-import { STATUSES, status } from "./work-status.ts";
+import { REASONED, STATUSES, status } from "./work-status.ts";
 import { take } from "./work-take.ts";
 
 export const USAGE = [
 	"usage: work.ts take --card <id> [--after <comment id>]",
 	"       work.ts finish [--card <id>] [--title <text> --body-file <path>]",
-	"       work.ts status --card <id> --to <status>",
+	"       work.ts status --card <id> --to <status> [--why <reason>, required with discarded and idea alone]",
 	"       work.ts resolve --pr <n> --head <sha> --comment <id> [--comment <id> …]",
 	"       work.ts draft --pr <n>",
 ];
@@ -65,10 +67,17 @@ export async function work(args: string[]): Promise<{ lines: string[]; code: num
 		if ((card === undefined || ID.test(card)) && set && opening !== null) return finish(card, opening);
 	}
 	if (subcommand === "status") {
-		const set = values(rest, { card: { type: "string" }, to: { type: "string" } });
-		const [card, to] = [set?.card, set?.to];
-		if (typeof card === "string" && ID.test(card) && typeof to === "string" && STATUSES.includes(to))
-			return status(card, to);
+		// `multiple` on `--why`, so a repeated one is refused rather than the last one kept.
+		const set = values(rest, {
+			card: { type: "string" },
+			to: { type: "string" },
+			why: { type: "string", multiple: true },
+		});
+		const [card, to, why = []] = [set?.card, set?.to, set?.why];
+		// Required where the move posts a reason, and refused elsewhere.
+		const reasoned = REASONED.includes(to ?? "") ? why.length === 1 && !!why[0]?.trim() : !why.length;
+		if (typeof card === "string" && ID.test(card) && typeof to === "string" && STATUSES.includes(to) && reasoned)
+			return status(card, to, why[0]);
 	}
 	if (subcommand === "resolve") {
 		// `multiple` on all three, so a repeated `--pr` or `--head` is refused rather than the last one kept.

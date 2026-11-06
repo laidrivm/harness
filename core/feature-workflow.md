@@ -355,8 +355,11 @@ for them is already here.
   is created at `idea` and moved to its stage in the same turn, in the harness
   with `bun bun/work.ts status`, and a move that command refuses — the WIP
   limit's included — leaves the card at `idea`, is reported as a card left
-  behind, and starts none of the stage's work. Only the user moves a card to `discarded`, and no
-  session moves one out of it: a reconciliation leaves a `discarded` card as
+  behind, and starts none of the stage's work. A session discards a card, or
+  returns a `discarded` one to `idea` and never further, with `bun
+  bun/work.ts status --card <id> --to discarded --why <reason>` (`--to idea`
+  alike), giving the reason, which the command posts on the card; elsewhere
+  these moves stay the user's. A reconciliation leaves a `discarded` card as
   it is, even when the tree still holds the change its `Pointer` names. A
   session the user directs at an `idea` card may move it to `exploring`
   directly — the instruction is the approval.

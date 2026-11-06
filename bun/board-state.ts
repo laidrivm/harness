@@ -206,7 +206,8 @@ export function boardState(tree: string): State {
 
 /**
  * The ten statuses a card moves through, in the order `task-board` lists them.
- * `discarded`, the eleventh, is outside the order: only the user sets it.
+ * `discarded`, the eleventh, is outside the order: the user sets it, or a
+ * session through `work.ts status` with its reason, and no reconciliation.
  */
 export const ORDER: readonly string[] = [
 	"idea",
