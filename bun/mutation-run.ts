@@ -20,7 +20,7 @@ import { REPORT } from "./mutation-floor.ts";
 import { merge, reusable, type Stored, trim } from "./mutation-stored.ts";
 import { root } from "./root.ts";
 
-/** `retest`: its test files changed, so the survivors no test covered are run again (see `reusable`). */
+/** `retest`: its test files changed, so its survivors are run again (see `reusable`). */
 export type Run = { module: string; force: boolean; retest?: boolean };
 
 /** Every tracked `bun/<name>.ts` that is neither a test nor a fixture. */
