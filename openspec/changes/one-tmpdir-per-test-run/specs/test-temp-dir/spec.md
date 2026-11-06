@@ -67,14 +67,14 @@ entry it cannot read, claim or remove SHALL NOT stop the run.
 
 - **WHEN** a run whose test has made temporary directories is killed with
   `SIGKILL`
-- **THEN** the `TMPDIR` it started with holds one `harness-test-*`
-  directory more than before
+- **THEN** the `harness-test-*` parent the run made remains under the
+  `TMPDIR` it started with
 
 #### Scenario: A run stopped by a test's process.exit
 
 - **WHEN** a test that has made temporary directories calls `process.exit(0)`
-- **THEN** the `TMPDIR` the run started with holds one `harness-test-*`
-  directory more than before
+- **THEN** the `harness-test-*` parent the run made remains under the
+  `TMPDIR` it started with
 
 #### Scenario: A later run removes an abandoned parent
 
