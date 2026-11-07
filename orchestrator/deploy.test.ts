@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup } from "../bun/diff-budget.fixture.ts";
 import {
@@ -11,6 +11,8 @@ import {
 	host,
 	log,
 	moved,
+	page,
+	rule,
 	STOP,
 	set,
 	started,
@@ -50,6 +52,87 @@ describe("deploy.sh", () => {
 		expect(steps(h)).toEqual(["read"]);
 		expect(deployed(h)).toBeUndefined();
 		expect(stopped(h, "one")).toBeUndefined();
+	});
+
+	// spec: orchestrator/an-older-check-suite-s-success
+	test.each([
+		["failed", "failure"],
+		["pending", null],
+	])("an older suite's success and a newer %s run move nothing and exit 0", (_, newer) => {
+		const h = host();
+		set(
+			h,
+			"runs",
+			page([
+				{ id: 9, conclusion: newer },
+				{ id: 5, conclusion: "success" },
+			]),
+		);
+		expect(deploy(h).code).toBe(0);
+		expect(steps(h)).toEqual(["read"]);
+		expect(deployed(h)).toBeUndefined();
+	});
+
+	// spec: orchestrator/a-newer-check-suite-s-success
+	test("an older suite's failure and a newer success deploy the head", () => {
+		const h = host();
+		set(
+			h,
+			"runs",
+			page([
+				{ id: 5, conclusion: "failure" },
+				{ id: 9, conclusion: "success" },
+			]),
+		);
+		expect(deploy(h).code).toBe(0);
+		expect(deployed(h)).toBe(`${HEAD}\n`);
+	});
+
+	// spec: orchestrator/check-runs-on-more-than-one-page
+	test("a newer failure on the second page after an older success on the first moves nothing, both pages read", () => {
+		const h = host();
+		set(h, "runs.1", page([{ id: 5, conclusion: "success" }], 2));
+		set(h, "runs.2", page([{ id: 9, conclusion: "failure" }], 2));
+		expect(deploy(h).code).toBe(0);
+		expect(steps(h)).toEqual(["read"]);
+		const reads = log(h).filter((l) => l.startsWith("curl "));
+		expect(reads.map((l) => l.match(/&per_page=100&page=(\d+)$/)?.[1])).toEqual(["1", "2"]);
+	});
+
+	// spec: orchestrator/check-runs-on-more-than-one-page
+	test("a second page with no runs while the count is short reads as a check that cannot be read", () => {
+		const h = host();
+		set(h, "runs.1", page([{ id: 5, conclusion: "success" }], 2));
+		set(h, "runs.2", page([], 2));
+		const r = deploy(h);
+		expect(r.code).toBe(1);
+		expect(r.out).toContain("could not be read");
+		expect(steps(h)).toEqual(["read"]);
+		expect(failure(h)).toBeUndefined();
+	});
+
+	// spec: orchestrator/an-image-older-than-the-check
+	test.each([
+		["exits 1 reads as not passed", 1, 0, "has not passed"],
+		["exits 2 reads as a check that cannot be read", 2, 1, "could not be read"],
+		["is missing reads as a check that cannot be read", undefined, 1, "could not be read"],
+	])("the checkout's rule decides, whatever the image holds: a rule that %s", (_, exit, code, said) => {
+		const h = host();
+		if (exit === undefined) rmSync(rule(h));
+		else writeFileSync(rule(h), `process.exit(${exit});\n`);
+		const r = deploy(h);
+		expect([r.code, r.out]).toEqual([code, expect.stringContaining(said)]);
+		expect(steps(h)).toEqual(["read"]);
+	});
+
+	// spec: orchestrator/an-image-older-than-the-check
+	test("the read runs the checkout's rule mounted read-only, never the image's copy", () => {
+		const h = host();
+		deploy(h);
+		const read = log(h).find((l) => /^docker run .*--entrypoint bun/.test(l)) ?? "";
+		expect(read).toContain(`--mount type=bind,source=${rule(h)},target=/green-run.ts,readonly`);
+		expect(read.endsWith(" orchestrator-runner /green-run.ts")).toBe(true);
+		expect(read).not.toContain("/opt/orchestrator");
 	});
 
 	// spec: orchestrator/the-head-s-test-check-has-not-passed

@@ -7,7 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:tes
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { GREEN, git, type Served, serve } from "./bump.fixture.ts";
+import { type CheckRun, GREEN, git, type Served, serve } from "./bump.fixture.ts";
 import { CHECK, verify } from "./bump.ts";
 
 const OLD = "eddf1fdd56642c48a3b222034ec6268c9b55971f";
@@ -76,11 +76,11 @@ const deps = (run: ReturnType<typeof runner>["run"]) => ({
 describe("choosing a target", () => {
 	// spec: harness-updates/a-quiet-day-changes-nothing
 	test.each([
-		["still running", NEW, [{ conclusion: null }]],
-		["failed", NEW, [{ conclusion: "failure" }]],
+		["still running", NEW, [{ id: 1, conclusion: null }]],
+		["failed", NEW, [{ id: 1, conclusion: "failure" }]],
 		["absent", NEW, []],
 		["green but already pinned", OLD, [GREEN]],
-		["green only from another app", NEW, [{ conclusion: "success", app: { slug: "other" } }]],
+		["green only from another app", NEW, [{ id: 1, conclusion: "success", app: { slug: "other" } }]],
 	])("a head whose test run is %s reports no target and changes nothing", async (_, sha, served) => {
 		api.head = sha;
 		api.runs = served;
@@ -90,6 +90,42 @@ describe("choosing a target", () => {
 		expect(await verify(dir, deps(run))).toEqual({ sha: "", tree: "" });
 		expect(calls).toEqual([]);
 		expect(readFileSync(join(dir, "package.json"), "utf8")).toBe(before);
+	});
+
+	const ours = (id: number, conclusion: string | null): CheckRun => ({ ...GREEN, id, conclusion });
+
+	// spec: harness-updates/an-older-check-suite-s-success-does-not-make-the-head-green
+	test.each([
+		["failed", [ours(5, "success"), ours(9, "failure")]],
+		["pending", [ours(9, null), ours(5, "success")]],
+	])("an older suite's success and a newer %s run report no target and change nothing", async (_, served) => {
+		api.head = NEW;
+		api.runs = served;
+		const dir = consumer();
+		const before = readFileSync(join(dir, "package.json"), "utf8");
+		const { run, calls } = runner();
+		expect(await verify(dir, deps(run))).toEqual({ sha: "", tree: "" });
+		expect(calls).toEqual([]);
+		expect(readFileSync(join(dir, "package.json"), "utf8")).toBe(before);
+	});
+
+	// spec: harness-updates/a-newer-check-suite-s-success-makes-the-head-green
+	test("an older suite's failure and a newer success target the head", async () => {
+		api.head = NEW;
+		api.runs = [ours(9, "success"), ours(5, "failure")];
+		const { run } = runner();
+		expect((await verify(consumer(), deps(run))).sha).toBe(NEW);
+	});
+
+	// spec: harness-updates/test-runs-on-more-than-one-page
+	test("a newer failure on the second page after an older success on the first reports no target", async () => {
+		api.head = NEW;
+		api.runs = [...Array.from({ length: 100 }, (_, i) => ours(i + 1, "success")), ours(101, "failure")];
+		const { run, calls } = runner();
+		expect(await verify(consumer(), deps(run))).toEqual({ sha: "", tree: "" });
+		expect(calls).toEqual([]);
+		// commits/main, then the two pages.
+		expect(api.seen).toHaveLength(3);
 	});
 });
 

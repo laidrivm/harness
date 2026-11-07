@@ -4,9 +4,9 @@
  * `bun node_modules/harness/bun/bump.ts verify` from its root.
  *
  * `verify` runs in a job whose token cannot write: it moves the pin to the
- * harness's `main` once that commit's `test` run succeeded, then gates on the
- * new harness's sync and check and the consumer's own `bumpTest`, and reports
- * the target and the tree it checked. It pushes nothing. A head not yet green,
+ * harness's `main` once that commit's newest `test` run succeeded, then gates
+ * on the new harness's sync and check and the consumer's own `bumpTest`, and
+ * reports the target and the tree it checked. It pushes nothing. A head not yet green,
  * or already pinned, is a quiet day: exit 0 and no target.
  *
  * `land <sha> <tree>` runs in a second job, which may push: from a fresh
@@ -17,6 +17,7 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs
 import { join } from "node:path";
 import { movePin, pinOf } from "./bump-pin.ts";
 import { bumpTest } from "./config.ts";
+import { collect, green } from "./green-run.ts";
 
 /** Runs `argv` in `cwd` and returns its exit code. */
 type Run = (argv: string[], cwd: string) => number;
@@ -55,15 +56,17 @@ async function get(deps: Deps, path: string): Promise<unknown> {
  */
 export const CHECK = "test";
 
-/** The harness's `main` head, when its latest `CHECK` run succeeded. */
+/** The harness's `main` head, when its newest `CHECK` run, read from every page, succeeded. */
 async function greenHead(deps: Deps): Promise<string | undefined> {
 	const { sha } = (await get(deps, "commits/main")) as { sha: string };
-	const { check_runs } = (await get(deps, `commits/${sha}/check-runs?check_name=${CHECK}&filter=latest`)) as {
-		check_runs: { conclusion: string | null; app?: { slug?: string } }[];
-	};
-	// The name alone could be any app's; the harness's run is GitHub Actions'.
-	const green = check_runs.some((run) => run.conclusion === "success" && run.app?.slug === "github-actions");
-	return green ? sha : undefined;
+	const pages: unknown[] = [];
+	let runs = collect(pages);
+	while (runs === "more") {
+		const query = `check_name=${CHECK}&filter=latest&per_page=100&page=${pages.length + 1}`;
+		pages.push(await get(deps, `commits/${sha}/check-runs?${query}`));
+		runs = collect(pages);
+	}
+	return green(runs) ? sha : undefined;
 }
 
 function git(cwd: string, args: string[], env?: Record<string, string>): string {

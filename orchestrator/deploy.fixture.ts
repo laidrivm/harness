@@ -6,8 +6,9 @@ import { emptyDir } from "../bun/diff-budget.fixture.ts";
  * A fabricated host for `deploy.sh`: stub `git`, `docker`, `curl`, `flock`,
  * `chown` and `sleep` on `PATH` that log their arguments to `log` and answer
  * from files in the fake directory, the runner's and the agent's volumes as
- * two directories, a copy of the script beside its own `secrets/`, and the
- * state directory, not yet made.
+ * two directories, a copy of the script beside its own `secrets/`, a copy of
+ * `bun/green-run.ts` beside the script's directory, as the checkout holds it,
+ * and the state directory, not yet made.
  */
 
 const script = join(import.meta.dir, "deploy.sh");
@@ -64,10 +65,18 @@ cat "$FAKE/runs.$n" 2>/dev/null || cat "$FAKE/runs"`,
 "image prune") ;;
 "run --rm")
 	while [ $# -gt 0 ]; do
-		case $1 in --entrypoint) entry=$2; shift ;; orchestrator-runner) shift; break ;; esac
+		case $1 in --entrypoint) entry=$2; shift ;; --mount) mount=$2; shift ;; orchestrator-runner) shift; break ;; esac
 		shift
 	done
-	case $entry in jq) exec jq "$@" ;; curl) exit "$(code engine)" ;; *) exit "$(code push)" ;; esac ;;
+	# bun runs the mount's source, as the container would its target; docker fails a missing source with 125.
+	src=\${mount#*source=}
+	src=\${src%%,*}
+	case $entry in
+	jq) exec jq "$@" ;;
+	bun) [ -f "$src" ] || exit 125; exec bun "$src" ;;
+	curl) exit "$(code engine)" ;;
+	*) exit "$(code push)" ;;
+	esac ;;
 esac`,
 	flock: `[ -z "$REAL_FLOCK" ] || exec "$REAL_FLOCK" "$@"`,
 	chown: "",
@@ -89,8 +98,16 @@ export function host(): Host {
 	const agent = join(fake, "orchestrator_agent_home");
 	const locks = join(runner, "orchestrator/locks");
 	const dir = join(root, "orchestrator");
-	for (const d of [bin, locks, join(agent, "clones/one"), join(agent, "clones/two"), join(dir, "secrets")])
+	for (const d of [
+		bin,
+		locks,
+		join(agent, "clones/one"),
+		join(agent, "clones/two"),
+		join(dir, "secrets"),
+		join(root, "bun"),
+	])
 		mkdirSync(d, { recursive: true });
+	copyFileSync(join(import.meta.dir, "../bun/green-run.ts"), join(root, "bun/green-run.ts"));
 	for (const [name, body] of Object.entries(STUBS))
 		writeFileSync(join(bin, name), PRELUDE + body + "\n", { mode: 0o755 });
 	writeFileSync(join(fake, "head"), `${HEAD}\n`);
@@ -104,9 +121,18 @@ export function host(): Host {
 	return { fake, state: join(root, "state/harness-deploy"), runner, agent, locks, dir };
 }
 
+type Run = { id: number; conclusion: string | null; app?: string };
+
+/** A page of `test` runs, by default from github-actions, out of `total`: the runs given unless named. */
+export const page = (list: Run[], total = list.length) =>
+	JSON.stringify({
+		total_count: total,
+		check_runs: list.map(({ app = "github-actions", ...run }) => ({ name: "test", app: { slug: app }, ...run })),
+	});
+
 /** A latest `test` run from `app` in the given state; `undefined` for none at all. */
 export const runs = (conclusion: string | null | undefined, app = "github-actions") =>
-	JSON.stringify({ check_runs: conclusion === undefined ? [] : [{ name: "test", app: { slug: app }, conclusion }] });
+	page(conclusion === undefined ? [] : [{ id: 1, conclusion, app }]);
 
 /** What the check read answers: every read, or only the nth. */
 export function answer(h: Host, conclusion: string | null | undefined, app?: string, nth?: number) {
@@ -116,8 +142,11 @@ export function answer(h: Host, conclusion: string | null | undefined, app?: str
 /** Sets a stub's answer file: an exit code, or the output it prints. */
 export const set = (h: Host, file: string, value: string | number) => writeFileSync(join(h.fake, file), String(value));
 
-/** jq's directory: the stub `docker run` hands jq's runs to the real one. */
-const tools = [Bun.which("jq")].filter((p) => p !== null).map((p) => dirname(p));
+/** The checkout's check rule, beside its `orchestrator/`, which the stub `docker run` hands to the real bun. */
+export const rule = (h: Host) => join(h.dir, "../bun/green-run.ts");
+
+/** jq's and bun's directories: the stub `docker run` hands their runs to the real ones. */
+const tools = [Bun.which("jq"), process.execPath].filter((p) => p !== null).map((p) => dirname(p));
 const env = (h: Host, extra: Record<string, string>) => ({
 	PATH: [join(h.fake, "bin"), ...tools, "/usr/bin", "/bin"].join(":"),
 	FAKE: h.fake,

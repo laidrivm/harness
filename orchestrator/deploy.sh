@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # One run of harness-deploy.service, as root on the host, from the checkout's
 # orchestrator/ (host-deploy design). When origin/main's head is neither the
-# commit last deployed nor the one last rolled back, and its latest `test`
-# check run from github-actions concluded success, it fast-forwards the
-# checkout to that head, tags the runner's running image as the previous one,
-# and builds the images. Only while the persistent session is fresh (the
+# commit last deployed nor the one last rolled back, and its newest `test`
+# check run from github-actions, across check suites and pages, concluded
+# success (bun/green-run.ts decides), it fast-forwards the checkout to that
+# head, tags the runner's running image as the previous one, and builds the
+# images. Only while the persistent session is fresh (the
 # managed hooks' ~/.harness-fresh in agent's home) does it bring the stack up,
 # under every pass lock, restart the runner when up left it as it was, and
 # wait two minutes at most for tmux session `main`; then it pushes the
@@ -42,17 +43,28 @@ volume() {
 	dir=$(docker volume inspect -f '{{ .Mountpoint }}' "orchestrator_$1") && [ -d "$dir" ] && printf '%s\n' "$dir"
 }
 
-# 0 when a latest `test` run from github-actions concluded success for the
-# head, 1 when none did, 2 when the check runs could not be read.
+# 0 when the head's newest `test` run from github-actions, across its check
+# suites, concluded success, 1 when it did not or there is none, 2 when the
+# check runs could not be read. bun/green-run.ts decides, under the runner
+# image's bun, over every page read so far, and exits 3 while it wants the
+# next. It is the checkout's file, never the image's: a build that failed
+# after the fast-forward, or a rollback, leaves the name on an image older
+# than the rule, and the checkout's is the version this script was read from.
 green() {
-	local body
-	body=$(curl -fsS --max-time 30 -H 'Accept: application/vnd.github+json' "$runs") || return 2
-	printf '%s' "$body" | json -e 'any(.check_runs[]; .app.slug == "github-actions" and .conclusion == "success")' >/dev/null
-	case $? in
-	0) return 0 ;;
-	1) return 1 ;;
-	*) return 2 ;;
-	esac
+	local pages= body n=1
+	while :; do
+		body=$(curl -fsS --max-time 30 -H 'Accept: application/vnd.github+json' "$runs&per_page=100&page=$n") || return 2
+		pages=${pages:+$pages,}$body
+		printf '[%s]' "$pages" | docker run --rm -i \
+			--mount "type=bind,source=${PWD%/*}/bun/green-run.ts,target=/green-run.ts,readonly" \
+			--entrypoint bun "$image" /green-run.ts
+		case $? in
+		0) return 0 ;;
+		1) return 1 ;;
+		3) n=$((n + 1)) ;;
+		*) return 2 ;;
+		esac
+	done
 }
 
 # Writes the line $2 to a new file $1 in a volume a container's user can

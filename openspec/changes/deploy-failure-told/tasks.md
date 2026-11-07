@@ -73,7 +73,7 @@ fail first. `put()` and its `shortcut:` comment are not touched.
 
 ## 3. The newest test run decides
 
-- [ ] 3.1 Failing cases in a new `bun/green-run.test.ts` for
+- [x] 3.1 Failing cases in a new `bun/green-run.test.ts` for
       `green(runs)`: no runs, another app's success alone, a pending, failed
       and successful single run; an older `success` with a newer `failure`
       or pending run is not green, an older `failure` with a newer `success`
@@ -84,11 +84,11 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       while the count is short, throw. Run as a script over a JSON array of
       bodies, it exits 0, 1, 2 and 3 for green, not green, unreadable
       standard input and another page wanted
-- [ ] 3.2 Then `bun/green-run.ts`, importing nothing, its comment naming the
+- [x] 3.2 Then `bun/green-run.ts`, importing nothing, its comment naming the
       per-suite reading of `filter=latest`; add it to `stryker.config.json`'s
       `mutate` if the mutation floor's rules call for it. Verify
       `bun test bun/green-run` passes
-- [ ] 3.3 Failing cases in `bun/bump-verify.test.ts`'s *choosing a target*,
+- [x] 3.3 Failing cases in `bun/bump-verify.test.ts`'s *choosing a target*,
       `bun/bump.fixture.ts`'s `CheckRun` and `GREEN` gaining ids: an older
       run's `success` and a newer `failure` or pending one report no target
       and change nothing
@@ -100,10 +100,10 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       after an older `success` on the first reports no target
       (`harness-updates/test-runs-on-more-than-one-page`); the existing
       cases keep passing
-- [ ] 3.4 Then `greenHead()` in `bun/bump.ts` reads pages of
+- [x] 3.4 Then `greenHead()` in `bun/bump.ts` reads pages of
       `per_page=100` while `collect()` answers `more` and calls `green()`.
       Verify `bun test bun/bump` passes
-- [ ] 3.5 Failing cases in `orchestrator/deploy.test.ts`, with
+- [x] 3.5 Failing cases in `orchestrator/deploy.test.ts`, with
       `orchestrator/deploy.fixture.ts`'s `runs()` able to answer several runs
       with ids, the fixture's checkout gaining `bun/green-run.ts` beside
       `orchestrator/`, and its `docker run` stub running `--entrypoint bun`
@@ -123,13 +123,13 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       the module), the read still decides from the checkout's file; and the
       read's command names the checkout's file, never the image's path
       (`orchestrator/an-image-older-than-the-check`)
-- [ ] 3.6 Then `deploy.sh`'s `green()` reads `$runs&per_page=100&page=<n>`
+- [x] 3.6 Then `deploy.sh`'s `green()` reads `$runs&per_page=100&page=<n>`
       and pipes the bodies read so far, as a JSON array, to
       `docker run --rm -i --mount "type=bind,source=${PWD%/*}/bun/green-run.ts,target=/green-run.ts,readonly" --entrypoint bun "$image" /green-run.ts`,
       reading the next page while it exits 3, and maps its other exits as it
       maps `jq`'s today, its comment saying why the checkout's file. Verify
       `bun test orchestrator/deploy` passes
-- [ ] 3.7 The implementation's pull request body names the check by hand
+- [x] 3.7 The implementation's pull request body names the check by hand
       from design *Risks*: before merging, the merge commit's `test` runs
       under `filter=latest` are one. Verify by reading the body back
 

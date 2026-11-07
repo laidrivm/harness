@@ -494,7 +494,7 @@ builds waits. Then a root timer deploys `main` to this host:
 `host/harness-deploy.timer` starts `host/harness-deploy.service` five
 minutes after boot and five minutes after each run, and the service runs
 `deploy.sh` from this checkout at `/root/harness`. Each run that finds a new
-head of `main` whose `test` check passed fast-forwards the checkout and
+head of `main` whose newest `test` run passed fast-forwards the checkout and
 builds the images. It brings the stack up only while the session is fresh,
 after a `/clear` or a new conversation's first start and before its first
 message, so it cuts no turn short but one whose prompt arrives between the
