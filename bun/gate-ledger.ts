@@ -34,8 +34,10 @@ function project(event: Event, preferred: string | undefined): string {
 export function stateDir(env: Env = process.env): string {
 	// The XDG spec ignores a relative value, which would land in the tree.
 	const xdg = env.XDG_STATE_HOME ?? "";
-	// The environment's own HOME, so a caller handed one never lands in this process's.
-	return isAbsolute(xdg) ? xdg : join(env.HOME || homedir(), ".local", "state");
+	// The environment's own HOME, so a caller handed one never lands in this process's; a relative one would land in
+	// the tree as well, so the account's home stands in for it.
+	const home = env.HOME ?? "";
+	return isAbsolute(xdg) ? xdg : join(isAbsolute(home) ? home : homedir(), ".local", "state");
 }
 
 /** The ledger's path. The turn gate reads it back to find the runner's record. */
@@ -99,7 +101,8 @@ export function ran(
 export const passed = (commit: string, top: string | undefined, ledger?: string) =>
 	RUNNER_STEPS.every((rule) => ran(commit, top, "pass", ledger, rule));
 
-// `stateDir()`'s rule, in the session user's shell, so it reads that user's environment.
+// `stateDir()`'s rule, in the session user's shell, so it reads that user's environment; its login sets an absolute
+// HOME, so the relative one `stateDir()` replaces cannot reach it.
 const AGENT_LEDGER =
 	'd=${XDG_STATE_HOME-}; case $d in /*) ;; *) d=$HOME/.local/state ;; esac; cat "$d/harness/gates.jsonl"';
 

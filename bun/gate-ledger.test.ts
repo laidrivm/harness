@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { cleanup, event, fabricate, run } from "./command-guard.fixture.ts";
 import { stateDir } from "./gate-ledger.ts";
@@ -70,6 +71,10 @@ describe("where the ledger lives", () => {
 			join(home, ".local", "state"),
 			"/s",
 		]);
+	});
+
+	test("a relative HOME handed in gives way to the account's home", () => {
+		expect(stateDir({ HOME: "." })).toBe(join(homedir(), ".local", "state"));
 	});
 
 	test("a second record appends without rewriting the first", () => {
