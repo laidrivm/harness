@@ -1113,7 +1113,9 @@ does not exist, the run SHALL skip the Windmill push and say so.
 - **WHEN** the head carries a `test` run from `github-actions` in more than
   one check suite, and the newest of them is pending or failed while an older
   one concluded `success`
-- **THEN** the checkout is not moved, and the next tick reads the check again
+- **THEN** the checkout is not moved when the read before the fast-forward
+  finds it so, the stack is not brought up when the read before `up` does,
+  and the next tick reads the check again
 
 #### Scenario: A newer check suite's success
 
@@ -1249,16 +1251,17 @@ journal and left for the user; retrying or verifying it is stage 9's.
 
 - **WHEN** `main` is not up two minutes after `up` and the head cannot be
   recorded as rolled back
-- **THEN** the failure file names the wait for `main`, the rolled-back record
-  and the head, the journal says the head could not be recorded, and the
-  rollback's tag and `up` still run
+- **THEN** the journal says the head could not be recorded, the rollback's
+  tag still runs and, when it succeeds, its `up`, and when both succeed the
+  failure file names the wait for `main`, the rolled-back record and the head
 
 #### Scenario: A retry after a late failure
 
 - **WHEN** a run brought the stack up for the head and a later step failed,
   and the next run deploys the same head
 - **THEN** that run does not move the previous image, and a rollback in it
-  brings the runner up on the image that ran before the first run
+  whose tag and `up` succeed brings the runner up on the image that ran
+  before the first run
 
 #### Scenario: A new head after a brought-up one
 
@@ -1336,7 +1339,7 @@ prompt, each with a line asking the session to report it to the user in
 chat, and SHALL move it aside. Only a move that succeeds SHALL keep the
 next start or prompt from reporting it again; a move that fails SHALL leave
 the report printed and the file where it was, for the next start or prompt to
-report again.
+report unless a later deploy has removed it, superseding the failure.
 
 #### Scenario: The build fails
 
@@ -1375,7 +1378,8 @@ report again.
 - **WHEN** the start or prompt hook prints the failure file and its move
   aside fails
 - **THEN** the hook's output still carries the report, the failure file stays
-  where it was, and the next start or prompt reports it again
+  where it was, and the next start or prompt reports it again unless a later
+  deploy has removed it
 
 #### Scenario: A prompt with no failure
 
