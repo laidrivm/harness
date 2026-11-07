@@ -43,6 +43,58 @@ describe("words after the deps script's name", () => {
 	);
 });
 
+describe("a typed frozen install", () => {
+	// spec: agent-permissions/a-typed-frozen-install-is-refused
+	//   agent-permissions/a-frozen-install-within-a-compound-line
+	test.each([
+		"bun install --frozen-lockfile",
+		"bun i --frozen-lockfile",
+		"bun install --frozen-lockfile --ignore-scripts",
+		"bun install --frozen-lockfile 2>&1",
+		"bun --cwd sub install --frozen-lockfile",
+		"cd sub && bun install --frozen-lockfile",
+		"bun install --frozen-lockfile | tail -5",
+		'bash -c "bun i --frozen-lockfile"',
+	])("%s blocks, naming bun run deps", (line) => {
+		const { code, rule, reason } = verdict(line);
+		expect({ code, rule }).toEqual({ code: 2, rule: "frozen-install" });
+		expect(reason).toContain("`bun run deps`");
+		expect(reason).toContain("plain `bun install`");
+		expect(reason).toContain("other flags");
+	});
+
+	// spec: agent-permissions/a-literal-install-still-prompts
+	//   agent-permissions/the-flag-only-as-text
+	test.each([
+		"bun install",
+		"bun i",
+		"bun install lodash",
+		"echo bun install --frozen-lockfile",
+		'git commit -m "bun install --frozen-lockfile"',
+		"bun run install --frozen-lockfile",
+		"bun add --frozen-lockfile x",
+	])("%s is not refused as frozen-install", (line) => expect(verdict(line).rule).not.toBe("frozen-install"));
+
+	// spec: agent-permissions/a-frozen-install-inside-a-committed-script
+	test("a committed script's frozen install passes", () => {
+		const dir = fabricate("feat/x");
+		writeFileSync(
+			join(dir, "package.json"),
+			JSON.stringify({
+				scripts: {
+					deps: "bun install --frozen-lockfile",
+					setup: "bun install --frozen-lockfile && bun run build",
+					build: "true",
+				},
+			}),
+		);
+		git(dir, "add", "package.json");
+		git(dir, "commit", "-m", "scripts");
+		expect(verdict("bun run deps", dir)).toEqual({ code: 0, reason: "" });
+		expect(verdict("bun run setup", dir)).toEqual({ code: 0, reason: "" });
+	});
+});
+
 // Both pass on the guard before `deps-args`; they pin it, so a later check
 // that refuses the script's text is seen.
 describe("the script read from package.json", () => {

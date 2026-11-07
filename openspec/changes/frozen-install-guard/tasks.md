@@ -8,7 +8,7 @@ not touched.
 
 ## 1. The refusal
 
-- [ ] 1.1 Failing cases in `bun/command-guard-deps.test.ts`, through
+- [x] 1.1 Failing cases in `bun/command-guard-deps.test.ts`, through
       `verdict()` as its `deps-args` cases do: `bun install --frozen-lockfile`,
       `bun i --frozen-lockfile`, `bun install --frozen-lockfile --ignore-scripts`,
       `bun install --frozen-lockfile 2>&1` and
@@ -34,7 +34,7 @@ not touched.
       (`a-frozen-install-inside-a-committed-script`) — the existing
       *the script read from package.json* case keeps passing. Verify the
       refusing cases fail on today's guard
-- [ ] 1.2 Then `frozenInstall(name, rest)` in `bun/command-guard-exec.ts`
+- [x] 1.2 Then `frozenInstall(name, rest)` in `bun/command-guard-exec.ts`
       beside `depsArgs`: `bun`, the subcommand found by `subcommand(args(rest),
       ["install", "i"])`, and the word `--frozen-lockfile` after it; the
       reason as the spec's *A typed frozen install is refused* names it. Called
@@ -49,7 +49,7 @@ not touched.
 
 ## 2. Docs
 
-- [ ] 2.1 In `README.md`'s bootstrap paragraph, «every literal
+- [x] 2.1 In `README.md`'s bootstrap paragraph, «every literal
       `bun install` prompts» says the guard refuses the frozen form, naming
       `bun run deps`; `core/code-style.md`'s «Automated installs — CI jobs,
       hooks, scripts — use `bun install --frozen-lockfile`» adds that an
@@ -59,7 +59,7 @@ not touched.
 
 ## 3. Integration
 
-- [ ] 3.1 `bunx --no-install openspec validate frozen-install-guard --strict`
+- [x] 3.1 `bunx --no-install openspec validate frozen-install-guard --strict`
       passes, and `bun test` passes whole
 - [ ] 3.2 After the self-pin passes the apply's merge, an agent's
       `bun install --frozen-lockfile` in this repository is refused with no

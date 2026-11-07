@@ -2,8 +2,9 @@
  * What `command-guard.ts` refuses of a program handed to a shell: a shell,
  * `source`, `.` or `eval` whose program the line does not spell out, a
  * `bunx` that would install what it runs, a `bun test` or `bun run` that
- * carries `--retry`, and a `bun run deps` given words after the script's name
- * (`depsArgs`). Decided by where the program comes
+ * carries `--retry`, a `bun run deps` given words after the script's name
+ * (`depsArgs`), and a typed `bun install --frozen-lockfile`
+ * (`frozenInstall`). Decided by where the program comes
  * from — standard input, a substitution, an expansion — never by what
  * produced it, so no list of downloaders stands here. Each check returns the
  * reason rather than blocking, because the exit code and the ledger id are the
@@ -138,8 +139,8 @@ export function bunxInstall(name: string, rest: string[]): string | undefined {
 /**
  * The index in `words` — redirections already dropped by `args` — of bun's
  * subcommand among `verbs`, found as `bunxInstall` finds `x`: a word straight
- * after an option is passed over as its possible value. Shared by `depsArgs`
- * and `bunTestRetry`.
+ * after an option is passed over as its possible value. Shared by `depsArgs`,
+ * `frozenInstall` and `bunTestRetry`.
  */
 const subcommand = (words: string[], verbs: string[]) =>
 	words.findIndex((word, at) => verbs.includes(word) || !(word.startsWith("-") || words[at - 1]?.startsWith("-")));
@@ -165,6 +166,22 @@ export function depsArgs(part: string[], name: string, rest: string[]): string |
 	if (words.slice(sub + 1).find((word) => !word.startsWith("-")) !== "deps" || part.join(" ") === "bun run deps")
 		return undefined;
 	return `command-guard: bun forwards every word after \`bun run deps\` to \`bun install --frozen-lockfile\`, where a flag such as \`--no-verify\` changes what it installs, and a word before \`bun\` — an \`xargs\`, an assignment bun reads — reaches it as well. ${bare}`;
+}
+
+/**
+ * Why `name` with `rest` is a `bun install` or `bun i` carrying
+ * `--frozen-lockfile`, or nothing. A redirection rather than a boundary: the
+ * `ask` entries hold every install anyway, so a frozen install this parse
+ * misses prompts, as it did before the check (frozen-install-guard D1). The
+ * guard consults it on a typed line only, never on a script's text (D3).
+ */
+export function frozenInstall(name: string, rest: string[]): string | undefined {
+	if (name !== "bun") return undefined;
+	const words = args(rest);
+	const sub = subcommand(words, ["install", "i"]);
+	if (words[sub] !== "install" && words[sub] !== "i") return undefined;
+	if (!words.slice(sub + 1).includes("--frozen-lockfile")) return undefined;
+	return "command-guard: a typed frozen install stops on the `bun install` prompt. Install with `bun run deps`, which runs unprompted. Type a plain `bun install`, which prompts, only after a re-pin, or when `package.json` has uncommitted edits or `bun.lock` lacks the pin. A frozen install with other flags, such as `--ignore-scripts`, or of a package with no `deps` script, is the user's to run, since `bun run deps` runs the root lifecycle scripts of the package that holds it.";
 }
 
 /**
