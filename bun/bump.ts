@@ -6,8 +6,8 @@
  * `verify` runs in a job whose token cannot write: it moves the pin to the
  * harness's `main` once that commit's newest `test` run succeeded, then gates
  * on the new harness's sync and check and the consumer's own `bumpTest`, and
- * reports the target and the tree it checked. It pushes nothing. A head not yet green,
- * or already pinned, is a quiet day: exit 0 and no target.
+ * reports the target and the tree it checked. It pushes nothing. A head not
+ * yet green, or already pinned, is a quiet day: exit 0 and no target.
  *
  * `land <sha> <tree>` runs in a second job, which may push: from a fresh
  * checkout it redoes the edit, running bun and the harness's own sync but no

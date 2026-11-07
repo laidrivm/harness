@@ -68,12 +68,15 @@ cat "$FAKE/runs.$n" 2>/dev/null || cat "$FAKE/runs"`,
 		case $1 in --entrypoint) entry=$2; shift ;; --mount) mount=$2; shift ;; orchestrator-runner) shift; break ;; esac
 		shift
 	done
-	# bun runs the mount's source, as the container would its target; docker fails a missing source with 125.
+	# bun runs the mount's source when handed its target, as the container would; docker fails a missing
+	# source with 125, and any other path is one the image does not hold, which bun fails with 1.
 	src=\${mount#*source=}
 	src=\${src%%,*}
+	target=\${mount#*target=}
+	target=\${target%%,*}
 	case $entry in
 	jq) exec jq "$@" ;;
-	bun) [ -f "$src" ] || exit 125; exec bun "$src" ;;
+	bun) [ -f "$src" ] || exit 125; [ "$1" = "$target" ] || exit 1; exec bun "$src" ;;
 	curl) exit "$(code engine)" ;;
 	*) exit "$(code push)" ;;
 	esac ;;
