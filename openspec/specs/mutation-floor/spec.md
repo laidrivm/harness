@@ -25,10 +25,10 @@ runs in, failing and naming that field when it is not a whole number. A
 mutant counts as surviving when its status is `Survived` or `NoCoverage`:
 `Killed`, `Timeout`, `Ignored`, `CompileError` and
 `RuntimeError` all mean something other than "the tests let this through",
-and `NoCoverage` means no test ran against it at all. `NoCoverage` should not
-arise under the command runner, which performs no coverage analysis, and is
-counted rather than excluded precisely because its appearance would mean the
-setup is not what this requirement assumes.
+and `NoCoverage` means no test ran against it at all. Under a runner that
+reports per-test coverage `NoCoverage` is how a mutant no test reaches is
+reported, and it is counted with `Survived`, so moving a survivor between
+the two leaves the count where it was.
 
 Stryker's own `thresholds.break` SHALL stay `null`: it compares a
 mutation-score percentage whose denominator moves with every edit to a
@@ -97,6 +97,12 @@ history for a guarantee the diff already gives.
 - **THEN** the check fails naming `harness.mutationFloor.surviving`, and
   reports no gap against it
 
+#### Scenario: A survivor no test reaches
+
+- **WHEN** a mutant that read `Survived` under the command runner reads
+  `NoCoverage` under the per-test runner, and nothing else changed
+- **THEN** the count, and the check's verdict, are unchanged
+
 ### Requirement: The harness mutates each listed module against its own tests
 
 In the harness, a module SHALL be each tracked `bun/<name>.ts` that is not a
@@ -105,17 +111,35 @@ names — `stryker.config.json`'s `mutate` — which the run and the floor both
 read: the modules whose tests exercise them in their own process, so that a
 mutant's status reflects the tests rather than the load or a child process
 that never saw the mutant. A listed module SHALL be mutated alone, and its
-mutants SHALL be judged by `bun test bun/<name>` — the test files whose path
-begins with it — and by no other test. A module the list does not name SHALL
-NOT be mutated, and the run SHALL name it. A listed module that is not
-tracked, or that no such test file matches, SHALL fail the run naming it:
-nothing could kill its mutants, and a crashed run is not a count.
+mutants SHALL be judged by the test files whose path begins with
+`bun/<name>`, and by no other test. Each mutant SHALL run only the tests of
+those files that reached it in the module's dry run, in the test's own
+process, and a mutant none reached SHALL read `NoCoverage` without a run: a
+mutant reached only in a process a test starts counts as reached by none. A
+static mutant, reached as the module loads rather than in any test, SHALL run
+every test of those files, as Stryker runs one, and never read `NoCoverage`
+for want of a covering test. A module the list does not name SHALL NOT be
+mutated, and the run SHALL name it. A listed module that is not tracked, or that no such
+test file matches, SHALL fail the run naming it: nothing could kill its
+mutants, and a crashed run is not a count.
 
 #### Scenario: A module with its own tests
 
 - **WHEN** the run mutates a listed `bun/config.ts`
-- **THEN** it mutates that file alone and runs `bun test bun/config` against
-  each mutant
+- **THEN** it mutates that file alone, and each mutant runs only the tests of
+  `bun/config*.test.ts` that reached it in the dry run
+
+#### Scenario: A mutant no test reaches
+
+- **WHEN** no test of a listed module's test files reaches a mutant in the
+  dry run
+- **THEN** the mutant reads `NoCoverage`, and no test runs against it
+
+#### Scenario: A module its tests reach only through a child process
+
+- **WHEN** a listed module's tests run it only as a `bun` process they start
+- **THEN** its mutants read `NoCoverage`, and the floor counts them as
+  survivors
 
 #### Scenario: A module the list does not name
 
@@ -157,11 +181,15 @@ would include code nothing judges, or count a module twice. A listed module
 with a test file and no stored file SHALL be mutated whole, and the run
 SHALL then fail naming the file it wrote until that file is committed: the
 count would otherwise leave the module out. A stored file SHALL record a
-fingerprint of the test files and the fixtures they import that it was measured against,
-and of the command, Stryker options and timeouts its mutants ran under, and
-SHALL hold nothing that depends on the machine or the checkout that wrote
-it — no absolute path, system, timing or test output — so that every clone
-writes the same file for the same results.
+fingerprint of what its results were measured against and Stryker cannot see
+change itself: the fixtures its tests import, the shared test configuration,
+the build step's script, the versions of the runner and of Stryker its
+mutants ran under, and the Stryker options and timeouts. It SHALL also store
+each of its test files' source and tests, and each mutant's covering and
+killing tests, which Stryker reads to tell a changed test from an unchanged
+one. A stored file SHALL hold nothing that depends on the machine or the checkout that
+wrote it — no absolute path, system, timing or test output — so that every
+clone writes the same file for the same results.
 
 #### Scenario: Unchanged modules counted from their stored results
 
@@ -205,21 +233,31 @@ writes the same file for the same results.
   change
 - **THEN** the stored file it writes is the one `HEAD` tracks
 
+#### Scenario: What a stored file holds of tests
+
+- **WHEN** a listed module is mutated
+- **THEN** its stored file holds its test files' sources and tests and each
+  mutant's covering and killing tests, and its fingerprint names no test file
+
 ### Requirement: A run mutates only what its stored results do not cover
 
 A run SHALL mutate exactly the listed modules with tests that have no stored file, whose
-source differs from the copy their stored file holds, or whose tests, the
-fixtures they import, the shared test configuration and Stryker's options no
-longer match its fingerprint — a branch's changes, and any stale file a merge
-left. The last SHALL re-run whole, because the command runner reports no
-tests, and a module with no stored file too; the rest incrementally. The
-baseline SHALL be the same run asked for every listed module. A run that would
-mutate SHALL fail first while the checkout holds an edited or untracked file
-outside `mutation/`, naming each, since Stryker copies the working tree and
-not `HEAD`. Whether or not any module needs a run, a listed module whose
-source, tests, the fixtures they import or the shared test configuration
-differ from `HEAD`'s copy SHALL fail the run first, naming each, since its
-results and its fingerprint are measured against `HEAD`'s copy.
+source differs from the copy their stored file holds, whose test files —
+one edited, added or deleted — differ from the copies it holds, or whose
+fingerprint no longer matches — a
+branch's changes, and any stale file a merge left. A fingerprint mismatch,
+and a module with no stored file, SHALL re-run whole; the rest
+incrementally, Stryker re-running the mutants whose source or covering tests
+changed, save a `Killed` one a test that killed it still kills unchanged,
+and, where a test file changed, every survivor, `Survived` or `NoCoverage`,
+whose covering tests did not. The baseline SHALL be the same run asked for
+every listed module. A run that would mutate SHALL fail first while the checkout holds an
+edited or untracked file outside `mutation/`, naming each, since Stryker
+copies the working tree and not `HEAD`. Whether or not any module needs a
+run, a listed module whose source, tests, the fixtures they import or the
+shared test configuration differ from `HEAD`'s copy SHALL fail the run
+first, naming each, since its results and its fingerprint are measured
+against `HEAD`'s copy.
 
 Of the files a module's tests reach, the fingerprint SHALL hold only the
 fixtures they import directly, `bunfig.toml` and what it preloads: a change
@@ -229,8 +267,9 @@ them by hand; deriving every importer would be machinery for a rare case.
 
 #### Scenario: Stryker's options changed
 
-- **WHEN** `stryker.config.json`'s options other than `mutate`, the command a
-  mutant runs, or its timeouts differ from those a stored file records
+- **WHEN** `stryker.config.json`'s options other than `mutate`, the build
+  step's script, the runner's or Stryker's version, or the timeouts differ
+  from those a stored file records
 - **THEN** the run re-runs every listed module whole
 
 #### Scenario: A checkout with uncommitted files
@@ -256,15 +295,26 @@ them by hand; deriving every importer would be machinery for a rare case.
 #### Scenario: The module's source changed
 
 - **WHEN** a listed `bun/<name>.ts` differs from the source
-  `mutation/<name>.json` holds, and its tests match the fingerprint
+  `mutation/<name>.json` holds, and its tests match their stored copies
 - **THEN** the run mutates that module incrementally and no other module
 
 #### Scenario: A test file changed
 
 - **WHEN** the list names `bun/<name>.ts` and `bun/<name>-steps.ts`, and only
-  `bun/<name>-steps.test.ts` changed since the stored files were written
-- **THEN** the run re-runs whole every listed module whose test filter matches
-  that path — `bun/<name>.ts` and `bun/<name>-steps.ts` — and no other
+  `bun/<name>-steps.test.ts` changed since the stored files were written,
+  importing the same fixtures as before
+- **THEN** the run re-runs incrementally every listed module whose test files
+  include that path — `bun/<name>.ts` and `bun/<name>-steps.ts` — and no
+  other, and in each the mutants whose covering or killing tests changed,
+  save a killed one an unchanged test still kills, and every survivor; a
+  change to the fixtures it imports re-runs them whole
+
+#### Scenario: A test file deleted
+
+- **WHEN** `bun/sync-settings-package.test.ts` is deleted and
+  `bun/sync-settings.test.ts` and `bun/sync-settings.ts` are unchanged
+- **THEN** the run re-runs `bun/sync-settings.ts` incrementally, testing
+  again each mutant a test of the deleted file killed
 
 #### Scenario: A fixture another module's tests import
 
