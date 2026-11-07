@@ -9,12 +9,19 @@ as `bun run deps`; an install that must rewrite the lockfile, or one from a
 `ask` entries of *Every manifest-mutating invocation prompts, whatever else
 allows it* SHALL stay as they are, so every literal `bun install` or `bun i`
 the command guard lets through still prompts. The command guard SHALL block a
-typed `bun install` or `bun i` carrying `--frozen-lockfile` among its words,
-wherever it stands in the command line, with a reason naming `bun run deps`,
-and naming a plain `bun install`, which prompts, for a re-pin, a
-`package.json` with uncommitted edits and a `bun.lock` that lacks the pin.
-The block is a redirection rather than a boundary: a frozen install the guard
-does not read as one is left to the `ask` entry, which prompts. The install is
+`bun install` or `bun i` carrying `--frozen-lockfile` among its words in the
+line the agent typed, wherever it stands there — a compound line, a shell's
+`-c` program or an `eval` included — and SHALL NOT block one it reads from a
+committed script's text, which the `ask` entries never match. The reason SHALL
+name `bun run deps`; a plain `bun install`, which prompts, for a re-pin, a
+`package.json` with uncommitted edits and a `bun.lock` that lacks the pin;
+and that a frozen install with other flags, such as `--ignore-scripts`, is
+the user's to run, since `bun run deps` runs the root lifecycle scripts. The
+block is a redirection rather than a boundary: a frozen install the guard
+does not read as one is left to the `ask` entry, which prompts. A blocked
+call shows no prompt only because Claude Code's hooks reference runs a
+`PreToolUse` hook before the permission flow; that order is Claude Code's,
+observed rather than tested here. The install is
 pinned only by the `bun.lock` on disk, which nothing compares with `HEAD`. The
 install SHALL run the root lifecycle scripts the committed manifest names
 (`preinstall`, `postinstall`, `prepare`), with no `--ignore-scripts`: a
@@ -40,9 +47,9 @@ set reaches the install unread.
 - **WHEN** the agent attempts `bun install --frozen-lockfile`,
   `bun i --frozen-lockfile`, `bun install --frozen-lockfile --ignore-scripts`
   or `bun install --frozen-lockfile 2>&1`
-- **THEN** the hook blocks the call before any prompt is shown, and the
-  reason names `bun run deps`, and a plain `bun install` for a re-pin, a
-  `package.json` with uncommitted edits and a `bun.lock` that lacks the pin
+- **THEN** the hook blocks the call, and the reason names `bun run deps`; a
+  plain `bun install` for a re-pin, a `package.json` with uncommitted edits
+  and a `bun.lock` that lacks the pin; and other flags as the user's to run
 
 #### Scenario: A frozen install within a compound line
 
@@ -50,6 +57,14 @@ set reaches the install unread.
   `bun install --frozen-lockfile | tail -5` or
   `bash -c "bun i --frozen-lockfile"`
 - **THEN** the hook blocks the call, with the same reason
+
+#### Scenario: A frozen install inside a committed script
+
+- **WHEN** the agent attempts `bun run deps`, or `bun run setup` where the
+  committed `package.json` holds
+  `"setup": "bun install --frozen-lockfile && bun run build"`
+- **THEN** the hook does not block it for a frozen install, because the
+  install is the script's text, not the typed line
 
 #### Scenario: A literal install still prompts
 
