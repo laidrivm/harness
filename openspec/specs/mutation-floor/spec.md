@@ -248,9 +248,10 @@ fingerprint no longer matches — a
 branch's changes, and any stale file a merge left. A fingerprint mismatch,
 and a module with no stored file, SHALL re-run whole; the rest
 incrementally, Stryker re-running the mutants whose source or covering tests
-changed and, where a test file changed, every survivor, `Survived` or
-`NoCoverage`, whose covering tests did not. The baseline SHALL be the same run asked for every listed
-module. A run that would mutate SHALL fail first while the checkout holds an
+changed, save a `Killed` one a test that killed it still kills unchanged,
+and, where a test file changed, every survivor, `Survived` or `NoCoverage`,
+whose covering tests did not. The baseline SHALL be the same run asked for
+every listed module. A run that would mutate SHALL fail first while the checkout holds an
 edited or untracked file outside `mutation/`, naming each, since Stryker
 copies the working tree and not `HEAD`. Whether or not any module needs a
 run, a listed module whose source, tests, the fixtures they import or the
@@ -304,8 +305,9 @@ them by hand; deriving every importer would be machinery for a rare case.
   importing the same fixtures as before
 - **THEN** the run re-runs incrementally every listed module whose test files
   include that path — `bun/<name>.ts` and `bun/<name>-steps.ts` — and no
-  other, and in each the mutants whose covering or killing tests changed and
-  every survivor; a change to the fixtures it imports re-runs them whole
+  other, and in each the mutants whose covering or killing tests changed,
+  save a killed one an unchanged test still kills, and every survivor; a
+  change to the fixtures it imports re-runs them whole
 
 #### Scenario: A test file deleted
 
