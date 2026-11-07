@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup } from "../bun/diff-budget.fixture.ts";
 import {
@@ -211,6 +211,8 @@ describe("deploy.sh and the session", () => {
 		set(h, "push", 1);
 		expect(deploy(h).code).toBe(1);
 		set(h, "session", 1);
+		// A record naming the head is not written again, so a failed rewrite cannot empty it.
+		chmodSync(join(h.state, "brought-up"), 0o444);
 		const before = log(h).length;
 		expect(deploy(h).code).toBe(1);
 		const retry = log(h).slice(before);
