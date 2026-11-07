@@ -60,9 +60,10 @@ green() {
 		printf '[%s]' "$pages" | docker run --rm -i \
 			--mount "type=bind,source=${PWD%/*}/bun/green-run.ts,target=/green-run.ts,readonly" \
 			--entrypoint bun "$image" /green-run.ts
+		# Not green is 4, never 1, which bun and docker exit with on their own failures.
 		case $? in
 		0) return 0 ;;
-		1) return 1 ;;
+		4) return 1 ;;
 		3) n=$((n + 1)) ;;
 		*) return 2 ;;
 		esac

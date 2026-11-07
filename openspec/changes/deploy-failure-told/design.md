@@ -164,8 +164,13 @@ unchanged; only the step's words grow.
 an exported `collect(pages)` that takes the API's page bodies read so far
 and returns their runs, or `more` while they hold fewer runs than the first
 page's `total_count`; and, run as a script, both over a JSON array of those
-bodies on standard input, exiting 0 for green, 1 for not, 2 for input it
-cannot read and 3 for another page wanted. `greenHead()` imports both.
+bodies on standard input, exiting 0 for green, 4 for not, 2 for input it
+cannot read and 3 for another page wanted. Not green is not 1 (the user's
+decision on #476, 07.11): bun exits 1 when it cannot load or run the file,
+so under 1 a broken rule would read as a head not yet green, exit 0 and
+tell nobody, every tick. Under 4, `deploy.sh` reads every exit but 0, 3 and
+4 as a check that cannot be read, which fails the run.
+`greenHead()` imports both.
 `deploy.sh`'s `green()` pipes the pages to it under the runner
 image's bun, as it runs `jq` today, but runs the checkout's own file,
 bind-mounted read-only:
