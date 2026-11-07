@@ -37,6 +37,8 @@ describe("a process signalled by name", () => {
 		'bash -c "killall bun"',
 		"ps aux | grep bun && pkill bun",
 		"killall5 -15",
+		// zsh expands `=pkill` to its path.
+		"=pkill -f bun",
 	])("%s blocks", (line) => {
 		blocks(line, "kill-by-name");
 	});
@@ -110,6 +112,12 @@ describe("a kill aimed past the line's own jobs", () => {
 		"kill -s 0 95034",
 		"kill -s",
 		"kill -l 15",
+		"=kill 95034",
+		// `2>&1` is one word; read as `2>` and a separator, the pid left `kill`.
+		"kill 2>&1 95034",
+		"kill %1 2>&1 95034",
+		"kill %1 <&0 95034",
+		"kill %1 >&- 95034",
 		// A heredoc's body is read as commands once the line runs a script.
 		"cat > s.sh <<'EOF'\nkill 95034\nEOF\nbash s.sh",
 	])("%s blocks", (line) => {
@@ -127,8 +135,8 @@ describe("a kill that reaches only the line's own jobs, or signals nothing", () 
 		"/bin/kill %1 2>/dev/null",
 		"FOO=1 kill %1",
 		"{ kill %1; }",
-		// The parse splits `2>&1` on its `&`, leaving a `2>` that ends the command.
 		"kill %1 2>&1",
+		"kill %1 >&2",
 	])("%s passes", (line) => passes(line));
 
 	// spec: agent-permissions/no-signal-sent

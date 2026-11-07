@@ -94,7 +94,7 @@ export function unreadProgram(part: string[], name: string, rest: string[], firs
 		// `xargs` writes its input into a `-c` string (`xargs -I{} sh -c '{}'`),
 		// and without a replacement or a `$` the shell never reads what it
 		// appends, so every `-c` that `xargs` runs is refused.
-		const xargs = part.slice(0, part.length - rest.length - 1).some((word) => word.split("/").pop() === "xargs");
+		const xargs = part.slice(0, part.length - rest.length - 1).some((word) => base(word) === "xargs");
 		if (shell.stdin) unread = true;
 		else if (shell.info) unread = false;
 		else if (shell.command)
@@ -209,19 +209,16 @@ export function killByName(part: string[]): string | undefined {
  * or nothing (kill-guard D2, D3). `kill` must be the command's name with no
  * prefix — `xargs`, `watch` and the like append or rewrite its words — and no
  * substitution may feed the command. Its words are read raw, redirections
- * included: an open one with a word after it is refused, since quoted it is a
- * word `kill` gets and the next reaches `kill` as a pid (`kill '<' 95034`).
- * One ending the command hides nothing — the `2>` that `2>&1` leaves, the
- * parse splitting on its `&`.
+ * included: an open one is refused, since quoted it is a word `kill` gets and
+ * the next word reaches `kill` as a pid (`kill '<' 95034`).
  */
 export function killSignal(part: string[]): string | undefined {
 	const at = part.findIndex((word) => base(word) === "kill");
 	if (at === -1) return undefined;
 	if (FED.has(part) || part.findIndex((_, index) => named(part, index)) !== at) return SIGNAL;
-	const after = part.slice(at + 1);
 	const words: string[] = [];
-	for (const [index, word] of after.entries()) {
-		if (OPEN_REDIRECTION.test(word) && index < after.length - 1) return SIGNAL;
+	for (const word of part.slice(at + 1)) {
+		if (OPEN_REDIRECTION.test(word)) return SIGNAL;
 		if (!REDIRECTION.test(word)) words.push(word);
 	}
 	let next = 0;

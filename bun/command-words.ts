@@ -53,8 +53,11 @@ const NOT_A_NAME = /^([A-Za-z_][A-Za-z0-9_]*=|-|[0-9]*[<>])/;
  */
 export const OPEN_REDIRECTION = /^[0-9]*(<<<|[<>]{1,2}&?)$/;
 
-/** The name a path runs by: `/usr/bin/git` is `git`. */
-export const base = (word: string) => word.split("/").pop() ?? "";
+/**
+ * The name a path runs by: `/usr/bin/git` is `git`, and zsh's `=git`, which
+ * it expands to that path, is too.
+ */
+export const base = (word: string) => word.replace(/^=/, "").split("/").pop() ?? "";
 
 /**
  * Whether `words[at]` can be a command name: not an assignment, an option or a

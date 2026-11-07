@@ -238,7 +238,8 @@ not age with the code.
   nothing, and name the branch in the report).
 - Never signal a process this session did not start through a sender the
   command guard does not read — a committed script's `process.kill`, a
-  command string a tool runs itself (`watch "kill …"`), `playwright-cli
+  command string a tool runs itself (`watch "kill …"`, `trap 'kill …'
+  EXIT`), a command name built by an expansion (`$k`), `playwright-cli
   kill-all`, `fuser -k`.
 - Never run an act the command guard or a permission entry refuses or asks
   about — a commit, a push, a `gh` write, a package command, an edit to a gated

@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { cleanup, event, fabricate, run } from "./command-guard.fixture.ts";
+import { cleanup, event, fabricate, run, verdict } from "./command-guard.fixture.ts";
 
 /**
  * What `command-parse.ts` decides, exercised through the guard rather than by
@@ -69,6 +69,16 @@ describe("a spelling that walks around a permission pattern", () => {
 		// `'>'` is the file the first `>` writes, so `git` after it is the name.
 		expect(run(event("> '>' git commit -m fix"), fabricate("main")).code).toBe(2);
 	});
+
+	test("a duplicated descriptor ends no command", () => {
+		// `>&` is one operator: split at its `&`, `--force` left the push.
+		expect(verdict("git push 2>&1 --force origin x").rule).toBe("force-push");
+	});
+
+	test.each(["echo '>'& git commit -m fix", "echo \\>& git commit -m fix"])(
+		"a quoted or escaped > before & leaves & a separator: %s",
+		(line) => expect(run(event(line), fabricate("main")).code).toBe(2),
+	);
 
 	test("a command merely ending in git does not block", () => {
 		expect(run(event("mygit commit -m fix"), fabricate("main")).code).toBe(0);
