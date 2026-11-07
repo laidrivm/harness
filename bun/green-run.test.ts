@@ -10,13 +10,14 @@ const ours = (id: number, conclusion: string | null) => ({ id, conclusion, app: 
 
 describe("green", () => {
 	// spec: harness-updates/a-quiet-day-changes-nothing
+	// Each table holds a maker, so the case builds its subject (core/rules.md).
 	test.each([
-		["no runs", []],
-		["another app's success alone", [{ id: 1, conclusion: "success", app: { slug: "other" } }]],
-		["a pending run", [ours(1, null)]],
-		["a failed run", [ours(1, "failure")]],
+		["no runs", () => []],
+		["another app's success alone", () => [{ id: 1, conclusion: "success", app: { slug: "other" } }]],
+		["a pending run", () => [ours(1, null)]],
+		["a failed run", () => [ours(1, "failure")]],
 	])("%s is not green", (_, runs) => {
-		expect(green(runs)).toBe(false);
+		expect(green(runs())).toBe(false);
 	});
 
 	// spec: harness-updates/a-quiet-day-changes-nothing
@@ -68,14 +69,14 @@ describe("collect", () => {
 
 	// spec: harness-updates/test-runs-on-more-than-one-page
 	test.each([
-		["a first body with no total_count", [{ check_runs: [ours(1, "success")] }]],
-		["a later body with no total_count", [page(2, ours(1, "success")), { check_runs: [ours(2, "success")] }]],
-		["a body with no check_runs", [{ total_count: 1 }]],
-		["a run with no id", [page(1, { conclusion: "success", app: { slug: "github-actions" } })]],
-		["a last page with no runs while the count is short", [page(2, ours(1, "success")), page(2)]],
-		["a first page with no runs while the count is short", [page(1)]],
+		["a first body with no total_count", () => [{ check_runs: [ours(1, "success")] }]],
+		["a later body with no total_count", () => [page(2, ours(1, "success")), { check_runs: [ours(2, "success")] }]],
+		["a body with no check_runs", () => [{ total_count: 1 }]],
+		["a run with no id", () => [page(1, { conclusion: "success", app: { slug: "github-actions" } })]],
+		["a last page with no runs while the count is short", () => [page(2, ours(1, "success")), page(2)]],
+		["a first page with no runs while the count is short", () => [page(1)]],
 	])("%s throws", (_, pages) => {
-		expect(() => collect(pages)).toThrow();
+		expect(() => collect(pages())).toThrow();
 	});
 });
 
@@ -86,13 +87,15 @@ const run = (stdin: string) =>
 describe("run as a script", () => {
 	// spec: orchestrator/check-runs-on-more-than-one-page
 	test.each([
-		["green", [page(1, ours(1, "success"))], 0],
-		["not green", [page(2, ours(1, "success")), page(2, ours(2, "failure"))], 1],
-		["another page wanted", [page(2, ours(1, "success"))], 3],
-		["unreadable pages", [page(2, ours(1, "success")), page(2)], 2],
-		["no array", page(1, ours(1, "success")), 2],
+		["green", () => [page(1, ours(1, "success"))], 0],
+		["not green", () => [page(2, ours(1, "success")), page(2, ours(2, "failure"))], 1],
+		["another page wanted", () => [page(2, ours(1, "success"))], 3],
+		["unreadable pages", () => [page(2, ours(1, "success")), page(2)], 2],
+		["no array", () => page(1, ours(1, "success")), 2],
+		// An empty body read by deploy.sh adds no page; wanting another would read forever.
+		["no pages", () => [], 2],
 	])("%s exits as deploy.sh reads it", (_, pages, code) => {
-		expect(run(JSON.stringify(pages))).toBe(code);
+		expect(run(JSON.stringify(pages()))).toBe(code);
 	});
 
 	test("standard input that is not JSON exits 2", () => {

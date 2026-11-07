@@ -96,11 +96,11 @@ describe("choosing a target", () => {
 
 	// spec: harness-updates/an-older-check-suite-s-success-does-not-make-the-head-green
 	test.each([
-		["failed", [ours(5, "success"), ours(9, "failure")]],
-		["pending", [ours(9, null), ours(5, "success")]],
+		["failed", () => [ours(5, "success"), ours(9, "failure")]],
+		["pending", () => [ours(9, null), ours(5, "success")]],
 	])("an older suite's success and a newer %s run report no target and change nothing", async (_, served) => {
 		api.head = NEW;
-		api.runs = served;
+		api.runs = served();
 		const dir = consumer();
 		const before = readFileSync(join(dir, "package.json"), "utf8");
 		const { run, calls } = runner();

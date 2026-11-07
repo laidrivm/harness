@@ -100,10 +100,18 @@ describe("deploy.sh", () => {
 	});
 
 	// spec: orchestrator/check-runs-on-more-than-one-page
-	test("a second page with no runs while the count is short reads as a check that cannot be read", () => {
+	test.each([
+		[
+			"a second page with no runs while the count is short",
+			() => page([{ id: 5, conclusion: "success" }], 2),
+			() => page([], 2),
+		],
+		// It adds no page, so asking for the next would read forever.
+		["an empty first body", () => "", () => page([{ id: 5, conclusion: "success" }])],
+	])("%s reads as a check that cannot be read", (_, first, second) => {
 		const h = host();
-		set(h, "runs.1", page([{ id: 5, conclusion: "success" }], 2));
-		set(h, "runs.2", page([], 2));
+		set(h, "runs.1", first());
+		set(h, "runs.2", second());
 		const r = deploy(h);
 		expect(r.code).toBe(1);
 		expect(r.out).toContain("could not be read");
