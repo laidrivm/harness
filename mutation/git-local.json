@@ -2,15 +2,25 @@
 	"schemaVersion": "1.0",
 	"testFiles": {
 		"bun/git-local.test.ts": {
-			"source": "import { expect, test } from \"bun:test\";\nimport { unlocal } from \"./git-local.ts\";\n\ntest(\"drops every variable git names as local, keeps the rest, and leaves its argument whole\", () => {\n\tconst env = { GIT_DIR: \"/r/.git\", GIT_WORK_TREE: \"/r\", GIT_INDEX_FILE: \"/r/i\", GIT_EDITOR: \"true\", HOME: \"/h\" };\n\texpect(unlocal(env)).toEqual({ GIT_EDITOR: \"true\", HOME: \"/h\" });\n\texpect(Object.keys(env)).toHaveLength(5);\n});\n",
+			"source": "import { expect, test } from \"bun:test\";\nimport { mkdtempSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { join } from \"node:path\";\nimport { unlocal } from \"./git-local.ts\";\n\ntest(\"drops every variable git names as local, keeps the rest, and leaves its argument whole\", () => {\n\tconst env = { GIT_DIR: \"/r/.git\", GIT_WORK_TREE: \"/r\", GIT_INDEX_FILE: \"/r/i\", GIT_EDITOR: \"true\", HOME: \"/h\" };\n\texpect(unlocal(env)).toEqual({ GIT_EDITOR: \"true\", HOME: \"/h\" });\n\texpect(Object.keys(env)).toHaveLength(5);\n});\n\ntest(\"asks the git on the PATH it is given, though this process has one\", () => {\n\t// The test-tmpdir preload removes the directory with the run's others.\n\tconst PATH = mkdtempSync(join(tmpdir(), \"git-local-path-\"));\n\texpect(() => unlocal({ GIT_DIR: \"/r/.git\", PATH })).toThrow();\n});\n",
 			"tests": [
 				{
 					"id": "0",
+					"name": "bun/git-local.test.ts > asks the git on the PATH it is given, though this process has one",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 14
+						}
+					}
+				},
+				{
+					"id": "1",
 					"name": "bun/git-local.test.ts > drops every variable git names as local, keeps the rest, and leaves its argument whole",
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 5
+							"line": 8
 						}
 					}
 				}
@@ -19,7 +29,7 @@
 	},
 	"files": {
 		"bun/git-local.ts": {
-			"source": "/**\n * `env` less every variable `git rev-parse --local-env-vars` names. A session or a run started under a git hook\n * inherits its `GIT_DIR` and `GIT_WORK_TREE`, which outrank both `-C` and a directory's own `.git`, so a git given\n * them reads another repository. The list is git's own and reads no repository, so it is asked in this process's\n * environment whatever `env` holds.\n */\nexport function unlocal(env: Record<string, string | undefined>): Record<string, string | undefined> {\n\tconst local = new Set(Bun.spawnSync([\"git\", \"rev-parse\", \"--local-env-vars\"]).stdout.toString().split(\"\\n\"));\n\treturn Object.fromEntries(Object.entries(env).filter(([key]) => !local.has(key)));\n}\n",
+			"source": "/**\n * `env` less every variable `git rev-parse --local-env-vars` names. A session or a run started under a git hook\n * inherits its `GIT_DIR` and `GIT_WORK_TREE`, which outrank both `-C` and a directory's own `.git`, so a git given\n * them reads another repository. The list is git's own and reads no repository, so it is asked in this process's\n * environment with only `env`'s `PATH`, where one is set: the git found there is the one `env`'s callers then run.\n */\nexport function unlocal(env: Record<string, string | undefined>): Record<string, string | undefined> {\n\tconst probe = Bun.spawnSync([\"git\", \"rev-parse\", \"--local-env-vars\"], {\n\t\tenv: { ...process.env, PATH: env.PATH ?? process.env.PATH },\n\t});\n\tconst local = new Set(probe.stdout.toString().split(\"\\n\"));\n\treturn Object.fromEntries(Object.entries(env).filter(([key]) => !local.has(key)));\n}\n",
 			"mutants": [
 				{
 					"id": "0",
@@ -27,7 +37,7 @@
 					"location": {
 						"end": {
 							"column": 2,
-							"line": 10
+							"line": 13
 						},
 						"start": {
 							"column": 102,
@@ -37,10 +47,11 @@
 					"replacement": "{}",
 					"status": "Killed",
 					"coveredBy": [
-						"0"
+						"0",
+						"1"
 					],
 					"killedBy": [
-						"0"
+						"1"
 					]
 				},
 				{
@@ -48,21 +59,22 @@
 					"mutatorName": "ArrayDeclaration",
 					"location": {
 						"end": {
-							"column": 78,
+							"column": 70,
 							"line": 8
 						},
 						"start": {
-							"column": 38,
+							"column": 30,
 							"line": 8
 						}
 					},
 					"replacement": "[]",
 					"status": "Killed",
 					"coveredBy": [
-						"0"
+						"0",
+						"1"
 					],
 					"killedBy": [
-						"0"
+						"1"
 					]
 				},
 				{
@@ -70,21 +82,22 @@
 					"mutatorName": "StringLiteral",
 					"location": {
 						"end": {
-							"column": 44,
+							"column": 36,
 							"line": 8
 						},
 						"start": {
-							"column": 39,
+							"column": 31,
 							"line": 8
 						}
 					},
 					"replacement": "\"\"",
 					"status": "Killed",
 					"coveredBy": [
-						"0"
+						"0",
+						"1"
 					],
 					"killedBy": [
-						"0"
+						"1"
 					]
 				},
 				{
@@ -92,21 +105,22 @@
 					"mutatorName": "StringLiteral",
 					"location": {
 						"end": {
-							"column": 57,
+							"column": 49,
 							"line": 8
 						},
 						"start": {
-							"column": 46,
+							"column": 38,
 							"line": 8
 						}
 					},
 					"replacement": "\"\"",
 					"status": "Killed",
 					"coveredBy": [
-						"0"
+						"0",
+						"1"
 					],
 					"killedBy": [
-						"0"
+						"1"
 					]
 				},
 				{
@@ -114,40 +128,42 @@
 					"mutatorName": "StringLiteral",
 					"location": {
 						"end": {
-							"column": 77,
+							"column": 69,
 							"line": 8
 						},
 						"start": {
-							"column": 59,
+							"column": 51,
 							"line": 8
 						}
 					},
 					"replacement": "\"\"",
 					"status": "Killed",
 					"coveredBy": [
-						"0"
+						"0",
+						"1"
 					],
 					"killedBy": [
-						"0"
+						"1"
 					]
 				},
 				{
 					"id": "5",
-					"mutatorName": "StringLiteral",
+					"mutatorName": "ObjectLiteral",
 					"location": {
 						"end": {
-							"column": 108,
-							"line": 8
+							"column": 3,
+							"line": 10
 						},
 						"start": {
-							"column": 104,
+							"column": 72,
 							"line": 8
 						}
 					},
-					"replacement": "\"\"",
+					"replacement": "{}",
 					"status": "Killed",
 					"coveredBy": [
-						"0"
+						"0",
+						"1"
 					],
 					"killedBy": [
 						"0"
@@ -155,21 +171,22 @@
 				},
 				{
 					"id": "6",
-					"mutatorName": "MethodExpression",
+					"mutatorName": "ObjectLiteral",
 					"location": {
 						"end": {
-							"column": 82,
+							"column": 62,
 							"line": 9
 						},
 						"start": {
-							"column": 28,
+							"column": 8,
 							"line": 9
 						}
 					},
-					"replacement": "Object.entries(env)",
+					"replacement": "{}",
 					"status": "Killed",
 					"coveredBy": [
-						"0"
+						"0",
+						"1"
 					],
 					"killedBy": [
 						"0"
@@ -177,21 +194,22 @@
 				},
 				{
 					"id": "7",
-					"mutatorName": "ArrowFunction",
+					"mutatorName": "LogicalOperator",
 					"location": {
 						"end": {
-							"column": 81,
+							"column": 60,
 							"line": 9
 						},
 						"start": {
-							"column": 55,
+							"column": 32,
 							"line": 9
 						}
 					},
-					"replacement": "() => undefined",
+					"replacement": "env.PATH && process.env.PATH",
 					"status": "Killed",
 					"coveredBy": [
-						"0"
+						"0",
+						"1"
 					],
 					"killedBy": [
 						"0"
@@ -199,24 +217,90 @@
 				},
 				{
 					"id": "8",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 58,
+							"line": 11
+						},
+						"start": {
+							"column": 54,
+							"line": 11
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed",
+					"coveredBy": [
+						"1"
+					],
+					"killedBy": [
+						"1"
+					]
+				},
+				{
+					"id": "9",
+					"mutatorName": "MethodExpression",
+					"location": {
+						"end": {
+							"column": 82,
+							"line": 12
+						},
+						"start": {
+							"column": 28,
+							"line": 12
+						}
+					},
+					"replacement": "Object.entries(env)",
+					"status": "Killed",
+					"coveredBy": [
+						"1"
+					],
+					"killedBy": [
+						"1"
+					]
+				},
+				{
+					"id": "10",
+					"mutatorName": "ArrowFunction",
+					"location": {
+						"end": {
+							"column": 81,
+							"line": 12
+						},
+						"start": {
+							"column": 55,
+							"line": 12
+						}
+					},
+					"replacement": "() => undefined",
+					"status": "Killed",
+					"coveredBy": [
+						"1"
+					],
+					"killedBy": [
+						"1"
+					]
+				},
+				{
+					"id": "11",
 					"mutatorName": "BooleanLiteral",
 					"location": {
 						"end": {
 							"column": 81,
-							"line": 9
+							"line": 12
 						},
 						"start": {
 							"column": 66,
-							"line": 9
+							"line": 12
 						}
 					},
 					"replacement": "local.has(key)",
 					"status": "Killed",
 					"coveredBy": [
-						"0"
+						"1"
 					],
 					"killedBy": [
-						"0"
+						"1"
 					]
 				}
 			]
