@@ -39,7 +39,10 @@ the other exec checks do and errs toward letting a call through: a miss
 costs the prompt this change removes, never an install the user did not
 see. This does not reopen 2 б of 2026-11-06, which dropped a *block* of every
 non-frozen install because each parse gap there let a manifest change past
-the user; here a parse gap falls back to the user.
+the user; here a parse gap falls back to the user. The one over-reading is
+the house walk's own: past a wrapper (`time`, `nohup`, `xargs`) every word is
+a candidate command, so `time echo bun install --frozen-lockfile` refuses,
+as it does for the other exec checks; no agent types that to install.
 
 Rejected: a hook `ask`, or a hook `allow` for the frozen form — an `ask`
 entry prompts over a hook's `allow`, and a local `allow` silences a hook's
@@ -90,9 +93,12 @@ prompts, and nothing refuses it, since it is also the right command in those
 three cases. So under agent-rulebook's *A rule only partly covered* the
 Process rule is shortened to what the guard cannot see — install with
 `bun run deps`, and type a plain `bun install` only in those three cases —
-rather than deleted. The shortened rule still names `bun run deps`, so the
-window between this change's merge and the self-pin bump that brings the
-refusal here is covered by prose as before.
+rather than deleted. The gate lands here only when the self-pin passes the
+apply's merge, since hooks run from `node_modules/harness`; the rule is
+shortened in that bump's pull request or after it, never at the apply's
+merge, so the frozen spelling is covered by prose until the refusal holds it.
+`core/code-style.md`'s line on automated installs gains that an agent's
+install is `bun run deps`, so the two docs do not disagree.
 
 ### 5. Where the refusal is decided before the prompt
 
@@ -107,6 +113,11 @@ no `verdict()` case can.
 - [A frozen variant the user wants run by an agent] → refused outright where
   it used to prompt; the reason says the user runs it in a terminal of their
   own.
+- [A frozen install of a sub-package with no `deps` script] → refused where
+  it used to prompt, and `bun run deps` there fails or reaches the root's
+  script; the reason names that case as the user's to run. Rejected: reading
+  each target directory's committed `deps` before refusing — a redirect for
+  a layout no consumer measured on 2026-11-07 has.
 - [A consumer whose own `deps` script is not a frozen install] → sync refuses
   to overwrite it and the harness check fails while it differs
   (*frozen-install-unprompted* decision 3), so that consumer is already

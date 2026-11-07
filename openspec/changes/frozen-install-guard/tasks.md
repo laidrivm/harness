@@ -1,6 +1,7 @@
 # frozen-install-guard — tasks
 
-One pull request. The failing cases come first, their failure seen before the
+Groups 1 and 2 are one pull request; 3.2 and 3.3 follow the self-pin bump
+that brings the refusal here. The failing cases come first, their failure seen before the
 code changes, each cited as `// spec: agent-permissions/<slug>` where a
 scenario names it. The `ask` entries, the bootstrap and the settings text are
 not touched.
@@ -27,8 +28,9 @@ not touched.
       get no `frozen-install` rule (`the-flag-only-as-text`); in a fabricated
       checkout whose committed `package.json` holds
       `"deps": "bun install --frozen-lockfile"` and
-      `"setup": "bun install --frozen-lockfile && bun run build"`,
-      `bun run deps` and `bun run setup` get no `frozen-install` rule
+      `"setup": "bun install --frozen-lockfile && bun run build"` and
+      `"build": "true"`, `bun run deps` and `bun run setup` each pass as
+      `{ code: 0, reason: "" }`
       (`a-frozen-install-inside-a-committed-script`) — the existing
       *the script read from package.json* case keeps passing. Verify the
       refusing cases fail on today's guard
@@ -45,27 +47,32 @@ not touched.
       `bun test bun/command-guard` passes and both files stay under the
       `.ts` line cap
 
-## 2. The prose shrinks
+## 2. Docs
 
-- [ ] 2.1 Shorten the Process rule «Install dependencies with `bun run deps`,
-      never a literal `bun install` …» in `core/rules.md` to what the guard
-      cannot see (design decision 4): install with `bun run deps`, and type a
-      plain `bun install` only after a re-pin, or if `package.json` has
-      uncommitted edits or `bun.lock` lacks the pin — the frozen spelling and
-      its prompt leave it. Grep `core/`, `CLAUDE.md` and `README.md` for
-      other prose stating the frozen prohibition (agent-rulebook's *A
-      mechanised prohibition leaves its prose home*); the re-pin line in
-      `core/git-and-prs.md` stays, since it asks for a plain
-      `bun install`. In `README.md`'s bootstrap paragraph, «every literal
+- [ ] 2.1 In `README.md`'s bootstrap paragraph, «every literal
       `bun install` prompts» says the guard refuses the frozen form, naming
-      `bun run deps`. Verify `bun test` over the rulebook and README suites
-      passes
+      `bun run deps`; `core/code-style.md`'s «Automated installs — CI jobs,
+      hooks, scripts — use `bun install --frozen-lockfile`» adds that an
+      agent installs with `bun run deps` (design decision 4). The rule in
+      `core/rules.md` is not touched here. Verify `bun test` over the
+      rulebook and README suites passes
 
 ## 3. Integration
 
 - [ ] 3.1 `bunx --no-install openspec validate frozen-install-guard --strict`
       passes, and `bun test` passes whole
-- [ ] 3.2 After the self-pin passes the merge, an agent's
+- [ ] 3.2 After the self-pin passes the apply's merge, an agent's
       `bun install --frozen-lockfile` in this repository is refused with no
-      prompt shown, and `bun install` still prompts (design decision 4);
+      prompt shown, and `bun install` still prompts (design decision 5);
       record both on the card
+- [ ] 3.3 Then, in the self-pin bump's pull request or one after it, shorten
+      the Process rule «Install dependencies with `bun run deps`, never a
+      literal `bun install` …» in `core/rules.md` to what the guard cannot
+      see (design decision 4): install with `bun run deps`, and type a plain
+      `bun install` only after a re-pin, or if `package.json` has
+      uncommitted edits or `bun.lock` lacks the pin — the frozen spelling
+      and its prompt leave it. Grep `core/`, `CLAUDE.md` and `README.md` for
+      other prose stating the frozen prohibition (agent-rulebook's *A
+      mechanised prohibition leaves its prose home*); the re-pin line in
+      `core/git-and-prs.md` stays, since it asks for a plain `bun install`.
+      Verify `bun test` over the rulebook suites passes
