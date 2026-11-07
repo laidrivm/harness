@@ -82,8 +82,9 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       `total_count` answer `more`; pages that reach it answer their runs
       together; a body with no `total_count`, and a last page with no runs
       while the count is short, throw. Run as a script over a JSON array of
-      bodies, it exits 0, 1, 2 and 3 for green, not green, unreadable
-      standard input and another page wanted
+      bodies, it exits 0, 4, 2 and 3 for green, not green, unreadable
+      standard input and another page wanted — never 1 for not green,
+      which bun exits with on its own failures
 - [x] 3.2 Then `bun/green-run.ts`, importing nothing, its comment naming the
       per-suite reading of `filter=latest`; add it to `stryker.config.json`'s
       `mutate` if the mutation floor's rules call for it. Verify
@@ -116,7 +117,8 @@ fail first. `put()` and its `shortcut:` comment are not touched.
       pages read, and a second page with no runs while the count is short
       reads as a check that cannot be read
       (`orchestrator/check-runs-on-more-than-one-page`); a script that exits 2
-      reads as a check that cannot be read; the existing pending, failed,
+      or 1, or one bun cannot run, reads as a check that cannot be read; the
+      existing pending, failed,
       absent and other-app cases keep passing. Two recovery cases: with the
       image's `/opt/orchestrator/bun/green-run.ts` absent (a build that
       failed after the fast-forward, or a rollback to an image from before
@@ -126,8 +128,9 @@ fail first. `put()` and its `shortcut:` comment are not touched.
 - [x] 3.6 Then `deploy.sh`'s `green()` reads `$runs&per_page=100&page=<n>`
       and pipes the bodies read so far, as a JSON array, to
       `docker run --rm -i --mount "type=bind,source=${PWD%/*}/bun/green-run.ts,target=/green-run.ts,readonly" --entrypoint bun "$image" /green-run.ts`,
-      reading the next page while it exits 3, and maps its other exits as it
-      maps `jq`'s today, its comment saying why the checkout's file. Verify
+      reading the next page while it exits 3, reading 4 as not green and
+      every other exit but 0 as a check that cannot be read, its comment
+      saying why the checkout's file. Verify
       `bun test orchestrator/deploy` passes
 - [x] 3.7 The implementation's pull request body names the check by hand
       from design *Risks*: before merging, the merge commit's `test` runs

@@ -88,7 +88,8 @@ describe("run as a script", () => {
 	// spec: orchestrator/check-runs-on-more-than-one-page
 	test.each([
 		["green", () => [page(1, ours(1, "success"))], 0],
-		["not green", () => [page(2, ours(1, "success")), page(2, ours(2, "failure"))], 1],
+		// Never 1, which bun exits with when it cannot run the file.
+		["not green", () => [page(2, ours(1, "success")), page(2, ours(2, "failure"))], 4],
 		["another page wanted", () => [page(2, ours(1, "success"))], 3],
 		["unreadable pages", () => [page(2, ours(1, "success")), page(2)], 2],
 		["no array", () => page(1, ours(1, "success")), 2],

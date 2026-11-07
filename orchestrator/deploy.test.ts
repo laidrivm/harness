@@ -121,13 +121,16 @@ describe("deploy.sh", () => {
 
 	// spec: orchestrator/an-image-older-than-the-check
 	test.each([
-		["exits 1 reads as not passed", 1, 0, "has not passed"],
-		["exits 2 reads as a check that cannot be read", 2, 1, "could not be read"],
+		["exits 4 reads as not passed", "process.exit(4);", 0, "has not passed"],
+		["exits 2 reads as a check that cannot be read", "process.exit(2);", 1, "could not be read"],
 		["is missing reads as a check that cannot be read", undefined, 1, "could not be read"],
-	])("the checkout's rule decides, whatever the image holds: a rule that %s", (_, exit, code, said) => {
+		// bun exits 1 on a file it cannot run, so a broken rule never reads as a head that waits.
+		["bun cannot run reads as a check that cannot be read", "this is not TypeScript (", 1, "could not be read"],
+		["exits 1 reads as a check that cannot be read", "process.exit(1);", 1, "could not be read"],
+	])("the checkout's rule decides, whatever the image holds: a rule that %s", (_, text, code, said) => {
 		const h = host();
-		if (exit === undefined) rmSync(rule(h));
-		else writeFileSync(rule(h), `process.exit(${exit});\n`);
+		if (text === undefined) rmSync(rule(h));
+		else writeFileSync(rule(h), `${text}\n`);
 		const r = deploy(h);
 		expect([r.code, r.out]).toEqual([code, expect.stringContaining(said)]);
 		expect(steps(h)).toEqual(["read"]);

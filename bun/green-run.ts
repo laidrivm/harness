@@ -10,9 +10,12 @@
  * with creation; an older suite's success never outvotes it.
  *
  * Run as a script, it reads a JSON array of the page bodies read so far, at
- * least one, on standard input and exits 0 for green, 1 for not, 2 for input
- * it cannot read and 3 for another page wanted. It imports nothing, so
- * `deploy.sh` runs it under the runner image's bun with no `node_modules`.
+ * least one, on standard input and exits 0 for green, 4 for not, 2 for input
+ * it cannot read and 3 for another page wanted. Not green is never 1, the
+ * code bun exits with when it cannot load or run the file: a broken rule then
+ * reads as a check that cannot be read, never as a quiet head that waits. It
+ * imports nothing, so `deploy.sh` runs it under the runner image's bun with
+ * no `node_modules`.
  */
 
 export type Run = { id: number; conclusion: string | null; app?: { slug?: string } | null };
@@ -60,5 +63,5 @@ if (import.meta.main) {
 		console.error(`green-run: ${(error as Error).message}`);
 		process.exit(2);
 	}
-	process.exit(runs === "more" ? 3 : green(runs) ? 0 : 1);
+	process.exit(runs === "more" ? 3 : green(runs) ? 0 : 4);
 }
