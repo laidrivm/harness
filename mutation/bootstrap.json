@@ -257,7 +257,7 @@
 			]
 		},
 		"bun/bootstrap.test.ts": {
-			"source": "/**\n * The bootstrap hook and the turn gate's, Notion guard's, question gate's,\n * loop guard's and flake watch's registrations run as Claude Code runs them: the command\n * through a shell, the event as JSON on stdin, in a project with no harness\n * installed and then with one.\n */\nimport { afterAll, describe, expect, test } from \"bun:test\";\nimport { mkdirSync, mkdtempSync, rmSync, writeFileSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { join } from \"node:path\";\nimport { BOOTSTRAP, HOOKS, NOTION_GUARD, QUESTION_GATE, TURN_MARK, TURN_STOP } from \"./bootstrap.ts\";\n\nconst made: string[] = [];\n\nafterAll(() => {\n\tfor (const dir of made) rmSync(dir, { recursive: true, force: true });\n});\n\n/** A project directory, with a stand-in guard installed when `guard` is set. */\nfunction project(guard?: string): string {\n\tconst dir = mkdtempSync(join(tmpdir(), \"harness-bootstrap-\"));\n\tmade.push(dir);\n\tif (guard !== undefined) {\n\t\tmkdirSync(join(dir, \"node_modules/harness/bun\"), { recursive: true });\n\t\twriteFileSync(join(dir, \"node_modules/harness/bun/command-guard.ts\"), guard);\n\t}\n\treturn dir;\n}\n\n/** The hook's verdict in `dir` on `input`, exactly as given on stdin. */\nfunction raw(dir: string, input: string) {\n\tconst run = Bun.spawnSync([\"sh\", \"-c\", BOOTSTRAP], {\n\t\tcwd: dir,\n\t\tenv: { ...process.env, CLAUDE_PROJECT_DIR: dir },\n\t\tstdin: new TextEncoder().encode(input),\n\t});\n\treturn { code: run.exitCode, stderr: run.stderr.toString() };\n}\n\n/** The hook's verdict on `command` in `dir`. */\nconst hook = (dir: string, command: string) => raw(dir, JSON.stringify({ tool_name: \"Bash\", tool_input: { command } }));\n\ndescribe(\"before the install\", () => {\n\t// spec: cloud-sessions/the-local-policy-is-unchanged\n\ttest.each([\"bun install\", \"bun i\", \"bun install --frozen-lockfile\", \"bun run deps\"])(\"%s runs\", (command) => {\n\t\texpect(hook(project(), command).code).toBe(0);\n\t});\n\n\ttest.each([\n\t\t[\"any other command\", \"git status\"],\n\t\t[\"the deps script with a word after it\", \"bun run deps --no-verify\"],\n\t\t[\"an install that names a package\", \"bun install lodash\"],\n\t\t[\"an install with another flag\", \"bun install --registry https://x.test\"],\n\t\t[\"an install from another directory\", \"bun install --cwd ../other\"],\n\t\t[\"an install with a command chained after it\", \"bun install && git status\"],\n\t\t[\"an install with a command chained before it\", \"git status; bun install\"],\n\t])(\"%s is blocked, naming bun run deps\", (_, command) => {\n\t\tconst { code, stderr } = hook(project(), command);\n\t\texpect(code).toBe(2);\n\t\texpect(stderr).toContain(\"run bun run deps first\");\n\t});\n\n\ttest(\"input that is not JSON blocks rather than letting through\", () => {\n\t\t// The parse throws, bun exits 1, and the hook turns that into 2.\n\t\texpect(raw(project(), \"bun install\").code).toBe(2);\n\t});\n});\n\ndescribe(\"after the install\", () => {\n\ttest(\"the guard decides, and a command it allows runs\", () => {\n\t\tconst dir = project(\"process.exit(0);\\n\");\n\t\texpect(hook(dir, \"git status\").code).toBe(0);\n\t});\n\n\ttest(\"a command the guard blocks stays blocked\", () => {\n\t\tconst dir = project(\"console.error('guarded'); process.exit(2);\\n\");\n\t\tconst { code, stderr } = hook(dir, \"bun install\");\n\t\texpect(code).toBe(2);\n\t\texpect(stderr).toContain(\"guarded\");\n\t});\n\n\ttest(\"a guard that fails to run blocks rather than letting through\", () => {\n\t\t// Exit 1 is non-blocking to Claude Code; the hook turns it into 2.\n\t\tconst dir = project(\"throw new Error('broken');\\n\");\n\t\texpect(hook(dir, \"git status\").code).toBe(2);\n\t});\n});\n\n/** A project with `script` installed as `file`, the turn gate by default. */\nfunction gated(script?: string, prefix = \"harness-turn-gate-\", file = \"turn-gate.ts\"): string {\n\tconst dir = mkdtempSync(join(tmpdir(), prefix));\n\tmade.push(dir);\n\tif (script !== undefined) {\n\t\tmkdirSync(join(dir, \"node_modules/harness/bun\"), { recursive: true });\n\t\twriteFileSync(join(dir, \"node_modules/harness/bun\", file), script);\n\t}\n\treturn dir;\n}\n\n/**\n * A registration's verdict in `dir`, as Claude Code runs it: the turn gate's\n * on an empty event, the Notion guard's on any.\n */\nfunction turn(command: string, dir: string) {\n\tconst run = Bun.spawnSync([\"sh\", \"-c\", command], {\n\t\tcwd: dir,\n\t\tenv: { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: dir },\n\t\tstdin: new TextEncoder().encode(\"{}\"),\n\t});\n\treturn {\n\t\tcode: run.exitCode,\n\t\tstdout: run.stdout.toString(),\n\t\tstderr: run.stderr.toString(),\n\t};\n}\n\n/** Refuses, naming the half it was run as. */\nconst REFUSES = \"console.error(process.argv[2]); process.exit(2);\\n\";\n\ndescribe(\"the turn gate before the install\", () => {\n\t// spec: commit-gates/a-consumer-clone-before-install\n\ttest(\"the turn ends, with nothing printed [1]\", () => {\n\t\texpect(turn(TURN_STOP, gated())).toEqual({ code: 0, stdout: \"\", stderr: \"\" });\n\t});\n\n\ttest(\"the prompt goes through, with nothing added to it [2]\", () => {\n\t\tconst { code, stdout } = turn(TURN_MARK, gated());\n\t\texpect({ code, stdout }).toEqual({ code: 0, stdout: \"\" });\n\t});\n});\n\ndescribe(\"the turn gate after the install\", () => {\n\ttest(\"a refusal leaves exactly 2, with its reason [3]\", () => {\n\t\texpect(turn(TURN_STOP, gated(REFUSES))).toMatchObject({\n\t\t\tcode: 2,\n\t\t\tstderr: \"stop\\n\",\n\t\t});\n\t});\n\n\ttest(\"the mark text runs the mark half\", () => {\n\t\texpect(turn(TURN_MARK, gated(REFUSES)).stderr).toBe(\"mark\\n\");\n\t});\n\n\ttest(\"a gate that fails to run ends the turn rather than holding it [4]\", () => {\n\t\texpect(turn(TURN_STOP, gated(\"throw (\\n\")).code).not.toBe(2);\n\t});\n\n\ttest(\"a project path holding a space still reaches the gate [5]\", () => {\n\t\tconst dir = gated(REFUSES, \"harness turn gate \");\n\t\texpect(turn(TURN_STOP, dir).code).toBe(2);\n\t});\n});\n\n/** A project with `script` installed as the Notion guard. */\nconst guarded = (script: string) => gated(script, \"harness-notion-guard-\", \"notion-guard.ts\");\n\ndescribe(\"the Notion guard's registration\", () => {\n\ttest(\"before the install, the call goes through with nothing printed\", () => {\n\t\texpect(turn(NOTION_GUARD, gated())).toEqual({\n\t\t\tcode: 0,\n\t\t\tstdout: \"\",\n\t\t\tstderr: \"\",\n\t\t});\n\t});\n\n\ttest(\"after the install, a refusal leaves exactly 2, with its reason\", () => {\n\t\tconst refuses = \"console.error('refused'); process.exit(2);\\n\";\n\t\texpect(turn(NOTION_GUARD, guarded(refuses))).toMatchObject({\n\t\t\tcode: 2,\n\t\t\tstderr: \"refused\\n\",\n\t\t});\n\t});\n\n\ttest(\"a guard that fails to run lets the call through\", () => {\n\t\texpect(turn(NOTION_GUARD, guarded(\"throw (\\n\")).code).not.toBe(2);\n\t});\n});\n\ndescribe(\"the question gate's registration\", () => {\n\tconst gate = (script: string) => gated(script, \"harness-question-gate-\", \"question-gate.ts\");\n\n\ttest(\"before the install, nothing is printed, so the prompt stands\", () => {\n\t\texpect(turn(QUESTION_GATE, gated())).toEqual({\n\t\t\tcode: 0,\n\t\t\tstdout: \"\",\n\t\t\tstderr: \"\",\n\t\t});\n\t});\n\n\ttest(\"after the install, the gate's answer reaches Claude Code\", () => {\n\t\texpect(turn(QUESTION_GATE, gate(\"console.log('allow');\\n\")).stdout).toBe(\"allow\\n\");\n\t});\n\n\ttest(\"a gate that fails to run prints no answer\", () => {\n\t\texpect(turn(QUESTION_GATE, gate(\"throw (\\n\")).stdout).toBe(\"\");\n\t});\n});\n\ndescribe(\"the loop guard's registrations\", () => {\n\t/** The text `HOOKS` registers the guard with on `event`. */\n\tconst on = (event: string) => {\n\t\tconst hook = HOOKS.find((h) => h.event === event && h.name === \"harness loop guard\");\n\t\texpect(hook).toBeDefined();\n\t\treturn hook?.command ?? \"\";\n\t};\n\tconst events = [\"PreToolUse\", \"PostToolUseFailure\"];\n\n\t// spec: loop-guard/before-the-install\n\ttest.each(events)(\"on %s, before the install, exit 0 with nothing printed [35]\", (event) => {\n\t\texpect(turn(on(event), gated())).toEqual({ code: 0, stdout: \"\", stderr: \"\" });\n\t});\n\n\ttest.each(events)(\"on %s, after the install, pass on the guard's answer\", (event) => {\n\t\tconst answers = \"console.log('warned'); console.error('refused'); process.exit(2);\\n\";\n\t\tconst dir = gated(answers, \"harness-loop-guard-\", \"loop-guard.ts\");\n\t\texpect(turn(on(event), dir)).toEqual({\n\t\t\tcode: 2,\n\t\t\tstdout: \"warned\\n\",\n\t\t\tstderr: \"refused\\n\",\n\t\t});\n\t});\n});\n\ndescribe(\"the flake watch's registrations\", () => {\n\t// spec: flaky-tests/before-the-watch-is-installed\n\ttest(\"on each event, before the install, exit 0 with nothing printed [43]\", () => {\n\t\tconst commands = HOOKS.filter((h) => h.name === \"harness flake watch\").map((h) => h.command);\n\t\texpect(commands).toHaveLength(2);\n\t\tfor (const command of commands) expect(turn(command, gated())).toEqual({ code: 0, stdout: \"\", stderr: \"\" });\n\t});\n});\n",
+			"source": "/**\n * The bootstrap hook and the turn gate's, Notion guard's, question gate's,\n * loop guard's and flake watch's registrations run as Claude Code runs them: the command\n * through a shell, the event as JSON on stdin, in a project with no harness\n * installed and then with one.\n */\nimport { afterAll, describe, expect, test } from \"bun:test\";\nimport { mkdirSync, mkdtempSync, rmSync, writeFileSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { join } from \"node:path\";\nimport { BOOTSTRAP, HOOKS, NOTION_GUARD, QUESTION_GATE, TURN_MARK, TURN_STOP } from \"./bootstrap.ts\";\n\nconst made: string[] = [];\n\nafterAll(() => {\n\tfor (const dir of made) rmSync(dir, { recursive: true, force: true });\n});\n\n/** A project directory, with a stand-in guard installed when `guard` is set. */\nfunction project(guard?: string): string {\n\tconst dir = mkdtempSync(join(tmpdir(), \"harness-bootstrap-\"));\n\tmade.push(dir);\n\tif (guard !== undefined) {\n\t\tmkdirSync(join(dir, \"node_modules/harness/bun\"), { recursive: true });\n\t\twriteFileSync(join(dir, \"node_modules/harness/bun/command-guard.ts\"), guard);\n\t}\n\treturn dir;\n}\n\n/** The hook's verdict in `dir` on `input`, exactly as given on stdin. */\nfunction raw(dir: string, input: string) {\n\tconst run = Bun.spawnSync([\"sh\", \"-c\", BOOTSTRAP], {\n\t\tcwd: dir,\n\t\tenv: { ...process.env, CLAUDE_PROJECT_DIR: dir },\n\t\tstdin: new TextEncoder().encode(input),\n\t});\n\treturn { code: run.exitCode, stderr: run.stderr.toString() };\n}\n\n/** The hook's verdict on `command` in `dir`. */\nconst hook = (dir: string, command: string) => raw(dir, JSON.stringify({ tool_name: \"Bash\", tool_input: { command } }));\n\ndescribe(\"before the install\", () => {\n\t// spec: cloud-sessions/the-local-policy-is-unchanged\n\ttest.each([\"bun install\", \"bun i\", \"bun install --frozen-lockfile\", \"bun run deps\"])(\"%s runs\", (command) => {\n\t\texpect(hook(project(), command).code).toBe(0);\n\t});\n\n\ttest.each([\n\t\t[\"any other command\", \"git status\"],\n\t\t[\"the deps script with a word after it\", \"bun run deps --no-verify\"],\n\t\t[\"an install that names a package\", \"bun install lodash\"],\n\t\t[\"an install with another flag\", \"bun install --registry https://x.test\"],\n\t\t[\"an install from another directory\", \"bun install --cwd ../other\"],\n\t\t[\"an install with a command chained after it\", \"bun install && git status\"],\n\t\t[\"an install with a command chained before it\", \"git status; bun install\"],\n\t])(\"%s is blocked, naming bun run deps\", (_, command) => {\n\t\tconst { code, stderr } = hook(project(), command);\n\t\texpect(code).toBe(2);\n\t\t// Exactly the hint: a mark that lost its separating space reaches `exit` as an argument, which the shell reports.\n\t\texpect(stderr).toBe(\"The harness is not installed: run bun run deps first.\\n\");\n\t});\n\n\ttest(\"input that is not JSON blocks rather than letting through\", () => {\n\t\t// The parse throws, bun exits 1, and the hook turns that into 2.\n\t\texpect(raw(project(), \"bun install\").code).toBe(2);\n\t});\n});\n\ndescribe(\"after the install\", () => {\n\ttest(\"the guard decides, and a command it allows runs\", () => {\n\t\tconst dir = project(\"process.exit(0);\\n\");\n\t\texpect(hook(dir, \"git status\").code).toBe(0);\n\t});\n\n\ttest(\"a command the guard blocks stays blocked\", () => {\n\t\tconst dir = project(\"console.error('guarded'); process.exit(2);\\n\");\n\t\tconst { code, stderr } = hook(dir, \"bun install\");\n\t\texpect(code).toBe(2);\n\t\texpect(stderr).toContain(\"guarded\");\n\t});\n\n\ttest(\"a guard that fails to run blocks rather than letting through\", () => {\n\t\t// Exit 1 is non-blocking to Claude Code; the hook turns it into 2.\n\t\tconst dir = project(\"throw new Error('broken');\\n\");\n\t\texpect(hook(dir, \"git status\").code).toBe(2);\n\t});\n});\n\n/** A project with `script` installed as `file`, the turn gate by default. */\nfunction gated(script?: string, prefix = \"harness-turn-gate-\", file = \"turn-gate.ts\"): string {\n\tconst dir = mkdtempSync(join(tmpdir(), prefix));\n\tmade.push(dir);\n\tif (script !== undefined) {\n\t\tmkdirSync(join(dir, \"node_modules/harness/bun\"), { recursive: true });\n\t\twriteFileSync(join(dir, \"node_modules/harness/bun\", file), script);\n\t}\n\treturn dir;\n}\n\n/**\n * A registration's verdict in `dir`, as Claude Code runs it: the turn gate's\n * on an empty event, the Notion guard's on any.\n */\nfunction turn(command: string, dir: string) {\n\tconst run = Bun.spawnSync([\"sh\", \"-c\", command], {\n\t\tcwd: dir,\n\t\tenv: { PATH: process.env.PATH, CLAUDE_PROJECT_DIR: dir },\n\t\tstdin: new TextEncoder().encode(\"{}\"),\n\t});\n\treturn {\n\t\tcode: run.exitCode,\n\t\tstdout: run.stdout.toString(),\n\t\tstderr: run.stderr.toString(),\n\t};\n}\n\n/** Refuses, naming the half it was run as. */\nconst REFUSES = \"console.error(process.argv[2]); process.exit(2);\\n\";\n\ndescribe(\"the turn gate before the install\", () => {\n\t// spec: commit-gates/a-consumer-clone-before-install\n\ttest(\"the turn ends, with nothing printed [1]\", () => {\n\t\texpect(turn(TURN_STOP, gated())).toEqual({ code: 0, stdout: \"\", stderr: \"\" });\n\t});\n\n\ttest(\"the prompt goes through, with nothing added to it [2]\", () => {\n\t\tconst { code, stdout } = turn(TURN_MARK, gated());\n\t\texpect({ code, stdout }).toEqual({ code: 0, stdout: \"\" });\n\t});\n});\n\ndescribe(\"the turn gate after the install\", () => {\n\ttest(\"a refusal leaves exactly 2, with its reason [3]\", () => {\n\t\texpect(turn(TURN_STOP, gated(REFUSES))).toMatchObject({\n\t\t\tcode: 2,\n\t\t\tstderr: \"stop\\n\",\n\t\t});\n\t});\n\n\ttest(\"the mark text runs the mark half\", () => {\n\t\texpect(turn(TURN_MARK, gated(REFUSES)).stderr).toBe(\"mark\\n\");\n\t});\n\n\ttest(\"a gate that fails to run ends the turn rather than holding it [4]\", () => {\n\t\texpect(turn(TURN_STOP, gated(\"throw (\\n\")).code).not.toBe(2);\n\t});\n\n\ttest(\"a project path holding a space still reaches the gate [5]\", () => {\n\t\tconst dir = gated(REFUSES, \"harness turn gate \");\n\t\texpect(turn(TURN_STOP, dir).code).toBe(2);\n\t});\n});\n\n/** A project with `script` installed as the Notion guard. */\nconst guarded = (script: string) => gated(script, \"harness-notion-guard-\", \"notion-guard.ts\");\n\ndescribe(\"the Notion guard's registration\", () => {\n\ttest(\"before the install, the call goes through with nothing printed\", () => {\n\t\texpect(turn(NOTION_GUARD, gated())).toEqual({\n\t\t\tcode: 0,\n\t\t\tstdout: \"\",\n\t\t\tstderr: \"\",\n\t\t});\n\t});\n\n\ttest(\"after the install, a refusal leaves exactly 2, with its reason\", () => {\n\t\tconst refuses = \"console.error('refused'); process.exit(2);\\n\";\n\t\texpect(turn(NOTION_GUARD, guarded(refuses))).toMatchObject({\n\t\t\tcode: 2,\n\t\t\tstderr: \"refused\\n\",\n\t\t});\n\t});\n\n\ttest(\"a guard that fails to run lets the call through\", () => {\n\t\texpect(turn(NOTION_GUARD, guarded(\"throw (\\n\")).code).not.toBe(2);\n\t});\n});\n\ndescribe(\"the question gate's registration\", () => {\n\tconst gate = (script: string) => gated(script, \"harness-question-gate-\", \"question-gate.ts\");\n\n\ttest(\"before the install, nothing is printed, so the prompt stands\", () => {\n\t\texpect(turn(QUESTION_GATE, gated())).toEqual({\n\t\t\tcode: 0,\n\t\t\tstdout: \"\",\n\t\t\tstderr: \"\",\n\t\t});\n\t});\n\n\ttest(\"after the install, the gate's answer reaches Claude Code\", () => {\n\t\texpect(turn(QUESTION_GATE, gate(\"console.log('allow');\\n\")).stdout).toBe(\"allow\\n\");\n\t});\n\n\ttest(\"a gate that fails to run prints no answer\", () => {\n\t\texpect(turn(QUESTION_GATE, gate(\"throw (\\n\")).stdout).toBe(\"\");\n\t});\n});\n\ndescribe(\"the loop guard's registrations\", () => {\n\t/** The text `HOOKS` registers the guard with on `event`. */\n\tconst on = (event: string) => {\n\t\tconst hook = HOOKS.find((h) => h.event === event && h.name === \"harness loop guard\");\n\t\texpect(hook).toBeDefined();\n\t\treturn hook?.command ?? \"\";\n\t};\n\tconst events = [\"PreToolUse\", \"PostToolUseFailure\"];\n\n\t// spec: loop-guard/before-the-install\n\ttest.each(events)(\"on %s, before the install, exit 0 with nothing printed [35]\", (event) => {\n\t\texpect(turn(on(event), gated())).toEqual({ code: 0, stdout: \"\", stderr: \"\" });\n\t});\n\n\ttest.each(events)(\"on %s, after the install, pass on the guard's answer\", (event) => {\n\t\tconst answers = \"console.log('warned'); console.error('refused'); process.exit(2);\\n\";\n\t\tconst dir = gated(answers, \"harness-loop-guard-\", \"loop-guard.ts\");\n\t\texpect(turn(on(event), dir)).toEqual({\n\t\t\tcode: 2,\n\t\t\tstdout: \"warned\\n\",\n\t\t\tstderr: \"refused\\n\",\n\t\t});\n\t});\n});\n\ndescribe(\"the flake watch's registrations\", () => {\n\t// spec: flaky-tests/before-the-watch-is-installed\n\ttest(\"on each event, before the install, exit 0 with nothing printed [43]\", () => {\n\t\tconst commands = HOOKS.filter((h) => h.name === \"harness flake watch\").map((h) => h.command);\n\t\texpect(commands).toHaveLength(2);\n\t\tfor (const command of commands) expect(turn(command, gated())).toEqual({ code: 0, stdout: \"\", stderr: \"\" });\n\t});\n});\n",
 			"tests": [
 				{
 					"id": "25",
@@ -265,7 +265,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 77
+							"line": 78
 						}
 					}
 				},
@@ -275,7 +275,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 84
+							"line": 85
 						}
 					}
 				},
@@ -285,7 +285,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 72
+							"line": 73
 						}
 					}
 				},
@@ -395,7 +395,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 65
+							"line": 66
 						}
 					}
 				},
@@ -415,7 +415,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 228
+							"line": 229
 						}
 					}
 				},
@@ -425,7 +425,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 215
+							"line": 216
 						}
 					}
 				},
@@ -435,7 +435,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 211
+							"line": 212
 						}
 					}
 				},
@@ -445,7 +445,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 215
+							"line": 216
 						}
 					}
 				},
@@ -455,7 +455,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 211
+							"line": 212
 						}
 					}
 				},
@@ -465,7 +465,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 176
+							"line": 177
 						}
 					}
 				},
@@ -475,7 +475,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 168
+							"line": 169
 						}
 					}
 				},
@@ -485,7 +485,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 160
+							"line": 161
 						}
 					}
 				},
@@ -495,7 +495,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 196
+							"line": 197
 						}
 					}
 				},
@@ -505,7 +505,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 192
+							"line": 193
 						}
 					}
 				},
@@ -515,7 +515,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 184
+							"line": 185
 						}
 					}
 				},
@@ -525,7 +525,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 146
+							"line": 147
 						}
 					}
 				},
@@ -535,7 +535,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 150
+							"line": 151
 						}
 					}
 				},
@@ -545,7 +545,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 135
+							"line": 136
 						}
 					}
 				},
@@ -555,7 +555,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 142
+							"line": 143
 						}
 					}
 				},
@@ -565,7 +565,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 128
+							"line": 129
 						}
 					}
 				},
@@ -575,7 +575,7 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 124
+							"line": 125
 						}
 					}
 				}
@@ -2114,7 +2114,7 @@
 	},
 	"fingerprint": {
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bun/mutation-sandbox.ts": "8f49905c3e1997723e79f546090f50aad24dba8c",
+		"bun/mutation-sandbox.ts": "ede8545eb682402b82fc0b15d364213acdc1124e",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
 		"@hughescr/stryker-bun-runner": "1.6.0",

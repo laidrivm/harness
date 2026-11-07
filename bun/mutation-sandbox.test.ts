@@ -53,6 +53,15 @@ test("the sandbox's commit is stryker's, whatever identity the environment expor
 	expect(log).toBe("stryker stryker@sandbox stryker stryker@sandbox");
 });
 
+test("the sandbox's commit is stryker's, whatever author and committer the global configuration names", () => {
+	const { checkout, sandbox: dir } = sandbox({ "bun/a.ts": "1\n" });
+	const global = join(checkout, "gitconfig");
+	writeFileSync(global, "[author]\n\tname = y\n\temail = y@y\n[committer]\n\tname = y\n\temail = y@y\n");
+	expect(build(dir, { ...process.env, GIT_CONFIG_GLOBAL: global }).exitCode).toBe(0);
+	const log = Bun.spawnSync(["git", "log", "--format=%an %ae %cn %ce"], { cwd: dir }).stdout.toString().trim();
+	expect(log).toBe("stryker stryker@sandbox stryker stryker@sandbox");
+});
+
 test("a repository an earlier attempt left without a HEAD is remade", () => {
 	const { sandbox: dir } = sandbox({ "bun/a.ts": "1\n" });
 	git(dir, "init", "-q");
