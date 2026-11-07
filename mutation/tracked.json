@@ -1,5 +1,102 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/tracked.test.ts": {
+			"source": "import { afterAll, describe, expect, test } from \"bun:test\";\nimport {\n\texistsSync,\n\tmkdirSync,\n\tmkdtempSync,\n\treadFileSync,\n\trealpathSync,\n\trmSync,\n\tsymlinkSync,\n\twriteFileSync,\n} from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { dirname, join } from \"node:path\";\nimport { uncomment } from \"./scan.ts\";\nimport { tracked } from \"./tracked.ts\";\n\nconst made: string[] = [];\n\nafterAll(() => {\n\tfor (const dir of made) rmSync(dir, { recursive: true, force: true });\n});\n\n/**\n * A throwaway repository at `name` under a fresh temporary directory, holding\n * `files`, all tracked. Resolved through `realpathSync` because git reports the\n * root with the temporary directory's symlinks resolved.\n */\nfunction fabricate(files: Record<string, string>, name = \"repo\"): string {\n\tconst parent = mkdtempSync(join(tmpdir(), \"tracked-\"));\n\tmade.push(parent);\n\tconst dir = join(realpathSync(parent), name);\n\tmkdirSync(dir);\n\tgit(dir, \"init\", \"-b\", \"main\");\n\tfor (const [path, text] of Object.entries(files)) {\n\t\tconst full = join(dir, path);\n\t\tmkdirSync(dirname(full), { recursive: true });\n\t\twriteFileSync(full, text);\n\t}\n\tgit(dir, \"add\", \"-A\");\n\treturn dir;\n}\n\nfunction git(dir: string, ...args: string[]): void {\n\tconst run = Bun.spawnSync([\"git\", ...args], { cwd: dir });\n\tif (run.exitCode !== 0) throw new Error(run.stderr.toString());\n}\n\ndescribe(\"the tracked-file sweep\", () => {\n\t// spec: tracked-file-sweep/a-check-run-from-a-subdirectory\n\ttest(\"run from a subdirectory it lists the whole repository from the root\", () => {\n\t\tconst dir = fabricate({ \"a.ts\": \"\", \"src/b.ts\": \"\", \"src/deep/c.ts\": \"\" });\n\t\tconst { root, paths, files } = tracked(join(dir, \"src\"));\n\t\texpect(root).toBe(dir);\n\t\texpect(paths).toEqual([\"a.ts\", \"src/b.ts\", \"src/deep/c.ts\"]);\n\t\texpect(files).toEqual(paths);\n\t});\n\n\t// spec: tracked-file-sweep/a-tracked-file-absent-from-the-work-tree\n\ttest(\"a deleted path, a symlink and a gitlink are paths but not files\", () => {\n\t\tconst dir = fabricate({ \"kept.ts\": \"\", \"gone.ts\": \"\" });\n\t\trmSync(join(dir, \"gone.ts\"));\n\t\tsymlinkSync(join(dir, \"kept.ts\"), join(dir, \"link.ts\"));\n\t\tgit(dir, \"add\", \"link.ts\");\n\t\t// A gitlink needs no real submodule: the index entry is what git lists,\n\t\t// and the directory beside it is what a check would fail to read.\n\t\tmkdirSync(join(dir, \"sub\"));\n\t\tgit(dir, \"update-index\", \"--add\", \"--cacheinfo\", `160000,${\"1\".repeat(40)},sub`);\n\t\tconst { paths, files } = tracked(dir);\n\t\texpect(paths).toEqual([\"gone.ts\", \"kept.ts\", \"link.ts\", \"sub\"]);\n\t\texpect(files).toEqual([\"kept.ts\"]);\n\t});\n\n\t// spec: tracked-file-sweep/a-repository-path-ending-in-a-space\n\ttest(\"a root ending in a space keeps the space, and joins against it resolve\", () => {\n\t\tconst dir = fabricate({ \"a.ts\": \"\" }, \"repo \");\n\t\tconst { root, files } = tracked(dir);\n\t\texpect(root).toBe(dir);\n\t\texpect(root.endsWith(\" \")).toBe(true);\n\t\texpect(files).toEqual([\"a.ts\"]);\n\t\texpect(existsSync(join(root, \"a.ts\"))).toBe(true);\n\t});\n\n\ttest(\"a repository tracking nothing lists nothing and still names its root\", () => {\n\t\tconst dir = fabricate({});\n\t\texpect(tracked(dir)).toEqual({ root: dir, paths: [], files: [] });\n\t});\n\n\ttest(\"a path with a newline in its name is one entry, unquoted\", () => {\n\t\tconst dir = fabricate({ \"a\\nb.ts\": \"\" });\n\t\texpect(tracked(dir).files).toEqual([\"a\\nb.ts\"]);\n\t});\n\n\ttest(\"outside any repository it throws rather than listing nothing\", () => {\n\t\tconst parent = mkdtempSync(join(tmpdir(), \"tracked-\"));\n\t\tmade.push(parent);\n\t\texpect(() => tracked(parent)).toThrow();\n\t});\n});\n\n/**\n * The tracked source files allowed a listing of git's index of their own, each\n * with why. Every other tracked source file is scanned. A query naming literal\n * paths enumerates nothing, but it trips this scan too: add it here, saying so.\n */\nconst OWN_LISTING: Record<string, string> = {\n\t\"bun/tracked.ts\": \"the sweep itself\",\n\t\"bun/tracked.test.ts\": \"fabricates repositories, and holds the pattern below\",\n\t\"bun/check.ts\": \"lists one directory with `-s`, for the mode the sweep does not return\",\n\t\"bun/command-guard-interpreters.ts\": \"asks with `--error-unmatch` whether one named file is tracked\",\n\t\"bun/flake-watch.ts\": \"lists untracked files to fingerprint the tree, and the sweep reads tracked files only\",\n\t\"bun/repo-layout.test.ts\": \"enumerates a fabricated repository to build its expectation\",\n\t\"bun/spec-coverage-sweep.test.ts\": \"asks whether a fabricated repository tracks a directory\",\n};\n\nconst SOURCE = /\\.(?:[cm]?[jt]sx?)$/;\n\n// `ls-files` inside a quoted string on one line — a spawn argument or a\n// `sh -c` command — or run through Bun's shell. Only `ls-files` lists the tree:\n// `rev-parse --show-toplevel` alone yields the root, which a dozen files take\n// without listing anything. Matched against the source with its comments\n// blanked, so prose quoting the command is not a listing.\nconst LISTING = /[\"'][^\"'\\n]*\\bls-files\\b[^\"'\\n]*[\"']|\\$`[^`]*\\bls-files\\b/;\n\n/** Tracked source files outside `OWN_LISTING` that derive a listing. */\nfunction ownListings(cwd: string): string[] {\n\tconst { root, files } = tracked(cwd);\n\treturn files.filter(\n\t\t(path) =>\n\t\t\tSOURCE.test(path) &&\n\t\t\t!(path in OWN_LISTING) &&\n\t\t\tLISTING.test(uncomment(readFileSync(join(root, path), \"utf8\"), \"ts\")),\n\t);\n}\n\ndescribe(\"one listing\", () => {\n\t// spec: tracked-file-sweep/a-second-listing-is-introduced\n\ttest(\"no tracked source file outside the exemptions lists the tree itself\", () => {\n\t\texpect(ownListings(import.meta.dir)).toEqual([]);\n\t});\n\n\ttest(\"a reintroduced listing fails, naming its file\", () => {\n\t\tconst dir = fabricate({\n\t\t\t\"bun/tracked.ts\": 'spawn([\"git\", \"ls-files\", \"-z\"]);',\n\t\t\t\"bun/gate.ts\": 'Bun.spawnSync([\"git\", \"ls-files\", \"-z\"]);',\n\t\t\t\"bun/shell.ts\": \"await Bun.$`git ls-files -z`;\",\n\t\t\t\"bun/sh.ts\": 'Bun.spawnSync([\"sh\", \"-c\", \"git ls-files -z\"]);',\n\t\t\t\"bun/prose.ts\": \"// `git ls-files` run in a subdirectory lists less\",\n\t\t\t\"bun/quoted.ts\": \"// \\\"git ls-files\\\" is documented here\\n/* 'ls-files -z' */\",\n\t\t\t\"bun/root.ts\": 'spawn([\"git\", \"rev-parse\", \"--show-toplevel\"]);',\n\t\t});\n\t\texpect(ownListings(dir)).toEqual([\"bun/gate.ts\", \"bun/sh.ts\", \"bun/shell.ts\"]);\n\t});\n\n\ttest(\"every exemption still names a tracked file\", () => {\n\t\tconst { files } = tracked(import.meta.dir);\n\t\tfor (const path of Object.keys(OWN_LISTING)) expect(files).toContain(path);\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/tracked.test.ts > one listing > a reintroduced listing fails, naming its file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 142
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/tracked.test.ts > one listing > every exemption still names a tracked file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 155
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/tracked.test.ts > one listing > no tracked source file outside the exemptions lists the tree itself",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 138
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/tracked.test.ts > the tracked-file sweep > a deleted path, a symlink and a gitlink are paths but not files",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 60
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/tracked.test.ts > the tracked-file sweep > a path with a newline in its name is one entry, unquoted",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 89
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/tracked.test.ts > the tracked-file sweep > a repository tracking nothing lists nothing and still names its root",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 84
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/tracked.test.ts > the tracked-file sweep > a root ending in a space keeps the space, and joins against it resolve",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 75
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/tracked.test.ts > the tracked-file sweep > outside any repository it throws rather than listing nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 94
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/tracked.test.ts > the tracked-file sweep > run from a subdirectory it lists the whole repository from the root",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 51
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/tracked.ts": {
 			"source": "/**\n * The tracked-file sweep every check that reads the tree takes its listing\n * from. A caller applies its own filter to the result; the listing itself is\n * never derived a second time.\n */\nimport { lstatSync } from \"node:fs\";\nimport { join } from \"node:path\";\n\nexport type Tracked = {\n\t/** The repository root containing `cwd`. */\n\troot: string;\n\t/** Every tracked path, relative to `root`, in git's order. */\n\tpaths: string[];\n\t/** Those of `paths` the filesystem reports as regular files. */\n\tfiles: string[];\n};\n\n/** The repository containing `cwd`, and what git tracks in it. */\nexport function tracked(cwd?: string): Tracked {\n\tconst top = Bun.spawnSync([\"git\", \"rev-parse\", \"--show-toplevel\"], { cwd });\n\tif (top.exitCode !== 0) throw new Error(top.stderr.toString());\n\t// Only the terminator git adds, not `trim()`: a repository whose path ends\n\t// in a space is unusual and not a check's to corrupt.\n\tconst root = top.stdout.toString().replace(/\\n$/, \"\");\n\n\t// At the root, never at `cwd`: `git ls-files` run in a subdirectory reports\n\t// only what is under it and names it relative to it, so a check run from\n\t// there would scope itself to that directory and say nothing about it.\n\tconst ls = Bun.spawnSync([\"git\", \"ls-files\", \"-z\"], { cwd: root });\n\tif (ls.exitCode !== 0) throw new Error(ls.stderr.toString());\n\t// `-z` terminates rather than separates, so the last field is empty and\n\t// would otherwise resolve to the root itself and be read as a directory.\n\tconst paths = ls.stdout.toString().split(\"\\0\").filter(Boolean);\n\n\t// The view a caller that opens what it lists takes: a tracked path may be\n\t// deleted from the work tree, a symlink, or a submodule's gitlink, which\n\t// reads as a directory, and none of the three is a file to open. A caller\n\t// ruling on paths alone takes `paths`, where all three still stand.\n\tconst files = paths.filter((path) => lstatSync(join(root, path), { throwIfNoEntry: false })?.isFile());\n\n\treturn { root, paths, files };\n}\n",
@@ -18,7 +115,21 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +145,21 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +175,21 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +205,21 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +235,21 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +265,21 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +295,21 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +325,21 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +355,21 @@
 						}
 					},
 					"replacement": "top.exitCode === 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +385,13 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +407,17 @@
 						}
 					},
 					"replacement": "/\\n/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +433,20 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +462,20 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +491,20 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "14",
@@ -242,7 +520,20 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "15",
@@ -258,7 +549,20 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "16",
@@ -274,7 +578,20 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "17",
@@ -290,7 +607,20 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "18",
@@ -306,7 +636,17 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					]
 				},
 				{
 					"id": "19",
@@ -322,7 +662,20 @@
 						}
 					},
 					"replacement": "ls.exitCode === 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "20",
@@ -338,7 +691,8 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "21",
@@ -354,7 +708,20 @@
 						}
 					},
 					"replacement": "ls.stdout.toString().split(\"\\0\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "22",
@@ -370,7 +737,20 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "23",
@@ -386,7 +766,20 @@
 						}
 					},
 					"replacement": "paths",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "24",
@@ -402,7 +795,20 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "25",
@@ -418,7 +824,19 @@
 						}
 					},
 					"replacement": "lstatSync(join(root, path), {\n  throwIfNoEntry: false\n}).isFile",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "26",
@@ -434,7 +852,19 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "27",
@@ -450,7 +880,19 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "28",
@@ -466,17 +908,31 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				}
 			]
 		}
 	},
 	"fingerprint": {
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/mutation-sandbox.ts": "8f49905c3e1997723e79f546090f50aad24dba8c",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
-		"bun/tracked.test.ts": "f1a1f2e9a6fe7e3f601def1a3a5cbedb4b62cbcd",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars) GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c author.name=stryker -c author.email=stryker@sandbox -c committer.name=stryker -c committer.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/tracked",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

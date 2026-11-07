@@ -15,6 +15,7 @@ import {
 	STOP,
 	set,
 	steps,
+	stopped,
 } from "./deploy.fixture.ts";
 
 /** `deploy.sh` and the persistent session: the fresh-session mark, the restart, the wait for `main`, the rollback. */
@@ -158,6 +159,30 @@ describe("deploy.sh and the session", () => {
 		const before = log(h).length;
 		expect(deploy(h).code).toBe(0);
 		expect(moved(h, before)).toEqual([]);
+	});
+
+	// spec: orchestrator/the-rolled-back-record-cannot-be-written
+	// spec: orchestrator/the-rollback-fails-without-its-record
+	test.each([
+		["the wait for main", undefined, ["session", "back", "up"]],
+		["the tag back", "back", ["session", "back"]],
+		["the rollback's up", "rollup", ["session", "back", "up"]],
+	])("with rolled-back unwritable, %s and the record are named, and the next run deploys again", (step, file, tail) => {
+		const h = host();
+		mkdirSync(join(h.state, "rolled-back"), { recursive: true });
+		set(h, "session", 1);
+		if (file) set(h, file, 1);
+		const r = deploy(h);
+		expect(r.code).toBe(1);
+		expect(r.out).toContain(`deploy: ${HEAD} could not be recorded as rolled back`);
+		expect(steps(h).slice(-tail.length)).toEqual(tail);
+		expect(failure(h)).toMatch(STOP(`${step} and the rolled-back record`));
+		// A stop file keeps the first failure line, so the record is written before it.
+		expect(stopped(h, "one")).toMatch(STOP("the wait for main and the rolled-back record"));
+		expect(deployed(h)).toBeUndefined();
+		const before = log(h).length;
+		deploy(h);
+		expect(moved(h, before)).toContain("git merge -q --ff-only origin/main");
 	});
 
 	// spec: orchestrator/a-failure-after-main-is-up

@@ -1,5 +1,232 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/notion-release.test.ts": {
+			"source": "/**\n * `cleared()`, the release the work commands run, and `release()`, the write\n * it shares with `unassign()`, against `standIn()`: what they read, what they\n * write back, and what they return. [n]: the proposal-stage `/zombies` list\n * of `notion-ask-sets-assign`'s tasks.md.\n */\nimport { afterAll, beforeAll, describe, expect, test } from \"bun:test\";\nimport { CARD, OTHER, standIn, TOKEN, USER } from \"./notion-bot.fixture.ts\";\nimport { client } from \"./notion-bot.ts\";\nimport { cleared, release as write } from \"./notion-release.ts\";\n\nconst notion = standIn();\nlet before: string | undefined;\nbeforeAll(() => {\n\tbefore = process.env.HARNESS_NOTION_API_URL;\n\tprocess.env.HARNESS_NOTION_API_URL = notion.server.url.origin;\n});\nafterAll(() => {\n\tif (before === undefined) delete process.env.HARNESS_NOTION_API_URL;\n\telse process.env.HARNESS_NOTION_API_URL = before;\n\tnotion.server.stop(true);\n});\n\nconst BOT = \"ffffeeee-dddd-cccc-bbbb-aaaa99998888\";\nconst PAGE = `GET /v1/pages/${CARD}`;\nconst COMMENTS = \"GET /v1/comments\";\nconst PATCH = `PATCH /v1/pages/${CARD}`;\nconst REMOVED = `assign: removed the user from ${CARD}`;\nconst RESTORED = `assign: restored the user on ${CARD}`;\n\n/** A comment by `author` at minute `at`, opening with a code run of `mark` when one is named. */\nconst said = (author: string, at: number, mark?: string) => ({\n\tid: `c${at}`,\n\tcreated_by: { id: author },\n\tcreated_time: `2026-11-01T10:${String(at).padStart(2, \"0\")}:00Z`,\n\trich_text: [...(mark ? [{ plain_text: mark, annotations: { code: true } }] : []), { plain_text: \" text\" }],\n});\nconst question = (at: number) => said(BOT, at, \"harness-question\");\nconst pause = (at: number) => said(BOT, at, \"harness-pause\");\nconst reply = (at: number) => said(USER, at);\n\ntype Case = {\n\tassign?: string[];\n\tcomments?: unknown[];\n\tkeep?: boolean;\n\tunlisted?: boolean;\n\tfail?: Record<string, number>;\n\tnext?: Record<string, object>;\n};\n\n/** `cleared()` on a card the stand-in holds as `c` says, each `next` applied after that call's first answer, and the calls it made. */\nasync function release({ next = {}, ...c }: Case = {}) {\n\tconst once = Object.fromEntries(Object.entries(next).map(([call, then]) => [call, [then]]));\n\tObject.assign(notion.state, { assign: [USER, OTHER], comments: [], keep: false, unlisted: false, fail: {} }, c, {\n\t\tnext: once,\n\t});\n\tnotion.state.seen.length = 0;\n\tnotion.state.bodies.length = 0;\n\tconst result = await cleared(client(TOKEN), CARD, USER);\n\treturn { ...result, seen: [...notion.state.seen], assign: notion.state.assign };\n}\n\ndescribe(\"nothing waits: the user leaves Assign\", () => {\n\t// spec: task-board/a-move-after-the-answer task-board/someone-else-on-assign\n\ttest(\"the user's comment after the last question: the user alone removed [13]\", async () => {\n\t\tconst run = await release({ comments: [question(1), reply(2)] });\n\t\texpect([run.line, run.restoreFailed, run.assign]).toEqual([REMOVED, false, [OTHER]]);\n\t\texpect(run.seen).toEqual([PAGE, COMMENTS, PATCH, COMMENTS]);\n\t\texpect(notion.state.bodies[2]).toEqual({ properties: { Assign: { people: [{ id: OTHER }] } } });\n\t});\n\n\t// spec: task-board/work-resumed\n\ttest(\"a card with no question [14]\", async () => {\n\t\texpect((await release()).line).toBe(REMOVED);\n\t});\n});\n\ndescribe(\"something waits: nothing written\", () => {\n\t// spec: task-board/a-question-waits task-board/a-pause-notice-waits\n\ttest.each([\n\t\t[\"a waiting question [15]\", [question(1)]],\n\t\t[\"a triage's harness-answer alone after it [16]\", [question(1), said(BOT, 2, \"harness-answer\")]],\n\t\t[\"a pause notice no comment of the user's follows [27]\", [pause(1)]],\n\t\t[\n\t\t\t\"a pause notice followed only by a marked comment of the user's [30]\",\n\t\t\t[pause(1), said(USER, 2, \"harness-question\")],\n\t\t],\n\t])(\"%s\", async (_, comments) => {\n\t\tconst run = await release({ comments });\n\t\texpect([run.line, run.restoreFailed, run.seen, run.assign]).toEqual([\n\t\t\tundefined,\n\t\t\tfalse,\n\t\t\t[PAGE, COMMENTS],\n\t\t\t[USER, OTHER],\n\t\t]);\n\t});\n\n\t// spec: task-board/the-user-not-on-assign\n\ttest(\"Assign without the user: no comments read [18]\", async () => {\n\t\tconst run = await release({ assign: [OTHER] });\n\t\texpect([run.line, run.seen]).toEqual([undefined, [PAGE]]);\n\t});\n\n\t// spec: task-board/the-user-not-on-assign\n\ttest(\"25 people without the user: no line, since nothing would be written (local review)\", async () => {\n\t\tconst run = await release({ assign: Array.from({ length: 25 }, (_, i) => `${i}`.padStart(32, \"0\")) });\n\t\texpect([run.line, run.seen]).toEqual([undefined, [PAGE]]);\n\t});\n});\n\ndescribe(\"the release fails\", () => {\n\t// spec: task-board/the-release-fails\n\ttest.each([\n\t\t[\n\t\t\t\"25 people on Assign [26]\",\n\t\t\t{ assign: [USER, ...Array.from({ length: 24 }, (_, i) => `${i}`.padStart(32, \"0\"))] },\n\t\t\t`${CARD} lists 25 people on Assign`,\n\t\t],\n\t\t[\"an answer still holding the user [19]\", { keep: true }, \"the Assign write did not remove the user\"],\n\t\t[\"an answer with no Assign list [25]\", { unlisted: true }, \"the Assign write did not remove the user\"],\n\t\t[\"a comments read answered 500 [20]\", { fail: { [COMMENTS]: 500 } }, \"the comments read answered 500\"],\n\t])(\"%s: an assign: failed line\", async (_, c, why) => {\n\t\tconst run = await release(c);\n\t\texpect([run.line?.startsWith(\"assign: failed — \"), run.line?.includes(why), run.restoreFailed]).toEqual([\n\t\t\ttrue,\n\t\t\ttrue,\n\t\t\tfalse,\n\t\t]);\n\t});\n});\n\ndescribe(\"something arrives during the release\", () => {\n\t// spec: task-board/a-question-posted-during-the-release\n\ttest.each([\n\t\t[\"a question [29]\", {}, { [COMMENTS]: { comments: [question(3)] } }, \"waits\"],\n\t\t[\"a pause notice [33]\", {}, { [COMMENTS]: { comments: [pause(3)] } }, \"waits\"],\n\t\t[\"a second comments read answered 500 [34]\", {}, { [PATCH]: { fail: { [COMMENTS]: 500 } } }, \"unread\"],\n\t\t[\n\t\t\t\"a question, the write answering no Assign list (local review)\",\n\t\t\t{ unlisted: true },\n\t\t\t{ [COMMENTS]: { comments: [question(3)] }, [PATCH]: { unlisted: false } },\n\t\t\t\"waits\",\n\t\t],\n\t])(\"%s: the user back beside the other person\", async (_, c, next, back) => {\n\t\tconst run = await release({ ...c, next });\n\t\texpect([run.line, run.back, run.restoreFailed, run.assign]).toEqual([RESTORED, back, false, [OTHER, USER]]);\n\t\texpect(run.seen).toEqual([PAGE, COMMENTS, PATCH, COMMENTS, PATCH]);\n\t});\n\n\t// spec: task-board/the-restore-fails\n\ttest.each([\n\t\t[\"a restore answered 500 [35]\", { [PATCH]: { fail: { [PATCH]: 500 } } }, \"waits\" as const, \"the restore: \"],\n\t\t[\n\t\t\t\"a restore answer without the user\",\n\t\t\t{ [PATCH]: { keep: true } },\n\t\t\t\"waits\" as const,\n\t\t\t\"the restore did not hold the user\",\n\t\t],\n\t\t[\n\t\t\t\"a second comments read and the restore answered 500\",\n\t\t\t{ [PATCH]: { fail: { [COMMENTS]: 500, [PATCH]: 500 } } },\n\t\t\t\"unread\" as const,\n\t\t\t\"the restore: \",\n\t\t],\n\t])(\"%s: restoreFailed, back kept\", async (_, next, back, why) => {\n\t\tconst run = await release({ next: { [COMMENTS]: { comments: [question(3)] }, ...next } });\n\t\texpect([run.line?.startsWith(\"assign: failed — \"), run.line?.includes(why), run.back, run.restoreFailed]).toEqual([\n\t\t\ttrue,\n\t\t\ttrue,\n\t\t\tback,\n\t\t\ttrue,\n\t\t]);\n\t});\n});\n\ndescribe(\"release(), which unassign() shares\", () => {\n\t/** `release()` on the stand-in as `c` says: what it returned, or the message it threw. */\n\tconst released = async (c: Case) => {\n\t\tObject.assign(\n\t\t\tnotion.state,\n\t\t\t{ assign: [USER, OTHER], comments: [], keep: false, unlisted: false, fail: {}, next: {} },\n\t\t\tc,\n\t\t);\n\t\treturn write(client(TOKEN), CARD, USER).then(\n\t\t\t(done) => (done ? \"written\" : \"declined\"),\n\t\t\t(error: Error) => error.message,\n\t\t);\n\t};\n\n\t// spec: task-board/the-release-fails\n\ttest.each([\n\t\t[\"an answer still holding the user\", { keep: true }],\n\t\t[\"an answer with no Assign list\", { unlisted: true }],\n\t])(\"%s throws, so every caller fails on it (the user's answer 11 b)\", async (_, c) => {\n\t\texpect(await released(c)).toBe(\"the Assign write did not remove the user\");\n\t});\n\n\ttest(\"an answer without the user is written\", async () => {\n\t\texpect(await released({})).toBe(\"written\");\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/notion-release.test.ts > nothing waits: the user leaves Assign > a card with no question [14]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 75
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/notion-release.test.ts > nothing waits: the user leaves Assign > the user's comment after the last question: the user alone removed [13]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 67
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/notion-release.test.ts > release(), which unassign() shares > an answer still holding the user throws, so every caller fails on it (the user's answer 11 b)",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 196
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/notion-release.test.ts > release(), which unassign() shares > an answer with no Assign list throws, so every caller fails on it (the user's answer 11 b)",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 196
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/notion-release.test.ts > release(), which unassign() shares > an answer without the user is written",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 200
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/notion-release.test.ts > something arrives during the release > a pause notice [33]: the user back beside the other person",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 146
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/notion-release.test.ts > something arrives during the release > a question [29]: the user back beside the other person",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 146
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/notion-release.test.ts > something arrives during the release > a question, the write answering no Assign list (local review): the user back beside the other person",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 146
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/notion-release.test.ts > something arrives during the release > a restore answer without the user: restoreFailed, back kept",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 167
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/notion-release.test.ts > something arrives during the release > a restore answered 500 [35]: restoreFailed, back kept",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 167
+						}
+					}
+				},
+				{
+					"id": "10",
+					"name": "bun/notion-release.test.ts > something arrives during the release > a second comments read and the restore answered 500: restoreFailed, back kept",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 167
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/notion-release.test.ts > something arrives during the release > a second comments read answered 500 [34]: the user back beside the other person",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 146
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/notion-release.test.ts > something waits: nothing written > 25 people without the user: no line, since nothing would be written (local review)",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 107
+						}
+					}
+				},
+				{
+					"id": "13",
+					"name": "bun/notion-release.test.ts > something waits: nothing written > a pause notice followed only by a marked comment of the user's [30]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 90
+						}
+					}
+				},
+				{
+					"id": "14",
+					"name": "bun/notion-release.test.ts > something waits: nothing written > a pause notice no comment of the user's follows [27]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 90
+						}
+					}
+				},
+				{
+					"id": "15",
+					"name": "bun/notion-release.test.ts > something waits: nothing written > a triage's harness-answer alone after it [16]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 90
+						}
+					}
+				},
+				{
+					"id": "16",
+					"name": "bun/notion-release.test.ts > something waits: nothing written > a waiting question [15]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 90
+						}
+					}
+				},
+				{
+					"id": "17",
+					"name": "bun/notion-release.test.ts > something waits: nothing written > Assign without the user: no comments read [18]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 101
+						}
+					}
+				},
+				{
+					"id": "18",
+					"name": "bun/notion-release.test.ts > the release fails > 25 people on Assign [26]: an assign: failed line",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 124
+						}
+					}
+				},
+				{
+					"id": "19",
+					"name": "bun/notion-release.test.ts > the release fails > a comments read answered 500 [20]: an assign: failed line",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 124
+						}
+					}
+				},
+				{
+					"id": "20",
+					"name": "bun/notion-release.test.ts > the release fails > an answer still holding the user [19]: an assign: failed line",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 124
+						}
+					}
+				},
+				{
+					"id": "21",
+					"name": "bun/notion-release.test.ts > the release fails > an answer with no Assign list [25]: an assign: failed line",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 124
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/notion-release.ts": {
 			"source": "/**\n * The release of a card's `Assign` that `bun/work.ts status`, `take` and\n * `finish --card` run (task-board, *The work commands release `Assign` when\n * nothing waits*), and the page read, cap and write it shares with the\n * runner's `unassign()`\n * (`openspec/changes/archive/2026-11-01-notion-ask-sets-assign/design.md`,\n * *Releasing `Assign`*). No call is retried, and no line holds the token.\n */\nimport { type Call, discussion, hex, type Page, waits } from \"./notion-bot.ts\";\n\n/** How a line opens when a call failed or `Assign` was too long to read whole: the user may still be on `Assign`. */\nexport const UNASSIGN_FAILED = \"assign: failed —\";\n\ntype Person = { id: unknown };\n/** A PATCH's answer or a page read, its `Assign` read where it is used. */\ntype Paged = Page | null | undefined;\n\nconst people = (page: Paged): Person[] | undefined => {\n\tconst listed = page?.properties?.Assign?.people;\n\treturn Array.isArray(listed) ? listed : undefined;\n};\nconst holds = (listed: Person[] | undefined, user: string) => listed?.some((p) => hex(p?.id) === hex(user)) ?? false;\nconst write = (call: Call, card: string, kept: { id: unknown }[]) =>\n\tcall<Paged>(\"the Assign write\", `/v1/pages/${card}`, \"PATCH\", {\n\t\tproperties: { Assign: { people: kept } },\n\t});\n\n/**\n * Reads `card`'s `Assign` and, once `go` agrees with the list read, writes it\n * back without `user`, keeping everyone else, and reads the user's absence\n * back from Notion's answer, for every caller, `unassign()` included (the\n * user's answer 11 b). Returns `true` once written and read back, `false`\n * when `go` declined; throws naming the step, at 25 people, the most a page\n * read lists, or when the answer still holds the user or lists no `Assign`.\n * `go` is asked first, so a card it declines never reads as failed for its\n * length.\n */\nexport async function release(\n\tcall: Call,\n\tcard: string,\n\tuser: string,\n\tgo: (listed: Person[]) => Promise<boolean> = async () => true,\n) {\n\tconst listed = people(await call<Paged>(\"the page read\", `/v1/pages/${card}`)) ?? [];\n\tif (!(await go(listed))) return false;\n\t// shortcut: a page read lists 25 references of a property at most, so a longer `Assign` is left whole rather than written back cut; page through `/v1/pages/<id>/properties/<property>` if a card ever needs it.\n\tif (listed.length >= 25) throw new Error(`${card} lists 25 people on Assign, the most a page read returns`);\n\tlet now: Person[] | undefined;\n\ttry {\n\t\tnow = people(await write(call, card, without(listed, user)));\n\t} catch (error) {\n\t\tthrow new AtWrite((error as Error).message);\n\t}\n\tif (!now || holds(now, user)) throw new AtWrite(\"the Assign write did not remove the user\");\n\treturn true;\n}\nconst without = (listed: Person[], user: string) =>\n\tlisted.filter((p) => hex(p?.id) !== hex(user)).map((p) => ({ id: p.id }));\n\n/** A `release()` failure at or after its write, which may have landed, unlike one before it. */\nexport class AtWrite extends Error {}\n\n/** Whether a question or a `harness-pause` notice waits on `card` for `user`, read with no integration id. */\nasync function open(call: Call, card: string, user: string) {\n\tconst comments = await discussion(call, card);\n\treturn waits(comments, user) || waits(comments, user, undefined, \"harness-pause\");\n}\n\n/**\n * What `cleared()` did: the line to print, none when it wrote nothing; `back`,\n * `waits` when its own reads found a question or a pause notice, whether it\n * then wrote nothing, put the user back or failed to, and `unread` when its\n * second read failed; and whether a restore failed.\n */\nexport type Cleared = { line?: string; back?: \"waits\" | \"unread\"; restoreFailed: boolean };\n\n/**\n * Removes `user` from `card`'s `Assign` when it holds them and nothing waits,\n * then reads the comments again and puts the user back when something now\n * waits or that read failed. The second read follows any write that may have\n * landed, its answer read back or not, so a question posted meanwhile keeps\n * the user whatever the write answered. A failed restore leaves what waits,\n * or the comments it could not read, with no one on `Assign`.\n */\nexport async function cleared(call: Call, card: string, user: string): Promise<Cleared> {\n\tconst failed = (why: string, restoreFailed = false): Cleared => ({\n\t\tline: `${UNASSIGN_FAILED} ${why}`,\n\t\trestoreFailed,\n\t});\n\tlet listed: Person[] = [];\n\tlet waiting = false;\n\tlet fault: string | undefined;\n\ttry {\n\t\tconst done = await release(call, card, user, async (read) => {\n\t\t\tlisted = read;\n\t\t\tif (!holds(read, user)) return false;\n\t\t\twaiting = await open(call, card, user);\n\t\t\treturn !waiting;\n\t\t});\n\t\t// `back`, so `finish` keeps the draft for what this read found after its own.\n\t\tif (!done) return waiting ? { back: \"waits\", restoreFailed: false } : { restoreFailed: false };\n\t} catch (error) {\n\t\t// Before the write, nothing changed; at it, the write may have landed.\n\t\tif (!(error instanceof AtWrite)) return failed((error as Error).message);\n\t\tfault = (error as Error).message;\n\t}\n\tlet back: Cleared[\"back\"];\n\ttry {\n\t\tback = (await open(call, card, user)) ? \"waits\" : undefined;\n\t} catch {\n\t\t// Unread is the side that keeps a question visible.\n\t\tback = \"unread\";\n\t}\n\tif (!back) return fault ? failed(fault) : { line: `assign: removed the user from ${card}`, restoreFailed: false };\n\t// The release's own fault first, so a restore that fails as the release did names both.\n\tconst before = fault ? `${fault}; ` : \"\";\n\t// `back` kept, so `finish` names an unread second read rather than a wait it never saw (CodeRabbit on #382).\n\tconst unrestored = (why: string): Cleared => ({ ...failed(`${before}${why}`, true), back });\n\ttry {\n\t\tif (!holds(people(await write(call, card, [...without(listed, user), { id: user }])), user))\n\t\t\treturn unrestored(\"the restore did not hold the user\");\n\t} catch (error) {\n\t\treturn unrestored(`the restore: ${(error as Error).message}`);\n\t}\n\treturn { line: `assign: restored the user on ${card}`, back, restoreFailed: false };\n}\n",
@@ -18,7 +245,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +265,34 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +308,34 @@
 						}
 					},
 					"replacement": "page?.properties?.Assign.people",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"21"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +351,31 @@
 						}
 					},
 					"replacement": "page?.properties.Assign",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +391,31 @@
 						}
 					},
 					"replacement": "page.properties",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +431,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +451,33 @@
 						}
 					},
 					"replacement": "listed?.some(p => hex(p?.id) === hex(user)) && false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +493,33 @@
 						}
 					},
 					"replacement": "listed?.every(p => hex(p?.id) === hex(user))",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +535,30 @@
 						}
 					},
 					"replacement": "listed.some",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +574,33 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +616,33 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +658,33 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +700,33 @@
 						}
 					},
 					"replacement": "hex(p?.id) !== hex(user)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +742,30 @@
 						}
 					},
 					"replacement": "p.id",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "14",
@@ -242,7 +781,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "15",
@@ -258,7 +798,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "16",
@@ -274,7 +818,23 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "17",
@@ -290,7 +850,26 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "18",
@@ -306,7 +885,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "19",
@@ -322,7 +920,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "20",
@@ -338,7 +955,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "21",
@@ -354,7 +990,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "22",
@@ -370,7 +1025,15 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"2",
+						"3",
+						"4"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "23",
@@ -386,7 +1049,15 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"2",
+						"3",
+						"4"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "24",
@@ -402,7 +1073,34 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "25",
@@ -418,7 +1116,34 @@
 						}
 					},
 					"replacement": "people(await call<Paged>(\"the page read\", `/v1/pages/${card}`)) && []",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "26",
@@ -434,7 +1159,31 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "27",
@@ -450,7 +1199,34 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "28",
@@ -466,7 +1242,8 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "29",
@@ -482,7 +1259,34 @@
 						}
 					},
 					"replacement": "await go(listed)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "30",
@@ -498,7 +1302,34 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "31",
@@ -514,7 +1345,34 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "32",
@@ -530,7 +1388,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "33",
@@ -546,7 +1415,27 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"18",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "34",
@@ -562,7 +1451,27 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"18",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "35",
@@ -578,7 +1487,27 @@
 						}
 					},
 					"replacement": "listed.length > 25",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"18",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "36",
@@ -594,7 +1523,27 @@
 						}
 					},
 					"replacement": "listed.length < 25",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"18",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "38",
@@ -610,7 +1559,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"18"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "39",
@@ -626,7 +1581,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "40",
@@ -642,7 +1616,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "41",
@@ -658,7 +1633,8 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "42",
@@ -674,7 +1650,26 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "43",
@@ -690,7 +1685,26 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"20"
+					]
 				},
 				{
 					"id": "44",
@@ -706,7 +1720,26 @@
 						}
 					},
 					"replacement": "!now && holds(now, user)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"20"
+					]
 				},
 				{
 					"id": "45",
@@ -722,7 +1755,26 @@
 						}
 					},
 					"replacement": "now",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "47",
@@ -738,7 +1790,17 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"2",
+						"20",
+						"21",
+						"3",
+						"7"
+					],
+					"killedBy": [
+						"20"
+					]
 				},
 				{
 					"id": "48",
@@ -754,7 +1816,21 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"4",
+						"5",
+						"6",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "49",
@@ -770,7 +1846,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "50",
@@ -786,7 +1866,26 @@
 						}
 					},
 					"replacement": "listed",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "51",
@@ -802,7 +1901,26 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "52",
@@ -818,7 +1936,26 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "53",
@@ -834,7 +1971,26 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "54",
@@ -850,7 +2006,26 @@
 						}
 					},
 					"replacement": "hex(p?.id) === hex(user)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "55",
@@ -866,7 +2041,23 @@
 						}
 					},
 					"replacement": "p.id",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "56",
@@ -882,7 +2073,26 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "57",
@@ -898,7 +2108,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"2",
+						"20",
+						"21",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "58",
@@ -914,7 +2143,29 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"13",
+						"14",
+						"15",
+						"16",
+						"18",
+						"19",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "59",
@@ -930,7 +2181,28 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"13",
+						"14",
+						"15",
+						"16",
+						"18",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "60",
@@ -946,7 +2218,28 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"13",
+						"14",
+						"15",
+						"16",
+						"18",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "61",
@@ -962,7 +2255,28 @@
 						}
 					},
 					"replacement": "waits(comments, user) && waits(comments, user, undefined, \"harness-pause\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"13",
+						"14",
+						"15",
+						"16",
+						"18",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "62",
@@ -978,7 +2292,25 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"14",
+						"18",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "63",
@@ -994,7 +2326,31 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "64",
@@ -1010,7 +2366,31 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "65",
@@ -1026,7 +2406,16 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"18",
+						"19",
+						"20",
+						"21"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "66",
@@ -1042,7 +2431,19 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"18",
+						"19",
+						"20",
+						"21",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "67",
@@ -1058,7 +2459,19 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"18",
+						"19",
+						"20",
+						"21",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "68",
@@ -1074,7 +2487,28 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "69",
@@ -1090,7 +2524,28 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "70",
@@ -1106,7 +2561,31 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "71",
@@ -1122,7 +2601,31 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "72",
@@ -1138,7 +2641,31 @@
 						}
 					},
 					"replacement": "holds(read, user)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "73",
@@ -1154,7 +2681,31 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "74",
@@ -1170,7 +2721,31 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "75",
@@ -1186,7 +2761,14 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"12",
+						"17"
+					],
+					"killedBy": [
+						"17"
+					]
 				},
 				{
 					"id": "76",
@@ -1202,7 +2784,28 @@
 						}
 					},
 					"replacement": "waiting",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"13",
+						"14",
+						"15",
+						"16",
+						"18",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "77",
@@ -1218,7 +2821,26 @@
 						}
 					},
 					"replacement": "done",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"5",
+						"6",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "78",
@@ -1234,7 +2856,26 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"5",
+						"6",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "79",
@@ -1250,7 +2891,26 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"5",
+						"6",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "80",
@@ -1266,7 +2926,16 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"14",
+						"15",
+						"16"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "81",
@@ -1282,7 +2951,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"13",
+						"14",
+						"15",
+						"16"
+					]
 				},
 				{
 					"id": "82",
@@ -1298,7 +2973,16 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"14",
+						"15",
+						"16"
+					],
+					"killedBy": [
+						"16"
+					]
 				},
 				{
 					"id": "83",
@@ -1314,7 +2998,11 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"12",
+						"17"
+					]
 				},
 				{
 					"id": "84",
@@ -1330,7 +3018,11 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"12",
+						"17"
+					]
 				},
 				{
 					"id": "85",
@@ -1346,7 +3038,17 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"18",
+						"19",
+						"20",
+						"21",
+						"7"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "86",
@@ -1362,7 +3064,17 @@
 						}
 					},
 					"replacement": "error instanceof AtWrite",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"18",
+						"19",
+						"20",
+						"21",
+						"7"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "87",
@@ -1378,7 +3090,17 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"18",
+						"19",
+						"20",
+						"21",
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "88",
@@ -1394,7 +3116,17 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"18",
+						"19",
+						"20",
+						"21",
+						"7"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "89",
@@ -1410,7 +3142,23 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "90",
@@ -1426,7 +3174,17 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "91",
@@ -1442,7 +3200,14 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "92",
@@ -1458,7 +3223,14 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "93",
@@ -1474,7 +3246,23 @@
 						}
 					},
 					"replacement": "back",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "94",
@@ -1490,7 +3278,23 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "95",
@@ -1506,7 +3310,23 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"20",
+						"21",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "96",
@@ -1522,7 +3342,14 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "97",
@@ -1538,7 +3365,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "98",
@@ -1554,7 +3388,14 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "99",
@@ -1570,7 +3411,10 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"7"
+					]
 				},
 				{
 					"id": "100",
@@ -1586,7 +3430,15 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"5",
+						"6",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "101",
@@ -1602,7 +3454,19 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "102",
@@ -1618,7 +3482,15 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "103",
@@ -1634,7 +3506,15 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "104",
@@ -1650,7 +3530,15 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "105",
@@ -1666,7 +3554,19 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "106",
@@ -1682,7 +3582,19 @@
 						}
 					},
 					"replacement": "holds(people(await write(call, card, [...without(listed, user), {\n  id: user\n}])), user)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "107",
@@ -1698,7 +3610,19 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "108",
@@ -1714,7 +3638,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "109",
@@ -1730,7 +3666,19 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "110",
@@ -1746,7 +3694,19 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "111",
@@ -1762,7 +3722,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "112",
@@ -1778,7 +3744,14 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "113",
@@ -1794,7 +3767,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "114",
@@ -1810,7 +3790,16 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"11",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "115",
@@ -1826,7 +3815,16 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"11",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "116",
@@ -1842,18 +3840,28 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"11",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"6"
+					]
 				}
 			]
 		}
 	},
 	"fingerprint": {
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/mutation-sandbox.ts": "8f49905c3e1997723e79f546090f50aad24dba8c",
 		"bun/notion-bot.fixture.ts": "31b1532653bebf287d99d2c55c0de447dd24fa9e",
-		"bun/notion-release.test.ts": "eee103368b84c183289059dd9f49f7345c7bfe85",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars) GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c author.name=stryker -c author.email=stryker@sandbox -c committer.name=stryker -c committer.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/notion-release",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

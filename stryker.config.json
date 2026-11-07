@@ -8,6 +8,7 @@
 		"bun/config.ts",
 		"bun/file-size.ts",
 		"bun/floor.ts",
+		"bun/git-local.ts",
 		"bun/github-app.ts",
 		"bun/manifest-ranges.ts",
 		"bun/notion-release.ts",
@@ -21,7 +22,10 @@
 		"bun/transcript-archive-store.ts",
 		"bun/transient.ts"
 	],
-	"testRunner": "command",
+	"testRunner": "bun",
+	"appendPlugins": ["@hughescr/stryker-bun-runner"],
+	"coverageAnalysis": "perTest",
+	"buildCommand": "bun bun/mutation-sandbox.ts",
 	"thresholds": {
 		"break": null
 	},

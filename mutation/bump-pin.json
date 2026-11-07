@@ -1,5 +1,142 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/bump-pin.test.ts": {
+			"source": "/**\n * Moving the harness pin in a consumer's `package.json` text: one line\n * changes, whatever the indentation, and a spec the edit cannot be sure of\n * fails before anything is installed.\n */\nimport { describe, expect, test } from \"bun:test\";\nimport { movePin, pinOf } from \"./bump-pin.ts\";\n\nconst OLD = \"eddf1fdd56642c48a3b222034ec6268c9b55971f\";\nconst NEW = \"9d321b61a74c70d4d3324d11e64fef488f2202a0\";\nconst spec = (sha: string) => `github:laidrivm/harness#${sha}`;\n\nconst manifest = (indent: string, harness = spec(OLD)) =>\n\t`${JSON.stringify(\n\t\t{\n\t\t\tname: \"consumer\",\n\t\t\tdependencies: { harness, react: \"19.0.0\" },\n\t\t\tharness: { bumpTest: \"bun test\" },\n\t\t},\n\t\tnull,\n\t\tindent,\n\t)}\\n`;\n\ndescribe(\"moving the pin\", () => {\n\ttest.each([\n\t\t[\"tabs\", \"\\t\"],\n\t\t[\"two spaces\", \"  \"],\n\t])(\"under %s, exactly the pin's line changes\", (_, indent) => {\n\t\tconst before = manifest(indent).split(\"\\n\");\n\t\tconst after = movePin(manifest(indent), NEW).split(\"\\n\");\n\t\tconst changed = before.filter((line, i) => line !== after[i]);\n\t\texpect(after).toHaveLength(before.length);\n\t\texpect(changed).toEqual([`${indent}${indent}\"harness\": \"${spec(OLD)}\",`]);\n\t});\n\n\ttest(\"the parsed dependency is the new spec afterwards\", () => {\n\t\tconst after = JSON.parse(movePin(manifest(\"\\t\"), NEW));\n\t\texpect(after.dependencies.harness).toBe(spec(NEW));\n\t\texpect(pinOf(movePin(manifest(\"\\t\"), NEW))).toBe(NEW);\n\t});\n\n\ttest.each([\n\t\t[\"a short hash\", spec(\"eddf1fd\")],\n\t\t[\"another owner\", `github:someone/harness#${OLD}`],\n\t\t[\"a version range\", \"^1.0.0\"],\n\t])(\"a spec with %s fails naming it\", (_, harness) => {\n\t\texpect(() => movePin(manifest(\"\\t\", harness), NEW)).toThrow(harness);\n\t});\n\n\ttest(\"a spec that occurs twice in the text fails naming it\", () => {\n\t\tconst twice = manifest(\"\\t\").replace('\"name\": \"consumer\"', `\"name\": \"consumer\",\\n\\t\"note\": \"${spec(OLD)}\"`);\n\t\texpect(() => movePin(twice, NEW)).toThrow(spec(OLD));\n\t});\n\n\ttest(\"a target that is not a full commit hash fails\", () => {\n\t\texpect(() => movePin(manifest(\"\\t\"), \"9d321b6\")).toThrow(\"9d321b6\");\n\t});\n\n\ttest(\"a manifest without the dependency fails naming it\", () => {\n\t\texpect(() => pinOf('{\"dependencies\": {}}')).toThrow(\"dependencies.harness\");\n\t});\n});\n\ndescribe(\"a development-dependency pin\", () => {\n\t/** A manifest naming the harness under the fields given, as the harness's own does. */\n\tconst both = (fields: { dependencies?: string; devDependencies?: string }) =>\n\t\t`${JSON.stringify(\n\t\t\t{\n\t\t\t\tname: \"harness\",\n\t\t\t\t...(fields.dependencies && { dependencies: { harness: fields.dependencies } }),\n\t\t\t\t...(fields.devDependencies && {\n\t\t\t\t\tdevDependencies: { harness: fields.devDependencies },\n\t\t\t\t}),\n\t\t\t},\n\t\t\tnull,\n\t\t\t\"\\t\",\n\t\t)}\\n`;\n\n\ttest(\"under devDependencies alone is read and moved there\", () => {\n\t\tconst text = both({ devDependencies: spec(OLD) });\n\t\texpect(pinOf(text)).toBe(OLD);\n\t\texpect(JSON.parse(movePin(text, NEW)).devDependencies.harness).toBe(spec(NEW));\n\t});\n\n\ttest(\"the same pin under both fields moves both\", () => {\n\t\tconst after = JSON.parse(movePin(both({ dependencies: spec(OLD), devDependencies: spec(OLD) }), NEW));\n\t\texpect(after.dependencies.harness).toBe(spec(NEW));\n\t\texpect(after.devDependencies.harness).toBe(spec(NEW));\n\t});\n\n\ttest(\"two different pins read and move the runtime one alone\", () => {\n\t\tconst text = both({ dependencies: spec(OLD), devDependencies: spec(NEW) });\n\t\texpect(pinOf(text)).toBe(OLD);\n\t\tconst after = JSON.parse(movePin(text, \"a\".repeat(40)));\n\t\texpect(after.dependencies.harness).toBe(spec(\"a\".repeat(40)));\n\t\texpect(after.devDependencies.harness).toBe(spec(NEW));\n\t});\n\n\ttest(\"the old spec once more outside the two fields still fails naming it\", () => {\n\t\tconst thrice = both({ dependencies: spec(OLD), devDependencies: spec(OLD) }).replace(\n\t\t\t'\"name\": \"harness\"',\n\t\t\t`\"name\": \"harness\",\\n\\t\"note\": \"${spec(OLD)}\"`,\n\t\t);\n\t\texpect(() => movePin(thrice, NEW)).toThrow(spec(OLD));\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/bump-pin.test.ts > a development-dependency pin > the old spec once more outside the two fields still fails naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 101
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/bump-pin.test.ts > a development-dependency pin > the same pin under both fields moves both",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 87
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/bump-pin.test.ts > a development-dependency pin > two different pins read and move the runtime one alone",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 93
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/bump-pin.test.ts > a development-dependency pin > under devDependencies alone is read and moved there",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 81
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/bump-pin.test.ts > moving the pin > a manifest without the dependency fails naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 61
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/bump-pin.test.ts > moving the pin > a spec that occurs twice in the text fails naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 52
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/bump-pin.test.ts > moving the pin > a spec with a short hash fails naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 48
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/bump-pin.test.ts > moving the pin > a spec with a version range fails naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 48
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/bump-pin.test.ts > moving the pin > a spec with another owner fails naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 48
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/bump-pin.test.ts > moving the pin > a target that is not a full commit hash fails",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 57
+						}
+					}
+				},
+				{
+					"id": "10",
+					"name": "bun/bump-pin.test.ts > moving the pin > the parsed dependency is the new spec afterwards",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 38
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/bump-pin.test.ts > moving the pin > under tabs, exactly the pin's line changes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 30
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/bump-pin.test.ts > moving the pin > under two spaces, exactly the pin's line changes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 30
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/bump-pin.ts": {
 			"source": "/**\n * The harness pin in a `package.json`, read and moved as text. As text and\n * not by re-serialising the manifest, so the diff is the pin's lines whatever\n * the file's indentation and key order. Not by `bun add`, which in bun 1.4.2\n * left the old pin in `bun.lock` beside the new one.\n *\n * A consumer pins the harness under `dependencies`; the harness pins itself\n * under `devDependencies`. Both fields are read in that order, the one\n * `NOTICE` in `bootstrap.ts` uses, so one rule decides which pin a manifest has.\n */\n\n/** The only spec a bump moves: the harness on GitHub, at a full commit. */\nconst SPEC = /^github:laidrivm\\/harness#([0-9a-f]{40})$/;\n\n/** The two fields a harness pin may sit in, in the order they are read. */\nconst FIELDS = [\"dependencies\", \"devDependencies\"] as const;\n\ntype Manifest = Partial<Record<(typeof FIELDS)[number], Record<string, unknown>>>;\n\n/** The harness spec under each of the two fields, `undefined` where none. */\nfunction harnessFields(text: string): unknown[] {\n\tconst manifest = JSON.parse(text) as Manifest;\n\treturn FIELDS.map((field) => manifest[field]?.harness);\n}\n\n/** The commit `text`'s pin names, or a throw naming why not. */\nexport function pinOf(text: string): string {\n\tconst specs = harnessFields(text);\n\tconst at = specs.findIndex((spec) => spec != null);\n\tconst harness = specs[at];\n\tif (typeof harness !== \"string\")\n\t\tthrow new Error(\"package.json: no dependencies.harness or devDependencies.harness to move\");\n\tconst sha = SPEC.exec(harness)?.[1];\n\tif (sha === undefined)\n\t\tthrow new Error(`package.json: ${FIELDS[at]}.harness is ${harness}, not github:laidrivm/harness#<40-hex>`);\n\treturn sha;\n}\n\n/**\n * `text` with its harness pin moved to `sha`, in each of the two fields that\n * holds the old spec. The old spec must occur exactly that many times, so the\n * replacement cannot touch anything outside those fields, and the result is\n * parsed back to confirm each of them is what moved. A field holding another\n * spec is left as it is.\n */\nexport function movePin(text: string, sha: string): string {\n\tif (!/^[0-9a-f]{40}$/.test(sha)) throw new Error(`${sha} is not a full commit hash`);\n\tconst old = `github:laidrivm/harness#${pinOf(text)}`;\n\tconst holding = harnessFields(text).map((spec) => spec === old);\n\tconst expected = holding.filter(Boolean).length;\n\tconst quoted = JSON.stringify(old);\n\tconst count = text.split(quoted).length - 1;\n\tif (count !== expected)\n\t\tthrow new Error(`package.json: ${old} occurs ${count} times, not ${expected === 1 ? \"once\" : `${expected} times`}`);\n\tconst next = `github:laidrivm/harness#${sha}`;\n\tconst moved = text.replaceAll(quoted, JSON.stringify(next));\n\tconst after = harnessFields(moved);\n\tif (holding.some((held, i) => held && after[i] !== next))\n\t\tthrow new Error(`package.json: moving ${old} did not move the dependency`);\n\treturn moved;\n}\n",
@@ -18,7 +155,8 @@
 						}
 					},
 					"replacement": "/github:laidrivm\\/harness#([0-9a-f]{40})$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "1",
@@ -34,7 +172,8 @@
 						}
 					},
 					"replacement": "/^github:laidrivm\\/harness#([0-9a-f]{40})/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "2",
@@ -50,7 +189,11 @@
 						}
 					},
 					"replacement": "/^github:laidrivm\\/harness#([0-9a-f])$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +209,11 @@
 						}
 					},
 					"replacement": "/^github:laidrivm\\/harness#([^0-9a-f]{40})$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +229,24 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +262,24 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +295,24 @@
 						}
 					},
 					"replacement": "manifest[field].harness",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +328,24 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +361,24 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +394,24 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +427,24 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +460,24 @@
 						}
 					},
 					"replacement": "spec == null",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +493,24 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +526,24 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "14",
@@ -242,7 +559,24 @@
 						}
 					},
 					"replacement": "typeof harness === \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "15",
@@ -258,7 +592,24 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "17",
@@ -274,7 +625,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"4"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "18",
@@ -290,7 +647,23 @@
 						}
 					},
 					"replacement": "SPEC.exec(harness)[1]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "19",
@@ -306,7 +679,23 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "20",
@@ -322,7 +711,23 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "21",
@@ -338,7 +743,23 @@
 						}
 					},
 					"replacement": "sha !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "23",
@@ -354,7 +775,15 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "24",
@@ -370,7 +799,24 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "25",
@@ -386,7 +832,24 @@
 						}
 					},
 					"replacement": "/^[0-9a-f]{40}$/.test(sha)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "26",
@@ -402,7 +865,24 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "27",
@@ -418,7 +898,24 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "28",
@@ -434,7 +931,21 @@
 						}
 					},
 					"replacement": "/[0-9a-f]{40}$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "29",
@@ -450,7 +961,21 @@
 						}
 					},
 					"replacement": "/^[0-9a-f]{40}/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "30",
@@ -466,7 +991,24 @@
 						}
 					},
 					"replacement": "/^[0-9a-f]$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "31",
@@ -482,7 +1024,24 @@
 						}
 					},
 					"replacement": "/^[^0-9a-f]{40}$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "33",
@@ -498,7 +1057,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "34",
@@ -514,7 +1079,23 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "35",
@@ -530,7 +1111,20 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "36",
@@ -546,7 +1140,20 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "37",
@@ -562,7 +1169,20 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "38",
@@ -578,7 +1198,20 @@
 						}
 					},
 					"replacement": "spec !== old",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "39",
@@ -594,7 +1227,20 @@
 						}
 					},
 					"replacement": "holding",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "40",
@@ -610,7 +1256,20 @@
 						}
 					},
 					"replacement": "text.split(quoted).length + 1",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "41",
@@ -626,7 +1285,20 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "42",
@@ -642,7 +1314,20 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "43",
@@ -658,7 +1343,20 @@
 						}
 					},
 					"replacement": "count === expected",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3",
+						"5"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "45",
@@ -674,7 +1372,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "46",
@@ -690,7 +1395,11 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"5"
+					]
 				},
 				{
 					"id": "47",
@@ -706,7 +1415,11 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"5"
+					]
 				},
 				{
 					"id": "48",
@@ -722,7 +1435,11 @@
 						}
 					},
 					"replacement": "expected !== 1",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"5"
+					]
 				},
 				{
 					"id": "49",
@@ -738,7 +1455,10 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"5"
+					]
 				},
 				{
 					"id": "50",
@@ -754,7 +1474,10 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0"
+					]
 				},
 				{
 					"id": "51",
@@ -770,7 +1493,18 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "52",
@@ -786,7 +1520,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "53",
@@ -802,7 +1547,15 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3"
+					]
 				},
 				{
 					"id": "54",
@@ -818,7 +1571,15 @@
 						}
 					},
 					"replacement": "holding.every((held, i) => held && after[i] !== next)",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3"
+					]
 				},
 				{
 					"id": "55",
@@ -834,7 +1595,15 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3"
+					]
 				},
 				{
 					"id": "56",
@@ -850,7 +1619,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "57",
@@ -866,7 +1646,15 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3"
+					]
 				},
 				{
 					"id": "58",
@@ -882,7 +1670,18 @@
 						}
 					},
 					"replacement": "held || after[i] !== next",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "59",
@@ -898,7 +1697,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "60",
@@ -914,7 +1724,18 @@
 						}
 					},
 					"replacement": "after[i] === next",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"2",
+						"3"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "62",
@@ -930,17 +1751,19 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				}
 			]
 		}
 	},
 	"fingerprint": {
-		"bun/bump-pin.test.ts": "d8b7867f846e887a7673a593efe0705568e4379a",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/mutation-sandbox.ts": "8f49905c3e1997723e79f546090f50aad24dba8c",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars) GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c author.name=stryker -c author.email=stryker@sandbox -c committer.name=stryker -c committer.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/bump-pin",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

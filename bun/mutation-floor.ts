@@ -21,9 +21,9 @@ const SURVIVING = ["Survived", "NoCoverage"];
 
 /**
  * Statuses meaning something other than that. `NoCoverage` sits above rather
- * than here because no test ran against such a mutant at all; it should not
- * arise under the command runner, which performs no coverage analysis, and
- * counting it is what makes its appearance visible instead of silent.
+ * than here because no test ran against such a mutant at all. Under the
+ * per-test runner it is how a mutant no test reaches reads, one the runner
+ * before it scored `Survived`, so counting both leaves the floor where it was.
  *
  * The report schema carries an eighth status, `Pending`, which neither list
  * names on purpose: it means the run did not finish, so both counting it and

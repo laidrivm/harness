@@ -19,7 +19,12 @@ export type Tree = {
 	dirty: string[];
 	listed: string[];
 	options: Record<string, unknown>;
+	/** The versions `package.json` pins of the runner and of Stryker, so a scratch clone without `node_modules` reads them. */
+	versions: Record<string, string>;
 };
+
+/** The packages whose version decides a mutant's verdict, and so re-runs every module when it moves. */
+export const RUNNERS = ["@hughescr/stryker-bun-runner", "@stryker-mutator/core"];
 
 const git = (cwd: string, ...args: string[]) => {
 	const run = Bun.spawnSync(["git", ...args], { cwd });
@@ -56,7 +61,10 @@ export function load(top: string): Tree {
 	const { $schema: _, mutate, ...options } = JSON.parse(readFileSync(join(top, "stryker.config.json"), "utf8"));
 	if (!Array.isArray(mutate) || !mutate.every((m) => typeof m === "string"))
 		throw new Error("stryker.config.json's mutate must list the modules the run mutates");
-	return { tracked, blobs, text, stored: storedFiles(top), dirty: changed(top), listed: mutate, options };
+	const manifest = join(top, "package.json");
+	const pins = existsSync(manifest) ? (JSON.parse(readFileSync(manifest, "utf8")).devDependencies ?? {}) : {};
+	const versions = Object.fromEntries(RUNNERS.filter((name) => name in pins).map((name) => [name, String(pins[name])]));
+	return { tracked, blobs, text, stored: storedFiles(top), dirty: changed(top), listed: mutate, options, versions };
 }
 
 /** The text of each `mutation/<name>.json` under `top`, by its path. */

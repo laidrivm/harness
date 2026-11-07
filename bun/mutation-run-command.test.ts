@@ -14,7 +14,6 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { load, unsaved } from "./mutation-checkout.ts";
-import { command } from "./mutation-run.ts";
 
 const script = `${import.meta.dir}/mutation-run.ts`;
 const made: string[] = [];
@@ -74,13 +73,14 @@ const cli = (cwd: string, bin: string, ...args: string[]) => {
 	return { code: run.exitCode, err: run.stderr.toString(), out: run.stdout.toString() };
 };
 
-/** `dir` with its results committed, then a changed test committed over them, so the next run is forced. */
+/** `dir` with its results committed, then a changed Stryker option committed over them, so the next run is forced. */
 function forced(dir: string): string {
 	cli(dir, path({ node: "exit 0", bunx: stryker }));
 	git(dir, "add", "mutation");
 	git(dir, "commit", "-qm", "results");
-	write(dir, { "bun/a.test.ts": "2\n" });
-	git(dir, "commit", "-qam", "a changed test");
+	const config = JSON.parse(readFileSync(join(dir, "stryker.config.json"), "utf8"));
+	write(dir, { "stryker.config.json": JSON.stringify({ ...config, ignoreStatic: true }) });
+	git(dir, "commit", "-qam", "a changed option");
 	return readFileSync(join(dir, "mutation/a.json"), "utf8");
 }
 
@@ -90,6 +90,7 @@ const REPORT = "reports/mutation/mutation.json";
 const results = JSON.stringify({
 	schemaVersion: "1.0",
 	projectRoot: "/somewhere",
+	testFiles: { "bun/a.test.ts": { source: "1\n", tests: [] } },
 	files: {
 		"bun/a.ts": {
 			source: "1\n",
@@ -115,9 +116,6 @@ const sweeping = (...failing: string[]) =>
 		"echo dry >> calls",
 		...failing.map((module) => `if /usr/bin/grep -q '"${module}"' "$4"; then exit 1; fi`),
 	].join("\n");
-
-/** A sandbox's module and a test of it that passes, for the cases that run `command` itself. */
-const passing = { "bun/a.ts": "1\n", "bun/a.test.ts": 'import { test } from "bun:test";\ntest("a", () => {});\n' };
 
 const three = { "bun/b.ts": "1\n", "bun/b.test.ts": "1\n", "bun/c.ts": "1\n", "bun/c.test.ts": "1\n" };
 const listedThree = ["bun/a.ts", "bun/b.ts", "bun/c.ts"];
@@ -146,7 +144,7 @@ describe("the command", () => {
 		expect(first.code).toBe(1);
 		expect(first.err).toContain("mutation/a.json differs from HEAD's");
 		const kept = Object.keys(JSON.parse(readFileSync(join(dir, "mutation/a.json"), "utf8")));
-		expect(kept).toEqual(["schemaVersion", "files", "fingerprint"]);
+		expect(kept).toEqual(["schemaVersion", "testFiles", "files", "fingerprint"]);
 		git(dir, "add", "mutation");
 		git(dir, "commit", "-qm", "results");
 		expect(cli(dir, path({ node: "exit 0", bunx: "exit 3" })).code).toBe(0);
@@ -204,6 +202,17 @@ describe("the command", () => {
 		]);
 	});
 
+	test("a run after a test changed hands Stryker its results less its survivors", () => {
+		const dir = repository();
+		cli(dir, path({ node: "exit 0", bunx: stryker }));
+		git(dir, "add", "mutation");
+		git(dir, "commit", "-qm", "results");
+		write(dir, { "bun/a.test.ts": "2\n" });
+		git(dir, "commit", "-qam", "a changed test");
+		cli(dir, path({ node: "exit 0", bunx: `${writes[0]}\n/bin/cp "$f" seen; exit 3` }));
+		expect(JSON.parse(readFileSync(join(dir, "seen"), "utf8")).files["bun/a.ts"].mutants).toEqual([]);
+	});
+
 	test("one module is not dry-run apart, its own run starting with one", () => {
 		const dir = repository();
 		cli(dir, path({ node: "exit 0", bunx: `/usr/bin/grep -c '"dryRunOnly":true' "$4" >> calls; exit 3` }));
@@ -230,59 +239,15 @@ describe("the command", () => {
 	});
 
 	// spec: mutation-floor/a-mutant-that-writes-to-the-root-git-names
-	test("the tests a run starts find the sandbox through git, never the checkout around it", () => {
-		const checkout = repository();
-		const sandbox = join(checkout, ".stryker-tmp", "sandbox-1");
-		const find = 'Bun.spawnSync(["git", "rev-parse", "--show-toplevel"]).stdout.toString().trim()';
-		write(sandbox, {
-			"bun/a.ts": "1\n",
-			"bun/a.test.ts": `import { test } from "bun:test";\ntest("a main block", () => Bun.write(${find} + "/leak", ""));\n`,
-		});
-		// Twice: the second finds the sandbox's repository already made.
-		for (const _ of [1, 2]) expect(Bun.spawnSync(["sh", "-c", command("bun/a.ts")], { cwd: sandbox }).exitCode).toBe(0);
-		expect([existsSync(join(sandbox, "leak")), existsSync(join(checkout, "leak"))]).toEqual([true, false]);
-	});
-
-	test("the sandbox's repository has a HEAD, and one an earlier attempt left without it is remade", () => {
-		const sandbox = join(repository(), ".stryker-tmp", "sandbox-1");
-		write(sandbox, passing);
-		git(sandbox, "init", "-q");
-		const head = () => Bun.spawnSync(["git", "log", "--format=%an", "-1"], { cwd: sandbox }).stdout.toString().trim();
-		expect(Bun.spawnSync(["sh", "-c", command("bun/a.ts")], { cwd: sandbox }).exitCode).toBe(0);
-		expect(head()).toBe("stryker");
-	});
-
-	test("the sandbox's commit is stryker's even where git's identity variables and global identity are set", () => {
-		const sandbox = join(repository(), ".stryker-tmp", "sandbox-1");
-		write(sandbox, passing);
-		const global = join(scratch(), "gitconfig");
-		write(dirname(global), {
-			gitconfig: "[author]\n\tname = y\n\temail = y@y\n[committer]\n\tname = y\n\temail = y@y\n",
-		});
-		const env = {
-			...process.env,
-			GIT_CONFIG_GLOBAL: global,
-			GIT_AUTHOR_NAME: "x",
-			GIT_AUTHOR_EMAIL: "x@x",
-			GIT_COMMITTER_NAME: "x",
-			GIT_COMMITTER_EMAIL: "x@x",
-		};
-		expect(Bun.spawnSync(["sh", "-c", command("bun/a.ts")], { cwd: sandbox, env }).exitCode).toBe(0);
-		const log = Bun.spawnSync(["git", "log", "--format=%an %ae %cn %ce", "-1"], { cwd: sandbox });
-		expect(log.stdout.toString().trim()).toBe("stryker stryker@sandbox stryker stryker@sandbox");
-	});
-
 	test.each(["sh", "dash", "bash"].filter((shell) => Bun.which(shell)))(
-		"under %s, git's repository variables inherited from a hook point the sandbox's git at the sandbox",
+		"under %s, git's repository variables inherited from a hook never reach Stryker",
 		(shell) => {
-			const checkout = repository();
-			const sandbox = join(checkout, ".stryker-tmp", "sandbox-1");
-			write(sandbox, passing);
-			const env = { ...process.env, GIT_DIR: join(checkout, ".git"), GIT_WORK_TREE: checkout };
-			expect(Bun.spawnSync([shell, "-c", command("bun/a.ts")], { cwd: sandbox, env }).exitCode).toBe(0);
-			const count = (cwd: string) =>
-				Bun.spawnSync(["git", "rev-list", "--count", "HEAD"], { cwd }).stdout.toString().trim();
-			expect([count(checkout), count(sandbox), existsSync(join(sandbox, ".git"))]).toEqual(["1", "1", true]);
+			const dir = repository();
+			const bin = path({ node: "exit 0", bunx: "/usr/bin/env > seen; exit 3" });
+			const env = { PATH: bin, HOME: scratch(), GIT_DIR: join(dir, ".git"), GIT_WORK_TREE: dir };
+			Bun.spawnSync([Bun.which(shell) ?? shell, "-c", 'exec bun "$0"', script], { cwd: dir, env });
+			const seen = readFileSync(join(dir, "seen"), "utf8");
+			expect([seen.includes("HOME="), /^GIT_(DIR|WORK_TREE)=/m.test(seen)]).toEqual([true, false]);
 		},
 	);
 

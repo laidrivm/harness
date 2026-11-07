@@ -1,5 +1,152 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/floor.test.ts": {
+			"source": "/**\n * What a count owes the floor a consumer declares, whichever floor it is: the\n * gap in each direction, the reason, and a floor or reason the check cannot\n * read. The callers' own cases bind it to `harness.mutationFloor` and\n * `harness.uncitedFloor`.\n */\nimport { describe, expect, test } from \"bun:test\";\nimport { naming } from \"./floor.fixture.ts\";\nimport { type Floor, gauge } from \"./floor.ts\";\n\n/** A floor of the shape both callers declare, under a key neither uses. */\nconst at: Floor = {\n\tkey: \"someFloor\",\n\tfield: \"count\",\n\tcounted: \"things\",\n\tlower: \"remove one\",\n};\n\nconst why = \"measured\";\n\ndescribe(\"the count against the floor\", () => {\n\ttest(\"a count equal to the floor passes\", () => {\n\t\texpect(gauge(at, 7, 7, why)).toEqual([]);\n\t});\n\n\ttest(\"a floor of zero with nothing counted passes\", () => {\n\t\texpect(gauge(at, 0, 0, why)).toEqual([]);\n\t});\n\n\ttest(\"a count above the floor names both numbers and the way down\", () => {\n\t\texpect(gauge(at, 8, 7, why)).toEqual([\n\t\t\t\"8 things against a floor of 7 — remove one, or raise the floor and say why\",\n\t\t]);\n\t});\n\n\ttest(\"a count below the floor names the value to write\", () => {\n\t\texpect(gauge(at, 6, 7, why)).toEqual([\n\t\t\t\"6 things against a floor of 7 — write 6 as the floor, so the gain is recorded\",\n\t\t]);\n\t});\n});\n\n// spec: mutation-floor/the-floor-changed-with-no-reason-given\n// spec: spec-test-traceability/the-floor-changed-with-no-reason-given\ndescribe(\"the floor's reason\", () => {\n\ttest(\"an empty reason fails naming the field\", () => {\n\t\texpect(gauge(at, 7, 7, \"\")).toEqual(naming(\"someFloor\", \"why\"));\n\t});\n\n\ttest(\"a reason of whitespace alone fails naming the field\", () => {\n\t\texpect(gauge(at, 7, 7, \" \\t \")).toEqual(naming(\"someFloor\", \"why\"));\n\t});\n\n\ttest(\"an absent reason fails naming the field, rather than throwing\", () => {\n\t\texpect(gauge(at, 7, 7, undefined)).toEqual(naming(\"someFloor\", \"why\"));\n\t});\n\n\ttest(\"a reason that is not text fails naming the field\", () => {\n\t\texpect(gauge(at, 7, 7, [\"measured\"])).toEqual(naming(\"someFloor\", \"why\"));\n\t});\n\n\ttest(\"the reason is demanded whichever direction the number moved\", () => {\n\t\tfor (const count of [6, 7, 8]) expect(gauge(at, count, 7, \"\")[0]).toContain(\"harness.someFloor.why\");\n\t});\n});\n\n// spec: mutation-floor/a-floor-that-is-not-a-whole-number\n// spec: spec-test-traceability/a-floor-that-is-not-a-whole-number\ndescribe(\"a floor that is not a whole number\", () => {\n\ttest(\"a negative floor fails naming the field\", () => {\n\t\texpect(gauge(at, 0, -1, why)).toEqual(naming(\"someFloor\", \"count\"));\n\t});\n\n\ttest(\"a floor written as a string fails naming the field, with no gap\", () => {\n\t\texpect(gauge(at, 7, \"7\", why)).toEqual(naming(\"someFloor\", \"count\"));\n\t});\n\n\ttest(\"an absent floor fails naming the field\", () => {\n\t\texpect(gauge(at, 7, undefined, why)).toEqual(naming(\"someFloor\", \"count\"));\n\t});\n\n\ttest(\"a fractional floor fails naming the field\", () => {\n\t\texpect(gauge(at, 7, 7.5, why)).toEqual(naming(\"someFloor\", \"count\"));\n\t});\n\n\ttest(\"a floor and a reason both unreadable are both named\", () => {\n\t\texpect(gauge(at, 7, null, undefined)).toEqual([...naming(\"someFloor\", \"why\"), ...naming(\"someFloor\", \"count\")]);\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/floor.test.ts > a floor that is not a whole number > a floor and a reason both unreadable are both named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 88
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/floor.test.ts > a floor that is not a whole number > a floor written as a string fails naming the field, with no gap",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 76
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/floor.test.ts > a floor that is not a whole number > a fractional floor fails naming the field",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 84
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/floor.test.ts > a floor that is not a whole number > a negative floor fails naming the field",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 72
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/floor.test.ts > a floor that is not a whole number > an absent floor fails naming the field",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 80
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/floor.test.ts > the count against the floor > a count above the floor names both numbers and the way down",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 32
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/floor.test.ts > the count against the floor > a count below the floor names the value to write",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 38
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/floor.test.ts > the count against the floor > a count equal to the floor passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 24
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/floor.test.ts > the count against the floor > a floor of zero with nothing counted passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 28
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/floor.test.ts > the floor's reason > a reason of whitespace alone fails naming the field",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 52
+						}
+					}
+				},
+				{
+					"id": "10",
+					"name": "bun/floor.test.ts > the floor's reason > a reason that is not text fails naming the field",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 60
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/floor.test.ts > the floor's reason > an absent reason fails naming the field, rather than throwing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 56
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/floor.test.ts > the floor's reason > an empty reason fails naming the field",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 48
+						}
+					}
+				},
+				{
+					"id": "13",
+					"name": "bun/floor.test.ts > the floor's reason > the reason is demanded whichever direction the number moved",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 64
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/floor.ts": {
 			"source": "/**\n * What a count owes the floor a consumer declares under `harness.<key>` — the\n * one rule behind `harness.mutationFloor` and `harness.uncitedFloor`, so the\n * two cannot drift apart — and what makes a counted entry with a reason\n * readable, which each approval of `harness.suppressions` is too.\n *\n * Both directions fail: a rise admits something nothing checks, and a floor\n * left above reality stops being a measurement. The reason is demanded on every\n * run rather than only on a rise, because telling a rise from a drop needs the\n * previously committed value, and reading git history to decide whether to ask\n * is more machinery than one field.\n */\n\n/** Where a floor sits and how its problems read. */\nexport type Floor = {\n\t/** The key under `harness` in `package.json`. */\n\tkey: string;\n\t/** The field under it holding the number. */\n\tfield: string;\n\t/** What the count counts, as a plural noun. */\n\tcounted: string;\n\t/** How a count above the floor comes back down. */\n\tlower: string;\n};\n\n/**\n * True for a count a measurement can be compared against: a whole number, zero\n * or above. A fraction or a negative one no count can equal, and a gain would\n * be reported that is not one. A type guard, since `Number.isInteger` does not\n * narrow `unknown`.\n */\nconst whole = (n: unknown): n is number => typeof n === \"number\" && Number.isInteger(n) && n >= 0;\n\n/**\n * What is wrong with a `{ <field>: count, why }` entry at `path` — a floor, or\n * one approval of `harness.suppressions` — in a hand-edited `package.json`\n * that `bun/config.ts` checks only for presence: an absent reason or a count\n * written as `\"12\"` is named here rather than thrown as a `TypeError` or\n * compared as never equal, or as `NaN`, which nothing exceeds.\n */\nexport function unreadable(path: string, field: string, count: unknown, why: unknown): string[] {\n\treturn [\n\t\t...(typeof why === \"string\" && why.trim() ? [] : [`${path}.why gives no reason — write one as text`]),\n\t\t...(whole(count) ? [] : [`${path}.${field} is not a whole number`]),\n\t];\n}\n\n/** The gap between `count` and the floor, after what `unreadable` names. */\nexport function gauge(at: Floor, count: number, floor: unknown, why: unknown): string[] {\n\tconst problems = unreadable(`harness.${at.key}`, at.field, floor, why);\n\tif (whole(floor) && count !== floor) {\n\t\tconst gap = `${count} ${at.counted} against a floor of ${floor}`;\n\t\tproblems.push(\n\t\t\tcount > floor\n\t\t\t\t? `${gap} — ${at.lower}, or raise the floor and say why`\n\t\t\t\t: `${gap} — write ${count} as the floor, so the gain is recorded`,\n\t\t);\n\t}\n\treturn problems;\n}\n",
@@ -18,7 +165,11 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +185,26 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +220,26 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +255,26 @@
 						}
 					},
 					"replacement": "typeof n === \"number\" && Number.isInteger(n) || n >= 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +290,26 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "5",
@@ -98,7 +325,26 @@
 						}
 					},
 					"replacement": "typeof n === \"number\" || Number.isInteger(n)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"2"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +360,23 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "7",
@@ -130,7 +392,26 @@
 						}
 					},
 					"replacement": "typeof n !== \"number\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "8",
@@ -146,7 +427,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +462,22 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +493,22 @@
 						}
 					},
 					"replacement": "n > 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +524,22 @@
 						}
 					},
 					"replacement": "n < 0",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"3",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "12",
@@ -210,7 +555,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +590,26 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "14",
@@ -242,7 +625,26 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "15",
@@ -258,7 +660,26 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "16",
@@ -274,7 +695,26 @@
 						}
 					},
 					"replacement": "typeof why === \"string\" || why.trim()",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "17",
@@ -290,7 +730,26 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "18",
@@ -306,7 +765,26 @@
 						}
 					},
 					"replacement": "typeof why !== \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "19",
@@ -322,7 +800,26 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "20",
@@ -338,7 +835,23 @@
 						}
 					},
 					"replacement": "why",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"9"
+					]
 				},
 				{
 					"id": "21",
@@ -354,7 +867,20 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "22",
@@ -370,7 +896,18 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"10",
+						"11",
+						"12",
+						"13",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "23",
@@ -386,7 +923,18 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"10",
+						"11",
+						"12",
+						"13",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "24",
@@ -402,7 +950,21 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "25",
@@ -418,7 +980,17 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "26",
@@ -434,7 +1006,17 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"2",
+						"3",
+						"4"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "27",
@@ -450,7 +1032,26 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "28",
@@ -466,7 +1067,26 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "29",
@@ -482,7 +1102,26 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "30",
@@ -498,7 +1137,26 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "31",
@@ -514,7 +1172,26 @@
 						}
 					},
 					"replacement": "whole(floor) || count !== floor",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "32",
@@ -530,7 +1207,21 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "33",
@@ -546,7 +1237,21 @@
 						}
 					},
 					"replacement": "count === floor",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "34",
@@ -562,7 +1267,15 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"5",
+						"6"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "35",
@@ -578,7 +1291,15 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"5",
+						"6"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "37",
@@ -594,7 +1315,15 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"5",
+						"6"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "38",
@@ -610,7 +1339,15 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"5",
+						"6"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "39",
@@ -626,7 +1363,12 @@
 						}
 					},
 					"replacement": "count >= floor",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"13",
+						"5",
+						"6"
+					]
 				},
 				{
 					"id": "40",
@@ -642,7 +1384,15 @@
 						}
 					},
 					"replacement": "count <= floor",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"5",
+						"6"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "41",
@@ -658,7 +1408,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"5"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "42",
@@ -674,18 +1431,26 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"13",
+						"6"
+					],
+					"killedBy": [
+						"6"
+					]
 				}
 			]
 		}
 	},
 	"fingerprint": {
 		"bun/floor.fixture.ts": "08f6214ba4f9a14f74ba2d50ba59527c779a0e4b",
-		"bun/floor.test.ts": "8746b69aae0bf383375055ec4bf987c5b8329b47",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/mutation-sandbox.ts": "8f49905c3e1997723e79f546090f50aad24dba8c",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars) GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c author.name=stryker -c author.email=stryker@sandbox -c committer.name=stryker -c committer.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/floor",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

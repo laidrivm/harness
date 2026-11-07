@@ -1,5 +1,172 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/config.test.ts": {
+			"source": "/**\n * What a gate does when the consumer's `package.json` leaves its value out:\n * fail, naming the key — never run on a default nobody chose; `reviewers`\n * alone reads its absence as none.\n */\nimport { afterAll, describe, expect, test } from \"bun:test\";\nimport { mkdtempSync, rmSync, writeFileSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { join } from \"node:path\";\nimport { bumpTest, read, reviewers } from \"./config.ts\";\nimport { stray } from \"./repo-layout.ts\";\n\nconst made: string[] = [];\n\nafterAll(() => {\n\tfor (const dir of made) rmSync(dir, { recursive: true, force: true });\n});\n\n/** A consumer repository whose manifest holds `harness`, tracked. */\nfunction consumer(harness?: Record<string, unknown>): string {\n\tconst dir = mkdtempSync(join(tmpdir(), \"harness-config-\"));\n\tmade.push(dir);\n\twriteFileSync(join(dir, \"package.json\"), JSON.stringify(harness === undefined ? {} : { harness }));\n\tBun.spawnSync([\"git\", \"init\", \"-q\"], { cwd: dir });\n\tBun.spawnSync([\"git\", \"add\", \"-A\"], { cwd: dir });\n\treturn dir;\n}\n\ndescribe(\"reading a value\", () => {\n\ttest(\"a present key is returned as written\", () => {\n\t\tconst dir = consumer({ diffBudgetExclude: [\"bun.lock\"] });\n\t\texpect(read(dir, \"diffBudgetExclude\")).toEqual([\"bun.lock\"]);\n\t});\n\n\ttest(\"the bump's test command is read, and its absence names it\", () => {\n\t\texpect(read(consumer({ bumpTest: \"bun test\" }), \"bumpTest\")).toBe(\"bun test\");\n\t\texpect(() => read(consumer({}), \"bumpTest\")).toThrow(\"harness.bumpTest\");\n\t});\n\n\ttest(\"the project's test command is returned, and an absent or blank one names the key [26]\", () => {\n\t\texpect(bumpTest(consumer({ bumpTest: \"bun test\" }))).toBe(\"bun test\");\n\t\tfor (const harness of [{}, { bumpTest: \"\" }, { bumpTest: \"   \" }, { bumpTest: 1 }])\n\t\t\texpect(() => bumpTest(consumer(harness))).toThrow(\"harness.bumpTest\");\n\t});\n\n\ttest(\"a manifest with no harness object names the key it lacks\", () => {\n\t\texpect(() => read(consumer(), \"rootFiles\")).toThrow(\"harness.rootFiles\");\n\t});\n\n\ttest(\"a key set to null names that key\", () => {\n\t\tconst dir = consumer({ rootFiles: null });\n\t\texpect(() => read(dir, \"rootFiles\")).toThrow(\"harness.rootFiles\");\n\t});\n\n\ttest(\"a harness object without the key names that key\", () => {\n\t\tconst dir = consumer({ rootFiles: {} });\n\t\texpect(() => read(dir, \"suppressions\")).toThrow(\"harness.suppressions\");\n\t});\n});\n\ndescribe(\"the reviewers finish waits for\", () => {\n\t/** A directory with no `package.json` at all. */\n\tconst bare = () => {\n\t\tconst dir = mkdtempSync(join(tmpdir(), \"harness-config-\"));\n\t\tmade.push(dir);\n\t\treturn dir;\n\t};\n\n\t// spec: work-finish/a-project-naming-no-reviewer\n\ttest(\"no file, no harness object, no key, null and an empty list each name none\", () => {\n\t\tfor (const dir of [bare(), consumer(), consumer({}), consumer({ reviewers: null }), consumer({ reviewers: [] })])\n\t\t\texpect(reviewers(dir)).toEqual([]);\n\t});\n\n\ttest(\"a list naming CodeRabbit is returned as written\", () => {\n\t\texpect(reviewers(consumer({ reviewers: [\"CodeRabbit\"] }))).toEqual([\"CodeRabbit\"]);\n\t});\n\n\t// spec: work-finish/a-package-file-that-is-not-json\n\ttest(\"a file that is not JSON throws naming the file\", () => {\n\t\tconst dir = bare();\n\t\twriteFileSync(join(dir, \"package.json\"), \"{\");\n\t\texpect(() => reviewers(dir)).toThrow(join(dir, \"package.json\"));\n\t});\n\n\t// spec: work-finish/a-value-that-is-not-a-list\n\ttest.each([\n\t\t[\"a string\", \"CodeRabbit\"],\n\t\t[\"a list holding a number\", [1]],\n\t\t[\"an object\", { CodeRabbit: true }],\n\t])(\"%s throws naming harness.reviewers\", (_, value) => {\n\t\texpect(() => reviewers(consumer({ reviewers: value }))).toThrow(\"harness.reviewers\");\n\t});\n\n\t// spec: work-finish/a-reviewer-finish-does-not-know\n\ttest(\"a name other than CodeRabbit throws naming it\", () => {\n\t\texpect(() => reviewers(consumer({ reviewers: [\"CodeRabbit\", \"Copilot\"] }))).toThrow(\"Copilot\");\n\t});\n\n\ttest(\"an empty name is refused and shown quoted\", () => {\n\t\texpect(() => reviewers(consumer({ reviewers: [\"\"] }))).toThrow('names \"\"');\n\t});\n});\n\ndescribe(\"a gate whose value is absent\", () => {\n\ttest(\"the mutation floor fails naming harness.mutationFloor\", () => {\n\t\t// The command a consumer runs, from inside the consumer.\n\t\tconst run = Bun.spawnSync([\"bun\", join(import.meta.dir, \"mutation-floor.ts\")], {\n\t\t\tcwd: consumer({ rootFiles: {} }),\n\t\t});\n\t\texpect(run.exitCode).not.toBe(0);\n\t\texpect(run.stderr.toString()).toContain(\"harness.mutationFloor\");\n\t});\n\n\ttest(\"the root sweep fails naming harness.rootFiles\", () => {\n\t\texpect(() => stray(consumer({ mutationFloor: {} }))).toThrow(\"harness.rootFiles\");\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/config.test.ts > a gate whose value is absent > the mutation floor fails naming harness.mutationFloor",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 108
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/config.test.ts > a gate whose value is absent > the root sweep fails naming harness.rootFiles",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 117
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/config.test.ts > reading a value > a harness object without the key names that key",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 57
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/config.test.ts > reading a value > a key set to null names that key",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 52
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/config.test.ts > reading a value > a manifest with no harness object names the key it lacks",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 48
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/config.test.ts > reading a value > a present key is returned as written",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 32
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/config.test.ts > reading a value > the bump's test command is read, and its absence names it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 37
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/config.test.ts > reading a value > the project's test command is returned, and an absent or blank one names the key [26]",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 42
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/config.test.ts > the reviewers finish waits for > a file that is not JSON throws naming the file",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 82
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/config.test.ts > the reviewers finish waits for > a list holding a number throws naming harness.reviewers",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 93
+						}
+					}
+				},
+				{
+					"id": "10",
+					"name": "bun/config.test.ts > the reviewers finish waits for > a list naming CodeRabbit is returned as written",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 77
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/config.test.ts > the reviewers finish waits for > a name other than CodeRabbit throws naming it",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 98
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/config.test.ts > the reviewers finish waits for > a string throws naming harness.reviewers",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 93
+						}
+					}
+				},
+				{
+					"id": "13",
+					"name": "bun/config.test.ts > the reviewers finish waits for > an empty name is refused and shown quoted",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 102
+						}
+					}
+				},
+				{
+					"id": "14",
+					"name": "bun/config.test.ts > the reviewers finish waits for > an object throws naming harness.reviewers",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 93
+						}
+					}
+				},
+				{
+					"id": "15",
+					"name": "bun/config.test.ts > the reviewers finish waits for > no file, no harness object, no key, null and an empty list each name none",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 72
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/config.ts": {
 			"source": "/**\n * The values a gate runs with, read from the consumer's `package.json` under\n * `\"harness\"`. A gate carries none of them in its own source: what is mutated,\n * which root files are allowed, which suppressions are approved — each is a\n * project's own, and this package is shared.\n *\n * A key that is absent fails, naming it. A default would make a forgotten value\n * read as a decision, and nothing downstream could tell the two apart. The one\n * exception is `reviewers`: its absence means no external reviewer, since the\n * harness also runs without one (the user's answer 2 b, 2026-11-03).\n */\nimport { existsSync, readFileSync } from \"node:fs\";\nimport { join } from \"node:path\";\n\nexport type Config = {\n\t/** How many of the mutants Stryker reports survive. */\n\tmutationFloor: { surviving: number; why: string };\n\t/** How many acceptance criteria no test cites. */\n\tuncitedFloor: { count: number; why: string };\n\t/** Every file allowed at the root, and why it is there. */\n\trootFiles: Record<string, string>;\n\t/** Approved suppressions by `<path> <marker>`: how many, and why. */\n\tsuppressions: Record<string, { count: number; why: string }>;\n\t/** Pathspecs the diff budget does not count. */\n\tdiffBudgetExclude: string[];\n\t/** The shell command a bump runs as the consumer's unit tests. */\n\tbumpTest: string;\n\t/** The name of the board whose cards this tree decides — never its address. */\n\tboard: string;\n\t/** The check-run names of the reviewers `work.ts finish` waits for; `CodeRabbit` the only one understood. */\n\treviewers: string[];\n};\n\n/** `file` parsed, or a throw naming it: the parser's own message names a position and no file. */\nfunction manifest(file: string): { harness?: Partial<Config> } | null {\n\tconst text = readFileSync(file, \"utf8\");\n\ttry {\n\t\treturn JSON.parse(text);\n\t} catch (error) {\n\t\tthrow new Error(`${file} is not JSON — ${String(error)}`);\n\t}\n}\n\n/** `key` from the `\"harness\"` object of `root`'s `package.json`. */\nexport function read<K extends keyof Config>(root: string, key: K): Config[K] {\n\tconst file = join(root, \"package.json\");\n\tconst value = manifest(file)?.harness?.[key];\n\t// `null` too: JSON can only spell an absent value that way, and the gate\n\t// would otherwise read a field of it and throw something nobody can act on.\n\tif (value === undefined || value === null)\n\t\tthrow new Error(`${file} has no \"harness.${key}\" — the gate reads it there`);\n\treturn value as Config[K];\n}\n\n/**\n * The project's checks command, `harness.bumpTest` — its unit tests at the\n * least, and here every gate `.githooks/gates.sh` runs — which a bump and\n * the pre-PR runner run as `sh -c <value>`. Throws naming the key when it is\n * absent or blank: `sh -c \"\"` exits 0, a pass with no test run at all.\n */\nexport function bumpTest(root: string): string {\n\tconst value = read(root, \"bumpTest\");\n\tif (typeof value !== \"string\" || value.trim() === \"\") throw new Error(\"package.json: harness.bumpTest is blank\");\n\treturn value;\n}\n\n/** The name CodeRabbit's app gives its check run: the one reviewer `harness.reviewers` may name, and the run `coderabbit-run.ts` reads. */\nexport const CODERABBIT = \"CodeRabbit\";\n\n/**\n * `harness.reviewers` of `root`'s `package.json`: `[]` with no file, no key or\n * `null`, so no reviewer is waited for. Throws naming the file when it does not\n * parse, `harness.reviewers` when the value is not a list of names, and the\n * name `finish` cannot read the state of otherwise.\n */\nexport function reviewers(root: string): string[] {\n\tconst file = join(root, \"package.json\");\n\tconst value: unknown = existsSync(file) ? manifest(file)?.harness?.reviewers : undefined;\n\tif (value === undefined || value === null) return [];\n\tif (!Array.isArray(value) || !value.every((name) => typeof name === \"string\"))\n\t\tthrow new Error(`package.json: harness.reviewers is ${JSON.stringify(value)}, not a list of check-run names`);\n\tconst unknown = value.filter((name) => name !== CODERABBIT);\n\tif (unknown.length)\n\t\tthrow new Error(\n\t\t\t`package.json: harness.reviewers names ${unknown.map((name) => JSON.stringify(name)).join(\", \")}; CodeRabbit is the only one understood`,\n\t\t);\n\treturn value;\n}\n\n/** The `name` of `top`'s `package.json`, or `undefined`. */\nexport function named(top: string): string | undefined {\n\ttry {\n\t\tconst name = JSON.parse(readFileSync(join(top, \"package.json\"), \"utf8\"))?.name;\n\t\treturn typeof name === \"string\" && name ? name : undefined;\n\t} catch {\n\t\treturn undefined;\n\t}\n}\n\n/**\n * A card's `pointer` split into this repository's cross-repository prefix,\n * its name, a colon and a space (task-board, *A card for another repository's\n * change points across*), and the path after it; no prefix where it has none.\n */\nexport function across(top: string, pointer: string): { prefix: string; path: string } {\n\tconst name = named(top);\n\tconst prefix = name && pointer.startsWith(`${name}: `) ? `${name}: ` : \"\";\n\treturn { prefix, path: pointer.slice(prefix.length) };\n}\n",
@@ -18,7 +185,27 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +221,24 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +254,27 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "3",
@@ -66,7 +290,13 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "5",
@@ -82,7 +312,13 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"8"
+					],
+					"killedBy": [
+						"8"
+					]
 				},
 				{
 					"id": "6",
@@ -98,7 +334,19 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "7",
@@ -114,7 +362,19 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "8",
@@ -130,7 +390,19 @@
 						}
 					},
 					"replacement": "manifest(file)?.harness[key]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "9",
@@ -146,7 +418,16 @@
 						}
 					},
 					"replacement": "manifest(file).harness",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7"
+					]
 				},
 				{
 					"id": "10",
@@ -162,7 +443,19 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "11",
@@ -178,7 +471,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "12",
@@ -194,7 +499,19 @@
 						}
 					},
 					"replacement": "value === undefined && value === null",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "13",
@@ -210,7 +527,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "14",
@@ -226,7 +555,19 @@
 						}
 					},
 					"replacement": "value !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "15",
@@ -242,7 +583,16 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"3",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"3"
+					]
 				},
 				{
 					"id": "16",
@@ -258,7 +608,16 @@
 						}
 					},
 					"replacement": "value !== null",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"3",
+						"5",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"5"
+					]
 				},
 				{
 					"id": "18",
@@ -274,7 +633,18 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"1",
+						"2",
+						"3",
+						"4",
+						"6",
+						"7"
+					],
+					"killedBy": [
+						"6"
+					]
 				},
 				{
 					"id": "19",
@@ -290,7 +660,13 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "20",
@@ -306,7 +682,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "21",
@@ -322,7 +704,13 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "22",
@@ -338,7 +726,13 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "23",
@@ -354,7 +748,13 @@
 						}
 					},
 					"replacement": "typeof value !== \"string\" && value.trim() === \"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "24",
@@ -370,7 +770,13 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "25",
@@ -386,7 +792,13 @@
 						}
 					},
 					"replacement": "typeof value === \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "26",
@@ -402,7 +814,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "27",
@@ -418,7 +836,13 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "28",
@@ -434,7 +858,13 @@
 						}
 					},
 					"replacement": "value.trim() !== \"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "29",
@@ -450,7 +880,13 @@
 						}
 					},
 					"replacement": "value",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "30",
@@ -466,7 +902,13 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "32",
@@ -482,7 +924,13 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"7"
+					],
+					"killedBy": [
+						"7"
+					]
 				},
 				{
 					"id": "33",
@@ -498,7 +946,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "34",
@@ -514,7 +966,20 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "35",
@@ -530,7 +995,20 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "36",
@@ -546,7 +1024,20 @@
 						}
 					},
 					"replacement": "manifest(file)?.harness.reviewers",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "37",
@@ -562,7 +1053,17 @@
 						}
 					},
 					"replacement": "manifest(file).harness",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "38",
@@ -578,7 +1079,19 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "39",
@@ -594,7 +1107,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "40",
@@ -610,7 +1135,19 @@
 						}
 					},
 					"replacement": "value === undefined && value === null",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "41",
@@ -626,7 +1163,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "42",
@@ -642,7 +1191,19 @@
 						}
 					},
 					"replacement": "value !== undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "43",
@@ -658,7 +1219,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "44",
@@ -674,7 +1247,19 @@
 						}
 					},
 					"replacement": "value !== null",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "45",
@@ -690,7 +1275,13 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"15"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "46",
@@ -706,7 +1297,19 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "47",
@@ -722,7 +1325,19 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "48",
@@ -738,7 +1353,19 @@
 						}
 					},
 					"replacement": "!Array.isArray(value) && !value.every(name => typeof name === \"string\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "49",
@@ -754,7 +1381,19 @@
 						}
 					},
 					"replacement": "Array.isArray(value)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "50",
@@ -770,7 +1409,17 @@
 						}
 					},
 					"replacement": "value.every(name => typeof name === \"string\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "51",
@@ -786,7 +1435,17 @@
 						}
 					},
 					"replacement": "value.some(name => typeof name === \"string\")",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "52",
@@ -802,7 +1461,17 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"15",
+						"9"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "53",
@@ -818,7 +1487,13 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"9"
+					]
 				},
 				{
 					"id": "54",
@@ -834,7 +1509,16 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"9"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "55",
@@ -850,7 +1534,16 @@
 						}
 					},
 					"replacement": "typeof name !== \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"9"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "56",
@@ -866,7 +1559,16 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"9"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "58",
@@ -882,7 +1584,15 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"12",
+						"14",
+						"9"
+					],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "59",
@@ -898,7 +1608,16 @@
 						}
 					},
 					"replacement": "value",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"15"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "60",
@@ -914,7 +1633,16 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"15"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "61",
@@ -930,7 +1658,15 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "62",
@@ -946,7 +1682,15 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "63",
@@ -962,7 +1706,15 @@
 						}
 					},
 					"replacement": "name === CODERABBIT",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13"
+					],
+					"killedBy": [
+						"10"
+					]
 				},
 				{
 					"id": "64",
@@ -978,7 +1730,16 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"15"
+					],
+					"killedBy": [
+						"15"
+					]
 				},
 				{
 					"id": "65",
@@ -994,7 +1755,16 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"13",
+						"15"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "67",
@@ -1010,7 +1780,14 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"11",
+						"13"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "68",
@@ -1026,7 +1803,14 @@
 						}
 					},
 					"replacement": "() => undefined",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"11",
+						"13"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "69",
@@ -1042,7 +1826,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"11",
+						"13"
+					]
 				},
 				{
 					"id": "70",
@@ -1058,7 +1846,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "71",
@@ -1074,7 +1863,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "72",
@@ -1090,7 +1880,8 @@
 						}
 					},
 					"replacement": "JSON.parse(readFileSync(join(top, \"package.json\"), \"utf8\")).name",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "73",
@@ -1106,7 +1897,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "74",
@@ -1122,7 +1914,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "75",
@@ -1138,7 +1931,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "76",
@@ -1154,7 +1948,8 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "77",
@@ -1170,7 +1965,8 @@
 						}
 					},
 					"replacement": "typeof name === \"string\" || name",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "78",
@@ -1186,7 +1982,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "79",
@@ -1202,7 +1999,8 @@
 						}
 					},
 					"replacement": "typeof name !== \"string\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "80",
@@ -1218,7 +2016,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "81",
@@ -1234,7 +2033,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "82",
@@ -1250,7 +2050,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "83",
@@ -1266,7 +2067,8 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "84",
@@ -1282,7 +2084,8 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "85",
@@ -1298,7 +2101,8 @@
 						}
 					},
 					"replacement": "name || pointer.startsWith(`${name}: `)",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "86",
@@ -1314,7 +2118,8 @@
 						}
 					},
 					"replacement": "pointer.endsWith(`${name}: `)",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "87",
@@ -1330,7 +2135,8 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "88",
@@ -1346,7 +2152,8 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "89",
@@ -1362,7 +2169,8 @@
 						}
 					},
 					"replacement": "\"Stryker was here!\"",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "90",
@@ -1378,7 +2186,8 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				},
 				{
 					"id": "91",
@@ -1394,17 +2203,19 @@
 						}
 					},
 					"replacement": "pointer",
-					"status": "Survived"
+					"status": "NoCoverage",
+					"coveredBy": []
 				}
 			]
 		}
 	},
 	"fingerprint": {
-		"bun/config.test.ts": "357d1182272828a08eb720329499e50dc7260de5",
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
+		"bun/mutation-sandbox.ts": "8f49905c3e1997723e79f546090f50aad24dba8c",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars) GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c author.name=stryker -c author.email=stryker@sandbox -c committer.name=stryker -c committer.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/config",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }

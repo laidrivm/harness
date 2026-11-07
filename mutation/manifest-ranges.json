@@ -1,5 +1,382 @@
 {
 	"schemaVersion": "1.0",
+	"testFiles": {
+		"bun/manifest-ranges.test.ts": {
+			"source": "/**\n * What `ranges` reads as a set of versions and what it lets through.\n *\n * The manifests below are fabricated because the rule is: it answers for a\n * field this repository does not carry yet, and a case that could not have\n * come out the other way proves nothing about it. What a consumer's own\n * manifest says is a question for the consumer's check.\n */\nimport { describe, expect, test } from \"bun:test\";\nimport { ranges } from \"./manifest-ranges.ts\";\n\n/**\n * A manifest holding `fields`, with the ones every real one carries — this\n * repository's own name among them, which carries a digit and so is what every\n * case below also asserts is not read as a version.\n */\nconst manifest = (fields: Record<string, unknown>) =>\n\tJSON.stringify({ name: \"d2ass\", private: true, type: \"module\", ...fields });\n\ndescribe(\"a version naming a set rather than a version\", () => {\n\ttest.each([\n\t\t[\"a caret\", \"^6.16.0\"],\n\t\t[\"a tilde\", \"~6.16.0\"],\n\t\t[\"a comparator\", \">=6.16.0\"],\n\t\t[\"a disjunction\", \"6.16.0 || 6.17.0\"],\n\t\t[\"a minor wildcard\", \"6.x\"],\n\t\t[\"a bare wildcard\", \"*\"],\n\t\t[\"a hyphen span\", \"6.16.0 - 6.17.0\"],\n\t\t[\"a major on its own\", \"6\"],\n\t\t[\"a major and minor\", \"6.16\"],\n\t])(\"%s is named, with the field it sits in\", (_, spec) => {\n\t\tconst found = ranges(manifest({ dependencies: { qs: spec } }));\n\n\t\texpect(found).toEqual([`package.json: dependencies.qs is ${spec}, not one version`]);\n\t});\n\n\ttest(\"is reached inside a nested override\", () => {\n\t\t// bun lets an override scope a version to one dependent, so the values\n\t\t// are not all at one depth — and the nested spelling is the one a scan\n\t\t// reading the top level alone would pass.\n\t\tconst fields = { overrides: { ajv: { \"fast-uri\": \"^3.1.6\" } } };\n\n\t\tconst found = ranges(manifest(fields));\n\n\t\texpect(found).toEqual([\"package.json: overrides.ajv.fast-uri is ^3.1.6, not one version\"]);\n\t});\n\n\ttest(\"is named once per version, not once per manifest\", () => {\n\t\t// Every other case here asserts a one-element list, which a scan keeping\n\t\t// the last match rather than collecting them would satisfy.\n\t\tconst fields = {\n\t\t\tdependencies: { qs: \"^6.16.0\" },\n\t\t\toverrides: { \"fast-uri\": \"~3.1.7\" },\n\t\t};\n\n\t\tconst found = ranges(manifest(fields));\n\n\t\texpect(found).toEqual([\n\t\t\t\"package.json: dependencies.qs is ^6.16.0, not one version\",\n\t\t\t\"package.json: overrides.fast-uri is ~3.1.7, not one version\",\n\t\t]);\n\t});\n\n\ttest(\"is named in a field this scan was never told about\", () => {\n\t\t// The property the exemption list buys: `peerDependencies` is nowhere in\n\t\t// this file, and a range in it is still caught.\n\t\tconst found = ranges(manifest({ peerDependencies: { preact: \"^10\" } }));\n\n\t\texpect(found).toEqual([\"package.json: peerDependencies.preact is ^10, not one version\"]);\n\t});\n});\n\ndescribe(\"a Git specifier\", () => {\n\tconst commit = \"0123456789abcdef0123456789abcdef01234567\";\n\n\ttest(\"the harness pinned to a full commit passes\", () => {\n\t\tconst fields = {\n\t\t\tdependencies: { harness: `github:laidrivm/harness#${commit}` },\n\t\t};\n\n\t\texpect(ranges(manifest(fields))).toEqual([]);\n\t});\n\n\ttest(\"a manifest with no harness entry passes\", () => {\n\t\t// The pin is admitted, not demanded: a manifest from before the harness\n\t\t// was added names no entry for this rule to read.\n\t\tconst fields = { dependencies: { preact: \"10.29.8\" } };\n\n\t\texpect(ranges(manifest(fields))).toEqual([]);\n\t});\n\n\ttest.each([\n\t\t[\"a 39-character hash\", `#${commit.slice(1)}`],\n\t\t[\"a 41-character hash\", `#${commit}0`],\n\t\t[\"an upper-case hash\", `#${commit.toUpperCase()}`],\n\t\t[\"a branch\", \"#main\"],\n\t\t[\"a tag\", \"#v1.0.0\"],\n\t\t[\"no reference\", \"\"],\n\t])(\"the harness pinned to %s is named\", (_, reference) => {\n\t\tconst spec = `github:laidrivm/harness${reference}`;\n\n\t\tconst found = ranges(manifest({ dependencies: { harness: spec } }));\n\n\t\texpect(found).toEqual([\n\t\t\t`package.json: dependencies.harness is ${spec}, not github:laidrivm/harness#<40-hex commit>`,\n\t\t]);\n\t});\n\n\ttest(\"the harness by bare shorthand is named\", () => {\n\t\t// The one entry the shorthand cannot hide in: it is read by its key, and\n\t\t// every value but the pin fails there.\n\t\tconst found = ranges(manifest({ dependencies: { harness: \"laidrivm/harness\" } }));\n\n\t\texpect(found).toEqual([\n\t\t\t\"package.json: dependencies.harness is laidrivm/harness, not github:laidrivm/harness#<40-hex commit>\",\n\t\t]);\n\t});\n\n\ttest.each([\n\t\t[\"pinned to a commit\", `github:lodash/lodash#${commit}`],\n\t\t[\"on a branch\", \"github:lodash/lodash#main\"],\n\t\t[\"over git+https\", \"git+https://github.com/lodash/lodash.git\"],\n\t\t[\"over ssh\", \"git@github.com:lodash/lodash.git\"],\n\t\t[\"by shorthand with a reference\", `lodash/lodash#${commit}`],\n\t])(\"another dependency %s is named as a range is\", (_, spec) => {\n\t\tconst found = ranges(manifest({ dependencies: { lodash: spec } }));\n\n\t\texpect(found).toEqual([`package.json: dependencies.lodash is ${spec}, not one version`]);\n\t});\n\n\ttest(\"a hosted prefix other than github is named\", () => {\n\t\tconst found = ranges(manifest({ dependencies: { lodash: \"gitlab:lodash/lodash\" } }));\n\n\t\texpect(found).toEqual([\"package.json: dependencies.lodash is gitlab:lodash/lodash, not one version\"]);\n\t});\n\n\ttest(\"beside the pinned harness, only the other entry is named\", () => {\n\t\tconst fields = {\n\t\t\tdependencies: {\n\t\t\t\tharness: `github:laidrivm/harness#${commit}`,\n\t\t\t\tlodash: \"github:lodash/lodash#main\",\n\t\t\t},\n\t\t};\n\n\t\texpect(ranges(manifest(fields))).toEqual([\n\t\t\t\"package.json: dependencies.lodash is github:lodash/lodash#main, not one version\",\n\t\t]);\n\t});\n\n\ttest(\"a package whose name ends in .harness is not the harness entry\", () => {\n\t\t// Read by the key, not the path's tail, which this name shares.\n\t\tconst fields = { dependencies: { \"my.harness\": \"1.0.0\" } };\n\n\t\texpect(ranges(manifest(fields))).toEqual([]);\n\t});\n\n\ttest(\"a path with a slash passes\", () => {\n\t\t// The bare shorthand's shape, which is why the shorthand without a\n\t\t// reference is the one Git form this scan lets through.\n\t\texpect(ranges(manifest({ module: \"src/model.ts\" }))).toEqual([]);\n\t});\n});\n\ndescribe(\"a value this scan has nothing to say about\", () => {\n\ttest.each([\"10.29.8\", \"1.2.3-beta.1\", \"1.2.3+build.5\"])(\"the exact version %s passes\", (spec) => {\n\t\t// A prerelease is still one version, and it carries the hyphen a span\n\t\t// is written with — which is why the span is recognised by the digit\n\t\t// after that hyphen rather than by the hyphen alone.\n\t\texpect(ranges(manifest({ dependencies: { qs: spec } }))).toEqual([]);\n\t});\n\n\ttest(\"a command carrying an operator passes, being exempt\", () => {\n\t\t// Every shell operator this rejects in a version is ordinary in a script,\n\t\t// which is why the two fields are exempt rather than parsed.\n\t\tconst fields = {\n\t\t\tscripts: { lint: \"biome ci . || exit 1\", dev: \"bun x.ts >/dev/null\" },\n\t\t\t\"simple-git-hooks\": { \"pre-push\": \"bun test && echo x\" },\n\t\t};\n\n\t\texpect(ranges(manifest(fields))).toEqual([]);\n\t});\n\n\ttest(\"a reason among the consumer's harness values passes, being exempt\", () => {\n\t\t// Prose, and prose opens with a tilde or a comparator as readily as a\n\t\t// range does.\n\t\tconst fields = {\n\t\t\tharness: {\n\t\t\t\tmutationFloor: { surviving: 3, why: \"~ half are equivalent\" },\n\t\t\t\tdiffBudgetExclude: [\"*.woff2\"],\n\t\t\t},\n\t\t};\n\n\t\texpect(ranges(manifest(fields))).toEqual([]);\n\t});\n\n\ttest(\"a null passes rather than ending the scan\", () => {\n\t\t// `typeof null` is `\"object\"` and `Object.entries(null)` throws, so the\n\t\t// guard against it is the difference between a clean manifest and a\n\t\t// check that cannot report on one.\n\t\tconst fields = { dependencies: { qs: null, preact: \"^10.29.8\" } };\n\n\t\texpect(ranges(manifest(fields))).toEqual([\"package.json: dependencies.preact is ^10.29.8, not one version\"]);\n\t});\n\n\ttest(\"a path carrying an x segment passes\", () => {\n\t\t// Not every field this scan walks holds a version, and a wildcard read\n\t\t// wherever a dot precedes an `x` would refuse this one.\n\t\tconst fields = {\n\t\t\tmain: \"./index.x.ts\",\n\t\t\tdependencies: { preact: \"10.29.8\" },\n\t\t};\n\n\t\texpect(ranges(manifest(fields))).toEqual([]);\n\t});\n});\n",
+			"tests": [
+				{
+					"id": "0",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > a hosted prefix other than github is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 133
+						}
+					}
+				},
+				{
+					"id": "1",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > a manifest with no harness entry passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 86
+						}
+					}
+				},
+				{
+					"id": "2",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > a package whose name ends in .harness is not the harness entry",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 152
+						}
+					}
+				},
+				{
+					"id": "3",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > a path with a slash passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 159
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > another dependency by shorthand with a reference is named as a range is",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 127
+						}
+					}
+				},
+				{
+					"id": "5",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > another dependency on a branch is named as a range is",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 127
+						}
+					}
+				},
+				{
+					"id": "6",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > another dependency over git+https is named as a range is",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 127
+						}
+					}
+				},
+				{
+					"id": "7",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > another dependency over ssh is named as a range is",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 127
+						}
+					}
+				},
+				{
+					"id": "8",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > another dependency pinned to a commit is named as a range is",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 127
+						}
+					}
+				},
+				{
+					"id": "9",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > beside the pinned harness, only the other entry is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 139
+						}
+					}
+				},
+				{
+					"id": "10",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > the harness by bare shorthand is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 111
+						}
+					}
+				},
+				{
+					"id": "11",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > the harness pinned to a 39-character hash is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 101
+						}
+					}
+				},
+				{
+					"id": "12",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > the harness pinned to a 41-character hash is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 101
+						}
+					}
+				},
+				{
+					"id": "13",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > the harness pinned to a branch is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 101
+						}
+					}
+				},
+				{
+					"id": "14",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > the harness pinned to a full commit passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 78
+						}
+					}
+				},
+				{
+					"id": "15",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > the harness pinned to a tag is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 101
+						}
+					}
+				},
+				{
+					"id": "16",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > the harness pinned to an upper-case hash is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 101
+						}
+					}
+				},
+				{
+					"id": "17",
+					"name": "bun/manifest-ranges.test.ts > a Git specifier > the harness pinned to no reference is named",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 101
+						}
+					}
+				},
+				{
+					"id": "18",
+					"name": "bun/manifest-ranges.test.ts > a value this scan has nothing to say about > a command carrying an operator passes, being exempt",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 174
+						}
+					}
+				},
+				{
+					"id": "19",
+					"name": "bun/manifest-ranges.test.ts > a value this scan has nothing to say about > a null passes rather than ending the scan",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 198
+						}
+					}
+				},
+				{
+					"id": "20",
+					"name": "bun/manifest-ranges.test.ts > a value this scan has nothing to say about > a path carrying an x segment passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 207
+						}
+					}
+				},
+				{
+					"id": "21",
+					"name": "bun/manifest-ranges.test.ts > a value this scan has nothing to say about > a reason among the consumer's harness values passes, being exempt",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 185
+						}
+					}
+				},
+				{
+					"id": "22",
+					"name": "bun/manifest-ranges.test.ts > a value this scan has nothing to say about > the exact version 1.2.3-beta.1 passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 167
+						}
+					}
+				},
+				{
+					"id": "23",
+					"name": "bun/manifest-ranges.test.ts > a value this scan has nothing to say about > the exact version 1.2.3+build.5 passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 167
+						}
+					}
+				},
+				{
+					"id": "24",
+					"name": "bun/manifest-ranges.test.ts > a value this scan has nothing to say about > the exact version 10.29.8 passes",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 167
+						}
+					}
+				},
+				{
+					"id": "25",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > a bare wildcard is named, with the field it sits in",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				},
+				{
+					"id": "26",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > a caret is named, with the field it sits in",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				},
+				{
+					"id": "27",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > a comparator is named, with the field it sits in",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				},
+				{
+					"id": "28",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > a disjunction is named, with the field it sits in",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				},
+				{
+					"id": "29",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > a hyphen span is named, with the field it sits in",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				},
+				{
+					"id": "30",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > a major and minor is named, with the field it sits in",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				},
+				{
+					"id": "31",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > a major on its own is named, with the field it sits in",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				},
+				{
+					"id": "32",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > a minor wildcard is named, with the field it sits in",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				},
+				{
+					"id": "33",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > a tilde is named, with the field it sits in",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 33
+						}
+					}
+				},
+				{
+					"id": "34",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > is named in a field this scan was never told about",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 66
+						}
+					}
+				},
+				{
+					"id": "35",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > is named once per version, not once per manifest",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 50
+						}
+					}
+				},
+				{
+					"id": "36",
+					"name": "bun/manifest-ranges.test.ts > a version naming a set rather than a version > is reached inside a nested override",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 39
+						}
+					}
+				}
+			]
+		}
+	},
 	"files": {
 		"bun/manifest-ranges.ts": {
 			"source": "/**\n * Every version in `package.json` names one version and not a set of them.\n *\n * `bunfig.toml`'s `[install] exact = true` states the policy and its reason —\n * a malicious release ships as a patch or minor bump, which a caret adopts\n * unread — but it governs only what `bun add` writes. A range typed into the\n * file by hand, or into `overrides`, which `bun add` never touches, passes\n * every gate this repository has. This is the gate it passes.\n *\n * A module of its own rather than the test that exercises it, the shape\n * `repo-layout.ts` and `file-size.ts` already have: what it answers is a\n * question about a manifest that does not exist yet, so it is a rule, and a\n * rule written inside its own test is one the fabricated inputs exist to\n * justify rather than to guard.\n */\n\n/**\n * The top-level fields holding something other than version specs, which is\n * the whole of what this scan exempts: shell commands, and the consumer's\n * `harness` values, whose reasons are prose a range pattern would misread.\n * Everything else is walked, `overrides` and any field added later alike — a\n * scan scoped by a list of the collections it covers is one a new collection\n * is silently outside of, and a dependency field nobody thought to add to\n * that list is exactly where an unread range would sit.\n */\nconst EXEMPT = new Set([\"scripts\", \"simple-git-hooks\", \"harness\"]);\n\n/**\n * Every way a spec names more than the one version it appears to: a widening\n * operator or comparator, a disjunction, a wildcard, a partial version — `6`\n * is every 6 and `6.16` every 6.16, which is the form that reads least like a\n * range and is the widest of them — and a hyphen span.\n *\n * Written as what a range is rather than as what a version is, because the\n * scan walks every field and most of them hold neither: `\"module\"`, `\"d2ass\"`\n * and `\"./index.x.ts\"` all have to pass, and a pattern asking what a version\n * looks like has to tell them apart from one. The cost is that a date would\n * read as a span; no field here holds one, and the report names the field.\n */\nconst RANGE = /^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i;\n\n/**\n * A spec naming a Git repository, which names whatever its reference points at\n * when it is installed — a set, pinned or not, as a range is.\n *\n * ponytail: two forms pass. The bare `owner/repo` shorthand, which bun and npm\n * both read as GitHub, has the shape of a path without a `#`, and this scan\n * reads every field — a module path under `harness` must pass. An HTTPS\n * tarball URL has the shape of `homepage` or `repository.url`. A complete check\n * would read `bun.lock`, where every dependency's source is written out whole.\n */\nconst GIT = /^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i;\n\n/**\n * The one Git spec admitted, and for the `harness` entry alone: a full commit\n * hash, which `bun.lock` records and nothing can move under it.\n */\nconst HARNESS_PIN = /^github:laidrivm\\/harness#[0-9a-f]{40}$/;\n\n/** Every version in `manifest` that names a set, and an empty list when none. */\nexport function ranges(manifest: string): string[] {\n\tconst found: string[] = [];\n\n\tconst walk = (value: unknown, path: string, key: string) => {\n\t\tif (typeof value === \"string\") {\n\t\t\t// The key, not the path's tail: `my.harness` is a package of its own.\n\t\t\tif (key === \"harness\" && path !== key) {\n\t\t\t\tif (!HARNESS_PIN.test(value))\n\t\t\t\t\tfound.push(`package.json: ${path} is ${value}, not github:laidrivm/harness#<40-hex commit>`);\n\t\t\t} else if (RANGE.test(value) || GIT.test(value)) found.push(`package.json: ${path} is ${value}, not one version`);\n\t\t\treturn;\n\t\t}\n\t\t// `null` first: it is an object to `typeof`, and `Object.entries` throws\n\t\t// on it rather than returning nothing.\n\t\tif (value === null || typeof value !== \"object\") return;\n\t\tfor (const [name, inner] of Object.entries(value)) walk(inner, `${path}.${name}`, name);\n\t};\n\n\tconst parsed = JSON.parse(manifest) as Record<string, unknown>;\n\tfor (const [key, value] of Object.entries(parsed)) if (!EXEMPT.has(key)) walk(value, key, key);\n\n\treturn found;\n}\n",
@@ -18,7 +395,11 @@
 						}
 					},
 					"replacement": "[]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "1",
@@ -34,7 +415,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "2",
@@ -50,7 +435,8 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "3",
@@ -66,7 +452,11 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"21"
+					]
 				},
 				{
 					"id": "4",
@@ -82,7 +472,8 @@
 						}
 					},
 					"replacement": "/[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "5",
@@ -98,7 +489,11 @@
 						}
 					},
 					"replacement": "/^[^\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "6",
@@ -114,7 +509,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "7",
@@ -130,7 +526,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "8",
@@ -146,7 +543,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[^x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"25"
+					]
 				},
 				{
 					"id": "9",
@@ -162,7 +563,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "10",
@@ -178,7 +583,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"1"
+					]
 				},
 				{
 					"id": "11",
@@ -194,7 +603,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "12",
@@ -210,7 +620,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\D+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "13",
@@ -226,7 +640,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"31"
+					]
 				},
 				{
 					"id": "14",
@@ -242,7 +660,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"30"
+					]
 				},
 				{
 					"id": "15",
@@ -258,7 +680,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\D+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"30"
+					]
 				},
 				{
 					"id": "16",
@@ -274,7 +700,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "17",
@@ -290,7 +717,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "18",
@@ -306,7 +734,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "19",
@@ -322,7 +751,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\D+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"32"
+					]
 				},
 				{
 					"id": "20",
@@ -338,7 +771,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"32"
+					]
 				},
 				{
 					"id": "21",
@@ -354,7 +791,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "22",
@@ -370,7 +808,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\D+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "23",
@@ -386,7 +825,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[^x*]$|^\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"32"
+					]
 				},
 				{
 					"id": "24",
@@ -402,7 +845,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|\\d[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "25",
@@ -418,7 +862,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\D[\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "26",
@@ -434,7 +882,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "27",
@@ -450,7 +902,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[^\\d.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "28",
@@ -466,7 +922,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\D.]*\\s*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "29",
@@ -482,7 +942,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s-\\s*\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "30",
@@ -498,7 +959,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\S*-\\s*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "31",
@@ -514,7 +979,8 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s\\d/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "32",
@@ -530,7 +996,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\S*\\d/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"29"
+					]
 				},
 				{
 					"id": "33",
@@ -546,7 +1016,11 @@
 						}
 					},
 					"replacement": "/^[\\^~<>=]|\\|\\||^[x*]$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)*\\.[x*]$|^\\d[\\d.]*\\s*-\\s*\\D/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"22"
+					]
 				},
 				{
 					"id": "34",
@@ -562,7 +1036,8 @@
 						}
 					},
 					"replacement": "/(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "35",
@@ -578,7 +1053,8 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "36",
@@ -594,7 +1070,8 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z])?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "37",
@@ -610,7 +1087,8 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[^a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "38",
@@ -626,7 +1104,8 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "39",
@@ -642,7 +1121,8 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "40",
@@ -658,7 +1138,8 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "41",
@@ -674,7 +1155,8 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "42",
@@ -690,7 +1172,8 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|[a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "43",
@@ -706,7 +1189,11 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[^a-z0-9][\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "44",
@@ -722,7 +1209,11 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]\\/[\\w.-]+#/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "45",
@@ -738,7 +1229,11 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][^\\w.-]*\\/[\\w.-]+#/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "46",
@@ -754,7 +1249,11 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\W.-]*\\/[\\w.-]+#/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "47",
@@ -770,7 +1269,11 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\w.-]#/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "48",
@@ -786,7 +1289,11 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[^\\w.-]+#/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "49",
@@ -802,7 +1309,11 @@
 						}
 					},
 					"replacement": "/^(github|gitlab|bitbucket|gist|git(\\+[a-z]+)?):|^git@|\\.git(#.*)?$|^[a-z0-9][\\w.-]*\\/[\\W.-]+#/i",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"4"
+					]
 				},
 				{
 					"id": "50",
@@ -818,7 +1329,8 @@
 						}
 					},
 					"replacement": "/github:laidrivm\\/harness#[0-9a-f]{40}$/",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": []
 				},
 				{
 					"id": "51",
@@ -834,7 +1346,11 @@
 						}
 					},
 					"replacement": "/^github:laidrivm\\/harness#[0-9a-f]{40}/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"12"
+					]
 				},
 				{
 					"id": "52",
@@ -850,7 +1366,11 @@
 						}
 					},
 					"replacement": "/^github:laidrivm\\/harness#[0-9a-f]$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "53",
@@ -866,7 +1386,11 @@
 						}
 					},
 					"replacement": "/^github:laidrivm\\/harness#[^0-9a-f]{40}$/",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "54",
@@ -882,7 +1406,49 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "55",
@@ -898,7 +1464,49 @@
 						}
 					},
 					"replacement": "[\"Stryker was here\"]",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "56",
@@ -914,7 +1522,49 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "57",
@@ -930,7 +1580,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "58",
@@ -946,7 +1638,49 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "59",
@@ -962,7 +1696,49 @@
 						}
 					},
 					"replacement": "typeof value !== \"string\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "60",
@@ -978,7 +1754,49 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "61",
@@ -994,7 +1812,49 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "62",
@@ -1010,7 +1870,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "63",
@@ -1026,7 +1928,49 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "64",
@@ -1042,7 +1986,49 @@
 						}
 					},
 					"replacement": "key === \"harness\" || path !== key",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "65",
@@ -1058,7 +2044,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "66",
@@ -1074,7 +2102,49 @@
 						}
 					},
 					"replacement": "key !== \"harness\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "67",
@@ -1090,7 +2160,49 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "68",
@@ -1106,7 +2218,18 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"9"
+					]
 				},
 				{
 					"id": "69",
@@ -1122,7 +2245,21 @@
 						}
 					},
 					"replacement": "path === key",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "70",
@@ -1138,7 +2275,21 @@
 						}
 					},
 					"replacement": "{}",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"9"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "71",
@@ -1154,7 +2305,21 @@
 						}
 					},
 					"replacement": "HARNESS_PIN.test(value)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "72",
@@ -1170,7 +2335,21 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"9"
+					],
+					"killedBy": [
+						"14"
+					]
 				},
 				{
 					"id": "73",
@@ -1186,7 +2365,21 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"9"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "75",
@@ -1202,7 +2395,19 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"10",
+						"11",
+						"12",
+						"13",
+						"15",
+						"16",
+						"17"
+					],
+					"killedBy": [
+						"11"
+					]
 				},
 				{
 					"id": "76",
@@ -1218,7 +2423,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "77",
@@ -1234,7 +2481,49 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "78",
@@ -1250,7 +2539,49 @@
 						}
 					},
 					"replacement": "RANGE.test(value) && GIT.test(value)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "80",
@@ -1266,7 +2597,32 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"19",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "81",
@@ -1282,7 +2638,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "82",
@@ -1298,7 +2696,49 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "83",
@@ -1314,7 +2754,49 @@
 						}
 					},
 					"replacement": "value === null && typeof value !== \"object\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "84",
@@ -1330,7 +2812,49 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"19"
+					]
 				},
 				{
 					"id": "85",
@@ -1346,7 +2870,49 @@
 						}
 					},
 					"replacement": "value !== null",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "86",
@@ -1362,7 +2928,46 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Survived"
+					"status": "Survived",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					]
 				},
 				{
 					"id": "87",
@@ -1378,7 +2983,49 @@
 						}
 					},
 					"replacement": "typeof value === \"object\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "88",
@@ -1394,7 +3041,49 @@
 						}
 					},
 					"replacement": "\"\"",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "90",
@@ -1410,7 +3099,46 @@
 						}
 					},
 					"replacement": "``",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"19",
+						"2",
+						"20",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "91",
@@ -1426,7 +3154,49 @@
 						}
 					},
 					"replacement": "EXEMPT.has(key)",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "92",
@@ -1442,7 +3212,49 @@
 						}
 					},
 					"replacement": "true",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"18"
+					]
 				},
 				{
 					"id": "93",
@@ -1458,7 +3270,49 @@
 						}
 					},
 					"replacement": "false",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				},
 				{
 					"id": "94",
@@ -1474,17 +3328,60 @@
 						}
 					},
 					"replacement": ";",
-					"status": "Killed"
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"1",
+						"10",
+						"11",
+						"12",
+						"13",
+						"14",
+						"15",
+						"16",
+						"17",
+						"18",
+						"19",
+						"2",
+						"20",
+						"21",
+						"22",
+						"23",
+						"24",
+						"25",
+						"26",
+						"27",
+						"28",
+						"29",
+						"3",
+						"30",
+						"31",
+						"32",
+						"33",
+						"34",
+						"35",
+						"36",
+						"4",
+						"5",
+						"6",
+						"7",
+						"8",
+						"9"
+					],
+					"killedBy": [
+						"26"
+					]
 				}
 			]
 		}
 	},
 	"fingerprint": {
 		"bun/git-env-guard.ts": "2dbce777369c16c8a2b165ae783e4d61aabd5a79",
-		"bun/manifest-ranges.test.ts": "106d8cc2d1127240ddd11bff5f995ac6be703cb2",
+		"bun/mutation-sandbox.ts": "8f49905c3e1997723e79f546090f50aad24dba8c",
 		"bun/test-tmpdir.ts": "82346afeba08a5445dbe00da9440183eb8a5d569",
 		"bunfig.toml": "725261230eb92c6da7b80c3afd7c116ed1cb846d",
-		"stryker command": "unset $(git rev-parse --local-env-vars) GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; { { test -d .git && git rev-parse -q --verify HEAD >/dev/null; } || { rm -rf .git && git init -q && git add -A && git -c user.name=stryker -c user.email=stryker@sandbox -c author.name=stryker -c author.email=stryker@sandbox -c committer.name=stryker -c committer.email=stryker@sandbox -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qm sandbox; }; } && bun test bun/manifest-ranges",
-		"stryker options": "{\"testRunner\":\"command\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
+		"@hughescr/stryker-bun-runner": "1.6.0",
+		"@stryker-mutator/core": "10.0.0",
+		"stryker options": "{\"testRunner\":\"bun\",\"appendPlugins\":[\"@hughescr/stryker-bun-runner\"],\"coverageAnalysis\":\"perTest\",\"buildCommand\":\"bun bun/mutation-sandbox.ts\",\"thresholds\":{\"break\":null},\"reporters\":[\"clear-text\",\"progress\",\"json\"],\"incremental\":true,\"tempDirName\":\".stryker-tmp\",\"tsconfigFile\":\"tsconfig.stryker-none.json\",\"ignorePatterns\":[\"/.claude/worktrees\",\"/.claude/skills\",\"/orchestrator/secrets\",\"/orchestrator/app-key\",\"mutation\"],\"dryRunTimeoutMinutes\":15,\"timeoutFactor\":3,\"timeoutMS\":10000}"
 	}
 }
