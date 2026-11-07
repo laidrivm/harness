@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { unlocal } from "./git-local.ts";
@@ -14,4 +14,14 @@ test("asks the git on the PATH it is given, though this process has one", () => 
 	// The test-tmpdir preload removes the directory with the run's others.
 	const PATH = mkdtempSync(join(tmpdir(), "git-local-path-"));
 	expect(() => unlocal({ GIT_DIR: "/r/.git", PATH })).toThrow();
+});
+
+test("an empty PATH falls back to this process's", () => {
+	expect(unlocal({ GIT_DIR: "/r/.git", PATH: "" })).toEqual({ PATH: "" });
+});
+
+test("throws when the git it finds fails, rather than strip nothing", () => {
+	const PATH = mkdtempSync(join(tmpdir(), "git-local-fail-"));
+	writeFileSync(join(PATH, "git"), "#!/bin/sh\nexit 1\n", { mode: 0o755 });
+	expect(() => unlocal({ GIT_DIR: "/r/.git", PATH })).toThrow("exited 1");
 });

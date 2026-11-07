@@ -35,7 +35,9 @@ export function stateDir(env: Env = process.env): string {
 	// The XDG spec ignores a relative value, which would land in the tree.
 	const xdg = env.XDG_STATE_HOME ?? "";
 	// The environment's own HOME, so a caller handed one never lands in this process's; a relative one would land in
-	// the tree as well, so the account's home stands in for it.
+	// the tree as well, so this process's stands in for it.
+	// shortcut: `homedir()` (and bun's `userInfo().homedir`) return this process's HOME, so a process started with a
+	// relative one still writes under it; refuse there if a session is ever seen starting that way.
 	const home = env.HOME ?? "";
 	return isAbsolute(xdg) ? xdg : join(isAbsolute(home) ? home : homedir(), ".local", "state");
 }

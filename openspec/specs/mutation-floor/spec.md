@@ -178,15 +178,14 @@ module, SHALL fail the run before it mutates anything, naming it: the count
 would include code nothing judges, or count a module twice. A listed module
 with a test file and no stored file SHALL be mutated whole, and the run
 SHALL then fail naming the file it wrote until that file is committed: the
-count would otherwise leave the module out. A stored file SHALL record a fingerprint of
-what its results were measured against and Stryker cannot see change itself:
-the fixtures its tests import, the shared test configuration, the versions of
-the runner and of Stryker its mutants ran under, and the Stryker options and
-timeouts. It
-SHALL also store each of its test files' source and tests, and each mutant's
-covering and killing tests,
-which Stryker reads to tell a changed test from an unchanged one. A stored
-file SHALL hold nothing that depends on the machine or the checkout that
+count would otherwise leave the module out. A stored file SHALL record a
+fingerprint of what its results were measured against and Stryker cannot see
+change itself: the fixtures its tests import, the shared test configuration,
+the build step's script, the versions of the runner and of Stryker its
+mutants ran under, and the Stryker options and timeouts. It SHALL also store
+each of its test files' source and tests, and each mutant's covering and
+killing tests, which Stryker reads to tell a changed test from an unchanged
+one. A stored file SHALL hold nothing that depends on the machine or the checkout that
 wrote it — no absolute path, system, timing or test output — so that every
 clone writes the same file for the same results.
 
@@ -264,9 +263,9 @@ them by hand; deriving every importer would be machinery for a rare case.
 
 #### Scenario: Stryker's options changed
 
-- **WHEN** `stryker.config.json`'s options other than `mutate`, the command a
-  mutant runs, the runner's or Stryker's version, or the timeouts differ from
-  those a stored file records
+- **WHEN** `stryker.config.json`'s options other than `mutate`, the build
+  step's script, the runner's or Stryker's version, or the timeouts differ
+  from those a stored file records
 - **THEN** the run re-runs every listed module whole
 
 #### Scenario: A checkout with uncommitted files
