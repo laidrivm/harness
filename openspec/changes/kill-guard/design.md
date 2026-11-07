@@ -3,23 +3,26 @@
 ## Context
 
 The guard reads one Bash call's text before it runs (`bun/command-guard.ts`),
-resolves each command's name past paths, wrappers and nesting
-(`command-words.ts`, `command-parse.ts`) and refuses by rule id. It sees the
-typed line and nothing the shell computes: a variable, a substitution's
-output, what `xargs` reads from a pipe. The 06.11 calls were plain
-`kill <pid> <pid>…` with literal pids taken from `ps aux | grep` (see
+splits it into commands (`command-parse.ts`), resolves each command's name
+past paths, wrappers and nesting (`command-words.ts`) and refuses by rule id.
+It sees the typed line and nothing the shell computes: a variable, a
+substitution's output, what `xargs` reads from a pipe. The parse also removes
+quoting, so a quoted `'>'` and a redirection read alike. The 06.11 calls were
+plain `kill <pid> <pid>…` with literal pids taken from `ps aux | grep` (see
 proposal.md — Why). The card left three questions open; the decisions below
 answer them.
 
 Measured on 07.11 on this machine:
 
-- The Bash tool's shell is a child of the `claude` process, and a subagent's
-  shell has the same parent as the main session's: this agent's shell
-  (`zsh -c …`, pid 30635) and the main thread's both hang under
-  `claude --resume …` (pid 5962). Subagents run inside that one process.
+- The Bash tool's shell is a child of the `claude` process, and a subagent
+  runs inside that process: this subagent's shell (`zsh -c …`, pid 30635)
+  hangs directly under `claude --resume <the main session's id>` (pid 5962).
 - In a fresh Bash tool call, zsh's `$!` is `0`, and `kill $!` became
   `kill 0`: the call ended with exit 144 and printed nothing, the whole
   process group of that call having been signalled.
+- The second local review reproduced in zsh, on `sleep` children of its own:
+  `kill -0$(echo 9) <pid>` sends SIGKILL, `pgrep … | xargs -I-0 kill -0`
+  sends SIGTERM, and `kill '<' <pid>` sends SIGTERM to the pid.
 
 ## Goals / Non-Goals
 
@@ -27,7 +30,8 @@ Measured on 07.11 on this machine:
 
 - Refuse every form the 06.11 session used, and the forms a session would
   reach for next when that one is refused: `pkill -f`, `killall`,
-  `pgrep … | xargs kill`, `kill $(pgrep …)`.
+  `pgrep … | xargs kill`, `kill $(pgrep …)`, a `kill` behind a prefix the
+  guard does not know.
 - Keep the guard's one-bun-start cost on a call it allows: no process-table
   read, no file read.
 
@@ -64,69 +68,92 @@ Alternatives considered:
 - **Refuse every `kill`**. Rejected only because `kill %1` costs nothing to
   keep and d2ass's agents already use it.
 
-### 2. `$!`, `$PPID`, `kill -0`, `kill %1` (card question 2)
+### 2. A word, not an invocation, triggers the check
+
+A command is judged as a signal whenever one of its words, by base name, is
+`kill`, `pkill`, `killall`, `killall5` or `skill` — wherever that word stands,
+not only where `invocations` would read a command name. `invocations` finds a
+name past the prefixes it lists (`WRAPPERS`, `KEYWORDS`) and stops at any
+other: `noglob pkill bun`, `setsid pkill bun`, `arch -arm64 pkill bun`,
+`watch -n1 kill 95034`, `find . -exec kill {} ;` and zsh's `repeat 1 kill`
+all read as some other command. Growing that list is the enumeration
+*Scope a scan by what it exempts* forbids; matching the word exempts nothing
+and needs no list of prefixes.
+
+The cost is a refused search for the bare word: `git grep -n pkill`,
+`grep -rn kill .`, `echo kill`. A quoted phrase is one word and is not
+matched (`git commit -m "refuse pkill"` passes), and a pattern such as
+`'\bkill\b'` or `'[k]ill'` finds the same lines — quoted, since zsh reads an
+unquoted `[k]ill` as a glob and fails on no match; the reason says so.
+
+- `pkill`, `killall`, `killall5` and `skill` pick their targets by name
+  across the machine, and are refused as `kill-by-name` in any position.
+- `kill` passes only where it is the command's name — the first word that can
+  be one, past assignments, redirections and reserved words (`FOO=1 kill %1`,
+  `if kill -0 …`, `{ kill %1; }`) — so a `kill` behind any prefix at all,
+  `xargs`, `command`, `sudo`, `noglob` or one never listed, is refused as
+  `kill-signal`. `xargs` appends the pids it reads, and with `-I` or `-J`
+  rewrites any word of `kill`'s, so no operand of a wrapped `kill` can be
+  trusted. Which word can be a name is decided by one predicate in
+  `command-words.ts`, lifted out of `invocations` and used by both.
+- A `kill` in a command a substitution interrupts (`FED`) is refused: the
+  substitution's output joins the words, even the one before it —
+  `kill -0$(echo 9)` is `kill -09`.
+
+### 3. The words a passing `kill` may hold (card question 2)
+
+Every word after `kill` is read raw, in order, and each must fit; anything
+else refuses the call:
+
+1. A redirection glued to its target (`2>/dev/null`, `>out`, `2>&1`) is
+   skipped: if it was quoted, `kill` gets a word that names no process. An
+   open one (`>`, `2>`, `<`) is refused, since read as an operator it would
+   hide the next word, and if quoted it hides nothing from `kill`:
+   `kill '<' 95034` signals 95034.
+2. An optional signal: `-0`, which sends none; `-s` or `-n` with the next
+   word matching `^[A-Za-z0-9]+$`; or one word matching `^-[A-Za-z0-9]+$`
+   (`-9`, `-KILL`, `-l`). Then an optional `--`.
+3. The operands. After `-0` each must match `^[0-9]+$`: a liveness probe of a
+   pid, nothing more — bash's `kill` still reads `-s KILL` after a first
+   `-0`, and a `-9` there is a process group, so neither is let through.
+   After any other signal each must match `^%[A-Za-z0-9_+%-]*$`, a literal job
+   spec.
+
+Matching each word whole is what keeps an expansion out: `$` and glob
+characters fail every pattern, and an expansion glued to `%` or `-` splits
+into more words than the guard read — in zsh `x=(1 95034); kill %$x` runs
+`kill %1 95034`.
+
+So:
 
 - `$!` is refused like any variable. It would name the line's own last
   background job, but in a shell that started none zsh reads it as `0`, and
   `kill 0` signals the caller's whole process group (measured above).
 - `$PPID` is refused: the Bash tool's parent is `claude` itself.
-- `kill -0 <pid>` passes: signal 0 sends nothing and only tests that the pid
-  exists. So do `kill -l` and `kill -L`, which list signal names. These three
-  are decided first, before the wrapper and substitution checks below, so
-  `xargs kill -0` and `kill -0 $(pgrep bun)` pass too: whatever pids reach
-  them, no signal is sent. Only the `-0` spelling counts; `kill -s 0` is
-  read as any other signal.
-- `kill %1` passes, as decided above; so do `kill -9 %1`, `kill -s KILL %1`
-  and `kill -- %1`. The signal is the first word when it starts with `-`
-  (`-s` and `-n` take the next word as theirs), and a `--` after it is passed
-  over; every word left is an operand.
-- Each word is matched whole, anchored at both ends: the signal as
-  `-[A-Za-z0-9]+` (or a bare `[A-Za-z0-9]+` after `-s`/`-n`), each operand
-  as `%[A-Za-z0-9_+%-]*`. A word carrying `$`, a glob character or anything
-  else fails the match, because an expansion glued to `%` or `-` splits into
-  more words than the guard read: in zsh `x=(1 95034); kill %$x` runs
-  `kill %1 95034`.
-- A word starting with `-` among the operands is a process group, and is
-  refused like a pid.
-
-### 3. Wrappers and substitutions
-
-A `kill` with a wrapper among the words before it — `xargs kill`,
-`command kill`, `env kill`, `sudo kill` — is refused whatever its operands.
-`xargs` appends the pids it reads from the pipe, so `xargs kill %1` would
-signal pids the guard never saw; telling `xargs` from the harmless wrappers
-would mean modelling each wrapper's options, which `invocations`
-deliberately does not do. The test is a predicate exported from
-`command-words.ts` over `WRAPPERS`, applied to the words of `part` before
-the name, so it reads wrappers exactly as `invocations` does; an assignment,
-a redirection or a reserved word before the name (`FOO=1 kill %1`,
-`if kill -0 …`, `{ kill %1; }`) is not a wrapper, and passes. A `kill` in a
-command a substitution interrupts (`FED`) is refused, since the
-substitution's output becomes operands the parse never holds.
-
-`pkill` and `killall` are refused however `invocations` reaches them. It
-stopped at zsh's precommand modifiers `noglob` and `nocorrect`, and at
-`caffeinate`, reading them as the command — and the Bash tool's shell is
-zsh — so those three join `WRAPPERS`. That widens every check, not only this
-one: `noglob git commit` on main was not refused before. `watch` and
-`find … -exec` run their command from a string or a template the guard does
-not model, and stay with the shortened rule.
+- `kill -0 95034` passes; `xargs kill -0`, `kill -0 $(pgrep bun)` and
+  `kill -0 -s KILL 95034` do not. `kill -l` passes as a signal word with no
+  operand; `kill -l 15` is refused, a cost accepted.
+- `kill %1`, `kill -9 %1`, `kill -s KILL %1`, `kill -- %+` and
+  `kill %1 2>/dev/null` pass; a bare `kill` passes, signalling nothing.
 
 ### 4. The reason (card question 3)
 
-One reason for the two rule ids, `kill-signal` and `kill-by-name`: stop a
-background task you started with `TaskStop`; a job this same line started is
-`kill %N`; any other process is not the session's to signal — ask the user.
-It does not suggest a pid from the session's own output, since decision 1
-refuses that pid too.
+One reason for the two rule ids: stop a background task you started with
+`TaskStop`; a job this same line started is `kill %N`; any other process is
+not the session's to signal — ask the user. It adds that the bare word is
+matched anywhere, so a search for it is written as `'[k]ill'`. It does not
+suggest a pid from the session's own output, since decision 1 refuses that
+pid too.
 
 ### 5. Where the check lives
 
 Two functions in `command-guard-exec.ts`, beside `bunTestRetry` and
 `depsArgs`, each returning a reason or `undefined` as they do, one per rule
-id: `killByName(name)` and `killSignal(part, name, rest)`, the second
-reading the invocation's words with `args()` and `FED`. `check()` blocks
-each under its own id in the same place. No new module.
+id: `killByName(part)` and `killSignal(part)`. Both take the command's words,
+not an invocation, so `check()` calls them once per command, before its walk
+over `invocations`, and blocks each under its own id. The name-position
+predicate is lifted from `invocations` into an export of `command-words.ts`,
+with `invocations` switched to it in the same change. No new module.
 
 ## Risks / Trade-offs
 
@@ -135,22 +162,23 @@ each under its own id in the same place. No new module.
   `TaskStop`; a process already detached goes to the user. d2ass's untracked
   `settings.local.json` allows three `pkill -f` patterns for its dev server;
   those calls become refusals (proposal.md — Impact).
+- [A search for the bare word is refused] → the reason names `'[k]ill'`, which
+  finds the same lines.
 - [A signal sent from a program text] → inline or uncommitted: a `-c`
   string with `$` in it, `bun -e`, `python3 -c` and an uncommitted script are
   refused by the existing unread-program and interpreter checks. A committed
-  script's `process.kill` runs unread, and stays with the rule.
-- [Over-refusal of contrived forms such as `env -i kill %1`] → accepted, the
-  safe way to be wrong, as for the guard's other checks.
-- [Senders the guard does not read: `playwright-cli kill-all`, which the
-  vendored `core/skills/playwright-cli` names and which stops every
-  Playwright daemon of the user; `fuser -k`; `find … -exec kill`; `watch`;
-  `launchctl kill`] → not gated, since no session was seen using one against
-  another's process; they are what the shortened Safety rule names.
+  script's `process.kill`, and a command string a tool runs itself
+  (`watch "kill 95034"`, `sh -c` inside a committed script), run unread, and
+  stay with the rule.
+- [Senders by another name: `playwright-cli kill-all`, which the vendored
+  `core/skills/playwright-cli` names and which stops every Playwright daemon
+  of the user; `fuser -k`] → not gated, since no session was seen using one
+  against another's process; they are what the shortened Safety rule names.
 
 ## Migration Plan
 
 Ships with the next harness pin bump; nothing to migrate. In the same pull
 request the stop-gap Safety rule in `core/rules.md` is shortened, under
 `agent-rulebook`'s *A rule only partly covered*, to the senders the guard
-cannot read: a committed script, `playwright-cli kill-all`, `fuser -k`,
-`find … -exec kill`.
+cannot read: a committed script, a command string a tool runs itself,
+`playwright-cli kill-all`, `fuser -k`.
