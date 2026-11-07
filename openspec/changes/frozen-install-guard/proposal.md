@@ -22,14 +22,19 @@ rather than a fix, because it changes how an existing gate behaves
   id `frozen-install`. The reason names `bun run deps`, and a plain
   `bun install`, which prompts, for the cases the script cannot serve: a
   re-pin, a `package.json` with uncommitted edits, a `bun.lock` that lacks
-  the pin. The `PreToolUse` hook decides before the `ask` entry prompts, so
-  the agent reads the refusal and retries with no prompt shown.
+  the pin; a frozen install with other flags is the user's to run. The
+  `PreToolUse` hook decides before the `ask` entry prompts, so the agent
+  reads the refusal and retries with no prompt shown.
+- A frozen install inside a committed script — `bun run deps` itself, or a
+  consumer's own `setup` — is not refused: the guard reads a script's text
+  through the same walk, and only the typed line is checked for this.
 - Every other literal install — a plain `bun install`, `bun i`, `bun add`,
   `bun install <package>` — keeps prompting: those change the lockfile and
   stay the user's call. The `ask` entries are not touched.
 - The stop-gap Process rule in `core/rules.md` («Install dependencies with
-  `bun run deps` …») is deleted, under *A mechanised prohibition leaves its
-  prose home*; its exception moves into the refusal's reason.
+  `bun run deps` …») is shortened to what the guard cannot see — a plain
+  `bun install`, which it leaves to the prompt — under agent-rulebook's
+  *A rule only partly covered*; the frozen spelling leaves it.
 - `README.md`'s sentence that every literal `bun install` prompts names the
   refusal of the frozen form.
 
@@ -54,13 +59,15 @@ None.
 ## Impact
 
 - Changed: `bun/command-guard-exec.ts` (a `frozenInstall` check beside
-  `depsArgs`), `bun/command-guard.ts` (the call, the block, the header),
+  `depsArgs`), `bun/command-guard.ts` (the call, the block, the header, and
+  whether a line was typed or read from a script),
   `bun/command-guard-deps.test.ts` (the cases), `core/rules.md` (the rule
-  deleted), `README.md` (one sentence).
+  shortened), `README.md` (one sentence).
 - Reach: hooks run from the installed harness, so the refusal takes effect in
   this repository once its self-pin passes the merge, and in a consumer at
   the bump that crosses it. Nothing to sync: no settings text changes.
 - Consumers measured 2026-11-07 (d2ass, mellon, skills, skills-mutation,
   woop-woop): no doc tells an agent to type a frozen install once the harness
   is installed; the frozen installs in their trees run in CI, in the board
-  loop's clone or in a hook's command, none through the Bash tool.
+  loop's clone, in a hook's command or in a `package.json` script, and the
+  last is read as a script, which this check leaves alone.

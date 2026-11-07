@@ -12,8 +12,9 @@ not touched.
       `bun i --frozen-lockfile`, `bun install --frozen-lockfile --ignore-scripts`,
       `bun install --frozen-lockfile 2>&1` and
       `bun --cwd sub install --frozen-lockfile` each block as
-      `{ code: 2, rule: "frozen-install" }`, the reason naming `bun run deps`
-      and a plain `bun install` (`a-typed-frozen-install-is-refused`);
+      `{ code: 2, rule: "frozen-install" }`, the reason naming `bun run deps`,
+      a plain `bun install` and other flags as the user's
+      (`a-typed-frozen-install-is-refused`);
       `cd sub && bun install --frozen-lockfile`,
       `bun install --frozen-lockfile | tail -5` and
       `bash -c "bun i --frozen-lockfile"` block the same
@@ -23,25 +24,38 @@ not touched.
       `bun/settings.test.ts`); `echo bun install --frozen-lockfile`,
       `git commit -m "bun install --frozen-lockfile"`,
       `bun run install --frozen-lockfile` and `bun add --frozen-lockfile x`
-      get no `frozen-install` rule (`the-flag-only-as-text`). Verify they fail
-      on today's guard
+      get no `frozen-install` rule (`the-flag-only-as-text`); in a fabricated
+      checkout whose committed `package.json` holds
+      `"deps": "bun install --frozen-lockfile"` and
+      `"setup": "bun install --frozen-lockfile && bun run build"`,
+      `bun run deps` and `bun run setup` get no `frozen-install` rule
+      (`a-frozen-install-inside-a-committed-script`) — the existing
+      *the script read from package.json* case keeps passing. Verify the
+      refusing cases fail on today's guard
 - [ ] 1.2 Then `frozenInstall(name, rest)` in `bun/command-guard-exec.ts`
       beside `depsArgs`: `bun`, the subcommand found by `subcommand(args(rest),
       ["install", "i"])`, and the word `--frozen-lockfile` after it; the
       reason as the spec's *A typed frozen install is refused* names it. Called
       and blocked as `frozen-install` from `check()` in
-      `bun/command-guard.ts`; both header comments name it, and the exec
-      file's comment says a miss prompts (design decision 1). Verify
+      `bun/command-guard.ts` only on a typed line: `check(line, script =
+      false)`, `interpreter()` handed `(line) => check(line, true)`, the
+      `bash -c` and `eval` recursions passing the flag on (design decision
+      3); both header comments name it, and the exec file's comment says a
+      miss prompts (design decision 1). Verify
       `bun test bun/command-guard` passes and both files stay under the
       `.ts` line cap
 
-## 2. The prose leaves
+## 2. The prose shrinks
 
-- [ ] 2.1 Delete the Process rule «Install dependencies with `bun run deps`,
-      never a literal `bun install` …» from `core/rules.md`, and grep
-      `core/`, `CLAUDE.md` and `README.md` for prose stating the same
-      prohibition (*A mechanised prohibition leaves its prose home*); the
-      re-pin line in `core/git-and-prs.md` stays, since it asks for a plain
+- [ ] 2.1 Shorten the Process rule «Install dependencies with `bun run deps`,
+      never a literal `bun install` …» in `core/rules.md` to what the guard
+      cannot see (design decision 4): install with `bun run deps`, and type a
+      plain `bun install` only after a re-pin, or if `package.json` has
+      uncommitted edits or `bun.lock` lacks the pin — the frozen spelling and
+      its prompt leave it. Grep `core/`, `CLAUDE.md` and `README.md` for
+      other prose stating the frozen prohibition (agent-rulebook's *A
+      mechanised prohibition leaves its prose home*); the re-pin line in
+      `core/git-and-prs.md` stays, since it asks for a plain
       `bun install`. In `README.md`'s bootstrap paragraph, «every literal
       `bun install` prompts» says the guard refuses the frozen form, naming
       `bun run deps`. Verify `bun test` over the rulebook and README suites
