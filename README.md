@@ -78,7 +78,7 @@ jobs:
 
 ## Hooks and commands
 
-Until the install has run, the hooks stand aside: the bootstrap lets only the install through, and in a cloud session the `SessionStart` hook runs that install itself. An agent installs with `bun run deps`, the script `"deps": "bun install --frozen-lockfile"` that sync adds to `package.json`, refusing to overwrite a `deps` of the project's own: the `ask` entries match the typed text, so every literal `bun install` prompts while the script does not ([agent-permissions](openspec/specs/agent-permissions/spec.md)). A project whose `allow` lacks `Bash(bun run *)` may add `Bash(bun run deps)` for the default mode. Each guard and gate records what it decides in the gate ledger, `gates.jsonl` under the user's state directory ([gate-ledger](openspec/specs/gate-ledger/spec.md)).
+Until the install has run, the hooks stand aside: the bootstrap lets only the install through, and in a cloud session the `SessionStart` hook runs that install itself. An agent installs with `bun run deps`, the script `"deps": "bun install --frozen-lockfile"` that sync adds to `package.json`, refusing to overwrite a `deps` of the project's own: the `ask` entries match the typed text, so every literal `bun install` the command guard lets through prompts while the script does not, and the guard refuses a typed `bun install --frozen-lockfile`, naming `bun run deps` ([agent-permissions](openspec/specs/agent-permissions/spec.md)). A project whose `allow` lacks `Bash(bun run *)` may add `Bash(bun run deps)` for the default mode. Each guard and gate records what it decides in the gate ledger, `gates.jsonl` under the user's state directory ([gate-ledger](openspec/specs/gate-ledger/spec.md)).
 
 | Piece | What it is for | Contract |
 |---|---|---|

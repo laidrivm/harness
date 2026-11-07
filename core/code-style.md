@@ -48,8 +48,9 @@ single-source rule this file inherits.
   `trustedDependencies` yourself — surface `bun pm untrusted` output and
   let the user decide (unattended: user — report that output as `BLOCKED`).
 - Automated installs — CI jobs, hooks, scripts — use `bun install
-  --frozen-lockfile`; plain `bun install` is only a developer resolving
-  versions locally on purpose (it is also what installs the git hooks).
+  --frozen-lockfile`, and an agent installs with `bun run deps`; plain
+  `bun install` is only a developer resolving versions locally on purpose
+  (it is also what installs the git hooks).
 - Never state a framework, library or tool's behaviour from memory — a
   method, a default, a file it reads — check the docs or ask the tool
   itself; models invent all three.

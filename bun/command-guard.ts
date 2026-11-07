@@ -6,8 +6,9 @@
  * has merged, a force-push wherever the flag sits, the `gh` commands that
  * publish text on the user's behalf, a shell handed a program the line does not
  * spell out, a `bunx` that would install what it runs, a test run that
- * retries a failing test until it passes, and a `bun run deps` given words
- * after the script's name.
+ * retries a failing test until it passes, a `bun run deps` given words
+ * after the script's name, and a frozen `bun install` on the typed line —
+ * never in a script's text, which `check`'s `script` flag tells apart.
  *
  * It runs without an `if` field on purpose. A permission pattern — which is
  * what `if` takes — matches the command word literally, so `/usr/bin/git` and
@@ -36,7 +37,7 @@
 
 import { existsSync } from "node:fs";
 import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
-import { bunTestRetry, bunxInstall, depsArgs, shellWords, unreadProgram } from "./command-guard-exec.ts";
+import { bunTestRetry, bunxInstall, depsArgs, frozenInstall, shellWords, unreadProgram } from "./command-guard-exec.ts";
 import { ghApiWrite, ghPublish } from "./command-guard-gh.ts";
 import { interpreter, type Refusal } from "./command-guard-interpreters.ts";
 import { commands } from "./command-parse.ts";
@@ -125,7 +126,8 @@ function refuseStranded(target: string): void {
 		);
 }
 
-function check(command: string): void {
+/** `script` says `command` is a committed script's text, not the typed line. */
+function check(command: string, script = false): void {
 	for (const part of commands(command, block)) {
 		// Every candidate, not the first: past a wrapper the parser cannot tell
 		// an option's operand from the command it wraps, and a candidate naming
@@ -139,6 +141,8 @@ function check(command: string): void {
 			if (retry) block("bun-test-retry", retry);
 			const deps = depsArgs(part, name, rest);
 			if (deps) block("deps-args", deps);
+			const frozen = script ? undefined : frozenInstall(name, rest);
+			if (frozen) block("frozen-install", frozen);
 			// `bash -c "git push --force"`, `bash -lc …` and `bash -oc pipefail
 			// …` too: the program is the first operand after the options and
 			// their values, wherever the `c` stood. Every word from there is read
@@ -146,14 +150,14 @@ function check(command: string): void {
 			// may be it, and joined to the next it could hide its last command.
 			const shell = SHELLS.has(name) ? shellWords(rest) : null;
 			if (shell?.command) {
-				for (const word of rest.slice(shell.start)) check(word);
+				for (const word of rest.slice(shell.start)) check(word, script);
 				continue;
 			}
 			if (name === "eval") {
-				check(rest.join(" "));
+				check(rest.join(" "), script);
 				continue;
 			}
-			const refused = interpreter(name, rest, dirs, index === 0, check);
+			const refused = interpreter(name, rest, dirs, index === 0, (line) => check(line, true));
 			if (refused) refusals.push(refused);
 			if (name === "cd" || name === "pushd" || name === "popd") {
 				// `popd` returns to a stack this reader does not keep; bare `cd` goes home.
