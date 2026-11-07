@@ -20,8 +20,11 @@ test("an empty PATH falls back to this process's", () => {
 	expect(unlocal({ GIT_DIR: "/r/.git", PATH: "" })).toEqual({ PATH: "" });
 });
 
-test("throws when the git it finds fails, rather than strip nothing", () => {
+test.each([
+	["fails", "exit 1", "exited 1"],
+	["lists no GIT_DIR", "echo GIT_WORK_TREE", "exited 0"],
+])("throws when the git it finds %s, rather than strip nothing", (_, body, message) => {
 	const PATH = mkdtempSync(join(tmpdir(), "git-local-fail-"));
-	writeFileSync(join(PATH, "git"), "#!/bin/sh\nexit 1\n", { mode: 0o755 });
-	expect(() => unlocal({ GIT_DIR: "/r/.git", PATH })).toThrow("exited 1");
+	writeFileSync(join(PATH, "git"), `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+	expect(() => unlocal({ GIT_DIR: "/r/.git", PATH })).toThrow(message);
 });

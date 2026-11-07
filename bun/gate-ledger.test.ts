@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { isAbsolute, join } from "node:path";
+import { join } from "node:path";
 import { cleanup, event, fabricate, run } from "./command-guard.fixture.ts";
 import { stateDir } from "./gate-ledger.ts";
 
@@ -74,8 +74,7 @@ describe("where the ledger lives", () => {
 	});
 
 	test("a relative HOME handed in gives way to this process's", () => {
-		const state = stateDir({ HOME: "." });
-		expect([isAbsolute(state), state]).toEqual([true, join(homedir(), ".local", "state")]);
+		expect(stateDir({ HOME: "." })).toBe(join(homedir(), ".local", "state"));
 	});
 
 	test("a second record appends without rewriting the first", () => {

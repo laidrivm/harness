@@ -116,8 +116,10 @@ mutants SHALL be judged by the test files whose path begins with
 those files that reached it in the module's dry run, in the test's own
 process, and a mutant none reached SHALL read `NoCoverage` without a run: a
 mutant reached only in a process a test starts counts as reached by none. A
-module the list does not name SHALL NOT be mutated, and
-the run SHALL name it. A listed module that is not tracked, or that no such
+static mutant, reached as the module loads rather than in any test, SHALL run
+every test of those files, as Stryker runs one, and never read `NoCoverage`
+for want of a covering test. A module the list does not name SHALL NOT be
+mutated, and the run SHALL name it. A listed module that is not tracked, or that no such
 test file matches, SHALL fail the run naming it: nothing could kill its
 mutants, and a crashed run is not a count.
 
@@ -245,8 +247,9 @@ one edited, added or deleted — differ from the copies it holds, or whose
 fingerprint no longer matches — a
 branch's changes, and any stale file a merge left. A fingerprint mismatch,
 and a module with no stored file, SHALL re-run whole; the rest
-incrementally, Stryker re-running only the mutants whose source or covering
-tests changed. The baseline SHALL be the same run asked for every listed
+incrementally, Stryker re-running the mutants whose source or covering tests
+changed and, where a test file changed, every survivor, `Survived` or
+`NoCoverage`, whose covering tests did not. The baseline SHALL be the same run asked for every listed
 module. A run that would mutate SHALL fail first while the checkout holds an
 edited or untracked file outside `mutation/`, naming each, since Stryker
 copies the working tree and not `HEAD`. Whether or not any module needs a
@@ -297,10 +300,12 @@ them by hand; deriving every importer would be machinery for a rare case.
 #### Scenario: A test file changed
 
 - **WHEN** the list names `bun/<name>.ts` and `bun/<name>-steps.ts`, and only
-  `bun/<name>-steps.test.ts` changed since the stored files were written
+  `bun/<name>-steps.test.ts` changed since the stored files were written,
+  importing the same fixtures as before
 - **THEN** the run re-runs incrementally every listed module whose test files
   include that path — `bun/<name>.ts` and `bun/<name>-steps.ts` — and no
-  other, and in each only the mutants whose covering or killing tests changed
+  other, and in each the mutants whose covering or killing tests changed and
+  every survivor; a change to the fixtures it imports re-runs them whole
 
 #### Scenario: A test file deleted
 
