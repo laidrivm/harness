@@ -71,26 +71,46 @@ Alternatives considered:
   `kill 0` signals the caller's whole process group (measured above).
 - `$PPID` is refused: the Bash tool's parent is `claude` itself.
 - `kill -0 <pid>` passes: signal 0 sends nothing and only tests that the pid
-  exists. So do `kill -l` and `kill -L`, which list signal names.
+  exists. So do `kill -l` and `kill -L`, which list signal names. These three
+  are decided first, before the wrapper and substitution checks below, so
+  `xargs kill -0` and `kill -0 $(pgrep bun)` pass too: whatever pids reach
+  them, no signal is sent. Only the `-0` spelling counts; `kill -s 0` is
+  read as any other signal.
 - `kill %1` passes, as decided above; so do `kill -9 %1`, `kill -s KILL %1`
   and `kill -- %1`. The signal is the first word when it starts with `-`
   (`-s` and `-n` take the next word as theirs), and a `--` after it is passed
   over; every word left is an operand.
+- Each word is matched whole, anchored at both ends: the signal as
+  `-[A-Za-z0-9]+` (or a bare `[A-Za-z0-9]+` after `-s`/`-n`), each operand
+  as `%[A-Za-z0-9_+%-]*`. A word carrying `$`, a glob character or anything
+  else fails the match, because an expansion glued to `%` or `-` splits into
+  more words than the guard read: in zsh `x=(1 95034); kill %$x` runs
+  `kill %1 95034`.
 - A word starting with `-` among the operands is a process group, and is
   refused like a pid.
 
 ### 3. Wrappers and substitutions
 
-A `kill` whose name is not the command's first word after assignments and
-redirections — `xargs kill`, `command kill`, `env kill`, `sudo kill` — is
-refused whatever its operands. `xargs` appends the pids it reads from the
-pipe, so `xargs kill %1` would signal pids the guard never saw; telling
-`xargs` from the harmless wrappers would mean modelling each wrapper's
-options, which `invocations` deliberately does not do. A `kill` in a command
-a substitution interrupts (`FED`) is refused, since the substitution's output
-becomes operands the parse never holds. `pkill` and `killall` are refused
-however they are reached; `invocations` already finds them past every
-wrapper.
+A `kill` with a wrapper among the words before it — `xargs kill`,
+`command kill`, `env kill`, `sudo kill` — is refused whatever its operands.
+`xargs` appends the pids it reads from the pipe, so `xargs kill %1` would
+signal pids the guard never saw; telling `xargs` from the harmless wrappers
+would mean modelling each wrapper's options, which `invocations`
+deliberately does not do. The test is a predicate exported from
+`command-words.ts` over `WRAPPERS`, applied to the words of `part` before
+the name, so it reads wrappers exactly as `invocations` does; an assignment,
+a redirection or a reserved word before the name (`FOO=1 kill %1`,
+`if kill -0 …`, `{ kill %1; }`) is not a wrapper, and passes. A `kill` in a
+command a substitution interrupts (`FED`) is refused, since the
+substitution's output becomes operands the parse never holds.
+
+`pkill` and `killall` are refused however `invocations` reaches them. It
+stopped at zsh's precommand modifiers `noglob` and `nocorrect`, and at
+`caffeinate`, reading them as the command — and the Bash tool's shell is
+zsh — so those three join `WRAPPERS`. That widens every check, not only this
+one: `noglob git commit` on main was not refused before. `watch` and
+`find … -exec` run their command from a string or a template the guard does
+not model, and stay with the shortened rule.
 
 ### 4. The reason (card question 3)
 
@@ -102,9 +122,11 @@ refuses that pid too.
 
 ### 5. Where the check lives
 
-A `killSignal(part, name, rest)` in `command-guard-exec.ts`, beside
-`bunTestRetry` and `depsArgs`, which already read one invocation's words with
-`args()` and `FED`; `check()` calls it in the same place. No new module.
+Two functions in `command-guard-exec.ts`, beside `bunTestRetry` and
+`depsArgs`, each returning a reason or `undefined` as they do, one per rule
+id: `killByName(name)` and `killSignal(part, name, rest)`, the second
+reading the invocation's words with `args()` and `FED`. `check()` blocks
+each under its own id in the same place. No new module.
 
 ## Risks / Trade-offs
 
@@ -113,17 +135,22 @@ A `killSignal(part, name, rest)` in `command-guard-exec.ts`, beside
   `TaskStop`; a process already detached goes to the user. d2ass's untracked
   `settings.local.json` allows three `pkill -f` patterns for its dev server;
   those calls become refusals (proposal.md — Impact).
-- [A rule for `kill` inside a program text the guard cannot read] → already
-  refused: a `-c` string with `$` in it, `bun -e`, `python3 -c` and an
-  uncommitted script are refused by the existing unread-program and
-  interpreter checks before any signal.
+- [A signal sent from a program text] → inline or uncommitted: a `-c`
+  string with `$` in it, `bun -e`, `python3 -c` and an uncommitted script are
+  refused by the existing unread-program and interpreter checks. A committed
+  script's `process.kill` runs unread, and stays with the rule.
 - [Over-refusal of contrived forms such as `env -i kill %1`] → accepted, the
   safe way to be wrong, as for the guard's other checks.
-- [Another signal sender, such as `launchctl kill` or `osascript`] → not
-  covered; no session was seen using one, and a gate against an unseen
-  threat is not added.
+- [Senders the guard does not read: `playwright-cli kill-all`, which the
+  vendored `core/skills/playwright-cli` names and which stops every
+  Playwright daemon of the user; `fuser -k`; `find … -exec kill`; `watch`;
+  `launchctl kill`] → not gated, since no session was seen using one against
+  another's process; they are what the shortened Safety rule names.
 
 ## Migration Plan
 
-Ships with the next harness pin bump; nothing to migrate. The stop-gap
-Safety rule in `core/rules.md` is deleted in the same pull request.
+Ships with the next harness pin bump; nothing to migrate. In the same pull
+request the stop-gap Safety rule in `core/rules.md` is shortened, under
+`agent-rulebook`'s *A rule only partly covered*, to the senders the guard
+cannot read: a committed script, `playwright-cli kill-all`, `fuser -k`,
+`find … -exec kill`.
