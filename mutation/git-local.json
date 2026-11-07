@@ -2,7 +2,7 @@
 	"schemaVersion": "1.0",
 	"testFiles": {
 		"bun/git-local.test.ts": {
-			"source": "import { expect, test } from \"bun:test\";\nimport { mkdtempSync, writeFileSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { join } from \"node:path\";\nimport { unlocal } from \"./git-local.ts\";\n\ntest(\"drops every variable git names as local, keeps the rest, and leaves its argument whole\", () => {\n\tconst env = { GIT_DIR: \"/r/.git\", GIT_WORK_TREE: \"/r\", GIT_INDEX_FILE: \"/r/i\", GIT_EDITOR: \"true\", HOME: \"/h\" };\n\texpect(unlocal(env)).toEqual({ GIT_EDITOR: \"true\", HOME: \"/h\" });\n\texpect(Object.keys(env)).toHaveLength(5);\n});\n\ntest(\"asks the git on the PATH it is given, though this process has one\", () => {\n\t// The test-tmpdir preload removes the directory with the run's others.\n\tconst PATH = mkdtempSync(join(tmpdir(), \"git-local-path-\"));\n\texpect(() => unlocal({ GIT_DIR: \"/r/.git\", PATH })).toThrow();\n});\n\ntest(\"an empty PATH falls back to this process's\", () => {\n\texpect(unlocal({ GIT_DIR: \"/r/.git\", PATH: \"\" })).toEqual({ PATH: \"\" });\n});\n\ntest(\"throws when the git it finds fails, rather than strip nothing\", () => {\n\tconst PATH = mkdtempSync(join(tmpdir(), \"git-local-fail-\"));\n\twriteFileSync(join(PATH, \"git\"), \"#!/bin/sh\\nexit 1\\n\", { mode: 0o755 });\n\texpect(() => unlocal({ GIT_DIR: \"/r/.git\", PATH })).toThrow(\"exited 1\");\n});\n",
+			"source": "import { expect, test } from \"bun:test\";\nimport { mkdtempSync, writeFileSync } from \"node:fs\";\nimport { tmpdir } from \"node:os\";\nimport { join } from \"node:path\";\nimport { unlocal } from \"./git-local.ts\";\n\ntest(\"drops every variable git names as local, keeps the rest, and leaves its argument whole\", () => {\n\tconst env = { GIT_DIR: \"/r/.git\", GIT_WORK_TREE: \"/r\", GIT_INDEX_FILE: \"/r/i\", GIT_EDITOR: \"true\", HOME: \"/h\" };\n\texpect(unlocal(env)).toEqual({ GIT_EDITOR: \"true\", HOME: \"/h\" });\n\texpect(Object.keys(env)).toHaveLength(5);\n});\n\ntest(\"asks the git on the PATH it is given, though this process has one\", () => {\n\t// The test-tmpdir preload removes the directory with the run's others.\n\tconst PATH = mkdtempSync(join(tmpdir(), \"git-local-path-\"));\n\texpect(() => unlocal({ GIT_DIR: \"/r/.git\", PATH })).toThrow();\n});\n\ntest(\"an empty PATH falls back to this process's\", () => {\n\texpect(unlocal({ GIT_DIR: \"/r/.git\", PATH: \"\" })).toEqual({ PATH: \"\" });\n});\n\ntest.each([\n\t[\"fails\", \"exit 1\", \"exited 1\"],\n\t[\"lists no GIT_DIR\", \"echo GIT_WORK_TREE\", \"exited 0\"],\n])(\"throws when the git it finds %s, rather than strip nothing\", (_, body, message) => {\n\tconst PATH = mkdtempSync(join(tmpdir(), \"git-local-fail-\"));\n\twriteFileSync(join(PATH, \"git\"), `#!/bin/sh\\n${body}\\n`, { mode: 0o755 });\n\texpect(() => unlocal({ GIT_DIR: \"/r/.git\", PATH })).toThrow(message);\n});\n",
 			"tests": [
 				{
 					"id": "0",
@@ -40,7 +40,17 @@
 					"location": {
 						"start": {
 							"column": 1,
-							"line": 24
+							"line": 27
+						}
+					}
+				},
+				{
+					"id": "4",
+					"name": "bun/git-local.test.ts > throws when the git it finds lists no GIT_DIR, rather than strip nothing",
+					"location": {
+						"start": {
+							"column": 1,
+							"line": 27
 						}
 					}
 				}
@@ -49,7 +59,7 @@
 	},
 	"files": {
 		"bun/git-local.ts": {
-			"source": "/**\n * `env` less every variable `git rev-parse --local-env-vars` names. A session or a run started under a git hook\n * inherits its `GIT_DIR` and `GIT_WORK_TREE`, which outrank both `-C` and a directory's own `.git`, so a git given\n * them reads another repository. The list is git's own and reads no repository, so it is asked in this process's\n * environment with only `env`'s `PATH`, where one is set: the git found there is the one `env`'s callers then run.\n * A probe that fails throws rather than strip nothing, which would pass every variable on.\n */\nexport function unlocal(env: Record<string, string | undefined>): Record<string, string | undefined> {\n\tconst probe = Bun.spawnSync([\"git\", \"rev-parse\", \"--local-env-vars\"], {\n\t\tenv: { ...process.env, PATH: env.PATH || process.env.PATH },\n\t});\n\tif (!probe.success) throw new Error(`git rev-parse --local-env-vars exited ${probe.exitCode}`);\n\tconst local = new Set(probe.stdout.toString().split(\"\\n\"));\n\treturn Object.fromEntries(Object.entries(env).filter(([key]) => !local.has(key)));\n}\n",
+			"source": "/**\n * `env` less every variable `git rev-parse --local-env-vars` names. A session or a run started under a git hook\n * inherits its `GIT_DIR` and `GIT_WORK_TREE`, which outrank both `-C` and a directory's own `.git`, so a git given\n * them reads another repository. The list is git's own and reads no repository, so it is asked in this process's\n * environment with only `env`'s `PATH`, where one is set: the git found there is the one `env`'s callers then run.\n * A probe that fails, or whose list lacks `GIT_DIR`, throws rather than strip nothing, which would pass every variable\n * on.\n */\nexport function unlocal(env: Record<string, string | undefined>): Record<string, string | undefined> {\n\tconst probe = Bun.spawnSync([\"git\", \"rev-parse\", \"--local-env-vars\"], {\n\t\tenv: { ...process.env, PATH: env.PATH || process.env.PATH },\n\t});\n\tconst local = new Set(probe.stdout.toString().split(\"\\n\"));\n\tif (!probe.success || !local.has(\"GIT_DIR\"))\n\t\tthrow new Error(`git rev-parse --local-env-vars exited ${probe.exitCode} without GIT_DIR in its list`);\n\treturn Object.fromEntries(Object.entries(env).filter(([key]) => !local.has(key)));\n}\n",
 			"mutants": [
 				{
 					"id": "0",
@@ -57,11 +67,11 @@
 					"location": {
 						"end": {
 							"column": 2,
-							"line": 15
+							"line": 17
 						},
 						"start": {
 							"column": 102,
-							"line": 8
+							"line": 9
 						}
 					},
 					"replacement": "{}",
@@ -70,7 +80,8 @@
 						"0",
 						"1",
 						"2",
-						"3"
+						"3",
+						"4"
 					],
 					"killedBy": [
 						"2"
@@ -82,11 +93,11 @@
 					"location": {
 						"end": {
 							"column": 70,
-							"line": 9
+							"line": 10
 						},
 						"start": {
 							"column": 30,
-							"line": 9
+							"line": 10
 						}
 					},
 					"replacement": "[]",
@@ -95,7 +106,8 @@
 						"0",
 						"1",
 						"2",
-						"3"
+						"3",
+						"4"
 					],
 					"killedBy": [
 						"2"
@@ -107,11 +119,11 @@
 					"location": {
 						"end": {
 							"column": 36,
-							"line": 9
+							"line": 10
 						},
 						"start": {
 							"column": 31,
-							"line": 9
+							"line": 10
 						}
 					},
 					"replacement": "\"\"",
@@ -120,7 +132,8 @@
 						"0",
 						"1",
 						"2",
-						"3"
+						"3",
+						"4"
 					],
 					"killedBy": [
 						"2"
@@ -132,11 +145,11 @@
 					"location": {
 						"end": {
 							"column": 49,
-							"line": 9
+							"line": 10
 						},
 						"start": {
 							"column": 38,
-							"line": 9
+							"line": 10
 						}
 					},
 					"replacement": "\"\"",
@@ -145,7 +158,8 @@
 						"0",
 						"1",
 						"2",
-						"3"
+						"3",
+						"4"
 					],
 					"killedBy": [
 						"2"
@@ -157,11 +171,11 @@
 					"location": {
 						"end": {
 							"column": 69,
-							"line": 9
+							"line": 10
 						},
 						"start": {
 							"column": 51,
-							"line": 9
+							"line": 10
 						}
 					},
 					"replacement": "\"\"",
@@ -170,7 +184,8 @@
 						"0",
 						"1",
 						"2",
-						"3"
+						"3",
+						"4"
 					],
 					"killedBy": [
 						"2"
@@ -182,11 +197,11 @@
 					"location": {
 						"end": {
 							"column": 3,
-							"line": 11
+							"line": 12
 						},
 						"start": {
 							"column": 72,
-							"line": 9
+							"line": 10
 						}
 					},
 					"replacement": "{}",
@@ -195,7 +210,8 @@
 						"0",
 						"1",
 						"2",
-						"3"
+						"3",
+						"4"
 					],
 					"killedBy": [
 						"1"
@@ -207,11 +223,11 @@
 					"location": {
 						"end": {
 							"column": 62,
-							"line": 10
+							"line": 11
 						},
 						"start": {
 							"column": 8,
-							"line": 10
+							"line": 11
 						}
 					},
 					"replacement": "{}",
@@ -220,7 +236,8 @@
 						"0",
 						"1",
 						"2",
-						"3"
+						"3",
+						"4"
 					],
 					"killedBy": [
 						"1"
@@ -232,11 +249,11 @@
 					"location": {
 						"end": {
 							"column": 60,
-							"line": 10
+							"line": 11
 						},
 						"start": {
 							"column": 32,
-							"line": 10
+							"line": 11
 						}
 					},
 					"replacement": "true",
@@ -245,7 +262,8 @@
 						"0",
 						"1",
 						"2",
-						"3"
+						"3",
+						"4"
 					],
 					"killedBy": [
 						"2"
@@ -257,11 +275,11 @@
 					"location": {
 						"end": {
 							"column": 60,
-							"line": 10
+							"line": 11
 						},
 						"start": {
 							"column": 32,
-							"line": 10
+							"line": 11
 						}
 					},
 					"replacement": "false",
@@ -270,7 +288,8 @@
 						"0",
 						"1",
 						"2",
-						"3"
+						"3",
+						"4"
 					],
 					"killedBy": [
 						"2"
@@ -282,11 +301,11 @@
 					"location": {
 						"end": {
 							"column": 60,
-							"line": 10
+							"line": 11
 						},
 						"start": {
 							"column": 32,
-							"line": 10
+							"line": 11
 						}
 					},
 					"replacement": "env.PATH && process.env.PATH",
@@ -295,7 +314,8 @@
 						"0",
 						"1",
 						"2",
-						"3"
+						"3",
+						"4"
 					],
 					"killedBy": [
 						"1"
@@ -303,100 +323,6 @@
 				},
 				{
 					"id": "10",
-					"mutatorName": "BooleanLiteral",
-					"location": {
-						"end": {
-							"column": 20,
-							"line": 12
-						},
-						"start": {
-							"column": 6,
-							"line": 12
-						}
-					},
-					"replacement": "probe.success",
-					"status": "Killed",
-					"coveredBy": [
-						"0",
-						"2",
-						"3"
-					],
-					"killedBy": [
-						"2"
-					]
-				},
-				{
-					"id": "11",
-					"mutatorName": "ConditionalExpression",
-					"location": {
-						"end": {
-							"column": 20,
-							"line": 12
-						},
-						"start": {
-							"column": 6,
-							"line": 12
-						}
-					},
-					"replacement": "true",
-					"status": "Killed",
-					"coveredBy": [
-						"0",
-						"2",
-						"3"
-					],
-					"killedBy": [
-						"2"
-					]
-				},
-				{
-					"id": "12",
-					"mutatorName": "ConditionalExpression",
-					"location": {
-						"end": {
-							"column": 20,
-							"line": 12
-						},
-						"start": {
-							"column": 6,
-							"line": 12
-						}
-					},
-					"replacement": "false",
-					"status": "Killed",
-					"coveredBy": [
-						"0",
-						"2",
-						"3"
-					],
-					"killedBy": [
-						"3"
-					]
-				},
-				{
-					"id": "14",
-					"mutatorName": "StringLiteral",
-					"location": {
-						"end": {
-							"column": 95,
-							"line": 12
-						},
-						"start": {
-							"column": 38,
-							"line": 12
-						}
-					},
-					"replacement": "``",
-					"status": "Killed",
-					"coveredBy": [
-						"3"
-					],
-					"killedBy": [
-						"3"
-					]
-				},
-				{
-					"id": "15",
 					"mutatorName": "StringLiteral",
 					"location": {
 						"end": {
@@ -412,7 +338,133 @@
 					"status": "Killed",
 					"coveredBy": [
 						"0",
+						"2",
+						"3",
+						"4"
+					],
+					"killedBy": [
 						"2"
+					]
+				},
+				{
+					"id": "11",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 14
+						},
+						"start": {
+							"column": 6,
+							"line": 14
+						}
+					},
+					"replacement": "true",
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4"
+					],
+					"killedBy": [
+						"2"
+					]
+				},
+				{
+					"id": "12",
+					"mutatorName": "ConditionalExpression",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 14
+						},
+						"start": {
+							"column": 6,
+							"line": 14
+						}
+					},
+					"replacement": "false",
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4"
+					],
+					"killedBy": [
+						"3"
+					]
+				},
+				{
+					"id": "13",
+					"mutatorName": "LogicalOperator",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 14
+						},
+						"start": {
+							"column": 6,
+							"line": 14
+						}
+					},
+					"replacement": "!probe.success && !local.has(\"GIT_DIR\")",
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4"
+					],
+					"killedBy": [
+						"4"
+					]
+				},
+				{
+					"id": "14",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 20,
+							"line": 14
+						},
+						"start": {
+							"column": 6,
+							"line": 14
+						}
+					},
+					"replacement": "probe.success",
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"3",
+						"4"
+					],
+					"killedBy": [
+						"2"
+					]
+				},
+				{
+					"id": "15",
+					"mutatorName": "BooleanLiteral",
+					"location": {
+						"end": {
+							"column": 45,
+							"line": 14
+						},
+						"start": {
+							"column": 24,
+							"line": 14
+						}
+					},
+					"replacement": "local.has(\"GIT_DIR\")",
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"4"
 					],
 					"killedBy": [
 						"2"
@@ -420,15 +472,62 @@
 				},
 				{
 					"id": "16",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 44,
+							"line": 14
+						},
+						"start": {
+							"column": 35,
+							"line": 14
+						}
+					},
+					"replacement": "\"\"",
+					"status": "Killed",
+					"coveredBy": [
+						"0",
+						"2",
+						"4"
+					],
+					"killedBy": [
+						"4"
+					]
+				},
+				{
+					"id": "18",
+					"mutatorName": "StringLiteral",
+					"location": {
+						"end": {
+							"column": 104,
+							"line": 15
+						},
+						"start": {
+							"column": 19,
+							"line": 15
+						}
+					},
+					"replacement": "``",
+					"status": "Killed",
+					"coveredBy": [
+						"3",
+						"4"
+					],
+					"killedBy": [
+						"3"
+					]
+				},
+				{
+					"id": "19",
 					"mutatorName": "MethodExpression",
 					"location": {
 						"end": {
 							"column": 82,
-							"line": 14
+							"line": 16
 						},
 						"start": {
 							"column": 28,
-							"line": 14
+							"line": 16
 						}
 					},
 					"replacement": "Object.entries(env)",
@@ -442,16 +541,16 @@
 					]
 				},
 				{
-					"id": "17",
+					"id": "20",
 					"mutatorName": "ArrowFunction",
 					"location": {
 						"end": {
 							"column": 81,
-							"line": 14
+							"line": 16
 						},
 						"start": {
 							"column": 55,
-							"line": 14
+							"line": 16
 						}
 					},
 					"replacement": "() => undefined",
@@ -465,16 +564,16 @@
 					]
 				},
 				{
-					"id": "18",
+					"id": "21",
 					"mutatorName": "BooleanLiteral",
 					"location": {
 						"end": {
 							"column": 81,
-							"line": 14
+							"line": 16
 						},
 						"start": {
 							"column": 66,
-							"line": 14
+							"line": 16
 						}
 					},
 					"replacement": "local.has(key)",
