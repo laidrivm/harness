@@ -5,8 +5,9 @@ import { cleanup, fabricate, git, verdict } from "./command-guard.fixture.ts";
 
 /**
  * What `command-guard.ts` refuses of a `bun run deps` given words after the
- * script's name, which bun forwards to the install. That the bare call passes
- * is `command-guard-interpreters.test.ts`'s. Every line here is a string the
+ * script's name, which bun forwards to the install, and of a typed frozen
+ * install, which it sends to `bun run deps`. That the bare call passes is
+ * `command-guard-interpreters.test.ts`'s. Every line here is a string the
  * guard reads; none of them is ever run.
  */
 
@@ -55,6 +56,7 @@ describe("a typed frozen install", () => {
 		"cd sub && bun install --frozen-lockfile",
 		"bun install --frozen-lockfile | tail -5",
 		'bash -c "bun i --frozen-lockfile"',
+		"eval bun install --frozen-lockfile",
 	])("%s blocks, naming bun run deps", (line) => {
 		const { code, rule, reason } = verdict(line);
 		expect({ code, rule }).toEqual({ code: 2, rule: "frozen-install" });
@@ -76,7 +78,9 @@ describe("a typed frozen install", () => {
 	])("%s is not refused as frozen-install", (line) => expect(verdict(line).rule).not.toBe("frozen-install"));
 
 	// spec: agent-permissions/a-frozen-install-inside-a-committed-script
-	test("a committed script's frozen install passes", () => {
+	// `shell` and `evaled` pin the flag through a script's `-c` and `eval`; the
+	// typed install after a script read pins that the flag is per line.
+	test("a committed script's frozen install passes, and a typed one beside it does not", () => {
 		const dir = fabricate("feat/x");
 		writeFileSync(
 			join(dir, "package.json"),
@@ -85,13 +89,16 @@ describe("a typed frozen install", () => {
 					deps: "bun install --frozen-lockfile",
 					setup: "bun install --frozen-lockfile && bun run build",
 					build: "true",
+					shell: "bash -c 'bun install --frozen-lockfile'",
+					evaled: "eval bun install --frozen-lockfile",
 				},
 			}),
 		);
 		git(dir, "add", "package.json");
 		git(dir, "commit", "-m", "scripts");
-		expect(verdict("bun run deps", dir)).toEqual({ code: 0, reason: "" });
-		expect(verdict("bun run setup", dir)).toEqual({ code: 0, reason: "" });
+		for (const name of ["deps", "setup", "shell", "evaled"])
+			expect(verdict(`bun run ${name}`, dir)).toEqual({ code: 0, reason: "" });
+		expect(verdict("bun run deps && bun install --frozen-lockfile", dir).rule).toBe("frozen-install");
 	});
 });
 
