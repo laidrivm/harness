@@ -5,12 +5,12 @@
 # check run from github-actions, across check suites and pages, concluded
 # success (bun/green-run.ts decides), it fast-forwards the checkout to that
 # head, tags the runner's running image as the previous one unless a run
-# brought this head up already, and builds the images. Only while the persistent session is fresh (the
-# managed hooks' ~/.harness-fresh in agent's home) does it bring the stack up,
-# under every pass lock, restart the runner when up left it as it was, and
-# wait two minutes at most for tmux session `main`; then it pushes the
-# Windmill scripts and route while their token exists, records the head and
-# prunes. A session that does not come back is rolled back once: the
+# brought this head up already, and builds the images. Only while the
+# persistent session is fresh (the managed hooks' ~/.harness-fresh in agent's
+# home) does it bring the stack up, under every pass lock, restart the runner
+# when up left it as it was, and wait two minutes at most for tmux session
+# `main`; then it pushes the Windmill scripts and route while their token
+# exists, records the head and prunes. A session that does not come back is rolled back once: the
 # rolled-back record and the failure file first, then the previous image under
 # the name and the runner up on it. A rollback step that fails is named in the
 # failure file and left for the user; while the rolled-back record names the
@@ -20,12 +20,12 @@
 #
 # The records are `deployed`, `rolled-back` and `brought-up`, the head last
 # brought up, written before up and never removed, in $STATE_DIRECTORY,
-# systemd's StateDirectory, or /var/lib/harness-deploy for a run by hand. A fetch or a
-# check read that fails exits 1 and writes nothing: the host is still on a
-# working commit. A step after the fast-forward that fails writes the failure
-# file ~/.harness-deploy-failed in agent's home, which the session's next start
-# or prompt reports, and each clone's stop file, unless one exists, and exits
-# 1; the next run starts again from the fetch. Every other run exits 0, a busy
+# systemd's StateDirectory, or /var/lib/harness-deploy for a run by hand. A
+# fetch or a check read that fails exits 1 and writes nothing: the host is
+# still on a working commit. A step after the fast-forward that fails writes
+# the failure file ~/.harness-deploy-failed in agent's home, which the
+# session's next start or prompt reports, and each clone's stop file, unless
+# one exists, and exits 1; the next run starts again from the fetch. Every other run exits 0, a busy
 # session's included.
 
 # Compose names them after the project, `orchestrator`: <project>-<service>
@@ -122,8 +122,9 @@ fresh() {
 
 # Takes each lock file it is handed, blocking, then reads the check again,
 # looks for the mark again, removes an older failure file, records the head as
-# brought up, brings the stack up, and restarts the runner when up left $container, the one tagged, as it
-# was, so the session starts again on the updated clone. Each level holds its
+# brought up, brings the stack up, and restarts the runner when up left
+# $container, the one tagged, as it was, so the session starts again on the
+# updated clone. Each level holds its
 # file on fd 9: bash keeps the enclosing level's open on another descriptor
 # while the inner one runs, so every lock stays held until the calls return.
 # Returns 3 when the check is no longer green or the session is at work, and
