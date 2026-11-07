@@ -9,8 +9,8 @@
  * newest `github-actions` run decides, by the largest `id`, since ids grow
  * with creation; an older suite's success never outvotes it.
  *
- * Run as a script, it reads a JSON array of the page bodies read so far on
- * standard input and exits 0 for green, 1 for not, 2 for input it cannot read
+ * Run as a script, it reads a JSON array of the page bodies read so far, at
+ * least one, on standard input and exits 0 for green, 1 for not, 2 for input it cannot read
  * and 3 for another page wanted. It imports nothing, so `deploy.sh` runs it
  * under the runner image's bun with no `node_modules`.
  */
@@ -53,7 +53,8 @@ if (import.meta.main) {
 	let runs: Run[] | "more";
 	try {
 		const pages: unknown = JSON.parse(await Bun.stdin.text());
-		if (!Array.isArray(pages)) throw new Error("standard input is no array of pages");
+		// The caller pipes the pages it read, so none means a body that added none, and `more` would page forever.
+		if (!Array.isArray(pages) || pages.length === 0) throw new Error("standard input is no array of pages");
 		runs = collect(pages);
 	} catch (error) {
 		console.error(`green-run: ${(error as Error).message}`);

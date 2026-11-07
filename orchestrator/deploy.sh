@@ -49,7 +49,9 @@ volume() {
 # image's bun, over every page read so far, and exits 3 while it wants the
 # next. It is the checkout's file, never the image's: a build that failed
 # after the fast-forward, or a rollback, leaves the name on an image older
-# than the rule, and the checkout's is the version this script was read from.
+# than the rule. The read before the fast-forward runs the rule this script
+# was read with; the read under the locks runs the head's, so a head that
+# changes the rule's exit codes keeps their meaning for this script.
 green() {
 	local pages= body n=1
 	while :; do

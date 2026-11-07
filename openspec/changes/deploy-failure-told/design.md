@@ -181,8 +181,15 @@ build that fails after the fast-forward leaves the name on the older image,
 and a rollback tags the previous image back. Either way the image's copy is
 missing, and a read through it would fail every tick. It would then block
 the build that repairs the image, or the next head after a rollback. The
-checkout's file is the version `deploy.sh` itself was read from, so script
-and rule move together on each fast-forward, as the `jq` filter does today.
+checkout's file is the version `deploy.sh` itself was read from at the
+first read, so script and rule move together on each fast-forward, as the
+`jq` filter does today. The second read, under the locks, comes after the
+fast-forward and runs the head's file under the older script (local
+`/code-review`, group 3): a head that moves the file or changes its exit
+codes is read once by a script that predates it, which reads a missing file
+as a check that cannot be read and deploys on the next tick. A head that
+changes the codes keeps their old meaning, since a misread code is not
+retried.
 A missing file fails `--mount`, and that failure reads as a check that
 cannot be read: the run exits 1 and the journal shows it. The `json()`
 helper stays for `push()`'s read of the compose config.
