@@ -34,7 +34,9 @@ rather than a fix, because it changes how an existing gate behaves
 - The stop-gap Process rule in `core/rules.md` («Install dependencies with
   `bun run deps` …») is shortened to what the guard cannot see — a plain
   `bun install`, which it leaves to the prompt — under agent-rulebook's
-  *A rule only partly covered*; the frozen spelling leaves it.
+  *A rule only partly covered*; the frozen spelling leaves it once the
+  self-pin brings the refusal here. `core/code-style.md`'s line on automated
+  installs names `bun run deps` for an agent.
 - `README.md`'s sentence that every literal `bun install` prompts names the
   refusal of the frozen form.
 
@@ -65,7 +67,8 @@ None.
   shortened), `README.md` (one sentence).
 - Reach: hooks run from the installed harness, so the refusal takes effect in
   this repository once its self-pin passes the merge, and in a consumer at
-  the bump that crosses it. Nothing to sync: no settings text changes.
+  the bump that crosses it. No settings text changes; the shortened rule
+  reaches a consumer's `harness/` copy through the sync its bump runs.
 - Consumers measured 2026-11-07 (d2ass, mellon, skills, skills-mutation,
   woop-woop): no doc tells an agent to type a frozen install once the harness
   is installed; the frozen installs in their trees run in CI, in the board

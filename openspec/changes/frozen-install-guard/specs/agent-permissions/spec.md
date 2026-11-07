@@ -15,8 +15,9 @@ line the agent typed, wherever it stands there — a compound line, a shell's
 committed script's text, which the `ask` entries never match. The reason SHALL
 name `bun run deps`; a plain `bun install`, which prompts, for a re-pin, a
 `package.json` with uncommitted edits and a `bun.lock` that lacks the pin;
-and that a frozen install with other flags, such as `--ignore-scripts`, is
-the user's to run, since `bun run deps` runs the root lifecycle scripts. The
+and that a frozen install with other flags, such as `--ignore-scripts`, or of
+a package with no `deps` script, is the user's to run, since `bun run deps`
+runs the root lifecycle scripts of the package that holds it. The
 block is a redirection rather than a boundary: a frozen install the guard
 does not read as one is left to the `ask` entry, which prompts. A blocked
 call shows no prompt only because Claude Code's hooks reference runs a
@@ -49,7 +50,8 @@ set reaches the install unread.
   or `bun install --frozen-lockfile 2>&1`
 - **THEN** the hook blocks the call, and the reason names `bun run deps`; a
   plain `bun install` for a re-pin, a `package.json` with uncommitted edits
-  and a `bun.lock` that lacks the pin; and other flags as the user's to run
+  and a `bun.lock` that lacks the pin; and other flags, or a package with no
+  `deps` script, as the user's to run
 
 #### Scenario: A frozen install within a compound line
 
@@ -62,9 +64,10 @@ set reaches the install unread.
 
 - **WHEN** the agent attempts `bun run deps`, or `bun run setup` where the
   committed `package.json` holds
-  `"setup": "bun install --frozen-lockfile && bun run build"`
-- **THEN** the hook does not block it for a frozen install, because the
-  install is the script's text, not the typed line
+  `"setup": "bun install --frozen-lockfile && bun run build"` and a `build`
+  script
+- **THEN** the hook does not block either, because the install is the
+  script's text, not the typed line
 
 #### Scenario: A literal install still prompts
 
