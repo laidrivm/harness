@@ -57,7 +57,8 @@ describe("before the install", () => {
 	])("%s is blocked, naming bun run deps", (_, command) => {
 		const { code, stderr } = hook(project(), command);
 		expect(code).toBe(2);
-		expect(stderr).toContain("run bun run deps first");
+		// Exactly the hint: a mark that lost its separating space reaches `exit` as an argument, which the shell reports.
+		expect(stderr).toBe("The harness is not installed: run bun run deps first.\n");
 	});
 
 	test("input that is not JSON blocks rather than letting through", () => {

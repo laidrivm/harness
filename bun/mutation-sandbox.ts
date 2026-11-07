@@ -27,6 +27,13 @@ if (top !== realpathSync(".") || git("rev-parse", "-q", "--verify", "HEAD").exit
 	rmSync(".git", { recursive: true, force: true });
 	if (git("init", "-q").exitCode !== 0) fail("init");
 	if (git("add", "-A").exitCode !== 0) fail("add");
-	const values = ["-c", "user.name=stryker", "-c", "user.email=stryker@sandbox", "-c", "commit.gpgsign=false"];
+	// `author.*` and `committer.*` too: a global one outranks `user.*` given on the command line.
+	const values = ["user", "author", "committer"].flatMap((who) => [
+		"-c",
+		`${who}.name=stryker`,
+		"-c",
+		`${who}.email=stryker@sandbox`,
+	]);
+	values.push("-c", "commit.gpgsign=false");
 	if (git(...values, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "sandbox").exitCode !== 0) fail("commit");
 }
