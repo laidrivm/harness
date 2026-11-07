@@ -53,16 +53,24 @@ const NOT_A_NAME = /^([A-Za-z_][A-Za-z0-9_]*=|-|[0-9]*[<>])/;
  */
 export const OPEN_REDIRECTION = /^[0-9]*(<<<|[<>]{1,2}&?)$/;
 
+/** The name a path runs by: `/usr/bin/git` is `git`. */
+export const base = (word: string) => word.split("/").pop() ?? "";
+
 /**
  * Whether `words[at]` can be a command name: not an assignment, an option or a
  * redirection, not the target of an open redirection before it, and not a
  * reserved word. Shared by `invocations` and the guard's `kill` check, so
  * both read the same word as the command's name.
+ *
+ * A target only where an odd run of open redirections stands before it: each
+ * takes the word after it, so in `> '>' git` the quoted `>` is the target and
+ * `git` the name.
  */
-export const named = (words: string[], at: number) =>
-	!NOT_A_NAME.test(words[at] ?? "") &&
-	!OPEN_REDIRECTION.test(words[at - 1] ?? "") &&
-	!KEYWORDS.has(words[at]?.split("/").pop() ?? "");
+export function named(words: string[], at: number): boolean {
+	let run = 0;
+	while (OPEN_REDIRECTION.test(words[at - 1 - run] ?? "")) run++;
+	return !NOT_A_NAME.test(words[at] ?? "") && run % 2 === 0 && !KEYWORDS.has(base(words[at] ?? ""));
+}
 
 /** The words after the redirections, which name no program. */
 export const args = (rest: string[]) =>
@@ -89,7 +97,7 @@ export function invocations(words: string[]): [string, string[]][] {
 	let wrapped = false;
 	for (let at = 0; at < words.length; at++) {
 		if (!named(words, at)) continue;
-		const name = words[at]?.split("/").pop() ?? "";
+		const name = base(words[at] ?? "");
 		if (WRAPPERS.has(name)) {
 			// `command -v bash` names a command and runs nothing.
 			const option = words[at + 1] ?? "";

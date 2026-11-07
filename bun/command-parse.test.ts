@@ -65,6 +65,11 @@ describe("a spelling that walks around a permission pattern", () => {
 		expect(run(event("> /tmp/nope git commit -m fix"), fabricate("main")).code).toBe(2);
 	});
 
+	test("a quoted target that looks like a redirection is still only the target", () => {
+		// `'>'` is the file the first `>` writes, so `git` after it is the name.
+		expect(run(event("> '>' git commit -m fix"), fabricate("main")).code).toBe(2);
+	});
+
 	test("a command merely ending in git does not block", () => {
 		expect(run(event("mygit commit -m fix"), fabricate("main")).code).toBe(0);
 	});

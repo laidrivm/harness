@@ -107,9 +107,11 @@ else refuses the call:
 
 1. A redirection glued to its target (`2>/dev/null`, `>out`, `2>&1`) is
    skipped: if it was quoted, `kill` gets a word that names no process. An
-   open one (`>`, `2>`, `<`) is refused, since read as an operator it would
-   hide the next word, and if quoted it hides nothing from `kill`:
-   `kill '<' 95034` signals 95034.
+   open one (`>`, `2>`, `<`) with a word after it is refused, since read as an
+   operator it would hide the next word, and if quoted it hides nothing from
+   `kill`: `kill '<' 95034` signals 95034. One that ends the command hides
+   nothing and is skipped: the parse splits `2>&1` on its `&`, so `kill %1
+   2>&1` reaches the check as `kill %1 2>`.
 2. An optional signal: `-0`, which sends none; `-s` or `-n` with the next
    word matching `^[A-Za-z0-9]+$`; or one word matching `^-[A-Za-z0-9]+$`
    (`-9`, `-KILL`, `-l`). Then an optional `--`.

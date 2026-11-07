@@ -127,11 +127,17 @@ describe("a kill that reaches only the line's own jobs, or signals nothing", () 
 		"/bin/kill %1 2>/dev/null",
 		"FOO=1 kill %1",
 		"{ kill %1; }",
+		// The parse splits `2>&1` on its `&`, leaving a `2>` that ends the command.
+		"kill %1 2>&1",
 	])("%s passes", (line) => passes(line));
 
 	// spec: agent-permissions/no-signal-sent
-	test.each(["kill -0 95034", "kill -l", "kill", "if kill -0 95034; then echo up; fi", "kill -0 -- 95034"])(
-		"%s passes",
-		(line) => passes(line),
-	);
+	test.each([
+		"kill -0 95034",
+		"kill -l",
+		"kill",
+		"if kill -0 95034; then echo up; fi",
+		"kill -0 -- 95034",
+		"kill -0 95034 >/dev/null 2>&1",
+	])("%s passes", (line) => passes(line));
 });

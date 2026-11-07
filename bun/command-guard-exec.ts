@@ -14,7 +14,7 @@
 
 import { posix } from "node:path";
 import { FED } from "./command-parse.ts";
-import { args, named, OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
+import { args, base, named, OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
 
 /**
  * The long shell options that take the next word as their value. A short
@@ -192,7 +192,7 @@ export function bunTestRetry(name: string, rest: string[]): string | undefined {
 const SIGNAL =
 	"command-guard: this command may signal a process the session did not start. `pkill`, `killall`, `killall5` and `skill` pick theirs by name across the machine, and `kill` passes only as the command's own name, with literal job specs (`%1`) or, after `-0`, plain numeric pids. Stop a background task you started with TaskStop; a job this same line started with `&` is `kill %N`; any other process is not the session's to signal — ask the user. The bare word is matched anywhere, so search for it with a quoted pattern such as `'[k]ill'`.";
 
-const base = (word: string) => word.split("/").pop();
+const BY_NAME = new Set(["pkill", "killall", "killall5", "skill"]);
 
 /**
  * Why `part` holds a word naming `pkill`, `killall`, `killall5` or `skill`,
@@ -201,7 +201,7 @@ const base = (word: string) => word.split("/").pop();
  * list of prefixes is the enumeration kill-guard D2 rejects.
  */
 export function killByName(part: string[]): string | undefined {
-	return part.some((word) => ["pkill", "killall", "killall5", "skill"].includes(base(word) ?? "")) ? SIGNAL : undefined;
+	return part.some((word) => BY_NAME.has(base(word))) ? SIGNAL : undefined;
 }
 
 /**
@@ -209,16 +209,19 @@ export function killByName(part: string[]): string | undefined {
  * or nothing (kill-guard D2, D3). `kill` must be the command's name with no
  * prefix — `xargs`, `watch` and the like append or rewrite its words — and no
  * substitution may feed the command. Its words are read raw, redirections
- * included: an open one is refused, since quoted it is a word `kill` gets and
- * the next word reaches `kill` as a pid (`kill '<' 95034`).
+ * included: an open one with a word after it is refused, since quoted it is a
+ * word `kill` gets and the next reaches `kill` as a pid (`kill '<' 95034`).
+ * One ending the command hides nothing — the `2>` that `2>&1` leaves, the
+ * parse splitting on its `&`.
  */
 export function killSignal(part: string[]): string | undefined {
 	const at = part.findIndex((word) => base(word) === "kill");
 	if (at === -1) return undefined;
 	if (FED.has(part) || part.findIndex((_, index) => named(part, index)) !== at) return SIGNAL;
+	const after = part.slice(at + 1);
 	const words: string[] = [];
-	for (const word of part.slice(at + 1)) {
-		if (OPEN_REDIRECTION.test(word)) return SIGNAL;
+	for (const [index, word] of after.entries()) {
+		if (OPEN_REDIRECTION.test(word) && index < after.length - 1) return SIGNAL;
 		if (!REDIRECTION.test(word)) words.push(word);
 	}
 	let next = 0;
