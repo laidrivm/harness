@@ -147,9 +147,12 @@ locked() {
 		# This head supersedes an older failure, and the restarted session's
 		# start can run before the wait for main sees it.
 		rm -f "$agent/.harness-deploy-failed"
-		# Before up, since an up that fails part way can leave the head's runner up.
+		# Before up, since an up that fails part way can leave the head's runner
+		# up; a record naming the head already is left as it is, so a failed
+		# rewrite cannot empty it.
 		step="the brought-up record"
-		printf '%s\n' "$head" >"$state/brought-up" || return 1
+		[ "$head" = "$(cat "$state/brought-up" 2>/dev/null)" ] ||
+			printf '%s\n' "$head" >"$state/brought-up" || return 1
 		step=up
 		docker compose up -d || return 1
 		local now
