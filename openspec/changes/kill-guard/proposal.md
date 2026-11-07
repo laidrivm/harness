@@ -19,23 +19,30 @@ SIGTERM to a pre-pr run while others run beside it*).
 
 - The command guard refuses `pkill` and `killall` in every form, wherever
   they stand on the line.
-- It refuses `kill` unless every pid operand is a job spec (`%1`, `%+`,
-  `%sleep`), which names only a job of the shell running that very line. A
-  numeric pid, a negative one (a process group), a variable (`$pid`, `$PPID`,
-  `$!`) and an operand a substitution supplies are refused. `kill -0`, which
-  sends no signal, and `kill -l`/`kill -L`, which list signal names, pass.
-  A `kill` behind a wrapper (`xargs kill`, `command kill`, `env kill`) is
-  refused, since `xargs` appends pids the guard never sees.
+- It refuses `kill` unless every pid operand is a literal job spec (`%1`,
+  `%+`, `%sleep`), which names only a job of the shell running that very
+  line. A numeric pid, a negative one (a process group), a word carrying a
+  `$` (`$pid`, `$PPID`, `$!`, `%$x`) and an operand a substitution supplies
+  are refused. `kill -0`, which sends no signal, and `kill -l`/`kill -L`,
+  which list signal names, pass. A `kill` behind a wrapper (`xargs kill`,
+  `command kill`, `env kill`) is refused, since `xargs` appends pids the
+  guard never sees.
+- zsh's precommand modifiers `noglob` and `nocorrect`, and `caffeinate`,
+  join the guard's wrappers, so a name behind them is read — for every check,
+  not only this one.
 - The reason names `TaskStop` for a background task the session started,
   `kill %N` for a job the same line started, and the user for anything else.
-- The stop-gap Safety rule in `core/rules.md` leaves under *A mechanised
-  prohibition leaves its prose home*.
+- The stop-gap Safety rule in `core/rules.md` is shortened, under
+  `agent-rulebook`'s *A rule only partly covered*, to the senders the guard
+  cannot read: a committed script's `process.kill`, `playwright-cli
+  kill-all`, `fuser -k`, `find … -exec kill`.
 
 Not in this change: a ledger of the pids a session spawned, or a check of a
 pid's ancestry against the session's process (see design.md for why neither
-is needed to stop the seen incident); other ways to send a signal, such as
-an interpreter's `process.kill`, which the interpreter check already refuses
-as unread program text, or `launchctl`, which no session was seen using.
+is needed to stop the seen incident); a gate on the other ways to send a
+signal — a committed script, `playwright-cli kill-all`, which the vendored
+skill names, `launchctl` — none of which a session was seen using against
+another's process; they stay in the shortened rule.
 
 ## Capabilities
 
@@ -50,9 +57,11 @@ None.
 
 ## Impact
 
-- Changed: `bun/command-guard.ts` (the call and the header's list),
-  `bun/command-guard-exec.ts` (the check, beside `bunTestRetry`), a new
-  `bun/command-guard-kill.test.ts`, `core/rules.md` (the Safety rule leaves).
+- Changed: `bun/command-guard.ts` (the calls and the header's list),
+  `bun/command-guard-exec.ts` (the two checks, beside `bunTestRetry`),
+  `bun/command-words.ts` (three wrappers, and a predicate for a name behind
+  one), a new `bun/command-guard-kill.test.ts`, `core/rules.md` (the Safety
+  rule shortened).
 - Consumers: an agent can no longer stop a process by pid or by pattern. In
   the consumer trees measured (d2ass, mellon, woop-woop), only d2ass's
   untracked `.claude/settings.local.json` allows such calls —
