@@ -8,10 +8,11 @@
  * hook belongs to the file it runs for.
  */
 
-export type CheckRun = { conclusion: string | null; app?: { slug: string } };
+export type CheckRun = { id: number; conclusion: string | null; app?: { slug: string } };
 
 /** A passed run as the harness's own CI posts it. */
 export const GREEN: CheckRun = {
+	id: 1,
 	conclusion: "success",
 	app: { slug: "github-actions" },
 };
@@ -33,12 +34,16 @@ export function serve(state: Served): ReturnType<typeof Bun.serve> {
 	return Bun.serve({
 		port: 0,
 		fetch(request) {
-			const path = new URL(request.url).pathname;
+			const { pathname: path, searchParams: query } = new URL(request.url);
 			state.seen.push(request.headers.get("authorization"));
 			if (state.broken) return new Response("down", { status: 500 });
 			if (path === "/repos/laidrivm/harness/commits/main") return Response.json({ sha: state.head });
-			if (path === `/repos/laidrivm/harness/commits/${state.head}/check-runs`)
-				return Response.json({ check_runs: state.runs });
+			if (path === `/repos/laidrivm/harness/commits/${state.head}/check-runs`) {
+				// A page at a time, 30 runs unless asked, as GitHub serves them.
+				const per = Number(query.get("per_page") ?? 30);
+				const start = (Number(query.get("page") ?? 1) - 1) * per;
+				return Response.json({ total_count: state.runs.length, check_runs: state.runs.slice(start, start + per) });
+			}
 			return new Response("not found", { status: 404 });
 		},
 	});
