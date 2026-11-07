@@ -538,8 +538,13 @@ the session's report of the failure file and each clone's stop file as
 head again:
 stop deploys, below, and once `/var/lib/harness-deploy` can be written, write
 the head's full sha from that line to `/var/lib/harness-deploy/rolled-back`
-before enabling them again. To retry the rolled-back head,
-remove the record:
+before enabling them again. Beside `deployed` and `rolled-back`, a run writes
+the head to `/var/lib/harness-deploy/brought-up` right before it brings the
+stack up, and never removes it; a later run of that head, after a step past
+`up` failed, leaves the image tagged as previous as it is, so its rollback
+still goes back to the image from before the first. A `brought-up` that
+cannot be written fails the run before `up`, and the failure file names
+`the brought-up record`. To retry the rolled-back head, remove the record:
 
 ```sh
 rm /var/lib/harness-deploy/rolled-back

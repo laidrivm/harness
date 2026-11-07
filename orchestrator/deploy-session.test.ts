@@ -205,6 +205,49 @@ describe("deploy.sh and the session", () => {
 		expect(failure(h)).toMatch(STOP("the push"));
 	});
 
+	// spec: orchestrator/a-retry-after-a-late-failure
+	test("a retry of a head brought up before keeps the previous image, and its rollback tags that image back", () => {
+		const h = host();
+		set(h, "push", 1);
+		expect(deploy(h).code).toBe(1);
+		set(h, "session", 1);
+		const before = log(h).length;
+		expect(deploy(h).code).toBe(1);
+		const retry = log(h).slice(before);
+		expect(retry).toContain("docker compose build");
+		expect(retry).toContain("docker compose up -d");
+		expect(retry).toContain("docker compose exec -T -u agent runner tmux has-session -t main");
+		expect(retry).toContain("docker tag orchestrator-runner:previous orchestrator-runner");
+		expect(failure(h)).toMatch(STOP("the wait for main"));
+		// The first run's tag, of the image from before it, is the only one.
+		expect(log(h).filter((l) => /^docker tag sha256:/.test(l))).toEqual([
+			"docker tag sha256:old orchestrator-runner:previous",
+		]);
+	});
+
+	// spec: orchestrator/a-new-head-after-a-brought-up-one
+	// spec: orchestrator/the-brought-up-record-cannot-be-written
+	test.each([
+		["names another head", false],
+		["cannot be written", true],
+	])("a brought-up record that %s", (_, unwritable) => {
+		const h = host();
+		mkdirSync(h.state, { recursive: true });
+		if (unwritable) mkdirSync(join(h.state, "brought-up"));
+		else writeFileSync(join(h.state, "brought-up"), `${"f".repeat(40)}\n`);
+		const r = deploy(h);
+		if (unwritable) {
+			expect(r.code).toBe(1);
+			expect(steps(h)).not.toContain("up");
+			expect(failure(h)).toMatch(STOP("the brought-up record"));
+			expect(deployed(h)).toBeUndefined();
+		} else {
+			expect(r.code).toBe(0);
+			expect(log(h)).toContain("docker tag sha256:old orchestrator-runner:previous");
+			expect(readFileSync(join(h.state, "brought-up"), "utf8")).toBe(`${HEAD}\n`);
+		}
+	});
+
 	// spec: orchestrator/the-build-fails
 	test("a symlink planted at the failure file is replaced, never followed", () => {
 		const h = host();
