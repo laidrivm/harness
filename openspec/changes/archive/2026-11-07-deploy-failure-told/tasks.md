@@ -162,4 +162,4 @@ fail first. `put()` and its `shortcut:` comment are not touched.
 
 ## 5. Integration
 
-- [ ] 5.1 `bun test` and `bun bun/pre-pr.ts` pass on the branch
+- [x] 5.1 `bun test` and `bun bun/pre-pr.ts` pass on the branch

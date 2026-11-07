@@ -1080,7 +1080,8 @@ SHALL NOT run either call.
 A root timer SHALL start the host's deploy five minutes after boot and five
 minutes after each run ends, one run at a time. Each run SHALL compare `origin/main`'s head with the commit it last
 deployed and with the commit it last rolled back. When the head is neither and
-its latest `test` check run from `github-actions` has concluded `success`, the
+its newest `test` check run from `github-actions`, across every check suite
+of the head, has concluded `success`, the
 run SHALL fast-forward the host's checkout to that head and rebuild the
 images, and SHALL record the head as deployed only once the session is up on
 them. It SHALL move the host's checkout and images to no other commit; the
@@ -1106,6 +1107,35 @@ does not exist, the run SHALL skip the Windmill push and say so.
   or failed, read before the fast-forward or again right before `up`
 - **THEN** the stack is not brought up, the head is not recorded and no
   failure is written
+
+#### Scenario: An older check suite's success
+
+- **WHEN** the head carries a `test` run from `github-actions` in more than
+  one check suite, and the newest of them is pending or failed while an older
+  one concluded `success`
+- **THEN** the checkout is not moved, and the next tick reads the check again
+
+#### Scenario: A newer check suite's success
+
+- **WHEN** the head carries a failed `test` run from `github-actions` in one
+  check suite and a newer successful one in another
+- **THEN** the head is deployed as a green head is
+
+#### Scenario: Check runs on more than one page
+
+- **WHEN** the head's `test` runs span more than one page of the check runs'
+  answer
+- **THEN** every page is read and the newest run among them decides, and a
+  page with no runs before the count is reached reads as a check that cannot
+  be read
+
+#### Scenario: An image older than the check
+
+- **WHEN** the runner image under the name was built from a commit before
+  the checkout's, because a build after the fast-forward failed or a
+  rollback restored the previous image
+- **THEN** the check is read and decided by the checkout's rule, as on any
+  other run
 
 #### Scenario: A green head
 
@@ -1190,12 +1220,16 @@ session starts again on the updated clone.
 ### Requirement: A session that does not come back is rolled back
 
 Before the build the deploy SHALL tag the image the running runner container
-runs as the previous image. After bringing the stack up it SHALL wait at most
+runs as the previous image, unless the head is the one whose images it last
+brought up, when the previous image SHALL stay as tagged; it SHALL record
+that head before bringing the stack up, and SHALL NOT bring it up when the
+record cannot be written. After bringing the stack up it SHALL wait at most
 two minutes for the tmux session `main` in the runner. When `main` is not up
-by then, it SHALL write the failure file, record the head as rolled back,
+by then, it SHALL record the head as rolled back, write the failure file,
 bring the runner up on the previous image once, and SHALL NOT deploy that
 head again while the record holds it; a record that cannot be written SHALL
-be told by the journal. A rollback that fails SHALL be told by the failure file and the
+be told by the journal and named in every failure line the rollback writes.
+A rollback that fails SHALL be told by the failure file and the
 journal and left for the user; retrying or verifying it is stage 9's.
 
 #### Scenario: The session comes back
@@ -1211,6 +1245,33 @@ journal and left for the user; retrying or verifying it is stage 9's.
   head, the run fails, and, when the rollback's tag and `up` succeed, the
   runner runs the previous image
 
+#### Scenario: The rolled-back record cannot be written
+
+- **WHEN** `main` is not up two minutes after `up` and the head cannot be
+  recorded as rolled back
+- **THEN** the failure file names the wait for `main`, the rolled-back record
+  and the head, the journal says the head could not be recorded, and the
+  rollback's tag and `up` still run
+
+#### Scenario: A retry after a late failure
+
+- **WHEN** a run brought the stack up for the head and a later step failed,
+  and the next run deploys the same head
+- **THEN** that run does not move the previous image, and a rollback in it
+  brings the runner up on the image that ran before the first run
+
+#### Scenario: A new head after a brought-up one
+
+- **WHEN** the head differs from the one whose images a run last brought up
+- **THEN** the image the running runner container runs is tagged as the
+  previous image, as on any deploy
+
+#### Scenario: The brought-up record cannot be written
+
+- **WHEN** the head cannot be recorded as brought up
+- **THEN** the stack is not brought up, the failure file names the
+  brought-up record and the head, and the run fails
+
 #### Scenario: A rolled-back head
 
 - **WHEN** a run finds `origin/main`'s head equal to the commit last rolled
@@ -1222,6 +1283,12 @@ journal and left for the user; retrying or verifying it is stage 9's.
 - **WHEN** the tag back or the runner's `up` fails during a rollback
 - **THEN** the failure file names the failed step, the head stays recorded as
   rolled back, the run fails, and no later run retries the rollback
+
+#### Scenario: The rollback fails without its record
+
+- **WHEN** the head cannot be recorded as rolled back and the tag back or the
+  runner's `up` then fails
+- **THEN** the failure file names that step and the rolled-back record
 
 ### Requirement: A deploy never ends a running pass
 
@@ -1264,9 +1331,12 @@ check read that fails SHALL write neither, nor SHALL a run that the service's
 start timeout kills before the failure file is written, which leaves the
 timeout on the journal. The managed `SessionStart` hook
 SHALL print the failure file, when it exists, on startup, on clear and on a
-continued start, with a line asking the session to report it to the user in
-chat, and SHALL then move it aside, so the next start does not report it
-again.
+continued start, and the managed `UserPromptSubmit` hook on each submitted
+prompt, each with a line asking the session to report it to the user in
+chat, and SHALL move it aside. Only a move that succeeds SHALL keep the
+next start or prompt from reporting it again; a move that fails SHALL leave
+the report printed and the file where it was, for the next start or prompt to
+report again.
 
 #### Scenario: The build fails
 
@@ -1291,3 +1361,24 @@ again.
 - **WHEN** the managed `SessionStart` hook runs while the failure file exists
 - **THEN** its output asks the session to report the failure to the user and
   carries the file's line, and the next start's output does not
+
+#### Scenario: A failure after main is up
+
+- **WHEN** a step after `main` is up fails, such as the Windmill push, and a
+  prompt is then submitted to the session that started before it
+- **THEN** the `UserPromptSubmit` hook's output asks the session to report the
+  failure to the user and carries the file's line, and the next prompt's
+  output does not
+
+#### Scenario: The failure file cannot be moved aside
+
+- **WHEN** the start or prompt hook prints the failure file and its move
+  aside fails
+- **THEN** the hook's output still carries the report, the failure file stays
+  where it was, and the next start or prompt reports it again
+
+#### Scenario: A prompt with no failure
+
+- **WHEN** a prompt is submitted while the failure file does not exist
+- **THEN** the `UserPromptSubmit` hook prints nothing and removes the
+  fresh-session mark as before

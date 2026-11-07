@@ -285,3 +285,8 @@ deploy's rollback would bring back the first deploy's previous image.
   merge commit's `test` runs come from one suite: `gh api
   repos/laidrivm/harness/commits/<sha>/check-runs?check_name=test&filter=latest`
   lists one run. The implementation's pull request body names this step.
+- [The deploy that ships this change writes no `brought-up`] → that run is
+  the old `deploy.sh`; if it fails after `up`, the next run finds no record
+  and tags the head's own image as `previous` (CodeRabbit on #477, left by
+  the user's answer of 07.11). The window is one head, the same as every
+  retry before this change.
