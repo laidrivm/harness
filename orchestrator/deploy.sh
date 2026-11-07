@@ -4,8 +4,8 @@
 # commit last deployed nor the one last rolled back, and its newest `test`
 # check run from github-actions, across check suites and pages, concluded
 # success (bun/green-run.ts decides), it fast-forwards the checkout to that
-# head, tags the runner's running image as the previous one, and builds the
-# images. Only while the persistent session is fresh (the
+# head, tags the runner's running image as the previous one unless a run
+# brought this head up already, and builds the images. Only while the persistent session is fresh (the
 # managed hooks' ~/.harness-fresh in agent's home) does it bring the stack up,
 # under every pass lock, restart the runner when up left it as it was, and
 # wait two minutes at most for tmux session `main`; then it pushes the
@@ -18,8 +18,9 @@
 # record that cannot be written is named there too, and the next run deploys
 # the head again, its rollback included.
 #
-# The records are `deployed` and `rolled-back` in $STATE_DIRECTORY, systemd's
-# StateDirectory, or /var/lib/harness-deploy for a run by hand. A fetch or a
+# The records are `deployed`, `rolled-back` and `brought-up`, the head last
+# brought up, written before up and never removed, in $STATE_DIRECTORY,
+# systemd's StateDirectory, or /var/lib/harness-deploy for a run by hand. A fetch or a
 # check read that fails exits 1 and writes nothing: the host is still on a
 # working commit. A step after the fast-forward that fails writes the failure
 # file ~/.harness-deploy-failed in agent's home, which the session's next start
@@ -120,8 +121,8 @@ fresh() {
 }
 
 # Takes each lock file it is handed, blocking, then reads the check again,
-# looks for the mark again, removes an older failure file, brings the stack
-# up, and restarts the runner when up left $container, the one tagged, as it
+# looks for the mark again, removes an older failure file, records the head as
+# brought up, brings the stack up, and restarts the runner when up left $container, the one tagged, as it
 # was, so the session starts again on the updated clone. Each level holds its
 # file on fd 9: bash keeps the enclosing level's open on another descriptor
 # while the inner one runs, so every lock stays held until the calls return.
@@ -145,6 +146,9 @@ locked() {
 		# This head supersedes an older failure, and the restarted session's
 		# start can run before the wait for main sees it.
 		rm -f "$agent/.harness-deploy-failed"
+		# Before up, since an up that fails part way can leave the head's runner up.
+		step="the brought-up record"
+		printf '%s\n' "$head" >"$state/brought-up" || return 1
 		step=up
 		docker compose up -d || return 1
 		local now
@@ -241,12 +245,20 @@ deploy() {
 	# a fresh session has moved the name already. With no container, a stack
 	# brought down, the name's image is the one up would have brought back.
 	local source=$image
-	container=$(docker compose ps -aq runner) &&
-		{ [ -z "$container" ] || source=$(docker inspect -f '{{ .Image }}' "$container"); } &&
-		docker tag "$source" "$image:previous" || {
+	container=$(docker compose ps -aq runner) || {
 		failed "the tag"
 		return 1
 	}
+	# A run that brought this head up has tagged the image from before it, and
+	# the container may run the head's own since; tagging that would leave a
+	# rollback nothing to go back to, and the older image to the prune.
+	if [ "$head" != "$(cat "$state/brought-up" 2>/dev/null)" ]; then
+		{ [ -z "$container" ] || source=$(docker inspect -f '{{ .Image }}' "$container"); } &&
+			docker tag "$source" "$image:previous" || {
+			failed "the tag"
+			return 1
+		}
+	fi
 	docker compose build || {
 		failed "the build"
 		return 1
