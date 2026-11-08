@@ -22,7 +22,7 @@
       bump targets `HEAD`, and the API's `commits/main` is never read (D1).
       Cite each `harness-updates` scenario of the self bump in a `// spec:`
       comment. Record that they fail
-- [ ] 1.2 Implement D1–D3 in `bun/bump.ts`, restoring `bumpSelf`,
+- [x] 1.2 Implement D1–D3 in `bun/bump.ts`, restoring `bumpSelf`,
       `mergedBump` and `commitBump` from `64d84b6^`, with `harnessFields`
       exported again from `bun/bump-pin.ts`, `greenHead` taking the commit
       to ask about (`verify` still passes `main`'s), and the install as
@@ -37,13 +37,13 @@
       `bun bun/mutation-run.ts`, commit what it writes, run it again and then
       `bun bun/mutation-floor.ts`, and commit the floor it names (README,
       *Working on the harness*)
-- [ ] 1.3 Write a failing case that reads `.github/workflows/self-bump.yml`
+- [x] 1.3 Write a failing case that reads `.github/workflows/self-bump.yml`
       and `test.yml` as parsed YAML: the `workflow_run` trigger names
       `test.yml`'s `name`, `completed` and `main` alone, and the job's `if`
       requires `success` and `push`, or a dispatch from `refs/heads/main` —
       a renamed `Test` would otherwise stop every bump without a sound — and
       no job of the workflow is named `test` (D5). Record that it fails
-- [ ] 1.4 Add `.github/workflows/self-bump.yml` per design D4 and D5,
+- [x] 1.4 Add `.github/workflows/self-bump.yml` per design D4 and D5,
       reading `vars.HARNESS_APP_ID` and `secrets.HARNESS_APP_KEY` in the job
       that names `environment: self-bump`, the token asked with contents,
       pull-requests and workflows write: `actions/create-github-app-token`
@@ -53,7 +53,7 @@
       and body D5 gives. Verify with `bun test bun/bun-version.test.ts`, 1.3's
       case, `actionlint` through `.githooks/gates.sh`, and by reading the
       file back against D5; its first real run is 2.2
-- [ ] 1.5 Rewrite README's *Move the pin by hand* line (*Working on the
+- [x] 1.5 Rewrite README's *Move the pin by hand* line (*Working on the
       harness*) to name the workflow, the `bump/self-pin` pull request the
       user merges, and the hand move as the fallback while the workflow is
       off. Verify by reading the paragraph back

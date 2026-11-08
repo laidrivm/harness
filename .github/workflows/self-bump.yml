@@ -1,0 +1,85 @@
+name: Self bump
+
+# Proposes moving the harness's own development pin to `main`'s green head
+# by pull request, as the board loop's GitHub App, so the required checks and
+# CodeRabbit run on it; the user merges it (design D4 and D5 of
+# openspec/changes/self-pin-in-ci). `workflow_run` runs the default branch's
+# copy of this file, so a branch cannot rewrite what runs with the key.
+on:
+  workflow_run:
+    workflows: [Test]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two completions never push the branch at once.
+concurrency:
+  group: self-bump
+  cancel-in-progress: false
+
+jobs:
+  # Never named `test`: a `workflow_run` job's check run lands on main's head,
+  # where one named `test` would become the run `green()` reads, and a failed
+  # bump would turn main red for every consumer's bump and `deploy.sh`.
+  self-bump:
+    # A dispatch from another ref is skipped rather than failing at the
+    # environment's branch rule.
+    if: >-
+      (github.event_name == 'workflow_run'
+        && github.event.workflow_run.conclusion == 'success'
+        && github.event.workflow_run.event == 'push')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    environment: self-bump
+    steps:
+      # Pinned by commit. Nothing updates these three pins but a hand edit —
+      # no dependabot runs in this repository; checkout and setup-bun move
+      # with test.yml's.
+      - id: token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.HARNESS_APP_ID }}
+          private-key: ${{ secrets.HARNESS_APP_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          # The force-push moves bump/self-pin across any workflow edit main made.
+          permission-workflows: write
+      # Full history: the merged-bump comparison and the commit count read it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          token: ${{ steps.token.outputs.token }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - id: bump
+        run: bun bun/bump.ts self
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - if: steps.bump.outputs.sha != ''
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          SHA: ${{ steps.bump.outputs.sha }}
+          OLD: ${{ steps.bump.outputs.old }}
+          BEHIND: ${{ steps.bump.outputs.behind }}
+        run: |
+          # An identical tree pushed again would dismiss the approval and re-run every check for nothing.
+          if git rev-parse -q --verify refs/remotes/origin/bump/self-pin >/dev/null \
+            && [ "$(git rev-parse 'origin/bump/self-pin^{tree}')" = "$(git rev-parse 'HEAD^{tree}')" ]; then
+            echo "bump/self-pin already holds this tree; not pushed"
+          else
+            git push --force origin HEAD:refs/heads/bump/self-pin
+          fi
+          title="Move the self-pin to ${SHA:0:7}"
+          body="Moves \`devDependencies.harness\` and \`bun.lock\` from \`${OLD:0:7}\` to \`${SHA:0:7}\` (\`${OLD:0:7}..${SHA:0:7}\`), past ${BEHIND} commits of \`main\`. Opened by \`.github/workflows/self-bump.yml\`; the user merges it."
+          # Open ones alone: `gh pr view bump/self-pin` also finds a merged one and would edit it.
+          number=$(gh pr list --head bump/self-pin --state open --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --title "$title" --body "$body"
+          else
+            gh pr create --head bump/self-pin --base main --title "$title" --body "$body"
+          fi
