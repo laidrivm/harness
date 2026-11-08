@@ -3,9 +3,8 @@
  * `source`, `.` or `eval` whose program the line does not spell out, a
  * `bunx` that would install what it runs, a `bun test` or `bun run` that
  * carries `--retry`, a `bun run deps` given words after the script's name
- * (`depsArgs`), and a signal the session may not own: `pkill` and its kin
- * anywhere (`killByName`), a `kill` aimed past the line's own jobs
- * (`killSignal`). Decided by where the program comes
+ * (`depsArgs`), and a typed `bun install --frozen-lockfile`
+ * (`frozenInstall`). Decided by where the program comes
  * from — standard input, a substitution, an expansion — never by what
  * produced it, so no list of downloaders stands here. Each check returns the
  * reason rather than blocking, because the exit code and the ledger id are the
@@ -14,7 +13,7 @@
 
 import { posix } from "node:path";
 import { FED } from "./command-parse.ts";
-import { args, base, named, OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
+import { args, base, OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
 
 /**
  * The long shell options that take the next word as their value. A short
@@ -26,7 +25,7 @@ import { args, base, named, OPEN_REDIRECTION, SHELLS } from "./command-words.ts"
 const TAKES_VALUE = new Set(["--rcfile", "--init-file"]);
 
 /** A redirection, attached to its target (`<in`, `2>&1`) or not (`<`). */
-const REDIRECTION = /^[0-9]*[<>]/;
+export const REDIRECTION = /^[0-9]*[<>]/;
 
 /** The index of the first word from `at` on that is not a redirection. */
 function firstWord(words: string[], at: number): number {
@@ -140,8 +139,8 @@ export function bunxInstall(name: string, rest: string[]): string | undefined {
 /**
  * The index in `words` — redirections already dropped by `args` — of bun's
  * subcommand among `verbs`, found as `bunxInstall` finds `x`: a word straight
- * after an option is passed over as its possible value. Shared by `depsArgs`
- * and `bunTestRetry`.
+ * after an option is passed over as its possible value. Shared by `depsArgs`,
+ * `frozenInstall` and `bunTestRetry`.
  */
 const subcommand = (words: string[], verbs: string[]) =>
 	words.findIndex((word, at) => verbs.includes(word) || !(word.startsWith("-") || words[at - 1]?.startsWith("-")));
@@ -170,6 +169,22 @@ export function depsArgs(part: string[], name: string, rest: string[]): string |
 }
 
 /**
+ * Why `name` with `rest` is a `bun install` or `bun i` carrying
+ * `--frozen-lockfile`, or nothing. A redirection rather than a boundary: the
+ * `ask` entries hold every install anyway, so a frozen install this parse
+ * misses prompts, as it did before the check (frozen-install-guard D1). The
+ * guard consults it on a typed line only, never on a script's text (D3).
+ */
+export function frozenInstall(name: string, rest: string[]): string | undefined {
+	if (name !== "bun") return undefined;
+	const words = args(rest);
+	const sub = subcommand(words, ["install", "i"]);
+	if (words[sub] !== "install" && words[sub] !== "i") return undefined;
+	if (!words.slice(sub + 1).includes("--frozen-lockfile")) return undefined;
+	return "command-guard: a typed frozen install stops on the `bun install` prompt. Install with `bun run deps`, which runs unprompted. Type a plain `bun install`, which prompts, only after a re-pin, or when `package.json` has uncommitted edits or `bun.lock` lacks the pin. A frozen install with other flags, such as `--ignore-scripts`, or of a package with no `deps` script, is the user's to run, since `bun run deps` runs the root lifecycle scripts of the package that holds it.";
+}
+
+/**
  * Why `name` with `rest` is a `bun test` carrying `--retry`, or a `bun run`
  * carrying it before or after the script's name, or nothing. The subcommand
  * is found as `bunxInstall` finds `x`. After `run` the guard cannot read what
@@ -186,49 +201,4 @@ export function bunTestRetry(name: string, rest: string[]): string | undefined {
 	const retry = (word: string) => word === "--retry" || word.startsWith("--retry=");
 	if (!words.slice(sub + 1).some(retry)) return undefined;
 	return `command-guard: \`bun ${verb}\` with \`--retry\` reruns a failing test until it passes, which hides a flaky test instead of naming it. Run the suite once; a test that fails and then passes unchanged is named as flaky and filed as a card (\`core/testing.md\`). \`--rerun-each\` stays allowed for finding one.`;
-}
-
-/** One reason for both signal checks (kill-guard D4). */
-const SIGNAL =
-	"command-guard: this command may signal a process the session did not start. `pkill`, `killall`, `killall5` and `skill` pick theirs by name across the machine, and `kill` passes only as the command's own name, with literal job specs (`%1`) or, after `-0`, plain numeric pids. Stop a background task you started with TaskStop; a job this same line started with `&` is `kill %N`; any other process is not the session's to signal — ask the user. The bare word is matched anywhere, so search for it with a quoted pattern such as `'[k]ill'`.";
-
-const BY_NAME = new Set(["pkill", "killall", "killall5", "skill"]);
-
-/**
- * Why `part` holds a word naming `pkill`, `killall`, `killall5` or `skill`,
- * or nothing. A word anywhere, not a command name: a prefix the guard does
- * not know (`noglob`, `setsid`, `find -exec`) would otherwise hide it, and a
- * list of prefixes is the enumeration kill-guard D2 rejects.
- */
-export function killByName(part: string[]): string | undefined {
-	return part.some((word) => BY_NAME.has(base(word))) ? SIGNAL : undefined;
-}
-
-/**
- * Why `part` holds the word `kill` aimed past a job of the line's own shell,
- * or nothing (kill-guard D2, D3). `kill` must be the command's name with no
- * prefix — `xargs`, `watch` and the like append or rewrite its words — and no
- * substitution may feed the command. Its words are read raw, redirections
- * included: an open one is refused, since quoted it is a word `kill` gets and
- * the next word reaches `kill` as a pid (`kill '<' 95034`).
- */
-export function killSignal(part: string[]): string | undefined {
-	const at = part.findIndex((word) => base(word) === "kill");
-	if (at === -1) return undefined;
-	if (FED.has(part) || part.findIndex((_, index) => named(part, index)) !== at) return SIGNAL;
-	const words: string[] = [];
-	for (const word of part.slice(at + 1)) {
-		if (OPEN_REDIRECTION.test(word)) return SIGNAL;
-		if (!REDIRECTION.test(word)) words.push(word);
-	}
-	let next = 0;
-	const first = words[0] ?? "";
-	if (first === "-s" || first === "-n") {
-		if (!/^[A-Za-z0-9]+$/.test(words[1] ?? "")) return SIGNAL;
-		next = 2;
-	} else if (/^-[A-Za-z0-9]+$/.test(first)) next = 1;
-	if (words[next] === "--") next++;
-	// After `-0` a pid is only probed; a `-9` there would be a process group.
-	const operand = first === "-0" ? /^[0-9]+$/ : /^%[A-Za-z0-9_+%-]*$/;
-	return words.slice(next).every((word) => operand.test(word)) ? undefined : SIGNAL;
 }

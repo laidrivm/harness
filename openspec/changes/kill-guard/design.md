@@ -150,13 +150,16 @@ pid too.
 
 ### 5. Where the check lives
 
-Two functions in `command-guard-exec.ts`, beside `bunTestRetry` and
-`depsArgs`, each returning a reason or `undefined` as they do, one per rule
-id: `killByName(part)` and `killSignal(part)`. Both take the command's words,
-not an invocation, so `check()` calls them once per command, before its walk
-over `invocations`, and blocks each under its own id. The name-position
-predicate is lifted from `invocations` into an export of `command-words.ts`,
-with `invocations` switched to it in the same change. No new module.
+Two functions in a module of their own, `command-guard-kill.ts`, each
+returning a reason or `undefined` as `bunTestRetry` and `depsArgs` do, one
+per rule id: `killByName(part)` and `killSignal(part)`. Both take the
+command's words, not an invocation, so `check()` calls them once per
+command, before its walk over `invocations`, and blocks each under its own
+id. They were planned beside `bunTestRetry` in `command-guard-exec.ts`; the
+merge with frozen-install-guard took `command-guard.ts` past the 300-line
+cap, and the module of their own is what kept its import on one line. The
+name-position predicate is lifted from `invocations` into an export of
+`command-words.ts`, with `invocations` switched to it in the same change.
 
 ## Risks / Trade-offs
 

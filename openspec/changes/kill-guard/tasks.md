@@ -19,9 +19,10 @@ reads through `verdict()` from `bun/command-guard.fixture.ts`; none is run.
       `git grep -n pkill`, the stderr naming `'[k]ill'`, while
       `git commit -m "refuse pkill"` gets no `kill-by-name`
       (`agent-permissions/the-bare-word-in-a-search`)
-- [x] 1.2 Then `killByName(part)` in `bun/command-guard-exec.ts`, beside
-      `bunTestRetry`: a word of `part` whose base name is `pkill`, `killall`,
-      `killall5` or `skill` returns the refusal; `check()` in
+- [x] 1.2 Then `killByName(part)` in `bun/command-guard-kill.ts` (planned
+      beside `bunTestRetry`; see design.md decision 5): a word of `part`
+      whose base name is `pkill`, `killall`, `killall5` or `skill` returns
+      the refusal; `check()` in
       `bun/command-guard.ts` calls it once per command, before the walk over
       `invocations`, and blocks it as `kill-by-name`. The header comments of
       both guard files name the prohibition. Verify `bun test

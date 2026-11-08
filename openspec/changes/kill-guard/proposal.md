@@ -57,7 +57,8 @@ None.
 ## Impact
 
 - Changed: `bun/command-guard.ts` (the calls and the header's list),
-  `bun/command-guard-exec.ts` (the two checks, beside `bunTestRetry`),
+  a new `bun/command-guard-kill.ts` (the two checks), `bun/command-parse.ts`
+  (a `&` after `<` or `>` read as part of the operator),
   `bun/command-words.ts` (the name-position predicate, lifted out of
   `invocations`), a new `bun/command-guard-kill.test.ts`, `core/rules.md`
   (the Safety rule shortened).
