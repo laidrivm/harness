@@ -32,9 +32,14 @@ const RUNS_CODE = new Set(["exec", "repl", "create", "c"]);
 
 const INTERPRETER = /^(python(\d[\d.]*t?)?|node|bun|deno|perl|ruby|php)$/;
 
-const refuse = (name: string, id: Refusal["id"], what: string): Refusal => ({
+const refuse = (
+	name: string,
+	id: Refusal["id"],
+	what: string,
+	remedy = "commit the script and run it by its path",
+): Refusal => ({
 	id,
-	reason: `command-guard: \`${name}\` is given ${what}, so the guard cannot read the program it runs and refuses it — a local \`allow\` rule would silence a prompt. To run it, commit the script and run it by its path.`,
+	reason: `command-guard: \`${name}\` is given ${what}, so the guard cannot read the program it runs and refuses it — a local \`allow\` rule would silence a prompt. To run it, ${remedy}.`,
 });
 
 /** git's answer in `cwd`, or `null` when the call fails. */
@@ -112,7 +117,8 @@ function bunRun(operand: string, dirs: Set<string | null>, read: (line: string) 
 				return refuse(
 					"bun run",
 					"untracked-script",
-					`\`${operand}\`, a script of \`${file}\`, which is untracked or has uncommitted edits`,
+					`\`${operand}\`, a script of \`${file}\`, which the repository does not hold as committed`,
+					"commit that package.json first; an install from an edited one is a plain `bun install`, which prompts",
 				);
 			const key = `${file}\0${operand}`;
 			if (reading.has(key)) continue;
