@@ -19,7 +19,9 @@ and that a frozen install with other flags, such as `--ignore-scripts`, or of
 a package with no `deps` script, is the user's to run, since `bun run deps`
 runs the root lifecycle scripts of the package that holds it. The
 block is a redirection rather than a boundary: a frozen install the guard
-does not read as one is left to the `ask` entry, which prompts. A blocked
+does not read as one is left to the `ask` entry, which prompts, as is every
+frozen install before the harness is installed, where the bootstrap hook
+runs in the guard's place and lets it through. A blocked
 call shows no prompt only because Claude Code's hooks reference runs a
 `PreToolUse` hook before the permission flow; that order is Claude Code's,
 observed rather than tested here. The install is
