@@ -92,7 +92,14 @@ describe("a kill aimed past the line's own jobs", () => {
 	});
 
 	// spec: agent-permissions/a-word-that-hides-the-next
-	test.each(["kill '<' 95034", "kill %1 '>' 95034", "kill %1 > /dev/null"])("%s blocks", (line) => {
+	test.each([
+		"kill '<' 95034",
+		"kill %1 '>' 95034",
+		"kill %1 > /dev/null",
+		"kill '>x' -12345",
+		"kill '>x' -0 95034",
+		`bash -c "kill '>x' -12345"`,
+	])("%s blocks", (line) => {
 		blocks(line, "kill-signal");
 	});
 
@@ -137,6 +144,7 @@ describe("a kill that reaches only the line's own jobs, or signals nothing", () 
 		"{ kill %1; }",
 		"kill %1 2>&1",
 		"kill %1 >&2",
+		"kill -9 2>/dev/null %1",
 	])("%s passes", (line) => passes(line));
 
 	// spec: agent-permissions/no-signal-sent
