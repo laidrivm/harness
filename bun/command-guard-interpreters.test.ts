@@ -165,17 +165,21 @@ describe("an interpreter given program text the guard cannot read", () => {
 
 	test("bun run check is refused when package.json is edited or untracked", () => {
 		const { dir } = checkout();
-		writeFileSync(join(dir, "package.json"), '{"scripts":{"check":"bun pre.ts"}}');
-		// the reason names the package.json and a plain install, never the script as missing
-		const unvouched = (at: string) => {
-			const { code, out, reason, records } = answer("bun run check", at);
+		writeFileSync(join(dir, "package.json"), '{"scripts":{"check":"bun pre.ts","deps":"bun install"}}');
+		// the reason names the package.json, never the script as missing; only `deps` is told to install
+		const unvouched = (at: string, script = "check") => {
+			const { code, out, reason, records } = answer(`bun run ${script}`, at);
 			expect({ code, out, blocks: records.map((r) => r.decision) }).toEqual({ code: 2, out: "", blocks: ["block"] });
 			expect(reason).toMatch(
-				/`check`, a script of `\/\S+\/package\.json`, which the repository does not hold as committed/,
+				new RegExp(
+					`\`${script}\`, a script of \`/\\S+/package\\.json\`, which the repository does not hold as committed`,
+				),
 			);
-			expect(reason).toContain("a plain `bun install`");
+			expect(reason).not.toContain("no committed package.json names");
+			expect(reason.includes("a plain `bun install`")).toBe(script === "deps");
 		};
 		unvouched(dir);
+		unvouched(dir, "deps");
 		const bare = fabricate("feat/x");
 		writeFileSync(join(bare, "package.json"), '{"scripts":{"check":"true"}}');
 		writeFileSync(join(bare, "a"), "");
@@ -187,9 +191,14 @@ describe("an interpreter given program text the guard cannot read", () => {
 	// rules out the 08.11 card's guess, that the session's checkout decides; the incident was the edited case above
 	test("bun run reads the package.json of the event's cwd, not the session's checkout", () => {
 		const session = scripted("{}");
-		const env = { ...process.env, CLAUDE_PROJECT_DIR: session, XDG_STATE_HOME: fabricate(undefined, "state-") };
-		expect(run({ ...event("bun run check"), cwd: base.dir }, session, env)).toMatchObject({ code: 0, reason: "" });
-		const swapped = run({ ...event("bun run check"), cwd: session }, base.dir, env);
+		const env = (project: string) => ({
+			...process.env,
+			CLAUDE_PROJECT_DIR: project,
+			XDG_STATE_HOME: fabricate(undefined, "state-"),
+		});
+		const there = run({ ...event("bun run check"), cwd: base.dir }, session, env(session));
+		expect(there).toMatchObject({ code: 0, reason: "" });
+		const swapped = run({ ...event("bun run check"), cwd: session }, base.dir, env(base.dir));
 		expect(swapped).toMatchObject({ code: 2, out: "" });
 		expect(swapped.reason).toContain("`check`, which no committed package.json names as a script");
 	});

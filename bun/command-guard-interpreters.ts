@@ -118,7 +118,9 @@ function bunRun(operand: string, dirs: Set<string | null>, read: (line: string) 
 					"bun run",
 					"untracked-script",
 					`\`${operand}\`, a script of \`${file}\`, which the repository does not hold as committed`,
-					"commit that package.json first; an install from an edited one is a plain `bun install`, which prompts",
+					operand === "deps"
+						? "commit that package.json first; an install from an edited one is a plain `bun install`, which prompts"
+						: "commit that package.json first",
 				);
 			const key = `${file}\0${operand}`;
 			if (reading.has(key)) continue;
