@@ -3,8 +3,9 @@ name: Self bump
 # Proposes moving the harness's own development pin to `main`'s green head
 # by pull request, as the board loop's GitHub App, so the required checks and
 # CodeRabbit run on it; the user merges it (design D4 and D5 of
-# openspec/changes/self-pin-in-ci). `workflow_run` runs the default branch's
-# copy of this file, so a branch cannot rewrite what runs with the key.
+# openspec/changes/archive/2026-11-08-self-pin-in-ci). `workflow_run` runs the
+# default branch's copy of this file, so a branch cannot rewrite what runs with
+# the key.
 on:
   workflow_run:
     workflows: [Test]

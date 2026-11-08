@@ -60,7 +60,7 @@
 
 ## 2. Turn it on
 
-- [ ] 2.1 **User act, once, by hand, in a terminal of your own** — the
+- [x] 2.1 **User act, once, by hand, in a terminal of your own** — the
       names 1.4 reads (design D4). No key ever goes into the tree, a card or
       a chat.
       1. The environment `self-bump`, deployment branches limited to `main`
@@ -91,8 +91,12 @@
       Verify with `gh api repos/laidrivm/harness/environments/self-bump`
       (one `main` branch policy), `gh secret list --repo laidrivm/harness
       --env self-bump` and `gh variable list --repo laidrivm/harness --env
-      self-bump`, each naming its one entry
-- [ ] 2.2 **User act.** Once group 1 has merged, run `gh workflow run
+      self-bump`, each naming its one entry.
+      Done 08.11: the environment `self-bump` exists, its deployment-branch
+      policy lists one rule, `main` of type branch; the secret
+      `HARNESS_APP_KEY` and the variable `HARNESS_APP_ID` exist in it (names
+      only were checked)
+- [x] 2.2 **User act.** Once group 1 has merged, run `gh workflow run
       self-bump.yml --repo laidrivm/harness` once. When it writes a `sha`,
       confirm a
       `bump/self-pin` pull request opens as the App with the eight required
@@ -106,4 +110,17 @@
       writes none, confirm the run ends green with no branch pushed and no
       new pull request — an earlier bump's open one stays as it was. This is
       the evidence for the three workflow scenarios no
-      unit test reaches
+      unit test reaches.
+      Seen 08.11: the first run came by itself rather than by dispatch —
+      run 42441674609, `workflow_run` on f7349295, succeeded and opened #490
+      «Move the self-pin to f734929» from `bump/self-pin`, authored by the
+      App, its commit by `github-actions[bot]`, with the required checks and
+      CodeRabbit on it. CodeRabbit approved it and it merged on that one
+      approval, so the *unattributed changes* risk did not fire. The next
+      `Test` on `main`, at merge commit 9e1bfb6f, passed, and self bump run
+      42472930936 ended green: `bun bun/bump.ts self` wrote no `sha`, the
+      push step was skipped (D2) and no pull request opened. The
+      `GITHUB_TOKEN` with `contents: read` reads check-runs. Not yet seen:
+      `main` moving while a bump pull request is open (*A second bump
+      updates the open pull request*), and a later run writing a `sha` after
+      a merged bump (*A bump after a merged bump opens a new pull request*)
