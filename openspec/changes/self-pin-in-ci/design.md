@@ -168,7 +168,8 @@ merges under the ruleset, and CodeRabbit reviews it (the App has a seat since
   every check for nothing. A missing branch (the first run, or one GitHub
   deleted at a merge, since `delete_branch_on_merge` is on) is pushed. Then,
   pushed or not,
-  `gh pr list --head bump/self-pin --state open` — `gh pr edit` with the new
+  `gh pr list --head bump/self-pin --state open`, less any from a fork, whose
+  branch of the same name `--head` also matches — `gh pr edit` with the new
   title and body when one is open, `gh pr create --head bump/self-pin --base
   main` otherwise, since the checkout's own branch is `main`. Not
   `gh pr view bump/self-pin`, which also finds the branch's merged pull
