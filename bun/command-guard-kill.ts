@@ -39,9 +39,15 @@ export function killSignal(part: string[]): string | undefined {
 	if (at === -1) return undefined;
 	if (FED.has(part) || part.findIndex((_, index) => named(part, index)) !== at) return SIGNAL;
 	const words: string[] = [];
+	// How many words stood before the first redirection: one that was quoted is
+	// an operand, and `kill` reads no option after an operand (`kill '>x' -12345`).
+	let redirectedAt = Number.POSITIVE_INFINITY;
 	for (const word of part.slice(at + 1)) {
 		if (OPEN_REDIRECTION.test(word)) return SIGNAL;
+		// Quoted, `'>'"$@"` splits into operands the guard never read (`>x 95034`).
+		if (REDIRECTION.test(word) && /[$`]/.test(word)) return SIGNAL;
 		if (!REDIRECTION.test(word)) words.push(word);
+		else redirectedAt = Math.min(redirectedAt, words.length);
 	}
 	let next = 0;
 	const first = words[0] ?? "";
@@ -50,6 +56,7 @@ export function killSignal(part: string[]): string | undefined {
 		next = 2;
 	} else if (/^-[A-Za-z0-9]+$/.test(first)) next = 1;
 	if (words[next] === "--") next++;
+	if (redirectedAt < next) return SIGNAL;
 	// After `-0` a pid is only probed; a `-9` there would be a process group.
 	const operand = first === "-0" ? /^[0-9]+$/ : /^%[A-Za-z0-9_+%-]*$/;
 	return words.slice(next).every((word) => operand.test(word)) ? undefined : SIGNAL;

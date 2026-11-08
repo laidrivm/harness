@@ -112,7 +112,12 @@ else refuses the call:
    `kill '<' 95034` signals 95034. `2>&1` is one glued word: the parse reads
    the `&` after an unquoted `<` or `>` as part of the operator, as every
    POSIX shell does, never as a separator that would cut the words after it
-   off `kill` (`kill 2>&1 95034`).
+   off `kill` (`kill 2>&1 95034`). A signal or `--` after a glued redirection
+   is refused (the archive's CodeRabbit review): quoted, the redirection is
+   an operand, `kill` reads no option after an operand, and
+   `kill '>x' -12345` signals the process group 12345. A redirection-shaped
+   word holding `$` or a backtick is refused too: quoted, `'>'"$@"` splits
+   into `>x 95034`; the cost is a real `2>$log`.
 2. An optional signal: `-0`, which sends none; `-s` or `-n` with the next
    word matching `^[A-Za-z0-9]+$`; or one word matching `^-[A-Za-z0-9]+$`
    (`-9`, `-KILL`, `-l`). Then an optional `--`.

@@ -32,9 +32,14 @@ const RUNS_CODE = new Set(["exec", "repl", "create", "c"]);
 
 const INTERPRETER = /^(python(\d[\d.]*t?)?|node|bun|deno|perl|ruby|php)$/;
 
-const refuse = (name: string, id: Refusal["id"], what: string): Refusal => ({
+const refuse = (
+	name: string,
+	id: Refusal["id"],
+	what: string,
+	remedy = "commit the script and run it by its path",
+): Refusal => ({
 	id,
-	reason: `command-guard: \`${name}\` is given ${what}, so the guard cannot read the program it runs and refuses it — a local \`allow\` rule would silence a prompt. To run it, commit the script and run it by its path.`,
+	reason: `command-guard: \`${name}\` is given ${what}, so the guard cannot read the program it runs and refuses it — a local \`allow\` rule would silence a prompt. To run it, ${remedy}.`,
 });
 
 /** git's answer in `cwd`, or `null` when the call fails. */
@@ -107,7 +112,16 @@ function bunRun(operand: string, dirs: Set<string | null>, read: (line: string) 
 		if (found === null) return none;
 		const script = found[operand];
 		if (typeof script === "string") {
-			if (!committed(file as string, new Set([from]))) return none;
+			// named apart from `none`: an agent read that wording as the script missing, and blamed the wrong tree
+			if (!committed(file as string, new Set([from])))
+				return refuse(
+					"bun run",
+					"untracked-script",
+					`\`${operand}\`, a script of \`${file}\`, which the repository does not hold as committed`,
+					operand === "deps"
+						? "commit that package.json first; an install from an edited one is a plain `bun install`, which prompts"
+						: "commit that package.json first",
+				);
 			const key = `${file}\0${operand}`;
 			if (reading.has(key)) continue;
 			reading.add(key);
