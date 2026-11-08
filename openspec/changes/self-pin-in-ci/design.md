@@ -216,8 +216,7 @@ agent from `origin/main` installs at the pin with `bun run deps` as today.
   → unverified whether a commit by `github-actions[bot]` in a pull request
   the App authors counts as unattributed and asks a second approval; 2.2
   checks that one approval merges, and if not, the bump commit's identity
-  moves to the App's bot (`laidrivm-harness-agent[bot]`, user id
-  345034597).
+  moves to the App's bot identity.
 - [A failing run reaches no harness watcher] → `ci-run.ts` ignores a
   `workflow_run` on `main` that is not scheduled, so a revoked key or a
   refused push shows only as a red run in Actions and GitHub's own
