@@ -10,7 +10,7 @@
 		"@hughescr/stryker-bun-runner": "1.6.0",
 		"@stryker-mutator/core": "10.0.0",
 		"@types/bun": "1.4.2",
-		"harness": "github:laidrivm/harness#8a1fffd6769454841b5763793d138815607c239e",
+		"harness": "github:laidrivm/harness#cd50372957481408a4a547f2fef9814ca46a3cdc",
 		"typescript": "7.0.2"
 	},
 	"harness": {
