@@ -49,8 +49,9 @@ single-source rule this file inherits.
   let the user decide (unattended: user — report that output as `BLOCKED`).
 - Automated installs — CI jobs, hooks, scripts — use `bun install
   --frozen-lockfile`, and an agent installs with `bun run deps`; plain
-  `bun install` is only a developer resolving versions locally on purpose
-  (it is also what installs the git hooks).
+  `bun install` only resolves versions on purpose — a developer's, or an
+  agent's in the cases the install rule in `rules.md` names (it is also
+  what installs the git hooks).
 - Never state a framework, library or tool's behaviour from memory — a
   method, a default, a file it reads — check the docs or ask the tool
   itself; models invent all three.

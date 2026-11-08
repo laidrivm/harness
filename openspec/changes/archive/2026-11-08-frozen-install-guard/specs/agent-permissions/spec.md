@@ -19,9 +19,10 @@ and that a frozen install with other flags, such as `--ignore-scripts`, or of
 a package with no `deps` script, is the user's to run, since `bun run deps`
 runs the root lifecycle scripts of the package that holds it. The
 block is a redirection rather than a boundary: a frozen install the guard
-does not read as one is left to the `ask` entry, which prompts, as is every
-frozen install before the harness is installed, where the bootstrap hook
-runs in the guard's place and lets it through. A blocked
+does not read as one is left to the `ask` entry, which prompts, as is a line
+of exactly `bun install --frozen-lockfile` or `bun i --frozen-lockfile`
+before the harness is installed, where the bootstrap hook runs in the
+guard's place, lets those exact lines through and blocks every other. A blocked
 call shows no prompt only because Claude Code's hooks reference runs a
 `PreToolUse` hook before the permission flow; that order is Claude Code's,
 observed rather than tested here. The install is
@@ -69,8 +70,8 @@ set reaches the install unread.
   committed `package.json` holds
   `"setup": "bun install --frozen-lockfile && bun run build"` and a `build`
   script
-- **THEN** the hook does not block either, because the install is the
-  script's text, not the typed line
+- **THEN** the hook does not block either for a frozen install, because the
+  install is the script's text, not the typed line
 
 #### Scenario: A literal install still prompts
 
