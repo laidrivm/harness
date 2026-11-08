@@ -107,7 +107,13 @@ function bunRun(operand: string, dirs: Set<string | null>, read: (line: string) 
 		if (found === null) return none;
 		const script = found[operand];
 		if (typeof script === "string") {
-			if (!committed(file as string, new Set([from]))) return none;
+			// named apart from `none`: an agent read that wording as the script missing, and blamed the wrong tree
+			if (!committed(file as string, new Set([from])))
+				return refuse(
+					"bun run",
+					"untracked-script",
+					`\`${operand}\`, a script of \`${file}\`, which is untracked or has uncommitted edits`,
+				);
 			const key = `${file}\0${operand}`;
 			if (reading.has(key)) continue;
 			reading.add(key);
