@@ -22,7 +22,8 @@ block is a redirection rather than a boundary: a frozen install the guard
 does not read as one is left to the `ask` entry, which prompts, as is a line
 of exactly `bun install --frozen-lockfile` or `bun i --frozen-lockfile`
 before the harness is installed, where the bootstrap hook runs in the
-guard's place, lets those exact lines through and blocks every other. A blocked
+guard's place: it lets those lines through beside a bare `bun install` or
+`bun i` and `bun run deps`, and blocks any other line. A blocked
 call shows no prompt only because Claude Code's hooks reference runs a
 `PreToolUse` hook before the permission flow; that order is Claude Code's,
 observed rather than tested here. The install is
