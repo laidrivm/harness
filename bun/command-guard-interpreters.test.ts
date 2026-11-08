@@ -166,13 +166,22 @@ describe("an interpreter given program text the guard cannot read", () => {
 	test("bun run check is refused when package.json is edited or untracked", () => {
 		const { dir } = checkout();
 		writeFileSync(join(dir, "package.json"), '{"scripts":{"check":"bun pre.ts"}}');
-		refused("bun run check", dir);
+		const why = /`check`, a script of `\/\S+\/package\.json`, which is untracked or has uncommitted edits/;
+		expect(refused("bun run check", dir)).toMatch(why);
 		const bare = fabricate("feat/x");
 		writeFileSync(join(bare, "package.json"), '{"scripts":{"check":"true"}}');
 		writeFileSync(join(bare, "a"), "");
 		git(bare, "add", "a");
 		git(bare, "commit", "-m", "a");
-		refused("bun run check", bare);
+		expect(refused("bun run check", bare)).toMatch(why);
+	});
+
+	// the 08.11 incident's hypothesis: the session's checkout lacks the script, the event's `cwd` has it
+	test("bun run reads the package.json of the event's cwd, not the session's checkout", () => {
+		const session = scripted("{}");
+		const env = { ...process.env, CLAUDE_PROJECT_DIR: session, XDG_STATE_HOME: fabricate(undefined, "state-") };
+		expect(run({ ...event("bun run check"), cwd: base.dir }, session, env).code).toBe(0);
+		expect(run({ ...event("bun run check"), cwd: session }, base.dir, env).code).toBe(2);
 	});
 
 	/** A checkout whose committed `package.json` is `manifest`, plus `extra`. */
