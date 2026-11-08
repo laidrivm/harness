@@ -60,5 +60,8 @@ None.
 - New `.github/workflows/self-bump.yml`; `bun/bun-version.test.ts` already
   reads every workflow's `bun-version`.
 - `README.md`.
-- **User act.** The App's credentials reach the workflow (design.md D4;
-  question 1 on the card), then one run by hand and the first merge.
+- **User act, once, by hand** (tasks.md 2.1, design.md D4): create the
+  GitHub environment `self-bump` with deployment branches limited to `main`;
+  generate a second private key of the App `laidrivm-harness-agent` and store
+  it there as the secret `HARNESS_APP_KEY`; set the App's id there as the
+  variable `HARNESS_APP_ID`. Then one run by hand and the first merge (2.2).
