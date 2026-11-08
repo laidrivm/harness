@@ -77,7 +77,10 @@ jobs:
           title="Move the self-pin to ${SHA:0:7}"
           body="Moves \`devDependencies.harness\` and \`bun.lock\` from \`${OLD:0:7}\` to \`${SHA:0:7}\` (\`${OLD:0:7}..${SHA:0:7}\`), past ${BEHIND} commits of \`main\`. Opened by \`.github/workflows/self-bump.yml\`; the user merges it."
           # Open ones alone: `gh pr view bump/self-pin` also finds a merged one and would edit it.
-          number=$(gh pr list --head bump/self-pin --state open --json number --jq '.[0].number')
+          # `--head` matches the branch name in any fork too, so a fork's pull request is dropped;
+          # `// empty`, or none open would print `null`.
+          number=$(gh pr list --head bump/self-pin --state open --json number,isCrossRepository \
+            --jq 'map(select(.isCrossRepository | not))[0].number // empty')
           if [ -n "$number" ]; then
             gh pr edit "$number" --title "$title" --body "$body"
           else
