@@ -2346,10 +2346,11 @@ specs (`%1`, `%+`). The reason SHALL name `TaskStop`, `kill %N` and the user.
 #### Scenario: A word that hides the next
 
 - **WHEN** the agent attempts `kill '<' 95034`, `kill %1 '>' 95034`,
-  `kill %1 > /dev/null` or `kill '>x' -12345`
+  `kill %1 > /dev/null`, `kill '>x' -12345` or `kill -9 '>'"$@"`
 - **THEN** the hook blocks the call, because a quoted `<` reaches `kill` as a
   word the parse cannot tell from a redirection, and `kill` reads no signal
-  after it: `-12345` there is a process group
+  after it: `-12345` there is a process group; and a redirection-shaped word
+  holding an expansion may split into pids the guard never read
 
 #### Scenario: A signal after a no-signal probe
 
