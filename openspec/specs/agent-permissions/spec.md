@@ -2277,8 +2277,9 @@ set reaches the install unread.
 #### Scenario: A frozen install within a compound line
 
 - **WHEN** the agent attempts `cd sub && bun install --frozen-lockfile`,
-  `bun install --frozen-lockfile | tail -5` or
-  `bash -c "bun i --frozen-lockfile"`
+  `bun install --frozen-lockfile | tail -5`,
+  `bash -c "bun i --frozen-lockfile"` or
+  `eval bun install --frozen-lockfile`
 - **THEN** the hook blocks the call, with the same reason
 
 #### Scenario: A frozen install inside a committed script
