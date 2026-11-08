@@ -64,9 +64,12 @@ not touched.
 - [x] 3.2 After the self-pin passes the apply's merge, an agent's
       `bun install --frozen-lockfile` in this repository is refused with no
       prompt shown, and `bun install` still prompts (design decision 5);
-      record both on the card — recorded on 2026-11-08 under «Живая
-      проверка 08.11» on the card body: the typed frozen install was refused
-      with the deps message, and `bun run deps` passed
+      record both on the card — recorded on 2026-11-08 in the card body's
+      section «Живая проверка 08.11» (the live check of 08.11): the typed
+      frozen install was refused with the deps message, and `bun run deps`
+      passed; a plain `bun install` prompting was not re-observed there, and
+      rests on the `ask` entries this change leaves untouched, pinned in
+      `bun/settings.test.ts`
 - [x] 3.3 Then, in the self-pin bump's pull request or one after it, shorten
       the Process rule «Install dependencies with `bun run deps`, never a
       literal `bun install` …» in `core/rules.md` to what the guard cannot
