@@ -18,12 +18,17 @@
       commit missing from the history (a shallow fetch) → non-zero naming the
       diff, no commit; run as a script with `GITHUB_OUTPUT` set → exactly the
       `sha=`, `old=` and `behind=` lines appended, all three empty on a quiet
-      run; a green API head that is not the checkout's `HEAD` → quiet, tree
-      unchanged (D1). Cite each `harness-updates` scenario of the self bump
-      in a `// spec:` comment. Record that they fail
+      run; `main` in the API moved past the checkout's green `HEAD` → the
+      bump targets `HEAD`, and the API's `commits/main` is never read (D1).
+      Cite each `harness-updates` scenario of the self bump in a `// spec:`
+      comment. Record that they fail
 - [ ] 1.2 Implement D1–D3 in `bun/bump.ts`, restoring `bumpSelf`,
       `mergedBump` and `commitBump` from `64d84b6^`, with `harnessFields`
-      exported again from `bun/bump-pin.ts`; `land` calls `commitBump`; the
+      exported again from `bun/bump-pin.ts`, `greenHead` taking the commit
+      to ask about (`verify` still passes `main`'s), and the install as
+      `--lockfile-only` once a scratch run shows its `bun.lock` equals a full
+      install's (else the full install, saying so in D1); `land` calls
+      `commitBump`; the
       usage line and header comment name `self`; `bump.fixture.ts`'s header
       names the third test file. Verify with `bun test bun/bump-pin.test.ts
       bun/bump-self.test.ts bun/bump-land.test.ts bun/bump-verify.test.ts`
@@ -36,8 +41,8 @@
       and `test.yml` as parsed YAML: the `workflow_run` trigger names
       `test.yml`'s `name`, `completed` and `main` alone, and the job's `if`
       requires `success` and `push`, or a dispatch from `refs/heads/main` —
-      a renamed `Test` would otherwise stop every bump without a sound.
-      Record that it fails
+      a renamed `Test` would otherwise stop every bump without a sound — and
+      no job of the workflow is named `test` (D5). Record that it fails
 - [ ] 1.4 Add `.github/workflows/self-bump.yml` per design D4 and D5,
       reading `vars.HARNESS_APP_ID` and `secrets.HARNESS_APP_KEY` in the job
       that names `environment: self-bump`, the token asked with contents,
@@ -93,7 +98,9 @@
       `bump/self-pin` pull request opens as the App with the eight required
       checks and CodeRabbit on it; when `main` moves before the merge,
       confirm the next run updates that pull request rather than opening a
-      second. Merge it, confirm the next `Test` run on `main` ends the
+      second. Merge it on one approval (else design's *unattributed
+      changes* risk applies: move the commit identity to the App's bot
+      before the next run), confirm the next `Test` run on `main` ends the
       workflow quietly (D2), and that the first later run writing a `sha`
       opens a new pull request rather than editing the merged one. When it
       writes none, confirm the run ends green with no branch pushed and no

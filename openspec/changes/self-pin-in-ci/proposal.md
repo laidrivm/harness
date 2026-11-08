@@ -20,8 +20,8 @@ never landed.
 
 - `bun/bump.ts` gains a third command, `self`, restored from `self-pin-bump`
   step 1 (`36e9a2c`, removed in `64d84b6`): from the harness's own root it
-  targets `main`'s newest green commit as `verify` does, moves the
-  development pin with `movePin` and runs `bun install --ignore-scripts`, then
+  targets the `main` head it checked out, once green by `verify`'s rule,
+  moves the development pin with `movePin` and rewrites `bun.lock`, then
   commits `package.json` and `bun.lock` alone, with no sync, check or
   `bumpTest`. It changes nothing when the head is not green, is the pin, or
   differs from the pin only as a merged bump does — in `bun.lock` and the
@@ -55,8 +55,10 @@ None.
 
 ## Impact
 
-- `bun/bump.ts` (`bumpSelf`, a commit helper shared with `land`), a new
-  `bun/bump-self.test.ts`, `bun/bump-pin.ts` exporting `harnessFields`.
+- `bun/bump.ts` (`bumpSelf`, a commit helper shared with `land`,
+  `greenHead` given the commit to ask about), a new `bun/bump-self.test.ts`,
+  `bun/bump-pin.ts` exporting `harnessFields` and so `mutation/bump-pin.json`
+  and `harness.mutationFloor` re-measured, `bun/bump.fixture.ts`'s header.
 - New `.github/workflows/self-bump.yml`; `bun/bun-version.test.ts` already
   reads every workflow's `bun-version`.
 - `README.md`.

@@ -49,26 +49,27 @@ start; pinning skills; new roll-out code.
 
 `bun bun/bump.ts self` from the harness's root, as #281 shipped it and #305
 removed it (`git show 64d84b6^:bun/bump.ts`): refuse a manifest whose two
-harness fields differ (D3), read the pin, take `greenHead`, stop quietly
-(exit 0, `sha`, `old`, `behind` all empty) on a head not green, equal to the
-pin, or a merged bump (D2), or a head that is not the checkout's `HEAD`:
-`main` moved between the checkout and the API read, the commit would sit on
-one base while pinning another, and D2's diff could name a commit the clone
-lacks — the newer head's own `Test` run starts the next attempt. Otherwise
-move the pin with `movePin`, run
-`bun install --ignore-scripts`, stage `package.json` and `bun.lock` alone,
-commit through the helper `land` shares (`Bump harness <old7>..<new7>`, as
-`github-actions[bot]`), and write `sha`, `old` and `behind`
-(`git rev-list --count <pin>..<head>`) to `$GITHUB_OUTPUT`. The function is
-`bumpSelf`: `self` names a global in bun.
+harness fields differ (D3), read the pin, and stop quietly (exit 0, `sha`,
+`old`, `behind` all empty) on a head not green, equal to the pin, or a merged
+bump (D2). The head is the checkout's own `HEAD` (`git rev-parse HEAD`), and
+its greenness is asked of `greenHead`, given that commit rather than reading
+`commits/main` — #281's version read `main` from the API, which could name a
+commit the clone lacks once `main` moved after the checkout, so D2's diff
+threw and the commit sat on one base while pinning another. Otherwise move
+the pin with `movePin`, run `bun install --lockfile-only --ignore-scripts`
+(nothing here reads `node_modules`; 1.2 confirms the lock equals a full
+install's, else the full install stays), stage `package.json` and `bun.lock`
+alone, commit through the helper `land` shares (`Bump harness
+<old7>..<new7>`, as `github-actions[bot]`), and write `sha`, `old` and
+`behind` (`git rev-list --count <pin>..<head>`) to `$GITHUB_OUTPUT`. The
+function is `bumpSelf`: `self` names a global in bun.
 
 No sync (it would write a `harness/` copy into the harness), no check (it
 needs consumer keys), no `bumpTest`: the head already passed `test`, and the
 pull request runs every required check again on the merge.
 
 - *Alternative: target `workflow_run.head_sha`.* Equal on the trigger, but
-  absent on `workflow_dispatch`, and it skips `green`'s `github-actions` slug
-  check.
+  absent on `workflow_dispatch`; the checkout's `HEAD` is there on both.
 - *Alternative: the whole bump in workflow shell (`jq`, `git diff`).* The
   merged-bump comparison and the green rule would then live in YAML no test
   reaches, and `greenHead` would have a second copy.
@@ -149,6 +150,10 @@ merges under the ruleset, and CodeRabbit reviews it (the App has a seat since
   every `main` move ends in a `Test` run, and dispatch covers a missed one.
 - `concurrency: { group: self-bump, cancel-in-progress: false }`, so two
   completions never push the branch at once.
+- The job is named `self-bump`, never `test`: a `workflow_run` job's check
+  run lands on `main`'s head, and one named `test` would become the newest
+  `test` run there that `green()` reads, so a failed bump would turn `main`
+  red for every consumer's `verify` and `deploy.sh`.
 - `permissions: { contents: read }` for `GITHUB_TOKEN`, which the `self` step
   gets as `GITHUB_TOKEN: ${{ github.token }}`, as the consumers' `verify`
   does, so `greenHead`'s two reads are authenticated rather than held to the
@@ -156,11 +161,13 @@ merges under the ruleset, and CodeRabbit reviews it (the App has a seat since
 - Steps: the token step; `actions/checkout` with `ref: main`, that token and
   `fetch-depth: 0` (D2's diff and the count read history); `setup-bun` with
   `test.yml`'s pin and `bun-version`; `bun bun/bump.ts self`. When `sha` is
-  set and `origin/bump/self-pin` does not already hold `HEAD`'s tree — a
+  set: `git push --force origin HEAD:refs/heads/bump/self-pin`, skipped only
+  when `origin/bump/self-pin` exists and already holds `HEAD`'s tree — a
   re-run or a dispatch on a head the open pull request already pins would
   otherwise push an identical tree, dismissing the approval and re-running
-  every check for nothing: `git push --force origin
-  HEAD:refs/heads/bump/self-pin`, then
+  every check for nothing. A missing branch (the first run, or one GitHub
+  deleted at a merge, since `delete_branch_on_merge` is on) is pushed. Then,
+  pushed or not,
   `gh pr list --head bump/self-pin --state open` — `gh pr edit` with the new
   title and body when one is open, `gh pr create --head bump/self-pin --base
   main` otherwise, since the checkout's own branch is `main`. Not
@@ -202,9 +209,15 @@ agent from `origin/main` installs at the pin with `bun run deps` as today.
   the auto-merge card closes it.
 - [A second App key lives in GitHub] → an environment limited to
   `main`, a separate key so revoking it leaves the host's mint working.
-- [`main` moves while a run is queued] → D1's stop on a head that is not the
-  checkout's `HEAD`, or one not green yet, makes the run quiet; the newer
-  head's `Test` completion runs it again.
+- [`main` moves while a run is queued] → the run pins the commit it checked
+  out, once green; the newer head's `Test` completion runs it again and moves
+  the open pull request on.
+- [The ruleset's `require_extra_approval_for_unattributed_changes` is on]
+  → unverified whether a commit by `github-actions[bot]` in a pull request
+  the App authors counts as unattributed and asks a second approval; 2.2
+  checks that one approval merges, and if not, the bump commit's identity
+  moves to the App's bot (`laidrivm-harness-agent[bot]`, user id
+  345034597).
 - [A failing run reaches no harness watcher] → `ci-run.ts` ignores a
   `workflow_run` on `main` that is not scheduled, so a revoked key or a
   refused push shows only as a red run in Actions and GitHub's own

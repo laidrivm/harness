@@ -6,7 +6,8 @@
 
 After each successful `test` run from a push to the harness's `main`, and
 when started by hand, the harness SHALL propose moving its development pin
-to `main`'s newest green commit, on the target rule a consumer's bump uses:
+to the `main` head it checked out, once green by the rule a consumer's bump
+uses:
 one commit changing only `package.json`'s pin and `bun.lock`, with no sync,
 check or `bumpTest`, on one branch, and one pull request from it whose
 author's pull requests run the required checks. It SHALL push nothing to
