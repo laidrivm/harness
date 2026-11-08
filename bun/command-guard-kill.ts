@@ -44,6 +44,8 @@ export function killSignal(part: string[]): string | undefined {
 	let redirectedAt = Number.POSITIVE_INFINITY;
 	for (const word of part.slice(at + 1)) {
 		if (OPEN_REDIRECTION.test(word)) return SIGNAL;
+		// Quoted, `'>'"$@"` splits into operands the guard never read (`>x 95034`).
+		if (REDIRECTION.test(word) && /[$`]/.test(word)) return SIGNAL;
 		if (!REDIRECTION.test(word)) words.push(word);
 		else redirectedAt = Math.min(redirectedAt, words.length);
 	}

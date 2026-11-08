@@ -99,6 +99,8 @@ describe("a kill aimed past the line's own jobs", () => {
 		"kill '>x' -12345",
 		"kill '>x' -0 95034",
 		`bash -c "kill '>x' -12345"`,
+		`set -- x 95034; kill -9 '>'"$@"`,
+		"kill %1 2>$log",
 	])("%s blocks", (line) => {
 		blocks(line, "kill-signal");
 	});
