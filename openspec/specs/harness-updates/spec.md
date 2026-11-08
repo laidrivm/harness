@@ -336,8 +336,8 @@ author's pull requests run the required checks. It SHALL push nothing to
 
 #### Scenario: A second bump updates the open pull request
 
-- **WHEN** a bump runs while the previous bump's pull request is still open
-  and `main`'s green head has moved again
+- **WHEN** a bump that writes a commit runs while the previous bump's pull
+  request is still open and `main`'s green head has moved again
 - **THEN** the same pull request now carries one commit moving the pin to the
   new head, and no second bump pull request is open
 

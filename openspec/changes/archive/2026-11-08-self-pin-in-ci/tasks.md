@@ -119,8 +119,11 @@
       approval, so the *unattributed changes* risk did not fire. The next
       `Test` on `main`, at merge commit 9e1bfb6f, passed, and self bump run
       42472930936 ended green: `bun bun/bump.ts self` wrote no `sha`, the
-      push step was skipped (D2) and no pull request opened. The
-      `GITHUB_TOKEN` with `contents: read` reads check-runs. Not yet seen:
-      `main` moving while a bump pull request is open (*A second bump
-      updates the open pull request*), and a later run writing a `sha` after
-      a merged bump (*A bump after a merged bump opens a new pull request*)
+      push step was skipped and no pull request opened. The log does not say
+      which quiet stop fired; it reads as D2's by elimination, since that
+      head was green and was not the pin. The `GITHUB_TOKEN` with
+      `contents: read` reads check-runs. Not yet seen: a run by
+      `gh workflow run` (the dispatch half of the job's `if`), `main` moving
+      while a bump pull request is open (*A second bump updates the open
+      pull request*), and a later run writing a `sha` after a merged bump
+      (*A bump after a merged bump opens a new pull request*)
