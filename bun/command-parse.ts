@@ -131,6 +131,12 @@ function scan(line: string, refuse: Refuse, inBody: boolean, bodies: string[]): 
 	 * backticks does not start their bodies, and one inside `( … )` does.
 	 */
 	let pending: Delimiter[] = [];
+	/**
+	 * Where the last unquoted, unescaped `<` or `>` stood, so a `&` straight
+	 * after it is read as part of the operator; a quoted `'>'&` is a word and a
+	 * job's end.
+	 */
+	let operator = -1;
 
 	const suspend = (kind: string) => {
 		suspended.push({ kind, quote, cases, pattern, arith, pending });
@@ -232,6 +238,10 @@ function scan(line: string, refuse: Refuse, inBody: boolean, bodies: string[]): 
 				pending.push(found);
 				at = found.end - 1;
 			}
+		} else if (char === "&" && operator === at - 1) {
+			// `>&` and `<&` are one operator in every POSIX shell (`2>&1`), so the
+			// `&` ends no command; split there, `kill 2>&1 95034` lost its pid.
+			word += char;
 		} else if (pattern && (char === "(" || char === "|")) {
 			// Pattern syntax: the optional `(` opening a pattern is not a subshell,
 			// and `|` between alternatives is not a pipe.
@@ -262,6 +272,7 @@ function scan(line: string, refuse: Refuse, inBody: boolean, bodies: string[]): 
 		} else if (/\s/.test(char)) {
 			endWord();
 		} else {
+			if (char === "<" || char === ">") operator = at;
 			word += char;
 		}
 	}

@@ -13,7 +13,7 @@
 
 import { posix } from "node:path";
 import { FED } from "./command-parse.ts";
-import { args, OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
+import { args, base, OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
 
 /**
  * The long shell options that take the next word as their value. A short
@@ -25,7 +25,7 @@ import { args, OPEN_REDIRECTION, SHELLS } from "./command-words.ts";
 const TAKES_VALUE = new Set(["--rcfile", "--init-file"]);
 
 /** A redirection, attached to its target (`<in`, `2>&1`) or not (`<`). */
-const REDIRECTION = /^[0-9]*[<>]/;
+export const REDIRECTION = /^[0-9]*[<>]/;
 
 /** The index of the first word from `at` on that is not a redirection. */
 function firstWord(words: string[], at: number): number {
@@ -93,7 +93,7 @@ export function unreadProgram(part: string[], name: string, rest: string[], firs
 		// `xargs` writes its input into a `-c` string (`xargs -I{} sh -c '{}'`),
 		// and without a replacement or a `$` the shell never reads what it
 		// appends, so every `-c` that `xargs` runs is refused.
-		const xargs = part.slice(0, part.length - rest.length - 1).some((word) => word.split("/").pop() === "xargs");
+		const xargs = part.slice(0, part.length - rest.length - 1).some((word) => base(word) === "xargs");
 		if (shell.stdin) unread = true;
 		else if (shell.info) unread = false;
 		else if (shell.command)

@@ -7,8 +7,11 @@
  * publish text on the user's behalf, a shell handed a program the line does not
  * spell out, a `bunx` that would install what it runs, a test run that
  * retries a failing test until it passes, a `bun run deps` given words
- * after the script's name, and a frozen `bun install` on the typed line —
- * never in a script's text, which `check`'s `script` flag tells apart.
+ * after the script's name, a frozen `bun install` on the typed line —
+ * never in a script's text, which `check`'s `script` flag tells apart — and a
+ * process signal the session may not own: `pkill`, `killall`, `killall5` or
+ * `skill` anywhere, and a `kill` aimed at anything but a literal job spec of
+ * the line's own shell.
  *
  * It runs without an `if` field on purpose. A permission pattern — which is
  * what `if` takes — matches the command word literally, so `/usr/bin/git` and
@@ -31,8 +34,9 @@
  * invokes is `command-words.ts`'s; what this file holds is what the
  * prohibitions themselves are, the reading of a `gh` invocation excepted,
  * which is `command-guard-gh.ts`'s, of a shell's program and a `bunx`'s
- * options, which is `command-guard-exec.ts`'s, and of what an interpreter is
- * refused, which is `command-guard-interpreters.ts`'s.
+ * options, which is `command-guard-exec.ts`'s, of a signal, which is
+ * `command-guard-kill.ts`'s, and of what an interpreter is refused, which is
+ * `command-guard-interpreters.ts`'s.
  */
 
 import { existsSync } from "node:fs";
@@ -40,6 +44,7 @@ import { branchState, FETCH_MAX_AGE, headBranch } from "./branch-state.ts";
 import { bunTestRetry, bunxInstall, depsArgs, frozenInstall, shellWords, unreadProgram } from "./command-guard-exec.ts";
 import { ghApiWrite, ghPublish } from "./command-guard-gh.ts";
 import { interpreter, type Refusal } from "./command-guard-interpreters.ts";
+import { killByName, killSignal } from "./command-guard-kill.ts";
 import { commands } from "./command-parse.ts";
 import { invocations, place, SHELLS } from "./command-words.ts";
 import { blocker } from "./gate-ledger.ts";
@@ -129,6 +134,11 @@ function refuseStranded(target: string): void {
 /** `script` says `command` is a committed script's text, not the typed line. */
 function check(command: string, script = false): void {
 	for (const part of commands(command, block)) {
+		// On the command's words rather than an invocation, so no prefix hides one.
+		const byName = killByName(part);
+		if (byName) block("kill-by-name", byName);
+		const signal = killSignal(part);
+		if (signal) block("kill-signal", signal);
 		// Every candidate, not the first: past a wrapper the parser cannot tell
 		// an option's operand from the command it wraps, and a candidate naming
 		// nothing this file guards costs a comparison.

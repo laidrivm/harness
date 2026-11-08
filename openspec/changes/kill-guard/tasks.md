@@ -7,7 +7,7 @@ reads through `verdict()` from `bun/command-guard.fixture.ts`; none is run.
 
 ## 1. Signalled by name
 
-- [ ] 1.1 Failing cases in a new `bun/command-guard-kill.test.ts`, shaped as
+- [x] 1.1 Failing cases in a new `bun/command-guard-kill.test.ts`, shaped as
       `bun/command-guard-bunx.test.ts`, each blocking as
       `{ code: 2, rule: "kill-by-name" }`: `pkill -f "bun test"`,
       `killall bun`, `pkill -P 123` and `skill -KILL -c bun`, the stderr
@@ -19,9 +19,10 @@ reads through `verdict()` from `bun/command-guard.fixture.ts`; none is run.
       `git grep -n pkill`, the stderr naming `'[k]ill'`, while
       `git commit -m "refuse pkill"` gets no `kill-by-name`
       (`agent-permissions/the-bare-word-in-a-search`)
-- [ ] 1.2 Then `killByName(part)` in `bun/command-guard-exec.ts`, beside
-      `bunTestRetry`: a word of `part` whose base name is `pkill`, `killall`,
-      `killall5` or `skill` returns the refusal; `check()` in
+- [x] 1.2 Then `killByName(part)` in `bun/command-guard-kill.ts` (planned
+      beside `bunTestRetry`; see design.md decision 5): a word of `part`
+      whose base name is `pkill`, `killall`, `killall5` or `skill` returns
+      the refusal; `check()` in
       `bun/command-guard.ts` calls it once per command, before the walk over
       `invocations`, and blocks it as `kill-by-name`. The header comments of
       both guard files name the prohibition. Verify `bun test
@@ -29,7 +30,7 @@ reads through `verdict()` from `bun/command-guard.fixture.ts`; none is run.
 
 ## 2. kill
 
-- [ ] 2.1 Failing cases in `bun/command-guard-kill.test.ts`, each blocking
+- [x] 2.1 Failing cases in `bun/command-guard-kill.test.ts`, each blocking
       as `{ code: 2, rule: "kill-signal" }`: `kill 95034 27453`,
       `kill -9 68348`, `kill -TERM -- -123` and `kill %1 95034`, the stderr
       naming `TaskStop`, `kill %N` and the user
@@ -56,12 +57,12 @@ reads through `verdict()` from `bun/command-guard.fixture.ts`; none is run.
       (`agent-permissions/a-job-the-line-started`); `kill -0 95034`,
       `kill -l`, a bare `kill` and `if kill -0 95034; then echo up; fi`
       (`agent-permissions/no-signal-sent`)
-- [ ] 2.2 Lift the test of whether a word can be a command name (not
+- [x] 2.2 Lift the test of whether a word can be a command name (not
       `NOT_A_NAME`, not an open redirection's target, not a `KEYWORDS` word)
       out of `invocations` into an export of `bun/command-words.ts`, and
       switch `invocations` to it; `bun test bun/command-guard bun/command-parse`
       passes unchanged
-- [ ] 2.3 Then `killSignal(part)` beside `killByName`, per design.md
+- [x] 2.3 Then `killSignal(part)` beside `killByName`, per design.md
       decisions 2 and 3: when a word of `part` has the base name `kill`,
       refuse unless that word is the first one 2.2's predicate accepts and
       `part` is not in `FED`; then read the words after it raw, in order —
@@ -74,7 +75,7 @@ reads through `verdict()` from `bun/command-guard.fixture.ts`; none is run.
 
 ## 3. The rule shrinks to what the guard cannot see
 
-- [ ] 3.1 Shorten the Safety bullet *Never signal a process this session did
+- [x] 3.1 Shorten the Safety bullet *Never signal a process this session did
       not start…* in `core/rules.md`, under `agent-rulebook`'s *A rule only
       partly covered*, to the senders the guard does not read — a committed
       script's `process.kill`, a command string a tool runs itself
@@ -85,7 +86,7 @@ reads through `verdict()` from `bun/command-guard.fixture.ts`; none is run.
 
 ## 4. Integration
 
-- [ ] 4.1 `bunx --no-install openspec validate kill-guard --strict` passes,
+- [x] 4.1 `bunx --no-install openspec validate kill-guard --strict` passes,
       and `bun test` passes whole; the PR body says the session's own hook
       runs the pinned `node_modules/harness`, so the refusal reaches a live
       session only with the pin bump that crosses this change

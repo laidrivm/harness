@@ -109,7 +109,10 @@ else refuses the call:
    skipped: if it was quoted, `kill` gets a word that names no process. An
    open one (`>`, `2>`, `<`) is refused, since read as an operator it would
    hide the next word, and if quoted it hides nothing from `kill`:
-   `kill '<' 95034` signals 95034.
+   `kill '<' 95034` signals 95034. `2>&1` is one glued word: the parse reads
+   the `&` after an unquoted `<` or `>` as part of the operator, as every
+   POSIX shell does, never as a separator that would cut the words after it
+   off `kill` (`kill 2>&1 95034`).
 2. An optional signal: `-0`, which sends none; `-s` or `-n` with the next
    word matching `^[A-Za-z0-9]+$`; or one word matching `^-[A-Za-z0-9]+$`
    (`-9`, `-KILL`, `-l`). Then an optional `--`.
@@ -147,13 +150,16 @@ pid too.
 
 ### 5. Where the check lives
 
-Two functions in `command-guard-exec.ts`, beside `bunTestRetry` and
-`depsArgs`, each returning a reason or `undefined` as they do, one per rule
-id: `killByName(part)` and `killSignal(part)`. Both take the command's words,
-not an invocation, so `check()` calls them once per command, before its walk
-over `invocations`, and blocks each under its own id. The name-position
-predicate is lifted from `invocations` into an export of `command-words.ts`,
-with `invocations` switched to it in the same change. No new module.
+Two functions in a module of their own, `command-guard-kill.ts`, each
+returning a reason or `undefined` as `bunTestRetry` and `depsArgs` do, one
+per rule id: `killByName(part)` and `killSignal(part)`. Both take the
+command's words, not an invocation, so `check()` calls them once per
+command, before its walk over `invocations`, and blocks each under its own
+id. They were planned beside `bunTestRetry` in `command-guard-exec.ts`; the
+merge with frozen-install-guard took `command-guard.ts` past the 300-line
+cap, and the module of their own is what kept its import on one line. The
+name-position predicate is lifted from `invocations` into an export of
+`command-words.ts`, with `invocations` switched to it in the same change.
 
 ## Risks / Trade-offs
 
