@@ -9,7 +9,7 @@
         "@hughescr/stryker-bun-runner": "1.6.0",
         "@stryker-mutator/core": "10.0.0",
         "@types/bun": "1.4.2",
-        "harness": "github:laidrivm/harness#f7349295d46b5da081a51ee6a9b177defe037d15",
+        "harness": "github:laidrivm/harness#49484c6db96685c60b114698c2f7e5d3c80b3a03",
         "typescript": "7.0.2",
       },
     },
@@ -291,7 +291,7 @@
 
     "gopd": ["gopd@1.2.0", "", {}, "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg=="],
 
-    "harness": ["harness@github:laidrivm/harness#f734929", {}, "laidrivm-harness-f734929", "sha512-gSjbQpXRo4qCtxvYp8aXEH4Ytxk/tuee/8py8losblIw5CNuUh4dQyUE4G1NLKzrrGYnGUpCUZD/QYaMaqUSWA=="],
+    "harness": ["harness@github:laidrivm/harness#49484c6", {}, "laidrivm-harness-49484c6", "sha512-XGGhpAbq27l4Xa4rhhvkVOhGU/izUMBG29Vzr9LxhZxT9B+07AiKyM0PdzGBtUPDs7UC/6kkPqmlYMm47JFY3g=="],
 
     "has-symbols": ["has-symbols@1.1.0", "", {}, "sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ=="],
 
