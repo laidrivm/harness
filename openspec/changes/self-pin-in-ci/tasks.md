@@ -104,5 +104,6 @@
       workflow quietly (D2), and that the first later run writing a `sha`
       opens a new pull request rather than editing the merged one. When it
       writes none, confirm the run ends green with no branch pushed and no
-      pull request. This is the evidence for the three workflow scenarios no
+      new pull request — an earlier bump's open one stays as it was. This is
+      the evidence for the three workflow scenarios no
       unit test reaches
