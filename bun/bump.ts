@@ -12,10 +12,16 @@
  * `land <sha> <tree>` runs in a second job, which may push: from a fresh
  * checkout it redoes the edit, running bun and the harness's own sync but no
  * consumer dependency, and pushes to `main` only the tree `verify` reported.
+ *
+ * `self` is the harness's bump of its own development pin, run from the
+ * harness's root by `.github/workflows/self-bump.yml`: the checkout's `HEAD`,
+ * once green by `verify`'s rule, with the pin and `bun.lock` moved and
+ * committed and no sync, check or `bumpTest`. It pushes nothing; the
+ * workflow proposes the commit by pull request.
  */
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { movePin, pinOf } from "./bump-pin.ts";
+import { harnessFields, movePin, pinOf } from "./bump-pin.ts";
 import { bumpTest } from "./config.ts";
 import { collect, green } from "./green-run.ts";
 
@@ -56,9 +62,8 @@ async function get(deps: Deps, path: string): Promise<unknown> {
  */
 export const CHECK = "test";
 
-/** The harness's `main` head, when its newest `CHECK` run, read from every page, succeeded. */
-async function greenHead(deps: Deps): Promise<string | undefined> {
-	const { sha } = (await get(deps, "commits/main")) as { sha: string };
+/** `sha`, when its newest `CHECK` run, read from every page, succeeded. */
+async function greenHead(deps: Deps, sha: string): Promise<string | undefined> {
 	const pages: unknown[] = [];
 	let runs = collect(pages);
 	while (runs === "more") {
@@ -104,7 +109,8 @@ export async function verify(root: string, deps: Deps): Promise<{ sha: string; t
 	const manifest = join(root, "package.json");
 	const text = readFileSync(manifest, "utf8");
 	const pin = pinOf(text);
-	const head = await greenHead(deps);
+	const { sha: main } = (await get(deps, "commits/main")) as { sha: string };
+	const head = await greenHead(deps, main);
 	if (head === undefined || head === pin) return { sha: "", tree: "" };
 	writeFileSync(manifest, movePin(text, head));
 	const step = stepper(root, head, deps.run);
@@ -133,6 +139,12 @@ export function land(root: string, sha: string, tree: string, deps: { run: Run }
 	step("sync", SYNC);
 	const reproduced = stage(root);
 	if (reproduced !== tree) throw new Error(`the bump to ${sha} reproduced tree ${reproduced}, not the checked ${tree}`);
+	commitBump(root, old, sha);
+	git(root, ["push", "origin", "HEAD:main"]);
+}
+
+/** Commits what is staged at `root` as the bump from `old` to `sha`, by `github-actions[bot]`. */
+function commitBump(root: string, old: string, sha: string): void {
 	// By environment, not `-c user.*`: an inherited GIT_AUTHOR_* or GIT_COMMITTER_* outranks config.
 	const name = "github-actions[bot]";
 	const email = "41898282+github-actions[bot]@users.noreply.github.com";
@@ -142,7 +154,62 @@ export function land(root: string, sha: string, tree: string, deps: { run: Run }
 		GIT_COMMITTER_NAME: name,
 		GIT_COMMITTER_EMAIL: email,
 	});
-	git(root, ["push", "origin", "HEAD:main"]);
+}
+
+/**
+ * Whether `head` differs from `pin` only as a merged bump does: in
+ * `bun.lock` and in the two harness fields of `package.json`. Any other
+ * field of the manifest differing — a script, `exports`, a dependency — is
+ * a change the pin must follow.
+ */
+function mergedBump(root: string, pin: string, head: string): boolean {
+	const diff = Bun.spawnSync(
+		["git", "diff", "--quiet", pin, head, "--", ":(exclude)package.json", ":(exclude)bun.lock"],
+		{ cwd: root },
+	);
+	// `--quiet` exits 1 on a difference; anything else non-zero is git failing, as on a pin a shallow fetch lacks.
+	if (diff.exitCode === 1) return false;
+	if (diff.exitCode !== 0) throw new Error(`git diff ${pin} ${head}: ${diff.stderr.toString().trim()}`);
+	const rest = (sha: string) => {
+		const manifest = JSON.parse(git(root, ["show", `${sha}:package.json`]));
+		delete manifest.dependencies?.harness;
+		delete manifest.devDependencies?.harness;
+		return manifest;
+	};
+	return Bun.deepEquals(rest(pin), rest(head));
+}
+
+/**
+ * Moves the harness's own pin at `root` to the checkout's `HEAD` once green
+ * and commits it, returning the target, the old pin and the commits between
+ * them, or empty strings when there is nothing to propose: a head not green,
+ * already pinned, or a merged bump, which would otherwise propose one bump
+ * per merged bump. Throws on a manifest whose two harness fields differ.
+ *
+ * `HEAD`, never the API's `main`: once `main` moves past the checkout, that
+ * names a commit the clone may lack, and the commit would sit on one base
+ * while pinning another. Not `self`, which names a global in bun.
+ */
+export async function bumpSelf(root: string, deps: Deps): Promise<{ sha: string; old: string; behind: string }> {
+	const manifest = join(root, "package.json");
+	const text = readFileSync(manifest, "utf8");
+	// Before every quiet stop: `mergedBump` ignores both fields, so a head that
+	// changed only them would pass for a merged bump while `pass.sh` runs the
+	// development pin the consumers' rule leaves behind.
+	const [runtime, dev] = harnessFields(text);
+	if (runtime != null && dev != null && runtime !== dev)
+		throw new Error(
+			`package.json: dependencies.harness is ${runtime} but devDependencies.harness is ${dev}; align them by hand`,
+		);
+	const old = pinOf(text);
+	const head = git(root, ["rev-parse", "HEAD"]);
+	const quiet = { sha: "", old: "", behind: "" };
+	if (head === old || (await greenHead(deps, head)) === undefined || mergedBump(root, old, head)) return quiet;
+	writeFileSync(manifest, movePin(text, head));
+	stepper(root, head, deps.run)("install", ["bun", "install", "--lockfile-only", "--ignore-scripts"]);
+	git(root, ["add", "--", "package.json", "bun.lock"]);
+	commitBump(root, old, head);
+	return { sha: head, old, behind: git(root, ["rev-list", "--count", `${old}..${head}`]) };
 }
 
 const spawn: Run = (argv, cwd) => Bun.spawnSync(argv, { cwd, stdio: ["inherit", "inherit", "inherit"] }).exitCode;
@@ -150,20 +217,23 @@ const spawn: Run = (argv, cwd) => Bun.spawnSync(argv, { cwd, stdio: ["inherit", 
 if (import.meta.main) {
 	const [command, sha, tree] = Bun.argv.slice(2);
 	const landing = command === "land" && sha && tree;
-	if (command !== "verify" && !landing) {
-		console.error("usage: bump.ts verify | bump.ts land <sha> <tree>");
+	if (command !== "verify" && command !== "self" && !landing) {
+		console.error("usage: bump.ts verify | bump.ts self | bump.ts land <sha> <tree>");
 		process.exit(2);
 	}
 	try {
 		const root = git(".", ["rev-parse", "--show-toplevel"]);
 		if (landing) land(root, sha, tree, { run: spawn });
 		else {
-			const result = await verify(root, {
+			const deps = {
 				api: process.env.GITHUB_API_URL ?? "https://api.github.com",
 				token: process.env.GITHUB_TOKEN,
 				run: spawn,
-			});
-			const lines = `sha=${result.sha}\ntree=${result.tree}\n`;
+			};
+			const result = command === "self" ? await bumpSelf(root, deps) : await verify(root, deps);
+			const lines = Object.entries(result)
+				.map(([key, value]) => `${key}=${value}\n`)
+				.join("");
 			const output = process.env.GITHUB_OUTPUT;
 			if (output) appendFileSync(output, lines);
 			else process.stdout.write(lines);

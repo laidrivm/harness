@@ -1,9 +1,10 @@
 /**
  * What the bump's test files share: a local stand-in for the two GitHub API
- * paths `greenHead` reads, and git run with a throwaway identity.
+ * paths the bump reads, and git run with a throwaway identity.
  *
- * Its own module because `bump-verify.test.ts` and `bump-land.test.ts` both
- * use its `git` — a second copy would drift while both files still passed. A
+ * Its own module because `bump-verify.test.ts`, `bump-land.test.ts` and
+ * `bump-self.test.ts` all use its `git`, and the first and last its stand-in
+ * — a second copy would drift while every file still passed. A
  * test file that serves starts and stops its own server, since a lifecycle
  * hook belongs to the file it runs for.
  */
@@ -20,13 +21,17 @@ export const GREEN: CheckRun = {
 /**
  * What the stand-in serves, mutated by each case: `main`'s head, that
  * commit's `test` runs, whether every answer fails, and the authorization
- * header of each request seen.
+ * header of each request seen. `main`, where set, is served as `main`'s head
+ * in place of `head`, whose runs are still the ones served; `paths`, where
+ * set, records each path asked.
  */
 export type Served = {
 	head: string;
 	runs: CheckRun[];
 	broken: boolean;
 	seen: (string | null)[];
+	main?: string;
+	paths?: string[];
 };
 
 /** Starts the stand-in, answering from `state` as it stands at each request. */
@@ -36,8 +41,9 @@ export function serve(state: Served): ReturnType<typeof Bun.serve> {
 		fetch(request) {
 			const { pathname: path, searchParams: query } = new URL(request.url);
 			state.seen.push(request.headers.get("authorization"));
+			state.paths?.push(path);
 			if (state.broken) return new Response("down", { status: 500 });
-			if (path === "/repos/laidrivm/harness/commits/main") return Response.json({ sha: state.head });
+			if (path === "/repos/laidrivm/harness/commits/main") return Response.json({ sha: state.main ?? state.head });
 			if (path === `/repos/laidrivm/harness/commits/${state.head}/check-runs`) {
 				// A page at a time, 30 runs unless asked, as GitHub serves them.
 				const per = Number(query.get("per_page") ?? 30);

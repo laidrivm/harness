@@ -2,7 +2,7 @@
 
 ## 1. `bump.ts self` and the workflow that proposes its commit
 
-- [ ] 1.1 Write the failing cases in a new `bun/bump-self.test.ts`, starting
+- [x] 1.1 Write the failing cases in a new `bun/bump-self.test.ts`, starting
       from #281's (`git show 64d84b6^:bun/bump-self.test.ts`), over a scratch
       git repository and `bun/bump.fixture.ts`'s stand-in API: head not green
       → `sha`, `old`, `behind` empty, tree unchanged; head is the pin → same;
