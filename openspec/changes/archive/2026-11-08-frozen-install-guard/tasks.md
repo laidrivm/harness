@@ -61,11 +61,13 @@ not touched.
 
 - [x] 3.1 `bunx --no-install openspec validate frozen-install-guard --strict`
       passes, and `bun test` passes whole
-- [ ] 3.2 After the self-pin passes the apply's merge, an agent's
+- [x] 3.2 After the self-pin passes the apply's merge, an agent's
       `bun install --frozen-lockfile` in this repository is refused with no
       prompt shown, and `bun install` still prompts (design decision 5);
-      record both on the card
-- [ ] 3.3 Then, in the self-pin bump's pull request or one after it, shorten
+      record both on the card — recorded on 2026-11-08 under «Живая
+      проверка 08.11» on the card body: the typed frozen install was refused
+      with the deps message, and `bun run deps` passed
+- [x] 3.3 Then, in the self-pin bump's pull request or one after it, shorten
       the Process rule «Install dependencies with `bun run deps`, never a
       literal `bun install` …» in `core/rules.md` to what the guard cannot
       see (design decision 4): install with `bun run deps`, and type a plain
